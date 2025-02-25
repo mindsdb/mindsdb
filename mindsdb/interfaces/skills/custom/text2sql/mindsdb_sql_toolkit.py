@@ -5,6 +5,7 @@ from datetime import datetime
 from langchain_community.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
 from langchain_community.tools import ListSQLDatabaseTool, InfoSQLDatabaseTool, QuerySQLDataBaseTool
 from langchain_core.tools import BaseTool
+from mindsdb.utilities.config import config
 
 from mindsdb.interfaces.skills.custom.text2sql.mindsdb_sql_tool import MindsDBSQLParserTool
 
@@ -44,30 +45,42 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
             db=self.db, description=info_sql_database_tool_description
         )
 
+        if config.is_cloud:
+            response_description = dedent("""
+                1. Final Response Format:
+                   - Assume the frontend fully supports Markdown unless the user specifies otherwise.
+                   - When the response contains data that fits a table format, present it as a properly formatted Markdown table
+                       - Ensure clarity and proper structure for easy readability.
+                       - After you pesent a table, if you believe that the data can be visualized:
+                           -always generate a Chart.js configuration and include it in the Markdown response as follows:
+                                ```chartjs
+                                {<chartjs JSON config>}
+                                ```
+                           - when presenting a chart:
+                                - never mention anything about chart.js or it's configuration, 
+                                - the front end will render that config into a chart, so when you refer to it, always refer to it as a chart, not a config.
+                                - BEFORE visualizing information use as much as possible the database to sort information, using ORDER BY
+                   - Always wrap mathematical expressions and/or formulas, in $ or $$ as follows:
+                      - Inline: ${expression}$
+                      - Block: $${expression}$$
+                      - For example: 
+                           - instead of:  \text{pe c} =\frac{R}{B},    do $$ \text{pe c} =\frac{R}{B}$$
+                           - instead of: where ( \Delta U ) is the change, do: where ( $\Delta U$ ) is the change
+            """)
+        else:
+            response_description = dedent("""
+                1. Final Response Format:
+                   - Assume the frontend fully supports Markdown unless the user specifies otherwise.
+                   - When the response contains data that fits a table format, present it as a properly formatted Markdown table
+                       - Ensure clarity and proper structure for easy readability.
+            """)
+
         query_sql_database_tool_description = dedent(f"""\
             Input: A detailed and well-structured SQL query. The query must be enclosed between the symbols $START$ and $STOP$.
             Output: Database result or error message. For errors, rewrite and retry the query. For 'Unknown column' errors, use '{info_sql_database_tool.name}' to check table fields.
             This system is a highly intelligent and reliable PostgreSQL SQL skill designed to work with databases.
             Follow these instructions with utmost precision:
-            1. Final Response Format:
-               - Assume the frontend fully supports Markdown unless the user specifies otherwise.
-               - When the response contains data that fits a table format, present it as a properly formatted Markdown table
-                   - Ensure clarity and proper structure for easy readability.
-                   - After you pesent a table, if you believe that the data can be visualized:
-                       -always generate a Chart.js configuration and include it in the Markdown response as follows:
-                            ```chartjs
-                            {{<chartjs JSON config>}}
-                            ```
-                       - when presenting a chart:
-                            - never mention anything about chart.js or it's configuration, 
-                            - the front end will render that config into a chart, so when you refer to it, always refer to it as a chart, not a config.
-                            - BEFORE visualizing information use as much as possible the database to sort information, using ORDER BY
-               - Always wrap mathematical expressions and/or formulas, in $ or $$ as follows:
-                  - Inline: ${expression}$
-                  - Block: $${expression}$$
-                  - For example: 
-                       - instead of:  \text{pe c} =\frac{R}{B},    do $$ \text{pe c} =\frac{R}{B}$$
-                       - instead of: where ( \Delta U ) is the change, do: where ( $\Delta U$ ) is the change
+            {response_description}
             2. Sample Data:
                - Before answering a question, if you don't have sample data about a table, **always** get sample data using `SELECT * FROM table LIMIT 3` from the tables you believe are relevant to formulating your answers.
             3. Categorical Data:

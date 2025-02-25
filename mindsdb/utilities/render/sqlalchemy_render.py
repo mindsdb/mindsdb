@@ -63,6 +63,10 @@ class AttributedStr(str):
         obj.is_quoted = is_quoted
         return obj
 
+    def replace(self, *args):
+        obj = super().replace(*args)
+        return AttributedStr(obj, self.is_quoted)
+
 
 def get_is_quoted(identifier: ast.Identifier):
     quoted = getattr(identifier, 'is_quoted', [])

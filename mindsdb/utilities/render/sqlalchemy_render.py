@@ -63,6 +63,10 @@ class AttributedStr(str):
         obj.is_quoted = is_quoted
         return obj
 
+    def replace(self, *args):
+        obj = super().replace(*args)
+        return AttributedStr(obj, self.is_quoted)
+
 
 def get_is_quoted(identifier: ast.Identifier):
     quoted = getattr(identifier, 'is_quoted', [])
@@ -92,9 +96,6 @@ class SqlalchemyRender:
         # override dialect's preparer
         if hasattr(dialect, 'preparer'):
             class Preparer(dialect.preparer):
-
-                def __init__(self, *args, **kwargs):
-                    super().__init__(*args, **kwargs)
 
                 def _requires_quotes(self, value: str) -> bool:
                     # check force-quote flag
@@ -242,6 +243,8 @@ class SqlalchemyRender:
 
             op = t.op.lower()
             if op in ('in', 'not in'):
+                if t.args[1].parentheses:
+                    arg1 = [arg1]
                 if isinstance(arg1, sa.sql.selectable.ColumnClause):
                     raise NotImplementedError(f'Required list argument for: {op}')
 
@@ -536,12 +539,19 @@ class SqlalchemyRender:
                 query = query.select_from(table)
 
                 # other tables
+                has_explicit_join = False
                 for item in join_list[1:]:
                     table = self.to_table(item['table'])
                     if item['is_implicit']:
                         # add to from clause
-                        query = query.select_from(table)
+                        if has_explicit_join:
+                            # sqlalchemy doesn't support implicit join after explicit
+                            # convert it to explicit
+                            query = query.join(table, sa.text('1=1'))
+                        else:
+                            query = query.select_from(table)
                     else:
+                        has_explicit_join = True
                         if item['condition'] is None:
                             # otherwise, sqlalchemy raises "Don't know how to join to ..."
                             condition = sa.text('1=1')
@@ -564,7 +574,7 @@ class SqlalchemyRender:
                             condition,
                             full=is_full
                         )
-            elif isinstance(from_table, ast.Union):
+            elif isinstance(from_table, (ast.Union, ast.Intersect, ast.Except)):
                 alias = None
                 if from_table.alias:
                     alias = self.get_alias(from_table.alias)

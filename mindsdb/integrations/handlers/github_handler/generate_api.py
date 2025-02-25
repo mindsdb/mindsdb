@@ -31,7 +31,7 @@ def parse_annotations(annotations):
         return Type(getattr(annotations, '__name__', None))
     for item in annotations.split('|'):
         item = item.strip()
-        if item == None:
+        if item is None:
             continue
         if '[' in item:
             type_name = item[: item.find('[')]
@@ -61,6 +61,7 @@ def get_properties(cls):
 
         properties[prop_name] = parse_annotations(sig2.return_annotation)
     return properties
+
 
 def get_github_types():
     # get github types

@@ -1,7 +1,7 @@
 """added_metadata_to_projects
 
 Revision ID: 11347c213b36
-Revises: c06c35f7e8e1
+Revises: 4521dafe89ab
 Create Date: 2025-02-19 18:46:24.014843
 
 """
@@ -15,7 +15,7 @@ from mindsdb.utilities.config import config
 
 # revision identifiers, used by Alembic.
 revision = '11347c213b36'
-down_revision = 'c06c35f7e8e1'
+down_revision = '4521dafe89ab'
 branch_labels = None
 depends_on = None
 

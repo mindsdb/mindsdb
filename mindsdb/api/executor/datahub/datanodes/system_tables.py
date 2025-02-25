@@ -14,7 +14,10 @@ logger = log.getLogger(__name__)
 
 def _get_scope(query):
     databases, tables = None, None
-    conditions = extract_comparison_conditions(query.where)
+    try:
+        conditions = extract_comparison_conditions(query.where)
+    except NotImplementedError:
+        return databases, tables
     for op, arg1, arg2 in conditions:
         if op == '=':
             scope = [arg2]

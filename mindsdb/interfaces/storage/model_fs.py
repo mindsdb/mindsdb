@@ -1,5 +1,6 @@
 import os
 import re
+import json
 import io
 import zipfile
 from typing import Union
@@ -7,7 +8,10 @@ from typing import Union
 import mindsdb.interfaces.storage.db as db
 
 from .fs import RESOURCE_GROUP, FileStorageFactory, SERVICE_FILES_NAMES
-from .json import get_json_storage
+from .json import get_json_storage, get_encrypted_json_storage
+
+
+JSON_STORAGE_FILE = 'json_storage.json'
 
 
 class ModelStorage:
@@ -119,8 +123,22 @@ class ModelStorage:
         )
         return json_storage.set(name, data)
 
+    def encrypted_json_set(self, name: str, data: dict) -> None:
+        json_storage = get_encrypted_json_storage(
+            resource_id=self.predictor_id,
+            resource_group=RESOURCE_GROUP.PREDICTOR
+        )
+        return json_storage.set(name, data)
+
     def json_get(self, name):
         json_storage = get_json_storage(
+            resource_id=self.predictor_id,
+            resource_group=RESOURCE_GROUP.PREDICTOR
+        )
+        return json_storage.get(name)
+
+    def encrypted_json_get(self, name: str) -> dict:
+        json_storage = get_encrypted_json_storage(
             resource_id=self.predictor_id,
             resource_group=RESOURCE_GROUP.PREDICTOR
         )
@@ -237,8 +255,22 @@ class HandlerStorage:
         )
         return json_storage.set(name, content)
 
+    def encrypted_json_set(self, name: str, content: dict) -> None:
+        json_storage = get_encrypted_json_storage(
+            resource_id=self.integration_id,
+            resource_group=RESOURCE_GROUP.INTEGRATION
+        )
+        return json_storage.set(name, content)
+
     def json_get(self, name):
         json_storage = get_json_storage(
+            resource_id=self.integration_id,
+            resource_group=RESOURCE_GROUP.INTEGRATION
+        )
+        return json_storage.get(name)
+
+    def encrypted_json_get(self, name: str) -> dict:
+        json_storage = get_encrypted_json_storage(
             resource_id=self.integration_id,
             resource_group=RESOURCE_GROUP.INTEGRATION
         )
@@ -251,8 +283,11 @@ class HandlerStorage:
         ...
 
     def export_files(self) -> bytes:
-        if self.is_empty():
+        json_storage = self.export_json_storage()
+
+        if self.is_empty() and not json_storage:
             return None
+
         folder_path = self.folder_get('')
 
         zip_fd = io.BytesIO()
@@ -264,6 +299,11 @@ class HandlerStorage:
                         continue
                     abs_path = os.path.join(root, file_name)
                     zipf.write(abs_path, os.path.relpath(abs_path, folder_path))
+
+            # If JSON storage is not empty, add it to the zip file.
+            if json_storage:
+                json_str = json.dumps(json_storage)
+                zipf.writestr(JSON_STORAGE_FILE, json_str)
 
         zip_fd.seek(0)
         return zip_fd.read()
@@ -277,6 +317,48 @@ class HandlerStorage:
         zip_fd.seek(0)
 
         with zipfile.ZipFile(zip_fd, 'r') as zip_ref:
-            zip_ref.extractall(folder_path)
+            for name in zip_ref.namelist():
+                # If JSON storage file is in the zip file, import the content to the JSON storage.
+                # Thereafter, remove the file from the folder.
+                if name == JSON_STORAGE_FILE:
+                    json_storage = zip_ref.read(JSON_STORAGE_FILE)
+                    self.import_json_storage(json_storage)
+
+                else:
+                    zip_ref.extract(name, folder_path)
 
         self.folder_sync('')
+
+    def export_json_storage(self) -> list[dict]:
+        json_storage = get_json_storage(
+            resource_id=self.integration_id,
+            resource_group=RESOURCE_GROUP.INTEGRATION
+        )
+
+        records = []
+        for record in json_storage.get_all_records():
+            record_dict = record.to_dict()
+            if record_dict.get('encrypted_content'):
+                record_dict['encrypted_content'] = record_dict['encrypted_content'].decode()
+            records.append(record_dict)
+
+        return records
+
+    def import_json_storage(self, records: bytes) -> None:
+        json_storage = get_json_storage(
+            resource_id=self.integration_id,
+            resource_group=RESOURCE_GROUP.INTEGRATION
+        )
+
+        encrypted_json_storage = get_encrypted_json_storage(
+            resource_id=self.integration_id,
+            resource_group=RESOURCE_GROUP.INTEGRATION
+        )
+
+        records = json.loads(records.decode())
+
+        for record in records:
+            if record['encrypted_content']:
+                encrypted_json_storage.set_str(record['name'], record['encrypted_content'])
+            else:
+                json_storage.set(record['name'], record['content'])

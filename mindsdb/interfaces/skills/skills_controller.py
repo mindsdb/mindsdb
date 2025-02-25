@@ -1,7 +1,7 @@
 import datetime
 from typing import Dict, List, Optional
 
-from sqlalchemy import null
+from sqlalchemy import null, func
 from sqlalchemy.orm.attributes import flag_modified
 
 from mindsdb.interfaces.storage import db
@@ -33,7 +33,7 @@ class SkillsController:
 
         project = self.project_controller.get(name=project_name)
         return db.Skills.query.filter(
-            db.Skills.name == skill_name,
+            func.lower(db.Skills.name) == func.lower(skill_name),
             db.Skills.project_id == project.id,
             db.Skills.deleted_at == null()
         ).first()

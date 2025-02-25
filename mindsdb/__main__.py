@@ -538,7 +538,7 @@ if __name__ == '__main__':
     ioloop = asyncio.new_event_loop()
     ioloop.run_until_complete(wait_apis_start())
 
-    threading.Thread(target=do_clean_process_marks).start()
+    threading.Thread(target=do_clean_process_marks, name='clean_process_marks').start()
 
     ioloop.run_until_complete(gather_apis())
     ioloop.close()

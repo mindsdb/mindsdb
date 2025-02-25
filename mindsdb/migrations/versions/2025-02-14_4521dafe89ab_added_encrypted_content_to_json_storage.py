@@ -1,7 +1,7 @@
 """added_encrypted_content_to_json_storage
 
 Revision ID: 4521dafe89ab
-Revises: c06c35f7e8e1
+Revises: 6ab9903fc59a
 Create Date: 2025-02-14 12:05:13.102594
 
 """
@@ -12,7 +12,7 @@ import mindsdb.interfaces.storage.db  # noqa
 
 # revision identifiers, used by Alembic.
 revision = '4521dafe89ab'
-down_revision = 'c06c35f7e8e1'
+down_revision = '6ab9903fc59a'
 branch_labels = None
 depends_on = None
 

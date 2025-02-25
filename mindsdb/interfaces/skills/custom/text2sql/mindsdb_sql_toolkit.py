@@ -57,15 +57,15 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
                                 {<chartjs JSON config>}
                                 ```
                            - when presenting a chart:
-                                - never mention anything about chart.js or it's configuration, 
+                                - never mention anything about chart.js or it's configuration,
                                 - the front end will render that config into a chart, so when you refer to it, always refer to it as a chart, not a config.
                                 - BEFORE visualizing information use as much as possible the database to sort information, using ORDER BY
                    - Always wrap mathematical expressions and/or formulas, in $ or $$ as follows:
                       - Inline: ${expression}$
                       - Block: $${expression}$$
-                      - For example: 
-                           - instead of:  \text{pe c} =\frac{R}{B},    do $$ \text{pe c} =\frac{R}{B}$$
-                           - instead of: where ( \Delta U ) is the change, do: where ( $\Delta U$ ) is the change
+                      - For example:
+                           - instead of:  \\text{pe c} =\\frac{R}{B},    do $$ \\text{pe c} =\\frac{R}{B}$$
+                           - instead of: where ( \\Delta U ) is the change, do: where ( $\\Delta U$ ) is the change
             """)
         else:
             response_description = dedent("""
@@ -115,7 +115,7 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
                - Always give aliases in lower-case underscore notation, no quotes or backticks for alias that are in lowe-case underscore notation.
                   - For example: instead of SELECT COUNT(*) AS `count` do SELECT COUNT(*) AS count
                - For any calculations, always use the database:
-                  - Leverage window functions when necessary, and aggregate operations like OVER(). 
+                  - Leverage window functions when necessary, and aggregate operations like OVER().
                   - For percentages, make sure to safe guard division by zero using nullif(a, b)
                - When asked about distributions, also include calculated percentages, which you should calculate in the query
             7. Error Handling:

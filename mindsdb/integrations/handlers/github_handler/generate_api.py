@@ -184,11 +184,8 @@ class GHTable(APIResource):
                     method_kwargs[condition.column] = condition.value
                     condition.applied = True
 
-        # connection = self.handler.connect()
-        # method = getattr(connection.get_repo(self.handler.repository), self.method.name)
-
-        con = github.Github()
-        method = getattr(con.get_repo('mindsdb/mindsdb'), self.method.name)
+        connection = self.handler.connect()
+        method = getattr(connection.get_repo(self.handler.repository), self.method.name)
 
         data = []
         count = 0

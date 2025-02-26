@@ -262,7 +262,7 @@ class SkillToolController:
             type=skill.type
         )
 
-    def _make_document_retrieval_tools(self, skill: db.Skills, llm):
+    def _make_document_retrieval_tools(self, skill: db.Skills, llm: BaseChatModel):
         """
         Creates document retrieval tool for searching and querying documents
         """

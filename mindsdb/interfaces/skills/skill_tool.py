@@ -27,6 +27,7 @@ class SkillType(enum.Enum):
     TEXT2SQL = 'sql'
     KNOWLEDGE_BASE = 'knowledge_base'
     RETRIEVAL = 'retrieval'
+    DOCUMENT_RETRIEVAL = 'document_retrieval'
 
 
 @dataclass
@@ -261,6 +262,28 @@ class SkillToolController:
             type=skill.type
         )
 
+    def _make_document_retrieval_tools(self, skill: db.Skills, llm):
+        """
+        Creates document retrieval tool for searching and querying documents
+        """
+        params = skill.params
+        config = params.get('config', {})
+        if 'llm' not in config:
+            config['llm'] = llm
+        tool = dict(
+            name=params.get('name', skill.name),
+            source=params.get('source', None),
+            config=config,
+            description='Use this tool to search for documents by name/ID and ask questions about them. '
+                        'The input should be either a document name/ID to retrieve, or a question about a specific document.',
+            type=skill.type
+        )
+        pred_args = {}
+        pred_args['llm'] = llm
+
+        from .document_retrieval_tool import build_document_retrieval_tool
+        return build_document_retrieval_tool(tool, pred_args, skill)
+
     def get_tools_from_skills(self, skills_data: List[SkillData], llm: BaseChatModel, embedding_model: Embeddings) -> dict:
         """Creates function for skill and metadata (name, description)
 
@@ -296,6 +319,15 @@ class SkillToolController:
                     for skill in skills
                 ]
             elif skill_type == SkillType.RETRIEVAL:
+                tools[skill_type] = [
+                    self._make_retrieval_tools(skill, llm, embedding_model)
+                    for skill in skills
+                ]
+            elif skill_type == SkillType.DOCUMENT_RETRIEVAL:
+                tools[skill_type] = [
+                    self._make_document_retrieval_tools(skill, llm, embedding_model)
+                    for skill in skills
+                ]
                 tools[skill_type] = [
                     self._make_retrieval_tools(skill, llm, embedding_model)
                     for skill in skills

@@ -34,7 +34,7 @@ Where:
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `project_name`                              | Name of the project where the model resides.                                                                       |
 | `model_name`                                | Name of the model to be retrained.                                                                                 |
-| `integration_name`                          | Name of the integration created using the [`CREATE DATABASE`](/sql/create/databases) statement or file upload.    |
+| `integration_name`                          | Name of the integration created using the [`CREATE DATABASE`](/sql/create/database) statement or file upload.    |
 | `(SELECT column_name, ... FROM table_name)` | Selecting additional data to be used for retraining.                                                               |
 | `WHERE incremental_column > LAST`           | Selecting only newly added data to be used to finetune the model. Learn more about the [`LAST` keyword here](/mindsdb_sql/sql/create/jobs#last). |
 | `USING key = value`                         | Optional. The `USING` clause lets you pass multiple parameters to the `FINETUNE` statement.                          |

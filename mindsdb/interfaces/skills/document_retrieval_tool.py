@@ -5,6 +5,7 @@ from langchain_core.tools import Tool
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 import tiktoken
+import re
 
 from mindsdb.utilities import log
 from mindsdb.interfaces.skills.skill_tool import skill_tool
@@ -61,6 +62,50 @@ class DocumentConfig(BaseModel):
 
 # Default configuration
 DEFAULT_CONFIG = DocumentConfig()
+
+
+def _analyze_query(query: str, model) -> dict:
+    """Analyze the query to determine its type and extract relevant information.
+
+    Args:
+        query (str): The user's query
+        model: LLM model for analysis
+
+    Returns:
+        dict: Analysis results containing query_type and extracted_id
+    """
+    template = """Analyze the following document query and determine:
+1. If it's a question (asking for specific information) or a request for document summary
+2. Extract any document ID or title mentioned in the query
+
+Query: {query}
+
+Respond in the following JSON format:
+{{
+    "query_type": "question" or "summary",
+    "extracted_id": "<extracted id or title, or null if none found>",
+    "reasoning": "<brief explanation of your analysis>"
+}}
+"""
+
+    prompt = PromptTemplate(template=template, input_variables=["query"])
+    chain = LLMChain(llm=model, prompt=prompt)
+
+    try:
+        response = chain.run(query=query)
+        # Convert string response to dict, handling potential JSON formatting issues
+        import json
+        result = json.loads(response)
+        return result
+    except Exception as e:
+        logger.error(f"Error analyzing query: {str(e)}")
+        # Fallback to simple analysis
+        has_question = any(q in query.lower() for q in ["what", "how", "why", "when", "where", "who", "?"])
+        return {
+            "query_type": "question" if has_question else "summary",
+            "extracted_id": None,
+            "reasoning": "Fallback analysis due to error"
+        }
 
 
 def _handle_token_limit(content: str, model, max_tokens: int = 32000, budget_multiplier: float = 0.8) -> str:
@@ -169,17 +214,17 @@ def build_document_retrieval_tool(tool: dict, pred_args: dict, skill) -> Tool:
             str: Document content or answer to question
         """
         try:
-            # Parse document name/id from query if provided
-            doc_id = None
-            if "document" in query.lower():
-                # Extract document name/id using simple pattern matching
-                # Could be enhanced with better NLP/regex patterns
-                import re
-                doc_patterns = [
-                    r'document (?:id|ID|Id)?\s*["\']?([^"\']+)["\']?',
-                    r'document\s+["\']?([^"\']+)["\']?'
-                ]
-                for pattern in doc_patterns:
+            # Analyze query using LLM
+            analysis = _analyze_query(query, pred_args['llm'])
+            doc_id = analysis.get('extracted_id')
+
+            # Fallback to regex if LLM couldn't find an ID
+            if not doc_id:
+                for pattern in [
+                    r'document[s]* (?:id|ID|Id)[: ]*([\w-]+)',  # Match 'document id: ABC123'
+                    r'doc(?:ument)*[s]* [\"\']*([\w-]+)[\"\']*',     # Match 'document \"ABC123\"' or 'doc ABC123'
+                    r'[\"\']*([\w-]+)[\"\']*'                      # Match any quoted ID as fallback
+                ]:
                     match = re.search(pattern, query)
                     if match:
                         doc_id = match.group(1)
@@ -226,18 +271,18 @@ def build_document_retrieval_tool(tool: dict, pred_args: dict, skill) -> Tool:
                 conditions = []
                 if config.search_type == SearchType.WILDCARD:
                     # Use LIKE for wildcard search, case-insensitive
-                    conditions.append(f"LOWER(\"{config.title_column}\") LIKE '%{doc_id.lower()}%'")
+                    conditions.append(f"LOWER({config.title_column}) LIKE '%{doc_id.lower()}%'")
                     if config.id_column != config.title_column:
-                        conditions.append(f"LOWER(\"{config.id_column}\") LIKE '%{doc_id.lower()}%'")
+                        conditions.append(f"LOWER({config.id_column}) LIKE '%{doc_id.lower()}%'")
                 else:
                     # Use exact match
-                    conditions.append(f"\"{config.id_column}\" = '{doc_id}'")
+                    conditions.append(f"{config.id_column} = '{doc_id}'")
                     if config.id_column != config.title_column:
-                        conditions.append(f"\"{config.title_column}\" = '{doc_id}'")
+                        conditions.append(f"{config.title_column} = '{doc_id}'")
 
                 sql = f"""
-                SELECT \"{config['id_column']}\", \"{config['title_column']}\", \"{config['content_column']}\"
-                FROM {config['table_name']}
+                SELECT {config.id_column}, {config.title_column}, {config.content_column}
+                FROM {config.table_name}
                 WHERE {' OR '.join(conditions)}
                 LIMIT 1
                 """
@@ -261,7 +306,8 @@ def build_document_retrieval_tool(tool: dict, pred_args: dict, skill) -> Tool:
                     'title': title
                 },
                 'content': content,
-                'query_type': 'question' if "?" in query or any(q in query.lower() for q in ["what", "how", "why", "when", "where", "who"]) else 'summary'
+                'query_type': analysis['query_type'],
+                'reasoning': analysis.get('reasoning', '')
             }
 
             # Handle token limit

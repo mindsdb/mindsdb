@@ -38,12 +38,10 @@ class YoutubeHandler(APIHandler):
             name of a handler instance
         """
         super().__init__(name)
-
-        connection_data = kwargs.get("connection_data", {})
+        self.connection_data = kwargs.get("connection_data", {})
+        self.kwargs = kwargs
 
         self.parser = parse_sql
-        self.connection_data = connection_data
-        self.kwargs = kwargs
         self.connection = None
         self.is_connected = False
 

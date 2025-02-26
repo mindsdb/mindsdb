@@ -14,6 +14,12 @@ from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import Au
 
 from .google_calendar_tables import GoogleCalendarEventsTable
 
+DEFAULT_SCOPES = [
+    'https://www.googleapis.com/auth/calendar',
+    'https://www.googleapis.com/auth/calendar.events',
+    'https://www.googleapis.com/auth/calendar.readonly'
+]
+
 logger = log.getLogger(__name__)
 
 
@@ -33,8 +39,12 @@ class GoogleCalendarHandler(APIHandler):
             events (GoogleCalendarEventsTable): The `GoogleCalendarEventsTable` object for interacting with the events table.
         """
         super().__init__(name)
-
         self.connection_data = kwargs.get('connection_data', {})
+
+        self.service = None
+        self.is_connected = False
+
+        self.handler_storage = kwargs['handler_storage']
 
         self.credentials_url = self.connection_data.get('credentials_url', None)
         self.credentials_file = self.connection_data.get('credentials_file', None)
@@ -50,16 +60,7 @@ class GoogleCalendarHandler(APIHandler):
             elif secret_url:
                 self.credentials_url = secret_url
 
-        self.token = None
-        self.service = None
-        self.scopes = [
-            'https://www.googleapis.com/auth/calendar',
-            'https://www.googleapis.com/auth/calendar.events',
-            'https://www.googleapis.com/auth/calendar.readonly'
-        ]
-        self.is_connected = False
-
-        self.handler_storage = kwargs['handler_storage']
+        self.scopes = self.connection_data.get('scopes', DEFAULT_SCOPES)
 
         events = GoogleCalendarEventsTable(self)
         self.events = events

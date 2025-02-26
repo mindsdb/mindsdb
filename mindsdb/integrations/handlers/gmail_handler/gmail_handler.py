@@ -25,9 +25,11 @@ from base64 import urlsafe_b64encode, urlsafe_b64decode
 from mindsdb.integrations.utilities.handlers.auth_utilities import GoogleUserOAuth2Manager
 from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import AuthException
 
-DEFAULT_SCOPES = ['https://www.googleapis.com/auth/gmail.compose',
-                  'https://www.googleapis.com/auth/gmail.readonly',
-                  'https://www.googleapis.com/auth/gmail.modify']
+DEFAULT_SCOPES = [
+    'https://www.googleapis.com/auth/gmail.compose',
+    'https://www.googleapis.com/auth/gmail.readonly',
+    'https://www.googleapis.com/auth/gmail.modify'
+]
 
 logger = log.getLogger(__name__)
 
@@ -275,6 +277,14 @@ class GmailHandler(APIHandler):
         super().__init__(name)
         self.connection_args = kwargs.get('connection_data', {})
 
+        self.token_file = None
+        self.max_page_size = 500
+        self.max_batch_size = 100
+        self.service = None
+        self.is_connected = False
+
+        self.handler_storage = kwargs['handler_storage']
+
         self.credentials_url = self.connection_args.get('credentials_url', None)
         self.credentials_file = self.connection_args.get('credentials_file', None)
         if self.connection_args.get('credentials'):
@@ -290,13 +300,6 @@ class GmailHandler(APIHandler):
                 self.credentials_url = secret_url
 
         self.scopes = self.connection_args.get('scopes', DEFAULT_SCOPES)
-        self.token_file = None
-        self.max_page_size = 500
-        self.max_batch_size = 100
-        self.service = None
-        self.is_connected = False
-
-        self.handler_storage = kwargs['handler_storage']
 
         emails = EmailsTable(self)
         self.emails = emails

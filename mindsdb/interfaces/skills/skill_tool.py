@@ -325,11 +325,7 @@ class SkillToolController:
                 ]
             elif skill_type == SkillType.DOCUMENT_RETRIEVAL:
                 tools[skill_type] = [
-                    self._make_document_retrieval_tools(skill, llm, embedding_model)
-                    for skill in skills
-                ]
-                tools[skill_type] = [
-                    self._make_retrieval_tools(skill, llm, embedding_model)
+                    self._make_document_retrieval_tools(skill, llm)
                     for skill in skills
                 ]
         return tools

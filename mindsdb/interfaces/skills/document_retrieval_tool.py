@@ -208,7 +208,7 @@ def build_document_retrieval_tool(tool: dict, pred_args: dict, skill) -> Tool:
             }
 
             # Handle token limit
-            content = _handle_token_limit(response, pred_args['llm'])
+            content = _handle_token_limit(response['content'], pred_args['llm'])
 
             # Structure the response in Langchain's ReAct format
             thought = "I found the relevant document. Let me analyze its content to help answer the query."

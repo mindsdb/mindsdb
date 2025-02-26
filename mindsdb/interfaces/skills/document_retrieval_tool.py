@@ -1,3 +1,6 @@
+from enum import Enum
+from typing import List, Optional
+from pydantic import BaseModel, Field, ConfigDict
 from langchain_core.tools import Tool
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
@@ -8,16 +11,56 @@ from mindsdb.interfaces.skills.skill_tool import skill_tool
 
 logger = log.getLogger(__name__)
 
+
+class SearchType(str, Enum):
+    """Available search types for document retrieval"""
+    EXACT = 'exact'
+    WILDCARD = 'wildcard'
+    CUSTOM = 'custom'
+
+
+class DocumentConfig(BaseModel):
+    """Configuration for document retrieval tool"""
+    model_config = ConfigDict(frozen=True, extra='forbid')
+
+    table_name: str = Field(
+        default='documents',
+        description='Name of the table containing documents',
+        pattern=r'^[a-zA-Z_][a-zA-Z0-9_]*$'  # Valid SQL table name
+    )
+    id_column: str = Field(
+        default='id',
+        description='Column name for document ID',
+        pattern=r'^[a-zA-Z_][a-zA-Z0-9_]*$'  # Valid SQL column name
+    )
+    title_column: str = Field(
+        default='title',
+        description='Column name for document title',
+        pattern=r'^[a-zA-Z_][a-zA-Z0-9_]*$'  # Valid SQL column name
+    )
+    content_column: str = Field(
+        default='content',
+        description='Column name for document content',
+        pattern=r'^[a-zA-Z_][a-zA-Z0-9_]*$'  # Valid SQL column name
+    )
+    search_type: SearchType = Field(
+        default=SearchType.EXACT,
+        description='Type of search to perform'
+    )
+    custom_query: Optional[str] = Field(
+        default=None,
+        description='Optional custom SQL query with {search_term} placeholder',
+        pattern=r'.*\{search_term\}.*' if '{search_term}' in str else None  # Must contain placeholder if provided
+    )
+    required_columns: List[str] = Field(
+        default_factory=list,
+        description='Columns that must be present in custom query results',
+        min_items=0
+    )
+
+
 # Default configuration
-DEFAULT_CONFIG = {
-    'table_name': 'documents',
-    'id_column': 'id',
-    'title_column': 'title',
-    'content_column': 'content',
-    'search_type': 'exact',  # 'exact', 'wildcard', or 'custom'
-    'custom_query': None,    # Optional custom SQL query with {search_term} placeholder
-    'required_columns': []   # Columns that must be present in custom query results
-}
+DEFAULT_CONFIG = DocumentConfig()
 
 
 def _handle_token_limit(content: str, model, max_tokens: int = 32000, budget_multiplier: float = 0.8) -> str:
@@ -33,7 +76,7 @@ def _handle_token_limit(content: str, model, max_tokens: int = 32000, budget_mul
         str: Original or summarized content
     """
     # Get token count
-    encoding = tiktoken.get_encoding("gpt2")  # Use GPT-2 tokenizer as a reasonable default
+    encoding = tiktoken.get_encoding("gpt4")
     n_tokens = len(encoding.encode(content))
 
     # Return original content if within limit
@@ -80,6 +123,16 @@ def _handle_token_limit(content: str, model, max_tokens: int = 32000, budget_mul
 
 
 def build_document_retrieval_tool(tool: dict, pred_args: dict, skill) -> Tool:
+    """Build a document retrieval tool that can search documents by name/id and allow chat interactions.
+
+    Args:
+        tool: Tool configuration dictionary
+        pred_args: Predictor arguments dictionary
+        skill: Skills database object
+
+    Returns:
+        Tool: Configured document retrieval tool
+    """
     """
     Builds a document retrieval tool that can search documents by name/id and allow chat interactions.
 
@@ -91,12 +144,16 @@ def build_document_retrieval_tool(tool: dict, pred_args: dict, skill) -> Tool:
     Returns:
         Tool: Configured document retrieval tool
     """
-    tools_config = tool.get('config', {})
-    tools_config.update(pred_args)
+    # Create config from tool config and pred_args
+    config_dict = tool.get('config', {})
+    config_dict.update(pred_args)
 
-    # Merge with default config
-    config = DEFAULT_CONFIG.copy()
-    config.update(tools_config)
+    # Create Pydantic model from config
+    try:
+        config = DocumentConfig(**config_dict)
+    except Exception as e:
+        logger.error(f"Error in document retrieval config: {str(e)}")
+        config = DEFAULT_CONFIG.copy(deep=True)
 
     # Get command executor for SQL queries
     executor = skill_tool.get_command_executor()
@@ -132,11 +189,11 @@ def build_document_retrieval_tool(tool: dict, pred_args: dict, skill) -> Tool:
                 return "Please specify a document name or ID to search for."
 
             # Build and execute SQL query based on configuration
-            if config['search_type'] == 'custom' and config['custom_query']:
+            if config.search_type == SearchType.CUSTOM and config.custom_query:
                 # Use custom SQL query if provided
                 try:
                     # Format the query with the search term
-                    sql = config['custom_query'].format(search_term=doc_id)
+                    sql = config.custom_query.format(search_term=doc_id)
 
                     # Execute the query
                     result = executor.execute_command(sql)
@@ -146,16 +203,16 @@ def build_document_retrieval_tool(tool: dict, pred_args: dict, skill) -> Tool:
                     # Validate required columns are present
                     doc = result[0]
                     missing_cols = []
-                    for col in config['required_columns']:
+                    for col in config.required_columns:
                         if col not in doc:
                             missing_cols.append(col)
                     if missing_cols:
                         raise ValueError(f"Custom query missing required columns: {', '.join(missing_cols)}")
 
                     # Use the custom query results
-                    content = doc[config['content_column']]
-                    doc_id = doc.get(config['id_column'], 'N/A')
-                    title = doc.get(config['title_column'], 'N/A')
+                    content = doc[config.content_column]
+                    doc_id = doc.get(config.id_column, 'N/A')
+                    title = doc.get(config.title_column, 'N/A')
 
                     # Handle token limit
                     content = _handle_token_limit(content, pred_args['llm'])
@@ -167,16 +224,16 @@ def build_document_retrieval_tool(tool: dict, pred_args: dict, skill) -> Tool:
             else:
                 # Use default search behavior
                 conditions = []
-                if config['search_type'] == 'wildcard':
+                if config.search_type == SearchType.WILDCARD:
                     # Use LIKE for wildcard search, case-insensitive
-                    conditions.append(f"LOWER(\"{config['title_column']}\") LIKE '%{doc_id.lower()}%'")
-                    if config['id_column'] != config['title_column']:
-                        conditions.append(f"LOWER(\"{config['id_column']}\") LIKE '%{doc_id.lower()}%'")
+                    conditions.append(f"LOWER(\"{config.title_column}\") LIKE '%{doc_id.lower()}%'")
+                    if config.id_column != config.title_column:
+                        conditions.append(f"LOWER(\"{config.id_column}\") LIKE '%{doc_id.lower()}%'")
                 else:
                     # Use exact match
-                    conditions.append(f"\"{config['id_column']}\" = '{doc_id}'")
-                    if config['id_column'] != config['title_column']:
-                        conditions.append(f"\"{config['title_column']}\" = '{doc_id}'")
+                    conditions.append(f"\"{config.id_column}\" = '{doc_id}'")
+                    if config.id_column != config.title_column:
+                        conditions.append(f"\"{config.title_column}\" = '{doc_id}'")
 
                 sql = f"""
                 SELECT \"{config['id_column']}\", \"{config['title_column']}\", \"{config['content_column']}\"
@@ -190,9 +247,9 @@ def build_document_retrieval_tool(tool: dict, pred_args: dict, skill) -> Tool:
                     return f"Document matching '{doc_id}' not found."
 
                 doc = result[0]
-                content = doc[config['content_column']]
-                doc_id = doc[config['id_column']]
-                title = doc[config['title_column']]
+                content = doc[config.content_column]
+                doc_id = doc[config.id_column]
+                title = doc[config.title_column]
 
                 # Handle token limit
                 content = _handle_token_limit(content, pred_args['llm'])

@@ -1,8 +1,4 @@
-import os
-
 import pandas as pd
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
@@ -13,13 +9,12 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.utilities.config import Config
 from mindsdb.utilities import log
-logger = log.getLogger(__name__)
-
-from mindsdb.integrations.handlers.gmail_handler.utils import AuthException, google_auth_flow, save_creds_to_file
-
 from mindsdb.integrations.utilities.handlers.auth_utilities import GoogleUserOAuth2Manager
+from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import AuthException
 
 from .google_calendar_tables import GoogleCalendarEventsTable
+
+logger = log.getLogger(__name__)
 
 
 class GoogleCalendarHandler(APIHandler):

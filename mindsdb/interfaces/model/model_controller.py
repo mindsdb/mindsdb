@@ -19,6 +19,7 @@ from mindsdb.interfaces.model.functions import (
 )
 from mindsdb.interfaces.storage.json import get_json_storage
 from mindsdb.interfaces.storage.model_fs import ModelStorage
+from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.functions import resolve_model_identifier
 import mindsdb.utilities.profiler as profiler
@@ -28,6 +29,8 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 IS_PY36 = sys.version_info[1] <= 6
+
+default_project = config.get('default_project')
 
 
 def delete_model_storage(model_id, ctx_dump):
@@ -149,7 +152,7 @@ class ModelController():
             models.append(model_data)
         return models
 
-    def delete_model(self, model_name: str, project_name: str = 'mindsdb', version=None):
+    def delete_model(self, model_name: str, project_name: str = default_project, version=None):
         from mindsdb.interfaces.database.database import DatabaseController
 
         project_record = get_project_record(func.lower(project_name))
@@ -344,7 +347,7 @@ class ModelController():
     def prepare_finetune_statement(self, statement, database_controller):
         project_name, model_name, model_version = resolve_model_identifier(statement.name)
         if project_name is None:
-            project_name = 'mindsdb'
+            project_name = default_project
         data_integration_ref, fetch_data_query = self._get_data_integration_ref(statement, database_controller)
 
         set_active = True

@@ -30,6 +30,7 @@ from email.message import EmailMessage
 from base64 import urlsafe_b64encode, urlsafe_b64decode
 
 from .utils import AuthException, google_auth_flow, save_creds_to_file
+from mindsdb.integrations.utilities.handlers.auth_utilities import GoogleUserOAuth2Manager
 
 DEFAULT_SCOPES = ['https://www.googleapis.com/auth/gmail.compose',
                   'https://www.googleapis.com/auth/gmail.readonly',
@@ -366,7 +367,10 @@ class GmailHandler(APIHandler):
         if self.is_connected and self.service is not None:
             return self.service
 
-        self.service = self.create_connection()
+        google_oauth2_manager = GoogleUserOAuth2Manager(self.handler_storage, self.scopes, self.credentials_file, self.credentials_url, self.connection_args.get('code'))
+        creds = google_oauth2_manager.get_oauth2_credentials()
+
+        self.service = build('gmail', 'v1', credentials=creds)
 
         self.is_connected = True
         return self.service

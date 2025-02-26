@@ -16,8 +16,10 @@ from mindsdb.api.mongo.responders.find import find_to_ast
 from mindsdb.api.mongo.utilities.mongodb_parser import MongodbParser
 from mindsdb.integrations.libs.response import HandlerStatusResponse
 from mindsdb.utilities import log
+from mindsdb.utilities.config import config
 
 logger = log.getLogger(__name__)
+default_project = config.get("default_project")
 
 
 class Responce(Responder):
@@ -186,7 +188,7 @@ class Responce(Responder):
                             query["sort"] = step["args"][0]
                     # TODO implement group modifiers
                     ast_query = find_to_ast(
-                        query, request_env.get("database", "mindsdb")
+                        query, request_env.get("database", default_project)
                     )
 
                     # to string
@@ -197,7 +199,7 @@ class Responce(Responder):
                         "pipeline": mql.pipeline[0]["args"][0],
                     }
                     ast_query = aggregate_to_ast(
-                        query, request_env.get("database", "mindsdb")
+                        query, request_env.get("database", default_project)
                     )
                     query_str = ast_query.to_string()
             except Exception:

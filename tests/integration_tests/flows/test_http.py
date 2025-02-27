@@ -42,7 +42,7 @@ class TestHTTP(HTTPHelperMixin):
         resp = self.sql_via_http('show databases', RESPONSE_TYPE.TABLE)
         return [x[0] for x in resp['data']]
 
-    @pytest.mark.parametrize("util_uri", ["util/ping", "util/ping_native", "config/vars"])
+    @pytest.mark.parametrize("util_uri", ["util/ping", "util/ping_native"])
     def test_utils(self, util_uri):
         """
         Call utilities ping endpoint

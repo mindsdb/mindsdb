@@ -473,11 +473,11 @@ class ValueSchema(BaseModel):
         description="One of the following. The value as it exists in the table column. A dict of {table_value: descriptive value, ...}, where table_value is the value in the table. A list of sample values taken from the column."
     )
     comparator: Optional[Union[str, List[str]]] = Field(
-        description="The posgtres sql operators used to compare two values.",
+        description="The posgtres sql operators used to compare two values. For example: `>`, `<`, `=`, or `%`.",
         default="=",
     )
     type: str = Field(
-        description="A valid postgres value type for this value in the column."
+        description="A valid postgres type for this value. One of: int, string, float, or bool. When numbers appear they should be of type int or float."
     )
     description: str = Field(description="Description of what the value represents.")
     usage: str = Field(description="How and when to use this value for search.")

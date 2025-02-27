@@ -214,12 +214,12 @@ class SQLRetriever(BaseRetriever):
         )
 
         value_str = ""
+        header_str = ""
         if type(value_schema.value) in [str, int, float, bool]:
             header_str = f"This schema describes a single value in the {column_schema.column} column."
 
             value_str = f"""
-## **Value**
-The database value in the column is {value_schema.value}
+ -**Value**: {value_schema.value}
 """
 
         elif type(value_schema.value) is dict:

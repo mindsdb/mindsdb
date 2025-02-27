@@ -2,6 +2,7 @@ import traceback
 
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
 from mindsdb.integrations.utilities.rag.config_loader import load_rag_config
+from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
 
 from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS
@@ -17,8 +18,7 @@ from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embeddi
 logger = log.getLogger(__name__)
 
 
-def _build_rag_pipeline_tool(tool: dict, pred_args: dict, skill: db.Skills):
-    # build RAG config
+def _load_rag_config(tool: dict, pred_args: dict, skill: db.Skills) -> RAGPipelineModel:
     tools_config = tool['config']
     tools_config.update(pred_args)
 
@@ -62,43 +62,41 @@ def _build_rag_pipeline_tool(tool: dict, pred_args: dict, skill: db.Skills):
         logger.debug("Using default embedding model as no knowledge base provided")
 
     # Load and validate config
-    try:
-        rag_config = load_rag_config(tools_config, kb_params, embeddings_model)
-        # build retriever
-        rag_pipeline = RAG(rag_config)
-        logger.debug(f"RAG pipeline created with config: {rag_config}")
+    return load_rag_config(tools_config, kb_params, embeddings_model)
 
-        def rag_wrapper(query: str) -> str:
-            try:
-                result = rag_pipeline(query)
-                logger.debug(f"RAG pipeline result: {result}")
-                return result['answer']
-            except Exception as e:
-                logger.error(f"Error in RAG pipeline: {str(e)}")
-                logger.error(traceback.format_exc())
-                return f"Error in retrieval: {str(e)}"
 
-        # Create RAG tool
-        return Tool(
-            func=rag_wrapper,
-            name=tool['name'],
-            description=tool['description'],
-            response_format='content',
-            # Return directly by default since we already use an LLM against retrieved context to generate a response.
-            return_direct=tools_config.get('return_direct', True)
-        )
+def _build_rag_pipeline_tool(tool: dict, pred_args: dict, skill: db.Skills):
+    rag_config = _load_rag_config(tool, pred_args, skill)
+    # build retriever
+    rag_pipeline = RAG(rag_config)
+    logger.debug(f"RAG pipeline created with config: {rag_config}")
 
-    except Exception as e:
-        logger.error(f"Error building RAG pipeline: {str(e)}")
-        raise ValueError(f"Failed to build RAG pipeline: {str(e)}")
+    def rag_wrapper(query: str) -> str:
+        try:
+            result = rag_pipeline(query)
+            logger.debug(f"RAG pipeline result: {result}")
+            return result['answer']
+        except Exception as e:
+            logger.error(f"Error in RAG pipeline: {str(e)}")
+            logger.error(traceback.format_exc())
+            return f"Error in retrieval: {str(e)}"
+
+    # Create RAG tool
+    tools_config = tool['config']
+    tools_config.update(pred_args)
+    return Tool(
+        func=rag_wrapper,
+        name=tool['name'],
+        description=tool['description'],
+        response_format='content',
+        # Return directly by default since we already use an LLM against retrieved context to generate a response.
+        return_direct=tools_config.get('return_direct', True)
+    )
 
 
 def _build_name_lookup_tool(tool: dict, pred_args: dict, skill: db.Skills):
-    tools_config = tool['config']
-    tools_config.update(pred_args)
-
     if 'source' not in tool:
-        raise ValueError(f"Knowledge base for tool not found")
+        raise ValueError("Knowledge base for tool not found")
     kb_name = tool['source']
     executor = skill_tool.get_command_executor()
     kb = _get_knowledge_base(kb_name, skill.project_id, executor)
@@ -107,10 +105,19 @@ def _build_name_lookup_tool(tool: dict, pred_args: dict, skill: db.Skills):
     kb_table = executor.session.kb_controller.get_table(kb.name, kb.project_id)
     vector_db_handler = kb_table.get_vector_db()
 
+    rag_config = _load_rag_config(tool, pred_args, skill)
+    metadata_config = rag_config.metadata_config
+
     def _get_document_by_name(name: str):
-        documents_response = vector_db_handler.native_query(
-            f'SELECT * FROM scientech_document WHERE "Title" ILIKE \'%{name}%\' LIMIT 1;'
-        )
+        if metadata_config.name_column_index is not None:
+            tsquery_str = ' & '.join(name.split(' '))
+            documents_response = vector_db_handler.native_query(
+                f'SELECT * FROM {metadata_config.table} WHERE {metadata_config.name_column_index} @@ to_tsquery(\'{tsquery_str}\') LIMIT 1;'
+            )
+        else:
+            documents_response = vector_db_handler.native_query(
+                f'SELECT * FROM {metadata_config.table} WHERE "{metadata_config.name_column}" ILIKE \'%{name}%\' LIMIT 1;'
+            )
         if documents_response.resp_type == RESPONSE_TYPE.ERROR:
             raise RuntimeError(f'There was an error looking up documents: {documents_response.error_message}')
         if documents_response.data_frame.empty:
@@ -118,45 +125,42 @@ def _build_name_lookup_tool(tool: dict, pred_args: dict, skill: db.Skills):
         document_row = documents_response.data_frame.head(1)
         # Restore document from chunks, keeping in mind max context.
         id_filter_condition = FilterCondition(
-            f"metadata->>'original_row_id'",
+            f"{metadata_config.embeddings_metadata_column}->>'{metadata_config.doc_id_key}'",
             FilterOperator.EQUAL,
-            str(document_row.get('Id').item())
+            str(document_row.get(metadata_config.id_column).item())
         )
         document_chunks_df = vector_db_handler.select(
-            'embeddings',
+            {metadata_config.embeddings_table},
             conditions=[id_filter_condition]
         )
         if document_chunks_df.empty:
             return None
         sort_col = 'chunk_id' if 'chunk_id' in document_chunks_df.columns else 'id'
         document_chunks_df.sort_values(by=sort_col)
-        chunk_size = len(document_chunks_df.head(1).get('content', ''))
-        # Leave a buffer for additional context.
-        max_context = 32768 - (2 * chunk_size)
         content = ''
         for _, chunk in document_chunks_df.iterrows():
-            if len(content) > max_context:
+            if len(content) > metadata_config.max_document_context:
                 break
-            content += chunk.get('content', '')
-        
+            content += chunk.get(metadata_config.content_column, '')
+
         return Document(
             page_content=content,
             metadata=document_row.to_dict(orient='records')[0]
         )
 
-
     def _lookup_document_by_name(name: str):
         found_document = _get_document_by_name(name)
         if found_document is None:
             return f'I could not find any document with name {name}. Please make sure the document name matches exactly.'
-        return f"I found document {found_document.metadata.get('Id')} with name {found_document.metadata.get('Title')}. Here is the full document to use as context:\n\n{found_document.page_content}"
+        return f"I found document {found_document.metadata.get(metadata_config.id_column)} with name {found_document.metadata.get(metadata_config.name_column)}. Here is the full document to use as context:\n\n{found_document.page_content}"
 
     return Tool(
         func=_lookup_document_by_name,
         name=tool.get('name', '') + '_name_lookup',
-        description='You must use this tool only when the user is asking about a specific document by name or title. The input should be the exact name of the document the user is looking for.',
+        description='You must use this tool ONLY when the user is asking about a specific document by name or title. The input should be the exact name of the document the user is looking for.',
         return_direct=False
     )
+
 
 def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
     """
@@ -173,10 +177,17 @@ def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
     Raises:
         ValueError: If knowledge base is not found or configuration is invalid
     """
-    return [
-        _build_rag_pipeline_tool(tool, pred_args, skill),
-        _build_name_lookup_tool(tool, pred_args, skill)
-    ]
+    # Catch configuration errors before creating tools.
+    try:
+        rag_config = _load_rag_config(tool, pred_args, skill)
+    except Exception as e:
+        logger.error(f"Error building RAG pipeline: {str(e)}")
+        raise ValueError(f"Failed to build RAG pipeline: {str(e)}")
+    tools = [_build_rag_pipeline_tool(tool, pred_args, skill)]
+    if rag_config.metadata_config is None:
+        return tools
+    tools.append(_build_name_lookup_tool(tool, pred_args, skill))
+    return tools
 
 
 def _get_knowledge_base(knowledge_base_name: str, project_id, executor) -> KnowledgeBase:

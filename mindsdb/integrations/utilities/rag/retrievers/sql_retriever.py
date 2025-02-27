@@ -686,7 +686,7 @@ Below is a description of the contents in this column in list format:
                 value = f"'{value}'"
             base_query += f'"{filter.attribute}" {filter.comparator} {value}'
             if i < len(metadata_filters) - 1:
-                base_query += " AND "
+                base_query += " OR "
 
         base_query += f" ORDER BY e.embeddings {self.distance_function.value[0]} '{{embeddings}}' LIMIT {self.search_kwargs.k};"
         return base_query

@@ -73,7 +73,7 @@ class APIHandlerGenerator:
                 self.connection_data = connection_data
                 self.kwargs = kwargs
 
-                self.connection = None
+                self.connection = {}
                 self.is_connected = False
 
                 for resource, resource_class in resources.items():
@@ -86,6 +86,7 @@ class APIHandlerGenerator:
                 Returns:
                     dict: A dictionary containing the information required to connect to the API.
                           Most notably, the authentication mechansim and the associated credentials.
+                          Additionally, if pagination is supported, the pagination information will be included.
                           API resources will need to parse this information to make requests to the API.
                 """
                 if self.is_connected is True:
@@ -93,43 +94,9 @@ class APIHandlerGenerator:
                 
                 # If the API requires authentication, set up the authentication mechanism.
                 if security_schemes:
-                    # API key authentication will be given preference over other mechanisms.
-                    # NOTE: If the API supports multiple authentication mechanisms, should they be supported? Which one should be given preference?
-                    if 'ApiKeyAuth' in security_schemes:
-                        # For API key authentication, the API key is required.
-                        if 'api_key' not in self.connection_data:
-                            raise ValueError(
-                                "The API key is required for API key authentication."
-                            )
-                        self.connection = {
-                            "auth": {
-                                "type": "api_key",
-                                "credentials": self.connection_data["api_key"],
-                                "in": security_schemes['ApiKeyAuth']['in'],
-                                "name": security_schemes['ApiKeyAuth']['name']
-                            }
-                        }
+                    self.connection['auth'] = self._process_auth(security_schemes)
 
-                    elif 'basic' in security_schemes:
-                        # For basic authentication, the username and password are required.
-                        if not all(
-                            key in self.connection_data
-                            for key in ["username", "password"]
-                        ):
-                            raise ValueError(
-                                "The username and password are required for basic authentication."
-                            )
-                        self.connection = {
-                            "auth": {
-                                "type": "basic",
-                                "credentials": HTTPBasicAuth(
-                                    self.connection_data["username"],
-                                    self.connection_data["password"],
-                                ),
-                            }
-                        }
-
-                    # TODO: Add support for other authentication mechanisms.
+                # TODO: Add support for pagination if the API supports it.
                         
             def check_connection(self) -> StatusResponse:
                 """
@@ -140,6 +107,62 @@ class APIHandlerGenerator:
                 """
                 # TODO: Implement the connection check logic by making a simple request to the API.
                 #       Can the endpoint be determined by looking for common 'test' or 'health' endpoints such as '/me' or '/health'?
+                pass
+
+            def _process_auth(self, security_schemes: dict) -> dict:
+                """
+                Processes the authentication mechanism defined in the OpenAPI specification.
+
+                Args:
+                    security_schemes (Dict): A dictionary containing the security schemes defined in the OpenAPI specification.
+
+                Returns:
+                    Dict: A dictionary containing the authentication information required to connect to the API.
+                """
+                # API key authentication will be given preference over other mechanisms.
+                # NOTE: If the API supports multiple authentication mechanisms, should they be supported? Which one should be given preference?
+                if 'ApiKeyAuth' in security_schemes:
+                    # For API key authentication, the API key is required.
+                    if 'api_key' not in self.connection_data:
+                        raise ValueError(
+                            "The API key is required for API key authentication."
+                        )
+                    return {
+                        "type": "api_key",
+                        "credentials": self.connection_data["api_key"],
+                        "in": security_schemes['ApiKeyAuth']['in'],
+                        "name": security_schemes['ApiKeyAuth']['name']
+                    }
+
+                elif 'basic' in security_schemes:
+                    # For basic authentication, the username and password are required.
+                    if not all(
+                        key in self.connection_data
+                        for key in ["username", "password"]
+                    ):
+                        raise ValueError(
+                            "The username and password are required for basic authentication."
+                        )
+                    return {
+                        "type": "basic",
+                        "credentials": HTTPBasicAuth(
+                            self.connection_data["username"],
+                            self.connection_data["password"],
+                        ),
+                    }
+
+                # TODO: Add support for other authentication mechanisms.
+
+            def _process_pagination(self, pagination: dict) -> dict:
+                """
+                Processes the pagination information defined in the OpenAPI specification.
+
+                Args:
+                    pagination (Dict): A dictionary containing the pagination information defined in the OpenAPI specification.
+
+                Returns:
+                    Dict: A dictionary containing the pagination information required to paginate through the API responses.
+                """
                 pass
 
         return AnyHandler

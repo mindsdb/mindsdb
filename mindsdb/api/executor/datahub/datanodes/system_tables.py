@@ -8,13 +8,17 @@ from mindsdb.api.executor.datahub.classes.tables_row import (
     TablesRow,
 )
 from mindsdb.utilities import log
+from mindsdb.utilities.config import config
 
 logger = log.getLogger(__name__)
 
 
 def _get_scope(query):
     databases, tables = None, None
-    conditions = extract_comparison_conditions(query.where)
+    try:
+        conditions = extract_comparison_conditions(query.where)
+    except NotImplementedError:
+        return databases, tables
     for op, arg1, arg2 in conditions:
         if op == '=':
             scope = [arg2]
@@ -289,7 +293,11 @@ class ColumnsTable(Table):
         databases, tables_names = _get_scope(query)
 
         if databases is None:
-            databases = ['information_schema', 'mindsdb', 'files']
+            databases = [
+                'information_schema',
+                config.get('default_project'),
+                'files'
+            ]
 
         for db_name in databases:
             tables = {}

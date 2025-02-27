@@ -13,10 +13,14 @@ from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.skills.skills_controller import SkillsController
+from mindsdb.utilities.config import config
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
 from .constants import ASSISTANT_COLUMN, SUPPORTED_PROVIDERS, PROVIDER_TO_MODELS
 from .langchain_agent import get_llm_provider
+
+
+default_project = config.get('default_project')
 
 
 class AgentsController:
@@ -70,7 +74,7 @@ class AgentsController:
 
         return model, provider
 
-    def get_agent(self, agent_name: str, project_name: str = 'mindsdb') -> Optional[db.Agents]:
+    def get_agent(self, agent_name: str, project_name: str = default_project) -> Optional[db.Agents]:
         '''
         Gets an agent by name.
 
@@ -91,7 +95,7 @@ class AgentsController:
         ).first()
         return agent
 
-    def get_agent_by_id(self, id: int, project_name: str = 'mindsdb') -> db.Agents:
+    def get_agent_by_id(self, id: int, project_name: str = default_project) -> db.Agents:
         '''
         Gets an agent by id.
 
@@ -162,7 +166,7 @@ class AgentsController:
             ValueError: Agent with given name already exists, or skill/model with given name does not exist.
         '''
         if project_name is None:
-            project_name = 'mindsdb'
+            project_name = default_project
         project = self.project_controller.get(name=project_name)
 
         agent = self.get_agent(name, project_name)
@@ -208,7 +212,7 @@ class AgentsController:
     def update_agent(
             self,
             agent_name: str,
-            project_name: str = 'mindsdb',
+            project_name: str = default_project,
             name: str = None,
             model_name: str = None,
             skills_to_add: List[Union[str, dict]] = None,
@@ -256,9 +260,9 @@ class AgentsController:
         if (
             is_demo and (
                 (name is not None and name != agent_name)
-                or (model_name or provider)
-                or (len(skills_to_add) > 0 or len(skills_to_remove) > 0 or len(skills_to_rewrite) > 0)
-                or (isinstance(params, dict) and len(params) > 1 and 'prompt_template' not in params)
+                or (model_name is not None and existing_agent.model_name != model_name)
+                or (provider is not None and existing_agent.provider != provider)
+                or (isinstance(params, dict) and len(params) > 0 and 'prompt_template' not in params)
             )
         ):
             raise ValueError("It is forbidden to change properties of the demo object")
@@ -347,7 +351,7 @@ class AgentsController:
 
         return existing_agent
 
-    def delete_agent(self, agent_name: str, project_name: str = 'mindsdb'):
+    def delete_agent(self, agent_name: str, project_name: str = default_project):
         '''
         Deletes an agent by name.
 
@@ -371,7 +375,7 @@ class AgentsController:
             self,
             agent: db.Agents,
             messages: List[Dict[str, str]],
-            project_name: str = 'mindsdb',
+            project_name: str = default_project,
             tools: List[BaseTool] = None,
             stream: bool = False) -> Union[Iterator[object], pd.DataFrame]:
         """
@@ -412,7 +416,7 @@ class AgentsController:
             self,
             agent: db.Agents,
             messages: List[Dict[str, str]],
-            project_name: str = 'mindsdb',
+            project_name: str = default_project,
             tools: List[BaseTool] = None) -> Iterator[object]:
         '''
         Queries an agent to get a stream of completion chunks.

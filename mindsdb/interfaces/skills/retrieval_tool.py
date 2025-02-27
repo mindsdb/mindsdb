@@ -130,7 +130,7 @@ def _build_name_lookup_tool(tool: dict, pred_args: dict, skill: db.Skills):
             str(document_row.get(metadata_config.id_column).item())
         )
         document_chunks_df = vector_db_handler.select(
-            {metadata_config.embeddings_table},
+            metadata_config.embeddings_table,
             conditions=[id_filter_condition]
         )
         if document_chunks_df.empty:

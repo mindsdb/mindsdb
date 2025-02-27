@@ -158,14 +158,12 @@ def search_and_replace_refs(schema, defs, ref_skip={}, n=0):
     for key, value in schema.items():
         if key in ref_skip:
             continue
-        # print('\t'*n, key)
         if type(value) is dict:
             if "$ref" in value:
                 definition_key = value["$ref"].split("/")[-1]
                 if definition_key in ref_skip:
                     schema[key] = {"type": "null"}
                 else:
-                    # print('\t'*(n + 1), definition_key)
                     schema[key] = {definition_key: defs[definition_key]["properties"]}
             else:
                 search_and_replace_refs(value, defs, ref_skip, n + 1)

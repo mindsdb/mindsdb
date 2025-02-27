@@ -540,11 +540,6 @@ class MetadataConfig(BaseModel):
     )
 
 
-class MetadataSchema(BaseModel):
-    table: str = Field(
-        description="Name of table in the database"
-
-
 class ColumnSchema(BaseModel):
     column: str = Field(description="Name of the column in the database")
     type: str = Field(description="Type of the column (e.g. int, string, datetime)")

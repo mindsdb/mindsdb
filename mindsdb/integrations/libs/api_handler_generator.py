@@ -1,13 +1,46 @@
 import json
 import yaml
-from typing import Optional, Type
+from typing import List, Optional, Type
 
+import pandas as pd
 from requests.auth import HTTPBasicAuth
 
+from mindsdb.integrations.utilities.sql_utils import (
+    FilterCondition, SortColumn
+)
 from mindsdb.integrations.libs.api_handler import APIHandler, APIResource
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
+
+
+class APIResourceGenerator:
+    """
+    A class to generate API resources based on the OpenAPI specification.
+    """
+    def __init__(self, openapi_spec_path: str):
+        self.openapi_spec_parser = OpenAPISpecParser(openapi_spec_path)
+
+    def generate_api_resources(self) -> Type[APIResource]:
+        """
+        Generates an API resource based on the OpenAPI specification.
+
+        Returns:
+            Type[APIResource]: The generated API resource class.
+        """
+        
+        class AnyResource(APIResource):
+            def list(
+                self,
+                conditions: Optional[List[FilterCondition]] = None,
+                limit: Optional[int] = None,
+                sort: Optional[List[SortColumn]] = None,
+                targets: Optional[List[str]] = None,
+                **kwargs,   
+            ) -> pd.DataFrame:
+                pass
+
+        return AnyResource
 
 
 class APIHandlerGenerator:
@@ -17,7 +50,7 @@ class APIHandlerGenerator:
     def __init__(self, openapi_spec_path: str):
         self.openapi_spec_parser = OpenAPISpecParser(openapi_spec_path)
 
-    def generate_api_handler(self, resources: dict[str, Type[APIResource]]):
+    def generate_api_handler(self, resources: dict[str, Type[APIResource]]) -> Type[APIHandler]:
         """
         Generates an API handler class based on the OpenAPI specification.
         Args:

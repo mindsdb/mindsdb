@@ -285,7 +285,6 @@ if __name__ == '__main__':
         except Exception:
             pass
 
-    is_cloud = config.is_cloud
 
     logger.debug("Applying database migrations")
     try:
@@ -294,18 +293,20 @@ if __name__ == '__main__':
     except Exception as e:
         logger.error(f"Error! Something went wrong during DB migrations: {e}")
 
-    logger.debug(f"Checking if default project {config.get('default_project')} exists")
-    project_controller = ProjectController()
 
-    current_default_project = project_controller.get(is_default=True)
-    if current_default_project.record.name != config.get('default_project'):
-        try:
-            new_default_project = project_controller.get(name=config.get('default_project'))
-            log.critical(f"A project with the name '{config.get('default_project')}' already exists")
-            sys.exit(1)
-        except EntityNotExistsError:
-            pass
-        project_controller.update(current_default_project.record.id, new_name=config.get('default_project'))
+    if not config.is_cloud:
+        logger.debug(f"Checking if default project {config.get('default_project')} exists")
+        project_controller = ProjectController()
+
+        current_default_project = project_controller.get(is_default=True)
+        if current_default_project.record.name != config.get('default_project'):
+            try:
+                new_default_project = project_controller.get(name=config.get('default_project'))
+                log.critical(f"A project with the name '{config.get('default_project')}' already exists")
+                sys.exit(1)
+            except EntityNotExistsError:
+                pass
+            project_controller.update(current_default_project.record.id, new_name=config.get('default_project'))
 
     apis = os.getenv('MINDSDB_APIS') or config.cmd_args.api
 
@@ -345,7 +346,7 @@ if __name__ == '__main__':
     logger.debug(f"Env config: {config.env_config}")
 
     unexisting_pids = clean_unlinked_process_marks()
-    if not is_cloud:
+    if not config.is_cloud:
         if len(unexisting_pids) > 0:
             set_error_model_status_by_pids(unexisting_pids)
         set_error_model_status_for_unfinished()

@@ -3,6 +3,7 @@ from collections import OrderedDict
 
 from mindsdb.interfaces.database.projects import ProjectController
 import mindsdb.utilities.profiler as profiler
+from mindsdb.utilities.config import config
 from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.interfaces.database.log import LogDBController
 
@@ -58,7 +59,7 @@ class DatabaseController:
                 'id': x.id,
                 'engine': None,
                 'visible': True,
-                'deletable': x.name.lower() != 'mindsdb'
+                'deletable': x.name.lower() != config.get('default_project')
             })
         for key, value in integrations.items():
             db_type = value.get('type', 'data')

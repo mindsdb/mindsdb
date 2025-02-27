@@ -25,6 +25,10 @@ from mindsdb.api.executor.planner.utils import (
 )
 from mindsdb.api.executor.planner.plan_join import PlanJoin
 from mindsdb.api.executor.planner.query_prepare import PreparedStatementPlanner
+from mindsdb.utilities.config import config
+
+
+default_project = config.get('default_project')
 
 
 class QueryPlanner:
@@ -54,12 +58,12 @@ class QueryPlanner:
                 self.integrations[integration_name] = integration
 
         # allow to select from mindsdb namespace
-        _projects.add('mindsdb')
+        _projects.add(default_project)
 
         self.default_namespace = default_namespace
 
         # legacy parameter
-        self.predictor_namespace = predictor_namespace.lower() if predictor_namespace else 'mindsdb'
+        self.predictor_namespace = predictor_namespace.lower() if predictor_namespace else default_project
 
         # map for lower names of predictors
 

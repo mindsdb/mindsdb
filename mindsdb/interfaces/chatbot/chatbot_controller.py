@@ -9,7 +9,10 @@ from mindsdb.interfaces.model.functions import get_project_records
 from mindsdb.utilities.context import context as ctx
 
 from mindsdb.api.executor.controllers.session_controller import SessionController
-from mindsdb.utilities.config import Config
+from mindsdb.utilities.config import config
+
+
+default_project = config.get('default_project')
 
 
 class ChatBotController:
@@ -25,7 +28,7 @@ class ChatBotController:
         self.project_controller = project_controller
         self.agents_controller = agents_controller
 
-    def get_chatbot(self, chatbot_name: str, project_name: str = 'mindsdb') -> dict:
+    def get_chatbot(self, chatbot_name: str, project_name: str = default_project) -> dict:
         '''
         Gets a chatbot by name.
 
@@ -118,7 +121,7 @@ class ChatBotController:
 
         return bot_obj
 
-    def get_chatbots(self, project_name: str = 'mindsdb') -> List[dict]:
+    def get_chatbots(self, project_name: str = default_project) -> List[dict]:
         '''
         Gets all chatbots in a project.
 
@@ -199,14 +202,12 @@ class ChatBotController:
             bot (db.ChatBots): The created chatbot
         '''
 
-        config = Config()
-
         is_cloud = config.get('cloud', False)
         if is_cloud and ctx.user_class == 0:
             raise Exception("You can't create chatbot")
 
         if project_name is None:
-            project_name = 'mindsdb'
+            project_name = default_project
         project = self.project_controller.get(name=project_name)
 
         bot = self.get_chatbot(name, project_name)
@@ -260,7 +261,7 @@ class ChatBotController:
     def update_chatbot(
             self,
             chatbot_name: str,
-            project_name: str = 'mindsdb',
+            project_name: str = default_project,
             name: str = None,
             model_name: str = None,
             agent_name: str = None,
@@ -338,7 +339,7 @@ class ChatBotController:
 
         return existing_chatbot_rec
 
-    def delete_chatbot(self, chatbot_name: str, project_name: str = 'mindsdb'):
+    def delete_chatbot(self, chatbot_name: str, project_name: str = default_project):
         '''
         Deletes a chatbot by name.
 

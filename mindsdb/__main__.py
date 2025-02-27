@@ -285,14 +285,12 @@ if __name__ == '__main__':
         except Exception:
             pass
 
-
     logger.debug("Applying database migrations")
     try:
         from mindsdb.migrations import migrate
         migrate.migrate_to_head()
     except Exception as e:
         logger.error(f"Error! Something went wrong during DB migrations: {e}")
-
 
     if not config.is_cloud:
         logger.debug(f"Checking if default project {config.get('default_project')} exists")

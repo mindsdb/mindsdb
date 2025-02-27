@@ -287,26 +287,25 @@ if __name__ == '__main__':
 
     is_cloud = config.is_cloud
 
-    if not is_cloud:
-        logger.debug("Applying database migrations")
+    logger.debug("Applying database migrations")
+    try:
+        from mindsdb.migrations import migrate
+        migrate.migrate_to_head()
+    except Exception as e:
+        logger.error(f"Error! Something went wrong during DB migrations: {e}")
+
+    logger.debug(f"Checking if default project {config.get('default_project')} exists")
+    project_controller = ProjectController()
+
+    current_default_project = project_controller.get(is_default=True)
+    if current_default_project.record.name != config.get('default_project'):
         try:
-            from mindsdb.migrations import migrate
-            migrate.migrate_to_head()
-        except Exception as e:
-            logger.error(f"Error! Something went wrong during DB migrations: {e}")
-
-        logger.debug(f"Checking if default project {config.get('default_project')} exists")
-        project_controller = ProjectController()
-
-        current_default_project = project_controller.get(is_default=True)
-        if current_default_project.record.name != config.get('default_project'):
-            try:
-                new_default_project = project_controller.get(name=config.get('default_project'))
-                log.critical(f"A project with the name '{config.get('default_project')}' already exists")
-                sys.exit(1)
-            except EntityNotExistsError:
-                pass
-            project_controller.update(current_default_project.record.id, new_name=config.get('default_project'))
+            new_default_project = project_controller.get(name=config.get('default_project'))
+            log.critical(f"A project with the name '{config.get('default_project')}' already exists")
+            sys.exit(1)
+        except EntityNotExistsError:
+            pass
+        project_controller.update(current_default_project.record.id, new_name=config.get('default_project'))
 
     apis = os.getenv('MINDSDB_APIS') or config.cmd_args.api
 

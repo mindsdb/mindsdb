@@ -21,7 +21,7 @@ class APIResourceGenerator:
     def __init__(self, openapi_spec_path: str):
         self.openapi_spec_parser = OpenAPISpecParser(openapi_spec_path)
 
-    def generate_api_resources(self) -> Type[APIResource]:
+    def generate_api_resource(self) -> Type[APIResource]:
         """
         Generates an API resource based on the OpenAPI specification.
 

@@ -500,6 +500,46 @@ class ValueSchema(BaseModel):
     )
 
 
+class MetadataConfig(BaseModel):
+    """Class to configure metadata for retrieval. Only supports very basic document name lookup at the moment."""
+    table: str = Field(
+        description="Source table for metadata."
+    )
+    max_document_context: int = Field(
+        # To work well with models with context window of 32768.
+        default=16384,
+        description="Truncate a document before using as context with an LLM if it exceeds this amount of tokens"
+    )
+    embeddings_table: str = Field(
+        default="embeddings",
+        description="Source table for embeddings"
+    )
+    id_column: str = Field(
+        default="Id",
+        description="Name of ID column in metadata table"
+    )
+    name_column: str = Field(
+        default="Title",
+        description="Name of column containing name or title of document"
+    )
+    name_column_index: Optional[str] = Field(
+        default=None,
+        description="Name of GIN index to use when looking up name."
+    )
+    content_column: str = Field(
+        default="content",
+        description="Name of column in embeddings table containing chunk content"
+    )
+    embeddings_metadata_column: str = Field(
+        default="metadata",
+        description="Name of column in embeddings table containing chunk metadata"
+    )
+    doc_id_key: str = Field(
+        default="original_row_id",
+        description="Metadata field that links an embedded chunk back to source document ID"
+    )
+
+
 class ColumnSchema(BaseModel):
     column: str = Field(description="Name of the column in the database")
     type: str = Field(description="Type of the column (e.g. int, string, datetime)")
@@ -725,13 +765,16 @@ class RAGPipelineModel(BaseModel):
     llm_provider: Optional[str] = Field(
         default=None, description="Language model provider"
     )
-
     vector_store: VectorStore = Field(
         default_factory=lambda: vector_store_map[VectorStoreConfig().vector_store_type],
         description="Vector store",
     )
     db_connection_string: Optional[str] = Field(
         default=None, description="Database connection string"
+    )
+    metadata_config: Optional[MetadataConfig] = Field(
+        default=None,
+        description="Configuration for metadata to be used for retrieval"
     )
     table_name: str = Field(default=DEFAULT_TEST_TABLE_NAME, description="Table name")
     embedding_model: Optional[Embeddings] = Field(

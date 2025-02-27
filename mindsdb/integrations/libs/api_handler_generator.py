@@ -11,17 +11,26 @@ from mindsdb.integrations.libs.response import (
 
 
 class APIHandlerGenerator:
+    """
+    A class to generate an API handler based on the OpenAPI specification.
+    """
     def __init__(self, openapi_spec_path: str):
         self.openapi_spec_parser = OpenAPISpecParser(openapi_spec_path)
 
     def generate_api_handler(self, resources: dict[str, Type[APIResource]]):
-
+        """
+        Generates an API handler class based on the OpenAPI specification.
+        Args:
+            resources (Dict[str, Type[APIResource]]): A dictionary containing the resources and their corresponding classes.
+        Returns:
+            Type[APIHandler]: The generated API handler class.
+        """
         security_schemes = self.openapi_spec_parser.get_security_schemes()
         
         class AnyHandler(APIHandler):
-            def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
+            def __init__(self, name: str, connection_data: Optional[dict], **kwargs) -> None:
                 """
-                Initializes the handler.
+                Initializes the handler and registers the resources.
                 Args:
                     name (Text): The name of the handler instance.
                     connection_data (Dict): The connection data required to connect to the API.
@@ -92,16 +101,30 @@ class APIHandlerGenerator:
             def check_connection(self) -> StatusResponse:
                 """
                 Checks the connection to the API.
+
+                Returns:
+                    StatusResponse: An object containing the success status and an error message if an error occurs.
                 """
+                # TODO: Implement the connection check logic by making a simple request to the API.
+                #       Can the endpoint be determined by looking for common 'test' or 'health' endpoints such as '/me' or '/health'?
                 pass
 
         return AnyHandler
 
 
 class OpenAPISpecParser:
-    def __init__(self, openapi_spec_path: str):
+    """
+    A class to parse the OpenAPI specification.
+    """
+    def __init__(self, openapi_spec_path: str) -> None:
         with open(openapi_spec_path, 'r') as f:
             self.openapi_spec = json.loads(f.read()) if openapi_spec_path.endswith('.json') else yaml.safe_load(f)
 
-    def get_security_schemes(self):
+    def get_security_schemes(self) -> dict:
+        """
+        Returns the security schemes defined in the OpenAPI specification.
+        
+        Returns:
+            dict: A dictionary containing the security schemes defined in the OpenAPI specification.
+        """
         return self.openapi_spec.get('components', {}).get('securitySchemes', {})

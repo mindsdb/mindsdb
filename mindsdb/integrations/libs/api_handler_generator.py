@@ -1,6 +1,7 @@
+from dataclasses import dataclass
 import json
-import yaml
 from typing import List, Optional, Type
+import yaml
 
 import pandas as pd
 from requests.auth import HTTPBasicAuth
@@ -12,6 +13,15 @@ from mindsdb.integrations.libs.api_handler import APIHandler, APIResource
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
+
+
+@dataclass
+class APIInfo:
+    """
+    A class to store the information about the API.
+    """
+    auth: dict = None
+    pagination: dict = None
 
 
 class APIResourceGenerator:
@@ -73,7 +83,7 @@ class APIHandlerGenerator:
                 self.connection_data = connection_data
                 self.kwargs = kwargs
 
-                self.connection = {}
+                self.api_info = {}
                 self.is_connected = False
 
                 for resource, resource_class in resources.items():
@@ -90,13 +100,17 @@ class APIHandlerGenerator:
                           API resources will need to parse this information to make requests to the API.
                 """
                 if self.is_connected is True:
-                    return self.connection
+                    return self.api_info
                 
                 # If the API requires authentication, set up the authentication mechanism.
+                auth = None
                 if security_schemes:
-                    self.connection['auth'] = self._process_auth(security_schemes)
+                    auth = self._process_auth(security_schemes)
 
                 # TODO: Add support for pagination if the API supports it.
+                pagination = None
+
+                self.api_info = APIInfo(auth=auth, pagination=pagination)
                         
             def check_connection(self) -> StatusResponse:
                 """

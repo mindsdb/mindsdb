@@ -225,3 +225,21 @@ class OpenAPISpecParser:
             dict: A dictionary containing the security schemes defined in the OpenAPI specification.
         """
         return self.openapi_spec.get('components', {}).get('securitySchemes', {})
+
+    def get_schemas(self) -> dict:
+        """
+        Returns the schemas defined in the OpenAPI specification.
+        
+        Returns:
+            dict: A dictionary containing the schemas defined in the OpenAPI specification.
+        """
+        return self.openapi_spec.get('components', {}).get('schemas', {})
+
+    def get_endpoints(self) -> dict:
+        """
+        Returns the endpoints defined in the OpenAPI specification.
+        
+        Returns:
+            dict: A dictionary containing the endpoints defined in the OpenAPI specification.
+        """
+        return self.openapi_spec.get('paths', {})

@@ -44,7 +44,7 @@ class APIEndpointParam:
 
 
 @dataclass
-class APISchemaType:
+class APIResourceType:
     name: str
     type_name: str
     sub_type: str = None
@@ -68,23 +68,24 @@ class APIResourceGenerator:
         paths = self.openapi_spec_parser.get_paths()
         schemas = self.openapi_spec_parser.get_schemas()
 
-        schema_types = self.process_schema_types(schemas)
-        endpoints = self.process_endpoints(paths, schema_types)
-        
+        resource_types = self.process_resource_types(schemas)
+        endpoints = self.process_endpoints(paths, resource_types)
+
         resources = {}
         for endpoint in endpoints:
             # TODO: Getting the name like this is not reliable.
             name = endpoint.url.split('/')[-1]
-            resources[name] = self._generate_api_resource(endpoint, schema_types)
+            resources[name] = self._generate_api_resource(endpoint, resource_types)
 
         return resources
     
-    def _generate_api_resource(self, endpoint: APIEndpoint, schema_types: dict) -> Type[APIResource]:
+    def _generate_api_resource(self, endpoint: APIEndpoint, resource_types: dict) -> Type[APIResource]:
         """
         Generates an API resource class based on the endpoint information.
 
         Args:
             endpoint (APIEndpoint): An object containing the endpoint information.
+            resource_types (Dict): A dictionary containing the resource types defined in the OpenAPI specification.
 
         Returns:
             Type[APIResource]: The generated API resource class.
@@ -92,8 +93,8 @@ class APIResourceGenerator:
         class AnyResource(APIResource):
             def __init__(self, *args, **kwargs):
                 self.output_columns = {}
-                if endpoint.response in schema_types:
-                    self.output_columns = schema_types[endpoint.response].properties
+                if endpoint.response in resource_types:
+                    self.output_columns = resource_types[endpoint.response].properties
 
                 self.params, self.list_params = [], []
                 for name, type in endpoint.params.items():
@@ -198,15 +199,15 @@ class APIResourceGenerator:
                 return pd.DataFrame(data, columns=self.get_columns())
 
         return AnyResource
-    
-    def process_schema_types(self, schemas: dict) -> dict:
-        schema_types = {}
+
+    def process_resource_types(self, schemas: dict) -> dict:
+        resource_types = {}
         for name, schema_info in schemas.items():
-            schema_types[name] = self._convert_to_schema_type(name, schema_info)
+            resource_types[name] = self._convert_to_resource_type(name, schema_info)
 
-        return schema_types
+        return resource_types
 
-    def process_endpoints(self, paths: dict, schema_types: dict) -> dict:
+    def process_endpoints(self, paths: dict, resource_types: dict) -> dict:
         """
         Processes the endpoints defined in the OpenAPI specification.
 
@@ -227,7 +228,7 @@ class APIResourceGenerator:
                     continue
 
                 parameters = self._process_endpoint_parameters(method_info['parameters']) if 'parameters' in method_info else {}
-                response, response_path = self._process_endpoint_response(method_info['responses'], schema_types)
+                response, response_path = self._process_endpoint_response(method_info['responses'], resource_types)
                 # TODO: Add support for pagination.
                 has_pagination = False
 
@@ -256,7 +257,7 @@ class APIResourceGenerator:
         """
         endpoint_parameters = {}
         for parameter in parameters:
-            type_name = self.get_schema_type(parameter['schema'])
+            type_name = self.get_resource_type(parameter['schema'])
 
             optional = 'default' in parameter['schema']
             endpoint_parameters[parameter['name']] = APIEndpointParam(
@@ -267,8 +268,8 @@ class APIResourceGenerator:
             )
 
         return endpoint_parameters
-    
-    def _process_endpoint_response(self, responses: dict, schema_types: dict) -> Tuple[str, str]:
+
+    def _process_endpoint_response(self, responses: dict, resource_types: dict) -> Tuple[str, str]:
         response = None
         response_path = [] # used to find list in response
 
@@ -280,9 +281,9 @@ class APIResourceGenerator:
                 if content_type != 'application/json':
                     raise NotImplementedError
                 
-                type_name = self.get_schema_type(resp_info['schema'])
+                type_name = self.get_resource_type(resp_info['schema'])
                 # try to find table
-                type = schema_types[type_name]
+                type = resource_types[type_name]
                 if type.type_name == 'list':
                     response = type.sub_type
                 elif type.type_name == 'object':
@@ -297,17 +298,17 @@ class APIResourceGenerator:
 
         return response, response_path
 
-    def _convert_to_schema_type(self, name: str, schema: dict) -> APISchemaType:
+    def _convert_to_resource_type(self, name: str, schema: dict) -> APIResourceType:
         """
-        Converts the schema information to a schema type.
+        Converts the schema information to a resource type.
 
         Args:
             schema (Dict): A dictionary containing the schema information.
 
         Returns:
-            APISchemaType: An object containing the schema type information.
+            APIResourceType: An object containing the resource type information.
         """
-        type_name = self.get_schema_type(schema)
+        type_name = self.get_resource_type(schema)
         # type_name= info['type']
 
         kwargs = {
@@ -319,16 +320,16 @@ class APIResourceGenerator:
             properties = {}
             for k, v in schema['properties'].items():
                 # type_name2 = get_type(v)
-                properties[k] = self._convert_to_schema_type(k, v)
+                properties[k] = self._convert_to_resource_type(k, v)
 
             kwargs['properties'] = properties
 
         if type_name == 'array' and 'items' in schema:
-            kwargs['sub_type'] = self.get_schema_type(schema['items'])
+            kwargs['sub_type'] = self.get_resource_type(schema['items'])
 
-        return APISchemaType(**kwargs)
+        return APIResourceType(**kwargs)
 
-    def get_schema_type(self, schema: dict) -> str:
+    def get_resource_type(self, schema: dict) -> str:
         if 'type' in schema:
             return schema['type']
 
@@ -337,7 +338,7 @@ class APIResourceGenerator:
 
         elif 'allOf' in schema:
             # TODO Get only the first type.
-            return self.get_schema_type(schema['allOf'][0])
+            return self.get_resource_type(schema['allOf'][0])
 
         else:
             return None

@@ -51,12 +51,53 @@ class APIResourceType:
     properties: dict[str, str] = None
 
 
+class OpenAPISpecParser:
+    """
+    A class to parse the OpenAPI specification.
+    """
+    def __init__(self, openapi_spec_path: str) -> None:
+        if openapi_spec_path.startswith('http://') or openapi_spec_path.startswith('https://'):
+            response = requests.get(openapi_spec_path)
+            response.raise_for_status()
+            self.openapi_spec = response.json() if openapi_spec_path.endswith('.json') else yaml.safe_load(response.text)
+        else:
+            with open(openapi_spec_path, 'r') as f:
+                self.openapi_spec = json.loads(f.read()) if openapi_spec_path.endswith('.json') else yaml.safe_load(f)
+
+    def get_security_schemes(self) -> dict:
+        """
+        Returns the security schemes defined in the OpenAPI specification.
+        
+        Returns:
+            dict: A dictionary containing the security schemes defined in the OpenAPI specification.
+        """
+        return self.openapi_spec.get('components', {}).get('securitySchemes', {})
+
+    def get_schemas(self) -> dict:
+        """
+        Returns the schemas defined in the OpenAPI specification.
+        
+        Returns:
+            dict: A dictionary containing the schemas defined in the OpenAPI specification.
+        """
+        return self.openapi_spec.get('components', {}).get('schemas', {})
+
+    def get_paths(self) -> dict:
+        """
+        Returns the paths defined in the OpenAPI specification.
+        
+        Returns:
+            dict: A dictionary containing the paths defined in the OpenAPI specification.
+        """
+        return self.openapi_spec.get('paths', {})
+
+
 class APIResourceGenerator:
     """
     A class to generate API resources based on the OpenAPI specification.
     """
-    def __init__(self, openapi_spec_path: str):
-        self.openapi_spec_parser = OpenAPISpecParser(openapi_spec_path)
+    def __init__(self, openapi_spec_parser: OpenAPISpecParser) -> None:
+        self.openapi_spec_parser = openapi_spec_parser
 
     def generate_api_resources(self) -> Dict[str, Type[APIResource]]:
         """
@@ -348,8 +389,8 @@ class APIHandlerGenerator:
     """
     A class to generate an API handler based on the OpenAPI specification.
     """
-    def __init__(self, openapi_spec_path: str):
-        self.openapi_spec_parser = OpenAPISpecParser(openapi_spec_path)
+    def __init__(self, openapi_spec_parser: OpenAPISpecParser) -> None:
+        self.openapi_spec_parser = openapi_spec_parser
 
     def generate_api_handler(self, resources: dict[str, Type[APIResource]]) -> Type[APIHandler]:
         """
@@ -471,44 +512,3 @@ class APIHandlerGenerator:
             }
 
         # TODO: Add support for other authentication mechanisms.
-
-
-class OpenAPISpecParser:
-    """
-    A class to parse the OpenAPI specification.
-    """
-    def __init__(self, openapi_spec_path: str) -> None:
-        if openapi_spec_path.startswith('http://') or openapi_spec_path.startswith('https://'):
-            response = requests.get(openapi_spec_path)
-            response.raise_for_status()
-            self.openapi_spec = response.json() if openapi_spec_path.endswith('.json') else yaml.safe_load(response.text)
-        else:
-            with open(openapi_spec_path, 'r') as f:
-                self.openapi_spec = json.loads(f.read()) if openapi_spec_path.endswith('.json') else yaml.safe_load(f)
-
-    def get_security_schemes(self) -> dict:
-        """
-        Returns the security schemes defined in the OpenAPI specification.
-        
-        Returns:
-            dict: A dictionary containing the security schemes defined in the OpenAPI specification.
-        """
-        return self.openapi_spec.get('components', {}).get('securitySchemes', {})
-
-    def get_schemas(self) -> dict:
-        """
-        Returns the schemas defined in the OpenAPI specification.
-        
-        Returns:
-            dict: A dictionary containing the schemas defined in the OpenAPI specification.
-        """
-        return self.openapi_spec.get('components', {}).get('schemas', {})
-
-    def get_paths(self) -> dict:
-        """
-        Returns the paths defined in the OpenAPI specification.
-        
-        Returns:
-            dict: A dictionary containing the paths defined in the OpenAPI specification.
-        """
-        return self.openapi_spec.get('paths', {})

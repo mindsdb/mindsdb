@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from functools import reduce
 import json
 from typing import Dict, List, Optional, Tuple, Type
 import yaml
@@ -11,9 +12,7 @@ from mindsdb.integrations.utilities.sql_utils import (
     FilterCondition, FilterOperator, SortColumn
 )
 from mindsdb.integrations.libs.api_handler import APIHandler, APIResource
-from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse,
-)
+from mindsdb.integrations.libs.response import HandlerStatusResponse
 
 
 @dataclass
@@ -76,11 +75,11 @@ class APIResourceGenerator:
         for endpoint in endpoints:
             # TODO: Getting the name like this is not reliable.
             name = endpoint.url.split('/')[-1]
-            resources[name] = self._generate_api_resource(endpoint)
+            resources[name] = self._generate_api_resource(endpoint, schema_types)
 
         return resources
     
-    def _generate_api_resource(self, endpoint: APIEndpoint) -> Type[APIResource]:
+    def _generate_api_resource(self, endpoint: APIEndpoint, schema_types: dict) -> Type[APIResource]:
         """
         Generates an API resource class based on the endpoint information.
 
@@ -91,6 +90,24 @@ class APIResourceGenerator:
             Type[APIResource]: The generated API resource class.
         """
         class AnyResource(APIResource):
+            def __init__(self, *args, **kwargs):
+                self.output_columns = {}
+                if endpoint.response in schema_types:
+                    self.output_columns = schema_types[endpoint.response].properties
+
+                self.params, self.list_params = [], []
+                for name, type in endpoint.params.items():
+                    self.params.append(name)
+                    if type.name == 'list':
+                        self.list_params.append(name)
+
+                # self._allow_sort = 'sort' in method.params
+
+                super().__init__(*args, **kwargs)
+
+            def get_columns(self) -> List[str]:
+                return list(self.output_columns.keys())
+
             def list(
                 self,
                 conditions: Optional[List[FilterCondition]] = None,
@@ -136,45 +153,47 @@ class APIResourceGenerator:
                                 body[filter[0]] = [filter[1]]
 
                 api_info = self.handler.connect()
-                auth = api_info['auth']
+                auth = api_info.auth
                 if auth:
                     if auth['type'] == 'basic':
                         response = requests.request(
                             endpoint.method,
-                            api_info['base_url'] + endpoint.url,
+                            api_info.base_url + endpoint.url,
                             params=query,
                             data=body,
                             auth=auth['credentials']
                         )
 
-                data = []
-                count = 0
-                # TODO: Check the content type of the response.
-                for record in response.json():
-                    item = {}
-                    for name, type in self.output_columns.items():
+                # data = []
+                # count = 0
+                # # TODO: Check the content type of the response.
+                # for record in response.json():
+                #     item = {}
+                #     for name, type in self.output_columns.items():
 
-                        # workaround to prevent making addition request per property.
-                        if name in targets:
-                            # request only if is required
-                            value = getattr(record, name)
-                        else:
-                            value = getattr(record, '_' + name).value
-                        if value is not None:
-                            if type.name == 'list':
-                                value = ",".join([
-                                        str(self.repr_value(i, type.sub_type))
-                                        for i in value
-                                ])
-                            else:
-                                value = self.repr_value(value, type.name)
-                        item[name] = value
+                #         # workaround to prevent making addition request per property.
+                #         if name in targets:
+                #             # request only if is required
+                #             value = getattr(record, name)
+                #         else:
+                #             value = getattr(record, '_' + name).value
+                #         if value is not None:
+                #             if type.name == 'list':
+                #                 value = ",".join([
+                #                         str(self.repr_value(i, type.sub_type))
+                #                         for i in value
+                #                 ])
+                #             else:
+                #                 value = self.repr_value(value, type.name)
+                #         item[name] = value
 
-                    data.append(item)
-                    count += 1
+                #     data.append(item)
+                #     count += 1
 
-                    if limit <= count:
-                        break
+                #     if limit <= count:
+                #         break
+
+                data = reduce(lambda d, key: d.get(key, {}), endpoint.response_path, response.json())
 
                 return pd.DataFrame(data, columns=self.get_columns())
 
@@ -199,8 +218,8 @@ class APIResourceGenerator:
         """
         endpoints = []
         for path, path_info in paths.items():
-            # TODO: Change this to base URL.
-            if path != '/rest/api/3/search':
+            # TODO: What should this condition be?
+            if path != '/rest/api/3/project/search':
                 continue
 
             for http_method, method_info in path_info.items():
@@ -235,18 +254,19 @@ class APIResourceGenerator:
         Returns:
             Dict: A dictionary containing the processed parameters.
         """
+        endpoint_parameters = {}
         for parameter in parameters:
             type_name = self.get_schema_type(parameter['schema'])
 
             optional = 'default' in parameter['schema']
-            parameters[parameter['name']] = APIEndpointParam(
+            endpoint_parameters[parameter['name']] = APIEndpointParam(
                 name=parameter['name'],
                 type=type_name,
                 optional=optional,
                 where=parameter['in'],
             )
 
-        return parameters
+        return endpoint_parameters
     
     def _process_endpoint_response(self, responses: dict, schema_types: dict) -> Tuple[str, str]:
         response = None
@@ -304,7 +324,7 @@ class APIResourceGenerator:
             kwargs['properties'] = properties
 
         if type_name == 'array' and 'items' in schema:
-            kwargs['sub_type'] = self._convert_to_schema_type(schema['items'])
+            kwargs['sub_type'] = self.get_schema_type(schema['items'])
 
         return APISchemaType(**kwargs)
 
@@ -359,7 +379,7 @@ class APIHandlerGenerator:
                 for resource, resource_class in resources.items():
                     self._register_table(resource, resource_class(self))
 
-            def connect(self) -> dict:
+            def connect(self) -> APIInfo:
                 """
                 Establishes a connection to the API.
                 
@@ -386,17 +406,22 @@ class APIHandlerGenerator:
                     base_url=self.connection_data['base_url'],
                     auth=auth
                 )
+
+                self.is_connected = True
+
+                return self.api_info
                         
-            def check_connection(self) -> StatusResponse:
+            def check_connection(self) -> HandlerStatusResponse:
                 """
                 Checks the connection to the API.
 
                 Returns:
-                    StatusResponse: An object containing the success status and an error message if an error occurs.
+                    HandlerStatusResponse: An object containing the success status and an error message if an error occurs.
                 """
                 # TODO: Implement the connection check logic by making a simple request to the API.
                 #       Can the endpoint be determined by looking for common 'test' or 'health' endpoints such as '/me' or '/health'?
-                pass\
+                response = HandlerStatusResponse(True)
+                return response
                 
         return AnyHandler
 
@@ -427,7 +452,7 @@ class APIHandlerGenerator:
                 "name": security_schemes['ApiKeyAuth']['name']
             }
 
-        elif 'basic' in security_schemes:
+        elif 'basicAuth' in security_schemes:
             # For basic authentication, the username and password are required.
             if not all(
                 key in connection_data

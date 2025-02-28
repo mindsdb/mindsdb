@@ -453,8 +453,13 @@ class OpenAPISpecParser:
     A class to parse the OpenAPI specification.
     """
     def __init__(self, openapi_spec_path: str) -> None:
-        with open(openapi_spec_path, 'r') as f:
-            self.openapi_spec = json.loads(f.read()) if openapi_spec_path.endswith('.json') else yaml.safe_load(f)
+        if openapi_spec_path.startswith('http://') or openapi_spec_path.startswith('https://'):
+            response = requests.get(openapi_spec_path)
+            response.raise_for_status()
+            self.openapi_spec = response.json() if openapi_spec_path.endswith('.json') else yaml.safe_load(response.text)
+        else:
+            with open(openapi_spec_path, 'r') as f:
+                self.openapi_spec = json.loads(f.read()) if openapi_spec_path.endswith('.json') else yaml.safe_load(f)
 
     def get_security_schemes(self) -> dict:
         """

@@ -24,6 +24,33 @@ class APIInfo:
     pagination: dict = None
 
 
+@dataclass
+class APIEndpoint:
+    url: str
+    method: str
+    # table_name: str
+    params: dict
+    response: str
+    response_path: list
+    has_pagination: bool = False
+
+
+@dataclass
+class APIEndpointParam:
+    name: str
+    type: str
+    where: str = None
+    optional: bool = False
+
+
+@dataclass
+class APISchema:
+    name: str
+    type_name: str
+    sub_type: str = None
+    properties: dict[str, str] = None
+
+
 class APIResourceGenerator:
     """
     A class to generate API resources based on the OpenAPI specification.

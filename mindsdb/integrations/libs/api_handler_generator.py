@@ -21,8 +21,8 @@ class APIInfo:
     """
     A class to store the information about the API.
     """
+    base_url: str = None
     auth: dict = None
-    pagination: dict = None
 
 
 @dataclass
@@ -76,16 +76,15 @@ class APIResourceGenerator:
         for endpoint in endpoints:
             # TODO: Getting the name like this is not reliable.
             name = endpoint.url.split('/')[-1]
-            resources[name] = self._generate_api_resource(name, endpoint)
+            resources[name] = self._generate_api_resource(endpoint)
 
         return resources
     
-    def _generate_api_resource(self, name: str, endpoint: APIEndpoint) -> Type[APIResource]:
+    def _generate_api_resource(self, endpoint: APIEndpoint) -> Type[APIResource]:
         """
         Generates an API resource class based on the endpoint information.
 
         Args:
-            name (Text): The name of the API resource.
             endpoint (APIEndpoint): An object containing the endpoint information.
 
         Returns:
@@ -136,7 +135,17 @@ class APIResourceGenerator:
                             else:
                                 body[filter[0]] = [filter[1]]
 
-                response = requests.request(endpoint.method, endpoint.url, params=query, data=body)
+                api_info = self.handler.connect()
+                auth = api_info['auth']
+                if auth:
+                    if auth['type'] == 'basic':
+                        response = requests.request(
+                            endpoint.method,
+                            api_info['base_url'] + endpoint.url,
+                            params=query,
+                            data=body,
+                            auth=auth['credentials']
+                        )
 
                 data = []
                 count = 0
@@ -363,6 +372,9 @@ class APIHandlerGenerator:
                 if self.is_connected is True:
                     return self.api_info
                 
+                if 'base_url' not in self.connection_data:
+                    raise ValueError("The base URL is required to connect to the API.")
+                
                 # If the API requires authentication, set up the authentication mechanism.
                 auth = None
                 if security_schemes:
@@ -370,10 +382,10 @@ class APIHandlerGenerator:
                         self.connection_data, security_schemes
                     )
 
-                # TODO: Add support for pagination if the API supports it.
-                pagination = None
-
-                self.api_info = APIInfo(auth=auth, pagination=pagination)
+                self.api_info = APIInfo(
+                    base_url=self.connection_data['base_url'],
+                    auth=auth
+                )
                         
             def check_connection(self) -> StatusResponse:
                 """
@@ -433,19 +445,6 @@ class APIHandlerGenerator:
             }
 
         # TODO: Add support for other authentication mechanisms.
-
-    @staticmethod
-    def process_pagination(connection_data: dict, pagination: dict) -> dict:
-        """
-        Processes the pagination information defined in the OpenAPI specification.
-
-        Args:
-            pagination (Dict): A dictionary containing the pagination information defined in the OpenAPI specification.
-
-        Returns:
-            Dict: A dictionary containing the pagination information required to paginate through the API responses.
-        """
-        pass
 
 
 class OpenAPISpecParser:

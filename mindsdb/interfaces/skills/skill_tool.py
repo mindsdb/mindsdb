@@ -10,6 +10,7 @@ from mindsdb_sql_parser.ast import Select, BinaryOperation, Identifier, Constant
 
 from mindsdb.utilities import log
 from mindsdb.utilities.cache import get_cache
+from mindsdb.utilities.config import config
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.skills.sql_agent import SQLAgent
 from mindsdb.integrations.libs.vectordatabase_handler import TableField
@@ -106,7 +107,7 @@ class SkillToolController:
             from mindsdb.api.executor.controllers import SessionController  # Top-level import produces circular import in some cases TODO: figure out a fix without losing runtime improvements (context: see #9304)  # noqa
 
             sql_session = SessionController()
-            sql_session.database = 'mindsdb'
+            sql_session.database = config.get('default_project')
 
             self.command_executor = ExecuteCommands(sql_session)
         return self.command_executor
@@ -222,8 +223,8 @@ class SkillToolController:
         pred_args = {}
         pred_args['llm'] = llm
 
-        from .retrieval_tool import build_retrieval_tool
-        return build_retrieval_tool(tool, pred_args, skill)
+        from .retrieval_tool import build_retrieval_tools
+        return build_retrieval_tools(tool, pred_args, skill)
 
     def _get_rag_query_function(self, skill: db.Skills):
         session_controller = self.get_command_executor().session
@@ -295,10 +296,9 @@ class SkillToolController:
                     for skill in skills
                 ]
             elif skill_type == SkillType.RETRIEVAL:
-                tools[skill_type] = [
-                    self._make_retrieval_tools(skill, llm, embedding_model)
-                    for skill in skills
-                ]
+                tools[skill_type] = []
+                for skill in skills:
+                    tools[skill_type] += self._make_retrieval_tools(skill, llm, embedding_model)
         return tools
 
 

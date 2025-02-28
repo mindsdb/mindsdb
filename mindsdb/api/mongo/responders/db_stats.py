@@ -1,5 +1,6 @@
 from mindsdb.api.mongo.classes import Responder
 import mindsdb.api.mongo.functions as helpers
+from mindsdb.utilities.config import config
 
 
 class Responce(Responder):
@@ -8,7 +9,7 @@ class Responce(Responder):
     def result(self, query, request_env, mindsdb_env, session):
         db = query['$db']
         collections = 0
-        if db == 'mindsdb':
+        if db == config.get('default_project'):
             collections = 2 + len(mindsdb_env['model_controller'].get_models())
         return {
             'db': db,

@@ -4,6 +4,7 @@ from typing import List, Optional
 from collections import OrderedDict
 
 import sqlalchemy as sa
+from sqlalchemy.orm.attributes import flag_modified
 import numpy as np
 
 from mindsdb_sql_parser.ast.base import ASTNode
@@ -30,6 +31,7 @@ class Project:
         p.name = db_record.name
         p.company_id = ctx.company_id
         p.id = db_record.id
+        p.metadata = db_record.metadata_
         return p
 
     def create(self, name: str):
@@ -405,9 +407,9 @@ class ProjectController:
 
         return [Project.from_record(x) for x in records]
 
-    def get(self, id: Optional[int] = None, name: Optional[str] = None, deleted: bool = False) -> Project:
+    def get(self, id: Optional[int] = None, name: Optional[str] = None, deleted: bool = False, is_default: bool = False) -> Project:
         if id is not None and name is not None:
-            raise ValueError("Both 'id' and 'name' is None")
+            raise ValueError("Both 'id' and 'name' can't be provided at the same time")
 
         company_id = ctx.company_id if ctx.company_id is not None else 0
         q = db.Project.query.filter_by(company_id=company_id)
@@ -424,6 +426,9 @@ class ProjectController:
         else:
             q = q.filter_by(deleted_at=sa.null())
 
+        if is_default:
+            q = q.filter(db.Project.metadata_['is_default'].as_boolean() == is_default)
+
         record = q.first()
 
         if record is None:
@@ -433,4 +438,25 @@ class ProjectController:
     def add(self, name: str) -> Project:
         project = Project()
         project.create(name=name)
+        return project
+
+    def update(self, id: Optional[int] = None, name: Optional[str] = None, new_name: str = None, new_metadata: dict = None) -> Project:
+        if id is not None and name is not None:
+            raise ValueError("Both 'id' and 'name' can't be provided at the same time")
+
+        if id is not None:
+            project = self.get(id=id)
+        else:
+            project = self.get(name=name)
+
+        if new_name is not None:
+            project.name = new_name
+            project.record.name = new_name
+
+        if new_metadata is not None:
+            project.metadata = new_metadata
+            project.record.metadata = new_metadata
+            flag_modified(project.record, 'metadata_')
+
+        db.session.commit()
         return project

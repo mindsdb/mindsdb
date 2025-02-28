@@ -32,12 +32,26 @@ def upgrade():
         sa.UniqueConstraint('name', 'company_id', name='unique_project_name_company_id')
     )
 
+    project_table = sa.Table(
+        'project',
+        sa.MetaData(),
+        sa.Column('id', sa.Integer()),
+        sa.Column('name', sa.String()),
+        sa.Column('company_id', sa.Integer()),
+    )
+
     conn = op.get_bind()
     session = sa.orm.Session(bind=conn)
 
-    project_record = db.Project(name='mindsdb')
-    session.add(project_record)
-    session.commit()
+    conn.execute(
+        project_table.insert().values(
+            name='mindsdb'
+        )
+    )
+
+    project_record = conn.execute(
+        project_table.select().where(project_table.c.name == 'mindsdb')
+    ).fetchone()
 
     with op.batch_alter_table('predictor', schema=None) as batch_op:
         batch_op.add_column(sa.Column('project_id', sa.Integer()))

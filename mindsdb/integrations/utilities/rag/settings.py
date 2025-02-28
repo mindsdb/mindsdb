@@ -518,7 +518,6 @@ class RAGPipelineModel(BaseModel):
         default=None,
         description="Language model provider"
     )
-
     vector_store: VectorStore = Field(
         default_factory=lambda: vector_store_map[VectorStoreConfig().vector_store_type],
         description="Vector store"

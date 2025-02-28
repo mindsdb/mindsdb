@@ -26,7 +26,7 @@ from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_message impor
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_packets import PostgresPacketReader, \
     PostgresPacketBuilder
 from mindsdb.api.postgres.postgres_proxy.utilities import strip_null_byte
-from mindsdb.utilities.config import Config
+from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
 from mindsdb.api.mysql.mysql_proxy.external_libs.mysql_scramble import scramble as scramble_func
@@ -92,7 +92,6 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
                 Copied from mysql_proxy
                 TODO: Extract method into common
             """
-        config = Config()
         is_cloud = config.get('cloud', False)
 
         if sys.platform != 'linux' or is_cloud is False:
@@ -237,7 +236,7 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
         self.server.connection_id += 1
         self.connection_id = self.server.connection_id
         self.session = SessionController()
-        self.session.database = 'mindsdb'
+        self.session.database = config.get('default_project')
 
         if hasattr(self.server, 'salt') and isinstance(self.server.salt, str):
             self.salt = self.server.salt
@@ -461,7 +460,6 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
 
     @staticmethod
     def startProxy():
-        config = Config()
         host = config['api']['postgres']['host']
         port = int(config['api']['postgres']['port'])
         server = TcpServer((host, port), PostgresProxyHandler)

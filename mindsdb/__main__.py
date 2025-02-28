@@ -22,12 +22,14 @@ logger.debug("Starting MindsDB...")
 
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.utilities.config import config
+from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.utilities.starters import (
     start_http, start_mysql, start_mongo, start_postgres, start_ml_task_queue, start_scheduler, start_tasks
 )
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 from mindsdb.utilities.functions import get_versions_where_predictors_become_obsolete
 from mindsdb.interfaces.database.integrations import integration_controller
+from mindsdb.interfaces.database.projects import ProjectController
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.utilities.install import install_dependencies
 from mindsdb.utilities.fs import clean_process_marks, clean_unlinked_process_marks
@@ -292,6 +294,19 @@ if __name__ == '__main__':
             migrate.migrate_to_head()
         except Exception as e:
             logger.error(f"Error! Something went wrong during DB migrations: {e}")
+
+        logger.debug(f"Checking if default project {config.get('default_project')} exists")
+        project_controller = ProjectController()
+
+        current_default_project = project_controller.get(is_default=True)
+        if current_default_project.record.name != config.get('default_project'):
+            try:
+                new_default_project = project_controller.get(name=config.get('default_project'))
+                log.critical(f"A project with the name '{config.get('default_project')}' already exists")
+                sys.exit(1)
+            except EntityNotExistsError:
+                pass
+            project_controller.update(current_default_project.record.id, new_name=config.get('default_project'))
 
     apis = os.getenv('MINDSDB_APIS') or config.cmd_args.api
 

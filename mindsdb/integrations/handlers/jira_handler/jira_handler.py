@@ -41,7 +41,8 @@ class JiraHandler(APIHandler):
 
         api_resource_generator = APIResourceGenerator(
             "https://developer.atlassian.com/cloud/jira/platform/swagger-v3.v3.json",
-            self.connection_data
+            self.connection_data,
+            api_base='/rest/api/3/'
         )
 
         resource_tables = api_resource_generator.generate_api_resources(self)

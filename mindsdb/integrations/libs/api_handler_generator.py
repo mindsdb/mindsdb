@@ -110,9 +110,10 @@ class APIResourceGenerator:
     """
     A class to generate API resources based on the OpenAPI specification.
     """
-    def __init__(self, url, connection_data) -> None:
+    def __init__(self, url, connection_data, api_base=None) -> None:
         self.openapi_spec_parser = OpenAPISpecParser(url)
         self.connection_data = connection_data
+        self.api_base = api_base
 
     def generate_api_resources(self, handler, table_name_format='{url}') -> Dict[str, APIResource]:
         """
@@ -163,6 +164,9 @@ class APIResourceGenerator:
         """
         endpoints = []
         for path, path_info in paths.items():
+            if self.api_base is not None and not path.startswith(self.api_base):
+                continue
+
             for http_method, method_info in path_info.items():
                 if http_method != 'get':
                     continue

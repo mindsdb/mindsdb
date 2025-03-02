@@ -5,6 +5,7 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.utilities import log
 from mindsdb_sql_parser import parse_sql
+from mindsdb.integrations.libs.api_handler_generator import APIResourceGenerator
 
 from atlassian import Jira
 from typing import Optional
@@ -36,9 +37,21 @@ class JiraHandler(APIHandler):
         self.connection = None
         self.is_connected = False
 
+        # todo store parsed data in files
 
-        jira_projects_data = JiraProjectsTable(self)
-        self._register_table("project", jira_projects_data)
+        api_resource_generator = APIResourceGenerator(
+            "https://developer.atlassian.com/cloud/jira/platform/swagger-v3.v3.json",
+            self.connection_data,
+            api_base='/rest/api/3/'
+        )
+
+        resource_tables = api_resource_generator.generate_api_resources(self)
+
+        for table_name, resource in resource_tables.items():
+            self._register_table(table_name, resource)
+
+        # jira_projects_data = JiraProjectsTable(self)
+        # self._register_table("project", jira_projects_data)
 
     def __del__(self):
         if self.is_connected is True:
@@ -50,6 +63,10 @@ class JiraHandler(APIHandler):
         Returns:
             HandlerStatusResponse
         """
+
+        # TODO find how to check connection via api
+        return True
+        self._tables['search'].list()
 
         if self.is_connected is True:
             return self.connection

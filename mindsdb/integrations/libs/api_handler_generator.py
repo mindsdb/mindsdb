@@ -171,9 +171,6 @@ class APIResourceGenerator:
                 if http_method != 'get':
                     continue
 
-                # if path != '/rest/api/3/search':
-                #     continue
-
                 parameters = self._process_endpoint_parameters(method_info['parameters']) if 'parameters' in method_info else {}
 
                 response, response_path = self._process_endpoint_response(method_info['responses'])
@@ -316,6 +313,9 @@ class RestApiTable(APIResource):
         self.output_columns = {}
         if endpoint.response in resource_types:
             self.output_columns = resource_types[endpoint.response].properties
+        else:
+            # let it be single column with this type
+            self.output_columns = {'value': endpoint.response}
 
         # check params:
         self.params, self.list_params = [], []
@@ -442,18 +442,24 @@ class RestApiTable(APIResource):
         data = []
         count = 0
 
+        columns = self.get_columns()
         for record in resp:
             item = {}
-            for name, value in record.items():
 
-                # value = record.[name]
+            if isinstance(record, dict):
+                for name, value in record.items():
 
-                item[name] = self.repr_value(value)
+                    # value = record.[name]
 
-            data.append(item)
+                    item[name] = self.repr_value(value)
+
+                data.append(item)
+            elif len(columns) > 0:
+                # response is value
+                item[columns[0]] = self.repr_value(record)
 
             count += 1
             if limit <= count:
                 break
 
-        return pd.DataFrame(data, columns=self.get_columns())
+        return pd.DataFrame(data, columns=columns)

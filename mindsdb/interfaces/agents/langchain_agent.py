@@ -7,6 +7,7 @@ import re
 import threading
 import numpy as np
 import pandas as pd
+from textwrap import dedent
 
 from langchain.agents import AgentExecutor
 from langchain.agents.initialize import initialize_agent
@@ -381,13 +382,49 @@ class LangchainAgent:
             if isinstance(answer, str) and len(answer) > 0:
                 memory.chat_memory.add_ai_message(answer)
 
+        # from langchain.agents.conversational.prompt import FORMAT_INSTRUCTIONS, PREFIX, SUFFIX
         agent_type = args.get("agent_type", DEFAULT_AGENT_TYPE)
+        only_sql_skills = all(rel.skill.type == 'sql' for rel in self.agent.skills_relationships)
+        agent_kwargs = {"output_parser": SafeOutputParser()}
+
+        is_classic_mode = df['question'][0].startswith('(classic)')   # FIXME
+        if (not is_classic_mode) and only_sql_skills:
+            agent_kwargs['prefix'] = dedent('''\
+                You are a helpful AI assistant with access to the user's database(s). Your primary role is to help users
+                retrieve and analyze data by writing SQL queries.
+                Important: If you don't have a list of tables and columns available, retrieve it before responding to the question.
+
+                ## Core Responsibilities:
+                1. Always assume that answering the user's question requires querying the database
+                2. If you don't have the necessary information about the database structure, use a relevant tool
+                3. Write clear, efficient MySQL-compatible SQL queries to retrieve the requested information
+                4. Explain your query approach and the results in a user-friendly manner
+                5. Help users understand their data structure and relationships
+
+                ## When responding to queries:
+                1. If the user's request is unclear, ask clarifying questions about what data they need
+                2. Always specify which tables and columns you're using in your explanation
+                3. Format SQL queries with proper indentation and line breaks for readability
+                4. After providing the query, explain what it does in simple terms
+                5. If you need information about database structure, use the `get_table_schema` tool
+
+                ## SQL query guidelines:
+                1. Use MySQL syntax and functions (not PostgreSQL, SQL Server, etc.)
+                2. Be aware of MySQL's limitations and syntax requirements
+                3. Use proper quoting for identifiers when necessary (backticks for table/column names)
+                4. Use only SELECT queries. Do not attempt to modify data (INSERT, UPDATE, DELETE)
+
+                TOOLS:
+                ------
+
+                Assistant has access to the following tools:
+            ''')
         agent_executor = initialize_agent(
             tools,
             llm,
             agent=agent_type,
             # Use custom output parser to handle flaky LLMs that don't ALWAYS conform to output format.
-            agent_kwargs={"output_parser": SafeOutputParser()},
+            agent_kwargs=agent_kwargs,
             # Calls the agent’s LLM Chain one final time to generate a final answer based on the previous steps
             early_stopping_method="generate",
             handle_parsing_errors=self._handle_parsing_errors,

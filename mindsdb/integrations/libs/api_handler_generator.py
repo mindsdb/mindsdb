@@ -446,6 +446,8 @@ class RestApiTable(APIResource):
         req = requests.request(self.endpoint.method, url, params=query, data=body, auth=auth)
 
         resp = req.json()
+        if req.status_code != 200:
+            raise RuntimeError(req.text)
         for item in self.endpoint.response_path:
             resp = resp[item]
 

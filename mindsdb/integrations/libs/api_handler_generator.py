@@ -397,8 +397,7 @@ class RestApiTable(APIResource):
         if limit is None:
             limit = 20
 
-        query = {}
-        body = {}
+        query, body, path_vars = {}, {}, {}
 
         # TODO sort
         # if sort is not None and self._allow_sort:
@@ -426,12 +425,23 @@ class RestApiTable(APIResource):
                     condition.applied = True
 
                 if filter:
+                    name, value = filter
                     param = self.endpoint.params[condition.column]
                     if param.where == 'query':
-                        query[filter[0]] = [filter[1]]
+                        query[name] = value
+                    elif param.where == 'path':
+                        path_vars[name] = value
                     else:
-                        body[filter[0]] = [filter[1]]
+                        body[name] = value
+
         url = self.connection_data['api_base'] + self.endpoint.url
+        if path_vars:
+            url = url.format(**path_vars)
+        # check empty placeholders
+        placeholders = re.findall(r"{(\w+)}", url)
+        if placeholders:
+            raise RuntimeError('Parameters are required: ' + ', '.join(placeholders))
+
         auth = self._handle_auth()['credentials']
         req = requests.request(self.endpoint.method, url, params=query, data=body, auth=auth)
 

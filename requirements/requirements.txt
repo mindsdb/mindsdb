@@ -1,41 +1,43 @@
-packaging
+packaging==24.2
 flask == 3.0.3
 werkzeug == 3.0.6
-flask-restx >= 1.3.0, < 2.0.0
-pandas >=2.0.0, <2.1.0
+flask-restx==1.3.0
+pandas==2.0.3
+pandas-gbq==0.28.0
 python-multipart == 0.0.18
 pyparsing == 2.3.1
-cryptography>=35.0
+cryptography==44.0.0
 psycopg[binary]
-waitress >= 1.4.4
+waitress==3.0.2
 pymongo[srv] == 4.8.0
-psutil
-sqlalchemy >= 2.0.0, < 3.0.0
+psutil==5.9.8
+sqlalchemy==2.0.35
+starlette==0.45.3
 psycopg2-binary  # This is required for using sqlalchemy with postgres
-alembic >= 1.3.3
-redis >=5.0.0, < 6.0.0
+alembic ==1.14.1
+redis == 5.2.1
 walrus==0.9.3
-flask-compress >= 1.0.0
-appdirs >= 1.0.0
-mindsdb-sql-parser ~= 0.2.0
-pydantic ~= 2.7.0
-mindsdb-evaluator >= 0.0.7, < 0.1.0
+flask-compress == 1.17
+appdirs==1.4.4
+mindsdb-sql-parser == 0.2.0
+pydantic ==2.7.4
+mindsdb-evaluator == 0.0.15
 duckdb == 0.9.1
 requests == 2.32.3
 pydateinfer==0.3.0
 dataprep_ml==24.5.1.2
 dill == 0.3.6
-numpy
-pytz
-botocore
-boto3 >= 1.34.131
-python-dateutil
-gunicorn
+numpy==1.26.4
+pytz==2024.2
+botocore==1.36.10
+boto3==1.36.10
+python-dateutil==2.9.0.post0
+gunicorn==23.0.0
 scikit-learn==1.5.2
 protobuf==3.20.3
-hierarchicalforecast~=0.4.0
-google-auth-oauthlib
-msal
+hierarchicalforecast==0.4.3
+google-auth-oauthlib==1.2.1
+msal==1.31.1
 langchain==0.3.7
 langchain-community==0.3.5
 langchain-core==0.3.15
@@ -45,11 +47,11 @@ langchain-openai==0.2.6
 langchain-anthropic==0.2.4
 langchain-text-splitters==0.3.2
 langfuse==2.53.3  # Latest as of November 4, 2024
-lark
+lark==1.2.2
 lxml==5.3.0 # Required for knowledge base webpage embeddings
 pgvector==0.3.6 # Required for knowledge bases
 prometheus-client==0.20.0
-transformers >= 4.42.4
+transformers == 4.48.2
 sentry-sdk[flask] == 2.14.0
 opentelemetry-api==1.27.0
 opentelemetry-sdk==1.27.0
@@ -59,7 +61,7 @@ opentelemetry-instrumentation-flask==0.48b0
 opentelemetry-distro==0.48b0
 
 # files reading
-pymupdf
-filetype
-charset-normalizer
-openpyxl # used by pandas to read txt files
+pymupdf==1.25.2
+filetype==1.2.0
+charset-normalizer==3.4.1
+openpyxl==3.1.5 # used by pandas to read txt files

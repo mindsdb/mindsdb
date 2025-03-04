@@ -17,6 +17,8 @@ from mindsdb.integrations.libs.api_handler import APIResource
 class ApiRequestException(Exception):
     pass
 
+class ApiResponseException(Exception):
+    pass
 
 @dataclass
 class APIInfo:
@@ -31,7 +33,6 @@ class APIInfo:
 class APIEndpoint:
     url: str
     method: str
-    # table_name: str
     params: dict
     response: dict
 
@@ -119,6 +120,13 @@ class APIResourceGenerator:
         self.connection_data = connection_data
         self.api_base = api_base
         self.options = options or {}
+        self.resources = {}
+
+    def check_connection(self):
+        if 'check_connection_table' in self.options:
+            table = self.resources.get(self.options['check_connection_table'])
+            if table:
+                table.list(targets=[], limit=1, conditions=[])
 
     def generate_api_resources(self, handler, table_name_format='{url}') -> Dict[str, APIResource]:
         """
@@ -136,16 +144,15 @@ class APIResourceGenerator:
 
         prefix_len = len(find_common_url_prefix([i.url for i in endpoints]))
 
-        resources = {}
         for endpoint in endpoints:
             url = endpoint.url[prefix_len:]
             # replace placehoders with x
             url = re.sub(r"{(\w+)}", 'x', url)
             url = url.replace('/', '_').strip('_')
             table_name = table_name_format.format(url=url, method=endpoint.method).lower()
-            resources[table_name] = RestApiTable(handler, endpoint=endpoint, resource_gen=self)
+            self.resources[table_name] = RestApiTable(handler, endpoint=endpoint, resource_gen=self)
 
-        return resources
+        return self.resources
 
     def process_resource_types(self, schemas: dict) -> dict:
         resource_types = {}
@@ -432,9 +439,9 @@ class RestApiTable(APIResource):
         auth = self._handle_auth()['credentials']
         req = requests.request(self.endpoint.method, url, params=query, data=body, auth=auth)
 
-        resp = req.json()
         if req.status_code != 200:
-            raise RuntimeError(req.text)
+            raise ApiResponseException(req.text)
+        resp = req.json()
 
         total = None
         if 'total_column' in self.options and isinstance(resp, dict):

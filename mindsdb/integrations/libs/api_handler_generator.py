@@ -17,8 +17,10 @@ from mindsdb.integrations.libs.api_handler import APIResource
 class ApiRequestException(Exception):
     pass
 
+
 class ApiResponseException(Exception):
     pass
+
 
 @dataclass
 class APIInfo:

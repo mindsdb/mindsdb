@@ -14,6 +14,10 @@ from mindsdb.integrations.utilities.sql_utils import (
 from mindsdb.integrations.libs.api_handler import APIResource
 
 
+class ApiRequestException(Exception):
+    pass
+
+
 @dataclass
 class APIInfo:
     """
@@ -30,7 +34,6 @@ class APIEndpoint:
     # table_name: str
     params: dict
     response: dict
-    has_pagination: bool = False
 
 
 @dataclass
@@ -151,13 +154,6 @@ class APIResourceGenerator:
 
         return resource_types
 
-    def has_pagination(self, params):
-        if 'offset_param' in self.options:
-            for col in self.options['offset_param']:
-                if col in params:
-                    return True
-        return False
-
     def process_endpoints(self, paths: dict) -> List[APIEndpoint]:
         """
         Processes the endpoints defined in the OpenAPI specification.
@@ -179,8 +175,6 @@ class APIResourceGenerator:
 
                 parameters = self._process_endpoint_parameters(method_info['parameters']) if 'parameters' in method_info else {}
 
-                has_pagination = self.has_pagination(parameters)
-
                 response = self._process_endpoint_response(method_info['responses'])
                 if response['type'] is None:
                     continue
@@ -189,7 +183,6 @@ class APIResourceGenerator:
                     url=path,
                     method=http_method,
                     params=parameters,
-                    has_pagination=has_pagination,
                     response=response
                 )
 
@@ -333,6 +326,7 @@ class RestApiTable(APIResource):
         resource_types = resource_gen.resource_types
         self.connection_data = resource_gen.connection_data
         self.security_schemes = resource_gen.security_schemes
+        self.options = resource_gen.options
 
         self.output_columns = {}
         response_type = endpoint.response['type']
@@ -378,7 +372,7 @@ class RestApiTable(APIResource):
         if 'ApiKeyAuth' in security_schemes:
             # For API key authentication, the API key is required.
             if 'api_key' not in self.connection_data:
-                raise ValueError(
+                raise ApiRequestException(
                     "The API key is required for API key authentication."
                 )
             return {
@@ -394,7 +388,7 @@ class RestApiTable(APIResource):
                 key in self.connection_data
                 for key in ["username", "password"]
             ):
-                raise ValueError(
+                raise ApiRequestException(
                     "The username and password are required for basic authentication."
                 )
             return {
@@ -410,6 +404,53 @@ class RestApiTable(APIResource):
     def get_columns(self) -> List[str]:
         return list(self.output_columns.keys())
 
+    def get_offset_param(self):
+        if 'offset_param' in self.options:
+            for col in self.options['offset_param']:
+                if col in self.endpoint.params:
+                    return col
+
+    def _api_request(self, filters):
+        query, body, path_vars = {}, {}, {}
+        for name, value in filters.items():
+            param = self.endpoint.params[name]
+            if param.where == 'query':
+                query[name] = value
+            elif param.where == 'path':
+                path_vars[name] = value
+            else:
+                body[name] = value
+
+        url = self.connection_data['api_base'] + self.endpoint.url
+        if path_vars:
+            url = url.format(**path_vars)
+        # check empty placeholders
+        placeholders = re.findall(r"{(\w+)}", url)
+        if placeholders:
+            raise ApiRequestException('Parameters are required: ' + ', '.join(placeholders))
+
+        auth = self._handle_auth()['credentials']
+        req = requests.request(self.endpoint.method, url, params=query, data=body, auth=auth)
+
+        resp = req.json()
+        if req.status_code != 200:
+            raise RuntimeError(req.text)
+
+        total = None
+        if 'total_column' in self.options and isinstance(resp, dict):
+            for col in self.options['total_column']:
+                if col in resp:
+                    total = resp[col]
+                    break
+
+        for item in self.endpoint.response['path']:
+            resp = resp[item]
+
+        if self.endpoint.response['view'] == 'record':
+            # response is one record, make table
+            resp = [resp]
+        return resp, total
+
     def list(
         self,
         conditions: List[FilterCondition] = None,
@@ -422,57 +463,40 @@ class RestApiTable(APIResource):
         if limit is None:
             limit = 20
 
-        query, body, path_vars = {}, {}, {}
-
+        filters = {}
         if conditions:
             for condition in conditions:
-                filter = None
                 if condition.column not in self.params:
                     continue
 
                 if condition.column in self.list_params:
                     if condition.op == FilterOperator.IN:
-                        filter = [condition.column, condition.value]
+                        filters[condition.column] = condition.value
                     elif condition.op == FilterOperator.EQUAL:
-                        filter = [condition.column, [condition]]
+                        filters[condition.column] = [condition]
                     condition.applied = True
                 else:
-                    filter = [condition.column, condition.value]
+                    filters[condition.column] = condition.value
                     condition.applied = True
 
-                if filter:
-                    name, value = filter
-                    param = self.endpoint.params[condition.column]
-                    if param.where == 'query':
-                        query[name] = value
-                    elif param.where == 'path':
-                        path_vars[name] = value
-                    else:
-                        body[name] = value
+        resp, total = self._api_request(filters)
+        # pagination
+        offset_param = self.get_offset_param()
 
-        url = self.connection_data['api_base'] + self.endpoint.url
-        if path_vars:
-            url = url.format(**path_vars)
-        # check empty placeholders
-        placeholders = re.findall(r"{(\w+)}", url)
-        if placeholders:
-            raise ValueError('Parameters are required: ' + ', '.join(placeholders))
+        if total is not None and offset_param is not None:
+            while True:
+                count = len(resp)
+                if limit <= count or total <= count:
+                    break
 
-        auth = self._handle_auth()['credentials']
-        req = requests.request(self.endpoint.method, url, params=query, data=body, auth=auth)
+                # download more pages
+                filters[offset_param] = count
+                resp2, total = self._api_request(filters)
+                resp.extend(resp2)
 
-        resp = req.json()
-        if req.status_code != 200:
-            raise RuntimeError(req.text)
-        for item in self.endpoint.response['path']:
-            resp = resp[item]
-
-        if self.endpoint.response['view'] == 'record':
-            # response is one record, make table
-            resp = [resp]
+        resp = resp[:limit]
 
         data = []
-        count = 0
 
         columns = self.get_columns()
         for record in resp:
@@ -480,18 +504,11 @@ class RestApiTable(APIResource):
 
             if isinstance(record, dict):
                 for name, value in record.items():
-
-                    # value = record.[name]
-
                     item[name] = self.repr_value(value)
 
                 data.append(item)
             elif len(columns) > 0:
                 # response is value
                 item[columns[0]] = self.repr_value(record)
-
-            count += 1
-            if limit <= count:
-                break
 
         return pd.DataFrame(data, columns=columns)

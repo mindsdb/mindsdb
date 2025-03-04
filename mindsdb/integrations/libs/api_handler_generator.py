@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import re
 import json
-from typing import Dict, List, Tuple
+from typing import Dict, List
 import yaml
 
 import pandas as pd
@@ -29,8 +29,7 @@ class APIEndpoint:
     method: str
     # table_name: str
     params: dict
-    response: str
-    response_path: list
+    response: dict
     has_pagination: bool = False
 
 
@@ -50,6 +49,8 @@ class APIEndpointParam:
 
 
 def find_common_url_prefix(urls):
+    if len(urls) == 0:
+        return ''
     urls = [
         url.split('/')
         for url in urls
@@ -110,10 +111,11 @@ class APIResourceGenerator:
     """
     A class to generate API resources based on the OpenAPI specification.
     """
-    def __init__(self, url, connection_data, api_base=None) -> None:
+    def __init__(self, url, connection_data, api_base=None, options=None) -> None:
         self.openapi_spec_parser = OpenAPISpecParser(url)
         self.connection_data = connection_data
         self.api_base = api_base
+        self.options = options or {}
 
     def generate_api_resources(self, handler, table_name_format='{url}') -> Dict[str, APIResource]:
         """
@@ -134,8 +136,10 @@ class APIResourceGenerator:
         resources = {}
         for endpoint in endpoints:
             url = endpoint.url[prefix_len:]
-            url = re.sub(r'[\{\}/]+', '_', url).strip('_')
-            table_name = table_name_format.format(url=url, method=endpoint.method)
+            # replace placehoders with x
+            url = re.sub(r"{(\w+)}", 'x', url)
+            url = url.replace('/', '_').strip('_')
+            table_name = table_name_format.format(url=url, method=endpoint.method).lower()
             resources[table_name] = RestApiTable(handler, endpoint=endpoint, resource_gen=self)
 
         return resources
@@ -148,8 +152,10 @@ class APIResourceGenerator:
         return resource_types
 
     def has_pagination(self, params):
-        if 'startAt' in params:
-            return True
+        if 'offset_param' in self.options:
+            for col in self.options['offset_param']:
+                if col in params:
+                    return True
         return False
 
     def process_endpoints(self, paths: dict) -> List[APIEndpoint]:
@@ -173,19 +179,18 @@ class APIResourceGenerator:
 
                 parameters = self._process_endpoint_parameters(method_info['parameters']) if 'parameters' in method_info else {}
 
-                response, response_path = self._process_endpoint_response(method_info['responses'])
-                if response is None:
-                    continue
-
                 has_pagination = self.has_pagination(parameters)
+
+                response = self._process_endpoint_response(method_info['responses'])
+                if response['type'] is None:
+                    continue
 
                 endpoint = APIEndpoint(
                     url=path,
                     method=http_method,
                     params=parameters,
                     has_pagination=has_pagination,
-                    response=response,
-                    response_path=response_path
+                    response=response
                 )
 
                 endpoints.append(endpoint)
@@ -216,13 +221,14 @@ class APIResourceGenerator:
 
         return endpoint_parameters
 
-    def _process_endpoint_response(self, responses: dict) -> Tuple[str, list]:
+    def _process_endpoint_response(self, responses: dict):
         response = None
         response_path = []  # used to find list in response
 
         if '200' not in responses:
             return responses, response_path
 
+        view = 'table'
         for content_type, resp_info in responses['200']['content'].items():
             if content_type != 'application/json':
                 continue
@@ -234,23 +240,41 @@ class APIResourceGenerator:
             type = self._convert_to_resource_type(resp_info['schema'])
 
             # resolve type
+            type_name = None
             if type.type_name in self.resource_types:
+                type_name = type.type_name
                 type = self.resource_types[type.type_name]
 
-            if type.type_name == 'list':
+            if type.type_name == 'array':
                 response = type.sub_type
             elif type.type_name == 'object':
-                # find property with list
                 if type.properties is None:
                     raise NotImplementedError
-                for k, v in type.properties.items():
-                    if v.type_name == 'array':
-                        response = v.sub_type
-                        response_path.append(k)
-                        break
+
+                # if it is a table find property with list
+                is_table = False
+                if 'total_column' in self.options:
+                    for col in self.options['total_column']:
+                        if col in type.properties:
+                            is_table = True
+
+                if is_table:
+                    for k, v in type.properties.items():
+                        if v.type_name == 'array':
+
+                            response = v.sub_type
+                            response_path.append(k)
+                            break
+                else:
+                    response = type_name
+                    view = 'record'
             break
 
-        return response, response_path
+        return {
+            'type': response,
+            'path': response_path,
+            'view': view
+        }
 
     def _convert_to_resource_type(self, schema: dict) -> APIResourceType:
         """
@@ -311,11 +335,12 @@ class RestApiTable(APIResource):
         self.security_schemes = resource_gen.security_schemes
 
         self.output_columns = {}
-        if endpoint.response in resource_types:
-            self.output_columns = resource_types[endpoint.response].properties
+        response_type = endpoint.response['type']
+        if response_type in resource_types:
+            self.output_columns = resource_types[response_type].properties
         else:
             # let it be single column with this type
-            self.output_columns = {'value': endpoint.response}
+            self.output_columns = {'value': response_type}
 
         # check params:
         self.params, self.list_params = [], []
@@ -399,15 +424,6 @@ class RestApiTable(APIResource):
 
         query, body, path_vars = {}, {}, {}
 
-        # TODO sort
-        # if sort is not None and self._allow_sort:
-        #     for col in sort:
-        #         method_kwargs['sort'] = col.column
-        #         method_kwargs['direction'] = 'asc' if col.ascending else 'desc'
-        #         sort.applied = True
-        #         # supported only 1 column
-        #         break
-
         if conditions:
             for condition in conditions:
                 filter = None
@@ -440,7 +456,7 @@ class RestApiTable(APIResource):
         # check empty placeholders
         placeholders = re.findall(r"{(\w+)}", url)
         if placeholders:
-            raise RuntimeError('Parameters are required: ' + ', '.join(placeholders))
+            raise ValueError('Parameters are required: ' + ', '.join(placeholders))
 
         auth = self._handle_auth()['credentials']
         req = requests.request(self.endpoint.method, url, params=query, data=body, auth=auth)
@@ -448,8 +464,12 @@ class RestApiTable(APIResource):
         resp = req.json()
         if req.status_code != 200:
             raise RuntimeError(req.text)
-        for item in self.endpoint.response_path:
+        for item in self.endpoint.response['path']:
             resp = resp[item]
+
+        if self.endpoint.response['view'] == 'record':
+            # response is one record, make table
+            resp = [resp]
 
         data = []
         count = 0

@@ -6,13 +6,16 @@ from mindsdb.interfaces.skills.skill_tool import skill_tool
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.storage.db import KnowledgeBase
 from mindsdb.utilities import log
+from langchain_core.documents import Document
 from langchain_core.tools import Tool
 from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
+from mindsdb.integrations.libs.response import RESPONSE_TYPE
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
 
 logger = log.getLogger(__name__)
 
 
-def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
+def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
     """
     Builds a retrieval tool i.e RAG
 
@@ -71,6 +74,9 @@ def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
         logger.debug("Using default embedding model as no knowledge base provided")
 
     # Load and validate config
+    rag_pipeline_tool = None
+    name_lookup_tool = None
+    rag_config = None
     try:
         rag_config = load_rag_config(tools_config, kb_params, embeddings_model)
         # build retriever
@@ -87,7 +93,7 @@ def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
                 return f"Error in retrieval: {str(e)}"
 
         # Create RAG tool
-        return Tool(
+        rag_pipeline_tool = Tool(
             func=rag_wrapper,
             name=tool['name'],
             description=tool['description'],
@@ -99,7 +105,68 @@ def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
     except Exception as e:
         logger.error(f"Error building RAG pipeline: {str(e)}")
         raise ValueError(f"Failed to build RAG pipeline: {str(e)}")
+    
+    vector_db_handler = kb_table.get_vector_db()
+    metadata_config = rag_config.metadata_config
 
+    def _get_document_by_name(name: str):
+        if metadata_config.name_column_index is not None:
+            tsquery_str = ' & '.join(name.split(' '))
+            documents_response = vector_db_handler.native_query(
+                f'SELECT * FROM {metadata_config.table} WHERE {metadata_config.name_column_index} @@ to_tsquery(\'{tsquery_str}\') LIMIT 1;'
+            )
+        else:
+            documents_response = vector_db_handler.native_query(
+                f'SELECT * FROM {metadata_config.table} WHERE "{metadata_config.name_column}" ILIKE \'%{name}%\' LIMIT 1;'
+            )
+        if documents_response.resp_type == RESPONSE_TYPE.ERROR:
+            raise RuntimeError(f'There was an error looking up documents: {documents_response.error_message}')
+        if documents_response.data_frame.empty:
+            return None
+        document_row = documents_response.data_frame.head(1)
+        # Restore document from chunks, keeping in mind max context.
+        id_filter_condition = FilterCondition(
+            f"{metadata_config.embeddings_metadata_column}->>'{metadata_config.doc_id_key}'",
+            FilterOperator.EQUAL,
+            str(document_row.get(metadata_config.id_column).item())
+        )
+        document_chunks_df = vector_db_handler.select(
+            metadata_config.embeddings_table,
+            conditions=[id_filter_condition]
+        )
+        if document_chunks_df.empty:
+            return None
+        sort_col = 'chunk_id' if 'chunk_id' in document_chunks_df.columns else 'id'
+        document_chunks_df.sort_values(by=sort_col)
+        content = ''
+        for _, chunk in document_chunks_df.iterrows():
+            if len(content) > metadata_config.max_document_context:
+                break
+            content += chunk.get(metadata_config.content_column, '')
+
+        return Document(
+            page_content=content,
+            metadata=document_row.to_dict(orient='records')[0]
+        )
+
+    def _lookup_document_by_name(name: str):
+        found_document = _get_document_by_name(name)
+        if found_document is None:
+            return f'I could not find any document with name {name}. Please make sure the document name matches exactly.'
+        return f"I found document {found_document.metadata.get(metadata_config.id_column)} with name {found_document.metadata.get(metadata_config.name_column)}. Here is the full document to use as context:\n\n{found_document.page_content}"
+
+    name_lookup_tool = Tool(
+        func=_lookup_document_by_name,
+        name=tool.get('name', '') + '_name_lookup',
+        description='You must use this tool ONLY when the user is asking about a specific document by name or title (e.g. "Find me document XXX", "search for document XXX"). The input should be the exact name of the document the user is looking for.',
+        return_direct=False
+    )
+
+    tools = [rag_pipeline_tool]
+    if rag_config.metadata_config is None:
+        return tools
+    tools.append(name_lookup_tool)
+    return tools
 
 def _get_knowledge_base(knowledge_base_name: str, project_id, executor) -> KnowledgeBase:
     """

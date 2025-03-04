@@ -1,8 +1,14 @@
 from dataclasses import dataclass
 import re
+from io import StringIO
 import json
 from typing import Dict, List
 import yaml
+try:
+    from yaml import CLoader as Loader
+except ImportError:
+    from yaml import Loader
+
 
 import pandas as pd
 import requests
@@ -77,13 +83,18 @@ class OpenAPISpecParser:
     A class to parse the OpenAPI specification.
     """
     def __init__(self, openapi_spec_path: str) -> None:
+
         if openapi_spec_path.startswith('http://') or openapi_spec_path.startswith('https://'):
             response = requests.get(openapi_spec_path)
             response.raise_for_status()
-            self.openapi_spec = response.json() if openapi_spec_path.endswith('.json') else yaml.safe_load(response.text)
+
+            if openapi_spec_path.endswith('.json'):
+                self.openapi_spec = response.json()
+            else:
+                stream = StringIO(response.text)
+                self.openapi_spec = yaml.load(stream, Loader=Loader)
         else:
-            with open(openapi_spec_path, 'r') as f:
-                self.openapi_spec = json.loads(f.read()) if openapi_spec_path.endswith('.json') else yaml.safe_load(f)
+            raise ApiRequestException('URL is required')
 
     def get_security_schemes(self) -> dict:
         """
@@ -211,6 +222,7 @@ class APIResourceGenerator:
         """
         endpoint_parameters = {}
         for parameter in parameters:
+
             type_name = self.get_resource_type(parameter['schema'])
 
             optional = 'default' in parameter['schema']

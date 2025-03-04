@@ -5,6 +5,7 @@ on:
     types: [opened, reopened, synchronize, labeled]
     branches:
       - 'main'
+      - 'stable-1-31'
 
 # Cancel any existing runs of this workflow on the same branch/pr
 # We always want to build/deploy/test a new commit over an older one

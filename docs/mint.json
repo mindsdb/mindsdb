@@ -34,8 +34,8 @@
     }
   ],
   "topbarCtaButton": {
-    "name": "Get Started",
-    "url": "https://github.com/mindsdb/mindsdb"
+    "name": "Try Demo",
+    "url": "http://mdb.ai/register"
   },
   "anchors": [
     {

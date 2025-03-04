@@ -21,7 +21,7 @@ connection_args = OrderedDict(
     },
     code={
         'type': ARG_TYPE.STR,
-        'description': 'code after authorisation',
-        'label': 'code after authorisation',
+        'description': 'Code After Authorisation',
+        'label': 'Code After Authorisation',
     },
 )

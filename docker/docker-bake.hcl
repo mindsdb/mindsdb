@@ -1,6 +1,6 @@
 # The default targets to be built if none are specified
 group "default" {
-  targets = ["bare", "devel", "cloud", "lightwood", "huggingface"]
+  targets = ["cloud"]
 }
 
 variable "PUSH_TO_DOCKERHUB" {
@@ -56,7 +56,7 @@ function "get_tags" {
     PUSH_TO_DOCKERHUB ? "mindsdb/${IMAGE}:${VERSION}${notequal(image, "bare") ? "-${image}" : ""}" : "",
     PUSH_TO_DOCKERHUB ? "mindsdb/${IMAGE}:${notequal(image, "bare") ? image : "latest"}" : ""
   ]
-} 
+}
 
 
 
@@ -103,4 +103,3 @@ target "images" {
   cache-to = get_cache_to(item.name)
   cache-from = get_cache_from(item.name)
 }
-

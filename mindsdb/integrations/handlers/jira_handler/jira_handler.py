@@ -3,7 +3,6 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
 from mindsdb.utilities import log
-from mindsdb_sql_parser import parse_sql
 from mindsdb.integrations.libs.api_handler_generator import APIResourceGenerator
 
 
@@ -55,7 +54,6 @@ class JiraHandler(APIHandler):
             HandlerStatusResponse
         """
         return
-
 
     def check_connection(self) -> StatusResponse:
         """

@@ -6,6 +6,7 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.utilities.config import config
 
 
@@ -102,11 +103,22 @@ class SkillsController:
         if skill is not None:
             raise ValueError(f'Skill with name already exists: {name}')
 
+        metadata = {}
+        if type == 'sql':
+            database_name = params.get('database')
+            handler = integration_controller.get_data_handler(database_name, connect=True)
+            if handler is None:
+                raise Exception('integration not found')
+
+            information_schema = integration_controller.get_information_schema(database_name)
+            metadata['information_schema'] = information_schema.to_dict()
+
         new_skill = db.Skills(
             name=name,
             project_id=project.id,
             type=type,
             params=params,
+            metadata_=metadata
         )
         db.session.add(new_skill)
         db.session.commit()

@@ -11,9 +11,13 @@ from pathlib import Path
 from copy import deepcopy
 from typing import Optional
 from textwrap import dedent
+from datetime import datetime
 from collections import OrderedDict
+from dataclasses import dataclass, field
+from csv import excel as excel_csv_dialect
 import inspect
 
+import pandas as pd
 from sqlalchemy import func
 
 from mindsdb.interfaces.storage import db
@@ -34,6 +38,66 @@ from mindsdb.integrations.libs.base import BaseHandler
 import mindsdb.utilities.profiler as profiler
 
 logger = log.getLogger(__name__)
+
+
+@dataclass
+class HandlerInformationSchema:
+    """Representation of information schema for a handler
+
+    Args:
+        tables (pd.DataFrame): DataFrame containing information from information_schema.tables
+        columns (pd.DataFrame): DataFrame containing information from information_schema.columns
+        _fetched_at (datetime): datetime of when the information schema was fetched
+        _version (int): version of the information schema structure
+    """
+    tables: pd.DataFrame
+    columns: pd.DataFrame
+    _fetched_at: datetime = field(default=None)
+    _version: int = field(default=1)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> 'HandlerInformationSchema':
+        return cls(
+            tables=pd.DataFrame(data['tables']['data'], columns=data['tables']['columns']),
+            columns=pd.DataFrame(data['columns']['data'], columns=data['columns']['columns']),
+            _fetched_at=datetime.fromisoformat(data['_fetched_at']),
+            _version=data.get('_version', 1)
+        )
+
+    def __post_init__(self):
+        tables_columns_filter = ['TABLE_NAME', 'TABLE_SCHEMA', 'TABLE_TYPE']
+        columns_columns_filter = ['TABLE_SCHEMA', 'TABLE_NAME', 'COLUMN_NAME', 'DATA_TYPE']
+        columns_names_map = {
+            'FIELD': 'COLUMN_NAME',
+            'TYPE': 'DATA_TYPE'
+        }
+        self.tables.columns = [x.upper() for x in self.tables.columns]
+        self.tables = self.tables[tables_columns_filter]
+
+        columns = [x.upper() for x in self.columns.columns]
+        columns = [columns_names_map.get(x, x) for x in columns]
+        self.columns.columns = columns
+        self.columns = self.columns[columns_columns_filter]
+
+        if self._fetched_at is None:
+            self._fetched_at = datetime.now()
+
+    def to_dict(self) -> dict:
+        return {
+            'tables': self.tables.to_dict(orient='split', index=False),
+            'columns': self.columns.to_dict(orient='split', index=False),
+            '_fetched_at': self._fetched_at.isoformat(),
+            '_version': self._version
+        }
+
+    def get_table_as_excel_csv(self, table_name: str) -> str:
+        return getattr(self, table_name).to_csv(
+            index=False,
+            sep=excel_csv_dialect.delimiter,
+            quotechar=excel_csv_dialect.quotechar,
+            lineterminator=excel_csv_dialect.lineterminator,
+            quoting=excel_csv_dialect.quoting
+        )
 
 
 class HandlersCache:
@@ -930,6 +994,49 @@ class IntegrationController:
                     )
                     db.session.add(integration_record)
         db.session.commit()
+
+    def get_information_schema(self, handler_name: str) -> HandlerInformationSchema:
+        """Get information schema for a given handler
+
+        Args:
+            handler_name (str): The name of the handler to get information schema for
+
+        Returns:
+            HandlerInformationSchema: The information schema for the given handler
+        """
+        columns_dataframes = []
+        handler = integration_controller.get_data_handler(handler_name, connect=True)
+        if handler is None:
+            raise Exception('integration not found')
+        import inspect
+        if 'all' in inspect.signature(handler.get_tables).parameters:
+            response = handler.get_tables(all=True)
+        else:
+            response = handler.get_tables()
+        response.data_frame.columns = [x.upper() for x in response.data_frame.columns]
+        tables_dataframe = response.data_frame
+
+        for table_metadata in tables_dataframe.to_dict(orient='records'):
+            table_name = table_metadata['TABLE_NAME']
+            table_schema = table_metadata['TABLE_SCHEMA']
+            if 'schema_name' in inspect.signature(handler.get_columns).parameters:
+                response = handler.get_columns(
+                    table_name=table_name,
+                    schema_name=table_schema
+                )
+            else:
+                response = handler.get_columns(
+                    table_name=table_name
+                )
+            response.data_frame.columns = [x.upper() for x in response.data_frame.columns]
+            response.data_frame['TABLE_NAME'] = table_name
+            response.data_frame['TABLE_SCHEMA'] = table_schema
+            columns_dataframes.append(response.data_frame)
+
+        return HandlerInformationSchema(
+            tables=tables_dataframe,
+            columns=pd.concat(columns_dataframes)
+        )
 
 
 integration_controller = IntegrationController()

@@ -10,6 +10,7 @@ import pandas as pd
 
 from langchain.agents import AgentExecutor
 from langchain.agents.initialize import initialize_agent
+from langchain.agents.conversational.prompt import PREFIX
 from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
 from langchain_community.chat_models import (
     ChatAnyscale,
@@ -31,6 +32,7 @@ from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
 from mindsdb.interfaces.agents.event_dispatch_callback_handler import EventDispatchCallbackHandler
 from mindsdb.interfaces.agents.constants import AGENT_CHUNK_POLLING_INTERVAL_SECONDS
+from mindsdb.interfaces.database.integrations import HandlerInformationSchema
 from mindsdb.utilities import log
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 from mindsdb.interfaces.storage import db
@@ -382,12 +384,41 @@ class LangchainAgent:
                 memory.chat_memory.add_ai_message(answer)
 
         agent_type = args.get("agent_type", DEFAULT_AGENT_TYPE)
+        agent_kwargs = {"output_parser": SafeOutputParser()}
+
+        information_schema_txts = []
+        for skill_rel in self.agent.skills_relationships[0]:
+            skill = skill_rel.skill
+            skill_metadata = skill.metadata_ or {}
+
+            if 'information_schema' not in skill_metadata:
+                logger.info(f'Refreshing information_schema of the skill "{skill.name}"')
+                # TODO refresh it
+                continue
+
+            information_schema = HandlerInformationSchema.from_dict(skill_metadata['information_schema'])
+            tables_csv: str = information_schema.get_table_as_excel_csv('tables')
+            columns_csv: str = information_schema.get_table_as_excel_csv('columns')
+
+            information_schema_txts.append(
+                f"The information_schema.tables of the database `{skill.name}` is (CSV with Excel dialect):\n"
+                + tables_csv
+                + f"\nThe information_schema.columns of the database `{skill.name}` is (CSV with Excel dialect):\n"
+                + columns_csv
+                + '\n'
+            )
+
+        if len(information_schema_txts) > 0:
+            prompt_parts = PREFIX.partition('TOOLS:')
+            prompt = prompt_parts[0] + ('\n'.join(information_schema_txts)) + prompt_parts[1] + prompt_parts[2]
+            agent_kwargs['prefix'] = prompt
+
         agent_executor = initialize_agent(
             tools,
             llm,
             agent=agent_type,
             # Use custom output parser to handle flaky LLMs that don't ALWAYS conform to output format.
-            agent_kwargs={"output_parser": SafeOutputParser()},
+            agent_kwargs=agent_kwargs,
             # Calls the agent’s LLM Chain one final time to generate a final answer based on the previous steps
             early_stopping_method="generate",
             handle_parsing_errors=self._handle_parsing_errors,

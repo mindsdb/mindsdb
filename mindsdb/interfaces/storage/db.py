@@ -451,6 +451,11 @@ class Skills(Base):
     deleted_at = Column(DateTime)
 
     def as_dict(self) -> Dict:
+        metadata = {}
+        if isinstance(self.metadata_, dict) and 'information_schema' in self.metadata_:
+            metadata['information_schema'] = {
+                'fetched_at': self.metadata_['information_schema']['_fetched_at']
+            }
         return {
             "id": self.id,
             "name": self.name,
@@ -459,6 +464,7 @@ class Skills(Base):
             "type": self.type,
             "params": self.params,
             "created_at": self.created_at,
+            "metadata": {}
         }
 
 

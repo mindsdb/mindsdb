@@ -23,9 +23,6 @@ class JiraHandler(APIHandler):
         super().__init__(name)
         self.connection_data = kwargs.get("connection_data", {})
 
-        self.parser = parse_sql
-        self.dialect = 'jira'
-        self.kwargs = kwargs
         self.connection = None
         self.is_connected = False
 
@@ -34,7 +31,7 @@ class JiraHandler(APIHandler):
         self.api_resource_generator = APIResourceGenerator(
             "https://developer.atlassian.com/cloud/jira/platform/swagger-v3.v3.json",
             self.connection_data,
-            api_base='/rest/api/3/',
+            url_base='/rest/api/3/',
             options={
                 'offset_param': ['startAt', 'offset'],
                 'total_column': ['totalEntryCount', 'total'],

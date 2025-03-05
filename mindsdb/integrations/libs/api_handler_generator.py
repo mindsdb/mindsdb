@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import re
 from io import StringIO
 import json
-from typing import Dict, List
+from typing import Dict, List, Any
 import yaml
 try:
     from yaml import CLoader as Loader
@@ -57,7 +57,7 @@ class APIEndpointParam:
     name: str
     type: APIResourceType
     where: str = None
-    optional: bool = False
+    default: Any = None
 
 
 def find_common_url_prefix(urls):
@@ -83,7 +83,6 @@ class OpenAPISpecParser:
     A class to parse the OpenAPI specification.
     """
     def __init__(self, openapi_spec_path: str) -> None:
-
         if openapi_spec_path.startswith('http://') or openapi_spec_path.startswith('https://'):
             response = requests.get(openapi_spec_path)
             response.raise_for_status()
@@ -123,15 +122,18 @@ class OpenAPISpecParser:
         """
         return self.openapi_spec.get('paths', {})
 
+    def get_specs(self) -> dict:
+        return self.openapi_spec
+
 
 class APIResourceGenerator:
     """
     A class to generate API resources based on the OpenAPI specification.
     """
-    def __init__(self, url, connection_data, api_base=None, options=None) -> None:
+    def __init__(self, url, connection_data, url_base=None, options=None) -> None:
         self.openapi_spec_parser = OpenAPISpecParser(url)
         self.connection_data = connection_data
-        self.api_base = api_base
+        self.url_base = url_base
         self.options = options or {}
         self.resources = {}
 
@@ -186,7 +188,8 @@ class APIResourceGenerator:
         """
         endpoints = []
         for path, path_info in paths.items():
-            if self.api_base is not None and not path.startswith(self.api_base):
+            # filter endpoints by url base
+            if self.url_base is not None and (not path.startswith(self.url_base) or path == self.url_base):
                 continue
 
             for http_method, method_info in path_info.items():
@@ -210,6 +213,14 @@ class APIResourceGenerator:
 
         return endpoints
 
+    def get_ref_object(self, ref):
+        # get object by $ref link
+        el = self.openapi_spec_parser.get_specs()
+        for path in ref.lstrip('#').split('/'):
+            if path:
+                el = el[path]
+        return el
+
     def _process_endpoint_parameters(self, parameters: list) -> Dict[str, APIEndpointParam]:
         """
         Processes the parameters defined in the OpenAPI specification.
@@ -222,14 +233,15 @@ class APIResourceGenerator:
         """
         endpoint_parameters = {}
         for parameter in parameters:
+            if '$ref' in parameter:
+                parameter = self.get_ref_object(parameter['$ref'])
 
             type_name = self.get_resource_type(parameter['schema'])
 
-            optional = 'default' in parameter['schema']
             endpoint_parameters[parameter['name']] = APIEndpointParam(
                 name=parameter['name'],
                 type=type_name,
-                optional=optional,
+                default=parameter['schema'].get('default'),
                 where=parameter['in'],
             )
 
@@ -243,7 +255,12 @@ class APIResourceGenerator:
             return {'type': None}
 
         view = 'table'
-        for content_type, resp_info in responses['200']['content'].items():
+
+        resp_success = responses['200']
+        if '$ref' in resp_success:
+            resp_success = self.get_ref_object(responses['200']['$ref'])
+
+        for content_type, resp_info in resp_success['content'].items():
             if content_type != 'application/json':
                 continue
 
@@ -337,9 +354,6 @@ class APIResourceGenerator:
             # TODO Get only the first type.
             return self.get_resource_type(schema['allOf'][0])
 
-        else:
-            return None
-
 
 class RestApiTable(APIResource):
     def __init__(self, *args, endpoint: APIEndpoint = None, resource_gen=None, **kwargs):
@@ -393,17 +407,12 @@ class RestApiTable(APIResource):
         # NOTE: If the API supports multiple authentication mechanisms, should they be supported? Which one should be given preference?
 
         security_schemes = self.security_schemes
-        if 'ApiKeyAuth' in security_schemes:
-            # For API key authentication, the API key is required.
-            if 'api_key' not in self.connection_data:
-                raise ApiRequestException(
-                    "The API key is required for API key authentication."
-                )
+
+        if 'token' in self.connection_data:
+            headers = {'Authorization': f'Bearer {self.connection_data["token"]}'}
+
             return {
-                "type": "api_key",
-                "credentials": self.connection_data["api_key"],
-                "in": security_schemes['ApiKeyAuth']['in'],
-                "name": security_schemes['ApiKeyAuth']['name']
+                "headers": headers
             }
 
         elif 'basicAuth' in security_schemes:
@@ -416,23 +425,30 @@ class RestApiTable(APIResource):
                     "The username and password are required for basic authentication."
                 )
             return {
-                "type": "basic",
-                "credentials": HTTPBasicAuth(
+                "auth": HTTPBasicAuth(
                     self.connection_data["username"],
                     self.connection_data["password"],
                 ),
             }
-
-        # TODO: Add support for other authentication mechanisms.
+        return {}
 
     def get_columns(self) -> List[str]:
         return list(self.output_columns.keys())
 
-    def get_offset_param(self):
-        if 'offset_param' in self.options:
-            for col in self.options['offset_param']:
+    def get_setting_param(self, setting_name: str) -> str:
+        # find input param name for specific setting
+
+        if setting_name in self.options:
+            for col in self.options[setting_name]:
                 if col in self.endpoint.params:
                     return col
+
+    def get_user_params(self):
+        params = {}
+        for k, v in self.connection_data.items():
+            if k not in ('username', 'password', 'token', 'api_base'):
+                params[k] = v
+        return params
 
     def _api_request(self, filters):
         query, body, path_vars = {}, {}, {}
@@ -453,8 +469,8 @@ class RestApiTable(APIResource):
         if placeholders:
             raise ApiRequestException('Parameters are required: ' + ', '.join(placeholders))
 
-        auth = self._handle_auth()['credentials']
-        req = requests.request(self.endpoint.method, url, params=query, data=body, auth=auth)
+        kwargs = self._handle_auth()
+        req = requests.request(self.endpoint.method, url, params=query, data=body, **kwargs)
 
         if req.status_code != 200:
             raise ApiResponseException(req.text)
@@ -503,19 +519,48 @@ class RestApiTable(APIResource):
                     filters[condition.column] = condition.value
                     condition.applied = True
 
-        resp, total = self._api_request(filters)
-        # pagination
-        offset_param = self.get_offset_param()
+        # user params
+        params = self.get_user_params()
+        if params:
+            filters.update(params)
 
-        if total is not None and offset_param is not None:
+        page_size_param = self.get_setting_param('page_size_param')
+        page_size = None
+        if page_size_param is not None:
+            # use default value for page size
+            page_size = self.endpoint.params[page_size_param].default
+            if page_size:
+                filters[page_size_param] = page_size
+        resp, total = self._api_request(filters)
+
+        # pagination
+        offset_param = self.get_setting_param('offset_param')
+        page_num_param = self.get_setting_param('page_num_param')
+        if offset_param is not None or page_num_param is not None:
+            page_num = 1
             while True:
                 count = len(resp)
-                if limit <= count or total <= count:
+                if limit <= count:
+                    break
+
+                if total is not None and total <= count:
+                    # total is reached
+                    break
+
+                if page_size is not None and page_size > count:
+                    # number of results are more than page, don't go to next page
                     break
 
                 # download more pages
-                filters[offset_param] = count
+                if offset_param:
+                    filters[offset_param] = count
+                else:
+                    page_num += 1
+                    filters[page_num_param] = page_num
                 resp2, total = self._api_request(filters)
+                if len(resp2) == 0:
+                    # no results from next page
+                    break
                 resp.extend(resp2)
 
         resp = resp[:limit]

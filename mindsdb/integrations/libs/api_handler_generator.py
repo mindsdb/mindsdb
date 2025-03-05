@@ -367,7 +367,10 @@ class RestApiTable(APIResource):
         super().__init__(*args, **kwargs)
 
     def repr_value(self, value):
+        # convert dict and lists to strings to show it response table
+
         if isinstance(value, dict):
+            # remove empty keys
             value = {
                 k: v
                 for k, v in value.items()

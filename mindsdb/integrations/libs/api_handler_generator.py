@@ -240,7 +240,7 @@ class APIResourceGenerator:
         response_path = []  # used to find list in response
 
         if '200' not in responses:
-            return responses, response_path
+            return {'type': None}
 
         view = 'table'
         for content_type, resp_info in responses['200']['content'].items():
@@ -251,29 +251,29 @@ class APIResourceGenerator:
             if 'schema' not in resp_info:
                 continue
 
-            type = self._convert_to_resource_type(resp_info['schema'])
+            resource_type = self._convert_to_resource_type(resp_info['schema'])
 
             # resolve type
             type_name = None
-            if type.type_name in self.resource_types:
-                type_name = type.type_name
-                type = self.resource_types[type.type_name]
+            if resource_type.type_name in self.resource_types:
+                type_name = resource_type.type_name
+                resource_type = self.resource_types[resource_type.type_name]
 
-            if type.type_name == 'array':
-                response = type.sub_type
-            elif type.type_name == 'object':
-                if type.properties is None:
+            if resource_type.type_name == 'array':
+                response = resource_type.sub_type
+            elif resource_type.type_name == 'object':
+                if resource_type.properties is None:
                     raise NotImplementedError
 
                 # if it is a table find property with list
                 is_table = False
                 if 'total_column' in self.options:
                     for col in self.options['total_column']:
-                        if col in type.properties:
+                        if col in resource_type.properties:
                             is_table = True
 
                 if is_table:
-                    for k, v in type.properties.items():
+                    for k, v in resource_type.properties.items():
                         if v.type_name == 'array':
 
                             response = v.sub_type

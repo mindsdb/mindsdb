@@ -31,6 +31,7 @@ class GithubHandler(APIHandler):
             options={
                 'page_num_param': ['page'],
                 'page_size_param': ['per_page'],
+                'total_column': ['total_count'],
             }
         )
 

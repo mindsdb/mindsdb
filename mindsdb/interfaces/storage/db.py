@@ -461,6 +461,11 @@ class Skills(Base):
         }
 
 
+class Text2SQLSkills(Skills):
+    __tablename__ = "text2SQL_skills"
+    database_schema = Column(String, nullable=True, default='')
+
+
 class Agents(Base):
     __tablename__ = "agents"
     id = Column(Integer, primary_key=True)

@@ -32,6 +32,7 @@ from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
 from mindsdb.interfaces.agents.event_dispatch_callback_handler import EventDispatchCallbackHandler
 from mindsdb.interfaces.agents.constants import AGENT_CHUNK_POLLING_INTERVAL_SECONDS
+from mindsdb.interfaces.skills.skills_controller import SkillsController
 from mindsdb.interfaces.database.integrations import HandlerInformationSchema
 from mindsdb.utilities import log
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
@@ -387,14 +388,15 @@ class LangchainAgent:
         agent_kwargs = {"output_parser": SafeOutputParser()}
 
         information_schema_txts = []
-        for skill_rel in self.agent.skills_relationships[0]:
+        for skill_rel in self.agent.skills_relationships:
             skill = skill_rel.skill
             skill_metadata = skill.metadata_ or {}
 
             if 'information_schema' not in skill_metadata:
                 logger.info(f'Refreshing information_schema of the skill "{skill.name}"')
-                # TODO refresh it
-                continue
+                skills_controller = SkillsController()
+                skills_controller.update_skill_information_schema(skill)
+                skill_metadata = skill.metadata_ or {}
 
             information_schema = HandlerInformationSchema.from_dict(skill_metadata['information_schema'])
             tables_csv: str = information_schema.get_table_as_excel_csv('tables')

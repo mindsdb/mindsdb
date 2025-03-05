@@ -4,6 +4,7 @@ import base64
 import shutil
 import ast
 import time
+import inspect
 import tempfile
 import importlib
 import threading
@@ -15,7 +16,6 @@ from datetime import datetime
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from csv import excel as excel_csv_dialect
-import inspect
 
 import pandas as pd
 from sqlalchemy import func
@@ -1007,8 +1007,8 @@ class IntegrationController:
         columns_dataframes = []
         handler = integration_controller.get_data_handler(handler_name, connect=True)
         if handler is None:
-            raise Exception('integration not found')
-        import inspect
+            raise EntityNotExistsError(f'Database with name {handler_name} not found')
+
         if 'all' in inspect.signature(handler.get_tables).parameters:
             response = handler.get_tables(all=True)
         else:

@@ -442,6 +442,7 @@ class Skills(Base):
     project_id = Column(Integer, nullable=False)
     type = Column(String, nullable=False)
     params = Column(JSON)
+    metadata_: dict = Column("metadata", JSON, nullable=True)
 
     created_at = Column(DateTime, default=datetime.datetime.now)
     updated_at = Column(

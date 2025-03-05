@@ -106,10 +106,6 @@ class SkillsController:
         metadata = {}
         if type == 'sql':
             database_name = params.get('database')
-            handler = integration_controller.get_data_handler(database_name, connect=True)
-            if handler is None:
-                raise Exception('integration not found')
-
             information_schema = integration_controller.get_information_schema(database_name)
             metadata['information_schema'] = information_schema.to_dict()
 
@@ -124,6 +120,25 @@ class SkillsController:
         db.session.commit()
 
         return new_skill
+
+    def update_skill_information_schema(self, skill_record: db.Skills) -> None:
+        '''Updates the information schema for a sql skill.
+
+        Args:
+            skill_record (db.Skills): The skill record to update
+
+        Raises:
+            ValueError: If `project_name` does not exist or skill doesn't exist
+        '''
+        if skill_record.type != 'sql':
+            raise ValueError('Information schema is only supported for SQL skills')
+
+        database_name = skill_record.params.get('database')
+        information_schema = integration_controller.get_information_schema(database_name)
+
+        skill_record.metadata_['information_schema'] = information_schema.to_dict()
+        flag_modified(skill_record, 'metadata_')
+        db.session.commit()
 
     def update_skill(
             self,

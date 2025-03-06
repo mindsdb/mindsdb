@@ -138,7 +138,8 @@ PACKAGE_NAME_MAP = {
     "opentelemetry-instrumentation-requests": ["opentelemetry"],
     "opentelemetry-instrumentation-flask": ["opentelemetry"],
     "opentelemetry-distro": ["opentelemetry"],
-    "sqlalchemy-ingres": ["ingres_sa_dialect"]
+    "sqlalchemy-ingres": ["ingres_sa_dialect"],
+    "pyaml": ["yaml"],
 }
 
 # We use this to exit with a non-zero status code if any check fails

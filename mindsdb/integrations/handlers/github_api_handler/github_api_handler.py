@@ -9,7 +9,7 @@ from mindsdb.integrations.libs.api_handler_generator import APIResourceGenerator
 logger = log.getLogger(__name__)
 
 
-class JiraHandler(APIHandler):
+class GithubHandler(APIHandler):
 
     def __init__(self, name=None, **kwargs):
         """
@@ -22,19 +22,16 @@ class JiraHandler(APIHandler):
         super().__init__(name)
         self.connection_data = kwargs.get("connection_data", {})
 
-        self.connection = None
         self.is_connected = False
 
-        # todo store parsed data in files
-
         self.api_resource_generator = APIResourceGenerator(
-            "https://developer.atlassian.com/cloud/jira/platform/swagger-v3.v3.json",
+            "https://raw.githubusercontent.com/github/rest-api-description/refs/heads/main/descriptions/api.github.com/api.github.com.yaml",
             self.connection_data,
-            url_base='/rest/api/3/',
+            url_base='/repos/{owner}/{repo}/',
             options={
-                'offset_param': ['startAt', 'offset'],
-                'total_column': ['totalEntryCount', 'total'],
-                'check_connection_table': 'myself'
+                'page_num_param': ['page'],
+                'page_size_param': ['per_page'],
+                'total_column': ['total_count'],
             }
         )
 
@@ -68,7 +65,7 @@ class JiraHandler(APIHandler):
             self.api_resource_generator.check_connection()
             response.success = True
         except Exception as e:
-            logger.error(f"Error connecting to Jira API: {e}!")
+            logger.error(f"Error connecting to GitHub API: {e}!")
             response.error_message = e
 
         self.is_connected = response.success

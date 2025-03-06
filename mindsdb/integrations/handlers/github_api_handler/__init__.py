@@ -1,19 +1,17 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
+
 from .__about__ import __version__ as version, __description__ as description
-
 try:
-    from .jira_handler import JiraHandler as Handler
+    from .github_api_handler import GithubHandler as Handler
     import_error = None
-
 except Exception as e:
     Handler = None
     import_error = e
 
-
-title = 'Atlassian Jira'
-name = 'jira'
+title = "GitHub"
+name = "github_api"
 type = HANDLER_TYPE.DATA
-icon_path = 'icon.svg'
+icon_path = "icon.svg"
 
 __all__ = [
     "Handler",

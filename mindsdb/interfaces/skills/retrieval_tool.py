@@ -171,6 +171,12 @@ def _build_content_cache_lookup_tool(tool: dict):
 
     def _get_content_by_key(key: str):
         cache = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DATABASE)
+
+        try:
+            cache.ping()
+        except redis.exceptions.ConnectionError:
+            return f'I could not connect to the cache. Please make sure the cache is running.'
+
         content = cache.get(key)
 
         if not content:

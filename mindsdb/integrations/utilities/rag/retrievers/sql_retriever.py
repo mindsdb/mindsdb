@@ -659,7 +659,7 @@ Below is a description of the contents in this column in list format:
         retry: int = 0,
     ) -> str:
         # Base select JOINed with document source table.
-        base_query = f"""SELECT * FROM {self.embeddings_table} AS e INNER JOIN {self.source_table} AS s ON e."document_id" = s."{self.source_id_column}" """
+        base_query = f"""WITH hybrid_search AS MATERIAlIZED (SELECT * FROM {self.embeddings_table} AS e INNER JOIN {self.source_table} AS s ON e."document_id" = s."{self.source_id_column}" """
 
         # return an empty string if schema has not been ranked
         if not ranked_database_schema:
@@ -688,7 +688,7 @@ Below is a description of the contents in this column in list format:
             if i < len(metadata_filters) - 1:
                 base_query += " OR "
 
-        base_query += f" ORDER BY e.embeddings {self.distance_function.value[0]} '{{embeddings}}' LIMIT {self.search_kwargs.k};"
+        base_query += f" ORDER BY e.embeddings {self.distance_function.value[0]} '{{embeddings}}' LIMIT 2000) SELECT * FROM hybrid_search LIMIT {self.search_kwargs.k};"
 
         logger.info(f"Prepared SQL query {base_query}")
         return base_query

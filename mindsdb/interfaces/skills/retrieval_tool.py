@@ -6,6 +6,7 @@ from mindsdb.interfaces.skills.skill_tool import skill_tool
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.storage.db import KnowledgeBase
 from mindsdb.utilities import log
+from mindsdb.utilities.cache import get_cache
 from langchain_core.documents import Document
 from langchain_core.tools import Tool
 from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
@@ -162,10 +163,29 @@ def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
         return_direct=False
     )
 
+    def _lookup_document_id_by_name_in_cache(name: str):
+        cache = get_cache("content")
+
+        content = cache.get(name)
+
+        if not content:
+            return f'I could not find any content for the key {name}. Please make sure this key is valid.'
+
+        # TODO: Fix this based on how the content will be stored.
+        return f'I found the some content for the key {name}. Here is the full content to use as context:\n\n{content}'
+    
+    id_lookup_tool = Tool(
+        func=_lookup_document_id_by_name_in_cache,
+        name=tool.get('name', '') + '_id_lookup',
+        # TODO: Review this description.
+        description='You must use this tool FIRST when the user is asking about a specific document by by name or title (e.g. "Find me document XXX", "search for document XXX"). The input should be the exact name of the document the user is looking for. If the document cannot be found, use other tools to search for it.',
+        return_direct=False
+    )
+
     tools = [rag_pipeline_tool]
     if rag_config.metadata_config is None:
         return tools
-    tools.append(name_lookup_tool)
+    tools.extend([name_lookup_tool, id_lookup_tool])
     return tools
 
 def _get_knowledge_base(knowledge_base_name: str, project_id, executor) -> KnowledgeBase:

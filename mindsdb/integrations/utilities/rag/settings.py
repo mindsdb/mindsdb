@@ -415,6 +415,10 @@ class MetadataConfig(BaseModel):
         default="content",
         description="Name of column in embeddings table containing chunk content"
     )
+    content_column_index: Optional[str] = Field(
+        default=None,
+        description="Name of GIN index to use when looking up name."
+    )
     embeddings_metadata_column: str = Field(
         default="metadata",
         description="Name of column in embeddings table containing chunk metadata"

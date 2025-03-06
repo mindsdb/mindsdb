@@ -9,12 +9,6 @@ from flask import current_app as ca
 
 from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.api.http.namespaces.configs.util import ns_conf
-from mindsdb.utilities.telemetry import (
-    enable_telemetry,
-    disable_telemetry,
-    telemetry_file_exists,
-    inject_telemetry_to_static
-)
 from mindsdb.api.http.gui import update_static
 from mindsdb.utilities.fs import clean_unlinked_process_marks
 from mindsdb.api.http.utils import http_error
@@ -96,28 +90,6 @@ class PingNative(Resource):
             Will return right result only on Linux.
         '''
         return get_active_tasks()
-
-
-@ns_conf.route('/telemetry')
-class Telemetry(Resource):
-    @ns_conf.doc('get_telemetry_status')
-    @api_endpoint_metrics('GET', '/util/telemetry')
-    def get(self):
-        root_storage_path = ca.config_obj['paths']['root']
-        status = "enabled" if telemetry_file_exists(root_storage_path) else "disabled"
-        return {"status": status}
-
-    @ns_conf.doc('set_telemetry')
-    @api_endpoint_metrics('POST', '/util/telemetry')
-    def post(self):
-        data = request.json
-        action = data['action']
-        if str(action).lower() in ["true", "enable", "on"]:
-            enable_telemetry(ca.config_obj['paths']['root'])
-        else:
-            disable_telemetry(ca.config_obj['paths']['root'])
-        inject_telemetry_to_static(ca.config_obj.paths['static'])
-        return '', 200
 
 
 @ns_conf.route('/validate_json_ai')

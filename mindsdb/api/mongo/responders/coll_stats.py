@@ -3,6 +3,7 @@ from mindsdb_sql_parser.ast import Describe, Identifier
 from mindsdb.api.mongo.classes import Responder
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.classes.query_sql import run_sql_command
+from mindsdb.utilities.config import config
 
 
 class Responce(Responder):
@@ -14,7 +15,7 @@ class Responce(Responder):
 
         scale = query.get('scale')
 
-        if db != 'mindsdb' or collection == 'predictors' or scale is None:
+        if db != config.get('default_project') or collection == 'predictors' or scale is None:
             # old behavior
             # NOTE real answer is huge, i removed most data from it.
             res = {
@@ -37,7 +38,7 @@ class Responce(Responder):
             }
 
             res['ns'] = f"{db}.{collection}"
-            if db == 'mindsdb' and collection == 'predictors':
+            if db == config.get('default_project') and collection == 'predictors':
                 res['count'] = len(mindsdb_env['model_controller'].get_models())
         else:
 

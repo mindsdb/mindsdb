@@ -400,7 +400,7 @@ class LangchainAgent:
                 "max_iterations", args.get("max_iterations", DEFAULT_MAX_ITERATIONS)
             ),
             memory=memory,
-            verbose=args.get("verbose", args.get("verbose", True)),
+            verbose=args.get("verbose", args.get("verbose", False))
         )
         return agent_executor
 
@@ -435,7 +435,7 @@ class LangchainAgent:
         all_callbacks = []
 
         if self.log_callback_handler is None:
-            self.log_callback_handler = LogCallbackHandler(logger)
+            self.log_callback_handler = LogCallbackHandler(logger, verbose=args.get("verbose", True))
 
         all_callbacks.append(self.log_callback_handler)
 
@@ -589,8 +589,9 @@ AI: {response}"""
 
         agent_executor_finished_event = threading.Event()
 
-        def stream_worker():
+        def stream_worker(context: dict):
             try:
+                ctx.load(context)
                 for chunk in stream_iterator:
                     chunk_queue.put(chunk)
             finally:
@@ -598,7 +599,9 @@ AI: {response}"""
                 agent_executor_finished_event.set()
 
         # Enqueue Langchain agent streaming chunks in a separate thread to not block event chunks.
-        executor_stream_thread = threading.Thread(target=stream_worker, daemon=True)
+        executor_stream_thread = threading.Thread(
+            target=stream_worker, daemon=True, args=(ctx.dump(),), name='LangchainAgent.stream_worker'
+        )
         executor_stream_thread.start()
 
         while not agent_executor_finished_event.is_set():

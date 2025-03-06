@@ -219,14 +219,17 @@ class Test(BaseExecutorMockPredictor):
         # one key with max value of a
         assert len(data) == 2
         #  first row
-        assert data[0]['a'] == 3
-        assert data[0]['t'] == dt.datetime(2020, 1, 3)
-        assert data[0]['g'] == 'x'
-
-        # second
-        assert data[1]['a'] == 13
-        assert data[1]['t'] == dt.datetime(2021, 1, 3)
-        assert data[1]['g'] == 'y'
+        groups = [
+            ['x', 3, dt.datetime(2020, 1, 3)],
+            ['y', 13, dt.datetime(2021, 1, 3)],
+        ]
+        if data[0]['g'] == 'y':
+            # other sort order after duckdb join
+            groups.reverse()
+        for i, (group, val, date) in enumerate(groups):
+            assert data[i]['a'] == val
+            assert data[i]['t'] == date
+            assert data[i]['g'] == group
 
         # > latest ______________________
         ret = self.execute("""

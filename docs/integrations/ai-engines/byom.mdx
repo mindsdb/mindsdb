@@ -116,15 +116,6 @@ Let's briefly go over the files that need to be uploaded:
             pred_df = pd.merge(pred_df, self.limit[[self.target_col, 'lower', 'upper']], how='left', on=self.target_col)
     ​
             return pred_df
-    ​
-    ​
-    if __name__ == '__main__':
-        BYOM = CustomPredictor()
-        df_train = pd.read_csv('/data/work/mindsdb/test/byom/df_train.csv')
-        BYOM.train(df=df_train,target_col='Time')
-    ​
-        df = BYOM.predict(df=df_train[:10])
-        print(df)
     ```
 </Accordion>
 

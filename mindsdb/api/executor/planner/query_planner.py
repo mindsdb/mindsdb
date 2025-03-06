@@ -1,5 +1,7 @@
 import copy
 
+import pandas as pd
+
 from mindsdb_sql_parser import ast
 from mindsdb_sql_parser.ast import (
     Select, Identifier, Join, Star, BinaryOperation, Constant, Union, CreateTable,
@@ -12,7 +14,7 @@ from mindsdb.api.executor.planner.query_plan import QueryPlan
 from mindsdb.api.executor.planner.steps import (
     FetchDataframeStep, ProjectStep, ApplyPredictorStep,
     ApplyPredictorRowStep, UnionStep, GetPredictorColumns, SaveToTable,
-    InsertToTable, UpdateToTable, SubSelectStep,
+    InsertToTable, UpdateToTable, SubSelectStep, QueryStep,
     DeleteStep, DataStep, CreateTableStep
 )
 from mindsdb.api.executor.planner.utils import (
@@ -23,6 +25,10 @@ from mindsdb.api.executor.planner.utils import (
 )
 from mindsdb.api.executor.planner.plan_join import PlanJoin
 from mindsdb.api.executor.planner.query_prepare import PreparedStatementPlanner
+from mindsdb.utilities.config import config
+
+
+default_project = config.get('default_project')
 
 
 class QueryPlanner:
@@ -52,12 +58,12 @@ class QueryPlanner:
                 self.integrations[integration_name] = integration
 
         # allow to select from mindsdb namespace
-        _projects.add('mindsdb')
+        _projects.add(default_project)
 
         self.default_namespace = default_namespace
 
         # legacy parameter
-        self.predictor_namespace = predictor_namespace.lower() if predictor_namespace else 'mindsdb'
+        self.predictor_namespace = predictor_namespace.lower() if predictor_namespace else default_project
 
         # map for lower names of predictors
 
@@ -746,7 +752,10 @@ class QueryPlanner:
             step = DataStep(from_table.data)
             last_step = self.plan.add_step(step)
             return self.plan_sub_select(query, last_step, add_absent_cols=True)
-
+        elif from_table is None:
+            # one line select
+            step = QueryStep(query, from_table=pd.DataFrame([None]))
+            self.plan.add_step(step)
         else:
             raise PlanningException(f'Unsupported from_table {type(from_table)}')
 

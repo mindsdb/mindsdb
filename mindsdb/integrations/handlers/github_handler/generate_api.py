@@ -125,9 +125,9 @@ class GHTable(APIResource):
 
         # check params:
         self.params, self.list_params = [], []
-        for name, type in method.params.items():
+        for name, param_type in method.params.items():
             self.params.append(name)
-            if type.name == 'list':
+            if param_type.name == 'list':
                 self.list_params.append(name)
 
         self._allow_sort = 'sort' in method.params
@@ -135,7 +135,7 @@ class GHTable(APIResource):
         super().__init__(*args, **kwargs)
 
     def repr_value(self, value, type_name):
-        if value is None or type in ('bool', 'int', 'float'):
+        if value is None or type_name in ('bool', 'int', 'float'):
             return value
         if type_name in self.github_types:
             properties = self.github_types[type_name]
@@ -191,7 +191,7 @@ class GHTable(APIResource):
         count = 0
         for record in method(**method_kwargs):
             item = {}
-            for name, type in self.output_columns.items():
+            for name, output_type in self.output_columns.items():
 
                 # workaround to prevent making addition request per property.
                 if name in targets:
@@ -200,13 +200,13 @@ class GHTable(APIResource):
                 else:
                     value = getattr(record, '_' + name).value
                 if value is not None:
-                    if type.name == 'list':
+                    if output_type.name == 'list':
                         value = ",".join([
-                                str(self.repr_value(i, type.sub_type))
+                                str(self.repr_value(i, output_type.sub_type))
                                 for i in value
                         ])
                     else:
-                        value = self.repr_value(value, type.name)
+                        value = self.repr_value(value, output_type.name)
                 item[name] = value
 
             data.append(item)

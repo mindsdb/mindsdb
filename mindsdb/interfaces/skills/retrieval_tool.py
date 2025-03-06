@@ -213,6 +213,7 @@ def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
     if rag_config.metadata_config is None:
         return tools
     tools.append(_build_name_lookup_tool(tool, pred_args, skill))
+    tool.append(_build_content_cache_lookup_tool(tool))
     return tools
 
 

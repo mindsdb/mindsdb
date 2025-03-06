@@ -45,14 +45,7 @@ class GithubHandler(APIHandler):
         self.is_connected = False
 
         # custom tables
-        # self._register_table("issues", GithubIssuesTable(self))
-        # self._register_table("pull_requests", GithubPullRequestsTable(self))
-        # self._register_table("commits", GithubCommitsTable(self))
-        # self._register_table("releases", GithubReleasesTable(self))
-        # self._register_table("branches", GithubBranchesTable(self))
-        # self._register_table("contributors", GithubContributorsTable(self))
-        # self._register_table("milestones", GithubMilestonesTable(self))
-        # self._register_table("projects", GithubProjectsTable(self))
+        self._register_table("issues", GithubIssuesTable(self))
         self._register_table("files", GithubFilesTable(self))
 
         # generated tables

@@ -182,11 +182,78 @@ def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
         return_direct=False
     )
 
+    def _search_documents_wrapper(phrase: str) -> str:
+        try:
+            results = _search_documents_by_phrase(phrase)
+            if not results:
+                return f"No documents found containing the phrase: {phrase}"
+            
+            response = "Found the following relevant documents:\n"
+            for result in results:
+                response += f"- Document ID: {result['document_id']} (Relevance: {result['rank']:.3f})\n"
+            return response
+        except Exception as e:
+            logger.error(f"Error in phrase search wrapper: {str(e)}")
+            return f"Error searching documents: {str(e)}"
+
+    phrase_search_tool = Tool(
+        func=_search_documents_wrapper,
+        name=tool.get('name', '') + '_phrase_search',
+        description='Use this tool when you need to search for documents containing a specific phrase or sentence. Returns document IDs and their relevance scores.',
+        return_direct=False
+    )
+
     tools = [rag_pipeline_tool]
     if rag_config.metadata_config is None:
         return tools
-    tools.extend([name_lookup_tool, id_lookup_tool])
+    tools.extend([name_lookup_tool, id_lookup_tool, phrase_search_tool])
     return tools
+
+def _search_documents_by_phrase(phrase: str, limit: int = 5) -> list:
+    """
+    Search for documents containing the given phrase using PostgreSQL full-text search.
+    
+    Args:
+        phrase: The phrase or sentence to search for
+        limit: Maximum number of results to return (default: 5)
+        
+    Returns:
+        list: List of dictionaries containing document IDs and relevance scores
+    """
+    try:
+        # Search in the embeddings table using ts_content
+        embeddings_query = f'''
+            SELECT DISTINCT 
+                {metadata_config.doc_id_key},
+                ts_rank(ts_content, plainto_tsquery('english', %s)) as rank
+            FROM {metadata_config.embeddings_table}
+            WHERE ts_content @@ plainto_tsquery('english', %s)
+            ORDER BY rank DESC
+            LIMIT {limit};
+        '''
+        
+        embeddings_response = vector_db_handler.native_query(
+            embeddings_query,
+            params=[phrase, phrase]
+        )
+        
+        if embeddings_response.resp_type == RESPONSE_TYPE.ERROR:
+            raise RuntimeError(f'Error searching documents: {embeddings_response.error_message}')
+            
+        if not embeddings_response.data_frame.empty:
+            results = []
+            for _, row in embeddings_response.data_frame.iterrows():
+                results.append({
+                    'document_id': row[metadata_config.doc_id_key],
+                    'rank': float(row['rank'])
+                })
+            return results
+            
+        return []
+        
+    except Exception as e:
+        logger.error(f'Error in document search: {str(e)}')
+        raise RuntimeError(f'Failed to search documents: {str(e)}')
 
 def _get_knowledge_base(knowledge_base_name: str, project_id, executor) -> KnowledgeBase:
     """

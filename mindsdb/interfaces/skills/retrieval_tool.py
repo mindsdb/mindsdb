@@ -38,6 +38,8 @@ def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
     kb_params = {}
     embeddings_model = None
 
+    content_cache = get_cache("content")
+
     if 'source' in tool:
         kb_name = tool['source']
         executor = skill_tool.get_command_executor()
@@ -175,7 +177,9 @@ def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
         if documents_response.data_frame.empty:
             return None
 
-        # TODO: Cache the response.
+        # Cache the title of the documents against their IDs.
+        for _, row in documents_response.data_frame.iterrows():
+            content_cache.set(row[metadata_config.name_column], row[metadata_config.doc_id_key])
 
         return documents_response.data_frame[metadata_config.name_column].to_list()
     
@@ -195,9 +199,7 @@ def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
     )
 
     def _lookup_document_id_by_name_in_cache(name: str):
-        cache = get_cache("content")
-
-        content = cache.get(name)
+        content = content_cache.get(name)
 
         if not content:
             return f'I could not find any content for the key {name}. Please make sure this key is valid.'

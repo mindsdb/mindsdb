@@ -12,6 +12,7 @@ from mindsdb.interfaces.storage.db import KnowledgeBase
 from mindsdb.utilities import log
 from langchain_core.documents import Document
 from langchain_core.tools import Tool
+import redis
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
 
@@ -158,6 +159,31 @@ def _build_name_lookup_tool(tool: dict, pred_args: dict, skill: db.Skills):
         func=_lookup_document_by_name,
         name=tool.get('name', '') + '_name_lookup',
         description='You must use this tool ONLY when the user is asking about a specific document by name or title. The input should be the exact name of the document the user is looking for.',
+        return_direct=False
+    )
+
+
+def _build_content_cache_lookup_tool(tool: dict):
+    # TODO: Should this be configurable?
+    REDIS_HOST = 'localhost'
+    REDIS_PORT = 6379
+    REDIS_DATABASE = 0
+
+    def _get_content_by_key(key: str):
+        cache = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DATABASE)
+        content = cache.get(key)
+
+        if not content:
+            return f'I could not find any content for the key {key}. Please make sure this key is valid.'
+
+        # TODO: Fix this based on how the content will be stored.
+        return f'I found the some content for the key {key}. Here is the full content to use as context:\n\n{content}'
+
+    return Tool(
+        func=_get_content_by_key,
+        name=tool.get('name', '') + '_content_cache_lookup',
+        # TODO: What should the description be?
+        description='',
         return_direct=False
     )
 

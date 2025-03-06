@@ -9,10 +9,10 @@ from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS
 from mindsdb.interfaces.skills.skill_tool import skill_tool
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.storage.db import KnowledgeBase
+from mindsdb.utilities.cache import get_cache
 from mindsdb.utilities import log
 from langchain_core.documents import Document
 from langchain_core.tools import Tool
-import redis
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
 
@@ -164,18 +164,8 @@ def _build_name_lookup_tool(tool: dict, pred_args: dict, skill: db.Skills):
 
 
 def _build_content_cache_lookup_tool(tool: dict):
-    # TODO: Should this be configurable?
-    REDIS_HOST = 'localhost'
-    REDIS_PORT = 6379
-    REDIS_DATABASE = 0
-
     def _get_content_by_key(key: str):
-        cache = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DATABASE)
-
-        try:
-            cache.ping()
-        except redis.exceptions.ConnectionError:
-            return f'I could not connect to the cache. Please make sure the cache is running.'
+        cache = get_cache("content")
 
         content = cache.get(key)
 

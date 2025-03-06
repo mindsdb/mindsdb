@@ -13,7 +13,7 @@
   <br />
 
   <a href="https://github.com/mindsdb/mindsdb">
-    <img src="/docs/assets/mindsdb_logo.jpg" alt="MindsDB" width="300">
+    <img src="/docs/assets/mindsdb_logo.png" alt="MindsDB" width="300">
   </a>
 
   <p align="center">

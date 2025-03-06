@@ -1,9 +1,9 @@
-import hashlib
-
 from mindsdb.api.executor.planner.steps import UnionStep
 
 from mindsdb.api.executor.sql_query.result_set import ResultSet
 from mindsdb.api.executor.exceptions import WrongArgumentError
+from mindsdb.api.executor.utilities.sql import query_df_with_type_infer_fallback
+import numpy as np
 
 from .base import BaseStepCall
 
@@ -30,27 +30,24 @@ class UnionStepCall(BaseStepCall):
         #         if type1 != type2:
         #             raise ErSqlWrongArguments(f'UNION types mismatch: {type1} != {type2}')
 
-        data = ResultSet()
-        for col in left_result.columns:
-            data.add_column(col)
+        table_a, names = left_result.to_df_cols()
+        table_b, _ = right_result.to_df_cols()
 
-        records_hashes = []
-        results = []
-        for row in left_result.to_lists():
-            if step.unique:
-                checksum = hashlib.sha256(str(row).encode()).hexdigest()
-                if checksum in records_hashes:
-                    continue
-                records_hashes.append(checksum)
-            results.append(list(row))
+        op = 'UNION ALL'
+        if step.unique:
+            op = 'UNION'
+        query = f"""
+            SELECT * FROM table_a
+            {op}
+            SELECT * FROM table_b
+        """
 
-        for row in right_result.to_lists():
-            if step.unique:
-                checksum = hashlib.sha256(str(row).encode()).hexdigest()
-                if checksum in records_hashes:
-                    continue
-                records_hashes.append(checksum)
-            results.append(list(row))
-        data.add_raw_values(results)
+        resp_df, _description = query_df_with_type_infer_fallback(query, {
+            'table_a': table_a,
+            'table_b': table_b
+        })
+        resp_df.replace({np.nan: None}, inplace=True)
+
+        data = ResultSet().from_df_cols(resp_df, col_names=names)
 
         return data

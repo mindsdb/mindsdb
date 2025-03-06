@@ -599,7 +599,9 @@ AI: {response}"""
                 agent_executor_finished_event.set()
 
         # Enqueue Langchain agent streaming chunks in a separate thread to not block event chunks.
-        executor_stream_thread = threading.Thread(target=stream_worker, daemon=True, args=(ctx.dump(),))
+        executor_stream_thread = threading.Thread(
+            target=stream_worker, daemon=True, args=(ctx.dump(),), name='LangchainAgent.stream_worker'
+        )
         executor_stream_thread.start()
 
         while not agent_executor_finished_event.is_set():

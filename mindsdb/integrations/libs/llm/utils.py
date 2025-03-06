@@ -16,6 +16,7 @@ from mindsdb.integrations.libs.llm.config import (
     NvidiaNIMConfig,
     MindsdbConfig,
 )
+from mindsdb.utilities.config import config
 from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
 
 
@@ -211,7 +212,7 @@ def get_llm_config(provider: str, args: Dict) -> BaseLLMConfig:
     if provider == "mindsdb":
         return MindsdbConfig(
             model_name=args["model_name"],
-            project_name=args.get("project_name", "mindsdb"),
+            project_name=args.get("project_name", config.get("default_project")),
         )
     if provider == "vllm":
         return OpenAIConfig(

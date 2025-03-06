@@ -199,7 +199,7 @@ def initialize_app(config, no_studio):
             or gui_exists is False
         )
     ):
-        init_static_thread = threading.Thread(target=initialize_static)
+        init_static_thread = threading.Thread(target=initialize_static, name='initialize_static')
         init_static_thread.start()
 
     app, api = initialize_flask(config, init_static_thread, no_studio)
@@ -419,8 +419,13 @@ def initialize_flask(config, init_static_thread, no_studio):
         logger.info(f" - GUI available at {url}")
 
         pid = os.getpid()
-        x = threading.Thread(target=_open_webbrowser, args=(url, pid, port, init_static_thread, config['paths']['static']), daemon=True)
-        x.start()
+        thread = threading.Thread(
+            target=_open_webbrowser,
+            args=(url, pid, port, init_static_thread, config['paths']['static']),
+            daemon=True,
+            name='open_webbrowser'
+        )
+        thread.start()
 
     return app, api
 

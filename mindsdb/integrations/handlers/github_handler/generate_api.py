@@ -25,6 +25,11 @@ class GHMethod:
 
 
 def parse_annotations(annotations):
+    '''
+    Parse string annotation, and extract type, input examples:
+    - Milestone | Opt[str]
+    - PaginatedList[Issue]
+    '''
     type_name, sub_type = None, None
     if not isinstance(annotations, str):
 
@@ -51,6 +56,8 @@ def parse_annotations(annotations):
 
 
 def get_properties(cls):
+    # find properties of the class
+
     properties = {}
     for prop_name, prop in inspect.getmembers(cls):
         if prop_name.startswith('_'):
@@ -89,6 +96,9 @@ def get_github_types():
 
 
 def get_github_methods(cls):
+    '''
+    Analyse class in order to find methods which return list of objects.
+    '''
     methods = []
 
     for method_name, method in inspect.getmembers(cls, inspect.isfunction):

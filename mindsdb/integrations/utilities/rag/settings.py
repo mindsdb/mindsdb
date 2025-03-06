@@ -274,11 +274,89 @@ SQL Query:
 
 DEFAULT_NUM_QUERY_RETRIES = 2
 
+NAME_LOOKUP_TOOL_DESCRIPTION = '''This tool is designed to retrieve a SINGLE document using its exact name or title. Use this tool only when the user's request explicitly includes the full name or title of a SINGLE document. The input provided to the tool must be the exact full name of the document.
+
+When to Use:
+
+The user's request clearly specifies the document name or title.
+The query implies a singular, specific document is needed.
+Valid Query Examples:
+
+Please find the document NEI 2012-06, Revision 4
+Please find the document NUREG/CR-7278
+Show me the document OG- 11-68
+Find the document NUREG/CR-6393
+Find NUREG/CR-7116
+Find document titled "Concentration Averaging and Encapsulation Branch Technical Position"
+Find "BEAVER VALLEY 2 - LER 2022-001"
+Find REGULATORY GUIDE 1.183 from 2000
+Find Docket No. 52-033
+Show Prairie Island 1/2 - Application to Revise Technical Specifications to Adopt TSTF-591, "Revise Risk Informed Completion Time (RICT) Program"
+When Not to Use:
+
+Use this tool only when the document name is clearly specified to ensure precise and accurate lookup results.
+'''
+
+DEFAULT_DOCUMENT_IDENTIFIER_PROMPT_TEMPLATE = '''Construct a DocumentIdentifier.
+
+A single document usually has usually the following format:
+
+<type_key>[separator /-_]<must have document_identifier can like number[possible separator and other numbers]> <possibly rev revision number]>, also there are location_keywords that we can try to find independently from title, like name of plant or location.
+
+Here are all the type keys and what they mean:
+
+{type_descriptions}
+
+<< INSTRUCTIONS FOR HOW TO FORMAT FINAL OUTPUT >>
+{format_instructions}
+
+RETURN ONLY THE FINAL JSON. DO NOT EXPLAIN, JUST RETURN THE FINAL JSON.
+
+Here is the user input:
+{input}
+'''
+
+DEFAULT_DOCUMENT_TYPE_IDENTIFIER = 5
+
 
 class LLMConfig(BaseModel):
     model_name: str = Field(default=DEFAULT_LLM_MODEL, description='LLM model to use for generation')
     provider: str = Field(default=DEFAULT_LLM_MODEL_PROVIDER, description='LLM model provider to use for generation')
     params: Dict[str, Any] = Field(default_factory=dict)
+
+
+class DocumentIdentifier(BaseModel):
+    type_key: str = Field(
+        description='Key for the type of document (e.g. LER, SECY, NUREG)'
+    )
+    document_number: Optional[str] = Field(
+        description='Number to further identify document',
+        default=None
+    )
+    revision: Optional[str] = Field(
+        description='Some documents have revisions (e.g. 4, 3.H). Only include this if specifically asked for a revision.'
+    )
+
+
+class DocumentTypeMetadata(BaseModel):
+    key: str = Field(
+        description='Key for the type of document (e.g. LER, SECY, NUREG)'
+    )
+    id: Optional[int] = Field(
+        default=None,
+        description='Identifier for the document type'
+    )
+    type_pattern: Optional[str] = Field(
+        default=None,
+        description='Postgres pattern that matches this document type (e.g. %LER%)'
+    )
+    name: str = Field(
+        description='Human readable name for this document type'
+    )
+    description: Optional[str] = Field(
+        default=None,
+        description='Description for what this document type is'
+    )
 
 
 class MultiVectorRetrieverMode(Enum):
@@ -411,6 +489,18 @@ class MetadataConfig(BaseModel):
         default=None,
         description="Name of GIN index to use when looking up name."
     )
+    type_column: str = Field(
+        default="Type",
+        description="Name of column containing type of document"
+    )
+    type_pattern_column: str = Field(
+        default="ReportNumber",
+        description="Name of column to match document type pattern against"
+    )
+    date_column: str = Field(
+        default="CreatedOnDate",
+        description="Name of column containing date when document was created or modified last"
+    )
     content_column: str = Field(
         default="content",
         description="Name of column in embeddings table containing chunk content"
@@ -422,6 +512,17 @@ class MetadataConfig(BaseModel):
     doc_id_key: str = Field(
         default="original_row_id",
         description="Metadata field that links an embedded chunk back to source document ID"
+    )
+    llm_config: LLMConfig = Field(
+        default_factory=LLMConfig,
+        description="LLM configuration to use for generating the final SQL query for retrieval"
+    )
+    document_types: List[DocumentTypeMetadata] = Field(
+        description="Document types to include when searching by name"
+    )
+    document_identifier_prompt_template: str = Field(
+        default=DEFAULT_DOCUMENT_IDENTIFIER_PROMPT_TEMPLATE,
+        description="Prompt template to generate DocumentIdentifier. Has 'format_instructions', 'type_descriptions', and 'input' input variables"
     )
 
 

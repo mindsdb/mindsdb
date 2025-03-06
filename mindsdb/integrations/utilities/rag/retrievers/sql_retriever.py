@@ -659,7 +659,7 @@ Below is a description of the contents in this column in list format:
         retry: int = 0,
     ) -> str:
         # Base select JOINed with document source table.
-        base_query = f"""SELECT * FROM {self.embeddings_table} AS e INNER JOIN {self.source_table} AS s ON (e.metadata->>'original_row_id')::int = s."{self.source_id_column}" """
+        base_query = f"""SELECT * FROM {self.embeddings_table} AS e INNER JOIN {self.source_table} AS s ON e."document_id" = s."{self.source_id_column}" """
 
         # return an empty string if schema has not been ranked
         if not ranked_database_schema:
@@ -684,11 +684,13 @@ Below is a description of the contents in this column in list format:
             value = filter.value
             if isinstance(value, str):
                 value = f"'{value}'"
-            base_query += f'"{filter.attribute}" {filter.comparator} {value}'
+            base_query += f's."{filter.attribute}" {filter.comparator} {value}'
             if i < len(metadata_filters) - 1:
-                base_query += " AND "
+                base_query += " OR "
 
         base_query += f" ORDER BY e.embeddings {self.distance_function.value[0]} '{{embeddings}}' LIMIT {self.search_kwargs.k};"
+
+        logger.info(f"Prepared SQL query {base_query}")
         return base_query
 
     def _generate_filter(
@@ -785,6 +787,7 @@ Below is a description of the contents in this column in list format:
             checked_sql_query_with_embeddings = checked_sql_query.format(
                 embeddings=embeddings_str
             )
+            logger.info(f"Prepared SQL query with embeddings {checked_sql_query_with_embeddings}")
             return self.vector_store_handler.native_query(
                 checked_sql_query_with_embeddings
             )

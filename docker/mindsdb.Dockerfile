@@ -77,9 +77,9 @@ RUN --mount=type=cache,target=/root/.cache uv pip install --no-deps "."
 
 
 
-# Same as build image, but with dev dependencies installed.
+# Same as extras image, but with dev dependencies installed.
 # This image is used in our docker-compose
-FROM build as dev
+FROM extras as dev
 WORKDIR /mindsdb
 
 # Configure apt to retain downloaded packages so we can store them in a cache mount
@@ -116,7 +116,7 @@ ENTRYPOINT [ "bash", "-c", "watchfiles --filter python 'python -Im mindsdb --con
 
 
 # This is the final image for most use-cases
-# Copies the installed pip packages from `build` and installs only what we need to run
+# Copies the installed pip packages from `extras` and installs only what we need to run
 FROM python:3.10-slim
 WORKDIR /mindsdb
 
@@ -132,9 +132,9 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     -o APT::Install-Suggests=false \
     libpq5 freetds-bin curl
 
-# Copy installed packages and venv from the build stage
-COPY --link --from=build /venv /venv
-COPY --link --from=build /mindsdb /mindsdb
+# Copy installed packages and venv from the extras stage
+COPY --link --from=extras /venv /venv
+COPY --link --from=extras /mindsdb /mindsdb
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
 ENV PYTHONUNBUFFERED 1

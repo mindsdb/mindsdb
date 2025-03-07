@@ -65,7 +65,7 @@ target "base" {
   dockerfile = "docker/mindsdb.Dockerfile"
   platforms = PLATFORM_LIST
   target = "build"
-  output = ["registry"]
+  output = ["type=registry"]
   # TODO add caching
 }
 
@@ -112,6 +112,6 @@ target "images" {
   contexts = {
     build = "target:base"
   }
-  output = ["registry"]
+  output = ["type=registry"]
 }
 

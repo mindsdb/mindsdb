@@ -112,6 +112,6 @@ target "images" {
   contexts = {
     build = "target:base"
   }
-  output = [{ type = "registry" }]
+  output = ["registry"]
 }
 

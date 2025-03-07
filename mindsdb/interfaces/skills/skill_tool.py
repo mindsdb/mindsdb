@@ -1,4 +1,3 @@
-import enum
 from collections import defaultdict
 from typing import List, Dict, Optional
 
@@ -11,7 +10,7 @@ from mindsdb.utilities.cache import get_cache
 from mindsdb.utilities.config import config
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.skills.sql_agent import SQLAgent
-from mindsdb.interfaces.skills.skills_controller import SkillsController
+from mindsdb.interfaces.skills.skills_controller import SkillsController, SkillType
 from mindsdb.integrations.libs.vectordatabase_handler import TableField
 from mindsdb.interfaces.database.integrations import HandlerInformationSchema
 
@@ -20,13 +19,6 @@ _DEFAULT_TOP_K_SIMILARITY_SEARCH = 5
 _MAX_CACHE_SIZE = 1000
 
 logger = log.getLogger(__name__)
-
-
-class SkillType(enum.Enum):
-    TEXT2SQL_LEGACY = 'text2sql'
-    TEXT2SQL = 'sql'
-    KNOWLEDGE_BASE = 'knowledge_base'
-    RETRIEVAL = 'retrieval'
 
 
 class SkillData:

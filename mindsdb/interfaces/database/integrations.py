@@ -1067,6 +1067,10 @@ class IntegrationController:
             response = handler.get_tables(all=True)
         else:
             response = handler.get_tables()
+
+        if len(response.data_frame.columns) == 0:
+            response.data_frame = pd.DataFrame([], columns=['TABLE_NAME', 'TABLE_SCHEMA', 'TABLE_TYPE'])
+
         response.data_frame.columns = [x.upper() for x in response.data_frame.columns]
         tables_dataframe = response.data_frame
 
@@ -1089,7 +1093,11 @@ class IntegrationController:
 
         return HandlerInformationSchema(
             tables=tables_dataframe,
-            columns=pd.concat(columns_dataframes)
+            columns=(
+                pd.concat(columns_dataframes)
+                if len(columns_dataframes) > 0 else
+                pd.DataFrame([], columns=['TABLE_SCHEMA', 'TABLE_NAME', 'COLUMN_NAME', 'DATA_TYPE'])
+            )
         )
 
 

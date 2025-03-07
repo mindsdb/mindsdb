@@ -129,9 +129,16 @@ class TestAgent(BaseExecutorDummyML):
 
     @patch('openai.OpenAI')
     def test_agent_with_tables(self, mock_openai):
-        sd = SkillData(
-            name='test', type='', project_id=1,
+        from mindsdb.interfaces.storage import db
+        skill_record = db.Skills(
+            name='test',
+            project_id=1,
+            type='sql',
             params={'tables': []},
+            metadata_={}
+        )
+        sd = SkillData(
+            skill_record=skill_record,
             agent_tables_list=[]
         )
 
@@ -172,8 +179,8 @@ class TestAgent(BaseExecutorDummyML):
         self.run_sql('''
             create skill test_skill
             using
-            type = 'text2sql',
-            database = 'example_db',
+            type = 'sql',
+            database = 'files',
             tables = ['table_1', 'table_2'],
             description = "this is sales data";
         ''')
@@ -338,8 +345,8 @@ class TestAgent(BaseExecutorDummyML):
         self.run_sql('''
             create skill my_demo_skill
             using
-            type = 'text2sql',
-            database = 'example_db',
+            type = 'sql',
+            database = 'files',
             description = "",
             is_demo=true;
         ''')

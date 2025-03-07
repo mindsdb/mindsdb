@@ -1,3 +1,4 @@
+import enum
 import datetime
 from typing import Dict, List, Optional
 
@@ -11,6 +12,13 @@ from mindsdb.utilities.config import config
 
 
 default_project = config.get('default_project')
+
+
+class SkillType(enum.Enum):
+    TEXT2SQL_LEGACY = 'text2sql'
+    TEXT2SQL = 'sql'
+    KNOWLEDGE_BASE = 'knowledge_base'
+    RETRIEVAL = 'retrieval'
 
 
 class SkillsController:
@@ -104,7 +112,7 @@ class SkillsController:
             raise ValueError(f'Skill with name already exists: {name}')
 
         metadata = {}
-        if type == 'sql':
+        if SkillType(type) == SkillType.TEXT2SQL:
             database_name = params.get('database')
             information_schema = integration_controller.get_information_schema(database_name)
             metadata['information_schema'] = information_schema.to_dict()
@@ -130,7 +138,7 @@ class SkillsController:
         Raises:
             ValueError: If `project_name` does not exist or skill doesn't exist
         '''
-        if skill_record.type != 'sql':
+        if SkillType(skill_record.type) != SkillType.TEXT2SQL:
             raise ValueError('Information schema is only supported for SQL skills')
 
         database_name = skill_record.params.get('database')

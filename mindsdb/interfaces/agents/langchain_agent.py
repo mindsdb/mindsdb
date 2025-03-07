@@ -40,7 +40,7 @@ from mindsdb.utilities import log
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.context import context as ctx
-from mindsdb.interfaces.skills.skill_tool import SkillType
+from mindsdb.interfaces.skills.skills_controller import SkillType
 
 from .mindsdb_chat_model import ChatMindsdb
 from .callback_handlers import LogCallbackHandler, ContextCaptureCallback
@@ -394,6 +394,9 @@ class LangchainAgent:
         information_schema_txts = []
         for skill_rel in self.agent.skills_relationships:
             skill = skill_rel.skill
+            if SkillType(skill.type) != SkillType.TEXT2SQL:
+                continue
+
             skill_metadata = skill.metadata_ or {}
 
             if 'information_schema' not in skill_metadata:

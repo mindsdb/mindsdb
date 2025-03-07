@@ -65,7 +65,6 @@ target "base" {
   dockerfile = "docker/mindsdb.Dockerfile"
   platforms = PLATFORM_LIST
   target = "build"
-  output = [{ type = "registry" }]
   # TODO add caching
 }
 

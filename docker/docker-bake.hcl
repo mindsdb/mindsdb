@@ -1,6 +1,6 @@
 # The default targets to be built if none are specified
 group "default" {
-  targets = ["bare", "devel", "cloud", "lightwood", "huggingface"]
+  targets = ["cloud"]
 }
 
 variable "PUSH_TO_DOCKERHUB" {

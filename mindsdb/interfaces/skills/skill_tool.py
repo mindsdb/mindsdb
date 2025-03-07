@@ -13,6 +13,7 @@ from mindsdb.utilities.cache import get_cache
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.skills.sql_agent import SQLAgent
 from mindsdb.integrations.libs.vectordatabase_handler import TableField
+from mindsdb.integrations.utilities.rag.settings import RETRIEVAL_TOOL_PROMPT_TEMPLATE
 
 
 _DEFAULT_TOP_K_SIMILARITY_SEARCH = 5
@@ -256,7 +257,7 @@ class SkillToolController:
         return dict(
             name='Knowledge Base Retrieval',
             func=self._get_rag_query_function(skill),
-            description=f'Use this tool to get more context or information to answer a question about {description}. The input should be the exact question the user is asking.',
+            description=RETRIEVAL_TOOL_PROMPT_TEMPLATE.format(description=description),
             type=skill.type
         )
 

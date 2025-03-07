@@ -1,16 +1,23 @@
+import pandas as pd
+
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
 from mindsdb.integrations.utilities.rag.config_loader import load_rag_config
+from mindsdb.integrations.utilities.rag.settings import DocumentIdentifier, DEFAULT_DOCUMENT_TYPE_IDENTIFIER, NAME_LOOKUP_TOOL_DESCRIPTION
 
 from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS
 from mindsdb.interfaces.skills.skill_tool import skill_tool
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.storage.db import KnowledgeBase
 from mindsdb.utilities import log
+from langchain.chains.llm import LLMChain
 from langchain_core.documents import Document
+from langchain_core.output_parsers import PydanticOutputParser
+from langchain_core.prompts import PromptTemplate
 from langchain_core.tools import Tool
 from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
+from mindsdb.interfaces.agents.langchain_agent import create_chat_model
 
 logger = log.getLogger(__name__)
 
@@ -105,9 +112,114 @@ def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
     except Exception as e:
         logger.error(f"Error building RAG pipeline: {str(e)}")
         raise ValueError(f"Failed to build RAG pipeline: {str(e)}")
-    
+
     vector_db_handler = kb_table.get_vector_db()
     metadata_config = rag_config.metadata_config
+
+    def _data_frame_to_document(df: pd.DataFrame) -> Document:
+        # Restore document from chunks, keeping in mind max context.
+        id_filter_condition = FilterCondition(
+            f"{metadata_config.embeddings_metadata_column}->>'{metadata_config.doc_id_key}'",
+            FilterOperator.EQUAL,
+            str(df.get(metadata_config.id_column).item())
+        )
+        document_chunks_df = vector_db_handler.select(
+            metadata_config.embeddings_table,
+            conditions=[id_filter_condition]
+        )
+        if document_chunks_df.empty:
+            return None
+        sort_col = 'chunk_id' if 'chunk_id' in document_chunks_df.columns else 'id'
+        document_chunks_df.sort_values(by=sort_col)
+        content = ''
+        for _, chunk in document_chunks_df.iterrows():
+            if len(content) > metadata_config.max_document_context:
+                break
+            content += chunk.get(metadata_config.content_column, '')
+
+        metadata = df.to_dict(orient='records')[0]
+        return Document(
+            page_content=content,
+            metadata=metadata
+        )
+
+    def _get_document_by_identifiers(name: str):
+        parser = PydanticOutputParser(pydantic_object=DocumentIdentifier)
+        document_type_metadata = metadata_config.document_types
+        document_type_key_to_metadata = {}
+        for metadata in document_type_metadata:
+            document_type_key_to_metadata[metadata.key] = metadata
+
+        # Build descriptions of document types with their corresponding IDs
+        type_key_description = ''
+        for type_key, metadata in document_type_key_to_metadata.items():
+            type_key_description += f"{type_key} - {metadata.name} - {metadata.description or ''}\n"
+
+        doc_prompt_template = PromptTemplate(
+            input_variables=['format_instructions', 'input', 'type_descriptions'],
+            template=metadata_config.document_identifier_prompt_template
+        )
+        llm = create_chat_model({
+            'model_name': metadata_config.llm_config.model_name,
+            'provider': metadata_config.llm_config.provider,
+            **metadata_config.llm_config.params
+        })
+        doc_chain = LLMChain(llm=llm, prompt=doc_prompt_template)
+
+        # Generate document identifier based on user input.
+        doc_output = doc_chain.predict(
+            format_instructions=parser.get_format_instructions(),
+            input=name,
+            type_descriptions=type_key_description
+        )
+        document_identifier = parser.invoke(doc_output)
+
+        # Construct SQL query to filter based on generated document identifier.
+        base_query = f'''SELECT * FROM {metadata_config.table} AS s WHERE '''
+        nrs_document_type_metadata = document_type_key_to_metadata.get(document_identifier.type_key)
+        if nrs_document_type_metadata is None:
+            # Fallback.
+            logger.debug('Could not identify document type. Falling back to retrieving a document using name/title.')
+            return _get_document_by_name(name)
+        report_number_rex = nrs_document_type_metadata.type_pattern or f'%{document_identifier.type_key}%'
+        report_number_rex += f'{document_identifier.document_number}%' if document_identifier.document_number else ''
+        if document_identifier.revision:
+            report_number_rex += f'REV%{document_identifier.revision}%'
+        document_id_report_number_clause = ''
+        document_id_title_clause = ''
+        if document_identifier.document_number:
+            document_id_report_number_clause = f"AND s.\"{metadata_config.type_pattern_column}\" ILIKE '%{document_identifier.document_number}%'"
+            document_id_title_clause = f"AND s.\"{metadata_config.name_column}\" ILIKE '%{document_identifier.document_number}%'"
+        lookup_query = base_query + f"""
+        (
+
+            s."{metadata_config.type_column}" = {nrs_document_type_metadata.id or DEFAULT_DOCUMENT_TYPE_IDENTIFIER}
+            AND s."{metadata_config.type_pattern_column}" ILIKE '{report_number_rex}'
+            {document_id_report_number_clause}
+        )
+        OR
+        (
+            s."{metadata_config.type_column}" = {nrs_document_type_metadata.id or DEFAULT_DOCUMENT_TYPE_IDENTIFIER}
+            AND s."{metadata_config.name_column}" ILIKE '{report_number_rex}'
+            {document_id_title_clause}
+        )
+
+        ORDER BY s."{metadata_config.date_column}" DESC;
+        """
+
+        logger.debug(f'Executing query to fetch document: {lookup_query}')
+        documents_response = vector_db_handler.native_query(lookup_query)
+        if documents_response.resp_type == RESPONSE_TYPE.ERROR:
+            # Fallback.
+            logger.warning(f'Something went wrong retrieving document by identifiers: {documents_response.error_message}')
+            logger.debug('Falling back to retrieving a document using name/title')
+            return _get_document_by_name(name)
+        if documents_response.data_frame.empty:
+            # Fallback.
+            logger.debug('Could not find any relevant documents. Falling back to retrieving a document by name/title')
+            return None
+        document_row = documents_response.data_frame.head(1)
+        return _data_frame_to_document(document_row)
 
     def _get_document_by_name(name: str):
         if metadata_config.name_column_index is not None:
@@ -124,33 +236,10 @@ def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
         if documents_response.data_frame.empty:
             return None
         document_row = documents_response.data_frame.head(1)
-        # Restore document from chunks, keeping in mind max context.
-        id_filter_condition = FilterCondition(
-            f"{metadata_config.embeddings_metadata_column}->>'{metadata_config.doc_id_key}'",
-            FilterOperator.EQUAL,
-            str(document_row.get(metadata_config.id_column).item())
-        )
-        document_chunks_df = vector_db_handler.select(
-            metadata_config.embeddings_table,
-            conditions=[id_filter_condition]
-        )
-        if document_chunks_df.empty:
-            return None
-        sort_col = 'chunk_id' if 'chunk_id' in document_chunks_df.columns else 'id'
-        document_chunks_df.sort_values(by=sort_col)
-        content = ''
-        for _, chunk in document_chunks_df.iterrows():
-            if len(content) > metadata_config.max_document_context:
-                break
-            content += chunk.get(metadata_config.content_column, '')
-
-        return Document(
-            page_content=content,
-            metadata=document_row.to_dict(orient='records')[0]
-        )
+        return _data_frame_to_document(document_row)
 
     def _lookup_document_by_name(name: str):
-        found_document = _get_document_by_name(name)
+        found_document = _get_document_by_identifiers(name)
         if found_document is None:
             return f'I could not find any document with name {name}. Please make sure the document name matches exactly.'
         return f"I found document {found_document.metadata.get(metadata_config.id_column)} with name {found_document.metadata.get(metadata_config.name_column)}. Here is the full document to use as context:\n\n{found_document.page_content}"
@@ -158,7 +247,7 @@ def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
     name_lookup_tool = Tool(
         func=_lookup_document_by_name,
         name=tool.get('name', '') + '_name_lookup',
-        description='You must use this tool ONLY when the user is asking about a specific document by name or title (e.g. "Find me document XXX", "search for document XXX"). The input should be the exact name of the document the user is looking for.',
+        description=NAME_LOOKUP_TOOL_DESCRIPTION,
         return_direct=False
     )
 
@@ -167,6 +256,7 @@ def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
         return tools
     tools.append(name_lookup_tool)
     return tools
+
 
 def _get_knowledge_base(knowledge_base_name: str, project_id, executor) -> KnowledgeBase:
     """

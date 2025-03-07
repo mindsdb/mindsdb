@@ -1,10 +1,8 @@
 name: Build and deploy to dev
 
 on:
-  pull_request_target:
+  pull_request:
     types: [opened, reopened, synchronize, labeled]
-    branches:
-      - 'main'
 
 # Cancel any existing runs of this workflow on the same branch/pr
 # We always want to build/deploy/test a new commit over an older one
@@ -51,6 +49,7 @@ jobs:
         with:
           git-sha: ${{ github.event.pull_request.head.sha }}
           target: cloud
+          platforms: linux/amd64
   
   # Build our docker images based on our bake file
   # This job only pushes the layers to the cache repo
@@ -72,7 +71,7 @@ jobs:
         with:
           git-sha: ${{ github.event.pull_request.head.sha }}
 
-          
+
   # Call our deployment workflow, so long as this is not a forked PR
   # This will run the deployment workflow in the base branch, not in the PR.
   # So if you change the deploy workflow in your PR, the changes won't be reflected in this run.

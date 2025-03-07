@@ -108,7 +108,7 @@ def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
     except Exception as e:
         logger.error(f"Error building RAG pipeline: {str(e)}")
         raise ValueError(f"Failed to build RAG pipeline: {str(e)}")
-    
+
     vector_db_handler = kb_table.get_vector_db()
     metadata_config = rag_config.metadata_config
 
@@ -157,18 +157,18 @@ def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
         if found_document is None:
             return f'I could not find any document with name {name}. Please make sure the document name matches exactly.'
         return f"I found document {found_document.metadata.get(metadata_config.id_column)} with name {found_document.metadata.get(metadata_config.name_column)}. Here is the full document to use as context:\n\n{found_document.page_content}"
-    
+
     def _lookup_documents_by_content(content: str):
         documents_response = vector_db_handler.native_query(
             f'''
                 SELECT DISTINCT ON (t."{metadata_config.name_column}")
-                    t."{metadata_config.doc_id_key}",
+                    e."{metadata_config.doc_id_key}",
                     t."{metadata_config.name_column}",
-                    ts_rank(e."{metadata_config.content_column_index}", plainto_tsquery({content})) as rank
+                    ts_rank(e."{metadata_config.content_column_index}", plainto_tsquery('{content}')) as rank
                 FROM {metadata_config.embeddings_table} e
                 INNER JOIN {metadata_config.table} t ON e."{metadata_config.doc_id_key}" = t."{metadata_config.id_column}"
-                WHERE e."{metadata_config.content_column_index}" @@ plainto_tsquery({content})
-                ORDER BY t."{metadata_config.name_column}", rank DESC;
+                WHERE e."{metadata_config.content_column_index}" @@ plainto_tsquery('{content}')
+                ORDER BY t."{metadata_config.name_column}", rank DESC LIMIT 10;
             '''
         )
 
@@ -182,12 +182,12 @@ def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
             content_cache.set(row[metadata_config.name_column], row[metadata_config.doc_id_key])
 
         return documents_response.data_frame[metadata_config.name_column].to_list()
-    
+
     content_lookup_tool = Tool(
         func=_lookup_documents_by_content,
         name=tool.get('name', '') + '_content_lookup',
         # TODO: Review this description.
-        description='You must use this tool ONLY when the user is asking about a specific document by content (e.g. "Find me document with content XXX", "search for document with content XXX"). The input should be the exact content of the document the user is looking for.',
+        description='You must use this tool ONLY when the user is asking about a document by providing the content (e.g. "Find me documents with content XXX", "search for documents with content XXX"). The input should be the content of the document the user is looking for. List the titles of the documents and return to the user',
         return_direct=False
     )
 
@@ -206,7 +206,7 @@ def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
 
         # TODO: Fix this based on how the content will be stored.
         return f'I found the some content for the key {name}. Here is the full content to use as context:\n\n{content}'
-    
+
     id_lookup_tool = Tool(
         func=_lookup_document_id_by_name_in_cache,
         name=tool.get('name', '') + '_id_lookup',

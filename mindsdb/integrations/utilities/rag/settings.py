@@ -274,7 +274,7 @@ SQL Query:
 
 DEFAULT_NUM_QUERY_RETRIES = 2
 
-NAME_LOOKUP_TOOL_DESCRIPTION = '''This tool is designed to retrieve a SINGLE document using its exact name or title. Use this tool only when the user's request explicitly includes the full name or title of a SINGLE document. The input provided to the tool must be the exact full name of the document.
+NAME_LOOKUP_TOOL_DESCRIPTION = '''This tool is designed to retrieve a SINGLE document using its name or title. Use this tool only when the user's request includes the name or title of a SINGLE document. The input provided to the tool must be the exact full name of the document.
 
 When to Use:
 
@@ -292,9 +292,10 @@ Find "BEAVER VALLEY 2 - LER 2022-001"
 Find REGULATORY GUIDE 1.183 from 2000
 Find Docket No. 52-033
 Show Prairie Island 1/2 - Application to Revise Technical Specifications to Adopt TSTF-591, "Revise Risk Informed Completion Time (RICT) Program"
-When Not to Use:
 
-Use this tool only when the document name is clearly specified to ensure precise and accurate lookup results.
+Use this tool when the document name is clearly specified to ensure precise and accurate lookup results.
+
+If you can potentially use multiple of your tools to answer the user question, you should prefer this name lookup tool because it is faster.
 '''
 
 DEFAULT_DOCUMENT_IDENTIFIER_PROMPT_TEMPLATE = '''Construct a DocumentIdentifier.
@@ -317,6 +318,19 @@ Here is the user input:
 '''
 
 DEFAULT_DOCUMENT_TYPE_IDENTIFIER = 5
+
+RETRIEVAL_TOOL_PROMPT_TEMPLATE = '''This tool is designed to fetch in-depth context, background information, and supporting details about {description}. It should be used when the user's inquiry requires an explanation, analysis, or synthesis of information rather than a simple document lookup. The input should be the full question as posed by the user.
+
+When to Use This Tool:
+
+The query asks for detailed context or an explanation about a subject related to {description} that CANNOT be found by looking up a SINGLE document.
+The user is requesting background information, definitions, or analysis rather than a specific document.
+The input question implies a need for understanding processes, systems, or key details within the subject.
+Examples of Suitable Queries:
+
+"What is the Significance Determination Process?"
+"What is the docket number for the Kairos Hermes reactor?"
+'''
 
 
 class LLMConfig(BaseModel):

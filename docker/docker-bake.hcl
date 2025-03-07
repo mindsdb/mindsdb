@@ -61,6 +61,13 @@ function "get_tags" {
 
 
 ### OUTPUT IMAGES ###
+target "base" {
+  dockerfile = "docker/mindsdb.Dockerfile"
+  platforms = PLATFORM_LIST
+  target = "build"
+
+  # TODO add caching
+}
 
 target "images" {
   name = item.name
@@ -102,5 +109,8 @@ target "images" {
   }
   cache-to = get_cache_to(item.name)
   cache-from = get_cache_from(item.name)
+  contexts = {
+    build = "target:base"
+  }
 }
 

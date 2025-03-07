@@ -60,6 +60,10 @@ ENV UV_LINK_MODE=copy \
 RUN --mount=type=cache,target=/root/.cache \
     uv venv /venv \
     && uv pip install pip "."
+
+
+
+FROM build as extras
 # Install extras on top of the bare mindsdb
 RUN --mount=type=cache,target=/root/.cache \
     if [ -n "$EXTRAS" ]; then uv pip install $EXTRAS; fi

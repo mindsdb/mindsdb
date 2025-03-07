@@ -1,6 +1,4 @@
 import enum
-import inspect
-from dataclasses import dataclass
 from collections import defaultdict
 from typing import List, Dict, Optional
 
@@ -13,7 +11,9 @@ from mindsdb.utilities.cache import get_cache
 from mindsdb.utilities.config import config
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.skills.sql_agent import SQLAgent
+from mindsdb.interfaces.skills.skills_controller import SkillsController
 from mindsdb.integrations.libs.vectordatabase_handler import TableField
+from mindsdb.interfaces.database.integrations import HandlerInformationSchema
 
 
 _DEFAULT_TOP_K_SIMILARITY_SEARCH = 5
@@ -29,7 +29,6 @@ class SkillType(enum.Enum):
     RETRIEVAL = 'retrieval'
 
 
-@dataclass
 class SkillData:
     """Storage for skill's data
 
@@ -45,6 +44,30 @@ class SkillData:
     params: dict
     project_id: int
     agent_tables_list: Optional[List[str]]
+    _skill_record: db.Skills
+
+    def __init__(self, skill_record: db.Skills, agent_tables_list: Optional[List[str]] = None):
+        self._skill_record = skill_record
+        self.name = skill_record.name
+        self.type = skill_record.type
+        self.params = skill_record.params
+        self.project_id = skill_record.project_id
+        self.agent_tables_list = agent_tables_list
+
+    def get_available_information_schema(self) -> dict:
+        skill_metadata = self._skill_record.metadata_
+        if (
+            isinstance(skill_metadata, dict) is None
+            or 'information_schema' not in skill_metadata
+        ):
+            SkillsController().update_skill_information_schema(self._skill_record)
+
+        information_schema_dict = self._skill_record.metadata_['information_schema']
+        information_schema_obj = HandlerInformationSchema.from_dict(information_schema_dict)
+        restrictions = self.restriction_on_tables
+        information_schema_obj.filter_tables(restrictions)
+
+        return information_schema_obj
 
     @property
     def restriction_on_tables(self) -> Optional[Dict[str, set]]:
@@ -112,7 +135,7 @@ class SkillToolController:
             self.command_executor = ExecuteCommands(sql_session)
         return self.command_executor
 
-    def _make_text_to_sql_tools(self, skills: List[db.Skills], llm) -> List:
+    def _make_text_to_sql_tools(self, skills: List[SkillData], llm) -> List:
         '''
            Uses SQLAgent to execute tool
         '''
@@ -120,7 +143,6 @@ class SkillToolController:
         try:
             from mindsdb.interfaces.agents.mindsdb_database_agent import MindsDBSQL
             from mindsdb.interfaces.skills.custom.text2sql.mindsdb_sql_toolkit import MindsDBSQLToolkit
-            from langchain_community.tools.sql_database.tool import QuerySQLDataBaseTool
         except ImportError:
             raise ImportError(
                 'To use the text-to-SQL skill, please install langchain with `pip install mindsdb[langchain]`')
@@ -132,40 +154,16 @@ class SkillToolController:
             return f'`{name}`'
 
         tables_list = []
+        databases_information_schemas = {}
         for skill in skills:
-            database = skill.params['database']
-            restriction_on_tables = skill.restriction_on_tables
-            if restriction_on_tables is None:
-                handler = command_executor.session.integration_controller.get_data_handler(database)
-                if 'all' in inspect.signature(handler.get_tables).parameters:
-                    response = handler.get_tables(all=True)
-                else:
-                    response = handler.get_tables()
-                # no restrictions
-                columns = [c.lower() for c in response.data_frame.columns]
-                name_idx = columns.index('table_name') if 'table_name' in columns else 0
-
-                if 'table_schema' in response.data_frame.columns:
-                    for _, row in response.data_frame.iterrows():
-                        tables_list.append(f"{database}.{row['table_schema']}.{escape_table_name(row[name_idx])}")
-                else:
-                    for table_name in response.data_frame.iloc[:, name_idx]:
-                        tables_list.append(f"{database}.{escape_table_name(table_name)}")
-                continue
-            for schema_name, tables in restriction_on_tables.items():
-                for table in tables:
-                    if schema_name is None:
-                        tables_list.append(f'{database}.{escape_table_name(table)}')
-                    else:
-                        tables_list.append(f'{database}.{schema_name}.{escape_table_name(table)}')
+            available_informaton_schema = skill.get_available_information_schema()
+            databases_information_schemas['name'] = available_informaton_schema
+            tables_list += available_informaton_schema.get_tables_as_str_list(skill.name)
 
         sql_agent = SQLAgent(
             command_executor=command_executor,
             databases=list(set(s.params['database'] for s in skills)),
-            databases_struct={
-                skill.params['database']: skill.restriction_on_tables
-                for skill in skills
-            },
+            databaes_information_schemas=databases_information_schemas,
             include_tables=tables_list,
             ignore_tables=None,
             sample_rows_in_table_info=3,
@@ -183,23 +181,6 @@ class SkillToolController:
             if description:
                 descriptions.append(description)
 
-        for i, tool in enumerate(sql_database_tools):
-            if isinstance(tool, QuerySQLDataBaseTool):
-                # Add our own custom description so our agent knows when to query this table.
-                original_description = tool.description
-                tool.description = ''
-                if len(descriptions) > 0:
-                    tool.description += f'Use this tool if you need data about {" OR ".join(descriptions)}.\n'
-                tool.description += 'Use the conversation context to decide which table to query.\n'
-                if len(tables_list) > 0:
-                    f'These are the available tables: {",".join(tables_list)}.\n'
-                tool.description += (
-                    'ALWAYS consider these special cases:\n'
-                    ' - For TIMESTAMP type columns, make sure you include the time portion in your query (e.g. WHERE date_column = "2020-01-01 12:00:00")\n'
-                    'Here are the rest of the instructions:\n'
-                    f'{original_description}'
-                )
-                sql_database_tools[i] = tool
         return sql_database_tools
 
     def _make_retrieval_tools(self, skill: db.Skills, llm, embedding_model):

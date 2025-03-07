@@ -1,10 +1,12 @@
-import json
-from concurrent.futures import as_completed, TimeoutError
-from typing import Dict, Iterable, List, Optional
-from uuid import uuid4
-import queue
 import re
+import json
+import queue
 import threading
+from uuid import uuid4
+from textwrap import dedent
+from typing import Dict, Iterable, List, Optional
+from concurrent.futures import as_completed, TimeoutError
+
 import numpy as np
 import pandas as pd
 
@@ -38,6 +40,7 @@ from mindsdb.utilities import log
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.context import context as ctx
+from mindsdb.interfaces.skills.skill_tool import SkillType
 
 from .mindsdb_chat_model import ChatMindsdb
 from .callback_handlers import LogCallbackHandler, ContextCaptureCallback
@@ -387,6 +390,7 @@ class LangchainAgent:
         agent_type = args.get("agent_type", DEFAULT_AGENT_TYPE)
         agent_kwargs = {"output_parser": SafeOutputParser()}
 
+        # region collect information schema text
         information_schema_txts = []
         for skill_rel in self.agent.skills_relationships:
             skill = skill_rel.skill
@@ -403,17 +407,79 @@ class LangchainAgent:
             columns_csv: str = information_schema.get_table_as_excel_csv('columns')
 
             information_schema_txts.append(
-                f"The information_schema.tables of the database `{skill.name}` is (CSV with Excel dialect):\n"
+                f"The `information_schema`.`tables` of the database `{skill.name}` is (CSV with Excel dialect):\n"
                 + tables_csv
-                + f"\nThe information_schema.columns of the database `{skill.name}` is (CSV with Excel dialect):\n"
+                + f"\nThe `information_schema`.`columns` of the database `{skill.name}` is (CSV with Excel dialect):\n"
                 + columns_csv
                 + '\n'
             )
+        # endregion
+
+        only_sql_skills = all(SkillType(rel.skill.type) == SkillType.TEXT2SQL for rel in self.agent.skills_relationships)
+        prefix = PREFIX
+        if only_sql_skills:
+            skills_names = [f'`{rel.skill.name}`' for rel in self.agent.skills_relationships]
+            if len(skills_names) == 1:
+                skills_names = skills_names[0]
+            else:
+                skills_names = 's: ' + (', '.join(skills_names))
+
+            additional_descriptions = []
+            for rel in self.agent.skills_relationships:
+                description = rel.skill.params.get('description', '')
+                if len(description) > 0:
+                    additional_descriptions.append(dedent(f'''
+                        Database `{skill.name}`: {description}
+                    '''))
+            if len(additional_descriptions) > 0:
+                additional_descriptions = (
+                    f'The user has provided the following description of his database{"s" if len(additional_descriptions) > 1 else ""}:'
+                    + ('\n'.join(additional_descriptions))
+                    + '\n'
+                )
+            else:
+                additional_descriptions = ''
+
+            prefix = dedent(f'''\
+                You are a helpful AI assistant with access to the user's database{skills_names}. Your primary role is to help users
+                retrieve and analyze data by writing SQL queries.
+
+                ## Core Responsibilities:
+                1. Always assume that answering the user's question requires querying the database
+                2. Write clear, efficient MySQL-compatible SQL queries to retrieve the requested information
+                3. The answer should start with the result, followed by an explanation of the result and a description of the data used
+
+                ## When responding to queries:
+                1. If the user's request is unclear, ask clarifying questions about what data they need
+                2. Always specify which tables and columns you're using in your explanation
+                3. Format SQL queries with proper indentation and line breaks for readability
+
+                ## SQL query guidelines:
+                1. Use MySQL syntax and functions (not PostgreSQL, SQL Server, etc.). Be aware of MySQL's limitations and syntax requirements
+                2. Use proper quoting for identifiers when necessary (backticks for table/column names)
+                3. Use only SELECT queries. Do not attempt to modify data (INSERT, UPDATE, DELETE and other DML statements)
+                4. Always fully qualify table names with database names: `database_name`.`table_name`
+                5. When schema names are needed, use: `database_name`.`schema_name`.`table_name`
+                6. Always escape database names, schema names, and table names individually with backticks (`):
+                    - CORRECT: `database_name`.`table_name`
+                    - INCORRECT: `database_name.table_name`
+                7. Apply this escaping to all database, schema, and table names in your queries, including in JOIN clauses, WHERE conditions, etc.
+
+                TOOLS:
+                ------
+
+                As an assistant, you have access to a range of tools: {', '.join([tool.name for tool in tools])}
+                Descriptions of the tools:
+            ''')
+            prompt_parts = prefix.partition('TOOLS:')
+            prefix = prompt_parts[0] + additional_descriptions + prompt_parts[1] + prompt_parts[2]
 
         if len(information_schema_txts) > 0:
-            prompt_parts = PREFIX.partition('TOOLS:')
+            prompt_parts = prefix.partition('TOOLS:')
             prompt = prompt_parts[0] + ('\n'.join(information_schema_txts)) + prompt_parts[1] + prompt_parts[2]
             agent_kwargs['prefix'] = prompt
+        else:
+            agent_kwargs['prefix'] = prefix
 
         agent_executor = initialize_agent(
             tools,
@@ -441,10 +507,7 @@ class LangchainAgent:
         # Makes Langchain compatible tools from a skill
         skills_data = [
             SkillData(
-                name=rel.skill.name,
-                type=rel.skill.type,
-                params=rel.skill.params,
-                project_id=rel.skill.project_id,
+                skill_record=rel.skill,
                 agent_tables_list=(rel.parameters or {}).get('tables')
             )
             for rel in self.agent.skills_relationships

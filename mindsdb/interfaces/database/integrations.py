@@ -1,18 +1,18 @@
 import os
 import sys
-import base64
-import shutil
 import ast
 import time
+import base64
+import shutil
 import inspect
 import tempfile
 import importlib
 import threading
 from pathlib import Path
 from copy import deepcopy
-from typing import Optional
 from textwrap import dedent
 from datetime import datetime
+from typing import Optional, List
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from csv import excel as excel_csv_dialect
@@ -41,6 +41,21 @@ logger = log.getLogger(__name__)
 
 
 @dataclass
+class SchemaTableName:
+    schema_name: Optional[str]
+    table_name: str
+
+    def weak_equal_to(self, value: 'SchemaTableName'):
+        if self.schema_name is None:
+            return self.table_name.lower() == value.table_name.lower()
+
+        return self.schema_name.lower() == value.schema_name.lower() and self.table_name.lower() == value.table_name.lower()
+
+    def __eq__(self, value: 'SchemaTableName'):
+        return self.schema_name == value.schema_name and self.table_name == value.table_name
+
+
+@dataclass
 class HandlerInformationSchema:
     """Representation of information schema for a handler
 
@@ -65,7 +80,7 @@ class HandlerInformationSchema:
         )
 
     def __post_init__(self):
-        tables_columns_filter = ['TABLE_NAME', 'TABLE_SCHEMA', 'TABLE_TYPE']
+        tables_columns_filter = ['TABLE_SCHEMA', 'TABLE_NAME', 'TABLE_TYPE']
         columns_columns_filter = ['TABLE_SCHEMA', 'TABLE_NAME', 'COLUMN_NAME', 'DATA_TYPE']
         columns_names_map = {
             'FIELD': 'COLUMN_NAME',
@@ -81,6 +96,35 @@ class HandlerInformationSchema:
 
         if self._fetched_at is None:
             self._fetched_at = datetime.now()
+
+    def filter_tables(self, tables_names: Optional[List[SchemaTableName]]) -> None:
+        if tables_names is None:
+            return
+
+        def _filter_tables(value: pd.Series) -> bool:
+            schema_table_name = SchemaTableName(
+                schema_name=value['TABLE_SCHEMA'],
+                table_name=value['TABLE_NAME']
+            )
+            return any(
+                schema_table_name.weak_equal_to(table_name) for table_name in tables_names
+            )
+
+        self.tables = self.tables[
+            self.tables.apply(_filter_tables, axis=1)
+        ]
+
+        def _filter_columns(value: pd.Series) -> bool:
+            schema_name = value['TABLE_SCHEMA']
+            table_name = value['TABLE_NAME']
+            return (
+                (self.tables['TABLE_SCHEMA'] == schema_name)
+                & (self.tables['TABLE_NAME'] == table_name)
+            ).any()
+
+        self.columns = self.columns[
+            self.columns.apply(_filter_columns, axis=1)
+        ]
 
     def to_dict(self) -> dict:
         return {
@@ -98,6 +142,16 @@ class HandlerInformationSchema:
             lineterminator=excel_csv_dialect.lineterminator,
             quoting=excel_csv_dialect.quoting
         )
+
+    def get_tables_as_str_list(self, database_name: str) -> List[str]:
+        return self.tables.apply(
+            lambda row: (
+                f"`{database_name}`.`{row['TABLE_NAME']}`"
+                if row['TABLE_SCHEMA'] is None else
+                f"`{database_name}`.`{row['TABLE_SCHEMA']}`.`{row['TABLE_NAME']}`"
+            ),
+            axis=1
+        ).tolist()
 
 
 class HandlersCache:

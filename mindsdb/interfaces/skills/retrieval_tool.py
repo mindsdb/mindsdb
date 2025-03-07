@@ -6,6 +6,7 @@ from mindsdb.interfaces.skills.skill_tool import skill_tool
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.storage.db import KnowledgeBase
 from mindsdb.utilities import log
+from mindsdb.utilities.cache import get_cache
 from langchain_core.documents import Document
 from langchain_core.tools import Tool
 from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
@@ -36,6 +37,8 @@ def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
 
     kb_params = {}
     embeddings_model = None
+
+    content_cache = get_cache("content")
 
     if 'source' in tool:
         kb_name = tool['source']
@@ -105,7 +108,7 @@ def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
     except Exception as e:
         logger.error(f"Error building RAG pipeline: {str(e)}")
         raise ValueError(f"Failed to build RAG pipeline: {str(e)}")
-    
+
     vector_db_handler = kb_table.get_vector_db()
     metadata_config = rag_config.metadata_config
 
@@ -155,6 +158,39 @@ def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
             return f'I could not find any document with name {name}. Please make sure the document name matches exactly.'
         return f"I found document {found_document.metadata.get(metadata_config.id_column)} with name {found_document.metadata.get(metadata_config.name_column)}. Here is the full document to use as context:\n\n{found_document.page_content}"
 
+    def _lookup_documents_by_content(content: str):
+        documents_response = vector_db_handler.native_query(
+            f'''
+                SELECT DISTINCT ON (t."{metadata_config.name_column}")
+                    e."{metadata_config.doc_id_key}",
+                    t."{metadata_config.name_column}",
+                    ts_rank(e."{metadata_config.content_column_index}", plainto_tsquery('{content}')) as rank
+                FROM {metadata_config.embeddings_table} e
+                INNER JOIN {metadata_config.table} t ON e."{metadata_config.doc_id_key}" = t."{metadata_config.id_column}"
+                WHERE e."{metadata_config.content_column_index}" @@ plainto_tsquery('{content}')
+                ORDER BY t."{metadata_config.name_column}", rank DESC LIMIT 10;
+            '''
+        )
+
+        if documents_response.resp_type == RESPONSE_TYPE.ERROR:
+            raise RuntimeError(f'There was an error looking up documents: {documents_response.error_message}')
+        if documents_response.data_frame.empty:
+            return None
+
+        # Cache the title of the documents against their IDs.
+        for _, row in documents_response.data_frame.iterrows():
+            content_cache.set(row[metadata_config.name_column], row[metadata_config.doc_id_key])
+
+        return documents_response.data_frame[metadata_config.name_column].to_list()
+
+    content_lookup_tool = Tool(
+        func=_lookup_documents_by_content,
+        name=tool.get('name', '') + '_content_lookup',
+        # TODO: Review this description.
+        description='You must use this tool ONLY when the user is asking about a document by providing the content (e.g. "Find me documents with content XXX", "search for documents with content XXX"). The input should be the content of the document the user is looking for. List the titles of the documents and return to the user',
+        return_direct=False
+    )
+
     name_lookup_tool = Tool(
         func=_lookup_document_by_name,
         name=tool.get('name', '') + '_name_lookup',
@@ -162,10 +198,27 @@ def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
         return_direct=False
     )
 
+    def _lookup_document_id_by_name_in_cache(name: str):
+        content = content_cache.get(name)
+
+        if not content:
+            return f'I could not find any content for the key {name}. Please make sure this key is valid.'
+
+        # TODO: Fix this based on how the content will be stored.
+        return f'I found the some content for the key {name}. Here is the full content to use as context:\n\n{content}'
+
+    id_lookup_tool = Tool(
+        func=_lookup_document_id_by_name_in_cache,
+        name=tool.get('name', '') + '_id_lookup',
+        # TODO: Review this description.
+        description='You must use this tool FIRST when the user is asking about a specific document by by name or title (e.g. "Find me document XXX", "search for document XXX"). The input should be the exact name of the document the user is looking for. If the document cannot be found, use other tools to search for it.',
+        return_direct=False
+    )
+
     tools = [rag_pipeline_tool]
     if rag_config.metadata_config is None:
         return tools
-    tools.append(name_lookup_tool)
+    tools.extend([name_lookup_tool, content_lookup_tool, id_lookup_tool])
     return tools
 
 def _get_knowledge_base(knowledge_base_name: str, project_id, executor) -> KnowledgeBase:

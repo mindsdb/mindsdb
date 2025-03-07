@@ -621,7 +621,7 @@ Below is a description of the contents in this column in list format:
 
         ablated_dict = {}
         for key, value in ablation_value_dict.items():
-            if value >= ablation_quantiles[retry]:
+            if value >= ablation_quantiles[::-1][retry]:
                 ablated_dict[key] = value
 
         #  discard low ranked filters ##################################################################################
@@ -817,13 +817,23 @@ Below is a description of the contents in this column in list format:
         )
 
         if type(metadata_filters) is list:
+            num_retries = 0
+            ablated_metadata_filters = self._dynamic_ablation(
+                metadata_filters=metadata_filters,
+                ablation_value_dict=ablation_value_dict,
+                ablation_quantiles=ablation_quantiles,
+                retry=num_retries,
+            )
+
             # Initial Execution of the similarity search with metadata filters.
             document_response = self._prepare_and_execute_query(
                 ranked_database_schema=ranked_database_schema,
-                metadata_filters=metadata_filters,
+                metadata_filters=ablated_metadata_filters,
                 embeddings_str=str(embedded_query),
             )
-            num_retries = 0
+
+            num_retries += 1
+
             while num_retries < self.num_retries:
                 if (
                     document_response.resp_type != RESPONSE_TYPE.ERROR

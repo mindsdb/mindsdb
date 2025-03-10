@@ -12,7 +12,7 @@ from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.skills.sql_agent import SQLAgent
 from mindsdb.interfaces.skills.skills_controller import SkillsController, SkillType
 from mindsdb.integrations.libs.vectordatabase_handler import TableField
-from mindsdb.interfaces.database.integrations import HandlerInformationSchema
+from mindsdb.integrations.libs.information_schema import HandlerInformationSchema
 
 
 _DEFAULT_TOP_K_SIMILARITY_SEARCH = 5

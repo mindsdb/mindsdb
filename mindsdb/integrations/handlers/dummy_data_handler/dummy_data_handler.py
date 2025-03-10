@@ -86,7 +86,11 @@ class DummyHandler(DatabaseHandler):
         Returns:
             HandlerResponse: Details of the table.
         """
-        query = f'DESCRIBE {table_name};'
+        query = f"""
+            select TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE
+            from information_schema.columns
+            where table_name = '{table_name}';
+        """
         return self.native_query(query)
 
     def subscribe(self, stop_event, callback, table_name, columns=None, **kwargs):

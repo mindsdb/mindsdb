@@ -464,7 +464,7 @@ class Skills(Base):
             "type": self.type,
             "params": self.params,
             "created_at": self.created_at,
-            "metadata": {}
+            "metadata": metadata
         }
 
 

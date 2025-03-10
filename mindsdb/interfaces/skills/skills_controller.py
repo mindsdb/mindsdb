@@ -139,7 +139,7 @@ class SkillsController:
             ValueError: If `project_name` does not exist or skill doesn't exist
         '''
         if SkillType(skill_record.type) != SkillType.TEXT2SQL:
-            raise ValueError('Information schema is only supported for SQL skills')
+            raise TypeError('Information schema is only supported for SQL skills')
 
         database_name = skill_record.params.get('database')
         information_schema = integration_controller.get_information_schema(database_name)

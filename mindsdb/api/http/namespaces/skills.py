@@ -168,3 +168,37 @@ class SkillResource(Resource):
             )
         skills_controller.delete_skill(skill_name, project_name)
         return '', HTTPStatus.NO_CONTENT
+
+
+@ns_conf.route('/<project_name>/skills/<skill_name>/refresh-information-schema')
+@ns_conf.param('project_name', 'Name of the project')
+@ns_conf.param('skill_name', 'Name of the skill')
+class SkillRefreshInformationSchema(Resource):
+    @ns_conf.doc('update_skill_information_schema')
+    @api_endpoint_metrics('POST', '/skills/skill/refresh-information-schema')
+    def post(self, project_name, skill_name):
+        """Refresh the information schema for a SQL skill
+
+        Args:
+            project_name (str): Name of the project
+            skill_name (str): Name of the skill
+        """
+        skills_controller = SkillsController()
+        try:
+            existing_skill_record = skills_controller.get_skill(skill_name, project_name)
+        except ValueError:
+            # Project needs to exist
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Project not found',
+                f'Project with name {project_name} does not exist'
+            )
+        try:
+            skills_controller.update_skill_information_schema(existing_skill_record)
+        except TypeError:
+            return http_error(
+                HTTPStatus.BAD_REQUEST,
+                'Wrong skill type',
+                'The method only accepts SQL skills'
+            )
+        return '', HTTPStatus.NO_CONTENT

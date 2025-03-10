@@ -16,6 +16,9 @@ from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOper
 logger = log.getLogger(__name__)
 
 
+DOCUMENT_RETRIEVAL_LIMIT = 1000
+
+
 def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
     """
     Builds a retrieval tool i.e RAG
@@ -168,7 +171,8 @@ def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
                 FROM {metadata_config.embeddings_table} e
                 INNER JOIN {metadata_config.table} t ON e."{metadata_config.doc_id_key}" = t."{metadata_config.id_column}"
                 WHERE e."{metadata_config.content_column_index}" @@ plainto_tsquery('{content}')
-                ORDER BY t."{metadata_config.name_column}", rank DESC LIMIT 10;
+                ORDER BY t."{metadata_config.name_column}", rank DESC
+                LIMIT {DOCUMENT_RETRIEVAL_LIMIT};
             '''
         )
 

@@ -41,7 +41,7 @@ def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
     kb_params = {}
     embeddings_model = None
 
-    content_cache = get_cache("content")
+    content_cache = get_cache("content", max_size=None)
 
     if 'source' in tool:
         kb_name = tool['source']

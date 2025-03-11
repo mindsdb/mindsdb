@@ -61,7 +61,7 @@ RUN --mount=type=cache,target=/root/.cache \
 
 
 
-FROM build AS extras
+FROM build
 ARG EXTRAS
 # Install extras on top of the bare mindsdb
 RUN --mount=type=cache,target=/root/.cache \
@@ -78,71 +78,35 @@ RUN --mount=type=cache,target=/root/.cache uv pip install --no-deps "."
 
 # Same as extras image, but with dev dependencies installed.
 # This image is used in our docker-compose
-FROM extras AS dev
-WORKDIR /mindsdb
+# FROM extras AS dev
+# WORKDIR /mindsdb
 
-# Configure apt to retain downloaded packages so we can store them in a cache mount
-RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
-# Install system dependencies, with caching for faster builds
-RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
-    --mount=target=/var/cache/apt,type=cache,sharing=locked \
-    apt update -qy \
-    && apt-get upgrade -qy \
-    && apt-get install -qy \
-    -o APT::Install-Recommends=false \
-    -o APT::Install-Suggests=false \
-    libpq5 freetds-bin curl
+# # Configure apt to retain downloaded packages so we can store them in a cache mount
+# RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
+# # Install system dependencies, with caching for faster builds
+# RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
+#     --mount=target=/var/cache/apt,type=cache,sharing=locked \
+#     apt update -qy \
+#     && apt-get upgrade -qy \
+#     && apt-get install -qy \
+#     -o APT::Install-Recommends=false \
+#     -o APT::Install-Suggests=false \
+#     libpq5 freetds-bin curl
 
-# Install dev requirements and install 'mindsdb' as an editable package
-RUN --mount=type=cache,target=/root/.cache uv pip install -r requirements/requirements-dev.txt \
-                                        && uv pip install --no-deps -e "."
+# # Install dev requirements and install 'mindsdb' as an editable package
+# RUN --mount=type=cache,target=/root/.cache uv pip install -r requirements/requirements-dev.txt \
+#                                         && uv pip install --no-deps -e "."
 
-COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
-
-
-ENV PYTHONUNBUFFERED=1
-ENV MINDSDB_DOCKER_ENV=1
-ENV VIRTUAL_ENV=/venv
-ENV PATH=/venv/bin:$PATH
-
-EXPOSE 47334/tcp
-EXPOSE 47335/tcp
-EXPOSE 47336/tcp
-
-ENTRYPOINT [ "bash", "-c", "watchfiles --filter python 'python -Im mindsdb --config=/root/mindsdb_config.json --api=http'" ]
+# COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
 
+# ENV PYTHONUNBUFFERED=1
+# ENV MINDSDB_DOCKER_ENV=1
+# ENV VIRTUAL_ENV=/venv
+# ENV PATH=/venv/bin:$PATH
 
+# EXPOSE 47334/tcp
+# EXPOSE 47335/tcp
+# EXPOSE 47336/tcp
 
-# This is the final image for most use-cases
-# Copies the installed pip packages from `extras` and installs only what we need to run
-FROM python:3.10-slim
-WORKDIR /mindsdb
-
-# Configure apt to retain downloaded packages so we can store them in a cache mount
-RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
-# Install system dependencies, with caching for faster builds
-RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
-    --mount=target=/var/cache/apt,type=cache,sharing=locked \
-    apt update -qy \
-    && apt-get upgrade -qy \
-    && apt-get install -qy \
-    -o APT::Install-Recommends=false \
-    -o APT::Install-Suggests=false \
-    libpq5 freetds-bin curl
-
-# Copy installed packages and venv from the extras stage
-COPY --link --from=extras /venv /venv
-COPY --link --from=extras /mindsdb /mindsdb
-COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
-
-ENV PYTHONUNBUFFERED=1
-ENV MINDSDB_DOCKER_ENV=1
-ENV VIRTUAL_ENV=/venv
-ENV PATH=/venv/bin:$PATH
-
-EXPOSE 47334/tcp
-EXPOSE 47335/tcp
-EXPOSE 47336/tcp
-
-ENTRYPOINT [ "bash", "-c", "python -Im mindsdb --config=/root/mindsdb_config.json --api=http" ]
+# ENTRYPOINT [ "bash", "-c", "watchfiles --filter python 'python -Im mindsdb --config=/root/mindsdb_config.json --api=http'" ]

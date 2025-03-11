@@ -1,23 +1,15 @@
-from mindsdb.integrations.handlers.jira_handler.jira_table import JiraProjectsTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
 from mindsdb.utilities import log
-from mindsdb_sql_parser import parse_sql
-
-from atlassian import Jira
-from typing import Optional
-import requests
+from mindsdb.integrations.libs.api_handler_generator import APIResourceGenerator
 
 
 logger = log.getLogger(__name__)
 
-class JiraHandler(APIHandler):
-    """
-    This handler handles connection and execution of the Airtable statements.
-    """
 
+class JiraHandler(APIHandler):
 
     def __init__(self, name=None, **kwargs):
         """
@@ -30,64 +22,38 @@ class JiraHandler(APIHandler):
         super().__init__(name)
         self.connection_data = kwargs.get("connection_data", {})
 
-        self.parser = parse_sql
-        self.dialect = 'jira'
-        self.kwargs = kwargs
         self.connection = None
         self.is_connected = False
 
+        # todo store parsed data in files
 
-        jira_projects_data = JiraProjectsTable(self)
-        self._register_table("project", jira_projects_data)
+        self.api_resource_generator = APIResourceGenerator(
+            "https://developer.atlassian.com/cloud/jira/platform/swagger-v3.v3.json",
+            self.connection_data,
+            url_base='/rest/api/3/',
+            options={
+                'offset_param': ['startAt', 'offset'],
+                'total_column': ['totalEntryCount', 'total'],
+                'check_connection_table': 'myself'
+            }
+        )
+
+        resource_tables = self.api_resource_generator.generate_api_resources(self)
+
+        for table_name, resource in resource_tables.items():
+            self._register_table(table_name, resource)
 
     def __del__(self):
         if self.is_connected is True:
             self.disconnect()
 
-    def connect(self) -> StatusResponse:
+    def connect(self):
         """
         Set up the connection required by the handler.
         Returns:
             HandlerStatusResponse
         """
-
-        if self.is_connected is True:
-            return self.connection
-        
-        s = requests.Session()
-        if self.connection_data.get("cloud", False):
-            params = {
-                "cloud": True,
-                "username": self.connection_data['jira_username'],
-                "password": self.connection_data['jira_api_token'],
-                "url": self.connection_data['jira_url'],
-            }   
-        else:
-            params = {
-                "cloud": False,
-                "url": self.connection_data['jira_url'],
-                "session": s
-            }
-
-        s.headers['Authorization'] =  f"Bearer {self.connection_data['jira_api_token']}"
-
-        self.connection = Jira(**params)
-        self.is_connected = True
-
-
-        return self.connection
-
-    def disconnect(self):
-        """
-        Close any existing connections.
-        """
-
-        if self.is_connected is False:
-            return
-
-        self.connection.close()
-        self.is_connected = False
-        return self.is_connected
+        return
 
     def check_connection(self) -> StatusResponse:
         """
@@ -97,37 +63,13 @@ class JiraHandler(APIHandler):
         """
 
         response = StatusResponse(False)
-        need_to_close = self.is_connected is False
-        
+
         try:
-            self.connect()
+            self.api_resource_generator.check_connection()
             response.success = True
         except Exception as e:
             logger.error(f"Error connecting to Jira API: {e}!")
             response.error_message = e
 
         self.is_connected = response.success
-
         return response
-
-    def native_query(self, query: str) -> StatusResponse:
-        """Receive and process a raw query.
-        Parameters
-        ----------
-        query : str
-            query in a native format
-        Returns
-        -------
-        StatusResponse
-            Request status
-        """
-        ast = parse_sql(query)
-        return self.query(ast)
-   
-    def construct_jql(self):
-        """construct jql & returns it to JiraProjectsTable class
-        Returns
-        -------
-        Str
-        """
-        return 'project = ' + str(self.connection_data['project'])

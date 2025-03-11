@@ -162,7 +162,7 @@ class SalesforceHandler(APIHandler):
             )
 
         return response
-    
+
     def _get_resource_names(self) -> None:
         """
         Retrieves the names of the Salesforce resources.
@@ -172,5 +172,5 @@ class SalesforceHandler(APIHandler):
         """
         if not self.resource_names:
             self.resource_names = [resource['name'] for resource in self.connection.sobjects.describe()['sobjects']]
-            
+
         return self.resource_names

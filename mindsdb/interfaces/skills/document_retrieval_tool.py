@@ -1,15 +1,13 @@
 from enum import Enum
 from typing import List, Optional
+
 from pydantic import BaseModel, Field
 from langchain_core.tools import Tool
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 import tiktoken
-import re
-from mindsdb_sql_parser import parse_sql
 
 from mindsdb.utilities import log
-from mindsdb.interfaces.skills.skill_tool import skill_tool
 
 logger = log.getLogger(__name__)
 
@@ -56,6 +54,10 @@ class DocumentConfig(BaseModel):
     content_order_column: str = Field(
         default='chunk_id',
         description='Column in content table for ordering content chunks'
+    )
+    source: str = Field(
+        default='scientech_kb',
+        description='Knowledge base source'
     )
 
     # Custom query configuration
@@ -195,41 +197,76 @@ def _handle_token_limit(content: str, model, max_tokens: int = 32000, budget_mul
         return summaries[0] if summaries else "Error: Could not summarize document"
 
 
-def build_document_retrieval_tool(tool: dict, pred_args: dict, skill) -> Tool:
-    """Build a document retrieval tool that can search documents by name/id and allow chat interactions.
+def _get_knowledge_base(kb_name, project_id, executor):
+    """
+    Get knowledge base by name and project ID
 
     Args:
-        tool: Tool configuration dictionary
-        pred_args: Predictor arguments dictionary
-        skill: Skills database object
+        kb_name: Name of the knowledge base
+        project_id: Project ID
+        executor: Command executor
 
     Returns:
-        Tool: Configured document retrieval tool
+        Knowledge base object or None if not found
     """
-    """
-    Builds a document retrieval tool that can search documents by name/id and allow chat interactions.
-
-    Args:
-        tool: Tool configuration dictionary
-        pred_args: Predictor arguments dictionary
-        skill: Skills database object
-
-    Returns:
-        Tool: Configured document retrieval tool
-    """
-    # Create config from tool config and pred_args
-    config_dict = tool.get('config', {})
-    config_dict.update(pred_args)
-
-    # Create Pydantic model from config
     try:
-        config = DocumentConfig(**config_dict)
+        # Get knowledge base from executor
+        kb = executor.session.kb_controller.get(kb_name, project_id)
+        return kb
+    except Exception as e:
+        logger.error(f"Error getting knowledge base {kb_name}: {str(e)}")
+        return None
+
+
+def build_document_retrieval_tool(tool: dict, pred_args: dict) -> Tool:
+    """
+    Build a document retrieval tool that can search documents by name/id and allow chat interactions.
+
+    Args:
+        tool: Tool configuration
+        pred_args: Prediction arguments including LLM and config
+
+    Returns:
+        Tool: Document retrieval tool
+    """
+    # Get tool configuration
+    config = tool.get('config', {})
+
+    # Create DocumentConfig from config
+    try:
+        doc_config = DocumentConfig(**config)
+        pred_args['config'] = doc_config
     except Exception as e:
         logger.error(f"Error in document retrieval config: {str(e)}")
-        config = DEFAULT_CONFIG.copy(deep=True)
+        doc_config = DocumentConfig()
+        pred_args['config'] = doc_config
 
-    # Get command executor for SQL queries
-    executor = skill_tool.get_command_executor()
+    # Get knowledge base
+    if 'source' not in tool:
+        raise ValueError("Knowledge base for tool not found")
+
+    kb_name = tool['source']
+    executor = pred_args.get('executor')
+    if not executor:
+        raise ValueError("Executor not found in pred_args")
+
+    # Get project ID from skill
+    skill = pred_args.get('skill')
+    if not skill:
+        raise ValueError("Skill not found in pred_args")
+
+    project_id = getattr(skill, 'project_id', None)
+    if not project_id:
+        raise ValueError("Project ID not found in skill")
+
+    # Get knowledge base
+    kb = _get_knowledge_base(kb_name, project_id, executor)
+    if not kb:
+        raise ValueError(f"Knowledge base not found: {kb_name}")
+
+    # Get vector database handler
+    kb_table = executor.session.kb_controller.get_table(kb.name, project_id)
+    vector_db_handler = kb_table.get_vector_db()
 
     def retrieve_document(query: str) -> str:
         """
@@ -253,201 +290,112 @@ def build_document_retrieval_tool(tool: dict, pred_args: dict, skill) -> Tool:
             query_type = analysis.get('query_type', 'question')
             reasoning = analysis.get('reasoning', '')
 
-            # Log analysis results for debugging
-            logger.debug(f"Query analysis: {analysis}")
-
-            # Fallback to regex if LLM couldn't find an ID
             if not doc_id:
-                for pattern in [
-                    r'document[s]* (?:id|ID|Id)[: ]*([\w-]+)',  # Match 'document id: ABC123'
-                    r'doc(?:ument)*[s]* [\"\']*([\w-]+)[\"\']*',     # Match 'document \"ABC123\"' or 'doc ABC123'
-                    r'[\"\']*([\w-]+)[\"\']*'                      # Match any quoted ID as fallback
-                ]:
-                    match = re.search(pattern, query)
-                    if match:
-                        doc_id = match.group(1)
-                        # Update analysis with regex-found ID
-                        analysis['extracted_id'] = doc_id
-                        analysis['reasoning'] += " (ID found via pattern matching)"
-                        break
+                return "I couldn't identify a specific document in your query. Please provide a document ID or title."
 
-            # If still no doc_id, try to use the query itself as the doc_id
-            if not doc_id and query and query.strip():
-                doc_id = query.strip()
-                analysis['extracted_id'] = doc_id
-                analysis['reasoning'] += " (Using query as document ID)"
+            # Prepare the search term
+            safe_doc_id = doc_id.replace("'", "''")  # Escape single quotes for SQL
 
-            if not doc_id:
-                if query_type == 'summary':
-                    return "Please specify which document you would like me to summarize."
-                else:
-                    return "Please specify which document you would like me to search for information in."
+            try:
+                # Query the document metadata
+                documents_response = vector_db_handler.native_query(
+                    f'SELECT * FROM {doc_config.metadata_table} WHERE "{doc_config.metadata_id_column}" ILIKE \'%{safe_doc_id}%\' OR "{doc_config.metadata_title_column}" ILIKE \'%{safe_doc_id}%\' LIMIT 1;'
+                )
 
-            # Build and execute SQL query based on configuration
-            if config.search_type == SearchType.CUSTOM and config.custom_query:
-                # Use custom SQL query if provided
-                try:
-                    # Format the query with the search term and database if provided
-                    query_params = {'search_term': doc_id}
-                    if config.database:
-                        query_params['database'] = f'"{config.database}"'
+                # Check for errors
+                if hasattr(documents_response, 'resp_type') and getattr(documents_response, 'resp_type', None) == 'error':
+                    raise RuntimeError(f'There was an error looking up documents: {getattr(documents_response, "error_message", "Unknown error")}')
 
-                    # Format the query with parameters
-                    sql = config.custom_query.format(**query_params)
+                # Check if we found any documents
+                if hasattr(documents_response, 'data_frame') and getattr(documents_response, 'data_frame', None) is not None:
+                    if documents_response.data_frame.empty:
+                        return f"Document matching '{doc_id}' not found."
 
-                    # Parse SQL query into AST
-                    ast = parse_sql(sql)
+                    # Get the first document
+                    document_row = documents_response.data_frame.head(1)
+                    doc_id = document_row.get(doc_config.metadata_id_column).item()
+                    title = document_row.get(doc_config.metadata_title_column).item()
 
-                    # Execute the query
-                    result = executor.execute_command(
-                        ast,
-                        database_name=config.database if config.database else None
+                    # Query the document content
+                    from mindsdb.integrations.handlers.vector_db.models.filter_models import FilterCondition, FilterOperator
+
+                    # Create a filter condition to get chunks for this document
+                    id_filter_condition = FilterCondition(
+                        "metadata->>'original_row_id'",
+                        FilterOperator.EQUAL,
+                        str(doc_id)
                     )
 
-                    # Check if result exists and has data
-                    if not result or not hasattr(result, '__iter__'):
-                        return f"Document matching '{doc_id}' not found."
+                    # Get document chunks
+                    document_chunks_df = vector_db_handler.select(
+                        doc_config.content_table,
+                        conditions=[id_filter_condition]
+                    )
 
-                    # Convert to list if it's not already
-                    result_list = list(result)
-                    if not result_list:
-                        return f"Document matching '{doc_id}' not found."
+                    if document_chunks_df.empty:
+                        return f"Content not found for document '{title}' (ID: {doc_id})"
 
-                    # Validate required columns are present
-                    doc = result_list[0]
-                    missing_cols = []
-                    for col in config.required_columns:
-                        if col not in doc:
-                            missing_cols.append(col)
-                    if missing_cols:
-                        raise ValueError(f"Custom query missing required columns: {', '.join(missing_cols)}")
+                    # Sort chunks by order
+                    sort_col = doc_config.content_order_column if doc_config.content_order_column in document_chunks_df.columns else 'id'
+                    document_chunks_df = document_chunks_df.sort_values(by=sort_col)
 
-                    # Use the custom query results
-                    content = doc[config.content_column]
-                    doc_id = doc.get(config.id_column, 'N/A')
-                    title = doc.get(config.title_column, 'N/A')
+                    # Get content with token limit
+                    content = ''
+                    for _, chunk in document_chunks_df.iterrows():
+                        chunk_content = chunk.get(doc_config.content_column, '')
+                        content += chunk_content
 
-                    # Handle token limit
+                    # Handle token limit with the LLM's max token limit
                     content = _handle_token_limit(content, pred_args['llm'])
 
-                except KeyError as e:
-                    return f"Error in custom query: Missing column {str(e)}"
-                except Exception as e:
-                    return f"Error executing custom query: {str(e)}"
-            else:
+                    # Structure the response
+                    response = {
+                        'document_info': {
+                            'id': doc_id,
+                            'title': title
+                        },
+                        'content': content,
+                        'query_analysis': {
+                            'query_type': query_type,
+                            'extracted_id': doc_id,
+                            'reasoning': reasoning,
+                            'confidence': 'high' if analysis.get('extracted_id') else 'medium',
+                            'method': 'llm_analysis'
+                        }
+                    }
 
-                if config.search_type == SearchType.WILDCARD:
-                    # First, search in metadata table by title
-                    table_ref = f'"{config.database}"."{config.metadata_table}"' if config.database else f'"{config.metadata_table}"'
-                    # Ensure doc_id is not None before calling lower()
-                    safe_doc_id = doc_id.lower() if doc_id else ""
-                    sql = f"""
-                    SELECT "{config.metadata_id_column}", "{config.metadata_title_column}"
-                    FROM {table_ref}
-                    WHERE "{config.metadata_title_column}" LIKE '%{safe_doc_id}%'
-                    LIMIT 10
-                    """
+                    # Structure the response in Langchain's ReAct format
+                    thought = "I found the relevant document. Let me analyze its content to help answer the query."
+
+                    if query_type == 'question':
+                        observation = (
+                            f"Document Found:\n"
+                            f"- Title: {response['document_info']['title']}\n"
+                            f"- ID: {response['document_info']['id']}\n\n"
+                            f"Question: {query}\n\n"
+                            f"Document Content:\n{content}"
+                        )
+                        action = "Now I will analyze the content to answer the specific question."
+                    else:
+                        observation = (
+                            f"Document Found:\n"
+                            f"- Title: {response['document_info']['title']}\n"
+                            f"- ID: {response['document_info']['id']}\n\n"
+                            f"Document Content:\n{content}"
+                        )
+                        action = "Now I will create a clear and concise summary of the main points in this document."
+
+                    # Format in Langchain's expected format
+                    return f"Thought: {thought}\nObservation: {observation}\nThought: {action}\nAI: Let me help you with that."
                 else:
-                    # Exact match by ID or title
-                    table_ref = f'"{config.database}"."{config.metadata_table}"' if config.database else f'"{config.metadata_table}"'
-                    sql = f"""
-                    SELECT "{config.metadata_id_column}", "{config.metadata_title_column}"
-                    FROM {table_ref}
-                    WHERE "{config.metadata_id_column}" = '{doc_id}'
-                       OR "{config.metadata_title_column}" = '{doc_id}'
-                    LIMIT 1
-                    """
-
-                # Parse SQL query into AST
-                ast = parse_sql(sql)
-
-                result = executor.execute_command(
-                    ast,
-                    database_name=config.database if config.database else None
-                )
-                if not result or not hasattr(result, '__iter__'):
                     return f"Document matching '{doc_id}' not found."
 
-                # Get metadata
-                result_list = list(result)
-                if not result_list:
-                    return f"Document matching '{doc_id}' not found."
-
-                doc = result_list[0]
-                doc_id = doc[config.metadata_id_column]
-                title = doc[config.metadata_title_column]
-
-                # Get content
-                content_table_ref = f'"{config.database}"."{config.content_table}"' if config.database else f'"{config.content_table}"'
-                content_sql = f"""
-                SELECT {config.content_column}
-                FROM {content_table_ref}
-                WHERE {config.content_id_column} = '{doc_id}'
-                ORDER BY {config.content_order_column}
-                """
-                # Parse SQL query into AST
-                content_ast = parse_sql(content_sql)
-                content_result = executor.execute_command(
-                    content_ast,
-                    database_name=config.database if config.database else None
-                )
-
-                if not content_result or not hasattr(content_result, '__iter__'):
-                    return f"Content not found for document '{title}' (ID: {doc_id})"
-
-                # Combine all content chunks
-                content_result_list = list(content_result)
-                if not content_result_list:
-                    return f"Content not found for document '{title}' (ID: {doc_id})"
-
-                content = '\n'.join(row[0] for row in content_result_list)
-
-                # Handle token limit
-                content = _handle_token_limit(content, pred_args['llm'])
-
-            # Format initial response
-            response = {
-                'document_info': {
-                    'id': doc_id,
-                    'title': title
-                },
-                'content': content,
-                'query_type': query_type,
-                'reasoning': reasoning,
-                'analysis': {
-                    'is_question': query_type == 'question',
-                    'requires_summary': query_type == 'summary',
-                    'confidence': 'high' if analysis.get('extracted_id') else 'medium',
-                    'method': 'llm_analysis'
-                }
-            }
-
-            # Handle token limit
-            content = _handle_token_limit(response['content'], pred_args['llm'])
-
-            # Structure the response in Langchain's ReAct format
-            thought = "I found the relevant document. Let me analyze its content to help answer the query."
-
-            if query_type == 'question':
-                observation = (
-                    f"Document Found:\n"
-                    f"- Title: {response['document_info']['title']}\n"
-                    f"- ID: {response['document_info']['id']}\n\n"
-                    f"Question: {query}\n\n"
-                    f"Document Content:\n{content}"
-                )
-                action = "Now I will analyze the content to answer the specific question."
-            else:
-                observation = (
-                    f"Document Found:\n"
-                    f"- Title: {response['document_info']['title']}\n"
-                    f"- ID: {response['document_info']['id']}\n\n"
-                    f"Document Content:\n{content}"
-                )
-                action = "Now I will create a clear and concise summary of the main points in this document."
-
-            # Format in Langchain's expected format
-            return f"Thought: {thought}\nObservation: {observation}\nThought: {action}\nAI: Let me help you with that."
+            except Exception as e:
+                logger.error(f"Error in document retrieval query: {str(e)}")
+                thought = "I encountered an error while trying to retrieve the document."
+                observation = f"Error retrieving document: {str(e)}"
+                follow_up = "I should inform the user about this error."
+                return f"Thought: {thought}\nObservation: {observation}\nThought: {follow_up}\nAI: I'm sorry, but I encountered an error while trying to retrieve the document. {str(e)}"
 
         except Exception as e:
             logger.error(f"Error in document retrieval: {str(e)}")

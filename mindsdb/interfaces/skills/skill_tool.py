@@ -262,27 +262,33 @@ class SkillToolController:
             type=skill.type
         )
 
-    def _make_document_retrieval_tools(self, skill: db.Skills, llm: BaseChatModel):
+    def _make_document_retrieval_tools(self, skill: db.Skills, llm):
         """
-        Creates document retrieval tool for searching and querying documents
+        creates document retrieval tool
         """
         params = skill.params
         config = params.get('config', {})
         if 'llm' not in config:
+            # Set LLM if not explicitly provided in configs.
             config['llm'] = llm
         tool = dict(
             name=params.get('name', skill.name),
             source=params.get('source', None),
             config=config,
-            description='Use this tool to search for documents by name/ID and ask questions about them. '
-                        'The input should be either a document name/ID to retrieve, or a question about a specific document.',
+            description=f'You must use this tool to get more context or information '
+                        f'to answer a question about {params["description"]}. '
+                        f'The input should be the exact question the user is asking.',
             type=skill.type
         )
+
+        # Add executor and skill to pred_args
         pred_args = {}
         pred_args['llm'] = llm
+        pred_args['executor'] = self.get_command_executor()
+        pred_args['skill'] = skill
 
         from .document_retrieval_tool import build_document_retrieval_tool
-        return build_document_retrieval_tool(tool, pred_args, skill)
+        return build_document_retrieval_tool(tool, pred_args)
 
     def get_tools_from_skills(self, skills_data: List[SkillData], llm: BaseChatModel, embedding_model: Embeddings) -> dict:
         """Creates function for skill and metadata (name, description)

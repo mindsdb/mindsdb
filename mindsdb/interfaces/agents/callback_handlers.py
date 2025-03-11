@@ -1,5 +1,6 @@
 from typing import Any, Dict, List, Union
 import logging
+import json
 from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.messages.base import BaseMessage
@@ -15,6 +16,13 @@ class ContextCaptureCallback(BaseCallbackHandler):
             'page_content': doc.page_content,
             'metadata': doc.metadata
         } for doc in documents]
+
+    def on_tool_end(self, output: str, *, run_id: str, parent_run_id: Union[str, None] = None, **kwargs: Any) -> Any:
+        # If the output has an UI representation, use that for context
+        if hasattr(output, 'ui_repr'):
+            self.context = [json.loads(output.ui_repr())]
+        else:
+            self.context = [{'content': output}]
 
     def get_contexts(self):
         return self.context

@@ -1,6 +1,6 @@
 import json
 from concurrent.futures import as_completed, TimeoutError
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional, Any
 from uuid import uuid4
 import queue
 import re
@@ -207,6 +207,29 @@ def process_chunk(chunk):
         return str(chunk)
 
 
+class ContentAwareMemory(ConversationSummaryBufferMemory):
+    """Memory class that properly handles ContentSearchResult objects."""
+    
+    def save_context(self, inputs: Dict[str, Any], outputs: Dict[str, Any]) -> None:
+        """Save context from this conversation to buffer. Properly handle ContentSearchResult objects."""
+        # Get input string - use the input_key if available, otherwise use the first value
+        input_str = inputs.get(self.input_key, next(iter(inputs.values())) if inputs else "")
+        
+        # Get output string - use the output_key if available, otherwise use the first value
+        output_str = outputs.get(self.output_key, next(iter(outputs.values())) if outputs else "")
+        
+        # Convert ContentSearchResult to string if needed
+        if hasattr(output_str, 'prompt_repr'):
+            output_str = output_str.prompt_repr()
+        elif not isinstance(output_str, str):
+            output_str = str(output_str)
+            
+        self.chat_memory.add_user_message(str(input_str))
+        self.chat_memory.add_ai_message(str(output_str))
+        
+        self.prune()
+
+
 class LangchainAgent:
 
     def __init__(self, agent: db.Agents, model: dict = None):
@@ -360,8 +383,8 @@ class LangchainAgent:
         # Prefer prediction prompt template over original if provided.
         prompt_template = args["prompt_template"]
 
-        # Set up memory.
-        memory = ConversationSummaryBufferMemory(
+        # Set up memory with our custom class
+        memory = ContentAwareMemory(
             llm=llm,
             input_key="input",
             output_key="output",
@@ -388,7 +411,7 @@ class LangchainAgent:
             agent=agent_type,
             # Use custom output parser to handle flaky LLMs that don't ALWAYS conform to output format.
             agent_kwargs={"output_parser": SafeOutputParser()},
-            # Calls the agent’s LLM Chain one final time to generate a final answer based on the previous steps
+            # Calls the agent's LLM Chain one final time to generate a final answer based on the previous steps
             early_stopping_method="generate",
             handle_parsing_errors=self._handle_parsing_errors,
             # Timeout per agent invocation.
@@ -648,26 +671,30 @@ AI: {response}"""
     def process_chunk(chunk):
         if isinstance(chunk, dict):
             return {k: LangchainAgent.process_chunk(v) for k, v in chunk.items()}
-        if isinstance(chunk, list):
+        elif isinstance(chunk, list):
             return [LangchainAgent.process_chunk(item) for item in chunk]
-        if isinstance(chunk, AgentAction):
+        elif isinstance(chunk, AgentAction):
             # Format agent actions properly for streaming.
             return {
                 'tool': LangchainAgent.process_chunk(chunk.tool),
                 'tool_input': LangchainAgent.process_chunk(chunk.tool_input),
                 'log': LangchainAgent.process_chunk(chunk.log)
             }
-        if isinstance(chunk, AgentStep):
+        elif isinstance(chunk, AgentStep):
             # Format agent steps properly for streaming.
             return {
                 'action': LangchainAgent.process_chunk(chunk.action),
                 'observation': LangchainAgent.process_chunk(chunk.observation) if chunk.observation else ''
             }
-        if issubclass(chunk.__class__, BaseMessage):
+        elif issubclass(chunk.__class__, BaseMessage):
             # Extract content from message subclasses properly for streaming.
             return {
                 'content': chunk.content
             }
-        if isinstance(chunk, (str, int, float, bool, type(None))):
+        # Handle ContentSearchResult objects
+        elif hasattr(chunk, 'prompt_repr') and hasattr(chunk, 'ui_repr'):
+            # For user-facing output, use user_repr
+            return json.loads(chunk.prompt_repr())
+        elif isinstance(chunk, (str, int, float, bool, type(None))):
             return chunk
         return str(chunk)

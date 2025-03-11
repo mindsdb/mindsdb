@@ -1,3 +1,7 @@
+import json
+from dataclasses import dataclass
+from typing import List, Optional
+
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
 from mindsdb.integrations.utilities.rag.config_loader import load_rag_config
 
@@ -17,6 +21,38 @@ logger = log.getLogger(__name__)
 
 
 DOCUMENT_RETRIEVAL_LIMIT = 1000
+
+
+@dataclass
+class ContentSearchResult:
+    """Class to represent content search results with different representations for user and AI."""
+    titles: List[str]
+    total_results: int
+    query: str
+    full_results: Optional[List[dict]] = None
+    
+    def prompt_repr(self) -> str:
+        """Returns a prompt-friendly JSON representation showing only titles and total count."""
+        return json.dumps({
+            "chart_name": "Title Results",
+            "data": {
+                "Title": self.titles[:10],  # Only show first 10 results
+                "total_results": self.total_results
+            }
+        })
+    
+    def ui_repr(self) -> str:
+        """Returns an UI-focused JSON representation including query and full results."""
+        return json.dumps({
+            "titles": self.titles,
+            "total_results": self.total_results,
+            "query": self.query,
+            "full_results": self.full_results
+        })
+
+    def __str__(self) -> str:
+        """Default string representation is the user representation."""
+        return self.prompt_repr()
 
 
 def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
@@ -178,18 +214,32 @@ def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
 
         if documents_response.resp_type == RESPONSE_TYPE.ERROR:
             raise RuntimeError(f'There was an error looking up documents: {documents_response.error_message}')
+        
         if documents_response.data_frame.empty:
-            return None
+            return ContentSearchResult(
+                titles=[],
+                total_results=0,
+                query=content
+            )
 
         # Cache the title of the documents against their IDs.
+        full_results = []
         for _, row in documents_response.data_frame.iterrows():
             content_cache.set(row[metadata_config.name_column], row[metadata_config.doc_id_key])
+            full_results.append({
+                "title": row[metadata_config.name_column],
+                "doc_id": row[metadata_config.doc_id_key],
+                "rank": float(row["rank"])
+            })
 
         titles = documents_response.data_frame[metadata_config.name_column].to_list()
-        if not titles:
-            return {"chart_name":"Title Results", "data": {"Title": []}}
-            
-        return {"chart_name":"Title Results", "data": {"Title": titles}}
+        
+        return ContentSearchResult(
+            titles=titles,
+            total_results=len(titles),
+            query=content,
+            full_results=full_results
+        )
 
     content_lookup_tool = Tool(
         func=_lookup_documents_by_content,

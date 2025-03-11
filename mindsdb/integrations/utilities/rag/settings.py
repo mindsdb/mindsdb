@@ -349,7 +349,7 @@ class DocumentIdentifier(BaseModel):
         description='Key for the type of document (e.g. LER, SECY, NUREG)'
     )
     document_number: Optional[str] = Field(
-        description='Number to further identify document',
+        description='Number to further identify document. This should NEVER include letters (e.g. 12-06, 1.183, 7116, 6393)',
         default=None
     )
     revision: Optional[str] = Field(

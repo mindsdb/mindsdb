@@ -33,7 +33,7 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     && apt-get install -qy \
     -o APT::Install-Recommends=false \
     -o APT::Install-Suggests=false \
-    freetds-dev  # freetds required to build pymssql on arm64 for mssql_handler. Can be removed when we are on python3.11+
+    freetds-dev freetds-bin libpq5 curl # freetds-dev required to build pymssql on arm64 for mssql_handler. Can be removed when we are on python3.11+
 
 # Use a specific tag so the file doesn't change
 COPY --from=ghcr.io/astral-sh/uv:0.4.23 /uv /usr/local/bin/uv

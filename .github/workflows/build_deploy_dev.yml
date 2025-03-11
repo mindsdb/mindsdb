@@ -71,7 +71,6 @@ jobs:
         with:
           git-sha: ${{ github.event.pull_request.head.sha }}
 
-
   # Call our deployment workflow, so long as this is not a forked PR
   # This will run the deployment workflow in the base branch, not in the PR.
   # So if you change the deploy workflow in your PR, the changes won't be reflected in this run.

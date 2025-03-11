@@ -51,6 +51,7 @@ jobs:
         with:
           git-sha: ${{ github.event.pull_request.head.sha }}
           target: cloud
+          platforms: linux/amd64
   
   # Build our docker images based on our bake file
   # This job only pushes the layers to the cache repo

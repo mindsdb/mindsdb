@@ -253,7 +253,7 @@ def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
         for doc in found_documents:
             lookup_response += f'ID {doc.metadata.get(metadata_config.id_column)} - {doc.metadata.get(metadata_config.name_column)}\n'
         return lookup_response
-    
+
     def _lookup_document_by_document_id(id: int):
         lookup_query = f'''SELECT * FROM {metadata_config.table} AS s WHERE s."{metadata_config.id_column}" = {id} LIMIT 1'''
         documents_response = vector_db_handler.native_query(lookup_query)

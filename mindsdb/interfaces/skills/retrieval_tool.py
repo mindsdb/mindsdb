@@ -185,14 +185,17 @@ def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
         for _, row in documents_response.data_frame.iterrows():
             content_cache.set(row[metadata_config.name_column], row[metadata_config.doc_id_key])
 
-        return documents_response.data_frame[metadata_config.name_column].to_list()
+        titles = documents_response.data_frame[metadata_config.name_column].to_list()
+        if not titles:
+            return {"chart_name":"Title Results", "data": {"Title": []}}
+            
+        return {"chart_name":"Title Results", "data": {"Title": titles}}
 
     content_lookup_tool = Tool(
         func=_lookup_documents_by_content,
         name=tool.get('name', '') + '_content_lookup',
-        # TODO: Review this description.
-        description='You must use this tool ONLY when the user is asking about a document by providing the content (e.g. "Find me documents with content XXX", "search for documents with content XXX"). The input should be the content of the document the user is looking for. List the titles of the documents and return to the user',
-        return_direct=False
+        description='You must use this tool ONLY when the user is asking about a document by providing the content (e.g. "Find me documents with content XXX", "search for documents with content XXX"). The input should be the content of the document the user is looking for. The tool will return a JSON structure with a "Title Results" table containing a single "Title" column.',
+        return_direct=True
     )
 
     name_lookup_tool = Tool(

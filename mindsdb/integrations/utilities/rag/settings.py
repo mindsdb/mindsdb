@@ -298,6 +298,11 @@ Use this tool when the document name is clearly specified to ensure precise and 
 If you can potentially use multiple of your tools to answer the user question, you should prefer this name lookup tool because it is faster.
 '''
 
+ID_LOOKUP_TOOL_DESCRIPTION = '''ONLY use this tool when the user specifies a document ID to get after using the name_lookup tool. Never use this tool unless the name_lookup tool was used and returned a list of document IDs for the user to choose from.
+
+The input provided must be the exact document ID and nothing else (e.g. 523093).
+'''
+
 DEFAULT_DOCUMENT_IDENTIFIER_PROMPT_TEMPLATE = '''Construct a DocumentIdentifier.
 
 A single document usually has usually the following format:
@@ -651,6 +656,10 @@ class MultiHopRetrieverConfig(BaseModel):
 
 
 class RAGPipelineModel(BaseModel):
+    enable_retrieval: bool = Field(
+        default=True,
+        description="Whether or not to enable base retrieval pipeline as a tool for semantic search"
+    )
     documents: Optional[List[Document]] = Field(
         default=None,
         description="List of documents"

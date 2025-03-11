@@ -2,7 +2,7 @@ import pandas as pd
 
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
 from mindsdb.integrations.utilities.rag.config_loader import load_rag_config
-from mindsdb.integrations.utilities.rag.settings import DocumentIdentifier, DEFAULT_DOCUMENT_TYPE_IDENTIFIER, NAME_LOOKUP_TOOL_DESCRIPTION
+from mindsdb.integrations.utilities.rag.settings import DocumentIdentifier, DEFAULT_DOCUMENT_TYPE_IDENTIFIER, ID_LOOKUP_TOOL_DESCRIPTION, NAME_LOOKUP_TOOL_DESCRIPTION
 
 from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS
 from mindsdb.interfaces.skills.skill_tool import skill_tool
@@ -143,7 +143,7 @@ def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
             metadata=metadata
         )
 
-    def _get_document_by_identifiers(name: str):
+    def _get_documents_by_identifiers(name: str):
         parser = PydanticOutputParser(pydantic_object=DocumentIdentifier)
         document_type_metadata = metadata_config.document_types
         document_type_key_to_metadata = {}
@@ -235,14 +235,38 @@ def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
             raise RuntimeError(f'There was an error looking up documents: {documents_response.error_message}')
         if documents_response.data_frame.empty:
             return None
-        document_row = documents_response.data_frame.head(1)
-        return _data_frame_to_document(document_row)
+        found_documents = []
+        for _, row in documents_response.data_frame.iterrows():
+            found_documents.append(_data_frame_to_document(row))
+        return found_documents
 
     def _lookup_document_by_name(name: str):
-        found_document = _get_document_by_identifiers(name)
-        if found_document is None:
+        found_documents = _get_documents_by_identifiers(name)
+        if not found_documents:
             return f'I could not find any document with name {name}. Please make sure the document name matches exactly.'
-        return f"I found document {found_document.metadata.get(metadata_config.id_column)} with name {found_document.metadata.get(metadata_config.name_column)}. Here is the full document to use as context:\n\n{found_document.page_content}"
+        num_docs = len(found_documents)
+        if num_docs == 1:
+            first_document = found_documents[0]
+            # Return directly if we only find one document.
+            return f"I found document {first_document.metadata.get(metadata_config.id_column)} with name {first_document.metadata.get(metadata_config.name_column)}. Here is the full document to use as context:\n\n{first_document.page_content}"
+        lookup_response = f'I found {num_docs} documents after looking up {name}. Please let me know which ID is the right one and I will fetch the full document:\n\n'
+        for doc in found_documents:
+            lookup_response += f'ID {doc.metadata.get(metadata_config.id_column)} - {doc.metadata.get(metadata_config.name_column)}\n'
+        return lookup_response
+    
+    def _lookup_document_by_document_id(id: int):
+        lookup_query = f'''SELECT * FROM {metadata_config.table} AS s WHERE s."{metadata_config.id_column}" = {id} LIMIT 1'''
+        documents_response = vector_db_handler.native_query(lookup_query)
+        if documents_response.resp_type == RESPONSE_TYPE.ERROR:
+            # Fallback.
+            logger.warning(f'Something went wrong retrieving document by ID {id}: {documents_response.error_message}')
+            return None
+        if documents_response.data_frame.empty:
+            # Fallback.
+            logger.debug(f'Could not find any relevant documents by ID {id}')
+            return None
+        document_row = documents_response.data_frame.head(1)
+        return _data_frame_to_document(document_row)
 
     name_lookup_tool = Tool(
         func=_lookup_document_by_name,
@@ -250,11 +274,19 @@ def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
         description=NAME_LOOKUP_TOOL_DESCRIPTION,
         return_direct=False
     )
+    id_lookup_tool = Tool(
+        func=_lookup_document_by_document_id,
+        name=tool.get('name', '') + '_id_lookup',
+        description=ID_LOOKUP_TOOL_DESCRIPTION,
+        return_direct=False
+    )
 
-    tools = [rag_pipeline_tool]
-    if rag_config.metadata_config is None:
-        return tools
-    tools.append(name_lookup_tool)
+    tools = []
+    if rag_config.enable_retrieval:
+        tools.append(rag_pipeline_tool)
+    if rag_config.metadata_config is not None:
+        tools.append(name_lookup_tool)
+        tools.append(id_lookup_tool)
     return tools
 
 

@@ -51,12 +51,12 @@ class SkillsController:
             db.Skills.deleted_at == null()
         ).first()
 
-    def get_skills(self, project_name: str) -> List[dict]:
+    def get_skills(self, project_name: Optional[str]) -> List[dict]:
         '''
         Gets all skills in a project.
 
         Parameters:
-            project_name (str): The name of the containing project
+            project_name (Optional[str]): The name of the containing project
 
         Returns:
             all_skills (List[db.Skills]): List of database skill object
@@ -65,11 +65,13 @@ class SkillsController:
             ValueError: If `project_name` does not exist
         '''
 
-        project_controller = ProjectController()
-        projects = project_controller.get_list()
-        if project_name is not None:
+        if project_name is None:
+            projects = self.project_controller.get_list()
             projects = list([p for p in projects if p.name == project_name])
-        project_ids = list([p.id for p in projects])
+            project_ids = list([p.id for p in projects])
+        else:
+            project = self.project_controller.get(name=project_name)
+            project_ids = [project.id]
 
         query = (
             db.session.query(db.Skills)

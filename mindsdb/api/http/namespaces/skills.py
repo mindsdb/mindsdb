@@ -7,6 +7,7 @@ from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.http.utils import http_error
 from mindsdb.interfaces.skills.skills_controller import SkillsController
+from mindsdb.utilities.exception import EntityNotExistsError
 
 
 def create_skill(project_name, skill):
@@ -52,7 +53,7 @@ class SkillsResource(Resource):
         skills_controller = SkillsController()
         try:
             all_skills = skills_controller.get_skills(project_name)
-        except ValueError:
+        except EntityNotExistsError:
             # Project needs to exist.
             return http_error(
                 HTTPStatus.NOT_FOUND,

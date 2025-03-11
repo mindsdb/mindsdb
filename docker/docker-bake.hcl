@@ -66,7 +66,6 @@ target "base" {
   platforms = PLATFORM_LIST
   target = "build"
   output = ["type=registry"]
-  # TODO add caching
 }
 
 target "images" {

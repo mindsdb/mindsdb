@@ -46,6 +46,7 @@ try:
 except RuntimeError:
     logger.info('Torch multiprocessing context already set, ignoring...')
 
+
 _stop_event = threading.Event()
 
 

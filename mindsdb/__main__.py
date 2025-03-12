@@ -120,7 +120,6 @@ class TrunkProcessData:
                 return False
             return self.restart_on_failure
 
-
 def close_api_gracefully(trunc_processes_struct):
     _stop_event.set()
     try:

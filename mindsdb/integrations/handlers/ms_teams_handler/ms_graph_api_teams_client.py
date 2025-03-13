@@ -1,5 +1,7 @@
 from typing import Text, List, Dict, Optional
 
+from requests.exceptions import RequestException
+
 from mindsdb.integrations.utilities.handlers.api_utilities.microsoft.ms_graph_api_utilities import MSGraphAPIBaseClient
 
 
@@ -10,6 +12,19 @@ class MSGraphAPITeamsClient(MSGraphAPIBaseClient):
     Several common methods for submitting requests, fetching data, etc. are inherited from the base class.
     """
 
+    def check_connection(self) -> bool:
+        """
+        Check if the connection to Microsoft Teams is established.
+
+        Returns:
+            bool: True if the connection is established, False otherwise.
+        """
+        try:
+            self.fetch_data_json("me/joinedTeams")
+            return True
+        except RequestException as request_error:
+            return False
+        
     def _get_group_ids(self) -> List[Text]:
         """
         Get all group IDs related to Microsoft Teams.
@@ -18,29 +33,10 @@ class MSGraphAPITeamsClient(MSGraphAPIBaseClient):
             List[Text]: The group IDs.
         """
         if not self._group_ids:
-            api_url = self._get_api_url("groups")
-            # Only get the id and resourceProvisioningOptions fields.
-            params = {"$select": "id,resourceProvisioningOptions"}
-            groups = self._get_response_value_unsafe(self._make_request(api_url, params=params))
-            # Filter out only the groups that are related to Microsoft Teams.
-            self._group_ids = [item["id"] for item in groups if "Team" in item["resourceProvisioningOptions"]]
+            groups = self.fetch_data_json("me/joinedTeams")
+            self._group_ids = [group["id"] for group in groups]
 
         return self._group_ids
-    
-    def _get_channel_ids(self, group_id: Text) -> List[Text]:
-        """
-        Get all channel IDs related to a group.
-
-        Args:
-            group_id (Text): The ID of the group.
-
-        Returns:
-            List[Text]: The channel IDs for that group.
-        """
-        api_url = self._get_api_url(f"teams/{group_id}/channels")
-        channels_ids = self._get_response_value_unsafe(self._make_request(api_url))
-
-        return channels_ids
     
     def get_channel(self, group_id: Text, channel_id: Text) -> Dict:
         """
@@ -54,7 +50,7 @@ class MSGraphAPITeamsClient(MSGraphAPIBaseClient):
             Dict: The channel data.
         """
         api_url = self._get_api_url(f"teams/{group_id}/channels/{channel_id}")
-        channel = self._make_request(api_url)
+        channel = self.fetch_data_json(api_url)
         # Add the group ID to the channel data.
         channel.update({"teamId": group_id})
 
@@ -69,154 +65,8 @@ class MSGraphAPITeamsClient(MSGraphAPIBaseClient):
         """
         channels = []
         for group_id in self._get_group_ids():
-            for group_channels in self._fetch_data(f"teams/{group_id}/channels", pagination=False):
-                [group_channel.update({"teamId": group_id}) for group_channel in group_channels]
-                channels.extend(group_channels)
+            for group_channel in self.fetch_data_json(f"teams/{group_id}/channels"):
+                group_channel["teamId"] = group_id
+                channels.append(group_channel)
 
         return channels
-    
-    def get_channel_message(self, group_id: Text, channel_id: Text, message_id: Text) -> Dict:
-        """
-        Get a channel message by its ID and the IDs of the group and channel that it belongs to.
-
-        Args:
-            group_id (Text): The ID of the group that the channel belongs to.
-            channel_id (Text): The ID of the channel that the message belongs to.
-            message_id (Text): The ID of the message.
-
-        Returns:
-            Dict: The channel message data.
-        """
-        api_url = self._get_api_url(f"teams/{group_id}/channels/{channel_id}/messages/{message_id}")
-        message = self._make_request(api_url)
-
-        return message
-
-    def get_channel_messages(self) -> List[Dict]:
-        """
-        Get all channel messages.
-
-        Returns:
-            List[Dict]: The channel messages data.
-        """
-        channel_messages = []
-        for group_id in self._get_group_ids():
-            for channel_id in self._get_channel_ids(group_id):
-                for messages in self._fetch_data(f"teams/{group_id}/channels/{channel_id['id']}/messages"):
-                    channel_messages.extend(messages)
-
-        return channel_messages
-    
-    def send_channel_message(self, group_id: Text, channel_id: Text, message: Text, subject: Optional[Text] = None) -> None:
-        """
-        Send a message to a channel.
-
-        Args:
-            group_id (Text): The ID of the group that the channel belongs to.
-            channel_id (Text): The ID of the channel.
-            message (Text): The message to send.
-            subject (Optional[Text]): The subject of the message.
-        """
-        api_url = self._get_api_url(f"teams/{group_id}/channels/{channel_id}/messages")
-        data = {
-            "subject": subject,
-            "body": {
-                "content": message
-            }
-        }
-
-        self._make_request(api_url, data=data, method="POST")
-
-    def get_chat(self, chat_id: Text) -> Dict:
-        """
-        Get a chat by its ID.
-
-        Args:
-            chat_id (Text): The ID of the chat.
-
-        Returns:
-            Dict: The chat data.
-        """
-        api_url = self._get_api_url(f"chats/{chat_id}")
-        # Expand the response with the last message preview.
-        chat = self._make_request(api_url, params={"$expand": "lastMessagePreview"})
-
-        return chat
-    
-    def get_chats(self) -> List[Dict]:
-        """
-        Get all chats.
-
-        Returns:
-            List[Dict]: The chats data.
-        """
-        chats = []
-        for chat in self._fetch_data("chats", params={"$expand": "lastMessagePreview"}):
-            chats.extend(chat)
-
-        return chats
-    
-    def get_chat_message(self, chat_id: Text, message_id: Text) -> Dict:
-        """
-        Get a chat message by its ID and the ID of the chat that it belongs to.
-
-        Args:
-            chat_id (Text): The ID of the chat that the message belongs to.
-            message_id (Text): The ID of the message.
-
-        Returns:
-            Dict: The chat message data.
-        """
-        api_url = self._get_api_url(f"chats/{chat_id}/messages/{message_id}")
-        message = self._make_request(api_url)
-
-        return message
-    
-    def get_chat_messages(self, chat_id: Text) -> List[Dict]:
-        """
-        Get all chat messages for a chat.
-
-        Args:
-            chat_id (Text): The ID of the chat.
-
-        Returns:
-            List[Dict]: The chat messages data.
-        """
-        chat_messages = []
-        for messages in self._fetch_data(f"chats/{chat_id}/messages"):
-            chat_messages.extend(messages)
-
-        return chat_messages
-
-    def get_all_chat_messages(self) -> List[Dict]:
-        """
-        Get all chat messages for all chats.
-
-        Returns:
-            List[Dict]: The chat messages data.
-        """
-        chat_messages = []
-        for chat_id in [chat["id"] for chat in self.get_chats()]:
-            for messages in self._fetch_data(f"chats/{chat_id}/messages"):
-                chat_messages.extend(messages)
-
-        return chat_messages
-    
-    def send_chat_message(self, chat_id: Text, message: Text, subject: Optional[Text] = None) -> None:
-        """
-        Send a message to a chat.
-
-        Args:
-            chat_id (Text): The ID of the chat.
-            message (Text): The message to send.
-            subject (Optional[Text]): The subject of the message.
-        """
-        api_url = self._get_api_url(f"chats/{chat_id}/messages")
-        data = {
-            "subject": subject,
-            "body": {
-                "content": message
-            }
-        }
-        
-        self._make_request(api_url, data=data, method="POST")

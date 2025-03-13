@@ -4,14 +4,17 @@ from botbuilder.schema import Activity, ActivityTypes
 from botbuilder.schema import ChannelAccount
 from botframework.connector import ConnectorClient
 from botframework.connector.auth import MicrosoftAppCredentials
-from mindsdb.utilities import log
 from mindsdb_sql_parser import parse_sql
+import msal
 
+from mindsdb.integrations.handlers.ms_teams_handler.ms_graph_api_teams_client import MSGraphAPITeamsClient
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
 from mindsdb.integrations.libs.api_handler import APIChatHandler
+from mindsdb.integrations.utilities.handlers.auth_utilities import MSGraphAPIDelegatedPermissionsManager
 from mindsdb.interfaces.chatbot.types import ChatBotMessage
+from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
@@ -34,6 +37,7 @@ class MSTeamsHandler(APIChatHandler):
 
         connection_data = kwargs.get("connection_data", {})
         self.connection_data = connection_data
+        self.handler_storage = kwargs['handler_storage']
         self.kwargs = kwargs
 
         self.connection = None
@@ -55,11 +59,42 @@ class MSTeamsHandler(APIChatHandler):
         """
         if self.is_connected:
             return self.connection
+    
+        if self.connection_data.get("is_chatbot", True):
+            self.connection = MicrosoftAppCredentials(
+                app_id=self.connection_data["client_id"],
+                password=self.connection_data["client_secret"]
+            )
+        else:
+            # Initialize the token cache.
+            cache = msal.SerializableTokenCache()
 
-        self.connection = MicrosoftAppCredentials(
-            app_id=self.connection_data["client_id"],
-            password=self.connection_data["client_secret"]
-        )
+            # Load the cache from file if it exists.
+            cache_file = 'cache.bin'
+            try:
+                cache_content = self.handler_storage.file_get(cache_file)
+            except FileNotFoundError:
+                cache_content = None
+
+            if cache_content:
+                cache.deserialize(cache_content)
+
+            # Initialize the Microsoft Authentication Library (MSAL) app.
+            permissions_manager = MSGraphAPIDelegatedPermissionsManager(
+                client_id=self.connection_data['client_id'],
+                client_secret=self.connection_data['client_secret'],
+                tenant_id=self.connection_data['tenant_id'],
+                cache=cache,
+                code=self.connection_data.get('code')
+            )
+
+            access_token = permissions_manager.get_access_token()
+
+            # Save the cache back to file if it has changed.
+            if cache.has_state_changed:
+                self.handler_storage.file_set(cache_file, cache.serialize().encode('utf-8'))
+
+            self.connection = MSGraphAPITeamsClient(access_token)
 
         self.is_connected = True
 

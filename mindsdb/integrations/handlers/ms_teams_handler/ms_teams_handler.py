@@ -6,13 +6,16 @@ from botframework.connector import ConnectorClient
 from botframework.connector.auth import MicrosoftAppCredentials
 from mindsdb_sql_parser import parse_sql
 import msal
+from requests.exceptions import RequestException
 
 from mindsdb.integrations.handlers.ms_teams_handler.ms_graph_api_teams_client import MSGraphAPITeamsClient
+from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_tables import ChannelsTable
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
 from mindsdb.integrations.libs.api_handler import APIChatHandler
 from mindsdb.integrations.utilities.handlers.auth_utilities import MSGraphAPIDelegatedPermissionsManager
+from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import AuthException
 from mindsdb.interfaces.chatbot.types import ChatBotMessage
 from mindsdb.utilities import log
 
@@ -59,8 +62,8 @@ class MSTeamsHandler(APIChatHandler):
         """
         if self.is_connected:
             return self.connection
-    
-        if self.connection_data.get("is_chatbot", True):
+
+        if self._is_chatbot():
             self.connection = MicrosoftAppCredentials(
                 app_id=self.connection_data["client_id"],
                 password=self.connection_data["client_secret"]
@@ -79,7 +82,6 @@ class MSTeamsHandler(APIChatHandler):
             if cache_content:
                 cache.deserialize(cache_content)
 
-            # Initialize the Microsoft Authentication Library (MSAL) app.
             permissions_manager = MSGraphAPIDelegatedPermissionsManager(
                 client_id=self.connection_data['client_id'],
                 client_secret=self.connection_data['client_secret'],
@@ -95,6 +97,8 @@ class MSTeamsHandler(APIChatHandler):
                 self.handler_storage.file_set(cache_file, cache.serialize().encode('utf-8'))
 
             self.connection = MSGraphAPITeamsClient(access_token)
+
+            self._register_table('channels', ChannelsTable(self))
 
         self.is_connected = True
 
@@ -112,16 +116,38 @@ class MSTeamsHandler(APIChatHandler):
         response = StatusResponse(False)
 
         try:
-            self.connect()
-            response.success = True
-        except Exception as e:
-            logger.error(f'Error connecting to Microsoft Teams: {e}!')
-            response.success = False
-            response.error_message = str(e)
+            connection = self.connect()
+            if not self._is_chatbot() and connection.check_connection():
+                response.success = True
+                response.copy_storage = True
+            else:
+                raise RequestException("Connection check failed!")
+        except (ValueError, RequestException) as known_error:
+            logger.error(f'Connection check to Microsoft Teams failed, {known_error}!')
+            response.error_message = str(known_error)
+        except AuthException as error:
+            response.error_message = str(error)
+            response.redirect_url = error.auth_url
+            return response
+        except Exception as unknown_error:
+            logger.error(f'Connection check to Microsoft Teams failed due to an unknown error, {unknown_error}!')
+            response.error_message = str(unknown_error)
 
         self.is_connected = response.success
 
         return response
+    
+    def _is_chatbot(self) -> bool:
+        """
+        Check if the handler is being used as a chatbot.
+
+        Returns
+        -------
+        bool
+            True if the handler is being used as a chatbot, False otherwise.
+        """
+        is_chatbot = self.connection_data.get("is_chatbot", True)
+        return is_chatbot.lower() == "true" if isinstance(is_chatbot, str) else is_chatbot
 
     def native_query(self, query: Text) -> StatusResponse:
         """
@@ -138,7 +164,6 @@ class MSTeamsHandler(APIChatHandler):
             Response object with the result of the query.
         """
         ast = parse_sql(query)
-
         return self.query(ast)
     
     def get_chat_config(self) -> Dict:

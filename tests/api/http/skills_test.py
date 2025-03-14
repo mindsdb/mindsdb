@@ -22,6 +22,12 @@ def app():
         config.merge_configs()
         db.init()
         migrate.migrate_to_head()
+
+        _dummy_db_path = os.path.join(temp_dir, '_mindsdb_duck_db')
+        r = db.Integration(name="dummy_data", data={'db_path': _dummy_db_path}, engine="dummy_data")
+        db.session.add(r)
+        db.session.commit()
+
         app = initialize_app(config, True)
         yield app
 
@@ -301,3 +307,31 @@ def test_delete_skill_not_found(client):
 def test_delete_skill_project_not_found(client):
     delete_response = client.delete('/api/projects/woop/skills/test_create_skill', follow_redirects=True)
     assert '404' in delete_response.status
+
+
+def test_information_schema(client):
+    create_request = {
+        'skill': {
+            'name': 'test_information_schema',
+            'type': SkillType.TEXT2SQL.value,
+            'params': {
+                'database': 'dummy_data',
+                'tables': [],
+                'description': ''
+            }
+        }
+    }
+
+    create_response = client.post('/api/projects/mindsdb/skills', json=create_request, follow_redirects=True)
+    assert '201' in create_response.status
+
+    created_skill = create_response.get_json()
+    created_information_schema_fetched_at = created_skill['metadata']['information_schema']['fetched_at']
+
+    client.post('/api/projects/mindsdb/skills/test_information_schema/refresh-information-schema')
+    updated_response = client.get('/api/projects/mindsdb/skills/test_information_schema', follow_redirects=True)
+
+    updated_skill = updated_response.get_json()
+    updated_information_schema_fetched_at = updated_skill['metadata']['information_schema']['fetched_at']
+
+    assert created_information_schema_fetched_at != updated_information_schema_fetched_at

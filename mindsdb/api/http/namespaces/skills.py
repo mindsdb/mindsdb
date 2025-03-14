@@ -194,6 +194,12 @@ class SkillRefreshInformationSchema(Resource):
                 'Project not found',
                 f'Project with name {project_name} does not exist'
             )
+        if existing_skill_record is None:
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Skill not found',
+                f'Skill with name {skill_name} does not exist'
+            )
         try:
             skills_controller.update_skill_information_schema(existing_skill_record)
         except TypeError:

@@ -325,7 +325,7 @@ class VectorStoreHandler(BaseHandler):
         if not df_insert.empty:
             self.insert(table_name, df_insert)
 
-    def _dispatch_delete(self, query: Delete):
+    def dispatch_delete(self, query: Delete):
         """
         Dispatch delete query to the appropriate method.
         """
@@ -382,7 +382,7 @@ class VectorStoreHandler(BaseHandler):
             DropTables: self._dispatch_drop_table,
             Insert: self._dispatch_insert,
             Update: self._dispatch_update,
-            Delete: self._dispatch_delete,
+            Delete: self.dispatch_delete,
             Select: self.dispatch_select,
         }
         if type(query) in dispatch_router:

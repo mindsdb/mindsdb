@@ -98,7 +98,7 @@ class DocumentPreprocessor:
         provided_id: str = None,
     ) -> str:
         """Generate deterministic ID for a chunk"""
-        base_id = self._generate_deterministic_id(content, content_column, provided_id)
+        base_id = provided_id
         chunk_id = (
             f"{base_id}_chunk_{chunk_index}" if chunk_index is not None else base_id
         )

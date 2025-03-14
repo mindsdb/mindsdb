@@ -210,8 +210,7 @@ class ChromaDBHandler(VectorStoreHandler):
         chroma_db_conditions = []
         for condition in metadata_conditions:
             metadata_key = condition.column.split(".")[-1]
-            if condition.key is not None:
-                metadata_key = condition.key
+
             chroma_db_conditions.append(
                 {
                     metadata_key: {

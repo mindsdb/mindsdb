@@ -106,7 +106,6 @@ class KnowledgeBaseTable:
         df = db_handler.dispatch_select(query)
 
         if df is not None:
-            df = filter_dataframe(df, outer_filters)
 
             logger.debug(f"Query returned {len(df)} rows")
             logger.debug(f"Columns in response: {df.columns.tolist()}")

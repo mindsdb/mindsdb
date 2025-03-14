@@ -5,7 +5,8 @@ from tempfile import TemporaryDirectory
 from mindsdb.api.http.initialize import initialize_app
 from mindsdb.migrations import migrate
 from mindsdb.interfaces.storage import db
-from mindsdb.utilities.config import Config
+from mindsdb.utilities.config import config
+from mindsdb.interfaces.skills.skills_controller import SkillType
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -17,9 +18,11 @@ def app():
         db_path = 'sqlite:///' + os.path.join(temp_dir, 'mindsdb.sqlite3.db')
         # Need to change env variable for migrate module, since it calls db.init().
         os.environ['MINDSDB_DB_CON'] = db_path
+        config.prepare_env_config()
+        config.merge_configs()
         db.init()
         migrate.migrate_to_head()
-        app = initialize_app(Config(), True, False)
+        app = initialize_app(config, True)
         yield app
 
     os.environ['MINDSDB_DB_CON'] = old_minds_db_con
@@ -28,6 +31,14 @@ def app():
 @pytest.fixture()
 def client(app):
     return app.test_client()
+
+
+def _clear_skill(skill):
+    """del keys that can not be compared"""
+    exclude_keys = ['created_at', 'metadata']
+    for key in exclude_keys:
+        del skill[key]
+    return skill
 
 
 def test_get_all_skills(client):
@@ -45,7 +56,7 @@ def test_create_skill(client):
     create_request = {
         'skill': {
             'name': 'test_create_skill',
-            'type': 'Knowledge Base',
+            'type': SkillType.KNOWLEDGE_BASE.value,
             'params': {
                 'k1': 'v1'
             }
@@ -61,19 +72,20 @@ def test_create_skill(client):
         'project_id': created_skill['project_id'],
         'agent_ids': [],
         'name': 'test_create_skill',
-        'type': 'Knowledge Base',
+        'type': SkillType.KNOWLEDGE_BASE.value,
         'params': {
             'k1': 'v1'
         }
     }
-    assert created_skill == expected_skill
+
+    assert _clear_skill(created_skill) == expected_skill
 
 
 def test_get_skill(client):
     create_request = {
         'skill': {
             'name': 'test_get_skill',
-            'type': 'Knowledge Base',
+            'type': SkillType.KNOWLEDGE_BASE.value,
             'params': {
                 'k1': 'v1'
             }
@@ -91,12 +103,12 @@ def test_get_skill(client):
         'project_id': skill['project_id'],
         'agent_ids': [],
         'name': 'test_get_skill',
-        'type': 'Knowledge Base',
+        'type': SkillType.KNOWLEDGE_BASE.value,
         'params': {
             'k1': 'v1'
         }
     }
-    assert skill == expected_skill
+    assert _clear_skill(skill) == expected_skill
 
 
 def test_get_skill_not_found(client):
@@ -112,7 +124,7 @@ def test_get_skill_project_not_found(client):
 def test_post_skill_no_skill(client):
     malformed_request = {
         'name': 'test_post_skill_no_skill',
-        'type': 'Knowledge Base',
+        'type': SkillType.KNOWLEDGE_BASE.value,
         'params': {
             'k1': 'v1'
         }
@@ -125,7 +137,7 @@ def test_post_skill_no_skill(client):
 def test_post_skill_no_name(client):
     malformed_request = {
         'skill': {
-            'type': 'Knowledge Base',
+            'type': SkillType.KNOWLEDGE_BASE.value,
             'params': {
                 'k1': 'v1'
             }
@@ -154,7 +166,7 @@ def test_post_skill_no_params(client):
     malformed_request = {
         'skill': {
             'name': 'test_post_skill_no_params',
-            'type': 'Knowledge Base',
+            'type': SkillType.KNOWLEDGE_BASE.value,
         }
     }
 
@@ -166,7 +178,7 @@ def test_put_skill_create(client):
     create_request = {
         'skill': {
             'name': 'test_put_skill_create',
-            'type': 'Knowledge Base',
+            'type': SkillType.KNOWLEDGE_BASE.value,
             'params': {
                 'k1': 'v1'
             }
@@ -182,19 +194,19 @@ def test_put_skill_create(client):
         'project_id': created_skill['project_id'],
         'agent_ids': [],
         'name': 'test_put_skill_create',
-        'type': 'Knowledge Base',
+        'type': SkillType.KNOWLEDGE_BASE.value,
         'params': {
             'k1': 'v1'
         }
     }
-    assert created_skill == expected_skill
+    assert _clear_skill(created_skill) == expected_skill
 
 
 def test_put_skill_update(client):
     create_request = {
         'skill': {
             'name': 'test_put_skill_update',
-            'type': 'Knowledge Base',
+            'type': SkillType.KNOWLEDGE_BASE.value,
             'params': {
                 'k1': 'v1',
                 'k2': 'v2',
@@ -232,13 +244,13 @@ def test_put_skill_update(client):
             'k3': 'v3'
         }
     }
-    assert updated_skill == expected_skill
+    assert _clear_skill(updated_skill) == expected_skill
 
 
 def test_put_skill_no_skill(client):
     malformed_request = {
         'name': 'test_put_skill_no_skill',
-        'type': 'Knowledge Base',
+        'type': SkillType.KNOWLEDGE_BASE.value,
         'params': {
             'k1': 'v1'
         }
@@ -252,7 +264,7 @@ def test_put_skill_no_project(client):
     update_request = {
         'skill': {
             'name': 'test_put_skill_update',
-            'type': 'Knowledge Base',
+            'type': SkillType.KNOWLEDGE_BASE.value,
             'params': {
                 'k1': 'v1',
                 'k2': 'v2',
@@ -268,7 +280,7 @@ def test_delete_skill(client):
     create_request = {
         'skill': {
             'name': 'test_delete_skill',
-            'type': 'Knowledge Base',
+            'type': SkillType.KNOWLEDGE_BASE.value,
             'params': {
                 'k1': 'v1'
             }

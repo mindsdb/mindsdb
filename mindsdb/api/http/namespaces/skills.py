@@ -89,7 +89,7 @@ class SkillResource(Resource):
         skills_controller = SkillsController()
         try:
             existing_skill = skills_controller.get_skill(skill_name, project_name)
-        except ValueError:
+        except EntityNotExistsError:
             # Project needs to exist
             return http_error(
                 HTTPStatus.NOT_FOUND,
@@ -121,7 +121,7 @@ class SkillResource(Resource):
 
         try:
             existing_skill = skills_controller.get_skill(skill_name, project_name)
-        except ValueError:
+        except EntityNotExistsError:
             # Project needs to exist
             return http_error(
                 HTTPStatus.NOT_FOUND,
@@ -153,7 +153,7 @@ class SkillResource(Resource):
         skills_controller = SkillsController()
         try:
             existing_skill = skills_controller.get_skill(skill_name, project_name)
-        except ValueError:
+        except EntityNotExistsError:
             # Project needs to exist
             return http_error(
                 HTTPStatus.NOT_FOUND,

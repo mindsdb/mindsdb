@@ -1,3 +1,4 @@
+import enum
 import datetime
 from typing import Dict, List, Optional
 
@@ -6,10 +7,18 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.utilities.config import config
 
 
 default_project = config.get('default_project')
+
+
+class SkillType(enum.Enum):
+    TEXT2SQL_LEGACY = 'text2sql'
+    TEXT2SQL = 'sql'
+    KNOWLEDGE_BASE = 'knowledge_base'
+    RETRIEVAL = 'retrieval'
 
 
 class SkillsController:
@@ -42,12 +51,12 @@ class SkillsController:
             db.Skills.deleted_at == null()
         ).first()
 
-    def get_skills(self, project_name: str) -> List[dict]:
+    def get_skills(self, project_name: Optional[str]) -> List[dict]:
         '''
         Gets all skills in a project.
 
         Parameters:
-            project_name (str): The name of the containing project
+            project_name (Optional[str]): The name of the containing project
 
         Returns:
             all_skills (List[db.Skills]): List of database skill object
@@ -56,11 +65,13 @@ class SkillsController:
             ValueError: If `project_name` does not exist
         '''
 
-        project_controller = ProjectController()
-        projects = project_controller.get_list()
-        if project_name is not None:
+        if project_name is None:
+            projects = self.project_controller.get_list()
             projects = list([p for p in projects if p.name == project_name])
-        project_ids = list([p.id for p in projects])
+            project_ids = list([p.id for p in projects])
+        else:
+            project = self.project_controller.get(name=project_name)
+            project_ids = [project.id]
 
         query = (
             db.session.query(db.Skills)
@@ -102,16 +113,42 @@ class SkillsController:
         if skill is not None:
             raise ValueError(f'Skill with name already exists: {name}')
 
+        metadata = {}
+        if SkillType(type) == SkillType.TEXT2SQL:
+            database_name = params.get('database')
+            information_schema = integration_controller.get_information_schema(database_name)
+            metadata['information_schema'] = information_schema.to_dict()
+
         new_skill = db.Skills(
             name=name,
             project_id=project.id,
             type=type,
             params=params,
+            metadata_=metadata
         )
         db.session.add(new_skill)
         db.session.commit()
 
         return new_skill
+
+    def update_skill_information_schema(self, skill_record: db.Skills) -> None:
+        '''Updates the information schema for a sql skill.
+
+        Args:
+            skill_record (db.Skills): The skill record to update
+
+        Raises:
+            ValueError: If `project_name` does not exist or skill doesn't exist
+        '''
+        if SkillType(skill_record.type) != SkillType.TEXT2SQL:
+            raise TypeError('Information schema is only supported for SQL skills')
+
+        database_name = skill_record.params.get('database')
+        information_schema = integration_controller.get_information_schema(database_name)
+
+        skill_record.metadata_['information_schema'] = information_schema.to_dict()
+        flag_modified(skill_record, 'metadata_')
+        db.session.commit()
 
     def update_skill(
             self,

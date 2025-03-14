@@ -1,7 +1,6 @@
 
 import re
 import csv
-import inspect
 from io import StringIO
 from typing import Iterable, List, Optional, Any
 
@@ -79,14 +78,14 @@ class SQLAgent:
             self,
             command_executor,
             databases: List[str],
-            databases_struct: dict,
+            databaes_information_schemas: dict,
             include_tables: Optional[List[str]] = None,
             ignore_tables: Optional[List[str]] = None,
             sample_rows_in_table_info: int = 3,
             cache: Optional[dict] = None
     ):
         self._command_executor = command_executor
-        self._mindsdb_db_struct = databases_struct
+        self._databaes_information_schemas = databaes_information_schemas
 
         self._sample_rows_in_table_info = int(sample_rows_in_table_info)
 
@@ -129,9 +128,17 @@ class SQLAgent:
             tables_parts += no_schema_parts
 
             def _check_f(node, is_table=None, **kwargs):
-                if is_table and isinstance(node, Identifier):
-                    if node.parts not in tables_parts:
-                        raise ValueError(f"Table {'.'.join(node.parts)} not found. Available tables: {', '.join(self._tables_to_include)}")
+                if (
+                    is_table and isinstance(node, Identifier)
+                    and node.parts not in tables_parts
+                    # In case if identifier contains schema name, but table_parts not:
+                    # Example: ['db_name', 'PUBLIC', 'table_name'] in ['db_name', 'table_name']
+                    and not (len(node.parts) == 3 and [node.parts[0], node.parts[2]] in tables_parts)
+                ):
+                    raise ValueError(
+                        f"Table {'.'.join(node.parts)} not found. "
+                        f"Available tables: {', '.join(self._tables_to_include)}"
+                    )
 
             query_traversal(ast_query, _check_f)
 
@@ -141,63 +148,7 @@ class SQLAgent:
         Returns:
             Iterable[str]: list with table names
         """
-        cache_key = f'{ctx.company_id}_{",".join(self._databases)}_tables'
-
-        # first check cache and return if found
-        if self._cache:
-            cached_tables = self._cache.get(cache_key)
-            if cached_tables:
-                return cached_tables
-
-        if self._tables_to_include:
-            return self._tables_to_include
-
-        result_tables = []
-
-        for db_name in self._mindsdb_db_struct:
-            handler = self._command_executor.session.integration_controller.get_data_handler(db_name)
-
-            schemas_names = list(self._mindsdb_db_struct[db_name].keys())
-            if len(schemas_names) > 1 and None in schemas_names:
-                raise Exception('default schema and named schemas can not be used in same filter')
-
-            if None in schemas_names:
-                # get tables only from default schema
-                response = handler.get_tables()
-                tables_in_default_schema = list(response.data_frame.table_name)
-                schema_tables_restrictions = self._mindsdb_db_struct[db_name][None]     # None - is default schema
-                if schema_tables_restrictions is None:
-                    for table_name in tables_in_default_schema:
-                        result_tables.append([db_name, table_name])
-                else:
-                    for table_name in schema_tables_restrictions:
-                        if table_name in tables_in_default_schema:
-                            result_tables.append([db_name, table_name])
-            else:
-                if 'all' in inspect.signature(handler.get_tables).parameters:
-                    response = handler.get_tables(all=True)
-                else:
-                    response = handler.get_tables()
-                response_schema_names = list(response.data_frame.table_schema.unique())
-                schemas_intersection = set(schemas_names) & set(response_schema_names)
-                if len(schemas_intersection) == 0:
-                    raise Exception('There are no allowed schemas in ds')
-
-                for schema_name in schemas_intersection:
-                    schema_sub_df = response.data_frame[response.data_frame['table_schema'] == schema_name]
-                    if self._mindsdb_db_struct[db_name][schema_name] is None:
-                        # all tables from schema allowed
-                        for row in schema_sub_df:
-                            result_tables.append([db_name, schema_name, row['table_name']])
-                    else:
-                        for table_name in self._mindsdb_db_struct[db_name][schema_name]:
-                            if table_name in schema_sub_df['table_name'].values:
-                                result_tables.append([db_name, schema_name, table_name])
-
-        result_tables = ['.'.join(x) for x in result_tables]
-        if self._cache:
-            self._cache.set(cache_key, set(result_tables))
-        return result_tables
+        return self._tables_to_include
 
     def _resolve_table_names(self, table_names: List[str], all_tables: List[Identifier]) -> List[Identifier]:
         """

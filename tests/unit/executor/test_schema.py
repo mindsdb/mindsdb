@@ -119,17 +119,17 @@ class TestSchema(BaseExecutorDummyML):
         # skill
         self.run_sql('''
          CREATE SKILL skill1
-            USING type = 'text_to_sql',
+            USING type = 'sql',
                 database = 'dummy_data', tables = ['table1'];
         ''')
         self.run_sql('''
          CREATE SKILL proj2.skill2
-            USING type = 'text_to_sql',
+            USING type = 'sql',
                 database = 'dummy_data', tables = ['table1'];
         ''')
 
         df = self.run_sql('describe skill skill1')
-        assert df.NAME[0] == 'skill1' and df.TYPE[0] == 'text_to_sql'
+        assert df.NAME[0] == 'skill1' and df.TYPE[0] == 'sql'
 
         # --- SHOW ---
 

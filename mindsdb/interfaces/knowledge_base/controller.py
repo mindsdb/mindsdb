@@ -217,7 +217,7 @@ class KnowledgeBaseTable:
 
         # send to vectordb
         db_handler = self.get_vector_db()
-        db_handler.query(query)
+        db_handler.dispatch_delete(query)
 
     def hybrid_search(
         self,

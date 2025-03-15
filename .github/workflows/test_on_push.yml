@@ -37,7 +37,6 @@ jobs:
               - '!docs/**'  
               - '!**/*.md'
 
-              
   # Run all of our static code checks here
   code_checking:
     name: Run static code checks
@@ -47,6 +46,9 @@ jobs:
       - name: Checkout
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         uses: actions/checkout@v4
+        with:
+          # required to grab the history of the PR for pre-commit to work out what's changed
+          fetch-depth: 0 
       - name: Set up Python
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         uses: actions/setup-python@v5.1.0

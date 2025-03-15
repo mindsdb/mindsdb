@@ -37,6 +37,7 @@ jobs:
               - '!docs/**'  
               - '!**/*.md'
 
+              
   # Run all of our static code checks here
   code_checking:
     name: Run static code checks

@@ -23,6 +23,14 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 
+def chatbot_only(func):
+    def wrapper(self, *args, **kwargs):
+        if self.connection_data.get('mode', 'chat') != 'chat':
+            raise ValueError("This connection can only be used as a data source. Please use a chatbot connection by setting the 'mode' parameter to 'chat'.")
+        return func(self, *args, **kwargs)
+    return wrapper
+
+
 class MSTeamsHandler(APIChatHandler):
     """
     This handler handles the connection and execution of SQL statements on Microsoft Teams via the Microsoft Graph API.
@@ -64,7 +72,7 @@ class MSTeamsHandler(APIChatHandler):
         if self.is_connected:
             return self.connection
 
-        if self._is_chatbot():
+        if self.connection_data.get('mode', 'chat') == 'chat':
             self.connection = MicrosoftAppCredentials(
                 app_id=self.connection_data["client_id"],
                 password=self.connection_data["client_secret"]
@@ -119,7 +127,7 @@ class MSTeamsHandler(APIChatHandler):
 
         try:
             connection = self.connect()
-            if not self._is_chatbot() and connection.check_connection():
+            if self.connection_data.get('mode', 'chat') == 'data' and connection.check_connection():
                 response.success = True
                 response.copy_storage = True
             else:
@@ -138,17 +146,8 @@ class MSTeamsHandler(APIChatHandler):
         self.is_connected = response.success
 
         return response
-    
-    def _is_chatbot(self) -> bool:
-        """
-        Checks if the handler is being used as a chatbot.
 
-        Returns:
-            bool: True if the handler is being used as a chatbot, False otherwise.
-        """
-        is_chatbot = self.connection_data.get("is_chatbot", True)
-        return is_chatbot.lower() == "true" if isinstance(is_chatbot, str) else is_chatbot
-    
+    @chatbot_only
     def get_chat_config(self) -> Dict:
         """
         Gets the configuration for the chatbot.
@@ -164,7 +163,8 @@ class MSTeamsHandler(APIChatHandler):
         }
 
         return params
-    
+
+    @chatbot_only
     def get_my_user_name(self) -> Text:
         """
         Gets the name of the signed in user.
@@ -174,7 +174,8 @@ class MSTeamsHandler(APIChatHandler):
             Text: The name of the signed in user.
         """
         return None
-    
+
+    @chatbot_only
     def on_webhook(self, request: Dict, callback: Callable) -> None:
         """
         Handles a webhook request.
@@ -199,7 +200,8 @@ class MSTeamsHandler(APIChatHandler):
             chat_id=request['conversation']['id'],
             message=chat_bot_message
         )    
-            
+
+    @chatbot_only
     def respond(self, message: ChatBotMessage) -> None:
         """
         Sends a response to the chatbot.

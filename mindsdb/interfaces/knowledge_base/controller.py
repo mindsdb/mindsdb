@@ -406,6 +406,9 @@ class KnowledgeBaseTable:
                         value = float(value)
                     elif pd.api.types.is_bool_dtype(value):
                         value = bool(value)
+                    elif isinstance(value, dict):
+                        metadata.update(value)
+                        continue
                     else:
                         value = str(value)
                     metadata[col] = value

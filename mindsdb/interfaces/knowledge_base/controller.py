@@ -387,17 +387,6 @@ class KnowledgeBaseTable:
                 # all the rest columns
                 metadata_columns = list(set(columns).difference(content_columns))
 
-        elif metadata_columns is not None:
-            metadata_columns = list(set(metadata_columns).intersection(columns))
-            # use all unused columns is content
-            content_columns = list(set(columns).difference(metadata_columns))
-        elif TableField.METADATA.value in columns:
-            metadata_columns = [TableField.METADATA.value]
-            content_columns = list(set(columns).difference(metadata_columns))
-        else:
-            # all columns go to content
-            content_columns = columns
-
         # Add content columns directly (don't combine them)
         for col in content_columns:
             df_out[col] = df[col]

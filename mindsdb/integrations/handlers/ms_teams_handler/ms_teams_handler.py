@@ -9,7 +9,9 @@ import msal
 from requests.exceptions import RequestException
 
 from mindsdb.integrations.handlers.ms_teams_handler.ms_graph_api_teams_client import MSGraphAPITeamsClient
-from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_tables import ChannelsTable, ChannelMessagesTable
+from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_tables import (
+    ChannelsTable, ChannelMessagesTable, ChatsTable
+)
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
@@ -100,6 +102,7 @@ class MSTeamsHandler(APIChatHandler):
 
             self._register_table('channels', ChannelsTable(self))
             self._register_table('channel_messages', ChannelMessagesTable(self))
+            self._register_table('chats', ChatsTable(self))
 
         self.is_connected = True
 

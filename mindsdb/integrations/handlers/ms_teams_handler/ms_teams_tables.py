@@ -174,3 +174,54 @@ class ChannelMessagesTable(APIResource):
             "channelIdentity_teamId",
             "channelIdentity_channelId",
         ]
+    
+
+class ChatsTable(APIResource):
+    def list(
+        self,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        sort: List[SortColumn] = None,
+        targets: List[str] = None,
+        **kwargs
+    ):
+        client: MSGraphAPITeamsClient = self.handler.connect()
+        chats = []
+
+        chat_ids = None
+        for condition in conditions:
+            if condition.column == "id":
+                if condition.op == FilterOperator.EQUAL:
+                    chat_ids = [condition.value]
+
+                elif condition.op == FilterOperator.IN:
+                    chat_ids = condition.value
+
+                else:
+                    raise ValueError(
+                        f"Unsupported operator '{condition.op}' for column 'id'."
+                    )
+
+                condition.applied = True
+
+        if chat_ids:
+            chats = client.get_chats_by_ids(chat_ids)
+
+        else:
+            chats = client.get_all_chats()
+
+        chats_df = pd.json_normalize(chats, sep="_")
+        chats_df = chats_df[self.get_columns()]
+
+        return chats_df
+
+    def get_columns(self) -> List[str]:
+        return [
+            "id",
+            "topic",
+            "createdDateTime",
+            "lastUpdatedDateTime",
+            "chatType",
+            "webUrl",
+            "isHiddenForAllMembers"
+        ]

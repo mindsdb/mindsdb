@@ -213,3 +213,53 @@ class MSGraphAPITeamsClient(MSGraphAPIBaseClient):
                 break
 
         return chats[:limit]
+    
+    def get_message_in_chat_by_id(self, chat_id: Text, message_id: Text) -> Dict:
+        """
+        Get a message by its ID and the ID of the chat that it belongs to.
+
+        Args:
+            chat_id (Text): The ID of the chat that the message belongs to.
+            message_id (Text): The ID of the message.
+
+        Returns:
+            Dict: The message data.
+        """
+        return self.fetch_data_json(f"me/chats/{chat_id}/messages/{message_id}")
+    
+    def get_messages_in_chat_by_ids(self, chat_id: Text, message_ids: List[Text]) -> List[Dict]:
+        """
+        Get messages by their IDs and the ID of the chat that they belong to.
+
+        Args:
+            chat_id (Text): The ID of the chat that the messages belong to.
+            message_ids (List[Text]): The IDs of the messages.
+
+        Returns:
+            List[Dict]: The messages data.
+        """
+        messages = []
+        for message_id in message_ids:
+            messages.append(self.get_message_in_chat_by_id(chat_id, message_id))
+
+        return messages
+    
+    def get_all_messages_in_chat(self, chat_id: Text, limit: int = None) -> List[Dict]:
+        """
+        Get messages of a chat by its ID.
+
+        Args:
+            chat_id (Text): The ID of the chat.
+
+        Returns:
+            List[Dict]: The messages data.
+        """
+        messages = []
+        for messages_batch in self.fetch_paginated_data(f"me/chats/{chat_id}/messages"):
+            messages += messages_batch
+
+            if limit and len(messages) >= limit:
+                break
+
+        return messages[:limit]
+

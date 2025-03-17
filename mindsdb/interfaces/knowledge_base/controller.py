@@ -352,7 +352,7 @@ class KnowledgeBaseTable:
             logger.debug(f"Added IDs: {df_out[TableField.ID.value].tolist()}")
 
         # -- prepare content and metadata --
-        content_columns = params.get('content_columns')
+        content_columns = params.get('content_columns', [TableField.CONTENT.value])
         metadata_columns = params.get('metadata_columns')
 
         logger.debug(f"Processing with: content_columns={content_columns}, metadata_columns={metadata_columns}")

@@ -12,6 +12,9 @@ from mindsdb.integrations.utilities.sql_utils import (
 
 
 class ChannelsTable(APIResource):
+    """
+    The table abstraction for the 'channels' resource of the Microsoft Graph API.
+    """
     def list(
         self,
         conditions: List[FilterCondition] = None,
@@ -20,6 +23,15 @@ class ChannelsTable(APIResource):
         targets: List[str] = None,
         **kwargs
     ):
+        """
+        Executes a parsed SELECT SQL query on the 'channels' resource of the Microsoft Graph API.
+
+        Args:
+            conditions (List[FilterCondition]): The list of parsed filter conditions.
+            limit (int): The maximum number of records to return.
+            sort (List[SortColumn]): The list of parsed sort columns.
+            targets (List[str]): The list of target columns to return.
+        """
         client: MSGraphAPITeamsClient = self.handler.connect()
         channels = []
 
@@ -69,6 +81,12 @@ class ChannelsTable(APIResource):
         return channels_df
 
     def get_columns(self) -> List[str]:
+        """
+        Retrieves the attributes (columns) of the 'chats' resource.
+
+        Returns:
+            List[Text]: A list of attributes (columns) of the 'chats' resource.
+        """
         return [
             "id",
             "createdDateTime",
@@ -84,6 +102,9 @@ class ChannelsTable(APIResource):
 
 
 class ChannelMessagesTable(APIResource):
+    """
+    The table abstraction for the 'channel messages' resource of the Microsoft Graph API.
+    """
     def list(
         self,
         conditions: List[FilterCondition] = None,
@@ -92,6 +113,15 @@ class ChannelMessagesTable(APIResource):
         targets: List[str] = None,
         **kwargs
     ):
+        """
+        Executes a parsed SELECT SQL query on the 'channel messages' resource of the Microsoft Graph API.
+
+        Args:
+            conditions (List[FilterCondition]): The list of parsed filter conditions.
+            limit (int): The maximum number of records to return.
+            sort (List[SortColumn]): The list of parsed sort columns.
+            targets (List[str]): The list of target columns to return.
+        """
         client: MSGraphAPITeamsClient = self.handler.connect()
         messages = []
 
@@ -140,7 +170,7 @@ class ChannelMessagesTable(APIResource):
             messages = client.get_messages_in_channel_by_ids(group_id, channel_id, message_ids)
 
         else:
-            messages = client.get_all_messages_in_channel(group_id, channel_id)
+            messages = client.get_all_messages_in_channel(group_id, channel_id, limit)
 
         messages_df = pd.json_normalize(messages, sep="_")
         messages_df = messages_df[self.get_columns()]
@@ -148,6 +178,12 @@ class ChannelMessagesTable(APIResource):
         return messages_df
 
     def get_columns(self) -> List[str]:
+        """
+        Retrieves the attributes (columns) of the 'chat messages' resource.
+
+        Returns:
+            List[Text]: A list of attributes (columns) of the 'chat messages' resource.
+        """
         return [
             "id",
             "replyToId",
@@ -177,6 +213,9 @@ class ChannelMessagesTable(APIResource):
     
 
 class ChatsTable(APIResource):
+    """
+    The table abstraction for the 'chats' resource of the Microsoft Graph API.
+    """
     def list(
         self,
         conditions: List[FilterCondition] = None,
@@ -185,6 +224,15 @@ class ChatsTable(APIResource):
         targets: List[str] = None,
         **kwargs
     ):
+        """
+        Executes a parsed SELECT SQL query on the 'chats' resource of the Microsoft Graph API.
+
+        Args:
+            conditions (List[FilterCondition]): The list of parsed filter conditions.
+            limit (int): The maximum number of records to return.
+            sort (List[SortColumn]): The list of parsed sort columns.
+            targets (List[str]): The list of target columns to return.
+        """
         client: MSGraphAPITeamsClient = self.handler.connect()
         chats = []
 
@@ -208,7 +256,7 @@ class ChatsTable(APIResource):
             chats = client.get_chats_by_ids(chat_ids)
 
         else:
-            chats = client.get_all_chats()
+            chats = client.get_all_chats(limit)
 
         chats_df = pd.json_normalize(chats, sep="_")
         chats_df = chats_df[self.get_columns()]
@@ -216,6 +264,12 @@ class ChatsTable(APIResource):
         return chats_df
 
     def get_columns(self) -> List[str]:
+        """
+        Retrieves the attributes (columns) of the 'chats' resource.
+
+        Returns:
+            List[Text]: A list of attributes (columns) of the 'chats' resource.
+        """
         return [
             "id",
             "topic",
@@ -228,6 +282,9 @@ class ChatsTable(APIResource):
     
 
 class ChatMessagesTable(APIResource):
+    """
+    The table abstraction for the 'chat messages' resource of the Microsoft Graph API.
+    """
     def list(
         self,
         conditions: List[FilterCondition] = None,
@@ -236,6 +293,15 @@ class ChatMessagesTable(APIResource):
         targets: List[str] = None,
         **kwargs
     ):
+        """
+        Executes a parsed SELECT SQL query on the 'chat messages' resource of the Microsoft Graph API.
+
+        Args:
+            conditions (List[FilterCondition]): The list of parsed filter conditions.
+            limit (int): The maximum number of records to return.
+            sort (List[SortColumn]): The list of parsed sort columns.
+            targets (List[str]): The list of target columns to return.
+        """
         client: MSGraphAPITeamsClient = self.handler.connect()
         messages = []
 
@@ -273,7 +339,7 @@ class ChatMessagesTable(APIResource):
             messages = client.get_messages_in_chat_by_ids(chat_id, message_ids)
 
         else:
-            messages = client.get_all_messages_in_chat(chat_id)
+            messages = client.get_all_messages_in_chat(chat_id, limit)
 
         messages_df = pd.json_normalize(messages, sep="_")
         messages_df = messages_df[self.get_columns()]
@@ -281,6 +347,12 @@ class ChatMessagesTable(APIResource):
         return messages_df
 
     def get_columns(self) -> List[str]:
+        """
+        Retrieves the attributes (columns) of the 'chat messages' resource.
+
+        Returns:
+            List[Text]: A list of attributes (columns) of the 'chat messages' resource.
+        """
         return [
             "id",
             "replyToId",

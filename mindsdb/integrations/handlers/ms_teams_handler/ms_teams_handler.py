@@ -1,10 +1,9 @@
-from typing import Text, Dict, Callable
+from typing import Callable, Dict, Text, Callable, Union
 
 from botbuilder.schema import Activity, ActivityTypes
 from botbuilder.schema import ChannelAccount
 from botframework.connector import ConnectorClient
 from botframework.connector.auth import MicrosoftAppCredentials
-from mindsdb_sql_parser import parse_sql
 import msal
 from requests.exceptions import RequestException
 
@@ -26,14 +25,16 @@ logger = log.getLogger(__name__)
 
 class MSTeamsHandler(APIChatHandler):
     """
-    The Microsoft Teams handler implementation.
+    This handler handles the connection and execution of SQL statements on Microsoft Teams via the Microsoft Graph API.
+    It is also responsible for handling the chatbot functionality.
     """
 
     name = 'teams'
 
     def __init__(self, name: str, **kwargs):
         """
-        Initialize the handler.
+        Initializes the handler.
+
         Args:
             name (str): name of particular handler instance
             **kwargs: arbitrary keyword arguments.
@@ -53,14 +54,12 @@ class MSTeamsHandler(APIChatHandler):
         self.bot_id = None
         self.conversation_id = None
 
-    def connect(self) -> MicrosoftAppCredentials:
+    def connect(self) -> Union[MicrosoftAppCredentials, MSGraphAPITeamsClient]:
         """
-        Set up the connection required by the handler.
+        Establishes a connection to the Microsoft Teams registered app or the Microsoft Graph API.
 
-        Returns
-        -------
-        MicrosoftAppCredentials
-            Client object for interacting with the Microsoft Teams app.
+        Returns:
+            Union[MicrosoftAppCredentials, MSGraphAPITeamsClient]: A connection object to the Microsoft Teams registered app or the Microsoft Graph API.
         """
         if self.is_connected:
             return self.connection
@@ -111,12 +110,10 @@ class MSTeamsHandler(APIChatHandler):
 
     def check_connection(self) -> StatusResponse:
         """
-        Check connection to the handler.
+        Checks the status of the connection to Microsoft Teams.
 
-        Returns
-        -------
-        StatusResponse
-            Response object with the status of the connection.
+        Returns:
+            StatusResponse: An object containing the success status and an error message if an error occurs.
         """
         response = StatusResponse(False)
 
@@ -144,42 +141,21 @@ class MSTeamsHandler(APIChatHandler):
     
     def _is_chatbot(self) -> bool:
         """
-        Check if the handler is being used as a chatbot.
+        Checks if the handler is being used as a chatbot.
 
-        Returns
-        -------
-        bool
-            True if the handler is being used as a chatbot, False otherwise.
+        Returns:
+            bool: True if the handler is being used as a chatbot, False otherwise.
         """
         is_chatbot = self.connection_data.get("is_chatbot", True)
         return is_chatbot.lower() == "true" if isinstance(is_chatbot, str) else is_chatbot
-
-    def native_query(self, query: Text) -> StatusResponse:
-        """
-        Receive and process a raw query.
-
-        Parameters
-        ----------
-        query: Text
-            Query in the native format.
-
-        Returns
-        -------
-        StatusResponse
-            Response object with the result of the query.
-        """
-        ast = parse_sql(query)
-        return self.query(ast)
     
     def get_chat_config(self) -> Dict:
         """
-        Get the configuration for the chatbot.
+        Gets the configuration for the chatbot.
         This method is required for the implementation of the chatbot.
 
-        Returns
-        -------
-        Dict
-            Configuration for the chatbot.
+        Returns:
+            Dict: The configuration for the chatbot.
         """
         params = {
             'polling': {
@@ -191,27 +167,21 @@ class MSTeamsHandler(APIChatHandler):
     
     def get_my_user_name(self) -> Text:
         """
-        Get the name of the signed in user.
+        Gets the name of the signed in user.
         This method is required for the implementation of the chatbot.
 
-        Returns
-        -------
-        Text
-            Name of the signed in user.
+        Returns:
+            Text: The name of the signed in user.
         """
         return None
     
     def on_webhook(self, request: Dict, callback: Callable) -> None:
         """
-        Handle a webhook request.
+        Handles a webhook request.
 
-        Parameters
-        ----------
-        request: Dict
-            The incoming webhook request.
-
-        callback: Callable
-            Callback function to call after parsing the request.
+        Args:
+            request (Dict): The request data.
+            callback (Callable): The callback function to call.
         """
         self.service_url = request["serviceUrl"]
         self.channel_id = request["channelId"]
@@ -232,12 +202,16 @@ class MSTeamsHandler(APIChatHandler):
             
     def respond(self, message: ChatBotMessage) -> None:
         """
-        Send a response to the chatbot.
+        Sends a response to the chatbot.
 
-        Parameters
-        ----------
-        message: ChatBotMessage
-            The message to send.
+        Args:
+            message (ChatBotMessage): The message to send
+
+        Raises:
+            ValueError: If the chatbot message is not of type DIRECT.
+
+        Returns:
+            None
         """
         credentials = self.connect()
 

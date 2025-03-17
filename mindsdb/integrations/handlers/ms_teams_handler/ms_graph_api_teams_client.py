@@ -90,7 +90,7 @@ class MSGraphAPITeamsClient(MSGraphAPIBaseClient):
     
     def get_all_channels_across_all_groups(self) -> List[Dict]:
         """
-        Get all channels.
+        Get all channels across all groups that the signed in user is a member of.
 
         Returns:
             List[Dict]: The channels data.
@@ -197,7 +197,7 @@ class MSGraphAPITeamsClient(MSGraphAPIBaseClient):
 
     def get_all_chats(self, limit: int = None) -> List[Dict]:
         """
-        Get all chats.
+        Get all chats of the signed in user.
 
         Args:
             limit (int): The maximum number of chats to return.

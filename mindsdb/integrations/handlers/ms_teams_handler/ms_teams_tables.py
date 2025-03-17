@@ -63,7 +63,8 @@ class ChannelsTable(APIResource):
         else:
             channels = client.get_all_channels_across_all_groups()
 
-        channels_df = pd.json_normalize(channels)
+        channels_df = pd.json_normalize(channels, sep="_")
+        channels_df = channels_df[self.get_columns()]
 
         return channels_df
 
@@ -141,7 +142,8 @@ class ChannelMessagesTable(APIResource):
         else:
             messages = client.get_all_messages_in_channel(group_id, channel_id)
 
-        messages_df = pd.json_normalize(messages)
+        messages_df = pd.json_normalize(messages, sep="_")
+        messages_df = messages_df[self.get_columns()]
 
         return messages_df
 

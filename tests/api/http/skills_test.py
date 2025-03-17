@@ -5,7 +5,7 @@ from tempfile import TemporaryDirectory
 from mindsdb.api.http.initialize import initialize_app
 from mindsdb.migrations import migrate
 from mindsdb.interfaces.storage import db
-from mindsdb.utilities.config import Config
+from mindsdb.utilities.config import config
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -17,9 +17,11 @@ def app():
         db_path = 'sqlite:///' + os.path.join(temp_dir, 'mindsdb.sqlite3.db')
         # Need to change env variable for migrate module, since it calls db.init().
         os.environ['MINDSDB_DB_CON'] = db_path
+        config.prepare_env_config()
+        config.merge_configs()
         db.init()
         migrate.migrate_to_head()
-        app = initialize_app(Config(), True, False)
+        app = initialize_app(config, True)
         yield app
 
     os.environ['MINDSDB_DB_CON'] = old_minds_db_con
@@ -28,6 +30,15 @@ def app():
 @pytest.fixture()
 def client(app):
     return app.test_client()
+
+
+def _clear_skill(skill):
+    """del keys that can not be compared"""
+    exclude_keys = ['created_at', 'metadata']
+    for key in exclude_keys:
+        if key in skill:
+            del skill[key]
+    return skill
 
 
 def test_get_all_skills(client):
@@ -66,7 +77,7 @@ def test_create_skill(client):
             'k1': 'v1'
         }
     }
-    assert created_skill == expected_skill
+    assert _clear_skill(created_skill) == expected_skill
 
 
 def test_get_skill(client):
@@ -96,7 +107,7 @@ def test_get_skill(client):
             'k1': 'v1'
         }
     }
-    assert skill == expected_skill
+    assert _clear_skill(skill) == expected_skill
 
 
 def test_get_skill_not_found(client):
@@ -187,7 +198,7 @@ def test_put_skill_create(client):
             'k1': 'v1'
         }
     }
-    assert created_skill == expected_skill
+    assert _clear_skill(created_skill) == expected_skill
 
 
 def test_put_skill_update(client):
@@ -232,7 +243,7 @@ def test_put_skill_update(client):
             'k3': 'v3'
         }
     }
-    assert updated_skill == expected_skill
+    assert _clear_skill(updated_skill) == expected_skill
 
 
 def test_put_skill_no_skill(client):

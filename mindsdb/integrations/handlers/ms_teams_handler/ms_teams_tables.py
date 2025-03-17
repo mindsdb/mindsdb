@@ -2,7 +2,7 @@ from typing import List
 
 import pandas as pd
 
-from mindsdb.integrations.handlers.ms_teams_handler.ms_graph_api_teams_client import MSGraphAPITeamsClient
+from mindsdb.integrations.handlers.ms_teams_handler.ms_graph_api_teams_client import MSGraphAPITeamsDelegatedPermissionsClient
 from mindsdb.integrations.libs.api_handler import APIResource
 from mindsdb.integrations.utilities.sql_utils import (
     FilterCondition,
@@ -32,7 +32,7 @@ class ChannelsTable(APIResource):
             sort (List[SortColumn]): The list of parsed sort columns.
             targets (List[str]): The list of target columns to return.
         """
-        client: MSGraphAPITeamsClient = self.handler.connect()
+        client: MSGraphAPITeamsDelegatedPermissionsClient = self.handler.connect()
         channels = []
 
         team_id, channel_ids = None, None
@@ -122,7 +122,7 @@ class ChannelMessagesTable(APIResource):
             sort (List[SortColumn]): The list of parsed sort columns.
             targets (List[str]): The list of target columns to return.
         """
-        client: MSGraphAPITeamsClient = self.handler.connect()
+        client: MSGraphAPITeamsDelegatedPermissionsClient = self.handler.connect()
         messages = []
 
         group_id, channel_id, message_ids = None, None, None
@@ -233,7 +233,7 @@ class ChatsTable(APIResource):
             sort (List[SortColumn]): The list of parsed sort columns.
             targets (List[str]): The list of target columns to return.
         """
-        client: MSGraphAPITeamsClient = self.handler.connect()
+        client: MSGraphAPITeamsDelegatedPermissionsClient = self.handler.connect()
         chats = []
 
         chat_ids = None
@@ -302,7 +302,7 @@ class ChatMessagesTable(APIResource):
             sort (List[SortColumn]): The list of parsed sort columns.
             targets (List[str]): The list of target columns to return.
         """
-        client: MSGraphAPITeamsClient = self.handler.connect()
+        client: MSGraphAPITeamsDelegatedPermissionsClient = self.handler.connect()
         messages = []
 
         chat_id, message_ids = None, None

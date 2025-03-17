@@ -7,7 +7,7 @@ from botframework.connector.auth import MicrosoftAppCredentials
 import msal
 from requests.exceptions import RequestException
 
-from mindsdb.integrations.handlers.ms_teams_handler.ms_graph_api_teams_client import MSGraphAPITeamsClient
+from mindsdb.integrations.handlers.ms_teams_handler.ms_graph_api_teams_client import MSGraphAPITeamsDelegatedPermissionsClient
 from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_tables import (
     ChannelsTable, ChannelMessagesTable, ChatsTable, ChatMessagesTable
 )
@@ -54,12 +54,12 @@ class MSTeamsHandler(APIChatHandler):
         self.bot_id = None
         self.conversation_id = None
 
-    def connect(self) -> Union[MicrosoftAppCredentials, MSGraphAPITeamsClient]:
+    def connect(self) -> Union[MicrosoftAppCredentials, MSGraphAPITeamsDelegatedPermissionsClient]:
         """
         Establishes a connection to the Microsoft Teams registered app or the Microsoft Graph API.
 
         Returns:
-            Union[MicrosoftAppCredentials, MSGraphAPITeamsClient]: A connection object to the Microsoft Teams registered app or the Microsoft Graph API.
+            Union[MicrosoftAppCredentials, MSGraphAPITeamsDelegatedPermissionsClient]: A connection object to the Microsoft Teams registered app or the Microsoft Graph API.
         """
         if self.is_connected:
             return self.connection
@@ -97,7 +97,7 @@ class MSTeamsHandler(APIChatHandler):
             if cache.has_state_changed:
                 self.handler_storage.file_set(cache_file, cache.serialize().encode('utf-8'))
 
-            self.connection = MSGraphAPITeamsClient(access_token)
+            self.connection = MSGraphAPITeamsDelegatedPermissionsClient(access_token)
 
             self._register_table('channels', ChannelsTable(self))
             self._register_table('channel_messages', ChannelMessagesTable(self))

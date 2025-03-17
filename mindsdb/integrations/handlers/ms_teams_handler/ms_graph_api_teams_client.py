@@ -5,9 +5,9 @@ from requests.exceptions import RequestException
 from mindsdb.integrations.utilities.handlers.api_utilities.microsoft.ms_graph_api_utilities import MSGraphAPIBaseClient
 
 
-class MSGraphAPITeamsClient(MSGraphAPIBaseClient): 
+class MSGraphAPITeamsDelegatedPermissionsClient(MSGraphAPIBaseClient): 
     """
-    The Microsoft Graph API client for the Microsoft Teams handler.
+    The Microsoft Graph API client for the Microsoft Teams handler with delegated permissions.
     This client is used for accessing the Microsoft Teams specific endpoints of the Microsoft Graph API.
     Several common methods for submitting requests, fetching data, etc. are inherited from the base class.
     """

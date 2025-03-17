@@ -87,7 +87,7 @@ class MSGraphAPIBaseClient:
 
         return response
 
-    def fetch_paginated_data(self, endpoint: Text, params: Optional[Dict] = {}) -> Generator:
+    def fetch_paginated_data(self, endpoint: Text, params: Optional[Dict] = None) -> Generator:
         """
         Fetches data from the Microsoft Graph API by making the specified request and handling pagination.
 
@@ -98,6 +98,8 @@ class MSGraphAPIBaseClient:
         Yields:
             List: The data fetched from the Microsoft Graph API.
         """
+        if params is None:
+            params = {}
         api_url = self._get_api_url(endpoint)
 
         # Add the pagination count to the request parameters.
@@ -157,4 +159,8 @@ class MSGraphAPIBaseClient:
             Union[List, Dict]: The JSON response fetched from the Microsoft Graph API.
         """
         response = self._fetch_data(endpoint, params)
-        return response.json()['value']
+        response_json = response.json()
+
+        if "value" in response_json:
+            return response_json["value"]
+        return response_json

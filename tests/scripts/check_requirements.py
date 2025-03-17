@@ -122,7 +122,6 @@ PACKAGE_NAME_MAP = {
     "scikit-learn": ["sklearn"],
     "influxdb3-python": ["influxdb_client_3"],
     "hubspot-api-client": ["hubspot"],
-    "pytest-lazy-fixture": ["pytest_lazyfixture"],
     "eventbrite-python": ["eventbrite"],
     "clickhouse-sqlalchemy": ["clickhouse_sqlalchemy"],
     "pillow": ["PIL"],

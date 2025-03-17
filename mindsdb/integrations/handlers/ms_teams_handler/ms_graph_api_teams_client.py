@@ -38,7 +38,7 @@ class MSGraphAPITeamsClient(MSGraphAPIBaseClient):
 
         return self._group_ids
     
-    def get_channel(self, group_id: Text, channel_id: Text) -> Dict:
+    def get_channel_in_group_by_id(self, group_id: Text, channel_id: Text) -> Dict:
         """
         Get a channel by its ID and the ID of the group that it belongs to.
 
@@ -56,7 +56,40 @@ class MSGraphAPITeamsClient(MSGraphAPIBaseClient):
 
         return channel
     
-    def get_channels(self) -> List[Dict]:
+    def get_channels_in_group_by_ids(self, group_id: Text, channel_ids: List[Text]) -> List[Dict]:
+        """
+        Get channels by their IDs and the ID of the group that they belong to.
+
+        Args:
+            group_id (Text): The ID of the group that the channels belong to.
+            channel_ids (List[Text]): The IDs of the channels.
+
+        Returns:
+            List[Dict]: The channels data.
+        """
+        channels = []
+        for channel_id in channel_ids:
+            channels.append(self.get_channel_in_group_by_id(group_id, channel_id))
+
+        return channels
+    
+    def get_all_channels_in_group(self, group_id: Text) -> List[Dict]:
+        """
+        Get all channels of a group by its ID.
+
+        Args:
+            group_id (Text): The ID of the group.
+
+        Returns:
+            List[Dict]: The channels data.
+        """
+        channels = self.fetch_data_json(f"teams/{group_id}/channels")
+        for channel in channels:
+            channel["teamId"] = group_id
+
+        return channels
+    
+    def get_all_channels_across_all_groups(self) -> List[Dict]:
         """
         Get all channels.
 
@@ -65,8 +98,20 @@ class MSGraphAPITeamsClient(MSGraphAPIBaseClient):
         """
         channels = []
         for group_id in self._get_group_ids():
-            for group_channel in self.fetch_data_json(f"teams/{group_id}/channels"):
-                group_channel["teamId"] = group_id
-                channels.append(group_channel)
+            channels += self.get_all_channels_in_group(group_id)
 
         return channels
+    
+    def get_channels_across_all_groups_by_ids(self, channel_ids: List[Text]) -> List[Dict]:
+        """
+        Get channels by their IDs.
+
+        Args:
+            channel_ids (List[Text]): The IDs of the channels.
+
+        Returns:
+            List[Dict]: The channels data.
+        """
+        channels = self.get_all_channels_across_all_groups()
+
+        return [channel for channel in channels if channel["id"] in channel_ids]

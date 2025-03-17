@@ -225,3 +225,83 @@ class ChatsTable(APIResource):
             "webUrl",
             "isHiddenForAllMembers"
         ]
+    
+
+class ChatMessagesTable(APIResource):
+    def list(
+        self,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        sort: List[SortColumn] = None,
+        targets: List[str] = None,
+        **kwargs
+    ):
+        client: MSGraphAPITeamsClient = self.handler.connect()
+        messages = []
+
+        chat_id, message_ids = None, None
+        for condition in conditions:
+            if condition.column == "chatId":
+                if condition.op == FilterOperator.EQUAL:
+                    chat_id = condition.value
+
+                else:
+                    raise ValueError(
+                        f"Unsupported operator '{condition.op}' for column 'chatId'."
+                    )
+
+                condition.applied = True
+
+            if condition.column == "id":
+                if condition.op == FilterOperator.EQUAL:
+                    message_ids = [condition.value]
+
+                elif condition.op == FilterOperator.IN:
+                    message_ids = condition.value
+
+                else:
+                    raise ValueError(
+                        f"Unsupported operator '{condition.op}' for column 'id'."
+                    )
+
+                condition.applied = True
+
+        if not chat_id:
+            raise ValueError("The 'chatId' column is required.")
+        
+        if message_ids:
+            messages = client.get_messages_in_chat_by_ids(chat_id, message_ids)
+
+        else:
+            messages = client.get_all_messages_in_chat(chat_id)
+
+        messages_df = pd.json_normalize(messages, sep="_")
+        messages_df = messages_df[self.get_columns()]
+
+        return messages_df
+
+    def get_columns(self) -> List[str]:
+        return [
+            "id",
+            "replyToId",
+            "etag",
+            "messageType",
+            "createdDateTime",
+            "lastModifiedDateTime",
+            "lastEditedDateTime",
+            "deletedDateTime",
+            "subject",
+            "summary",
+            "chatId",
+            "importance",
+            "locale",
+            "webUrl",
+            "policyViolation",
+            "from_application",
+            "from_device",
+            "from_user_id",
+            "from_user_displayName",
+            "from_user_userIdentityType",
+            "body_contentType",
+            "body_content",
+        ]

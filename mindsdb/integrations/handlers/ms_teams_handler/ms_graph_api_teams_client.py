@@ -166,3 +166,50 @@ class MSGraphAPITeamsClient(MSGraphAPIBaseClient):
                 break
 
         return messages[:limit]
+    
+    def get_chat_by_id(self, chat_id: Text) -> Dict:
+        """
+        Get a chat by its ID.
+
+        Args:
+            chat_id (Text): The ID of the chat.
+
+        Returns:
+            Dict: The chat data.
+        """
+        return self.fetch_data_json(f"/me/chats/{chat_id}")
+    
+    def get_chats_by_ids(self, chat_ids: List[Text]) -> List[Dict]:
+        """
+        Get chats by their IDs.
+
+        Args:
+            chat_ids (List[Text]): The IDs of the chats.
+
+        Returns:
+            List[Dict]: The chats data.
+        """
+        chats = []
+        for chat_id in chat_ids:
+            chats.append(self.get_chat_by_id(chat_id))
+
+        return chats
+
+    def get_all_chats(self, limit: int = None) -> List[Dict]:
+        """
+        Get all chats.
+
+        Args:
+            limit (int): The maximum number of chats to return.
+
+        Returns:
+            List[Dict]: The chats data.
+        """
+        chats = []
+        for chat_batch in self.fetch_paginated_data("me/chats"):
+            chats += chat_batch
+
+            if limit and len(chats) >= limit:
+                break
+
+        return chats[:limit]

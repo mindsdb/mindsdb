@@ -483,7 +483,7 @@ class SqlalchemyRender:
 
         return schema, table_name
 
-    def to_table(self, node):
+    def to_table(self, node, is_lateral=False):
         if isinstance(node, ast.Identifier):
             schema, table_name = self.get_table_name(node)
 
@@ -497,7 +497,10 @@ class SqlalchemyRender:
             alias = None
             if node.alias:
                 alias = self.get_alias(node.alias)
-            table = sub_stmt.subquery(alias)
+            if is_lateral:
+                table = sub_stmt.lateral(alias)
+            else:
+                table = sub_stmt.subquery(alias)
 
         else:
             # TODO tests are failing
@@ -526,8 +529,11 @@ class SqlalchemyRender:
 
                 query = query.add_cte(stmt.cte(self.get_alias(alias), nesting=True))
 
-        if node.distinct:
+        if node.distinct is True:
             query = query.distinct()
+        elif isinstance(node.distinct, list):
+            columns = [self.to_expression(c) for c in node.distinct]
+            query = query.distinct(*columns)
 
         if node.from_table is not None:
             from_table = node.from_table
@@ -541,7 +547,8 @@ class SqlalchemyRender:
                 # other tables
                 has_explicit_join = False
                 for item in join_list[1:]:
-                    table = self.to_table(item['table'])
+                    join_type = item['join_type']
+                    table = self.to_table(item['table'], is_lateral=('LATERAL' in join_type))
                     if item['is_implicit']:
                         # add to from clause
                         if has_explicit_join:
@@ -558,7 +565,6 @@ class SqlalchemyRender:
                         else:
                             condition = self.to_expression(item['condition'])
 
-                        join_type = item['join_type']
                         if 'ASOF' in join_type:
                             raise NotImplementedError(f'Unsupported join type: {join_type}')
                         method = 'join'

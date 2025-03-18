@@ -105,17 +105,17 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.handler.connect = MagicMock(return_value=mock_conn)
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
 
-        mock_cursor.fetchall = MagicMock(return_value = [
+        mock_cursor.fetchall = MagicMock(return_value=[
             [1, 'name1'],
             [2, 'name2']
         ])
-        
+
         # Create proper description objects with necessary type_code for _cast_dtypes
         class ColumnDescription:
             def __init__(self, name, type_code=None):
                 self.name = name
                 self.type_code = type_code  # Needed for the _cast_dtypes method
-                
+
         mock_cursor.description = [
             ColumnDescription('id', 23),  # int4 type code
             ColumnDescription('name', 25)  # text type code
@@ -173,16 +173,16 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         query_str = "INVALID SQL"
         data = self.handler.native_query(query_str)
-        
+
         mock_cursor.execute.assert_called_once_with(query_str)
-        
+
         assert isinstance(data, Response)
         self.assertEqual(data.type, RESPONSE_TYPE.ERROR)
-        
+
         # The handler implementation sets error_code to 0, check error_message instead
         self.assertEqual(data.error_code, 0)
         self.assertEqual(data.error_message, str(error))
-        
+
         # Ensure rollback was called
         mock_conn.rollback.assert_called_once()
 
@@ -205,27 +205,27 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             def __init__(self, name, type_code):
                 self.name = name
                 self.type_code = type_code
-        
+
         # Create type code mapping
         type_codes = {
             'int2': 21,    # Typical OID for int2
             'int4': 23,    # Typical OID for int4
             'int8': 20,    # Typical OID for int8
-            'numeric': 1700, # Typical OID for numeric
+            'numeric': 1700,  # Typical OID for numeric
             'float4': 700,  # Typical OID for float4
             'float8': 701,  # Typical OID for float8
             'text': 25     # Typical OID for text
         }
-        
+
         original_get = psycopg.postgres.types.get
-        
+
         try:
             type_mocks = {}
             for pg_type, oid in type_codes.items():
                 type_mock = MagicMock()
                 type_mock.name = pg_type
                 type_mocks[oid] = type_mock
-            
+
             # Mock the types.get function
             # Make it return a default mock for any OID to avoid KeyError
             def mock_get(oid):
@@ -236,9 +236,9 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                     default_mock = MagicMock()
                     default_mock.name = 'unknown'
                     return default_mock
-                
+
             psycopg.postgres.types.get = mock_get
-            
+
             description = [
                 ColumnDescription('int2_col', type_codes['int2']),
                 ColumnDescription('int4_col', type_codes['int4']),
@@ -248,9 +248,8 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                 ColumnDescription('float8_col', type_codes['float8']),
                 ColumnDescription('text_col', type_codes['text'])
             ]
-            
+
             self.handler._cast_dtypes(df, description)
-            
             # Verify the types were correctly cast
             self.assertEqual(df['int2_col'].dtype, 'int16')
             self.assertEqual(df['int4_col'].dtype, 'int32')
@@ -259,7 +258,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             self.assertEqual(df['float4_col'].dtype, 'float32')
             self.assertEqual(df['float8_col'].dtype, 'float64')
             self.assertEqual(df['text_col'].dtype, 'object')
-        
+
         finally:
             # Restore original function
             psycopg.postgres.types.get = original_get
@@ -278,24 +277,23 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             def __init__(self, name, type_code):
                 self.name = name
                 self.type_code = type_code
-        
+
         # Create type code mapping
         type_codes = {
             'int2': 21,    # Typical OID for int2
             'float4': 700,  # Typical OID for float4
         }
-        
+
         # Create mock psycopg.postgres.types.get function
         original_get = psycopg.postgres.types.get
-        
+
         try:
             type_mocks = {}
             for pg_type, oid in type_codes.items():
                 type_mock = MagicMock()
                 type_mock.name = pg_type
                 type_mocks[oid] = type_mock
-            
-            # Mock the types.get function
+
             # Make it return a default mock for any OID to avoid KeyError
             def mock_get(oid):
                 if oid in type_mocks:
@@ -304,37 +302,36 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                     default_mock = MagicMock()
                     default_mock.name = 'unknown'
                     return default_mock
-                
+
             psycopg.postgres.types.get = mock_get
-            
+
             # Set up description with our custom class
             description = [
                 ColumnDescription('int2_col', type_codes['int2']),
                 ColumnDescription('float4_col', type_codes['float4'])
             ]
-            
+
             self.handler._cast_dtypes(df, description)
-            
+
             self.assertEqual(df['int2_col'].dtype, 'int16')
             self.assertEqual(df['float4_col'].dtype, 'float32')
             self.assertEqual(df['int2_col'].iloc[1], 0)
             self.assertEqual(df['float4_col'].iloc[1], 0)
-        
+
         finally:
             psycopg.postgres.types.get = original_get
 
     def test_insert(self):
         """
-        Tests the insert method to ensure it correctly uses the COPY command 
+        Tests the insert method to ensure it correctly uses the COPY command
         to insert a DataFrame into a PostgreSQL table
         """
         mock_conn = MagicMock()
-        # Use MockCursorContextManager for simplified mocking
         mock_cursor = MockCursorContextManager()
 
         self.handler.connect = MagicMock(return_value=mock_conn)
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
-        
+
         # Create mock for copy operation
         copy_obj = MagicMock()
         mock_cursor.copy = MagicMock(return_value=copy_obj)
@@ -363,8 +360,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         self.handler.connect = MagicMock(return_value=mock_conn)
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
-        
-        
+
         error_msg = "Table doesn't exist"
         error = psycopg.Error(error_msg)
         mock_cursor.copy = MagicMock(side_effect=error)
@@ -385,15 +381,14 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         Tests the disconnect method to ensure it correctly closes connections
         """
         mock_conn = MagicMock()
-        
+
         self.handler.connection = mock_conn
         self.handler.is_connected = True
-        
+
         self.handler.disconnect()
-        
+
         mock_conn.close.assert_called_once()
         self.assertFalse(self.handler.is_connected)
-        
         mock_conn.reset_mock()
         self.handler.disconnect()
         mock_conn.close.assert_not_called()
@@ -404,25 +399,23 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         """
         self.tearDown()
         self.setUp()
-        
         self.handler.connection_args['connection_parameters'] = {
             'application_name': 'mindsdb_test',
             'keepalives': 1
         }
-        
+
         self.handler.connect()
-        
+
         call_kwargs = self.mock_connect.call_args[1]
-        
+
         self.assertEqual(call_kwargs['application_name'], 'mindsdb_test')
         self.assertEqual(call_kwargs['keepalives'], 1)
-        self.assertEqual(call_kwargs['connect_timeout'], 10)  # Default value
-        
+        self.assertEqual(call_kwargs['connect_timeout'], 10)
         self.assertEqual(call_kwargs['sslmode'], 'prefer')
-        
+
         expected_options = '-c search_path=public,public'
         self.assertEqual(call_kwargs['options'], expected_options)
-        
+
         # Test with a different schema
         # Create a fresh handler with different schema
         self.tearDown()
@@ -431,7 +424,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.handler.connection_args['connection_parameters'] = {
             'application_name': 'mindsdb_test'
         }
-        
+
         self.handler.connect()
         call_kwargs = self.mock_connect.call_args[1]
         expected_options = '-c search_path=custom_schema,public'

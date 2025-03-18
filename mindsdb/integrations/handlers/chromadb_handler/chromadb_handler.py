@@ -319,6 +319,7 @@ class ChromaDBHandler(VectorStoreHandler):
             for cond in conditions:
                 if cond.column == distance_col:
                     distance_filter = cond
+                    break
 
         df = pd.DataFrame(payload)
         if distance_filter is not None:

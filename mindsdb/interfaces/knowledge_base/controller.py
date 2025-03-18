@@ -281,7 +281,6 @@ class KnowledgeBaseTable:
                         **base_metadata,
                         'original_row_id': str(row_id),
                         'content_column': col,
-                        'content_type': col.split('_')[-1] if '_' in col else 'text'
                     }
 
                     raw_documents.append(Document(

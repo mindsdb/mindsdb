@@ -132,7 +132,7 @@ class MSGraphAPIBaseClient:
 
         response = self._make_request(api_url, params)
         return response
-    
+
     def fetch_data_content(self, endpoint: str, params: Optional[Dict] = {}) -> bytes:
         """
         Fetches data content from the Microsoft Graph API by making the specified request.

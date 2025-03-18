@@ -529,8 +529,11 @@ class SqlalchemyRender:
 
                 query = query.add_cte(stmt.cte(self.get_alias(alias), nesting=True))
 
-        if node.distinct:
+        if node.distinct is True:
             query = query.distinct()
+        elif isinstance(node.distinct, list):
+            columns = [self.to_expression(c) for c in node.distinct]
+            query = query.distinct(*columns)
 
         if node.from_table is not None:
             from_table = node.from_table

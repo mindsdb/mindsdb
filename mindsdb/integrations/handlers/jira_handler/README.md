@@ -1,60 +1,53 @@
-# Jira Handler
+---
+title: Jira
+sidebarTitle: Jira
+---
 
-This is the implementation of the Jira handler for MindsDB.
+This documentation describes the integration of MindsDB with [Jira](https://www.atlassian.com/software/jira/guides/getting-started/introduction), the #1 agile project management tool used by teams to plan, track, release and support world-class software with confidence.
+The integration allows MindsDB to access data from Jira and enhance it with AI capabilities.
 
-## Jira
-In short, Jira is a tool to track the progress of software defects,story and releases.
-In this handler. python client of api is used and more information about this python client can be found (here)[https://pypi.org/project/atlassian-python-api/]
+## Prerequisites
 
+Before proceeding, ensure the following prerequisites are met:
 
-## Implementation
-This handler was implemented as per the MindsDB API Handler documentation.
+1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
+2. To connect Salesforce to MindsDB, install the required dependencies following [this instruction](https://docs.mindsdb.com/setup/self-hosted/docker#install-dependencies).
 
+## Connection
 
-### Self hosted JIRA
-The required arguments for to establish a connection are,
-* `jira_url`: Jira hosted url instance
-* `jira_api_token`: API key for accessing the Jira url instance (PAT)
-* `project`: Jira project name 
+Establish a connection to Jira from MindsDB by executing the following SQL command and providing its [handler name](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/jira_handler) as an engine.
 
-### Cloud JIRA
+```sql
+CREATE DATABASE jira_datasource
+WITH
+    ENGINE = 'jira',
+    PARAMETERS = {
+        "api_base": "https://example.atlassian.net",
+        "username": "john.doe@example.com",
+        "password": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+    };
+```
 
-* `jira_url`: Jira cloud instance "https://example.atlassian.net"
-* `jira_username`: Your Atlassian login email address
-* `jira_api_token`: Your Atlassian ID API Key
-* `project`: Jira project name 
+Required connection parameters include the following:
 
+* `api_base`: The base URL for your Jira instance/server.
+* `username`: The email address associated with your Jira account.
+* `password`: The API token generated for your Jira account.
+
+<Tip>
+Refer this [guide](https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/) for instructions on how to create API tokens for your account.
+</Tip>
 
 ## Usage
-In order to make use of this handler and connect to an Jira in MindsDB, the following syntax can be used,
-~~~~sql
-CREATE DATABASE jira_source
-WITH
-engine='Jira',
-parameters={
-    "jira_url": "https://jira.linuxfoundation.org",
-     "jira_api_token": "Bearer <your-jira-api-token>",
-     "project": "RELENG"   
-};
-~~~~
 
-## Implemented Features
+Retrieve data from a specified table by providing the integration and table names:
 
-- [x] Jira project table for a given Jira hosted url instance
-  - [x] Support LIMIT
-  - [x] Support ORDER BY
-  - [x] Support column selection
+```sql
+SELECT *
+FROM jira_datasource.table_name
+LIMIT 10;
+```
 
-Now, you can use this established connection to query your table as follows,
-~~~~sql
-SELECT * FROM jira_source.project
-~~~~
-
-Advanced queries for the jira handler
-
-~~~~sql
-SELECT key,summary,status
-FROM jira_source.project
-ORDER BY key ASC
-LIMIT 10
-~~~~ 
+<Note>
+The above example utilize `jira_datasource` as the datasource name, which is defined in the `CREATE DATABASE` command.
+</Note>

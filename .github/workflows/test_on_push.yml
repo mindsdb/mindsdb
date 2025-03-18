@@ -181,11 +181,12 @@ jobs:
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
             env PYTHONPATH=./ pytest tests/unit/planner/ -x
-            env PYTHONPATH=./:parser_tests/tests pytest tests/unit/render/ -x
             env PYTHONPATH=./ pytest tests/unit/executor/ -x
-            env PYTHONPATH=./ pytest tests/unit/test_llm_utils.py
+            env PYTHONPATH=./ pytest tests/unit/various/ -x
             env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_minds_endpoint.py
             env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_openai.py
+
+            env PYTHONPATH=./:parser_tests/tests pytest tests/unit/render/ -x
             # env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_anyscale_endpoints.py
           fi
       - name: Run Handlers tests and submit Coverage to coveralls

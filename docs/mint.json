@@ -436,7 +436,8 @@
           "pages": [
             "mindsdb_sql/sql/create/project",
             "mindsdb_sql/sql/drop/project",
-            "mindsdb_sql/sql/list-projects"
+            "mindsdb_sql/sql/list-projects",
+            "mindsdb_sql/sql/use/project"
           ]
         },
         {

@@ -46,6 +46,9 @@ jobs:
       - name: Checkout
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         uses: actions/checkout@v4
+        with:
+          # required to grab the history of the PR for pre-commit to work out what's changed
+          fetch-depth: 0 
       - name: Set up Python
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         uses: actions/setup-python@v5.1.0
@@ -60,19 +63,13 @@ jobs:
         run: |
           python tests/scripts/check_print_statements.py
 
-      # Gathers a list of changed files for pre-commit to use
-      - name: Get changed files
-        if: ${{ needs.changes.outputs.not-docs == 'true' }}
-        id: changed-files
-        uses: tj-actions/changed-files@v41
-
       # Run pre-commit on all changed files
       # See .pre-commit-config.yaml for the list of checks
       - name: Run pre-commit
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         uses: pre-commit/action@v3.0.0
         with:
-          extra_args: --files ${{ steps.changed-files.outputs.all_changed_files }}
+          extra_args: --from-ref ${{ github.event.pull_request.base.sha }} --to-ref ${{ github.event.pull_request.head.sha }}
 
       # Runs a few different checks against our many requirements files
       # to make sure they're in order

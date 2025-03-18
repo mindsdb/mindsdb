@@ -3,6 +3,9 @@ from typing import Text, List, Dict, Optional
 from requests.exceptions import RequestException
 
 from mindsdb.integrations.utilities.handlers.api_utilities.microsoft.ms_graph_api_utilities import MSGraphAPIBaseClient
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 class MSGraphAPITeamsDelegatedPermissionsClient(MSGraphAPIBaseClient): 
@@ -23,9 +26,19 @@ class MSGraphAPITeamsDelegatedPermissionsClient(MSGraphAPIBaseClient):
             self.fetch_data_json("me/joinedTeams")
             return True
         except RequestException as request_error:
+            logger.error(f"Failed to check connection to Microsoft Teams: {request_error}")
             return False
         
-    def _get_group_ids(self) -> List[Text]:
+    def get_all_groups(self) -> List[Dict]:
+        """
+        Get all groups that the signed in user is a member of.
+
+        Returns:
+            List[Dict]: The groups data.
+        """
+        return self.fetch_data_json("me/joinedTeams")
+        
+    def _get_all_group_ids(self) -> List[Text]:
         """
         Get all group IDs related to Microsoft Teams.
 
@@ -33,7 +46,7 @@ class MSGraphAPITeamsDelegatedPermissionsClient(MSGraphAPIBaseClient):
             List[Text]: The group IDs.
         """
         if not self._group_ids:
-            groups = self.fetch_data_json("me/joinedTeams")
+            groups = self.get_all_groups()
             self._group_ids = [group["id"] for group in groups]
 
         return self._group_ids
@@ -96,7 +109,7 @@ class MSGraphAPITeamsDelegatedPermissionsClient(MSGraphAPIBaseClient):
             List[Dict]: The channels data.
         """
         channels = []
-        for group_id in self._get_group_ids():
+        for group_id in self._get_all_group_ids():
             channels += self.get_all_channels_in_group(group_id)
 
         return channels

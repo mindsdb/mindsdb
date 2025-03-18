@@ -72,7 +72,8 @@ class MSTeamsHandler(APIChatHandler):
         if self.is_connected:
             return self.connection
 
-        if self.connection_data.get('mode', 'chat') == 'chat':
+        # The default mode is 'data'. This is used for data source connections.
+        if self.connection_data.get('mode', 'data') == 'chat':
             self.connection = MicrosoftAppCredentials(
                 app_id=self.connection_data["client_id"],
                 password=self.connection_data["client_secret"]
@@ -127,7 +128,8 @@ class MSTeamsHandler(APIChatHandler):
 
         try:
             connection = self.connect()
-            if self.connection_data.get('mode', 'chat') == 'data' and connection.check_connection():
+            # A connection check against the Microsoft Graph API is run if the connection is in 'data' mode.
+            if self.connection_data.get('mode', 'data') == 'data' and connection.check_connection():
                 response.success = True
                 response.copy_storage = True
             else:

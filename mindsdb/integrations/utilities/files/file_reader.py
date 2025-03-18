@@ -309,7 +309,7 @@ class FileReader(FormatDetector):
             )
         text = file_obj.read()
 
-        metadata = {"source": name, "file_format": "txt"}
+        metadata = {"source_file": name, "file_format": "txt"}
         documents = [Document(page_content=text, metadata=metadata)]
 
         text_splitter = RecursiveCharacterTextSplitter(
@@ -337,7 +337,7 @@ class FileReader(FormatDetector):
         split_text = text_splitter.split_text(text)
 
         return pd.DataFrame(
-            {"content": split_text, "metadata": [{"file_format": "pdf", "source": name}] * len(split_text)}
+            {"content": split_text, "metadata": [{"file_format": "pdf", "source_file": name}] * len(split_text)}
         )
 
     @staticmethod

@@ -11,6 +11,58 @@ from mindsdb.integrations.utilities.sql_utils import (
 )
 
 
+class TeamsTable(APIResource):
+    """
+    The table abstraction for the 'teams' resource of the Microsoft Graph API.
+    """
+    def list(
+        self,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        sort: List[SortColumn] = None,
+        targets: List[str] = None,
+        **kwargs
+    ):
+        """
+        Executes a parsed SELECT SQL query on the 'teams' resource of the Microsoft Graph API.
+
+        Args:
+            conditions (List[FilterCondition]): The list of parsed filter conditions.
+            limit (int): The maximum number of records to return.
+            sort (List[SortColumn]): The list of parsed sort columns.
+            targets (List[str]): The list of target columns to return.
+        """
+        client: MSGraphAPITeamsDelegatedPermissionsClient = self.handler.connect()
+        teams = client.get_all_groups()
+
+        teams_df = pd.json_normalize(teams, sep="_")
+        teams_df = teams_df[self.get_columns()]
+
+        return teams_df
+
+    def get_columns(self) -> List[str]:
+        """
+        Retrieves the attributes (columns) of the 'teams' resource.
+
+        Returns:
+            List[Text]: A list of attributes (columns) of the 'teams' resource.
+        """
+        return [
+            "id",
+            "createdDateTime",
+            "displayName",
+            "description",
+            "internalId",
+            "classification",
+            "specialization",
+            "visibility",
+            "webUrl",
+            "isArchived",
+            "tenantId",
+            "isMembershipLimitedToOwners",
+        ]
+
+
 class ChannelsTable(APIResource):
     """
     The table abstraction for the 'channels' resource of the Microsoft Graph API.

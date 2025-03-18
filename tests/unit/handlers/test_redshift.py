@@ -16,7 +16,7 @@ from test_postgres import TestPostgresHandler
 class TestRedshiftHandler(TestPostgresHandler):
 
     def create_handler(self):
-        return RedshiftHandler('redshift', connection_data={'connection_data': self.dummy_connection_data})
+        return RedshiftHandler('redshift', connection_data=self.dummy_connection_data)
 
     def test_insert(self):
         """

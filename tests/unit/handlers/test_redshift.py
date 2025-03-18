@@ -53,24 +53,24 @@ class TestRedshiftHandler(TestPostgresHandler):
         """
         mock_conn = MagicMock()
         mock_cursor = MockCursorContextManager()
-    
+
         self.handler.connect = MagicMock(return_value=mock_conn)
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
-    
+
         error_msg = "Table doesn't exist"
         error = psycopg.Error(error_msg)
         mock_cursor.executemany.side_effect = error
-    
+
         df = pd.DataFrame({
             'column1': [1, 2, 3, np.nan],
             'column2': ['a', 'b', 'c', None]
         })
-    
+
         response = self.handler.insert('nonexistent_table', df)
-    
+
         mock_cursor.executemany.assert_called_once()
         mock_conn.rollback.assert_called_once()
-    
+
         assert isinstance(response, Response)
         self.assertEqual(response.type, RESPONSE_TYPE.ERROR)
         self.assertEqual(response.error_message, error_msg)

@@ -1,1 +1,3 @@
-pymssql >= 2.1.4
+python-tds==1.16.0
+pyOpenSSL==25.0.0
+bitarray==3.1.1

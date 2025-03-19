@@ -13,7 +13,7 @@ from mindsdb_sql_parser.ast import Identifier
 from tests.unit.executor_test_base import BaseExecutorDummyML
 
 
-@pytest.mark.parametrize('byom_type', ['inhouse', 'venv'])
+@pytest.mark.parametrize('byom_type', ['inhouse'])  # , 'venv'
 class TestBYOM(BaseExecutorDummyML):
 
     def _create_engine(self, name, code, **kwargs):

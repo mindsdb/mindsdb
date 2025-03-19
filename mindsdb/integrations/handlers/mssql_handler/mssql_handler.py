@@ -57,7 +57,7 @@ class SqlServerHandler(DatabaseHandler):
             raise ValueError('Required parameters (host, user, password, database) must be provided.')
 
         config = {
-            'host': self.connection_args.get('host'),
+            'dsn': self.connection_args.get('host'),
             'user': self.connection_args.get('user'),
             'password': self.connection_args.get('password'),
             'database': self.connection_args.get('database')

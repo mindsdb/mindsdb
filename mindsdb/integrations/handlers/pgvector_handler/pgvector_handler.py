@@ -114,13 +114,27 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         if conditions is None:
             return {}
 
-        return {
-            condition.column.split(".")[-1]: {
+        filter_conditions = {}
+
+        for condition in conditions:
+
+            parts = condition.column.split(".")
+            key = parts[0]
+            # converts 'col.el1.el2' to col->'el1'->>'el2'
+            if len(parts) > 1:
+                # intermediate elements
+                for el in parts[1:-1]:
+                    key += f" -> '{el}'"
+
+                # last element
+                key += f" ->> '{parts[-1]}'"
+
+            filter_conditions[key] = {
                 "op": condition.op.value,
                 "value": condition.value,
             }
-            for condition in conditions
-        }
+
+        return filter_conditions
 
     @staticmethod
     def _construct_where_clause(filter_conditions=None):

@@ -58,7 +58,6 @@ class SkillsController:
 
         if project_name is None:
             projects = self.project_controller.get_list()
-            projects = list([p for p in projects if p.name == project_name])
             project_ids = list([p.id for p in projects])
         else:
             project = self.project_controller.get(name=project_name)

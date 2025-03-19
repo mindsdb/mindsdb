@@ -125,7 +125,7 @@ class ChatBotController:
         Gets all chatbots in a project.
 
         Parameters:
-            project_name (str): The name of the containing project
+            project_name (str): The name of the containing project. If None, then return from all projects
 
         Returns:
             all_bots (List[db.ChatBots]): List of database chatbot object
@@ -137,7 +137,7 @@ class ChatBotController:
                 continue
             project_names[project.id] = project.name
 
-        if project_name not in project_names.values():
+        if project_name is not None and project_name not in project_names.values():
             raise EntityNotExistsError(f'Project {project_name} not found')
 
         query = db.session.query(

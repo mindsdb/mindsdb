@@ -87,7 +87,7 @@ class MSGraphAPIBaseClient:
 
         return response
 
-    def fetch_paginated_data(self, endpoint: Text, params: Optional[Dict] = {}) -> Generator:
+    def fetch_paginated_data(self, endpoint: Text, params: Optional[Dict] = None) -> Generator:
         """
         Fetches data from the Microsoft Graph API by making the specified request and handling pagination.
 
@@ -98,6 +98,8 @@ class MSGraphAPIBaseClient:
         Yields:
             List: The data fetched from the Microsoft Graph API.
         """
+        if params is None:
+            params = {}
         api_url = self._get_api_url(endpoint)
 
         # Add the pagination count to the request parameters.
@@ -115,7 +117,7 @@ class MSGraphAPIBaseClient:
             api_url = response_json.get("@odata.nextLink", "")
             yield value
 
-    def fetch_data(self, endpoint: str, params: Optional[Dict] = {}) -> Union[List, Dict, bytes]:
+    def _fetch_data(self, endpoint: str, params: Optional[Dict] = {}) -> Union[List, Dict, bytes]:
         """
         Fetches data from the Microsoft Graph API by making the specified request.
 
@@ -129,4 +131,36 @@ class MSGraphAPIBaseClient:
         api_url = self._get_api_url(endpoint)
 
         response = self._make_request(api_url, params)
+        return response
+
+    def fetch_data_content(self, endpoint: str, params: Optional[Dict] = {}) -> bytes:
+        """
+        Fetches data content from the Microsoft Graph API by making the specified request.
+
+        Args:
+            endpoint (str): The endpoint of the Microsoft Graph API to fetch data from.
+            params (Optional[Dict]): The parameters to include in the request.
+
+        Returns:
+            bytes: The data content fetched from the Microsoft Graph API.
+        """
+        response = self._fetch_data(endpoint, params)
         return response.content
+
+    def fetch_data_json(self, endpoint: str, params: Optional[Dict] = {}) -> Union[List, Dict]:
+        """
+        Fetches data from the Microsoft Graph API by making the specified request and returns the JSON response.
+
+        Args:
+            endpoint (str): The endpoint of the Microsoft Graph API to fetch data from.
+            params (Optional[Dict]): The parameters to include in the request.
+
+        Returns:
+            Union[List, Dict]: The JSON response fetched from the Microsoft Graph API.
+        """
+        response = self._fetch_data(endpoint, params)
+        response_json = response.json()
+
+        if "value" in response_json:
+            return response_json["value"]
+        return response_json

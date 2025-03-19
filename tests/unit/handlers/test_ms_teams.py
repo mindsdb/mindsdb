@@ -23,6 +23,15 @@ class TestMSTeamsHandler(BaseHandlerTestSetup, unittest.TestCase):
         return OrderedDict(
             client_id='12345678-90ab-cdef-1234-567890abcdef',
             client_secret='a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6',
+            tenant_id='abcdef12-3456-7890-abcd-ef1234567890',
+            code='1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',  # Not passed by the user, but by the front-end.
+        )
+
+    @property
+    def dummy_connection_data_without_code(self):
+        return OrderedDict(
+            client_id='12345678-90ab-cdef-1234-567890abcdef',
+            client_secret='a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6',
             tenant_id='abcdef12-3456-7890-abcd-ef1234567890'
         )
     
@@ -36,6 +45,16 @@ class TestMSTeamsHandler(BaseHandlerTestSetup, unittest.TestCase):
             handler_storage=mock_handler_storage
         )
     
+    def create_handler_without_code(self):
+        mock_handler_storage = MagicMock()
+        mock_handler_storage.file_get.side_effect = FileNotFoundError
+
+        return MSTeamsHandler(
+            'teams',
+            connection_data=self.dummy_connection_data_without_code,
+            handler_storage=mock_handler_storage
+        )
+    
     def create_patcher(self):
         return patch('msal.ConfidentialClientApplication')
 
@@ -43,6 +62,8 @@ class TestMSTeamsHandler(BaseHandlerTestSetup, unittest.TestCase):
         """
         Test if `connect` method successfully returns a redirect URL when the authentication code is not provided.
         """
+        self.handler = self.create_handler_without_code()
+
         mock_msal = MagicMock()
         mock_msal.get_accounts.return_value = []
         mock_auth_url = 'https://mock.auth.url'
@@ -54,6 +75,10 @@ class TestMSTeamsHandler(BaseHandlerTestSetup, unittest.TestCase):
             self.handler.connect()
 
         self.assertFalse(self.handler.is_connected)
+
+
+    # def test_connect_with_code_returns_access_token(self):
+    #     pass
 
 
 if __name__ == '__main__':

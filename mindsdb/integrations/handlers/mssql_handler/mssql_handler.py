@@ -1,5 +1,5 @@
-import pymssql
-from pymssql import OperationalError
+import pytds
+from socket import gaierror
 import pandas as pd
 
 from mindsdb_sql_parser import parse_sql
@@ -71,10 +71,10 @@ class SqlServerHandler(DatabaseHandler):
             config['server'] = self.connection_args.get('server')
 
         try:
-            self.connection = pymssql.connect(**config)
+            self.connection = pytds.connect(**config)
             self.is_connected = True
             return self.connection
-        except OperationalError as e:
+        except gaierror as e:
             logger.error(f'Error connecting to Microsoft SQL Server {self.database}, {e}!')
             self.is_connected = False
             raise
@@ -106,7 +106,7 @@ class SqlServerHandler(DatabaseHandler):
                 # Execute a simple query to test the connection
                 cur.execute('select 1;')
             response.success = True
-        except OperationalError as e:
+        except gaierror as e:
             logger.error(f'Error connecting to Microsoft SQL Server {self.database}, {e}!')
             response.error_message = str(e)
 

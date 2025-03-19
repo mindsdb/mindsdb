@@ -39,8 +39,7 @@ class TestMSTeamsHandler(BaseHandlerTestSetup, unittest.TestCase):
     def create_patcher(self):
         return patch('msal.ConfidentialClientApplication')
 
-    @patch('msal.SerializableTokenCache')
-    def test_connect_without_code_returns_redirect_url(self, mock_serializable_token_cache):
+    def test_connect_without_code_returns_redirect_url(self):
         """
         Test if `connect` method successfully returns a redirect URL when the authentication code is not provided.
         """

@@ -131,7 +131,7 @@ class SqlServerHandler(DatabaseHandler):
         need_to_close = self.is_connected is False
 
         connection = self.connect()
-        with connection.cursor(as_dict=True) as cur:
+        with connection.cursor() as cur:
             try:
                 cur.execute(query)
                 if cur.description:

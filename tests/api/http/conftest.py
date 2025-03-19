@@ -1,5 +1,7 @@
 import os
+import sys
 from http import HTTPStatus
+from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import pytest
@@ -50,6 +52,7 @@ def create_dummy_db(client: FlaskClient, db_name: str):
         }
     )
     assert response.status_code == HTTPStatus.OK
+    assert response.json['type'] == 'ok'
 
 
 def create_demo_db(client: FlaskClient):
@@ -69,3 +72,42 @@ def create_demo_db(client: FlaskClient):
     }
     response = client.post('/api/databases', json=example_db_data, follow_redirects=True)
     assert '201' in response.status
+
+
+def create_dummy_ml(client: FlaskClient):
+    from mindsdb.interfaces.database.integrations import integration_controller
+
+    test_handler_path = Path(__file__).parents[2] / 'unit'
+    sys.path.append(str(test_handler_path))
+
+    handler_dir = Path(test_handler_path) / 'dummy_ml_handler'
+
+    handler_meta = {
+        'import': {
+            'success': None,
+            'error_message': None,
+            'folder': handler_dir.name,
+            'dependencies': [],
+        },
+        'path': handler_dir,
+        'name': 'dummy_ml',
+        'permanent': False,
+    }
+    integration_controller.handlers_import_status['dummy_ml'] = handler_meta
+    integration_controller.import_handler('dummy_ml', '')
+
+    if not integration_controller.get_handler_meta('dummy_ml')['import']['success']:
+        error = integration_controller.handlers_import_status['dummy_ml']['import']['error_message']
+        raise Exception(f"Can not import: {str(handler_dir)}: {error}")
+
+    response = client.post(
+        '/api/sql/query',
+        json={
+            'query': '''
+                create ml_engine dummy_ml
+                from dummy_ml
+            '''
+        }
+    )
+    assert response.status_code == HTTPStatus.OK
+    assert response.json['type'] == 'ok'

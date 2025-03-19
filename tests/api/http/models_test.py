@@ -1,52 +1,12 @@
-import os
-import pytest
-from tempfile import TemporaryDirectory
-
-from mindsdb.api.http.initialize import initialize_app
-from mindsdb.migrations import migrate
-from mindsdb.interfaces.storage import db
-from mindsdb.utilities.config import Config
+from tests.api.http.conftest import create_demo_db, create_dummy_ml
 
 
-@pytest.fixture(scope="session", autouse=True)
-def app():
-    old_minds_db_con = ''
-    if 'MINDSDB_DB_CON' in os.environ:
-        old_minds_db_con = os.environ['MINDSDB_DB_CON']
-    with TemporaryDirectory(prefix='models_test_') as temp_dir:
-        db_path = 'sqlite:///' + os.path.join(temp_dir, 'mindsdb.sqlite3.db')
-        # Need to change env variable for migrate module, since it calls db.init().
-        os.environ['MINDSDB_DB_CON'] = db_path
-        db.init()
-        migrate.migrate_to_head()
-        app = initialize_app(Config(), True, False)
-
-        # Create an integration database.
-        test_client = app.test_client()
-        # From Learning Hub.
-        example_db_data = {
-            'database': {
-                'name': 'example_db',
-                'engine': 'postgres',
-                'parameters': {
-                    "user": "demo_user",
-                    "password": "demo_password",
-                    "host": "samples.mindsdb.com",
-                    "port": "5432",
-                    "database": "demo"
-                }
-            }
-        }
-        response = test_client.post('/api/databases', json=example_db_data, follow_redirects=True)
-        assert '201' in response.status
-
-        yield app
-    os.environ['MINDSDB_DB_CON'] = old_minds_db_con
+TEST_DB_NAME = 'dummy_db'
 
 
-@pytest.fixture()
-def client(app):
-    return app.test_client()
+def test_prepare(client):
+    create_demo_db(client)
+    create_dummy_ml(client)
 
 
 def test_train_model(client):
@@ -55,6 +15,7 @@ def test_train_model(client):
         CREATE MODEL mindsdb.home_rentals_model
         FROM example_db (SELECT * FROM demo_data.home_rentals)
         PREDICT rental_price
+        USING engine = 'dummy_ml'
     '''
     train_data = {
         'query': create_query
@@ -73,10 +34,13 @@ def test_train_model(client):
         'predict': 'rental_price',
         'status': 'generating',
         'version': 1,
-        'problem_definition': "{'target': 'rental_price'}"
+        # 'problem_definition': "{'target': 'rental_price'}"
     }
+    for key, value in expected_model.items():
+        assert created_model[key] == value
+    assert "'target': 'rental_price'" in created_model['problem_definition']
 
-    assert created_model == expected_model
+    # assert created_model == expected_model
 
 
 def test_train_model_no_query_aborts(client):
@@ -117,8 +81,9 @@ def test_train_model_already_exists_aborts(client):
     # Learning Hub home rentals model.
     create_query = '''
         CREATE MODEL mindsdb.home_rentals_model_duplicate
-        FROM example_db (SELECT * FROM demo_data.home_rentals)
+        FROM example_db (SELECT * FROM demo_data.home_rentals limit 50)
         PREDICT rental_price
+        USING engine = 'dummy_ml'
     '''
     train_data = {
         'query': create_query
@@ -194,6 +159,7 @@ def test_delete_model(client):
         CREATE MODEL mindsdb.home_rentals_model_delete
         FROM example_db (SELECT * FROM demo_data.home_rentals)
         PREDICT rental_price
+        USING engine = 'dummy_ml'
     '''
     train_data = {
         'query': create_query

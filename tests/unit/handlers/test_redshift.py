@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 
 import numpy as np
 import pandas as pd
+import psycopg
 
 from base_handler_test import MockCursorContextManager
 from mindsdb.integrations.libs.response import (
@@ -16,7 +17,7 @@ from test_postgres import TestPostgresHandler
 class TestRedshiftHandler(TestPostgresHandler):
 
     def create_handler(self):
-        return RedshiftHandler('redshift', connection_data={'connection_data': self.dummy_connection_data})
+        return RedshiftHandler('redshift', connection_data=self.dummy_connection_data)
 
     def test_insert(self):
         """
@@ -45,6 +46,34 @@ class TestRedshiftHandler(TestPostgresHandler):
         mock_cursor.executemany.assert_called_once_with(expected_query, df.replace({np.nan: None}).values.tolist())
         assert isinstance(response, Response)
         self.assertEqual(response.type, RESPONSE_TYPE.OK)
+
+    def test_insert_error(self):
+        """
+        Tests the `insert` method to ensure it correctly handles an exception and returns the appropriate response.
+        """
+        mock_conn = MagicMock()
+        mock_cursor = MockCursorContextManager()
+
+        self.handler.connect = MagicMock(return_value=mock_conn)
+        mock_conn.cursor = MagicMock(return_value=mock_cursor)
+
+        error_msg = "Table doesn't exist"
+        error = psycopg.Error(error_msg)
+        mock_cursor.executemany.side_effect = error
+
+        df = pd.DataFrame({
+            'column1': [1, 2, 3, np.nan],
+            'column2': ['a', 'b', 'c', None]
+        })
+
+        response = self.handler.insert('nonexistent_table', df)
+
+        mock_cursor.executemany.assert_called_once()
+        mock_conn.rollback.assert_called_once()
+
+        assert isinstance(response, Response)
+        self.assertEqual(response.type, RESPONSE_TYPE.ERROR)
+        self.assertEqual(response.error_message, error_msg)
 
 
 if __name__ == '__main__':

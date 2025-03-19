@@ -831,6 +831,8 @@ class KnowledgeBaseController:
         # drop objects if they were created automatically
         if 'default_vector_storage' in kb.params:
             try:
+                handler = self.session.datahub.get(kb.params['default_vector_storage']).integration_handler
+                handler.drop_table(kb.vector_database_table)
                 self.session.integration_controller.delete(kb.params['default_vector_storage'])
             except EntityNotExistsError:
                 pass

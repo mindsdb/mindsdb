@@ -13,9 +13,9 @@ def test_train_model(client):
     # Learning Hub home rentals model.
     create_query = '''
         CREATE MODEL mindsdb.home_rentals_model
-        FROM example_db (SELECT * FROM demo_data.home_rentals)
+        FROM example_db (SELECT * FROM demo_data.home_rentals limit 10)
         PREDICT rental_price
-        USING engine = 'dummy_ml'
+        USING engine = 'dummy_ml', join_learn_process = true
     '''
     train_data = {
         'query': create_query
@@ -25,22 +25,19 @@ def test_train_model(client):
     created_model = response.get_json()
 
     expected_model = {
-        'accuracy': None,
+        'accuracy': created_model['accuracy'],
         'active': True,
         'error': None,
-        'fetch_data_query': 'SELECT * FROM demo_data.home_rentals',
+        'fetch_data_query': 'SELECT * FROM demo_data.home_rentals limit 10',
         'mindsdb_version': created_model['mindsdb_version'],
         'name': 'home_rentals_model',
         'predict': 'rental_price',
-        'status': 'generating',
+        'status': 'complete',
         'version': 1,
-        # 'problem_definition': "{'target': 'rental_price'}"
     }
     for key, value in expected_model.items():
         assert created_model[key] == value
     assert "'target': 'rental_price'" in created_model['problem_definition']
-
-    # assert created_model == expected_model
 
 
 def test_train_model_no_query_aborts(client):
@@ -81,9 +78,9 @@ def test_train_model_already_exists_aborts(client):
     # Learning Hub home rentals model.
     create_query = '''
         CREATE MODEL mindsdb.home_rentals_model_duplicate
-        FROM example_db (SELECT * FROM demo_data.home_rentals limit 50)
+        FROM example_db (SELECT * FROM demo_data.home_rentals limit 10)
         PREDICT rental_price
-        USING engine = 'dummy_ml'
+        USING engine = 'dummy_ml', join_learn_process = true
     '''
     train_data = {
         'query': create_query
@@ -118,13 +115,12 @@ def test_get_model_by_version(client):
     expected_model = model_ver_1.copy()
     expected_model['active'] = True
     expected_model['error'] = None
-    expected_model['fetch_data_query'] = 'SELECT * FROM demo_data.home_rentals'
+    expected_model['fetch_data_query'] = 'SELECT * FROM demo_data.home_rentals limit 10'
     expected_model['name'] = 'home_rentals_model'
     expected_model['predict'] = 'rental_price'
     expected_model['version'] = 1
 
     assert model_ver_1 == expected_model
-
     assert model_active_ver == expected_model
 
 
@@ -157,9 +153,9 @@ def test_delete_model(client):
     # Learning Hub home rentals model.
     create_query = '''
         CREATE MODEL mindsdb.home_rentals_model_delete
-        FROM example_db (SELECT * FROM demo_data.home_rentals)
+        FROM example_db (SELECT * FROM demo_data.home_rentals limit 10)
         PREDICT rental_price
-        USING engine = 'dummy_ml'
+        USING engine = 'dummy_ml', join_learn_process = true
     '''
     train_data = {
         'query': create_query

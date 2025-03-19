@@ -12,9 +12,10 @@ from mindsdb.api.http.initialize import initialize_app
 from mindsdb.migrations import migrate
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.config import config
+from mindsdb.integrations.libs.process_cache import process_cache
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="module", autouse=True)
 def app():
     old_minds_db_con = ''
     if 'MINDSDB_DB_CON' in os.environ:
@@ -31,10 +32,11 @@ def app():
         app._mindsdb_temp_dir = temp_dir
         yield app
 
+    process_cache.shutdown()
     os.environ['MINDSDB_DB_CON'] = old_minds_db_con
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def client(app: Flask) -> FlaskClient:
     return app.test_client()
 

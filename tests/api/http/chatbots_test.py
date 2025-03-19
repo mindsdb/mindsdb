@@ -9,10 +9,10 @@ def test_prepare(client):
 
     # Create model to use in all tests.
     create_query = '''
-    CREATE MODEL mindsdb.test_model
-    FROM example_db (SELECT * FROM demo_data.home_rentals)
-    PREDICT rental_price
-    USING engine = 'dummy_ml'
+        CREATE MODEL mindsdb.test_model
+        FROM example_db (SELECT * FROM demo_data.home_rentals)
+        PREDICT rental_price
+        USING engine = 'dummy_ml', join_learn_process = true
     '''
     train_data = {
         'query': create_query

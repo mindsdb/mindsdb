@@ -28,16 +28,16 @@ variable "ECR_REPO" {
 
 function "get_cache_to" {
   params = [image]
-  result = length(PLATFORM_LIST) > 1 ? [] : [
-    "type=registry,image-manifest=true,oci-mediatypes=true,mode=max,ref=${ECR_REPO}/${IMAGE}-cache:${replace("${BRANCH}", "/", "-")}-${image}-${replace("${PLATFORM_LIST[0]}", "linux/", "")}"
+  result = [
+    "type=registry,image-manifest=true,oci-mediatypes=true,mode=max,ref=${ECR_REPO}/${IMAGE}-cache:${replace("${BRANCH}", "/", "-")}-${image}"
   ]
 }
 function "get_cache_from" {
   params = [image]
   result = flatten([for p in PLATFORM_LIST:
     split("\n", <<EOT
-type=registry,ref=${ECR_REPO}/${IMAGE}-cache:${replace("${BRANCH}", "/", "-")}-${image}-${replace("${p}", "linux/", "")}
-type=registry,ref=${ECR_REPO}/${IMAGE}-cache:main-${image}-${replace("${p}", "linux/", "")}
+type=registry,ref=${ECR_REPO}/${IMAGE}-cache:${replace("${BRANCH}", "/", "-")}-${image}
+type=registry,ref=${ECR_REPO}/${IMAGE}-cache:main-${image}
 EOT
     )
   ])
@@ -61,6 +61,12 @@ function "get_tags" {
 
 
 ### OUTPUT IMAGES ###
+target "base" {
+  dockerfile = "docker/mindsdb.Dockerfile"
+  platforms = PLATFORM_LIST
+  target = "build"
+  output = ["type=registry"]
+}
 
 target "images" {
   name = item.name
@@ -102,5 +108,9 @@ target "images" {
   }
   cache-to = get_cache_to(item.name)
   cache-from = get_cache_from(item.name)
+  contexts = {
+    build = "target:base"
+  }
+  output = ["type=registry"]
 }
 

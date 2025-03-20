@@ -1,19 +1,20 @@
 import os
 import sys
-import base64
-import shutil
 import ast
 import time
+import base64
+import shutil
+import inspect
 import tempfile
 import importlib
 import threading
 from pathlib import Path
 from copy import deepcopy
-from typing import Optional
 from textwrap import dedent
+from typing import Optional
 from collections import OrderedDict
-import inspect
 
+import pandas as pd
 from sqlalchemy import func
 
 from mindsdb.interfaces.storage import db
@@ -32,6 +33,7 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 from mindsdb.integrations.libs.base import BaseHandler
 import mindsdb.utilities.profiler as profiler
+from mindsdb.integrations.libs.information_schema import HandlerInformationSchema, DEFAULT_SCHEMA
 
 logger = log.getLogger(__name__)
 
@@ -930,6 +932,59 @@ class IntegrationController:
                     )
                     db.session.add(integration_record)
         db.session.commit()
+
+    def get_information_schema(self, handler_name: str) -> HandlerInformationSchema:
+        """Get information schema for a given handler
+
+        Args:
+            handler_name (str): The name of the handler to get information schema for
+
+        Returns:
+            HandlerInformationSchema: The information schema for the given handler
+        """
+        columns_dataframes = []
+        handler = integration_controller.get_data_handler(handler_name, connect=True)
+        if handler is None:
+            raise EntityNotExistsError(f'Database with name {handler_name} not found')
+
+        if 'all' in inspect.signature(handler.get_tables).parameters:
+            response = handler.get_tables(all=True)
+        else:
+            response = handler.get_tables()
+
+        if len(response.data_frame.columns) == 0:
+            response.data_frame = pd.DataFrame([], columns=['TABLE_NAME', 'TABLE_SCHEMA', 'TABLE_TYPE'])
+
+        response.data_frame.columns = [x.upper() for x in response.data_frame.columns]
+        tables_dataframe = response.data_frame
+
+        for table_metadata in tables_dataframe.to_dict(orient='records'):
+            table_name = table_metadata['TABLE_NAME']
+            table_schema = table_metadata.get('TABLE_SCHEMA', DEFAULT_SCHEMA)
+            if table_schema is DEFAULT_SCHEMA:
+                logger.warning(f"Handler '{handler_name}' responds to 'get_tables' without schema name")
+            if 'schema_name' in inspect.signature(handler.get_columns).parameters and table_schema is not DEFAULT_SCHEMA:
+                response = handler.get_columns(
+                    table_name=table_name,
+                    schema_name=table_schema
+                )
+            else:
+                response = handler.get_columns(
+                    table_name=table_name
+                )
+            response.data_frame.columns = [x.upper() for x in response.data_frame.columns]
+            response.data_frame['TABLE_NAME'] = table_name
+            response.data_frame['TABLE_SCHEMA'] = table_schema
+            columns_dataframes.append(response.data_frame)
+
+        return HandlerInformationSchema(
+            tables=tables_dataframe,
+            columns=(
+                pd.concat(columns_dataframes)
+                if len(columns_dataframes) > 0 else
+                pd.DataFrame([], columns=['TABLE_SCHEMA', 'TABLE_NAME', 'COLUMN_NAME', 'DATA_TYPE'])
+            )
+        )
 
 
 integration_controller = IntegrationController()

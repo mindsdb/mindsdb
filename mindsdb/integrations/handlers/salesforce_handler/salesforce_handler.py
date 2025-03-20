@@ -54,7 +54,7 @@ class SalesforceHandler(APIHandler):
             'PricebookEntry',
             'Order',
             'OrderItem',
-            'Case',
+            'Cases',
             'Campaign',
             'CampaignMember',
             'Contract',

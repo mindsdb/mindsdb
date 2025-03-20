@@ -1,3 +1,5 @@
+from http import HTTPStatus
+
 from tests.api.http.conftest import create_demo_db, create_dummy_ml
 
 
@@ -21,7 +23,7 @@ def test_train_model(client):
         'query': create_query
     }
     response = client.post('/api/projects/mindsdb/models', json=train_data, follow_redirects=True)
-    assert '201' in response.status
+    assert response.status_code == HTTPStatus.CREATED
     created_model = response.get_json()
 
     expected_model = {
@@ -42,12 +44,12 @@ def test_train_model(client):
 
 def test_train_model_no_query_aborts(client):
     response = client.post('/api/projects/mindsdb/models', json={}, follow_redirects=True)
-    assert '400' in response.status
+    assert response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_train_model_no_project_aborts(client):
     response = client.post('/api/projects/nani/models', json={'query': ''}, follow_redirects=True)
-    assert '404' in response.status
+    assert response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_train_model_invalid_query_aborts(client):
@@ -60,7 +62,7 @@ def test_train_model_invalid_query_aborts(client):
         'query': invalid_create_query
     }
     response = client.post('/api/projects/mindsdb/models', json=train_data, follow_redirects=True)
-    assert '400' in response.status
+    assert response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_train_model_no_create_query_aborts(client):
@@ -71,7 +73,7 @@ def test_train_model_no_create_query_aborts(client):
         'query': invalid_create_query
     }
     response = client.post('/api/projects/mindsdb/models', json=train_data, follow_redirects=True)
-    assert '400' in response.status
+    assert response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_train_model_already_exists_aborts(client):
@@ -86,9 +88,9 @@ def test_train_model_already_exists_aborts(client):
         'query': create_query
     }
     response = client.post('/api/projects/mindsdb/models', json=train_data, follow_redirects=True)
-    assert '201' in response.status
+    assert response.status_code == HTTPStatus.CREATED
     response = client.post('/api/projects/mindsdb/models', json=train_data, follow_redirects=True)
-    assert '409' in response.status
+    assert response.status_code == HTTPStatus.CONFLICT
 
 
 def test_train_model_no_ml_handler_aborts(client):
@@ -103,7 +105,7 @@ def test_train_model_no_ml_handler_aborts(client):
         'query': create_query
     }
     response = client.post('/api/projects/mindsdb/models', json=train_data, follow_redirects=True)
-    assert '404' in response.status
+    assert response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_get_model_by_version(client):
@@ -126,27 +128,27 @@ def test_get_model_by_version(client):
 
 def test_get_model_no_project_aborts(client):
     response = client.get('/api/projects/mawp/models/home_rentals_model', follow_redirects=True)
-    assert '404' in response.status
+    assert response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_predict_model_no_project_aborts(client):
     response = client.post('/api/projects/mawp/models/home_rentals_model/predict', follow_redirects=True)
-    assert '404' in response.status
+    assert response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_predict_model_no_model_aborts(client):
     response = client.post('/api/projects/mindsdb/models/plumbus/predict', follow_redirects=True)
-    assert '404' in response.status
+    assert response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_describe_model_no_project_aborts(client):
     response = client.get('/api/projects/mawp/models/home_rentals_model/describe', follow_redirects=True)
-    assert '404' in response.status
+    assert response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_describe_model_no_model_aborts(client):
     response = client.get('/api/projects/mindsdb/models/plumbus/describe', follow_redirects=True)
-    assert '404' in response.status
+    assert response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_delete_model(client):
@@ -161,20 +163,20 @@ def test_delete_model(client):
         'query': create_query
     }
     response = client.post('/api/projects/mindsdb/models', json=train_data, follow_redirects=True)
-    assert '201' in response.status
+    assert response.status_code == HTTPStatus.CREATED
 
     response = client.delete('/api/projects/mindsdb/models/home_rentals_model_delete', follow_redirects=True)
-    assert '204' in response.status
+    assert response.status_code == HTTPStatus.NO_CONTENT
 
     response = client.get('/api/projects/mindsdb/models/home_rentals_model_delete', follow_redirects=True)
-    assert '404' in response.status
+    assert response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_delete_model_no_project_aborts(client):
     response = client.delete('/api/projects/mawp/models/home_rentals_model', follow_redirects=True)
-    assert '404' in response.status
+    assert response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_delete_model_no_model_aborts(client):
     response = client.delete('/api/projects/mindsdb/models/meeseeks', follow_redirects=True)
-    assert '404' in response.status
+    assert response.status_code == HTTPStatus.NOT_FOUND

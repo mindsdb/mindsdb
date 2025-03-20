@@ -1,3 +1,5 @@
+from http import HTTPStatus
+
 import datetime as dt
 
 
@@ -20,7 +22,7 @@ def test_jobs_flow(client):
     }
 
     response = client.post('/api/projects/mindsdb/jobs', json=request)
-    assert '200' in response.status
+    assert response.status_code == HTTPStatus.OK
     created_job = response.json
 
     for field in ['name', 'query', 'if_query', 'schedule_str']:
@@ -33,21 +35,21 @@ def test_jobs_flow(client):
     # --- get created ---
 
     response = client.get('/api/projects/mindsdb/jobs/test_job')
-    assert '200' in response.status
+    assert response.status_code == HTTPStatus.OK
     job_resp = response.json
     assert job_resp['query'] == job['query']
 
     # --- get history ---
 
     response = client.get('/api/projects/mindsdb/jobs/test_job/history')
-    assert '200' in response.status
+    assert response.status_code == HTTPStatus.OK
     # no executions
     assert len(response.get_json()) == 0
 
     # --- get list ---
 
     response = client.get('/api/projects/mindsdb/jobs')
-    assert '200' in response.status
+    assert response.status_code == HTTPStatus.OK
     assert len(response.get_json()) == 1
 
     # check first job
@@ -57,8 +59,8 @@ def test_jobs_flow(client):
     # --- delete job ---
 
     response = client.delete('/api/projects/mindsdb/jobs/test_job')
-    assert '204' in response.status
+    assert response.status_code == HTTPStatus.NO_CONTENT
 
     # got deleted
     response = client.get('/api/projects/mindsdb/jobs/test_job')
-    assert '404' in response.status
+    assert response.status_code == HTTPStatus.NOT_FOUND

@@ -1,3 +1,6 @@
+from http import HTTPStatus
+
+
 def test_get_projects(client):
     response = client.get('/api/projects', follow_redirects=True)
     all_projects = response.get_json()
@@ -14,4 +17,4 @@ def test_get_project(client):
 
 def test_get_project_not_found(client):
     response = client.get('/api/projects/zoop', follow_redirects=True)
-    assert '404' in response.status
+    assert response.status_code == HTTPStatus.NOT_FOUND

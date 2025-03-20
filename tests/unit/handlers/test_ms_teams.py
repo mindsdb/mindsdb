@@ -113,6 +113,9 @@ class TestMSTeamsHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         # TODO: Asserts _register_table() is called for each table.
 
+    def test_connect_with_invalid_code_raises_error(self):
+        pass
+
     @patch('msal.SerializableTokenCache')
     def test_connect_with_cache_returns_access_code(self, mock_token_cache):
         """"
@@ -142,6 +145,50 @@ class TestMSTeamsHandler(BaseHandlerTestSetup, unittest.TestCase):
         # TODO: Assert connect() is called only once.
 
         # TODO: Asserts _register_table() is called for each table.
+
+    @patch('requests.get')
+    def test_check_connection_with_successful_connection(self, mock_get):
+        mock_msal = MagicMock()
+        mock_msal.get_accounts.return_value = []
+
+        mock_msal.acquire_token_by_authorization_code.return_value = {
+            "access_token": "mock_access_token"
+        }
+
+        self.mock_connect.return_value = mock_msal
+
+        mock_response = MagicMock(
+            status_code = 200
+        )
+        mock_get.return_value = mock_response
+
+        response = self.handler.check_connection()
+
+        assert isinstance(response, StatusResponse)
+        self.assertTrue(response.success)
+        self.assertFalse(response.error_message)
+
+    @patch('requests.get')
+    def test_check_connection_with_failed_connection(self, mock_get):
+        mock_msal = MagicMock()
+        mock_msal.get_accounts.return_value = []
+
+        mock_msal.acquire_token_by_authorization_code.return_value = {
+            "access_token": "mock_access_token"
+        }
+
+        self.mock_connect.return_value = mock_msal
+
+        mock_response = MagicMock(
+            status_code = 400
+        )
+        mock_get.return_value = mock_response
+
+        response = self.handler.check_connection()
+
+        self.assertFalse(response.success)
+        assert isinstance(response, StatusResponse)
+        self.assertTrue(response.error_message)
 
 
 if __name__ == '__main__':

@@ -92,6 +92,12 @@ class SalesforceHandler(APIHandler):
                 is_sandbox=self.connection_data.get('is_sandbox', False)
             )
             self.is_connected = True
+
+            # Register Salesforce tables.
+            for resource_name in self._get_resource_names():
+                table_class = create_table_class(resource_name)
+                self._register_table(resource_name.lower(), table_class(self))
+
             return self.connection
         except AuthenticationError as auth_error:
             logger.error(f"Authentication error connecting to Salesforce, {auth_error}!")
@@ -179,3 +185,15 @@ class SalesforceHandler(APIHandler):
             )
 
         return response
+
+    def _get_resource_names(self) -> None:
+        """
+        Retrieves the names of the Salesforce resources.
+
+        Returns:
+            None
+        """
+        if not self.resource_names:
+            self.resource_names = [resource['name'] for resource in self.connection.sobjects.describe()['sobjects']]
+
+        return self.resource_names

@@ -16,7 +16,6 @@ Before proceeding, ensure the following prerequisites are met:
 ## Connection
 
 Establish a connection to Salesforce from MindsDB by executing the following SQL command and providing its [handler name](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/salesforce_handler) as an engine.
-In the following example we are addressing a connection towards a Salesforce sandbox, use is_sanbox equal to false if you need to connect to a production environment.
 
 ```sql
 CREATE DATABASE salesforce_datasource
@@ -26,8 +25,7 @@ WITH
         "username": "demo@example.com",
         "password": "demo_password",
         "client_id": "3MVG9lKcPoNINVBIPJjdw1J9LLM82HnZz9Yh7ZJnY",
-        "client_secret": "5A52C1A1E21DF9012IODC9ISNXXAADDA9",
-        "is_sandbox": true
+        "client_secret": "5A52C1A1E21DF9012IODC9ISNXXAADDA9"
     };
 ```
 
@@ -38,23 +36,26 @@ Required connection parameters include the following:
 * `client_id`: The client ID (consumer key) from a connected app in Salesforce.
 * `client_secret`: The client secret (consumer secret) from a connected app in Salesforce.
 
-Optional parameter:
-* `is_sandbox`: If true connect to a sandbox (test.salesforce.com), if false or omitted it connects to a production instance (login.salesforce.com).
+Optional connection parameters include the following:
+
+* `is_sandbox`: The setting to indicate whether to connect to a Salesforce sandbox environment (`true`) or production environment (`false`). This parameter defaults to `false`.
 
 <Tip>
 To create a connected app in Salesforce and obtain the client ID and client secret, follow the steps given below:
 1. Log in to your Salesforce account.
-2. Go to `Setup` > `Apps` > `App Manager`.
-3. Click `New Connected App`.
-4. Fill in the required details. Esure that the `Enable OAuth Settings` checkbox is checked, set the `Callback URL` to wherever MindsDB is deployed followed by `/verify-auth` (e.g., `http://localhost:47334/verify-auth`), and choose the appropriate OAuth scopes.
-5. Click `Save`.
-6. Copy the `Consumer Key` (client ID) and `Consumer Secret` (client secret) from the connected app details under `Consumer Key and Secret`.
-7. Go to `Setup` > `Apps` > `Connected Apps` > `Manage Connected Apps`.
-8. Click on the connected app name.
+2. Go to `Settings` > `Open Advanced Setup` > `Apps` > `App Manager`.
+3. Click `New Connected App`, select `Create a Connected App` and click `Continue`.
+4. Fill in the required details, i.e., `Connected App Name`, `API Name` and `Contact Phone`.
+5. Select the `Enable OAuth Settings` checkbox, set the `Callback URL` to wherever MindsDB is deployed followed by `/verify-auth` (e.g., `http://localhost:47334/verify-auth`), and choose the following OAuth scopes:
+ - Manage user data via APIs (api)
+ - Perform requests at any time (refresh_token, offline_access)
+6. Click `Save` and then `Continue`.
+7. Click on `Manage Consumer Details` under `API (Enable OAuth Settings)`, and copy the Consumer Key (client ID) and Consumer Secret (client secret).
+8. Click on `Back to Manage Connected Apps` and then `Manage`.
 9. Click `Edit Policies`.
-10. Under `OAuth Policies`, ensure that the `Permitted Users` is set to `All users may self-authorize` and `IP Relaxation` is set to `Relax IP restrictions`.
+10. Under `OAuth Policies`, configure the `Permitted Users` and `IP Relaxation` settings according to your security policies. For example, to enable all users to access the app without enforcing any IP restrictions, select `All users may self-authorize` and `Relax IP restrictions` respectively. Leave the `Refresh Token Policy` set to `Refresh token is valid until revoked`.
 11. Click `Save`.
-12. Go to `Setup` > `Identity` > `OAuth and OpenID Connect Settings`.
+12. Go to `Identity` > `OAuth and OpenID Connect Settings`.
 13. Ensure that the `Allow OAuth Username-Password Flows` checkbox is checked.
 </Tip>
 
@@ -85,25 +86,3 @@ SELECT * FROM salesforce_datasource (
 <Note>
 The above examples utilize `salesforce_datasource` as the datasource name, which is defined in the `CREATE DATABASE` command.
 </Note>
-
-## Supported Tables
-
-The Salesforce integration supports the following tables:
-
-* `Account`: The table containing account information.
-* `Contact`: The table containing contact information for people you do business with.
-* `Opportunity`: The table containing sales opportunities.
-* `Lead`: The table containing potential sales leads.
-* `Task`: The table containing tasks and activities.
-* `Event`: The table containing calendar events.
-* `User`: The table containing user information.
-* `Product2`: The table containing product information.
-* `Pricebook2`: The table containing price book information.
-* `PricebookEntry`: The table containing price book entries.
-* `Order`: The table containing order information.
-* `OrderItem`: The table containing order items.
-* `Case`: The table containing customer service cases.
-* `Campaign`: The table containing marketing campaigns.
-* `CampaignMember`: The table containing campaign members.
-* `Contract`: The table containing contract information.
-* `Asset`: The table containing asset information.

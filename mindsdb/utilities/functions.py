@@ -1,6 +1,7 @@
 import os
 import base64
 import hashlib
+import json
 import datetime
 import textwrap
 from functools import wraps
@@ -195,3 +196,13 @@ def decrypt(encripted: bytes, key: str) -> bytes:
 
     cipher = Fernet(fernet_key)
     return cipher.decrypt(encripted)
+
+
+def encrypt_json(data: dict, key: str) -> bytes:
+    json_str = json.dumps(data)
+    return encrypt(json_str.encode(), key)
+
+
+def decrypt_json(encrypted_data: bytes, key: str) -> dict:
+    decrypted = decrypt(encrypted_data, key)
+    return json.loads(decrypted)

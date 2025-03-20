@@ -1,1 +1,1 @@
-pygithub
+pygithub==2.6.1

@@ -27,7 +27,7 @@ logger = log.getLogger(__name__)
 
 
 # todo Issue #7316 add support for different indexes and search algorithms e.g. cosine similarity or L2 norm
-class PgVectorHandler(VectorStoreHandler, PostgresHandler):
+class PgVectorHandler(PostgresHandler, VectorStoreHandler):
     """This handler handles connection and execution of the PostgreSQL with pgvector extension statements."""
 
     name = "pgvector"
@@ -64,11 +64,11 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
             return Response(RESPONSE_TYPE.OK)
         return super().get_tables()
 
-    def native_query(self, query) -> Response:
+    def native_query(self, query, params=None) -> Response:
         # Prevent execute native queries
         if self._is_shared_db:
             return Response(RESPONSE_TYPE.OK)
-        return super().native_query(query)
+        return super().native_query(query, params=params)
 
     def raw_query(self, query, params=None) -> Response:
         resp = super().native_query(query, params)
@@ -114,13 +114,27 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         if conditions is None:
             return {}
 
-        return {
-            condition.column.split(".")[-1]: {
+        filter_conditions = {}
+
+        for condition in conditions:
+
+            parts = condition.column.split(".")
+            key = parts[0]
+            # converts 'col.el1.el2' to col->'el1'->>'el2'
+            if len(parts) > 1:
+                # intermediate elements
+                for el in parts[1:-1]:
+                    key += f" -> '{el}'"
+
+                # last element
+                key += f" ->> '{parts[-1]}'"
+
+            filter_conditions[key] = {
                 "op": condition.op.value,
                 "value": condition.value,
             }
-            for condition in conditions
-        }
+
+        return filter_conditions
 
     @staticmethod
     def _construct_where_clause(filter_conditions=None):

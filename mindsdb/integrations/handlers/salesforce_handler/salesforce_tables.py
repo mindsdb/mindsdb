@@ -11,7 +11,7 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 
-def create_table_class(table_name: Text, resource_name: Text) -> APIResource:
+def create_table_class(resource_name: Text) -> APIResource:
     """
     Creates a table class for the given Salesforce resource.
     """
@@ -31,7 +31,7 @@ def create_table_class(table_name: Text, resource_name: Text) -> APIResource:
             Returns:
                 pd.DataFrame: A DataFrame containing the data retrieved from the Salesforce resource.
             """
-            query.from_table = table_name
+            query.from_table = resource_name
 
             # SOQL does not support * in SELECT queries. Replace * with column names.
             if isinstance(query.targets[0], Star):

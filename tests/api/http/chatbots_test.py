@@ -1,64 +1,24 @@
-import os
 import pytest
-from tempfile import TemporaryDirectory
-
-from mindsdb.api.http.initialize import initialize_app
-from mindsdb.migrations import migrate
-from mindsdb.interfaces.storage import db
-from mindsdb.utilities.config import Config
+from http import HTTPStatus
+from tests.api.http.conftest import create_demo_db, create_dummy_ml
 
 
-@pytest.fixture(scope="session", autouse=True)
-def app():
-    old_minds_db_con = ''
-    if 'MINDSDB_DB_CON' in os.environ:
-        old_minds_db_con = os.environ['MINDSDB_DB_CON']
-    with TemporaryDirectory(prefix='chatbots_test_') as temp_dir:
-        db_path = 'sqlite:///' + os.path.join(temp_dir, 'mindsdb.sqlite3.db')
-        # Need to change env variable for migrate module, since it calls db.init().
-        os.environ['MINDSDB_DB_CON'] = db_path
-        db.init()
-        migrate.migrate_to_head()
-        app = initialize_app(Config(), True, False)
+def test_prepare(client):
+    create_demo_db(client)
+    create_dummy_ml(client)
 
-        # Create an integration database.
-        test_client = app.test_client()
-        # From Learning Hub.
-        example_db_data = {
-            'database': {
-                'name': 'example_db',
-                'engine': 'postgres',
-                'parameters': {
-                    "user": "demo_user",
-                    "password": "demo_password",
-                    "host": "samples.mindsdb.com",
-                    "port": "5432",
-                    "database": "demo"
-                }
-            }
-        }
-        response = test_client.post('/api/databases', json=example_db_data, follow_redirects=True)
-        assert '201' in response.status
-
-        # Create model to use in all tests.
-        create_query = '''
+    # Create model to use in all tests.
+    create_query = '''
         CREATE MODEL mindsdb.test_model
         FROM example_db (SELECT * FROM demo_data.home_rentals)
         PREDICT rental_price
-        '''
-        train_data = {
-            'query': create_query
-        }
-        response = test_client.post('/api/projects/mindsdb/models', json=train_data, follow_redirects=True)
-        assert '201' in response.status
-
-        yield app
-    os.environ['MINDSDB_DB_CON'] = old_minds_db_con
-
-
-@pytest.fixture()
-def client(app):
-    return app.test_client()
+        USING engine = 'dummy_ml', join_learn_process = true
+    '''
+    train_data = {
+        'query': create_query
+    }
+    response = client.post('/api/projects/mindsdb/models', json=train_data, follow_redirects=True)
+    assert '201' in response.status
 
 
 @pytest.fixture()
@@ -75,7 +35,7 @@ def test_db(client):
 
 def test_get_all_chatbots(client, test_db):
     response = client.get('/api/projects/mindsdb/chatbots', follow_redirects=True)
-    assert '200' in response.status
+    assert response.status_code == HTTPStatus.OK
     assert len(response.get_json()) == 0
 
     chatbot_data = {
@@ -110,14 +70,15 @@ def test_get_all_chatbots(client, test_db):
         },
         'created_at': actual_chatbot['created_at'],
         'id': actual_chatbot['id'],
-        'project': 'mindsdb'
+        'project': 'mindsdb',
+        'webhook_token': None
     }
     assert actual_chatbot == expected_chatbot
 
 
 def test_get_all_chatbots_project_not_found(client):
     response = client.get('/api/projects/glorp/chatbots', follow_redirects=True)
-    assert '404' in response.status
+    assert response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_get_chatbot(client, test_db):
@@ -135,7 +96,7 @@ def test_get_chatbot(client, test_db):
     client.post('/api/projects/mindsdb/chatbots', json=chatbot_data, follow_redirects=True)
 
     response = client.get('/api/projects/mindsdb/chatbots/test_get_chatbot', follow_redirects=True)
-    assert '200' in response.status
+    assert response.status_code == HTTPStatus.OK
     actual_chatbot = response.get_json()
 
     expected_chatbot = {
@@ -151,19 +112,20 @@ def test_get_chatbot(client, test_db):
         },
         'created_at': actual_chatbot['created_at'],
         'id': actual_chatbot['id'],
-        'project': 'mindsdb'
+        'project': 'mindsdb',
+        'webhook_token': None
     }
     assert actual_chatbot == expected_chatbot
 
 
 def test_get_chatbot_not_found(client):
     response = client.get('/api/projects/mindsdb/chatbots/test_get_chatbot_not_found', follow_redirects=True)
-    assert '404' in response.status
+    assert response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_get_chatbot_project_not_found(client):
     response = client.get('/api/projects/zoop/chatbots/test_get_chatbot', follow_redirects=True)
-    assert '404' in response.status
+    assert response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_post_chatbot(client, test_db):
@@ -179,7 +141,7 @@ def test_post_chatbot(client, test_db):
         }
     }
     response = client.post('/api/projects/mindsdb/chatbots', json=chatbot_data, follow_redirects=True)
-    assert '201' in response.status
+    assert response.status_code == HTTPStatus.CREATED
     created_chatbot = response.get_json()
 
     expected_chatbot = {
@@ -192,7 +154,8 @@ def test_post_chatbot(client, test_db):
         },
         'created_at': created_chatbot['created_at'],
         'id': created_chatbot['id'],
-        'project_id': created_chatbot['project_id']
+        'project_id': created_chatbot['project_id'],
+        'webhook_token': None
     }
     assert created_chatbot == expected_chatbot
 
@@ -208,7 +171,7 @@ def test_post_chatbot_no_chatbot_fails(client, test_db):
         }
     }
     response = client.post('/api/projects/mindsdb/chatbots', json=chatbot_data, follow_redirects=True)
-    assert '400' in response.status
+    assert response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_post_chatbot_no_name_fails(client, test_db):
@@ -223,7 +186,7 @@ def test_post_chatbot_no_name_fails(client, test_db):
         }
     }
     response = client.post('/api/projects/mindsdb/chatbots', json=chatbot_data, follow_redirects=True)
-    assert '400' in response.status
+    assert response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_post_chatbot_no_model_name_fails(client, test_db):
@@ -238,7 +201,7 @@ def test_post_chatbot_no_model_name_fails(client, test_db):
         }
     }
     response = client.post('/api/projects/mindsdb/chatbots', json=chatbot_data, follow_redirects=True)
-    assert '400' in response.status
+    assert response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_post_chatbot_no_database_id_fails(client):
@@ -253,7 +216,7 @@ def test_post_chatbot_no_database_id_fails(client):
         }
     }
     response = client.post('/api/projects/mindsdb/chatbots', json=chatbot_data, follow_redirects=True)
-    assert '400' in response.status
+    assert response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_post_chatbot_model_does_not_exist_fails(client, test_db):
@@ -269,7 +232,7 @@ def test_post_chatbot_model_does_not_exist_fails(client, test_db):
         }
     }
     response = client.post('/api/projects/mindsdb/chatbots', json=chatbot_data, follow_redirects=True)
-    assert '404' in response.status
+    assert response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_post_chatbot_project_does_not_exist_fails(client, test_db):
@@ -285,7 +248,7 @@ def test_post_chatbot_project_does_not_exist_fails(client, test_db):
         }
     }
     response = client.post('/api/projects/bloop/chatbots', json=chatbot_data, follow_redirects=True)
-    assert '404' in response.status
+    assert response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_put_chatbot_create(client, test_db):
@@ -301,7 +264,7 @@ def test_put_chatbot_create(client, test_db):
         }
     }
     response = client.put('/api/projects/mindsdb/chatbots/test_put_chatbot_create', json=chatbot_data, follow_redirects=True)
-    assert '201' in response.status
+    assert response.status_code == HTTPStatus.CREATED
     created_chatbot = response.get_json()
 
     expected_chatbot = {
@@ -314,7 +277,8 @@ def test_put_chatbot_create(client, test_db):
         },
         'created_at': created_chatbot['created_at'],
         'id': created_chatbot['id'],
-        'project_id': created_chatbot['project_id']
+        'project_id': created_chatbot['project_id'],
+        'webhook_token': None
     }
     assert created_chatbot == expected_chatbot
 
@@ -332,7 +296,7 @@ def test_put_chatbot_update(client, test_db):
         }
     }
     response = client.put('/api/projects/mindsdb/chatbots/test_put_chatbot_update', json=chatbot_data, follow_redirects=True)
-    assert '201' in response.status
+    assert response.status_code == HTTPStatus.CREATED
 
     updated_chatbot_data = {
         'chatbot': {
@@ -342,7 +306,7 @@ def test_put_chatbot_update(client, test_db):
         }
     }
     response = client.put('/api/projects/mindsdb/chatbots/test_put_chatbot_update', json=updated_chatbot_data, follow_redirects=True)
-    assert '200' in response.status
+    assert response.status_code == HTTPStatus.OK
     updated_chatbot = response.get_json()
 
     expected_chatbot = {
@@ -356,7 +320,8 @@ def test_put_chatbot_update(client, test_db):
         },
         'created_at': updated_chatbot['created_at'],
         'id': updated_chatbot['id'],
-        'project_id': updated_chatbot['project_id']
+        'project_id': updated_chatbot['project_id'],
+        'webhook_token': None
     }
     assert updated_chatbot == expected_chatbot
 
@@ -372,7 +337,7 @@ def test_put_chatbot_no_chatbot_fails(client, test_db):
         }
     }
     response = client.put('/api/projects/mindsdb/chatbots/test_put_chatbot_update', json=chatbot_data, follow_redirects=True)
-    assert '400' in response.status
+    assert response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_put_chatbot_project_not_found(client, test_db):
@@ -388,7 +353,7 @@ def test_put_chatbot_project_not_found(client, test_db):
         }
     }
     response = client.put('/api/projects/flumpus/chatbots/test_put_chatbot_project_not_found', json=chatbot_data, follow_redirects=True)
-    assert '404' in response.status
+    assert response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_put_chatbot_model_not_found(client, test_db):
@@ -404,7 +369,7 @@ def test_put_chatbot_model_not_found(client, test_db):
         }
     }
     response = client.put('/api/projects/mindsdb/chatbots/test_put_chatbot_model_not_found', json=chatbot_data, follow_redirects=True)
-    assert '404' in response.status
+    assert response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_put_chatbot_create_no_name_fails(client, test_db):
@@ -419,7 +384,7 @@ def test_put_chatbot_create_no_name_fails(client, test_db):
         }
     }
     response = client.put('/api/projects/mindsdb/chatbots/test_put_chatbot_create_no_name_fails', json=chatbot_data, follow_redirects=True)
-    assert '400' in response.status
+    assert response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_put_chatbot_create_no_model_fails(client, test_db):
@@ -434,7 +399,7 @@ def test_put_chatbot_create_no_model_fails(client, test_db):
         }
     }
     response = client.put('/api/projects/mindsdb/chatbots/test_put_chatbot_create_no_model_fails', json=chatbot_data, follow_redirects=True)
-    assert '400' in response.status
+    assert response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_put_chatbot_create_no_database_id_fails(client):
@@ -449,7 +414,7 @@ def test_put_chatbot_create_no_database_id_fails(client):
         }
     }
     response = client.put('/api/projects/mindsdb/chatbots/test_put_chatbot_create_no_database_id_fails', json=chatbot_data, follow_redirects=True)
-    assert '400' in response.status
+    assert response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_delete_chatbot(client, test_db):
@@ -467,14 +432,14 @@ def test_delete_chatbot(client, test_db):
     client.post('/api/projects/mindsdb/chatbots', json=chatbot_data, follow_redirects=True)
 
     response = client.delete('/api/projects/mindsdb/chatbots/test_delete_chatbot', follow_redirects=True)
-    assert '204' in response.status
+    assert response.status_code == HTTPStatus.NO_CONTENT
 
 
 def test_delete_chatbot_not_found(client):
     response = client.delete('/api/projects/mindsdb/chatbots/test_delete_chatbot_not_found', follow_redirects=True)
-    assert '404' in response.status
+    assert response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_delete_chatbot_project_not_found(client):
     response = client.delete('/api/projects/krombopulos/chatbots/test_post_chatbot', follow_redirects=True)
-    assert '404' in response.status
+    assert response.status_code == HTTPStatus.NOT_FOUND

@@ -38,6 +38,7 @@ class TestMSTeamsHandler(BaseHandlerTestSetup, unittest.TestCase):
     def create_handler(self):
         mock_handler_storage = MagicMock()
         mock_handler_storage.file_get.side_effect = FileNotFoundError
+        mock_handler_storage.file_set.return_value = None
 
         return MSTeamsHandler(
             'teams',
@@ -76,9 +77,29 @@ class TestMSTeamsHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         self.assertFalse(self.handler.is_connected)
 
+    @patch('msal.SerializableTokenCache')
+    def test_connect_with_valid_code_returns_access_token(self, mock_token_cache):
+        """"
+        Test if `connect` method successfully returns an access token when the authentication code is provided and is valid.
+        """
+        mock_msal = MagicMock()
+        mock_msal.get_accounts.return_value = []
 
-    # def test_connect_with_code_returns_access_token(self):
-    #     pass
+        mock_msal.acquire_token_by_authorization_code.return_value = {
+            "access_token": "mock_access_token"
+        }
+
+        self.mock_connect.return_value = mock_msal
+
+        mock_token_cache.has_state_changed = True
+
+        connection = self.handler.connect()
+
+        self.assertIsNotNone(connection)
+        self.assertTrue(self.handler.is_connected)
+        # TODO: Assert connect() is called only once.
+
+        # TODO: Asserts _register_table() is called for each table.
 
 
 if __name__ == '__main__':

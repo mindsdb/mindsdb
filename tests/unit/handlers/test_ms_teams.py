@@ -9,7 +9,8 @@ import pandas as pd
 from base_handler_test import BaseHandlerTestSetup, BaseAPIResourceTestSetup
 from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_handler import MSTeamsHandler
 from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_tables import (
-    TeamsTable
+    TeamsTable,
+    ChannelsTable
 )
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
@@ -17,6 +18,7 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import AuthException
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
 
 
 class TestMSTeamsHandler(BaseHandlerTestSetup, unittest.TestCase):
@@ -232,6 +234,11 @@ class MSTeamsResourceTestSetup(BaseAPIResourceTestSetup):
     def create_patcher(self):
         return patch('msal.ConfidentialClientApplication')
     
+    def generate_mock_data(self, columns = None):
+        if columns is None:
+            columns = self.resource.get_columns()
+        return {column: f"mock_{column}" for column in columns}
+
 
 class TestMSTeamsTeamsTable(MSTeamsResourceTestSetup, unittest.TestCase):
     def create_resource(self):
@@ -240,7 +247,7 @@ class TestMSTeamsTeamsTable(MSTeamsResourceTestSetup, unittest.TestCase):
     @patch('requests.get')
     def test_list(self, mock_get):
         """"
-        Test if `list` method successfully returns a Response object with the expected data when the request is successful.
+        Test if `list` method successfully returns a pandas DataFrame with data for all teams.
         """
         mock_msal = MagicMock()
         mock_msal.get_accounts.return_value = []
@@ -255,7 +262,7 @@ class TestMSTeamsTeamsTable(MSTeamsResourceTestSetup, unittest.TestCase):
             status_code = 200
         )
 
-        mock_team = {column: f"mock{column}" for column in self.resource.get_columns()}
+        mock_team = self.generate_mock_data()
         mock_response.json.return_value = {
             "value": [
                 mock_team
@@ -267,6 +274,174 @@ class TestMSTeamsTeamsTable(MSTeamsResourceTestSetup, unittest.TestCase):
 
         assert isinstance(response, pd.DataFrame)
         pd.testing.assert_frame_equal(response, pd.DataFrame([mock_team]))
+
+
+class TestMSTeamsChannelsTable(MSTeamsResourceTestSetup, unittest.TestCase):
+    def create_resource(self):
+        return ChannelsTable(self.handler)
+    
+    @patch('requests.get')
+    def test_list_all(self, mock_get):
+        """"
+        Test if `list` method successfully returns a pandas DataFrame with data for all channels in all teams.
+        """
+        mock_msal = MagicMock()
+        mock_msal.get_accounts.return_value = []
+
+        mock_msal.acquire_token_by_authorization_code.return_value = {
+            "access_token": "mock_access_token"
+        }
+
+        self.mock_connect.return_value = mock_msal
+
+        mock_response = MagicMock(
+            status_code = 200
+        )
+
+        mock_channel = self.generate_mock_data()
+        mock_response.json.return_value = {
+            "value": [
+                mock_channel
+            ]
+        }
+        mock_get.return_value = mock_response
+
+        response = self.resource.list(
+            conditions=[]
+        )
+
+        assert isinstance(response, pd.DataFrame)
+        pd.testing.assert_frame_equal(response, pd.DataFrame([mock_channel]))
+    
+    @patch('requests.get')
+    def test_list_with_team_id(self, mock_get):
+        """"
+        Test if `list` method successfully returns a pandas DataFrame with data for all channels in a team.
+        """
+        mock_msal = MagicMock()
+        mock_msal.get_accounts.return_value = []
+
+        mock_msal.acquire_token_by_authorization_code.return_value = {
+            "access_token": "mock_access_token"
+        }
+
+        self.mock_connect.return_value = mock_msal
+
+        mock_response = MagicMock(
+            status_code = 200
+        )
+
+        mock_channel = self.generate_mock_data()
+        mock_response.json.return_value = {
+            "value": [
+                mock_channel
+            ]
+        }
+        mock_get.return_value = mock_response
+
+        response = self.resource.list(
+            conditions=[
+                FilterCondition(
+                    column='teamId',
+                    op=FilterOperator.EQUAL,
+                    value="mock_team_id"
+                )
+            ]
+        )
+
+        assert isinstance(response, pd.DataFrame)
+        pd.testing.assert_frame_equal(response, pd.DataFrame([mock_channel]))
+
+    @patch('requests.get')
+    def test_list_with_channel_id(self, mock_get):
+        """"
+        Test if `list` method successfully returns a pandas DataFrame with data for a specific channel in a team.
+        """
+        mock_msal = MagicMock()
+        mock_msal.get_accounts.return_value = []
+
+        mock_msal.acquire_token_by_authorization_code.return_value = {
+            "access_token": "mock_access_token"
+        }
+
+        self.mock_connect.return_value = mock_msal
+
+        mock_response_1 = MagicMock(
+            status_code = 200
+        )
+        mock_response_2 = MagicMock(
+            status_code = 200
+        )
+
+        mock_team = self.generate_mock_data(
+            columns=TeamsTable(self.handler).get_columns()
+        )
+        mock_channel = self.generate_mock_data()
+        mock_response_1.json.return_value = {
+            "value": [
+                mock_team
+            ]
+        }
+        mock_response_2.json.return_value = {
+            "value": [
+                mock_channel
+            ]
+        }
+
+        mock_get.side_effect = [mock_response_1, mock_response_2]
+
+        response = self.resource.list(
+            conditions=[
+                FilterCondition(
+                    column='id',
+                    op=FilterOperator.EQUAL,
+                    value="mock_id"
+                )
+            ]
+        )
+
+        assert isinstance(response, pd.DataFrame)
+        pd.testing.assert_frame_equal(response, pd.DataFrame([mock_channel]))
+
+    @patch('requests.get')
+    def test_list_with_team_id_and_channel_id(self, mock_get):
+        """"
+        Test if `list` method successfully returns a pandas DataFrame with data for a specific channel in a specific team.
+        """
+        mock_msal = MagicMock()
+        mock_msal.get_accounts.return_value = []
+
+        mock_msal.acquire_token_by_authorization_code.return_value = {
+            "access_token": "mock_access_token"
+        }
+
+        self.mock_connect.return_value = mock_msal
+
+        mock_response = MagicMock(
+            status_code = 200
+        )
+
+        mock_channel = self.generate_mock_data()
+        mock_response.json.return_value = mock_channel
+        mock_get.return_value = mock_response
+
+        response = self.resource.list(
+            conditions=[
+                FilterCondition(
+                    column='teamId',
+                    op=FilterOperator.EQUAL,
+                    value="mock_team_id"
+                ),
+                FilterCondition(
+                    column='id',
+                    op=FilterOperator.EQUAL,
+                    value="mock_id"
+                )
+            ]
+        )
+
+        assert isinstance(response, pd.DataFrame)
+        pd.testing.assert_frame_equal(response, pd.DataFrame([mock_channel]))
 
 
 if __name__ == '__main__':

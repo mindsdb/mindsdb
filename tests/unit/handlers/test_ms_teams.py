@@ -231,16 +231,6 @@ class MSTeamsResourceTestSetup(BaseAPIResourceTestSetup):
     def create_patcher(self):
         return patch('msal.ConfidentialClientApplication')
     
-    def generate_mock_data(self, columns = None):
-        if columns is None:
-            columns = self.resource.get_columns()
-        return {column: f"mock_{column}" for column in columns}
-
-
-class TestMSTeamsTeamsTable(MSTeamsResourceTestSetup, unittest.TestCase):
-    def create_resource(self):
-        return TeamsTable(self.handler)
-    
     def setUp(self):
         super().setUp()
         mock_msal = MagicMock()
@@ -251,6 +241,16 @@ class TestMSTeamsTeamsTable(MSTeamsResourceTestSetup, unittest.TestCase):
         }
 
         self.mock_connect.return_value = mock_msal
+    
+    def generate_mock_data(self, columns = None):
+        if columns is None:
+            columns = self.resource.get_columns()
+        return {column: f"mock_{column}" for column in columns}
+
+
+class TestMSTeamsTeamsTable(MSTeamsResourceTestSetup, unittest.TestCase):
+    def create_resource(self):
+        return TeamsTable(self.handler)
     
     @patch('requests.get')
     def test_list(self, mock_get):
@@ -405,6 +405,89 @@ class TestMSTeamsChannelsTable(MSTeamsResourceTestSetup, unittest.TestCase):
 
         assert isinstance(response, pd.DataFrame)
         pd.testing.assert_frame_equal(response, pd.DataFrame([mock_channel]))
+
+
+class TestMSTeamsChannelMessagesTable(MSTeamsResourceTestSetup, unittest.TestCase):
+    def create_resource(self):
+        return ChannelMessagesTable(self.handler)
+
+    def test_list_without_team_id_and_channel_id_raises_error(self):
+        """"
+        Test if `list` method raises a ValueError when teamId and channelId are not provided.
+        """
+        with self.assertRaises(ValueError, msg="The 'channelIdentity_teamId' and 'channelIdentity_channelId' columns are required."):
+            self.resource.list(conditions=[])
+
+    @patch('requests.get')
+    def test_list_with_team_id_and_channel_id(self, mock_get):
+        """"
+        Test if `list` method successfully returns a pandas DataFrame with data for all messages in a specific channel in a specific team.
+        """
+        mock_response = MagicMock(
+            status_code = 200
+        )
+
+        mock_message = self.generate_mock_data()
+        mock_response.json.return_value = {
+            "value": [
+                mock_message
+            ]
+        }
+        mock_get.return_value = mock_response
+
+        response = self.resource.list(
+            conditions=[
+                FilterCondition(
+                    column='channelIdentity_teamId',
+                    op=FilterOperator.EQUAL,
+                    value="mock_team_id"
+                ),
+                FilterCondition(
+                    column='channelIdentity_channelId',
+                    op=FilterOperator.EQUAL,
+                    value="mock_channel_id"
+                )
+            ]
+        )
+
+        assert isinstance(response, pd.DataFrame)
+        pd.testing.assert_frame_equal(response, pd.DataFrame([mock_message]))
+
+    @patch('requests.get')
+    def test_list_with_team_id_channel_id_and_message_id(self, mock_get):
+        """"
+        Test if `list` method successfully returns a pandas DataFrame with data for a specific message in a specific channel in a specific team.
+        """
+        mock_response = MagicMock(
+            status_code = 200
+        )
+
+        mock_message = self.generate_mock_data()
+        mock_response.json.return_value = mock_message
+        mock_get.return_value = mock_response
+
+        response = self.resource.list(
+            conditions=[
+                FilterCondition(
+                    column='channelIdentity_teamId',
+                    op=FilterOperator.EQUAL,
+                    value="mock_team_id"
+                ),
+                FilterCondition(
+                    column='channelIdentity_channelId',
+                    op=FilterOperator.EQUAL,
+                    value="mock_channel_id"
+                ),
+                FilterCondition(
+                    column='id',
+                    op=FilterOperator.EQUAL,
+                    value="mock_id"
+                )
+            ]
+        )
+
+        assert isinstance(response, pd.DataFrame)
+        pd.testing.assert_frame_equal(response, pd.DataFrame([mock_message]))
 
 
 if __name__ == '__main__':

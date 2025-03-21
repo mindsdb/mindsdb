@@ -2,20 +2,17 @@ from collections import OrderedDict
 import unittest
 from unittest.mock import patch, MagicMock
 
-from mindsdb_sql_parser import ast
-from mindsdb_sql_parser.ast import Select, Identifier, Star, Constant
 import pandas as pd
 
 from base_handler_test import BaseHandlerTestSetup, BaseAPIResourceTestSetup
 from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_handler import MSTeamsHandler
 from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_tables import (
     TeamsTable,
-    ChannelsTable
+    ChannelsTable,
+    ChannelMessagesTable
 )
 from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
-    RESPONSE_TYPE
 )
 from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import AuthException
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
@@ -244,11 +241,8 @@ class TestMSTeamsTeamsTable(MSTeamsResourceTestSetup, unittest.TestCase):
     def create_resource(self):
         return TeamsTable(self.handler)
     
-    @patch('requests.get')
-    def test_list(self, mock_get):
-        """"
-        Test if `list` method successfully returns a pandas DataFrame with data for all teams.
-        """
+    def setUp(self):
+        super().setUp()
         mock_msal = MagicMock()
         mock_msal.get_accounts.return_value = []
 
@@ -257,7 +251,12 @@ class TestMSTeamsTeamsTable(MSTeamsResourceTestSetup, unittest.TestCase):
         }
 
         self.mock_connect.return_value = mock_msal
-
+    
+    @patch('requests.get')
+    def test_list(self, mock_get):
+        """"
+        Test if `list` method successfully returns a pandas DataFrame with data for all teams.
+        """
         mock_response = MagicMock(
             status_code = 200
         )
@@ -285,15 +284,6 @@ class TestMSTeamsChannelsTable(MSTeamsResourceTestSetup, unittest.TestCase):
         """"
         Test if `list` method successfully returns a pandas DataFrame with data for all channels in all teams.
         """
-        mock_msal = MagicMock()
-        mock_msal.get_accounts.return_value = []
-
-        mock_msal.acquire_token_by_authorization_code.return_value = {
-            "access_token": "mock_access_token"
-        }
-
-        self.mock_connect.return_value = mock_msal
-
         mock_response = MagicMock(
             status_code = 200
         )
@@ -318,15 +308,6 @@ class TestMSTeamsChannelsTable(MSTeamsResourceTestSetup, unittest.TestCase):
         """"
         Test if `list` method successfully returns a pandas DataFrame with data for all channels in a team.
         """
-        mock_msal = MagicMock()
-        mock_msal.get_accounts.return_value = []
-
-        mock_msal.acquire_token_by_authorization_code.return_value = {
-            "access_token": "mock_access_token"
-        }
-
-        self.mock_connect.return_value = mock_msal
-
         mock_response = MagicMock(
             status_code = 200
         )
@@ -357,15 +338,6 @@ class TestMSTeamsChannelsTable(MSTeamsResourceTestSetup, unittest.TestCase):
         """"
         Test if `list` method successfully returns a pandas DataFrame with data for a specific channel in a team.
         """
-        mock_msal = MagicMock()
-        mock_msal.get_accounts.return_value = []
-
-        mock_msal.acquire_token_by_authorization_code.return_value = {
-            "access_token": "mock_access_token"
-        }
-
-        self.mock_connect.return_value = mock_msal
-
         mock_response_1 = MagicMock(
             status_code = 200
         )
@@ -408,15 +380,6 @@ class TestMSTeamsChannelsTable(MSTeamsResourceTestSetup, unittest.TestCase):
         """"
         Test if `list` method successfully returns a pandas DataFrame with data for a specific channel in a specific team.
         """
-        mock_msal = MagicMock()
-        mock_msal.get_accounts.return_value = []
-
-        mock_msal.acquire_token_by_authorization_code.return_value = {
-            "access_token": "mock_access_token"
-        }
-
-        self.mock_connect.return_value = mock_msal
-
         mock_response = MagicMock(
             status_code = 200
         )

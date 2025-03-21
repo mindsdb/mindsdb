@@ -94,6 +94,8 @@ class MySQLHandler(DatabaseHandler):
                 config["ssl_key"] = ssl_key
         if 'collation' not in config:
             config['collation'] = 'utf8mb4_general_ci'
+        if 'use_pure' not in config:
+            config['use_pure'] = True
         try:
             connection = mysql.connector.connect(**config)
             connection.autocommit = True

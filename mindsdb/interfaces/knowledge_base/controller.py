@@ -281,7 +281,6 @@ class KnowledgeBaseTable:
                         **base_metadata,
                         'original_row_id': str(row_id),
                         'content_column': col,
-                        'content_type': col.split('_')[-1] if '_' in col else 'text'
                     }
 
                     raw_documents.append(Document(
@@ -352,7 +351,7 @@ class KnowledgeBaseTable:
             logger.debug(f"Added IDs: {df_out[TableField.ID.value].tolist()}")
 
         # -- prepare content and metadata --
-        content_columns = params.get('content_columns')
+        content_columns = params.get('content_columns', [TableField.CONTENT.value])
         metadata_columns = params.get('metadata_columns')
 
         logger.debug(f"Processing with: content_columns={content_columns}, metadata_columns={metadata_columns}")
@@ -387,17 +386,6 @@ class KnowledgeBaseTable:
                 # all the rest columns
                 metadata_columns = list(set(columns).difference(content_columns))
 
-        elif metadata_columns is not None:
-            metadata_columns = list(set(metadata_columns).intersection(columns))
-            # use all unused columns is content
-            content_columns = list(set(columns).difference(metadata_columns))
-        elif TableField.METADATA.value in columns:
-            metadata_columns = [TableField.METADATA.value]
-            content_columns = list(set(columns).difference(metadata_columns))
-        else:
-            # all columns go to content
-            content_columns = columns
-
         # Add content columns directly (don't combine them)
         for col in content_columns:
             df_out[col] = df[col]
@@ -417,6 +405,9 @@ class KnowledgeBaseTable:
                         value = float(value)
                     elif pd.api.types.is_bool_dtype(value):
                         value = bool(value)
+                    elif isinstance(value, dict):
+                        metadata.update(value)
+                        continue
                     else:
                         value = str(value)
                     metadata[col] = value
@@ -840,6 +831,8 @@ class KnowledgeBaseController:
         # drop objects if they were created automatically
         if 'default_vector_storage' in kb.params:
             try:
+                handler = self.session.datahub.get(kb.params['default_vector_storage']).integration_handler
+                handler.drop_table(kb.vector_database_table)
                 self.session.integration_controller.delete(kb.params['default_vector_storage'])
             except EntityNotExistsError:
                 pass

@@ -39,8 +39,31 @@ class SalesforceHandler(APIHandler):
 
         self.connection = None
         self.is_connected = False
-        self.thread_safe = True
-        self.resource_names = []
+
+        # Register Salesforce tables.
+        self.resource_names = {
+            'Account',
+            'Contact',
+            'Opportunity',
+            'Lead',
+            'Task',
+            'Event',
+            'User',
+            'Product2',
+            'Pricebook2',
+            'PricebookEntry',
+            'Order',
+            'OrderItem',
+            'Cases',
+            'Campaign',
+            'CampaignMember',
+            'Contract',
+            'Asset'
+        }
+
+        for resource_name in self.resource_names:
+            table_class = create_table_class(resource_name, resource_name)
+            self._register_table(resource_name, table_class(self))
 
     def connect(self) -> salesforce_api.client.Client:
         """

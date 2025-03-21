@@ -87,8 +87,6 @@ class TestMSTeamsHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         self.assertFalse(self.handler.is_connected)
 
-        # TODO: Assert connect() is only called once.
-
     @patch('msal.SerializableTokenCache')
     def test_connect_with_valid_code_returns_access_token(self, mock_token_cache):
         """"
@@ -109,17 +107,30 @@ class TestMSTeamsHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         self.assertIsNotNone(connection)
         self.assertTrue(self.handler.is_connected)
-        # TODO: Assert connect() is called only once.
-
-        # TODO: Asserts _register_table() is called for each table.
 
     def test_connect_with_invalid_code_raises_error(self):
-        pass
+        """"
+        Test if `connect` method raises an AuthException when the authentication code is invalid.
+        """
+        mock_msal = MagicMock()
+        mock_msal.get_accounts.return_value = []
+
+        mock_msal.acquire_token_by_authorization_code.return_value = {
+            "error": "invalid_grant",
+            "error_description": "AADSTS70000: The provided authorization code is invalid or has expired."
+        }
+
+        self.mock_connect.return_value = mock_msal
+
+        with self.assertRaises(AuthException, msg='Error getting access token: AADSTS70000: The provided authorization code is invalid or has expired.'):
+            self.handler.connect()
+
+        self.assertFalse(self.handler.is_connected)
 
     @patch('msal.SerializableTokenCache')
     def test_connect_with_cache_returns_access_code(self, mock_token_cache):
         """"
-        Test if `connect` method successfully returns an access token when some content is available in the cache.
+        Test if `connect` method successfully returns an access token when valid information is found in the cache.
         """
         self.handler = self.create_handler_without_code_with_cache()
 
@@ -142,12 +153,12 @@ class TestMSTeamsHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         self.assertIsNotNone(connection)
         self.assertTrue(self.handler.is_connected)
-        # TODO: Assert connect() is called only once.
-
-        # TODO: Asserts _register_table() is called for each table.
 
     @patch('requests.get')
     def test_check_connection_with_successful_connection(self, mock_get):
+        """"
+        Test if `check_connection` method successfully returns a StatusResponse object with success=True and no error message when the connection check is successful.
+        """
         mock_msal = MagicMock()
         mock_msal.get_accounts.return_value = []
 
@@ -170,6 +181,9 @@ class TestMSTeamsHandler(BaseHandlerTestSetup, unittest.TestCase):
 
     @patch('requests.get')
     def test_check_connection_with_failed_connection(self, mock_get):
+        """"
+        Test if `check_connection` method successfully returns a StatusResponse object with success=False and an error message when the connection check fails.
+        """
         mock_msal = MagicMock()
         mock_msal.get_accounts.return_value = []
 

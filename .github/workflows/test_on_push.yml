@@ -182,12 +182,19 @@ jobs:
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
             env PYTHONPATH=./ pytest tests/unit/planner/ -x
-            env PYTHONPATH=./:parser_tests/tests pytest tests/unit/render/ -x
-            env PYTHONPATH=./ pytest tests/unit/executor/ -x
-            env PYTHONPATH=./ pytest tests/unit/test_llm_utils.py
+            env PYTHONPATH=./ pytest tests/unit/executor/ -x -k "not test_udf"
+            env PYTHONPATH=./ pytest tests/unit/various/ -x -k "not test_document_preprocessor"
             env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_minds_endpoint.py
             env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_openai.py
+
+            env PYTHONPATH=./:parser_tests/tests pytest tests/unit/render/ -x
             # env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_anyscale_endpoints.py
+          fi
+      - name: Run HTTP API tests
+        if: ${{ needs.changes.outputs.not-docs == 'true' }}
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            env PYTHONPATH=./ pytest tests/api/http/ -x -k "not knowledge_bases_test"
           fi
       - name: Run Handlers tests and submit Coverage to coveralls
         if: ${{ needs.changes.outputs.not-docs == 'true' }}

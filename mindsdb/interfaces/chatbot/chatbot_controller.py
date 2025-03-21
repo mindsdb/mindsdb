@@ -1,14 +1,13 @@
 from typing import Dict, List
 
+from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.chatbot.chatbot_task import ChatBotTask
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.model.functions import get_project_records
-
+from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.utilities.context import context as ctx
-
-from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.utilities.config import config
 
 
@@ -126,7 +125,7 @@ class ChatBotController:
         Gets all chatbots in a project.
 
         Parameters:
-            project_name (str): The name of the containing project
+            project_name (str): The name of the containing project. If None, then return from all projects
 
         Returns:
             all_bots (List[db.ChatBots]): List of database chatbot object
@@ -137,6 +136,9 @@ class ChatBotController:
             if project_name is not None and project.name != project_name:
                 continue
             project_names[project.id] = project.name
+
+        if project_name is not None and project_name not in project_names.values():
+            raise EntityNotExistsError(f'Project {project_name} not found')
 
         query = db.session.query(
             db.ChatBots, db.Tasks

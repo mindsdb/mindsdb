@@ -1,6 +1,6 @@
 # The default targets to be built if none are specified
 group "default" {
-  targets = ["bare", "devel", "cloud", "lightwood", "huggingface"]
+  targets = ["bare", "devel", "cloud", "cloud-cpu", "lightwood", "huggingface", "huggingface-cpu"]
 }
 
 variable "PUSH_TO_DOCKERHUB" {
@@ -90,13 +90,25 @@ target "images" {
         target = ""
       },
       {
+        # If you make any changes here, make them to huggingface-cpu as well
         name = "huggingface"
         extras = ".[huggingface]"
         target = ""
       },
       {
+        name = "huggingface-cpu"
+        extras = ".[huggingface_cpu]"
+        target = ""
+      },
+      {
+        # If you make any changes here, make them to cloud-cpu as well
         name = "cloud"
         extras = ".[lightwood,huggingface,statsforecast-extra,neuralforecast-extra,timegpt,mssql,youtube,gmail,pgvector,writer,rag,github,snowflake,clickhouse,bigquery,elasticsearch,s3,dynamodb,databricks,oracle,teradata,hive,one_drive] darts datasetsforecast"
+        target = ""
+      },
+      {
+        name = "cloud-cpu"
+        extras = ".[lightwood,huggingface_cpu,statsforecast-extra,neuralforecast-extra,timegpt,mssql,youtube,gmail,pgvector,writer,rag,github,snowflake,clickhouse,bigquery,elasticsearch,s3,dynamodb,databricks,oracle,teradata,hive,one_drive] darts datasetsforecast"
         target = ""
       },
     ]

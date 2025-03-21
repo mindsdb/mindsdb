@@ -6,8 +6,11 @@ from mindsdb_sql_parser import ast
 from mindsdb_sql_parser.ast import Select, Identifier, Star, Constant
 import pandas as pd
 
-from base_handler_test import BaseHandlerTestSetup
+from base_handler_test import BaseHandlerTestSetup, BaseAPIResourceTestSetup
 from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_handler import MSTeamsHandler
+from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_tables import (
+    TeamsTable
+)
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
@@ -203,6 +206,67 @@ class TestMSTeamsHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertFalse(response.success)
         assert isinstance(response, StatusResponse)
         self.assertTrue(response.error_message)
+
+
+class MSTeamsResourceTestSetup(BaseAPIResourceTestSetup):
+    @property
+    def dummy_connection_data(self):
+        return OrderedDict(
+            client_id='12345678-90ab-cdef-1234-567890abcdef',
+            client_secret='a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6',
+            tenant_id='abcdef12-3456-7890-abcd-ef1234567890',
+            code='1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',  # Not passed by the user, but by the front-end.
+        )
+
+    def create_handler(self):
+        mock_handler_storage = MagicMock()
+        mock_handler_storage.file_get.side_effect = FileNotFoundError
+        mock_handler_storage.file_set.return_value = None
+
+        return MSTeamsHandler(
+            'teams',
+            connection_data=self.dummy_connection_data,
+            handler_storage=mock_handler_storage
+        )
+
+    def create_patcher(self):
+        return patch('msal.ConfidentialClientApplication')
+    
+
+class TestMSTeamsTeamsTable(MSTeamsResourceTestSetup, unittest.TestCase):
+    def create_resource(self):
+        return TeamsTable(self.handler)
+    
+    @patch('requests.get')
+    def test_list(self, mock_get):
+        """"
+        Test if `list` method successfully returns a Response object with the expected data when the request is successful.
+        """
+        mock_msal = MagicMock()
+        mock_msal.get_accounts.return_value = []
+
+        mock_msal.acquire_token_by_authorization_code.return_value = {
+            "access_token": "mock_access_token"
+        }
+
+        self.mock_connect.return_value = mock_msal
+
+        mock_response = MagicMock(
+            status_code = 200
+        )
+
+        mock_team = {column: f"mock{column}" for column in self.resource.get_columns()}
+        mock_response.json.return_value = {
+            "value": [
+                mock_team
+            ]
+        }
+        mock_get.return_value = mock_response
+
+        response = self.resource.list()
+
+        assert isinstance(response, pd.DataFrame)
+        pd.testing.assert_frame_equal(response, pd.DataFrame([mock_team]))
 
 
 if __name__ == '__main__':

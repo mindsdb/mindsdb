@@ -9,7 +9,9 @@ from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_handler import MSTe
 from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_tables import (
     TeamsTable,
     ChannelsTable,
-    ChannelMessagesTable
+    ChannelMessagesTable,
+    ChatsTable,
+    ChatMessagesTable
 )
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -488,6 +490,61 @@ class TestMSTeamsChannelMessagesTable(MSTeamsResourceTestSetup, unittest.TestCas
 
         assert isinstance(response, pd.DataFrame)
         pd.testing.assert_frame_equal(response, pd.DataFrame([mock_message]))
+
+
+class TestMSTeamsChatsTable(MSTeamsResourceTestSetup, unittest.TestCase):
+    def create_resource(self):
+        return ChatsTable(self.handler)
+
+    @patch('requests.get')
+    def test_list_all(self, mock_get):
+        """"
+        Test if `list` method successfully returns a pandas DataFrame with data for all chats.
+        """
+        mock_response = MagicMock(
+            status_code = 200
+        )
+
+        mock_channel = self.generate_mock_data()
+        mock_response.json.return_value = {
+            "value": [
+                mock_channel
+            ]
+        }
+        mock_get.return_value = mock_response
+
+        response = self.resource.list(
+            conditions=[]
+        )
+
+        assert isinstance(response, pd.DataFrame)
+        pd.testing.assert_frame_equal(response, pd.DataFrame([mock_channel]))
+
+    @patch('requests.get')
+    def test_list_with_chat_id(self, mock_get):
+        """"
+        Test if `list` method successfully returns a pandas DataFrame with data for a specific chat.
+        """
+        mock_response = MagicMock(
+            status_code = 200
+        )
+
+        mock_chat = self.generate_mock_data()
+        mock_response.json.return_value = mock_chat
+        mock_get.return_value = mock_response
+
+        response = self.resource.list(
+            conditions=[
+                FilterCondition(
+                    column='id',
+                    op=FilterOperator.EQUAL,
+                    value="mock_id"
+                )
+            ]
+        )
+
+        assert isinstance(response, pd.DataFrame)
+        pd.testing.assert_frame_equal(response, pd.DataFrame([mock_chat]))
 
 
 if __name__ == '__main__':

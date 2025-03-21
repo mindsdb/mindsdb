@@ -340,10 +340,7 @@ class JobsController:
         data, columns = logs_db_controller.query(query)
 
         names = [i['name'] for i in columns]
-        records = []
-        for row in data:
-            records.append(dict(zip(names, row)))
-        return records
+        return data[names].to_dict(orient='records')
 
 
 class JobsExecutor:

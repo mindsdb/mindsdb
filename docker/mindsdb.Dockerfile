@@ -63,11 +63,12 @@ RUN --mount=type=cache,target=/root/.cache \
 
 
 
-FROM build as extras
+FROM build AS extras
 ARG EXTRAS
 # Install extras on top of the bare mindsdb
+# The torch index is provided for "-cpu" images which install the cpu-only version of torch
 RUN --mount=type=cache,target=/root/.cache \
-    if [ -n "$EXTRAS" ]; then uv pip install $EXTRAS; fi
+    if [ -n "$EXTRAS" ]; then uv pip install --index-strategy unsafe-first-match --index https://pypi.org/simple --index https://download.pytorch.org/whl/ $EXTRAS; fi
 
 # Copy all of the mindsdb code over finally
 # Here is where we invalidate the cache again if ANY file has changed

@@ -244,7 +244,7 @@ class MSTeamsResourceTestSetup(BaseAPIResourceTestSetup):
 
         self.mock_connect.return_value = mock_msal
 
-    def generate_mock_data(self, columns = None):
+    def generate_mock_data(self, columns=None):
         if columns is None:
             columns = self.resource.get_columns()
         return {column: f"mock_{column}" for column in columns}

@@ -547,5 +547,78 @@ class TestMSTeamsChatsTable(MSTeamsResourceTestSetup, unittest.TestCase):
         pd.testing.assert_frame_equal(response, pd.DataFrame([mock_chat]))
 
 
+class TestMSTeamsChatMessagesTable(MSTeamsResourceTestSetup, unittest.TestCase):
+    def create_resource(self):
+        return ChatMessagesTable(self.handler)
+
+    def test_list_without_chat_id_raises_error(self):
+        """"
+        Test if `list` method raises a ValueError when chatId is not provided.
+        """
+        with self.assertRaises(ValueError, msg="The 'chatIdentity_chatId' column is required."):
+            self.resource.list(conditions=[])
+
+    @patch('requests.get')
+    def test_list_with_chat_id(self, mock_get):
+        """"
+        Test if `list` method successfully returns a pandas DataFrame with data for all messages in a specific chat.
+        """
+        mock_response = MagicMock(
+            status_code = 200
+        )
+
+        mock_message = self.generate_mock_data()
+        mock_response.json.return_value = {
+            "value": [
+                mock_message
+            ]
+        }
+        mock_get.return_value = mock_response
+
+        response = self.resource.list(
+            conditions=[
+                FilterCondition(
+                    column='chatId',
+                    op=FilterOperator.EQUAL,
+                    value="mock_chat_id"
+                )
+            ]
+        )
+
+        assert isinstance(response, pd.DataFrame)
+        pd.testing.assert_frame_equal(response, pd.DataFrame([mock_message]))
+
+    @patch('requests.get')
+    def test_list_with_chat_id_and_message_id(self, mock_get):
+        """"
+        Test if `list` method successfully returns a pandas DataFrame with data for a specific message in a specific chat.
+        """
+        mock_response = MagicMock(
+            status_code = 200
+        )
+
+        mock_message = self.generate_mock_data()
+        mock_response.json.return_value = mock_message
+        mock_get.return_value = mock_response
+
+        response = self.resource.list(
+            conditions=[
+                FilterCondition(
+                    column='chatId',
+                    op=FilterOperator.EQUAL,
+                    value="mock_chat_id"
+                ),
+                FilterCondition(
+                    column='id',
+                    op=FilterOperator.EQUAL,
+                    value="mock_id"
+                )
+            ]
+        )
+
+        assert isinstance(response, pd.DataFrame)
+        pd.testing.assert_frame_equal(response, pd.DataFrame([mock_message]))
+
+
 if __name__ == '__main__':
     unittest.main()

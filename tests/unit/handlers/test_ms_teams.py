@@ -38,7 +38,7 @@ class TestMSTeamsHandler(BaseHandlerTestSetup, unittest.TestCase):
             client_secret='a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6',
             tenant_id='abcdef12-3456-7890-abcd-ef1234567890'
         )
-    
+
     def create_handler(self):
         mock_handler_storage = MagicMock()
         mock_handler_storage.file_get.side_effect = FileNotFoundError
@@ -49,7 +49,7 @@ class TestMSTeamsHandler(BaseHandlerTestSetup, unittest.TestCase):
             connection_data=self.dummy_connection_data,
             handler_storage=mock_handler_storage
         )
-    
+
     def create_handler_without_code_without_cache(self):
         mock_handler_storage = MagicMock()
         mock_handler_storage.file_get.side_effect = FileNotFoundError
@@ -59,7 +59,7 @@ class TestMSTeamsHandler(BaseHandlerTestSetup, unittest.TestCase):
             connection_data=self.dummy_connection_data_without_code,
             handler_storage=mock_handler_storage
         )
-    
+
     def create_handler_without_code_with_cache(self):
         mock_handler_storage = MagicMock()
         mock_handler_storage.file_get.side_effect = b'mock_file_content'
@@ -69,7 +69,7 @@ class TestMSTeamsHandler(BaseHandlerTestSetup, unittest.TestCase):
             connection_data=self.dummy_connection_data_without_code,
             handler_storage=mock_handler_storage
         )
-    
+
     def create_patcher(self):
         return patch('msal.ConfidentialClientApplication')
 
@@ -173,7 +173,7 @@ class TestMSTeamsHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.mock_connect.return_value = mock_msal
 
         mock_response = MagicMock(
-            status_code = 200
+            status_code=200
         )
         mock_get.return_value = mock_response
 
@@ -198,7 +198,7 @@ class TestMSTeamsHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.mock_connect.return_value = mock_msal
 
         mock_response = MagicMock(
-            status_code = 400
+            status_code=400
         )
         mock_get.return_value = mock_response
 
@@ -232,7 +232,7 @@ class MSTeamsResourceTestSetup(BaseAPIResourceTestSetup):
 
     def create_patcher(self):
         return patch('msal.ConfidentialClientApplication')
-    
+
     def setUp(self):
         super().setUp()
         mock_msal = MagicMock()
@@ -243,7 +243,7 @@ class MSTeamsResourceTestSetup(BaseAPIResourceTestSetup):
         }
 
         self.mock_connect.return_value = mock_msal
-    
+
     def generate_mock_data(self, columns = None):
         if columns is None:
             columns = self.resource.get_columns()
@@ -253,14 +253,14 @@ class MSTeamsResourceTestSetup(BaseAPIResourceTestSetup):
 class TestMSTeamsTeamsTable(MSTeamsResourceTestSetup, unittest.TestCase):
     def create_resource(self):
         return TeamsTable(self.handler)
-    
+
     @patch('requests.get')
     def test_list(self, mock_get):
         """"
         Test if `list` method successfully returns a pandas DataFrame with data for all teams.
         """
         mock_response = MagicMock(
-            status_code = 200
+            status_code=200
         )
 
         mock_team = self.generate_mock_data()
@@ -280,14 +280,14 @@ class TestMSTeamsTeamsTable(MSTeamsResourceTestSetup, unittest.TestCase):
 class TestMSTeamsChannelsTable(MSTeamsResourceTestSetup, unittest.TestCase):
     def create_resource(self):
         return ChannelsTable(self.handler)
-    
+
     @patch('requests.get')
     def test_list_all(self, mock_get):
         """"
         Test if `list` method successfully returns a pandas DataFrame with data for all channels in all teams.
         """
         mock_response = MagicMock(
-            status_code = 200
+            status_code=200
         )
 
         mock_channel = self.generate_mock_data()
@@ -304,14 +304,14 @@ class TestMSTeamsChannelsTable(MSTeamsResourceTestSetup, unittest.TestCase):
 
         assert isinstance(response, pd.DataFrame)
         pd.testing.assert_frame_equal(response, pd.DataFrame([mock_channel]))
-    
+
     @patch('requests.get')
     def test_list_with_team_id(self, mock_get):
         """"
         Test if `list` method successfully returns a pandas DataFrame with data for all channels in a team.
         """
         mock_response = MagicMock(
-            status_code = 200
+            status_code=200
         )
 
         mock_channel = self.generate_mock_data()
@@ -341,10 +341,10 @@ class TestMSTeamsChannelsTable(MSTeamsResourceTestSetup, unittest.TestCase):
         Test if `list` method successfully returns a pandas DataFrame with data for a specific channel in a team.
         """
         mock_response_1 = MagicMock(
-            status_code = 200
+            status_code=200
         )
         mock_response_2 = MagicMock(
-            status_code = 200
+            status_code=200
         )
 
         mock_team = self.generate_mock_data(
@@ -383,7 +383,7 @@ class TestMSTeamsChannelsTable(MSTeamsResourceTestSetup, unittest.TestCase):
         Test if `list` method successfully returns a pandas DataFrame with data for a specific channel in a specific team.
         """
         mock_response = MagicMock(
-            status_code = 200
+            status_code=200
         )
 
         mock_channel = self.generate_mock_data()
@@ -426,7 +426,7 @@ class TestMSTeamsChannelMessagesTable(MSTeamsResourceTestSetup, unittest.TestCas
         Test if `list` method successfully returns a pandas DataFrame with data for all messages in a specific channel in a specific team.
         """
         mock_response = MagicMock(
-            status_code = 200
+            status_code=200
         )
 
         mock_message = self.generate_mock_data()
@@ -461,7 +461,7 @@ class TestMSTeamsChannelMessagesTable(MSTeamsResourceTestSetup, unittest.TestCas
         Test if `list` method successfully returns a pandas DataFrame with data for a specific message in a specific channel in a specific team.
         """
         mock_response = MagicMock(
-            status_code = 200
+            status_code=200
         )
 
         mock_message = self.generate_mock_data()
@@ -502,7 +502,7 @@ class TestMSTeamsChatsTable(MSTeamsResourceTestSetup, unittest.TestCase):
         Test if `list` method successfully returns a pandas DataFrame with data for all chats.
         """
         mock_response = MagicMock(
-            status_code = 200
+            status_code=200
         )
 
         mock_channel = self.generate_mock_data()
@@ -526,7 +526,7 @@ class TestMSTeamsChatsTable(MSTeamsResourceTestSetup, unittest.TestCase):
         Test if `list` method successfully returns a pandas DataFrame with data for a specific chat.
         """
         mock_response = MagicMock(
-            status_code = 200
+            status_code=200
         )
 
         mock_chat = self.generate_mock_data()
@@ -564,7 +564,7 @@ class TestMSTeamsChatMessagesTable(MSTeamsResourceTestSetup, unittest.TestCase):
         Test if `list` method successfully returns a pandas DataFrame with data for all messages in a specific chat.
         """
         mock_response = MagicMock(
-            status_code = 200
+            status_code=200
         )
 
         mock_message = self.generate_mock_data()
@@ -594,7 +594,7 @@ class TestMSTeamsChatMessagesTable(MSTeamsResourceTestSetup, unittest.TestCase):
         Test if `list` method successfully returns a pandas DataFrame with data for a specific message in a specific chat.
         """
         mock_response = MagicMock(
-            status_code = 200
+            status_code=200
         )
 
         mock_message = self.generate_mock_data()

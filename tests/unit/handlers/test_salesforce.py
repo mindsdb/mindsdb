@@ -333,6 +333,8 @@ class TestSalesforceAnyTable(BaseAPIResourceTestSetup, unittest.TestCase):
         self.assertEqual(list(df.columns), self.mock_columns)
         self.assertEqual(list(df.iloc[0]), list(self.mock_record.values()))
 
+    # TODO: Add tests for `add`, `modify`, and `remove` methods.
+
 
 if __name__ == '__main__':
     unittest.main()

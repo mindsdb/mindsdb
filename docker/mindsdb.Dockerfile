@@ -113,8 +113,3 @@ EXPOSE 47335/tcp
 EXPOSE 47336/tcp
 
 ENTRYPOINT [ "bash", "-c", "watchfiles --filter python 'python -Im mindsdb --config=/root/mindsdb_config.json --api=http'" ]
-
-
-
-# Make sure the regular image is the default
-FROM extras

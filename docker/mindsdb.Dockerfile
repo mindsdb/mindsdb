@@ -119,4 +119,6 @@ ENTRYPOINT [ "bash", "-c", "watchfiles --filter python 'python -Im mindsdb --con
 # Make sure the regular image is the default
 FROM extras
 
+COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
+
 ENTRYPOINT [ "bash", "-c", "python -Im mindsdb --config=/root/mindsdb_config.json --api=http" ]

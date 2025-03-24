@@ -3,8 +3,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 
 from salesforce_api.exceptions import AuthenticationError
-from mindsdb_sql_parser.ast import Select, Identifier, Star
-import pandas as pd
+from mindsdb_sql_parser.ast import BinaryOperation, Constant, Identifier, Select, Star
 
 from base_handler_test import BaseHandlerTestSetup, BaseAPIResourceTestSetup
 from mindsdb.integrations.handlers.salesforce_handler.salesforce_handler import SalesforceHandler
@@ -190,6 +189,141 @@ class TestSalesforceAnyTable(BaseAPIResourceTestSetup, unittest.TestCase):
             from_table=Identifier(
                 parts=[
                     self.table_name
+                ]
+            )
+        )
+        df = self.resource.select(select_query)
+
+        self.assertEqual(len(df), 1)
+        self.assertEqual(list(df.columns), self.mock_columns)
+        self.assertEqual(list(df.iloc[0]), list(self.mock_record.values()))
+
+    def test_select_columns_with_alias(self):
+        """
+        Test that the `select` method returns the data from the Salesforce resource for a SELECT query with specific columns and aliases.
+        """
+        select_query = Select(
+            targets=[
+                Identifier(
+                    parts=[
+                        column
+                    ],
+                    alias=Identifier(
+                        parts=[
+                            f'{column}_alias'
+                        ]
+                    )
+                ) for column in self.mock_columns
+            ],
+            from_table=Identifier(
+                parts=[
+                    self.table_name
+                ]
+            )
+        )
+        df = self.resource.select(select_query)
+
+        self.assertEqual(len(df), 1)
+        self.assertEqual(list(df.columns), [f'{column}_alias' for column in self.mock_columns])
+        self.assertEqual(list(df.iloc[0]), list(self.mock_record.values()))
+
+    def test_select_columns_with_condition(self):
+        """
+        Test that the `select` method returns the data from the Salesforce resource for a SELECT query with specific columns and a WHERE condition.
+        """
+        select_query = Select(
+            targets=[
+                Identifier(
+                    parts=[
+                        column
+                    ]
+                ) for column in self.mock_columns
+            ],
+            from_table=Identifier(
+                parts=[
+                    self.table_name
+                ]
+            ),
+            where=BinaryOperation(
+                op='=',
+                args=[
+                    Identifier('Id'),
+                    Constant('Id_value')
+                ]
+            )
+        )
+        df = self.resource.select(select_query)
+
+        self.assertEqual(len(df), 1)
+        self.assertEqual(list(df.columns), self.mock_columns)
+        self.assertEqual(list(df.iloc[0]), list(self.mock_record.values()))
+
+    def test_select_columns_with_condition_and_limit(self):
+        """
+        Test that the `select` method returns the data from the Salesforce resource for a SELECT query with specific columns, a WHERE condition, and a LIMIT clause.
+        """
+        select_query = Select(
+            targets=[
+                Identifier(
+                    parts=[
+                        column
+                    ]
+                ) for column in self.mock_columns
+            ],
+            from_table=Identifier(
+                parts=[
+                    self.table_name
+                ]
+            ),
+            where=BinaryOperation(
+                op='=',
+                args=[
+                    Identifier('Id'),
+                    Constant('Id_value')
+                ]
+            ),
+            limit=Constant(1)
+        )
+        df = self.resource.select(select_query)
+
+        self.assertEqual(len(df), 1)
+        self.assertEqual(list(df.columns), self.mock_columns)
+        self.assertEqual(list(df.iloc[0]), list(self.mock_record.values()))
+
+    def test_select_columns_with_conditions(self):
+        """
+        Test that the `select` method returns the data from the Salesforce resource for a SELECT query with specific columns and multiple WHERE conditions.
+        """
+        select_query = Select(
+            targets=[
+                Identifier(
+                    parts=[
+                        column
+                    ]
+                ) for column in self.mock_columns
+            ],
+            from_table=Identifier(
+                parts=[
+                    self.table_name
+                ]
+            ),
+            where=BinaryOperation(
+                op='AND',
+                args=[
+                    BinaryOperation(
+                        op='=',
+                        args=[
+                            Identifier('Id'),
+                            Constant('Id_value')
+                        ]
+                    ),
+                    BinaryOperation(
+                        op='=',
+                        args=[
+                            Identifier('Name'),
+                            Constant('Name_value')
+                        ]
+                    )
                 ]
             )
         )

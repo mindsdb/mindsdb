@@ -126,10 +126,10 @@ class TestSalesforceAnyTable(BaseAPIResourceTestSetup, unittest.TestCase):
 
     def create_patcher(self):
         return patch('salesforce_api.Salesforce')
-    
+
     def create_resource(self):
         return create_table_class(self.table_name)(self.handler)
-    
+
     def setUp(self):
         """
         Set up common test fixtures.
@@ -153,7 +153,7 @@ class TestSalesforceAnyTable(BaseAPIResourceTestSetup, unittest.TestCase):
                 describe=lambda: {'fields': [{'name': column} for column in self.mock_columns]}
             )
         )
-    
+
     def test_select_all(self):
         """
         Test that the `select` method returns the data from the Salesforce resource for a simple SELECT * query.

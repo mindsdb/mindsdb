@@ -76,6 +76,17 @@ COPY . .
 # Install the "mindsdb" package now that we have the code for it
 RUN --mount=type=cache,target=/root/.cache uv pip install --no-deps "."
 
+COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
+
+ENV PYTHONUNBUFFERED=1
+ENV MINDSDB_DOCKER_ENV=1
+ENV VIRTUAL_ENV=/venv
+ENV PATH=/venv/bin:$PATH
+
+EXPOSE 47334/tcp
+EXPOSE 47335/tcp
+EXPOSE 47336/tcp
+
 
 
 
@@ -102,19 +113,12 @@ RUN --mount=type=cache,target=/root/.cache uv pip install -r requirements/requir
 
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
-
-ENV PYTHONUNBUFFERED=1
-ENV MINDSDB_DOCKER_ENV=1
-ENV VIRTUAL_ENV=/venv
-ENV PATH=/venv/bin:$PATH
-
-EXPOSE 47334/tcp
-EXPOSE 47335/tcp
-EXPOSE 47336/tcp
-
 ENTRYPOINT [ "bash", "-c", "watchfiles --filter python 'python -Im mindsdb --config=/root/mindsdb_config.json --api=http'" ]
+
 
 
 
 # Make sure the regular image is the default
 FROM extras
+
+ENTRYPOINT [ "bash", "-c", "python -Im mindsdb --config=/root/mindsdb_config.json --api=http" ]

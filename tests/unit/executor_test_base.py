@@ -262,7 +262,7 @@ class BaseExecutorTest(BaseUnitTest):
             predict_patcher = mock.patch("mindsdb.integrations.libs.ml_exec_base.BaseMLEngineExec.predict")
             self.mock_predict = predict_patcher.__enter__()
 
-            create_patcher = mock.patch("mindsdb.integrations.handlers.lightwood_handler.Handler.create")
+            create_patcher = mock.patch("mindsdb.integrations.handlers.lightwood_handler.lightwood_handler.LightwoodHandler.create")
             self.mock_create = create_patcher.__enter__()
 
         ctx.set_default()

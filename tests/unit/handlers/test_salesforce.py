@@ -7,7 +7,9 @@ from salesforce_api.exceptions import AuthenticationError
 from base_handler_test import BaseHandlerTestSetup
 from mindsdb.integrations.handlers.salesforce_handler.salesforce_handler import SalesforceHandler
 from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse
+    HandlerResponse as Response,
+    HandlerStatusResponse as StatusResponse,
+    RESPONSE_TYPE
 )
 
 
@@ -35,6 +37,7 @@ class TestSalesforceHandler(BaseHandlerTestSetup, unittest.TestCase):
         """
         self.mock_connect.return_value = MagicMock()
         connection = self.handler.connect()
+
         self.assertIsNotNone(connection)
         self.assertTrue(self.handler.is_connected)
         self.mock_connect.assert_called_once()
@@ -59,6 +62,50 @@ class TestSalesforceHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertFalse(response.success)
         assert isinstance(response, StatusResponse)
         self.assertTrue(response.error_message)
+
+    def test_get_tables(self):
+        """
+        Test that the `get_tables` method returns a list of tables mapped from the Salesforce API.
+        """
+        mock_tables = ['Account', 'Contact']
+        self.mock_connect.return_value = MagicMock(
+            sobjects=MagicMock(
+                describe=lambda: {'sobjects': [{'name': table} for table in mock_tables]}
+            )
+        )
+        self.handler.connect()
+        response = self.handler.get_tables()
+
+        assert isinstance(response, Response)
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+
+        df = response.data_frame
+        self.assertEqual(len(df), len(mock_tables))
+        self.assertEqual(list(df['table_name']), [table.lower() for table in mock_tables])
+
+    def test_get_columns(self):
+        """
+        Test that the `get_columns` method returns a list of columns for a given table.
+        """
+        mock_columns = ['Id', 'Name', 'Email']
+        mock_table = 'Contact'
+        self.mock_connect.return_value = MagicMock(
+            sobjects=MagicMock(
+                describe=lambda: {'sobjects': [{'name': mock_table}]},
+                Contact=MagicMock(
+                    describe=lambda: {'fields': [{'name': column} for column in mock_columns]}
+                )
+            )
+        )
+        self.handler.connect()
+        response = self.handler.get_columns(mock_table.lower())
+
+        assert isinstance(response, Response)
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+
+        df = response.data_frame
+        self.assertEqual(len(df), len(mock_columns))
+        self.assertEqual(list(df['Field']), mock_columns)
 
 
 if __name__ == '__main__':

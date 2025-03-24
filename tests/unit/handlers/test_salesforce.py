@@ -134,6 +134,41 @@ class TestSalesforceAnyTable(BaseAPIResourceTestSetup, unittest.TestCase):
     
     def create_resource(self):
         return create_table_class(self.table_name)(self.handler)
+    
+    def test_select_all(self):
+        """
+        Test that the `select` method returns the data from the Salesforce resource for a simple SELECT * query.
+        """
+        mock_columns = ['Id', 'Name', 'Email']
+        mock_record = {column: f'{column}_value' for column in mock_columns}
+        self.mock_connect.return_value = MagicMock(
+            sobjects=MagicMock(
+                query=lambda query: [
+                    {
+                        'attributes': {'type': self.table_name},
+                        **mock_record
+                    }
+                ]
+            ),
+            Contact=MagicMock(
+                describe=lambda: {'fields': [{'name': column} for column in mock_columns]}
+            )
+        )
+        select_query = Select(
+            targets=[
+                Star()
+            ],
+            from_table=Identifier(
+                parts=[
+                    self.table_name
+                ]
+            )
+        )
+        df = self.resource.select(select_query)
+
+        self.assertEqual(len(df), 1)
+        self.assertEqual(list(df.columns), mock_columns)
+        self.assertEqual(list(df.iloc[0]), list(mock_record.values()))
 
 
 if __name__ == '__main__':

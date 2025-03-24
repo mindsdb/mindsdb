@@ -3,9 +3,12 @@ import unittest
 from unittest.mock import patch, MagicMock
 
 from salesforce_api.exceptions import AuthenticationError
+from mindsdb_sql_parser.ast import Select, Identifier, Star
+import pandas as pd
 
-from base_handler_test import BaseHandlerTestSetup
+from base_handler_test import BaseHandlerTestSetup, BaseAPIResourceTestSetup
 from mindsdb.integrations.handlers.salesforce_handler.salesforce_handler import SalesforceHandler
+from mindsdb.integrations.handlers.salesforce_handler.salesforce_tables import create_table_class
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
@@ -106,6 +109,31 @@ class TestSalesforceHandler(BaseHandlerTestSetup, unittest.TestCase):
         df = response.data_frame
         self.assertEqual(len(df), len(mock_columns))
         self.assertEqual(list(df['Field']), mock_columns)
+
+
+class TestSalesforceAnyTable(BaseAPIResourceTestSetup, unittest.TestCase):
+
+    @property
+    def dummy_connection_data(self):
+        return OrderedDict(
+            username='demo@example.com',
+            password='demo_password',
+            client_id='3MVG9lKcPoNINVBIPJjdw1J9LLM82HnZz9Yh7ZJnY',
+            client_secret='5A52C1A1E21DF9012IODC9ISNXXAADDA9',
+        )
+    
+    @property
+    def table_name(self):
+        return 'Contact'
+
+    def create_handler(self):
+        return SalesforceHandler('salesforce', connection_data=self.dummy_connection_data)
+
+    def create_patcher(self):
+        return patch('salesforce_api.Salesforce')
+    
+    def create_resource(self):
+        return create_table_class(self.table_name)(self.handler)
 
 
 if __name__ == '__main__':

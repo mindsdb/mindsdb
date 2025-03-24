@@ -290,35 +290,6 @@ class TestAgent(BaseExecutorDummyML):
             args, _ = kb_select.call_args
             assert user_question in args[0].where.args[1].value
 
-    def test_kb(self):
-
-        self.run_sql(
-            '''
-                CREATE model emb_model
-                PREDICT predicted
-                using
-                  column='content',
-                  engine='dummy_ml',
-                  join_learn_process=true
-            '''
-        )
-
-        self.run_sql('create knowledge base kb_review using model=emb_model')
-
-        self.run_sql("insert into kb_review (content) values ('review')")
-
-        # selectable
-        ret = self.run_sql("select * from kb_review")
-        assert len(ret) == 1
-
-        # show tables in default chromadb
-        ret = self.run_sql("show knowledge bases")
-
-        db_name = ret.STORAGE[0].split('.')[0]
-        ret = self.run_sql(f"show tables from {db_name}")
-        # only one default collection there
-        assert len(ret) == 1
-
     def test_drop_demo_agent(self):
         """should not be possible to drop demo agent
         """
@@ -346,3 +317,152 @@ class TestAgent(BaseExecutorDummyML):
 
         with pytest.raises(ExecutorException):
             self.run_sql('drop skill my_demo_skill')
+
+
+class TestKB(BaseExecutorDummyML):
+
+    def test_kb(self):
+
+        self.run_sql(
+            '''
+                CREATE model emb_model
+                PREDICT predicted
+                using
+                  column='content',
+                  engine='dummy_ml',
+                  join_learn_process=true
+            '''
+        )
+
+        self.run_sql('create knowledge base kb_review using model=emb_model')
+        self.run_sql('drop knowledge base kb_review')  # drop chromadb left since the last failed test
+        self.run_sql('create knowledge base kb_review using model=emb_model')
+
+        self.run_sql("insert into kb_review (content) values ('review')")
+
+        # selectable
+        ret = self.run_sql("select * from kb_review")
+        assert len(ret) == 1
+
+        # show tables in default chromadb
+        ret = self.run_sql("show knowledge bases")
+
+        db_name = ret.STORAGE[0].split('.')[0]
+        ret = self.run_sql(f"show tables from {db_name}")
+        # only one default collection there
+        assert len(ret) == 1
+
+    def test_kb_metadata(self):
+
+        self.run_sql(
+            '''
+                CREATE model emb_model
+                PREDICT predicted
+                using
+                  column='content',
+                  engine='dummy_ml',
+                  output=[1,2],
+                  join_learn_process=true
+            '''
+        )
+
+        record = {
+            'review': "all is good, haven't used yet",
+            'url': 'https://laptops.com/123',
+            'product': 'probook',
+            'specs': 'Core i5; 8Gb; 1920х1080',
+            'id': 123
+        }
+        df = pd.DataFrame([record])
+        self.save_file('reviews', df)
+
+        # ---  case 1: kb with default columns settings ---
+        self.run_sql('create knowledge base kb_review using model=emb_model')
+        self.run_sql('drop knowledge base kb_review')  # drop chromadb left since the last failed test
+        self.run_sql('create knowledge base kb_review using model=emb_model')
+
+        self.run_sql("""
+            insert into kb_review
+            select review as content, id from files.reviews
+        """)
+
+        ret = self.run_sql("select * from kb_review where original_row_id = '123'")
+        assert len(ret) == 1
+        assert ret['content'][0] == record['review']
+
+        # delete by metadata
+        self.run_sql("delete from kb_review where original_row_id = '123'")
+        ret = self.run_sql("select * from kb_review where original_row_id = '123'")
+        assert len(ret) == 0
+
+        # insert without id
+        self.run_sql("""
+            insert into kb_review
+            select review as content, product, url from files.reviews
+        """)
+
+        # id column wasn't used
+        ret = self.run_sql("select * from kb_review where original_row_id = '123'")
+        assert len(ret) == 0
+
+        # product/url in metadata
+        ret = self.run_sql("select * from kb_review where product = 'probook'")
+        assert len(ret) == 1
+        assert ret['metadata'][0]['product'] == record['product']
+        assert ret['metadata'][0]['url'] == record['url']
+
+        self.run_sql("drop knowledge base kb_review")
+
+        # ---  case 2: kb with defined columns ---
+
+        self.run_sql('''
+          create knowledge base kb_review
+            using model=emb_model,
+            content_columns=['review', 'product'],
+            id_column='url',
+            metadata_columns=['specs', 'id']
+        ''')
+
+        self.run_sql("""
+            insert into kb_review
+            select * from files.reviews
+        """)
+
+        ret = self.run_sql("select * from kb_review")  # url in id
+
+        assert len(ret) == 2  # two columns are split in two records
+
+        # review/product in content
+        content = list(ret['content'])
+        assert record['review'] in content
+        assert record['product'] in content
+
+        # specs/id in metadata
+        metadata = ret['metadata'][0]
+        assert metadata['specs'] == record['specs']
+        assert str(metadata['id']) == str(record['id'])
+
+        self.run_sql("drop knowledge base kb_review")
+
+        # ---  case 3: content is defined, id is id, the rest goes to metadata ---
+        self.run_sql('''
+        create knowledge base kb_review
+         using model=emb_model,
+         content_columns=['review']
+        ''')
+
+        self.run_sql("""
+            insert into kb_review
+            select * from files.reviews
+        """)
+
+        ret = self.run_sql("select * from kb_review where original_row_id = '123'")  # id is id
+        assert len(ret) == 1
+        # review in content
+        assert ret['content'][0] == record['review']
+
+        # specs/url/product in metadata
+        metadata = ret['metadata'][0]
+        assert metadata['specs'] == record['specs']
+        assert metadata['url'] == record['url']
+        assert metadata['product'] == record['product']

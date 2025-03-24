@@ -37,7 +37,6 @@ exclude =
   mindsdb/integrations/handlers/sqlite_handler/sqlite_handler.py
   mindsdb/integrations/handlers/supabase_handler/tests/test_supabase_handler.py
   mindsdb/integrations/handlers/tidb_handler/*
-  mindsdb/integrations/handlers/timescaledb_handler/*
   mindsdb/integrations/handlers/trino_handler/trino_handler.py
   mindsdb/integrations/handlers/vertica_handler/*
   mindsdb/integrations/handlers/view_handler/view_handler.py

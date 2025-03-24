@@ -63,17 +63,29 @@ RUN --mount=type=cache,target=/root/.cache \
 
 
 
-FROM build as extras
+FROM build AS extras
 ARG EXTRAS
 # Install extras on top of the bare mindsdb
+# The torch index is provided for "-cpu" images which install the cpu-only version of torch
 RUN --mount=type=cache,target=/root/.cache \
-    if [ -n "$EXTRAS" ]; then uv pip install $EXTRAS; fi
+    if [ -n "$EXTRAS" ]; then uv pip install --index-strategy unsafe-first-match --index https://pypi.org/simple --index https://download.pytorch.org/whl/ $EXTRAS; fi
 
 # Copy all of the mindsdb code over finally
 # Here is where we invalidate the cache again if ANY file has changed
 COPY . .
 # Install the "mindsdb" package now that we have the code for it
 RUN --mount=type=cache,target=/root/.cache uv pip install --no-deps "."
+
+COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
+
+ENV PYTHONUNBUFFERED=1
+ENV MINDSDB_DOCKER_ENV=1
+ENV VIRTUAL_ENV=/venv
+ENV PATH=/venv/bin:$PATH
+
+EXPOSE 47334/tcp
+EXPOSE 47335/tcp
+EXPOSE 47336/tcp
 
 
 
@@ -101,19 +113,12 @@ RUN --mount=type=cache,target=/root/.cache uv pip install -r requirements/requir
 
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
-
-ENV PYTHONUNBUFFERED=1
-ENV MINDSDB_DOCKER_ENV=1
-ENV VIRTUAL_ENV=/venv
-ENV PATH=/venv/bin:$PATH
-
-EXPOSE 47334/tcp
-EXPOSE 47335/tcp
-EXPOSE 47336/tcp
-
 ENTRYPOINT [ "bash", "-c", "watchfiles --filter python 'python -Im mindsdb --config=/root/mindsdb_config.json --api=http'" ]
+
 
 
 
 # Make sure the regular image is the default
 FROM extras
+
+ENTRYPOINT [ "bash", "-c", "python -Im mindsdb --config=/root/mindsdb_config.json --api=http" ]

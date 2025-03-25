@@ -423,7 +423,7 @@ class PlanJoinTablesQuery:
             else:
                 query2.where = cond
 
-        step = self.planner.get_integration_select_step(query2)
+        step = self.planner.get_integration_select_step(query2, params=query_in.using)
         self.tables_fetch_step[item.index] = step
 
         self.add_plan_step(step)

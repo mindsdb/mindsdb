@@ -318,6 +318,83 @@ class TestConfluencePagesTable(ConfluenceTablesTestSetup, unittest.TestCase):
         )
 
 
+class TestConfluenceBlogPostsTable(ConfluenceTablesTestSetup, unittest.TestCase):
+    
+    def create_resource(self):
+        return ConfluenceBlogPostsTable(self.handler)
+
+    def test_list_all_returns_results(self):
+        """
+        Test that the `list` with a query equivalent to `SELECT * FROM blogposts` returns a list of blog posts.
+        """
+        df = self.resource.list(
+            conditions=[]
+        )
+
+        self.assertIsInstance(df, pd.DataFrame)
+        self.assertEqual(df.columns.tolist(), self.resource.get_columns())
+        self.assertEqual(df.shape, (1, len(self.resource.get_columns())))
+
+        self.mock_connect.return_value.request.assert_called_with(
+            "GET",
+            f"{self.dummy_connection_data['api_base']}/wiki/api/v2/blogposts",
+            params={
+                "body-format": "storage"
+            },
+            json=None
+        )
+
+    def test_list_with_conditions_returns_results(self):
+        """
+        Test that the `list` method returns a list of blog posts with the specified conditions.
+        """
+        mock_id = 'mock_id'
+        mock_space_id = 'mock_space_id'
+        mock_status = 'mock_status'
+        mock_title = 'mock_title'
+        df = self.resource.list(
+            conditions=[
+                FilterCondition(
+                    column="id",
+                    op=FilterOperator.EQUAL,
+                    value=mock_id
+                ),
+                FilterCondition(
+                    column="spaceId",
+                    op=FilterOperator.EQUAL,
+                    value=mock_space_id
+                ),
+                FilterCondition(
+                    column="status",
+                    op=FilterOperator.EQUAL,
+                    value=mock_status
+                ),
+                FilterCondition(
+                    column="title",
+                    op=FilterOperator.EQUAL,
+                    value=mock_title
+                )
+            ]
+        )
+
+        self.assertIsInstance(df, pd.DataFrame)
+        self.assertEqual(df.columns.tolist(), self.resource.get_columns())
+        self.assertEqual(df.shape, (1, len(self.resource.get_columns())))
+
+        self.mock_connect.return_value.request.assert_called_with(
+            "GET",
+            f"{self.dummy_connection_data['api_base']}/wiki/api/v2/blogposts",
+            params={
+                "body-format": "storage",
+                "id": [mock_id],
+                "space-id": [mock_space_id],
+                "status": [mock_status],
+                "title": mock_title
+            },
+            json=None
+        )
+
+
 class TestConfluenceDatabasesTable(ConfluenceTablesTestSetup, unittest.TestCase):
 
     def create_resource(self):

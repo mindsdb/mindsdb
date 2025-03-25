@@ -123,6 +123,7 @@ jobs:
         run: |
           # Install dev requirements and build our pip package
           uv pip install -r requirements/requirements-dev.txt
+          uv pip install setuptools==75.8.2
           python setup.py sdist
 
           # Install from the pip package

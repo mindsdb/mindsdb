@@ -39,19 +39,8 @@ class ConfluencePagesTable(APIResource):
         pages = []
         client: ConfluenceAPIClient = self.handler.connect()
 
-        space_id, page_ids = None, None
+        page_ids, space_ids, statuses, title = None, None, None, None
         for condition in conditions:
-            if condition.column == "spaceId":
-                if condition.op == FilterOperator.EQUAL:
-                    space_id = condition.value
-
-                else:
-                    raise ValueError(
-                        f"Unsupported operator '{condition.op}' for column 'spaceId'."
-                    )
-                
-                condition.applied = True
-
             if condition.column == "id":
                 if condition.op == FilterOperator.EQUAL:
                     page_ids = [condition.value]
@@ -66,16 +55,52 @@ class ConfluencePagesTable(APIResource):
                 
                 condition.applied = True
 
-        if page_ids:
-            for page_id in page_ids:
-                page = client.get_page_by_id(page_id)
-                pages.append(page)
+            if condition.column == "spaceId":
+                if condition.op == FilterOperator.EQUAL:
+                    space_ids = [condition.value]
 
-        elif space_id:
-            pages = client.get_pages_in_space(space_id, limit=limit)
+                elif condition.op == FilterOperator.IN:
+                    space_ids = condition.value
 
-        else:
-            pages = client.get_pages(limit=limit)
+                else:
+                    raise ValueError(
+                        f"Unsupported operator '{condition.op}' for column 'spaceId'."
+                    )
+                
+                condition.applied = True
+
+            if condition.column == "status":
+                if condition.op == FilterOperator.EQUAL:
+                    statuses = [condition.value]
+
+                elif condition.op == FilterOperator.IN:
+                    statuses = condition.value
+
+                else:
+                    raise ValueError(
+                        f"Unsupported operator '{condition.op}' for column 'status'."
+                    )
+                
+                condition.applied = True
+
+            if condition.column == "title":
+                if condition.op == FilterOperator.EQUAL:
+                    title = condition.value
+
+                else:
+                    raise ValueError(
+                        f"Unsupported operator '{condition.op}' for column 'title'."
+                    )
+                
+                condition.applied = True
+
+        pages = client.get_pages(
+            page_ids=page_ids,
+            space_ids=space_ids,
+            statuses=statuses,
+            title=title,
+            limit=limit
+        )
 
         pages_df = pd.json_normalize(pages, sep="_")
         pages_df = pages_df[self.get_columns()]

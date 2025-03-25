@@ -12,28 +12,27 @@ class ConfluenceAPIClient:
         self.session.auth = (self.username, self.password)
         self.session.headers.update({"Accept": "application/json"})
 
-    def get_pages(self, limit: int = None) -> List[dict]:
+    def get_pages(
+        self,
+        page_ids: List[int] = None,
+        space_ids: List[int] = None,
+        statuses: List[str] = ["current", "archived"],
+        title: str = None,
+        limit: int = 25,
+    ) -> List[dict]:
         url = f"{self.url}/wiki/api/v2/pages"
         params = {
             "body-format": "storage",
-            "limit": limit if limit else 25,
+            "status": statuses,
+            "limit": limit
         }
-        return self._paginate(url, params)
+        if page_ids:
+            params["id"] = page_ids
+        if space_ids:
+            params["space-id"] = space_ids
+        if title:
+            params["title"] = title
 
-    def get_page_by_id(self, page_id: int, limit: int = None) -> dict:
-        url = f"{self.url}/wiki/api/v2/pages/{page_id}"
-        params = {
-            "body-format": "storage",
-            "limit": limit if limit else 25,
-        }
-        response = self._make_request("GET", url, params)
-        return response
-
-    def get_pages_in_space(self, space_id: int) -> List[dict]:
-        url = f"{self.url}/wiki/api/v2/spaces/{space_id}/pages"
-        params = {
-            "body-format": "storage"
-        }
         return self._paginate(url, params)
 
     def _paginate(self, url: str, params: dict = None) -> List[dict]:

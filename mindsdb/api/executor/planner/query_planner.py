@@ -846,6 +846,8 @@ class QueryPlanner:
                     # mark plan
                     plan.is_resumable = True
                     continue
+                else:
+                    step.params = None
 
             if partition_step is not None:
                 # check and add step into partition

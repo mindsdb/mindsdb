@@ -50,3 +50,11 @@ LIMIT 10;
 <Note>
 The above example utilize `confluence_datasource` as the datasource name, which is defined in the `CREATE DATABASE` command.
 </Note>
+
+## Supported Tables
+
+* `spaces`: The table containing information about the spaces in Confluence.
+* `pages`: The table containing information about the pages in Confluence.
+* `blogposts`: The table containing information about the blog posts in Confluence.
+* `whiteboards`: The table containing information about the whiteboards in Confluence.
+* `databases`: The table containing information about the databases in Confluence.

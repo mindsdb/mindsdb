@@ -36,6 +36,7 @@ from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.utilities import log
+from mindsdb.integrations.utilities.rag.rerankers.reranker_compressor import LLMReranker
 
 logger = log.getLogger(__name__)
 
@@ -101,6 +102,21 @@ class KnowledgeBaseTable:
         db_handler = self.get_vector_db()
         logger.debug(f"Using vector db handler: {type(db_handler)}")
         resp = db_handler.query(query)
+        # check if we use reranking
+        rerank_model = self._kb.params.get("rerank_model")
+        if rerank_model:
+            reranker = LLMReranker()
+            # convert response from a dataframe to a list of strings
+            df = resp.data_frame
+            # get the content column
+            content_column = df[TableField.CONTENT.value]
+            # convert to list
+            documents = content_column.tolist()
+            scores = reranker.get_scores(query, documents)
+            # filter by score threshold
+            df = df[scores > reranker.threshold]
+            # update response
+            resp.data_frame = df
 
         if resp.data_frame is not None:
             logger.debug(f"Query returned {len(resp.data_frame)} rows")

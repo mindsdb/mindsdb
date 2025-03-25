@@ -3,6 +3,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 
 from mindsdb_sql_parser.ast import BinaryOperation, Constant, Identifier, Select, Star
+import pandas as pd
 
 from base_handler_test import BaseHandlerTestSetup, BaseAPIResourceTestSetup
 from mindsdb.integrations.handlers.confluence_handler.confluence_handler import ConfluenceHandler
@@ -12,6 +13,10 @@ from mindsdb.integrations.handlers.confluence_handler.confluence_tables import (
     ConfluencePagesTable,
     ConfluenceSpacesTable,
     ConfluenceWhiteboardsTable,
+)
+from mindsdb.integrations.utilities.sql_utils import (
+    FilterCondition,
+    FilterOperator
 )
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
@@ -123,7 +128,68 @@ class TestConfluenceHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertIsInstance(response, Response)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
         self.assertEqual(response.data_frame.columns.tolist(), ['Field', 'Type'])
-        
+
+
+class TestConfluenceDatabasesTable(BaseAPIResourceTestSetup, unittest.TestCase):
+
+    @property
+    def dummy_connection_data(self):
+        return OrderedDict(
+            api_base='https://demo.atlassian.net/',
+            username='demo@example.com',
+            password='demo_password',
+        )
+
+    def create_handler(self):
+        return ConfluenceHandler('confluence', connection_data=self.dummy_connection_data)
+
+    def create_patcher(self):
+        return patch('requests.Session')
+
+    def create_resource(self):
+        return ConfluenceDatabasesTable(self.handler)
+
+    def test_list_with_database_id_returns_results(self):
+        """
+        Test that the `list` method returns a list of databases with the specified database ID.
+        """
+        mock_request = MagicMock()
+        mock_request.return_value = MagicMock(
+            status_code=200,
+            raise_for_status=lambda: None,
+            json=lambda: {column: f"mock_{column}" for column in self.resource.get_columns()}
+        )
+        self.mock_connect.return_value = MagicMock(request=mock_request)
+
+        mock_id = 'mock_id'
+        df = self.resource.list(
+            conditions=[
+                FilterCondition(
+                    column="id",
+                    op=FilterOperator.EQUAL,
+                    value=mock_id
+                ),
+            ]
+        )
+
+        self.assertIsInstance(df, pd.DataFrame)
+        self.assertEqual(df.columns.tolist(), self.resource.get_columns())
+        self.assertEqual(df.shape, (1, len(self.resource.get_columns())))
+
+        self.mock_connect.return_value.request.assert_called_with(
+            "GET",
+            f"{self.dummy_connection_data['api_base']}/wiki/api/v2/databases/{mock_id}",
+            params=None,
+            json=None
+        )
+
+    def test_list_without_database_id_raises_error(self):
+        """
+        Test that the `list` method raises an error when no database ID is provided.
+        """
+        with self.assertRaises(ValueError):
+            self.resource.list(conditions=[])
+
 
 if __name__ == '__main__':
     unittest.main()

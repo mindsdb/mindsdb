@@ -91,6 +91,11 @@ class ConfluenceAPIClient:
         url = f"{self.url}/wiki/api/v2/whiteboards/{whiteboard_id}"
 
         return self._make_request("GET", url)
+    
+    def get_database_by_id(self, database_id: int) -> dict:
+        url = f"{self.url}/wiki/api/v2/databases/{database_id}"
+
+        return self._make_request("GET", url)
 
     def _paginate(self, url: str, params: dict = None) -> List[dict]:
         results = []

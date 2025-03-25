@@ -447,3 +447,79 @@ class ConfluenceWhiteboardsTable(APIResource):
             "version_minorEdit",
             "version_authorId",
         ]
+
+
+class ConfluenceDatabasesTable(APIResource):
+    """
+    The table abstraction for the 'databases' resource of the Confluence API.
+    """
+    def list(
+        self,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        sort: List[SortColumn] = None,
+        targets: List[str] = None,
+        **kwargs
+    ):
+        """
+        Executes a parsed SELECT SQL query on the 'databases' resource of the Confluence API.
+
+        Args:
+            conditions (List[FilterCondition]): The list of parsed filter conditions.
+            limit (int): The maximum number of records to return.
+            sort (List[SortColumn]): The list of parsed sort columns.
+            targets (List[str]): The list of target columns to return.
+        """
+        databases = []
+        client: ConfluenceAPIClient = self.handler.connect()
+
+        database_ids = None
+        for condition in conditions:
+            if condition.column == "id":
+                if condition.op == FilterOperator.EQUAL:
+                    database_ids = [condition.value]
+
+                elif condition.op == FilterOperator.IN:
+                    database_ids = condition.value
+
+                else:
+                    raise ValueError(
+                        f"Unsupported operator '{condition.op}' for column 'id'."
+                    )
+                
+                condition.applied = True
+
+        if not database_ids:
+            raise ValueError("The 'id' column must be provided in the WHERE clause.")
+
+        databases = [client.get_database_by_id(database_id) for database_id in database_ids]
+
+        databases_df = pd.json_normalize(databases, sep="_")
+        databases_df = databases_df[self.get_columns()]
+
+        return databases_df
+    
+    def get_columns(self) -> List[str]:
+        """
+        Retrieves the attributes (columns) of the 'databases' resource.
+
+        Returns:
+            List[Text]: A list of attributes (columns) of the 'databases' resource.
+        """
+        return [
+            "id",
+            "type",
+            "status",
+            "title",
+            "parentId",
+            "parentType",
+            "position",
+            "authorId",
+            "ownerId",
+            "createdAt",
+            "version_createdAt",
+            "version_message",
+            "version_number",
+            "version_minorEdit",
+            "version_authorId",
+        ]

@@ -49,6 +49,8 @@ class ConfluencePagesTable(APIResource):
                     raise ValueError(
                         f"Unsupported operator '{condition.op}' for column 'spaceId'."
                     )
+                
+                condition.applied = True
 
             if condition.column == "id":
                 if condition.op == FilterOperator.EQUAL:
@@ -61,23 +63,25 @@ class ConfluencePagesTable(APIResource):
                     raise ValueError(
                         f"Unsupported operator '{condition.op}' for column 'page_id'."
                     )
-            
+                
+                condition.applied = True
+
         if page_ids:
             for page_id in page_ids:
                 page = client.get_page_by_id(page_id)
                 pages.append(page)
 
         elif space_id:
-            pages = client.get_pages_in_space(space_id)
+            pages = client.get_pages_in_space(space_id, limit=limit)
 
         else:
-            pages = client.get_pages()
+            pages = client.get_pages(limit=limit)
 
         pages_df = pd.json_normalize(pages, sep="_")
         pages_df = pages_df[self.get_columns()]
 
         return pages_df
-    
+
     def get_columns(self) -> List[str]:
         """
         Retrieves the attributes (columns) of the 'chat messages' resource.

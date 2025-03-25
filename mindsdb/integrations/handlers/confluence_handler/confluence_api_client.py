@@ -12,17 +12,19 @@ class ConfluenceAPIClient:
         self.session.auth = (self.username, self.password)
         self.session.headers.update({"Accept": "application/json"})
 
-    def get_pages(self) -> List[dict]:
+    def get_pages(self, limit: int = None) -> List[dict]:
         url = f"{self.url}/wiki/api/v2/pages"
         params = {
-            "body-format": "storage"
+            "body-format": "storage",
+            "limit": limit if limit else 25,
         }
         return self._paginate(url, params)
 
-    def get_page_by_id(self, page_id: int) -> dict:
+    def get_page_by_id(self, page_id: int, limit: int = None) -> dict:
         url = f"{self.url}/wiki/api/v2/pages/{page_id}"
         params = {
-            "body-format": "storage"
+            "body-format": "storage",
+            "limit": limit if limit else 25,
         }
         response = self._make_request("GET", url, params)
         return response

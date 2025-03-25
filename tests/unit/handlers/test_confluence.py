@@ -145,6 +145,177 @@ class ConfluenceTablesTestSetup(BaseAPIResourceTestSetup):
 
     def create_patcher(self):
         return patch('requests.Session')
+    
+    def setUp(self):
+        """
+        Set up common test fixtures.
+        """
+        super().setUp()
+
+        mock_request = MagicMock()
+        mock_request.return_value = MagicMock(
+            status_code=200,
+            raise_for_status=lambda: None,
+            json=lambda: dict(
+                results=[{column: f"mock_{column}" for column in self.resource.get_columns()}],
+                _links=dict(next=None)
+            )
+        )
+        self.mock_connect.return_value = MagicMock(request=mock_request)
+
+
+class TestConfluenceSpacesTable(ConfluenceTablesTestSetup, unittest.TestCase):
+    
+    def create_resource(self):
+        return ConfluenceSpacesTable(self.handler)
+
+    def test_list_all_returns_results(self):
+        """
+        Test that the `list` with a query equivalent to `SELECT * FROM spaces` returns a list of spaces.
+        """
+        df = self.resource.list(
+            conditions=[]
+        )
+
+        self.assertIsInstance(df, pd.DataFrame)
+        self.assertEqual(df.columns.tolist(), self.resource.get_columns())
+        self.assertEqual(df.shape, (1, len(self.resource.get_columns())))
+
+        self.mock_connect.return_value.request.assert_called_with(
+            "GET",
+            f"{self.dummy_connection_data['api_base']}/wiki/api/v2/spaces",
+            params={
+                "description-format": "view"
+            },
+            json=None
+        )
+
+    def test_list_with_conditions_returns_results(self):
+        """
+        Test that the `list` method returns a list of spaces with the specified conditions.
+        """
+        mock_id = 'mock_id'
+        mock_key = 'mock_key'
+        mock_type = 'mock_type'
+        mock_status = 'mock_status'
+        df = self.resource.list(
+            conditions=[
+                FilterCondition(
+                    column="id",
+                    op=FilterOperator.EQUAL,
+                    value=mock_id
+                ),
+                FilterCondition(
+                    column="key",
+                    op=FilterOperator.EQUAL,
+                    value=mock_key
+                ),
+                FilterCondition(
+                    column="type",
+                    op=FilterOperator.EQUAL,
+                    value=mock_type
+                ),
+                FilterCondition(
+                    column="status",
+                    op=FilterOperator.EQUAL,
+                    value=mock_status
+                ),
+            ]
+        )
+
+        self.assertIsInstance(df, pd.DataFrame)
+        self.assertEqual(df.columns.tolist(), self.resource.get_columns())
+        self.assertEqual(df.shape, (1, len(self.resource.get_columns())))
+
+        self.mock_connect.return_value.request.assert_called_with(
+            "GET",
+            f"{self.dummy_connection_data['api_base']}/wiki/api/v2/spaces",
+            params={
+                "description-format": "view",
+                "ids": [mock_id],
+                "keys": [mock_key],
+                "type": mock_type,
+                "status": mock_status
+            },
+            json=None
+        )
+
+
+class TestConfluencePagesTable(ConfluenceTablesTestSetup, unittest.TestCase):
+
+    def create_resource(self):
+        return ConfluencePagesTable(self.handler)
+    
+    def test_list_all_returns_results(self):
+        """
+        Test that the `list` with a query equivalent to `SELECT * FROM pages` returns a list of pages.
+        """
+        df = self.resource.list(
+            conditions=[]
+        )
+
+        self.assertIsInstance(df, pd.DataFrame)
+        self.assertEqual(df.columns.tolist(), self.resource.get_columns())
+        self.assertEqual(df.shape, (1, len(self.resource.get_columns())))
+
+        self.mock_connect.return_value.request.assert_called_with(
+            "GET",
+            f"{self.dummy_connection_data['api_base']}/wiki/api/v2/pages",
+            params={
+                "body-format": "storage"
+            },
+            json=None
+        )
+
+    def test_list_with_conditions_returns_results(self):
+        """
+        Test that the `list` method returns a list of pages with the specified conditions.
+        """
+        mock_id = 'mock_id'
+        mock_space_id = 'mock_space_id'
+        mock_status = 'mock_status'
+        mock_title = 'mock_title'
+        df = self.resource.list(
+            conditions=[
+                FilterCondition(
+                    column="id",
+                    op=FilterOperator.EQUAL,
+                    value=mock_id
+                ),
+                FilterCondition(
+                    column="spaceId",
+                    op=FilterOperator.EQUAL,
+                    value=mock_space_id
+                ),
+                FilterCondition(
+                    column="status",
+                    op=FilterOperator.EQUAL,
+                    value=mock_status
+                ),
+                FilterCondition(
+                    column="title",
+                    op=FilterOperator.EQUAL,
+                    value=mock_title
+                )
+            ]
+        )
+
+        self.assertIsInstance(df, pd.DataFrame)
+        self.assertEqual(df.columns.tolist(), self.resource.get_columns())
+        self.assertEqual(df.shape, (1, len(self.resource.get_columns())))
+
+        self.mock_connect.return_value.request.assert_called_with(
+            "GET",
+            f"{self.dummy_connection_data['api_base']}/wiki/api/v2/pages",
+            params={
+                "body-format": "storage",
+                "id": [mock_id],
+                "space-id": [mock_space_id],
+                "status": [mock_status],
+                "title": mock_title
+            },
+            json=None
+        )
 
 
 class TestConfluenceDatabasesTable(ConfluenceTablesTestSetup, unittest.TestCase):

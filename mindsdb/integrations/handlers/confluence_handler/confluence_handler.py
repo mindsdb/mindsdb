@@ -1,9 +1,10 @@
 from typing import Any, Dict
 
 from mindsdb.integrations.handlers.confluence_handler.confluence_api_client import ConfluenceAPIClient
-from mindsdb.integrations.handlers.confluence_handler.confluence_table import (
-    ConfluenceSpacesTable,
+from mindsdb.integrations.handlers.confluence_handler.confluence_tables import (
+    ConfluenceBlogPostsTable,
     ConfluencePagesTable,
+    ConfluenceSpacesTable,
 )
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
@@ -41,6 +42,7 @@ class ConfluenceHandler(APIHandler):
 
         self._register_table("spaces", ConfluenceSpacesTable(self))
         self._register_table("pages", ConfluencePagesTable(self))
+        self._register_table("blogposts", ConfluenceBlogPostsTable(self))
 
     def connect(self) -> ConfluenceAPIClient:
         """

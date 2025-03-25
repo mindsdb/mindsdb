@@ -61,6 +61,31 @@ class ConfluenceAPIClient:
             params["limit"] = limit
 
         return self._paginate(url, params)
+    
+    def get_blogposts(
+        self,
+        post_ids: List[int] = None,
+        space_ids: List[str] = None,
+        statuses: List[str] = None,
+        title: str = None,
+        limit: int = None,
+    ) -> List[dict]:
+        url = f"{self.url}/wiki/api/v2/blogposts"
+        params = {
+            "body-format": "storage",
+        }
+        if post_ids:
+            params["id"] = post_ids
+        if space_ids:
+            params["space-key"] = space_ids
+        if statuses:
+            params["status"] = statuses
+        if title:
+            params["title"] = title
+        if limit:
+            params["limit"] = limit
+
+        return self._paginate(url, params)
 
     def _paginate(self, url: str, params: dict = None) -> List[dict]:
         results = []

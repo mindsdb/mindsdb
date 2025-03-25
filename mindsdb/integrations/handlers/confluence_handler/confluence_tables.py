@@ -253,3 +253,121 @@ class ConfluencePagesTable(APIResource):
             "_links_tinyui",
         ]
 
+
+class ConfluenceBlogPostsTable(APIResource):
+    """
+    The table abstraction for the 'blogposts' resource of the Confluence API.
+    """
+    def list(
+        self,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        sort: List[SortColumn] = None,
+        targets: List[str] = None,
+        **kwargs
+    ):
+        """
+        Executes a parsed SELECT SQL query on the 'blogposts' resource of the Confluence API.
+
+        Args:
+            conditions (List[FilterCondition]): The list of parsed filter conditions.
+            limit (int): The maximum number of records to return.
+            sort (List[SortColumn]): The list of parsed sort columns.
+            targets (List[str]): The list of target columns to return.
+        """
+        blogposts = []
+        client: ConfluenceAPIClient = self.handler.connect()
+
+        post_ids, space_ids, statuses, title = None, None, None, None
+        for condition in conditions:
+            if condition.column == "id":
+                if condition.op == FilterOperator.EQUAL:
+                    post_ids = [condition.value]
+
+                elif condition.op == FilterOperator.IN:
+                    post_ids = condition.value
+
+                else:
+                    raise ValueError(
+                        f"Unsupported operator '{condition.op}' for column 'id'."
+                    )
+                
+                condition.applied = True
+
+            if condition.column == "spaceKey":
+                if condition.op == FilterOperator.EQUAL:
+                    space_ids = [condition.value]
+
+                elif condition.op == FilterOperator.IN:
+                    space_ids = condition.value
+
+                else:
+                    raise ValueError(
+                        f"Unsupported operator '{condition.op}' for column 'spaceKey'."
+                    )
+                
+                condition.applied = True
+
+            if condition.column == "status":
+                if condition.op == FilterOperator.EQUAL:
+                    statuses = [condition.value]
+
+                elif condition.op == FilterOperator.IN:
+                    statuses = condition.value
+
+                else:
+                    raise ValueError(
+                        f"Unsupported operator '{condition.op}' for column 'status'."
+                    )
+                
+                condition.applied = True
+
+            if condition.column == "title":
+                if condition.op == FilterOperator.EQUAL:
+                    title = condition.value
+
+                else:
+                    raise ValueError(
+                        f"Unsupported operator '{condition.op}' for column 'title'."
+                    )
+                
+                condition.applied = True
+
+        blogposts = client.get_blogposts(
+            post_ids=post_ids,
+            space_ids=space_ids,
+            statuses=statuses,
+            title=title,
+            limit=limit
+        )
+
+        blogposts_df = pd.json_normalize(blogposts, sep="_")
+        blogposts_df = blogposts_df[self.get_columns()]
+
+        return blogposts_df
+
+    def get_columns(self) -> List[str]:
+        """
+        Retrieves the attributes (columns) of the 'blogposts' resource.
+
+        Returns:
+            List[Text]: A list of attributes (columns) of the 'blogposts' resource.
+        """
+        return [
+            "id",
+            "status",
+            "title",
+            "spaceId",
+            "authorId",
+            "createdAt",
+            "version_createdAt",
+            "version_message",
+            "version_number",
+            "version_minorEdit",
+            "version_authorId",
+            "body_storage_representation",
+            "body_storage_value",
+            "_links_webui",
+            "_links_editui",
+            "_links_tinyui",
+        ]

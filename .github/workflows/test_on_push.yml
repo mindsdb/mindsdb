@@ -123,6 +123,7 @@ jobs:
         run: |
           # Install dev requirements and build our pip package
           uv pip install -r requirements/requirements-dev.txt
+          uv pip install setuptools==75.8.2
           python setup.py sdist
 
           # Install from the pip package
@@ -177,6 +178,7 @@ jobs:
           uv pip install .[github]
           uv pip install .[ms_teams]
           uv pip install .[salesforce]
+          uv pip install .[mysql]
           uv pip freeze
           git clone https://github.com/mindsdb/mindsdb_sql_parser.git parser_tests
       - name: Run unit tests

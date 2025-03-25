@@ -9,6 +9,7 @@ from mindsdb.interfaces.jobs.jobs_controller import JobsController
 from mindsdb.interfaces.skills.skills_controller import SkillsController
 from mindsdb.interfaces.database.views import ViewController
 from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.interfaces.query_context.context_controller import query_context_controller
 
 from mindsdb.api.executor.datahub.datanodes.system_tables import Table
 
@@ -423,6 +424,21 @@ class ViewsTable(MdbTable):
         columns_lower = [col.lower() for col in cls.columns]
 
         # to list of lists
+        data = [[row[k] for k in columns_lower] for row in data]
+
+        return pd.DataFrame(data, columns=cls.columns)
+
+
+class QueriesTable(MdbTable):
+    name = 'QUERIES'
+    columns = ["ID", "STARTED_AT", "PROCESSED_ROWS", "ERROR", "SQL", "PARAMETERS", "CONTEXT", "UPDATED_AT"]
+
+    @classmethod
+    def get_data(cls, **kwargs):
+
+        data = query_context_controller.list_queries()
+        columns_lower = [col.lower() for col in cls.columns]
+
         data = [[row[k] for k in columns_lower] for row in data]
 
         return pd.DataFrame(data, columns=cls.columns)

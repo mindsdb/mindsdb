@@ -87,7 +87,6 @@ class PGVectorMDB(PGVector):
             # Use SQL directly for vector comparison
             query = sa.text(
                 f"""
-            SET hnsw.ef_search = {k};
             SELECT t.*, t.embeddings {distance_op} '{embedding_str}' as distance
             FROM {self.collection_name} t
             ORDER BY distance {order_direction}

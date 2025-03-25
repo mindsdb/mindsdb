@@ -228,7 +228,25 @@ class PostgresHandler(DatabaseHandler):
 
         connection = self.connect()
 
-        columns = [f'"{c}"' for c in df.columns]
+        columns = df.columns
+
+        with self._insert_lock:
+            resp = self.get_columns(table_name)
+        if resp.data_frame is not None and not resp.data_frame.empty:
+            # get first column
+            db_columns = {
+                c.lower(): c
+                for c in resp.data_frame['Field']
+            }
+
+            # try to get case of existing column
+            columns = [
+                db_columns.get(c.lower(), c)
+                for c in columns
+            ]
+
+        columns = [f'"{c}"' for c in columns]
+
         with connection.cursor() as cur:
             try:
                 with cur.copy(f'copy "{table_name}" ({",".join(columns)}) from STDIN  WITH CSV') as copy:

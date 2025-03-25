@@ -2,7 +2,6 @@ from collections import OrderedDict
 import unittest
 from unittest.mock import patch, MagicMock
 
-from mindsdb_sql_parser.ast import BinaryOperation, Constant, Identifier, Select, Star
 import pandas as pd
 
 from base_handler_test import BaseHandlerTestSetup, BaseAPIResourceTestSetup
@@ -14,14 +13,14 @@ from mindsdb.integrations.handlers.confluence_handler.confluence_tables import (
     ConfluenceSpacesTable,
     ConfluenceWhiteboardsTable,
 )
-from mindsdb.integrations.utilities.sql_utils import (
-    FilterCondition,
-    FilterOperator
-)
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
     RESPONSE_TYPE
+)
+from mindsdb.integrations.utilities.sql_utils import (
+    FilterCondition,
+    FilterOperator
 )
 
 
@@ -139,13 +138,13 @@ class ConfluenceTablesTestSetup(BaseAPIResourceTestSetup):
             username='demo@example.com',
             password='demo_password',
         )
-    
+
     def create_handler(self):
         return ConfluenceHandler('confluence', connection_data=self.dummy_connection_data)
 
     def create_patcher(self):
         return patch('requests.Session')
-    
+
     def setUp(self):
         """
         Set up common test fixtures.
@@ -165,7 +164,7 @@ class ConfluenceTablesTestSetup(BaseAPIResourceTestSetup):
 
 
 class TestConfluenceSpacesTable(ConfluenceTablesTestSetup, unittest.TestCase):
-    
+
     def create_resource(self):
         return ConfluenceSpacesTable(self.handler)
 
@@ -245,7 +244,7 @@ class TestConfluencePagesTable(ConfluenceTablesTestSetup, unittest.TestCase):
 
     def create_resource(self):
         return ConfluencePagesTable(self.handler)
-    
+
     def test_list_all_returns_results(self):
         """
         Test that the `list` with a query equivalent to `SELECT * FROM pages` returns a list of pages.
@@ -319,7 +318,7 @@ class TestConfluencePagesTable(ConfluenceTablesTestSetup, unittest.TestCase):
 
 
 class TestConfluenceBlogPostsTable(ConfluenceTablesTestSetup, unittest.TestCase):
-    
+
     def create_resource(self):
         return ConfluenceBlogPostsTable(self.handler)
 

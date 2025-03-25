@@ -60,7 +60,7 @@ class ConfluenceHandler(APIHandler):
         """
         if self.is_connected is True:
             return self.connection
-        
+
         if not all(key in self.connection_data and self.connection_data.get(key) for key in ['api_base', 'username', 'password']):
             raise ValueError('Required parameters (api_base, username, password) must be provided and should not be empty.')
 

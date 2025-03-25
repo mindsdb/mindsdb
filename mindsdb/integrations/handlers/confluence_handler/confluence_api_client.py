@@ -61,7 +61,7 @@ class ConfluenceAPIClient:
             params["limit"] = limit
 
         return self._paginate(url, params)
-    
+
     def get_blogposts(
         self,
         post_ids: List[int] = None,
@@ -86,12 +86,12 @@ class ConfluenceAPIClient:
             params["limit"] = limit
 
         return self._paginate(url, params)
-    
+
     def get_whiteboard_by_id(self, whiteboard_id: int) -> dict:
         url = f"{self.url}/wiki/api/v2/whiteboards/{whiteboard_id}"
 
         return self._make_request("GET", url)
-    
+
     def get_database_by_id(self, database_id: int) -> dict:
         url = f"{self.url}/wiki/api/v2/databases/{database_id}"
 

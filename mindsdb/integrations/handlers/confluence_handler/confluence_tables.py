@@ -52,7 +52,7 @@ class ConfluenceSpacesTable(APIResource):
                     raise ValueError(
                         f"Unsupported operator '{condition.op}' for column 'id'."
                     )
-                
+
                 condition.applied = True
 
             if condition.column == "key":
@@ -66,7 +66,7 @@ class ConfluenceSpacesTable(APIResource):
                     raise ValueError(
                         f"Unsupported operator '{condition.op}' for column 'key'."
                     )
-                
+
                 condition.applied = True
 
             if condition.column == "type":
@@ -77,7 +77,7 @@ class ConfluenceSpacesTable(APIResource):
                     raise ValueError(
                         f"Unsupported operator '{condition.op}' for column 'type'."
                     )
-                
+
                 condition.applied = True
 
             if condition.column == "status":
@@ -88,7 +88,7 @@ class ConfluenceSpacesTable(APIResource):
                     raise ValueError(
                         f"Unsupported operator '{condition.op}' for column 'status'."
                     )
-                
+
                 condition.applied = True
 
         spaces = client.get_spaces(
@@ -103,7 +103,7 @@ class ConfluenceSpacesTable(APIResource):
         spaces_df = spaces_df[self.get_columns()]
 
         return spaces_df
-    
+
     def get_columns(self) -> List[str]:
         """
         Retrieves the attributes (columns) of the 'spaces' resource.
@@ -164,7 +164,7 @@ class ConfluencePagesTable(APIResource):
                     raise ValueError(
                         f"Unsupported operator '{condition.op}' for column 'page_id'."
                     )
-                
+
                 condition.applied = True
 
             if condition.column == "spaceId":
@@ -178,7 +178,7 @@ class ConfluencePagesTable(APIResource):
                     raise ValueError(
                         f"Unsupported operator '{condition.op}' for column 'spaceId'."
                     )
-                
+
                 condition.applied = True
 
             if condition.column == "status":
@@ -192,7 +192,7 @@ class ConfluencePagesTable(APIResource):
                     raise ValueError(
                         f"Unsupported operator '{condition.op}' for column 'status'."
                     )
-                
+
                 condition.applied = True
 
             if condition.column == "title":
@@ -203,7 +203,7 @@ class ConfluencePagesTable(APIResource):
                     raise ValueError(
                         f"Unsupported operator '{condition.op}' for column 'title'."
                     )
-                
+
                 condition.applied = True
 
         pages = client.get_pages(
@@ -288,7 +288,7 @@ class ConfluenceBlogPostsTable(APIResource):
                     raise ValueError(
                         f"Unsupported operator '{condition.op}' for column 'id'."
                     )
-                
+
                 condition.applied = True
 
             if condition.column == "spaceId":
@@ -302,7 +302,7 @@ class ConfluenceBlogPostsTable(APIResource):
                     raise ValueError(
                         f"Unsupported operator '{condition.op}' for column 'spaceKey'."
                     )
-                
+
                 condition.applied = True
 
             if condition.column == "status":
@@ -316,7 +316,7 @@ class ConfluenceBlogPostsTable(APIResource):
                     raise ValueError(
                         f"Unsupported operator '{condition.op}' for column 'status'."
                     )
-                
+
                 condition.applied = True
 
             if condition.column == "title":
@@ -327,7 +327,7 @@ class ConfluenceBlogPostsTable(APIResource):
                     raise ValueError(
                         f"Unsupported operator '{condition.op}' for column 'title'."
                     )
-                
+
                 condition.applied = True
 
         blogposts = client.get_blogposts(
@@ -368,7 +368,7 @@ class ConfluenceBlogPostsTable(APIResource):
             "_links_editui",
             "_links_tinyui",
         ]
-    
+
 
 class ConfluenceWhiteboardsTable(APIResource):
     """
@@ -407,7 +407,7 @@ class ConfluenceWhiteboardsTable(APIResource):
                     raise ValueError(
                         f"Unsupported operator '{condition.op}' for column 'id'."
                     )
-                
+
                 condition.applied = True
 
         if not whiteboard_ids:
@@ -419,7 +419,7 @@ class ConfluenceWhiteboardsTable(APIResource):
         whiteboards_df = whiteboards_df[self.get_columns()]
 
         return whiteboards_df
-    
+
     def get_columns(self) -> List[str]:
         """
         Retrieves the attributes (columns) of the 'whiteboards' resource.
@@ -483,7 +483,7 @@ class ConfluenceDatabasesTable(APIResource):
                     raise ValueError(
                         f"Unsupported operator '{condition.op}' for column 'id'."
                     )
-                
+
                 condition.applied = True
 
         if not database_ids:
@@ -495,7 +495,7 @@ class ConfluenceDatabasesTable(APIResource):
         databases_df = databases_df[self.get_columns()]
 
         return databases_df
-    
+
     def get_columns(self) -> List[str]:
         """
         Retrieves the attributes (columns) of the 'databases' resource.

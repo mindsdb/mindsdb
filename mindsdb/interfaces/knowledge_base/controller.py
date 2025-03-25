@@ -118,14 +118,14 @@ class KnowledgeBaseTable:
 
         rerank_model = self._kb.params.get("rerank_model")
         if rerank_model and df is not None:
-            reranker = LLMReranker()
+            reranker = LLMReranker(model=rerank_model)
             # convert response from a dataframe to a list of strings
             content_column = df[TableField.CONTENT.value]
             # convert to list
             documents = content_column.tolist()
             scores = reranker.get_scores(query, documents)
             # filter by score threshold
-            df = df[scores > reranker.threshold]
+            df = df[scores > reranker.filtering_threshold]
         return df
 
     def insert_files(self, file_names: List[str]):

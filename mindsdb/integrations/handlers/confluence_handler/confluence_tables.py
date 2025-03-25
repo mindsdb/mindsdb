@@ -371,3 +371,79 @@ class ConfluenceBlogPostsTable(APIResource):
             "_links_editui",
             "_links_tinyui",
         ]
+    
+
+class ConfluenceWhiteboardsTable(APIResource):
+    """
+    The table abstraction for the 'whiteboards' resource of the Confluence API.
+    """
+    def list(
+        self,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        sort: List[SortColumn] = None,
+        targets: List[str] = None,
+        **kwargs
+    ):
+        """
+        Executes a parsed SELECT SQL query on the 'whiteboards' resource of the Confluence API.
+
+        Args:
+            conditions (List[FilterCondition]): The list of parsed filter conditions.
+            limit (int): The maximum number of records to return.
+            sort (List[SortColumn]): The list of parsed sort columns.
+            targets (List[str]): The list of target columns to return.
+        """
+        whiteboards = []
+        client: ConfluenceAPIClient = self.handler.connect()
+
+        whiteboard_ids = None
+        for condition in conditions:
+            if condition.column == "id":
+                if condition.op == FilterOperator.EQUAL:
+                    whiteboard_ids = [condition.value]
+
+                elif condition.op == FilterOperator.IN:
+                    whiteboard_ids = condition.value
+
+                else:
+                    raise ValueError(
+                        f"Unsupported operator '{condition.op}' for column 'id'."
+                    )
+                
+                condition.applied = True
+
+        if not whiteboard_ids:
+            raise ValueError("The 'id' column must be provided in the WHERE clause.")
+
+        whiteboards = [client.get_whiteboard_by_id(whiteboard_id) for whiteboard_id in whiteboard_ids]
+
+        whiteboards_df = pd.json_normalize(whiteboards, sep="_")
+        whiteboards_df = whiteboards_df[self.get_columns()]
+
+        return whiteboards_df
+    
+    def get_columns(self) -> List[str]:
+        """
+        Retrieves the attributes (columns) of the 'whiteboards' resource.
+
+        Returns:
+            List[Text]: A list of attributes (columns) of the 'whiteboards' resource.
+        """
+        return [
+            "id",
+            "type",
+            "status",
+            "title",
+            "parentId",
+            "parentType",
+            "position",
+            "authorId",
+            "ownerId",
+            "createdAt",
+            "version_createdAt",
+            "version_message",
+            "version_number",
+            "version_minorEdit",
+            "version_authorId",
+        ]

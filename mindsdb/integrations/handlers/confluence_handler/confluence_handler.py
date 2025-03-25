@@ -5,6 +5,7 @@ from mindsdb.integrations.handlers.confluence_handler.confluence_tables import (
     ConfluenceBlogPostsTable,
     ConfluencePagesTable,
     ConfluenceSpacesTable,
+    ConfluenceWhiteboardsTable,
 )
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
@@ -43,6 +44,7 @@ class ConfluenceHandler(APIHandler):
         self._register_table("spaces", ConfluenceSpacesTable(self))
         self._register_table("pages", ConfluencePagesTable(self))
         self._register_table("blogposts", ConfluenceBlogPostsTable(self))
+        self._register_table("whiteboards", ConfluenceWhiteboardsTable(self))
 
     def connect(self) -> ConfluenceAPIClient:
         """

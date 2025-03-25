@@ -106,13 +106,12 @@ class LLMReranker(BaseDocumentCompressor):
         # Create event loop and run async code
         import asyncio
         try:
-            loop = asyncio.get_running_loop()
+            rankings = asyncio.get_event_loop().run_until_complete(self._rank(query_documents_pairs))
         except RuntimeError:
-            # If no running loop exists, create a new one
+            # If no event loop is available, create a new one
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-
-        rankings = loop.run_until_complete(self._rank(query_documents_pairs))
+            rankings = loop.run_until_complete(self._rank(query_documents_pairs))
 
         compressed = []
         for ind, ranking in enumerate(rankings):
@@ -147,6 +146,15 @@ class LLMReranker(BaseDocumentCompressor):
             callback.on_retriever_end(compressed, run_id=run_id)
         return compressed
 
+    @property
+    def _identifying_params(self) -> Dict[str, Any]:
+        """Get the identifying parameters."""
+        return {
+            "model": self.model,
+            "temperature": self.temperature,
+            "remove_irrelevant": self.remove_irrelevant,
+        }
+
     def get_scores(self, query: str, documents: list[str]):
         query_document_pairs = [(query, doc) for doc in documents]
         # Create event loop and run async code
@@ -161,12 +169,3 @@ class LLMReranker(BaseDocumentCompressor):
         documents_and_scores = loop.run_until_complete(self._rank(query_document_pairs))
         scores = [score for _, score in documents_and_scores]
         return scores
-
-    @property
-    def _identifying_params(self) -> Dict[str, Any]:
-        """Get the identifying parameters."""
-        return {
-            "model": self.model,
-            "temperature": self.temperature,
-            "remove_irrelevant": self.remove_irrelevant,
-        }

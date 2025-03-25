@@ -45,38 +45,59 @@ class TestConfluenceHandler(BaseHandlerTestSetup, unittest.TestCase):
         """
         Test that the `check_connection` method returns a StatusResponse object and accurately reflects the connection status on a successful connection.
         """
-        self.mock_connect.return_value = MagicMock(
-            request=lambda *args, **kwargs: MagicMock(
-                status_code=200,
-                raise_for_status=lambda: None,
-                json=lambda: dict(
-                    results=[],
-                    _links=dict(next=None)
-                ),
+        mock_request = MagicMock()
+        mock_request.return_value = MagicMock(
+            status_code=200,
+            raise_for_status=lambda: None,
+            json=lambda: dict(
+                results=[],
+                _links=dict(next=None)
             ),
         )
+        self.mock_connect.return_value = MagicMock(request=mock_request)
+
         response = self.handler.check_connection()
 
         self.assertTrue(response.success)
         assert isinstance(response, StatusResponse)
         self.assertFalse(response.error_message)
 
+        self.mock_connect.return_value.request.assert_called_with(
+            "GET",
+            f"{self.dummy_connection_data['api_base']}/wiki/api/v2/spaces",
+            params={
+                "description-format": "view",
+                "limit": 1
+            },
+            json=None
+        )
+
     def test_check_connection_failure(self):
         """
         Test that the `check_connection` method returns a StatusResponse object and accurately reflects the connection status on a failed connection.
         """
-        self.mock_connect.return_value = MagicMock(
-            request=lambda *args, **kwargs: MagicMock(
-                status_code=401,
-                raise_for_status=lambda: None
-            )
+        mock_request = MagicMock()
+        mock_request.return_value = MagicMock(
+            status_code=401,
+            raise_for_status=lambda: None,
         )
+        self.mock_connect.return_value = MagicMock(request=mock_request)
         response = self.handler.check_connection()
 
         self.assertFalse(response.success)
         assert isinstance(response, StatusResponse)
         self.assertTrue(response.error_message)
 
+        self.mock_connect.return_value.request.assert_called_with(
+            "GET",
+            f"{self.dummy_connection_data['api_base']}/wiki/api/v2/spaces",
+            params={
+                "description-format": "view",
+                "limit": 1
+            },
+            json=None
+        )
+        
 
 if __name__ == '__main__':
     unittest.main()

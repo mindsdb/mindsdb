@@ -77,7 +77,7 @@ class ConfluenceAPIClient:
         if post_ids:
             params["id"] = post_ids
         if space_ids:
-            params["space-key"] = space_ids
+            params["space-id"] = space_ids
         if statuses:
             params["status"] = statuses
         if title:

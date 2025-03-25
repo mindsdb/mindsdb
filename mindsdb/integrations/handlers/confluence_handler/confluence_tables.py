@@ -291,7 +291,7 @@ class ConfluenceBlogPostsTable(APIResource):
                 
                 condition.applied = True
 
-            if condition.column == "spaceKey":
+            if condition.column == "spaceId":
                 if condition.op == FilterOperator.EQUAL:
                     space_ids = [condition.value]
 

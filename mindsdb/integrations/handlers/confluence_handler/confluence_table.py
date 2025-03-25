@@ -15,6 +15,121 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 
+class ConfluenceSpacesTable(APIResource):
+    """
+    The table abstraction for the 'spaces' resource of the Confluence API.
+    """
+    def list(
+        self,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        sort: List[SortColumn] = None,
+        targets: List[str] = None,
+        **kwargs
+    ):
+        """
+        Executes a parsed SELECT SQL query on the 'spaces' resource of the Confluence API.
+
+        Args:
+            conditions (List[FilterCondition]): The list of parsed filter conditions.
+            limit (int): The maximum number of records to return.
+            sort (List[SortColumn]): The list of parsed sort columns.
+            targets (List[str]): The list of target columns to return.
+        """
+        spaces = []
+        client: ConfluenceAPIClient = self.handler.connect()
+
+        ids, keys, type, statuses = None, None, None, None
+        for condition in conditions:
+            if condition.column == "id":
+                if condition.op == FilterOperator.EQUAL:
+                    ids = [condition.value]
+
+                elif condition.op == FilterOperator.IN:
+                    ids = condition.value
+
+                else:
+                    raise ValueError(
+                        f"Unsupported operator '{condition.op}' for column 'id'."
+                    )
+                
+                condition.applied = True
+
+            if condition.column == "key":
+                if condition.op == FilterOperator.EQUAL:
+                    keys = [condition.value]
+
+                elif condition.op == FilterOperator.IN:
+                    keys = condition.value
+
+                else:
+                    raise ValueError(
+                        f"Unsupported operator '{condition.op}' for column 'key'."
+                    )
+                
+                condition.applied = True
+
+            if condition.column == "type":
+                if condition.op == FilterOperator.EQUAL:
+                    type = condition.value
+
+                else:
+                    raise ValueError(
+                        f"Unsupported operator '{condition.op}' for column 'type'."
+                    )
+                
+                condition.applied = True
+
+            if condition.column == "status":
+                if condition.op == FilterOperator.EQUAL:
+                    statuses = [condition.value]
+
+                elif condition.op == FilterOperator.IN:
+                    statuses = condition.value
+
+                else:
+                    raise ValueError(
+                        f"Unsupported operator '{condition.op}' for column 'status'."
+                    )
+                
+                condition.applied = True
+
+        spaces = client.get_spaces(
+            ids=ids,
+            keys=keys,
+            type=type,
+            status=statuses,
+            limit=limit
+        )
+
+        spaces_df = pd.json_normalize(spaces, sep="_")
+        spaces_df = spaces_df[self.get_columns()]
+
+        return spaces_df
+    
+    def get_columns(self) -> List[str]:
+        """
+        Retrieves the attributes (columns) of the 'spaces' resource.
+
+        Returns:
+            List[Text]: A list of attributes (columns) of the 'spaces' resource.
+        """
+        return [
+            "id",
+            "key",
+            "name",
+            "type",
+            "description_view_representation",
+            "description_view_value",
+            "status",
+            "authorId",
+            "createdAt",
+            "homepageId",
+            "_links_webui",
+            "currentActiveAlias",
+        ]
+
+
 class ConfluencePagesTable(APIResource):
     """
     The table abstraction for the 'pages' resource of the Confluence API.

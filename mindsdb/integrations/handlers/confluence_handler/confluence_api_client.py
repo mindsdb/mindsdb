@@ -25,9 +25,9 @@ class ConfluenceAPIClient:
             "description-format": "view",
         }
         if ids:
-            params["id"] = ids
+            params["ids"] = ids
         if keys:
-            params["key"] = keys
+            params["keys"] = keys
         if type:
             params["type"] = type
         if status:

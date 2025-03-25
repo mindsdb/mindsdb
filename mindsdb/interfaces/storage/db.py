@@ -564,6 +564,26 @@ class QueryContext(Base):
     created_at: datetime.datetime = Column(DateTime, default=datetime.datetime.now)
 
 
+class Queries(Base):
+    __tablename__ = "queries"
+    id: int = Column(Integer, primary_key=True)
+    company_id: int = Column(Integer, nullable=True)
+
+    sql: str = Column(String, nullable=False)
+    # step_data: JSON = Column(JSON, nullable=True)
+
+    started_at: datetime.datetime = Column(DateTime, default=datetime.datetime.now)
+    parameters = Column(JSON, default={})
+    context = Column(JSON, default={})
+    processed_rows = Column(Integer, default=0)
+    error: str = Column(String, nullable=True)
+
+    updated_at: datetime.datetime = Column(
+        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
+    )
+    created_at: datetime.datetime = Column(DateTime, default=datetime.datetime.now)
+
+
 class LLMLog(Base):
     __tablename__ = "llm_log"
     id: int = Column(Integer, primary_key=True)

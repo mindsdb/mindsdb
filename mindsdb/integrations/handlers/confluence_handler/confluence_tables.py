@@ -39,7 +39,7 @@ class ConfluenceSpacesTable(APIResource):
         spaces = []
         client: ConfluenceAPIClient = self.handler.connect()
 
-        ids, keys, type, statuses = None, None, None, None
+        ids, keys, type, status = None, None, None, None
         for condition in conditions:
             if condition.column == "id":
                 if condition.op == FilterOperator.EQUAL:
@@ -82,10 +82,7 @@ class ConfluenceSpacesTable(APIResource):
 
             if condition.column == "status":
                 if condition.op == FilterOperator.EQUAL:
-                    statuses = [condition.value]
-
-                elif condition.op == FilterOperator.IN:
-                    statuses = condition.value
+                    status = condition.value
 
                 else:
                     raise ValueError(
@@ -98,7 +95,7 @@ class ConfluenceSpacesTable(APIResource):
             ids=ids,
             keys=keys,
             type=type,
-            status=statuses,
+            status=status,
             limit=limit
         )
 

@@ -83,8 +83,8 @@ class ConfluenceHandler(APIHandler):
         response = StatusResponse(False)
 
         try:
-            self.connect()
-            # TODO: Add a simple query to check the connection.
+            connection = self.connect()
+            connection.get_spaces(limit=1)
             response.success = True
         except Exception as e:
             logger.error(f"Error connecting to Confluence API: {e}!")

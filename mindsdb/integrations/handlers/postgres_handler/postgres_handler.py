@@ -1,6 +1,7 @@
 import time
 import json
 from typing import Optional
+import threading
 
 import pandas as pd
 import psycopg
@@ -44,6 +45,8 @@ class PostgresHandler(DatabaseHandler):
         self.connection = None
         self.is_connected = False
         self.thread_safe = True
+
+        self._insert_lock = threading.Lock()
 
     def __del__(self):
         if self.is_connected:
@@ -249,10 +252,11 @@ class PostgresHandler(DatabaseHandler):
 
         with connection.cursor() as cur:
             try:
-                with cur.copy(f'copy "{table_name}" ({",".join(columns)}) from STDIN  WITH CSV') as copy:
-                    df.to_csv(copy, index=False, header=False)
+                with self._insert_lock:
+                    with cur.copy(f'copy "{table_name}" ({",".join(columns)}) from STDIN  WITH CSV') as copy:
+                        df.to_csv(copy, index=False, header=False)
 
-                connection.commit()
+                    connection.commit()
             except Exception as e:
                 logger.error(f'Error running insert to {table_name} on {self.database}, {e}!')
                 connection.rollback()

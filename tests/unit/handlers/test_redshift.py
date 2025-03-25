@@ -92,22 +92,22 @@ class TestRedshiftHandler(TestPostgresHandler):
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
 
         df = pd.DataFrame(columns=['column1', 'column2'])
-        
+
         table_name = 'mock_table'
         response = self.handler.insert(table_name, df)
-        
+
         columns = ', '.join([f'"{col}"' if ' ' in col else col for col in df.columns])
         values = ', '.join(['%s' for _ in range(len(df.columns))])
         expected_query = f'INSERT INTO {table_name} ({columns}) VALUES ({values})'
-        
+
         mock_cursor.executemany.assert_called_once()
         call_args, call_kwargs = mock_cursor.executemany.call_args
         self.assertEqual(call_args[0], expected_query)
         self.assertEqual(len(call_args[1]), 0)
-        
+
         assert isinstance(response, Response)
         self.assertEqual(response.type, RESPONSE_TYPE.OK)
-        
+
         mock_conn.commit.assert_called_once()
 
     def test_insert_with_special_column_names(self):
@@ -129,22 +129,20 @@ class TestRedshiftHandler(TestPostgresHandler):
             'column-with-hyphens': [True, False],
             'mixed@column#123': [3.14, 2.71]
         })
-        
+
         table_name = 'mock_table'
         response = self.handler.insert(table_name, df)
-        
-        expected_columns = '"normal_column", "column with spaces", "column-with-hyphens", "mixed@column#123"'
+
         call_args = mock_cursor.executemany.call_args[0][0]
-        
+
         for col in df.columns:
             if ' ' in col:
                 self.assertIn(f'"{col}"', call_args)
             else:
                 self.assertTrue(col in call_args or f'"{col}"' in call_args)
-        
+
         assert isinstance(response, Response)
         self.assertEqual(response.type, RESPONSE_TYPE.OK)
-
 
     def test_insert_disconnect_when_needed(self):
         """
@@ -163,8 +161,7 @@ class TestRedshiftHandler(TestPostgresHandler):
 
         df = pd.DataFrame({'column1': [1, 2, 3]})
         self.handler.insert('mock_table', df)
-        
-        self.handler.disconnect.assert_called_once()        
+        self.handler.disconnect.assert_called_once()
         self.handler.connect.reset_mock()
         self.handler.disconnect.reset_mock()
         self.handler.is_connected = True

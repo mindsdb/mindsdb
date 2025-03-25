@@ -1,11 +1,16 @@
 from typing import List
+import pickle
 
+from sqlalchemy.orm.attributes import flag_modified
 import pandas as pd
+
+from mindsdb_sql_parser import Select, Star, OrderBy
 
 from mindsdb_sql_parser.ast import (
     Identifier, BinaryOperation, Last, Constant, ASTNode
 )
 from mindsdb.integrations.utilities.query_traversal import query_traversal
+from mindsdb.utilities.cache import get_cache
 
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.context import context as ctx
@@ -283,6 +288,173 @@ class QueryContextController:
         """
         rec = self._get_context_record(context_name, query_str)
         rec.values = values
+        db.session.commit()
+
+    def get_query(self, query_id):
+        # find query in progres or in error by it
+
+        rec = db.Queries.query.filter(
+            db.Queries.id == query_id,
+            db.Queries.company_id == ctx.company_id
+        ).first()
+
+        if rec is None:
+            raise RuntimeError(f'Query not found: {query_id}')
+        return RunningQuery(rec)
+
+    def create_query(self, query):
+
+        rec = db.Queries(
+            sql=str(query),
+            company_id=ctx.company_id,
+        )
+
+        db.session.add(rec)
+        db.session.commit()
+        return RunningQuery(rec)
+
+    def list_queries(self):
+
+        query = db.session.query(db.Queries).filter(
+            db.Queries.company_id == ctx.company_id
+        )
+        return [
+            {
+                'id': record.id,
+                'sql': record.sql,
+                'started_at': record.started_at,
+                'parameters': record.parameters,
+                'context': record.context,
+                'processed_rows': record.processed_rows,
+                'error': record.error,
+                'updated_at': record.updated_at,
+            }
+            for record in query
+        ]
+
+    def cancel_query(self, query_id):
+        rec = db.Queries.query.filter(
+            db.Queries.id == query_id,
+            db.Queries.company_id == ctx.company_id
+        ).first()
+        if rec is None:
+            raise RuntimeError(f'Query not found: {query_id}')
+
+        # the query in progress will fail when it tries to update status
+        db.session.delete(rec)
+        db.session.commit()
+
+
+class RunningQuery:
+    """
+    Query in progres
+    """
+
+    def __init__(self, record: db.Queries):
+        self.record = record
+        self.sql = record.sql
+
+    def get_partition_query(self, step_num, query):
+        # generate query for fetching the next partition
+
+        track_column = self.record.parameters['track_column']
+
+        query = Select(
+            targets=[Star()],
+            from_table=query,
+            order_by=[OrderBy(Identifier(track_column))],
+            limit=Constant(self.batch_size)
+        )
+
+        track_value = self.record.context.get('track_value')
+        # is it different step?
+        cur_step_num = self.record.context.get('step_num')
+        if cur_step_num is not None and cur_step_num != step_num:
+            # reset track_value
+            track_value = None
+            self.record.context['track_value'] = None
+            self.record.context['step_num'] = step_num
+            flag_modified(self.record, 'context')
+            db.session.commit()
+
+        if track_value is not None:
+            query.where = BinaryOperation(
+                op='>',
+                args=[Identifier(track_column), Constant(track_value)],
+            )
+
+        return query
+
+    def set_params(self, params):
+        # set parameters of the step which is about to be split into partitions
+
+        if 'track_column' not in params:
+            raise ValueError('Track column is not defined')
+        if 'batch_size' not in params:
+            params['batch_size'] = 1000
+
+        self.record.parameters = params
+        self.batch_size = self.record.parameters['batch_size']
+        db.session.commit()
+
+    def get_max_track_value(self, df):
+        # return max value to use in `set_progress`.
+        # this function is called before execution substeps, set_progress - after
+        track_column = self.record.parameters['track_column']
+        return df[track_column].max()
+
+    def set_progress(self, df, max_track_value):
+        # set progres of the query, after processing of batch
+        if len(df) == 0:
+            return
+
+        self.record.processed_rows = self.record.processed_rows + len(df)
+
+        cur_value = self.record.context.get('track_value')
+        new_value = max_track_value
+        if new_value is not None:
+            if cur_value is None or new_value > cur_value:
+                self.record.context['track_value'] = new_value
+                flag_modified(self.record, 'context')
+
+        db.session.commit()
+
+    def on_error(self, error, step_num, steps_data):
+        # saves error in query
+        # and saves step data to be able to continue query
+        self.record.error = str(error)
+        self.record.context['step_num'] = step_num
+        flag_modified(self.record, 'context')
+
+        # save steps_data
+        cache = get_cache('steps_data')
+        data = pickle.dumps(steps_data, protocol=5)
+        cache.set(str(self.record.id), data)
+
+        db.session.commit()
+
+    def clear_error(self):
+        if self.record.error is not None:
+            self.record.error = None
+            db.session.commit()
+
+    def get_state(self):
+        # returns data for continue the query
+        cache = get_cache('steps_data')
+        key = self.record.id
+        data = cache.get(key)
+        cache.delete(key)
+
+        steps_data = pickle.loads(data)
+
+        return {
+            'step_num': self.record.context.get('step_num'),
+            'steps_data': steps_data,
+        }
+
+    def finish(self):
+        # query is finished, we can delete it
+        db.session.delete(self.record)
         db.session.commit()
 
 

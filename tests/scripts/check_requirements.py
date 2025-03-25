@@ -38,8 +38,8 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 # transformers is required for langchain_core and not explicitly imported by mindsdb.
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch"],
-    "DEP001": ["torch", "pgvector", "pyarrow"],
-    "DEP002": ["psycopg2-binary", "lark", "transformers", "langchain-experimental", "lxml"]
+    "DEP001": ["torch", "pgvector", "pyarrow", "openai"],
+    "DEP002": ["psycopg2-binary", "lark", "transformers", "langchain-experimental", "lxml", "openpyxl"]
 }
 
 
@@ -50,7 +50,7 @@ MAIN_RULE_IGNORES = {
 # Or 2) because they are imported in an unusual way. E.g.:
 #   - pysqlite3 in the chromadb handler
 #   - dspy-ai in langchain handler
-OPTIONAL_HANDLER_DEPS = ["torch", "tiktoken", "wikipedia", "openpyxl",
+OPTIONAL_HANDLER_DEPS = ["torch", "tiktoken", "wikipedia",
                          "sentence-transformers", "faiss-cpu", "litellm", "chromadb", "dspy-ai", "sqlalchemy-solr"]
 
 # List of rules we can ignore for specific packages
@@ -122,7 +122,6 @@ PACKAGE_NAME_MAP = {
     "scikit-learn": ["sklearn"],
     "influxdb3-python": ["influxdb_client_3"],
     "hubspot-api-client": ["hubspot"],
-    "pytest-lazy-fixture": ["pytest_lazyfixture"],
     "eventbrite-python": ["eventbrite"],
     "clickhouse-sqlalchemy": ["clickhouse_sqlalchemy"],
     "pillow": ["PIL"],
@@ -138,7 +137,8 @@ PACKAGE_NAME_MAP = {
     "opentelemetry-instrumentation-requests": ["opentelemetry"],
     "opentelemetry-instrumentation-flask": ["opentelemetry"],
     "opentelemetry-distro": ["opentelemetry"],
-    "sqlalchemy-ingres": ["ingres_sa_dialect"]
+    "sqlalchemy-ingres": ["ingres_sa_dialect"],
+    "pyaml": ["yaml"],
 }
 
 # We use this to exit with a non-zero status code if any check fails

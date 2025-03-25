@@ -39,31 +39,8 @@ class SalesforceHandler(APIHandler):
 
         self.connection = None
         self.is_connected = False
-
-        # Register Salesforce tables.
-        self.resource_names = {
-            'Account',
-            'Contact',
-            'Opportunity',
-            'Lead',
-            'Task',
-            'Event',
-            'User',
-            'Product2',
-            'Pricebook2',
-            'PricebookEntry',
-            'Order',
-            'OrderItem',
-            'Case',
-            'Campaign',
-            'CampaignMember',
-            'Contract',
-            'Asset'
-        }
-
-        for resource_name in self.resource_names:
-            table_class = create_table_class(resource_name, resource_name)
-            self._register_table(resource_name, table_class(self))
+        self.thread_safe = True
+        self.resource_names = []
 
     def connect(self) -> salesforce_api.client.Client:
         """
@@ -88,9 +65,16 @@ class SalesforceHandler(APIHandler):
                 username=self.connection_data['username'],
                 password=self.connection_data['password'],
                 client_id=self.connection_data['client_id'],
-                client_secret=self.connection_data['client_secret']
+                client_secret=self.connection_data['client_secret'],
+                is_sandbox=self.connection_data.get('is_sandbox', False)
             )
             self.is_connected = True
+
+            # Register Salesforce tables.
+            for resource_name in self._get_resource_names():
+                table_class = create_table_class(resource_name)
+                self._register_table(resource_name.lower(), table_class(self))
+
             return self.connection
         except AuthenticationError as auth_error:
             logger.error(f"Authentication error connecting to Salesforce, {auth_error}!")
@@ -178,3 +162,15 @@ class SalesforceHandler(APIHandler):
             )
 
         return response
+
+    def _get_resource_names(self) -> None:
+        """
+        Retrieves the names of the Salesforce resources.
+
+        Returns:
+            None
+        """
+        if not self.resource_names:
+            self.resource_names = [resource['name'] for resource in self.connection.sobjects.describe()['sobjects']]
+
+        return self.resource_names

@@ -210,6 +210,7 @@ class ChromaDBHandler(VectorStoreHandler):
         chroma_db_conditions = []
         for condition in metadata_conditions:
             metadata_key = condition.column.split(".")[-1]
+
             chroma_db_conditions.append(
                 {
                     metadata_key: {
@@ -286,7 +287,7 @@ class ChromaDBHandler(VectorStoreHandler):
         else:
             # general get query
             result = collection.get(
-                ids=id_filters,
+                ids=id_filters or None,
                 where=filters,
                 limit=limit,
                 offset=offset,
@@ -310,9 +311,29 @@ class ChromaDBHandler(VectorStoreHandler):
             payload = {column: payload[column] for column in columns}
 
         # always include distance
+        distance_filter = None
+        distance_col = TableField.DISTANCE.value
         if distances is not None:
-            payload[TableField.DISTANCE.value] = distances
-        return pd.DataFrame(payload)
+            payload[distance_col] = distances
+
+            for cond in conditions:
+                if cond.column == distance_col:
+                    distance_filter = cond
+                    break
+
+        df = pd.DataFrame(payload)
+        if distance_filter is not None:
+            op_map = {
+                '<': '__lt__',
+                '<=': '__le__',
+                '>': '__gt__',
+                '>=': '__ge__',
+                '=': '__eq__',
+            }
+            op = op_map.get(distance_filter.op.value)
+            if op:
+                df = df[getattr(df[distance_col], op)(distance_filter.value)]
+        return df
 
     def _dataframe_metadata_to_chroma_metadata(self, metadata: Union[Dict[str, str], str]) -> Optional[Dict[str, str]]:
         """Convert DataFrame metadata to ChromaDB compatible metadata format"""
@@ -475,7 +496,7 @@ class ChromaDBHandler(VectorStoreHandler):
         collections = self._client.list_collections()
         collections_name = pd.DataFrame(
             columns=["table_name"],
-            data=[collection.name for collection in collections],
+            data=collections,
         )
         return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=collections_name)
 

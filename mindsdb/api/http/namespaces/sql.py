@@ -78,6 +78,7 @@ class Query(Resource):
                     "error_code": 0,
                     "error_message": str(e),
                 }
+                logger.error(f"Error query processing: \n{traceback.format_exc()}")
 
             except UnknownError as e:
                 # unclassified
@@ -87,6 +88,7 @@ class Query(Resource):
                     "error_code": 0,
                     "error_message": str(e),
                 }
+                logger.error(f"Error query processing: \n{traceback.format_exc()}")
 
             except Exception as e:
                 error_type = "unexpected"
@@ -95,7 +97,7 @@ class Query(Resource):
                     "error_code": 0,
                     "error_message": str(e),
                 }
-                logger.debug(f"Error query processing: \n{traceback.format_exc()}")
+                logger.error(f"Error query processing: \n{traceback.format_exc()}")
 
             if query_response.get("type") == SQL_RESPONSE_TYPE.ERROR:
                 error_type = "expected"

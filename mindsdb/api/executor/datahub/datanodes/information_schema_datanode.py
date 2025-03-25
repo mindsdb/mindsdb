@@ -3,12 +3,8 @@ import pandas as pd
 from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.api.executor.datahub.datanodes.datanode import DataNode
-from mindsdb.api.executor.datahub.datanodes.integration_datanode import (
-    IntegrationDataNode,
-)
-from mindsdb.api.executor.datahub.datanodes.project_datanode import (
-    ProjectDataNode,
-)
+from mindsdb.api.executor.datahub.datanodes.integration_datanode import IntegrationDataNode
+from mindsdb.api.executor.datahub.datanodes.project_datanode import ProjectDataNode
 from mindsdb.api.executor import exceptions as exc
 from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.api.executor.utilities.sql import get_query_tables
@@ -120,7 +116,7 @@ class InformationSchemaDataNode(DataNode):
             return True
         return False
 
-    def get_table_columns(self, tableName):
+    def get_table_columns(self, tableName, schema_name=None):
         tn = tableName.upper()
         if tn in self.tables:
             return [

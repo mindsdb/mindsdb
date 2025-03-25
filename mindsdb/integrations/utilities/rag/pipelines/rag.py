@@ -1,8 +1,9 @@
 from copy import copy
-from typing import Optional, Any
+from typing import Optional, Any, List
 
 from langchain_core.output_parsers import StrOutputParser
 from langchain.retrievers import ContextualCompressionRetriever
+from langchain_core.documents import Document
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableParallel, RunnablePassthrough, RunnableSerializable
@@ -28,6 +29,23 @@ from mindsdb.interfaces.agents.langchain_agent import create_chat_model
 class LangChainRAGPipeline:
     """
     Builds a RAG pipeline using langchain LCEL components
+
+    Args:
+        retriever_runnable: Base retriever component
+        prompt_template: Template for generating responses
+        llm: Language model for generating responses
+        reranker (bool): Whether to use reranking (default: False)
+        reranker_config (RerankerConfig): Configuration for the reranker, including:
+            - model: Model to use for reranking
+            - filtering_threshold: Minimum score to keep a document
+            - num_docs_to_keep: Maximum number of documents to keep
+            - max_concurrent_requests: Maximum concurrent API requests
+            - max_retries: Number of retry attempts for failed requests
+            - retry_delay: Delay between retries
+            - early_stop (bool): Whether to enable early stopping
+            - early_stop_threshold: Confidence threshold for early stopping
+        vector_store_config (VectorStoreConfig): Vector store configuration
+        summarization_config (SummarizationConfig): Summarization configuration
     """
 
     def __init__(
@@ -40,19 +58,15 @@ class LangChainRAGPipeline:
             vector_store_config: Optional[VectorStoreConfig] = None,
             summarization_config: Optional[SummarizationConfig] = None
     ):
-
         self.retriever_runnable = retriever_runnable
         self.prompt_template = prompt_template
         self.llm = llm
         if reranker:
             if reranker_config is None:
                 reranker_config = RerankerConfig()
-            self.reranker = LLMReranker(
-                model=reranker_config.model,
-                base_url=reranker_config.base_url,
-                filtering_threshold=reranker_config.filtering_threshold,
-                num_docs_to_keep=reranker_config.num_docs_to_keep
-            )
+            # Convert config to dict and initialize reranker
+            reranker_kwargs = reranker_config.model_dump(exclude_none=True)
+            self.reranker = LLMReranker(**reranker_kwargs)
         else:
             self.reranker = None
         self.summarizer = None
@@ -102,17 +116,45 @@ class LangChainRAGPipeline:
             raise ValueError("One of the required components (llm) is None")
 
         if self.reranker:
-            reranker = self.reranker
-            retriever = copy(self.retriever_runnable)
-            self.retriever_runnable = ContextualCompressionRetriever(
-                base_compressor=reranker, base_retriever=retriever
+            # Create a custom retriever that handles async operations properly
+            class AsyncRerankerRetriever(ContextualCompressionRetriever):
+                """Async-aware retriever that properly handles concurrent reranking operations."""
+
+                def __init__(self, base_retriever, reranker):
+                    super().__init__(
+                        base_compressor=reranker,
+                        base_retriever=base_retriever
+                    )
+
+                async def ainvoke(self, query: str) -> List[Document]:
+                    """Async retrieval with proper concurrency handling."""
+                    # Get initial documents
+                    if hasattr(self.base_retriever, 'ainvoke'):
+                        docs = await self.base_retriever.ainvoke(query)
+                    else:
+                        docs = await RunnablePassthrough(self.base_retriever.get_relevant_documents)(query)
+
+                    # Rerank documents
+                    if docs:
+                        docs = await self.base_compressor.acompress_documents(docs, query)
+                    return docs
+
+                def get_relevant_documents(self, query: str) -> List[Document]:
+                    """Sync wrapper for async retrieval."""
+                    import asyncio
+                    return asyncio.run(self.ainvoke(query))
+
+            # Use our custom async-aware retriever
+            self.retriever_runnable = AsyncRerankerRetriever(
+                base_retriever=copy(self.retriever_runnable),
+                reranker=self.reranker
             )
 
         rag_chain_from_docs = (
-                RunnablePassthrough.assign(context=(lambda x: format_docs(x["context"])))  # noqa: E126, E122
-                | prompt
-                | self.llm
-                | StrOutputParser()
+            RunnablePassthrough.assign(context=(lambda x: format_docs(x["context"])))
+            | prompt
+            | self.llm
+            | StrOutputParser()
         )
 
         retrieval_chain = RunnableParallel(
@@ -124,6 +166,16 @@ class LangChainRAGPipeline:
 
         rag_chain_with_source = retrieval_chain.assign(answer=rag_chain_from_docs)
         return rag_chain_with_source
+
+    async def ainvoke(self, input_dict: dict) -> dict:
+        """Async invocation of the RAG pipeline."""
+        chain = self.with_returned_sources()
+        return await chain.ainvoke(input_dict)
+
+    def invoke(self, input_dict: dict) -> dict:
+        """Sync invocation of the RAG pipeline."""
+        import asyncio
+        return asyncio.run(self.ainvoke(input_dict))
 
     @classmethod
     def _apply_search_kwargs(cls, retriever: Any, search_kwargs: Optional[SearchKwargs] = None, search_type: Optional[SearchType] = None) -> Any:
@@ -242,18 +294,23 @@ class LangChainRAGPipeline:
         retriever = SQLRetriever(
             fallback_retriever=vector_store_retriever,
             vector_store_handler=knowledge_base_table.get_vector_db(),
-            metadata_schemas=retriever_config.metadata_schemas,
-            examples=retriever_config.examples,
+            min_k=retriever_config.min_k,
+            max_filters=retriever_config.max_filters,
+            filter_threshold=retriever_config.filter_threshold,
+            database_schema=retriever_config.database_schema,
             embeddings_model=embeddings,
+            search_kwargs=config.search_kwargs,
             rewrite_prompt_template=retriever_config.rewrite_prompt_template,
-            retry_prompt_template=retriever_config.query_retry_template,
+            table_prompt_template=retriever_config.table_prompt_template,
+            column_prompt_template=retriever_config.column_prompt_template,
+            value_prompt_template=retriever_config.value_prompt_template,
+            boolean_system_prompt=retriever_config.boolean_system_prompt,
+            generative_system_prompt=retriever_config.generative_system_prompt,
             num_retries=retriever_config.num_retries,
-            sql_prompt_template=retriever_config.sql_prompt_template,
-            query_checker_template=retriever_config.query_checker_template,
             embeddings_table=knowledge_base_table._kb.vector_database_table,
             source_table=retriever_config.source_table,
+            source_id_column=retriever_config.source_id_column,
             distance_function=distance_function,
-            search_kwargs=config.search_kwargs,
             llm=sql_llm
         )
         return cls(

@@ -6,7 +6,7 @@ import pandas as pd
 from slack_sdk.errors import SlackApiError
 
 from mindsdb.integrations.libs.api_handler import APIResource
-from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions, FilterCondition, FilterOperator
+from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions, FilterCondition, FilterOperator, SortColumn
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -203,6 +203,7 @@ class SlackMessagesTable(APIResource):
         self,
         conditions: List[FilterCondition] = None,
         limit: int = None,
+        sort: List[SortColumn] = None,
         **kwargs: Any
     ) -> pd.DataFrame:
         """
@@ -222,6 +223,7 @@ class SlackMessagesTable(APIResource):
         Args:
             conditions (List[FilterCondition]): The conditions to filter the messages.
             limit (int): The limit of the messages to return.
+            sort (List[SortColumn]): The columns to sort the messages by.
             kwargs (Any): Arbitrary keyword arguments.
 
         Raises:
@@ -305,6 +307,14 @@ class SlackMessagesTable(APIResource):
 
         # Translate the time stamp into a 'created_at' field.
         result['created_at'] = pd.to_datetime(result['ts'].astype(float), unit='s').dt.strftime('%Y-%m-%d %H:%M:%S')
+
+        # Sort the messages by the specified columns.
+        if sort:
+            result.sort_values(
+                by=[col.column for col in sort],
+                ascending=[col.ascending for col in sort],
+                inplace=True
+            )
 
         return result
 
@@ -496,6 +506,7 @@ class SlackThreadsTable(APIResource):
         self,
         conditions: List[FilterCondition] = None,
         limit: int = None,
+        sort: List[SortColumn] = None,
         **kwargs: Any
     ) -> pd.DataFrame:
         """
@@ -514,6 +525,7 @@ class SlackThreadsTable(APIResource):
         Args:
             conditions (List[FilterCondition]): The conditions to filter the messages.
             limit (int): The limit of the messages to return.
+            sort (List[SortColumn]): The columns to sort the messages by.
             kwargs (Any): Arbitrary keyword arguments.
 
         Raises:
@@ -590,6 +602,14 @@ class SlackThreadsTable(APIResource):
         # Add the channel ID and name to the result.
         result['channel_id'] = params['channel']
         result['channel_name'] = channel['name'] if 'name' in channel else None
+
+        # Sort the messages by the specified columns.
+        if sort:
+            result.sort_values(
+                by=[col.column for col in sort],
+                ascending=[col.ascending for col in sort],
+                inplace=True
+            )
 
         return result
 

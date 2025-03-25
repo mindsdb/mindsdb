@@ -1,13 +1,9 @@
-import os
 import copy
 import shutil
-import datetime
 import tempfile
 from pathlib import Path
 from http import HTTPStatus
 
-from dateutil.tz import tzlocal
-from dateutil.parser import parse as parse_datetime
 from flask import request
 from flask_restx import Resource
 from flask import current_app as ca
@@ -17,29 +13,11 @@ from mindsdb.api.http.utils import http_error
 from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.utilities import log
 from mindsdb.utilities.functions import decrypt, encrypt
-from mindsdb.utilities.log_controller import get_logs
 from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.response import HandlerStatusResponse
 
 
 logger = log.getLogger(__name__)
-
-
-@ns_conf.route('/logs')
-@ns_conf.param('name', 'Get logs')
-class GetLogs(Resource):
-    @ns_conf.doc('get_integrations')
-    @api_endpoint_metrics('GET', '/config/logs')
-    def get(self):
-        min_timestamp = parse_datetime(request.args['min_timestamp'])
-        max_timestamp = request.args.get('max_timestamp', None)
-        context = request.args.get('context', None)
-        level = request.args.get('level', None)
-        log_from = request.args.get('log_from', None)
-        limit = request.args.get('limit', None)
-
-        logs = get_logs(min_timestamp, max_timestamp, context, level, log_from, limit)
-        return {'data': logs}
 
 
 @ns_conf.route('/')
@@ -258,29 +236,3 @@ class Integration(Resource):
                 f"Error during integration modification: {str(e)}"
             )
         return "", 200
-
-
-@ns_conf.route('/vars')
-class Vars(Resource):
-    @api_endpoint_metrics('GET', '/config/vars')
-    def get(self):
-        if os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false']:
-            telemtry = False
-        else:
-            telemtry = True
-
-        if ca.config_obj.get('disable_mongo', False):
-            mongo = False
-        else:
-            mongo = True
-
-        cloud = ca.config_obj.get('cloud', False)
-        local_time = datetime.datetime.now(tzlocal())
-        local_timezone = local_time.tzname()
-
-        return {
-            'mongo': mongo,
-            'telemtry': telemtry,
-            'cloud': cloud,
-            'timezone': local_timezone,
-        }

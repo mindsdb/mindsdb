@@ -121,7 +121,6 @@ def mindsdb_app(request, config):
     with open(config_path, "wt") as f:
         f.write(json.dumps(config))
 
-    os.environ['CHECK_FOR_UPDATES'] = '0'
     cmd = ['python3', '-m', 'mindsdb', f'--api={api_str}', f'--config={config_path}', '--verbose']
     if getattr(request.module, "USE_GUI", False) is False:
         cmd.append('--no_studio')

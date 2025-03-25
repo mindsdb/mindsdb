@@ -17,10 +17,10 @@ redis >=5.0.0, < 6.0.0
 walrus==0.9.3
 flask-compress >= 1.0.0
 appdirs >= 1.0.0
-mindsdb-sql-parser ~= 0.2.0
+mindsdb-sql-parser ~= 0.5.0
 pydantic ~= 2.7.0
 mindsdb-evaluator >= 0.0.7, < 0.1.0
-duckdb == 0.9.1
+duckdb == 1.2.0
 requests == 2.32.3
 pydateinfer==0.3.0
 dataprep_ml==24.5.1.2
@@ -38,10 +38,10 @@ google-auth-oauthlib
 msal
 langchain==0.3.7
 langchain-community==0.3.5
-langchain-core==0.3.15
+langchain-core==0.3.35
 langchain-experimental==0.3.3
 langchain-nvidia-ai-endpoints==0.3.3
-langchain-openai==0.2.6
+langchain-openai==0.3.6
 langchain-anthropic==0.2.4
 langchain-text-splitters==0.3.2
 langfuse==2.53.3  # Latest as of November 4, 2024
@@ -51,9 +51,17 @@ pgvector==0.3.6 # Required for knowledge bases
 prometheus-client==0.20.0
 transformers >= 4.42.4
 sentry-sdk[flask] == 2.14.0
+openai<2.0.0,>=1.58.1
 opentelemetry-api==1.27.0
 opentelemetry-sdk==1.27.0
 opentelemetry-exporter-otlp==1.27.0
 opentelemetry-instrumentation-requests==0.48b0
 opentelemetry-instrumentation-flask==0.48b0
 opentelemetry-distro==0.48b0
+pyaml==23.12.0
+
+# files reading
+pymupdf==1.25.2
+filetype
+charset-normalizer
+openpyxl # used by pandas to read txt and xlsx files

@@ -186,7 +186,6 @@ class ProcessCache:
         self._keep_alive = {}
         self._stop_event = threading.Event()
         self.cleaner_thread = None
-        self._start_clean()
 
     def __del__(self):
         self._stop_clean()
@@ -200,7 +199,7 @@ class ProcessCache:
         ):
             return
         self._stop_event.clear()
-        self.cleaner_thread = threading.Thread(target=self._clean)
+        self.cleaner_thread = threading.Thread(target=self._clean, name='ProcessCache.clean')
         self.cleaner_thread.daemon = True
         self.cleaner_thread.start()
 
@@ -258,6 +257,7 @@ class ProcessCache:
             Returns:
                 Future
         """
+        self._start_clean()
         handler_module_path = payload['handler_meta']['module_path']
         integration_id = payload['handler_meta']['integration_id']
         if task_type in (ML_TASK_TYPE.LEARN, ML_TASK_TYPE.FINETUNE):

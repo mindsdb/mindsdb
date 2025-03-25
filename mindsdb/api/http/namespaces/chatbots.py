@@ -11,6 +11,7 @@ from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.interfaces.chatbot.chatbot_controller import ChatBotController
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.interfaces.storage.db import Predictor
+from mindsdb.utilities.exception import EntityNotExistsError
 
 
 def create_chatbot(project_name, name, chatbot):
@@ -59,7 +60,7 @@ def create_chatbot(project_name, name, chatbot):
 
     try:
         existing_chatbot = chatbot_controller.get_chatbot(name, project_name=project_name)
-    except ValueError:
+    except EntityNotExistsError:
         # Project must exist.
         return http_error(
             HTTPStatus.NOT_FOUND,
@@ -152,7 +153,7 @@ class ChatBotsResource(Resource):
         chatbot_controller = ChatBotController()
         try:
             all_bots = chatbot_controller.get_chatbots(project_name)
-        except ValueError:
+        except (ValueError, EntityNotExistsError):
             # Project needs to exist.
             return http_error(
                 HTTPStatus.NOT_FOUND,
@@ -197,7 +198,7 @@ class ChatBotResource(Resource):
                     f'Chatbot with name {chatbot_name} does not exist'
                 )
             return existing_chatbot
-        except ValueError:
+        except (ValueError, EntityNotExistsError):
             # Project needs to exist.
             return http_error(
                 HTTPStatus.NOT_FOUND,
@@ -221,7 +222,7 @@ class ChatBotResource(Resource):
 
         try:
             existing_chatbot = chatbot_controller.get_chatbot(chatbot_name, project_name=project_name)
-        except ValueError:
+        except EntityNotExistsError:
             # Project needs to exist.
             return http_error(
                 HTTPStatus.NOT_FOUND,
@@ -306,7 +307,7 @@ class ChatBotResource(Resource):
                     'Chatbot not found',
                     f'Chatbot with name {chatbot_name} does not exist'
                 )
-        except ValueError:
+        except EntityNotExistsError:
             # Project needs to exist.
             return http_error(
                 HTTPStatus.NOT_FOUND,

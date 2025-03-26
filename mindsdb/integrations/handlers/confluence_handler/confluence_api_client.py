@@ -16,7 +16,7 @@ class ConfluenceAPIClient:
         self,
         ids: List[int] = None,
         keys: List[str] = None,
-        type: str = None,
+        space_type: str = None,
         status: str = None,
         limit: int = None,
     ):
@@ -28,8 +28,8 @@ class ConfluenceAPIClient:
             params["ids"] = ids
         if keys:
             params["keys"] = keys
-        if type:
-            params["type"] = type
+        if space_type:
+            params["type"] = space_type
         if status:
             params["status"] = status
         if limit:

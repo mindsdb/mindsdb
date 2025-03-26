@@ -221,10 +221,10 @@ class ConfluencePagesTable(APIResource):
 
     def get_columns(self) -> List[str]:
         """
-        Retrieves the attributes (columns) of the 'chat messages' resource.
+        Retrieves the attributes (columns) of the 'pages' resource.
 
         Returns:
-            List[Text]: A list of attributes (columns) of the 'chat messages' resource.
+            List[Text]: A list of attributes (columns) of the 'pages' resource.
         """
         return [
             "id",

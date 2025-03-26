@@ -182,7 +182,7 @@ class FunctionController(BYOMFunctionsController):
 
             md = MarkItDown(enable_plugins=False)
         except Exception as e:
-            raise RuntimeError('Unable to use to_markdown function, {e}')
+            raise RuntimeError(f'Unable to use to_markdown function, {e}')
 
         def callback(file_path):
             result = md.convert(file_path)

@@ -153,9 +153,8 @@ class ConfluenceAPIClient:
             next_params = {}
             if params:
                 next_params.update(params)
-                
             if "cursor=" in next_url:
-                #cursor= is 7 characters long
+                # cursor= is 7 characters long
                 cursor_start = next_url.find("cursor=") + 7
                 cursor_value = next_url[cursor_start:]
                 if "&" in cursor_value:
@@ -164,7 +163,6 @@ class ConfluenceAPIClient:
                 response = self._make_request("GET", url, next_params)
             else:
                 response = self._make_request("GET", next_url)
-                
             results.extend(response["results"])
 
         return results

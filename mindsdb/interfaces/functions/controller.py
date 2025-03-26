@@ -121,9 +121,12 @@ class FunctionController(BYOMFunctionsController):
         if meta is not None:
             return meta
 
-        # builtin function
+        # builtin functions
         if node.op.lower() == 'llm':
             return self.llm_call_function(node)
+        
+        elif node.op.lower() == 'to_markdown':
+            return self.to_markdown_call_function(node)
 
     def llm_call_function(self, node):
         name = node.op.lower()
@@ -158,6 +161,33 @@ class FunctionController(BYOMFunctionsController):
         def callback(question):
             resp = llm([HumanMessage(question)])
             return resp.content
+
+        meta = {
+            'name': name,
+            'callback': callback,
+            'input_types': ['str'],
+            'output_type': 'str'
+        }
+        self.callbacks[name] = meta
+        return meta
+    
+    def to_markdown_call_function(self, node):
+        name = node.op.lower()
+
+        if name in self.callbacks:
+            return self.callbacks[name]
+        
+        try:
+            from markitdown import MarkItDown
+        except ImportError:
+            raise RuntimeError('Unable to use to_markdown function, install markitdown package')
+
+        def callback(file_path):
+            # Default option.
+            # TODO: Allow use of LLMs.
+            md = MarkItDown(enable_plugins=False)
+            result = md.convert(file_path)
+            return result.markdown
 
         meta = {
             'name': name,

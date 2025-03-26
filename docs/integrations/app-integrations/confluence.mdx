@@ -58,3 +58,4 @@ The above example utilize `confluence_datasource` as the datasource name, which 
 * `blogposts`: The table containing information about the blog posts in Confluence.
 * `whiteboards`: The table containing information about the whiteboards in Confluence.
 * `databases`: The table containing information about the databases in Confluence.
+* `tasks`: The table containing information about the tasks in Confluence.

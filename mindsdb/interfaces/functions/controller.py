@@ -124,7 +124,7 @@ class FunctionController(BYOMFunctionsController):
         # builtin functions
         if node.op.lower() == 'llm':
             return self.llm_call_function(node)
-        
+
         elif node.op.lower() == 'to_markdown':
             return self.to_markdown_call_function(node)
 
@@ -170,13 +170,13 @@ class FunctionController(BYOMFunctionsController):
         }
         self.callbacks[name] = meta
         return meta
-    
+
     def to_markdown_call_function(self, node):
         name = node.op.lower()
 
         if name in self.callbacks:
             return self.callbacks[name]
-        
+
         try:
             from markitdown import MarkItDown
         except ImportError:

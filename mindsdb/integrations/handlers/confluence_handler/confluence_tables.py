@@ -100,7 +100,7 @@ class ConfluenceSpacesTable(APIResource):
 
                     else:
                         sort_condition = f"-{sort_column.column}"
-                    
+
                     sort_column.applied = True
                     break
 
@@ -689,7 +689,7 @@ class ConfluenceTasksTable(APIResource):
                     raise ValueError(
                         f"Unsupported operator '{condition.op}' for column 'completedBy'."
                     )
-                
+
                 condition.applied = True
 
             if condition.column == "status":
@@ -726,7 +726,7 @@ class ConfluenceTasksTable(APIResource):
         tasks_df = tasks_df[self.get_columns()]
 
         return tasks_df
-    
+
     def get_columns(self) -> List[str]:
         """
         Retrieves the attributes (columns) of the 'tasks' resource.

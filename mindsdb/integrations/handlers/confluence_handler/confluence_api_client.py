@@ -105,7 +105,7 @@ class ConfluenceAPIClient:
         url = f"{self.url}/wiki/api/v2/databases/{database_id}"
 
         return self._make_request("GET", url)
-    
+
     def get_tasks(
         self,
         task_ids: List[int] = None,

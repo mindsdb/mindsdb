@@ -490,7 +490,7 @@ class TestConfluenceWhiteboardsTable(ConfluenceTablesTestSetup, unittest.TestCas
 
 
 class TestConfluenceTasksTable(ConfluenceTablesTestSetup, unittest.TestCase):
-    
+
     def create_resource(self):
         return ConfluenceTasksTable(self.handler)
 

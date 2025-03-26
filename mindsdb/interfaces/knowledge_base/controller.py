@@ -126,19 +126,21 @@ class KnowledgeBaseTable:
                 content_column = df[TableField.CONTENT.value]
                 # convert to list
                 documents = content_column.tolist()
+                
                 # Extract query text from WHERE clause if it exists
                 query_text = ""
                 if query.where:
                     def extract_content(node, **kwargs):
                         nonlocal query_text
-                        is_binary_op = isinstance(node, BinaryOperation)
-                        is_identifier = isinstance(node.args[0], Identifier)
-                        is_content = node.args[0].parts[-1].lower() == 'content'
-                        is_constant = isinstance(node.args[1], Constant)
-                        if is_binary_op and is_identifier and is_content and is_constant:
+                        if (isinstance(node, BinaryOperation) and 
+                            isinstance(node.args[0], Identifier) and 
+                            node.args[0].parts[-1].lower() == 'content' and
+                            isinstance(node.args[1], Constant)):
                             query_text = node.args[1].value
+                    
                     query_traversal(query.where, extract_content)
                     logger.debug(f"Extracted query text: {query_text}")
+                
                 # Get scores from reranker
                 scores = reranker.get_scores(query_text, documents)
                 # Add scores as a new column for filtering
@@ -150,13 +152,16 @@ class KnowledgeBaseTable:
                 # Sort by relevance (higher score = more relevant)
                 df = df.sort_values(by='_relevance_score', ascending=False)
                 # Remove temporary column
-                # df = df.drop(columns=['_relevance_score'])
+                #df = df.drop(columns=['_relevance_score'])
                 # Apply original limit if it exists
                 if query.limit and len(df) > query.limit.value:
                     df = df.iloc[:query.limit.value]
+                    
                 logger.debug(f"Applied reranking with model {rerank_model}")
             except Exception as e:
                 logger.error(f"Error during reranking: {str(e)}")
+                # Continue with original results if reranking fails
+            
         return df
 
     def insert_files(self, file_names: List[str]):

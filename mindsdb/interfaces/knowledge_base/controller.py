@@ -131,9 +131,9 @@ class KnowledgeBaseTable:
                 if query.where:
                     def extract_content(node, **kwargs):
                         nonlocal query_text
-                        if (isinstance(node, BinaryOperation) and
-                                isinstance(node.args[0], Identifier) and
-                                node.args[0].parts[-1].lower() == 'content' and
+                        if (isinstance(node, BinaryOperation) and \
+                                isinstance(node.args[0], Identifier) and \
+                                node.args[0].parts[-1].lower() == 'content' and \
                                 isinstance(node.args[1], Constant)):
                             query_text = node.args[1].value
                     query_traversal(query.where, extract_content)
@@ -152,10 +152,10 @@ class KnowledgeBaseTable:
                 # df = df.drop(columns=['_relevance_score'])
                 # Apply original limit if it exists
                 if query.limit and len(df) > query.limit.value:
-                    df = df.iloc[:query.limit.value]   
+                    df = df.iloc[:query.limit.value]
                 logger.debug(f"Applied reranking with model {rerank_model}")
             except Exception as e:
-                logger.error(f"Error during reranking: {str(e)}")  
+                logger.error(f"Error during reranking: {str(e)}")
         return df
 
     def insert_files(self, file_names: List[str]):

@@ -88,16 +88,17 @@ class KnowledgeBaseTable:
                 break
             elif isinstance(target, Identifier) and target.parts[-1].lower() == relevance_column:
                 relevance_requested = True
-                break 
+                break
         # Extract the content query text for potential reranking
         query_text = ""
         if query.where:
             def extract_content(node, **kwargs):
                 nonlocal query_text
-                if (isinstance(node, BinaryOperation) and 
-                    isinstance(node.args[0], Identifier) and 
-                    node.args[0].parts[-1].lower() == 'content' and
-                    isinstance(node.args[1], Constant)):
+                is_binary_op = isinstance(node, BinaryOperation)
+                is_identifier = isinstance(node.args[0], Identifier)
+                is_content = node.args[0].parts[-1].lower() == 'content'
+                is_constant = isinstance(node.args[1], Constant)
+                if is_binary_op and is_identifier and is_content and is_constant:
                     query_text = node.args[1].value
             query_traversal(query.where, extract_content)
             logger.debug(f"Extracted query text: {query_text}")

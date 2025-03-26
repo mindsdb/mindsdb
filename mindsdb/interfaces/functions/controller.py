@@ -179,12 +179,12 @@ class FunctionController(BYOMFunctionsController):
 
         try:
             from markitdown import MarkItDown
-        except ImportError:
-            raise RuntimeError('Unable to use to_markdown function, install markitdown package')
+
+            md = MarkItDown(enable_plugins=False)
+        except Exception as e:
+            raise RuntimeError('Unable to use to_markdown function, {e}')
 
         def callback(file_path):
-            # Default option.
-            md = MarkItDown(enable_plugins=False)
             result = md.convert(file_path)
 
             # TODO: Allow another option that uses LLMs?

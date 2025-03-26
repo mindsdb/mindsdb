@@ -11,7 +11,7 @@ The integration allows MindsDB to access data stored in the Snowflake database a
 
 When querying data from Snowflake, MindsDB automatically converts column names to lower-case. To prevent this, users can provide an alias name as shown below.
 
-**This update is not back-compatible and has the following implications:**
+**This update is introduced with the MindsDB version 25.3.4.1. It is not backward-compatible and has the following implications:**
 
 1. Queries to Snowflake will return column names in lower-case from now on.
 2. The models created with Snowflake as a data source must be recreated.

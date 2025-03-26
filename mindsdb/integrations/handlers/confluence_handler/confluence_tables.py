@@ -91,11 +91,25 @@ class ConfluenceSpacesTable(APIResource):
 
                 condition.applied = True
 
+        sort_condition = None
+        if sort:
+            for sort_column in sort:
+                if sort_column.column in ["id", "key", "name"]:
+                    if sort_column.ascending:
+                        sort_condition = sort_column.column
+
+                    else:
+                        sort_condition = f"-{sort_column.column}"
+                    
+                    sort_column.applied = True
+                    break
+
         spaces = client.get_spaces(
             ids=ids,
             keys=keys,
             space_type=space_type,
             status=status,
+            sort_condition=sort_condition,
             limit=limit
         )
 
@@ -206,11 +220,23 @@ class ConfluencePagesTable(APIResource):
 
                 condition.applied = True
 
+        sort_condition = None
+        if sort:
+            for sort_column in sort:
+                if sort_column.column in ["id", "title", "createdAt"]:
+                    sort_condition = sort_column.column if sort_column != "createdAt" else "created-date"
+                    if not sort_column.ascending:
+                        sort_condition = f"-{sort_condition}"
+
+                    sort_column.applied = True
+                    break
+
         pages = client.get_pages(
             page_ids=page_ids,
             space_ids=space_ids,
             statuses=statuses,
             title=title,
+            sort_condition=sort_condition,
             limit=limit
         )
 
@@ -330,11 +356,23 @@ class ConfluenceBlogPostsTable(APIResource):
 
                 condition.applied = True
 
+        sort_condition = None
+        if sort:
+            for sort_column in sort:
+                if sort_column.column in ["id", "title", "createdAt"]:
+                    sort_condition = sort_column.column if sort_column != "createdAt" else "created-date"
+                    if not sort_column.ascending:
+                        sort_condition = f"-{sort_condition}"
+
+                    sort_column.applied = True
+                    break
+
         blogposts = client.get_blogposts(
             post_ids=post_ids,
             space_ids=space_ids,
             statuses=statuses,
             title=title,
+            sort_condition=sort_condition,
             limit=limit
         )
 

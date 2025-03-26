@@ -18,6 +18,7 @@ class ConfluenceAPIClient:
         keys: List[str] = None,
         space_type: str = None,
         status: str = None,
+        sort_condition: str = None,
         limit: int = None,
     ):
         url = f"{self.url}/wiki/api/v2/spaces"
@@ -32,6 +33,8 @@ class ConfluenceAPIClient:
             params["type"] = space_type
         if status:
             params["status"] = status
+        if sort_condition:
+            params["sort"] = sort_condition
         if limit:
             params["limit"] = limit
 
@@ -43,6 +46,7 @@ class ConfluenceAPIClient:
         space_ids: List[int] = None,
         statuses: List[str] = None,
         title: str = None,
+        sort_condition: str = None,
         limit: int = None,
     ) -> List[dict]:
         url = f"{self.url}/wiki/api/v2/pages"
@@ -57,6 +61,8 @@ class ConfluenceAPIClient:
             params["status"] = statuses
         if title:
             params["title"] = title
+        if sort_condition:
+            params["sort"] = sort_condition
         if limit:
             params["limit"] = limit
 
@@ -68,6 +74,7 @@ class ConfluenceAPIClient:
         space_ids: List[str] = None,
         statuses: List[str] = None,
         title: str = None,
+        sort_condition: str = None,
         limit: int = None,
     ) -> List[dict]:
         url = f"{self.url}/wiki/api/v2/blogposts"
@@ -82,6 +89,8 @@ class ConfluenceAPIClient:
             params["status"] = statuses
         if title:
             params["title"] = title
+        if sort_condition:
+            params["sort"] = sort_condition
         if limit:
             params["limit"] = limit
 

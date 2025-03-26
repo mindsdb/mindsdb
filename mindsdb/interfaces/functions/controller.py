@@ -184,9 +184,11 @@ class FunctionController(BYOMFunctionsController):
 
         def callback(file_path):
             # Default option.
-            # TODO: Allow use of LLMs.
             md = MarkItDown(enable_plugins=False)
             result = md.convert(file_path)
+
+            # TODO: Allow another option that uses LLMs?
+
             return result.markdown
 
         meta = {

@@ -12,6 +12,7 @@ from mindsdb.integrations.handlers.confluence_handler.confluence_tables import (
     ConfluencePagesTable,
     ConfluenceSpacesTable,
     ConfluenceWhiteboardsTable,
+    ConfluenceTasksTable,
 )
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
@@ -486,6 +487,105 @@ class TestConfluenceWhiteboardsTable(ConfluenceTablesTestSetup, unittest.TestCas
         """
         with self.assertRaises(ValueError):
             self.resource.list(conditions=[])
+
+
+class TestConfluenceTasksTable(ConfluenceTablesTestSetup, unittest.TestCase):
+    
+    def create_resource(self):
+        return ConfluenceTasksTable(self.handler)
+
+    def test_list_all_returns_results(self):
+        """
+        Test that the `list` with a query equivalent to `SELECT * FROM tasks` returns a list of tasks.
+        """
+        df = self.resource.list(
+            conditions=[]
+        )
+
+        self.assertIsInstance(df, pd.DataFrame)
+        self.assertEqual(df.columns.tolist(), self.resource.get_columns())
+        self.assertEqual(df.shape, (1, len(self.resource.get_columns())))
+
+        self.mock_connect.return_value.request.assert_called_with(
+            "GET",
+            f"{self.dummy_connection_data['api_base']}/wiki/api/v2/tasks",
+            params={
+                "body-format": "storage"
+            },
+            json=None
+        )
+
+    def test_list_with_conditions_returns_results(self):
+        """
+        Test that the `list` method returns a list of tasks with the specified conditions.
+        """
+        mock_task_ids = ['mock_task_id']
+        mock_space_ids = ['mock_space_id']
+        mock_page_ids = ['mock_page_id']
+        mock_created_by_ids = ['mock_created_by_id']
+        mock_assigned_to_ids = ['mock_assigned_to_id']
+        mock_completed_by_ids = ['mock_completed_by_id']
+        mock_status = 'mock_status'
+
+        df = self.resource.list(
+            conditions=[
+                FilterCondition(
+                    column="id",
+                    op=FilterOperator.EQUAL,
+                    value=mock_task_ids[0]
+                ),
+                FilterCondition(
+                    column="spaceId",
+                    op=FilterOperator.EQUAL,
+                    value=mock_space_ids[0]
+                ),
+                FilterCondition(
+                    column="pageId",
+                    op=FilterOperator.EQUAL,
+                    value=mock_page_ids[0]
+                ),
+                FilterCondition(
+                    column="createdBy",
+                    op=FilterOperator.EQUAL,
+                    value=mock_created_by_ids[0]
+                ),
+                FilterCondition(
+                    column="assignedTo",
+                    op=FilterOperator.EQUAL,
+                    value=mock_assigned_to_ids[0]
+                ),
+                FilterCondition(
+                    column="completedBy",
+                    op=FilterOperator.EQUAL,
+                    value=mock_completed_by_ids[0]
+                ),
+                FilterCondition(
+                    column="status",
+                    op=FilterOperator.EQUAL,
+                    value=mock_status
+                ),
+            ]
+        )
+
+        self.assertIsInstance(df, pd.DataFrame)
+        self.assertEqual(df.columns.tolist(), self.resource.get_columns())
+        self.assertEqual(df.shape, (1, len(self.resource.get_columns())))
+
+        self.mock_connect.return_value.request.assert_called_with(
+            "GET",
+            f"{self.dummy_connection_data['api_base']}/wiki/api/v2/tasks",
+            params={
+                "body-format": "storage",
+                "id": mock_task_ids,
+                "space-id": mock_space_ids,
+                "page-id": mock_page_ids,
+                "created-by": mock_created_by_ids,
+                "assigned-to": mock_assigned_to_ids,
+                "completed-by": mock_completed_by_ids,
+                "status": mock_status
+            },
+            json=None
+        )
 
 
 if __name__ == '__main__':

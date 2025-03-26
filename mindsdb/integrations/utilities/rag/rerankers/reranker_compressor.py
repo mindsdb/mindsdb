@@ -226,7 +226,6 @@ class LLMReranker(BaseDocumentCompressor):
             "temperature": self.temperature,
             "remove_irrelevant": self.remove_irrelevant,
         }
-    
     def get_scores(self, query: str, documents: list[str], disable_events: bool = True):
         """
         Get relevance scores for documents given a query.

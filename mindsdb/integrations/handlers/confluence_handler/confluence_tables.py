@@ -520,3 +520,196 @@ class ConfluenceDatabasesTable(APIResource):
             "version_minorEdit",
             "version_authorId",
         ]
+
+
+class ConfluenceTasksTable(APIResource):
+    """
+    The table abstraction for the 'tasks' resource of the Confluence API.
+    """
+    def list(
+        self,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        sort: List[SortColumn] = None,
+        targets: List[str] = None,
+        **kwargs
+    ):
+        """
+        Executes a parsed SELECT SQL query on the 'tasks' resource of the Confluence API.
+
+        Args:
+            conditions (List[FilterCondition]): The list of parsed filter conditions.
+            limit (int): The maximum number of records to return.
+            sort (List[SortColumn]): The list of parsed sort columns.
+            targets (List[str]): The list of target columns to return.
+        """
+        tasks = []
+        client: ConfluenceAPIClient = self.handler.connect()
+
+        task_ids = None
+        space_ids = None
+        page_ids = None
+        blogpost_ids = None
+        created_by_ids = None
+        assigned_to_ids = None
+        completed_by_ids = None
+        status = None
+
+        for condition in conditions:
+            if condition.column == "id":
+                if condition.op == FilterOperator.EQUAL:
+                    task_ids = [condition.value]
+
+                elif condition.op == FilterOperator.IN:
+                    task_ids = condition.value
+
+                else:
+                    raise ValueError(
+                        f"Unsupported operator '{condition.op}' for column 'id'."
+                    )
+
+                condition.applied = True
+
+            if condition.column == "spaceId":
+                if condition.op == FilterOperator.EQUAL:
+                    space_ids = [condition.value]
+
+                elif condition.op == FilterOperator.IN:
+                    space_ids = condition.value
+
+                else:
+                    raise ValueError(
+                        f"Unsupported operator '{condition.op}' for column 'spaceId'."
+                    )
+
+                condition.applied = True
+
+            if condition.column == "pageId":
+                if condition.op == FilterOperator.EQUAL:
+                    page_ids = [condition.value]
+
+                elif condition.op == FilterOperator.IN:
+                    page_ids = condition.value
+
+                else:
+                    raise ValueError(
+                        f"Unsupported operator '{condition.op}' for column 'pageId'."
+                    )
+
+                condition.applied = True
+
+            if condition.column == "blogPostId":
+                if condition.op == FilterOperator.EQUAL:
+                    blogpost_ids = [condition.value]
+
+                elif condition.op == FilterOperator.IN:
+                    blogpost_ids = condition.value
+
+                else:
+                    raise ValueError(
+                        f"Unsupported operator '{condition.op}' for column 'blogPostId'."
+                    )
+
+                condition.applied = True
+
+            if condition.column == "createdBy":
+                if condition.op == FilterOperator.EQUAL:
+                    created_by_ids = [condition.value]
+
+                elif condition.op == FilterOperator.IN:
+                    created_by_ids = condition.value
+
+                else:
+                    raise ValueError(
+                        f"Unsupported operator '{condition.op}' for column 'createdBy'."
+                    )
+
+                condition.applied = True
+
+            if condition.column == "assignedTo":
+                if condition.op == FilterOperator.EQUAL:
+                    assigned_to_ids = [condition.value]
+
+                elif condition.op == FilterOperator.IN:
+                    assigned_to_ids = condition.value
+
+                else:
+                    raise ValueError(
+                        f"Unsupported operator '{condition.op}' for column 'assignedTo'."
+                    )
+
+                condition.applied = True
+
+            if condition.column == "completedBy":
+                if condition.op == FilterOperator.EQUAL:
+                    completed_by_ids = [condition.value]
+
+                elif condition.op == FilterOperator.IN:
+                    completed_by_ids = condition.value
+
+                else:
+                    raise ValueError(
+                        f"Unsupported operator '{condition.op}' for column 'completedBy'."
+                    )
+                
+                condition.applied = True
+
+            if condition.column == "status":
+                if condition.op == FilterOperator.EQUAL:
+                    status = condition.value
+
+                else:
+                    raise ValueError(
+                        f"Unsupported operator '{condition.op}' for column 'status'."
+                    )
+
+                condition.applied = True
+
+        tasks = client.get_tasks(
+            task_ids=task_ids,
+            space_ids=space_ids,
+            page_ids=page_ids,
+            blogpost_ids=blogpost_ids,
+            created_by_ids=created_by_ids,
+            assigned_to_ids=assigned_to_ids,
+            completed_by_ids=completed_by_ids,
+            status=status,
+            limit=limit
+        )
+        tasks_df = pd.json_normalize(tasks, sep="_")
+
+        # Each task will have either a 'pageId' or 'blogPostId' but not both.
+        # In situations where they are all from the same resource, the other column will be empty.
+        # We will fill the empty column with None to ensure consistency.
+        for column in ["pageId", "blogPostId"]:
+            if column not in tasks_df.columns:
+                tasks_df[column] = None
+
+        tasks_df = tasks_df[self.get_columns()]
+
+        return tasks_df
+    
+    def get_columns(self) -> List[str]:
+        """
+        Retrieves the attributes (columns) of the 'tasks' resource.
+
+        Returns:
+            List[Text]: A list of attributes (columns) of the 'tasks' resource.
+        """
+        return [
+            "id",
+            "localId",
+            "spaceId",
+            "pageId",
+            "blogPostId",
+            "status",
+            "body_storage_representation",
+            "body_storage_value",
+            "createdBy",
+            "assignedTo",
+            "completedBy",
+            "createdAt",
+            "updatedAt",
+            "dueAt",
+            "completedAt",
+        ]

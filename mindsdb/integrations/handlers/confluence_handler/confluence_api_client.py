@@ -96,6 +96,43 @@ class ConfluenceAPIClient:
         url = f"{self.url}/wiki/api/v2/databases/{database_id}"
 
         return self._make_request("GET", url)
+    
+    def get_tasks(
+        self,
+        task_ids: List[int] = None,
+        space_ids: List[str] = None,
+        page_ids: List[str] = None,
+        blogpost_ids: List[str] = None,
+        created_by_ids: List[str] = None,
+        assigned_to_ids: List[str] = None,
+        completed_by_ids: List[str] = None,
+        status: str = None,
+        limit: int = None,
+    ) -> List[dict]:
+        url = f"{self.url}/wiki/api/v2/tasks"
+        params = {
+            "body-format": "storage",
+        }
+        if task_ids:
+            params["id"] = task_ids
+        if space_ids:
+            params["space-id"] = space_ids
+        if page_ids:
+            params["page-id"] = page_ids
+        if blogpost_ids:
+            params["blogpost-id"] = blogpost_ids
+        if created_by_ids:
+            params["created-by"] = created_by_ids
+        if assigned_to_ids:
+            params["assigned-to"] = assigned_to_ids
+        if completed_by_ids:
+            params["completed-by"] = completed_by_ids
+        if status:
+            params["status"] = status
+        if limit:
+            params["limit"] = limit
+
+        return self._paginate(url, params)
 
     def _paginate(self, url: str, params: dict = None) -> List[dict]:
         results = []

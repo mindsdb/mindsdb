@@ -84,26 +84,6 @@ jobs:
         with:
           push-to-dockerhub: true
 
-  # Build our docker images based on our bake file
-  # This job only pushes the layers to the cache repo
-  # It's done separately so other jobs can run without waiting for this one
-  build_cache:
-    name: Build Docker Cache
-    runs-on: mdb-dev
-    needs: [build]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Pull MindsDB Github Actions
-        uses: actions/checkout@v4
-        with:
-          repository: mindsdb/github-actions
-          path: github-actions
-          ssh-key: ${{ secrets.GH_ACTIONS_PULL_SSH }}
-      - uses: ./github-actions/docker-bake-cache
-        with:
-          cache-prefix: main
-
-
   # Call our deployment workflow
   deploy:
     name: Deploy to Prod

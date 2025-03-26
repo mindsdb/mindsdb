@@ -8,7 +8,7 @@ from mindsdb_sql_parser import parse_sql
 
 from mindsdb.interfaces.storage.db import KnowledgeBase
 
-from .executor_test_base import BaseExecutorTest
+from tests.unit.executor_test_base import BaseExecutorTest
 
 
 class TestKnowledgeBase(BaseExecutorTest):

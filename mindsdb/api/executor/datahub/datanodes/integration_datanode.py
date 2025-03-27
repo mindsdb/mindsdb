@@ -64,6 +64,7 @@ class IntegrationDataNode(DataNode):
             df = response.data_frame
             # case independent
             columns = [str(c).lower() for c in df.columns]
+            df.columns = columns
 
             col_name = None
             # looking for specific column names

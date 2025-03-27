@@ -7,6 +7,8 @@ from snowflake.connector.errors import NotSupportedError
 
 from mindsdb.utilities import log
 from mindsdb_sql_parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast import Select, Identifier
+
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.response import (
@@ -234,7 +236,30 @@ class SnowflakeHandler(DatabaseHandler):
 
         query_str = self.renderer.get_string(query, with_failback=True)
         logger.debug(f"Executing SQL query: {query_str}")
-        return self.native_query(query_str)
+        result = self.native_query(query_str)
+        return self.lowercase_columns(result, query)
+
+    def lowercase_columns(self, result, query):
+        if not isinstance(query, Select) or result.data_frame is None:
+            return result
+
+        quoted_columns = []
+        if query.targets is not None:
+            for column in query.targets:
+                if hasattr(column, 'alias') and column.alias is not None:
+                    if column.alias.is_quoted[-1]:
+                        quoted_columns.append(column.alias.parts[-1])
+                elif isinstance(column, Identifier):
+                    if column.is_quoted[-1]:
+                        quoted_columns.append(column.parts[-1])
+
+        rename_columns = {}
+        for col in result.data_frame.columns:
+            if col.isupper() and col not in quoted_columns:
+                rename_columns[col] = col.lower()
+        if rename_columns:
+            result.data_frame = result.data_frame.rename(columns=rename_columns)
+        return result
 
     def get_tables(self) -> Response:
         """

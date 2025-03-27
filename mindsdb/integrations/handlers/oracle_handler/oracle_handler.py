@@ -133,6 +133,12 @@ class OracleHandler(DatabaseHandler):
             connection = connect(
                 **config,
             )
+
+            if 'session_variables' in self.connection_data:
+                with connection.cursor() as cur:
+                    for key, value in self.connection_data['session_variables'].items():
+                        cur.execute(f"ALTER SESSION SET {key} = {repr(value)}")
+
         except DatabaseError as database_error:
             logger.error(f'Error connecting to Oracle, {database_error}!')
             raise

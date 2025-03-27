@@ -94,14 +94,21 @@ class KnowledgeBaseTable:
         if query.where:
             def extract_content(node, **kwargs):
                 nonlocal query_text
-                is_binary_op = isinstance(node, BinaryOperation)
-                is_identifier = isinstance(node.args[0], Identifier)
-                is_content = node.args[0].parts[-1].lower() == 'content'
+                # Check if node is a binary operation
+                if not isinstance(node, BinaryOperation):
+                    return
+                # Safely check if left side is an identifier that refers to 'content'
+                left_arg = node.args[0]
+                is_content = False
+                if isinstance(left_arg, Identifier) and hasattr(left_arg, 'parts') and left_arg.parts:
+                    is_content = left_arg.parts[-1].lower() == 'content'
+                # Check if right side is a constant
                 is_constant = isinstance(node.args[1], Constant)
-                if is_binary_op and is_identifier and is_content and is_constant:
+                # If conditions are met, extract the value
+                if is_content and is_constant:
                     query_text = node.args[1].value
             query_traversal(query.where, extract_content)
-            logger.debug(f"Extracted query text: {query_text}")
+            print(f"Extracted query text: {query_text}")
         # replace content with embeddings
         query_traversal(query.where, self._replace_query_content)
         logger.debug("Replaced content with embeddings in where clause")

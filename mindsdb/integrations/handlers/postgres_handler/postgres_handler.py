@@ -346,8 +346,8 @@ class PostgresHandler(DatabaseHandler):
                 table_schema = {schema_name}
         """
         result = self.native_query(query)
-        result.data_frame['mysql_data_type'] = result.data_frame['Type'].apply(_map_type)
-
+        if result.resp_type is RESPONSE_TYPE.TABLE:
+            result.data_frame['mysql_data_type'] = result.data_frame['Type'].apply(_map_type)
         return result
 
     def subscribe(self, stop_event, callback, table_name, columns=None, **kwargs):

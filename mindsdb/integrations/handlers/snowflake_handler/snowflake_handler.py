@@ -314,8 +314,8 @@ class SnowflakeHandler(DatabaseHandler):
               AND TABLE_SCHEMA = current_schema()
         """
         result = self.native_query(query)
-        result.data_frame = result.data_frame.rename(columns={'FIELD': 'Field', 'TYPE': 'Type'})
-
-        result.data_frame['mysql_data_type'] = result.data_frame['Type'].apply(_map_type)
+        if result.resp_type is RESPONSE_TYPE.TABLE:
+            result.data_frame = result.data_frame.rename(columns={'FIELD': 'Field', 'TYPE': 'Type'})
+            result.data_frame['mysql_data_type'] = result.data_frame['Type'].apply(_map_type)
 
         return result

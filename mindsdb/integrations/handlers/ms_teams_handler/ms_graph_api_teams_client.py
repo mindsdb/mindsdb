@@ -212,7 +212,7 @@ class MSGraphAPITeamsClient(MSGraphAPIBaseClient, ABC):
         """
         channels = []
         for channel_id in channel_ids:
-            channels.append(self.get_channel_in_group_by_id(group_id, channel_id))
+            channels.append(self._get_channel_in_group_by_id(group_id, channel_id))
 
         return channels
         
@@ -241,7 +241,7 @@ class MSGraphAPITeamsClient(MSGraphAPIBaseClient, ABC):
         """
         channels = []
         for group_id in self._get_all_group_ids():
-            channels += self.get_all_channels_in_group(group_id)
+            channels += self._get_all_channels_in_group(group_id)
 
         return channels
     
@@ -255,7 +255,7 @@ class MSGraphAPITeamsClient(MSGraphAPIBaseClient, ABC):
         Returns:
             List[Dict]: The channels data.
         """
-        channels = self.get_all_channels_across_all_groups()
+        channels = self._get_all_channels_across_all_groups()
 
         return [channel for channel in channels if channel["id"] in channel_ids]
     
@@ -287,7 +287,7 @@ class MSGraphAPITeamsClient(MSGraphAPIBaseClient, ABC):
         """
         messages = []
         for message_id in message_ids:
-            messages.append(self.get_message_in_channel_by_id(group_id, channel_id, message_id))
+            messages.append(self._get_message_in_channel_by_id(group_id, channel_id, message_id))
 
         return messages
 
@@ -323,7 +323,7 @@ class MSGraphAPITeamsClient(MSGraphAPIBaseClient, ABC):
         """
         chats = []
         for chat_id in chat_ids:
-            chats.append(self.get_chat_by_id(chat_id))
+            chats.append(self._get_chat_by_id(chat_id))
 
         return chats
     
@@ -340,7 +340,7 @@ class MSGraphAPITeamsClient(MSGraphAPIBaseClient, ABC):
         """
         messages = []
         for message_id in message_ids:
-            messages.append(self.get_message_in_chat_by_id(chat_id, message_id))
+            messages.append(self._get_message_in_chat_by_id(chat_id, message_id))
 
         return messages
 

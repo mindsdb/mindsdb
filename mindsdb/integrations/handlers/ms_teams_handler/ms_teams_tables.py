@@ -36,7 +36,7 @@ class TeamsTable(APIResource):
         teams = client.get_teams()
 
         teams_df = pd.json_normalize(teams, sep="_")
-        teams_df = teams_df[self.get_columns()]
+        teams_df = teams_df.reindex(columns=self.get_columns(), fill_value=None)
 
         return teams_df
 

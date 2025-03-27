@@ -26,6 +26,7 @@ from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import Au
 from mindsdb.interfaces.chatbot.types import ChatBotMessage
 from mindsdb.utilities import log
 
+
 logger = log.getLogger(__name__)
 
 

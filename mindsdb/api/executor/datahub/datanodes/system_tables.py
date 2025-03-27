@@ -1,3 +1,4 @@
+from typing import Optional, Literal
 from dataclasses import dataclass, astuple, fields
 
 import pandas as pd
@@ -164,33 +165,33 @@ class TablesTable(Table):
         return df
 
 
-@dataclass
+@dataclass(kw_only=True, slots=True)
 class ColumnsTableRow:
     """Represents a row in the COLUMNS table.
     Fields description: https://dev.mysql.com/doc/refman/8.4/en/information-schema-columns-table.html
     NOTE: attrs order matter, don't change it.
     """
-    TABLE_CATALOG: str = 'def'
-    TABLE_SCHEMA: str = None
-    TABLE_NAME: str = None
-    COLUMN_NAME: str = None
+    TABLE_CATALOG: Literal['def'] = 'def'
+    TABLE_SCHEMA: Optional[str] = None
+    TABLE_NAME: Optional[str] = None
+    COLUMN_NAME: Optional[str] = None
     ORDINAL_POSITION: int = 0
-    COLUMN_DEFAULT: str = None
-    IS_NULLABLE: str = 'YES'
+    COLUMN_DEFAULT: Optional[str] = None
+    IS_NULLABLE: Literal['YES', 'NO'] = 'YES'
     DATA_TYPE: str = MYSQL_DATA_TYPE.VARCHAR.value
-    CHARACTER_MAXIMUM_LENGTH: int = None
-    CHARACTER_OCTET_LENGTH: int = None
-    NUMERIC_PRECISION: int = None
-    NUMERIC_SCALE: int = None
-    DATETIME_PRECISION: int = None
-    CHARACTER_SET_NAME: str = None
-    COLLATION_NAME: str = None
-    COLUMN_TYPE: str = None
-    COLUMN_KEY: str = None
-    EXTRA: str = None
+    CHARACTER_MAXIMUM_LENGTH: Optional[int] = None
+    CHARACTER_OCTET_LENGTH: Optional[int] = None
+    NUMERIC_PRECISION: Optional[int] = None
+    NUMERIC_SCALE: Optional[int] = None
+    DATETIME_PRECISION: Optional[int] = None
+    CHARACTER_SET_NAME: Optional[str] = None
+    COLLATION_NAME: Optional[str] = None
+    COLUMN_TYPE: Optional[str] = None
+    COLUMN_KEY: Optional[str] = None
+    EXTRA: Optional[str] = None
     PRIVILEGES: str = 'select'
-    COLUMN_COMMENT: str = None
-    GENERATION_EXPRESSION: str = None
+    COLUMN_COMMENT: Optional[str] = None
+    GENERATION_EXPRESSION: Optional[str] = None
 
     def __post_init__(self):
         # region check mandatory fields

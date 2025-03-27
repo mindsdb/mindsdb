@@ -20,10 +20,41 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 import mindsdb.utilities.profiler as profiler
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 logger = log.getLogger(__name__)
 
 SUBSCRIBE_SLEEP_INTERVAL = 1
+
+
+def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
+    """Map Postgres types to MySQL types.
+
+    Args:
+        internal_type_name (str): The name of the Postgres type to map.
+
+    Returns:
+        MYSQL_DATA_TYPE: The MySQL type that corresponds to the Postgres type.
+    """
+    internal_type_name = internal_type_name.lower()
+    types_map = {
+        ('smallint', 'integer', 'bigint', 'int', 'smallserial', 'serial', 'bigserial'): MYSQL_DATA_TYPE.INT,
+        ('real', 'numeric', 'decimal', 'money', 'float'): MYSQL_DATA_TYPE.FLOAT,
+        ('double precision',): MYSQL_DATA_TYPE.DOUBLE,
+        ('character varying', 'varchar', 'character', 'char', 'bpchar', 'bpchar', 'text'): MYSQL_DATA_TYPE.TEXT,
+        ('timestamp', 'timestamp without time zone', 'timestamp with time zone'): MYSQL_DATA_TYPE.DATETIME,
+        ('date', ): MYSQL_DATA_TYPE.DATE,
+        ('time', 'time without time zone', 'time with time zone'): MYSQL_DATA_TYPE.TIME,
+        ('boolean',): MYSQL_DATA_TYPE.BOOL,
+        ('bytea',): MYSQL_DATA_TYPE.BINARY,
+    }
+
+    for snowflake_types, mysql_data_type in types_map.items():
+        if internal_type_name in snowflake_types:
+            return mysql_data_type
+
+    logger.warning(f"Postgres handler type mapping: unknown type: {internal_type_name}, use VARCHAR as fallback.")
+    return MYSQL_DATA_TYPE.VARCHAR
 
 
 class PostgresHandler(DatabaseHandler):
@@ -314,7 +345,10 @@ class PostgresHandler(DatabaseHandler):
             AND
                 table_schema = {schema_name}
         """
-        return self.native_query(query)
+        result = self.native_query(query)
+        result.data_frame['mysql_data_type'] = result.data_frame['Type'].apply(_map_type)
+
+        return result
 
     def subscribe(self, stop_event, callback, table_name, columns=None, **kwargs):
         config = self._make_connection_args()

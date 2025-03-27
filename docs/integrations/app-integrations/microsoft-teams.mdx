@@ -53,8 +53,8 @@ Follow the instructions below to set up the Microsoft Teams app that will be use
 <Steps>
   <Step title="Register an application in the Azure portal">
     - Navigate to Microsoft Entra ID in the Azure portal, click on *Add* and then on *App registration*.
-    - Click on *New registration* and fill out the *Name* and select the `Accounts in any organizational directory (Any Azure AD directory - Multitenant)` option under *Supported account types*. For the `application` permission mode, this step is unnecessary.
-    - If you chose the `delegated` permission mode, select `Web` as the platform and enter URL where MindsDB has been deployed followed by /verify-auth under *Redirect URI*. For example, if you are running MindsDB locally (on https://localhost:47334), enter https://localhost:47334/verify-auth in the Redirect URIs field.
+    - Click on *New registration* and fill out the *Name* and select the `Accounts in any organizational directory (Any Azure AD directory - Multitenant)` option under *Supported account types*.
+    - If you chose the `application` permission mode you may skip this step, but if you are using `delegated` permissions, select `Web` as the platform and enter URL where MindsDB has been deployed followed by /verify-auth under *Redirect URI*. For example, if you are running MindsDB locally (on https://localhost:47334), enter https://localhost:47334/verify-auth in the Redirect URIs field.
     - Click on *Register*. **Save the *Application (client) ID* and *Directory (tenant) ID* for later use.**
     - Click on *API Permissions* and then click on *Add a permission*.
     - Select *Microsoft Graph* and then click on either *Delegated permissions* or *Application permissions* based on the permission mode you have chosen.

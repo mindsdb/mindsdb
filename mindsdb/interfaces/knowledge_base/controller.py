@@ -92,23 +92,12 @@ class KnowledgeBaseTable:
         # Extract the content query text for potential reranking
         query_text = ""
         if query.where:
-            def extract_content(node, **kwargs):
-                nonlocal query_text
-                # Check if node is a binary operation
-                if not isinstance(node, BinaryOperation):
-                    return
-                # Safely check if left side is an identifier that refers to 'content'
-                left_arg = node.args[0]
-                is_content = False
-                if isinstance(left_arg, Identifier) and hasattr(left_arg, 'parts') and left_arg.parts:
-                    is_content = left_arg.parts[-1].lower() == 'content'
-                # Check if right side is a constant
-                is_constant = isinstance(node.args[1], Constant)
-                # If conditions are met, extract the value
-                if is_content and is_constant:
-                    query_text = node.args[1].value
-            query_traversal(query.where, extract_content)
-            print(f"Extracted query text: {query_text}")
+            db_handler = self.get_vector_db()
+            conditions = db_handler._extract_conditions(query.where)
+            for item in conditions:
+                if item.column == TableField.CONTENT.value:
+                    query_text = item.value
+            logger.debug(f"Extracted query text: {query_text}")
         # replace content with embeddings
         query_traversal(query.where, self._replace_query_content)
         logger.debug("Replaced content with embeddings in where clause")
@@ -151,7 +140,7 @@ class KnowledgeBaseTable:
                 # Get documents to rerank
                 documents = df[TableField.CONTENT.value].tolist()
                 # Use the get_scores method with disable_events=True
-                scores = reranker.get_scores(query_text, documents, disable_events=True)
+                scores = reranker.get_scores(query_text, documents)
                 # Add scores as the relevance column
                 df[relevance_column] = scores
                 # Sort by relevance
@@ -167,8 +156,7 @@ class KnowledgeBaseTable:
                     df[relevance_column] = 1 / (1 + df['distance'])
                     df = df.sort_values(by=relevance_column, ascending=False)
                 else:
-                    # If no distance, use uniform relevance
-                    df[relevance_column] = 1.0
+                    logger.info("No distance or reranker available")
         elif 'distance' in df.columns:
             # Calculate relevance from distance
             logger.info("Calculating relevance from vector distance")
@@ -176,9 +164,7 @@ class KnowledgeBaseTable:
                 df[relevance_column] = 1 / (1 + df['distance'])
                 df = df.sort_values(by=relevance_column, ascending=False)
         else:
-            # No distance or reranker, use uniform relevance
-            logger.info("No distance or reranker available, using uniform relevance")
-            df[relevance_column] = 1.0
+            logger.info("No distance or reranker available")
         # Apply original limit if it exists and wasn't already applied
         if query.limit and len(df) > query.limit.value:
             df = df.iloc[:query.limit.value]

@@ -57,8 +57,8 @@ def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
         ('VARIANT', 'OBJECT', 'ARRAY', 'MAP', 'GEOGRAPHY', 'GEOMETRY', 'VECTOR'): MYSQL_DATA_TYPE.VARCHAR
     }
 
-    for snowflake_types, mysql_data_type in types_map.items():
-        if internal_type_name in snowflake_types:
+    for db_types_list, mysql_data_type in types_map.items():
+        if internal_type_name in db_types_list:
             return mysql_data_type
 
     logger.warning(f"Snowflake handler type mapping: unknown type: {internal_type_name}, use VARCHAR as fallback.")

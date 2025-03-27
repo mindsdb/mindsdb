@@ -451,9 +451,9 @@ class SqlalchemyRender:
             return typename
 
         typename = typename.upper()
-        if re.match(r'^INT[\d]*$', typename):
+        if re.match(r'^INT[\d]+$', typename):
             typename = 'BIGINT'
-        if re.match(r'^FLOAT[\d]*$', typename):
+        if re.match(r'^FLOAT[\d]+$', typename):
             typename = 'FLOAT'
 
         return types_map[typename]

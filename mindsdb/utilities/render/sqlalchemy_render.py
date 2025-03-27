@@ -27,6 +27,7 @@ types_map = {}
 for type_name in sa_type_names:
     types_map[type_name.upper()] = getattr(sa.types, type_name)
 types_map['BOOL'] = types_map['BOOLEAN']
+types_map['DEC'] = types_map['DECIMAL']
 
 
 class RenderError(Exception):

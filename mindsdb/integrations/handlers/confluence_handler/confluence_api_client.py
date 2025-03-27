@@ -149,8 +149,20 @@ class ConfluenceAPIClient:
         results.extend(response["results"])
 
         while response["_links"].get("next"):
-            params["cursor"] = response["_links"].get("next")
-            response = self._make_request("GET", url, params)
+            next_url = response["_links"].get("next")
+            next_params = {}
+            if params:
+                next_params.update(params)
+            if "cursor=" in next_url:
+                # cursor= is 7 characters long
+                cursor_start = next_url.find("cursor=") + 7
+                cursor_value = next_url[cursor_start:]
+                if "&" in cursor_value:
+                    cursor_value = cursor_value.split("&")[0]
+                next_params["cursor"] = cursor_value
+                response = self._make_request("GET", url, next_params)
+            else:
+                response = self._make_request("GET", next_url)
             results.extend(response["results"])
 
         return results

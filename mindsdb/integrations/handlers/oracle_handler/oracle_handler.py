@@ -1,10 +1,9 @@
 from typing import Text, Dict, Optional
 
-from mindsdb_sql_parser.ast.base import ASTNode
-from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 import oracledb
-from oracledb import connect, Connection, DatabaseError
 import pandas as pd
+from oracledb import connect, Connection, DatabaseError
+from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
@@ -13,10 +12,50 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE,
 )
 from mindsdb.utilities import log
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 
 oracledb.defaults.fetch_lobs = False  # Return LOBs directly as strings or bytes.
 logger = log.getLogger(__name__)
+
+
+def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
+    """ Map Oracle types to MySQL types.
+        List of types: https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/Data-Types.html
+
+    Args:
+        internal_type_name (str): The name of the Oracle type to map.
+
+    Returns:
+        MYSQL_DATA_TYPE: The MySQL type that corresponds to the Oracle type.
+    """
+    internal_type_name = internal_type_name.upper()
+    types_map = {
+        (
+            'VARCHAR2', 'NVARCHAR2', 'CHARACTER VARYING', 'CHAR VARYING', 'NATIONAL CHARACTER', 'NATIONAL CHAR',
+            'VARCHAR', 'NCHAR', 'NATIONAL CHARACTER VARYING', 'NATIONAL CHAR VARYING', 'NCHAR VARYING', 'LONG VARCHAR'
+        ): MYSQL_DATA_TYPE.VARCHAR,
+        ('INTEGER', 'INT'): MYSQL_DATA_TYPE.INT,
+        ('SMALLINT',): MYSQL_DATA_TYPE.SMALLINT,
+        ('NUMBER', 'DECIMAL'): MYSQL_DATA_TYPE.DECIMAL,
+        ('FLOAT', 'BINARY_FLOAT', 'REAL'): MYSQL_DATA_TYPE.FLOAT,
+        ('BINARY_DOUBLE',): MYSQL_DATA_TYPE.DOUBLE,
+        ('LONG',): MYSQL_DATA_TYPE.BIGINT,
+        ('DATE',): MYSQL_DATA_TYPE.DATE,
+        ('HOUR', 'MINUTE', 'SECOND', 'TIMEZONE_HOUR', 'TIMEZONE_MINUTE'): MYSQL_DATA_TYPE.SMALLINT,
+        ('TIMESTAMP', 'TIMESTAMP WITH TIME ZONE', 'TIMESTAMP WITH LOCAL TIME ZONE'): MYSQL_DATA_TYPE.TIMESTAMP,
+        ('RAW', 'LONG RAW', 'BLOB', 'BFILE'): MYSQL_DATA_TYPE.BINARY,
+        ('ROWID', 'UROWID'): MYSQL_DATA_TYPE.TEXT,
+        ('CHAR', 'NCHAR', 'CLOB', 'NCLOB', 'CHARACTER'): MYSQL_DATA_TYPE.CHAR,
+    }
+
+    for db_types_list, mysql_data_type in types_map.items():
+        if internal_type_name in db_types_list:
+            return mysql_data_type
+
+    logger.warning(f"Oracle handler type mapping: unknown type: {internal_type_name}, use VARCHAR as fallback.")
+    return MYSQL_DATA_TYPE.VARCHAR
 
 
 class OracleHandler(DatabaseHandler):
@@ -237,10 +276,13 @@ class OracleHandler(DatabaseHandler):
         """
         query = f"""
             SELECT
-                column_name,
-                data_type
+                column_name AS field,
+                data_type AS type
             FROM USER_TAB_COLUMNS
             WHERE table_name = '{table_name}'
         """
         result = self.native_query(query)
+        if result.resp_type is RESPONSE_TYPE.TABLE:
+            result.data_frame.columns = [name.lower() for name in result.data_frame.columns]
+            result.data_frame['mysql_data_type'] = result.data_frame['type'].apply(_map_type)
         return result

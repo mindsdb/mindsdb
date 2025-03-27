@@ -7,7 +7,10 @@ from botframework.connector.auth import MicrosoftAppCredentials
 import msal
 from requests.exceptions import RequestException
 
-from mindsdb.integrations.handlers.ms_teams_handler.ms_graph_api_teams_client import MSGraphAPITeamsDelegatedPermissionsClient
+from mindsdb.integrations.handlers.ms_teams_handler.ms_graph_api_teams_client import (
+    MSGraphAPITeamsApplicationPermissionsClient,
+    MSGraphAPITeamsDelegatedPermissionsClient
+)
 from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_tables import (
     ChannelsTable, ChannelMessagesTable, ChatsTable, ChatMessagesTable, TeamsTable
 )
@@ -15,7 +18,10 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
 from mindsdb.integrations.libs.api_handler import APIChatHandler
-from mindsdb.integrations.utilities.handlers.auth_utilities import MSGraphAPIDelegatedPermissionsManager
+from mindsdb.integrations.utilities.handlers.auth_utilities import (
+    MSGraphAPIApplicationPermissionsManager,
+    MSGraphAPIDelegatedPermissionsManager
+)
 from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import AuthException
 from mindsdb.interfaces.chatbot.types import ChatBotMessage
 from mindsdb.utilities import log
@@ -92,13 +98,27 @@ class MSTeamsHandler(APIChatHandler):
             if cache_content:
                 cache.deserialize(cache_content)
 
-            permissions_manager = MSGraphAPIDelegatedPermissionsManager(
-                client_id=self.connection_data['client_id'],
-                client_secret=self.connection_data['client_secret'],
-                tenant_id=self.connection_data['tenant_id'],
-                cache=cache,
-                code=self.connection_data.get('code')
-            )
+            # The default permissions mode is 'delegated'. This requires the user to sign in.
+            permission_mode = self.connection_data.get('permission_mode', 'delegated')
+            if permission_mode == 'delegated':
+                permissions_manager = MSGraphAPIDelegatedPermissionsManager(
+                    client_id=self.connection_data['client_id'],
+                    client_secret=self.connection_data['client_secret'],
+                    tenant_id=self.connection_data['tenant_id'],
+                    cache=cache,
+                    code=self.connection_data.get('code')
+                )
+
+            elif permission_mode == 'application':
+                permissions_manager = MSGraphAPIApplicationPermissionsManager(
+                    client_id=self.connection_data['client_id'],
+                    client_secret=self.connection_data['client_secret'],
+                    tenant_id=self.connection_data['tenant_id'],
+                    cache=cache
+                )
+
+            else:
+                raise ValueError("The supported permission modes are 'delegated' and 'application'.")
 
             access_token = permissions_manager.get_access_token()
 
@@ -106,7 +126,11 @@ class MSTeamsHandler(APIChatHandler):
             if cache.has_state_changed:
                 self.handler_storage.file_set(cache_file, cache.serialize().encode('utf-8'))
 
-            self.connection = MSGraphAPITeamsDelegatedPermissionsClient(access_token)
+            if permission_mode == 'delegated':
+                self.connection = MSGraphAPITeamsDelegatedPermissionsClient(access_token)
+
+            else:
+                self.connection = MSGraphAPITeamsApplicationPermissionsClient(access_token)
 
             self._register_table('channels', ChannelsTable(self))
             self._register_table('channel_messages', ChannelMessagesTable(self))

@@ -29,9 +29,18 @@ class MSGraphAPITeamsClient(MSGraphAPIBaseClient, ABC):
             logger.error(f"Failed to check connection to Microsoft Teams: {request_error}")
             return False
         
+    def get_teams(self) -> List[Dict]:
+        """
+        Get teams from Microsoft Teams.
+
+        Returns:
+            List[Dict]: The teams data.
+        """
+        return self._get_all_groups()
+        
     def get_channels(self, group_id: Text = None, channel_ids: List[Text] = None) -> List[Dict]:
         """
-        Get channels by their IDs and the IDs of the groups that they belong to.
+        Get channels from Microsoft Teams.
 
         Args:
             group_id (Text): The ID of the group that the channels belong to.
@@ -51,7 +60,7 @@ class MSGraphAPITeamsClient(MSGraphAPIBaseClient, ABC):
         
     def get_channel_messages(self, group_id: Text, channel_id: Text, message_ids: List[Text] = None) -> List[Dict]:
         """
-        Get messages by their IDs and the IDs of the groups and channels that they belong to.
+        Get channel messages from Microsoft Teams.
 
         Args:
             group_id (Text): The ID of the group that the channel belongs to.
@@ -68,7 +77,7 @@ class MSGraphAPITeamsClient(MSGraphAPIBaseClient, ABC):
         
     def get_chats(self, chat_ids: List[Text] = None) -> List[Dict]:
         """
-        Get chats by their IDs.
+        Get chats from Microsoft Teams.
 
         Args:
             chat_ids (List[Text]): The IDs of the chats.
@@ -83,7 +92,7 @@ class MSGraphAPITeamsClient(MSGraphAPIBaseClient, ABC):
         
     def get_chat_messages(self, chat_id: Text, message_ids: List[Text] = None) -> List[Dict]:
         """
-        Get messages by their IDs and the ID of the chat that they belong to.
+        Get chat messages from Microsoft Teams.
 
         Args:
             chat_id (Text): The ID of the chat that the messages belong to.

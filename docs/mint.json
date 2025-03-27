@@ -1020,6 +1020,7 @@
           "pages": [
             "integrations/vector-db-integrations/chromadb",
             "integrations/vector-db-integrations/couchbase",
+            "integrations/vector-db-integrations/milvus",
             "integrations/vector-db-integrations/pgvector",
             "integrations/vector-db-integrations/pinecone",
             "integrations/vector-db-integrations/weaviate"

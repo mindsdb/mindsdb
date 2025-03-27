@@ -44,6 +44,11 @@ class INTERVAL(ColumnElement):
 @compiles(INTERVAL)
 def _compile_interval(element, compiler, **kw):
     items = element.info.split(' ', maxsplit=1)
+    if compiler.dialect.name == 'oracle' and len(items) == 2:
+        # replace to singular names (remove leading S if exists)
+        if items[1].upper().endswith('S'):
+            items[1] = items[1][:-1]
+
     if compiler.dialect.driver in ['snowflake']:
         # quote all
         args = " ".join(map(str, items))

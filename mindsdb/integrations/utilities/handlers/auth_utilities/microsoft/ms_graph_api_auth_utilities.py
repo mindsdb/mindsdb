@@ -89,7 +89,7 @@ class MSGraphAPIDelegatedPermissionsManager(MSGraphAPIPermissionsManager):
             scopes (List): The scopes for the Microsoft Graph API.
             code (Text): The authentication code for acquiring the access token.
         """
-        super().__init__(client_id, client_secret, tenant_id, cache, scopes, code)
+        super().__init__(client_id, client_secret, tenant_id, cache, scopes)
         self.code = code
         self.redirect_uri = None
         self._set_redirect_uri()

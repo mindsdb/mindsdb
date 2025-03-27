@@ -8,6 +8,7 @@ import msal
 from requests.exceptions import RequestException
 
 from mindsdb.integrations.handlers.ms_teams_handler.ms_graph_api_teams_client import (
+    MSGraphAPIBaseClient,
     MSGraphAPITeamsApplicationPermissionsClient,
     MSGraphAPITeamsDelegatedPermissionsClient
 )
@@ -69,7 +70,7 @@ class MSTeamsHandler(APIChatHandler):
         self.bot_id = None
         self.conversation_id = None
 
-    def connect(self) -> Union[MicrosoftAppCredentials, MSGraphAPITeamsDelegatedPermissionsClient]:
+    def connect(self) -> Union[MicrosoftAppCredentials, MSGraphAPIBaseClient]:
         """
         Establishes a connection to the Microsoft Teams registered app or the Microsoft Graph API.
 

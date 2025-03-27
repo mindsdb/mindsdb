@@ -31,7 +31,7 @@ logger = log.getLogger(__name__)
 
 def chatbot_only(func):
     def wrapper(self, *args, **kwargs):
-        if self.connection_data.get('mode', 'chat') != 'chat':
+        if self.connection_data.get('opertion_mode', 'datasource') != 'chatbot':
             raise ValueError("This connection can only be used as a data source. Please use a chatbot connection by setting the 'mode' parameter to 'chat'.")
         return func(self, *args, **kwargs)
     return wrapper
@@ -78,13 +78,9 @@ class MSTeamsHandler(APIChatHandler):
         if self.is_connected:
             return self.connection
 
-        # The default mode is 'data'. This is used for data source connections.
-        if self.connection_data.get('mode', 'data') == 'chat':
-            self.connection = MicrosoftAppCredentials(
-                app_id=self.connection_data["client_id"],
-                password=self.connection_data["client_secret"]
-            )
-        else:
+        # The default operation mode is 'datasource'. This is used for data source connections.
+        operation_mode = self.connection_data.get('operation_mode', 'datasource')
+        if operation_mode == 'datasource':
             # Initialize the token cache.
             cache = msal.SerializableTokenCache()
 
@@ -138,6 +134,15 @@ class MSTeamsHandler(APIChatHandler):
             self._register_table('chat_messages', ChatMessagesTable(self))
             self._register_table('teams', TeamsTable(self))
 
+        elif operation_mode == 'chatbot':
+            self.connection = MicrosoftAppCredentials(
+                self.connection_data['app_id'],
+                self.connection_data['app_password']
+            )
+
+        else:
+            raise ValueError("The supported operation modes are 'datasource' and 'chatbot'.")
+
         self.is_connected = True
 
         return self.connection
@@ -153,8 +158,8 @@ class MSTeamsHandler(APIChatHandler):
 
         try:
             connection = self.connect()
-            # A connection check against the Microsoft Graph API is run if the connection is in 'data' mode.
-            if self.connection_data.get('mode', 'data') == 'data' and connection.check_connection():
+            # A connection check against the Microsoft Graph API is run if the connection is in 'datasource' mode.
+            if self.connection_data.get('operation_mode', 'datasource') == 'datasource' and connection.check_connection():
                 response.success = True
                 response.copy_storage = True
             else:

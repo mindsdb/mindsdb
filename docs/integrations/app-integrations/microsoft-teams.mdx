@@ -33,6 +33,15 @@ Required connection parameters include the following:
 * `client_secret`: The client secret of the registered Microsoft Entra ID application.
 * `tenant_id`: The tenant ID of the Microsoft Entra ID directory.
 
+Optional connection parameters include the following:
+
+* `permission_mode`: The type of permissions used to access data in Microsoft Teams. Can be either `delegated` (default) or `application`. 
+
+<Tip>
+The `delegated` permission mode requires user sign-in and allows the app to access data on behalf of the signed-in user. The `application` permission mode does not require user sign-in and allows the app to access data without a user context. You can learn more about permission types in the [Microsoft Graph permissions documentation](https://learn.microsoft.com/en-us/graph/auth/auth-concepts#delegated-and-application-permissions).
+Note that application permissions generally require higher privileges and admin consent compared to delegated permissions, as they allow broader access to organizational data without user context.
+</Tip>
+
 <Note>
 Microsoft Entra ID was previously known as Azure Active Directory (Azure AD).
 </Note>
@@ -45,15 +54,20 @@ Follow the instructions below to set up the Microsoft Teams app that will be use
   <Step title="Register an application in the Azure portal">
     - Navigate to Microsoft Entra ID in the Azure portal, click on *Add* and then on *App registration*.
     - Click on *New registration* and fill out the *Name* and select the `Accounts in any organizational directory (Any Azure AD directory - Multitenant)` option under *Supported account types*.
-    - Select `Web` as the platform and enter URL where MindsDB has been deployed followed by /verify-auth under *Redirect URI*. For example, if you are running MindsDB locally (on https://localhost:47334), enter https://localhost:47334/verify-auth in the Redirect URIs field.
+    - If you chose the `application` permission mode you may skip this step, but if you are using `delegated` permissions, select `Web` as the platform and enter URL where MindsDB has been deployed followed by /verify-auth under *Redirect URI*. For example, if you are running MindsDB locally (on https://localhost:47334), enter https://localhost:47334/verify-auth in the Redirect URIs field.
     - Click on *Register*. **Save the *Application (client) ID* and *Directory (tenant) ID* for later use.**
     - Click on *API Permissions* and then click on *Add a permission*.
-    - Select *Microsoft Graph* and then click on *Delegated permissions*.
+    - Select *Microsoft Graph* and then click on either *Delegated permissions* or *Application permissions* based on the permission mode you have chosen.
     - Search for the following permissions and select them:
-      - Team.ReadBasic.All
-      - Channel.ReadBasic.All
-      - ChannelMessage.Read.All
-      - Chat.Read
+      - `delegated` permission mode:
+        - Team.ReadBasic.All
+        - Channel.ReadBasic.All
+        - ChannelMessage.Read.All
+        - Chat.Read
+      - `application` permission mode:
+        - Group.Read.All
+        - ChannelMessage.Read.All
+        - Chat.Read.All
     - Click on **Add permissions**.
     - Request an administrator to grant consent for the above permissions. If you are the administrator, click on **Grant admin consent for [your organization]** and then click on **Yes**.
     - Click on *Certificates & secrets* under *Manage*.

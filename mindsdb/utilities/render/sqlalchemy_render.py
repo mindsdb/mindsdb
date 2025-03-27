@@ -151,8 +151,10 @@ class SqlalchemyRender:
                 part = self.dialect.identifier_preparer.quote(i)
 
             parts2.append(part)
-
-        return sa.column('.'.join(parts2), is_literal=True)
+        text = '.'.join(parts2)
+        if identifier.is_outer and self.dialect.name == 'oracle':
+            text += '(+)'
+        return sa.column(text, is_literal=True)
 
     def get_alias(self, alias):
         if alias is None or len(alias.parts) == 0:

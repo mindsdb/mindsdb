@@ -165,7 +165,7 @@ class TablesTable(Table):
         return df
 
 
-@dataclass(kw_only=True, slots=True)
+@dataclass
 class ColumnsTableRow:
     """Represents a row in the COLUMNS table.
     Fields description: https://dev.mysql.com/doc/refman/8.4/en/information-schema-columns-table.html

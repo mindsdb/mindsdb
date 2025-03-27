@@ -22,7 +22,6 @@ class MSGraphAPIPermissionsManager(ABC):
         tenant_id: Text,
         cache: msal.SerializableTokenCache,
         scopes: List = ["https://graph.microsoft.com/.default"],
-        code: Text = None,
     ) -> None:
         """
         Initializes the permissions manager.
@@ -40,7 +39,6 @@ class MSGraphAPIPermissionsManager(ABC):
         self.tenant_id = tenant_id
         self.cache = cache
         self.scopes = scopes
-        self.code = code
 
     @abstractmethod
     def get_access_token(self) -> Text:
@@ -92,6 +90,7 @@ class MSGraphAPIDelegatedPermissionsManager(MSGraphAPIPermissionsManager):
             code (Text): The authentication code for acquiring the access token.
         """
         super().__init__(client_id, client_secret, tenant_id, cache, scopes, code)
+        self.code = code
         self.redirect_uri = None
         self._set_redirect_uri()
 

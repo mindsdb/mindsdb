@@ -7,7 +7,11 @@ from botframework.connector.auth import MicrosoftAppCredentials
 import msal
 from requests.exceptions import RequestException
 
-from mindsdb.integrations.handlers.ms_teams_handler.ms_graph_api_teams_client import MSGraphAPITeamsDelegatedPermissionsClient
+from mindsdb.integrations.handlers.ms_teams_handler.ms_graph_api_teams_client import (
+    MSGraphAPIBaseClient,
+    MSGraphAPITeamsApplicationPermissionsClient,
+    MSGraphAPITeamsDelegatedPermissionsClient
+)
 from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_tables import (
     ChannelsTable, ChannelMessagesTable, ChatsTable, ChatMessagesTable, TeamsTable
 )
@@ -15,17 +19,21 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
 from mindsdb.integrations.libs.api_handler import APIChatHandler
-from mindsdb.integrations.utilities.handlers.auth_utilities import MSGraphAPIDelegatedPermissionsManager
+from mindsdb.integrations.utilities.handlers.auth_utilities import (
+    MSGraphAPIApplicationPermissionsManager,
+    MSGraphAPIDelegatedPermissionsManager
+)
 from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import AuthException
 from mindsdb.interfaces.chatbot.types import ChatBotMessage
 from mindsdb.utilities import log
+
 
 logger = log.getLogger(__name__)
 
 
 def chatbot_only(func):
     def wrapper(self, *args, **kwargs):
-        if self.connection_data.get('mode', 'chat') != 'chat':
+        if self.connection_data.get('opertion_mode', 'datasource') != 'chatbot':
             raise ValueError("This connection can only be used as a data source. Please use a chatbot connection by setting the 'mode' parameter to 'chat'.")
         return func(self, *args, **kwargs)
     return wrapper
@@ -62,7 +70,7 @@ class MSTeamsHandler(APIChatHandler):
         self.bot_id = None
         self.conversation_id = None
 
-    def connect(self) -> Union[MicrosoftAppCredentials, MSGraphAPITeamsDelegatedPermissionsClient]:
+    def connect(self) -> Union[MicrosoftAppCredentials, MSGraphAPIBaseClient]:
         """
         Establishes a connection to the Microsoft Teams registered app or the Microsoft Graph API.
 
@@ -72,13 +80,9 @@ class MSTeamsHandler(APIChatHandler):
         if self.is_connected:
             return self.connection
 
-        # The default mode is 'data'. This is used for data source connections.
-        if self.connection_data.get('mode', 'data') == 'chat':
-            self.connection = MicrosoftAppCredentials(
-                app_id=self.connection_data["client_id"],
-                password=self.connection_data["client_secret"]
-            )
-        else:
+        # The default operation mode is 'datasource'. This is used for data source connections.
+        operation_mode = self.connection_data.get('operation_mode', 'datasource')
+        if operation_mode == 'datasource':
             # Initialize the token cache.
             cache = msal.SerializableTokenCache()
 
@@ -92,13 +96,27 @@ class MSTeamsHandler(APIChatHandler):
             if cache_content:
                 cache.deserialize(cache_content)
 
-            permissions_manager = MSGraphAPIDelegatedPermissionsManager(
-                client_id=self.connection_data['client_id'],
-                client_secret=self.connection_data['client_secret'],
-                tenant_id=self.connection_data['tenant_id'],
-                cache=cache,
-                code=self.connection_data.get('code')
-            )
+            # The default permissions mode is 'delegated'. This requires the user to sign in.
+            permission_mode = self.connection_data.get('permission_mode', 'delegated')
+            if permission_mode == 'delegated':
+                permissions_manager = MSGraphAPIDelegatedPermissionsManager(
+                    client_id=self.connection_data['client_id'],
+                    client_secret=self.connection_data['client_secret'],
+                    tenant_id=self.connection_data['tenant_id'],
+                    cache=cache,
+                    code=self.connection_data.get('code')
+                )
+
+            elif permission_mode == 'application':
+                permissions_manager = MSGraphAPIApplicationPermissionsManager(
+                    client_id=self.connection_data['client_id'],
+                    client_secret=self.connection_data['client_secret'],
+                    tenant_id=self.connection_data['tenant_id'],
+                    cache=cache
+                )
+
+            else:
+                raise ValueError("The supported permission modes are 'delegated' and 'application'.")
 
             access_token = permissions_manager.get_access_token()
 
@@ -106,13 +124,26 @@ class MSTeamsHandler(APIChatHandler):
             if cache.has_state_changed:
                 self.handler_storage.file_set(cache_file, cache.serialize().encode('utf-8'))
 
-            self.connection = MSGraphAPITeamsDelegatedPermissionsClient(access_token)
+            if permission_mode == 'delegated':
+                self.connection = MSGraphAPITeamsDelegatedPermissionsClient(access_token)
+
+            else:
+                self.connection = MSGraphAPITeamsApplicationPermissionsClient(access_token)
 
             self._register_table('channels', ChannelsTable(self))
             self._register_table('channel_messages', ChannelMessagesTable(self))
             self._register_table('chats', ChatsTable(self))
             self._register_table('chat_messages', ChatMessagesTable(self))
             self._register_table('teams', TeamsTable(self))
+
+        elif operation_mode == 'chatbot':
+            self.connection = MicrosoftAppCredentials(
+                self.connection_data['app_id'],
+                self.connection_data['app_password']
+            )
+
+        else:
+            raise ValueError("The supported operation modes are 'datasource' and 'chatbot'.")
 
         self.is_connected = True
 
@@ -129,8 +160,8 @@ class MSTeamsHandler(APIChatHandler):
 
         try:
             connection = self.connect()
-            # A connection check against the Microsoft Graph API is run if the connection is in 'data' mode.
-            if self.connection_data.get('mode', 'data') == 'data' and connection.check_connection():
+            # A connection check against the Microsoft Graph API is run if the connection is in 'datasource' mode.
+            if self.connection_data.get('operation_mode', 'datasource') == 'datasource' and connection.check_connection():
                 response.success = True
                 response.copy_storage = True
             else:

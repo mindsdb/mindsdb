@@ -27,6 +27,7 @@ types_map = {}
 for type_name in sa_type_names:
     types_map[type_name.upper()] = getattr(sa.types, type_name)
 types_map['BOOL'] = types_map['BOOLEAN']
+types_map['DEC'] = types_map['DECIMAL']
 
 
 class RenderError(Exception):
@@ -43,6 +44,11 @@ class INTERVAL(ColumnElement):
 @compiles(INTERVAL)
 def _compile_interval(element, compiler, **kw):
     items = element.info.split(' ', maxsplit=1)
+    if compiler.dialect.name == 'oracle' and len(items) == 2:
+        # replace to singular names (remove leading S if exists)
+        if items[1].upper().endswith('S'):
+            items[1] = items[1][:-1]
+
     if compiler.dialect.driver in ['snowflake']:
         # quote all
         args = " ".join(map(str, items))
@@ -118,6 +124,8 @@ class SqlalchemyRender:
         self.dialect = dialect(paramstyle="named")
         self.dialect.div_is_floordiv = False
 
+        self.selects_stack = []
+
         if dialect_name == 'mssql':
             # update version to MS_2008_VERSION for supports_multivalues_insert
             self.dialect.server_version_info = (10,)
@@ -143,14 +151,19 @@ class SqlalchemyRender:
                 part = self.dialect.identifier_preparer.quote(i)
 
             parts2.append(part)
-
-        return sa.column('.'.join(parts2), is_literal=True)
+        text = '.'.join(parts2)
+        if identifier.is_outer and self.dialect.name == 'oracle':
+            text += '(+)'
+        return sa.column(text, is_literal=True)
 
     def get_alias(self, alias):
         if alias is None or len(alias.parts) == 0:
             return None
         if len(alias.parts) > 1:
             raise NotImplementedError(f'Multiple alias {alias.parts}')
+
+        if self.selects_stack:
+            self.selects_stack[-1]['aliases'].append(alias)
 
         is_quoted = get_is_quoted(alias)[0]
         return AttributedStr(alias.parts[0], is_quoted)
@@ -205,12 +218,18 @@ class SqlalchemyRender:
                 alias = self.get_alias(t.alias)
                 col = col.label(alias)
         elif isinstance(t, ast.Function):
-            fnc = self.to_function(t)
+            col = self.to_function(t)
             if t.alias:
                 alias = self.get_alias(t.alias)
+                col = col.label(alias)
             else:
                 alias = str(t.op)
-            col = fnc.label(alias)
+                if self.selects_stack:
+                    aliases = self.selects_stack[-1]['aliases']
+                    if alias not in aliases:
+                        aliases.append(alias)
+                        col = col.label(alias)
+
         elif isinstance(t, ast.BinaryOperation):
             ops = {
                 "+": operators.add,
@@ -432,9 +451,9 @@ class SqlalchemyRender:
             return typename
 
         typename = typename.upper()
-        if re.match(r'^INT[\d]*$', typename):
+        if re.match(r'^INT[\d]+$', typename):
             typename = 'BIGINT'
-        if re.match(r'^FLOAT[\d]*$', typename):
+        if re.match(r'^FLOAT[\d]+$', typename):
             typename = 'FLOAT'
 
         return types_map[typename]
@@ -513,6 +532,9 @@ class SqlalchemyRender:
             return self.prepare_union(node)
 
         cols = []
+
+        self.selects_stack.append({'aliases': []})
+
         for t in node.targets:
             col = self.to_expression(t)
             cols.append(col)
@@ -646,6 +668,8 @@ class SqlalchemyRender:
                 query = query.with_for_update()
             else:
                 raise NotImplementedError(f'Select mode: {node.mode}')
+
+        self.selects_stack.pop()
 
         return query
 

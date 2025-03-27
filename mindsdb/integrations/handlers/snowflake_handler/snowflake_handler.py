@@ -16,6 +16,7 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 try:
     import pyarrow as pa
@@ -25,6 +26,43 @@ except Exception:
 
 
 logger = log.getLogger(__name__)
+
+
+def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
+    """ Map Snowflake types to MySQL types.
+
+    Args:
+        internal_type_name (str): The name of the Snowflake type to map.
+
+    Returns:
+        MYSQL_DATA_TYPE: The MySQL type that corresponds to the Snowflake type.
+    """
+    internal_type_name = internal_type_name.upper()
+    types_map = {
+        ('NUMBER', 'DECIMAL', 'DEC', 'NUMERIC'): MYSQL_DATA_TYPE.DECIMAL,
+        ('INT , INTEGER , BIGINT , SMALLINT , TINYINT , BYTEINT'): MYSQL_DATA_TYPE.INT,
+        ('FLOAT', 'FLOAT4', 'FLOAT8'): MYSQL_DATA_TYPE.FLOAT,
+        ('DOUBLE', 'DOUBLE PRECISION', 'REAL'): MYSQL_DATA_TYPE.DOUBLE,
+        ('VARCHAR'): MYSQL_DATA_TYPE.VARCHAR,
+        ('CHAR', 'CHARACTER', 'NCHAR'): MYSQL_DATA_TYPE.CHAR,
+        ('STRING', 'TEXT', 'NVARCHAR'): MYSQL_DATA_TYPE.TEXT,
+        ('NVARCHAR2', 'CHAR VARYING', 'NCHAR VARYING'): MYSQL_DATA_TYPE.VARCHAR,
+        ('BINARY', 'VARBINARY'): MYSQL_DATA_TYPE.BINARY,
+        ('BOOLEAN',): MYSQL_DATA_TYPE.BOOL,
+        ('TIMESTAMP_NTZ', 'DATETIME'): MYSQL_DATA_TYPE.DATETIME,
+        ('DATE',): MYSQL_DATA_TYPE.DATE,
+        ('TIME',): MYSQL_DATA_TYPE.TIME,
+        ('TIMESTAMP_LTZ'): MYSQL_DATA_TYPE.DATETIME,
+        ('TIMESTAMP_TZ'): MYSQL_DATA_TYPE.DATETIME,
+        ('VARIANT', 'OBJECT', 'ARRAY', 'MAP', 'GEOGRAPHY', 'GEOMETRY', 'VECTOR'): MYSQL_DATA_TYPE.VARCHAR
+    }
+
+    for db_types_list, mysql_data_type in types_map.items():
+        if internal_type_name in db_types_list:
+            return mysql_data_type
+
+    logger.warning(f"Snowflake handler type mapping: unknown type: {internal_type_name}, use VARCHAR as fallback.")
+    return MYSQL_DATA_TYPE.VARCHAR
 
 
 class SnowflakeHandler(DatabaseHandler):
@@ -286,6 +324,7 @@ class SnowflakeHandler(DatabaseHandler):
 
         Returns:
             Response: A response object containing the column details, formatted as per the `Response` class.
+
         Raises:
             ValueError: If the 'table_name' is not a valid string.
         """
@@ -300,6 +339,8 @@ class SnowflakeHandler(DatabaseHandler):
               AND TABLE_SCHEMA = current_schema()
         """
         result = self.native_query(query)
-        result.data_frame = result.data_frame.rename(columns={'FIELD': 'Field', 'TYPE': 'Type'})
+        if result.resp_type is RESPONSE_TYPE.TABLE:
+            result.data_frame = result.data_frame.rename(columns={'FIELD': 'Field', 'TYPE': 'Type'})
+            result.data_frame['mysql_data_type'] = result.data_frame['Type'].apply(_map_type)
 
         return result

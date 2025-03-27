@@ -78,8 +78,10 @@ class IntegrationDataNode(DataNode):
             names = df[df.columns[col_name]]
 
             # type
-            if 'type' in columns:
-                types = df[df.columns[columns.index('type')]]
+            if 'mysql_data_type' in columns:
+                types = df['mysql_data_type']
+            elif 'type' in columns:
+                types = df['type']
             else:
                 types = [None] * len(names)
 

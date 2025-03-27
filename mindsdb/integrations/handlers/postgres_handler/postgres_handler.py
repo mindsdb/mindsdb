@@ -39,7 +39,8 @@ def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
     internal_type_name = internal_type_name.lower()
     types_map = {
         ('smallint', 'integer', 'bigint', 'int', 'smallserial', 'serial', 'bigserial'): MYSQL_DATA_TYPE.INT,
-        ('real', 'numeric', 'decimal', 'money', 'float'): MYSQL_DATA_TYPE.FLOAT,
+        ('real', 'money', 'float'): MYSQL_DATA_TYPE.FLOAT,
+        ('numeric', 'decimal'): MYSQL_DATA_TYPE.DECIMAL,
         ('double precision',): MYSQL_DATA_TYPE.DOUBLE,
         ('character varying', 'varchar', 'character', 'char', 'bpchar', 'bpchar', 'text'): MYSQL_DATA_TYPE.TEXT,
         ('timestamp', 'timestamp without time zone', 'timestamp with time zone'): MYSQL_DATA_TYPE.DATETIME,
@@ -347,7 +348,8 @@ class PostgresHandler(DatabaseHandler):
         """
         result = self.native_query(query)
         if result.resp_type is RESPONSE_TYPE.TABLE:
-            result.data_frame['mysql_data_type'] = result.data_frame['Type'].apply(_map_type)
+            result.data_frame.columns = [name.lower() for name in result.data_frame.columns]
+            result.data_frame['mysql_data_type'] = result.data_frame['type'].apply(_map_type)
         return result
 
     def subscribe(self, stop_event, callback, table_name, columns=None, **kwargs):

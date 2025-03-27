@@ -842,19 +842,26 @@ class KnowledgeBaseController:
             except EntityNotExistsError:
                 pass
 
-    def get(self, name: str, project_id: int) -> db.KnowledgeBase:
+    def get(self, name: str, project_id: int = None) -> db.KnowledgeBase:
         """
         Get a knowledge base from the database
         by name + project_id
         """
-        kb = (
-            db.session.query(db.KnowledgeBase)
-            .filter_by(
-                name=name,
-                project_id=project_id,
+        if project_id:
+            kb = (
+                db.session.query(db.KnowledgeBase)
+                .filter_by(
+                    name=name,
+                    project_id=project_id,
+                )
+                .first()
             )
-            .first()
-        )
+        else:
+            kb = (
+                db.session.query(db.KnowledgeBase)
+                .filter_by(name=name)
+                .first()
+            )
         return kb
 
     def get_table(self, name: str, project_id: int, params: dict = None) -> KnowledgeBaseTable:

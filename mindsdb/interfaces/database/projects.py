@@ -296,6 +296,22 @@ class Project:
         ]
         return data
 
+    def get_knowledge_bases(self):
+        records = (
+            db.session.query(db.KnowledgeBase).filter_by(
+                project_id=self.id,
+            )
+        )
+        data = [{
+            'name': record.name,
+            'metadata': {
+                'type': 'knowledge_base',
+                'id': record.id,
+                'deletable': False
+            }
+        } for record in records]
+        return data
+    
     def get_views(self):
         records = (
             db.session.query(db.View).filter_by(
@@ -352,6 +368,10 @@ class Project:
         agents = self.get_agents()
         for agent in agents:
             data[agent['name']] = agent['metadata']
+
+        knowledge_bases = self.get_knowledge_bases()
+        for kb in knowledge_bases:
+            data[kb['name']] = kb['metadata']
 
         return data
 

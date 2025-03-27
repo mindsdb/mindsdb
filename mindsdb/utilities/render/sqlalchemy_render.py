@@ -119,6 +119,8 @@ class SqlalchemyRender:
         self.dialect = dialect(paramstyle="named")
         self.dialect.div_is_floordiv = False
 
+        self.selects_stack = []
+
         if dialect_name == 'mssql':
             # update version to MS_2008_VERSION for supports_multivalues_insert
             self.dialect.server_version_info = (10,)
@@ -152,6 +154,9 @@ class SqlalchemyRender:
             return None
         if len(alias.parts) > 1:
             raise NotImplementedError(f'Multiple alias {alias.parts}')
+
+        if self.selects_stack:
+            self.selects_stack[-1]['aliases'].append(alias)
 
         is_quoted = get_is_quoted(alias)[0]
         return AttributedStr(alias.parts[0], is_quoted)
@@ -206,12 +211,18 @@ class SqlalchemyRender:
                 alias = self.get_alias(t.alias)
                 col = col.label(alias)
         elif isinstance(t, ast.Function):
-            fnc = self.to_function(t)
+            col = self.to_function(t)
             if t.alias:
                 alias = self.get_alias(t.alias)
+                col = col.label(alias)
             else:
                 alias = str(t.op)
-            col = fnc.label(alias)
+                if self.selects_stack:
+                    aliases = self.selects_stack[-1]['aliases']
+                    if alias not in aliases:
+                        aliases.append(alias)
+                        col = col.label(alias)
+
         elif isinstance(t, ast.BinaryOperation):
             ops = {
                 "+": operators.add,
@@ -514,6 +525,9 @@ class SqlalchemyRender:
             return self.prepare_union(node)
 
         cols = []
+
+        self.selects_stack.append({'aliases': []})
+
         for t in node.targets:
             col = self.to_expression(t)
             cols.append(col)
@@ -647,6 +661,8 @@ class SqlalchemyRender:
                 query = query.with_for_update()
             else:
                 raise NotImplementedError(f'Select mode: {node.mode}')
+
+        self.selects_stack.pop()
 
         return query
 

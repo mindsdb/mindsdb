@@ -37,9 +37,9 @@ def start_mcp(verbose=False):
     """Start the MCP server"""
     from mindsdb.api.mcp.start import mcp
     from mindsdb.utilities.config import Config
-    
+
     config = Config()
     port = config['api']['mcp'].get('port', 47335)
     host = config['api']['mcp'].get('host', '127.0.0.1')
-    
+
     mcp.run(host=host, port=port)

@@ -1,8 +1,8 @@
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 
-from mcp.server.fastmcp import FastMCP, Context
+from mcp.server.fastmcp import FastMCP
 from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE as SQL_RESPONSE_TYPE
 from mindsdb.utilities import log
@@ -35,11 +35,11 @@ mcp = FastMCP(
 def query(query: str, context: Optional[Dict] = None) -> Dict[str, Any]:
     """
     Execute a SQL query against MindsDB
-    
+
     Args:
         query: The SQL query to execute
         context: Optional context parameters for the query
-    
+
     Returns:
         Dict containing the query results or error information
     """
@@ -59,7 +59,7 @@ def query(query: str, context: Optional[Dict] = None) -> Dict[str, Any]:
 
         if result.type == SQL_RESPONSE_TYPE.OK:
             return {"type": SQL_RESPONSE_TYPE.OK}
-        
+
         elif result.type == SQL_RESPONSE_TYPE.TABLE:
             return {
                 "type": SQL_RESPONSE_TYPE.TABLE,
@@ -69,7 +69,7 @@ def query(query: str, context: Optional[Dict] = None) -> Dict[str, Any]:
                     for x in result.columns
                 ],
             }
-        
+
         else:
             return {
                 "type": SQL_RESPONSE_TYPE.ERROR,
@@ -90,7 +90,7 @@ def query(query: str, context: Optional[Dict] = None) -> Dict[str, Any]:
 def list_databases() -> Dict[str, Any]:
     """
     List all databases in MindsDB along with their tables
-    
+
     Returns:
         Dict containing the list of databases and their tables
     """
@@ -106,10 +106,10 @@ def list_databases() -> Dict[str, Any]:
                 "error_code": result.error_code,
                 "error_message": result.error_message,
             }
-        
+
         elif result.type == SQL_RESPONSE_TYPE.OK:
             return {"type": "ok"}
-        
+
         elif result.type == SQL_RESPONSE_TYPE.TABLE:
             return {
                 "data": [

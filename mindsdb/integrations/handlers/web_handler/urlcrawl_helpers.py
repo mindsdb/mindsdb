@@ -16,7 +16,7 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 
-def pdf_to_markdown(response, gap_threshold=10):
+def pdf_to_markdown(content, gap_threshold=10):
     """
     Convert a PDF document to Markdown text.
 
@@ -32,7 +32,7 @@ def pdf_to_markdown(response, gap_threshold=10):
     """
 
     try:
-        file_stream = io.BytesIO(response.content)
+        file_stream = io.BytesIO(content)
         document = fitz.open(stream=file_stream, filetype="pdf")
     except Exception as e:
         raise Exception("Failed to process PDF data: " + str(e))
@@ -144,7 +144,7 @@ def get_all_website_links(url) -> dict:
 
         if "application/pdf" in content_type:
             content_html = "PDF"
-            content_text = pdf_to_markdown(response)
+            content_text = pdf_to_markdown(response.content)
         else:
             content_html = response.text
 

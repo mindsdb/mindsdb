@@ -202,8 +202,8 @@ class FunctionController(BYOMFunctionsController):
         }
         self.callbacks[name] = meta
         return meta
-    
-    def _parse_chat_model_params(self, param_prefix: str ='LLM_FUNCTION_'):
+
+    def _parse_chat_model_params(self, param_prefix: str = 'LLM_FUNCTION_'):
         """
         Parses the environment variables for chat model parameters.
         """

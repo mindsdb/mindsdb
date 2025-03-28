@@ -95,7 +95,7 @@ class ToMarkdown:
         Generates a description of the image using LLM.
         """
         image_base64 = base64.b64encode(image_bytes).decode("utf-8")
-        
+
         response = self.llm_client.responses.create(
             model=self.llm_model,
             input=[

@@ -17,8 +17,11 @@ def parse_sql2(sql, dialect='mindsdb'):
     # skip
 
     # step1: use mysql dialect and parse again
+    dialect = 'mysql'
+    if 'distinct on' in sql.lower():
+        dialect = 'postgres'
     try:
-        sql2 = SqlalchemyRender('mysql').get_string(query, with_failback=False)
+        sql2 = SqlalchemyRender(dialect).get_string(query, with_failback=False)
     except NotImplementedError:
         # skip not implemented, immediately exit
         return query

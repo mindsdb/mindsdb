@@ -5,8 +5,8 @@ from mindsdb_sql_parser.ast import Identifier, Insert, CreateTable
 from mindsdb.api.mongo.classes import Responder
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.responders.find import find_to_ast
-
 from mindsdb.api.mongo.classes.query_sql import run_sql_command
+from mindsdb.utilities.config import config
 
 
 def aggregate_to_ast(query, database):
@@ -63,7 +63,7 @@ class Responce(Responder):
 
         first_step = query['pipeline'][0]
         if '$match' in first_step:
-            ast_query = aggregate_to_ast(query, request_env.get('database', 'mindsdb'))
+            ast_query = aggregate_to_ast(query, request_env.get('database', config.get('default_project')))
 
             data = run_sql_command(request_env, ast_query)
 

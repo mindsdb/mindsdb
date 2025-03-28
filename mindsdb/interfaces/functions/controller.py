@@ -174,7 +174,7 @@ class FunctionController(BYOMFunctionsController):
                 llm_client = llm.root_client
                 llm_model = llm.model_name
             except Exception as e:
-                raise RuntimeError(f'Unable to use LLM function, check ENV variables: {e}')
+                pass
 
             to_markdown = ToMarkdown(llm_client, llm_model)
             return to_markdown.call(file_path_or_url)

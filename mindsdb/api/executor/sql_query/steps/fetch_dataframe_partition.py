@@ -145,52 +145,51 @@ class FetchDataframePartitionCall(BaseStepCall):
 
         # create N workers pool
         workers = []
-        for i in range(thread_count):
-            worker = threading.Thread(target=self._worker, daemon=True, args=(ctx.dump(), queue_in,
-                                                                              queue_out, self.stop_event))
-            worker.start()
-            workers.append(worker)
-
         results = []
-        while True:
 
-            # fetch batch
-            query2 = run_query.get_partition_query(self.current_step_num, query)
-            df, columns_info = self.dn.query(
-                query=query2,
-                session=self.session
-            )
+        try:
+            for i in range(thread_count):
+                worker = threading.Thread(target=self._worker, daemon=True, args=(ctx.dump(), queue_in,
+                                                                                  queue_out, self.stop_event))
+                worker.start()
+                workers.append(worker)
 
-            if df is None or len(df) == 0:
-                # TODO detect circles: data handler ignores condition and output is repeated
+            while True:
+                # fetch batch
+                query2 = run_query.get_partition_query(self.current_step_num, query)
+                df, columns_info = self.dn.query(
+                    query=query2,
+                    session=self.session
+                )
 
-                # exit & stop workers
-                self.stop_event.set()
-                break
+                if df is None or len(df) == 0:
+                    # TODO detect circles: data handler ignores condition and output is repeated
 
-            max_track_value = run_query.get_max_track_value(df)
+                    # exit & stop workers
+                    break
 
-            # split into chunks and send to workers
-            sent_chunks = 0
-            for df2 in split_data_frame(df, partition_size):
-                queue_in.put(df2)
-                sent_chunks += 1
+                max_track_value = run_query.get_max_track_value(df)
 
-            for i in range(sent_chunks):
-                res = queue_out.get()
-                if 'error' in res:
-                    self.close_workers(workers)
-                    raise RuntimeError(res['error'])
+                # split into chunks and send to workers
+                sent_chunks = 0
+                for df2 in split_data_frame(df, partition_size):
+                    queue_in.put(df2)
+                    sent_chunks += 1
 
-                if res['data']:
-                    results.append(res['data'])
+                for i in range(sent_chunks):
+                    res = queue_out.get()
+                    if 'error' in res:
+                        raise RuntimeError(res['error'])
 
-            # TODO
-            #  1. get next batch without updating track_value:
-            #    it allows to keep queue_in filled with data between fetching batches
-            run_query.set_progress(df, max_track_value)
+                    if res['data']:
+                        results.append(res['data'])
 
-        self.close_workers(workers)
+                # TODO
+                #  1. get next batch without updating track_value:
+                #    it allows to keep queue_in filled with data between fetching batches
+                run_query.set_progress(df, max_track_value)
+        finally:
+            self.close_workers(workers)
 
         return self.concat_results(results)
 

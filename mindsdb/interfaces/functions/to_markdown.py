@@ -1,6 +1,11 @@
+import base64
+from io import BytesIO
+
+import fitz  # PyMuPDF
 from markitdown import MarkItDown
 from openai import OpenAI
 import requests
+
 
 from mindsdb.integrations.handlers.web_handler.urlcrawl_helpers import pdf_to_markdown
 
@@ -38,7 +43,77 @@ class ToMarkdown:
         if self.llm_client is None:
             return pdf_to_markdown(file_content)
         else:
-            pass
+            return self._pdf_to_markdown_llm(file_content)
+
+    def _pdf_to_markdown_llm(self, file_content: bytes) -> str:
+        """
+        Converts a PDF file to markdown using LLM.
+        The LLM is used mainly for the purpose of generating descriptions of any images in the PDF.
+        """
+        pdf_stream = BytesIO(file_content)
+        document = fitz.open(stream=pdf_stream, filetype="pdf")
+
+        markdown_content = []
+        for page_num in range(len(document)):
+            page = document.load_page(page_num)
+
+            blocks = page.get_text("blocks")
+
+            page_content = []
+            blocks = page.get_text("blocks")
+            for block in blocks:
+                x0, y0, x1, y1, text, _, _, _ = block
+                page_content.append((y0, text.strip()))
+
+            # Extract images from the page.
+            image_list = page.get_images(full=True)
+            for img_index, img in enumerate(image_list):
+                xref = img[0]
+                base_image = document.extract_image(xref)
+                image_bytes = base_image["image"]
+
+                y0 = img[1]
+                image_description = self._generate_image_description(image_bytes)
+                page_content.append((y0, f"![Image]({image_description})"))
+
+            # Sort the content by y0 coordinate.
+            page_content.sort(key=lambda x: x[0])
+
+            for _, text in page_content:
+                markdown_content.append(text)
+            markdown_content.append("\n")
+
+        document.close()
+
+        return "\n".join(markdown_content)
+
+    def _generate_image_description(self, image_bytes: bytes) -> str:
+        """
+        Generates a description of the image using LLM.
+        """
+        image_base64 = base64.b64encode(image_bytes).decode("utf-8")
+        
+        response = self.llm_client.responses.create(
+            model=self.llm_model,
+            input=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "input_text", "text": "Describe this image"},
+                        {"type": "input_image", "image_url": f"data:image/png;base64,{image_base64}"},
+                    ],
+                }
+            ],
+        )
+        description = response.output[0].content[0].text
+        return description
+
+    def _pdf_to_markdown_no_llm(self, file_content: bytes) -> str:
+        """
+        Converts a PDF file to markdown without using LLM.
+        This is done using one of the helper functions used for the web handler.
+        """
+        return pdf_to_markdown(file_content)
 
     def _get_file_content(self, file_path_or_url: str) -> str:
         """

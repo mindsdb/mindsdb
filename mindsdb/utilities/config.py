@@ -205,7 +205,7 @@ class Config:
                 "mcp": {
                     "host": api_host,
                     "port": "47337",
-                    "enabled": False,
+                    "enabled": True,
                     "restart_on_failure": True,
                     "max_restart_count": 1,
                     "max_restart_interval_seconds": 60

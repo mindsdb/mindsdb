@@ -133,7 +133,7 @@ def list_databases() -> Dict[str, Any]:
 
 def start(*args, **kwargs):
     """Start the MCP server
-    
+
     Args:
         host (str): Host to bind to
         port (int): Port to listen on
@@ -148,5 +148,5 @@ def start(*args, **kwargs):
 
 
 if __name__ == "__main__":
-    
+
     start()

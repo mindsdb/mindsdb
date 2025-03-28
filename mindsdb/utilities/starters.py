@@ -36,5 +36,5 @@ def start_scheduler(*args, **kwargs):
 def start_mcp(*args, **kwargs):
     """Start the MCP server"""
     from mindsdb.api.mcp.start import start
-    
+
     start(*args, **kwargs)

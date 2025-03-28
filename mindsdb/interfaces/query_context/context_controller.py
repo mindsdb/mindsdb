@@ -1,5 +1,6 @@
 from typing import List
 import pickle
+import datetime as dt
 
 from sqlalchemy.orm.attributes import flag_modified
 import pandas as pd
@@ -304,6 +305,14 @@ class QueryContextController:
 
     def create_query(self, query):
 
+        # remove old queries
+        remove_query = db.session.query(db.Queries).filter(
+            db.Queries.company_id == ctx.company_id,
+            db.Queries.finished_at < (dt.datetime.now() - dt.timedelta(days=1))
+        )
+        for rec in remove_query.all():
+            db.session.delete(rec)
+
         rec = db.Queries(
             sql=str(query),
             company_id=ctx.company_id,
@@ -323,6 +332,7 @@ class QueryContextController:
                 'id': record.id,
                 'sql': record.sql,
                 'started_at': record.started_at,
+                'finished_at': record.finished_at,
                 'parameters': record.parameters,
                 'context': record.context,
                 'processed_rows': record.processed_rows,
@@ -454,7 +464,7 @@ class RunningQuery:
 
     def finish(self):
         # query is finished, we can delete it
-        db.session.delete(self.record)
+        self.record.finished_at = dt.datetime.now()
         db.session.commit()
 
 

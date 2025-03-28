@@ -573,6 +573,8 @@ class Queries(Base):
     # step_data: JSON = Column(JSON, nullable=True)
 
     started_at: datetime.datetime = Column(DateTime, default=datetime.datetime.now)
+    finished_at: datetime.datetime = Column(DateTime)
+
     parameters = Column(JSON, default={})
     context = Column(JSON, default={})
     processed_rows = Column(Integer, default=0)

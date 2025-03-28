@@ -24,6 +24,7 @@ def upgrade():
         sa.Column('company_id', sa.Integer(), nullable=True),
         sa.Column('sql', sa.String(), nullable=False),
         sa.Column('started_at', sa.DateTime(), nullable=True),
+        sa.Column('finished_at', sa.DateTime(), nullable=True),
         sa.Column('parameters', sa.JSON(), nullable=True),
         sa.Column('context', sa.JSON(), nullable=True),
         sa.Column('processed_rows', sa.Integer(), nullable=True),

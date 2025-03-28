@@ -1,0 +1,135 @@
+---
+title: Model Context Protocol (MCP)
+sidebarTitle: Overview
+---
+
+The Model Context Protocol (MCP) is a protocol designed to enable real-time communication between MindsDB and client applications for model training and inference. MCP runs on port 47337 by default.
+
+## Getting Started
+
+To enable the MCP API, you can:
+
+1. Use the `MINDSDB_APIS` environment variable:
+```bash
+export MINDSDB_APIS='http,mysql,mongodb,postgres,mcp'
+```
+
+2. Or specify it when starting MindsDB:
+```bash
+python -m mindsdb --api http,mysql,mongodb,postgres,mcp
+```
+
+## Protocol Overview
+
+MCP provides a bidirectional communication channel that allows clients to:
+
+1. Train models and receive real-time training status updates
+2. Make predictions and receive streaming responses
+3. Monitor model health and status
+4. Receive model retraining notifications
+
+## Creating an MCP Client
+
+Here's an example of how to create a simple MCP client in Python:
+
+```python
+import asyncio
+import websockets
+import json
+
+class MCPClient:
+    def __init__(self, host='localhost', port=47337):
+        self.uri = f"ws://{host}:{port}"
+        
+    async def connect(self):
+        self.ws = await websockets.connect(self.uri)
+        
+    async def train_model(self, model_name, query):
+        message = {
+            'type': 'train',
+            'model_name': model_name,
+            'query': query
+        }
+        await self.ws.send(json.dumps(message))
+        
+        # Receive training status updates
+        while True:
+            response = await self.ws.recv()
+            status = json.loads(response)
+            if status['type'] == 'training_complete':
+                break
+            print(f"Training status: {status}")
+            
+    async def predict(self, model_name, data):
+        message = {
+            'type': 'predict',
+            'model_name': model_name,
+            'data': data
+        }
+        await self.ws.send(json.dumps(message))
+        response = await self.ws.recv()
+        return json.loads(response)
+
+# Example usage
+async def main():
+    client = MCPClient()
+    await client.connect()
+    
+    # Train a model
+    await client.train_model(
+        'home_rentals_model',
+        '''
+        CREATE MODEL mindsdb.home_rentals_model
+        FROM example_db
+        (SELECT * FROM demo_data.home_rentals)
+        PREDICT rental_price
+        '''
+    )
+    
+    # Make predictions
+    prediction = await client.predict(
+        'home_rentals_model',
+        {'sqft': 800, 'location': 'good', 'neighborhood': 'downtown'}
+    )
+    print(f"Predicted rental price: {prediction['rental_price']}")
+
+if __name__ == '__main__':
+    asyncio.run(main())
+```
+
+## Error Handling
+
+The MCP client should handle various types of errors:
+
+```python
+async def connect(self):
+    try:
+        self.ws = await websockets.connect(self.uri)
+    except ConnectionRefusedError:
+        raise Exception("Could not connect to MCP server. Make sure MindsDB is running with MCP enabled.")
+    except Exception as e:
+        raise Exception(f"Error connecting to MCP server: {str(e)}")
+```
+
+## Best Practices
+
+1. **Connection Management**
+   - Implement reconnection logic
+   - Handle connection timeouts
+   - Clean up resources properly
+
+2. **Message Handling**
+   - Validate messages before sending
+   - Handle malformed responses
+   - Implement proper error handling
+
+3. **Security**
+   - Use secure WebSocket connections (WSS) in production
+   - Implement authentication if required
+   - Validate all input data
+
+## Next Steps
+
+- Check out our [example implementations](/mcp/examples) of MCP clients
+- Learn about [advanced features](/mcp/advanced) of the MCP protocol
+- See the [API reference](/mcp/api-reference) for detailed protocol specifications 

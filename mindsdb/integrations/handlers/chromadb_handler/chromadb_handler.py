@@ -240,6 +240,12 @@ class ChromaDBHandler(VectorStoreHandler):
 
         include = ["metadatas", "documents", "embeddings"]
 
+        # Filter out 'relevance' from columns since it's calculated post-query
+        if columns is not None:
+            filtered_columns = [col for col in columns if col.lower() != TableField.RELEVANCE.value]
+        else:
+            filtered_columns = columns
+
         # check if embedding vector filter is present
         vector_filter = (
             []
@@ -307,8 +313,9 @@ class ChromaDBHandler(VectorStoreHandler):
             TableField.EMBEDDINGS.value: embeddings,
         }
 
-        if columns is not None:
-            payload = {column: payload[column] for column in columns}
+        # Use the filtered columns that exclude 'relevance'
+        if filtered_columns is not None:
+            payload = {column: payload.get(column) for column in filtered_columns if column in payload}
 
         # always include distance
         distance_filter = None
@@ -316,10 +323,11 @@ class ChromaDBHandler(VectorStoreHandler):
         if distances is not None:
             payload[distance_col] = distances
 
-            for cond in conditions:
-                if cond.column == distance_col:
-                    distance_filter = cond
-                    break
+            if conditions is not None:
+                for cond in conditions:
+                    if cond.column == distance_col:
+                        distance_filter = cond
+                        break
 
         df = pd.DataFrame(payload)
         if distance_filter is not None:

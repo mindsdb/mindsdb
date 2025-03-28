@@ -54,7 +54,7 @@ class LLMReranker(BaseDocumentCompressor):
                 max_retries=2  # Client-level retries
             )
 
-    async def search_relevancy(self, query: str, document: str) -> Any:
+    async def search_relevancy(self, query: str, document: str, custom_event: bool = True) -> Any:
         await self._init_client()
 
         async with self._semaphore:
@@ -82,7 +82,8 @@ class LLMReranker(BaseDocumentCompressor):
                     }
 
                     # Stream reranking update.
-                    dispatch_custom_event("rerank", rerank_data)
+                    if custom_event:
+                        dispatch_custom_event("rerank", rerank_data)
                     return rerank_data
 
                 except Exception as e:
@@ -93,7 +94,7 @@ class LLMReranker(BaseDocumentCompressor):
                     retry_delay = self.retry_delay * (2 ** attempt) + random.uniform(0, 0.1)
                     await asyncio.sleep(retry_delay)
 
-    async def _rank(self, query_document_pairs: List[Tuple[str, str]]) -> List[Tuple[str, float]]:
+    async def _rank(self, query_document_pairs: List[Tuple[str, str]], custom_event: bool = True) -> List[Tuple[str, float]]:
         ranked_results = []
 
         # Process in larger batches for better throughput
@@ -102,7 +103,7 @@ class LLMReranker(BaseDocumentCompressor):
             batch = query_document_pairs[i:i + batch_size]
             try:
                 results = await asyncio.gather(
-                    *[self.search_relevancy(query=query, document=document) for (query, document) in batch],
+                    *[self.search_relevancy(query=query, document=document, custom_event=custom_event) for (query, document) in batch],
                     return_exceptions=True
                 )
 
@@ -227,16 +228,7 @@ class LLMReranker(BaseDocumentCompressor):
             "remove_irrelevant": self.remove_irrelevant,
         }
 
-    def get_scores(self, query: str, documents: list[str], disable_events: bool = True):
-        """
-        Get relevance scores for documents given a query.
-        Args:
-            query: The query text
-            documents: List of document texts to score
-            disable_events: Whether to disable event dispatching (default True)
-        Returns:
-            List of relevance scores
-        """
+    def get_scores(self, query: str, documents: list[str], custom_event: bool = False):
         query_document_pairs = [(query, doc) for doc in documents]
         # Create event loop and run async code
         import asyncio
@@ -246,89 +238,7 @@ class LLMReranker(BaseDocumentCompressor):
             # If no running loop exists, create a new one
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-        # If disable_events is True, we need to modify the _rank function to not use dispatch_custom_event
-        if disable_events:
-            # Create a wrapper function that doesn't dispatch events
-            async def _rank_without_events(query_document_pairs):
-                ranked_results = []
-                # Process in larger batches for better throughput
-                batch_size = min(self.max_concurrent_requests * 2, len(query_document_pairs))
-                for i in range(0, len(query_document_pairs), batch_size):
-                    batch = query_document_pairs[i:i + batch_size]
-                    try:
-                        # Define a no-events version of search_relevancy inside this closure
-                        async def search_relevancy_no_events(query, document):
-                            await self._init_client()
-                            async with self._semaphore:
-                                for attempt in range(self.max_retries):
-                                    try:
-                                        response = await self.client.chat.completions.create(
-                                            model=self.model,
-                                            messages=[
-                                                {"role": "system", "content": "Rate the relevance of the document to the query. Respond with 'yes' or 'no'."},
-                                                {"role": "user", "content": f"Query: {query}\nDocument: {document}\nIs this document relevant?"}
-                                            ],
-                                            temperature=self.temperature,
-                                            n=1,
-                                            logprobs=True,
-                                            max_tokens=1
-                                        )
-                                        # Extract response and confidence score
-                                        answer = response.choices[0].message.content
-                                        logprob = response.choices[0].logprobs.content[0].logprob
-                                        # No event dispatch here
-                                        return {"document": document, "answer": answer, "logprob": logprob}
-                                    except Exception as e:
-                                        if attempt == self.max_retries - 1:
-                                            log.error(f"Failed after {self.max_retries} attempts: {str(e)}")
-                                            raise
-                                        # Exponential backoff with jitter
-                                        retry_delay = self.retry_delay * (2 ** attempt) + random.uniform(0, 0.1)
-                                        await asyncio.sleep(retry_delay)
-                        # Use our no-events version for this batch
-                        results = await asyncio.gather(
-                            *[search_relevancy_no_events(query=query, document=document) for (query, document) in batch],
-                            return_exceptions=True
-                        )
-                        for idx, result in enumerate(results):
-                            if isinstance(result, Exception):
-                                log.error(f"Error processing document {i+idx}: {str(result)}")
-                                ranked_results.append((batch[idx][1], 0.0))
-                                continue
-                            answer = result["answer"]
-                            logprob = result["logprob"]
-                            prob = math.exp(logprob)
-                            # Convert answer to score using the model's confidence
-                            if answer.lower().strip() == "yes":
-                                score = prob  # If yes, use the model's confidence
-                            elif answer.lower().strip() == "no":
-                                score = 1 - prob  # If no, invert the confidence
-                            else:
-                                score = 0.5 * prob  # For unclear answers, reduce confidence
-                            ranked_results.append((batch[idx][1], score))
-                            # Check if we should stop early
-                            try:
-                                high_scoring_docs = [r for r in ranked_results if r[1] >= self.filtering_threshold]
-                                can_stop_early = (
-                                    self.early_stop  # Early stopping is enabled
-                                    and self.num_docs_to_keep  # We have a target number of docs
-                                    and len(high_scoring_docs) >= self.num_docs_to_keep  # Found enough good docs
-                                    and score >= self.early_stop_threshold  # Current doc is good enough
-                                )
-                                if can_stop_early:
-                                    log.info(f"Early stopping after finding {self.num_docs_to_keep} documents with high confidence")
-                                    return ranked_results
-                            except Exception as e:
-                                # Don't let early stopping errors stop the whole process
-                                log.warning(f"Error in early stopping check: {str(e)}")
-                    except Exception as e:
-                        log.error(f"Batch processing error: {str(e)}")
-                        continue
-                return ranked_results
-            # Use our no-events version
-            documents_and_scores = loop.run_until_complete(_rank_without_events(query_document_pairs))
-        else:
-            # Use the original _rank method
-            documents_and_scores = loop.run_until_complete(self._rank(query_document_pairs))
+
+        documents_and_scores = loop.run_until_complete(self._rank(query_document_pairs, custom_event=custom_event))
         scores = [score for _, score in documents_and_scores]
         return scores

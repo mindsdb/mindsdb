@@ -451,7 +451,11 @@ if __name__ == '__main__':
     }
 
     for api_enum in api_arr:
-        trunc_processes_struct[api_enum].need_to_run = True
+        if api_enum in trunc_processes_struct:
+            trunc_processes_struct[api_enum].need_to_run = True
+        else:
+            logger.error(f"ERROR: {api_enum} API is not a valid api in config")
+            
 
     if config['jobs']['disable'] is False:
         trunc_processes_struct[TrunkProcessEnum.JOBS].need_to_run = True

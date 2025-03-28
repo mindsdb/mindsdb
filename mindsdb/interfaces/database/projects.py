@@ -296,6 +296,19 @@ class Project:
         ]
         return data
 
+    def get_knowledge_bases(self):
+        from mindsdb.api.executor.controllers.session_controller import SessionController
+        session = SessionController()
+
+        return {
+            kb['name']: {
+                'type': 'knowledge_base',
+                'id': kb['id'],
+                'deletable': True
+            }
+            for kb in session.kb_controller.list(self.name)
+        }
+
     def get_views(self):
         records = (
             db.session.query(db.View).filter_by(
@@ -352,6 +365,8 @@ class Project:
         agents = self.get_agents()
         for agent in agents:
             data[agent['name']] = agent['metadata']
+
+        data.update(self.get_knowledge_bases())
 
         return data
 

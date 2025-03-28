@@ -131,19 +131,22 @@ def list_databases() -> Dict[str, Any]:
         }
 
 
-def run(host: str = '127.0.0.1', port: int = 47335):
-    """Run the MCP server
-
+def start(*args, **kwargs):
+    """Start the MCP server
+    
     Args:
         host (str): Host to bind to
         port (int): Port to listen on
     """
-    logger.info(f"Starting MCP server on {host}:{port}")
-    mcp.run(host=host, port=port)
-
-
-if __name__ == "__main__":
     config = Config()
     port = config['api']['mcp'].get('port', 47335)
     host = config['api']['mcp'].get('host', '127.0.0.1')
-    run(host=host, port=port)
+    logger.info(f"Starting MCP server on {host}:{port}")
+    mcp.settings.host = host
+    mcp.settings.port = port
+    mcp.run()
+
+
+if __name__ == "__main__":
+    
+    start()

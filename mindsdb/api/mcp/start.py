@@ -7,11 +7,9 @@ from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProx
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE as SQL_RESPONSE_TYPE
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
+from mindsdb.interfaces.storage import db
 
 logger = log.getLogger(__name__)
-
-# Create MCP server instance
-mcp = FastMCP("MindsDB")
 
 
 @asynccontextmanager
@@ -99,7 +97,6 @@ def list_databases() -> Dict[str, Any]:
 
     try:
         result = mysql_proxy.process_query(listing_query)
-
         if result.type == SQL_RESPONSE_TYPE.ERROR:
             return {
                 "type": "error",
@@ -111,17 +108,8 @@ def list_databases() -> Dict[str, Any]:
             return {"type": "ok"}
 
         elif result.type == SQL_RESPONSE_TYPE.TABLE:
-            return {
-                "data": [
-                    {
-                        "name": x[0],
-                        "tables": mysql_proxy.process_query(
-                            f"SHOW TABLES FROM `{x[0]}`"
-                        ).data,
-                    }
-                    for x in result.data
-                ]
-            }
+            data = result.data.to_lists(json_types=True)
+            return data
 
     except Exception as e:
         return {
@@ -133,20 +121,27 @@ def list_databases() -> Dict[str, Any]:
 
 def start(*args, **kwargs):
     """Start the MCP server
-
+    
     Args:
         host (str): Host to bind to
         port (int): Port to listen on
     """
+    db.init()
+    
     config = Config()
-    port = config['api']['mcp'].get('port', 47335)
+    port = int(config['api']['mcp'].get('port', 47337))
     host = config['api']['mcp'].get('host', '127.0.0.1')
+    
     logger.info(f"Starting MCP server on {host}:{port}")
     mcp.settings.host = host
     mcp.settings.port = port
-    mcp.run()
+    
+    try:
+        mcp.run(transport="sse")  # Use SSE transport instead of stdio
+    except Exception as e:
+        logger.error(f"Error starting MCP server: {str(e)}")
+        raise
 
 
 if __name__ == "__main__":
-
     start()

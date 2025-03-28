@@ -388,7 +388,7 @@ class TestKB(BaseExecutorDummyML):
 
         ret = self.run_sql("select * from kb_review where original_row_id = '123'")
         assert len(ret) == 1
-        assert ret['content'][0] == record['review']
+        assert ret['chunk_content'][0] == record['review']
 
         # delete by metadata
         self.run_sql("delete from kb_review where original_row_id = '123'")
@@ -433,7 +433,7 @@ class TestKB(BaseExecutorDummyML):
         assert len(ret) == 2  # two columns are split in two records
 
         # review/product in content
-        content = list(ret['content'])
+        content = list(ret['chunk_content'])
         assert record['review'] in content
         assert record['product'] in content
 
@@ -459,7 +459,7 @@ class TestKB(BaseExecutorDummyML):
         ret = self.run_sql("select * from kb_review where original_row_id = '123'")  # id is id
         assert len(ret) == 1
         # review in content
-        assert ret['content'][0] == record['review']
+        assert ret['chunk_content'][0] == record['review']
 
         # specs/url/product in metadata
         metadata = ret['metadata'][0]

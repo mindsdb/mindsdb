@@ -52,9 +52,6 @@ class IntegrationDataNode(DataNode):
         else:
             raise Exception(f"Can't get tables: {response.error_message}")
 
-    def has_table(self, tableName):
-        return True
-
     def get_table_columns(self, table_name: str, schema_name: Optional[str] = None):
         if 'schema_name' in inspect.signature(self.integration_handler.get_columns).parameters:
             response = self.integration_handler.get_columns(table_name, schema_name)

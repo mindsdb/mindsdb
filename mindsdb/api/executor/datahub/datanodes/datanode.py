@@ -10,9 +10,6 @@ class DataNode:
     def get_tables(self):
         pass
 
-    def has_table(self, tableName):
-        pass
-
     def get_table_columns(self, tableName, schema_name=None):
         pass
 

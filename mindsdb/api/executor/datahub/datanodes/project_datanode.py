@@ -45,10 +45,6 @@ class ProjectDataNode(DataNode):
         result = [TablesRow.from_dict(row) for row in tables]
         return result
 
-    def has_table(self, table_name):
-        tables = self.project.get_tables()
-        return table_name in tables
-
     def get_table_columns(self, table_name, schema_name=None):
         return [
             {'name': name}

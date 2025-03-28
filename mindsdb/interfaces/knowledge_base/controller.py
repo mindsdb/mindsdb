@@ -42,6 +42,12 @@ from mindsdb.integrations.utilities.rag.rerankers.reranker_compressor import LLM
 
 logger = log.getLogger(__name__)
 
+KB_TO_VECTORDB_COLUMNS = {
+    'id': 'original_row_id',
+    'chunk_id': 'id',
+    'chunk_content': 'content'
+}
+
 
 class KnowledgeBaseTable:
     """
@@ -105,7 +111,9 @@ class KnowledgeBaseTable:
         db_handler = self.get_vector_db()
         logger.debug(f"Using vector db handler: {type(db_handler)}")
 
-        df = db_handler.dispatch_select(query)
+        conditions = db_handler.extract_conditions(query.where)
+        self.addapt_conditions_columns(conditions)
+        df = db_handler.dispatch_select(query, conditions)
 
         if df is not None:
 
@@ -157,7 +165,31 @@ class KnowledgeBaseTable:
                 logger.debug(f"Applied reranking with model {rerank_model}")
             except Exception as e:
                 logger.error(f"Error during reranking: {str(e)}")
+
+        df = self.addapt_result_columns(df)
         return df
+
+    def addapt_conditions_columns(self, conditions):
+        if conditions is None:
+            return
+        for condition in conditions:
+            if condition.column in KB_TO_VECTORDB_COLUMNS:
+                condition.column = KB_TO_VECTORDB_COLUMNS[condition.column]
+
+    def addapt_result_columns(self, df):
+        col_update = {}
+        for kb_col, vec_col in KB_TO_VECTORDB_COLUMNS.items():
+            if vec_col in df.columns:
+                col_update[vec_col] = kb_col
+
+        df = df.rename(columns=col_update)
+
+        columns = list(df.columns)
+        # update id, get from metadata
+        df[TableField.ID.value] = df[TableField.METADATA.value].apply(lambda m: m.get('original_row_id'))
+
+        # id on first place
+        return df[[TableField.ID.value] + columns]
 
     def insert_files(self, file_names: List[str]):
         """Process and insert files"""
@@ -259,7 +291,9 @@ class KnowledgeBaseTable:
 
         # send to vectordb
         db_handler = self.get_vector_db()
-        db_handler.dispatch_delete(query)
+        conditions = db_handler.extract_conditions(query.where)
+        self.addapt_conditions_columns(conditions)
+        db_handler.dispatch_delete(query, conditions)
 
     def hybrid_search(
         self,

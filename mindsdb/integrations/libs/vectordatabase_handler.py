@@ -89,7 +89,7 @@ class VectorStoreHandler(BaseHandler):
         else:
             return value
 
-    def _extract_conditions(self, where_statement) -> Optional[List[FilterCondition]]:
+    def extract_conditions(self, where_statement) -> Optional[List[FilterCondition]]:
         conditions = []
         # parse conditions
         if where_statement is not None:
@@ -110,13 +110,7 @@ class VectorStoreHandler(BaseHandler):
                             right_hand = node.args[1].value
                     elif isinstance(node.args[1], Tuple):
                         # Constant could be actually a list i.e. [1.2, 3.2]
-                        right_hand = [
-                            ast.literal_eval(item.value)
-                            if isinstance(item, Constant)
-                            and not isinstance(item.value, list)
-                            else item.value
-                            for item in node.args[1].items
-                        ]
+                        right_hand = [item.value for item in node.args[1].items]
                     else:
                         raise Exception(f"Unsupported right hand side: {node.args[1]}")
                     conditions.append(
@@ -125,17 +119,20 @@ class VectorStoreHandler(BaseHandler):
 
             query_traversal(where_statement, _extract_comparison_conditions)
 
-            # try to treat conditions that are not in TableField as metadata conditions
-            for condition in conditions:
-                if not self._is_condition_allowed(condition):
-                    condition.column = (
-                        TableField.METADATA.value + "." + condition.column
-                    )
-
         else:
             conditions = None
 
         return conditions
+
+    def _convert_metadata_filters(self, conditions):
+        if conditions is None:
+            return
+        # try to treat conditions that are not in TableField as metadata conditions
+        for condition in conditions:
+            if not self._is_condition_allowed(condition):
+                condition.column = (
+                    TableField.METADATA.value + "." + condition.column
+                )
 
     def _is_columns_allowed(self, columns: List[str]) -> bool:
         """
@@ -325,14 +322,16 @@ class VectorStoreHandler(BaseHandler):
         if not df_insert.empty:
             self.insert(table_name, df_insert)
 
-    def dispatch_delete(self, query: Delete):
+    def dispatch_delete(self, query: Delete, conditions: List[FilterCondition] = None):
         """
         Dispatch delete query to the appropriate method.
         """
         # parse key arguments
         table_name = query.table.parts[-1]
-        where_statement = query.where
-        conditions = self._extract_conditions(where_statement)
+        if conditions is None:
+            where_statement = query.where
+            conditions = self.extract_conditions(where_statement)
+        self._convert_metadata_filters(conditions)
 
         # dispatch delete
         return self.delete(table_name, conditions=conditions)
@@ -356,9 +355,10 @@ class VectorStoreHandler(BaseHandler):
             )
 
         # check if columns are allowed
-        where_statement = query.where
         if conditions is None:
-            conditions = self._extract_conditions(where_statement)
+            where_statement = query.where
+            conditions = self.extract_conditions(where_statement)
+        self._convert_metadata_filters(conditions)
 
         # get offset and limit
         offset = query.offset.value if query.offset is not None else None

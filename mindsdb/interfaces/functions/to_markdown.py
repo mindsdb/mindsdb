@@ -57,13 +57,13 @@ class ToMarkdown:
         for page_num in range(len(document)):
             page = document.load_page(page_num)
 
-            blocks = page.get_text("blocks")
-
+            # Get text blocks with coordinates.
             page_content = []
             blocks = page.get_text("blocks")
             for block in blocks:
-                x0, y0, x1, y1, text, _, _, _ = block
-                page_content.append((y0, text.strip()))
+                x0, y0, x1, y1, text, _, _ = block
+                if text.strip():  # Skip empty or whitespace blocks.
+                    page_content.append((y0, text.strip()))
 
             # Extract images from the page.
             image_list = page.get_images(full=True)
@@ -72,13 +72,16 @@ class ToMarkdown:
                 base_image = document.extract_image(xref)
                 image_bytes = base_image["image"]
 
-                y0 = img[1]
+                # Use actual image y-coordinate if available.
+                y0 = float(base_image.get("y", 0))
                 image_description = self._generate_image_description(image_bytes)
-                page_content.append((y0, f"![Image]({image_description})"))
+                page_content.append((y0, f"![{image_description}](image_{page_num + 1}_{img_index + 1}.png)"))
 
-            # Sort the content by y0 coordinate.
+            # Sort the content by y0 coordinate
             page_content.sort(key=lambda x: x[0])
 
+            # Add sorted content to the markdown
+            markdown_content.append(f"# Page {page_num + 1}")
             for _, text in page_content:
                 markdown_content.append(text)
             markdown_content.append("\n")

@@ -24,7 +24,8 @@ from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.utilities.config import config
 from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.utilities.starters import (
-    start_http, start_mysql, start_mongo, start_postgres, start_ml_task_queue, start_scheduler, start_tasks
+    start_http, start_mysql, start_mongo, start_postgres, start_ml_task_queue, start_scheduler, start_tasks,
+    start_mcp
 )
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 from mindsdb.utilities.functions import get_versions_where_predictors_become_obsolete
@@ -57,6 +58,7 @@ class TrunkProcessEnum(Enum):
     JOBS = 'jobs'
     TASKS = 'tasks'
     ML_TASK_QUEUE = 'ml_task_queue'
+    MCP = 'mcp'
 
     @classmethod
     def _missing_(cls, value):
@@ -434,6 +436,17 @@ if __name__ == '__main__':
             name=TrunkProcessEnum.ML_TASK_QUEUE.value,
             entrypoint=start_ml_task_queue,
             args=(config.cmd_args.verbose,)
+        ),
+        TrunkProcessEnum.MCP: TrunkProcessData(
+            name=TrunkProcessEnum.MCP.value,
+            entrypoint=start_mcp,
+            port=config['api']['mcp']['port'],
+            args=(config.cmd_args.verbose,),
+            restart_on_failure=config['api']['mcp'].get('restart_on_failure', False),
+            max_restart_count=config['api']['mcp'].get('max_restart_count', TrunkProcessData.max_restart_count),
+            max_restart_interval_seconds=config['api']['mcp'].get(
+                'max_restart_interval_seconds', TrunkProcessData.max_restart_interval_seconds
+            )
         )
     }
 

@@ -1,7 +1,7 @@
 FROM gitpod/workspace-postgres
 
 ENV NODE_VERSION=18
-ENV PYTHON_VERSION=3.8
+ENV PYTHON_VERSION=3.10
 
 RUN pyenv install $PYTHON_VERSION -s \
     && pyenv global $PYTHON_VERSION

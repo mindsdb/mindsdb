@@ -523,6 +523,12 @@
       ]
     },
     {
+      "group": "MCP API",
+      "pages": [
+        "mcp/overview"
+      ]
+    },
+    {
       "group": "REST API",
       "pages": [
         "rest/overview",

@@ -135,22 +135,7 @@ class FunctionController(BYOMFunctionsController):
         if name in self.callbacks:
             return self.callbacks[name]
 
-        param_prefix = 'LLM_FUNCTION_'
-        chat_model_params = {}
-        for k, v in os.environ.items():
-            if k.startswith(param_prefix):
-                param_name = k[len(param_prefix):]
-                if param_name == 'MODEL':
-                    chat_model_params['model_name'] = v
-                else:
-                    chat_model_params[param_name.lower()] = v
-
-        if 'provider' not in chat_model_params:
-            chat_model_params['provider'] = 'openai'
-
-        if 'api_key' in chat_model_params:
-            # move to api_keys dict
-            chat_model_params["api_keys"] = {chat_model_params['provider']: chat_model_params['api_key']}
+        chat_model_params = self._parse_chat_model_params()
 
         try:
             from langchain_core.messages import HumanMessage

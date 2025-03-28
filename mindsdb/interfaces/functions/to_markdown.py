@@ -19,6 +19,8 @@ class ToMarkdown:
         Initializes the ToMarkdown class.
         """
         # Only OpenAI is supported for now.
+        if llm_client is not None and not isinstance(llm_client, OpenAI):
+            raise ValueError('Only OpenAI models are supported at the moment.')
         # TODO: Add support for other LLMs?
         self.llm_client = llm_client
         self.llm_model = llm_model
@@ -81,7 +83,6 @@ class ToMarkdown:
             page_content.sort(key=lambda x: x[0])
 
             # Add sorted content to the markdown
-            markdown_content.append(f"# Page {page_num + 1}")
             for _, text in page_content:
                 markdown_content.append(text)
             markdown_content.append("\n")
@@ -96,19 +97,19 @@ class ToMarkdown:
         """
         image_base64 = base64.b64encode(image_bytes).decode("utf-8")
 
-        response = self.llm_client.responses.create(
+        response = self.llm_client.chat.completions.create(
             model=self.llm_model,
-            input=[
+            messages=[
                 {
                     "role": "user",
                     "content": [
-                        {"type": "input_text", "text": "Describe this image"},
-                        {"type": "input_image", "image_url": f"data:image/png;base64,{image_base64}"},
+                        {"type": "text", "text": "Describe this image"},
+                        {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_base64}"}},
                     ],
                 }
             ],
         )
-        description = response.output[0].content[0].text
+        description = response.choices[0].message.content
         return description
 
     def _pdf_to_markdown_no_llm(self, file_content: bytes) -> str:

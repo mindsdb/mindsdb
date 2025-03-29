@@ -551,6 +551,7 @@ class ColumnSchema(BaseModel):
             Dict[Union[str, int, float], ValueSchema],
         ]
     ] = Field(
+        default=None,
         description="One of the following. A dict or ordered dict of {schema_value: ValueSchema, ...}, where schema value is the name given for this value description in the schema."
     )
     example_questions: Optional[List[LLMExample]] = Field(

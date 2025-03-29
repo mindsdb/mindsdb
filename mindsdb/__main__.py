@@ -9,10 +9,10 @@ import secrets
 import traceback
 import threading
 from enum import Enum
-from packaging import version
 from dataclasses import dataclass, field
 from typing import Callable, Optional, Tuple, List
 
+from packaging import version
 from sqlalchemy.orm.attributes import flag_modified
 
 from mindsdb.utilities import log
@@ -45,7 +45,6 @@ try:
     mp.set_start_method('spawn')
 except RuntimeError:
     logger.info('Torch multiprocessing context already set, ignoring...')
-
 
 _stop_event = threading.Event()
 

@@ -2,6 +2,7 @@
 import sentry_sdk
 import os
 from mindsdb.utilities import log
+from sentry_sdk.integrations.flask import FlaskIntegration
 
 logger = log.getLogger(__name__)
 
@@ -43,4 +44,6 @@ if SENTRY_IO_DSN and (not SENTRY_IO_DISABLED or SENTRY_IO_FORCE_RUN):
         environment=SENTRY_IO_ENVIRONMENT,
         # What release/image/etc we're using, injected in Helm/Kubernetes to be the image tag
         release=SENTRY_IO_RELEASE,
+        # Integrate with Flask
+        integrations=[FlaskIntegration()],
     )

@@ -1023,7 +1023,8 @@
             "integrations/vector-db-integrations/milvus",
             "integrations/vector-db-integrations/pgvector",
             "integrations/vector-db-integrations/pinecone",
-            "integrations/vector-db-integrations/weaviate"
+            "integrations/vector-db-integrations/weaviate",
+            "integrations/vector-db-integrations/upstash"
           ]
         },
         {

@@ -108,11 +108,7 @@ class ProjectDataNode(DataNode):
                         new_query.where,
                         project_filter
                     ])
-                df, columns_info = self.information_schema.query(new_query)
-                return DataHubResponse(
-                    data_frame=df,
-                    columns=columns_info
-                )
+                return self.information_schema.query(new_query)
             # endregion
 
             # other table from project

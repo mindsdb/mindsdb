@@ -34,8 +34,8 @@
     }
   ],
   "topbarCtaButton": {
-    "name": "Get Started",
-    "url": "https://github.com/mindsdb/mindsdb"
+    "name": "Try Demo",
+    "url": "http://mdb.ai/register"
   },
   "anchors": [
     {
@@ -284,10 +284,10 @@
               ]
             }
           ]
-        }
+        },
+        "minds-demo"
       ]
     },
-
     {
       "group": "Features",
       "pages": [
@@ -436,7 +436,8 @@
           "pages": [
             "mindsdb_sql/sql/create/project",
             "mindsdb_sql/sql/drop/project",
-            "mindsdb_sql/sql/list-projects"
+            "mindsdb_sql/sql/list-projects",
+            "mindsdb_sql/sql/use/project"
           ]
         },
         {
@@ -923,6 +924,7 @@
             "integrations/app-integrations/hackernews",
             "integrations/app-integrations/instatus",
             "integrations/app-integrations/intercom",
+            "integrations/app-integrations/jira",
             "integrations/app-integrations/mediawiki",
             "integrations/app-integrations/microsoft-onedrive",
             "integrations/app-integrations/microsoft-teams",
@@ -1018,6 +1020,7 @@
           "pages": [
             "integrations/vector-db-integrations/chromadb",
             "integrations/vector-db-integrations/couchbase",
+            "integrations/vector-db-integrations/milvus",
             "integrations/vector-db-integrations/pgvector",
             "integrations/vector-db-integrations/pinecone",
             "integrations/vector-db-integrations/weaviate"

@@ -1,7 +1,9 @@
 import time
-from typing import Dict
+import shutil
+import tempfile
 from http import HTTPStatus
-from sqlalchemy.exc import NoResultFound
+from typing import Dict
+from pathlib import Path
 
 from flask import request
 from flask_restx import Resource
@@ -92,6 +94,71 @@ class DatabasesResource(Resource):
 
         new_integration = session.database_controller.get_integration(new_integration_id)
         return new_integration, HTTPStatus.CREATED
+
+
+@ns_conf.route('/status')
+class DatabasesStatusResource(Resource):
+    @ns_conf.doc('check_database_connection_status')
+    @api_endpoint_metrics('POST', '/databases/status')
+    def post(self):
+        '''Check the connection parameters for a database'''
+        data = {}
+        if request.content_type == 'application/json':
+            data.update(request.json or {})
+        elif request.content_type.startswith('multipart/form-data'):
+            data.update(request.form or {})
+
+        if 'engine' not in data:
+            return http_error(
+                HTTPStatus.BAD_REQUEST, 'Wrong argument',
+                'Missing "engine" field for database'
+            )
+
+        engine = data['engine']
+        parameters = data
+        del parameters['engine']
+
+        files = request.files
+        temp_dir = None
+        if files is not None and len(files) > 0:
+            temp_dir = tempfile.mkdtemp(prefix='integration_files_')
+            for key, file in files.items():
+                temp_dir_path = Path(temp_dir)
+                file_name = Path(file.filename)
+                file_path = temp_dir_path.joinpath(file_name).resolve()
+                if temp_dir_path not in file_path.parents:
+                    raise Exception(f'Can not save file at path: {file_path}')
+                file.save(file_path)
+                parameters[key] = str(file_path)
+
+        session = SessionController()
+
+        try:
+            handler = session.integration_controller.create_tmp_handler("test_connection", engine, parameters)
+            status = handler.check_connection()
+        except ImportError as import_error:
+            status = HandlerStatusResponse(success=False, error_message=str(import_error))
+        except Exception as unknown_error:
+            status = HandlerStatusResponse(success=False, error_message=str(unknown_error))
+        finally:
+            if temp_dir is not None:
+                shutil.rmtree(temp_dir)
+
+        if not status.success:
+            if hasattr(status, 'redirect_url') and isinstance(status, str):
+                return {
+                    "status": "redirect_required",
+                    "redirect_url": status.redirect_url,
+                    "detail": status.error_message
+                }, HTTPStatus.OK
+            return {
+                "status": "connection_error",
+                "detail": status.error_message
+            }, HTTPStatus.OK
+
+        return {
+            "status": "success",
+        }, HTTPStatus.OK
 
 
 @ns_conf.route('/<database_name>')
@@ -269,7 +336,7 @@ class TablesList(Resource):
                 HTTPStatus.BAD_REQUEST, 'Error',
                 error_message
             )
-        except NoResultFound:
+        except EntityNotExistsError:
             # Only support creating tables from integrations.
             pass
 
@@ -351,7 +418,7 @@ class TableResource(Resource):
                 + f'If you want to delete a model or view, use the projects/{database_name}/models/{table_name} or ' \
                 + f'projects/{database_name}/views/{table_name} endpoints instead.'
             return http_error(HTTPStatus.BAD_REQUEST, 'Error', error_message)
-        except NoResultFound:
+        except EntityNotExistsError:
             # Only support dropping tables from integrations.
             pass
 

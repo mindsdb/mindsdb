@@ -10,6 +10,7 @@ from mindsdb_sql_parser.ast import Select, BinaryOperation, Identifier, Constant
 
 from mindsdb.utilities import log
 from mindsdb.utilities.cache import get_cache
+from mindsdb.utilities.config import config
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.skills.sql_agent import SQLAgent
 from mindsdb.integrations.libs.vectordatabase_handler import TableField
@@ -106,7 +107,7 @@ class SkillToolController:
             from mindsdb.api.executor.controllers import SessionController  # Top-level import produces circular import in some cases TODO: figure out a fix without losing runtime improvements (context: see #9304)  # noqa
 
             sql_session = SessionController()
-            sql_session.database = 'mindsdb'
+            sql_session.database = config.get('default_project')
 
             self.command_executor = ExecuteCommands(sql_session)
         return self.command_executor
@@ -126,6 +127,10 @@ class SkillToolController:
 
         command_executor = self.get_command_executor()
 
+        def escape_table_name(name: str) -> str:
+            name = name.strip(' `')
+            return f'`{name}`'
+
         tables_list = []
         for skill in skills:
             database = skill.params['database']
@@ -137,19 +142,22 @@ class SkillToolController:
                 else:
                     response = handler.get_tables()
                 # no restrictions
+                columns = [c.lower() for c in response.data_frame.columns]
+                name_idx = columns.index('table_name') if 'table_name' in columns else 0
+
                 if 'table_schema' in response.data_frame.columns:
                     for _, row in response.data_frame.iterrows():
-                        tables_list.append(f"{database}.{row['table_schema']}.{row['table_name']}")
+                        tables_list.append(f"{database}.{row['table_schema']}.{escape_table_name(row[name_idx])}")
                 else:
-                    for _, row in response.data_frame.iterrows():
-                        tables_list.append(f"{database}.{row['table_name']}")
+                    for table_name in response.data_frame.iloc[:, name_idx]:
+                        tables_list.append(f"{database}.{escape_table_name(table_name)}")
                 continue
             for schema_name, tables in restriction_on_tables.items():
                 for table in tables:
                     if schema_name is None:
-                        tables_list.append(f'{database}.{table}')
+                        tables_list.append(f'{database}.{escape_table_name(table)}')
                     else:
-                        tables_list.append(f'{database}.{schema_name}.{table}')
+                        tables_list.append(f'{database}.{schema_name}.{escape_table_name(table)}')
 
         sql_agent = SQLAgent(
             command_executor=command_executor,
@@ -215,8 +223,8 @@ class SkillToolController:
         pred_args = {}
         pred_args['llm'] = llm
 
-        from .retrieval_tool import build_retrieval_tool
-        return build_retrieval_tool(tool, pred_args, skill)
+        from .retrieval_tool import build_retrieval_tools
+        return build_retrieval_tools(tool, pred_args, skill)
 
     def _get_rag_query_function(self, skill: db.Skills):
         session_controller = self.get_command_executor().session
@@ -288,10 +296,9 @@ class SkillToolController:
                     for skill in skills
                 ]
             elif skill_type == SkillType.RETRIEVAL:
-                tools[skill_type] = [
-                    self._make_retrieval_tools(skill, llm, embedding_model)
-                    for skill in skills
-                ]
+                tools[skill_type] = []
+                for skill in skills:
+                    tools[skill_type] += self._make_retrieval_tools(skill, llm, embedding_model)
         return tools
 
 

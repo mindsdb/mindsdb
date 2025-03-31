@@ -111,10 +111,16 @@ def learn_process(data_integration_ref: dict, problem_definition: dict, fetch_da
             )
             handlers_cacher[predictor_record.id] = ml_handler
 
-            if not ml_handler.generative:
+            if not ml_handler.generative and target is not None:
                 if training_data_df is not None and target not in training_data_df.columns:
-                    raise Exception(
-                        f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
+                    # is the case different? convert column case in input dataframe
+                    col_names = {c.lower(): c for c in training_data_df.columns}
+                    target_found = col_names.get(target.lower())
+                    if target_found:
+                        training_data_df.rename(columns={target_found: target}, inplace=True)
+                    else:
+                        raise Exception(
+                            f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
 
             # create new model
             if base_model_id is None:

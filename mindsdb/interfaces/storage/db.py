@@ -10,6 +10,7 @@ from sqlalchemy import (
     DateTime,
     Index,
     Integer,
+    LargeBinary,
     Numeric,
     String,
     UniqueConstraint,
@@ -213,21 +214,10 @@ class Project(Base):
     deleted_at = Column(DateTime)
     name = Column(String, nullable=False)
     company_id = Column(Integer, default=0)
+    metadata_: dict = Column("metadata", JSON, nullable=True)
     __table_args__ = (
         UniqueConstraint("name", "company_id", name="unique_project_name_company_id"),
     )
-
-
-class Log(Base):
-    __tablename__ = "log"
-
-    id = Column(Integer, primary_key=True)
-    created_at = Column(DateTime, default=datetime.datetime.now)
-    log_type = Column(String)  # log, info, warning, traceback etc
-    source = Column(String)  # file + line
-    company_id = Column(Integer)
-    payload = Column(String)
-    created_at_index = Index("some_index", "created_at_index")
 
 
 class Integration(Base):
@@ -258,6 +248,7 @@ class File(Base):
     row_count = Column(Integer, nullable=False)
     columns = Column(Json, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.now)
+    metadata_: dict = Column("metadata", JSON, nullable=True)
     updated_at = Column(
         DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
     )
@@ -287,7 +278,19 @@ class JsonStorage(Base):
     resource_id = Column(Integer)
     name = Column(String)
     content = Column(JSON)
+    encrypted_content = Column(LargeBinary, nullable=True)
     company_id = Column(Integer)
+
+    def to_dict(self) -> Dict:
+        return {
+            "id": self.id,
+            "resource_group": self.resource_group,
+            "resource_id": self.resource_id,
+            "name": self.name,
+            "content": self.content,
+            "encrypted_content": self.encrypted_content,
+            "company_id": self.company_id,
+        }
 
 
 class Jobs(Base):

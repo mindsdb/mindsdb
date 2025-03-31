@@ -17,8 +17,11 @@ def parse_sql2(sql, dialect='mindsdb'):
     # skip
 
     # step1: use mysql dialect and parse again
+    dialect = 'mysql'
+    if 'distinct on' in sql.lower():
+        dialect = 'postgres'
     try:
-        sql2 = SqlalchemyRender('mysql').get_string(query, with_failback=False)
+        sql2 = SqlalchemyRender(dialect).get_string(query, with_failback=False)
     except NotImplementedError:
         # skip not implemented, immediately exit
         return query
@@ -151,7 +154,11 @@ class TestFromParser:
 
                 tests = klass()
                 for test_name, test_method in inspect.getmembers(tests, predicate=inspect.ismethod):
-                    if not test_name.startswith('test_') or test_name.endswith('_error'):
+                    if (
+                        not test_name.startswith('test_')
+                        or test_name.endswith('_error')
+                        or test_name.endswith('_render_skip')
+                    ):
                         continue
                     if test_name == 'test_mixed_join':
                         # FIXME alchemy can't render it

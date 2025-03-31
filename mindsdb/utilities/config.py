@@ -142,12 +142,14 @@ class Config:
             },
             'auth': {
                 'http_auth_enabled': False,
-                "http_permanent_session_lifetime": datetime.timedelta(days=31)
+                "http_permanent_session_lifetime": datetime.timedelta(days=31),
+                "username": "mindsdb"
             },
             "logging": {
                 "handlers": {
                     "console": {
                         "enabled": True,
+                        "formatter": "default",
                         "level": "INFO"     # MINDSDB_CONSOLE_LOG_LEVEL or MINDSDB_LOG_LEVEL (obsolete)
                     },
                     "file": {
@@ -183,7 +185,6 @@ class Config:
                 },
                 "mysql": {
                     "host": api_host,
-                    "password": "",
                     "port": "47335",
                     "database": "mindsdb",
                     "ssl": True,
@@ -216,7 +217,8 @@ class Config:
             },
             "tasks": {
                 "disable": False
-            }
+            },
+            "default_project": "mindsdb"
         }
         # endregion
 
@@ -351,6 +353,9 @@ class Config:
 
         if os.environ.get('MINDSDB_DB_CON', '') != '':
             self._env_config['storage_db'] = os.environ['MINDSDB_DB_CON']
+
+        if os.environ.get('MINDSDB_DEFAULT_PROJECT', '') != '':
+            self._env_config['default_project'] = os.environ['MINDSDB_DEFAULT_PROJECT'].lower()
 
     def parse_cmd_args(self) -> None:
         """Collect cmd args to self._cmd_args (accessable as self.cmd_args)
@@ -494,7 +499,7 @@ class Config:
 
         for env_name in ('MINDSDB_HTTP_SERVER_TYPE', 'MINDSDB_DEFAULT_SERVER'):
             env_value = os.environ.get(env_name, '')
-            if env_value.lower() not in ('waitress', 'flask', 'gunicorn'):
+            if env_value.lower() not in ('waitress', 'flask', 'gunicorn', ''):
                 logger.warning(
                     f"The value '{env_value}' of the environment variable {env_name} is not valid. "
                     "It must be one of the following: 'waitress', 'flask', or 'gunicorn'."

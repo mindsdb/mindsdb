@@ -31,7 +31,7 @@ jobs:
   # Build our docker images based on our bake file
   build:
     name: Build Docker Images
-    runs-on: mdb-dev\
+    runs-on: mdb-dev
     needs: [get-deploy-labels]
     if: needs.get-deploy-labels.outputs.deploy-envs != '[]'
     concurrency:

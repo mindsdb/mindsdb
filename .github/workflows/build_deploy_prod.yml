@@ -11,11 +11,6 @@ on:
 env:
   UV_SYSTEM_PYTHON: 1
 
-# Cancel any existing runs of this workflow on the same branch/pr
-# We always want to build/deploy/test a new commit over an older one
-concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
 
 jobs:
   # Check that the version defined in the github release is valid
@@ -23,6 +18,9 @@ jobs:
     name: Check Code Version
     runs-on: mdb-dev
     if: github.actor != 'mindsdbadmin'
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-check-version
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
       - uses: FranzDiebold/github-env-vars-action@v2
@@ -40,6 +38,9 @@ jobs:
     runs-on: mdb-dev
     needs: check-version
     if: github.actor != 'mindsdbadmin'
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-pypi
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -66,6 +67,9 @@ jobs:
     runs-on: mdb-dev
     needs: [check-version]
     if: github.actor != 'mindsdbadmin'
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-build
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
       - name: Docker Login
@@ -101,6 +105,9 @@ jobs:
     runs-on: mdb-dev
     needs: [build]
     if: github.actor != 'mindsdbadmin'
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-extension
+      cancel-in-progress: true
     environment:
       name: prod
     steps:
@@ -119,5 +126,8 @@ jobs:
   run_tests:
     name: Run Integration Tests
     needs: [deploy]
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-tests
+      cancel-in-progress: true
     uses: ./.github/workflows/test_on_deploy.yml
     secrets: inherit

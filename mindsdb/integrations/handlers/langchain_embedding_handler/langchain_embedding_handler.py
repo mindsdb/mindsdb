@@ -187,55 +187,17 @@ class LangchainEmbeddingHandler(BaseMLEngine):
         input_texts = df[input_columns].apply(self.row_to_document, axis=1).tolist()
 
         # Get embeddings using the helper method with fallback logic
-        all_embeddings = self._embed_texts_with_fallback(model, input_texts, batch_size)
-
-        # create a new dataframe with the embeddings
-        df_embeddings = df.copy().assign(**{target: all_embeddings})
-        return df_embeddings
-
-    def _embed_texts_with_fallback(self, model: Embeddings, texts: list[str], batch_size: int) -> list[list[float]]:
-        """Embeds texts using the provided model, handling batch failures with individual retries."""
         all_embeddings = []
-        total_docs = len(texts)
+        total_docs = len(input_texts)
         logger.info(f"Starting embedding process for {total_docs} documents with batch size {batch_size}")
 
         for start_idx in range(0, total_docs, batch_size):
             end_idx = min(start_idx + batch_size, total_docs)
-            batch_texts = texts[start_idx:end_idx]
+            batch_texts = input_texts[start_idx:end_idx]
             logger.debug(f"Processing batch {start_idx//batch_size + 1}/{(total_docs + batch_size - 1)//batch_size}: documents {start_idx} to {end_idx-1}")
 
-            try:
-                # get embeddings for this batch
-                batch_embeddings = model.embed_documents(batch_texts)
-                all_embeddings.extend(batch_embeddings)
-                logger.debug(f"Successfully processed batch of {len(batch_embeddings)} embeddings")
-            except Exception as e:
-                # If the entire batch fails, log a warning and attempt to process documents individually.
-                # This provides resilience for transient errors affecting only some documents.
-                # If an individual document fails during this fallback, an error *will* be raised.
-                logger.warning(
-                    f"Embedding batch failed: {str(e)}. "
-                    f"Attempting to process documents individually within the failed batch. "
-                    f"Processing will stop if an individual document fails."
-                )
-                # If batch fails, try one by one
-                batch_embeddings = []
-                for i, text in enumerate(batch_texts):
-                    current_doc_index = start_idx + i
-                    try:
-                        embedding = model.embed_documents([text])[0]
-                        batch_embeddings.append(embedding)
-                        logger.debug(f"Successfully processed individual document {current_doc_index}")
-                    except Exception as inner_e:
-                        # If single document fails, log error and raise a RuntimeError
-                        error_message = (
-                            f"Error embedding document at index {current_doc_index}: {str(inner_e)}. "
-                            f"Stopping embedding process."
-                        )
-                        logger.error(error_message)
-                        # Raise a more specific error instead of generic Exception
-                        raise RuntimeError(f"Failed to generate embedding for document index {current_doc_index}. Original error: {str(inner_e)}") from inner_e
-                all_embeddings.extend(batch_embeddings)  # Add successfully processed individual embeddings
+            batch_embeddings = self._embed_texts_with_fallback(model, batch_texts, start_idx)
+            all_embeddings.extend(batch_embeddings)
 
         logger.info(f"Completed processing {len(all_embeddings)} embeddings out of {total_docs} documents")
         if len(all_embeddings) != total_docs:
@@ -243,7 +205,53 @@ class LangchainEmbeddingHandler(BaseMLEngine):
             # Added as a safeguard log.
             logger.warning(f"Mismatch in processed embeddings: expected {total_docs}, got {len(all_embeddings)}. Check logs for errors.")
 
-        return all_embeddings
+        # create a new dataframe with the embeddings
+        df_embeddings = df.copy().assign(**{target: all_embeddings})
+        return df_embeddings
+
+    def _embed_texts_with_fallback(self, model: Embeddings, batch_texts: list[str], start_idx: int) -> list[list[float]]:
+        """
+        Embed a batch of texts with fallback to individual processing if batch fails.
+
+        Args:
+            model: The embedding model to use
+            batch_texts: List of texts to embed
+            start_idx: Starting index of this batch in the original text list (for error reporting)
+
+        Returns:
+            List of embeddings for the batch
+
+        Raises:
+            RuntimeError: If an individual document fails to embed during fallback processing
+        """
+        try:
+            # get embeddings for this batch
+            batch_embeddings = model.embed_documents(batch_texts)
+            logger.debug(f"Successfully processed batch of {len(batch_embeddings)} embeddings")
+            return batch_embeddings
+        except Exception as e:
+            # If the entire batch fails, log a warning and attempt to process documents individually.
+            # This provides resilience for transient errors affecting only some documents.
+            # If an individual document fails during this fallback, an error *will* be raised.
+            logger.warning(f"Batch processing failed, falling back to individual processing: {str(e)}")
+            # If batch fails, try one by one
+            batch_embeddings = []
+            for i, text in enumerate(batch_texts):
+                current_doc_index = start_idx + i
+                try:
+                    embedding = model.embed_documents([text])[0]
+                    batch_embeddings.append(embedding)
+                    logger.debug(f"Successfully processed individual document {current_doc_index}")
+                except Exception as inner_e:
+                    # If single document fails, log error and raise a RuntimeError
+                    error_message = (
+                        f"Error embedding document at index {current_doc_index}: {str(inner_e)}. "
+                        f"Stopping embedding process."
+                    )
+                    logger.error(error_message)
+                    # Raise a more specific error instead of generic Exception
+                    raise RuntimeError(f"Failed to generate embedding for document index {current_doc_index}. Original error: {str(inner_e)}") from inner_e
+            return batch_embeddings
 
     def row_to_document(self, row: pd.Series) -> str:
         """

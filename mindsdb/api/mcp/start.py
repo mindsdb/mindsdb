@@ -39,6 +39,7 @@ mcp = FastMCP(
 # MCP Queries
 LISTING_QUERY = "SHOW DATABASES"
 
+
 @mcp.tool()
 def query(query: str, context: Optional[Dict] = None) -> Dict[str, Any]:
     """
@@ -99,7 +100,7 @@ def list_databases() -> Dict[str, Any]:
     Returns:
         Dict containing the list of databases and their tables
     """
-    
+
     mysql_proxy = FakeMysqlProxy()
 
     try:
@@ -128,7 +129,6 @@ def list_databases() -> Dict[str, Any]:
 
 def start(*args, **kwargs):
     """Start the MCP server
-    
     Args:
         host (str): Host to bind to
         port (int): Port to listen on
@@ -136,11 +136,11 @@ def start(*args, **kwargs):
     config = Config()
     port = int(config['api'].get('mcp', {}).get('port', 47337))
     host = config['api'].get('mcp', {}).get('host', '127.0.0.1')
-    
+
     logger.info(f"Starting MCP server on {host}:{port}")
     mcp.settings.host = host
     mcp.settings.port = port
-    
+
     try:
         mcp.run(transport="sse")  # Use SSE transport instead of stdio
     except Exception as e:

@@ -14,10 +14,14 @@ class ToMarkdown:
     """
     Extracts the content of documents of various formats in markdown format.
     """
-    def __init__(self, llm_client: OpenAI = None, llm_model: str = None):
+    def __init__(self, llm_client: OpenAI = None, llm_model: str = None, use_llm: bool = False):
         """
         Initializes the ToMarkdown class.
         """
+        if use_llm and llm_client is not None:
+            self.llm_client = None
+            self.llm_model = None
+            return
         # Only OpenAI is supported for now.
         if llm_client is not None and not isinstance(llm_client, OpenAI):
             raise ValueError('Only OpenAI models are supported at the moment.')

@@ -42,6 +42,12 @@ from mindsdb.integrations.utilities.rag.rerankers.reranker_compressor import LLM
 
 logger = log.getLogger(__name__)
 
+KB_TO_VECTORDB_COLUMNS = {
+    'id': 'original_row_id',
+    'chunk_id': 'id',
+    'chunk_content': 'content'
+}
+
 
 class KnowledgeBaseTable:
     """
@@ -91,9 +97,9 @@ class KnowledgeBaseTable:
                 break
         # Extract the content query text for potential reranking
         query_text = ""
+        db_handler = self.get_vector_db()
+        conditions = db_handler._extract_conditions(query.where)
         if query.where:
-            db_handler = self.get_vector_db()
-            conditions = db_handler._extract_conditions(query.where)
             for item in conditions:
                 if item.column == TableField.CONTENT.value:
                     query_text = item.value
@@ -118,9 +124,9 @@ class KnowledgeBaseTable:
         query.targets = targets
         logger.debug(f"Modified query targets: {targets}")
         # Get response from vector db
-        db_handler = self.get_vector_db()
         logger.debug(f"Using vector db handler: {type(db_handler)}")
-        df = db_handler.dispatch_select(query)
+        self.addapt_conditions_columns(conditions)
+        df = db_handler.dispatch_select(query, conditions)
         if df is None or df.empty:
             logger.warning("Query returned no data")
             # Return empty DataFrame with appropriate columns
@@ -168,7 +174,30 @@ class KnowledgeBaseTable:
         # Apply original limit if it exists and wasn't already applied
         if query.limit and len(df) > query.limit.value:
             df = df.iloc[:query.limit.value]
+        df = self.addapt_result_columns(df)
         return df
+
+    def addapt_conditions_columns(self, conditions):
+        if conditions is None:
+            return
+        for condition in conditions:
+            if condition.column in KB_TO_VECTORDB_COLUMNS:
+                condition.column = KB_TO_VECTORDB_COLUMNS[condition.column]
+
+    def addapt_result_columns(self, df):
+        col_update = {}
+        for kb_col, vec_col in KB_TO_VECTORDB_COLUMNS.items():
+            if vec_col in df.columns:
+                col_update[vec_col] = kb_col
+
+        df = df.rename(columns=col_update)
+
+        columns = list(df.columns)
+        # update id, get from metadata
+        df[TableField.ID.value] = df[TableField.METADATA.value].apply(lambda m: m.get('original_row_id'))
+
+        # id on first place
+        return df[[TableField.ID.value] + columns]
 
     def insert_files(self, file_names: List[str]):
         """Process and insert files"""
@@ -270,7 +299,9 @@ class KnowledgeBaseTable:
 
         # send to vectordb
         db_handler = self.get_vector_db()
-        db_handler.dispatch_delete(query)
+        conditions = db_handler.extract_conditions(query.where)
+        self.addapt_conditions_columns(conditions)
+        db_handler.dispatch_delete(query, conditions)
 
     def hybrid_search(
         self,

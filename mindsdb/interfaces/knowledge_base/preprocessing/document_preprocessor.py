@@ -42,8 +42,14 @@ class DocumentPreprocessor:
         """Initialize preprocessor"""
         self.splitter = None  # Will be set by child classes
 
-    def process_documents(self, documents: List[Document]) -> List[ProcessedChunk]:
-        """Base implementation - should be overridden by child classes"""
+    def process_documents(self, documents: List[Document]) -> tuple[List[ProcessedChunk], List[str]]:
+        """Base implementation - should be overridden by child classes
+
+        Returns:
+            tuple: (processed_chunks, failed_doc_ids)
+                - processed_chunks: List of successfully processed chunks
+                - failed_doc_ids: List of document IDs that failed processing
+        """
         raise NotImplementedError("Subclasses must implement process_documents")
 
     def _split_document(self, doc: Document) -> List[Document]:
@@ -202,11 +208,12 @@ Please give a short succinct context to situate this chunk within the overall do
         # Use base class implementation
         return super()._split_document(doc)
 
-    def process_documents(self, documents: List[Document]) -> List[ProcessedChunk]:
+    def process_documents(self, documents: List[Document]) -> tuple[List[ProcessedChunk], List[str]]:
         chunks_list = []
         doc_index_list = []
         chunk_index_list = []
         processed_chunks = []
+        failed_doc_ids = []  # Store IDs of failed documents
 
         for doc_index, doc in enumerate(documents):
             # Get content_column from metadata if available
@@ -214,40 +221,54 @@ Please give a short succinct context to situate this chunk within the overall do
                 doc.metadata.get("content_column") if doc.metadata else None
             )
 
-            # Ensure document has an ID
-            if doc.id is None:
-                doc.id = self._generate_deterministic_id(doc.content, content_column)
+            # Ensure document has an ID (should be provided by caller)
+            doc_id = doc.id
+            if doc_id is None:
+                logger.error(f"Document at index {doc_index} received without an ID during preprocessing. Skipping.")
+                failed_doc_ids.append(f"document_{doc_index+1}_missing_id")
+                continue
 
             # Skip empty or whitespace-only content
             if not doc.content or not doc.content.strip():
+                logger.warning(f"Document {doc_id} has empty or whitespace-only content. Skipping.")
                 continue
 
-            chunk_docs = self._split_document(doc)
+            try:
+                chunk_docs = self._split_document(doc)
 
-            # Single chunk case
-            if len(chunk_docs) == 1:
-                chunk_doc = chunk_docs[0]
-                if not chunk_doc.content or not chunk_doc.content.strip():
-                    continue
-                else:
-                    chunks_list.append(chunk_doc)
-                    doc_index_list.append(doc_index)
-                    chunk_index_list.append(0)
-
-            else:
-                # Multiple chunks case
-                for i, chunk_doc in enumerate(chunk_docs):
+                # Single chunk case
+                if len(chunk_docs) == 1:
+                    chunk_doc = chunk_docs[0]
                     if not chunk_doc.content or not chunk_doc.content.strip():
                         continue
                     else:
                         chunks_list.append(chunk_doc)
                         doc_index_list.append(doc_index)
-                        chunk_index_list.append(i)
+                        chunk_index_list.append(0)
+
+                else:
+                    # Multiple chunks case
+                    for i, chunk_doc in enumerate(chunk_docs):
+                        if not chunk_doc.content or not chunk_doc.content.strip():
+                            continue
+                        else:
+                            chunks_list.append(chunk_doc)
+                            doc_index_list.append(doc_index)
+                            chunk_index_list.append(i)
+            except Exception as e:
+                logger.error(f"Error processing document {doc_id}: {str(e)}")
+                failed_doc_ids.append(doc_id)
+                continue
 
         # Generate contexts
-        doc_contents = [documents[i].content for i in doc_index_list]
-        chunk_contents = [chunk_doc.content for chunk_doc in chunks_list]
-        contexts = self._generate_context(chunk_contents, doc_contents)
+        try:
+            doc_contents = [documents[i].content for i in doc_index_list]
+            chunk_contents = [chunk_doc.content for chunk_doc in chunks_list]
+            contexts = self._generate_context(chunk_contents, doc_contents)
+        except Exception as e:
+            logger.error(f"Error generating contexts: {str(e)}")
+            # If context generation fails, we can't process any chunks
+            return [], [doc.id for doc in documents if doc.id is not None]
 
         for context, chunk_doc, chunk_index, doc_index in zip(
             contexts, chunks_list, chunk_index_list, doc_index_list
@@ -281,7 +302,8 @@ Please give a short succinct context to situate this chunk within the overall do
                 )
             )
 
-        return processed_chunks
+        logger.info(f"Contextual preprocessing complete. Created {len(processed_chunks)} chunks. Failed documents: {len(failed_doc_ids)}")
+        return processed_chunks, failed_doc_ids
 
 
 class TextChunkingPreprocessor(DocumentPreprocessor):
@@ -317,32 +339,43 @@ class TextChunkingPreprocessor(DocumentPreprocessor):
             for split_doc in split_docs
         ]
 
-    def process_documents(self, documents: List[Document]) -> List[ProcessedChunk]:
+    def process_documents(self, documents: List[Document]) -> tuple[list[ProcessedChunk], list[str | int]]:
         """Process documents into chunks with metadata"""
         logger.info(f"Starting document preprocessing for {len(documents)} documents")
         processed_chunks = []
+        failed_doc_ids = []  # Store IDs of failed documents
         total_chars = sum(len(doc.content) for doc in documents)
         logger.info(f"Total content size: {total_chars} characters")
 
-        failed_docs = 0
+        failed_docs_count = 0
         for i, doc in enumerate(documents):
+            # Assume doc.id is always provided by the caller (e.g., KnowledgeBaseTable.insert)
+            doc_id = doc.id
+            if doc_id is None:
+                # This case should ideally not happen if called from KnowledgeBaseTable.insert
+                logger.error(f"Document at index {i} received without an ID during preprocessing. Skipping.")
+                failed_docs_count += 1
+                # Use a placeholder for failed_doc_ids list if ID is missing
+                failed_doc_ids.append(f"document_{i+1}_missing_id")
+                continue
+
             try:
                 # Split document into chunks
                 chunks = self._split_document(doc)
-                logger.debug(f"Document {i+1}/{len(documents)} split into {len(chunks)} chunks")
+                logger.debug(f"Document {doc_id} split into {len(chunks)} chunks")
 
                 for chunk_idx, chunk in enumerate(chunks):
-                    # Generate chunk ID
+                    # Generate chunk ID based on the existing doc.id
                     chunk_id = self._generate_chunk_id(
                         chunk.content,
                         chunk_idx,
-                        provided_id=doc.id
+                        provided_id=doc_id
                     )
 
                     # Prepare metadata
                     metadata = chunk.metadata or {}
                     metadata.update({
-                        "original_doc_id": doc.id,
+                        "original_doc_id": doc_id,
                         "chunk_index": chunk_idx,
                         "total_chunks": len(chunks)
                     })
@@ -355,20 +388,36 @@ class TextChunkingPreprocessor(DocumentPreprocessor):
                         )
                     )
             except Exception as e:
-                failed_docs += 1
-                doc_id = doc.id if doc.id else f"document_{i+1}"
+                failed_docs_count += 1
                 logger.error(f"Error processing document {doc_id}: {str(e)}")
+                failed_doc_ids.append(doc_id)  # Add failed ID to the list
+                # Continue to the next document on error
                 continue
 
-        if failed_docs > 0:
-            logger.warning(f"Failed to process {failed_docs} out of {len(documents)} documents")
+        processed_doc_count = len(documents) - failed_docs_count
 
-        if not processed_chunks:
-            raise Exception(f"No chunks were created from {len(documents)} documents. Check document content and chunking configuration.")
+        # Log a warning if any documents failed
+        if failed_docs_count > 0:
+            warning_message = f"Failed to process {failed_docs_count} out of {len(documents)} documents. Failed IDs: {failed_doc_ids}"
+            logger.warning(warning_message)
 
-        logger.info(f"Preprocessing complete. Created {len(processed_chunks)} chunks from {len(documents)-failed_docs} documents")
-        logger.info(f"Average chunks per document: {len(processed_chunks)/(len(documents)-failed_docs):.2f}")
-        return processed_chunks
+        # Check if any chunks were produced from the successfully processed documents
+        if processed_doc_count > 0 and not processed_chunks:
+            logger.warning(f"Successfully processed {processed_doc_count} documents, but no chunks were generated. Check document content and chunking configuration.")
+        elif processed_doc_count == 0 and not processed_chunks:
+            # Only raise error if NO documents were processed successfully AND no chunks were created.
+            # Avoids raising error if input was empty list.
+            if len(documents) > 0:
+                raise RuntimeError(f"Failed to process all {len(documents)} documents. No chunks were created. Check logs and input data.")
+            else:
+                logger.info("Preprocessing received an empty list of documents.")
+
+        logger.info(f"Preprocessing complete. Created {len(processed_chunks)} chunks from {processed_doc_count} successfully processed documents.")
+        if processed_doc_count > 0:
+            logger.info(f"Average chunks per successfully processed document: {len(processed_chunks)/processed_doc_count:.2f}")
+
+        # Return both successful chunks and the list of failed document IDs
+        return processed_chunks, failed_doc_ids
 
 
 class PreprocessorFactory:

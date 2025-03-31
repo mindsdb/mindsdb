@@ -335,13 +335,24 @@ class KnowledgeBaseTable:
 
         # Apply preprocessing to all documents if preprocessor exists
         if self.document_preprocessor:
-            processed_chunks = self.document_preprocessor.process_documents(raw_documents)
+            # The preprocessor now returns a tuple: (processed_chunks, failed_doc_ids)
+            processed_chunks, failed_doc_ids = self.document_preprocessor.process_documents(raw_documents)
+            if failed_doc_ids:
+                logger.warning(f"Preprocessing failed for {len(failed_doc_ids)} documents: {failed_doc_ids}")
         else:
             processed_chunks = raw_documents  # Use raw documents if no preprocessing
+            failed_doc_ids = []
 
         if not processed_chunks:
             logger.warning("No valid content found in any content columns")
-            return
+            return {
+                "success": False,
+                "message": "No valid content found in any content columns",
+                "failed_doc_ids": failed_doc_ids,
+                "failed_chunk_ids": [],
+                "successful_chunks": 0,
+                "total_chunks": 0
+            }
 
         # Get batch size from params or use default
         batch_size = self._kb.params.get('batch_size', _DEFAULT_BATCH_SIZE)
@@ -349,6 +360,7 @@ class KnowledgeBaseTable:
         # Process chunks in batches
         total_chunks = len(processed_chunks)
         successful_chunks = 0
+        failed_chunk_ids = []  # Track failed chunk IDs
         db_handler = self.get_vector_db()
 
         logger.info(f"Starting batch processing for {len(df)} rows with batch size {batch_size}")
@@ -357,6 +369,9 @@ class KnowledgeBaseTable:
             end_idx = min(start_idx + batch_size, total_chunks)
             batch_chunks = processed_chunks[start_idx:end_idx]
             logger.debug(f"Processing chunk batch {start_idx//batch_size + 1}/{(total_chunks + batch_size - 1)//batch_size}: chunks {start_idx} to {end_idx}")
+
+            # Track chunk IDs in this batch for error reporting
+            batch_chunk_ids = [chunk.id for chunk in batch_chunks]
 
             try:
                 # Convert batch of chunks to DataFrame
@@ -367,9 +382,15 @@ class KnowledgeBaseTable:
                 } for chunk in batch_chunks])
 
                 # Calculate embeddings for this batch
-                batch_emb = self._df_to_embeddings(batch_df)
-                batch_df = pd.concat([batch_df, batch_emb], axis=1)
-                logger.debug(f"Generated embeddings for batch of {len(batch_df)} chunks")
+                try:
+                    batch_emb = self._df_to_embeddings(batch_df)
+                    batch_df = pd.concat([batch_df, batch_emb], axis=1)
+                    logger.debug(f"Generated embeddings for batch of {len(batch_df)} chunks")
+                except Exception as emb_e:
+                    # If embedding generation fails for the batch, log and skip the batch
+                    logger.error(f"Failed to generate embeddings for batch {start_idx}-{end_idx}: {str(emb_e)}")
+                    failed_chunk_ids.extend(batch_chunk_ids)
+                    continue
 
                 # Insert this batch
                 db_handler.do_upsert(self._kb.vector_database_table, batch_df)
@@ -378,13 +399,29 @@ class KnowledgeBaseTable:
                 logger.info(f"Progress: {successful_chunks}/{total_chunks} chunks processed ({(successful_chunks/total_chunks)*100:.1f}%)")
             except Exception as e:
                 logger.error(f"Failed to process batch {start_idx}-{end_idx}: {str(e)}")
+                # Track the failed chunk IDs
+                failed_chunk_ids.extend(batch_chunk_ids)
                 # Continue with next batch instead of failing completely
                 continue
 
+        # Prepare result summary
+        result = {
+            "success": successful_chunks > 0,
+            "message": f"Processed {successful_chunks} out of {total_chunks} chunks",
+            "failed_doc_ids": failed_doc_ids,
+            "failed_chunk_ids": failed_chunk_ids,
+            "successful_chunks": successful_chunks,
+            "total_chunks": total_chunks
+        }
+
         if successful_chunks < total_chunks:
             logger.warning(f"Only {successful_chunks} out of {total_chunks} chunks were successfully processed and inserted")
+            if failed_chunk_ids:
+                logger.warning(f"Failed chunk IDs: {failed_chunk_ids[:5]}{'...' if len(failed_chunk_ids) > 5 else ''}")
         else:
             logger.info(f"Successfully completed processing all {total_chunks} chunks")
+
+        return result
 
     def _adapt_column_names(self, df: pd.DataFrame) -> pd.DataFrame:
         '''

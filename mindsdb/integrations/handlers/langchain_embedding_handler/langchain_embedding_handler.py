@@ -183,45 +183,67 @@ class LangchainEmbeddingHandler(BaseMLEngine):
         batch_size = getattr(model, 'batch_size', 32)
         logger.info(f"Processing embeddings with batch size: {batch_size}")
 
-        # Process in batches to avoid memory issues
-        all_embeddings = []
-        total_rows = len(df)
-        logger.info(f"Starting batch processing for {total_rows} documents")
+        # Convert input rows to documents (list of strings)
+        input_texts = df[input_columns].apply(self.row_to_document, axis=1).tolist()
 
-        for start_idx in range(0, total_rows, batch_size):
-            end_idx = min(start_idx + batch_size, total_rows)
-            batch_df = df.iloc[start_idx:end_idx]
-            logger.debug(f"Processing batch {start_idx//batch_size + 1}/{(total_rows + batch_size - 1)//batch_size}: rows {start_idx} to {end_idx}")
-
-            # convert batch rows into documents
-            batch_texts = batch_df[input_columns].apply(self.row_to_document, axis=1)
-
-            try:
-                # get embeddings for this batch
-                batch_embeddings = model.embed_documents(batch_texts.tolist())
-                all_embeddings.extend(batch_embeddings)
-                logger.debug(f"Successfully processed batch of {len(batch_embeddings)} embeddings")
-            except Exception as e:
-                logger.warning(f"Batch processing failed, falling back to individual processing. Error: {str(e)}")
-                # If batch fails, try one by one
-                batch_embeddings = []
-                for i, text in enumerate(batch_texts):
-                    try:
-                        embedding = model.embed_documents([text])[0]
-                        batch_embeddings.append(embedding)
-                        logger.debug(f"Successfully processed individual document {start_idx + i}")
-                    except Exception as inner_e:
-                        # If single document fails, log error
-                        logger.error(f"Error embedding document at index {start_idx + len(batch_embeddings)}: {str(inner_e)}")
-                        # Raise the error since we can't determine the correct embedding format/size
-                        raise Exception(f"Failed to generate embedding for document. Original error: {str(inner_e)}")
-                all_embeddings.extend(batch_embeddings)
-
-        logger.info(f"Completed processing {len(all_embeddings)} embeddings")
+        # Get embeddings using the helper method with fallback logic
+        all_embeddings = self._embed_texts_with_fallback(model, input_texts, batch_size)
 
         # create a new dataframe with the embeddings
         df_embeddings = df.copy().assign(**{target: all_embeddings})
         return df_embeddings
+
+    def _embed_texts_with_fallback(self, model: Embeddings, texts: list[str], batch_size: int) -> list[list[float]]:
+        """Embeds texts using the provided model, handling batch failures with individual retries."""
+        all_embeddings = []
+        total_docs = len(texts)
+        logger.info(f"Starting embedding process for {total_docs} documents with batch size {batch_size}")
+
+        for start_idx in range(0, total_docs, batch_size):
+            end_idx = min(start_idx + batch_size, total_docs)
+            batch_texts = texts[start_idx:end_idx]
+            logger.debug(f"Processing batch {start_idx//batch_size + 1}/{(total_docs + batch_size - 1)//batch_size}: documents {start_idx} to {end_idx-1}")
+
+            try:
+                # get embeddings for this batch
+                batch_embeddings = model.embed_documents(batch_texts)
+                all_embeddings.extend(batch_embeddings)
+                logger.debug(f"Successfully processed batch of {len(batch_embeddings)} embeddings")
+            except Exception as e:
+                # If the entire batch fails, log a warning and attempt to process documents individually.
+                # This provides resilience for transient errors affecting only some documents.
+                # If an individual document fails during this fallback, an error *will* be raised.
+                logger.warning(
+                    f"Embedding batch failed: {str(e)}. "
+                    f"Attempting to process documents individually within the failed batch. "
+                    f"Processing will stop if an individual document fails."
+                )
+                # If batch fails, try one by one
+                batch_embeddings = []
+                for i, text in enumerate(batch_texts):
+                    current_doc_index = start_idx + i
+                    try:
+                        embedding = model.embed_documents([text])[0]
+                        batch_embeddings.append(embedding)
+                        logger.debug(f"Successfully processed individual document {current_doc_index}")
+                    except Exception as inner_e:
+                        # If single document fails, log error and raise a RuntimeError
+                        error_message = (
+                            f"Error embedding document at index {current_doc_index}: {str(inner_e)}. "
+                            f"Stopping embedding process."
+                        )
+                        logger.error(error_message)
+                        # Raise a more specific error instead of generic Exception
+                        raise RuntimeError(f"Failed to generate embedding for document index {current_doc_index}. Original error: {str(inner_e)}") from inner_e
+                all_embeddings.extend(batch_embeddings)  # Add successfully processed individual embeddings
+
+        logger.info(f"Completed processing {len(all_embeddings)} embeddings out of {total_docs} documents")
+        if len(all_embeddings) != total_docs:
+            # This condition should technically be unreachable if the RuntimeError is raised correctly on individual failure.
+            # Added as a safeguard log.
+            logger.warning(f"Mismatch in processed embeddings: expected {total_docs}, got {len(all_embeddings)}. Check logs for errors.")
+
+        return all_embeddings
 
     def row_to_document(self, row: pd.Series) -> str:
         """

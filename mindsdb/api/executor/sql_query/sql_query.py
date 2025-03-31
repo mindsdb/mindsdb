@@ -8,9 +8,9 @@
  * permission of MindsDB Inc
  *******************************************************
 """
-import re
 import inspect
 from textwrap import dedent
+from typing import Dict
 
 from mindsdb_sql_parser import parse_sql
 from mindsdb.api.executor.planner.steps import (
@@ -38,8 +38,6 @@ from . import steps
 from .result_set import ResultSet, Column
 from . steps.base import BaseStepCall
 
-superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_table', flags=re.IGNORECASE | re.MULTILINE | re.S)
-
 
 class SQLQuery:
 
@@ -59,23 +57,13 @@ class SQLQuery:
         }
 
         self.columns_list = None
-        self.steps_data = {}
+        self.steps_data: Dict[int, ResultSet] = {}
 
-        self.planner = None
+        self.planner: query_planner.QueryPlanner = None
         self.parameters = []
         self.fetched_data = None
 
-        self.outer_query = None
-
         if isinstance(sql, str):
-            # region workaround for subqueries in superset
-            if 'as virtual_table' in sql.lower():
-                subquery = re.findall(superset_subquery, sql)
-                if isinstance(subquery, list) and len(subquery) == 1:
-                    subquery = subquery[0]
-                    self.outer_query = sql.replace(subquery, 'dataframe')
-                    sql = subquery.strip('()')
-            # endregion
             self.query = parse_sql(sql)
             self.context['query_str'] = sql
         else:
@@ -270,24 +258,8 @@ class SQLQuery:
             return
 
         try:
-            if self.outer_query is not None:
-                # workaround for subqueries in superset. remove it?
-                # +++
-                # ???
-
-                result = step_result
-                df = result.to_df()
-
-                df2 = query_df(df, self.outer_query)
-
-                result2 = ResultSet().from_df(df2, database='', table_name='')
-
-                self.columns_list = result2.columns
-                self.fetched_data = result2
-
-            else:
-                result = step_result
-                self.fetched_data = result
+            result = step_result
+            self.fetched_data = result
         except Exception as e:
             raise UnknownError("error in preparing result query step") from e
 

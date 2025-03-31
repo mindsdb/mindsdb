@@ -23,7 +23,7 @@ from mindsdb.api.executor.planner.exceptions import PlanningException
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.api.executor.planner import query_planner
 
-from mindsdb.api.executor.utilities.sql import query_df, get_query_models
+from mindsdb.api.executor.utilities.sql import get_query_models
 from mindsdb.interfaces.model.functions import get_model_record
 from mindsdb.api.executor.exceptions import (
     BadTableError,
@@ -61,7 +61,7 @@ class SQLQuery:
 
         self.planner: query_planner.QueryPlanner = None
         self.parameters = []
-        self.fetched_data = None
+        self.fetched_data: ResultSet = None
 
         if isinstance(sql, str):
             self.query = parse_sql(sql)
@@ -257,11 +257,7 @@ class SQLQuery:
         if len(self.steps_data) == 0:
             return
 
-        try:
-            result = step_result
-            self.fetched_data = result
-        except Exception as e:
-            raise UnknownError("error in preparing result query step") from e
+        self.fetched_data = step_result
 
         try:
             if hasattr(self, 'columns_list') is False:

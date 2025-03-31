@@ -1,4 +1,4 @@
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, Union
 import pandas as pd
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import hashlib
@@ -42,7 +42,7 @@ class DocumentPreprocessor:
         """Initialize preprocessor"""
         self.splitter = None  # Will be set by child classes
 
-    def process_documents(self, documents: List[Document]) -> tuple[List[ProcessedChunk], List[str]]:
+    def process_documents(self, documents: List[Document]) -> tuple[List[ProcessedChunk], List[Union[str, int]]]:
         """Base implementation - should be overridden by child classes
 
         Returns:
@@ -339,7 +339,7 @@ class TextChunkingPreprocessor(DocumentPreprocessor):
             for split_doc in split_docs
         ]
 
-    def process_documents(self, documents: List[Document]) -> tuple[list[ProcessedChunk], list[str | int]]:
+    def process_documents(self, documents: List[Document]) -> tuple[List[ProcessedChunk], List[Union[str, int]]]:
         """Process documents into chunks with metadata"""
         logger.info(f"Starting document preprocessing for {len(documents)} documents")
         processed_chunks = []

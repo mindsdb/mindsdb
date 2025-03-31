@@ -237,7 +237,7 @@ class SQLQuery:
             for col in statement_info['parameters']
         ]
 
-    def execute_query(self, params=None):
+    def execute_query(self):
         if self.fetched_data is not None:
             # no need to execute
             return
@@ -245,7 +245,7 @@ class SQLQuery:
         step_result = None
         process_mark = None
         try:
-            steps = list(self.planner.execute_steps(params))
+            steps = list(self.planner.execute_steps())
             steps_classes = (x.__class__ for x in steps)
             predict_steps = (ApplyPredictorRowStep, ApplyPredictorStep, ApplyTimeseriesPredictorStep)
             if any(s in predict_steps for s in steps_classes):

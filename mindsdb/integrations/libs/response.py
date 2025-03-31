@@ -1,3 +1,4 @@
+from typing import Optional
 from pandas import DataFrame
 
 from mindsdb.utilities import log
@@ -8,13 +9,16 @@ from mindsdb_sql_parser.ast import ASTNode
 logger = log.getLogger(__name__)
 
 class HandlerResponse:
-    def __init__(self, resp_type: RESPONSE_TYPE, data_frame: DataFrame = None,
-                 query: ASTNode = 0, error_code: int = 0, error_message: str = None) -> None:
+    def __init__(self, resp_type: RESPONSE_TYPE, data_frame: DataFrame = None, query: ASTNode = 0, error_code: int = 0,
+                 error_message: Optional[str] = None, affected_rows: Optional[int] = None) -> None:
         self.resp_type = resp_type
         self.query = query
         self.data_frame = data_frame
         self.error_code = error_code
         self.error_message = error_message
+        self.affected_rows = affected_rows
+        if isinstance(self.affected_rows, int) is False or self.affected_rows < 0:
+            self.affected_rows = 0
 
     @property
     def type(self):

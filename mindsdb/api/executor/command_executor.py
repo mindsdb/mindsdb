@@ -586,8 +586,10 @@ class ExecuteCommands:
             SQLQuery(statement, session=self.session, execute=True, database=database_name)
             return ExecuteAnswer()
         elif type(statement) is Update:
-            SQLQuery(statement, session=self.session, execute=True, database=database_name)
-            return ExecuteAnswer()
+            query = SQLQuery(statement, session=self.session, execute=True, database=database_name)
+            return ExecuteAnswer(
+                affected_rows=query.fetched_data.affected_rows
+            )
         elif (
             type(statement) is Alter
             and ("disable keys" in sql_lower)

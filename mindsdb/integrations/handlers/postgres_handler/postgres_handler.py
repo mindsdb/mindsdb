@@ -228,7 +228,7 @@ class PostgresHandler(DatabaseHandler):
                 else:
                     cur.execute(query)
                 if cur.pgresult is None or ExecStatus(cur.pgresult.status) == ExecStatus.COMMAND_OK:
-                    response = Response(RESPONSE_TYPE.OK)
+                    response = Response(RESPONSE_TYPE.OK, affected_rows=cur.rowcount)
                 else:
                     result = cur.fetchall()
                     df = DataFrame(
@@ -238,7 +238,8 @@ class PostgresHandler(DatabaseHandler):
                     self._cast_dtypes(df, cur.description)
                     response = Response(
                         RESPONSE_TYPE.TABLE,
-                        df
+                        data_frame=df,
+                        affected_rows=cur.rowcount
                     )
                 connection.commit()
             except Exception as e:

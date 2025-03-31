@@ -14,6 +14,7 @@ from mindsdb_sql_parser.ast import (
 from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.api.executor.datahub.datanodes.datanode import DataNode
 from mindsdb.api.executor.datahub.classes.tables_row import TablesRow
+from mindsdb.api.executor.datahub.classes.response import DataHubResponse
 from mindsdb.utilities.partitioning import process_dataframe_in_partitions
 
 
@@ -67,7 +68,7 @@ class ProjectDataNode(DataNode):
 
         return ml_handler.predict(model_name, df, project_name=self.project.name, version=version, params=params)
 
-    def query(self, query=None, native_query=None, session=None):
+    def query(self, query=None, native_query=None, session=None) -> DataHubResponse:
         if query is None and native_query is not None:
             query = parse_sql(native_query)
 
@@ -77,7 +78,7 @@ class ProjectDataNode(DataNode):
             if kb_table:
                 # this is the knowledge db
                 kb_table.update_query(query)
-                return pd.DataFrame(), []
+                return DataHubResponse()
 
             raise NotImplementedError(f"Can't update object: {query_table}")
 
@@ -87,7 +88,7 @@ class ProjectDataNode(DataNode):
             if kb_table:
                 # this is the knowledge db
                 kb_table.delete_query(query)
-                return pd.DataFrame(), []
+                return DataHubResponse()
 
             raise NotImplementedError(f"Can't delete object: {query_table}")
 
@@ -108,7 +109,10 @@ class ProjectDataNode(DataNode):
                         project_filter
                     ])
                 df, columns_info = self.information_schema.query(new_query)
-                return df, columns_info
+                return DataHubResponse(
+                    data_frame=df,
+                    columns=columns_info
+                )
             # endregion
 
             # other table from project
@@ -125,7 +129,10 @@ class ProjectDataNode(DataNode):
                     for k, v in df.dtypes.items()
                 ]
 
-                return df, columns_info
+                return DataHubResponse(
+                    data_frame=df,
+                    columns=columns_info
+                )
 
             kb_table = session.kb_controller.get_table(query_table, self.project.id)
             if kb_table:
@@ -139,7 +146,10 @@ class ProjectDataNode(DataNode):
                     for k, v in df.dtypes.items()
                 ]
 
-                return df, columns_info
+                return DataHubResponse(
+                    data_frame=df,
+                    columns=columns_info
+                )
 
             raise EntityNotExistsError(f"Can't select from {query_table} in project")
         else:

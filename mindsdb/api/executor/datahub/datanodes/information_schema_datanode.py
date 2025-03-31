@@ -9,7 +9,7 @@ from mindsdb.api.executor import exceptions as exc
 from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.api.executor.utilities.sql import get_query_tables
 from mindsdb.interfaces.database.projects import ProjectController
-
+from mindsdb.api.executor.datahub.classes.response import DataHubResponse
 from mindsdb.utilities import log
 
 from .system_tables import (
@@ -137,7 +137,7 @@ class InformationSchemaDataNode(DataNode):
             if table.visible
         }
 
-    def query(self, query: ASTNode, session=None):
+    def query(self, query: ASTNode, session=None) -> DataHubResponse:
         query_tables = [x[1] for x in get_query_tables(query)]
 
         if len(query_tables) != 1:
@@ -160,7 +160,11 @@ class InformationSchemaDataNode(DataNode):
 
         columns_info = [{"name": k, "type": v} for k, v in data.dtypes.items()]
 
-        return data, columns_info
+        return DataHubResponse(
+            data_frame=data,
+            columns=columns_info,
+            affected_rows=0
+        )
 
     def _get_empty_table(self, table):
         columns = table.columns

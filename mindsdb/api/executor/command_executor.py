@@ -583,8 +583,10 @@ class ExecuteCommands:
             return ExecuteAnswer()
 
         elif type(statement) is Insert:
-            SQLQuery(statement, session=self.session, execute=True, database=database_name)
-            return ExecuteAnswer()
+            query = SQLQuery(statement, session=self.session, execute=True, database=database_name)
+            return ExecuteAnswer(
+                affected_rows=query.fetched_data.affected_rows
+            )
         elif type(statement) is Update:
             query = SQLQuery(statement, session=self.session, execute=True, database=database_name)
             return ExecuteAnswer(

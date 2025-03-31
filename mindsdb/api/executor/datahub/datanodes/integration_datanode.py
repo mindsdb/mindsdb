@@ -107,7 +107,7 @@ class IntegrationDataNode(DataNode):
             raise Exception(result.error_message)
 
     def create_table(self, table_name: Identifier, result_set: ResultSet = None, columns=None,
-                     is_replace=False, is_create=False):
+                     is_replace=False, is_create=False) -> DataHubResponse:
         # is_create - create table
         # is_replace - drop table if exists
         # is_create==False and is_replace==False: just insert
@@ -164,14 +164,14 @@ class IntegrationDataNode(DataNode):
 
         if result_set is None:
             # it is just a 'create table'
-            return
+            return DataHubResponse()
 
         # native insert
         if hasattr(self.integration_handler, 'insert'):
             df = result_set.to_df()
 
-            self.integration_handler.insert(table_name.parts[-1], df)
-            return
+            result: HandlerResponse = self.integration_handler.insert(table_name.parts[-1], df)
+            return DataHubResponse(affected_rows=result.affected_rows)
 
         insert_columns = [Identifier(parts=[x.alias]) for x in result_set.columns]
 
@@ -195,7 +195,7 @@ class IntegrationDataNode(DataNode):
 
         if len(values) == 0:
             # not need to insert
-            return
+            return DataHubResponse()
 
         insert_ast = Insert(
             table=table_name,
@@ -212,6 +212,8 @@ class IntegrationDataNode(DataNode):
 
         if result.type == RESPONSE_TYPE.ERROR:
             raise Exception(result.error_message)
+
+        return DataHubResponse(affected_rows=result.affected_rows)
 
     def _query(self, query) -> HandlerResponse:
         time_before_query = time.perf_counter()

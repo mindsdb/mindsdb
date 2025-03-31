@@ -117,13 +117,10 @@ class ProjectDataNode(DataNode):
                 # this is the view
                 df = self.project.query_view(query, session)
 
-                columns_info = [
-                    {
-                        'name': k,
-                        'type': v
-                    }
-                    for k, v in df.dtypes.items()
-                ]
+                columns_info = [{
+                    'name': k,
+                    'type': v
+                } for k, v in df.dtypes.items()]
 
                 return DataHubResponse(
                     data_frame=df,

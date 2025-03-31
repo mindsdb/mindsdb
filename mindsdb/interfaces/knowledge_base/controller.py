@@ -98,12 +98,21 @@ class KnowledgeBaseTable:
         # Extract the content query text for potential reranking
         query_text = ""
         db_handler = self.get_vector_db()
-        conditions = db_handler._extract_conditions(query.where)
+        conditions = db_handler.extract_conditions(query.where)
         if query.where:
             for item in conditions:
                 if item.column == TableField.CONTENT.value:
                     query_text = item.value
             logger.debug(f"Extracted query text: {query_text}")
+        # Filter out 'relevance' from query targets if present
+        filtered_targets = []
+        for target in query.targets:
+            if isinstance(target, Star):
+                filtered_targets.append(target)
+            elif isinstance(target, Identifier) and target.parts[-1].lower() != TableField.RELEVANCE.value:
+                filtered_targets.append(target)
+        query.targets = filtered_targets
+        logger.debug(f"Filtered query targets: {filtered_targets}")
         # replace content with embeddings
         query_traversal(query.where, self._replace_query_content)
         logger.debug("Replaced content with embeddings in where clause")

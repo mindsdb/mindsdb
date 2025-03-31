@@ -89,7 +89,6 @@ class SQLQuery:
         self.create_planner()
 
         if execute:
-            self.prepare_query(prepare=False)
             self.execute_query()
 
     @classmethod
@@ -203,40 +202,40 @@ class SQLQuery:
             'result': result
         }
 
-    def prepare_query(self, prepare=True):
-        if prepare:
-            # it is prepared statement call
-            try:
-                for step in self.planner.prepare_steps(self.query):
-                    data = self.execute_step(step)
-                    step.set_result(data)
-                    self.steps_data[step.step_num] = data
-            except PlanningException as e:
-                raise LogicError(e)
+    def prepare_query(self):
+        """it is prepared statement call
+        """
+        try:
+            for step in self.planner.prepare_steps(self.query):
+                data = self.execute_step(step)
+                step.set_result(data)
+                self.steps_data[step.step_num] = data
+        except PlanningException as e:
+            raise LogicError(e)
 
-            statement_info = self.planner.get_statement_info()
+        statement_info = self.planner.get_statement_info()
 
-            self.columns_list = []
-            for col in statement_info['columns']:
-                self.columns_list.append(
-                    Column(
-                        database=col['ds'],
-                        table_name=col['table_name'],
-                        table_alias=col['table_alias'],
-                        name=col['name'],
-                        alias=col['alias'],
-                        type=col['type']
-                    )
-                )
-
-            self.parameters = [
+        self.columns_list = []
+        for col in statement_info['columns']:
+            self.columns_list.append(
                 Column(
+                    database=col['ds'],
+                    table_name=col['table_name'],
+                    table_alias=col['table_alias'],
                     name=col['name'],
                     alias=col['alias'],
                     type=col['type']
                 )
-                for col in statement_info['parameters']
-            ]
+            )
+
+        self.parameters = [
+            Column(
+                name=col['name'],
+                alias=col['alias'],
+                type=col['type']
+            )
+            for col in statement_info['parameters']
+        ]
 
     def execute_query(self, params=None):
         if self.fetched_data is not None:

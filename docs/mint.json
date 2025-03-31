@@ -68,6 +68,10 @@
       "url": "sdks"
     },
     {
+      "name": "MCP API",
+      "url": "mcp"
+    },
+    {
       "name": "REST API",
       "url": "rest"
     },
@@ -525,7 +529,9 @@
     {
       "group": "MCP API",
       "pages": [
-        "mcp/overview"
+        "mcp/overview",
+        "mcp/tools",
+        "mcp/cursor_usage"
       ]
     },
     {

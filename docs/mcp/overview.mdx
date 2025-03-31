@@ -3,38 +3,44 @@ title: Model Context Protocol (MCP)
 sidebarTitle: Overview
 ---
 
-The Model Context Protocol (MCP) is a protocol designed to enable real-time communication between MindsDB and client applications for model training and inference. MCP runs on port 47337 by default.
+The Model Context Protocol (MCP) is a protocol designed to enable real-time communication between MCP clients, including LLMs, AI agents, and AI apps, and MCP servers, such as MindsDB.
+
+MindsDB is an MCP server that enables you to connect and unify your data within MindsDB and subsequently pass it via a single MCP server to MCP client apps so that users can ask questions over federated data.
 
 ## Getting Started
 
-To enable the MCP API, you can:
+MindsDB MCP API runs on port 47337 by default.
 
-1. Use the `MINDSDB_APIS` environment variable:
+To enable the MCP API, you can use the [`MINDSDB_APIS` environment variable](/setup/environment-vars#mindsdb-apis):
+
 ```bash
 export MINDSDB_APIS='http,mysql,mongodb,postgres,mcp'
 ```
 
-2. Or specify it when starting MindsDB:
+Or, specify it when starting MindsDB:
+
 ```bash
 python -m mindsdb --api http,mysql,mongodb,postgres,mcp
 ```
 
 ## Protocol Overview
 
-MCP provides a bidirectional communication channel that allows clients to Run queries over federated data 
+MCP provides a bidirectional communication channel that allows MCP clients, such as LLMs, AI agents or apps, to run queries over federated data provided by MCP servers, such as MindsDB.
 
-FEDERATED DATA: Is data that is stored in different databases and/or different cloud providers.
+<p align="center">
+  <img src="/assets/mcp.png" />
+</p>
+
+Here, federated data is data that is stored in different databases, applications, and/or cloud providers.
 
 MindsDB MCP API allows you to query federated data as if it were a single database.
 
+## How It Works
 
-## How it works
+Once you have MindsDB running, you can connect all your data sources and query them as if they were a single database. Then you can plug those databases to your AI applications/clients that use the MCP API.
 
-Once you have MindsDB running, you can connect all your databases and query them as if they were a single database.
-Then you can plug those databases to your AI applications/clients that use the MCP API.
-
-1. The client connects to the MCP API
-2. The client sends a query to the MCP API
-3. The MCP API sends the query to the federated data source
-4. The federated data source returns the results to the MCP API
-5. The MCP API returns the results to the client
+1. The client connects to the MCP API.
+2. The client sends a query to the MCP API.
+3. The MCP API sends the query to the federated data source.
+4. The federated data source returns the results to the MCP API.
+5. The MCP API returns the results to the client.

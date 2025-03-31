@@ -148,7 +148,7 @@ class ProjectDataNode(DataNode):
         else:
             raise NotImplementedError(f"Query not supported {query}")
 
-    def create_table(self, table_name: Identifier, result_set=None, is_replace=False, **kwargs):
+    def create_table(self, table_name: Identifier, result_set=None, is_replace=False, **kwargs) -> DataHubResponse:
         # is_create - create table
         # is_replace - drop table if exists
         # is_create==False and is_replace==False: just insert
@@ -164,5 +164,6 @@ class ProjectDataNode(DataNode):
                 kb_table.clear()
 
             df = result_set.to_df()
-            return kb_table.insert(df)
+            kb_table.insert(df)
+            return DataHubResponse()
         raise NotImplementedError(f"Can't create table {table_name}")

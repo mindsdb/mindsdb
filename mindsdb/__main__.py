@@ -387,6 +387,7 @@ if __name__ == '__main__':
 
     http_api_config = config['api']['http']
     mysql_api_config = config['api']['mysql']
+    mcp_api_config = config['api']['mcp']
     trunc_processes_struct = {
         TrunkProcessEnum.HTTP: TrunkProcessData(
             name=TrunkProcessEnum.HTTP.value,
@@ -440,11 +441,11 @@ if __name__ == '__main__':
         TrunkProcessEnum.MCP: TrunkProcessData(
             name=TrunkProcessEnum.MCP.value,
             entrypoint=start_mcp,
-            port=config['api']['mcp']['port'],
+            port=mcp_api_config.get('port', 47337),
             args=(config.cmd_args.verbose,),
-            restart_on_failure=config['api']['mcp'].get('restart_on_failure', False),
-            max_restart_count=config['api']['mcp'].get('max_restart_count', TrunkProcessData.max_restart_count),
-            max_restart_interval_seconds=config['api']['mcp'].get(
+            restart_on_failure=mcp_api_config.get('restart_on_failure', False),
+            max_restart_count=mcp_api_config.get('max_restart_count', TrunkProcessData.max_restart_count),
+            max_restart_interval_seconds=mcp_api_config.get(
                 'max_restart_interval_seconds', TrunkProcessData.max_restart_interval_seconds
             )
         )

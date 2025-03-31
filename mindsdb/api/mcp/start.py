@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
 from typing import Optional, Dict, Any
+from dataclasses import dataclass
 
 from mcp.server.fastmcp import FastMCP
 from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
@@ -12,12 +13,20 @@ from mindsdb.interfaces.storage import db
 logger = log.getLogger(__name__)
 
 
+@dataclass
+class AppContext:
+    db: Any
+
+
 @asynccontextmanager
-async def app_lifespan(server: FastMCP) -> AsyncIterator[Dict]:
-    """Manage application lifecycle"""
+async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
+    """Manage application lifecycle with type-safe context"""
+    # Initialize on startup
+    db.init()
     try:
-        yield {}
+        yield AppContext(db=db)
     finally:
+        # TODO: We need better way to handle this in storage/db.py
         pass
 
 
@@ -27,7 +36,8 @@ mcp = FastMCP(
     lifespan=app_lifespan,
     dependencies=["mindsdb"]  # Add any additional dependencies
 )
-
+# MCP Queries
+LISTING_QUERY = "SHOW DATABASES"
 
 @mcp.tool()
 def query(query: str, context: Optional[Dict] = None) -> Dict[str, Any]:
@@ -41,8 +51,6 @@ def query(query: str, context: Optional[Dict] = None) -> Dict[str, Any]:
     Returns:
         Dict containing the query results or error information
     """
-    if not isinstance(query, str):
-        raise ValueError('Query must be a string')
 
     if context is None:
         context = {}
@@ -58,7 +66,7 @@ def query(query: str, context: Optional[Dict] = None) -> Dict[str, Any]:
         if result.type == SQL_RESPONSE_TYPE.OK:
             return {"type": SQL_RESPONSE_TYPE.OK}
 
-        elif result.type == SQL_RESPONSE_TYPE.TABLE:
+        if result.type == SQL_RESPONSE_TYPE.TABLE:
             return {
                 "type": SQL_RESPONSE_TYPE.TABLE,
                 "data": result.data.to_lists(json_types=True),
@@ -67,7 +75,6 @@ def query(query: str, context: Optional[Dict] = None) -> Dict[str, Any]:
                     for x in result.columns
                 ],
             }
-
         else:
             return {
                 "type": SQL_RESPONSE_TYPE.ERROR,
@@ -92,11 +99,11 @@ def list_databases() -> Dict[str, Any]:
     Returns:
         Dict containing the list of databases and their tables
     """
-    listing_query = "SHOW DATABASES"
+    
     mysql_proxy = FakeMysqlProxy()
 
     try:
-        result = mysql_proxy.process_query(listing_query)
+        result = mysql_proxy.process_query(LISTING_QUERY)
         if result.type == SQL_RESPONSE_TYPE.ERROR:
             return {
                 "type": "error",
@@ -126,11 +133,9 @@ def start(*args, **kwargs):
         host (str): Host to bind to
         port (int): Port to listen on
     """
-    db.init()
-    
     config = Config()
-    port = int(config['api']['mcp'].get('port', 47337))
-    host = config['api']['mcp'].get('host', '127.0.0.1')
+    port = int(config['api'].get('mcp', {}).get('port', 47337))
+    host = config['api'].get('mcp', {}).get('host', '127.0.0.1')
     
     logger.info(f"Starting MCP server on {host}:{port}")
     mcp.settings.host = host

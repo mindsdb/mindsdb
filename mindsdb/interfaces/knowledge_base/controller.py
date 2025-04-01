@@ -40,6 +40,8 @@ from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.utilities import log
 from mindsdb.integrations.utilities.rag.rerankers.reranker_compressor import LLMReranker
 
+_DEFAULT_BATCH_SIZE = 100  # Default batch size for vector store operations
+
 logger = log.getLogger(__name__)
 
 KB_TO_VECTORDB_COLUMNS = {
@@ -367,26 +369,93 @@ class KnowledgeBaseTable:
 
         # Apply preprocessing to all documents if preprocessor exists
         if self.document_preprocessor:
-            processed_chunks = self.document_preprocessor.process_documents(raw_documents)
+            # The preprocessor now returns a tuple: (processed_chunks, failed_doc_ids)
+            processed_chunks, failed_doc_ids = self.document_preprocessor.process_documents(raw_documents)
+            if failed_doc_ids:
+                logger.warning(f"Preprocessing failed for {len(failed_doc_ids)} documents: {failed_doc_ids}")
         else:
             processed_chunks = raw_documents  # Use raw documents if no preprocessing
+            failed_doc_ids = []
 
-        # Convert processed chunks back to DataFrame with standard structure
-        df = pd.DataFrame([{
-            TableField.CONTENT.value: chunk.content,
-            TableField.ID.value: chunk.id,
-            TableField.METADATA.value: chunk.metadata
-        } for chunk in processed_chunks])
-
-        if df.empty:
+        if not processed_chunks:
             logger.warning("No valid content found in any content columns")
-            return
+            return {
+                "success": False,
+                "message": "No valid content found in any content columns",
+                "failed_doc_ids": failed_doc_ids,
+                "failed_chunk_ids": [],
+                "successful_chunks": 0,
+                "total_chunks": 0
+            }
 
-        # add embeddings and send to vector db
-        df_emb = self._df_to_embeddings(df)
-        df = pd.concat([df, df_emb], axis=1)
+        # Get batch size from params or use default
+        batch_size = self._kb.params.get('batch_size', _DEFAULT_BATCH_SIZE)
+
+        # Process chunks in batches
+        total_chunks = len(processed_chunks)
+        successful_chunks = 0
+        failed_chunk_ids = []  # Track failed chunk IDs
         db_handler = self.get_vector_db()
-        db_handler.do_upsert(self._kb.vector_database_table, df)
+
+        logger.info(f"Starting batch processing for {len(df)} rows with batch size {batch_size}")
+        logger.info(f"Document preprocessing complete. Total chunks to process: {total_chunks}")
+        for start_idx in range(0, total_chunks, batch_size):
+            end_idx = min(start_idx + batch_size, total_chunks)
+            batch_chunks = processed_chunks[start_idx:end_idx]
+            logger.debug(f"Processing chunk batch {start_idx//batch_size + 1}/{(total_chunks + batch_size - 1)//batch_size}: chunks {start_idx} to {end_idx}")
+
+            # Track chunk IDs in this batch for error reporting
+            batch_chunk_ids = [chunk.id for chunk in batch_chunks]
+
+            try:
+                # Convert batch of chunks to DataFrame
+                batch_df = pd.DataFrame([{
+                    TableField.CONTENT.value: chunk.content,
+                    TableField.ID.value: chunk.id,
+                    TableField.METADATA.value: self._flatten_metadata(chunk.metadata)
+                } for chunk in batch_chunks])
+
+                # Calculate embeddings for this batch
+                try:
+                    batch_emb = self._df_to_embeddings(batch_df)
+                    batch_df = pd.concat([batch_df, batch_emb], axis=1)
+                    logger.debug(f"Generated embeddings for batch of {len(batch_df)} chunks")
+                except Exception as emb_e:
+                    # If embedding generation fails for the batch, log and skip the batch
+                    logger.error(f"Failed to generate embeddings for batch {start_idx}-{end_idx}: {str(emb_e)}")
+                    failed_chunk_ids.extend(batch_chunk_ids)
+                    continue
+
+                # Insert this batch
+                db_handler.do_upsert(self._kb.vector_database_table, batch_df)
+                logger.debug("Successfully inserted batch into vector store")
+                successful_chunks += len(batch_chunks)
+                logger.info(f"Progress: {successful_chunks}/{total_chunks} chunks processed ({(successful_chunks/total_chunks)*100:.1f}%)")
+            except Exception as e:
+                logger.error(f"Failed to process batch {start_idx}-{end_idx}: {str(e)}")
+                # Track the failed chunk IDs
+                failed_chunk_ids.extend(batch_chunk_ids)
+                # Continue with next batch instead of failing completely
+                continue
+
+        # Prepare result summary
+        result = {
+            "success": successful_chunks > 0,
+            "message": f"Processed {successful_chunks} out of {total_chunks} chunks",
+            "failed_doc_ids": failed_doc_ids,
+            "failed_chunk_ids": failed_chunk_ids,
+            "successful_chunks": successful_chunks,
+            "total_chunks": total_chunks
+        }
+
+        if successful_chunks < total_chunks:
+            logger.warning(f"Only {successful_chunks} out of {total_chunks} chunks were successfully processed and inserted")
+            if failed_chunk_ids:
+                logger.warning(f"Failed chunk IDs: {failed_chunk_ids[:5]}{'...' if len(failed_chunk_ids) > 5 else ''}")
+        else:
+            logger.info(f"Successfully completed processing all {total_chunks} chunks")
+
+        return result
 
     def _adapt_column_names(self, df: pd.DataFrame) -> pd.DataFrame:
         '''
@@ -665,6 +734,22 @@ class KnowledgeBaseTable:
 
         id_string = f"content={content}_column={content_column}"
         return hashlib.sha256(id_string.encode()).hexdigest()
+
+    def _flatten_metadata(self, metadata: dict) -> dict:
+        """Flatten nested metadata dictionaries and convert values to primitive types for ChromaDB compatibility."""
+        flattened = {}
+        for key, value in metadata.items():
+            if isinstance(value, dict):
+                # Flatten nested dict with dot notation
+                for k, v in value.items():
+                    flattened[f"{key}.{k}"] = str(v)
+            else:
+                # Convert to primitive type
+                if isinstance(value, (int, float, bool)):
+                    flattened[key] = value
+                else:
+                    flattened[key] = str(value)
+        return flattened
 
     def _convert_metadata_value(self, value):
         """

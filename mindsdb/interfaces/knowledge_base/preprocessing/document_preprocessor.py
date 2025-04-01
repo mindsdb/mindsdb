@@ -1,4 +1,4 @@
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, Union
 import pandas as pd
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import hashlib
@@ -42,8 +42,14 @@ class DocumentPreprocessor:
         """Initialize preprocessor"""
         self.splitter = None  # Will be set by child classes
 
-    def process_documents(self, documents: List[Document]) -> List[ProcessedChunk]:
-        """Base implementation - should be overridden by child classes"""
+    def process_documents(self, documents: List[Document]) -> tuple[List[ProcessedChunk], List[Union[str, int]]]:
+        """Base implementation - should be overridden by child classes
+
+        Returns:
+            tuple: (processed_chunks, failed_doc_ids)
+                - processed_chunks: List of successfully processed chunks
+                - failed_doc_ids: List of document IDs that failed processing
+        """
         raise NotImplementedError("Subclasses must implement process_documents")
 
     def _split_document(self, doc: Document) -> List[Document]:
@@ -202,11 +208,12 @@ Please give a short succinct context to situate this chunk within the overall do
         # Use base class implementation
         return super()._split_document(doc)
 
-    def process_documents(self, documents: List[Document]) -> List[ProcessedChunk]:
+    def process_documents(self, documents: List[Document]) -> tuple[List[ProcessedChunk], List[str]]:
         chunks_list = []
         doc_index_list = []
         chunk_index_list = []
         processed_chunks = []
+        failed_doc_ids = []  # Store IDs of failed documents
 
         for doc_index, doc in enumerate(documents):
             # Get content_column from metadata if available
@@ -214,40 +221,54 @@ Please give a short succinct context to situate this chunk within the overall do
                 doc.metadata.get("content_column") if doc.metadata else None
             )
 
-            # Ensure document has an ID
-            if doc.id is None:
-                doc.id = self._generate_deterministic_id(doc.content, content_column)
+            # Ensure document has an ID (should be provided by caller)
+            doc_id = doc.id
+            if doc_id is None:
+                logger.error(f"Document at index {doc_index} received without an ID during preprocessing. Skipping.")
+                failed_doc_ids.append(f"document_{doc_index+1}_missing_id")
+                continue
 
             # Skip empty or whitespace-only content
             if not doc.content or not doc.content.strip():
+                logger.warning(f"Document {doc_id} has empty or whitespace-only content. Skipping.")
                 continue
 
-            chunk_docs = self._split_document(doc)
+            try:
+                chunk_docs = self._split_document(doc)
 
-            # Single chunk case
-            if len(chunk_docs) == 1:
-                chunk_doc = chunk_docs[0]
-                if not chunk_doc.content or not chunk_doc.content.strip():
-                    continue
-                else:
-                    chunks_list.append(chunk_doc)
-                    doc_index_list.append(doc_index)
-                    chunk_index_list.append(0)
-
-            else:
-                # Multiple chunks case
-                for i, chunk_doc in enumerate(chunk_docs):
+                # Single chunk case
+                if len(chunk_docs) == 1:
+                    chunk_doc = chunk_docs[0]
                     if not chunk_doc.content or not chunk_doc.content.strip():
                         continue
                     else:
                         chunks_list.append(chunk_doc)
                         doc_index_list.append(doc_index)
-                        chunk_index_list.append(i)
+                        chunk_index_list.append(0)
+
+                else:
+                    # Multiple chunks case
+                    for i, chunk_doc in enumerate(chunk_docs):
+                        if not chunk_doc.content or not chunk_doc.content.strip():
+                            continue
+                        else:
+                            chunks_list.append(chunk_doc)
+                            doc_index_list.append(doc_index)
+                            chunk_index_list.append(i)
+            except Exception as e:
+                logger.error(f"Error processing document {doc_id}: {str(e)}")
+                failed_doc_ids.append(doc_id)
+                continue
 
         # Generate contexts
-        doc_contents = [documents[i].content for i in doc_index_list]
-        chunk_contents = [chunk_doc.content for chunk_doc in chunks_list]
-        contexts = self._generate_context(chunk_contents, doc_contents)
+        try:
+            doc_contents = [documents[i].content for i in doc_index_list]
+            chunk_contents = [chunk_doc.content for chunk_doc in chunks_list]
+            contexts = self._generate_context(chunk_contents, doc_contents)
+        except Exception as e:
+            logger.error(f"Error generating contexts: {str(e)}")
+            # If context generation fails, we can't process any chunks
+            return [], [doc.id for doc in documents if doc.id is not None]
 
         for context, chunk_doc, chunk_index, doc_index in zip(
             contexts, chunks_list, chunk_index_list, doc_index_list
@@ -281,98 +302,122 @@ Please give a short succinct context to situate this chunk within the overall do
                 )
             )
 
-        return processed_chunks
+        logger.info(f"Contextual preprocessing complete. Created {len(processed_chunks)} chunks. Failed documents: {len(failed_doc_ids)}")
+        return processed_chunks, failed_doc_ids
 
 
 class TextChunkingPreprocessor(DocumentPreprocessor):
-    """Default text chunking preprocessor using RecursiveCharacterTextSplitter"""
+    """Default text chunking preprocessor using RecursiveCharacterTextSplitter with token-based chunking"""
 
     def __init__(self, config: Optional[TextChunkingConfig] = None):
         """Initialize with text chunking configuration"""
         super().__init__()
         self.config = config or TextChunkingConfig()
-        self.splitter = RecursiveCharacterTextSplitter(
+
+        # Use TokenTextSplitter with tiktoken encoder
+        self.splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+            encoding_name=self.config.encoding_name,
             chunk_size=self.config.chunk_size,
             chunk_overlap=self.config.chunk_overlap,
-            length_function=self.config.length_function,
-            separators=self.config.separators,
+            disallowed_special=(),  # Allow all special tokens
+            separators=self.config.separators
         )
 
     def _split_document(self, doc: Document) -> List[Document]:
         """Split document into chunks while preserving metadata"""
-        # Use base class implementation
-        return super()._split_document(doc)
+        if self.splitter is None:
+            raise ValueError("Splitter not configured")
 
-    def process_documents(self, documents: List[Document]) -> List[ProcessedChunk]:
+        # Convert to langchain Document for splitting
+        langchain_doc = LangchainDocument(
+            page_content=doc.content, metadata=doc.metadata or {}
+        )
+        # Split and convert back to our Document type
+        split_docs = self.splitter.split_documents([langchain_doc])
+        return [
+            Document(content=split_doc.page_content, metadata=split_doc.metadata)
+            for split_doc in split_docs
+        ]
+
+    def process_documents(self, documents: List[Document]) -> tuple[List[ProcessedChunk], List[Union[str, int]]]:
+        """Process documents into chunks with metadata"""
+        logger.info(f"Starting document preprocessing for {len(documents)} documents")
         processed_chunks = []
+        failed_doc_ids = []  # Store IDs of failed documents
+        total_chars = sum(len(doc.content) for doc in documents)
+        logger.info(f"Total content size: {total_chars} characters")
 
-        for doc in documents:
-            # Get content_column from metadata if available
-            content_column = (
-                doc.metadata.get("content_column") if doc.metadata else None
-            )
-
-            # Ensure document has an ID
-            if doc.id is None:
-                doc.id = self._generate_deterministic_id(doc.content, content_column)
-
-            # Skip empty or whitespace-only content
-            if not doc.content or not doc.content.strip():
+        failed_docs_count = 0
+        for i, doc in enumerate(documents):
+            # Assume doc.id is always provided by the caller (e.g., KnowledgeBaseTable.insert)
+            doc_id = doc.id
+            if doc_id is None:
+                # This case should ideally not happen if called from KnowledgeBaseTable.insert
+                logger.error(f"Document at index {i} received without an ID during preprocessing. Skipping.")
+                failed_docs_count += 1
+                # Use a placeholder for failed_doc_ids list if ID is missing
+                failed_doc_ids.append(f"document_{i+1}_missing_id")
                 continue
 
-            chunk_docs = self._split_document(doc)
+            try:
+                # Split document into chunks
+                chunks = self._split_document(doc)
+                logger.debug(f"Document {doc_id} split into {len(chunks)} chunks")
 
-            # Single chunk case
-            if len(chunk_docs) == 1:
-                chunk_doc = chunk_docs[0]
-                if not chunk_doc.content or not chunk_doc.content.strip():
-                    continue
-
-                # Initialize metadata
-                metadata = {}
-                if doc.metadata:
-                    metadata.update(doc.metadata)
-
-                # Pass through doc.id and content_column
-                id = self._generate_chunk_id(
-                    chunk_doc.content, content_column=content_column, provided_id=doc.id
-                )
-                processed_chunks.append(
-                    ProcessedChunk(
-                        id=id,
-                        content=chunk_doc.content,
-                        embeddings=doc.embeddings,
-                        metadata=self._prepare_chunk_metadata(doc.id, None, metadata),
-                    )
-                )
-            else:
-                # Multiple chunks case
-                for i, chunk_doc in enumerate(chunk_docs):
-                    if not chunk_doc.content or not chunk_doc.content.strip():
-                        continue
-
-                    # Initialize metadata
-                    metadata = {}
-                    if doc.metadata:
-                        metadata.update(doc.metadata)
-
-                    # Pass through doc.id and content_column
+                for chunk_idx, chunk in enumerate(chunks):
+                    # Generate chunk ID based on the existing doc.id
                     chunk_id = self._generate_chunk_id(
-                        chunk_doc.content,
-                        i,
-                        content_column=content_column,
-                        provided_id=doc.id,
+                        chunk.content,
+                        chunk_idx,
+                        provided_id=doc_id
                     )
+
+                    # Prepare metadata
+                    metadata = chunk.metadata or {}
+                    metadata.update({
+                        "original_doc_id": doc_id,
+                        "chunk_index": chunk_idx,
+                        "total_chunks": len(chunks)
+                    })
+
                     processed_chunks.append(
                         ProcessedChunk(
                             id=chunk_id,
-                            content=chunk_doc.content,
-                            embeddings=doc.embeddings,
-                            metadata=self._prepare_chunk_metadata(doc.id, i, metadata),
+                            content=chunk.content,
+                            metadata=metadata
                         )
                     )
+            except Exception as e:
+                failed_docs_count += 1
+                logger.error(f"Error processing document {doc_id}: {str(e)}")
+                failed_doc_ids.append(doc_id)  # Add failed ID to the list
+                # Continue to the next document on error
+                continue
 
-        return processed_chunks
+        processed_doc_count = len(documents) - failed_docs_count
+
+        # Log a warning if any documents failed
+        if failed_docs_count > 0:
+            warning_message = f"Failed to process {failed_docs_count} out of {len(documents)} documents. Failed IDs: {failed_doc_ids}"
+            logger.warning(warning_message)
+
+        # Check if any chunks were produced from the successfully processed documents
+        if processed_doc_count > 0 and not processed_chunks:
+            logger.warning(f"Successfully processed {processed_doc_count} documents, but no chunks were generated. Check document content and chunking configuration.")
+        elif processed_doc_count == 0 and not processed_chunks:
+            # Only raise error if NO documents were processed successfully AND no chunks were created.
+            # Avoids raising error if input was empty list.
+            if len(documents) > 0:
+                raise RuntimeError(f"Failed to process all {len(documents)} documents. No chunks were created. Check logs and input data.")
+            else:
+                logger.info("Preprocessing received an empty list of documents.")
+
+        logger.info(f"Preprocessing complete. Created {len(processed_chunks)} chunks from {processed_doc_count} successfully processed documents.")
+        if processed_doc_count > 0:
+            logger.info(f"Average chunks per successfully processed document: {len(processed_chunks)/processed_doc_count:.2f}")
+
+        # Return both successful chunks and the list of failed document IDs
+        return processed_chunks, failed_doc_ids
 
 
 class PreprocessorFactory:

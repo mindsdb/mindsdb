@@ -133,7 +133,10 @@ class KnowledgeBaseTable:
         query.targets = targets
         logger.debug(f"Modified query targets: {targets}")
         # Get response from vector db
+        db_handler = self.get_vector_db()
         logger.debug(f"Using vector db handler: {type(db_handler)}")
+
+        conditions = db_handler.extract_conditions(query.where)
         self.addapt_conditions_columns(conditions)
         df = db_handler.dispatch_select(query, conditions)
         if df is None or df.empty:
@@ -202,11 +205,18 @@ class KnowledgeBaseTable:
         df = df.rename(columns=col_update)
 
         columns = list(df.columns)
-        # update id, get from metadata
-        df[TableField.ID.value] = df[TableField.METADATA.value].apply(lambda m: m.get('original_row_id'))
-
-        # id on first place
-        return df[[TableField.ID.value] + columns]
+        # Only try to get ID from metadata if metadata column exists
+        if TableField.METADATA.value in df.columns:
+            df[TableField.ID.value] = df[TableField.METADATA.value].apply(lambda m: m.get('original_row_id'))
+        else:
+            # If metadata is not present, use the id column directly if it exists
+            if 'id' in df.columns:
+                df[TableField.ID.value] = df['id']
+            else:
+                # If neither metadata nor id exists, create a default ID
+                df[TableField.ID.value] = range(len(df))
+        # Ensure ID is in the first position
+        return df[[TableField.ID.value] + [col for col in columns if col != TableField.ID.value]]
 
     def insert_files(self, file_names: List[str]):
         """Process and insert files"""

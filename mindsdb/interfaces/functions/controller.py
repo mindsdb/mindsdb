@@ -173,7 +173,7 @@ class FunctionController(BYOMFunctionsController):
                 llm = create_chat_model(chat_model_params)
                 llm_client = llm.root_client
                 llm_model = llm.model_name
-            except Exception as e:
+            except Exception:
                 pass
 
             to_markdown = ToMarkdown(use_llm, llm_client, llm_model)

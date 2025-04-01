@@ -59,7 +59,10 @@ class Query(Resource):
                 result = mysql_proxy.process_query(query)
 
                 if result.type == SQL_RESPONSE_TYPE.OK:
-                    query_response = {"type": SQL_RESPONSE_TYPE.OK}
+                    query_response = {
+                        "type": SQL_RESPONSE_TYPE.OK,
+                        "affected_rows": result.affected_rows
+                    }
                 elif result.type == SQL_RESPONSE_TYPE.TABLE:
                     data = result.data.to_lists(json_types=True)
                     query_response = {

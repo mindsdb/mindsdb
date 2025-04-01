@@ -163,7 +163,7 @@ class FunctionController(BYOMFunctionsController):
         if name in self.callbacks:
             return self.callbacks[name]
 
-        def callback(file_path_or_url, use_llm=True):
+        def callback(file_path_or_url, use_llm):
             chat_model_params = self._parse_chat_model_params()
 
             llm_client = None
@@ -176,7 +176,7 @@ class FunctionController(BYOMFunctionsController):
             except Exception as e:
                 pass
 
-            to_markdown = ToMarkdown(llm_client, llm_model, use_llm)
+            to_markdown = ToMarkdown(use_llm, llm_client, llm_model)
             return to_markdown.call(file_path_or_url)
 
         meta = {

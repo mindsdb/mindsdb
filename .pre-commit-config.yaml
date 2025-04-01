@@ -1,7 +1,7 @@
 exclude: "^databricks_src|^data_engineering/"
 repos:
   - repo: https://github.com/pycqa/flake8
-    rev: 4.0.1
+    rev: 7.0.0
     hooks:
       - id: flake8
         additional_dependencies: [flake8-typing-imports==1.16.0]

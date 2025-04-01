@@ -201,6 +201,14 @@ class Config:
                     "host": api_host,
                     "port": "55432",
                     "database": "mindsdb"
+                },
+                "mcp": {
+                    "host": api_host,
+                    "port": "47337",
+                    "enabled": True,
+                    "restart_on_failure": True,
+                    "max_restart_count": 1,
+                    "max_restart_interval_seconds": 60
                 }
             },
             "cache": {

@@ -461,7 +461,7 @@ class TestKB(BaseExecutorDummyML):
         assert metadata['url'] == record['url']
         assert metadata['product'] == record['product']
 
-    def _test_join_kb_table(self):
+    def test_join_kb_table(self):
         self._create_embedding_model('emb_model')
 
         data = [
@@ -485,10 +485,15 @@ class TestKB(BaseExecutorDummyML):
         """)
 
         ret = self.run_sql("""
-            select * from kb_ral k
+            select t.italian, k.id, t.ral from kb_ral k
             join files.ral t on t.ral = k.id
-            where k.content = 'white' 
+            where k.content = 'white'
+            order by
+            limit 2
         """)
 
-        print(ret)
-
+        assert len(ret) == 2
+        row = ret.iloc[0]
+        # values are matched
+        ral = df[df['italian'] == row['italian']]['ral'][0]
+        assert ral == row['ral']

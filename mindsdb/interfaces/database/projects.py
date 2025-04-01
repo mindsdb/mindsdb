@@ -137,7 +137,7 @@ class Project:
                 view_meta['query_ast'],
                 session=session
             )
-            df = sqlquery.fetched_data.data.to_df()
+            df = sqlquery.fetched_data.to_df()
         finally:
             query_context_controller.release_context('view', view_meta['id'])
 

@@ -577,17 +577,17 @@ class ExecuteCommands:
         elif type(statement) is DropView:
             return self.answer_drop_view(statement, database_name)
         elif type(statement) is Delete:
-            query = SQLQuery(statement, session=self.session, execute=True, database=database_name)
+            query = SQLQuery(statement, session=self.session, database=database_name)
             return ExecuteAnswer(
                 affected_rows=query.fetched_data.affected_rows
             )
         elif type(statement) is Insert:
-            query = SQLQuery(statement, session=self.session, execute=True, database=database_name)
+            query = SQLQuery(statement, session=self.session, database=database_name)
             return ExecuteAnswer(
                 affected_rows=query.fetched_data.affected_rows
             )
         elif type(statement) is Update:
-            query = SQLQuery(statement, session=self.session, execute=True, database=database_name)
+            query = SQLQuery(statement, session=self.session, database=database_name)
             return ExecuteAnswer(
                 affected_rows=query.fetched_data.affected_rows
             )
@@ -788,7 +788,7 @@ class ExecuteCommands:
             raise Exception(
                 f'Nested query failed to execute with error: "{e}", please check and try again.'
             )
-        df = sqlquery.fetched_data.data.to_df()
+        df = sqlquery.fetched_data.to_df()
         df.columns = [
             str(t.alias) if hasattr(t, "alias") else str(t.parts[-1])
             for t in statement.data.targets
@@ -1920,7 +1920,7 @@ class ExecuteCommands:
         return ExecuteAnswer()
 
     def answer_select(self, query):
-        data = query.fetched_data.data
+        data = query.fetched_data
         return ExecuteAnswer(data=data)
 
     def answer_update_model_version(self, model_version, database_name):

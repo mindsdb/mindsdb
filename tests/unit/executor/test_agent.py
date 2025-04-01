@@ -488,12 +488,10 @@ class TestKB(BaseExecutorDummyML):
             select t.italian, k.id, t.ral from kb_ral k
             join files.ral t on t.ral = k.id
             where k.content = 'white'
-            order by
             limit 2
         """)
 
         assert len(ret) == 2
-        row = ret.iloc[0]
         # values are matched
-        ral = df[df['italian'] == row['italian']]['ral'][0]
-        assert ral == row['ral']
+        diff = ret[ret['ral'] != ret['id']]
+        assert len(diff) == 0

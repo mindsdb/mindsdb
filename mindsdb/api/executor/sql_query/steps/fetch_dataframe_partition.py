@@ -7,12 +7,16 @@ from mindsdb.api.executor.planner.steps import FetchDataframeStepPartition
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 
 from mindsdb.api.executor.sql_query.result_set import ResultSet
+from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.partitioning import get_max_thread_count, split_data_frame
 from mindsdb.api.executor.sql_query.steps.fetch_dataframe import get_table_alias, get_fill_param_fnc
 
 from .base import BaseStepCall
+
+
+logger = log.getLogger(__name__)
 
 
 class FetchDataframePartitionCall(BaseStepCall):
@@ -62,12 +66,13 @@ class FetchDataframePartitionCall(BaseStepCall):
                 # disable even with ml task queue
                 use_threads = False
 
+        on_error = step.params.get('error', 'raise')
         if use_threads:
-            return self.fetch_threads(run_query, query, thread_count=thread_count)
+            return self.fetch_threads(run_query, query, thread_count=thread_count, on_error=on_error)
         else:
-            return self.fetch_iterate(run_query, query)
+            return self.fetch_iterate(run_query, query, on_error=on_error)
 
-    def fetch_iterate(self, run_query, query):
+    def fetch_iterate(self, run_query, query, on_error=None):
         # process batches in circle
 
         results = []
@@ -85,9 +90,14 @@ class FetchDataframePartitionCall(BaseStepCall):
 
             # executing of sub steps can modify dataframe columns, lets memorise max tracking value
             max_track_value = run_query.get_max_track_value(df)
-            sub_data = self.exec_sub_steps(df)
-
-            results.append(sub_data)
+            try:
+                sub_data = self.exec_sub_steps(df)
+                results.append(sub_data)
+            except Exception as e:
+                if on_error == 'skip':
+                    logger.error(e)
+                else:
+                    raise e
 
             run_query.set_progress(df, max_track_value)
 
@@ -126,7 +136,7 @@ class FetchDataframePartitionCall(BaseStepCall):
             steps_data2[substep.step_num] = sub_data
         return sub_data
 
-    def fetch_threads(self, run_query, query, thread_count=None):
+    def fetch_threads(self, run_query, query, thread_count=None, on_error=None):
         # process batches in threads
 
         # create communication queues
@@ -179,7 +189,10 @@ class FetchDataframePartitionCall(BaseStepCall):
                 for i in range(sent_chunks):
                     res = queue_out.get()
                     if 'error' in res:
-                        raise RuntimeError(res['error'])
+                        if on_error == 'skip':
+                            logger.error(res['error'])
+                        else:
+                            raise RuntimeError(res['error'])
 
                     if res['data']:
                         results.append(res['data'])

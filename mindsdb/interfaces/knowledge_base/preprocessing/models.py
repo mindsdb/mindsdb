@@ -53,6 +53,10 @@ class TextChunkingConfig(BaseModel):
         default=len,
         description="Function to measure text length"
     )
+    encoding_name: str = Field(
+        default="cl100k_base",
+        description="The tiktoken encoding to use for token counting. Use either encoding_name (e.g. cl100k_base) or model_name (e.g. gpt-4)"
+    )
     separators: List[str] = Field(
         default=["\n\n", "\n", " ", ""],
         description="List of separators to use for splitting text, in order of priority"

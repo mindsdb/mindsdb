@@ -579,9 +579,10 @@ class ExecuteCommands:
         elif type(statement) is DropView:
             return self.answer_drop_view(statement, database_name)
         elif type(statement) is Delete:
-            SQLQuery(statement, session=self.session, execute=True, database=database_name)
-            return ExecuteAnswer()
-
+            query = SQLQuery(statement, session=self.session, execute=True, database=database_name)
+            return ExecuteAnswer(
+                affected_rows=query.fetched_data.affected_rows
+            )
         elif type(statement) is Insert:
             query = SQLQuery(statement, session=self.session, execute=True, database=database_name)
             return ExecuteAnswer(

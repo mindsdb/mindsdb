@@ -39,13 +39,14 @@ class HandlerResponse:
                  "error": self.error_message}
 
     def __repr__(self):
-        return "%s: resp_type=%s, query=%s, data_frame=%s, err_code=%s, error=%s" % (
+        return "%s: resp_type=%s, query=%s, data_frame=%s, err_code=%s, error=%s, affected_rows=%s" % (
                 self.__class__.__name__,
                 self.resp_type,
                 self.query,
                 self.data_frame,
                 self.error_code,
-                self.error_message
+                self.error_message,
+                self.affected_rows
             )
 
 class HandlerStatusResponse:

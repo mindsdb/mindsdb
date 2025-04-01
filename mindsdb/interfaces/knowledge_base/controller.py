@@ -135,7 +135,6 @@ class KnowledgeBaseTable:
         # Get response from vector db
         db_handler = self.get_vector_db()
         logger.debug(f"Using vector db handler: {type(db_handler)}")
-
         conditions = db_handler.extract_conditions(query.where)
         self.addapt_conditions_columns(conditions)
         df = db_handler.dispatch_select(query, conditions)

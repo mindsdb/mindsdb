@@ -223,9 +223,9 @@ if __name__ == '__main__':
     ctx.set_default()
 
     # ---- CHECK SYSTEM ----
-    if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 9):
+    if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 10):
         print("""
-     MindsDB requires Python >= 3.9 to run
+     MindsDB requires Python >= 3.10 to run
 
      Once you have supported Python version installed you can start mindsdb as follows:
 

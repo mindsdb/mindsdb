@@ -164,11 +164,9 @@ class ExecuteCommands:
         self.datahub = session.datahub
 
     @profiler.profile()
-    def execute_command(self, statement, database_name: str = None) -> ExecuteAnswer:
-        sql = None
-        if isinstance(statement, ASTNode):
-            sql = statement.to_string()
-        sql_lower = sql.lower()
+    def execute_command(self, statement: ASTNode, database_name: str = None) -> ExecuteAnswer:
+        sql: str = statement.to_string()
+        sql_lower: str = sql.lower()
 
         if database_name is None:
             database_name = self.session.database
@@ -790,8 +788,7 @@ class ExecuteCommands:
             raise Exception(
                 f'Nested query failed to execute with error: "{e}", please check and try again.'
             )
-        result = sqlquery.fetch('dataframe')
-        df = result["result"]
+        df = sqlquery.fetched_data.data.to_df()
         df.columns = [
             str(t.alias) if hasattr(t, "alias") else str(t.parts[-1])
             for t in statement.data.targets
@@ -1277,9 +1274,7 @@ class ExecuteCommands:
                 query_context_controller.IGNORE_CONTEXT
             )
             try:
-                sqlquery = SQLQuery(query, session=self.session, database=database_name)
-                if sqlquery.fetch()["success"] is not True:
-                    raise ExecutorException("Wrong view query")
+                SQLQuery(query, session=self.session, database=database_name)
             finally:
                 query_context_controller.release_context(
                     query_context_controller.IGNORE_CONTEXT
@@ -1925,9 +1920,8 @@ class ExecuteCommands:
         return ExecuteAnswer()
 
     def answer_select(self, query):
-        data = query.fetch()
-
-        return ExecuteAnswer(data=data["result"])
+        data = query.fetched_data.data
+        return ExecuteAnswer(data=data)
 
     def answer_update_model_version(self, model_version, database_name):
         if not isinstance(model_version, Identifier):

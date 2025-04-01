@@ -177,19 +177,6 @@ class SQLQuery:
             default_namespace=database,
         )
 
-    def fetch(self, view='result_set'):
-        data = self.fetched_data
-
-        if view == 'dataframe':
-            result = data.to_df()
-        else:
-            result = data
-
-        return {
-            'success': True,
-            'result': result
-        }
-
     def prepare_query(self):
         """it is prepared statement call
         """

@@ -7,12 +7,6 @@ on:
     types:
       - closed
 
-# Cancel any existing runs of this workflow on the same branch/pr
-# We always want to build/deploy/test a new commit over an older one
-concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
-
 jobs:
   
   # Build our docker images based on our bake file
@@ -20,6 +14,9 @@ jobs:
     if: github.event.pull_request.merged == true
     name: Build Docker Images
     runs-on: mdb-dev
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-build
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
       - name: Pull MindsDB Github Actions
@@ -47,5 +44,8 @@ jobs:
     if: github.event.pull_request.merged == true
     name: Run Integration Tests
     needs: [deploy]
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-tests
+      cancel-in-progress: true
     uses: ./.github/workflows/test_on_deploy.yml
     secrets: inherit

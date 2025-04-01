@@ -347,7 +347,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.handler.insert('test_table', df)
 
         # Verify copy was called with correct SQL
-        copy_sql = 'copy "test_table" ("id","name") from STDIN  WITH CSV'
+        copy_sql = 'copy "test_table" ("id","name") from STDIN WITH CSV'
         mock_cursor.copy.assert_called_once_with(copy_sql)
         mock_conn.commit.assert_called_once()
 

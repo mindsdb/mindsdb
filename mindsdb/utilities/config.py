@@ -201,6 +201,14 @@ class Config:
                     "host": api_host,
                     "port": "55432",
                     "database": "mindsdb"
+                },
+                "mcp": {
+                    "host": api_host,
+                    "port": "47337",
+                    "enabled": True,
+                    "restart_on_failure": True,
+                    "max_restart_count": 1,
+                    "max_restart_interval_seconds": 60
                 }
             },
             "cache": {
@@ -499,7 +507,7 @@ class Config:
 
         for env_name in ('MINDSDB_HTTP_SERVER_TYPE', 'MINDSDB_DEFAULT_SERVER'):
             env_value = os.environ.get(env_name, '')
-            if env_value.lower() not in ('waitress', 'flask', 'gunicorn'):
+            if env_value.lower() not in ('waitress', 'flask', 'gunicorn', ''):
                 logger.warning(
                     f"The value '{env_value}' of the environment variable {env_name} is not valid. "
                     "It must be one of the following: 'waitress', 'flask', or 'gunicorn'."

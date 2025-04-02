@@ -21,10 +21,13 @@ class ToMarkdown:
         # If use_llm is True, llm_client and llm_model must be provided.
         if use_llm and (llm_client is None or llm_model is None):
             raise ValueError('LLM client and model must be provided when use_llm is True.')
+
         # Only OpenAI is supported for now.
+        # TODO: Add support for other LLMs.
         if llm_client is not None and not isinstance(llm_client, OpenAI):
             raise ValueError('Only OpenAI models are supported at the moment.')
-        # TODO: Add support for other LLMs?
+
+        self.use_llm = use_llm
         self.llm_client = llm_client
         self.llm_model = llm_model
 
@@ -33,7 +36,7 @@ class ToMarkdown:
         Converts a file to markdown.
         """
         file_extension = self._get_file_extension(file_path_or_url)
-        file = self._get_file(file_path_or_url)
+        file = self._get_file_content(file_path_or_url)
 
         if file_extension == '.pdf':
             return self._pdf_to_markdown(file)
@@ -42,7 +45,7 @@ class ToMarkdown:
         else:
             return self._other_to_markdown(file)
 
-    def _get_file(self, file_path_or_url: str) -> str:
+    def _get_file_content(self, file_path_or_url: str) -> str:
         """
         Retrieves the content of a file.
         """
@@ -55,7 +58,7 @@ class ToMarkdown:
                 raise RuntimeError(f'Unable to retrieve file from URL: {file_path_or_url}')
         else:
             with open(file_path_or_url, 'rb') as file:
-                return file.read()
+                return BytesIO(file.read())
 
     def _get_file_extension(self, file_path_or_url: str) -> str:
         """
@@ -67,27 +70,24 @@ class ToMarkdown:
         else:
             return os.path.splitext(file_path_or_url)[1]
 
-    def _pdf_to_markdown(self, file: Union[requests.Response, bytes]) -> str:
+    def _pdf_to_markdown(self, file_content: Union[requests.Response, bytes]) -> str:
         """
         Converts a PDF file to markdown.
         """
-        if isinstance(file, requests.Response):
-            file_content = file.content
-        else:
-            file_content = file
-
         if self.llm_client is None:
             return self._pdf_to_markdown_no_llm(file_content)
         else:
             return self._pdf_to_markdown_llm(file_content)
 
-    def _pdf_to_markdown_llm(self, file_content: bytes) -> str:
+    def _pdf_to_markdown_llm(self, file_content: Union[requests.Response, BytesIO]) -> str:
         """
         Converts a PDF file to markdown using LLM.
         The LLM is used mainly for the purpose of generating descriptions of any images in the PDF.
         """
-        pdf_stream = BytesIO(file_content)
-        document = fitz.open(stream=pdf_stream, filetype="pdf")
+        if isinstance(file_content, requests.Response):
+            file_content = BytesIO(file_content.content)
+
+        document = fitz.open(stream=file_content, filetype="pdf")
 
         markdown_content = []
         for page_num in range(len(document)):
@@ -146,7 +146,7 @@ class ToMarkdown:
         description = response.choices[0].message.content
         return description
 
-    def _pdf_to_markdown_no_llm(self, file_content: bytes) -> str:
+    def _pdf_to_markdown_no_llm(self, file_content: Union[requests.Response, BytesIO]) -> str:
         """
         Converts a PDF file to markdown without using LLM.
         """
@@ -154,21 +154,21 @@ class ToMarkdown:
         result = md.convert(file_content)
         return result.markdown
 
-    def _image_to_markdown(self, file: Union[requests.Response, bytes]) -> str:
+    def _image_to_markdown(self, file_content: Union[requests.Response, BytesIO]) -> str:
         """
         Converts images to markdown.
         """
-        if self.llm_client is None:
-            raise RuntimeError('LLM client is not initialized.')
+        if not self.use_llm or self.llm_client is None:
+            raise ValueError('LLM client must be enabled to convert images to markdown.')
 
         md = MarkItDown(llm_client=self.llm_client, llm_model=self.llm_model, enable_plugins=True)
-        result = md.convert(file)
+        result = md.convert(file_content)
         return result.markdown
 
-    def _other_to_markdown(self, file: Union[requests.Response, bytes]) -> str:
+    def _other_to_markdown(self, file_content: Union[requests.Response, BytesIO]) -> str:
         """
         Converts other file formats to markdown.
         """
         md = MarkItDown(enable_plugins=True)
-        result = md.convert(file)
+        result = md.convert(file_content)
         return result.markdown

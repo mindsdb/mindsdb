@@ -1,53 +1,14 @@
-import os
-import pytest
-from tempfile import TemporaryDirectory
+from http import HTTPStatus
 
-from mindsdb.api.http.initialize import initialize_app
-from mindsdb.interfaces.storage import db
-from mindsdb.migrations import migrate
-from mindsdb.utilities.config import Config
+from tests.api.http.conftest import create_demo_db, create_dummy_db
 
 
-@pytest.fixture(scope="session", autouse=True)
-def app():
-    old_minds_db_con = ''
-    if 'MINDSDB_DB_CON' in os.environ:
-        old_minds_db_con = os.environ['MINDSDB_DB_CON']
-    with TemporaryDirectory(prefix='projects_test_') as temp_dir:
-        db_path = 'sqlite:///' + os.path.join(temp_dir, 'mindsdb.sqlite3.db')
-        # Need to change env variable for migrate module, since it calls db.init().
-        os.environ['MINDSDB_DB_CON'] = db_path
-        db.init()
-        migrate.migrate_to_head()
-        app = initialize_app(Config(), True, False)
-
-        # Create an integration database.
-        # Make sure to clean up any tables created since they will be created in the actual demo DB.
-        test_client = app.test_client()
-        # From Learning Hub.
-        example_db_data = {
-            'database': {
-                'name': 'example_db',
-                'engine': 'postgres',
-                'parameters': {
-                    "user": "demo_user",
-                    "password": "demo_password",
-                    "host": "samples.mindsdb.com",
-                    "port": "5432",
-                    "database": "demo"
-                }
-            }
-        }
-        response = test_client.post('/api/databases', json=example_db_data, follow_redirects=True)
-        assert '201' in response.status
-
-        yield app
-    os.environ['MINDSDB_DB_CON'] = old_minds_db_con
+TEST_DB_NAME = 'dummy_db'
 
 
-@pytest.fixture()
-def client(app):
-    return app.test_client()
+def test_prepare(client):
+    create_demo_db(client)
+    create_dummy_db(client, TEST_DB_NAME)
 
 
 def test_get_tables(client):
@@ -71,7 +32,7 @@ def test_get_table(client):
 def test_get_table_not_found(client):
     # Get default mindsdb models.
     response = client.get('/api/databases/mindsdb/tables/bloop', follow_redirects=True)
-    assert '404' in response.status
+    assert response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_create_table(client):
@@ -79,13 +40,13 @@ def test_create_table(client):
     table_data = {
         'table': {
             'name': 'test_create_table_house_sales',
-            'select': 'SELECT * FROM example_db.house_sales',
+            'select': 'SELECT * FROM example_db.house_sales limit 10',
             'replace': True
         }
     }
-    response = client.post('/api/databases/example_db/tables', json=table_data, follow_redirects=True)
+    response = client.post(f'/api/databases/{TEST_DB_NAME}/tables', json=table_data, follow_redirects=True)
     # Make sure we use the CREATED HTTP status code.
-    assert '201' in response.status
+    assert response.status_code == HTTPStatus.CREATED
     new_table = response.get_json()
 
     expected_table = {
@@ -95,28 +56,28 @@ def test_create_table(client):
     assert new_table == expected_table
 
     # Clean up.
-    client.delete('/api/databases/example_db/tables/test_create_table_house_sales', follow_redirects=True)
+    client.delete(f'/api/databases/{TEST_DB_NAME}/tables/test_create_table_house_sales', follow_redirects=True)
 
 
 def test_create_table_no_table_aborts(client):
     table_data = {
         'name': 'test_create_table_house_sales',
-        'select': 'SELECT * FROM example_db.house_sales',
+        'select': 'SELECT * FROM example_db.house_sales limit 10',
         'replace': True
     }
-    response = client.post('/api/databases/example_db/tables', json=table_data, follow_redirects=True)
-    assert '400' in response.status
+    response = client.post(f'/api/databases/{TEST_DB_NAME}/tables', json=table_data, follow_redirects=True)
+    assert response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_create_table_no_name_aborts(client):
     table_data = {
         'table': {
-            'select': 'SELECT * FROM example_db.house_sales',
+            'select': 'SELECT * FROM example_db.house_sales limit 10',
             'replace': True
         }
     }
-    response = client.post('/api/databases/example_db/tables', json=table_data, follow_redirects=True)
-    assert '400' in response.status
+    response = client.post(f'/api/databases/{TEST_DB_NAME}/tables', json=table_data, follow_redirects=True)
+    assert response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_create_table_no_select_aborts(client):
@@ -126,42 +87,42 @@ def test_create_table_no_select_aborts(client):
             'replace': True
         }
     }
-    response = client.post('/api/databases/example_db/tables', json=table_data, follow_redirects=True)
-    assert '400' in response.status
+    response = client.post(f'/api/databases/{TEST_DB_NAME}/tables', json=table_data, follow_redirects=True)
+    assert response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_create_table_in_project_aborts(client):
     table_data = {
         'table': {
             'name': 'test_create_table_house_sales',
-            'select': 'SELECT * FROM example_db.house_sales',
+            'select': 'SELECT * FROM example_db.house_sales limit 10',
             'replace': True
         }
     }
     response = client.post('/api/databases/mindsdb/tables', json=table_data, follow_redirects=True)
-    assert '400' in response.status
+    assert response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_create_table_already_exists_aborts(client):
     table_data = {
         'table': {
             'name': 'test_create_table_already_exists_aborts',
-            'select': 'SELECT * FROM example_db.house_sales',
+            'select': 'SELECT * FROM example_db.house_sales limit 10',
             'replace': False
         }
     }
-    response = client.post('/api/databases/example_db/tables', json=table_data, follow_redirects=True)
-    assert '201' in response.status
-    response = client.post('/api/databases/example_db/tables', json=table_data, follow_redirects=True)
-    assert '409' in response.status
+    response = client.post(f'/api/databases/{TEST_DB_NAME}/tables', json=table_data, follow_redirects=True)
+    assert response.status_code == HTTPStatus.CREATED
+    response = client.post(f'/api/databases/{TEST_DB_NAME}/tables', json=table_data, follow_redirects=True)
+    assert response.status_code == HTTPStatus.CONFLICT
 
     # Replace table should work fine if it already exists.
     table_data['table']['replace'] = True
-    response = client.post('/api/databases/example_db/tables', json=table_data, follow_redirects=True)
-    assert '201' in response.status
+    response = client.post(f'/api/databases/{TEST_DB_NAME}/tables', json=table_data, follow_redirects=True)
+    assert response.status_code == HTTPStatus.CREATED
 
     # Clean up.
-    client.delete('/api/databases/example_db/tables/test_create_table_already_exists_aborts', follow_redirects=True)
+    client.delete(f'/api/databases/{TEST_DB_NAME}/tables/test_create_table_already_exists_aborts', follow_redirects=True)
 
 
 def test_create_table_invalid_select_aborts(client):
@@ -172,62 +133,62 @@ def test_create_table_invalid_select_aborts(client):
             'replace': True
         }
     }
-    response = client.post('/api/databases/example_db/tables', json=table_data, follow_redirects=True)
-    assert '400' in response.status
+    response = client.post(f'/api/databases/{TEST_DB_NAME}/tables', json=table_data, follow_redirects=True)
+    assert response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def create_table_database_not_found_aborts(client):
     table_data = {
         'table': {
             'name': 'test_create_table_house_sales',
-            'select': 'SELECT * FROM example_db.house_sales',
+            'select': 'SELECT * FROM example_db.house_sales limit 10',
             'replace': True
         }
     }
     response = client.post('/api/databases/missingdb/tables', json=table_data, follow_redirects=True)
-    assert '404' in response.status
+    assert response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_create_table_bad_select_aborts(client):
     table_data = {
         'table': {
             'name': 'test_create_table_house_sales',
-            'select': 'SELECT wattt FROM example_db.house_sales',
+            'select': 'SELECT wattt FROM example_db.house_sales limit 10',
             'replace': True
         }
     }
-    response = client.post('/api/databases/example_db/tables', json=table_data, follow_redirects=True)
-    assert '400' in response.status
+    response = client.post(f'/api/databases/{TEST_DB_NAME}/tables', json=table_data, follow_redirects=True)
+    assert response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_delete_table(client):
     table_data = {
         'table': {
             'name': 'test_delete_table',
-            'select': 'SELECT * FROM example_db.house_sales',
+            'select': 'SELECT * FROM example_db.house_sales limit 10',
             'replace': True
         }
     }
-    response = client.post('/api/databases/example_db/tables', json=table_data, follow_redirects=True)
-    assert '201' in response.status
+    response = client.post(f'/api/databases/{TEST_DB_NAME}/tables', json=table_data, follow_redirects=True)
+    assert response.status_code == HTTPStatus.CREATED
 
-    response = client.delete('/api/databases/example_db/tables/test_delete_table', follow_redirects=True)
-    assert '204' in response.status
+    response = client.delete(f'/api/databases/{TEST_DB_NAME}/tables/test_delete_table', follow_redirects=True)
+    assert response.status_code == HTTPStatus.NO_CONTENT
 
-    response = client.get('/api/databases/example_db/tables/test_delete_table', follow_redirects=True)
-    assert '404' in response.status
+    response = client.get(f'/api/databases/{TEST_DB_NAME}/tables/test_delete_table', follow_redirects=True)
+    assert response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_delete_project_table_aborts(client):
     response = client.delete('/api/databases/mindsdb/tables/models', follow_redirects=True)
-    assert '400' in response.status
+    assert response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_delete_table_database_not_found_aborts(client):
     response = client.delete('/api/databases/databb/tables/models', follow_redirects=True)
-    assert '404' in response.status
+    assert response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_delete_table_not_found_aborts(client):
     response = client.delete('/api/databases/example_db/tables/nonexistent_table', follow_redirects=True)
-    assert '404' in response.status
+    assert response.status_code == HTTPStatus.NOT_FOUND

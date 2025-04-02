@@ -1,10 +1,9 @@
-from http import HTTPStatus
-import tempfile
 import time
+import shutil
+import tempfile
+from http import HTTPStatus
 from typing import Dict
 from pathlib import Path
-import shutil
-from sqlalchemy.exc import NoResultFound
 
 from flask import request
 from flask_restx import Resource
@@ -337,7 +336,7 @@ class TablesList(Resource):
                 HTTPStatus.BAD_REQUEST, 'Error',
                 error_message
             )
-        except NoResultFound:
+        except EntityNotExistsError:
             # Only support creating tables from integrations.
             pass
 
@@ -419,7 +418,7 @@ class TableResource(Resource):
                 + f'If you want to delete a model or view, use the projects/{database_name}/models/{table_name} or ' \
                 + f'projects/{database_name}/views/{table_name} endpoints instead.'
             return http_error(HTTPStatus.BAD_REQUEST, 'Error', error_message)
-        except NoResultFound:
+        except EntityNotExistsError:
             # Only support dropping tables from integrations.
             pass
 

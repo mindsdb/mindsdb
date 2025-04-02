@@ -49,7 +49,7 @@ Required connection parameters include the following:
 Establish a connection to YouTube from MindsDB by executing the below SQL command and following the Google authorization link provided as output:
 
 ```sql
-CREATE DATABASE mindsdb_youtube_oauth
+CREATE DATABASE mindsdb_youtube
 WITH ENGINE = 'youtube',
 PARAMETERS = {
   "credentials_file": "path-to-credentials-json-file"
@@ -81,15 +81,17 @@ Required connection parameters include one of the following:
         - Search for YouTube Data API v3 and enable it.
 
       - Go to OAuth consent screen:
-        - Choose user type as External and click on Create.
+        - Click on GET STARTED.
         - Provide app name and support email.
-        - In Scopes, add the following scopes: `../auth/youtube`, `.../auth/youtube.force-ssl`, `.../auth/youtubepartner`.
-        - Next, add test users.
-        - Save and continue.
+        - Choose Audience based on who will be using the app.
+        - Add the Contact Information (email address) of the developer.
+        - Agree to the terms and click on CONTINUE.
+        - Click on Create.
+        - Click on Audience on the left sidebar and under Test users, add the email addresses of the users who will be testing the app. When you are ready to publish the app, you can come back here and click on PUBLISH APP and this app will become available to either the organization or the public based on the audience you have chosen.
 
       - Go to Credentials:
         - Click on CREATE CREDENTIALS from the top bar and choose OAuth client ID.
-        - Choose type as `Web application` and provide a name. In the Authorized redirect URIs, add the following: `http://localhost/verify-auth`, `https://cloud.mindsdb.com/verify-auth`, `http://127.0.0.1:47334/verify-auth`
+        - Choose type as `Web application` and provide a name. Under Authorized redirect URIs, enter URL where MindsDB has been deployed followed by `/verify-auth`. For example, if you are running MindsDB locally (on `https://localhost:47334`), enter `https://localhost:47334/verify-auth`.
         - Click on CREATE.
         - Download the JSON file that is required to connect YouTube to MindsDB.
 </Accordion>
@@ -144,6 +146,6 @@ Here, the `video_id` column is mandatory in the `WHERE` clause.
 With the connection option 2, you can insert replies to comments:
 
 ```sql
-INSERT INTO mindsdb_youtube_oauth.comments (comment_id, reply)
+INSERT INTO mindsdb_youtube.comments (comment_id, reply)
 VALUES ("comment_id", "reply message");
 ```

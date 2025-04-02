@@ -1,99 +1,61 @@
-# Confluence Handler
+---
+title: Confluence
+sidebarTitle: Confluence
+---
 
-Confluence handler for MindsDB provides interfaces to connect with Confluence via APIs and pull confluence data into MindsDB.
+This documentation describes the integration of MindsDB with [Confluence](https://www.atlassian.com/software/confluence), a popular collaboration and documentation tool developed by Atlassian.
+The integration allows MindsDB to access data from Confluence and enhance it with AI capabilities.
 
-## Confluence
+## Prerequisites
 
-Confluence is a collaborative documentation tool,it can be used to host Wiki pages. In this handler,python client of api is used and more information about this python client can be found [here](https://pypi.org/project/atlassian-python-api/)
+Before proceeding, ensure the following prerequisites are met:
 
-## Confluence Handler Initialization
+1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
 
-The Confluence handler is initialized with the following parameters:
+## Connection
 
-- `url`: Confluence hosted url instance
-- `confluence_api_token`: Confluence API key to use for authentication
+Establish a connection to Confluence from MindsDB by executing the following SQL command and providing its [handler name](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/confluence_handler) as an engine.
 
-Please follow this [link](https://docs.searchunify.com/Content/Content-Sources/Atlassian-Jira-Confluence-Authentication-Create-API-Token.htm) to generate the token for accessing confluence API
-
-## Implemented Features
-
-- [x] Confluence spaces table for a given confluence hosted url instance
-  - [x] Support LIMIT
-  - [x] Support WHERE
-  - [x] Support ORDER BY
-  - [x] Support column selection
-
-## Example Usage
-
-The first step is to create a database with the new `confluence` engine.
-
-~~~~sql
-CREATE DATABASE mindsdb_confluence
+```sql
+CREATE DATABASE confluence_datasource
 WITH
     ENGINE = 'confluence',
     PARAMETERS = {
-    "url": "https://marios.atlassian.net/",
-    "username": "your_username",
-    "password":"access_token"
+        "api_base": "https://example.atlassian.net",
+        "username": "john.doe@example.com",
+        "password": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
     };
-~~~~
+```
 
-Use the established connection to query your database:
+Required connection parameters include the following:
 
-~~~~sql
-SELECT * FROM mindsdb_confluence.pages
-WHERE space='space';
-~~~~
+* `api_base`: The base URL for your Confluence instance/server.
+* `username`: The email address associated with your Confluence account.
+* `password`: The API token generated for your Confluence account.
 
-Advanced queries for the confluence handler
+<Tip>
+Refer this [guide](https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/) for instructions on how to create API tokens for your account.
+</Tip>
 
-~~~~sql
-SELECT id,title,body
-FROM mindsdb_confluence.pages
-WHERE space='space'
-ORDER BY id ASC, title DESC
-LIMIT 10
-~~~~
+## Usage
 
-## CRUD Operations
+Retrieve data from a specified table by providing the integration and table names:
 
-The engine supports CRUD operations using SQL queries on the `pages` Content Type.
-Here is the format for the queries:
+```sql
+SELECT *
+FROM confluence_datasource.table_name
+LIMIT 10;
+```
 
-~~~~sql
-SELECT * FROM mindsdb_confluence.pages
-WHERE space='space';
-~~~~
+<Note>
+The above example utilize `confluence_datasource` as the datasource name, which is defined in the `CREATE DATABASE` command.
+</Note>
 
-You need to specify the name of the space to view all the pages in that space.
+## Supported Tables
 
-To select a single page, you can use the `id` column:
-~~~~sql
-SELECT * FROM mindsdb_confluence.pages
-WHERE space='space' AND id=123456;
-~~~~
-
-~~~~sql
-INSERT INTO confluence_data.pages ('space', 'title', 'body')
-VALUES
-('DEMO', 'test title # 1', 'test body # 1'),
-('DEMO', 'test title # 2', 'test body # 2'),
-('DEMO', 'test title # 3', 'test body # 3')
-~~~~
-
-You need to specify the name of the space, title and body of the page to create a new page in that space.
-
-~~~~sql
-UPDATE confluence_data.pages
-SET title='New Title', body='This is the new body'
-WHERE id=123456;
-~~~~
-
-You need to specify the id of the page to update the title and body of the page.
-
-~~~~sql
-DELETE FROM confluence_data.pages
-WHERE id=123456;
-~~~~
-
-You need to specify the id of the page to delete the page.
+* `spaces`: The table containing information about the spaces in Confluence.
+* `pages`: The table containing information about the pages in Confluence.
+* `blogposts`: The table containing information about the blog posts in Confluence.
+* `whiteboards`: The table containing information about the whiteboards in Confluence.
+* `databases`: The table containing information about the databases in Confluence.
+* `tasks`: The table containing information about the tasks in Confluence.

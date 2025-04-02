@@ -294,16 +294,23 @@ class LangChainRAGPipeline:
         retriever = SQLRetriever(
             fallback_retriever=vector_store_retriever,
             vector_store_handler=knowledge_base_table.get_vector_db(),
-            metadata_schemas=retriever_config.metadata_schemas,
-            examples=retriever_config.examples,
+            min_k=retriever_config.min_k,
+            max_filters=retriever_config.max_filters,
+            filter_threshold=retriever_config.filter_threshold,
+            database_schema=retriever_config.database_schema,
             embeddings_model=embeddings,
+            search_kwargs=config.search_kwargs,
             rewrite_prompt_template=retriever_config.rewrite_prompt_template,
-            metadata_filters_prompt_template=retriever_config.metadata_filters_prompt_template,
+            table_prompt_template=retriever_config.table_prompt_template,
+            column_prompt_template=retriever_config.column_prompt_template,
+            value_prompt_template=retriever_config.value_prompt_template,
+            boolean_system_prompt=retriever_config.boolean_system_prompt,
+            generative_system_prompt=retriever_config.generative_system_prompt,
             num_retries=retriever_config.num_retries,
             embeddings_table=knowledge_base_table._kb.vector_database_table,
             source_table=retriever_config.source_table,
+            source_id_column=retriever_config.source_id_column,
             distance_function=distance_function,
-            search_kwargs=config.search_kwargs,
             llm=sql_llm
         )
         return cls(

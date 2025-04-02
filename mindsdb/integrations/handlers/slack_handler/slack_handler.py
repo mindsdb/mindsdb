@@ -267,7 +267,8 @@ class SlackHandler(APIChatHandler):
         user_info = web_connection.auth_test().data
         return user_info['bot_id']
 
-    def subscribe(self, stop_event: threading.Event, callback: Callable, table_name: Text, columns: List = None, **kwargs: Any) -> None:
+    def subscribe(self, stop_event: threading.Event, callback: Callable, table_name: Text = 'messages',
+                  columns: List = None, **kwargs: Any) -> None:
         """
         Subscribes to the Slack API using the Socket Mode for real-time responses to messages.
 

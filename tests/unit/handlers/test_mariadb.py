@@ -42,7 +42,14 @@ class TestMariaDBHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
     @property
     def get_columns_query(self):
-        return f"DESCRIBE `{self.mock_table}`;"
+        return f"""
+            select
+                COLUMN_NAME AS FIELD, DATA_TYPE AS TYPE
+            from
+                information_schema.columns
+            where
+                table_name = '{self.mock_table}'
+        """
 
     def create_handler(self):
         return MariaDBHandler('mariadb', connection_data=self.dummy_connection_data)

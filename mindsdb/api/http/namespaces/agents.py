@@ -47,7 +47,7 @@ def create_agent(project_name, name, agent):
 
     try:
         existing_agent = agents_controller.get_agent(name, project_name=project_name)
-    except ValueError:
+    except (ValueError, EntityNotExistsError):
         # Project must exist.
         return http_error(
             HTTPStatus.NOT_FOUND,
@@ -141,7 +141,7 @@ class AgentResource(Resource):
                     f'Agent with name {agent_name} does not exist'
                 )
             return existing_agent.as_dict()
-        except ValueError:
+        except (ValueError, EntityNotExistsError):
             # Project needs to exist.
             return http_error(
                 HTTPStatus.NOT_FOUND,
@@ -173,7 +173,11 @@ class AgentResource(Resource):
                 f'Project with name {project_name} does not exist'
             )
         if existing_agent_record is None:
-            raise Exception
+            return http_error(
+                HTTPStatus.BAD_REQUEST,
+                'Creation is not allowed',
+                'Creation of an agent using the PUT method is not allowed.'
+            )
 
         agent = request.json['agent']
         name = agent.get('name', None)
@@ -272,7 +276,7 @@ class AgentResource(Resource):
                     'Agent not found',
                     f'Agent with name {agent_name} does not exist'
                 )
-        except ValueError:
+        except (ValueError, EntityNotExistsError):
             # Project needs to exist.
             return http_error(
                 HTTPStatus.NOT_FOUND,
@@ -292,13 +296,6 @@ def _completion_event_generator(
 
     def json_serialize(data):
         return f'data: {json.dumps(data)}\n\n'
-
-    quick_response_message = {
-        'role': 'assistant',
-        'content': AGENT_QUICK_RESPONSE
-    }
-    yield json_serialize({"quick_response": True, "messages": [quick_response_message]})
-    logger.info("Quick response sent")
 
     try:
         # Populate API key by default if not present.
@@ -442,7 +439,7 @@ class AgentCompletions(Resource):
                     'Agent not found',
                     f'Agent with name {agent_name} does not exist'
                 )
-        except ValueError:
+        except (ValueError, EntityNotExistsError):
             # Project needs to exist.
             return http_error(
                 HTTPStatus.NOT_FOUND,

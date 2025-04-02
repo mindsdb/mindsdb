@@ -99,4 +99,4 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
         Returns:
             bytes: The content of the specified item.
         """
-        return self.fetch_data(f"me/drive/root:/{path}:/content")
+        return self.fetch_data_content(f"me/drive/root:/{path}:/content")

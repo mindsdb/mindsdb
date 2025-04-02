@@ -1,8 +1,4 @@
-import os
-
 import pandas as pd
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
@@ -11,12 +7,20 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
 )
+from mindsdb.utilities.config import Config
 from mindsdb.utilities import log
-logger = log.getLogger(__name__)
-
-from mindsdb.integrations.handlers.gmail_handler.utils import AuthException, google_auth_flow, save_creds_to_file
+from mindsdb.integrations.utilities.handlers.auth_utilities import GoogleUserOAuth2Manager
+from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import AuthException
 
 from .google_calendar_tables import GoogleCalendarEventsTable
+
+DEFAULT_SCOPES = [
+    'https://www.googleapis.com/auth/calendar',
+    'https://www.googleapis.com/auth/calendar.events',
+    'https://www.googleapis.com/auth/calendar.readonly'
+]
+
+logger = log.getLogger(__name__)
 
 
 class GoogleCalendarHandler(APIHandler):
@@ -35,19 +39,28 @@ class GoogleCalendarHandler(APIHandler):
             events (GoogleCalendarEventsTable): The `GoogleCalendarEventsTable` object for interacting with the events table.
         """
         super().__init__(name)
-
-        self.token = None
-        self.service = None
         self.connection_data = kwargs.get('connection_data', {})
-        self.credentials_file = self.connection_data['credentials']
-        self.scopes = [
-            'https://www.googleapis.com/auth/calendar',
-            'https://www.googleapis.com/auth/calendar.events',
-            'https://www.googleapis.com/auth/calendar.readonly'
-        ]
+
+        self.service = None
         self.is_connected = False
 
         self.handler_storage = kwargs['handler_storage']
+
+        self.credentials_url = self.connection_data.get('credentials_url', None)
+        self.credentials_file = self.connection_data.get('credentials_file', None)
+        if self.connection_data.get('credentials'):
+            self.credentials_file = self.connection_data.pop('credentials')
+        if not self.credentials_file and not self.credentials_url:
+            # try to get from config
+            gcalendar_config = Config().get('handlers', {}).get('youtube', {})
+            secret_file = gcalendar_config.get('credentials_file')
+            secret_url = gcalendar_config.get('credentials_url')
+            if secret_file:
+                self.credentials_file = secret_file
+            elif secret_url:
+                self.credentials_url = secret_url
+
+        self.scopes = self.connection_data.get('scopes', DEFAULT_SCOPES)
 
         events = GoogleCalendarEventsTable(self)
         self.events = events
@@ -64,32 +77,8 @@ class GoogleCalendarHandler(APIHandler):
         if self.is_connected is True:
             return self.service
 
-        secret_file = self.credentials_file
-
-        curr_dir = self.handler_storage.folder_get('config')
-
-        creds_file = None
-        try:
-            creds_file = os.path.join(curr_dir, 'secret.json')
-        except Exception:
-            pass
-
-        creds = None
-        if os.path.isfile(creds_file):
-            creds = Credentials.from_authorized_user_file(creds_file, self.scopes)
-
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-
-                save_creds_to_file(creds, creds_file)
-                self.handler_storage.folder_sync('config')
-
-            else:
-                creds = google_auth_flow(secret_file, self.scopes, self.connection_data.get('code'))
-
-                save_creds_to_file(creds, creds_file)
-                self.handler_storage.folder_sync('config')
+        google_oauth2_manager = GoogleUserOAuth2Manager(self.handler_storage, self.scopes, self.credentials_file, self.credentials_url, self.connection_data.get('code'))
+        creds = google_oauth2_manager.get_oauth2_credentials()
 
         self.service = build('calendar', 'v3', credentials=creds)
         return self.service
@@ -106,6 +95,7 @@ class GoogleCalendarHandler(APIHandler):
         try:
             self.connect()
             response.success = True
+            response.copy_storage = True
 
         except AuthException as error:
             response.error_message = str(error)

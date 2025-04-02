@@ -4,29 +4,29 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 
 
 connection_args = OrderedDict(
-    url={
+    api_base={
         "type": ARG_TYPE.URL,
-        "description": "Confluence URL",
-        "label": "url",
+        "description": "The base URL of the Confluence instance/server.",
+        "label": "Base URL",
         "required": True
     },
     username={
         "type": ARG_TYPE.STR,
-        "description": "Confluence username",
-        "label": "username",
+        "description": "The username for the Confluence account.",
+        "label": "Username",
         "required": True
     },
     password={
         "type": ARG_TYPE.STR,
-        "description": "Password",
-        "label": "password",
+        "description": "The API token for the Confluence account.",
+        "label": "Password",
         "required": True,
         "secret": True
     }
 )
 
 connection_args_example = OrderedDict(
-    url="https://marios.atlassian.net/",
+    api_base="https://marios.atlassian.net/",
     username="your_username",
     password="access_token"
 )

@@ -58,6 +58,7 @@ Optional connection parameters include the following:
  * `ssl_ca`:  Specifies the path to the Certificate Authority (CA) file in PEM format. 
  * `ssl_cert`:  Specifies the path to the SSL certificate file. This certificate should be signed by a trusted CA specified in the `ssl_ca` file or be a self-signed certificate trusted by the server.
  * `ssl_key`: Specifies the path to the private key file (in PEM format).
+ * `use_pure` (`True` by default): Whether to use pure Python or C Extension. If `use_pure=False` and the C Extension is not available, then Connector/Python will automatically fall back to the pure Python implementation.
 
 ## Usage
 

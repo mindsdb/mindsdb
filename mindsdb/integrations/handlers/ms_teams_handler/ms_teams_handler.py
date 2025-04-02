@@ -1,31 +1,56 @@
-from typing import Text, Dict, Callable
+from typing import Callable, Dict, Text, Callable, Union
 
 from botbuilder.schema import Activity, ActivityTypes
 from botbuilder.schema import ChannelAccount
 from botframework.connector import ConnectorClient
 from botframework.connector.auth import MicrosoftAppCredentials
-from mindsdb.utilities import log
-from mindsdb_sql_parser import parse_sql
+import msal
+from requests.exceptions import RequestException
 
+from mindsdb.integrations.handlers.ms_teams_handler.ms_graph_api_teams_client import (
+    MSGraphAPIBaseClient,
+    MSGraphAPITeamsApplicationPermissionsClient,
+    MSGraphAPITeamsDelegatedPermissionsClient
+)
+from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_tables import (
+    ChannelsTable, ChannelMessagesTable, ChatsTable, ChatMessagesTable, TeamsTable
+)
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
 from mindsdb.integrations.libs.api_handler import APIChatHandler
+from mindsdb.integrations.utilities.handlers.auth_utilities import (
+    MSGraphAPIApplicationPermissionsManager,
+    MSGraphAPIDelegatedPermissionsManager
+)
+from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import AuthException
 from mindsdb.interfaces.chatbot.types import ChatBotMessage
+from mindsdb.utilities import log
+
 
 logger = log.getLogger(__name__)
 
 
+def chatbot_only(func):
+    def wrapper(self, *args, **kwargs):
+        if self.connection_data.get('opertion_mode', 'datasource') != 'chatbot':
+            raise ValueError("This connection can only be used as a data source. Please use a chatbot connection by setting the 'mode' parameter to 'chat'.")
+        return func(self, *args, **kwargs)
+    return wrapper
+
+
 class MSTeamsHandler(APIChatHandler):
     """
-    The Microsoft Teams handler implementation.
+    This handler handles the connection and execution of SQL statements on Microsoft Teams via the Microsoft Graph API.
+    It is also responsible for handling the chatbot functionality.
     """
 
     name = 'teams'
 
     def __init__(self, name: str, **kwargs):
         """
-        Initialize the handler.
+        Initializes the handler.
+
         Args:
             name (str): name of particular handler instance
             **kwargs: arbitrary keyword arguments.
@@ -34,6 +59,7 @@ class MSTeamsHandler(APIChatHandler):
 
         connection_data = kwargs.get("connection_data", {})
         self.connection_data = connection_data
+        self.handler_storage = kwargs['handler_storage']
         self.kwargs = kwargs
 
         self.connection = None
@@ -44,22 +70,80 @@ class MSTeamsHandler(APIChatHandler):
         self.bot_id = None
         self.conversation_id = None
 
-    def connect(self) -> MicrosoftAppCredentials:
+    def connect(self) -> Union[MicrosoftAppCredentials, MSGraphAPIBaseClient]:
         """
-        Set up the connection required by the handler.
+        Establishes a connection to the Microsoft Teams registered app or the Microsoft Graph API.
 
-        Returns
-        -------
-        MicrosoftAppCredentials
-            Client object for interacting with the Microsoft Teams app.
+        Returns:
+            Union[MicrosoftAppCredentials, MSGraphAPITeamsDelegatedPermissionsClient]: A connection object to the Microsoft Teams registered app or the Microsoft Graph API.
         """
         if self.is_connected:
             return self.connection
 
-        self.connection = MicrosoftAppCredentials(
-            app_id=self.connection_data["client_id"],
-            password=self.connection_data["client_secret"]
-        )
+        # The default operation mode is 'datasource'. This is used for data source connections.
+        operation_mode = self.connection_data.get('operation_mode', 'datasource')
+        if operation_mode == 'datasource':
+            # Initialize the token cache.
+            cache = msal.SerializableTokenCache()
+
+            # Load the cache from file if it exists.
+            cache_file = 'cache.bin'
+            try:
+                cache_content = self.handler_storage.file_get(cache_file)
+            except FileNotFoundError:
+                cache_content = None
+
+            if cache_content:
+                cache.deserialize(cache_content)
+
+            # The default permissions mode is 'delegated'. This requires the user to sign in.
+            permission_mode = self.connection_data.get('permission_mode', 'delegated')
+            if permission_mode == 'delegated':
+                permissions_manager = MSGraphAPIDelegatedPermissionsManager(
+                    client_id=self.connection_data['client_id'],
+                    client_secret=self.connection_data['client_secret'],
+                    tenant_id=self.connection_data['tenant_id'],
+                    cache=cache,
+                    code=self.connection_data.get('code')
+                )
+
+            elif permission_mode == 'application':
+                permissions_manager = MSGraphAPIApplicationPermissionsManager(
+                    client_id=self.connection_data['client_id'],
+                    client_secret=self.connection_data['client_secret'],
+                    tenant_id=self.connection_data['tenant_id'],
+                    cache=cache
+                )
+
+            else:
+                raise ValueError("The supported permission modes are 'delegated' and 'application'.")
+
+            access_token = permissions_manager.get_access_token()
+
+            # Save the cache back to file if it has changed.
+            if cache.has_state_changed:
+                self.handler_storage.file_set(cache_file, cache.serialize().encode('utf-8'))
+
+            if permission_mode == 'delegated':
+                self.connection = MSGraphAPITeamsDelegatedPermissionsClient(access_token)
+
+            else:
+                self.connection = MSGraphAPITeamsApplicationPermissionsClient(access_token)
+
+            self._register_table('channels', ChannelsTable(self))
+            self._register_table('channel_messages', ChannelMessagesTable(self))
+            self._register_table('chats', ChatsTable(self))
+            self._register_table('chat_messages', ChatMessagesTable(self))
+            self._register_table('teams', TeamsTable(self))
+
+        elif operation_mode == 'chatbot':
+            self.connection = MicrosoftAppCredentials(
+                self.connection_data['app_id'],
+                self.connection_data['app_password']
+            )
+
+        else:
+            raise ValueError("The supported operation modes are 'datasource' and 'chatbot'.")
 
         self.is_connected = True
 
@@ -67,54 +151,44 @@ class MSTeamsHandler(APIChatHandler):
 
     def check_connection(self) -> StatusResponse:
         """
-        Check connection to the handler.
+        Checks the status of the connection to Microsoft Teams.
 
-        Returns
-        -------
-        StatusResponse
-            Response object with the status of the connection.
+        Returns:
+            StatusResponse: An object containing the success status and an error message if an error occurs.
         """
         response = StatusResponse(False)
 
         try:
-            self.connect()
-            response.success = True
-        except Exception as e:
-            logger.error(f'Error connecting to Microsoft Teams: {e}!')
-            response.success = False
-            response.error_message = str(e)
+            connection = self.connect()
+            # A connection check against the Microsoft Graph API is run if the connection is in 'datasource' mode.
+            if self.connection_data.get('operation_mode', 'datasource') == 'datasource' and connection.check_connection():
+                response.success = True
+                response.copy_storage = True
+            else:
+                raise RequestException("Connection check failed!")
+        except (ValueError, RequestException) as known_error:
+            logger.error(f'Connection check to Microsoft Teams failed, {known_error}!')
+            response.error_message = str(known_error)
+        except AuthException as error:
+            response.error_message = str(error)
+            response.redirect_url = error.auth_url
+            return response
+        except Exception as unknown_error:
+            logger.error(f'Connection check to Microsoft Teams failed due to an unknown error, {unknown_error}!')
+            response.error_message = str(unknown_error)
 
         self.is_connected = response.success
 
         return response
 
-    def native_query(self, query: Text) -> StatusResponse:
-        """
-        Receive and process a raw query.
-
-        Parameters
-        ----------
-        query: Text
-            Query in the native format.
-
-        Returns
-        -------
-        StatusResponse
-            Response object with the result of the query.
-        """
-        ast = parse_sql(query)
-
-        return self.query(ast)
-    
+    @chatbot_only
     def get_chat_config(self) -> Dict:
         """
-        Get the configuration for the chatbot.
+        Gets the configuration for the chatbot.
         This method is required for the implementation of the chatbot.
 
-        Returns
-        -------
-        Dict
-            Configuration for the chatbot.
+        Returns:
+            Dict: The configuration for the chatbot.
         """
         params = {
             'polling': {
@@ -123,30 +197,26 @@ class MSTeamsHandler(APIChatHandler):
         }
 
         return params
-    
+
+    @chatbot_only
     def get_my_user_name(self) -> Text:
         """
-        Get the name of the signed in user.
+        Gets the name of the signed in user.
         This method is required for the implementation of the chatbot.
 
-        Returns
-        -------
-        Text
-            Name of the signed in user.
+        Returns:
+            Text: The name of the signed in user.
         """
         return None
-    
+
+    @chatbot_only
     def on_webhook(self, request: Dict, callback: Callable) -> None:
         """
-        Handle a webhook request.
+        Handles a webhook request.
 
-        Parameters
-        ----------
-        request: Dict
-            The incoming webhook request.
-
-        callback: Callable
-            Callback function to call after parsing the request.
+        Args:
+            request (Dict): The request data.
+            callback (Callable): The callback function to call.
         """
         self.service_url = request["serviceUrl"]
         self.channel_id = request["channelId"]
@@ -164,15 +234,20 @@ class MSTeamsHandler(APIChatHandler):
             chat_id=request['conversation']['id'],
             message=chat_bot_message
         )    
-            
+
+    @chatbot_only
     def respond(self, message: ChatBotMessage) -> None:
         """
-        Send a response to the chatbot.
+        Sends a response to the chatbot.
 
-        Parameters
-        ----------
-        message: ChatBotMessage
-            The message to send.
+        Args:
+            message (ChatBotMessage): The message to send
+
+        Raises:
+            ValueError: If the chatbot message is not of type DIRECT.
+
+        Returns:
+            None
         """
         credentials = self.connect()
 

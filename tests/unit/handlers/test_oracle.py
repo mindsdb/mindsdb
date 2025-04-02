@@ -34,8 +34,8 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
     def get_columns_query(self):
         return f"""
             SELECT
-                column_name,
-                data_type
+                column_name AS field,
+                data_type AS type
             FROM USER_TAB_COLUMNS
             WHERE table_name = '{self.mock_table}'
         """

@@ -74,7 +74,9 @@ class MLTaskConsumer(BaseRedisQueue):
 
         # region collect cpu usage statistic
         self.cpu_stat = [0] * 10
-        self._collect_cpu_stat_thread = threading.Thread(target=self._collect_cpu_stat)
+        self._collect_cpu_stat_thread = threading.Thread(
+            target=self._collect_cpu_stat, name='MLTaskConsumer._collect_cpu_stat'
+        )
         self._collect_cpu_stat_thread.start()
         # endregion
 
@@ -221,7 +223,7 @@ class MLTaskConsumer(BaseRedisQueue):
             if self._ready_event.is_set() is False:
                 continue
             self._ready_event.clear()
-            threading.Thread(target=self._listen).start()
+            threading.Thread(target=self._listen, name='MLTaskConsumer._listen').start()
         self.stop()
 
     def stop(self) -> None:

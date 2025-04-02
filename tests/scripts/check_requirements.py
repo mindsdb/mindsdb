@@ -122,7 +122,6 @@ PACKAGE_NAME_MAP = {
     "scikit-learn": ["sklearn"],
     "influxdb3-python": ["influxdb_client_3"],
     "hubspot-api-client": ["hubspot"],
-    "pytest-lazy-fixture": ["pytest_lazyfixture"],
     "eventbrite-python": ["eventbrite"],
     "clickhouse-sqlalchemy": ["clickhouse_sqlalchemy"],
     "pillow": ["PIL"],
@@ -138,7 +137,8 @@ PACKAGE_NAME_MAP = {
     "opentelemetry-instrumentation-requests": ["opentelemetry"],
     "opentelemetry-instrumentation-flask": ["opentelemetry"],
     "opentelemetry-distro": ["opentelemetry"],
-    "sqlalchemy-ingres": ["ingres_sa_dialect"]
+    "sqlalchemy-ingres": ["ingres_sa_dialect"],
+    "pyaml": ["yaml"],
 }
 
 # We use this to exit with a non-zero status code if any check fails

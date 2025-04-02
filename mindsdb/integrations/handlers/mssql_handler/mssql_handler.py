@@ -13,8 +13,41 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
+
 
 logger = log.getLogger(__name__)
+
+
+def _map_type(mssql_type_text: str) -> MYSQL_DATA_TYPE:
+    """ Map MSSQL text types names to MySQL types as enum.
+
+    Args:
+        mssql_type_text (str): The name of the MSSQL type to map.
+
+    Returns:
+        MYSQL_DATA_TYPE: The MySQL type enum that corresponds to the MSSQL text type name.
+    """
+    internal_type_name = mssql_type_text.lower()
+    types_map = {
+        ('tinyint', 'smallint', 'int', 'bigint'): MYSQL_DATA_TYPE.INT,
+        ('bit',): MYSQL_DATA_TYPE.BOOL,
+        ('money', 'smallmoney', 'float', 'real'): MYSQL_DATA_TYPE.FLOAT,
+        ('decimal', 'numeric'): MYSQL_DATA_TYPE.DECIMAL,
+        ('date',): MYSQL_DATA_TYPE.DATE,
+        ('time',): MYSQL_DATA_TYPE.TIME,
+        ('datetime2', 'datetimeoffset', 'datetime', 'smalldatetime'): MYSQL_DATA_TYPE.DATETIME,
+        ('varchar', 'nvarchar'): MYSQL_DATA_TYPE.VARCHAR,
+        ('char', 'text', 'nchar', 'ntext'): MYSQL_DATA_TYPE.TEXT,
+        ('binary', 'varbinary', 'image'): MYSQL_DATA_TYPE.BINARY
+    }
+
+    for db_types_list, mysql_data_type in types_map.items():
+        if internal_type_name in db_types_list:
+            return mysql_data_type
+
+    logger.warning(f"MSSQL handler type mapping: unknown type: {internal_type_name}, use VARCHAR as fallback.")
+    return MYSQL_DATA_TYPE.VARCHAR
 
 
 class SqlServerHandler(DatabaseHandler):
@@ -215,4 +248,7 @@ class SqlServerHandler(DatabaseHandler):
             WHERE
                 table_name = '{table_name}'
         """
-        return self.native_query(query)
+        result = self.native_query(query)
+        if result.resp_type is RESPONSE_TYPE.TABLE:
+            result.data_frame['mysql_data_type'] = result.data_frame['Type'].apply(_map_type)
+        return result

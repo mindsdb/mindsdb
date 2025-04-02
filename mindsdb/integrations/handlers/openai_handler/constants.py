@@ -8,7 +8,9 @@ CHAT_MODELS = (
     'gpt-4-32k',
     'gpt-4-1106-preview',
     'gpt-4-0125-preview',
-    'gpt-4o'
+    'gpt-4o',
+    'o3-mini',
+    'o1-mini'
 )
 COMPLETION_MODELS = ('babbage-002', 'davinci-002')
 FINETUNING_MODELS = ('gpt-3.5-turbo', 'babbage-002', 'davinci-002', 'gpt-4')

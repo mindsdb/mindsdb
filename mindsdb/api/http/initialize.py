@@ -6,7 +6,6 @@ import traceback
 import webbrowser
 from pathlib import Path
 from http import HTTPStatus
-from distutils.version import LooseVersion
 
 import requests
 from flask import Flask, url_for, make_response, request, send_from_directory
@@ -14,6 +13,7 @@ from flask.json import dumps
 from flask_compress import Compress
 from flask_restx import Api
 from werkzeug.exceptions import HTTPException
+from packaging.version import Version, parse as parse_version
 
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.api.http.gui import update_static
@@ -48,7 +48,6 @@ from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.json_encoder import CustomJSONProvider
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
-from mindsdb.utilities.telemetry import inject_telemetry_to_static
 from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
 from mindsdb.utilities.otel import trace  # noqa: F401
 from opentelemetry.instrumentation.flask import FlaskInstrumentor  # noqa: F401
@@ -73,7 +72,7 @@ def custom_output_json(data, code, headers=None):
     return resp
 
 
-def get_last_compatible_gui_version() -> LooseVersion:
+def get_last_compatible_gui_version() -> Version:
     logger.debug("Getting last compatible frontend..")
     try:
         res = requests.get('https://mindsdb-web-builds.s3.amazonaws.com/compatible-config.json', timeout=5)
@@ -96,7 +95,7 @@ def get_last_compatible_gui_version() -> LooseVersion:
         logger.error(f"Cant decode compatible-config.json: {e}")
         return False
 
-    current_mindsdb_lv = LooseVersion(mindsdb_version)
+    current_mindsdb_lv = parse_version(mindsdb_version)
 
     try:
         gui_versions = {}
@@ -104,31 +103,31 @@ def get_last_compatible_gui_version() -> LooseVersion:
         max_gui_lv = None
         for el in versions['mindsdb']:
             if el['mindsdb_version'] is None:
-                gui_lv = LooseVersion(el['gui_version'])
+                gui_lv = parse_version(el['gui_version'])
             else:
-                mindsdb_lv = LooseVersion(el['mindsdb_version'])
-                gui_lv = LooseVersion(el['gui_version'])
-                if mindsdb_lv.vstring not in gui_versions or gui_lv > gui_versions[mindsdb_lv.vstring]:
-                    gui_versions[mindsdb_lv.vstring] = gui_lv
+                mindsdb_lv = parse_version(el['mindsdb_version'])
+                gui_lv = parse_version(el['gui_version'])
+                if mindsdb_lv.base_version not in gui_versions or gui_lv > gui_versions[mindsdb_lv.base_version]:
+                    gui_versions[mindsdb_lv.base_version] = gui_lv
                 if max_mindsdb_lv is None or max_mindsdb_lv < mindsdb_lv:
                     max_mindsdb_lv = mindsdb_lv
             if max_gui_lv is None or max_gui_lv < gui_lv:
                 max_gui_lv = gui_lv
 
-        all_mindsdb_lv = [LooseVersion(x) for x in gui_versions.keys()]
+        all_mindsdb_lv = [parse_version(x) for x in gui_versions.keys()]
         all_mindsdb_lv.sort()
 
-        if current_mindsdb_lv.vstring in gui_versions:
-            gui_version_lv = gui_versions[current_mindsdb_lv.vstring]
+        if current_mindsdb_lv.base_version in gui_versions:
+            gui_version_lv = gui_versions[current_mindsdb_lv.base_version]
         elif current_mindsdb_lv > all_mindsdb_lv[-1]:
             gui_version_lv = max_gui_lv
         else:
-            lower_versions = {key: value for key, value in gui_versions.items() if LooseVersion(key) < current_mindsdb_lv}
+            lower_versions = {key: value for key, value in gui_versions.items() if parse_version(key) < current_mindsdb_lv}
             if len(lower_versions) == 0:
-                gui_version_lv = gui_versions[all_mindsdb_lv[0].vstring]
+                gui_version_lv = gui_versions[all_mindsdb_lv[0].base_version]
             else:
-                all_lower_versions = [LooseVersion(x) for x in lower_versions.keys()]
-                gui_version_lv = gui_versions[all_lower_versions[-1].vstring]
+                all_lower_versions = [parse_version(x) for x in lower_versions.keys()]
+                gui_version_lv = gui_versions[all_lower_versions[-1].base_version]
     except Exception as e:
         logger.error(f"Error in compatible-config.json structure: {e}")
         return False
@@ -137,7 +136,7 @@ def get_last_compatible_gui_version() -> LooseVersion:
     return gui_version_lv
 
 
-def get_current_gui_version() -> LooseVersion:
+def get_current_gui_version() -> Version:
     logger.debug("Getting current frontend version..")
     config = Config()
     static_path = Path(config['paths']['static'])
@@ -149,7 +148,7 @@ def get_current_gui_version() -> LooseVersion:
             current_gui_version = f.readline()
 
     current_gui_lv = (
-        None if current_gui_version is None else LooseVersion(current_gui_version)
+        None if current_gui_version is None else parse_version(current_gui_version)
     )
     logger.debug(f"Current frontend version: {current_gui_lv}.")
 
@@ -164,7 +163,7 @@ def initialize_static():
     required_gui_version = config['gui'].get('version')
 
     if required_gui_version is not None:
-        required_gui_version_lv = LooseVersion(required_gui_version)
+        required_gui_version_lv = parse_version(required_gui_version)
         success = True
         if (
             current_gui_version_lv is None
@@ -177,7 +176,7 @@ def initialize_static():
             return False
 
         # ignore versions like '23.9.2.2'
-        if current_gui_version_lv is not None and len(current_gui_version_lv.version) < 3:
+        if current_gui_version_lv is not None and len(current_gui_version_lv.release) < 3:
             if current_gui_version_lv == last_gui_version_lv:
                 return True
         logger.debug("Updating gui..")
@@ -200,7 +199,7 @@ def initialize_app(config, no_studio):
             or gui_exists is False
         )
     ):
-        init_static_thread = threading.Thread(target=initialize_static)
+        init_static_thread = threading.Thread(target=initialize_static, name='initialize_static')
         init_static_thread.start()
 
     app, api = initialize_flask(config, init_static_thread, no_studio)
@@ -420,8 +419,13 @@ def initialize_flask(config, init_static_thread, no_studio):
         logger.info(f" - GUI available at {url}")
 
         pid = os.getpid()
-        x = threading.Thread(target=_open_webbrowser, args=(url, pid, port, init_static_thread, config['paths']['static']), daemon=True)
-        x.start()
+        thread = threading.Thread(
+            target=_open_webbrowser,
+            args=(url, pid, port, init_static_thread, config['paths']['static']),
+            daemon=True,
+            name='open_webbrowser'
+        )
+        thread.start()
 
     return app, api
 
@@ -441,7 +445,6 @@ def _open_webbrowser(url: str, pid: int, port: int, init_static_thread, static_f
     """
     if init_static_thread is not None:
         init_static_thread.join()
-    inject_telemetry_to_static(static_folder)
     try:
         is_http_active = wait_func_is_true(
             func=is_pid_listen_port, timeout=15, pid=pid, port=port

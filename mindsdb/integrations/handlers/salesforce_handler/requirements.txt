@@ -1,1 +1,1 @@
-salesforce_api
+salesforce_api==0.1.45

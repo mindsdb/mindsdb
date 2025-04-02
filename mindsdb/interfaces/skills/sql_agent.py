@@ -287,6 +287,7 @@ class SQLAgent:
         return info
 
     def _get_sample_rows(self, table: str, fields: List[str]) -> str:
+        logger.info(f'_get_sample_rows: table={table} fields={fields}')
         command = f"select {', '.join(fields)} from {table} limit {self._sample_rows_in_table_info};"
         try:
             ret = self._call_engine(command)
@@ -300,7 +301,7 @@ class SQLAgent:
                 map(lambda row: [truncate_value(value) for value in row], sample_rows))
             sample_rows_str = "\n" + list_to_csv_str([fields] + sample_rows)
         except Exception as e:
-            logger.warning(e)
+            logger.info(f'_get_sample_rows error: {e}')
             sample_rows_str = "\n" + "\t [error] Couldn't retrieve sample rows!"
 
         return sample_rows_str
@@ -347,14 +348,18 @@ class SQLAgent:
 
     def get_table_info_safe(self, table_names: Optional[List[str]] = None) -> str:
         try:
+            logger.info(f'get_table_info_safe: {table_names}')
             return self.get_table_info(table_names)
         except Exception as e:
+            logger.info(f'get_table_info_safe error: {e}')
             return f"Error: {e}"
 
     def query_safe(self, command: str, fetch: str = "all") -> str:
         try:
+            logger.info(f'query_safe (fetch={fetch}): {command}')
             return self.query(command, fetch)
         except Exception as e:
+            logger.info(f'query_safe error: {e}')
             msg = f"Error: {e}"
             if 'does not exist' in msg and ' relation ' in msg:
                 msg += '\nAvailable tables: ' + ', '.join(self.get_usable_table_names())

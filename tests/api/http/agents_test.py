@@ -1,94 +1,53 @@
-import os
-import pytest
-from tempfile import TemporaryDirectory
+from http import HTTPStatus
 from unittest.mock import patch
 
 import pandas as pd
 
-from mindsdb.api.http.initialize import initialize_app
-from mindsdb.migrations import migrate
-from mindsdb.interfaces.storage import db
-from mindsdb.utilities.config import Config
+from tests.api.http.conftest import create_demo_db, create_dummy_ml
 
 
-@pytest.fixture(scope="session", autouse=True)
-def app():
-    old_minds_db_con = ''
-    if 'MINDSDB_DB_CON' in os.environ:
-        old_minds_db_con = os.environ['MINDSDB_DB_CON']
-    with TemporaryDirectory(prefix='agents_test_') as temp_dir:
-        db_path = 'sqlite:///' + os.path.join(temp_dir, 'mindsdb.sqlite3.db')
-        # Need to change env variable for migrate module, since it calls db.init().
-        os.environ['MINDSDB_DB_CON'] = db_path
-        db.init()
-        migrate.migrate_to_head()
-        app = initialize_app(Config(), True)
-
-        # Create an integration database.
-        test_client = app.test_client()
-        # From Learning Hub.
-        example_db_data = {
-            'database': {
-                'name': 'example_db',
-                'engine': 'postgres',
-                'parameters': {
-                    "user": "demo_user",
-                    "password": "demo_password",
-                    "host": "samples.mindsdb.com",
-                    "port": "5432",
-                    "database": "demo"
-                }
-            }
-        }
-        response = test_client.post('/api/databases', json=example_db_data, follow_redirects=True)
-        assert '201' in response.status
-
-        # Create model to use in all tests.
-        create_query = '''
+def test_prepare(client):
+    create_demo_db(client)
+    create_dummy_ml(client)
+    # Create model to use in all tests.
+    create_query = '''
         CREATE MODEL mindsdb.test_model
-        FROM example_db (SELECT * FROM demo_data.home_rentals)
+        FROM example_db (SELECT location as answer, sqft FROM demo_data.home_rentals limit 10)
         PREDICT answer
-        '''
-        train_data = {
-            'query': create_query
-        }
-        response = test_client.post('/api/projects/mindsdb/models', json=train_data, follow_redirects=True)
-        assert '201' in response.status
+        USING engine = 'dummy_ml', join_learn_process = true
+    '''
+    train_data = {
+        'query': create_query
+    }
+    response = client.post('/api/projects/mindsdb/models', json=train_data, follow_redirects=True)
+    assert response.status_code == HTTPStatus.CREATED
 
-        # Create skills to use in all tests.
-        create_request = {
-            'skill': {
-                'name': 'test_skill',
-                'type': 'Knowledge Base',
-                'params': {
-                    'k1': 'v1'
-                }
+    # Create skills to use in all tests.
+    create_request = {
+        'skill': {
+            'name': 'test_skill',
+            'type': 'Knowledge Base',
+            'params': {
+                'k1': 'v1'
             }
         }
+    }
 
-        create_response = test_client.post('/api/projects/mindsdb/skills', json=create_request, follow_redirects=True)
-        assert '201' in create_response.status
+    create_response = client.post('/api/projects/mindsdb/skills', json=create_request, follow_redirects=True)
+    assert create_response.status_code == HTTPStatus.CREATED
 
-        create_request = {
-            'skill': {
-                'name': 'test_skill_2',
-                'type': 'Knowledge Base',
-                'params': {
-                    'k1': 'v1'
-                }
+    create_request = {
+        'skill': {
+            'name': 'test_skill_2',
+            'type': 'Knowledge Base',
+            'params': {
+                'k1': 'v1'
             }
         }
+    }
 
-        create_response = test_client.post('/api/projects/mindsdb/skills', json=create_request, follow_redirects=True)
-        assert '201' in create_response.status
-
-        yield app
-    os.environ['MINDSDB_DB_CON'] = old_minds_db_con
-
-
-@pytest.fixture()
-def client(app):
-    return app.test_client()
+    create_response = client.post('/api/projects/mindsdb/skills', json=create_request, follow_redirects=True)
+    assert create_response.status_code == HTTPStatus.CREATED
 
 
 def test_post_agent(client):
@@ -105,7 +64,7 @@ def test_post_agent(client):
     }
 
     create_response = client.post('/api/projects/mindsdb/agents', json=create_request, follow_redirects=True)
-    assert '201' in create_response.status
+    assert create_response.status_code == HTTPStatus.CREATED
 
     created_agent = create_response.get_json()
 
@@ -117,6 +76,7 @@ def test_post_agent(client):
             'k1': 'v1'
         },
         'skills': created_agent['skills'],
+        'skills_extra_parameters': created_agent['skills_extra_parameters'],
         'id': created_agent['id'],
         'project_id': created_agent['project_id'],
         'created_at': created_agent['created_at'],
@@ -138,7 +98,7 @@ def test_post_agent_no_agent(client):
         'skills': ['test_skill']
     }
     create_response = client.post('/api/projects/mindsdb/agents', json=create_request, follow_redirects=True)
-    assert '400' in create_response.status
+    assert create_response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_post_agent_no_name(client):
@@ -152,7 +112,7 @@ def test_post_agent_no_name(client):
         }
     }
     create_response = client.post('/api/projects/mindsdb/agents', json=create_request, follow_redirects=True)
-    assert '400' in create_response.status
+    assert create_response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_post_agent_no_model_name(client):
@@ -166,7 +126,7 @@ def test_post_agent_no_model_name(client):
         }
     }
     create_response = client.post('/api/projects/mindsdb/agents', json=create_request, follow_redirects=True)
-    assert '400' in create_response.status
+    assert create_response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_post_agent_project_not_found(client):
@@ -182,7 +142,7 @@ def test_post_agent_project_not_found(client):
         }
     }
     create_response = client.post('/api/projects/womp/agents', json=create_request, follow_redirects=True)
-    assert '404' in create_response.status
+    assert create_response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_post_agent_model_not_found(client):
@@ -198,7 +158,7 @@ def test_post_agent_model_not_found(client):
         }
     }
     create_response = client.post('/api/projects/mindsdb/agents', json=create_request, follow_redirects=True)
-    assert '404' in create_response.status
+    assert create_response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_post_agent_skill_not_found(client):
@@ -214,7 +174,7 @@ def test_post_agent_skill_not_found(client):
         }
     }
     create_response = client.post('/api/projects/mindsdb/agents', json=create_request, follow_redirects=True)
-    assert '404' in create_response.status
+    assert create_response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_get_agents(client):
@@ -232,14 +192,14 @@ def test_get_agents(client):
     client.post('/api/projects/mindsdb/agents', json=create_request, follow_redirects=True)
 
     get_response = client.get('/api/projects/mindsdb/agents', follow_redirects=True)
-    assert '200' in get_response.status
+    assert get_response.status_code == HTTPStatus.OK
     all_agents = get_response.get_json()
     assert len(all_agents) > 0
 
 
 def test_get_agents_project_not_found(client):
     get_response = client.get('/api/projects/bloop/agents', follow_redirects=True)
-    assert '404' in get_response.status
+    assert get_response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_get_agent(client):
@@ -258,7 +218,7 @@ def test_get_agent(client):
     client.post('/api/projects/mindsdb/agents', json=create_request, follow_redirects=True)
 
     get_response = client.get('/api/projects/mindsdb/agents/test_get_agent', follow_redirects=True)
-    assert '200' in get_response.status
+    assert get_response.status_code == HTTPStatus.OK
     agent = get_response.get_json()
 
     expected_agent = {
@@ -268,6 +228,7 @@ def test_get_agent(client):
             'k1': 'v1'
         },
         'skills': agent['skills'],
+        'skills_extra_parameters': agent['skills_extra_parameters'],
         'id': agent['id'],
         'provider': 'mindsdb',
         'project_id': agent['project_id'],
@@ -280,42 +241,43 @@ def test_get_agent(client):
 
 def test_get_agent_project_not_found(client):
     get_response = client.get('/api/projects/bloop/agents/test_get_agent', follow_redirects=True)
-    assert '404' in get_response.status
+    assert get_response.status_code == HTTPStatus.NOT_FOUND
 
+# At the moment creation via PUT is not allowed
+# def test_put_agent_create(client):
+#     create_request = {
+#         'agent': {
+#             'name': 'test_put_agent_create',
+#             'model_name': 'test_model',
+#             'params': {
+#                 'k1': 'v1'
+#             },
+#             'provider': 'mindsdb',
+#             'skills': ['test_skill']
+#         }
+#     }
 
-def test_put_agent_create(client):
-    create_request = {
-        'agent': {
-            'name': 'test_put_agent_create',
-            'model_name': 'test_model',
-            'params': {
-                'k1': 'v1'
-            },
-            'provider': 'mindsdb',
-            'skills': ['test_skill']
-        }
-    }
+#     put_response = client.put('/api/projects/mindsdb/agents/test_put_agent_create', json=create_request, follow_redirects=True)
+#     assert put_response.status_code == HTTPStatus.CREATED
 
-    put_response = client.put('/api/projects/mindsdb/agents/test_put_agent_create', json=create_request, follow_redirects=True)
-    assert '201' in put_response.status
+#     created_agent = put_response.get_json()
 
-    created_agent = put_response.get_json()
+#     expected_agent = {
+#         'name': 'test_put_agent_create',
+#         'model_name': 'test_model',
+#         'params': {
+#             'k1': 'v1'
+#         },
+#         'provider': 'mindsdb',
+#         'skills': created_agent['skills'],
+#         'skills_extra_parameters': created_agent['skills_extra_parameters'],
+#         'id': created_agent['id'],
+#         'project_id': created_agent['project_id'],
+#         'created_at': created_agent['created_at'],
+#         'updated_at': created_agent['updated_at']
+#     }
 
-    expected_agent = {
-        'name': 'test_put_agent_create',
-        'model_name': 'test_model',
-        'params': {
-            'k1': 'v1'
-        },
-        'provider': 'mindsdb',
-        'skills': created_agent['skills'],
-        'id': created_agent['id'],
-        'project_id': created_agent['project_id'],
-        'created_at': created_agent['created_at'],
-        'updated_at': created_agent['updated_at']
-    }
-
-    assert created_agent == expected_agent
+#     assert created_agent == expected_agent
 
 
 def test_put_agent_update(client):
@@ -333,7 +295,7 @@ def test_put_agent_update(client):
     }
 
     response = client.post('/api/projects/mindsdb/agents', json=create_request, follow_redirects=True)
-    assert '201' in response.status
+    assert response.status_code == HTTPStatus.CREATED
 
     update_request = {
         'agent': {
@@ -359,6 +321,7 @@ def test_put_agent_update(client):
         },
         'provider': 'mindsdb',
         'skills': updated_agent['skills'],
+        'skills_extra_parameters': updated_agent['skills_extra_parameters'],
         'id': updated_agent['id'],
         'project_id': updated_agent['project_id'],
         'created_at': updated_agent['created_at'],
@@ -384,25 +347,26 @@ def test_put_agent_no_agent(client):
     }
 
     response = client.put('/api/projects/mindsdb/agents/test_put_agent_no_agent', json=create_request, follow_redirects=True)
-    assert '400' in response.status
+    assert response.status_code == HTTPStatus.BAD_REQUEST
 
 
-def test_put_agent_model_not_found(client):
-    create_request = {
-        'agent': {
-            'name': 'test_put_agent_model_not_found',
-            'model_name': 'oopsy_daisy',
-            'params': {
-                'k1': 'v1',
-                'k2': 'v2'
-            },
-            'provider': 'mindsdb',
-            'skills': ['test_skill']
-        }
-    }
+# At the moment creation via PUT is not allowed
+# def test_put_agent_model_not_found(client):
+#     create_request = {
+#         'agent': {
+#             'name': 'test_put_agent_model_not_found',
+#             'model_name': 'oopsy_daisy',
+#             'params': {
+#                 'k1': 'v1',
+#                 'k2': 'v2'
+#             },
+#             'provider': 'mindsdb',
+#             'skills': ['test_skill']
+#         }
+#     }
 
-    response = client.put('/api/projects/mindsdb/agents/test_put_agent_model_not_found', json=create_request, follow_redirects=True)
-    assert '404' in response.status
+#     response = client.put('/api/projects/mindsdb/agents/test_put_agent_model_not_found', json=create_request, follow_redirects=True)
+#     assert '404' in response.status
 
 
 def test_delete_agent(client):
@@ -422,20 +386,20 @@ def test_delete_agent(client):
     client.post('/api/projects/mindsdb/agents', json=create_request, follow_redirects=True)
 
     delete_response = client.delete('/api/projects/mindsdb/agents/test_delete_agent', follow_redirects=True)
-    assert '204' in delete_response.status
+    assert delete_response.status_code == HTTPStatus.NO_CONTENT
 
     get_response = client.get('/api/projects/mindsdb/agents/test_delete_agent', follow_redirects=True)
-    assert '404' in get_response.status
+    assert get_response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_delete_agent_project_not_found(client):
     delete_response = client.delete('/api/projects/doop/agents/test_post_agent', follow_redirects=True)
-    assert '404' in delete_response.status
+    assert delete_response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_delete_agent_not_found(client):
     delete_response = client.delete('/api/projects/mindsdb/agents/test_delete_agent_not_found', follow_redirects=True)
-    assert '404' in delete_response.status
+    assert delete_response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_agent_completions(client):
@@ -450,7 +414,7 @@ def test_agent_completions(client):
     }
 
     create_response = client.post('/api/projects/mindsdb/agents', json=create_request, follow_redirects=True)
-    assert '201' in create_response.status
+    assert create_response.status_code == HTTPStatus.CREATED
 
     completions_request = {
         'messages': [
@@ -458,18 +422,18 @@ def test_agent_completions(client):
         ]
     }
 
-    with patch('mindsdb.api.executor.datahub.datahub.InformationSchemaDataNode') as information_schema_datanode_mock:
-        with patch('mindsdb.api.executor.datahub.datanodes.information_schema_datanode.ProjectDataNode') as project_datanode_mock:
-            information_schema_datanode_mock_instance = information_schema_datanode_mock.return_value
-            project_datanode_mock_instance = project_datanode_mock.return_value
-            # Mock underlying model predict return value.
-            project_datanode_mock_instance.predict.return_value = pd.DataFrame([{'answer': 'beepboop'}])
-            information_schema_datanode_mock_instance.get.return_value = project_datanode_mock_instance
-            completions_response = client.post('/api/projects/mindsdb/agents/test_agent/completions', json=completions_request, follow_redirects=True)
+    with patch('mindsdb.interfaces.agents.langchain_agent.LangchainAgent') as agent_mock:
+        agent_mock_instance = agent_mock.return_value
+        agent_mock_instance.get_completion.return_value = pd.DataFrame([{'answer': 'beepboop', 'trace_id': '---'}])
+        completions_response = client.post(
+            '/api/projects/mindsdb/agents/test_agent/completions',
+            json=completions_request,
+            follow_redirects=True
+        )
 
-            assert '200' in completions_response.status
-            message_json = completions_response.get_json()['message']
-            assert message_json['content'] == 'beepboop'
+        assert completions_response.status_code == HTTPStatus.OK
+        message_json = completions_response.get_json()['message']
+        assert message_json['content'] == 'beepboop'
 
 
 def test_agent_completions_project_not_found(client):
@@ -479,7 +443,7 @@ def test_agent_completions_project_not_found(client):
         ]
     }
     completions_response = client.post('/api/projects/bloop/agents/test_agent/completions', json=completions_request, follow_redirects=True)
-    assert '404' in completions_response.status
+    assert completions_response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_agent_completions_bad_request(client):
@@ -489,7 +453,7 @@ def test_agent_completions_bad_request(client):
         ]
     }
     completions_response = client.post('/api/projects/mindsdb/agents/test_agent/completions', json=completions_request, follow_redirects=True)
-    assert '400' in completions_response.status
+    assert completions_response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_agent_completions_agent_not_found(client):
@@ -499,4 +463,4 @@ def test_agent_completions_agent_not_found(client):
         ]
     }
     completions_response = client.post('/api/projects/mindsdb/agents/zoopy_agent/completions', json=completions_request, follow_redirects=True)
-    assert '404' in completions_response.status
+    assert completions_response.status_code == HTTPStatus.NOT_FOUND

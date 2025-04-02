@@ -2,13 +2,12 @@ from http import HTTPStatus
 
 from flask import request
 from flask_restx import Resource
-from sqlalchemy.exc import NoResultFound
-
 
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.metrics.metrics import api_endpoint_metrics
+from mindsdb.utilities.exception import EntityNotExistsError
 
 
 @ns_conf.route('/<project_name>/views')
@@ -20,7 +19,7 @@ class ViewsList(Resource):
         session = SessionController()
         try:
             project = session.database_controller.get_project(project_name)
-        except NoResultFound:
+        except EntityNotExistsError:
             return http_error(
                 HTTPStatus.NOT_FOUND,
                 'Project not found',
@@ -55,7 +54,7 @@ class ViewsList(Resource):
 
         try:
             project = session.database_controller.get_project(project_name)
-        except NoResultFound:
+        except EntityNotExistsError:
             return http_error(HTTPStatus.NOT_FOUND, 'Not found', f'Project name {project_name} does not exist')
 
         if project.get_view(name) is not None:
@@ -82,7 +81,7 @@ class ViewResource(Resource):
         session = SessionController()
         try:
             project = session.database_controller.get_project(project_name)
-        except NoResultFound:
+        except EntityNotExistsError:
             return http_error(HTTPStatus.NOT_FOUND, 'Project not found', f'Project name {project_name} does not exist')
 
         view = project.get_view(view_name)
@@ -106,7 +105,7 @@ class ViewResource(Resource):
         session = SessionController()
         try:
             project = session.database_controller.get_project(project_name)
-        except NoResultFound:
+        except EntityNotExistsError:
             return http_error(HTTPStatus.NOT_FOUND, 'Project not found', f'Project name {project_name} does not exist')
 
         existing_view = project.get_view(view_name)
@@ -143,7 +142,7 @@ class ViewResource(Resource):
         session = SessionController()
         try:
             project = session.database_controller.get_project(project_name)
-        except NoResultFound:
+        except EntityNotExistsError:
             return http_error(HTTPStatus.NOT_FOUND, 'Project not found', f'Project name {project_name} does not exist')
 
         if project.get_view(view_name) is None:

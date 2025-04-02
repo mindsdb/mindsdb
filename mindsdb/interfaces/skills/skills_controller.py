@@ -1,11 +1,15 @@
 import datetime
 from typing import Dict, List, Optional
 
-from sqlalchemy import null
+from sqlalchemy import null, func
 from sqlalchemy.orm.attributes import flag_modified
 
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.utilities.config import config
+
+
+default_project = config.get('default_project')
 
 
 class SkillsController:
@@ -16,7 +20,7 @@ class SkillsController:
             project_controller = ProjectController()
         self.project_controller = project_controller
 
-    def get_skill(self, skill_name: str, project_name: str = 'mindsdb') -> Optional[db.Skills]:
+    def get_skill(self, skill_name: str, project_name: str = default_project) -> Optional[db.Skills]:
         '''
         Gets a skill by name. Skills are expected to have unique names.
 
@@ -33,17 +37,17 @@ class SkillsController:
 
         project = self.project_controller.get(name=project_name)
         return db.Skills.query.filter(
-            db.Skills.name == skill_name,
+            func.lower(db.Skills.name) == func.lower(skill_name),
             db.Skills.project_id == project.id,
             db.Skills.deleted_at == null()
         ).first()
 
-    def get_skills(self, project_name: str) -> List[dict]:
+    def get_skills(self, project_name: Optional[str]) -> List[dict]:
         '''
         Gets all skills in a project.
 
         Parameters:
-            project_name (str): The name of the containing project
+            project_name (Optional[str]): The name of the containing project
 
         Returns:
             all_skills (List[db.Skills]): List of database skill object
@@ -52,11 +56,12 @@ class SkillsController:
             ValueError: If `project_name` does not exist
         '''
 
-        project_controller = ProjectController()
-        projects = project_controller.get_list()
-        if project_name is not None:
-            projects = list([p for p in projects if p.name == project_name])
-        project_ids = list([p.id for p in projects])
+        if project_name is None:
+            projects = self.project_controller.get_list()
+            project_ids = list([p.id for p in projects])
+        else:
+            project = self.project_controller.get(name=project_name)
+            project_ids = [project.id]
 
         query = (
             db.session.query(db.Skills)
@@ -90,7 +95,7 @@ class SkillsController:
             ValueError: If `project_name` does not exist or skill already exists
         '''
         if project_name is None:
-            project_name = 'mindsdb'
+            project_name = default_project
         project = self.project_controller.get(name=project_name)
 
         skill = self.get_skill(name, project_name)
@@ -113,7 +118,7 @@ class SkillsController:
             self,
             skill_name: str,
             new_name: str = None,
-            project_name: str = 'mindsdb',
+            project_name: str = default_project,
             type: str = None,
             params: Dict[str, str] = None):
         '''
@@ -158,7 +163,7 @@ class SkillsController:
 
         return existing_skill
 
-    def delete_skill(self, skill_name: str, project_name: str = 'mindsdb'):
+    def delete_skill(self, skill_name: str, project_name: str = default_project):
         '''
         Deletes a skill by name.
 

@@ -1,66 +1,36 @@
+from http import HTTPStatus
 
-import os
-from tempfile import TemporaryDirectory
-
-
-from unittest.mock import patch, MagicMock
 import pytest
+from unittest.mock import patch, MagicMock
 
-from mindsdb.api.http.initialize import initialize_app
 from mindsdb.api.mysql.mysql_proxy.mysql_proxy import SQLAnswer
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
-from mindsdb.migrations import migrate
-from mindsdb.interfaces.storage import db
-from mindsdb.utilities.config import Config
 
 
-@pytest.fixture(scope="session", autouse=True)
-def app():
-    old_minds_db_con = ''
-    if 'MINDSDB_DB_CON' in os.environ:
-        old_minds_db_con = os.environ['MINDSDB_DB_CON']
-    with TemporaryDirectory(prefix='knowledge_bases_test_') as temp_dir:
-        db_path = 'sqlite:///' + os.path.join(temp_dir, 'mindsdb.sqlite3.db')
-        # Need to change env variable for migrate module, since it calls db.init().
-        os.environ['MINDSDB_DB_CON'] = db_path
-        db.init()
-        migrate.migrate_to_head()
-        app = initialize_app(Config(), True)
+def test_prepare(client):
+    # Create langchain embedding model to use in all tests.
+    create_ml_engine_query = 'CREATE ML_ENGINE langchain_embedding FROM langchain_embedding;'
+    create_ml_engine_data = {
+        'query': create_ml_engine_query
+    }
+    response = client.post('/api/sql/query', json=create_ml_engine_data, follow_redirects=True)
+    assert response.status_code == HTTPStatus.OK
 
-        test_client = app.test_client()
-
-        # Create langchain embedding model to use in all tests.
-        create_ml_engine_query = 'CREATE ML_ENGINE langchain_embedding FROM langchain_embedding;'
-        create_ml_engine_data = {
-            'query': create_ml_engine_query
-        }
-        response = test_client.post('/api/sql/query', json=create_ml_engine_data, follow_redirects=True)
-        assert '200' in response.status
-
-        # Create model to use in all tests.
-        create_query = '''
-        CREATE MODEL mindsdb.test_embedding_model
-        PREDICT embeddings
-        USING
-            engine='langchain_embedding',
-            class = 'FakeEmbeddings',
-            size = 512,
-            input_columns = ['content'];
-        '''
-        train_data = {
-            'query': create_query
-        }
-        response = test_client.post('/api/projects/mindsdb/models', json=train_data, follow_redirects=True)
-        assert '201' in response.status
-
-        yield app
-
-    os.environ['MINDSDB_DB_CON'] = old_minds_db_con
-
-
-@pytest.fixture()
-def client(app):
-    return app.test_client()
+    # Create model to use in all tests.
+    create_query = '''
+    CREATE MODEL mindsdb.test_embedding_model
+    PREDICT embeddings
+    USING
+        engine='langchain_embedding',
+        class = 'FakeEmbeddings',
+        size = 512,
+        input_columns = ['content'];
+    '''
+    train_data = {
+        'query': create_query
+    }
+    response = client.post('/api/projects/mindsdb/models', json=train_data, follow_redirects=True)
+    assert response.status_code == HTTPStatus.CREATED
 
 
 def test_get_knowledge_base(client):
@@ -76,20 +46,16 @@ def test_get_knowledge_base(client):
     }
 
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
-
-    assert '201' in create_response.status
+    assert create_response.status_code == HTTPStatus.CREATED
 
     get_knowledge_bases_response = client.get('/api/projects/mindsdb/knowledge_bases')
-
-    assert '200' in get_knowledge_bases_response.status
+    assert get_knowledge_bases_response.status_code == HTTPStatus.OK
 
     all_knowledge_bases = get_knowledge_bases_response.get_json()
-
     assert len(all_knowledge_bases) == 1
 
     get_knowledge_base_response = client.get('/api/projects/mindsdb/knowledge_bases/test_get_kb')
-
-    assert '200' in get_knowledge_base_response.status
+    assert get_knowledge_base_response.status_code == HTTPStatus.OK
 
     created_knowledge_base = create_response.get_json()
     test_get_kb = get_knowledge_base_response.get_json()
@@ -131,8 +97,7 @@ def test_create_knowledge_base_no_storage(client):
     }
 
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
-
-    assert '201' in create_response.status
+    assert create_response.status_code == HTTPStatus.CREATED
 
     created_knowledge_base = create_response.get_json()
     expected_knowledge_base = {
@@ -156,8 +121,7 @@ def test_create_knowledge_base_no_knowledge_base_param(client):
     }
 
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
-
-    assert '400' in create_response.status
+    assert create_response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_create_knowledge_base_no_name(client):
@@ -168,8 +132,7 @@ def test_create_knowledge_base_no_name(client):
     }
 
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
-
-    assert '400' in create_response.status
+    assert create_response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_create_knowledge_base_no_model(client):
@@ -180,8 +143,7 @@ def test_create_knowledge_base_no_model(client):
     }
 
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
-
-    assert '400' in create_response.status
+    assert create_response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_create_knowledge_base_no_storage_database(client):
@@ -196,8 +158,7 @@ def test_create_knowledge_base_no_storage_database(client):
     }
 
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
-
-    assert '400' in create_response.status
+    assert create_response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_create_knowledge_base_no_storage_table(client):
@@ -212,8 +173,7 @@ def test_create_knowledge_base_no_storage_table(client):
     }
 
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
-
-    assert '400' in create_response.status
+    assert create_response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_create_knowledge_base_project_not_found(client):
@@ -225,8 +185,7 @@ def test_create_knowledge_base_project_not_found(client):
     }
 
     create_response = client.post('/api/projects/buoluobao/knowledge_bases', json=create_request, follow_redirects=True)
-
-    assert '404' in create_response.status
+    assert create_response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_create_knowledge_base_already_exists(client):
@@ -238,12 +197,10 @@ def test_create_knowledge_base_already_exists(client):
     }
 
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
-
-    assert '201' in create_response.status
+    assert create_response.status_code == HTTPStatus.CREATED
 
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
-
-    assert '409' in create_response.status
+    assert create_response.status_code == HTTPStatus.CONFLICT
 
 
 def test_delete_knowledge_base(client):
@@ -255,24 +212,23 @@ def test_delete_knowledge_base(client):
     }
 
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
-
-    assert '201' in create_response.status
+    assert create_response.status_code == HTTPStatus.CREATED
 
     delete_response = client.delete('/api/projects/mindsdb/knowledge_bases/test_delete_kb', follow_redirects=True)
-    assert '204' in delete_response.status
+    assert delete_response.status_code == HTTPStatus.NO_CONTENT
 
     get_response = client.get('/api/projects/mindsdb/knowledge_bases/test_delete_kb', follow_redirects=True)
-    assert '404' in get_response.status
+    assert get_response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_delete_knowledge_base_project_not_found(client):
     delete_response = client.delete('/api/projects/chasiubao/knowledge_bases/test_kb', follow_redirects=True)
-    assert '404' in delete_response.status
+    assert delete_response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_delete_knowledge_base_not_found(client):
     delete_response = client.delete('/api/projects/mindsdb/knowledge_bases/xiaolongbao_kb', follow_redirects=True)
-    assert '404' in delete_response.status
+    assert delete_response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_put_knowledge_base_rows(client):
@@ -284,7 +240,7 @@ def test_put_knowledge_base_rows(client):
     }
 
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
-    assert '201' in create_response.status
+    assert create_response.status_code == HTTPStatus.CREATED
 
     content_to_embed = '''To begin with a perfect Peking duck recipe at home, firstly choose head on (easy to hang for air drying out), clean and leaner ducks.
     Add around 1 teaspoon of white vinegar in clean water and soak the duck for 1 hour. Then prepare lines and tie the ducks from the top of the neck.
@@ -318,7 +274,7 @@ def test_put_knowledge_base_rows(client):
             follow_redirects=True
         )
 
-        assert '200' in update_response.status
+        assert update_response.status_code == HTTPStatus.OK
 
         # Verify insert_rows was called with correct data
         mock_table_instance.insert_rows.assert_called_once()
@@ -336,7 +292,7 @@ def test_put_knowledge_base_query(client):
         }
     }
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
-    assert '201' in create_response.status
+    assert create_response.status_code == HTTPStatus.CREATED
 
     content_to_embed = '''To begin with a perfect Peking duck recipe at home, firstly choose head on (easy to hang for air drying out), clean and leaner ducks.
     Add around 1 teaspoon of white vinegar in clean water and soak the duck for 1 hour. Then prepare lines and tie the ducks from the top of the neck.
@@ -373,7 +329,7 @@ def test_put_knowledge_base_query(client):
             follow_redirects=True
         )
 
-        assert '200' in update_response.status
+        assert update_response.status_code == HTTPStatus.OK
 
         # Verify insert was called with correct data
         mock_table_instance.insert_query_result.assert_called_once_with(
@@ -398,8 +354,10 @@ def create_test_kb(client):
                                   follow_redirects=True)
 
     # Check if creation was successful
-    assert create_response.status_code in [201,
-                                           200], f"Failed to create knowledge base. Status: {create_response.status}"
+    assert create_response.status_code in [
+        HTTPStatus.CREATED,
+        HTTPStatus.OK
+    ], f"Failed to create knowledge base. Status: {create_response.status}"
 
     return kb_name
 
@@ -411,7 +369,7 @@ def test_successful_completion(client, create_test_kb):
     }
     response = client.post(f'/api/projects/mindsdb/knowledge_bases/{kb_name}/completions',
                            json=completion_request, follow_redirects=True)
-    assert response.status_code == 200
+    assert response.status_code == HTTPStatus.OK
     response_data = response.get_json()
     assert 'message' in response_data
     assert 'content' in response_data['message']
@@ -426,7 +384,7 @@ def test_completion_missing_query_parameter(client, create_test_kb):
     }
     response = client.post(f'/api/projects/mindsdb/knowledge_bases/{kb_name}/completions',
                            json=invalid_request, follow_redirects=True)
-    assert response.status_code == 400
+    assert response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_completion_non_existent_project(client, create_test_kb):
@@ -436,7 +394,7 @@ def test_completion_non_existent_project(client, create_test_kb):
     }
     response = client.post(f'/api/projects/nonexistent/knowledge_bases/{kb_name}/completions',
                            json=completion_request, follow_redirects=True)
-    assert response.status_code == 404
+    assert response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_completion_non_existent_knowledge_base(client):
@@ -445,7 +403,7 @@ def test_completion_non_existent_knowledge_base(client):
     }
     response = client.post('/api/projects/mindsdb/knowledge_bases/nonexistent_kb/completions',
                            json=completion_request, follow_redirects=True)
-    assert response.status_code == 404
+    assert response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_create_knowledge_base_with_preprocessing(client):
@@ -466,7 +424,7 @@ def test_create_knowledge_base_with_preprocessing(client):
     }
 
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
-    assert '201' in create_response.status
+    assert create_response.status_code == HTTPStatus.CREATED
 
     created_knowledge_base = create_response.get_json()
     assert 'preprocessing' in created_knowledge_base['params']
@@ -474,7 +432,7 @@ def test_create_knowledge_base_with_preprocessing(client):
 
     # Verify preprocessing config is preserved in GET
     get_response = client.get('/api/projects/mindsdb/knowledge_bases/test_kb_preprocess')
-    assert '200' in get_response.status
+    assert get_response.status_code == HTTPStatus.OK
     kb_data = get_response.get_json()
     assert 'preprocessing' in kb_data['params']
     assert kb_data['params']['preprocessing'] == create_request['knowledge_base']['preprocessing']
@@ -496,7 +454,7 @@ def test_create_knowledge_base_invalid_preprocessing(client):
     }
 
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
-    assert '400' in create_response.status
+    assert create_response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_put_knowledge_base_with_preprocessing(client):
@@ -510,7 +468,7 @@ def test_put_knowledge_base_with_preprocessing(client):
     }
 
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
-    assert '201' in create_response.status
+    assert create_response.status_code == HTTPStatus.CREATED
 
     # Update with content and preprocessing
     content_to_embed = [
@@ -552,7 +510,7 @@ def test_put_knowledge_base_with_preprocessing(client):
             follow_redirects=True
         )
 
-        assert '200' in update_response.status
+        assert update_response.status_code == HTTPStatus.OK
 
         # Verify preprocessing was configured
         mock_table_instance.configure_preprocessing.assert_called_with({
@@ -583,7 +541,7 @@ def test_put_knowledge_base_invalid_preprocessing(client):
     }
 
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
-    assert '201' in create_response.status
+    assert create_response.status_code == HTTPStatus.CREATED
 
     # Update with invalid preprocessing config
     update_request = {
@@ -617,7 +575,7 @@ def test_put_knowledge_base_invalid_preprocessing(client):
             follow_redirects=True
         )
 
-        assert '400' in update_response.status
+        assert update_response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_put_knowledge_base_with_documents(client):
@@ -630,7 +588,7 @@ def test_put_knowledge_base_with_documents(client):
     }
 
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
-    assert '201' in create_response.status
+    assert create_response.status_code == HTTPStatus.CREATED
 
     # Test data
     test_documents = [
@@ -665,7 +623,7 @@ def test_put_knowledge_base_with_documents(client):
             follow_redirects=True
         )
 
-        assert '200' in update_response.status
+        assert update_response.status_code == HTTPStatus.OK
 
         # Verify insert_rows was called with correct Document objects
         mock_table_instance.insert_rows.assert_called_once()
@@ -686,7 +644,7 @@ def test_put_knowledge_base_mixed_content(client):
     }
 
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
-    assert '201' in create_response.status
+    assert create_response.status_code == HTTPStatus.CREATED
 
     update_request = {
         'knowledge_base': {
@@ -719,7 +677,7 @@ def test_put_knowledge_base_mixed_content(client):
             follow_redirects=True
         )
 
-        assert '200' in update_response.status
+        assert update_response.status_code == HTTPStatus.OK
 
 
 def test_create_knowledge_base_with_text_chunking(client):
@@ -740,7 +698,7 @@ def test_create_knowledge_base_with_text_chunking(client):
     }
 
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
-    assert '201' in create_response.status
+    assert create_response.status_code == HTTPStatus.CREATED
 
     created_knowledge_base = create_response.get_json()
     assert 'preprocessing' in created_knowledge_base['params']
@@ -748,7 +706,7 @@ def test_create_knowledge_base_with_text_chunking(client):
 
     # Verify preprocessing config is preserved in GET
     get_response = client.get('/api/projects/mindsdb/knowledge_bases/test_kb_text_chunking')
-    assert '200' in get_response.status
+    assert get_response.status_code == HTTPStatus.OK
     kb_data = get_response.get_json()
     assert 'preprocessing' in kb_data['params']
     assert kb_data['params']['preprocessing'] == create_request['knowledge_base']['preprocessing']
@@ -771,7 +729,7 @@ def test_create_knowledge_base_invalid_text_chunking(client):
     }
 
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
-    assert '400' in create_response.status
+    assert create_response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_put_knowledge_base_default_preprocessing(client):
@@ -784,7 +742,7 @@ def test_put_knowledge_base_default_preprocessing(client):
     }
 
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
-    assert '201' in create_response.status
+    assert create_response.status_code == HTTPStatus.CREATED
 
     update_request = {
         'knowledge_base': {
@@ -802,7 +760,7 @@ def test_put_knowledge_base_default_preprocessing(client):
         follow_redirects=True
     )
 
-    assert '200' in update_response.status
+    assert update_response.status_code == HTTPStatus.OK
 
 
 def test_put_knowledge_base_missing_metadata(client):
@@ -815,7 +773,7 @@ def test_put_knowledge_base_missing_metadata(client):
     }
 
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
-    assert '201' in create_response.status
+    assert create_response.status_code == HTTPStatus.CREATED
 
     # Request with missing source
     update_request = {
@@ -832,7 +790,7 @@ def test_put_knowledge_base_missing_metadata(client):
         follow_redirects=True
     )
 
-    assert '200' in update_response.status  # Should succeed with default metadata
+    assert update_response.status_code == HTTPStatus.OK  # Should succeed with default metadata
 
 
 def test_document_processing_with_valid_metadata(client):
@@ -852,7 +810,7 @@ def test_document_processing_with_valid_metadata(client):
     }
 
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
-    assert '201' in create_response.status
+    assert create_response.status_code == HTTPStatus.CREATED
 
     # Various valid metadata configurations as flat key-value pairs
     test_rows = [
@@ -885,7 +843,7 @@ def test_document_processing_with_valid_metadata(client):
         follow_redirects=True
     )
 
-    assert '200' in update_response.status
+    assert update_response.status_code == HTTPStatus.OK
 
 
 def test_document_processing_with_default_metadata(client):
@@ -898,7 +856,7 @@ def test_document_processing_with_default_metadata(client):
     }
 
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
-    assert '201' in create_response.status
+    assert create_response.status_code == HTTPStatus.CREATED
 
     # Only provide content, system should add default metadata
     update_request = {
@@ -926,7 +884,7 @@ def test_document_processing_with_default_metadata(client):
             follow_redirects=True
         )
 
-        assert '200' in update_response.status
+        assert update_response.status_code == HTTPStatus.OK
 
         # Verify that insert_rows was called with the correct data
         mock_instance.insert_rows.assert_called_once()
@@ -946,7 +904,7 @@ def test_document_loader_with_file_extensions(client):
     }
 
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
-    assert '201' in create_response.status
+    assert create_response.status_code == HTTPStatus.CREATED
 
     # Create test files
     with patch('mindsdb.interfaces.file.file_controller.FileController') as mock_file_controller:
@@ -974,7 +932,7 @@ def test_document_loader_with_file_extensions(client):
                 follow_redirects=True
             )
 
-            assert '200' in update_response.status
+            assert update_response.status_code == HTTPStatus.OK
 
             # Verify document loader was used
             mock_table_instance.insert_files.assert_called_once_with(['test.md', 'test.html', 'test.pdf'])
@@ -990,7 +948,7 @@ def test_document_loader_sql_error_handling(client):
     }
 
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
-    assert '201' in create_response.status
+    assert create_response.status_code == HTTPStatus.CREATED
 
     update_request = {
         'knowledge_base': {
@@ -1009,7 +967,7 @@ def test_document_loader_sql_error_handling(client):
             follow_redirects=True
         )
 
-        assert '400' in update_response.status
+        assert update_response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_preprocessing_update(client):
@@ -1062,7 +1020,7 @@ def test_preprocessing_update(client):
             follow_redirects=True
         )
 
-        assert '201' in create_response.status
+        assert create_response.status_code == HTTPStatus.CREATED
 
         # Now update with preprocessing config
         update_request = {
@@ -1087,7 +1045,7 @@ def test_preprocessing_update(client):
             follow_redirects=True
         )
 
-        assert '200' in update_response.status
+        assert update_response.status_code == HTTPStatus.OK
 
         # Verify preprocessing was updated
         mock_table.configure_preprocessing.assert_called_with(

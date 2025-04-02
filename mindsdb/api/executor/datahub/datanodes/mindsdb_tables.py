@@ -310,7 +310,7 @@ class ChatbotsTable(MdbTable):
         ):
             project_name = query.where.args[1].value
 
-        chatbot_data = chatbot_controller.get_chatbots(project_name)
+        chatbot_data = chatbot_controller.get_chatbots(project_name=project_name)
 
         columns = cls.columns
         columns_lower = [col.lower() for col in columns]

@@ -309,7 +309,7 @@ class FileReader(FormatDetector):
             )
         text = file_obj.read()
 
-        metadata = {"source": name}
+        metadata = {"source_file": name, "file_format": "txt"}
         documents = [Document(page_content=text, metadata=metadata)]
 
         text_splitter = RecursiveCharacterTextSplitter(
@@ -325,7 +325,7 @@ class FileReader(FormatDetector):
         )
 
     @staticmethod
-    def read_pdf(file_obj: BytesIO, **kwargs):
+    def read_pdf(file_obj: BytesIO, name=None, **kwargs):
 
         with fitz.open(stream=file_obj.read()) as pdf:  # open pdf
             text = chr(12).join([page.get_text() for page in pdf])
@@ -337,7 +337,7 @@ class FileReader(FormatDetector):
         split_text = text_splitter.split_text(text)
 
         return pd.DataFrame(
-            {"content": split_text, "metadata": [{}] * len(split_text)}
+            {"content": split_text, "metadata": [{"file_format": "pdf", "source_file": name}] * len(split_text)}
         )
 
     @staticmethod

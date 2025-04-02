@@ -25,48 +25,97 @@ CREATE DATABASE my_web
 WITH ENGINE = 'web';
 ```
 <Tip>
-The above query creates a database called `my_web`. This database by default has a table called `crawler` that we can use to crawl data from a given url/urls.
+The above query creates a database called `my_web`. This database by default has a table called `crawler` that stores data from a given URL or multiple URLs.
 </Tip>
 
 ## Usage
 
-<Note>
-Specifying a `LIMIT` clause is required. To crawl all pages on a site, consider setting the limit to a high value, such as 10,000, which exceeds the expected number of pages. Be aware that setting a higher limit may result in longer response times.
-</Note>
+### Parameters
 
-### Get Websites Content
+#### Crawl Depth
 
-The following usage examples demonstrate how to retrieve content from `docs.mindsdb.com`:
+The `crawl_depth` parameter defines how deep the crawler should navigate through linked pages:
 
-```sql
-SELECT * 
-FROM my_web.crawler 
-WHERE url = 'docs.mindsdb.com' 
-LIMIT 1;
-```
+- `crawl_depth = 0`: Crawls only the specified page.
+- `crawl_depth = 1`: Crawls the specified page and all linked pages on it.
+- Higher values continue the pattern.
 
-You can also retrieve content from internal pages. The following query fetches the content from 10 internal pages:
+#### Page Limits
 
-```sql
-SELECT * 
-FROM my_web.crawler 
-WHERE url = 'docs.mindsdb.com' 
-LIMIT 10;
-```
+There are multiple ways to limit the number of pages returned:
 
-In order to get the content from multiple websites, use the `UNION` operator:
+- The `LIMIT` clause defines the maximum number of pages returned globally.
+- The `per_url_limit` parameter limits the number of pages returned for each specific URL, if more than one URL is provided.
+
+### Crawling a Single URL
+
+The following example retrieves data from a single webpage:
 
 ```sql
 SELECT * 
 FROM my_web.crawler 
-WHERE url = 'docs.mindsdb.com'
-LIMIT 5
-UNION
+WHERE url = 'https://docs.mindsdb.com/';
+```
+
+Returns **1 row** by default.
+
+To retrieve more pages from the same URL, specify the `LIMIT`:
+
+```sql
 SELECT * 
 FROM my_web.crawler 
-WHERE url = 'docs.python.org'
-LIMIT 5;
+WHERE url = 'https://docs.mindsdb.com/'
+LIMIT 30;
 ```
+
+Returns up to **30 rows**.
+
+### Crawling Multiple URLs
+
+To crawl multiple URLs at once:
+
+```sql
+SELECT * 
+FROM my_web.crawler 
+WHERE url IN ('https://docs.mindsdb.com/', 'https://docs.mdb.ai/', 'https://mindsdb.com/');
+```
+
+Returns **3 rows** by default (1 row per URL).
+
+To apply a per-URL limit:
+
+```sql
+SELECT * 
+FROM my_web.crawler 
+WHERE url IN ('https://docs.mindsdb.com/', 'https://docs.mdb.ai/')
+AND per_url_limit = 2;
+```
+
+Returns **4 rows** (2 rows per URL).
+
+### Crawling with Depth
+
+To crawl all pages linked within a website:
+
+```sql
+SELECT * 
+FROM my_web.crawler 
+WHERE url = 'https://docs.mindsdb.com/'
+AND crawl_depth = 1;
+```
+
+Returns **1 + x rows**, where `x` is the number of linked webpages.
+
+For multiple URLs with crawl depth:
+
+```sql
+SELECT * 
+FROM my_web.crawler 
+WHERE url IN ('https://docs.mindsdb.com/', 'https://docs.mdb.ai/')
+AND crawl_depth = 1;
+```
+
+Returns **2 + x + y rows**, where `x` and `y` are the number of linked pages from each URL.
 
 ### Get PDF Content
 

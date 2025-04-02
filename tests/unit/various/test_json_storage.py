@@ -1,12 +1,12 @@
-import tempfile
 import os
 import unittest
-import json
+import tempfile
 
 from mindsdb.interfaces.storage import db   # noqa
 from mindsdb.migrations import migrate  # noqa
 from mindsdb.interfaces.storage.fs import RESOURCE_GROUP
 from mindsdb.interfaces.storage.json import get_json_storage  # noqa
+from mindsdb.utilities.config import config
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -19,16 +19,8 @@ class Test(unittest.TestCase):
         cls._temp_dir = tempfile.TemporaryDirectory(prefix='lightwood_handler_test_')
         os.environ['MINDSDB_STORAGE_DIR'] = os.environ.get('MINDSDB_STORAGE_DIR', cls._temp_dir.name)
         os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + os.path.join(os.environ['MINDSDB_STORAGE_DIR'], 'mindsdb.sqlite3.db') + '?check_same_thread=False&timeout=30'
-        # config
-        config = {}
-        # TODO run on own database
-        fdi, cfg_file = tempfile.mkstemp(prefix='mindsdb_conf_')
-
-        with os.fdopen(fdi, 'w') as fd:
-            json.dump(config, fd)
-
-        os.environ['MINDSDB_CONFIG_PATH'] = cfg_file
-
+        config.prepare_env_config()
+        config.merge_configs()
         db.init()
         migrate.migrate_to_head()
 

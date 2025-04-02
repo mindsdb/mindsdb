@@ -177,7 +177,7 @@ FROM slack_datasource.conversations;
 -- Retrieve a specific conversation using its ID
 SELECT * 
 FROM slack_datasource.conversations 
-WHERE channel_id = "<channel-id>";
+WHERE id = "<channel-id>";
 
 -- Retrieve a specific conversation using its name
 SELECT *

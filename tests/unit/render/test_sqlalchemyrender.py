@@ -118,13 +118,13 @@ class TestRender:
         assert sql.lower() == sql0
 
     def test_quoted_identifier(self):
-        sql = "SELECT `A`.*, A.`B` FROM Tbl.`Tab` AS t"
+        sql = "SELECT `A`.*, A.`B` AS `Bb`, `c` as Cc FROM Tbl.`Tab` AS `Tt`"
 
         query = parse_sql(sql)
         rendered = SqlalchemyRender('postgres').get_string(query, with_failback=False)
 
         # check queries are the same after render
-        assert rendered.replace('\n', '') == 'SELECT "A".*, A."B" FROM Tbl."Tab" AS t'
+        assert rendered.replace('\n', '') == 'SELECT "A".*, A."B" AS "Bb", "c" AS Cc FROM Tbl."Tab" AS "Tt"'
 
     def test_intersect_except(self):
         for op in ('EXCEPT', 'INTERSECT'):

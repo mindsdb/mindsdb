@@ -57,6 +57,7 @@ class RedshiftHandler(PostgresHandler):
                 connection.commit()
             except Exception as e:
                 logger.error(f"Error inserting data into {table_name}, {e}!")
+                connection.rollback()
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_code=0,

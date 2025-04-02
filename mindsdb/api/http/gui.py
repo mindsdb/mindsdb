@@ -5,6 +5,7 @@ from pathlib import Path
 from zipfile import ZipFile
 
 import requests
+from packaging.version import Version
 
 from mindsdb.utilities.config import Config
 from mindsdb.utilities import log
@@ -65,7 +66,7 @@ def download_gui(destignation, version):
     """
 
 
-def update_static(gui_version_lv):
+def update_static(gui_version: Version):
     """Update Scout files basing on compatible-config.json content.
     Files will be downloaded and updated if new version of GUI > current.
     Current GUI version stored in static/version.txt.
@@ -74,11 +75,11 @@ def update_static(gui_version_lv):
     static_path = Path(config["paths"]["static"])
 
     logger.info(
-        f"New version of GUI available ({gui_version_lv.vstring}). Downloading..."
+        f"New version of GUI available ({gui_version.base_version}). Downloading..."
     )
 
     temp_dir = tempfile.mkdtemp(prefix="mindsdb_gui_files_")
-    success = download_gui(temp_dir, gui_version_lv.vstring)
+    success = download_gui(temp_dir, gui_version.base_version)
     if success is False:
         shutil.rmtree(temp_dir)
         return False
@@ -90,5 +91,5 @@ def update_static(gui_version_lv):
     shutil.copytree(temp_dir, str(static_path))
     shutil.rmtree(temp_dir_for_rm)
 
-    logger.info(f"GUI version updated to {gui_version_lv.vstring}")
+    logger.info(f"GUI version updated to {gui_version.base_version}")
     return True

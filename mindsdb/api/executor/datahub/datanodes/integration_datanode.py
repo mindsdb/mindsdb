@@ -64,6 +64,7 @@ class IntegrationDataNode(DataNode):
             df = response.data_frame
             # case independent
             columns = [str(c).lower() for c in df.columns]
+            df.columns = columns
 
             col_name = None
             # looking for specific column names
@@ -78,8 +79,10 @@ class IntegrationDataNode(DataNode):
             names = df[df.columns[col_name]]
 
             # type
-            if 'type' in columns:
-                types = df[df.columns[columns.index('type')]]
+            if 'mysql_data_type' in columns:
+                types = df['mysql_data_type']
+            elif 'type' in columns:
+                types = df['type']
             else:
                 types = [None] * len(names)
 

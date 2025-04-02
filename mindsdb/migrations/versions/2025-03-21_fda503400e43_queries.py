@@ -34,6 +34,12 @@ def upgrade():
         sa.PrimaryKeyConstraint('id')
     )
 
+    with op.batch_alter_table('knowledge_base', schema=None) as batch_op:
+        batch_op.add_column(sa.Column('query_id', sa.INTEGER(), nullable=True))
+
 
 def downgrade():
+    with op.batch_alter_table('knowledge_base', schema=None) as batch_op:
+        batch_op.drop_column('query_id')
+
     op.drop_table('queries')

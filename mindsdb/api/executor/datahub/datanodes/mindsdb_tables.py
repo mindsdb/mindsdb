@@ -327,7 +327,8 @@ class ChatbotsTable(MdbTable):
 
 class KBTable(MdbTable):
     name = 'KNOWLEDGE_BASES'
-    columns = ["NAME", "PROJECT", "MODEL", "STORAGE", "PARAMS"]
+    columns = ["NAME", "PROJECT", "MODEL", "STORAGE", "PARAMS",
+               "INSERT_STARTED_AT", "INSERT_FINISHED_AT", "PROCESSED_ROWS", "ERROR", "QUERY_ID"]
 
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
@@ -337,10 +338,24 @@ class KBTable(MdbTable):
         controller = KnowledgeBaseController(inf_schema.session)
         kb_list = controller.list(project_name)
 
+        # shouldn't be a lot of queries, we can fetch them all
+        queries_data = {
+            item['id']: item
+            for item in query_context_controller.list_queries()
+        }
+
         data = []
 
         for kb in kb_list:
             vector_database_name = kb['vector_database'] or ''
+
+            query_item = {}
+            query_id = kb['query_id']
+            if query_id is not None:
+                if query_id in queries_data:
+                    query_item = queries_data.get(query_id)
+                else:
+                    query_id = None
 
             data.append((
                 kb['name'],
@@ -348,6 +363,11 @@ class KBTable(MdbTable):
                 kb['embedding_model'],
                 vector_database_name + '.' + kb['vector_database_table'],
                 to_json(kb['params']),
+                query_item.get('started_at'),
+                query_item.get('finished_at'),
+                query_item.get('processed_rows'),
+                query_item.get('error'),
+                query_id,
             ))
 
         return pd.DataFrame(data, columns=cls.columns)

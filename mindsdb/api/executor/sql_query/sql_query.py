@@ -34,6 +34,8 @@ import mindsdb.utilities.profiler as profiler
 from mindsdb.utilities.fs import create_process_mark, delete_process_mark
 from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
+from mindsdb.utilities.context import context as ctx
+
 
 from . import steps
 from .result_set import ResultSet, Column
@@ -261,6 +263,7 @@ class SQLQuery:
                 self.run_query = query_context_controller.get_query(self.query_id)
             else:
                 self.run_query = query_context_controller.create_query(self.context['query_str'])
+            ctx.run_query_id = self.run_query.record.id
 
         step_result = None
         process_mark = None
@@ -280,6 +283,7 @@ class SQLQuery:
         else:
             if self.run_query is not None:
                 self.run_query.finish()
+                ctx.run_query_id = None
         finally:
             if process_mark is not None:
                 delete_process_mark('predict', process_mark)

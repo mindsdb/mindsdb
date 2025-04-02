@@ -35,6 +35,7 @@ from mindsdb.interfaces.knowledge_base.preprocessing.models import Preprocessing
 from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor import PreprocessorFactory
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
+from mindsdb.utilities.context import context as ctx
 
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.utilities import log
@@ -327,10 +328,22 @@ class KnowledgeBaseTable:
         db_handler = self.get_vector_db()
         db_handler.delete(self._kb.vector_database_table)
 
+    def link_query(self, query_id):
+        self._kb.query_id = query_id
+        db.session.commit()
+
     def insert(self, df: pd.DataFrame):
         """Insert dataframe to KB table."""
         if df.empty:
             return
+
+        try:
+            run_query_id = ctx.run_query_id
+            # attach to runnning query
+            if run_query_id is not None:
+                self.link_query(run_query_id)
+        except AttributeError:
+            ...
 
         # First adapt column names to identify content and metadata columns
         adapted_df = self._adapt_column_names(df)
@@ -988,6 +1001,7 @@ class KnowledgeBaseController:
                 'embedding_model': embedding_model.name if embedding_model is not None else None,
                 'vector_database': None if vector_database is None else vector_database.name,
                 'vector_database_table': record.vector_database_table,
+                'query_id': record.query_id,
                 'params': record.params
             })
 

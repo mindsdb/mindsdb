@@ -466,3 +466,65 @@ class TestKB(BaseExecutorDummyML):
         assert metadata['specs'] == record['specs']
         assert metadata['url'] == record['url']
         assert metadata['product'] == record['product']
+
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_kb_partitions(self, mock_handler):
+        self.run_sql(
+            '''
+                CREATE model emb_model
+                PREDICT predicted
+                using
+                  column='content',
+                  engine='dummy_ml',
+                  output=[1,2],
+                  join_learn_process=true
+            '''
+        )
+        self.run_sql('create knowledge base kb_part using model=emb_model')
+
+        data = [
+            ['1000', 'Green beige', 'Beige verdastro'],
+            ['1004', 'Golden yellow', 'Giallo oro'],
+            ['9016', 'Traffic white', 'Bianco traffico'],
+            ['9023', 'Pearl dark grey', 'Grigio scuro perlato'],
+        ]
+
+        df = pd.DataFrame(data, columns=['ral', 'english', 'italian'])
+        df = pd.concat([df] * 30)
+        # unique ids
+        df['id'] = list(map(str, range(len(df))))
+
+        # self.save_file('ral', df.reset_index())
+        self.set_handler(mock_handler, name='pg', tables={'ral': df})
+
+        ret = self.run_sql('''
+            insert into kb_part
+            SELECT id, english content FROM  pg.ral
+            using batch_size=10, track_column=id
+        ''')
+
+        ret = self.run_sql('select * from information_schema.queries')
+        assert len(ret) == 1
+        rec = ret.iloc[0]
+        assert 'kb_part' in ret['SQL'][0]
+        assert ret['ERROR'][0] is None
+        assert ret['FINISHED_AT'][0] is not None
+
+        # test describe
+        ret = self.run_sql('describe knowledge base kb_part')
+        assert len(ret) == 1
+        rec_d = ret.iloc[0]
+        assert rec_d['PROCESSED_ROWS'] == rec['PROCESSED_ROWS']
+        assert rec_d['INSERT_STARTED_AT'] == rec['STARTED_AT']
+        assert rec_d['INSERT_FINISHED_AT'] == rec['FINISHED_AT']
+        assert rec_d['QUERY_ID'] == rec['ID']
+
+        # del query
+        self.run_sql(f"SELECT query_cancel({rec['ID']})")
+        ret = self.run_sql('describe knowledge base kb_part')
+        assert len(ret) == 1
+        rec_d = ret.iloc[0]
+        assert rec_d['PROCESSED_ROWS'] is None
+        assert rec_d['INSERT_STARTED_AT'] is None
+        assert rec_d['INSERT_FINISHED_AT'] is None
+        assert rec_d['QUERY_ID'] is None

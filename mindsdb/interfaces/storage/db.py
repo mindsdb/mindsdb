@@ -523,6 +523,7 @@ class KnowledgeBase(Base):
     embedding_model = relationship(
         "Predictor", foreign_keys=[embedding_model_id], doc="embedding model"
     )
+    query_id = Column(Integer, nullable=True)
 
     created_at = Column(DateTime, default=datetime.datetime.now)
     updated_at = Column(

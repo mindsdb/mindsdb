@@ -70,6 +70,10 @@ class VectorStoreHandler(BaseHandler):
             "name": TableField.METADATA.value,
             "data_type": "json",
         },
+        {
+            "name": TableField.DISTANCE.value,
+            "data_type": "float",
+        },
     ]
 
     def validate_connection_parameters(self, name, **kwargs):

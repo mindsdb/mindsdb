@@ -308,7 +308,7 @@ class ChromaDBHandler(VectorStoreHandler):
         }
 
         if columns is not None:
-            payload = {column: payload[column] for column in columns}
+            payload = {column: payload[column] for column in columns if column != TableField.DISTANCE.value}
 
         # always include distance
         distance_filter = None

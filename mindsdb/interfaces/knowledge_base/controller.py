@@ -84,42 +84,24 @@ class KnowledgeBaseTable:
         :return: dataframe with the result table
         """
         logger.debug(f"Processing select query: {query}")
-        # Define relevance column name using the enum value
-        relevance_column = TableField.RELEVANCE.value
-        # Check if relevance is requested in the output
-        relevance_requested = False
-        for target in query.targets:
-            if isinstance(target, Star):
-                relevance_requested = True
-                break
-            elif isinstance(target, Identifier) and target.parts[-1].lower() == relevance_column:
-                relevance_requested = True
-                break
+
         # Extract the content query text for potential reranking
-        query_text = ""
+        query_text = None
         db_handler = self.get_vector_db()
-        conditions = db_handler.extract_conditions(query.where)
         if query.where:
-            for item in conditions:
+            for item in db_handler.extract_conditions(query.where):
                 if item.column == TableField.CONTENT.value:
                     query_text = item.value
             logger.debug(f"Extracted query text: {query_text}")
-        # Filter out 'relevance' from query targets if present
-        filtered_targets = []
-        for target in query.targets:
-            if isinstance(target, Star):
-                filtered_targets.append(target)
-            elif isinstance(target, Identifier) and target.parts[-1].lower() != TableField.RELEVANCE.value:
-                filtered_targets.append(target)
-        query.targets = filtered_targets
-        logger.debug(f"Filtered query targets: {filtered_targets}")
+
         # replace content with embeddings
         query_traversal(query.where, self._replace_query_content)
         logger.debug("Replaced content with embeddings in where clause")
         # set table name
         query.from_table = Identifier(parts=[self._kb.vector_database_table])
         logger.debug(f"Set table name to: {self._kb.vector_database_table}")
-        # remove embeddings from result
+
+        # expand Star
         targets = []
         for target in query.targets:
             if isinstance(target, Star):
@@ -127,27 +109,49 @@ class KnowledgeBaseTable:
                     Identifier(TableField.ID.value),
                     Identifier(TableField.CONTENT.value),
                     Identifier(TableField.METADATA.value),
+                    Identifier(TableField.RELEVANCE.value),
                 ])
-            elif isinstance(target, Identifier) and target.parts[-1].lower() != TableField.EMBEDDINGS.value:
-                targets.append(target)
-        query.targets = targets
+            else:
+                col = target.parts[-1].lower()
+                col = KB_TO_VECTORDB_COLUMNS.get(col, col)
+                targets.append(Identifier(col))
+
+        requested_kv_columns = [target.parts[-1].lower() for target in targets]
+        vectordb_targets = [
+            target
+            for target in targets
+            if target.parts[-1].lower() not in (TableField.EMBEDDINGS.value, TableField.RELEVANCE.value)
+        ]
+
+        query.targets = vectordb_targets
         logger.debug(f"Modified query targets: {targets}")
         # Get response from vector db
-        db_handler = self.get_vector_db()
+
         logger.debug(f"Using vector db handler: {type(db_handler)}")
         conditions = db_handler.extract_conditions(query.where)
         self.addapt_conditions_columns(conditions)
         df = db_handler.dispatch_select(query, conditions)
-        if df is None or df.empty:
-            logger.warning("Query returned no data")
-            # Return empty DataFrame with appropriate columns
-            columns = [TableField.ID.value, TableField.CONTENT.value, TableField.METADATA.value]
-            if relevance_requested:
-                columns.append(relevance_column)
-            return pd.DataFrame(columns=columns)
+        df = self.addapt_result_columns(df)
+
+        if df.empty:
+            return df
         logger.debug(f"Query returned {len(df)} rows")
         logger.debug(f"Columns in response: {df.columns.tolist()}")
         # Check if we have a rerank_model configured in KB params
+
+        if TableField.RELEVANCE.value in requested_kv_columns:
+            df = self.add_relevance(df, query_text)
+
+        # Why it is required?
+        # Apply original limit if it exists and wasn't already applied
+        # if query.limit and len(df) > query.limit.value:
+        #     df = df.iloc[:query.limit.value]
+
+        return df
+
+    def add_relevance(self, df, query_text):
+        relevance_column = TableField.RELEVANCE.value
+
         rerank_model = self._kb.params.get("rerank_model")
         if rerank_model and query_text:
             # Use reranker for relevance score
@@ -155,7 +159,7 @@ class KnowledgeBaseTable:
                 logger.info(f"Using reranker model {rerank_model} for relevance calculation")
                 reranker = LLMReranker(model=rerank_model)
                 # Get documents to rerank
-                documents = df[TableField.CONTENT.value].tolist()
+                documents = df['chunk_content'].tolist()
                 # Use the get_scores method with disable_events=True
                 scores = reranker.get_scores(query_text, documents)
                 # Add scores as the relevance column
@@ -174,18 +178,15 @@ class KnowledgeBaseTable:
                     df = df.sort_values(by=relevance_column, ascending=False)
                 else:
                     logger.info("No distance or reranker available")
+
         elif 'distance' in df.columns:
             # Calculate relevance from distance
             logger.info("Calculating relevance from vector distance")
-            if relevance_requested:
-                df[relevance_column] = 1 / (1 + df['distance'])
-                df = df.sort_values(by=relevance_column, ascending=False)
+            df[relevance_column] = 1 / (1 + df['distance'])
+            df = df.sort_values(by=relevance_column, ascending=False)
+
         else:
-            logger.info("No distance or reranker available")
-        # Apply original limit if it exists and wasn't already applied
-        if query.limit and len(df) > query.limit.value:
-            df = df.iloc[:query.limit.value]
-        df = self.addapt_result_columns(df)
+            df[relevance_column] = None
         return df
 
     def addapt_conditions_columns(self, conditions):

@@ -23,6 +23,11 @@ class ToMarkdown:
         if use_llm and (llm_client is None or llm_model is None):
             raise ValueError('LLM client and model must be provided when use_llm is True.')
 
+        # If use_llm is False, set llm_client and llm_model to None even if they are provided.
+        if not use_llm:
+            llm_client = None
+            llm_model = None
+
         # Only OpenAI is supported for now.
         # TODO: Add support for other LLMs.
         if llm_client is not None and not isinstance(llm_client, OpenAI):

@@ -41,7 +41,7 @@ class ToMarkdown:
             return self._image_to_markdown(file)
         else:
             return self._other_to_markdown(file)
-        
+
     def _get_file(self, file_path_or_url: str) -> str:
         """
         Retrieves the content of a file.
@@ -56,7 +56,7 @@ class ToMarkdown:
         else:
             with open(file_path_or_url, 'rb') as file:
                 return file.read()
-            
+
     def _get_file_extension(self, file_path_or_url: str) -> str:
         """
         Retrieves the file extension from a file path or URL.

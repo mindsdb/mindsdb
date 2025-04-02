@@ -112,11 +112,12 @@ class KnowledgeBaseTable:
                     Identifier(TableField.RELEVANCE.value),
                 ])
             else:
+                # map to kb -> vector targets
                 col = target.parts[-1].lower()
                 col = KB_TO_VECTORDB_COLUMNS.get(col, col)
                 targets.append(Identifier(col))
 
-        requested_kv_columns = [target.parts[-1].lower() for target in targets]
+        requested_kb_columns = [target.parts[-1].lower() for target in targets]
         vectordb_targets = [
             target
             for target in targets
@@ -139,7 +140,7 @@ class KnowledgeBaseTable:
         logger.debug(f"Columns in response: {df.columns.tolist()}")
         # Check if we have a rerank_model configured in KB params
 
-        if TableField.RELEVANCE.value in requested_kv_columns:
+        if TableField.RELEVANCE.value in requested_kb_columns:
             df = self.add_relevance(df, query_text)
 
         # Why it is required?

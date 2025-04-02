@@ -10,9 +10,6 @@ from openai import OpenAI
 import requests
 
 
-from mindsdb.integrations.handlers.web_handler.urlcrawl_helpers import pdf_to_markdown
-
-
 class ToMarkdown:
     """
     Extracts the content of documents of various formats in markdown format.
@@ -80,7 +77,7 @@ class ToMarkdown:
             file_content = file
 
         if self.llm_client is None:
-            return pdf_to_markdown(file_content)
+            return self._pdf_to_markdown_no_llm(file_content)
         else:
             return self._pdf_to_markdown_llm(file_content)
 
@@ -152,9 +149,10 @@ class ToMarkdown:
     def _pdf_to_markdown_no_llm(self, file_content: bytes) -> str:
         """
         Converts a PDF file to markdown without using LLM.
-        This is done using one of the helper functions used for the web handler.
         """
-        return pdf_to_markdown(file_content)
+        md = MarkItDown(enable_plugins=True)
+        result = md.convert(file_content)
+        return result.markdown
 
     def _image_to_markdown(self, file: Union[requests.Response, bytes]) -> str:
         """

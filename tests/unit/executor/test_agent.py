@@ -495,3 +495,32 @@ class TestKB(BaseExecutorDummyML):
         # values are matched
         diff = ret[ret['ral'] != ret['id']]
         assert len(diff) == 0
+
+        # =================   operators  =================
+        ret = self.run_sql("""
+            select * from kb_ral
+            where id = '1000'
+        """)
+        assert len(ret) == 1
+        assert ret['id'][0] == '1000'
+
+        ret = self.run_sql("""
+            select * from kb_ral
+            where id != '1000'
+        """)
+        assert len(ret) == 3
+        assert '1000' not in ret['id']
+
+        ret = self.run_sql("""
+            select * from kb_ral
+            where id in ('1000', '1004')
+        """)
+        assert len(ret) == 2
+        assert set(ret['id']) == {'1000', '1004'}
+
+        ret = self.run_sql("""
+            select * from kb_ral
+            where id not in ('1000', '1004')
+        """)
+        assert len(ret) == 2
+        assert set(ret['id']) == {'9016', '9023'}

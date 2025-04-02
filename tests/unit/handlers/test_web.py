@@ -48,7 +48,7 @@ class TestWebHelpers(unittest.TestCase):
     def test_pdf_to_markdown(self, mock_response) -> None:
         response = mock_response.return_value
         response.content = PDF_CONTENT
-        result = helpers.pdf_to_markdown(response.content)
+        result = helpers.pdf_to_markdown(response)
         assert "Hello, this is a test!" in result
 
     @patch("requests.Response")
@@ -57,7 +57,7 @@ class TestWebHelpers(unittest.TestCase):
         response.content = BROKEN_PDF_CONTENT
 
         with pytest.raises(Exception, match="Failed to process PDF data"):
-            helpers.pdf_to_markdown(response.content)
+            helpers.pdf_to_markdown(response)
 
     def test_url_validation(self):
         assert helpers.is_valid('https://google.com') is True

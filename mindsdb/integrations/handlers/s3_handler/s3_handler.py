@@ -7,6 +7,7 @@ from duckdb import HTTPException
 from mindsdb_sql_parser import parse_sql
 import pandas as pd
 from typing import Text, Dict, Optional
+from botocore.client import Config
 from botocore.exceptions import ClientError
 
 from mindsdb_sql_parser.ast.base import ASTNode
@@ -53,12 +54,15 @@ class ListFilesTable(APIResource):
                 'extension': path[path.rfind('.') + 1:]
             }
 
+            if targets and 'public_url' in targets:
+                item['public_url'] = self.handler.generate_sas_url(path, obj['Bucket'])
+
             data.append(item)
 
         return pd.DataFrame(data=data, columns=self.get_columns())
 
     def get_columns(self) -> List[str]:
-        return ["path", "name", "extension", "bucket", "content"]
+        return ["path", "name", "extension", "bucket", "content", "public_url"]
 
 
 class FileTable(APIResource):
@@ -182,10 +186,12 @@ class S3Handler(APIHandler):
         }
 
         # Configure optional parameters.
-        if 'aws_session_token' in self.connection_data:
-            config['aws_session_token'] = self.connection_data['aws_session_token']
+        optional_parameters = ['region_name', 'aws_session_token']
+        for parameter in optional_parameters:
+            if parameter in self.connection_data:
+                config[parameter] = self.connection_data[parameter]
 
-        client = boto3.client('s3', **config)
+        client = boto3.client('s3', **config, config=Config(signature_version="s3v4"))
 
         # check connection
         if self.bucket is not None:
@@ -388,6 +394,25 @@ class S3Handler(APIHandler):
                 break
 
         return objects
+    
+    def generate_sas_url(self, key: str, bucket: str) -> str:
+        """
+        Generates a pre-signed URL for accessing an object in the S3 bucket.
+
+        Args:
+            key (str): The key (path) of the object in the S3 bucket.
+            bucket (str): The name of the S3 bucket.
+
+        Returns:
+            str: The pre-signed URL for accessing the object.
+        """
+        client = self.connect()
+        url = client.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': bucket, 'Key': key},
+            ExpiresIn=3600
+        )
+        return url
 
     def get_tables(self) -> Response:
         """

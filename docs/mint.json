@@ -68,6 +68,10 @@
       "url": "sdks"
     },
     {
+      "name": "MCP API",
+      "url": "mcp"
+    },
+    {
       "name": "REST API",
       "url": "rest"
     },
@@ -520,6 +524,14 @@
             "mindsdb_sql/sql_support/window-functions"
           ]
         }
+      ]
+    },
+    {
+      "group": "MCP API",
+      "pages": [
+        "mcp/overview",
+        "mcp/tools",
+        "mcp/cursor_usage"
       ]
     },
     {

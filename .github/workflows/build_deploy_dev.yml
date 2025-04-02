@@ -6,18 +6,15 @@ on:
     branches:
       - 'main'
 
-# Cancel any existing runs of this workflow on the same branch/pr
-# We always want to build/deploy/test a new commit over an older one
-concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
-
 jobs:
 
   # Looks for labels like "deploy-to-<env>" attached to a PR so we can deploy to those envs
   get-deploy-labels:
     name: Get Deploy Envs
     runs-on: mdb-dev
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-labels
+      cancel-in-progress: true
     environment:
       name: ${{ github.event.pull_request.head.repo.fork && 'manual-approval' || '' }}
     outputs:
@@ -37,6 +34,9 @@ jobs:
     runs-on: mdb-dev
     needs: [get-deploy-labels]
     if: needs.get-deploy-labels.outputs.deploy-envs != '[]'
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-build
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
         with:
@@ -71,6 +71,9 @@ jobs:
   run_tests:
     name: Run Integration Tests
     needs: [deploy]
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-tests
+      cancel-in-progress: true
     uses: ./.github/workflows/test_on_deploy.yml
     with:
       git-sha: ${{ github.event.pull_request.head.sha }}

@@ -161,7 +161,7 @@ class ToMarkdown:
         if self.llm_client is None:
             raise RuntimeError('LLM client is not initialized.')
 
-        md = MarkItDown(llm_client=self.llm_client, llm_model="gpt-4o")
+        md = MarkItDown(llm_client=self.llm_client, llm_model=self.llm_model, enable_plugins=True)
         result = md.convert(file)
         return result.markdown
 

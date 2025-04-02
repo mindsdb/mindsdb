@@ -33,10 +33,10 @@ class TeamsTable(APIResource):
             targets (List[str]): The list of target columns to return.
         """
         client: MSGraphAPITeamsDelegatedPermissionsClient = self.handler.connect()
-        teams = client.get_all_groups()
+        teams = client.get_teams()
 
         teams_df = pd.json_normalize(teams, sep="_")
-        teams_df = teams_df[self.get_columns()]
+        teams_df = teams_df.reindex(columns=self.get_columns(), fill_value=None)
 
         return teams_df
 
@@ -114,18 +114,7 @@ class ChannelsTable(APIResource):
 
                 condition.applied = True
 
-        if team_id:
-            if channel_ids:
-                channels = client.get_channels_in_group_by_ids(team_id, channel_ids)
-
-            else:
-                channels = client.get_all_channels_in_group(team_id)
-
-        elif channel_ids:
-            channels = client.get_channels_across_all_groups_by_ids(channel_ids)
-
-        else:
-            channels = client.get_all_channels_across_all_groups()
+        channels = client.get_channels(team_id, channel_ids)
 
         channels_df = pd.json_normalize(channels, sep="_")
         channels_df = channels_df[self.get_columns()]
@@ -218,11 +207,7 @@ class ChannelMessagesTable(APIResource):
         if not group_id or not channel_id:
             raise ValueError("The 'channelIdentity_teamId' and 'channelIdentity_channelId' columns are required.")
         
-        if message_ids:
-            messages = client.get_messages_in_channel_by_ids(group_id, channel_id, message_ids)
-
-        else:
-            messages = client.get_all_messages_in_channel(group_id, channel_id, limit)
+        messages = client.get_channel_messages(group_id, channel_id, message_ids)
 
         messages_df = pd.json_normalize(messages, sep="_")
         messages_df = messages_df[self.get_columns()]
@@ -304,11 +289,7 @@ class ChatsTable(APIResource):
 
                 condition.applied = True
 
-        if chat_ids:
-            chats = client.get_chats_by_ids(chat_ids)
-
-        else:
-            chats = client.get_all_chats(limit)
+        chats = client.get_chats(chat_ids)
 
         chats_df = pd.json_normalize(chats, sep="_")
         chats_df = chats_df[self.get_columns()]
@@ -387,11 +368,7 @@ class ChatMessagesTable(APIResource):
         if not chat_id:
             raise ValueError("The 'chatId' column is required.")
         
-        if message_ids:
-            messages = client.get_messages_in_chat_by_ids(chat_id, message_ids)
-
-        else:
-            messages = client.get_all_messages_in_chat(chat_id, limit)
+        messages = client.get_chat_messages(chat_id, message_ids)
 
         messages_df = pd.json_normalize(messages, sep="_")
         messages_df = messages_df[self.get_columns()]

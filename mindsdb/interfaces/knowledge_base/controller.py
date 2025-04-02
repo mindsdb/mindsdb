@@ -4,6 +4,7 @@ from typing import Dict, List, Optional
 
 import pandas as pd
 import hashlib
+import numpy as np
 
 from mindsdb_sql_parser.ast import (
     BinaryOperation,
@@ -37,8 +38,15 @@ from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.utilities import log
+from mindsdb.integrations.utilities.rag.rerankers.reranker_compressor import LLMReranker
 
 logger = log.getLogger(__name__)
+
+KB_TO_VECTORDB_COLUMNS = {
+    'id': 'original_row_id',
+    'chunk_id': 'id',
+    'chunk_content': 'content'
+}
 
 
 class KnowledgeBaseTable:
@@ -103,7 +111,9 @@ class KnowledgeBaseTable:
         db_handler = self.get_vector_db()
         logger.debug(f"Using vector db handler: {type(db_handler)}")
 
-        df = db_handler.dispatch_select(query)
+        conditions = db_handler.extract_conditions(query.where)
+        self.addapt_conditions_columns(conditions)
+        df = db_handler.dispatch_select(query, conditions)
 
         if df is not None:
 
@@ -115,7 +125,71 @@ class KnowledgeBaseTable:
         else:
             logger.warning("Query returned no data")
 
+        rerank_model = self._kb.params.get("rerank_model")
+        if rerank_model and df is not None and not df.empty:
+            try:
+                logger.info(f"Using reranker model: {rerank_model}")
+                reranker = LLMReranker(model=rerank_model)
+                # convert response from a dataframe to a list of strings
+                content_column = df[TableField.CONTENT.value]
+                # convert to list
+                documents = content_column.tolist()
+                # Extract query text from WHERE clause if it exists
+                query_text = ""
+                if query.where:
+                    def extract_content(node, **kwargs):
+                        nonlocal query_text
+                        is_binary_op = isinstance(node, BinaryOperation)
+                        is_identifier = isinstance(node.args[0], Identifier)
+                        is_content = node.args[0].parts[-1].lower() == 'content'
+                        is_constant = isinstance(node.args[1], Constant)
+                        if is_binary_op and is_identifier and is_content and is_constant:
+                            query_text = node.args[1].value
+                    query_traversal(query.where, extract_content)
+                    logger.debug(f"Extracted query text: {query_text}")
+                # Get scores from reranker
+                scores = reranker.get_scores(query_text, documents)
+                # Add scores as a new column for filtering
+                scores_array = np.array(scores)
+                # Add temporary column for sorting
+                df['_relevance_score'] = scores
+                # Filter by score threshold using numpy array for element-wise comparison
+                df = df[scores_array > reranker.filtering_threshold]
+                # Sort by relevance (higher score = more relevant)
+                df = df.sort_values(by='_relevance_score', ascending=False)
+                # Remove temporary column
+                # df = df.drop(columns=['_relevance_score'])
+                # Apply original limit if it exists
+                if query.limit and len(df) > query.limit.value:
+                    df = df.iloc[:query.limit.value]
+                logger.debug(f"Applied reranking with model {rerank_model}")
+            except Exception as e:
+                logger.error(f"Error during reranking: {str(e)}")
+
+        df = self.addapt_result_columns(df)
         return df
+
+    def addapt_conditions_columns(self, conditions):
+        if conditions is None:
+            return
+        for condition in conditions:
+            if condition.column in KB_TO_VECTORDB_COLUMNS:
+                condition.column = KB_TO_VECTORDB_COLUMNS[condition.column]
+
+    def addapt_result_columns(self, df):
+        col_update = {}
+        for kb_col, vec_col in KB_TO_VECTORDB_COLUMNS.items():
+            if vec_col in df.columns:
+                col_update[vec_col] = kb_col
+
+        df = df.rename(columns=col_update)
+
+        columns = list(df.columns)
+        # update id, get from metadata
+        df[TableField.ID.value] = df[TableField.METADATA.value].apply(lambda m: m.get('original_row_id'))
+
+        # id on first place
+        return df[[TableField.ID.value] + columns]
 
     def insert_files(self, file_names: List[str]):
         """Process and insert files"""
@@ -217,7 +291,9 @@ class KnowledgeBaseTable:
 
         # send to vectordb
         db_handler = self.get_vector_db()
-        db_handler.dispatch_delete(query)
+        conditions = db_handler.extract_conditions(query.where)
+        self.addapt_conditions_columns(conditions)
+        db_handler.dispatch_delete(query, conditions)
 
     def hybrid_search(
         self,

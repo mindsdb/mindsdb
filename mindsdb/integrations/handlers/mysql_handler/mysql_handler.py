@@ -13,8 +13,25 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 from mindsdb.integrations.handlers.mysql_handler.settings import ConnectionConfig
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 logger = log.getLogger(__name__)
+
+
+def _map_type(mysql_type_text: str) -> MYSQL_DATA_TYPE:
+    """ Map MySQL text types names to MySQL types as enum.
+
+    Args:
+        mysql_type_text (str): The name of the MySQL type to map.
+
+    Returns:
+        MYSQL_DATA_TYPE: The MySQL type enum that corresponds to the MySQL text type name.
+    """
+    try:
+        return MYSQL_DATA_TYPE(mysql_type_text.upper())
+    except Exception:
+        logger.warning(f'MySQL handler: unknown type: {mysql_type_text}, use TEXT as fallback.')
+        return MYSQL_DATA_TYPE.TEXT
 
 
 class MySQLHandler(DatabaseHandler):
@@ -211,6 +228,16 @@ class MySQLHandler(DatabaseHandler):
         """
         Show details about the table
         """
-        q = f"DESCRIBE `{table_name}`;"
+        q = f"""
+            select
+                COLUMN_NAME AS FIELD, DATA_TYPE AS TYPE
+            from
+                information_schema.columns
+            where
+                table_name = '{table_name}'
+        """
         result = self.native_query(q)
+        if result.resp_type is RESPONSE_TYPE.TABLE:
+            result.data_frame = result.data_frame.rename(columns={'FIELD': 'Field', 'TYPE': 'Type'})
+            result.data_frame['mysql_data_type'] = result.data_frame['Type'].apply(_map_type)
         return result

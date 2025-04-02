@@ -68,6 +68,10 @@
       "url": "sdks"
     },
     {
+      "name": "MCP API",
+      "url": "mcp"
+    },
+    {
       "name": "REST API",
       "url": "rest"
     },
@@ -520,6 +524,14 @@
             "mindsdb_sql/sql_support/window-functions"
           ]
         }
+      ]
+    },
+    {
+      "group": "MCP API",
+      "pages": [
+        "mcp/overview",
+        "mcp/tools",
+        "mcp/cursor_usage"
       ]
     },
     {
@@ -1020,6 +1032,7 @@
           "pages": [
             "integrations/vector-db-integrations/chromadb",
             "integrations/vector-db-integrations/couchbase",
+            "integrations/vector-db-integrations/milvus",
             "integrations/vector-db-integrations/pgvector",
             "integrations/vector-db-integrations/pinecone",
             "integrations/vector-db-integrations/weaviate"

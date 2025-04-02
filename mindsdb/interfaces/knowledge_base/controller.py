@@ -169,6 +169,7 @@ class KnowledgeBaseTable:
 
         else:
             df[relevance_column] = None
+            df['distance'] = None
         # Sort by relevance
         df = df.sort_values(by=relevance_column, ascending=False)
         return df

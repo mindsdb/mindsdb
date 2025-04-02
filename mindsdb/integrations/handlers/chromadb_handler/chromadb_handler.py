@@ -162,6 +162,8 @@ class ChromaDBHandler(VectorStoreHandler):
             FilterOperator.LESS_THAN_OR_EQUAL: "$lte",
             FilterOperator.GREATER_THAN: "$gt",
             FilterOperator.GREATER_THAN_OR_EQUAL: "$gte",
+            FilterOperator.IN: "$in",
+            FilterOperator.NOT_IN: "$nin",
         }
 
         if operator not in mapping:

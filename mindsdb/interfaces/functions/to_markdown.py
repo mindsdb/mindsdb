@@ -1,5 +1,8 @@
 import base64
 from io import BytesIO
+import os
+from typing import Union
+from urllib.parse import urlparse
 
 import fitz  # PyMuPDF
 from markitdown import MarkItDown
@@ -32,18 +35,49 @@ class ToMarkdown:
         """
         Converts a file to markdown.
         """
-        if file_path_or_url.endswith('.pdf'):
-            return self._pdf_to_markdown(file_path_or_url)
-        elif file_path_or_url.endswith(('.png', '.jpg', '.jpeg', '.gif')):
-            return self._image_to_markdown(file_path_or_url)
-        else:
-            return self._other_to_markdown(file_path_or_url)
+        file_extension = self._get_file_extension(file_path_or_url)
+        file = self._get_file(file_path_or_url)
 
-    def _pdf_to_markdown(self, file_path_or_url: str) -> str:
+        if file_extension == '.pdf':
+            return self._pdf_to_markdown(file)
+        elif file_extension in ['.jpg', '.jpeg', '.png', '.gif']:
+            return self._image_to_markdown(file)
+        else:
+            return self._other_to_markdown(file)
+        
+    def _get_file(self, file_path_or_url: str) -> str:
+        """
+        Retrieves the content of a file.
+        """
+        parsed_url = urlparse(file_path_or_url)
+        if parsed_url.scheme in ('http', 'https'):
+            response = requests.get(file_path_or_url)
+            if response.status_code == 200:
+                return response
+            else:
+                raise RuntimeError(f'Unable to retrieve file from URL: {file_path_or_url}')
+        else:
+            with open(file_path_or_url, 'rb') as file:
+                return file.read()
+            
+    def _get_file_extension(self, file_path_or_url: str) -> str:
+        """
+        Retrieves the file extension from a file path or URL.
+        """
+        parsed_url = urlparse(file_path_or_url)
+        if parsed_url.scheme in ('http', 'https'):
+            return os.path.splitext(parsed_url.path)[1]
+        else:
+            return os.path.splitext(file_path_or_url)[1]
+
+    def _pdf_to_markdown(self, file: Union[requests.Response, bytes]) -> str:
         """
         Converts a PDF file to markdown.
         """
-        file_content = self._get_file_content(file_path_or_url)
+        if isinstance(file, requests.Response):
+            file_content = file.content
+        else:
+            file_content = file
 
         if self.llm_client is None:
             return pdf_to_markdown(file_content)
@@ -122,21 +156,7 @@ class ToMarkdown:
         """
         return pdf_to_markdown(file_content)
 
-    def _get_file_content(self, file_path_or_url: str) -> str:
-        """
-        Retrieves the content of a file.
-        """
-        if file_path_or_url.startswith('http'):
-            response = requests.get(file_path_or_url)
-            if response.status_code == 200:
-                return response.content
-            else:
-                raise RuntimeError(f'Unable to retrieve file from URL: {file_path_or_url}')
-        else:
-            with open(file_path_or_url, 'rb') as file:
-                return file.read()
-
-    def _image_to_markdown(self, file_path_or_url: str) -> str:
+    def _image_to_markdown(self, file: Union[requests.Response, bytes]) -> str:
         """
         Converts images to markdown.
         """
@@ -144,13 +164,13 @@ class ToMarkdown:
             raise RuntimeError('LLM client is not initialized.')
 
         md = MarkItDown(llm_client=self.llm_client, llm_model="gpt-4o")
-        result = md.convert(file_path_or_url)
+        result = md.convert(file)
         return result.markdown
 
-    def _other_to_markdown(self, file_path_or_url: str) -> str:
+    def _other_to_markdown(self, file: Union[requests.Response, bytes]) -> str:
         """
         Converts other file formats to markdown.
         """
         md = MarkItDown(enable_plugins=True)
-        result = md.convert(file_path_or_url)
+        result = md.convert(file)
         return result.markdown

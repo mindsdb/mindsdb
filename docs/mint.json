@@ -2,8 +2,8 @@
   "$schema": "https://mintlify.com/schema.json",
   "name": "MindsDB",
   "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "light": "/logo/light.png",
+    "dark": "/logo/dark.png"
   },
   "favicon": "/favicon.png",
   "colors": {

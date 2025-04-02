@@ -22,7 +22,7 @@ class Executor:
         self.columns = []
         self.params = []
         self.data = None
-        self.server_status = None    # is it in use?
+        self.server_status = None
         self.is_executed = False
         self.error_message = None
         self.error_code = None

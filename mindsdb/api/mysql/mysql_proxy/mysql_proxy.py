@@ -105,23 +105,6 @@ class SQLAnswer:
     error_message: Optional[str] = None
     affected_rows: Optional[int] = None
 
-    # @classmethod
-    # def from_executor_answer(cls, executor_answer: ExecuteAnswer) -> 'SQLAnswer':
-    #     if executor_answer.data is None:
-    #         resp = cls(
-    #             resp_type=RESPONSE_TYPE.OK,
-    #             state_track=executor_answer.state_track,
-    #         )
-    #     else:
-    #         resp = cls(
-    #             resp_type=RESPONSE_TYPE.TABLE,
-    #             state_track=executor_answer.state_track,
-    #             columns=self.to_mysql_columns(executor_answer.columns),
-    #             data=executor_answer.data,
-    #             status=executor_answer.server_status,
-    #         )
-    #     return resp
-
     @property
     def type(self):
         return self.resp_type

@@ -4,7 +4,7 @@ from typing import List, Optional
 from mindsdb.api.executor.sql_query.result_set import ResultSet
 
 
-@dataclass
+@dataclass(kw_only=True, slots=True)
 class ExecuteAnswer:
     data: Optional[ResultSet] = None
     state_track: Optional[List[List]] = None

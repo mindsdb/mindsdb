@@ -228,7 +228,3 @@ class TestWebHandler(unittest.TestCase):
         # 4 results but limited
         df = crawler_table.list(conditions=[two_urls, depth_2, per_url_2], limit=3)
         assert len(df) == 3
-
-
-if __name__ == '__main__':
-    unittest.main()

@@ -337,10 +337,10 @@ class JobsController:
                 BinaryOperation(op='=', args=[Identifier('project'), Constant(project_name)])
             ])
         )
-        data, columns = logs_db_controller.query(query)
+        response = logs_db_controller.query(query)
 
-        names = [i['name'] for i in columns]
-        return data[names].to_dict(orient='records')
+        names = [i['name'] for i in response.columns]
+        return response.data_frame[names].to_dict(orient='records')
 
 
 class JobsExecutor:

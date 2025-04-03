@@ -230,18 +230,25 @@ class SnowflakeHandler(DatabaseHandler):
                     # Fallback for CREATE/DELETE/UPDATE. These commands returns table with single column,
                     # but it cannot be retrieved as pandas DataFrame.
                     result = cur.fetchall()
-                    if result:
-                        response = Response(
-                            RESPONSE_TYPE.TABLE,
-                            DataFrame(
-                                result,
-                                columns=[x[0] for x in cur.description]
+                    match result:
+                        case (
+                            [{'number of rows inserted': affected_rows}]
+                            | [{'number of rows deleted': affected_rows}]
+                            | [{'number of rows updated': affected_rows, 'number of multi-joined rows updated': _}]
+                        ):
+                            response = Response(RESPONSE_TYPE.OK, affected_rows=affected_rows)
+                        case list():
+                            response = Response(
+                                RESPONSE_TYPE.TABLE,
+                                DataFrame(
+                                    result,
+                                    columns=[x[0] for x in cur.description]
+                                )
                             )
-                        )
-                    else:
-                        # Looks like SnowFlake always returns something in response, so this is suspicious
-                        logger.warning('Snowflake did not return any data in response.')
-                        response = Response(RESPONSE_TYPE.OK)
+                        case _:
+                            # Looks like SnowFlake always returns something in response, so this is suspicious
+                            logger.warning('Snowflake did not return any data in response.')
+                            response = Response(RESPONSE_TYPE.OK)
             except Exception as e:
                 logger.error(f"Error running query: {query} on {self.connection_data.get('database')}, {e}!")
                 response = Response(

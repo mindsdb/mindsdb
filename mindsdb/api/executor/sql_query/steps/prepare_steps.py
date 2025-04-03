@@ -47,10 +47,10 @@ class GetTableColumnsCall(BaseStepCall):
         dn = self.session.datahub.get(step.namespace)
         ds_query = Select(from_table=Identifier(table), targets=[Star()], limit=Constant(0))
 
-        data, columns_info = dn.query(ds_query, session=self.session)
+        response = dn.query(ds_query, session=self.session)
 
         data = ResultSet()
-        for column in columns_info:
+        for column in response.columns:
             data.add_column(Column(
                 name=column['name'],
                 type=column.get('type'),

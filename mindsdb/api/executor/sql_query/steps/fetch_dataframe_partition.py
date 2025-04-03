@@ -100,10 +100,11 @@ class FetchDataframePartitionCall(BaseStepCall):
 
             # fetch batch
             query2 = run_query.get_partition_query(self.current_step_num, query)
-            df, columns_info = self.dn.query(
+            response = self.dn.query(
                 query=query2,
                 session=self.session
             )
+            df = response.data_frame
 
             if df is None or len(df) == 0:
                 break
@@ -204,10 +205,11 @@ class FetchDataframePartitionCall(BaseStepCall):
             while True:
                 # fetch batch
                 query2 = run_query.get_partition_query(self.current_step_num, query)
-                df, columns_info = self.dn.query(
+                response = self.dn.query(
                     query=query2,
                     session=self.session
                 )
+                df = response.data_frame
 
                 if df is None or len(df) == 0:
                     # TODO detect circles: data handler ignores condition and output is repeated

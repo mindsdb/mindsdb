@@ -156,10 +156,12 @@ class QueryContextController:
         last_values = {}
         for query, info in l_query.get_init_queries():
 
-            data, columns_info = dn.query(
+            response = dn.query(
                 query=query,
                 session=session
             )
+            data = response.data_frame
+            columns_info = response.columns
 
             if len(data) == 0:
                 value = None

@@ -112,6 +112,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_conn.is_connected = MagicMock(return_value=True)
 
         mock_cursor.with_rows = False
+        mock_cursor.rowcount = 1
 
         query_str = "INSERT INTO test_table VALUES (1, 'test')"
         data = self.handler.native_query(query_str)
@@ -122,6 +123,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         assert isinstance(data, Response)
         self.assertFalse(data.error_code)
         self.assertEqual(data.type, RESPONSE_TYPE.OK)
+        self.assertEqual(data.affected_rows, 1)
 
     def test_native_query_error(self):
         """

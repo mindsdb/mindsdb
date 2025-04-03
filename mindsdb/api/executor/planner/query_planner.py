@@ -871,7 +871,9 @@ class QueryPlanner:
 
                 if not can_be_partitioned:
                     if len(partition_step.steps) == 0:
-                        raise PlanningException('Nothing can be partitioned')
+                        # Nothing can be partitioned, failback to old plan
+                        plan.is_resumable = False
+                        return plan
                     partition_step = None
                 else:
                     # new_num = f'{partition_step.step_num}_{len(step)}'

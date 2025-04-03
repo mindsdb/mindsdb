@@ -33,9 +33,8 @@
 
 MindsDB is the world's most effective solution for building AI applications that talk to messy enterprise data sources. Think of it as a librarian Marie Kondo.
 
-<p align="center">
-  <img src="/docs/assets/cloud/main_mdb.png"/>
-</p>
+![image](https://github.com/user-attachments/assets/03b779e8-7008-485e-989a-e8733cb94e4c)
+
 
 A federated query engine that tidies up your data-sprawl chaos while meticulously answering every single question you throw at it. 
 

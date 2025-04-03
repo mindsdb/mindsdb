@@ -187,7 +187,7 @@ jobs:
           if [ "$RUNNER_OS" == "Linux" ]; then
             env PYTHONPATH=./ pytest tests/unit/planner/ -x
             env PYTHONPATH=./ pytest tests/unit/executor/ -x -k "not test_udf"
-            env PYTHONPATH=./ pytest tests/unit/various/ -x -k "not test_document_preprocessor"
+            env PYTHONPATH=./ pytest tests/unit/various/ -x
             env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_minds_endpoint.py
             env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_openai.py
 

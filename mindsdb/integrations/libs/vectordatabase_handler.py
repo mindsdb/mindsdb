@@ -39,6 +39,7 @@ class TableField(Enum):
     METADATA = "metadata"
     SEARCH_VECTOR = "search_vector"
     DISTANCE = "distance"
+    RELEVANCE = "relevance"
 
 
 class DistanceFunction(Enum):
@@ -68,6 +69,10 @@ class VectorStoreHandler(BaseHandler):
         {
             "name": TableField.METADATA.value,
             "data_type": "json",
+        },
+        {
+            "name": TableField.DISTANCE.value,
+            "data_type": "float",
         },
     ]
 

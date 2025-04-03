@@ -92,9 +92,7 @@ class DocumentPreprocessor:
 
     def _generate_chunk_id(
         self,
-        content: str,
         chunk_index: Optional[int] = None,
-        content_column: str = None,
         provided_id: str = None,
     ) -> str:
         """Generate deterministic ID for a chunk"""
@@ -262,15 +260,8 @@ Please give a short succinct context to situate this chunk within the overall do
             if doc.metadata:
                 metadata.update(doc.metadata)
 
-            # Pass through doc.id and content_column
-            content_column = (
-                doc.metadata.get("content_column") if doc.metadata else None
-            )
             chunk_id = self._generate_chunk_id(
-                processed_content,
-                chunk_index,
-                content_column=content_column,
-                provided_id=doc.id,
+                chunk_index=chunk_index, provided_id=doc.id
             )
             processed_chunks.append(
                 ProcessedChunk(
@@ -335,7 +326,7 @@ class TextChunkingPreprocessor(DocumentPreprocessor):
 
                 # Pass through doc.id and content_column
                 id = self._generate_chunk_id(
-                    chunk_doc.content, content_column=content_column, provided_id=doc.id
+                    chunk_index=0, provided_id=doc.id
                 )
                 processed_chunks.append(
                     ProcessedChunk(
@@ -358,9 +349,7 @@ class TextChunkingPreprocessor(DocumentPreprocessor):
 
                     # Pass through doc.id and content_column
                     chunk_id = self._generate_chunk_id(
-                        chunk_doc.content,
-                        i,
-                        content_column=content_column,
+                        chunk_index=i,
                         provided_id=doc.id,
                     )
                     processed_chunks.append(

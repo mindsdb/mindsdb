@@ -12,7 +12,7 @@ from mindsdb.api.executor.planner.exceptions import PlanningException
 from mindsdb.api.executor.planner import utils
 from mindsdb.api.executor.planner.query_plan import QueryPlan
 from mindsdb.api.executor.planner.steps import (
-    FetchDataframeStep, ProjectStep, ApplyPredictorStep,
+    PlanStep, FetchDataframeStep, ProjectStep, ApplyPredictorStep,
     ApplyPredictorRowStep, UnionStep, GetPredictorColumns, SaveToTable,
     InsertToTable, UpdateToTable, SubSelectStep, QueryStep, JoinStep,
     DeleteStep, DataStep, CreateTableStep, FetchDataframeStepPartition
@@ -165,7 +165,11 @@ class QueryPlanner:
 
         query_traversal(query, _prepare_integration_select)
 
-    def get_integration_select_step(self, select, params=None):
+    def get_integration_select_step(self, select: Select, params: dict = None) -> PlanStep:
+        """
+        Generate planner step to execute query over integration or over results of previous step (if it is CTE)
+        """
+
         if isinstance(select.from_table, NativeQuery):
             integration_name = select.from_table.integration.parts[-1]
         else:
@@ -825,7 +829,12 @@ class QueryPlanner:
 
         return plan
 
-    def handle_partitioning(self, plan):
+    def handle_partitioning(self, plan: QueryPlan) -> QueryPlan:
+        """
+        If plan has fetching in partitions:
+          try to rebuild plan to send fetched chunk of data through the following steps, if it is possible
+        """
+
         # handle fetchdataframe partitioning
         steps_out = []
 
@@ -876,7 +885,6 @@ class QueryPlanner:
                         return plan
                     partition_step = None
                 else:
-                    # new_num = f'{partition_step.step_num}_{len(step)}'
                     partition_step.steps.append(step)
                     continue
 

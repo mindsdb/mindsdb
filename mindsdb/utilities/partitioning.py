@@ -6,7 +6,10 @@ from mindsdb.utilities.config import Config
 from mindsdb.utilities.context_executor import execute_in_threads
 
 
-def get_max_thread_count():
+def get_max_thread_count() -> int:
+    """
+        Calculate the maximum number of threads allowed for the system.
+    """
     # workers count
     is_cloud = Config().is_cloud
     if is_cloud:
@@ -20,7 +23,10 @@ def get_max_thread_count():
     return max_threads
 
 
-def split_data_frame(df, partition_size):
+def split_data_frame(df: pd.DataFrame, partition_size: int) -> Iterable[pd.DataFrame]:
+    """
+    Split data frame into chunks with partition_size and yield them out
+    """
     chunk = 0
     while chunk * partition_size < len(df):
         # create results with partition

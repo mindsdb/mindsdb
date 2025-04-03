@@ -455,6 +455,12 @@ class QueriesTable(MdbTable):
 
     @classmethod
     def get_data(cls, **kwargs):
+        """
+        Returns all queries in progres or recently completed
+        Only queries marked as is_resumable by planner are stored in this table
+        :param kwargs:
+        :return:
+        """
 
         data = query_context_controller.list_queries()
         columns_lower = [col.lower() for col in cls.columns]

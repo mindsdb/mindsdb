@@ -328,10 +328,6 @@ class KnowledgeBaseTable:
         db_handler = self.get_vector_db()
         db_handler.delete(self._kb.vector_database_table)
 
-    def link_query(self, query_id):
-        self._kb.query_id = query_id
-        db.session.commit()
-
     def insert(self, df: pd.DataFrame):
         """Insert dataframe to KB table."""
         if df.empty:
@@ -339,9 +335,11 @@ class KnowledgeBaseTable:
 
         try:
             run_query_id = ctx.run_query_id
-            # attach to runnning query
+            # Link current KB to running query (where KB is used to insert data)
             if run_query_id is not None:
-                self.link_query(run_query_id)
+                self._kb.query_id = run_query_id
+                db.session.commit()
+
         except AttributeError:
             ...
 

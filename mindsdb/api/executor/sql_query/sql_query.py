@@ -11,8 +11,9 @@
 import re
 import inspect
 from textwrap import dedent
+from typing import Union
 
-from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser import parse_sql, ASTNode
 from mindsdb.api.executor.planner.steps import (
     ApplyTimeseriesPredictorStep,
     ApplyPredictorRowStep,
@@ -48,7 +49,8 @@ class SQLQuery:
 
     step_handlers = {}
 
-    def __init__(self, sql, session, execute=True, database=None, query_id=None):
+    def __init__(self, sql: Union[ASTNode, str], session, execute: bool = True,
+                 database: str = None, query_id: int = None):
         self.session = session
 
         if database is not None:
@@ -72,6 +74,7 @@ class SQLQuery:
         self.run_query = None
         self.query_id = query_id
         if query_id is not None:
+            # resume query
             run_query = query_context_controller.get_query(self.query_id)
             run_query.clear_error()
             sql = run_query.sql
@@ -278,9 +281,11 @@ class SQLQuery:
                 self.steps_data[step.step_num] = step_result
         except Exception as e:
             if self.run_query is not None:
+                # set error and place where it stopped
                 self.run_query.on_error(e, step.step_num, self.steps_data)
             raise e
         else:
+            # mark running query as completed
             if self.run_query is not None:
                 self.run_query.finish()
                 ctx.run_query_id = None

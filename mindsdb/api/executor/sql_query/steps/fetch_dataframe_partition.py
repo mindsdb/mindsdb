@@ -1,15 +1,17 @@
 import pandas as pd
 import threading
 import queue
+from typing import List
 
-
+from mindsdb_sql_parser import ASTNode
 from mindsdb.api.executor.planner.steps import FetchDataframeStepPartition
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 
+from mindsdb.interfaces.query_context.context_controller import RunningQuery
 from mindsdb.api.executor.sql_query.result_set import ResultSet
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
-from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.context import Context, context as ctx
 from mindsdb.utilities.partitioning import get_max_thread_count, split_data_frame
 from mindsdb.api.executor.sql_query.steps.fetch_dataframe import get_table_alias, get_fill_param_fnc
 
@@ -20,16 +22,32 @@ logger = log.getLogger(__name__)
 
 
 class FetchDataframePartitionCall(BaseStepCall):
+    """
+    Alternative to FetchDataframeCall but fetch data by batches wrapping user's query to:
+
+     select * from ({user query})
+      where {track_column} > {previous value}
+      order by track_column
+      limit size {batch_size} `
+
+    """
 
     bind = FetchDataframeStepPartition
 
-    def close_workers(self, workers):
-        self.stop_event.set()
-        for worker in workers:
-            if worker.is_alive():
-                worker.join()
+    def call(self, step: FetchDataframeStepPartition) -> ResultSet:
+        """
+        Parameters:
+        - batch_size - count of rows to fetch from database per iteration, optional default 1000
+        - threads - run partitioning in threads, bool or int, optinal, if set:
+           - int value: use this as count of threads
+           - true: table threads, autodetect count of thread
+           - false: disable threads even if ml task queue is enabled
+        - track_column - column used for creating partitions
+          - query will be sorted by this column and select will be limited by batch_size
+        - error (default raise)
+          - when `error='skip'`, errors in partition will be skipped and execution will be continued
+        """
 
-    def call(self, step):
         self.dn = self.session.datahub.get(step.integration)
         query = step.query
 
@@ -72,8 +90,10 @@ class FetchDataframePartitionCall(BaseStepCall):
         else:
             return self.fetch_iterate(run_query, query, on_error=on_error)
 
-    def fetch_iterate(self, run_query, query, on_error=None):
-        # process batches in circle
+    def fetch_iterate(self, run_query: RunningQuery, query: ASTNode, on_error: str = None) -> ResultSet:
+        """
+         Process batches one by one in circle
+        """
 
         results = []
         while True:
@@ -103,7 +123,10 @@ class FetchDataframePartitionCall(BaseStepCall):
 
         return self.concat_results(results)
 
-    def concat_results(self, results):
+    def concat_results(self, results: List[ResultSet]) -> ResultSet:
+        """
+        Concatenate list of result sets to single result set
+        """
         df_list = []
         for res in results:
             df, col_names = res.to_df_cols()
@@ -116,7 +139,15 @@ class FetchDataframePartitionCall(BaseStepCall):
 
         return data
 
-    def exec_sub_steps(self, df):
+    def exec_sub_steps(self, df: pd.DataFrame) -> ResultSet:
+        """
+        FetchDataframeStepPartition has substeps defined
+        Every batch of data have to be used to execute these substeps
+        - batch of data is put as result of FetchDataframeStepPartition
+        - substep are executed using result of previos step (like it is all fetched data is available)
+        - the final result is returned and used outside to concatenate with results of other's batches
+        """
+
         input_data = ResultSet()
 
         input_data.from_df(
@@ -136,8 +167,14 @@ class FetchDataframePartitionCall(BaseStepCall):
             steps_data2[substep.step_num] = sub_data
         return sub_data
 
-    def fetch_threads(self, run_query, query, thread_count=None, on_error=None):
-        # process batches in threads
+    def fetch_threads(self, run_query: RunningQuery, query: ASTNode,
+                      thread_count: int = None, on_error: str = None) -> ResultSet:
+        """
+        Process batches in threads
+        - spawn required count of threads
+        - create in/out queue to communicate with threads
+        - send task to threads and receive results
+        """
 
         # create communication queues
         queue_in = queue.Queue()
@@ -206,7 +243,20 @@ class FetchDataframePartitionCall(BaseStepCall):
 
         return self.concat_results(results)
 
-    def _worker(self, context, queue_in, queue_out, stop_event):
+    def close_workers(self, workers: List[threading.Thread]):
+        """
+        Sent signal to workers to stop
+        """
+
+        self.stop_event.set()
+        for worker in workers:
+            if worker.is_alive():
+                worker.join()
+
+    def _worker(self, context: Context, queue_in: queue.Queue, queue_out: queue.Queue, stop_event: threading.Event):
+        """
+        Worker function. Execute incoming tasks unless stop_event is set
+        """
         ctx.load(context)
         while True:
             if stop_event.is_set():

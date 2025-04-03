@@ -649,7 +649,14 @@ class ExecuteCommands:
             logger.warning(f"Unknown SQL statement: {sql}")
             raise NotSupportedYet(f"Unknown SQL statement: {sql}")
 
-    def exec_service_function(self, statement: Select, database_name):
+    def exec_service_function(self, statement: Select, database_name: str) -> Optional[ExecuteAnswer]:
+        """
+        If input query is a single line select without FROM
+          and has function in targets that matches with one of the mindsdb service functions:
+          - execute this function and return response
+        Otherwise, return None to allow to continue execution query outside
+        """
+
         if statement.from_table is not None or len(statement.targets) != 1:
             return
 

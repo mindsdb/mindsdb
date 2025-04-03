@@ -265,10 +265,12 @@ class PostgresHandler(DatabaseHandler):
 
         columns = df.columns
 
+        # postgres 'copy' is not thread safe. use lock to prevent concurrent execution
         with self._insert_lock:
             resp = self.get_columns(table_name)
+
+        # copy requires precise cases of names: get current column names from table and adapt input dataframe columns
         if resp.data_frame is not None and not resp.data_frame.empty:
-            # get first column
             db_columns = {
                 c.lower(): c
                 for c in resp.data_frame['Field']

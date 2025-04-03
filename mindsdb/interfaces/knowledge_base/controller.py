@@ -99,9 +99,14 @@ class KnowledgeBaseTable:
                     elif item.column == "reranking_threshold" and item.op.value == "=":
                         try:
                             reranking_threshold = float(item.value)
+                            # Validate range: must be between 0 and 1
+                            if not (0 <= reranking_threshold <= 1):
+                                raise ValueError(f"reranking_threshold must be between 0 and 1, got: {reranking_threshold}")
                             logger.debug(f"Found reranking_threshold in query: {reranking_threshold}")
-                        except (ValueError, TypeError):
-                            logger.warning(f"Invalid reranking_threshold value: {item.value}")
+                        except (ValueError, TypeError) as e:
+                            error_msg = f"Invalid reranking_threshold value: {item.value}. {str(e)}"
+                            logger.error(error_msg)
+                            raise ValueError(error_msg)
             query.where = self._filter_out_threshold_condition(query.where)
             logger.debug(f"Extracted query text: {query_text}")
 

@@ -87,7 +87,7 @@ class KnowledgeBaseTable:
 
         # Extract the content query text for potential reranking
         query_text = None
-        filtering_threshold = None
+        reranking_threshold = None
         db_handler = self.get_vector_db()
         if query.where:
             conditions = db_handler.extract_conditions(query.where)
@@ -95,13 +95,13 @@ class KnowledgeBaseTable:
                 for item in conditions:
                     if item.column == TableField.CONTENT.value:
                         query_text = item.value
-                    # Extract filtering_threshold if present, but don't include in filtered conditions
-                    elif item.column == "filtering_threshold" and item.op.value == "=":
+                    # Extract reranking_threshold if present, but don't include in filtered conditions
+                    elif item.column == "reranking_threshold" and item.op.value == "=":
                         try:
-                            filtering_threshold = float(item.value)
-                            logger.debug(f"Found filtering_threshold in query: {filtering_threshold}")
+                            reranking_threshold = float(item.value)
+                            logger.debug(f"Found reranking_threshold in query: {reranking_threshold}")
                         except (ValueError, TypeError):
-                            logger.warning(f"Invalid filtering_threshold value: {item.value}")
+                            logger.warning(f"Invalid reranking_threshold value: {item.value}")
             query.where = self._filter_out_threshold_condition(query.where)
             logger.debug(f"Extracted query text: {query_text}")
 
@@ -138,14 +138,14 @@ class KnowledgeBaseTable:
         logger.debug(f"Columns in response: {df.columns.tolist()}")
         # Check if we have a rerank_model configured in KB params
 
-        df = self.add_relevance(df, query_text, filtering_threshold)
+        df = self.add_relevance(df, query_text, reranking_threshold)
 
         # filter by targets
         if requested_kb_columns is not None:
             df = df[requested_kb_columns]
         return df
 
-    def add_relevance(self, df, query_text, filtering_threshold=None):
+    def add_relevance(self, df, query_text, reranking_threshold=None):
         relevance_column = TableField.RELEVANCE.value
 
         rerank_model = self._kb.params.get("rerank_model")
@@ -155,9 +155,9 @@ class KnowledgeBaseTable:
                 logger.info(f"Using reranker model {rerank_model} for relevance calculation")
                 reranker_params = {"model": rerank_model}
                 # Apply custom filtering threshold if provided
-                if filtering_threshold is not None:
-                    reranker_params["filtering_threshold"] = filtering_threshold
-                    logger.info(f"Using custom filtering threshold: {filtering_threshold}")
+                if reranking_threshold is not None:
+                    reranker_params["reranking_threshold"] = reranking_threshold
+                    logger.info(f"Using custom filtering threshold: {reranking_threshold}")
 
                 reranker = LLMReranker(**reranker_params)
                 # Get documents to rerank
@@ -169,8 +169,8 @@ class KnowledgeBaseTable:
 
                 # Filter by threshold
                 scores_array = np.array(scores)
-                df = df[scores_array > reranker.filtering_threshold]
-                logger.debug(f"Applied reranking with model {rerank_model}, threshold: {reranker.filtering_threshold}")
+                df = df[scores_array > reranker.reranking_threshold]
+                logger.debug(f"Applied reranking with model {rerank_model}, threshold: {reranker.reranking_threshold}")
             except Exception as e:
                 logger.error(f"Error during reranking: {str(e)}")
                 # Fallback to distance-based relevance
@@ -720,7 +720,7 @@ class KnowledgeBaseTable:
 
     def _filter_out_threshold_condition(self, where_clause):
         """
-        Recursively filters out filtering_threshold conditions from the WHERE clause
+        Recursively filters out reranking_threshold conditions from the WHERE clause
         Returns None if the clause should be removed entirely, or the modified clause
         """
         if not where_clause:
@@ -747,8 +747,8 @@ class KnowledgeBaseTable:
                 where_clause.args[1] = right_result
                 return where_clause
 
-            elif (isinstance(where_clause.args[0], Identifier) and where_clause.args[0].parts and where_clause.args[0].parts[-1] == 'filtering_threshold'):
-                # This is a filtering_threshold condition, return None to remove it
+            elif (isinstance(where_clause.args[0], Identifier) and where_clause.args[0].parts and where_clause.args[0].parts[-1] == 'reranking_threshold'):
+                # This is a reranking_threshold condition, return None to remove it
                 return None
 
         return where_clause

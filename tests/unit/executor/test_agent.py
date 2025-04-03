@@ -532,9 +532,9 @@ class TestKB(BaseExecutorDummyML):
     def test_kb_partitions(self, mock_handler):
         self._create_embedding_model('emb_model')
 
-        self.run_sql('create knowledge base kb_part using model=emb_model')
-
         df = self._get_ral_table()
+        self.save_file('ral', df)
+
         df = pd.concat([df] * 30)
         # unique ids
         df['id'] = list(map(str, range(len(df))))
@@ -542,8 +542,18 @@ class TestKB(BaseExecutorDummyML):
         self.set_handler(mock_handler, name='pg', tables={'ral': df})
 
         def check_partition(sql):
+            # create empty kb
+            self.run_sql('DROP KNOWLEDGE_BASE IF EXISTS kb_part')
+            self.run_sql('create knowledge base kb_part using model=emb_model')
+
+            # load kb
             self.run_sql(sql)
 
+            # check content
+            ret = self.run_sql('select * from kb_part')
+            assert len(ret) == len(df)
+
+            # check queries table
             ret = self.run_sql('select * from information_schema.queries')
             assert len(ret) == 1
             rec = ret.iloc[0]
@@ -586,3 +596,18 @@ class TestKB(BaseExecutorDummyML):
             SELECT id, english content FROM  pg.ral
             using batch_size=20, track_column=id, threads = 3
         ''')
+
+        # check select join using partitions
+        ret = self.run_sql('''
+            SELECT * FROM  pg.ral t
+            join emb_model
+            using batch_size=20, track_column=id
+        ''')
+        assert len(ret) == len(df)
+
+        ret = self.run_sql('''
+            SELECT * FROM  pg.ral t
+            join emb_model
+            using batch_size=20, track_column=id, threads = 3
+        ''')
+        assert len(ret) == len(df)

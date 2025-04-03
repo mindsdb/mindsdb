@@ -220,9 +220,10 @@ class FetchDataframePartitionCall(BaseStepCall):
                 # split into chunks and send to workers
                 sent_chunks = 0
                 for df2 in split_data_frame(df, partition_size):
-                    queue_in.put(df2)
+                    queue_in.put([sent_chunks, df2])
                     sent_chunks += 1
 
+                batch_results = []
                 for i in range(sent_chunks):
                     res = queue_out.get()
                     if 'error' in res:
@@ -232,7 +233,14 @@ class FetchDataframePartitionCall(BaseStepCall):
                             raise RuntimeError(res['error'])
 
                     if res['data']:
-                        results.append(res['data'])
+                        batch_results.append(res)
+
+                # sort results
+                batch_results.sort(key=lambda x: x['num'])
+
+                results.append(self.concat_results(
+                    [item['data'] for item in batch_results]
+                ))
 
                 # TODO
                 #  1. get next batch without updating track_value:
@@ -263,13 +271,13 @@ class FetchDataframePartitionCall(BaseStepCall):
                 break
 
             try:
-                df = queue_in.get(timeout=1)
+                chunk_num, df = queue_in.get(timeout=1)
                 if df is None:
                     continue
 
                 sub_data = self.exec_sub_steps(df)
 
-                queue_out.put({'data': sub_data})
+                queue_out.put({'data': sub_data, 'num': chunk_num})
             except queue.Empty:
                 continue
 

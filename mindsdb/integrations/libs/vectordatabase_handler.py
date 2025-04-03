@@ -74,10 +74,6 @@ class VectorStoreHandler(BaseHandler):
             "name": TableField.DISTANCE.value,
             "data_type": "float",
         },
-        {
-            "name": TableField.RELEVANCE.value,
-            "data_type": "float",
-        },
     ]
 
     def validate_connection_parameters(self, name, **kwargs):

@@ -156,7 +156,7 @@ class KnowledgeBaseTable:
                 reranker_params = {"model": rerank_model}
                 # Apply custom filtering threshold if provided
                 if reranking_threshold is not None:
-                    reranker_params["reranking_threshold"] = reranking_threshold
+                    reranker_params["filtering_threshold"] = reranking_threshold
                     logger.info(f"Using custom filtering threshold: {reranking_threshold}")
 
                 reranker = LLMReranker(**reranker_params)
@@ -169,8 +169,8 @@ class KnowledgeBaseTable:
 
                 # Filter by threshold
                 scores_array = np.array(scores)
-                df = df[scores_array > reranker.reranking_threshold]
-                logger.debug(f"Applied reranking with model {rerank_model}, threshold: {reranker.reranking_threshold}")
+                df = df[scores_array > reranker.filtering_threshold]
+                logger.debug(f"Applied reranking with model {rerank_model}, threshold: {reranker.filtering_threshold}")
             except Exception as e:
                 logger.error(f"Error during reranking: {str(e)}")
                 # Fallback to distance-based relevance

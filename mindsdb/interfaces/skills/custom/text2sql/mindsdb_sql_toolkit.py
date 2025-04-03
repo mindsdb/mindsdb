@@ -1,10 +1,12 @@
-from typing import List
+from typing import List, Optional
 from textwrap import dedent
 from datetime import datetime
 
 from langchain_community.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
 from langchain_community.tools import ListSQLDatabaseTool, InfoSQLDatabaseTool, QuerySQLDataBaseTool
+from langchain_core.callbacks import CallbackManagerForToolRun
 from langchain_core.tools import BaseTool
+from pydantic import BaseModel, Field, field_validator
 
 from mindsdb.interfaces.skills.custom.text2sql.mindsdb_sql_tool import MindsDBSQLParserTool
 
@@ -39,7 +41,46 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
             "Example of wrong Input:\n    $START$ `database.table1`, `database.table2`, `database.table3` $STOP$\n"
             "    $START$ table1 table2 table3 $STOP$\n"
         )
-        info_sql_database_tool = InfoSQLDatabaseTool(
+
+        class _InfoSQLDatabaseToolInput(BaseModel):
+            table_names: str = Field(
+                ...,
+                description=(
+                    "A comma-separated list of tables or file paths enclosed between the symbols $START$ and $STOP$. "
+                    "Table names and file paths must be escaped using backticks. Example:\n"
+                    "$START$ `database`.`table1`, `database`.`table2` $STOP$"
+                ),
+            )
+
+            @field_validator('table_names', mode="before")
+            @classmethod
+            def validate_table_names(cls, value: str) -> str:
+                """
+                Validate the the table_names field to ensure it is a comma-separated list of table names.
+                It should not be in the form of a dictionary with keys and values.
+                """
+                # The input string should not be in the form of a dictionary.
+                if '{' in value and '}' in value:
+                    raise ValueError(
+                        "Input should be a comma-separated list of table names, not a dictionary."
+                    )
+
+        class MindsDBInfoSQLDatabaseTool(InfoSQLDatabaseTool):
+            """Tool for getting metadata about a SQL database."""
+            def _run(
+                self,
+                table_names: str,
+                run_manager: Optional[CallbackManagerForToolRun] = None,
+            ) -> str:
+                """Get the schema for tables in a comma-separated list."""
+                # Validate the input using the Pydantic model.
+                try:
+                    _InfoSQLDatabaseToolInput(table_names=table_names)
+                except ValueError as e:
+                    return f"Invalid input: {e}. Please provide a comma-separated list of table names enclosed between the symbols $START$ and $STOP$."
+                return super()._run(table_names, run_manager)
+
+        info_sql_database_tool = MindsDBInfoSQLDatabaseTool(
             name=f'sql_db_schema{prefix}',
             db=self.db, description=info_sql_database_tool_description
         )

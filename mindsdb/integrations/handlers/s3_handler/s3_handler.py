@@ -394,7 +394,7 @@ class S3Handler(APIHandler):
                 break
 
         return objects
-    
+
     def generate_sas_url(self, key: str, bucket: str) -> str:
         """
         Generates a pre-signed URL for accessing an object in the S3 bucket.

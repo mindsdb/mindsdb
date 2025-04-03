@@ -63,12 +63,18 @@ USING
 * Using the HuggingFace models:
 
 ```sql
-CREATE MODEL embedding_model
+CREATE MODEL hf_embedding_model
 PREDICT embedding
 USING
       engine = 'embedding',
       class = 'HuggingFaceEmbeddings',
       model = "sentence-transformers/all-mpnet-base-v2";
+```
+
+Ensure that the model has been created successfully before using it. To do that, use the `DESCRIBE` command and look at the `status` column.
+
+```sql
+DESCRIBE openai_embedding_model;
 ```
 
 <Tip>

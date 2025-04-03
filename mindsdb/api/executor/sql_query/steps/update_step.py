@@ -123,6 +123,5 @@ class UpdateToTableCall(BaseStepCall):
             for param_name, param in params_map_index:
                 param.value = row[param_name]
 
-            # TODO affected rows?
             response = dn.query(query=update_query, session=self.session)
-        return ResultSet()
+        return ResultSet(affected_rows=response.affected_rows)

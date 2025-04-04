@@ -1,5 +1,6 @@
 import ast
 import sys
+import os
 from typing import Dict, List, Optional, Union
 import hashlib
 
@@ -67,6 +68,8 @@ class ChromaDBHandler(VectorStoreHandler):
             "persist_directory": self.persist_directory,
         }
 
+        self._use_handler_storage = False
+
         self.connect()
 
     def validate_connection_parameters(self, name, **kwargs):
@@ -79,11 +82,15 @@ class ChromaDBHandler(VectorStoreHandler):
 
         config = ChromaHandlerConfig(**_config)
 
-        if config.persist_directory and not self.handler_storage.is_temporal:
-            # get full persistence directory from handler storage
-            self.persist_directory = self.handler_storage.folder_get(
-                config.persist_directory
-            )
+        if config.persist_directory:
+            if os.path.isabs(config.persist_directory):
+                self.persist_directory = config.persist_directory
+            elif not self.handler_storage.is_temporal:
+                # get full persistence directory from handler storage
+                self.persist_directory = self.handler_storage.folder_get(
+                    config.persist_directory
+                )
+                self._use_handler_storage = True
 
         return config
 
@@ -105,7 +112,7 @@ class ChromaDBHandler(VectorStoreHandler):
 
     def _sync(self):
         """Sync the database to disk if using persistent storage"""
-        if self.persist_directory:
+        if self.persist_directory and self._use_handler_storage:
             self.handler_storage.folder_sync(self.persist_directory)
 
     def __del__(self):
@@ -416,8 +423,8 @@ class ChromaDBHandler(VectorStoreHandler):
             collection.upsert(
                 ids=data_dict[TableField.ID.value],
                 documents=data_dict[TableField.CONTENT.value],
-                embeddings=data_dict.get(TableField.EMBEDDINGS.value),
-                metadatas=data_dict.get(TableField.METADATA.value)
+                embeddings=data_dict.get(TableField.EMBEDDINGS.value, None),
+                metadatas=data_dict.get(TableField.METADATA.value, None)
             )
             self._sync()
         except Exception as e:

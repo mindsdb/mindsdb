@@ -281,7 +281,9 @@ class KnowledgeBaseTable:
 
         # send to vectordb
         db_handler = self.get_vector_db()
-        db_handler.query(query)
+        conditions = db_handler.extract_conditions(query.where)
+        self.addapt_conditions_columns(conditions)
+        db_handler.dispatch_update(query, conditions)
 
     def delete_query(self, query: Delete):
         """

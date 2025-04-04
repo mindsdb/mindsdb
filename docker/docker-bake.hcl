@@ -25,12 +25,18 @@ variable "BRANCH" {
 variable "ECR_REPO" {
   default = "454861456664.dkr.ecr.us-east-2.amazonaws.com"
 }
+variable "PUSH_CACHE" {
+  default = true
+}
+variable "CACHE_ONLY" {
+  default = false
+}
 
 function "get_cache_to" {
   params = [image]
-  result = [
+  result = PUSH_CACHE ? [
     "type=registry,image-manifest=true,oci-mediatypes=true,mode=max,ref=${ECR_REPO}/${IMAGE}-cache:${replace("${BRANCH}", "/", "-")}-${image}"
-  ]
+  ] : []
 }
 function "get_cache_from" {
   params = [image]
@@ -123,6 +129,6 @@ target "images" {
   contexts = {
     build = "target:base"
   }
-  output = ["type=registry"]
+  output = CACHE_ONLY ? ["type=cacheonly"] : ["type=registry"]
 }
 

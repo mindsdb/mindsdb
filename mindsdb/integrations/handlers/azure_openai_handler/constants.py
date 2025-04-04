@@ -1,0 +1,1 @@
+DEFAULT_API_VERSION = '2024-12-01-preview'

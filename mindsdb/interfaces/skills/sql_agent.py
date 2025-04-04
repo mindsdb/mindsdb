@@ -251,11 +251,13 @@ class SQLAgent:
         tables_info = []
         for table in all_tables:
             key = f"{ctx.company_id}_{table}_info"
-            table_info = self._cache.get(key) if self._cache else None
+            # Sanitize the key to avoid table (file) names with backticks and slashes.
+            sanitized_key = re.sub(r'[^\w\-.]', '_', key)
+            table_info = self._cache.get(sanitized_key) if self._cache else None
             if table_info is None:
                 table_info = self._get_single_table_info(table)
                 if self._cache:
-                    self._cache.set(key, table_info)
+                    self._cache.set(sanitized_key, table_info)
 
             tables_info.append(table_info)
 

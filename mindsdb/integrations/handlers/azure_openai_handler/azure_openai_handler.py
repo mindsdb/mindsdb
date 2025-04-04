@@ -1,7 +1,7 @@
 import os
 from openai import AzureOpenAI
 from azure.core.credentials import AzureKeyCredential
-from constants import DEFAULT_API_VERSION
+from mindsdb.integrations.handlers.azure_openai_handler.constants import DEFAULT_API_VERSION
 
 from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler
 

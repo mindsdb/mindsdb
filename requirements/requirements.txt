@@ -66,3 +66,4 @@ pymupdf==1.25.2
 filetype
 charset-normalizer
 openpyxl # used by pandas to read txt and xlsx files
+markitdown[all]==0.1.1

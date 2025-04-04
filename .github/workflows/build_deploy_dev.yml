@@ -46,6 +46,7 @@ jobs:
         with:
           repository: mindsdb/github-actions
           path: github-actions
+          ref: f60032a9910f1a350d5ee016d38c9a4033115f4a
       # Build the bakefile and push
       - uses: ./github-actions/docker-bake
         with:

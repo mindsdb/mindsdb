@@ -1,6 +1,7 @@
 import time
 import json
 from typing import Optional
+import threading
 
 import pandas as pd
 import psycopg
@@ -76,6 +77,8 @@ class PostgresHandler(DatabaseHandler):
         self.connection = None
         self.is_connected = False
         self.thread_safe = True
+
+        self._insert_lock = threading.Lock()
 
     def __del__(self):
         if self.is_connected:
@@ -261,14 +264,35 @@ class PostgresHandler(DatabaseHandler):
 
         connection = self.connect()
 
-        columns = [f'"{c}"' for c in df.columns]
+        columns = df.columns
+
+        # postgres 'copy' is not thread safe. use lock to prevent concurrent execution
+        with self._insert_lock:
+            resp = self.get_columns(table_name)
+
+        # copy requires precise cases of names: get current column names from table and adapt input dataframe columns
+        if resp.data_frame is not None and not resp.data_frame.empty:
+            db_columns = {
+                c.lower(): c
+                for c in resp.data_frame['Field']
+            }
+
+            # try to get case of existing column
+            columns = [
+                db_columns.get(c.lower(), c)
+                for c in columns
+            ]
+
+        columns = [f'"{c}"' for c in columns]
         rowcount = None
+
         with connection.cursor() as cur:
             try:
-                with cur.copy(f'copy "{table_name}" ({",".join(columns)}) from STDIN WITH CSV') as copy:
-                    df.to_csv(copy, index=False, header=False)
+                with self._insert_lock:
+                    with cur.copy(f'copy "{table_name}" ({",".join(columns)}) from STDIN WITH CSV') as copy:
+                        df.to_csv(copy, index=False, header=False)
 
-                connection.commit()
+                    connection.commit()
             except Exception as e:
                 logger.error(f'Error running insert to {table_name} on {self.database}, {e}!')
                 connection.rollback()

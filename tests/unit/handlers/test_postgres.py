@@ -376,7 +376,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         with self.assertRaises(psycopg.Error):
             self.handler.insert('nonexistent_table', df)
 
-        mock_conn.rollback.assert_called_once()
+        mock_conn.rollback.assert_called()
 
     def test_disconnect(self):
         """

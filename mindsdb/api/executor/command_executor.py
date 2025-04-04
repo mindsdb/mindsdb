@@ -34,6 +34,7 @@ from mindsdb_sql_parser.ast import (
     Update,
     Use,
     Tuple,
+    Function,
 )
 
 # typed models
@@ -599,6 +600,9 @@ class ExecuteCommands:
         ):
             return ExecuteAnswer()
         elif statement_type is Select:
+            ret = self.exec_service_function(statement, database_name)
+            if ret is not None:
+                return ret
             query = SQLQuery(statement, session=self.session, database=database_name)
             return self.answer_select(query)
         elif statement_type is Union:
@@ -647,6 +651,31 @@ class ExecuteCommands:
         else:
             logger.warning(f"Unknown SQL statement: {sql}")
             raise NotSupportedYet(f"Unknown SQL statement: {sql}")
+
+    def exec_service_function(self, statement: Select, database_name: str) -> Optional[ExecuteAnswer]:
+        """
+        If input query is a single line select without FROM
+          and has function in targets that matches with one of the mindsdb service functions:
+          - execute this function and return response
+        Otherwise, return None to allow to continue execution query outside
+        """
+
+        if statement.from_table is not None or len(statement.targets) != 1:
+            return
+
+        target = statement.targets[0]
+        if not isinstance(target, Function):
+            return
+
+        command = target.op.lower()
+        args = [arg.value for arg in target.args if isinstance(arg, Constant)]
+        if command == 'query_resume':
+            ret = SQLQuery(None, session=self.session, database=database_name, query_id=args[0])
+            return self.answer_select(ret)
+
+        elif command == 'query_cancel':
+            query_context_controller.cancel_query(*args)
+            return ExecuteAnswer()
 
     def answer_create_trigger(self, statement, database_name):
         triggers_controller = TriggersController()

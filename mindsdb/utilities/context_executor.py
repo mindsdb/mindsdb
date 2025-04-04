@@ -43,7 +43,7 @@ def execute_in_threads(func, tasks, thread_count=3, queue_size_k=1.5):
         for i in range(queue_size):
             try:
                 args = next(tasks)
-                futures.append(executor.submit(func, *args))
+                futures.append(executor.submit(func, args))
             except StopIteration:
                 break
 

@@ -87,11 +87,27 @@ class KnowledgeBaseTable:
 
         # Extract the content query text for potential reranking
         query_text = None
+        reranking_threshold = None
         db_handler = self.get_vector_db()
         if query.where:
-            for item in db_handler.extract_conditions(query.where):
-                if item.column == TableField.CONTENT.value:
-                    query_text = item.value
+            conditions = db_handler.extract_conditions(query.where)
+            if conditions:
+                for item in conditions:
+                    if item.column == TableField.CONTENT.value:
+                        query_text = item.value
+                    # Extract reranking_threshold if present, but don't include in filtered conditions
+                    elif item.column == "reranking_threshold" and item.op.value == "=":
+                        try:
+                            reranking_threshold = float(item.value)
+                            # Validate range: must be between 0 and 1
+                            if not (0 <= reranking_threshold <= 1):
+                                raise ValueError(f"reranking_threshold must be between 0 and 1, got: {reranking_threshold}")
+                            logger.debug(f"Found reranking_threshold in query: {reranking_threshold}")
+                        except (ValueError, TypeError) as e:
+                            error_msg = f"Invalid reranking_threshold value: {item.value}. {str(e)}"
+                            logger.error(error_msg)
+                            raise ValueError(error_msg)
+            query.where = self._filter_out_threshold_condition(query.where)
             logger.debug(f"Extracted query text: {query_text}")
 
         # replace content with embeddings
@@ -127,14 +143,14 @@ class KnowledgeBaseTable:
         logger.debug(f"Columns in response: {df.columns.tolist()}")
         # Check if we have a rerank_model configured in KB params
 
-        df = self.add_relevance(df, query_text)
+        df = self.add_relevance(df, query_text, reranking_threshold)
 
         # filter by targets
         if requested_kb_columns is not None:
             df = df[requested_kb_columns]
         return df
 
-    def add_relevance(self, df, query_text):
+    def add_relevance(self, df, query_text, reranking_threshold=None):
         relevance_column = TableField.RELEVANCE.value
 
         rerank_model = self._kb.params.get("rerank_model")
@@ -142,7 +158,13 @@ class KnowledgeBaseTable:
             # Use reranker for relevance score
             try:
                 logger.info(f"Using reranker model {rerank_model} for relevance calculation")
-                reranker = LLMReranker(model=rerank_model)
+                reranker_params = {"model": rerank_model}
+                # Apply custom filtering threshold if provided
+                if reranking_threshold is not None:
+                    reranker_params["filtering_threshold"] = reranking_threshold
+                    logger.info(f"Using custom filtering threshold: {reranking_threshold}")
+
+                reranker = LLMReranker(**reranker_params)
                 # Get documents to rerank
                 documents = df['chunk_content'].tolist()
                 # Use the get_scores method with disable_events=True
@@ -153,7 +175,7 @@ class KnowledgeBaseTable:
                 # Filter by threshold
                 scores_array = np.array(scores)
                 df = df[scores_array > reranker.filtering_threshold]
-                logger.debug(f"Applied reranking with model {rerank_model}")
+                logger.debug(f"Applied reranking with model {rerank_model}, threshold: {reranker.filtering_threshold}")
             except Exception as e:
                 logger.error(f"Error during reranking: {str(e)}")
                 # Fallback to distance-based relevance
@@ -700,6 +722,41 @@ class KnowledgeBaseTable:
 
         # Convert everything else to string
         return str(value)
+
+    def _filter_out_threshold_condition(self, where_clause):
+        """
+        Recursively filters out reranking_threshold conditions from the WHERE clause
+        Returns None if the clause should be removed entirely, or the modified clause
+        """
+        if not where_clause:
+            return None
+
+        if isinstance(where_clause, BinaryOperation):
+            if where_clause.op.lower() == 'and':
+                # Process both sides of the AND operation
+                left_result = self._filter_out_threshold_condition(where_clause.args[0])
+                right_result = self._filter_out_threshold_condition(where_clause.args[1])
+
+                # If both sides are None, the entire AND should be removed
+                if left_result is None and right_result is None:
+                    return None
+
+                # If either side is None (removed), return the other side only
+                if left_result is None:
+                    return right_result
+                elif right_result is None:
+                    return left_result
+
+                # Both sides have valid conditions, keep the AND operation
+                where_clause.args[0] = left_result
+                where_clause.args[1] = right_result
+                return where_clause
+
+            elif (isinstance(where_clause.args[0], Identifier) and where_clause.args[0].parts and where_clause.args[0].parts[-1] == 'reranking_threshold'):
+                # This is a reranking_threshold condition, return None to remove it
+                return None
+
+        return where_clause
 
 
 class KnowledgeBaseController:

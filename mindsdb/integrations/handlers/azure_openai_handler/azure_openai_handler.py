@@ -26,7 +26,7 @@ class AzureOpenAIHandler(OpenAIHandler):
         connection_args = {k.lower(): v for k, v in connection_args.items()}
         api_key = connection_args.get('azure_openai_api_key') or os.environ.get('AZURE_OPENAI_API_KEY')
         api_base = connection_args.get('api_base') or os.environ.get('AZURE_OPENAI_API_BASE')
-        api_version = connection_args.get('api_version') or os.environ.get('AZURE_OPENAI_API_VERSION', '2024-12-01-preview')
+        api_version = connection_args.get('api_version') or os.environ.get('AZURE_OPENAI_API_VERSION', DEFAULT_API_VERSION)
 
         if not all([api_key, api_base, api_version]):
             raise Exception("Azure OpenAI requires `azure_openai_api_key` and `api_base`.")

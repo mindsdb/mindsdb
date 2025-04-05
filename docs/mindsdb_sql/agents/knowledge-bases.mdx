@@ -31,7 +31,7 @@ Upon execution, it registers the `<kb_name>` and associates the specified or def
 The following is an explanation of the syntax and parameters:
 
 * `<kb_name>` is a unique user-defined identifier.
-* `model` is an optional parameter. It assigns a pre-existing [embedding model for generating vector embeddings](integrations/ai-engines/langchain_embedding).
+* `embedding_model` is an optional parameter. It assigns a pre-existing [embedding model for generating vector embeddings](integrations/ai-engines/langchain_embedding).
       * If not provided, the system shall use the model specified by the `DEFAULT_EMBEDDING_MODEL` system configuration/variable.
 * `rerank_model` is an optional parameter. It assigns a pre-existing reranking model for re-ranking search results.
       * If not provided, the system shall use the model specified by the `DEFAULT_RERANKING_MODEL` system configuration/variable (if any).
@@ -132,12 +132,7 @@ USING batch_size=200, track_column=id, threads=10;
 - **error** (default: `raise`):
   - `error='skip'` - Skips errors in partitions.
 
-```sql
-SELECT * FROM ({user query})
-WHERE {track_column} > {previous value}
-ORDER BY track_column
-LIMIT {batch_size};
-```
+
 
 **View queries in progress**
 
@@ -182,32 +177,6 @@ Here are the usage examples:
 
 ```sql
 INSERT INTO my_kb ( SELECT id, book_abstract AS content FROM my_books );
-```
-</Accordion>
-
-## Delete from a Knowledge Base
-
-Here is the syntax for deleting from a knowledge base:
-
-```sql
-DELETE FROM <kb_name> WHERE <condition>;
-```
-
-Upon execution, it identifies matching records based on the user-defined condition and removes all associated data (metadata, content, chunks, embeddings) for matching records from the KB's storage.
-
-The following is an explanation of the syntax and parameters:
-
-* `<kb_name>` is a unique identifier of a knowledge base.
-* `<condition>` is a standard SQL WHERE clause condition operating on stored metadata, primarily the unique record identifier (id). Operators like `=`, `IN`, `LIKE`, `>`, `<`, `!=`, `NOT LIKE`, `NOT IN` are supported.
-
-<Accordion title="Examples">
-
-Here are the usage examples:
-
-* Deleting from a knowledge base:
-
-```sql
-DELETE FROM my_kb WHERE id IN ('scifi_001', 'scifi_0010', 'bus_89');
 ```
 </Accordion>
 
@@ -359,3 +328,31 @@ WHERE books.topic = 'fantasy'
 AND my_kb.content = 'a novel about benevolent ai';
 ```
 </Accordion>
+
+
+## Delete from a Knowledge Base
+
+Here is the syntax for deleting from a knowledge base:
+
+```sql
+DELETE FROM <kb_name> WHERE <condition>;
+```
+
+Upon execution, it identifies matching records based on the user-defined condition and removes all associated data (metadata, content, chunks, embeddings) for matching records from the KB's storage.
+
+The following is an explanation of the syntax and parameters:
+
+* `<kb_name>` is a unique identifier of a knowledge base.
+* `<condition>` is a standard SQL WHERE clause condition operating on stored metadata, primarily the unique record identifier (id). Operators like `=`, `IN`, `LIKE`, `>`, `<`, `!=`, `NOT LIKE`, `NOT IN` are supported.
+
+<Accordion title="Examples">
+
+Here are the usage examples:
+
+* Deleting from a knowledge base:
+
+```sql
+DELETE FROM my_kb WHERE id IN ('scifi_001', 'scifi_0010', 'bus_89');
+```
+</Accordion>
+

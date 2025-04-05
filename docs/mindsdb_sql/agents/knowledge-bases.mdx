@@ -98,13 +98,13 @@ The following features are covered here:
 
 ```sql
 -- Transfer data between tables 
-INSERT INTO db2.table2
+INSERT INTO my_kb 
 SELECT * FROM db1.table1
 WHERE ws_id = 3
 USING batch_size=200, track_column=id;
 
 -- Add predictor in pipeline
-INSERT INTO db2.table2
+INSERT INTO my_kb
 SELECT * FROM db1.table1
 JOIN my_model
 USING batch_size=200, track_column=id, threads=true;
@@ -115,6 +115,7 @@ SELECT * FROM db1.table1
 USING batch_size=200, track_column=id, threads=10, error='skip';
 
 -- Perform prediction in threads and return data 
+INSERT INTO my_kb
 SELECT * FROM db1.table1
 JOIN my_model
 USING batch_size=200, track_column=id, threads=10;

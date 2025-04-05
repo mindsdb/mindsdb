@@ -18,7 +18,7 @@ Here is the syntax for creating a knowledge base:
 ```sql
 CREATE KNOWLEDGE_BASE <kb_name>
 USING
-    model = <embedding_model_name>, -- optional
+    embedding_model = <embedding_model_name>, -- optional
     rerank_model = <reranking_model_name>, -- optional
     storage = <storage_handler_name>, -- optional
     metadata_columns = ['date', 'creator', ...], -- optional

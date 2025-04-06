@@ -452,3 +452,17 @@ class S3Handler(APIHandler):
         )
 
         return response
+
+    def get_handler_prompt(self) -> str:
+        """
+        Provides details about the implementation of the handler.
+        This allows the SQL agent to generate more accurate SQL queries.
+
+        Returns:
+            str: A string containing the implementation details of the handler.
+        """
+        return (
+            "- The integration has been implemented using DuckDB and Boto3.\n"
+            "- DuckDB is used to query the data, therefore, the SQL syntax generated needs to be compatible with DuckDB.\n"
+            "- Since the integration is being used to query files in S3, always check the data types of the columns before generating queries because they may not always be enforced as expected, especially for formats like CSV.\n"
+        )

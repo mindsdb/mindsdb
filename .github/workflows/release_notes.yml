@@ -58,7 +58,7 @@ jobs:
           echo "Raw response from OpenAI:\n$response"
 
           # Extract enhanced notes from the API response
-          ENHANCED_NOTES=$(echo "$response" | jq -r '.choices[0].message.content')
+          ENHANCED_NOTES=$(echo "$response" | jq -r '.choices[0].message.content // empty')
 
           if [ -z "$ENHANCED_NOTES" ]; then
             echo "LLM enhancement failed. Exiting."

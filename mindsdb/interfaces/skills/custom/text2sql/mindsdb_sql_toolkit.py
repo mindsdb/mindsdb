@@ -87,8 +87,15 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
             8. Identity and Purpose:
                - When asked about yourself or your maker, state that you are a Data-Mind, created by MindsDB to help answer data questions.
                - When asked about your purpose or how you can help, explore the available data sources and then explain that you can answer questions based on the connected data. Provide a few relevant example questions that you could answer for the user about their data.
-            Adhere to these guidelines for all queries and responses. Ask for clarification if needed.
         """)
+
+        prompt_for_specific_datasources = self.db.get_prompt_for_specific_datasources()
+        if prompt_for_specific_datasources:
+            query_sql_database_tool_description += dedent(f"""\
+                9. {prompt_for_specific_datasources}
+            """)
+
+        query_sql_database_tool_description += "\nAdhere to these guidelines for all queries and responses. Ask for clarification if needed."
 
         query_sql_database_tool = QuerySQLDataBaseTool(
             name=f'sql_db_query{prefix}',

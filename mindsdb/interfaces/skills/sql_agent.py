@@ -364,3 +364,21 @@ class SQLAgent:
             if 'does not exist' in msg and ' relation ' in msg:
                 msg += '\nAvailable tables: ' + ', '.join(self.get_usable_table_names())
             return msg
+        
+    def get_prompt_for_specific_datasources(self) -> str:
+        """Get the prompt for the data handler.
+        This is useful for debugging and understanding how the data handler works.
+        """
+        prompt_for_specific_datasources = ""
+        for db_name in self._mindsdb_db_struct:
+            if not prompt_for_specific_datasources:
+                prompt_for_specific_datasources = "Data source specific instructions:"
+            
+            handler = self._command_executor.session.integration_controller.get_data_handler(db_name)
+            if hasattr(handler, 'get_handler_prompt'):
+                prompt_for_specific_datasources += (
+                    f"\n- Handler for {db_name}:\n"
+                    f"  {handler.get_handler_prompt()}\n\n"
+                )
+
+        return prompt_for_specific_datasources

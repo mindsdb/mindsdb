@@ -63,8 +63,8 @@ class ListFilesTable(APIResource):
 
 class FileTable(APIResource):
 
-    def list(self, targets: List[str] = None, table_name=None, *args, **kwargs) -> pd.DataFrame:
-        return self.handler.read_as_table(table_name)
+    def select(self, query: Select) -> pd.DataFrame:
+        return self.handler.read_as_table(query)
 
     def add(self, data, table_name=None):
         df = pd.DataFrame(data)
@@ -237,17 +237,22 @@ class S3Handler(APIHandler):
         # get bucket from first part of the key
         ar = key.split('/')
         return ar[0], '/'.join(ar[1:])
-
-    def read_as_table(self, key) -> pd.DataFrame:
+    
+    def read_as_table(self, query: Select) -> pd.DataFrame:
         """
-        Read object as dataframe. Uses duckdb
+        Query object as DataFrame using DuckDB.
         """
+        key = query.from_table.get_string()
         bucket, key = self._get_bucket(key)
 
+        # Replace the table name in the query with the S3 path.
+        s3_path = f"'s3://{bucket}/{key}'"
+        query.from_table = Identifier(parts=[s3_path])
+
+        # Execute the query using DuckDB.
         with self._connect_duckdb(bucket) as connection:
-
-            cursor = connection.execute(f"SELECT * FROM 's3://{bucket}/{key}'")
-
+            query_str = query.get_string().replace('`', '')
+            cursor = connection.execute(query_str)
             return cursor.fetchdf()
 
     def _read_as_content(self, key) -> None:

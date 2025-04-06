@@ -26,7 +26,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_BODY: ${{ github.event.release.body }}
         run: |
-          echo $RELEASE_BODY
+          echo "Release body:\n$RELEASE_BODY"
 
           # Prepare the LLM API payload
           payload=$(jq -n \
@@ -47,11 +47,15 @@ jobs:
               ]
             }')
 
+          echo "Payload sent to OpenAI:\n$payload"
+
           # Call the OpenAI API
           response=$(curl -s -X POST https://api.openai.com/v1/chat/completions \
             -H "Authorization: Bearer $OPENAI_API_KEY" \
             -H "Content-Type: application/json" \
             -d "$payload")
+
+          echo "Raw response from OpenAI:\n$response"
 
           # Extract enhanced notes from the API response
           ENHANCED_NOTES=$(echo "$response" | jq -r '.choices[0].message.content')

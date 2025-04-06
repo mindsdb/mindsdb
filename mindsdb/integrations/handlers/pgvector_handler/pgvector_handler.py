@@ -200,10 +200,20 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
             where_clause, offset_clause, limit_clause
         )
 
-        if columns is None:
-            targets = '*'
+        # Handle distance column specially since it's calculated, not stored
+        modified_columns = []
+        has_distance = False
+        if columns is not None:
+            for col in columns:
+                if col == TableField.DISTANCE.value:
+                    has_distance = True
+                else:
+                    modified_columns.append(col)
         else:
-            targets = ', '.join(columns)
+            modified_columns = ['id', 'content', 'embeddings', 'metadata']
+            has_distance = True
+
+        targets = ', '.join(modified_columns)
 
 
         if filter_conditions:
@@ -227,6 +237,10 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
                     # Use cosine similarity for dense vectors
                     distance_op = "<=>"
 
+                # Calculate distance as part of the query if needed
+                if has_distance:
+                    targets = f"{targets}, (embeddings {distance_op} '{search_vector}') as distance"
+                
                 return f"SELECT {targets} FROM {table_name} ORDER BY embeddings {distance_op} '{search_vector}' ASC {after_from_clause}"
 
             else:

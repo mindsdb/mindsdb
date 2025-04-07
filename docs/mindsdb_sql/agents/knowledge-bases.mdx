@@ -3,7 +3,7 @@ title: Knowledge Base
 sidebarTitle: Knowledge Base
 ---
 
-A knowledge base is an advanced system designed to go beyond traditional data storage.
+A knowledge base is an advanced system designed to go beyond traditional data storage. Its components include embedding and reranking models and a vector store.
 
 <p align="center">
   <img src="https://docs.google.com/drawings/d/e/2PACX-1vTVmUqhoFXLF3ncL0NWwgdPjI7Hj19f-5xU8ED31ntYvlsTM3poM9zZKwcrEwzvxJrOhl2raIFKWlsp/pub?w=1342&h=681" />
@@ -15,18 +15,20 @@ It intelligently organizes information in semantically meaningful ways, allowing
 
 Here is the syntax for creating a knowledge base:
 
-```sql
+<CodeGroup>
+
+```sql OpenAI
 CREATE KNOWLEDGE_BASE my_kb
 USING
      embedding_model = {
+         "provider": "OpenAI",
          "model_name" : "text-embedding-ada-002",
-         "api_key": "sk-...",  -- optional, default from env variable
-         "base_url": "https://api.openai.com/v1" -- optional, default https://api.openai.com/v1
+         "api_key": "sk-..."  -- optional, default from env variable
      },
-     rerank_model = {
+     reranking_model = {
+         "provider": "OpenAI",
          "model_name": 'gpt-4o',
-         "api_key": "sk-...",  -- optional, default from env variable
-         "base_url": "https://api.openai.com/v1" -- optional, default https://api.openai.com/v1
+         "api_key": "sk-..."  -- optional, default from env variable
      },
      storage = my_vector_store, -- optional, default ChromaDB
      metadata_columns = ['date', 'creator', ...], -- optional
@@ -35,50 +37,80 @@ USING
 ;
 ```
 
+```sql OpenAI via Azure
+CREATE KNOWLEDGE_BASE my_kb
+USING
+     embedding_model = {
+         "provider": "Azure_OpenAI",
+         "model_name" : "text-embedding-ada-002",
+         "api_key": "sk-...",  -- optional, default from env variable
+         "azure_endpoint" : "https://ai-2249ai742481026689.openai.azure.com/",
+         "openai_api_version": "2024-12-01-preview"
+     },
+     reranking_model = {
+         "provider": "OpenAI",
+         "model_name": 'gpt-4o',
+         "api_key": "sk-..."  -- optional, default from env variable
+     },
+     storage = my_vector_store, -- optional, default ChromaDB
+     metadata_columns = ['date', 'creator', ...], -- optional
+     content_columns = ['review', 'content', ...], -- optional, default content
+     id_column = 'id'; -- optional
+;
+```
+
+</CodeGroup>
+
 Upon execution, it registers `my_kb` and associates the specified models and storage.
 
 The following is an explanation of the syntax and parameters:
 
 * `embedding_model` stores specification of the embedding model to be used.
-      * `model_name` defines the embedding model as specified by the provider. Users can choose one of the [OpenAI embedding models](https://platform.openai.com/docs/guides/embeddings/embedding-models#embedding-models).
+      * `provider` defines the model provider. Currently, the supported providers include OpenAI and its models via Azure.
+      * `model_name` defines the embedding model name as specified by the provider. Users can choose one of the [OpenAI embedding models](https://platform.openai.com/docs/guides/embeddings/embedding-models#embedding-models).
       * `api_key` stores your OpenAI API key. Alternatively, you can use the `OPENAI_API_KEY` environment variable to store your OpenAI API key.
-      * `base_url` specifies the base URL of the model provider. It defaults to `https://api.openai.com/v1`.
+      * `azure_endpoint` is required when using `Azure_OpenAI` as the provider.
+      * `openai_api_version` is required when using `Azure_OpenAI` as the provider.
 
-* `rerank_model` stores specification of the reranking model to be used.
-      * `model_name` defines the reranking model as specified by the provider. Users can choose one of the [OpenAI chat models](https://platform.openai.com/docs/models).
+* `reranking_model` stores specification of the reranking model to be used.
+      * `provider` defines the model provider. Currently, the supported providers include OpenAI.
+      * `model_name` defines the reranking model name as specified by the provider. Users can choose one of the [OpenAI chat models](https://platform.openai.com/docs/models).
       * `api_key` stores your OpenAI API key. Alternatively, you can use the `OPENAI_API_KEY` environment variable to store your OpenAI API key.
-      * `base_url` specifies the base URL of the model provider. It defaults to `https://api.openai.com/v1`.
 
 * `storage` is an optional parameter. It assigns the name of the vector store connected to MindsDB, either [PGVector](/integrations/vector-db-integrations/pgvector) or [ChromaDB](/integrations/vector-db-integrations/chromadb). If not provided, the system uses the default ChromaDB vector database.
 
-* `metadata_columns` provides the list of column names that will be stored in the `metadata` column of the knowledge base. If not set, the `metadata` column is not used.
+* `metadata_columns` provides the list of column names that will be used as the `metadata` of the knowledge base. If not set, the `metadata` column is not used.
 
-* `content_columns` provides the list of column names that will be stored in the `content` column of the knowledge base. If not set, all columns are stored in the `content` column.
+* `content_columns` provides the list of column names that will be used as the `content` of the knowledge base. If not set, all columns are used.
 
-* `id_column` is the column name that will be stored in the `id` column of the knowledge base to uniquely identitify the data.
+* `id_column` is the column name that will be used as the unique identifier by the knowledge base.
 
 Get details about the knowledge base using the `DESCRIBE` command.
 
 ```sql
-DESCRIBE KNOWLEDGE_BASE <kb_name>;
+DESCRIBE KNOWLEDGE_BASE my_kb;
 ```
 
 <Accordion title="Examples">
 
 Here are the usage examples:
 
-* Creating a knowledge base using defaults:
+* Creating a knowledge base:
 
 ```sql
-CREATE KNOWLEDGE BASE my_kb;
-```
-
-* Creating a knowledge base specifying the embedding model:
-
-```sql
-CREATE KNOWLEDGE BASE my_kb_custom_embed
+CREATE KNOWLEDGE_BASE my_kb
 USING
-    model = my_embedding_model_v1;
+     embedding_model = {
+         "provider": "OpenAI",
+         "model_name" : "text-embedding-ada-002",
+         "api_key": "sk-..."
+     },
+     reranking_model = {
+         "provider": "OpenAI",
+         "model_name": 'gpt-4o',
+         "api_key": "sk-..."
+     }
+;
 ```
 </Accordion>
 
@@ -87,17 +119,17 @@ USING
 Here is the syntax for inserting into a knowledge base:
 
 ```sql
-INSERT INTO <kb_name> ( 
-            SELECT <id_col> AS id, <text_col> AS content 
-            FROM <source_table> 
-      );
+INSERT INTO my_kb ( 
+      SELECT <id_col> AS id, <text_col> AS content 
+      FROM <source_table> 
+);
 ```
 
-Upon execution, it inserts data into a knowledge base, using the embedding model to embed it into vectors before inserting into an underlying vector database. For each data row, it apply text chunking (if configured), generates vector embeddings for `content` (or chunks) using the KB's `embedding_model`, and persist ID, content, chunks, embeddings, and any other selected metadata (if supported) via the KB's `storage` handler.
+Upon execution, it inserts data into a knowledge base, using the embedding model to embed it into vectors before inserting into an underlying vector database.
 
 The following is an explanation of the syntax and parameters:
 
-* `<kb_name>` is a unique identifier of a knowledge base.
+* `my_kb` is a unique identifier of a knowledge base.
 * `<id_col>` is a column that contains unique identifiers of data.
 * `<text_col>` is a column (or a set of columns) that contain the text content. It must be explicitly aliased `AS content` for the system to identify it as the primary text for indexing.
 
@@ -105,58 +137,70 @@ The following is an explanation of the syntax and parameters:
 
 The following features are covered here:
 
-- Run the `INSERT INTO` query in partitions. A batch can be split into separate workers for improved performance.
-- Track progress of the query and manage queries in progress, that is, resume or cancel queries.
-- When a query is finished, it is stored in the `queries` table with a `finished_at` timestamp. If a user runs another query, all finished queries older than one day are removed.
-- Option to skip errors: When `error='skip'` is used, errors in partitions are skipped.
+- Run the `INSERT INTO` query in partitions where a batch can be split into separate workers for improved performance.
+- Track progress of the query and resume or cancel ongoing queries.
+- When a query is finished, it is stored in the `information_schema.queries` table with the `finished_at` timestamp. If a user runs another query, all finished queries older than one day are removed.
+- Option to skip errors in partitions.
 
 **Examples of statements**
 
 ```sql
--- Transfer data between tables 
+-- Insert data from table into a knowledge base
 INSERT INTO my_kb 
-SELECT * FROM db1.table1
+SELECT * 
+FROM db1.table1
 WHERE ws_id = 3
-USING batch_size=200, track_column=id;
+USING 
+      batch_size=200,
+      track_column=id;
 
--- Add predictor in pipeline
+-- Insert predictions (made by joining a table with a model) into a knowledge base
 INSERT INTO my_kb
-SELECT * FROM db1.table1
+SELECT * 
+FROM db1.table1
 JOIN my_model
-USING batch_size=200, track_column=id, threads=true;
+USING 
+      batch_size=200, 
+      track_column=id, 
+      threads=true;
 
--- Load knowledge base, skip errors
+-- Insert data from table into a knowledge base while skipping errors
 INSERT INTO my_kb
-SELECT * FROM db1.table1
-USING batch_size=200, track_column=id, threads=10, error='skip';
+SELECT * 
+FROM db1.table1
+USING 
+      batch_size=200, 
+      track_column=id, 
+      threads=10, 
+      error='skip';
 
 -- Perform prediction in threads and return data 
 INSERT INTO my_kb
-SELECT * FROM db1.table1
+SELECT * 
+FROM db1.table1
 JOIN my_model
-USING batch_size=200, track_column=id, threads=10;
+USING 
+      batch_size=200, 
+      track_column=id, 
+      threads=10;
+
+-- View queries in progress
+SELECT * FROM information_schema.queries;
 ```
 
 **Parameters**
 
-- **batch_size** - Number of rows fetched per iteration (default: `1000`).
-- **threads** - Run partitioning in threads (optional, bool or int):
+- **batch_size** - Number of rows fetched per iteration/batch (default: `1000`).
+- **threads** - Defines threads to run partitions in. Note that if the [ML task queue](/setup/custom-config#overview-of-config-parameters) is enabled, threads are automatically used for prediction. Allowed values for `threads` include:
   - `int` - Number of threads.
   - `true` - Auto-detect thread count.
-  - `false` - Disable threads even if ML task queue is enabled.
-- **track_column** - Column used for partitioning; query is sorted by this column and limited by batch_size.
-- **error** (default: `raise`):
-  - `error='skip'` - Skips errors in partitions.
-
-**View queries in progress**
-
-```sql
-SELECT * FROM information_schema.queries;
-```
+  - `false` - Disable threads, even if the ML task queue is enabled.
+- **track_column** - Column used for partitioning. The query is sorted by this column and limited by `batch_size`.
+- **error** - Defines the error processing. Its default value is `raise`. To skip errors in partitions, use `error='skip'`.
 
 **Repeat a query**
 
-If a query fails, its state is saved:
+If a query fails, its state is saved as follows:
 - Current step number (in database)
 - Current step data (cached in files or Redis)
 
@@ -167,20 +211,12 @@ Users can resolve the issue and resume the query:
 SELECT query_resume(1);
 ```
 
-**Stop or remove a query**
+Or, remove/cancel a query:
 
 ```sql
 -- Use the query ID
 SELECT query_cancel(1);
 ```
-
-**Improving performance**
-
-If a model is used in a query or loaded into the knowledge base (to generate embeddings), execution can be optimized by splitting the batch into chunks and processing them in threads.
-
-- If the [ML task queue](/setup/custom-config#overview-of-config-parameters) is enabled, threads are automatically used for prediction.
-- It speeds up CPU-bound predictions.
-- If prediction uses API services (like OpenAI), threads speed up execution even if the ML task queue is not enabled.
 </Accordion>
 
 <Accordion title="Examples">
@@ -204,6 +240,7 @@ KBs provide semantic search returning document-level relevance.
 SELECT id, relevance 
 FROM <kb_name> 
 WHERE content = '<query_text>' 
+AND reranking_threshold = 0.6 -- optional
 LIMIT <N>;
 ```
 
@@ -214,7 +251,17 @@ The following is an explanation of the syntax and parameters:
 * `SELECT id, relevance` specifies that the unique document identifier and its calculated relevance score should be returned.
 * `<kb_name>` is a unique identifier of a knowledge base.
 * `WHERE content = '<query_text>'` triggers semantic search based on the meaning of `<query_text>`.
+* `AND reranking_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1.
 * `LIMIT <N>` restricts results to the top N most relevant documents.
+
+<Note>
+Here are the conditions supported by the available vector stores:
+
+| Handler  |  IN, NOT IN | LIKE, NOT LIKE | < and > | !=  |
+| -------- | ----------- | -------------- | ------- | --- |
+| PgVector | +           | +              | +       | +   |
+| ChromaDB | +           | -              | -       | +   |
+</Note>
 
 <Accordion title="Examples">
 
@@ -226,6 +273,7 @@ Here are the usage examples:
 SELECT id, relevance 
 FROM my_kb 
 WHERE content = 'a novel about epic inter planetary intelligence' 
+AND reranking_threshold = 0.7
 LIMIT 10;
 ```
 </Accordion>
@@ -238,6 +286,7 @@ KBs provide semantic search returning chunk-level details.
 SELECT id, chunk_id, chunk_content, chunk_relevance 
 FROM <kb_name> 
 WHERE content = '<query_text>' 
+AND reranking_threshold = 0.6 -- optional
 LIMIT <N>;
 ```
 
@@ -248,6 +297,7 @@ The following is an explanation of the syntax and parameters:
 * `SELECT id, chunk_id, chunk_content, chunk_relevance` specifies that the unique document identifier, chunk identifier, chunk content, and the chunk relevance score should be returned.
 * `<kb_name>` is a unique identifier of a knowledge base.
 * `WHERE content = '<query_text>'` triggers semantic search based on the meaning of `<query_text>`.
+* `AND reranking_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1.
 * `LIMIT <N>` restricts results to the top N most relevant documents.
 
 <Accordion title="Examples">
@@ -260,6 +310,7 @@ Here are the usage examples:
 SELECT id, chunk_id, chunk_content, chunk_relevance 
 FROM my_kb 
 WHERE content = 'a novel about epic inter planetary intelligence' 
+AND reranking_threshold = 0.7
 LIMIT 10;
 ```
 </Accordion>
@@ -272,10 +323,11 @@ KBs combine semantic search with standard SQL filtering on metadata.
 SELECT id, chunk_content, chunk_relevance 
 FROM my_kb 
 WHERE id LIKE '<id_pattern>' -- metadata filtering conditions
-AND content = '<query_text>'; -- semantic search condition
+AND content = '<query_text>' -- semantic search condition
+AND reranking_threshold = 0.6; -- optional
 ```
 
-Upon execution, it performs the conjunctive filtering, that is, results must satisfy both the semantic search condition and the metadata condition(s).
+Upon execution, it performs the conjunctive filtering, that is, results must satisfy both the metadata condition(s) and the semantic search condition.
 
 The following is an explanation of the syntax and parameters:
 
@@ -283,6 +335,7 @@ The following is an explanation of the syntax and parameters:
 * `<kb_name>` is a unique identifier of a knowledge base.
 * `WHERE id LIKE '<id_pattern>'` is the metadata filtering condition.
 * `WHERE content = '<query_text>'` is the semantic search condition.
+* `AND reranking_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1.
 
 <Accordion title="Examples">
 
@@ -292,10 +345,10 @@ Here are the usage examples:
 
 ```sql
 SELECT id, chunk_content, chunk_relevance 
-FROM my_kb 
-WHERE content = 'a novel about ...' -- semantic search condition
+FROM my_kb
 WHERE id LIKE 'fiction%' -- metadata filtering conditions
-AND content = 'a novel about ...';
+AND content = 'a novel about ...' -- semantic search condition
+AND reranking_threshold = 0.6; -- optional
 ```
 </Accordion>
 
@@ -314,18 +367,9 @@ AND kb.content = '<query_text>'; -- semantic search filter on a KB
 
 The following is an explanation of the syntax and parameters:
 
-* `SELECT t.id, t.title, kb.chunk_content, kb.relevance` specified the columns selected from a table (`t`) and a knowledge base (`kb`).
+* `SELECT t.id, t.title, kb.chunk_content, kb.relevance` specifies the columns selected from a table (`t`) and a knowledge base (`kb`).
 * `WHERE <table_filter_condition>` sets conditions on a table.
 * `AND kb.content = '<query_text>'` sets a semantic search condition on a knowledge base.
-
-<Note>
-Here are the conditions supported by the available vector stores:
-
-| Handler  |  IN, NOT IN | LIKE, NOT LIKE | < and > | !=  |
-| -------- | ----------- | -------------- | ------- | --- |
-| PgVector | +           | +              | +       | +   |
-| ChromaDB | +           | -              | -       | +   |
-</Note>
 
 <Accordion title="Examples">
 
@@ -342,7 +386,6 @@ WHERE books.topic = 'fantasy'
 AND my_kb.content = 'a novel about benevolent ai';
 ```
 </Accordion>
-
 
 ## Delete from a Knowledge Base
 

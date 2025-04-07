@@ -4,7 +4,6 @@ from typing import Dict, List, Optional
 
 import pandas as pd
 import hashlib
-from langchain_openai import OpenAIEmbeddings
 import numpy as np
 
 from mindsdb_sql_parser.ast import (
@@ -29,7 +28,7 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
 from mindsdb.integrations.utilities.rag.config_loader import load_rag_config
 from mindsdb.integrations.utilities.handler_utils import get_api_key
-from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import row_to_document
+from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args, row_to_document
 
 from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS
 from mindsdb.interfaces.agents.langchain_agent import create_chat_model, get_llm_provider
@@ -58,13 +57,11 @@ def get_embedding_model_from_params(embedding_model_params: dict):
     """
     params_copy = copy.deepcopy(embedding_model_params)
     provider = params_copy.pop('provider', None)
+    params_copy['class'] = provider
     params_copy[f"{provider}_api_key"] = get_api_key(provider, params_copy)
     params_copy.pop('api_key', None)
 
-    if provider is None or provider == 'openai':
-        return OpenAIEmbeddings(**params_copy)
-    
-    raise ValueError(f'Unknown provider: {provider}')
+    return construct_model_from_args(params_copy)
 
 
 class KnowledgeBaseTable:
@@ -631,7 +628,6 @@ class KnowledgeBaseTable:
             # Extract embedding model args from knowledge base table
             embedding_args = self._kb.embedding_model.learn_args.get('using', {})
             # Construct the embedding model directly
-            from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
             embeddings_model = construct_model_from_args(embedding_args)
             logger.debug(f"Using knowledge base embedding model with args: {embedding_args}")
         elif self._kb.params.get('embedding_model'):

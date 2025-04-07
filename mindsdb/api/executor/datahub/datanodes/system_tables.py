@@ -211,7 +211,7 @@ class ColumnsTableRow:
         Returns:
             ColumnsTableRow: A row in the MindsDB's internal INFORMATION_SCHEMA.COLUMNS table.
         """
-        original_type: str = row[IS_COLUMNS_NAMES.DATA_TYPE]
+        original_type: str = row[IS_COLUMNS_NAMES.DATA_TYPE] or ''
         data_type: MYSQL_DATA_TYPE | None = row[IS_COLUMNS_NAMES.MYSQL_DATA_TYPE]
         if isinstance(data_type, MYSQL_DATA_TYPE) is False:
             # region try to infer type if `MYSQL_DATA_TYPE` is not set

@@ -20,7 +20,7 @@ from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.integrations.libs.response import RESPONSE_TYPE, HandlerResponse
 from mindsdb.utilities import log
-from mindsdb.integrations.utilities.sql_utils import conditions_to_filter, FilterCondition, FilterOperator
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
 
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 from .base import BaseHandler

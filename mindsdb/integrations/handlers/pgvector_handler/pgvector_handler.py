@@ -149,7 +149,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         for key, value in filter_conditions.items():
             if key == "embeddings":
                 continue
-            if value['op'].lower() == 'in':
+            if value['op'].lower() in ('in', 'not in'):
                 values = list(repr(i) for i in value['value'])
                 value['value'] = '({})'.format(', '.join(values))
             else:
@@ -165,9 +165,9 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
 
     @staticmethod
     def _construct_full_after_from_clause(
+        where_clause: str,
         offset_clause: str,
         limit_clause: str,
-        where_clause: str,
     ) -> str:
 
         return f"{where_clause} {offset_clause} {limit_clause}"

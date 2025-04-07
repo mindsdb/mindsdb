@@ -31,7 +31,7 @@ export MINDSDB_APIS='mysql,mcp'
 Start MindsDB in a Docker container enabling the MCP API port:
 
 ```bash
-docker run --name mindsdb_container -e MINDSDB_APIS='mysql,mcp' -p 47334:47334 -p 47335:47335 -p 47336:47336 -p 55432:55432 -p 47337:47337 mindsdb/mindsdb
+docker run --name mindsdb_container -e MINDSDB_APIS='mysql,mcp' -p 47335:47335 -p 47337:47337 mindsdb/mindsdb
 ```
 
 Or, specify it when starting MindsDB locally with Python:

@@ -4,13 +4,12 @@ from contextlib import contextmanager
 import boto3
 import duckdb
 from duckdb import HTTPException
-from mindsdb_sql_parser import parse_sql
 import pandas as pd
 from typing import Text, Dict, Optional
 from botocore.exceptions import ClientError
 
 from mindsdb_sql_parser.ast.base import ASTNode
-from mindsdb_sql_parser.ast import Select, Identifier, Insert, Star, Constant
+from mindsdb_sql_parser.ast import Select, Identifier, Insert
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
@@ -237,10 +236,16 @@ class S3Handler(APIHandler):
         # get bucket from first part of the key
         ar = key.split('/')
         return ar[0], '/'.join(ar[1:])
-    
+
     def read_as_table(self, query: Select) -> pd.DataFrame:
         """
-        Query object as DataFrame using DuckDB.
+        Queries objects as tables via DuckDB.
+
+        Args:
+            query (Select): A Select object representing the SQL query to be executed.
+
+        Returns:
+            pd.DataFrame: A DataFrame containing the result of the query.
         """
         key = query.from_table.get_string()
         bucket, key = self._get_bucket(key)
@@ -255,7 +260,13 @@ class S3Handler(APIHandler):
 
     def _read_as_content(self, key) -> None:
         """
-        Read object as content
+        Queries the content of the file in the S3 bucket.
+
+        Args:
+            key (str): The S3 path to the file.
+
+        Returns:
+            bytes: The content of the file.
         """
         bucket, key = self._get_bucket(key)
 

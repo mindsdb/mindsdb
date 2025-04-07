@@ -35,6 +35,7 @@ from mindsdb.interfaces.knowledge_base.preprocessing.models import Preprocessing
 from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor import PreprocessorFactory
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
 
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.utilities import log
@@ -86,32 +87,9 @@ class KnowledgeBaseTable:
         logger.debug(f"Processing select query: {query}")
 
         # Extract the content query text for potential reranking
-        query_text = None
-        reranking_threshold = None
-        db_handler = self.get_vector_db()
-        if query.where:
-            conditions = db_handler.extract_conditions(query.where)
-            if conditions:
-                for item in conditions:
-                    if item.column == TableField.CONTENT.value:
-                        query_text = item.value
-                    # Extract reranking_threshold if present, but don't include in filtered conditions
-                    elif item.column == "reranking_threshold" and item.op.value == "=":
-                        try:
-                            reranking_threshold = float(item.value)
-                            # Validate range: must be between 0 and 1
-                            if not (0 <= reranking_threshold <= 1):
-                                raise ValueError(f"reranking_threshold must be between 0 and 1, got: {reranking_threshold}")
-                            logger.debug(f"Found reranking_threshold in query: {reranking_threshold}")
-                        except (ValueError, TypeError) as e:
-                            error_msg = f"Invalid reranking_threshold value: {item.value}. {str(e)}"
-                            logger.error(error_msg)
-                            raise ValueError(error_msg)
-            query.where = self._filter_out_threshold_condition(query.where)
-            logger.debug(f"Extracted query text: {query_text}")
 
-        # replace content with embeddings
-        query_traversal(query.where, self._replace_query_content)
+        db_handler = self.get_vector_db()
+
         logger.debug("Replaced content with embeddings in where clause")
         # set table name
         query.from_table = Identifier(parts=[self._kb.vector_database_table])
@@ -134,7 +112,39 @@ class KnowledgeBaseTable:
 
         # Get response from vector db
         logger.debug(f"Using vector db handler: {type(db_handler)}")
-        conditions = db_handler.extract_conditions(query.where)
+
+        # extract values from conditions and prepare for vectordb
+        conditions = []
+        query_text = None
+        reranking_threshold = None
+        query_conditions = db_handler.extract_conditions(query.where)
+        if query_conditions is not None:
+            for item in query_conditions:
+                if item.column == "reranking_threshold" and item.op.value == "=":
+                    try:
+                        reranking_threshold = float(item.value)
+                        # Validate range: must be between 0 and 1
+                        if not (0 <= reranking_threshold <= 1):
+                            raise ValueError(f"reranking_threshold must be between 0 and 1, got: {reranking_threshold}")
+                        logger.debug(f"Found reranking_threshold in query: {reranking_threshold}")
+                    except (ValueError, TypeError) as e:
+                        error_msg = f"Invalid reranking_threshold value: {item.value}. {str(e)}"
+                        logger.error(error_msg)
+                        raise ValueError(error_msg)
+                elif item.column == TableField.CONTENT.value:
+                    query_text = item.value
+
+                    # replace content with embeddings
+                    conditions.append(FilterCondition(
+                        column=TableField.EMBEDDINGS.value,
+                        value=self._content_to_embeddings(item.value),
+                        op=FilterOperator.EQUAL,
+                    ))
+                else:
+                    conditions.append(item)
+
+        logger.debug(f"Extracted query text: {query_text}")
+
         self.addapt_conditions_columns(conditions)
         df = db_handler.dispatch_select(query, conditions)
         df = self.addapt_result_columns(df)
@@ -722,41 +732,6 @@ class KnowledgeBaseTable:
 
         # Convert everything else to string
         return str(value)
-
-    def _filter_out_threshold_condition(self, where_clause):
-        """
-        Recursively filters out reranking_threshold conditions from the WHERE clause
-        Returns None if the clause should be removed entirely, or the modified clause
-        """
-        if not where_clause:
-            return None
-
-        if isinstance(where_clause, BinaryOperation):
-            if where_clause.op.lower() == 'and':
-                # Process both sides of the AND operation
-                left_result = self._filter_out_threshold_condition(where_clause.args[0])
-                right_result = self._filter_out_threshold_condition(where_clause.args[1])
-
-                # If both sides are None, the entire AND should be removed
-                if left_result is None and right_result is None:
-                    return None
-
-                # If either side is None (removed), return the other side only
-                if left_result is None:
-                    return right_result
-                elif right_result is None:
-                    return left_result
-
-                # Both sides have valid conditions, keep the AND operation
-                where_clause.args[0] = left_result
-                where_clause.args[1] = right_result
-                return where_clause
-
-            elif (isinstance(where_clause.args[0], Identifier) and where_clause.args[0].parts and where_clause.args[0].parts[-1] == 'reranking_threshold'):
-                # This is a reranking_threshold condition, return None to remove it
-                return None
-
-        return where_clause
 
 
 class KnowledgeBaseController:

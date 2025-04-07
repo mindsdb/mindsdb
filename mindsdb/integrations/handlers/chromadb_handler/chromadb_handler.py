@@ -162,6 +162,8 @@ class ChromaDBHandler(VectorStoreHandler):
             FilterOperator.LESS_THAN_OR_EQUAL: "$lte",
             FilterOperator.GREATER_THAN: "$gt",
             FilterOperator.GREATER_THAN_OR_EQUAL: "$gte",
+            FilterOperator.IN: "$in",
+            FilterOperator.NOT_IN: "$nin",
         }
 
         if operator not in mapping:
@@ -308,7 +310,7 @@ class ChromaDBHandler(VectorStoreHandler):
         }
 
         if columns is not None:
-            payload = {column: payload[column] for column in columns}
+            payload = {column: payload[column] for column in columns if column != TableField.DISTANCE.value}
 
         # always include distance
         distance_filter = None
@@ -316,10 +318,11 @@ class ChromaDBHandler(VectorStoreHandler):
         if distances is not None:
             payload[distance_col] = distances
 
-            for cond in conditions:
-                if cond.column == distance_col:
-                    distance_filter = cond
-                    break
+            if conditions is not None:
+                for cond in conditions:
+                    if cond.column == distance_col:
+                        distance_filter = cond
+                        break
 
         df = pd.DataFrame(payload)
         if distance_filter is not None:

@@ -4,7 +4,7 @@
 
 <div align="center">
 	<a href="https://pypi.org/project/MindsDB/" target="_blank"><img src="https://badge.fury.io/py/MindsDB.svg" alt="MindsDB Release"></a>
-	<a href="https://www.python.org/downloads/" target="_blank"><img src="https://img.shields.io/badge/python-3.9.x%7C%203.10.x%7C%203.11.x-brightgreen.svg" alt="Python supported"></a>
+	<a href="https://www.python.org/downloads/" target="_blank"><img src="https://img.shields.io/badge/python-3.10.x%7C%203.11.x-brightgreen.svg" alt="Python supported"></a>
 	<a href="https://ossrank.com/p/630"><img src="https://shields.io/endpoint?url=https://ossrank.com/shield/630"></a>
 	<img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/Mindsdb">
 	<a href="https://hub.docker.com/u/mindsdb" target="_blank"><img src="https://img.shields.io/docker/pulls/mindsdb/mindsdb" alt="Docker pulls"></a>
@@ -31,13 +31,13 @@
 ----------------------------------------
 
 
-MindsDB is the world's most effective solution for building AI applications that talk to messy enterprise data sources. Think of it as a librarian Marie Kondo.
+MindsDB is a solution that enables humans, AI, agents, and applications to query data in natural language and SQL and get highly accurate answers across disparate data sources and types.
 
-<p align="center">
-  <img src="/docs/assets/cloud/main_mdb.png"/>
-</p>
+![image](https://github.com/user-attachments/assets/03b779e8-7008-485e-989a-e8733cb94e4c)
 
 A federated query engine that tidies up your data-sprawl chaos while meticulously answering every single question you throw at it. 
+
+[MindsDB has an MCP server built in](https://docs.mindsdb.com/mcp/overview) that enables your MCP applications to connect, unify and respond to questions over large-scale federated data—spanning databases, data warehouses, and SaaS applications.
 
 ## Minds [Demo](https://mdb.ai/register)
 Play with [Minds demo](https://mdb.ai/register), and see the power of MindsDB at answering questions from structured to unstructured data, whether it's scattered across SaaS applications, databases, or... hibernating in data warehouses like that $100 bill in your tuxedo pocket from prom night, lost, waiting to be discovered.

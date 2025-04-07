@@ -137,14 +137,10 @@ class Project:
                 view_meta['query_ast'],
                 session=session
             )
-            result = sqlquery.fetch(view='dataframe')
-
+            df = sqlquery.fetched_data.to_df()
         finally:
             query_context_controller.release_context('view', view_meta['id'])
 
-        if result['success'] is False:
-            raise Exception(f"Cant execute view query: {view_meta['query_ast']}")
-        df = result['result']
         # remove duplicated columns
         df = df.loc[:, ~df.columns.duplicated()]
 
@@ -296,6 +292,19 @@ class Project:
         ]
         return data
 
+    def get_knowledge_bases(self):
+        from mindsdb.api.executor.controllers.session_controller import SessionController
+        session = SessionController()
+
+        return {
+            kb['name']: {
+                'type': 'knowledge_base',
+                'id': kb['id'],
+                'deletable': True
+            }
+            for kb in session.kb_controller.list(self.name)
+        }
+
     def get_views(self):
         records = (
             db.session.query(db.View).filter_by(
@@ -352,6 +361,8 @@ class Project:
         agents = self.get_agents()
         for agent in agents:
             data[agent['name']] = agent['metadata']
+
+        data.update(self.get_knowledge_bases())
 
         return data
 

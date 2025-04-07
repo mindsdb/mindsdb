@@ -1,3 +1,5 @@
+from dataclasses import dataclass, fields
+
 from pandas import DataFrame
 
 from mindsdb.utilities import log
@@ -6,6 +8,33 @@ from mindsdb_sql_parser.ast import ASTNode
 
 
 logger = log.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class _INFORMATION_SCHEMA_COLUMNS_NAMES:
+    """Set of DataFrame columns that must be returned when calling `handler.get_columns(...)`.
+    These column names match the standard INFORMATION_SCHEMA.COLUMNS structure
+    used in SQL databases to describe table metadata.
+    """
+    COLUMN_NAME: str = 'COLUMN_NAME'
+    DATA_TYPE: str = 'DATA_TYPE'
+    ORDINAL_POSITION: str = 'ORDINAL_POSITION'
+    COLUMN_DEFAULT: str = 'COLUMN_DEFAULT'
+    IS_NULLABLE: str = 'IS_NULLABLE'
+    CHARACTER_MAXIMUM_LENGTH: str = 'CHARACTER_MAXIMUM_LENGTH'
+    CHARACTER_OCTET_LENGTH: str = 'CHARACTER_OCTET_LENGTH'
+    NUMERIC_PRECISION: str = 'NUMERIC_PRECISION'
+    NUMERIC_SCALE: str = 'NUMERIC_SCALE'
+    DATETIME_PRECISION: str = 'DATETIME_PRECISION'
+    CHARACTER_SET_NAME: str = 'CHARACTER_SET_NAME'
+    COLLATION_NAME: str = 'COLLATION_NAME'
+    MYSQL_DATA_TYPE: str = 'MYSQL_DATA_TYPE'
+
+
+IS_COLUMNS_NAMES = _INFORMATION_SCHEMA_COLUMNS_NAMES()
+IS_COLUMNS_NAMES_SET = set(f.name for f in fields(IS_COLUMNS_NAMES))
+
+
 
 class HandlerResponse:
     def __init__(self, resp_type: RESPONSE_TYPE, data_frame: DataFrame = None,
@@ -19,6 +48,25 @@ class HandlerResponse:
     @property
     def type(self):
         return self.resp_type
+
+    def to_columns_table_response(self) -> None:
+        """Transform the response to a `columns table` response.
+        NOTE: original dataframe will be mutated
+        """
+        if self.resp_type == RESPONSE_TYPE.COLUMNS_TABLE:
+            return
+        if self.resp_type != RESPONSE_TYPE.TABLE:
+            raise ValueError(f"Cannot convert {self.resp_type} to {RESPONSE_TYPE.COLUMNS_TABLE}")
+        # region validate df
+        self.data_frame.columns = [name.upper() for name in self.data_frame.columns]
+        current_columns_set = set(self.data_frame.columns)
+        if IS_COLUMNS_NAMES_SET != current_columns_set:
+            raise ValueError(
+                f'Columns set for INFORMATION_SCHEMA.COLUMNS is wrong: {list(current_columns_set)}'
+            )
+        # endregion
+
+        self.resp_type = RESPONSE_TYPE.COLUMNS_TABLE
 
     def to_json(self):
         try:
@@ -44,6 +92,7 @@ class HandlerResponse:
                 self.error_message
             )
 
+
 class HandlerStatusResponse:
     def __init__(self, success: bool = True,
                  error_message: str = None,
@@ -65,31 +114,3 @@ class HandlerStatusResponse:
         return f"{self.__class__.__name__}: success={self.success},\
               error={self.error_message},\
               redirect_url={self.redirect_url}"
-
-
-class ExecutorResponse:
-    def __init__(self, resp_type: RESPONSE_TYPE, query: object, error_code: int = 0, error_message: str = None):
-        self.resp_type = resp_type
-        self.query = query
-
-        self.error_code = error_code
-        self.error_message = error_message
-
-    @property
-    def type(self):
-        return self.resp_type
-
-    def to_json(self):
-        return  {"type": self.resp_type,
-                 "query": self.query,
-                 "error_code": self.error_code,
-                 "error": self.error_message}
-
-    def __repr__(self):
-        return "%s: resp_type=%s, query=%s, err_code=%s, error=%s" % (
-                self.__class__.__name__,
-                self.resp_type,
-                self.query,
-                self.error_code,
-                self.error_message,
-            )

@@ -1,6 +1,6 @@
 import time
 import inspect
-from typing import Optional
+from dataclasses import astuple
 
 import numpy as np
 from numpy import dtype as np_dtype
@@ -16,10 +16,12 @@ from mindsdb.api.executor.datahub.datanodes.datanode import DataNode
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.api.executor.datahub.classes.tables_row import TablesRow
 from mindsdb.api.executor.sql_query.result_set import ResultSet
+from mindsdb.integrations.libs.response import IS_COLUMNS_NAMES
 from mindsdb.integrations.utilities.utils import get_class_name
 from mindsdb.metrics import metrics
 from mindsdb.utilities import log
 from mindsdb.utilities.profiler import profiler
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 logger = log.getLogger(__name__)
 
@@ -52,47 +54,82 @@ class IntegrationDataNode(DataNode):
         else:
             raise Exception(f"Can't get tables: {response.error_message}")
 
-    def get_table_columns(self, table_name: str, schema_name: Optional[str] = None):
+    def get_table_columns_df(self, table_name: str, schema_name: str | None = None) -> pd.DataFrame:
+        """Get a DataFrame containing representation of information_schema.columns for the specified table.
+
+        Args:
+            table_name (str): The name of the table to get columns from.
+            schema_name (str | None): The name of the schema to get columns from.
+
+        Returns:
+            pd.DataFrame: A DataFrame containing representation of information_schema.columns for the specified table.
+                          The DataFrame has list of columns as in the integrations.libs.response.IS_COLUMNS_NAMES.
+        """
         if 'schema_name' in inspect.signature(self.integration_handler.get_columns).parameters:
             response = self.integration_handler.get_columns(table_name, schema_name)
         else:
             response = self.integration_handler.get_columns(table_name)
-        if response.type == RESPONSE_TYPE.TABLE:
-            df = response.data_frame
-            # case independent
-            columns = [str(c).lower() for c in df.columns]
-            df.columns = columns
 
-            col_name = None
-            # looking for specific column names
-            for col in ('field', 'column_name', 'column', 'name'):
-                if col in columns:
-                    col_name = columns.index(col)
-                    break
-            # if not found - pick first one
-            if col_name is None:
-                col_name = 0
+        if response.type == RESPONSE_TYPE.COLUMNS_TABLE:
+            return response.data_frame
 
-            names = df[df.columns[col_name]]
+        if response.type != RESPONSE_TYPE.TABLE:
+            logger.warning(f"Wrong response type for handler's `get_columns` call: {response.type}")
+            return pd.DataFrame([], columns=astuple(IS_COLUMNS_NAMES))
 
-            # type
-            if 'mysql_data_type' in columns:
-                types = df['mysql_data_type']
-            elif 'type' in columns:
-                types = df['type']
+        # region fallback for old handlers
+        df = response.data_frame
+        df.columns = [name.upper() for name in df.columns]
+        if 'FIELD' not in df.columns or 'TYPE' not in df.columns:
+            logger.warning(
+                f"Response from the handler's `get_columns` call does not contain required columns: f{df.columns}"
+            )
+            return pd.DataFrame([], columns=astuple(IS_COLUMNS_NAMES))
+
+        new_df = pd.DataFrame([], columns=astuple(IS_COLUMNS_NAMES))
+        new_df = df[['FIELD', 'TYPE']]
+        new_df.columns = ['COLUMN_NAME', 'DATA_TYPE']
+
+        def infer_mysql_type(column_type: str):
+            if column_type in ('double precision', 'real', 'numeric', 'float'):
+                column_type = MYSQL_DATA_TYPE.FLOAT
+            elif column_type in ('integer', 'smallint', 'int', 'bigint'):
+                column_type = MYSQL_DATA_TYPE.BIGINT
+            elif column_type in (
+                'timestamp without time zone',
+                'timestamp with time zone',
+                'date', 'timestamp'
+            ):
+                column_type = MYSQL_DATA_TYPE.DATETIME
             else:
-                types = [None] * len(names)
+                column_type = MYSQL_DATA_TYPE.VARCHAR
 
-            ret = []
-            for i, name in enumerate(names):
-                ret.append({
-                    'name': name,
-                    'type': types[i]
-                })
+            return column_type.value
 
-            return ret
+        new_df[IS_COLUMNS_NAMES.MYSQL_DATA_TYPE] = new_df[
+            IS_COLUMNS_NAMES.DATA_TYPE
+        ].apply(infer_mysql_type)
 
-        return []
+        for column_name in astuple(IS_COLUMNS_NAMES):
+            if column_name in new_df.columns:
+                continue
+            new_df[column_name] = None
+        # endregion
+
+        return new_df
+
+    def get_table_columns_names(self, table_name: str, schema_name: str | None = None) -> list[str]:
+        """Get a list of column names for the specified table.
+
+        Args:
+            table_name (str): The name of the table to get columns from.
+            schema_name (str | None): The name of the schema to get columns from.
+
+        Returns:
+            list[str]: A list of column names for the specified table.
+        """
+        df = self.get_table_columns_df(table_name, schema_name)
+        return df[IS_COLUMNS_NAMES.COLUMN_NAME].to_list()
 
     def drop_table(self, name: Identifier, if_exists=False):
         drop_ast = DropTables(

@@ -7,7 +7,7 @@ from threading import Thread
 import pandas as pd
 
 
-class Test:
+class KBTest:
 
     def __init__(self, vectordb=None, emb_model=None, mindsdb_server=None):
         self.vectordb = vectordb
@@ -192,19 +192,19 @@ class Test:
 
         ret = self.run_sql("select id, chunk_content from kb_crm where id not in ('1001', '1000') limit 4")
         assert len(ret) == 4
-        assert '1000' not in ret['id']
+        assert '1000' not in list(ret['id'])
 
         if self.vectordb_engine != 'chromadb':
             # some operators don't work with chromadb
 
             # like / not like
-            ret = self.run_sql("select id, chunk_content from kb_crm where id like '100%')")
+            ret = self.run_sql("select id, chunk_content from kb_crm where id like '100%'")
             assert len(ret) == 2
-            assert '1001' in ret['id']
+            assert '1001' in list(ret['id'])
 
             ret = self.run_sql("select id, chunk_content from kb_crm where id not like '100%' limit 4")
             assert len(ret) == 4
-            assert '1001' not in ret['id']
+            assert '1001' not in list(ret['id'])
 
         # TODO filtering combination with content
 

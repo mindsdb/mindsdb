@@ -191,7 +191,9 @@ class KnowledgeBaseTable:
 
         columns = list(df.columns)
         # update id, get from metadata
-        df[TableField.ID.value] = df[TableField.METADATA.value].apply(lambda m: m.get('original_row_id'))
+        df[TableField.ID.value] = df[TableField.METADATA.value].apply(
+            lambda m: None if m is None else m.get('original_row_id')
+        )
 
         # id on first place
         return df[[TableField.ID.value] + columns]

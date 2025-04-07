@@ -31,14 +31,13 @@
 ----------------------------------------
 
 
-MindsDB is the world's most effective solution for building AI applications that talk to messy enterprise data sources. Think of it as a librarian Marie Kondo.
+MindsDB is a solution that enables humans, AI, agents, and applications to query data in natural language and SQL and get highly accurate answers across disparate data sources and types.
 
 ![image](https://github.com/user-attachments/assets/03b779e8-7008-485e-989a-e8733cb94e4c)
 
-
 A federated query engine that tidies up your data-sprawl chaos while meticulously answering every single question you throw at it. 
 
-[MindsDB is also an MCP server](https://docs.mindsdb.com/mcp/overview) that enables your MCP applications to answer questions over large-scale federated data—spanning databases, data warehouses, and SaaS applications.
+[MindsDB has an MCP server built in](https://docs.mindsdb.com/mcp/overview) that enables your MCP applications to connect, unify and respond to questions over large-scale federated data—spanning databases, data warehouses, and SaaS applications.
 
 ## Minds [Demo](https://mdb.ai/register)
 Play with [Minds demo](https://mdb.ai/register), and see the power of MindsDB at answering questions from structured to unstructured data, whether it's scattered across SaaS applications, databases, or... hibernating in data warehouses like that $100 bill in your tuxedo pocket from prom night, lost, waiting to be discovered.

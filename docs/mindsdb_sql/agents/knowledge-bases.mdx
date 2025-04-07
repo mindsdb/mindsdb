@@ -16,29 +16,45 @@ It intelligently organizes information in semantically meaningful ways, allowing
 Here is the syntax for creating a knowledge base:
 
 ```sql
-CREATE KNOWLEDGE_BASE <kb_name>
+CREATE KNOWLEDGE_BASE my_kb
 USING
-    embedding_model = <embedding_model_name>, -- optional
-    rerank_model = <reranking_model_name>, -- optional
-    storage = <storage_handler_name>, -- optional
-    metadata_columns = ['date', 'creator', ...], -- optional
-    content_columns = ['review', 'content', ...], -- optional
-    id_column = 'id'; -- optional
+     embedding_model = {
+         "model_name" : "text-embedding-ada-002",
+         "api_key": "sk-...",  -- optional, default from env variable
+         "base_url": "https://api.openai.com/v1" -- optional, default https://api.openai.com/v1
+     },
+     rerank_model = {
+         "model_name": 'gpt-4o',
+         "api_key": "sk-...",  -- optional, default from env variable
+         "base_url": "https://api.openai.com/v1" -- optional, default https://api.openai.com/v1
+     },
+     storage = my_vector_store, -- optional, default ChromaDB
+     metadata_columns = ['date', 'creator', ...], -- optional
+     content_columns = ['review', 'content', ...], -- optional, default content
+     id_column = 'id'; -- optional
+;
 ```
 
-Upon execution, it registers the `<kb_name>` and associates the specified or default models and storage handler.
+Upon execution, it registers `my_kb` and associates the specified models and storage.
 
 The following is an explanation of the syntax and parameters:
 
-* `<kb_name>` is a unique user-defined identifier.
-* `embedding_model` is an optional parameter. It assigns a pre-existing [embedding model for generating vector embeddings](integrations/ai-engines/langchain_embedding).
-      * If not provided, the system shall use the model specified by the `DEFAULT_EMBEDDING_MODEL` system configuration/variable.
-* `rerank_model` is an optional parameter. It assigns a pre-existing reranking model for re-ranking search results.
-      * If not provided, the system shall use the model specified by the `DEFAULT_RERANKING_MODEL` system configuration/variable (if any).
-* `storage` is an optional parameter. It assigns a configured vector database handler.
-      * If not provided, the system shall use the handler designated as the system default (that is, ChromaDB).
+* `embedding_model` stores specification of the embedding model to be used.
+      * `model_name` defines the embedding model as specified by the provider. Users can choose one of the [OpenAI embedding models](https://platform.openai.com/docs/guides/embeddings/embedding-models#embedding-models).
+      * `api_key` stores your OpenAI API key. Alternatively, you can use the `OPENAI_API_KEY` environment variable to store your OpenAI API key.
+      * `base_url` specifies the base URL of the model provider. It defaults to `https://api.openai.com/v1`.
+
+* `rerank_model` stores specification of the reranking model to be used.
+      * `model_name` defines the reranking model as specified by the provider. Users can choose one of the [OpenAI chat models](https://platform.openai.com/docs/models).
+      * `api_key` stores your OpenAI API key. Alternatively, you can use the `OPENAI_API_KEY` environment variable to store your OpenAI API key.
+      * `base_url` specifies the base URL of the model provider. It defaults to `https://api.openai.com/v1`.
+
+* `storage` is an optional parameter. It assigns the name of the vector store connected to MindsDB, either [PGVector](/integrations/vector-db-integrations/pgvector) or [ChromaDB](/integrations/vector-db-integrations/chromadb). If not provided, the system uses the default ChromaDB vector database.
+
 * `metadata_columns` provides the list of column names that will be stored in the `metadata` column of the knowledge base. If not set, the `metadata` column is not used.
+
 * `content_columns` provides the list of column names that will be stored in the `content` column of the knowledge base. If not set, all columns are stored in the `content` column.
+
 * `id_column` is the column name that will be stored in the `id` column of the knowledge base to uniquely identitify the data.
 
 Get details about the knowledge base using the `DESCRIBE` command.
@@ -131,8 +147,6 @@ USING batch_size=200, track_column=id, threads=10;
 - **track_column** - Column used for partitioning; query is sorted by this column and limited by batch_size.
 - **error** (default: `raise`):
   - `error='skip'` - Skips errors in partitions.
-
-
 
 **View queries in progress**
 
@@ -355,4 +369,3 @@ Here are the usage examples:
 DELETE FROM my_kb WHERE id IN ('scifi_001', 'scifi_0010', 'bus_89');
 ```
 </Accordion>
-

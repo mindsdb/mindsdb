@@ -606,7 +606,7 @@ class KnowledgeBaseTable:
 
         if df.empty:
             return pd.DataFrame([], columns=[TableField.EMBEDDINGS.value])
-        
+
         # keep only content
         df = df[[TableField.CONTENT.value]]
 
@@ -847,7 +847,7 @@ class KnowledgeBaseController:
                 project.name,
                 params=params
             )
-            params['default_embedding_model'] = model_name    
+            params['default_embedding_model'] = model_name
 
         model_project = None
         if embedding_model is not None and len(embedding_model.parts) > 1:

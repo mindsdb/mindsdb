@@ -250,10 +250,8 @@ class S3Handler(APIHandler):
         query.from_table = Identifier(parts=[s3_path])
 
         # Execute the query using DuckDB.
-        with self._connect_duckdb(bucket) as connection:
-            query_str = query.get_string().replace('`', '')
-            cursor = connection.execute(query_str)
-            return cursor.fetchdf()
+        response = self.native_query(query.get_string().replace('`', ''))
+        return response.data_frame
 
     def _read_as_content(self, key) -> None:
         """
@@ -359,8 +357,17 @@ class S3Handler(APIHandler):
         Returns:
             Response: A response object containing the result of the query or an error message.
         """
-        query_ast = parse_sql(query)
-        return self.query(query_ast)
+        bucket = query.split("FROM 's3://")[1].split('/')[0]
+
+        with self._connect_duckdb(bucket) as connection:
+            cursor = connection.execute(query)
+            df = cursor.fetchdf()
+
+        response = Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=df
+        )
+        return response
 
     def get_objects(self, limit=None, buckets=None) -> List[dict]:
         client = self.connect()
@@ -438,22 +445,17 @@ class S3Handler(APIHandler):
         Returns:
             Response: A response object containing the column details, formatted as per the `Response` class.
         """
-        query = Select(
-            targets=[Star()],
-            from_table=Identifier(parts=[table_name]),
-            limit=Constant(1)
-        )
+        bucket, key = self._get_bucket(table_name.replace('`', ''))
+        query = f"DESCRIBE SELECT * FROM 's3://{bucket}/{key}'"
+        response = self.native_query(query)
 
-        result = self.query(query)
+        if response.resp_type is RESPONSE_TYPE.TABLE:
+            df = response.data_frame
+            df.rename(columns={'column_name': 'Field', 'column_type': 'Type'}, inplace=True)
 
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=pd.DataFrame(
-                {
-                    'column_name': result.data_frame.columns,
-                    'data_type': [data_type if data_type != 'object' else 'string' for data_type in result.data_frame.dtypes]
-                }
+            response = Response(
+                RESPONSE_TYPE.TABLE,
+                data_frame=df
             )
-        )
 
         return response

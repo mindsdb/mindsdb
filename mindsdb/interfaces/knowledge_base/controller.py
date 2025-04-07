@@ -28,6 +28,7 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
 )
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
 from mindsdb.integrations.utilities.rag.config_loader import load_rag_config
+from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import row_to_document
 
 from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS
 from mindsdb.interfaces.agents.langchain_agent import create_chat_model, get_llm_provider
@@ -48,6 +49,18 @@ KB_TO_VECTORDB_COLUMNS = {
     'chunk_id': 'id',
     'chunk_content': 'content'
 }
+
+
+def get_embedding_model_from_params(embedding_model_params: dict):
+    """
+    Create embedding model from parameters.
+    """
+    params_copy = copy.deepcopy(embedding_model_params)
+    provider = params_copy.pop('provider', None)
+    if provider is None or provider == 'openai':
+        return OpenAIEmbeddings(**params_copy)
+    
+    raise ValueError(f'Unknown provider: {provider}')
 
 
 class KnowledgeBaseTable:
@@ -541,37 +554,46 @@ class KnowledgeBaseTable:
 
         if df.empty:
             return pd.DataFrame([], columns=[TableField.EMBEDDINGS.value])
-
-        model_id = self._kb.embedding_model_id
-        # get the input columns
-        model_rec = db.session.query(db.Predictor).filter_by(id=model_id).first()
-
-        assert model_rec is not None, f"Model not found: {model_id}"
-        model_project = db.session.query(db.Project).filter_by(id=model_rec.project_id).first()
-
-        project_datanode = self.session.datahub.get(model_project.name)
-
+        
         # keep only content
         df = df[[TableField.CONTENT.value]]
 
-        model_using = model_rec.learn_args.get('using', {})
-        input_col = model_using.get('question_column')
-        if input_col is None:
-            input_col = model_using.get('input_column')
+        model_id = self._kb.embedding_model_id
+        if model_id:
+            # get the input columns
+            model_rec = db.session.query(db.Predictor).filter_by(id=model_id).first()
 
-        if input_col is not None and input_col != TableField.CONTENT.value:
-            df = df.rename(columns={TableField.CONTENT.value: input_col})
+            assert model_rec is not None, f"Model not found: {model_id}"
+            model_project = db.session.query(db.Project).filter_by(id=model_rec.project_id).first()
 
-        df_out = project_datanode.predict(
-            model_name=model_rec.name,
-            df=df,
-            params=self.model_params
-        )
+            project_datanode = self.session.datahub.get(model_project.name)
 
-        target = model_rec.to_predict[0]
-        if target != TableField.EMBEDDINGS.value:
-            # adapt output for vectordb
-            df_out = df_out.rename(columns={target: TableField.EMBEDDINGS.value})
+            model_using = model_rec.learn_args.get('using', {})
+            input_col = model_using.get('question_column')
+            if input_col is None:
+                input_col = model_using.get('input_column')
+
+            if input_col is not None and input_col != TableField.CONTENT.value:
+                df = df.rename(columns={TableField.CONTENT.value: input_col})
+
+            df_out = project_datanode.predict(
+                model_name=model_rec.name,
+                df=df,
+                params=self.model_params
+            )
+
+            target = model_rec.to_predict[0]
+            if target != TableField.EMBEDDINGS.value:
+                # adapt output for vectordb
+                df_out = df_out.rename(columns={target: TableField.EMBEDDINGS.value})
+
+        else:
+            embedding_model = get_embedding_model_from_params(self._kb.params.get('embedding_model'))
+
+            df_texts = df.apply(row_to_document, axis=1)
+            embeddings = embedding_model.embed_documents(df_texts.tolist())
+            df_out = df.copy().assign(**{TableField.EMBEDDINGS.value: embeddings})
+
         df_out = df_out[[TableField.EMBEDDINGS.value]]
 
         return df_out
@@ -753,8 +775,8 @@ class KnowledgeBaseController:
                 return kb
             raise EntityExistsError("Knowledge base already exists", name)
 
-        embedding_model_params = params.pop('embedding_model', None)
-        reranking_model_params = params.pop('reranking_model', None)
+        embedding_model_params = params.get('embedding_model', None)
+        reranking_model_params = params.get('reranking_model', None)
 
         if embedding_model:
             model_name = embedding_model.parts[-1]
@@ -762,7 +784,7 @@ class KnowledgeBaseController:
         elif embedding_model_params:
             # Get embedding model from params.
             # This is called here to check validaity of the parameters.
-            self._get_embedding_model_from_params(
+            get_embedding_model_from_params(
                 embedding_model_params
             )
 
@@ -901,16 +923,6 @@ class KnowledgeBaseController:
         command_executor.answer_create_predictor(statement, project_name)
 
         return model_name
-
-    def _get_embedding_model_from_params(self, embedding_model_params: dict):
-        """
-        Create embedding model from parameters.
-        """
-        provider = embedding_model_params.pop('provider', None)
-        if provider is None or provider == 'openai':
-            return OpenAIEmbeddings(**embedding_model_params)
-        
-        raise ValueError(f'Unknown provider: {args["provider"]}')
 
     def delete(self, name: str, project_name: int, if_exists: bool = False) -> None:
         """

@@ -28,6 +28,7 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
 )
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
 from mindsdb.integrations.utilities.rag.config_loader import load_rag_config
+from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import row_to_document
 
 from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS
@@ -57,6 +58,9 @@ def get_embedding_model_from_params(embedding_model_params: dict):
     """
     params_copy = copy.deepcopy(embedding_model_params)
     provider = params_copy.pop('provider', None)
+    params_copy[f"{provider}_api_key"] = get_api_key(provider, params_copy)
+    params_copy.pop('api_key', None)
+
     if provider is None or provider == 'openai':
         return OpenAIEmbeddings(**params_copy)
     

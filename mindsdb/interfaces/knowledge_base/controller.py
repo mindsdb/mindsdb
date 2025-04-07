@@ -4,6 +4,7 @@ from typing import Dict, List, Optional
 
 import pandas as pd
 import hashlib
+from langchain_openai import OpenAIEmbeddings
 import numpy as np
 
 from mindsdb_sql_parser.ast import (
@@ -760,7 +761,8 @@ class KnowledgeBaseController:
 
         elif embedding_model_params:
             # Get embedding model from params.
-            model_name = self._get_embedding_model(
+            # This is called here to check validaity of the parameters.
+            self._get_embedding_model_from_params(
                 embedding_model_params
             )
 
@@ -771,26 +773,21 @@ class KnowledgeBaseController:
             )
             params['default_embedding_model'] = model_name    
 
-        if embedding_model is None:
-            # create default embedding model
-            model_name = self._get_default_embedding_model(project.name, params=params)
-            params['default_embedding_model'] = model_name
-        else:
-            # get embedding model from input
-            model_name = embedding_model.parts[-1]
-
+        model_project = None
         if embedding_model is not None and len(embedding_model.parts) > 1:
             # model project is set
             model_project = self.session.database_controller.get_project(embedding_model.parts[-2])
-        else:
+        elif not embedding_model_params:
             model_project = project
 
-        model = self.session.model_controller.get_model(
-            name=model_name,
-            project_name=model_project.name
-        )
-        model_record = db.Predictor.query.get(model['id'])
-        embedding_model_id = model_record.id
+        embedding_model_id = None
+        if model_project:
+            model = self.session.model_controller.get_model(
+                name=model_name,
+                project_name=model_project.name
+            )
+            model_record = db.Predictor.query.get(model['id'])
+            embedding_model_id = model_record.id
 
         # search for the vector database table
         if storage is None:
@@ -905,8 +902,15 @@ class KnowledgeBaseController:
 
         return model_name
 
-    def _get_embedding_model(self, embedding_model_params: dict):
-        pass
+    def _get_embedding_model_from_params(self, embedding_model_params: dict):
+        """
+        Create embedding model from parameters.
+        """
+        provider = embedding_model_params.pop('provider', None)
+        if provider is None or provider == 'openai':
+            return OpenAIEmbeddings(**embedding_model_params)
+        
+        raise ValueError(f'Unknown provider: {args["provider"]}')
 
     def delete(self, name: str, project_name: int, if_exists: bool = False) -> None:
         """

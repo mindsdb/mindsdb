@@ -1256,7 +1256,6 @@ class ExecuteCommands:
             project_name = parts[0]
 
         query_str = statement.query_str
-        query = parse_sql(query_str)
 
         if isinstance(statement.from_table, Identifier):
             query = Select(
@@ -1266,6 +1265,8 @@ class ExecuteCommands:
                 ),
             )
             query_str = str(query)
+        else:
+            query = parse_sql(query_str)
 
         if isinstance(query, Select):
             # check create view sql

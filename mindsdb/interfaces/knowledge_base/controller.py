@@ -191,7 +191,9 @@ class KnowledgeBaseTable:
 
         columns = list(df.columns)
         # update id, get from metadata
-        df[TableField.ID.value] = df[TableField.METADATA.value].apply(lambda m: m.get('original_row_id'))
+        df[TableField.ID.value] = df[TableField.METADATA.value].apply(
+            lambda m: None if m is None else m.get('original_row_id')
+        )
 
         # id on first place
         return df[[TableField.ID.value] + columns]
@@ -281,7 +283,9 @@ class KnowledgeBaseTable:
 
         # send to vectordb
         db_handler = self.get_vector_db()
-        db_handler.query(query)
+        conditions = db_handler.extract_conditions(query.where)
+        self.addapt_conditions_columns(conditions)
+        db_handler.dispatch_update(query, conditions)
 
     def delete_query(self, query: Delete):
         """

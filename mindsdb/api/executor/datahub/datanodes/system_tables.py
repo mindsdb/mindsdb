@@ -220,7 +220,7 @@ class ColumnsTableRow:
                     data_type = MYSQL_DATA_TYPE.FLOAT
                 case 'integer' | 'smallint' | 'int' | 'bigint':
                     data_type = MYSQL_DATA_TYPE.BIGINT
-                case 'timestamp without time zone' | 'timestamp with time zone' |'date' | 'timestamp':
+                case 'timestamp without time zone' | 'timestamp with time zone' | 'date' | 'timestamp':
                     data_type = MYSQL_DATA_TYPE.DATETIME
                 case _:
                     data_type = MYSQL_DATA_TYPE.VARCHAR

@@ -284,7 +284,7 @@ class IntegrationDataNode(DataNode):
         return result
 
     @profiler.profile()
-    def query(self, query: Optional[ASTNode] = None, native_query: Optional[str] = None, session=None) -> DataHubResponse:
+    def query(self, query: ASTNode | None = None, native_query: str | None = None, session=None) -> DataHubResponse:
         try:
             if query is not None:
                 result: HandlerResponse = self._query(query)

@@ -30,8 +30,9 @@ class KBTest:
 
         try:
             self.con.databases.drop(name)
-        except RuntimeError:
-            pass
+        except RuntimeError as e:
+            if 'Database does not exists' not in str(e):
+                raise e
         # if engine == 'pgvector':
         #     connection_args = {}
         # elif engine == 'chromadb':
@@ -91,6 +92,10 @@ class KBTest:
         return resp
 
     def prepare(self):
+        # drop existed kb:
+        for name in ('kb_crm', 'kb_crm_part'):
+            self.run_sql(f'drop knowledge base if exists {name}')
+
         # create vector_db
         self.vectordb_name = self.create_vector_db(self.vectordb)
 
@@ -307,6 +312,9 @@ class KBTest:
 
                     ret = self.run_sql('describe knowledge base kb_crm_part')
                     record = ret.iloc[0]
+
+                    if record['QUERY_ID'] is None:
+                        raise RuntimeError('Query is not partitioned')
 
                     if record['INSERT_FINISHED_AT'] is not None:
                         print('loading completed')

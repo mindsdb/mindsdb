@@ -102,7 +102,6 @@ class Test:
         # connect database
         self.db_name = self.create_db()
 
-
     def create_kb(self, name):
         self.run_sql(f'drop knowledge base if exists {name}')
 
@@ -323,7 +322,6 @@ class Test:
                 thread.join()
         print('========= Tests summary ==========')
         print(pd.DataFrame(results))
-
 
     def test_relevance(self):
         """

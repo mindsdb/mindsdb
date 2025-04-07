@@ -759,10 +759,8 @@ class KnowledgeBaseController:
             model_name = embedding_model.parts[-1]
 
         elif embedding_model_params:
-            # Create embedding model from params.
+            # Get embedding model from params.
             model_name = self._get_embedding_model(
-                project.name,
-                f"kb_default_{name}_embedding_model",
                 embedding_model_params
             )
 
@@ -891,31 +889,9 @@ class KnowledgeBaseController:
         if engine == 'langchain_embedding':
             # Use default embeddings.
             using_args['class'] = 'openai'
-        return self._create_embedding_model(project_name, model_name, using_args)
 
-    def _get_embedding_model(self, project_name: str, model_name: str, params: dict, engine="langchain_embedding") -> str:
-        """
-        Create a new embedding model based on the provided parameters.
-        """
-        try:
-            model = self.session.model_controller.get_model(model_name, project_name=project_name)
-            if model is not None:
-                # Handle this better.
-                raise EntityExistsError("Embedding model already exists", model_name)
-        except PredictorRecordNotFound:
-            pass
-
-        using_args = {
-            'engine': engine
-        }
-        using_args.update(params)
-
-        return self._create_embedding_model(project_name, model_name, using_args)
-    
-    def _create_embedding_model(self, project_name: str, model_name: str, using_args: dict):
-        """
-        Create a new embedding model in the database.
-        """
+        # Include API key if provided.
+        using_args.update({k: v for k, v in params.items() if 'api_key' in k})
         statement = CreatePredictor(
             name=Identifier(parts=[project_name, model_name]),
             using=using_args,
@@ -928,6 +904,9 @@ class KnowledgeBaseController:
         command_executor.answer_create_predictor(statement, project_name)
 
         return model_name
+
+    def _get_embedding_model(self, embedding_model_params: dict):
+        pass
 
     def delete(self, name: str, project_name: int, if_exists: bool = False) -> None:
         """

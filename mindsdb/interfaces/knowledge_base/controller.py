@@ -630,6 +630,9 @@ class KnowledgeBaseTable:
             from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
             embeddings_model = construct_model_from_args(embedding_args)
             logger.debug(f"Using knowledge base embedding model with args: {embedding_args}")
+        elif self._kb.params.get('embedding_model'):
+            embeddings_model = get_embedding_model_from_params(self._kb.params['embedding_model'])
+            logger.debug(f"Using knowledge base embedding model from params: {self._kb.params['embedding_model']}")
         else:
             embeddings_model = DEFAULT_EMBEDDINGS_MODEL_CLASS()
             logger.debug("Using default embedding model as knowledge base has no embedding model")

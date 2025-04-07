@@ -66,6 +66,21 @@ def get_embedding_model_from_params(embedding_model_params: dict):
     return construct_model_from_args(params_copy)
 
 
+def get_reranking_model_from_params(reranking_model_params: dict):
+    """
+    Create reranking model from parameters.
+    """
+    params_copy = copy.deepcopy(reranking_model_params)
+    provider = params_copy.pop('provider', "openai")
+    if provider.lower() != 'openai':
+        raise ValueError("Only OpenAI provider is supported for the reranking model.")
+    params_copy[f"{provider}_api_key"] = get_api_key(provider, params_copy)
+    params_copy.pop('api_key', None)
+    params_copy['model_name'] = params_copy.pop('model', None)
+
+    return LLMReranker(**params_copy)
+
+
 class KnowledgeBaseTable:
     """
     Knowledge base table interface
@@ -179,18 +194,17 @@ class KnowledgeBaseTable:
     def add_relevance(self, df, query_text, reranking_threshold=None):
         relevance_column = TableField.RELEVANCE.value
 
-        rerank_model = self._kb.params.get("rerank_model")
-        if rerank_model and query_text and len(df) > 0:
+        reranking_model_params = self._kb.params.get("reranking_model")
+        if reranking_model_params and query_text and len(df) > 0:
             # Use reranker for relevance score
             try:
-                logger.info(f"Using reranker model {rerank_model} for relevance calculation")
-                reranker_params = {"model": rerank_model}
+                logger.info(f"Using knowledge reranking model from params: {reranking_model_params}")
                 # Apply custom filtering threshold if provided
                 if reranking_threshold is not None:
-                    reranker_params["filtering_threshold"] = reranking_threshold
+                    reranking_model_params["filtering_threshold"] = reranking_threshold
                     logger.info(f"Using custom filtering threshold: {reranking_threshold}")
 
-                reranker = LLMReranker(**reranker_params)
+                reranker = get_reranking_model_from_params(reranking_model_params)
                 # Get documents to rerank
                 documents = df['chunk_content'].tolist()
                 # Use the get_scores method with disable_events=True
@@ -201,7 +215,7 @@ class KnowledgeBaseTable:
                 # Filter by threshold
                 scores_array = np.array(scores)
                 df = df[scores_array > reranker.filtering_threshold]
-                logger.debug(f"Applied reranking with model {rerank_model}, threshold: {reranker.filtering_threshold}")
+                logger.debug(f"Applied reranking with params: {reranking_model_params}")
             except Exception as e:
                 logger.error(f"Error during reranking: {str(e)}")
                 # Fallback to distance-based relevance
@@ -850,6 +864,11 @@ class KnowledgeBaseController:
             )
             model_record = db.Predictor.query.get(model['id'])
             embedding_model_id = model_record.id
+
+        if reranking_model_params:
+            # Get reranking model from params.
+            # This is called here to check validaity of the parameters.
+            get_reranking_model_from_params(reranking_model_params)
 
         # search for the vector database table
         if storage is None:

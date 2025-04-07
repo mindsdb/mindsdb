@@ -26,13 +26,11 @@ class KBTest:
     def create_vector_db(self, connection_args):
         engine = connection_args.pop('engine')
 
-        name = f'vectordb_{engine}'
+        name = f'test_vectordb_{engine}'
 
         try:
-            self.con.databases.get(name)
-            return name
-
-        except AttributeError:
+            self.con.databases.drop(name)
+        except RuntimeError:
             pass
         # if engine == 'pgvector':
         #     connection_args = {}
@@ -65,7 +63,7 @@ class KBTest:
     def create_emb_model(self, params):
         engine = params.pop('engine')
 
-        name = f'emb_model_{engine}'
+        name = f'test_emb_model_{engine}'
         try:
             self.con.models.get(name)
             return name

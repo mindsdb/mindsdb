@@ -67,8 +67,6 @@ class HandlerResponse:
         self.data_frame[IS_COLUMNS_NAMES.MYSQL_DATA_TYPE] = self.data_frame[
             IS_COLUMNS_NAMES.DATA_TYPE
         ].apply(map_type_fn)
-        self.to_columns_table_response()
-
 
         # region validate df
         self.data_frame.columns = [name.upper() for name in self.data_frame.columns]

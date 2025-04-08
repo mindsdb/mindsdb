@@ -246,7 +246,7 @@ class MySQLHandler(DatabaseHandler):
             from
                 information_schema.columns
             where
-                table_name = '{table_name}'
+                table_name = '{table_name}';
         """
         result = self.native_query(q)
         result.to_columns_table_response(map_type_fn=_map_type)

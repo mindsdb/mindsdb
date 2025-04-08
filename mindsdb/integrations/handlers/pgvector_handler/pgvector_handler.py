@@ -157,7 +157,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
             where_clauses.append(f'{key} {value["op"]} {value["value"]}')
 
         if len(where_clauses) > 1:
-            return f"WHERE{' AND '.join(where_clauses)}"
+            return f"WHERE {' AND '.join(where_clauses)}"
         elif len(where_clauses) == 1:
             return f"WHERE {where_clauses[0]}"
         else:

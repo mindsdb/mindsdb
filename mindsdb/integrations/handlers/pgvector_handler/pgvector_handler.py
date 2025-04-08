@@ -219,7 +219,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         if filter_conditions:
 
             if embedding_search:
-                search_vector = filter_conditions["embeddings"]["value"][0]
+                search_vector = filter_conditions["embeddings"]["value"]
                 filter_conditions.pop("embeddings")
 
                 if self._is_sparse:

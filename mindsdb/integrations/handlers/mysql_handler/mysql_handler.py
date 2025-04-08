@@ -178,10 +178,11 @@ class MySQLHandler(DatabaseHandler):
                         pd.DataFrame(
                             result,
                             columns=[x[0] for x in cur.description]
-                        )
+                        ),
+                        affected_rows=cur.rowcount
                     )
                 else:
-                    response = Response(RESPONSE_TYPE.OK)
+                    response = Response(RESPONSE_TYPE.OK, affected_rows=cur.rowcount)
         except mysql.connector.Error as e:
             logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
             response = Response(

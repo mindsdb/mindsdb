@@ -392,6 +392,14 @@
             "use-cases/ai_workflow_automation/customer-reviews-notifications",
             "use-cases/ai_workflow_automation/real-time-trading-forecasts"
           ]
+        },
+        {
+          "group": "MCP API",
+          "pages": [
+            "use-cases/mcp_api/overview",
+            "use-cases/mcp_api/mindsdb_mcp_server",
+            "use-cases/mcp_api/cursor"
+          ]
         }
       ]
     },
@@ -960,7 +968,6 @@
         {
           "group": "Databases",
           "pages": [
-            "integrations/data-integrations/all-data-integrations",
             "integrations/data-integrations/airtable",
             "integrations/data-integrations/amazon-aurora",
             "integrations/data-integrations/amazon-dynamodb",

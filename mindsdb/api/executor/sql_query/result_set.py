@@ -50,13 +50,14 @@ def rename_df_columns(df: pd.DataFrame, names: Optional[List] = None) -> None:
 
 
 class ResultSet:
-    def __init__(self, columns=None, values: List[List] = None, df: pd.DataFrame = None):
-        '''
-
-        :param columns: list of Columns
-        :param values: data of resultSet, have to be list of lists with length equal to column
-        :param df: injected dataframe, have to have enumerated columns and length equal to columns
-        '''
+    def __init__(self, columns=None, values: List[List] = None, df: pd.DataFrame = None, affected_rows: int = None):
+        """
+        Args:
+            columns: list of Columns
+            values (List[List]): data of resultSet, have to be list of lists with length equal to column
+            df (pd.DataFrame): injected dataframe, have to have enumerated columns and length equal to columns
+            affected_rows (int): number of affected rows
+        """
         if columns is None:
             columns = []
         self._columns = columns
@@ -66,6 +67,8 @@ class ResultSet:
         elif df is None:
             df = pd.DataFrame(values)
         self._df = df
+
+        self.affected_rows = affected_rows
 
         self.is_prediction = False
 

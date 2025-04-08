@@ -62,7 +62,7 @@ def get_embedding_model_from_params(embedding_model_params: dict):
     params_copy['class'] = provider
     params_copy[f"{provider}_api_key"] = get_api_key(provider, params_copy, strict=False) or params_copy.get('api_key')
     params_copy.pop('api_key', None)
-    params_copy['model_name'] = params_copy.pop('model', None)
+    params_copy['model'] = params_copy.pop('model_name', None)
 
     return construct_model_from_args(params_copy)
 
@@ -77,7 +77,7 @@ def get_reranking_model_from_params(reranking_model_params: dict):
         raise ValueError("Only OpenAI provider is supported for the reranking model.")
     params_copy[f"{provider}_api_key"] = get_api_key(provider, params_copy, strict=False) or params_copy.get('api_key')
     params_copy.pop('api_key', None)
-    params_copy['model_name'] = params_copy.pop('model', None)
+    params_copy['model'] = params_copy.pop('model_name', None)
 
     return LLMReranker(**params_copy)
 

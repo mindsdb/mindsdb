@@ -93,7 +93,7 @@ jobs:
       - id: set-matrix
         uses: JoshuaTheMiller/conditional-build-matrix@v2.0.1
         with:
-          filter: "[?runOnBranch==`${{ github.ref }}` || runOnBranch==`always`]"
+          filter: "[?runOnBranch==`${{ github.event.pull_request.base.ref || github.ref }}` || runOnBranch==`always`]"
 
   # Check that our pip package is able to be installed in all of our supported environments
   check_install:

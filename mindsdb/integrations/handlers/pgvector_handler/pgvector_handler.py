@@ -241,7 +241,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
                 if has_distance:
                     targets = f"{targets}, (embeddings {distance_op} '{search_vector}') as distance"
                 
-                return f"SELECT {targets} FROM {table_name} ORDER BY embeddings {distance_op} '{search_vector}' ASC {after_from_clause}"
+                return f"SELECT {targets} FROM {table_name} {after_from_clause} ORDER BY embeddings {distance_op} '{search_vector}' ASC"
 
             else:
                 # if filter conditions, return rows that satisfy the conditions

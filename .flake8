@@ -1,5 +1,5 @@
 [flake8]
-min_python_version = 3.9.0
+min_python_version = 3.10.0
 max-line-length = 120
 ignore =
   # E402

@@ -8,9 +8,9 @@
  * permission of MindsDB Inc
  *******************************************************
 """
-import re
 import inspect
 from textwrap import dedent
+from typing import Dict
 
 from mindsdb_sql_parser import parse_sql
 from mindsdb.api.executor.planner.steps import (
@@ -23,7 +23,7 @@ from mindsdb.api.executor.planner.exceptions import PlanningException
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.api.executor.planner import query_planner
 
-from mindsdb.api.executor.utilities.sql import query_df, get_query_models
+from mindsdb.api.executor.utilities.sql import get_query_models
 from mindsdb.interfaces.model.functions import get_model_record
 from mindsdb.api.executor.exceptions import (
     BadTableError,
@@ -37,8 +37,6 @@ from mindsdb.utilities.exception import EntityNotExistsError
 from . import steps
 from .result_set import ResultSet, Column
 from . steps.base import BaseStepCall
-
-superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_table', flags=re.IGNORECASE | re.MULTILINE | re.S)
 
 
 class SQLQuery:
@@ -59,23 +57,13 @@ class SQLQuery:
         }
 
         self.columns_list = None
-        self.steps_data = {}
+        self.steps_data: Dict[int, ResultSet] = {}
 
-        self.planner = None
+        self.planner: query_planner.QueryPlanner = None
         self.parameters = []
-        self.fetched_data = None
-
-        self.outer_query = None
+        self.fetched_data: ResultSet = None
 
         if isinstance(sql, str):
-            # region workaround for subqueries in superset
-            if 'as virtual_table' in sql.lower():
-                subquery = re.findall(superset_subquery, sql)
-                if isinstance(subquery, list) and len(subquery) == 1:
-                    subquery = subquery[0]
-                    self.outer_query = sql.replace(subquery, 'dataframe')
-                    sql = subquery.strip('()')
-            # endregion
             self.query = parse_sql(sql)
             self.context['query_str'] = sql
         else:
@@ -89,7 +77,6 @@ class SQLQuery:
         self.create_planner()
 
         if execute:
-            self.prepare_query(prepare=False)
             self.execute_query()
 
     @classmethod
@@ -190,55 +177,42 @@ class SQLQuery:
             default_namespace=database,
         )
 
-    def fetch(self, view='result_set'):
-        data = self.fetched_data
+    def prepare_query(self):
+        """it is prepared statement call
+        """
+        try:
+            for step in self.planner.prepare_steps(self.query):
+                data = self.execute_step(step)
+                step.set_result(data)
+                self.steps_data[step.step_num] = data
+        except PlanningException as e:
+            raise LogicError(e)
 
-        if view == 'dataframe':
-            result = data.to_df()
-        else:
-            result = data
+        statement_info = self.planner.get_statement_info()
 
-        return {
-            'success': True,
-            'result': result
-        }
-
-    def prepare_query(self, prepare=True):
-        if prepare:
-            # it is prepared statement call
-            try:
-                for step in self.planner.prepare_steps(self.query):
-                    data = self.execute_step(step)
-                    step.set_result(data)
-                    self.steps_data[step.step_num] = data
-            except PlanningException as e:
-                raise LogicError(e)
-
-            statement_info = self.planner.get_statement_info()
-
-            self.columns_list = []
-            for col in statement_info['columns']:
-                self.columns_list.append(
-                    Column(
-                        database=col['ds'],
-                        table_name=col['table_name'],
-                        table_alias=col['table_alias'],
-                        name=col['name'],
-                        alias=col['alias'],
-                        type=col['type']
-                    )
-                )
-
-            self.parameters = [
+        self.columns_list = []
+        for col in statement_info['columns']:
+            self.columns_list.append(
                 Column(
+                    database=col['ds'],
+                    table_name=col['table_name'],
+                    table_alias=col['table_alias'],
                     name=col['name'],
                     alias=col['alias'],
                     type=col['type']
                 )
-                for col in statement_info['parameters']
-            ]
+            )
 
-    def execute_query(self, params=None):
+        self.parameters = [
+            Column(
+                name=col['name'],
+                alias=col['alias'],
+                type=col['type']
+            )
+            for col in statement_info['parameters']
+        ]
+
+    def execute_query(self):
         if self.fetched_data is not None:
             # no need to execute
             return
@@ -246,7 +220,7 @@ class SQLQuery:
         step_result = None
         process_mark = None
         try:
-            steps = list(self.planner.execute_steps(params))
+            steps = list(self.planner.execute_steps())
             steps_classes = (x.__class__ for x in steps)
             predict_steps = (ApplyPredictorRowStep, ApplyPredictorStep, ApplyTimeseriesPredictorStep)
             if any(s in predict_steps for s in steps_classes):
@@ -270,27 +244,7 @@ class SQLQuery:
         if len(self.steps_data) == 0:
             return
 
-        try:
-            if self.outer_query is not None:
-                # workaround for subqueries in superset. remove it?
-                # +++
-                # ???
-
-                result = step_result
-                df = result.to_df()
-
-                df2 = query_df(df, self.outer_query)
-
-                result2 = ResultSet().from_df(df2, database='', table_name='')
-
-                self.columns_list = result2.columns
-                self.fetched_data = result2
-
-            else:
-                result = step_result
-                self.fetched_data = result
-        except Exception as e:
-            raise UnknownError("error in preparing result query step") from e
+        self.fetched_data = step_result
 
         try:
             if hasattr(self, 'columns_list') is False:

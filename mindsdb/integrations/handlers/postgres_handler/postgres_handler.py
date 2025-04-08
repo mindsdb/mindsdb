@@ -228,7 +228,7 @@ class PostgresHandler(DatabaseHandler):
                 else:
                     cur.execute(query)
                 if cur.pgresult is None or ExecStatus(cur.pgresult.status) == ExecStatus.COMMAND_OK:
-                    response = Response(RESPONSE_TYPE.OK)
+                    response = Response(RESPONSE_TYPE.OK, affected_rows=cur.rowcount)
                 else:
                     result = cur.fetchall()
                     df = DataFrame(
@@ -238,7 +238,8 @@ class PostgresHandler(DatabaseHandler):
                     self._cast_dtypes(df, cur.description)
                     response = Response(
                         RESPONSE_TYPE.TABLE,
-                        df
+                        data_frame=df,
+                        affected_rows=cur.rowcount
                     )
                 connection.commit()
             except Exception as e:
@@ -255,15 +256,16 @@ class PostgresHandler(DatabaseHandler):
 
         return response
 
-    def insert(self, table_name: str, df: pd.DataFrame):
+    def insert(self, table_name: str, df: pd.DataFrame) -> Response:
         need_to_close = not self.is_connected
 
         connection = self.connect()
 
         columns = [f'"{c}"' for c in df.columns]
+        rowcount = None
         with connection.cursor() as cur:
             try:
-                with cur.copy(f'copy "{table_name}" ({",".join(columns)}) from STDIN  WITH CSV') as copy:
+                with cur.copy(f'copy "{table_name}" ({",".join(columns)}) from STDIN WITH CSV') as copy:
                     df.to_csv(copy, index=False, header=False)
 
                 connection.commit()
@@ -271,9 +273,12 @@ class PostgresHandler(DatabaseHandler):
                 logger.error(f'Error running insert to {table_name} on {self.database}, {e}!')
                 connection.rollback()
                 raise e
+            rowcount = cur.rowcount
 
         if need_to_close:
             self.disconnect()
+
+        return Response(RESPONSE_TYPE.OK, affected_rows=rowcount)
 
     @profiler.profile()
     def query(self, query: ASTNode) -> Response:

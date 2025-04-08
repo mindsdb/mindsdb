@@ -1,0 +1,73 @@
+---
+title: The TO_MARKDOWN() Function
+sidebarTitle: The TO_MARKDOWN() Function
+---
+
+MindsDB provides the `TO_MARKDOWN()` function that lets users extract the content of their documents in markdown by simply specifying the document path or URL. This function is especially useful for passing the extracted content of documents through LLMs or for storing them in a [Knowledge Base](/mindsdb_sql/agents/knowledge-bases).
+
+## Prerequisites
+
+To enable the use of a LLM with the `TO_MARKDOWN()` function in MindsDB, choose one of the available model providers and define the following environment variables.
+
+<Info>
+This function can be executed with or without the help of a LLM. 
+The use of a LLM is optional, and the function will work without it. For most documents, the content can be extracted without the need for a LLM. However, in the followig cases, using a LLM is recommended:
+- When PDF documents contain images, the LLM can generate descriptions for those images.
+- When the document itself is an image, the LLM can generate a description of the image content.
+</Info>
+
+<AccordionGroup>
+
+  <Accordion title="OpenAI">
+    Here are the environment variables for the OpenAI provider:
+
+    ```
+    LLM_FUNCTION_MODEL_NAME
+    LLM_FUNCTION_TEMPERATURE
+    LLM_FUNCTION_MAX_RETRIES
+    LLM_FUNCTION_MAX_TOKENS
+    LLM_FUNCTION_BASE_URL
+    OPENAI_API_KEY
+    LLM_FUNCTION_API_ORGANIZATION
+    LLM_FUNCTION_REQUEST_TIMEOUT
+    ```
+
+  </Accordion>
+</AccordionGroup>
+
+## Usage
+
+You can use the `TO_MARKDOWN()` function to extract the content of your documents in markdown format. The arguments for this function are:
+- `file_path_or_url`: The path or URL of the document you want to extract content from.
+- `use_llm`: A boolean value that indicates whether to use a LLM for generating the markdown content. If set to `True`, the environment variables for the LLM provider must be set. If set to `False`, the function will work without a LLM.
+
+The following example shows how to use the `TO_MARKDOWN()` function with a PDF document without using a LLM:
+
+```sql
+SELECT TO_MARKDOWN('https://www.princexml.com/howcome/2016/samples/invoice/index.pdf', False);
+```
+
+Here is the output:
+
+```sql
++------------------------------------------+
+| to_markdown                              |
++------------------------------------------+
+| '\nInvoice\n\n\nYesLogic Pty. Ltd.\n7 / 39 Bouverie St\nCarlton VIC 3053\nAustralia\n\n\nwww.yeslogic.com\nABN 32 101 193 560\n\nCustomer Name\nStreet\nPostcode City\nCountry\n\n\nInvoice date:\nNov 26, 2016\nInvoice number:\n161126\nPayment due:\n30 days after invoice date\n\n\nDescription\nFrom\nUntil\nAmount\n\nPrince Upgrades & Support\nNov 26, 2016\nNov 26, 2017\nUSD $950.00\n\nTotal\nUSD $950.00\n\n\nPlease transfer amount to:\n\n\nBank account name:\nYes Logic Pty Ltd\nName of Bank:\nCommonwealth Bank of Australia (CBA)\nBank State Branch (BSB):\n063010\nBank State Branch (BSB):\n063010\nBank State Branch (BSB):\n063019\nBank account number:\n13201652\nBank SWIFT code:\nCTBAAU2S\nBank address:\n231 Swanston St, Melbourne, VIC 3000, Australia\n\n\nThe BSB number identifies a branch of a financial institution in Australia. When transferring money to Australia, the\nBSB number is used together with the bank account number and the SWIFT code. Australian banks do not use IBAN\nnumbers.\n\n\nwww.yeslogic.com\n\n' |
++------------------------------------------+
+```
+
+The following example shows how to use the `TO_MARKDOWN()` function with a PDF document using a LLM:
+
+```sql
+SELECT TO_MARKDOWN('https://www.princexml.com/howcome/2016/samples/invoice/index.pdf', True);
+```
+```sql
++------------------------------------------+
+| to_markdown                              |
++------------------------------------------+
+| '![The image features a simple design of a purple arrow that starts in a curved shape on the left and transitions into a straight line on the right. The arrow appears to be pointing to the right, indicating direction or movement. The overall style is minimalistic and clean.](image_1_1.png)\nInvoice\nYesLogic Pty. Ltd.\n7 / 39 Bouverie St\nCarlton VIC 3053\nAustralia\nwww.yeslogic.com\nABN 32 101 193 560\nCustomer Name\nStreet\nPostcode City\nCountry\nInvoice date:\nNov 26, 2016\nInvoice number:\n161126\nPayment due:\n30 days after invoice date\nDescription\nFrom\nUntil\nAmount\nPrince Upgrades & Support\nNov 26, 2016\nNov 26, 2017\nUSD $950.00\nTotal\nUSD $950.00\nPlease transfer amount to:\nBank account name:\nYes Logic Pty Ltd\nName of Bank:\nCommonwealth Bank of Australia (CBA)\nBank State Branch (BSB):\n063010\nBank State Branch (BSB):\n063010\nBank State Branch (BSB):\n063019\nBank account number:\n13201652\nBank SWIFT code:\nCTBAAU2S\nBank address:\n231 Swanston St, Melbourne, VIC 3000, Australia\nThe BSB number identifies a branch of a financial institution in Australia. When transferring money to Australia, the\nBSB number is used together with the bank account number and the SWIFT code. Australian banks do not use IBAN\nnumbers.\nwww.yeslogic.com\n\n' |
++------------------------------------------+
+```
+
+The output includes the markdown content of the document, including the LLM-generated descriptions for any images within it.

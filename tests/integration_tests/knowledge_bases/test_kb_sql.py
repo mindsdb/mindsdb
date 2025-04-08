@@ -7,7 +7,7 @@ from threading import Thread
 import pandas as pd
 
 
-class KBTest:
+class KBTestBase:
 
     def __init__(self, vectordb=None, emb_model=None, mindsdb_server=None):
         self.vectordb = vectordb
@@ -123,6 +123,8 @@ class KBTest:
         ret = self.run_sql(f'describe knowledge base {name}')
         assert len(ret) == 1
 
+
+class KBTest(KBTestBase):
     def test_base_syntax(self):
         # TODO, what is "Confirm data persistence and integrity in vector store"
 

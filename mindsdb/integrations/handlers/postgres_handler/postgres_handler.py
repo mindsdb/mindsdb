@@ -363,7 +363,7 @@ class PostgresHandler(DatabaseHandler):
                 table_schema = {schema_name}
         """
         result = self.native_query(query)
-        result.to_columns_table_response()
+        result.to_columns_table_response(map_type_fn=_map_type)
         return result
 
     def subscribe(self, stop_event, callback, table_name, columns=None, **kwargs):

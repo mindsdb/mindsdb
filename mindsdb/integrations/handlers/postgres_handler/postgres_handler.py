@@ -17,7 +17,6 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    IS_COLUMNS_NAMES,
     RESPONSE_TYPE
 )
 import mindsdb.utilities.profiler as profiler
@@ -364,12 +363,7 @@ class PostgresHandler(DatabaseHandler):
                 table_schema = {schema_name}
         """
         result = self.native_query(query)
-        if result.resp_type is RESPONSE_TYPE.TABLE:
-            result.data_frame.columns = [name.upper() for name in result.data_frame.columns]
-            result.data_frame[IS_COLUMNS_NAMES.MYSQL_DATA_TYPE] = result.data_frame[
-                IS_COLUMNS_NAMES.DATA_TYPE
-            ].apply(_map_type)
-            result.to_columns_table_response()
+        result.to_columns_table_response()
         return result
 
     def subscribe(self, stop_event, callback, table_name, columns=None, **kwargs):

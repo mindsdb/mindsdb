@@ -1,3 +1,4 @@
+from typing import Callable
 from dataclasses import dataclass, fields
 
 import numpy
@@ -53,7 +54,7 @@ class HandlerResponse:
     def type(self):
         return self.resp_type
 
-    def to_columns_table_response(self) -> None:
+    def to_columns_table_response(self, map_type_fn: Callable) -> None:
         """Transform the response to a `columns table` response.
         NOTE: original dataframe will be mutated
         """
@@ -61,6 +62,14 @@ class HandlerResponse:
             return
         if self.resp_type != RESPONSE_TYPE.TABLE:
             raise ValueError(f"Cannot convert {self.resp_type} to {RESPONSE_TYPE.COLUMNS_TABLE}")
+
+        self.data_frame.columns = [name.upper() for name in self.data_frame.columns]
+        self.data_frame[IS_COLUMNS_NAMES.MYSQL_DATA_TYPE] = self.data_frame[
+            IS_COLUMNS_NAMES.DATA_TYPE
+        ].apply(map_type_fn)
+        self.to_columns_table_response()
+
+
         # region validate df
         self.data_frame.columns = [name.upper() for name in self.data_frame.columns]
         current_columns_set = set(self.data_frame.columns)

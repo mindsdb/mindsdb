@@ -1,6 +1,7 @@
 from dataclasses import dataclass, fields
 
-from pandas import DataFrame
+import numpy
+import pandas
 
 from mindsdb.utilities import log
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
@@ -37,7 +38,7 @@ IS_COLUMNS_NAMES_SET = set(f.name for f in fields(IS_COLUMNS_NAMES))
 
 
 class HandlerResponse:
-    def __init__(self, resp_type: RESPONSE_TYPE, data_frame: DataFrame = None, query: ASTNode = 0, error_code: int = 0,
+    def __init__(self, resp_type: RESPONSE_TYPE, data_frame: pandas.DataFrame = None, query: ASTNode = 0, error_code: int = 0,
                  error_message: str | None = None, affected_rows: int | None = None) -> None:
         self.resp_type = resp_type
         self.query = query
@@ -68,6 +69,22 @@ class HandlerResponse:
                 f'Columns set for INFORMATION_SCHEMA.COLUMNS is wrong: {list(current_columns_set)}'
             )
         # endregion
+
+        self.data_frame = self.data_frame.astype({
+            IS_COLUMNS_NAMES.COLUMN_NAME: 'string',
+            IS_COLUMNS_NAMES.DATA_TYPE: 'string',
+            IS_COLUMNS_NAMES.ORDINAL_POSITION: 'Int32',
+            IS_COLUMNS_NAMES.COLUMN_DEFAULT: 'string',
+            IS_COLUMNS_NAMES.IS_NULLABLE: 'string',
+            IS_COLUMNS_NAMES.CHARACTER_MAXIMUM_LENGTH: 'Int32',
+            IS_COLUMNS_NAMES.CHARACTER_OCTET_LENGTH: 'Int32',
+            IS_COLUMNS_NAMES.NUMERIC_PRECISION: 'Int32',
+            IS_COLUMNS_NAMES.NUMERIC_SCALE: 'Int32',
+            IS_COLUMNS_NAMES.DATETIME_PRECISION: 'Int32',
+            IS_COLUMNS_NAMES.CHARACTER_SET_NAME: 'string',
+            IS_COLUMNS_NAMES.COLLATION_NAME: 'string',
+        })
+        self.data_frame.replace([numpy.NaN, pandas.NA], None, inplace=True)
 
         self.resp_type = RESPONSE_TYPE.COLUMNS_TABLE
 

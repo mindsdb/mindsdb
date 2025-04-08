@@ -21,7 +21,8 @@ import sys
 import tempfile
 import traceback
 from functools import partial
-from typing import Dict, List
+from typing import Dict, List, Optional
+from dataclasses import dataclass
 
 from numpy import dtype as np_dtype
 from pandas.api import types as pd_types
@@ -93,24 +94,16 @@ def empty_fn():
     pass
 
 
+@dataclass
 class SQLAnswer:
-    def __init__(
-        self,
-        resp_type: RESPONSE_TYPE,
-        columns: List[Dict] = None,
-        data: List[Dict] = None,
-        status: int = None,
-        state_track: List[List] = None,
-        error_code: int = None,
-        error_message: str = None,
-    ):
-        self.resp_type = resp_type
-        self.columns = columns
-        self.data = data
-        self.status = status
-        self.state_track = state_track
-        self.error_code = error_code
-        self.error_message = error_message
+    resp_type: RESPONSE_TYPE = RESPONSE_TYPE.OK
+    columns: Optional[List[Dict]] = None
+    data: Optional[List[Dict]] = None   # resultSet ?
+    status: Optional[int] = None
+    state_track: Optional[List[List]] = None
+    error_code: Optional[int] = None
+    error_message: Optional[str] = None
+    affected_rows: Optional[int] = None
 
     @property
     def type(self):
@@ -333,7 +326,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 packages.append(self.last_packet())
             self.send_package_group(packages)
         elif answer.type == RESPONSE_TYPE.OK:
-            self.packet(OkPacket, state_track=answer.state_track).send()
+            self.packet(OkPacket, state_track=answer.state_track, affected_rows=answer.affected_rows).send()
         elif answer.type == RESPONSE_TYPE.ERROR:
             self.packet(
                 ErrPacket, err_code=answer.error_code, msg=answer.error_message
@@ -546,21 +539,23 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     @profiler.profile()
     def process_query(self, sql):
         executor = Executor(session=self.session, sqlserver=self)
-
         executor.query_execute(sql)
+        executor_answer = executor.executor_answer
 
-        if executor.data is None:
+        if executor_answer.data is None:
             resp = SQLAnswer(
                 resp_type=RESPONSE_TYPE.OK,
-                state_track=executor.state_track,
+                state_track=executor_answer.state_track,
+                affected_rows=executor_answer.affected_rows
             )
         else:
             resp = SQLAnswer(
                 resp_type=RESPONSE_TYPE.TABLE,
-                state_track=executor.state_track,
-                columns=self.to_mysql_columns(executor.columns),
-                data=executor.data,
+                state_track=executor_answer.state_track,
+                columns=self.to_mysql_columns(executor_answer.data.columns),
+                data=executor_answer.data,
                 status=executor.server_status,
+                affected_rows=executor_answer.affected_rows
             )
 
         # Increment the counter and include metadata in attributes

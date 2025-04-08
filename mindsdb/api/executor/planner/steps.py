@@ -249,11 +249,12 @@ class SubSelectStep(PlanStep):
 
 
 class QueryStep(PlanStep):
-    def __init__(self, query, from_table=None, *args, **kwargs):
+    def __init__(self, query, from_table=None, *args, strict_where=True, **kwargs):
         """Performs query using injected dataframe"""
         super().__init__(*args, **kwargs)
         self.query = query
         self.from_table = from_table
+        self.strict_where = strict_where
 
 
 class DataStep(PlanStep):

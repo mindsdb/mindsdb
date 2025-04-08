@@ -187,7 +187,7 @@ jobs:
           if [ "$RUNNER_OS" == "Linux" ]; then
             env PYTHONPATH=./ pytest tests/unit/planner/ -x
             env PYTHONPATH=./ pytest tests/unit/executor/ -x -k "not test_udf"
-            env PYTHONPATH=./ pytest tests/unit/various/ -x -k "not test_document_preprocessor"
+            env PYTHONPATH=./ pytest tests/unit/various/ -x
             env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_minds_endpoint.py
             env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_openai.py
 
@@ -208,11 +208,5 @@ jobs:
           do
             pytest --cov=mindsdb/integrations/handlers/${handler}_handler tests/unit/handlers/test_${handler}.py 
           done
-
-          # Dont run coveralls for PRs from forks
-          if [ ${{ github.event.pull_request.head.repo.full_name }} == ${{ github.repository }} ]; then
-            coveralls --service=github --basedir=mindsdb/integrations/handlers
-          fi
         env:
-          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
           github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}

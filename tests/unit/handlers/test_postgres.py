@@ -86,6 +86,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_pgresult = MagicMock()
         mock_pgresult.status = ExecStatus.COMMAND_OK
         mock_cursor.pgresult = mock_pgresult
+        mock_cursor.rowcount = 1
 
         query_str = "INSERT INTO table VALUES (1, 2, 3)"
         data = self.handler.native_query(query_str)
@@ -93,6 +94,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         assert isinstance(data, Response)
         self.assertFalse(data.error_code)
         self.assertEqual(data.type, RESPONSE_TYPE.OK)
+        self.assertEqual(data.affected_rows, 1)
 
     def test_native_query_with_results(self):
         """
@@ -347,7 +349,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.handler.insert('test_table', df)
 
         # Verify copy was called with correct SQL
-        copy_sql = 'copy "test_table" ("id","name") from STDIN  WITH CSV'
+        copy_sql = 'copy "test_table" ("id","name") from STDIN WITH CSV'
         mock_cursor.copy.assert_called_once_with(copy_sql)
         mock_conn.commit.assert_called_once()
 

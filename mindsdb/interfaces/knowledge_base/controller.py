@@ -168,7 +168,13 @@ class KnowledgeBaseTable:
             # Use reranker for relevance score
             try:
                 logger.info(f"Using reranker model {rerank_model} for relevance calculation")
-                reranker = LLMReranker(model=rerank_model)
+                reranker_params = {"model": rerank_model}
+                # Apply custom filtering threshold if provided
+                if reranking_threshold is not None:
+                    reranker_params["filtering_threshold"] = reranking_threshold
+                    logger.info(f"Using custom filtering threshold: {reranking_threshold}")
+
+                reranker = LLMReranker(**reranker_params)
                 # Get documents to rerank
                 documents = df['chunk_content'].tolist()
                 # Use the get_scores method with disable_events=True
@@ -179,7 +185,7 @@ class KnowledgeBaseTable:
                 # Filter by threshold
                 scores_array = np.array(scores)
                 df = df[scores_array > reranker.filtering_threshold]
-                logger.debug(f"Applied reranking with model {rerank_model}")
+                logger.debug(f"Applied reranking with model {rerank_model}, threshold: {reranker.filtering_threshold}")
             except Exception as e:
                 logger.error(f"Error during reranking: {str(e)}")
                 # Fallback to distance-based relevance
@@ -217,7 +223,9 @@ class KnowledgeBaseTable:
 
         columns = list(df.columns)
         # update id, get from metadata
-        df[TableField.ID.value] = df[TableField.METADATA.value].apply(lambda m: m.get('original_row_id'))
+        df[TableField.ID.value] = df[TableField.METADATA.value].apply(
+            lambda m: None if m is None else m.get('original_row_id')
+        )
 
         # id on first place
         return df[[TableField.ID.value] + columns]
@@ -307,7 +315,9 @@ class KnowledgeBaseTable:
 
         # send to vectordb
         db_handler = self.get_vector_db()
-        db_handler.query(query)
+        conditions = db_handler.extract_conditions(query.where)
+        self.addapt_conditions_columns(conditions)
+        db_handler.dispatch_update(query, conditions)
 
     def delete_query(self, query: Delete):
         """

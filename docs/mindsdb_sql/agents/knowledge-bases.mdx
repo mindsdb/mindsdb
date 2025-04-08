@@ -15,6 +15,12 @@ It intelligently organizes information in semantically meaningful ways, allowing
 
 Here is the syntax for creating a knowledge base:
 
+<Note>
+MindsDB stores objects, such as models or knowledge bases, inside projects. The default project is called `mindsdb`. You can [create other projects](/mindsdb_sql/sql/create/project) to store your objects.
+
+To refer to an object stored in a defined project, specify both project and object names separated by a dot: `project_name.object_name`. For example, `my_project.my_kb`. If no project is defined with the object name, the object is stored in the default `mindsdb` project.
+</Note>
+
 <CodeGroup>
 
 ```sql OpenAI
@@ -34,7 +40,6 @@ USING
      metadata_columns = ['date', 'creator', ...], -- optional
      content_columns = ['review', 'content', ...], -- optional, default content
      id_column = 'id'; -- optional
-;
 ```
 
 ```sql OpenAI via Azure
@@ -56,7 +61,6 @@ USING
      metadata_columns = ['date', 'creator', ...], -- optional
      content_columns = ['review', 'content', ...], -- optional, default content
      id_column = 'id'; -- optional
-;
 ```
 
 </CodeGroup>
@@ -109,8 +113,7 @@ USING
          "provider": "OpenAI",
          "model_name": 'gpt-4o',
          "api_key": "sk-..."
-     }
-;
+     };
 ```
 </Accordion>
 
@@ -410,5 +413,26 @@ Here are the usage examples:
 
 ```sql
 DELETE FROM my_kb WHERE id IN ('scifi_001', 'scifi_0010', 'bus_89');
+```
+</Accordion>
+
+## Drop a Knowledge Base
+
+Here is the syntax for deleting a knowledge base:
+
+```sql
+DROP KNOWLEDGE_BASE <kb_name>;
+```
+
+Upon execution, it removes the knowledge base with its content.
+
+<Accordion title="Examples">
+
+Here are the usage examples:
+
+* Dropping a knowledge base:
+
+```sql
+DROP KNOWLEDGE_BASE my_kb;
 ```
 </Accordion>

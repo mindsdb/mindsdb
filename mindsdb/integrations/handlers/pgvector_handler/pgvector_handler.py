@@ -157,7 +157,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
             where_clauses.append(f'{key} {value["op"]} {value["value"]}')
 
         if len(where_clauses) > 1:
-            return f"WHERE{' AND '.join(where_clauses)}"
+            return f"WHERE {' AND '.join(where_clauses)}"
         elif len(where_clauses) == 1:
             return f"WHERE {where_clauses[0]}"
         else:
@@ -195,11 +195,6 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         # given filter conditions, construct where clause
         where_clause = self._construct_where_clause(filter_conditions)
 
-        # construct full after from clause, where clause + offset clause + limit clause
-        after_from_clause = self._construct_full_after_from_clause(
-            where_clause, offset_clause, limit_clause
-        )
-
         # Handle distance column specially since it's calculated, not stored
         modified_columns = []
         has_distance = False
@@ -219,7 +214,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         if filter_conditions:
 
             if embedding_search:
-                search_vector = filter_conditions["embeddings"]["value"][0]
+                search_vector = filter_conditions["embeddings"]["value"]
                 filter_conditions.pop("embeddings")
 
                 if self._is_sparse:
@@ -241,15 +236,15 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
                 if has_distance:
                     targets = f"{targets}, (embeddings {distance_op} '{search_vector}') as distance"
                 
-                return f"SELECT {targets} FROM {table_name} ORDER BY embeddings {distance_op} '{search_vector}' ASC {after_from_clause}"
+                return f"SELECT {targets} FROM {table_name} {where_clause} ORDER BY embeddings {distance_op} '{search_vector}' ASC {limit_clause} {offset_clause} "
 
             else:
                 # if filter conditions, return rows that satisfy the conditions
-                return f"SELECT {targets} FROM {table_name} {after_from_clause}"
+                return f"SELECT {targets} FROM {table_name} {where_clause} {limit_clause} {offset_clause}"
 
         else:
             # if no filter conditions, return all rows
-            return f"SELECT {targets} FROM {table_name} {after_from_clause}"
+            return f"SELECT {targets} FROM {table_name} {limit_clause} {offset_clause}"
 
     def _check_table(self, table_name: str):
         # Apply namespace for a user

@@ -72,6 +72,7 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     TYPES,
     getConstName,
 )
+from mindsdb.api.executor.data_types.answer import ExecuteAnswer
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErWrongCharset,
@@ -599,18 +600,20 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
     def answer_stmt_execute(self, stmt_id, parameters):
         prepared_stmt = self.session.prepared_stmts[stmt_id]
-        executor = prepared_stmt["statement"]
+        executor: Executor = prepared_stmt["statement"]
 
         executor.stmt_execute(parameters)
 
-        if executor.data is None:
+        executor_answer: ExecuteAnswer = executor.executor_answer
+
+        if executor_answer.data is None:
             resp = SQLAnswer(
-                resp_type=RESPONSE_TYPE.OK, state_track=executor.state_track
+                resp_type=RESPONSE_TYPE.OK, state_track=executor_answer.state_track
             )
             return self.send_query_answer(resp)
 
         # TODO prepared_stmt['type'] == 'lock' is not used but it works
-        columns_def = self.to_mysql_columns(executor.columns)
+        columns_def = self.to_mysql_columns(executor_answer.data.columns)
         packages = [self.packet(ColumnCountPacket, count=len(columns_def))]
 
         packages.extend(self._get_column_defenition_packets(columns_def))
@@ -619,14 +622,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             packages.append(self.packet(EofPacket, status=0x0062))
 
         # send all
-        for row in executor.data.to_lists():
+        for row in executor_answer.data.to_lists():
             packages.append(
                 self.packet(BinaryResultsetRowPacket, data=row, columns=columns_def)
             )
 
         server_status = executor.server_status or 0x0002
         packages.append(self.last_packet(status=server_status))
-        prepared_stmt["fetched"] += len(executor.data)
+        prepared_stmt["fetched"] += len(executor_answer.data)
 
         return self.send_package_group(packages)
 
@@ -634,23 +637,24 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         prepared_stmt = self.session.prepared_stmts[stmt_id]
         executor = prepared_stmt["statement"]
         fetched = prepared_stmt["fetched"]
+        executor_answer: ExecuteAnswer = executor.executor_answer
 
-        if executor.data is None:
+        if executor_answer.data is None:
             resp = SQLAnswer(
-                resp_type=RESPONSE_TYPE.OK, state_track=executor.state_track
+                resp_type=RESPONSE_TYPE.OK, state_track=executor_answer.state_track
             )
             return self.send_query_answer(resp)
 
         packages = []
-        columns = self.to_mysql_columns(executor.columns)
-        for row in executor.data[fetched:limit].to_lists():
+        columns = self.to_mysql_columns(executor_answer.data.columns)
+        for row in executor_answer.data[fetched:limit].to_lists():
             packages.append(
                 self.packet(BinaryResultsetRowPacket, data=row, columns=columns)
             )
 
-        prepared_stmt["fetched"] += len(executor.data[fetched:limit])
+        prepared_stmt["fetched"] += len(executor_answer.data[fetched:limit])
 
-        if len(executor.data) <= limit + fetched:
+        if len(executor_answer.data) <= limit + fetched:
             status = sum(
                 [
                     SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT,
@@ -766,6 +770,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     response = SQLAnswer(RESPONSE_TYPE.OK)
                 elif p.type.value == COMMANDS.COM_FIELD_LIST:
                     # this command is deprecated, but console client still use it.
+                    response = SQLAnswer(RESPONSE_TYPE.OK)
+                elif p.type.value == COMMANDS.COM_STMT_RESET:
                     response = SQLAnswer(RESPONSE_TYPE.OK)
                 else:
                     logger.warning("Command has no specific handler, return OK msg")

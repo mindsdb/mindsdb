@@ -131,7 +131,7 @@ import mindsdb_sdk
 # connects to the specified host and port
 server = mindsdb_sdk.connect('http://127.0.0.1:47334')
 
-wiki_kb = server.knowledge_bases.get('mindsdb.reviews_kb');
+my_kb = server.knowledge_bases.get('mindsdb.reviews_kb');
 df = my_kb.find('what are the best kindle reviews').fetch()
 
 ```

@@ -639,12 +639,15 @@ class KnowledgeBaseTable:
                 # adapt output for vectordb
                 df_out = df_out.rename(columns={target: TableField.EMBEDDINGS.value})
 
-        else:
+        elif self._kb.params.get('embedding_model'):
             embedding_model = get_embedding_model_from_params(self._kb.params.get('embedding_model'))
 
             df_texts = df.apply(row_to_document, axis=1)
             embeddings = embedding_model.embed_documents(df_texts.tolist())
             df_out = df.copy().assign(**{TableField.EMBEDDINGS.value: embeddings})
+
+        else:
+            raise ValueError("No embedding model found for the knowledge base.")
 
         df_out = df_out[[TableField.EMBEDDINGS.value]]
 

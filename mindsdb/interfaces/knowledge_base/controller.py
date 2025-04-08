@@ -58,7 +58,7 @@ def get_embedding_model_from_params(embedding_model_params: dict):
     Create embedding model from parameters.
     """
     params_copy = copy.deepcopy(embedding_model_params)
-    provider = params_copy.pop('provider', None)
+    provider = params_copy.pop('provider', None).lower()
     params_copy['class'] = provider
     params_copy[f"{provider}_api_key"] = get_api_key(provider, params_copy, strict=False) or params_copy.get('api_key')
     params_copy.pop('api_key', None)
@@ -72,8 +72,8 @@ def get_reranking_model_from_params(reranking_model_params: dict):
     Create reranking model from parameters.
     """
     params_copy = copy.deepcopy(reranking_model_params)
-    provider = params_copy.pop('provider', "openai")
-    if provider.lower() != 'openai':
+    provider = params_copy.pop('provider', "openai").lower()
+    if provider != 'openai':
         raise ValueError("Only OpenAI provider is supported for the reranking model.")
     params_copy[f"{provider}_api_key"] = get_api_key(provider, params_copy, strict=False) or params_copy.get('api_key')
     params_copy.pop('api_key', None)

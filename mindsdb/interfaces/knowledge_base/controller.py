@@ -58,11 +58,18 @@ def get_embedding_model_from_params(embedding_model_params: dict):
     Create embedding model from parameters.
     """
     params_copy = copy.deepcopy(embedding_model_params)
-    provider = params_copy.pop('provider', None)
-    params_copy['class'] = provider
-    params_copy[f"{provider}_api_key"] = get_api_key(provider, params_copy, strict=False) or params_copy.get('api_key')
+    provider = params_copy.pop('provider', None).lower()
+    api_key = get_api_key(provider, params_copy, strict=False) or params_copy.get('api_key')
+    # Underscores are replaced because the provider name ultimately gets mapped to a class name.
+    # This is mostly to support Azure OpenAI (azure_openai); the mapped class name is 'AzureOpenAIEmbeddings'.
+    params_copy['class'] = provider.replace('_', '')
+    if provider == 'azure_openai':
+        # Azure OpenAI expects the api_key to be passed as 'openai_api_key'.
+        params_copy['openai_api_key'] = api_key
+    else:
+        params_copy[f"{provider}_api_key"] = api_key
     params_copy.pop('api_key', None)
-    params_copy['model_name'] = params_copy.pop('model', None)
+    params_copy['model'] = params_copy.pop('model_name', None)
 
     return construct_model_from_args(params_copy)
 
@@ -72,12 +79,12 @@ def get_reranking_model_from_params(reranking_model_params: dict):
     Create reranking model from parameters.
     """
     params_copy = copy.deepcopy(reranking_model_params)
-    provider = params_copy.pop('provider', "openai")
-    if provider.lower() != 'openai':
+    provider = params_copy.pop('provider', "openai").lower()
+    if provider != 'openai':
         raise ValueError("Only OpenAI provider is supported for the reranking model.")
     params_copy[f"{provider}_api_key"] = get_api_key(provider, params_copy, strict=False) or params_copy.get('api_key')
     params_copy.pop('api_key', None)
-    params_copy['model_name'] = params_copy.pop('model', None)
+    params_copy['model'] = params_copy.pop('model_name', None)
 
     return LLMReranker(**params_copy)
 

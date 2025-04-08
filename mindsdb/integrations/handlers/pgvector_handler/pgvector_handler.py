@@ -46,7 +46,8 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
 
     def _make_connection_args(self):
         cloud_pgvector_url = os.environ.get('KB_PGVECTOR_URL')
-        if cloud_pgvector_url is not None:
+        # if no connection args and shared pg vector defined - use it
+        if len(self.connection_args) == 0 and cloud_pgvector_url is not None:
             result = urlparse(cloud_pgvector_url)
             self.connection_args = {
                 'host': result.hostname,

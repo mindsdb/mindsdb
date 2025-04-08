@@ -36,6 +36,7 @@ from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor impor
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
+from mindsdb.utilities.context import context as ctx
 
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.utilities import log
@@ -372,6 +373,16 @@ class KnowledgeBaseTable:
         """Insert dataframe to KB table."""
         if df.empty:
             return
+
+        try:
+            run_query_id = ctx.run_query_id
+            # Link current KB to running query (where KB is used to insert data)
+            if run_query_id is not None:
+                self._kb.query_id = run_query_id
+                db.session.commit()
+
+        except AttributeError:
+            ...
 
         # First adapt column names to identify content and metadata columns
         adapted_df = self._adapt_column_names(df)
@@ -1029,6 +1040,7 @@ class KnowledgeBaseController:
                 'embedding_model': embedding_model.name if embedding_model is not None else None,
                 'vector_database': None if vector_database is None else vector_database.name,
                 'vector_database_table': record.vector_database_table,
+                'query_id': record.query_id,
                 'params': record.params
             })
 

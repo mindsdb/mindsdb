@@ -18,5 +18,5 @@
      "runs_on": "macos-latest",
      "python-version": 3.11,
      "runOnBranch": "refs/heads/main"
-  },
+  }
 ]

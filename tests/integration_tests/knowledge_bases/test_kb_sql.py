@@ -93,7 +93,7 @@ class KBTest:
 
     def prepare(self):
         # drop existed kb:
-        for name in ('kb_crm', 'kb_crm_part'):
+        for name in ('kb_crm', 'kb_crm_part', 'kb_home_rentals'):
             self.run_sql(f'drop knowledge base if exists {name}')
 
         # create vector_db
@@ -105,20 +105,20 @@ class KBTest:
         # connect database
         self.db_name = self.create_db()
 
-    def create_kb(self, name):
+    def create_kb(self, name, params=None):
         self.run_sql(f'drop knowledge base if exists {name}')
 
-        self.run_sql(f'''
-                    create knowledge base {name}
-                    using  model={self.emb_model},
-                    storage={self.vectordb_name}.crm_table
-                ''')
+        storage = self.con.databases.get(self.vectordb_name).tables.get(f'tbl_{name}')
+        self.con.knowledge_bases.create(
+            name,
+            model=self.con.models.get(self.emb_model),
+            storage=storage,
+            params=params,
+        )
 
         # clean
-        try:
-            self.run_sql(f'delete from kb_crm where id in (select id from {name})')
-        except Exception:
-            ...
+        if len(self.run_sql(f'select * from {name}')) > 0:
+            self.run_sql(f'delete from {name} where id in (select id from {name})')
 
         ret = self.run_sql(f'describe knowledge base {name}')
         assert len(ret) == 1
@@ -328,6 +328,66 @@ class KBTest:
                 thread.join()
         print('========= Tests summary ==========')
         print(pd.DataFrame(results))
+
+    def test_metadata(self):
+        self.create_kb('kb_crm', params={
+            'metadata_columns': ['status', 'category'],
+            'content_columns': ['message_body'],
+            'id_column': 'id',
+        })
+
+        self.run_sql("""
+            INSERT INTO kb_crm (
+                  SELECT *
+                  FROM example_db.crm_demo
+            );
+        """)
+
+        # -- Metadata search
+        ret = self.run_sql("""
+            SELECT *
+            FROM kb_crm
+            WHERE category = "Battery";
+        """)
+        assert set(ret.metadata.apply(lambda x: x.get('category'))) == {'Battery'}
+
+        ret = self.run_sql("""
+            SELECT *
+            FROM kb_crm
+            WHERE status = "solving" AND category = "Battery"
+        """)
+        assert set(ret.metadata.apply(lambda x: x.get('category'))) == {'Battery'}
+        assert set(ret.metadata.apply(lambda x: x.get('status'))) == {'solving'}
+
+        # -- Content + metadata search
+        ret = self.run_sql("""
+            SELECT *
+            FROM kb_crm
+            WHERE status = "solving" AND content = "noise";
+        """)
+        assert set(ret.metadata.apply(lambda x: x.get('status'))) == {'solving'}
+        assert 'noise' in ret.chunk_content[0]
+
+        # -- Content + metadata search with limit
+        ret = self.run_sql("""
+            SELECT *
+            FROM kb_crm
+            WHERE status = "solving" AND content = "noise"
+            LIMIT 5;
+        """)
+        assert set(ret.metadata.apply(lambda x: x.get('status'))) == {'solving'}
+        assert 'noise' in ret.chunk_content[0]
+        assert len(ret) == 5
+
+        # -- Content + metadata search with limit and re-ranking threshold
+        ret = self.run_sql("""
+            SELECT *
+            FROM kb_crm
+            WHERE status = "solving" AND content = "noise" AND reranking_threshold=0.8
+        """)
+        assert set(ret.metadata.apply(lambda x: x.get('status'))) == {'solving'}
+        assert 'noise' in ret.chunk_content[0]
+        assert len(ret[ret.relevance < 0.8]) == 0
 
     def test_relevance(self):
         """

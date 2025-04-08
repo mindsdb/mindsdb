@@ -199,6 +199,8 @@ class KnowledgeBaseTable:
             # Calculate relevance from distance
             logger.info("Calculating relevance from vector distance")
             df[relevance_column] = 1 / (1 + df['distance'])
+            if reranking_threshold is not None:
+                df = df[df[relevance_column] > reranking_threshold]
 
         else:
             df[relevance_column] = None

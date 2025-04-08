@@ -35,6 +35,7 @@ from mindsdb.interfaces.knowledge_base.preprocessing.models import Preprocessing
 from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor import PreprocessorFactory
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
 
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.utilities import log
@@ -86,16 +87,9 @@ class KnowledgeBaseTable:
         logger.debug(f"Processing select query: {query}")
 
         # Extract the content query text for potential reranking
-        query_text = None
-        db_handler = self.get_vector_db()
-        if query.where:
-            for item in db_handler.extract_conditions(query.where):
-                if item.column == TableField.CONTENT.value:
-                    query_text = item.value
-            logger.debug(f"Extracted query text: {query_text}")
 
-        # replace content with embeddings
-        query_traversal(query.where, self._replace_query_content)
+        db_handler = self.get_vector_db()
+
         logger.debug("Replaced content with embeddings in where clause")
         # set table name
         query.from_table = Identifier(parts=[self._kb.vector_database_table])
@@ -118,7 +112,39 @@ class KnowledgeBaseTable:
 
         # Get response from vector db
         logger.debug(f"Using vector db handler: {type(db_handler)}")
-        conditions = db_handler.extract_conditions(query.where)
+
+        # extract values from conditions and prepare for vectordb
+        conditions = []
+        query_text = None
+        reranking_threshold = None
+        query_conditions = db_handler.extract_conditions(query.where)
+        if query_conditions is not None:
+            for item in query_conditions:
+                if item.column == "reranking_threshold" and item.op.value == "=":
+                    try:
+                        reranking_threshold = float(item.value)
+                        # Validate range: must be between 0 and 1
+                        if not (0 <= reranking_threshold <= 1):
+                            raise ValueError(f"reranking_threshold must be between 0 and 1, got: {reranking_threshold}")
+                        logger.debug(f"Found reranking_threshold in query: {reranking_threshold}")
+                    except (ValueError, TypeError) as e:
+                        error_msg = f"Invalid reranking_threshold value: {item.value}. {str(e)}"
+                        logger.error(error_msg)
+                        raise ValueError(error_msg)
+                elif item.column == TableField.CONTENT.value:
+                    query_text = item.value
+
+                    # replace content with embeddings
+                    conditions.append(FilterCondition(
+                        column=TableField.EMBEDDINGS.value,
+                        value=self._content_to_embeddings(item.value),
+                        op=FilterOperator.EQUAL,
+                    ))
+                else:
+                    conditions.append(item)
+
+        logger.debug(f"Extracted query text: {query_text}")
+
         self.addapt_conditions_columns(conditions)
         df = db_handler.dispatch_select(query, conditions)
         df = self.addapt_result_columns(df)
@@ -127,14 +153,14 @@ class KnowledgeBaseTable:
         logger.debug(f"Columns in response: {df.columns.tolist()}")
         # Check if we have a rerank_model configured in KB params
 
-        df = self.add_relevance(df, query_text)
+        df = self.add_relevance(df, query_text, reranking_threshold)
 
         # filter by targets
         if requested_kb_columns is not None:
             df = df[requested_kb_columns]
         return df
 
-    def add_relevance(self, df, query_text):
+    def add_relevance(self, df, query_text, reranking_threshold=None):
         relevance_column = TableField.RELEVANCE.value
 
         rerank_model = self._kb.params.get("rerank_model")
@@ -142,7 +168,13 @@ class KnowledgeBaseTable:
             # Use reranker for relevance score
             try:
                 logger.info(f"Using reranker model {rerank_model} for relevance calculation")
-                reranker = LLMReranker(model=rerank_model)
+                reranker_params = {"model": rerank_model}
+                # Apply custom filtering threshold if provided
+                if reranking_threshold is not None:
+                    reranker_params["filtering_threshold"] = reranking_threshold
+                    logger.info(f"Using custom filtering threshold: {reranking_threshold}")
+
+                reranker = LLMReranker(**reranker_params)
                 # Get documents to rerank
                 documents = df['chunk_content'].tolist()
                 # Use the get_scores method with disable_events=True
@@ -153,7 +185,7 @@ class KnowledgeBaseTable:
                 # Filter by threshold
                 scores_array = np.array(scores)
                 df = df[scores_array > reranker.filtering_threshold]
-                logger.debug(f"Applied reranking with model {rerank_model}")
+                logger.debug(f"Applied reranking with model {rerank_model}, threshold: {reranker.filtering_threshold}")
             except Exception as e:
                 logger.error(f"Error during reranking: {str(e)}")
                 # Fallback to distance-based relevance

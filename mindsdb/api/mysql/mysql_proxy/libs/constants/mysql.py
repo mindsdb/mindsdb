@@ -94,6 +94,7 @@ class COMMANDS(object):
     COM_STMT_PREPARE = int('0x16', 0)
     COM_STMT_EXECUTE = int('0x17', 0)
     COM_STMT_FETCH = int('0x1c', 0)
+    COM_STMT_RESET = int('0x1a', 0)
     COM_STMT_CLOSE = int('0x19', 0)
     COM_FIELD_LIST = int('0x04', 0)  # deprecated
 

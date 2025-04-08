@@ -3,7 +3,7 @@ title: The TO_MARKDOWN() Function
 sidebarTitle: The TO_MARKDOWN() Function
 ---
 
-MindsDB provides the `TO_MARKDOWN()` function that lets users extract the content of their documents in markdown by simply specifying the document path or URL. This function is especially useful for passing the extracted content of documents through LLMs or for storing them in a Knowledge Base.
+MindsDB provides the `TO_MARKDOWN()` function that lets users extract the content of their documents in markdown by simply specifying the document path or URL. This function is especially useful for passing the extracted content of documents through LLMs or for storing them in a [Knowledge Base](/mindsdb_sql/agents/knowledge-bases).
 
 This function can be executed with or without the help of a LLM. 
 The use of a LLM is optional, and the function will work without it. For most documents, the content can be extracted without the need for a LLM. However, in the followig cases, using a LLM is recommended:

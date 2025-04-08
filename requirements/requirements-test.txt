@@ -11,3 +11,4 @@ coveralls
 locust
 ollama >= 0.1.7 # Langchain tests
 anthropic >= 0.21.3 # Langchain tests
+langchain-google-genai==2.1.2 # Langchain tests

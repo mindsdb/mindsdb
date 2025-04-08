@@ -160,7 +160,7 @@ jobs:
           uv pip install .
           uv pip install -r requirements/requirements-test.txt
           uv pip install .[lightwood]  # TODO: for now some tests rely on lightwood
-          uv pip install .[mssql]
+          uv pip install --pre --no-binary :all: pymssql --no-cache
           uv pip install .[clickhouse]
           uv pip install .[snowflake]
           uv pip install .[web]

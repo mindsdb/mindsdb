@@ -59,8 +59,15 @@ def get_embedding_model_from_params(embedding_model_params: dict):
     """
     params_copy = copy.deepcopy(embedding_model_params)
     provider = params_copy.pop('provider', None).lower()
-    params_copy['class'] = provider
-    params_copy[f"{provider}_api_key"] = get_api_key(provider, params_copy, strict=False) or params_copy.get('api_key')
+    api_key = get_api_key(provider, params_copy, strict=False) or params_copy.get('api_key')
+    # Underscores are replaced because the provider name ultimately gets mapped to a class name.
+    # This is mostly to support Azure OpenAI (azure_openai); the mapped class name is 'AzureOpenAIEmbeddings'.
+    params_copy['class'] = provider.replace('_', '')
+    if provider == 'azure_openai':
+        # Azure OpenAI expects the api_key to be passed as 'openai_api_key'.
+        params_copy['openai_api_key'] = api_key
+    else:
+        params_copy[f"{provider}_api_key"] = api_key
     params_copy.pop('api_key', None)
     params_copy['model'] = params_copy.pop('model_name', None)
 

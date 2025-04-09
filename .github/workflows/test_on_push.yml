@@ -197,6 +197,5 @@ jobs:
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
           python -m unittest discover -s tests/unit/handlers
-          done
         env:
           github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}

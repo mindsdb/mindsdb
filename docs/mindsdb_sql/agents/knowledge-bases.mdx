@@ -69,7 +69,7 @@ Upon execution, it registers `my_kb` and associates the specified models and sto
 
 The following is an explanation of the syntax and parameters:
 
-* `embedding_model` stores specification of the embedding model to be used.
+* `embedding_model` stores specifications of the embedding model to be used.
       * `provider` defines the model provider. Currently, the supported providers include OpenAI and its models via Azure.
       * `model_name` defines the embedding model name as specified by the provider. Users can choose one of the [OpenAI embedding models](https://platform.openai.com/docs/guides/embeddings/embedding-models#embedding-models).
       * `api_key` stores your OpenAI API key. Alternatively, you can use the `OPENAI_API_KEY` environment variable to store your OpenAI API key.
@@ -83,11 +83,11 @@ The following is an explanation of the syntax and parameters:
 
 * `storage` is an optional parameter. It assigns the name of the vector store created within MindsDB with the [`CREATE DATABASE` command](/mindsdb_sql/sql/create/database), which is either [PGVector](/integrations/vector-db-integrations/pgvector) or [ChromaDB](/integrations/vector-db-integrations/chromadb), followed by a table name present in that vector database where the knowledge base stores its content. If not provided, the system uses the default ChromaDB vector database.
 
-* `metadata_columns` provides the list of column names that will be used as the `metadata` of the knowledge base. If not set, the `metadata` column is not used.
+* `metadata_columns` provides the list of column names that will be used as the `metadata` of the knowledge base. Users can use these column names to filter the results by metadata and insert them into the knowledge base. If not set, the metadata is not used.
 
-* `content_columns` provides the list of column names that will be used as the `content` of the knowledge base. If not set, all columns are used.
+* `content_columns` provides the list of column names that will be used as the `content` of the knowledge base. Users can use these column names to filter the results by content and insert them into the knowledge base. If not set, the `content` column is used by default.
 
-* `id_column` is the column name that will be used as the unique identifier by the knowledge base.
+* `id_column` is the column name that will be used as the unique identifier by the knowledge base. If not set, the `id` column is used by default.
 
 Get details about the knowledge base using the `DESCRIBE` command.
 
@@ -107,13 +107,16 @@ USING
      embedding_model = {
          "provider": "OpenAI",
          "model_name" : "text-embedding-ada-002",
-         "api_key": "sk-..."
+         "api_key": "sk-..."  -- optional, default from env variable
      },
      reranking_model = {
          "provider": "OpenAI",
          "model_name": 'gpt-4o',
-         "api_key": "sk-..."
-     };
+         "api_key": "sk-..."  -- optional, default from env variable
+     },
+     metadata_columns = ['country'],
+     content_columns = ['country', 'population', 'areasquarekm', 'populationdensity'],
+     id_column = 'country_id';
 ```
 </Accordion>
 
@@ -133,8 +136,8 @@ Upon execution, it inserts data into a knowledge base, using the embedding model
 The following is an explanation of the syntax and parameters:
 
 * `my_kb` is a unique identifier of a knowledge base.
-* `<id_col>` is a column that contains unique identifiers of data.
-* `<text_col>` is a column (or a set of columns) that contain the text content. It must be explicitly aliased `AS content` for the system to identify it as the primary text for indexing.
+* `<id_col>` is a column that contains unique identifiers of data. Note that if you specified the `id_column` parameter when creating the knowledge base, you can insert this column name into the knowledge base without the `AS id` alias.
+* `<text_col>` is a column that contains the text content. Note that if you specified the `content_columns` parameter when creating the knowledge base, you can insert these column names into the knowledge base without the `AS content` alias.
 
 <Accordion title="Partitioning Queries for Better Performance">
 
@@ -226,10 +229,21 @@ SELECT query_cancel(1);
 
 Here are the usage examples:
 
-* Inserting into a knowledge base:
+* Inserting into a knowledge base where the `content_columns` and `id_column` parameters were not specified:
 
 ```sql
-INSERT INTO my_kb ( SELECT id, book_abstract AS content FROM my_books );
+INSERT INTO my_kb ( SELECT book_id AS id, book_summary AS content FROM my_books );
+```
+
+* Inserting into a knowledge base where the `content_columns` and `id_column` parameters were specified as follows:
+
+```sql
+content_columns = ["book_title", "book_summary"]
+id_column = "book_id"
+```
+
+```sql
+INSERT INTO my_kb ( SELECT book_id, book_title, book_summary FROM my_books );
 ```
 </Accordion>
 
@@ -286,7 +300,7 @@ LIMIT 10;
 KBs provide semantic search returning chunk-level details.
 
 ```sql
-SELECT id, chunk_id, chunk_content, chunk_relevance 
+SELECT id, chunk_id, chunk_content, metadata, distance, relevance
 FROM <kb_name> 
 WHERE content = '<query_text>' 
 AND reranking_threshold = 0.6 -- optional
@@ -297,7 +311,7 @@ Upon execution, it performs the semantic search workflow (including embedding th
 
 The following is an explanation of the syntax and parameters:
 
-* `SELECT id, chunk_id, chunk_content, chunk_relevance` specifies that the unique document identifier, chunk identifier, chunk content, and the chunk relevance score should be returned.
+* `SELECT id, chunk_id, chunk_content, metadata, distance, relevance` specifies that the unique document identifier, chunk identifier, chunk content, metadata (if defined), distance, and relevance should be returned.
 * `<kb_name>` is a unique identifier of a knowledge base.
 * `WHERE content = '<query_text>'` triggers semantic search based on the meaning of `<query_text>`.
 * `AND reranking_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1.
@@ -310,7 +324,7 @@ Here are the usage examples:
 * Returning top k most relevant chunks:
 
 ```sql
-SELECT id, chunk_id, chunk_content, chunk_relevance 
+SELECT id, chunk_id, chunk_content, relevance 
 FROM my_kb 
 WHERE content = 'a novel about epic inter planetary intelligence' 
 AND reranking_threshold = 0.7
@@ -323,7 +337,7 @@ LIMIT 10;
 KBs combine semantic search with standard SQL filtering on metadata.
 
 ```sql
-SELECT id, chunk_content, chunk_relevance 
+SELECT id, chunk_content, relevance 
 FROM my_kb 
 WHERE id LIKE '<id_pattern>' -- metadata filtering conditions
 AND content = '<query_text>' -- semantic search condition
@@ -334,7 +348,7 @@ Upon execution, it performs the conjunctive filtering, that is, results must sat
 
 The following is an explanation of the syntax and parameters:
 
-* `SELECT id, chunk_content, chunk_relevance` specifies that the unique document identifier, chunk content, and the chunk relevance score should be returned.
+* `SELECT id, chunk_content, relevance` specifies that the unique document identifier, chunk content, and the relevance score should be returned.
 * `<kb_name>` is a unique identifier of a knowledge base.
 * `WHERE id LIKE '<id_pattern>'` is the metadata filtering condition.
 * `WHERE content = '<query_text>'` is the semantic search condition.
@@ -347,7 +361,7 @@ Here are the usage examples:
 * Filtering results:
 
 ```sql
-SELECT id, chunk_content, chunk_relevance 
+SELECT id, chunk_content, relevance 
 FROM my_kb
 WHERE id LIKE 'fiction%' -- metadata filtering conditions
 AND content = 'a novel about ...' -- semantic search condition
@@ -381,12 +395,12 @@ Here are the usage examples:
 * Joining a knowledge base with a data table:
 
 ```sql
-SELECT books.id, books.title, my_kb.chunk_content, my_kb.relevance
-FROM books
+SELECT b.id, b.title, kb.chunk_content, kb.relevance
+FROM books AS b
 LEFT JOIN my_kb AS kb 
-ON books.id = my_kb.id
-WHERE books.topic = 'fantasy'
-AND my_kb.content = 'a novel about benevolent ai';
+ON b.id = kb.id
+WHERE b.topic = 'fantasy'
+AND kb.content = 'a novel about benevolent ai';
 ```
 </Accordion>
 
@@ -395,7 +409,8 @@ AND my_kb.content = 'a novel about benevolent ai';
 Here is the syntax for deleting from a knowledge base:
 
 ```sql
-DELETE FROM <kb_name> WHERE <condition>;
+DELETE FROM <kb_name> 
+WHERE <condition>;
 ```
 
 Upon execution, it identifies matching records based on the user-defined condition and removes all associated data (metadata, content, chunks, embeddings) for matching records from the KB's storage.
@@ -403,7 +418,7 @@ Upon execution, it identifies matching records based on the user-defined conditi
 The following is an explanation of the syntax and parameters:
 
 * `<kb_name>` is a unique identifier of a knowledge base.
-* `<condition>` is a standard SQL WHERE clause condition operating on stored metadata, primarily the unique record identifier (id). Operators like `=`, `IN`, `LIKE`, `>`, `<`, `!=`, `NOT LIKE`, `NOT IN` are supported.
+* `<condition>` is a standard SQL WHERE clause condition operating on metadata columns.
 
 <Accordion title="Examples">
 
@@ -412,7 +427,8 @@ Here are the usage examples:
 * Deleting from a knowledge base:
 
 ```sql
-DELETE FROM my_kb WHERE id IN ('scifi_001', 'scifi_0010', 'bus_89');
+DELETE FROM my_kb 
+WHERE id IN ('scifi_001', 'scifi_0010', 'bus_89');
 ```
 </Accordion>
 

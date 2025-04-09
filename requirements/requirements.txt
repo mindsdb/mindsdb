@@ -44,6 +44,7 @@ langchain-nvidia-ai-endpoints==0.3.3
 langchain-openai==0.3.6
 langchain-anthropic==0.2.4
 langchain-text-splitters==0.3.2
+langchain-google-genai>=2.0.0
 langfuse==2.53.3  # Latest as of November 4, 2024
 lark
 lxml==5.3.0 # Required for knowledge base webpage embeddings

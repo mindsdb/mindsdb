@@ -15,7 +15,7 @@ Before proceeding, ensure the following prerequisites are met:
 
 ## Setup
 
-Create an AI engine from the [LangChain Embedding handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/langchain_embedding_handler).
+Create an [AI/ML engine](/mindsdb_sql/sql/create/ml-engine) from the [LangChain Embedding handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/langchain_embedding_handler).
 
 ```sql
 CREATE ML_ENGINE embedding
@@ -32,16 +32,16 @@ USING
       class = "embedding_model_provider",
       model = "embedding_model_name",
       openai_api_key = "sk-xxx",
-      input_columns = ["content"];
+      input_columns = ["column1", "column2", ...];
 ```
 
 The following are the required and optional parameters:
 
-* `engine` is a required parameter. It defined the AI engine to be used.
-* `class` is a required parameter. It defines the model provider, such as OpenAI or HuggingFace.
+* `engine` is a required parameter. It defines the AI engine, as created with the `CREATE ML_ENGINE` statement, to be used.
+* `class` is a required parameter. It defines the model provider, such as `"OpenAI"` or `"HuggingFace"`.
 * `model` is a required parameter. It defined the embedding model, such as `text-embedding-3-small`.
 * `openai_api_key` is a required parameter when using OpenAI as a provider.
-* `input_columns` is an optional parameter. It defines the columns to be processed by the embedding model.
+* `input_columns` is an optional parameter. It defines the column(s) to be processed by the embedding model.
 
 ## Usage
 

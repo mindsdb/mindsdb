@@ -340,8 +340,7 @@ class KBTest(KBTestBase):
 
         self.run_sql("""
             INSERT INTO kb_crm (
-                  SELECT *
-                  FROM example_db.crm_demo
+                SELECT * FROM example_db.crm_demo
             );
         """)
 
@@ -388,14 +387,31 @@ class KBTest(KBTestBase):
             WHERE status = "solving" AND content = "noise" AND reranking_threshold=0.8
         """)
         assert set(ret.metadata.apply(lambda x: x.get('status'))) == {'solving'}
-        assert 'noise' in ret.chunk_content[0]
+        assert 'noise' in ret.chunk_content[0]  # first line contents word
         assert len(ret[ret.relevance < 0.8]) == 0
 
-    def test_relevance(self):
-        """
-        SELECT id, relevance FROM my_kb WHERE content = 'a novel about epic inter planetary intelligence' LIMIT 10;
+    def test_relevance(self, kb_params):
 
-        SELECT id, chunk_id, chunk_content,chunk_relevance FROM my_kb WHERE content = 'a novel about epic inter planetary intelligence' LIMIT 10;
+        # prepare KB
+        kb_params['metadata_columns'] = ['status', 'category']
+        kb_params['content_columns'] = ['message_body']
+        kb_params['id_column'] = 'id'
 
-        """
-        # TODO
+        self.create_kb('kb_crm', params=kb_params)
+
+        self.run_sql("""
+            INSERT INTO kb_crm (
+                SELECT * FROM example_db.crm_demo
+            );
+        """)
+
+        ret = self.run_sql("""
+            SELECT *
+            FROM kb_crm
+            WHERE status = "solving" AND content = "noise" AND reranking_threshold=0.8
+        """)
+        assert set(ret.metadata.apply(lambda x: x.get('status'))) == {'solving'}
+        for item in ret.chunk_content:
+            assert 'noise' in item  # all lines line contents word
+
+        assert len(ret[ret.relevance < 0.8]) == 0

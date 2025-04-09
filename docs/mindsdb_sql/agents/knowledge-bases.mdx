@@ -36,7 +36,7 @@ USING
          "model_name": 'gpt-4o',
          "api_key": "sk-..."  -- optional, default from env variable
      },
-     storage = my_vector_store, -- optional, default ChromaDB
+     storage = my_vector_store.storage_table, -- optional, default ChromaDB
      metadata_columns = ['date', 'creator', ...], -- optional
      content_columns = ['review', 'content', ...], -- optional, default content
      id_column = 'id'; -- optional
@@ -57,7 +57,7 @@ USING
          "model_name": 'gpt-4o',
          "api_key": "sk-..."  -- optional, default from env variable
      },
-     storage = my_vector_store, -- optional, default ChromaDB
+     storage = my_vector_store.storage_table, -- optional, default ChromaDB
      metadata_columns = ['date', 'creator', ...], -- optional
      content_columns = ['review', 'content', ...], -- optional, default content
      id_column = 'id'; -- optional
@@ -81,7 +81,7 @@ The following is an explanation of the syntax and parameters:
       * `model_name` defines the reranking model name as specified by the provider. Users can choose one of the [OpenAI chat models](https://platform.openai.com/docs/models).
       * `api_key` stores your OpenAI API key. Alternatively, you can use the `OPENAI_API_KEY` environment variable to store your OpenAI API key.
 
-* `storage` is an optional parameter. It assigns the name of the vector store connected to MindsDB, either [PGVector](/integrations/vector-db-integrations/pgvector) or [ChromaDB](/integrations/vector-db-integrations/chromadb). If not provided, the system uses the default ChromaDB vector database.
+* `storage` is an optional parameter. It assigns the name of the vector store created within MindsDB with the [`CREATE DATABASE` command](/mindsdb_sql/sql/create/database), which is either [PGVector](/integrations/vector-db-integrations/pgvector) or [ChromaDB](/integrations/vector-db-integrations/chromadb), followed by a table name present in that vector database where the knowledge base stores its content. If not provided, the system uses the default ChromaDB vector database.
 
 * `metadata_columns` provides the list of column names that will be used as the `metadata` of the knowledge base. If not set, the `metadata` column is not used.
 

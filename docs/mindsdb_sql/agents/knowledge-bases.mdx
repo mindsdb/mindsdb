@@ -193,7 +193,7 @@ SELECT * FROM information_schema.queries;
 
 **Parameters**
 
-- **batch_size** - Number of rows fetched per iteration/batch (default: `1000`).
+- **batch_size** - Number of rows fetched per iteration/batch (default: `1000`) to optimize data extraction from the source.
 - **threads** - Defines threads to run partitions in. Note that if the [ML task queue](/setup/custom-config#overview-of-config-parameters) is enabled, threads are automatically used for prediction. Allowed values for `threads` include:
   - `int` - Number of threads.
   - `true` - Auto-detect thread count.

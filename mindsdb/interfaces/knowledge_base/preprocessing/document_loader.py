@@ -1,15 +1,13 @@
 import os
 from typing import List, Iterator
 from langchain_core.documents import Document as LangchainDocument
-from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
+from langchain_text_splitters import MarkdownHeaderTextSplitter
 import pandas as pd
 
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.utilities.rag.loaders.file_loader import FileLoader
 from mindsdb.integrations.utilities.rag.splitters.file_splitter import (
     FileSplitter,
-    DEFAULT_CHUNK_SIZE,
-    DEFAULT_CHUNK_OVERLAP
 )
 from mindsdb.integrations.handlers.web_handler.urlcrawl_helpers import get_all_websites
 from mindsdb.interfaces.knowledge_base.preprocessing.models import Document
@@ -44,12 +42,6 @@ class DocumentLoader:
         self.markdown_splitter = markdown_splitter
         self.file_loader_class = file_loader_class
         self.mysql_proxy = mysql_proxy
-
-        # Initialize text splitter for query results with default settings
-        self.query_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=DEFAULT_CHUNK_SIZE,
-            chunk_overlap=DEFAULT_CHUNK_OVERLAP
-        )
 
     def load_files(self, file_names: List[str]) -> Iterator[Document]:
         """Load and split documents from files"""
@@ -143,8 +135,9 @@ class DocumentLoader:
 
         # Process each row into a Document
         for _, row in df.iterrows():
-            # Extract content and metadata
+            # Extract id, content  and metadata
             content = str(row.get('content', ''))
+            id = row.get('id', None)
 
             # Convert remaining columns to metadata
             metadata = {
@@ -156,21 +149,9 @@ class DocumentLoader:
 
             # Split content using recursive splitter
             if content:
-                doc = LangchainDocument(
-                    page_content=content,
+
+                yield Document(
+                    id=id,
+                    content=content,
                     metadata=metadata
                 )
-                # Use FileSplitter with default recursive splitter
-                split_docs = self.file_splitter.split_documents(
-                    [doc],
-                    default_failover=True
-                )
-
-                for split_doc in split_docs:
-                    metadata = doc.metadata.copy()
-                    metadata.update(split_doc.metadata or {})
-
-                    yield Document(
-                        content=split_doc.page_content,
-                        metadata=metadata
-                    )

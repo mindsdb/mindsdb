@@ -39,7 +39,14 @@ class InsertToTableCall(BaseStepCall):
 
             records = []
             for row in step.query.values:
-                record = [v.value for v in row]
+                record = []
+                for v in row:
+                    if isinstance(v, Identifier) and v.parts[0] == 'None':
+                        # Allow explicitly inserting NULL values.
+                        record.append(None)
+                        continue
+                    # Value is a constant
+                    record.append(v.value)
                 records.append(record)
 
             data.add_raw_values(records)
@@ -84,13 +91,13 @@ class InsertToTableCall(BaseStepCall):
             else:
                 col_names.add(col.alias)
 
-        dn.create_table(
+        response = dn.create_table(
             table_name=table_name,
             result_set=data,
             is_replace=is_replace,
             is_create=is_create
         )
-        return ResultSet()
+        return ResultSet(affected_rows=response.affected_rows)
 
 
 class SaveToTableCall(InsertToTableCall):

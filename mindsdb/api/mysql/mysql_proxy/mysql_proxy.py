@@ -21,7 +21,8 @@ import sys
 import tempfile
 import traceback
 from functools import partial
-from typing import Dict, List
+from typing import Dict, List, Optional
+from dataclasses import dataclass
 
 from numpy import dtype as np_dtype
 from pandas.api import types as pd_types
@@ -71,6 +72,7 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     TYPES,
     getConstName,
 )
+from mindsdb.api.executor.data_types.answer import ExecuteAnswer
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErWrongCharset,
@@ -81,8 +83,9 @@ from mindsdb.api.executor import exceptions as exec_exc
 from mindsdb.api.common.check_auth import check_auth
 from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
 from mindsdb.utilities import log
-from mindsdb.utilities.config import Config
+from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.otel.metric_handlers import get_query_request_counter
 from mindsdb.utilities.wizards import make_ssl_cert
 
 logger = log.getLogger(__name__)
@@ -92,24 +95,16 @@ def empty_fn():
     pass
 
 
+@dataclass
 class SQLAnswer:
-    def __init__(
-        self,
-        resp_type: RESPONSE_TYPE,
-        columns: List[Dict] = None,
-        data: List[Dict] = None,
-        status: int = None,
-        state_track: List[List] = None,
-        error_code: int = None,
-        error_message: str = None,
-    ):
-        self.resp_type = resp_type
-        self.columns = columns
-        self.data = data
-        self.status = status
-        self.state_track = state_track
-        self.error_code = error_code
-        self.error_message = error_message
+    resp_type: RESPONSE_TYPE = RESPONSE_TYPE.OK
+    columns: Optional[List[Dict]] = None
+    data: Optional[List[Dict]] = None   # resultSet ?
+    status: Optional[int] = None
+    state_track: Optional[List[List]] = None
+    error_code: Optional[int] = None
+    error_message: Optional[str] = None
+    affected_rows: Optional[int] = None
 
     @property
     def type(self):
@@ -332,7 +327,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 packages.append(self.last_packet())
             self.send_package_group(packages)
         elif answer.type == RESPONSE_TYPE.OK:
-            self.packet(OkPacket, state_track=answer.state_track).send()
+            self.packet(OkPacket, state_track=answer.state_track, affected_rows=answer.affected_rows).send()
         elif answer.type == RESPONSE_TYPE.ERROR:
             self.packet(
                 ErrPacket, err_code=answer.error_code, msg=answer.error_message
@@ -343,7 +338,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             data = []
         packets = []
         for i, column in enumerate(columns):
-            logger.info(
+            logger.debug(
                 "%s._get_column_defenition_packets: handling column - %s of %s type",
                 self.__class__.__name__,
                 column,
@@ -447,7 +442,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         connection. '0000' selected because in real mysql connection it should be lenght of package,
         and it can not be 0.
         """
-        config = Config()
         is_cloud = config.get("cloud", False)
 
         if sys.platform != "linux" or is_cloud is False:
@@ -546,22 +540,30 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     @profiler.profile()
     def process_query(self, sql):
         executor = Executor(session=self.session, sqlserver=self)
-
         executor.query_execute(sql)
+        executor_answer = executor.executor_answer
 
-        if executor.data is None:
+        if executor_answer.data is None:
             resp = SQLAnswer(
                 resp_type=RESPONSE_TYPE.OK,
-                state_track=executor.state_track,
+                state_track=executor_answer.state_track,
+                affected_rows=executor_answer.affected_rows
             )
         else:
             resp = SQLAnswer(
                 resp_type=RESPONSE_TYPE.TABLE,
-                state_track=executor.state_track,
-                columns=self.to_mysql_columns(executor.columns),
-                data=executor.data,
+                state_track=executor_answer.state_track,
+                columns=self.to_mysql_columns(executor_answer.data.columns),
+                data=executor_answer.data,
                 status=executor.server_status,
+                affected_rows=executor_answer.affected_rows
             )
+
+        # Increment the counter and include metadata in attributes
+        metadata = ctx.metadata(query=sql)
+        query_request_counter = get_query_request_counter()
+        query_request_counter.add(1, metadata)
+
         return resp
 
     def answer_stmt_prepare(self, sql):
@@ -598,18 +600,20 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
     def answer_stmt_execute(self, stmt_id, parameters):
         prepared_stmt = self.session.prepared_stmts[stmt_id]
-        executor = prepared_stmt["statement"]
+        executor: Executor = prepared_stmt["statement"]
 
         executor.stmt_execute(parameters)
 
-        if executor.data is None:
+        executor_answer: ExecuteAnswer = executor.executor_answer
+
+        if executor_answer.data is None:
             resp = SQLAnswer(
-                resp_type=RESPONSE_TYPE.OK, state_track=executor.state_track
+                resp_type=RESPONSE_TYPE.OK, state_track=executor_answer.state_track
             )
             return self.send_query_answer(resp)
 
         # TODO prepared_stmt['type'] == 'lock' is not used but it works
-        columns_def = self.to_mysql_columns(executor.columns)
+        columns_def = self.to_mysql_columns(executor_answer.data.columns)
         packages = [self.packet(ColumnCountPacket, count=len(columns_def))]
 
         packages.extend(self._get_column_defenition_packets(columns_def))
@@ -618,14 +622,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             packages.append(self.packet(EofPacket, status=0x0062))
 
         # send all
-        for row in executor.data.to_lists():
+        for row in executor_answer.data.to_lists():
             packages.append(
                 self.packet(BinaryResultsetRowPacket, data=row, columns=columns_def)
             )
 
         server_status = executor.server_status or 0x0002
         packages.append(self.last_packet(status=server_status))
-        prepared_stmt["fetched"] += len(executor.data)
+        prepared_stmt["fetched"] += len(executor_answer.data)
 
         return self.send_package_group(packages)
 
@@ -633,23 +637,24 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         prepared_stmt = self.session.prepared_stmts[stmt_id]
         executor = prepared_stmt["statement"]
         fetched = prepared_stmt["fetched"]
+        executor_answer: ExecuteAnswer = executor.executor_answer
 
-        if executor.data is None:
+        if executor_answer.data is None:
             resp = SQLAnswer(
-                resp_type=RESPONSE_TYPE.OK, state_track=executor.state_track
+                resp_type=RESPONSE_TYPE.OK, state_track=executor_answer.state_track
             )
             return self.send_query_answer(resp)
 
         packages = []
-        columns = self.to_mysql_columns(executor.columns)
-        for row in executor.data[fetched:limit].to_lists():
+        columns = self.to_mysql_columns(executor_answer.data.columns)
+        for row in executor_answer.data[fetched:limit].to_lists():
             packages.append(
                 self.packet(BinaryResultsetRowPacket, data=row, columns=columns)
             )
 
-        prepared_stmt["fetched"] += len(executor.data[fetched:limit])
+        prepared_stmt["fetched"] += len(executor_answer.data[fetched:limit])
 
-        if len(executor.data) <= limit + fetched:
+        if len(executor_answer.data) <= limit + fetched:
             status = sum(
                 [
                     SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT,
@@ -737,9 +742,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 if p.type.value == COMMANDS.COM_QUERY:
                     sql = self.decode_utf(p.sql.value)
                     sql = SqlStatementParser.clear_sql(sql)
-                    logger.debug(f"COM_QUERY: {sql}")
+                    logger.debug(f'Incoming query: {sql}')
                     profiler.set_meta(
-                        query=sql, api="mysql", environment=Config().get("environment")
+                        query=sql, api="mysql", environment=config.get("environment")
                     )
                     with profiler.Context("mysql_query_processing"):
                         response = self.process_query(sql)
@@ -765,6 +770,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     response = SQLAnswer(RESPONSE_TYPE.OK)
                 elif p.type.value == COMMANDS.COM_FIELD_LIST:
                     # this command is deprecated, but console client still use it.
+                    response = SQLAnswer(RESPONSE_TYPE.OK)
+                elif p.type.value == COMMANDS.COM_STMT_RESET:
                     response = SQLAnswer(RESPONSE_TYPE.OK)
                 else:
                     logger.warning("Command has no specific handler, return OK msg")
@@ -870,6 +877,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     def set_context(self, context):
         if "db" in context:
             self.session.database = context["db"]
+        else:
+            self.session.database = config.get('default_project')
+
         if "profiling" in context:
             self.session.profiling = context["profiling"]
         if "predictor_cache" in context:
@@ -896,7 +906,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         Create a server and wait for incoming connections until Ctrl-C
         """
         global logger
-        config = Config()
 
         cert_path = config["api"]["mysql"].get("certificate_path")
         if cert_path is None or cert_path == "":

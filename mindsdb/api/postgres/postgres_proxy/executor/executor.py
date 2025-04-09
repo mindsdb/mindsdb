@@ -6,7 +6,8 @@ from mindsdb.api.executor.planner import utils as planner_utils
 from numpy import dtype as np_dtype
 from pandas.api import types as pd_types
 
-from mindsdb.api.executor import SQLQuery, Column
+from mindsdb.api.executor.sql_query import SQLQuery
+from mindsdb.api.executor.sql_query.result_set import Column
 from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.api.mysql.mysql_proxy.utilities import SqlApiException
@@ -46,10 +47,11 @@ class Executor:
             self.query = parse_sql(sql)
         except Exception as mdb_error:
             # not all statements are parsed by parse_sql
-            self.logger.warning(f"SQL statement is not parsed by mindsdb_sql_parser: {sql}")
+            self.logger.warning('Failed to parse SQL query')
+            self.logger.debug(f'Query that cannot be parsed: {sql}')
 
             raise SqlApiException(
-                f"SQL statement cannot be parsed by mindsdb_sql_parser - {sql}: {mdb_error}"
+                f"The SQL statement cannot be parsed - {sql}: {mdb_error}"
             ) from mdb_error
 
     def stmt_execute(self, param_values):

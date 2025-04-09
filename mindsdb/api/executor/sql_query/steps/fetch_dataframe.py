@@ -46,17 +46,25 @@ def get_table_alias(table_obj, default_db_name):
 
 
 def get_fill_param_fnc(steps_data):
-    def fill_params(node, parent_query=None, **kwargs):
-        if isinstance(node, BinaryOperation):
-            if isinstance(node.args[1], Parameter):
-                rs = steps_data[node.args[1].value.step_num]
-                items = [Constant(i) for i in rs.get_column_values(col_idx=0)]
-                if node.op == '=' and len(items) == 1:
-                    # extract one value for option 'col=(subselect)'
-                    node.args[1] = items[0]
-                else:
-                    node.args[1] = Tuple(items)
-                return node
+    def fill_params(node, callstack=None, **kwargs):
+        if isinstance(node, Parameter):
+            rs = steps_data[node.value.step_num]
+            items = [Constant(i) for i in rs.get_column_values(col_idx=0)]
+
+            is_single_item = True
+            if callstack:
+                node_prev = callstack[0]
+                if isinstance(node_prev, BinaryOperation):
+                    # Check case: 'something IN Parameter()'
+                    if node_prev.op.lower() == 'in' and node_prev.args[1] is node:
+                        is_single_item = False
+
+            if is_single_item and len(items) == 1:
+                # extract one value for option 'col=(subselect)'
+                node = items[0]
+            else:
+                node = Tuple(items)
+            return node
 
         if isinstance(node, Parameter):
             rs = steps_data[node.value.step_num]
@@ -81,10 +89,11 @@ class FetchDataframeStepCall(BaseStepCall):
             table_alias = (self.context.get('database'), 'result', 'result')
 
             # fetch raw_query
-            df, columns_info = dn.query(
+            response = dn.query(
                 native_query=step.raw_query,
                 session=self.session
             )
+            df = response.data_frame
         else:
             table_alias = get_table_alias(step.query.from_table, self.context.get('database'))
 
@@ -96,13 +105,14 @@ class FetchDataframeStepCall(BaseStepCall):
 
             query, context_callback = query_context_controller.handle_db_context_vars(query, dn, self.session)
 
-            df, columns_info = dn.query(
+            response = dn.query(
                 query=query,
                 session=self.session
             )
+            df = response.data_frame
 
             if context_callback:
-                context_callback(df, columns_info)
+                context_callback(df, response.columns)
 
         result = ResultSet()
 

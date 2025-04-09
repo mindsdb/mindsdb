@@ -1,5 +1,6 @@
 import time
 import json
+from typing import Optional
 
 import pandas as pd
 import psycopg
@@ -19,10 +20,42 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 import mindsdb.utilities.profiler as profiler
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 logger = log.getLogger(__name__)
 
 SUBSCRIBE_SLEEP_INTERVAL = 1
+
+
+def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
+    """Map Postgres types to MySQL types.
+
+    Args:
+        internal_type_name (str): The name of the Postgres type to map.
+
+    Returns:
+        MYSQL_DATA_TYPE: The MySQL type that corresponds to the Postgres type.
+    """
+    internal_type_name = internal_type_name.lower()
+    types_map = {
+        ('smallint', 'integer', 'bigint', 'int', 'smallserial', 'serial', 'bigserial'): MYSQL_DATA_TYPE.INT,
+        ('real', 'money', 'float'): MYSQL_DATA_TYPE.FLOAT,
+        ('numeric', 'decimal'): MYSQL_DATA_TYPE.DECIMAL,
+        ('double precision',): MYSQL_DATA_TYPE.DOUBLE,
+        ('character varying', 'varchar', 'character', 'char', 'bpchar', 'bpchar', 'text'): MYSQL_DATA_TYPE.TEXT,
+        ('timestamp', 'timestamp without time zone', 'timestamp with time zone'): MYSQL_DATA_TYPE.DATETIME,
+        ('date', ): MYSQL_DATA_TYPE.DATE,
+        ('time', 'time without time zone', 'time with time zone'): MYSQL_DATA_TYPE.TIME,
+        ('boolean',): MYSQL_DATA_TYPE.BOOL,
+        ('bytea',): MYSQL_DATA_TYPE.BINARY,
+    }
+
+    for db_types_list, mysql_data_type in types_map.items():
+        if internal_type_name in db_types_list:
+            return mysql_data_type
+
+    logger.warning(f"Postgres handler type mapping: unknown type: {internal_type_name}, use VARCHAR as fallback.")
+    return MYSQL_DATA_TYPE.VARCHAR
 
 
 class PostgresHandler(DatabaseHandler):
@@ -67,6 +100,9 @@ class PostgresHandler(DatabaseHandler):
 
         if self.connection_args.get('sslmode'):
             config['sslmode'] = self.connection_args.get('sslmode')
+
+        if self.connection_args.get('autocommit'):
+            config['autocommit'] = self.connection_args.get('autocommit')
 
         # If schema is not provided set public as default one
         if self.connection_args.get('schema'):
@@ -158,7 +194,7 @@ class PostgresHandler(DatabaseHandler):
             'float8': 'float64'
         }
         columns = df.columns
-        df = df.set_axis(range(len(columns)), axis=1)
+        df.columns = list(range(len(columns)))
         for column_index, column_name in enumerate(df.columns):
             col = df[column_name]
             if str(col.dtype) == 'object':
@@ -169,7 +205,7 @@ class PostgresHandler(DatabaseHandler):
                         df[column_name] = col.astype(types_map[pg_type.name])
                     except ValueError as e:
                         logger.error(f'Error casting column {col.name} to {types_map[pg_type.name]}: {e}')
-        return df.set_axis(columns, axis=1)
+        df.columns = columns
 
     @profiler.profile()
     def native_query(self, query: str, params=None) -> Response:
@@ -192,17 +228,18 @@ class PostgresHandler(DatabaseHandler):
                 else:
                     cur.execute(query)
                 if cur.pgresult is None or ExecStatus(cur.pgresult.status) == ExecStatus.COMMAND_OK:
-                    response = Response(RESPONSE_TYPE.OK)
+                    response = Response(RESPONSE_TYPE.OK, affected_rows=cur.rowcount)
                 else:
                     result = cur.fetchall()
                     df = DataFrame(
                         result,
                         columns=[x.name for x in cur.description]
                     )
-                    df = self._cast_dtypes(df, cur.description)
+                    self._cast_dtypes(df, cur.description)
                     response = Response(
                         RESPONSE_TYPE.TABLE,
-                        df
+                        data_frame=df,
+                        affected_rows=cur.rowcount
                     )
                 connection.commit()
             except Exception as e:
@@ -219,15 +256,16 @@ class PostgresHandler(DatabaseHandler):
 
         return response
 
-    def insert(self, table_name: str, df: pd.DataFrame):
+    def insert(self, table_name: str, df: pd.DataFrame) -> Response:
         need_to_close = not self.is_connected
 
         connection = self.connect()
 
         columns = [f'"{c}"' for c in df.columns]
+        rowcount = None
         with connection.cursor() as cur:
             try:
-                with cur.copy(f'copy "{table_name}" ({",".join(columns)}) from STDIN  WITH CSV') as copy:
+                with cur.copy(f'copy "{table_name}" ({",".join(columns)}) from STDIN WITH CSV') as copy:
                     df.to_csv(copy, index=False, header=False)
 
                 connection.commit()
@@ -235,9 +273,12 @@ class PostgresHandler(DatabaseHandler):
                 logger.error(f'Error running insert to {table_name} on {self.database}, {e}!')
                 connection.rollback()
                 raise e
+            rowcount = cur.rowcount
 
         if need_to_close:
             self.disconnect()
+
+        return Response(RESPONSE_TYPE.OK, affected_rows=rowcount)
 
     @profiler.profile()
     def query(self, query: ASTNode) -> Response:
@@ -278,21 +319,27 @@ class PostgresHandler(DatabaseHandler):
         """
         return self.native_query(query)
 
-    def get_columns(self, table_name: str) -> Response:
+    def get_columns(self, table_name: str, schema_name: Optional[str] = None) -> Response:
         """
         Retrieves column details for a specified table in the PostgreSQL database.
 
         Args:
             table_name (str): The name of the table for which to retrieve column information.
+            schema_name (str): The name of the schema in which the table is located.
 
         Returns:
             Response: A response object containing the column details, formatted as per the `Response` class.
+
         Raises:
             ValueError: If the 'table_name' is not a valid string.
         """
 
         if not table_name or not isinstance(table_name, str):
             raise ValueError("Invalid table name provided.")
+        if isinstance(schema_name, str):
+            schema_name = f"'{schema_name}'"
+        else:
+            schema_name = 'current_schema()'
         query = f"""
             SELECT
                 column_name as "Field",
@@ -302,12 +349,15 @@ class PostgresHandler(DatabaseHandler):
             WHERE
                 table_name = '{table_name}'
             AND
-                table_schema = current_schema()
+                table_schema = {schema_name}
         """
-        return self.native_query(query)
+        result = self.native_query(query)
+        if result.resp_type is RESPONSE_TYPE.TABLE:
+            result.data_frame.columns = [name.lower() for name in result.data_frame.columns]
+            result.data_frame['mysql_data_type'] = result.data_frame['type'].apply(_map_type)
+        return result
 
     def subscribe(self, stop_event, callback, table_name, columns=None, **kwargs):
-
         config = self._make_connection_args()
         config['autocommit'] = True
 

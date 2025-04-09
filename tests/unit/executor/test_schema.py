@@ -45,6 +45,17 @@ class TestSchema(BaseExecutorDummyML):
         df = self.run_sql('describe view v1')
         assert df.NAME[0] == 'v1' and df.QUERY[0] == 'select * from models'
 
+        # columns of view
+        ret = self.run_sql('show columns from v1')
+        assert 'NAME' in list(ret.Field)
+
+        # columns of table
+        ret = self.run_sql('show full columns from table1', database='dummy_data')
+        assert 'Collation' in list(ret.columns)
+
+        ret = self.run_sql('show columns from table1', database='dummy_data')
+        assert 'Collation' not in list(ret.columns)
+
         # model
         self.run_sql('''
                 CREATE model pred1

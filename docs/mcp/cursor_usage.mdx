@@ -1,0 +1,85 @@
+---
+title: MindsDB MCP API with Cursor
+sidebarTitle: Usage with Cursor
+---
+
+This tutorial walks you through the usage of MindsDB MCP API with [Cursor](https://www.cursor.com/).
+
+<iframe
+  className="w-full h-96"
+  width="613"
+  height="286"
+  src="https://www.youtube.com/embed/f5VFd5LIuPg"
+  title="MindsDB an an MCP server"
+  frameBorder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+  allowFullScreen
+></iframe>
+
+## Enable MindsDB as an MCP Server
+
+1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
+
+2. When starting MindsDB, enable its MCP API as [explained here](/mcp/overview#getting-started).
+
+3. If this is your first time using MindsDB, make sure to [connect your data source](/mindsdb_sql/sql/create/database) and/or [upload files](/mindsdb_sql/sql/create/file), so that you can ask questions over your data as shown in the following steps.
+
+<Tip>
+To get you started quickly, use our sample dataset that stores the sales manager data.
+
+```sql
+CREATE DATABASE sales_manager_data
+WITH ENGINE = "postgres",
+PARAMETERS = {
+    "user": "demo_user",
+    "password": "demo_password",
+    "host": "samples.mindsdb.com",
+    "port": "5432",
+    "database": "sales_manager_data"
+};
+```
+</Tip>
+
+4. Open Cursor, go to the Cursor Settings, open the MCP tab, and click on *Add new global MCP server*. Alternatively, go to the Cursor settings -> Features -> MCP Servers.
+
+<p align="center">
+  <img src="/assets/mcp_cursor_settings.png" />
+</p>
+
+5. Add the below content to the `mcp.json` file.
+
+```yml
+{
+    "mcpServers": {
+      "mindsdb": {
+        "url": "http://127.0.0.1:47337/sse"
+      }
+    }
+}
+```
+
+6. Ensure that MindsDB is listed as an MCP server.
+
+<p align="center">
+  <img src="/assets/mcp_cursor_mcp_server.png" />
+</p>
+
+## Chat with Your Data
+
+1. Open the Cursor chat window and select the Agent mode from the dropdown.
+
+<p align="center">
+  <img src="/assets/mcp_cursor_chat_mode.png" />
+</p>
+
+2. Ask questions over your data. *Note that you need to approve each call of the MCP server’s tools by clicking on Run tool.*
+
+<p align="center">
+  <img src="/assets/mcp_cursor_chat_tool.png" />
+</p>
+
+3. The agent provides an answer with helpful suggestions of follow-up information that can be extracted from the available data.
+
+<p align="center">
+  <img src="/assets/mcp_cursor_chat.png" />
+</p>

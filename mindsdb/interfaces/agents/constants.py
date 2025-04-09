@@ -15,7 +15,8 @@ SUPPORTED_PROVIDERS = {
     "litellm",
     "ollama",
     "nvidia_nim",
-    "vllm"
+    "vllm",
+    "google"
 }
 # Chat models
 ANTHROPIC_CHAT_MODELS = (
@@ -153,6 +154,15 @@ NVIDIA_NIM_CHAT_MODELS = (
     "ibm/granite-34b-code-instruct",
 )
 
+GOOGLE_GEMINI_CHAT_MODELS = (
+    "gemini-2.5-pro-preview-03-25",
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-lite",
+    "gemini-1.5-flash",
+    "gemini-1.5-flash-8b",
+    "gemini-1.5-pro",
+)
+
 # Define a read-only dictionary mapping providers to their models
 PROVIDER_TO_MODELS = MappingProxyType(
     {
@@ -160,11 +170,13 @@ PROVIDER_TO_MODELS = MappingProxyType(
         "ollama": OLLAMA_CHAT_MODELS,
         "openai": OPEN_AI_CHAT_MODELS,
         "nvidia_nim": NVIDIA_NIM_CHAT_MODELS,
+        "google": GOOGLE_GEMINI_CHAT_MODELS,
     }
 )
 
 ASSISTANT_COLUMN = "answer"
 CONTEXT_COLUMN = "context"
+TRACE_ID_COLUMN = "trace_id"
 DEFAULT_AGENT_TIMEOUT_SECONDS = 300
 # These should require no additional arguments.
 DEFAULT_AGENT_TOOLS = []
@@ -177,3 +189,4 @@ USER_COLUMN = "question"
 DEFAULT_EMBEDDINGS_MODEL_PROVIDER = "openai"
 DEFAULT_EMBEDDINGS_MODEL_CLASS = OpenAIEmbeddings
 DEFAULT_TIKTOKEN_MODEL_NAME = os.getenv('DEFAULT_TIKTOKEN_MODEL_NAME', 'gpt-4')
+AGENT_CHUNK_POLLING_INTERVAL_SECONDS = os.getenv('AGENT_CHUNK_POLLING_INTERVAL_SECONDS', 1.0)

@@ -6,18 +6,15 @@ on:
     branches:
       - 'main'
 
-# Cancel any existing runs of this workflow on the same branch/pr
-# We always want to build/deploy/test a new commit over an older one
-concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
-
 jobs:
 
   # Looks for labels like "deploy-to-<env>" attached to a PR so we can deploy to those envs
   get-deploy-labels:
     name: Get Deploy Envs
     runs-on: mdb-dev
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-labels
+      cancel-in-progress: true
     environment:
       name: ${{ github.event.pull_request.head.repo.fork && 'manual-approval' || '' }}
     outputs:
@@ -37,6 +34,9 @@ jobs:
     runs-on: mdb-dev
     needs: [get-deploy-labels]
     if: needs.get-deploy-labels.outputs.deploy-envs != '[]'
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-build
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,14 +50,19 @@ jobs:
       - uses: ./github-actions/docker-bake
         with:
           git-sha: ${{ github.event.pull_request.head.sha }}
-  
-  # Build our docker images based on our bake file
-  # This job only pushes the layers to the cache repo
-  # It's done separately so other jobs can run without waiting for this one
-  build_cache:
-    name: Build Docker Cache
+          target: cloud-cpu
+          platforms: linux/amd64
+          push-cache: false
+
+  # Push cache layers to docker registry
+  # This is separate to the build step so we can do other stuff in parallel
+  build-cache:
+    name: Push Docker Cache
     runs-on: mdb-dev
     needs: [build]
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-cache
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
         with:
@@ -67,9 +72,14 @@ jobs:
         with:
           repository: mindsdb/github-actions
           path: github-actions
-      - uses: ./github-actions/docker-bake-cache
+      # Build the bakefile and push
+      - uses: ./github-actions/docker-bake
         with:
           git-sha: ${{ github.event.pull_request.head.sha }}
+          target: cloud-cpu
+          platforms: linux/amd64
+          push-cache: true
+          cache-only: true
 
   # Call our deployment workflow, so long as this is not a forked PR
   # This will run the deployment workflow in the base branch, not in the PR.
@@ -89,6 +99,9 @@ jobs:
   run_tests:
     name: Run Integration Tests
     needs: [deploy]
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-tests
+      cancel-in-progress: true
     uses: ./.github/workflows/test_on_deploy.yml
     with:
       git-sha: ${{ github.event.pull_request.head.sha }}

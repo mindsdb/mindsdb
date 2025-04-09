@@ -34,8 +34,8 @@
     }
   ],
   "topbarCtaButton": {
-    "name": "Get Started",
-    "url": "https://github.com/mindsdb/mindsdb"
+    "name": "Try Demo",
+    "url": "http://mdb.ai/register"
   },
   "anchors": [
     {
@@ -66,6 +66,10 @@
     {
       "name": "SDKs",
       "url": "sdks"
+    },
+    {
+      "name": "MCP API",
+      "url": "mcp"
     },
     {
       "name": "REST API",
@@ -284,10 +288,10 @@
               ]
             }
           ]
-        }
+        },
+        "minds-demo"
       ]
     },
-
     {
       "group": "Features",
       "pages": [
@@ -388,6 +392,14 @@
             "use-cases/ai_workflow_automation/customer-reviews-notifications",
             "use-cases/ai_workflow_automation/real-time-trading-forecasts"
           ]
+        },
+        {
+          "group": "MCP API",
+          "pages": [
+            "use-cases/mcp_api/overview",
+            "use-cases/mcp_api/mindsdb_mcp_server",
+            "use-cases/mcp_api/cursor"
+          ]
         }
       ]
     },
@@ -436,7 +448,8 @@
           "pages": [
             "mindsdb_sql/sql/create/project",
             "mindsdb_sql/sql/drop/project",
-            "mindsdb_sql/sql/list-projects"
+            "mindsdb_sql/sql/list-projects",
+            "mindsdb_sql/sql/use/project"
           ]
         },
         {
@@ -519,6 +532,14 @@
             "mindsdb_sql/sql_support/window-functions"
           ]
         }
+      ]
+    },
+    {
+      "group": "MCP API",
+      "pages": [
+        "mcp/overview",
+        "mcp/tools",
+        "mcp/cursor_usage"
       ]
     },
     {
@@ -907,6 +928,7 @@
       "group": "Data Sources",
       "pages": [
         "integrations/data-overview",
+        "integrations/sample-database",
         {
           "group": "Applications",
           "pages": [
@@ -922,6 +944,7 @@
             "integrations/app-integrations/hackernews",
             "integrations/app-integrations/instatus",
             "integrations/app-integrations/intercom",
+            "integrations/app-integrations/jira",
             "integrations/app-integrations/mediawiki",
             "integrations/app-integrations/microsoft-onedrive",
             "integrations/app-integrations/microsoft-teams",
@@ -945,7 +968,6 @@
         {
           "group": "Databases",
           "pages": [
-            "integrations/data-integrations/all-data-integrations",
             "integrations/data-integrations/airtable",
             "integrations/data-integrations/amazon-aurora",
             "integrations/data-integrations/amazon-dynamodb",
@@ -1017,9 +1039,20 @@
           "pages": [
             "integrations/vector-db-integrations/chromadb",
             "integrations/vector-db-integrations/couchbase",
+            "integrations/vector-db-integrations/milvus",
             "integrations/vector-db-integrations/pgvector",
             "integrations/vector-db-integrations/pinecone",
             "integrations/vector-db-integrations/weaviate"
+          ]
+        },
+        {
+          "group": "Files",
+          "pages": [
+            "integrations/files/csv-xlsx-xls",
+            "integrations/files/json",
+            "integrations/files/txt",
+            "integrations/files/pdf",
+            "integrations/files/parquet"
           ]
         }
       ]

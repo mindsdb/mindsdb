@@ -9,6 +9,7 @@ from mindsdb_sql_parser import parse_sql, ParsingException
 from mindsdb_sql_parser.ast.mindsdb import CreateJob
 from mindsdb_sql_parser.ast import Select, Star, Identifier, BinaryOperation, Constant
 
+from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.exception import EntityNotExistsError, EntityExistsError
 from mindsdb.interfaces.storage import db
@@ -19,6 +20,8 @@ from mindsdb.interfaces.database.log import LogDBController
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
+
+default_project = config.get('default_project')
 
 
 def split_sql(sql):
@@ -199,7 +202,7 @@ class JobsController:
         """
 
         if project_name is None:
-            project_name = 'mindsdb'
+            project_name = default_project
 
         start_at = None
         if query.start_str is not None:
@@ -334,13 +337,10 @@ class JobsController:
                 BinaryOperation(op='=', args=[Identifier('project'), Constant(project_name)])
             ])
         )
-        data, columns = logs_db_controller.query(query)
+        response = logs_db_controller.query(query)
 
-        names = [i['name'] for i in columns]
-        records = []
-        for row in data:
-            records.append(dict(zip(names, row)))
-        return records
+        names = [i['name'] for i in response.columns]
+        return response.data_frame[names].to_dict(orient='records')
 
 
 class JobsExecutor:

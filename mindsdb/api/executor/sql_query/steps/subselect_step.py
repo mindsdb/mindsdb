@@ -1,12 +1,13 @@
 from collections import defaultdict
 
+import pandas as pd
+
 from mindsdb_sql_parser.ast import (
-    Identifier,
-    Select,
-    Star,
-    Constant,
-    Parameter
+    Identifier, Select, Star, Constant, Parameter, Function, Variable, BinaryOperation
 )
+
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import SERVER_VARIABLES
+
 from mindsdb.api.executor.planner.step_result import Result
 from mindsdb.api.executor.planner.steps import SubSelectStep, QueryStep
 from mindsdb.integrations.utilities.query_traversal import query_traversal
@@ -80,11 +81,14 @@ class QueryStepCall(BaseStepCall):
 
     bind = QueryStep
 
-    def call(self, step):
+    def call(self, step: QueryStep):
         query = step.query
 
         if step.from_table is not None:
-            result_set = self.steps_data[step.from_table.step_num]
+            if isinstance(step.from_table, pd.DataFrame):
+                result_set = ResultSet().from_df(step.from_table)
+            else:
+                result_set = self.steps_data[step.from_table.step_num]
         else:
             # only from_table can content result
             prev_step_num = query.from_table.value.step_num
@@ -101,8 +105,36 @@ class QueryStepCall(BaseStepCall):
             if col.table_name != col.table_alias:
                 tbl_idx[col.table_alias].append(name)
 
+        # get aliases of first level
+        aliases = []
+        for col in query.targets:
+            if col.alias is not None:
+                aliases.append(col.alias.parts[0])
+
         # analyze condition and change name of columns
         def check_fields(node, is_target=None, **kwargs):
+            if isinstance(node, Function):
+                function_name = node.op.lower()
+
+                functions_results = {
+                    "database": self.session.database,
+                    "current_user": self.session.username,
+                    "user": self.session.username,
+                    "version": "8.0.17",
+                    "current_schema": "public",
+                    "connection_id": self.context.get('connection_id')
+                }
+                if function_name in functions_results:
+                    return Constant(functions_results[function_name], alias=Identifier(parts=[function_name]))
+
+            if isinstance(node, Variable):
+                var_name = node.value
+                column_name = f"@@{var_name}"
+                result = SERVER_VARIABLES.get(column_name)
+                if result is None:
+                    raise ValueError(f"Unknown variable '{var_name}'")
+                else:
+                    return Constant(result[0], alias=Identifier(parts=[column_name]))
 
             if isinstance(node, Identifier):
                 # only column name
@@ -119,13 +151,30 @@ class QueryStepCall(BaseStepCall):
                             for col in tbl_idx.get(table_name, [])
                         ]
 
+                if node.parts[-1].lower() == "session_user":
+                    return Constant(self.session.username, alias=node)
+                if node.parts[-1].lower() == '$$':
+                    # NOTE: sinve version 9.0 mysql client sends query 'select $$'.
+                    # Connection can be continued only if answer is parse error.
+                    raise ValueError(
+                        "You have an error in your SQL syntax; check the manual that corresponds to your server "
+                        "version for the right syntax to use near '$$' at line 1"
+                    )
+
                 if len(node.parts) == 1:
                     key = col_name
+                    if key in aliases:
+                        # key is defined as alias
+                        return
                 else:
                     table_name = node.parts[-2]
                     key = (table_name, col_name)
 
                 if key not in col_idx:
+                    if len(node.parts) == 1:
+                        # it can be local alias of a query
+                        return
+
                     raise KeyColumnDoesNotExist(f'Table not found for column: {key}')
 
                 new_name = col_idx[key]
@@ -134,6 +183,24 @@ class QueryStepCall(BaseStepCall):
         # fill params
         fill_params = get_fill_param_fnc(self.steps_data)
         query_traversal(query, fill_params)
+
+        if not step.strict_where:
+            # remove conditions with not-existed columns.
+            #   these conditions can be already used as input to model or knowledge base
+            #   but can be absent in their output
+
+            def remove_not_used_conditions(node, **kwargs):
+                # find last in where
+                if isinstance(node, BinaryOperation):
+                    for arg in node.args:
+                        if isinstance(arg, Identifier) and len(arg.parts) > 1:
+                            key = tuple(arg.parts[-2:])
+                            if key not in col_idx:
+                                # exclude
+                                node.args = [Constant(0), Constant(0)]
+                                node.op = '='
+
+            query_traversal(query.where, remove_not_used_conditions)
 
         query_traversal(query, check_fields)
         query.where = query_context_controller.remove_lasts(query.where)

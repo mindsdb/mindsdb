@@ -1,16 +1,42 @@
+from typing import Optional, Literal
+from dataclasses import dataclass, astuple, fields
 
 import pandas as pd
-from mindsdb_sql_parser.ast import BinaryOperation, Constant, Identifier, Select
 from mindsdb_sql_parser.ast.base import ASTNode
-from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 
+from mindsdb.utilities import log
+from mindsdb.utilities.config import config
+from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 from mindsdb.api.executor.datahub.classes.tables_row import (
     TABLES_ROW_TYPE,
     TablesRow,
 )
-from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
+
+
+def _get_scope(query):
+    databases, tables = None, None
+    try:
+        conditions = extract_comparison_conditions(query.where)
+    except NotImplementedError:
+        return databases, tables
+    for op, arg1, arg2 in conditions:
+        if op == '=':
+            scope = [arg2]
+        elif op == 'in':
+            if not isinstance(arg2, list):
+                arg2 = [arg2]
+            scope = arg2
+        else:
+            continue
+
+        if arg1.lower() == 'table_schema':
+            databases = scope
+        elif arg1.lower() == 'table_name':
+            tables = scope
+    return databases, tables
 
 
 class Table:
@@ -73,33 +99,19 @@ class TablesTable(Table):
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
 
-        target_table = None
-        if (
-            type(query) is Select
-            and type(query.where) is BinaryOperation
-            and query.where.op == "and"
-        ):
-            for arg in query.where.args:
-                if (
-                    type(arg) is BinaryOperation
-                    and arg.op == "="
-                    and type(arg.args[0]) is Identifier
-                    and arg.args[0].parts[-1].upper() == "TABLE_SCHEMA"
-                    and type(arg.args[1]) is Constant
-                ):
-                    target_table = arg.args[1].value
-                    break
+        databases, _ = _get_scope(query)
 
         data = []
         for name in inf_schema.tables.keys():
-            if target_table is not None and target_table != name:
+            if databases is not None and name not in databases:
                 continue
             row = TablesRow(TABLE_TYPE=TABLES_ROW_TYPE.SYSTEM_VIEW, TABLE_NAME=name)
             data.append(row.to_list())
 
         for ds_name, ds in inf_schema.persis_datanodes.items():
-            if target_table is not None and target_table != ds_name:
+            if databases is not None and ds_name not in databases:
                 continue
+
             if hasattr(ds, 'get_tables_rows'):
                 ds_tables = ds.get_tables_rows()
             else:
@@ -127,8 +139,9 @@ class TablesTable(Table):
                 data.append(row.to_list())
 
         for ds_name in inf_schema.get_integrations_names():
-            if target_table is not None and target_table != ds_name:
+            if databases is not None and ds_name not in databases:
                 continue
+
             try:
                 ds = inf_schema.get(ds_name)
                 ds_tables = ds.get_tables()
@@ -139,8 +152,9 @@ class TablesTable(Table):
                 logger.error(f"Can't get tables from '{ds_name}'")
 
         for project_name in inf_schema.get_projects_names():
-            if target_table is not None and target_table != project_name:
+            if databases is not None and project_name not in databases:
                 continue
+
             project_dn = inf_schema.get(project_name)
             project_tables = project_dn.get_tables()
             for row in project_tables:
@@ -151,173 +165,168 @@ class TablesTable(Table):
         return df
 
 
-class ColumnsTable(Table):
+@dataclass
+class ColumnsTableRow:
+    """Represents a row in the COLUMNS table.
+    Fields description: https://dev.mysql.com/doc/refman/8.4/en/information-schema-columns-table.html
+    NOTE: attrs order matter, don't change it.
+    """
+    TABLE_CATALOG: Literal['def'] = 'def'
+    TABLE_SCHEMA: Optional[str] = None
+    TABLE_NAME: Optional[str] = None
+    COLUMN_NAME: Optional[str] = None
+    ORDINAL_POSITION: int = 0
+    COLUMN_DEFAULT: Optional[str] = None
+    IS_NULLABLE: Literal['YES', 'NO'] = 'YES'
+    DATA_TYPE: str = MYSQL_DATA_TYPE.VARCHAR.value
+    CHARACTER_MAXIMUM_LENGTH: Optional[int] = None
+    CHARACTER_OCTET_LENGTH: Optional[int] = None
+    NUMERIC_PRECISION: Optional[int] = None
+    NUMERIC_SCALE: Optional[int] = None
+    DATETIME_PRECISION: Optional[int] = None
+    CHARACTER_SET_NAME: Optional[str] = None
+    COLLATION_NAME: Optional[str] = None
+    COLUMN_TYPE: Optional[str] = None
+    COLUMN_KEY: Optional[str] = None
+    EXTRA: Optional[str] = None
+    PRIVILEGES: str = 'select'
+    COLUMN_COMMENT: Optional[str] = None
+    GENERATION_EXPRESSION: Optional[str] = None
 
+    def __post_init__(self):
+        # region check mandatory fields
+        mandatory_fields = ['TABLE_SCHEMA', 'TABLE_NAME', 'COLUMN_NAME']
+        if any(getattr(self, field_name) is None for field_name in mandatory_fields):
+            raise ValueError('One of mandatory fields is missed when creating ColumnsTableRow')
+        # endregion
+
+        # region set default values depend on type
+        defaults = {
+            'COLUMN_TYPE': self.DATA_TYPE
+        }
+        if MYSQL_DATA_TYPE(self.DATA_TYPE) in (
+            MYSQL_DATA_TYPE.TIMESTAMP,
+            MYSQL_DATA_TYPE.DATETIME,
+            MYSQL_DATA_TYPE.DATE
+        ):
+            defaults = {
+                'DATETIME_PRECISION': 0,
+                'COLUMN_TYPE': self.DATA_TYPE
+            }
+        elif MYSQL_DATA_TYPE(self.DATA_TYPE) in (
+            MYSQL_DATA_TYPE.FLOAT,
+            MYSQL_DATA_TYPE.DOUBLE,
+            MYSQL_DATA_TYPE.DECIMAL
+        ):
+            defaults = {
+                'NUMERIC_PRECISION': 12,
+                'NUMERIC_SCALE': 0,
+                'COLUMN_TYPE': self.DATA_TYPE
+            }
+        elif MYSQL_DATA_TYPE(self.DATA_TYPE) in (
+            MYSQL_DATA_TYPE.TINYINT,
+            MYSQL_DATA_TYPE.SMALLINT,
+            MYSQL_DATA_TYPE.MEDIUMINT,
+            MYSQL_DATA_TYPE.INT,
+            MYSQL_DATA_TYPE.BIGINT
+        ):
+            defaults = {
+                'NUMERIC_PRECISION': 20,
+                'NUMERIC_SCALE': 0,
+                'COLUMN_TYPE': self.DATA_TYPE
+            }
+        elif MYSQL_DATA_TYPE(self.DATA_TYPE) is MYSQL_DATA_TYPE.VARCHAR:
+            defaults = {
+                'CHARACTER_MAXIMUM_LENGTH': 1024,
+                'CHARACTER_OCTET_LENGTH': 3072,
+                'CHARACTER_SET_NAME': 'utf8',
+                'COLLATION_NAME': 'utf8_bin',
+                'COLUMN_TYPE': 'varchar(1024)'
+            }
+        else:
+            # show as MYSQL_DATA_TYPE.TEXT:
+            defaults = {
+                'CHARACTER_MAXIMUM_LENGTH': 65535,      # from https://bugs.mysql.com/bug.php?id=90685
+                'CHARACTER_OCTET_LENGTH': 65535,        #
+                'CHARACTER_SET_NAME': 'utf8',
+                'COLLATION_NAME': 'utf8_bin',
+                'COLUMN_TYPE': 'text'
+            }
+
+        for key, value in defaults.items():
+            setattr(self, key, value)
+
+        self.DATA_TYPE = self.DATA_TYPE.lower()
+        self.COLUMN_TYPE = self.COLUMN_TYPE.lower()
+        # endregion
+
+
+class ColumnsTable(Table):
     name = 'COLUMNS'
-    columns = [
-        "TABLE_CATALOG",
-        "TABLE_SCHEMA",
-        "TABLE_NAME",
-        "COLUMN_NAME",
-        "ORDINAL_POSITION",
-        "COLUMN_DEFAULT",
-        "IS_NULLABLE",
-        "DATA_TYPE",
-        "CHARACTER_MAXIMUM_LENGTH",
-        "CHARACTER_OCTET_LENGTH",
-        "NUMERIC_PRECISION",
-        "NUMERIC_SCALE",
-        "DATETIME_PRECISION",
-        "CHARACTER_SET_NAME",
-        "COLLATION_NAME",
-        "COLUMN_TYPE",
-        "COLUMN_KEY",
-        "EXTRA",
-        "PRIVILEGES",
-        "COLUMN_COMMENT",
-        "GENERATION_EXPRESSION",
-    ]
+    columns = [field.name for field in fields(ColumnsTableRow)]
 
     @classmethod
     def get_data(cls, inf_schema=None, query: ASTNode = None, **kwargs):
-
-        # NOTE there is a lot of types in mysql, but listed below should be enough for our purposes
-        row_templates = {
-            "text": [
-                "def",
-                "SCHEMA_NAME",
-                "TABLE_NAME",
-                "COLUMN_NAME",
-                "COL_INDEX",
-                None,
-                "YES",
-                "varchar",
-                1024,
-                3072,
-                None,
-                None,
-                None,
-                "utf8",
-                "utf8_bin",
-                "varchar(1024)",
-                None,
-                None,
-                "select",
-                None,
-                None,
-            ],
-            "timestamp": [
-                "def",
-                "SCHEMA_NAME",
-                "TABLE_NAME",
-                "COLUMN_NAME",
-                "COL_INDEX",
-                "CURRENT_TIMESTAMP",
-                "YES",
-                "timestamp",
-                None,
-                None,
-                None,
-                None,
-                0,
-                None,
-                None,
-                "timestamp",
-                None,
-                None,
-                "select",
-                None,
-                None,
-            ],
-            "bigint": [
-                "def",
-                "SCHEMA_NAME",
-                "TABLE_NAME",
-                "COLUMN_NAME",
-                "COL_INDEX",
-                None,
-                "YES",
-                "bigint",
-                None,
-                None,
-                20,
-                0,
-                None,
-                None,
-                None,
-                "bigint unsigned",
-                None,
-                None,
-                "select",
-                None,
-                None,
-            ],
-            "float": [
-                "def",
-                "SCHEMA_NAME",
-                "TABLE_NAME",
-                "COLUMN_NAME",
-                "COL_INDEX",
-                None,
-                "YES",
-                "float",
-                None,
-                None,
-                12,
-                0,
-                None,
-                None,
-                None,
-                "float",
-                None,
-                None,
-                "select",
-                None,
-                None,
-            ],
-        }
-
         result = []
 
-        databases = None
-        conditions = extract_comparison_conditions(query.where)
-        for op, arg1, arg2 in conditions:
-            if arg1.lower() == 'table_schema':
-                if op == '=':
-                    databases = [arg2]
-                elif op == 'in':
-                    if not isinstance(arg2, list):
-                        arg2 = [arg2]
-                    databases = arg2
+        databases, tables_names = _get_scope(query)
 
         if databases is None:
-            databases = ['information_schema', 'mindsdb', 'files']
+            databases = [
+                'information_schema',
+                config.get('default_project'),
+                'files'
+            ]
 
         for db_name in databases:
+            tables = {}
             if db_name == 'information_schema':
-                tables = {
-                    table_name: table.columns
-                    for table_name, table in inf_schema.tables.items()
-                }
+                for table_name, table in inf_schema.tables.items():
+                    tables[table_name] = [
+                        {'name': name} for name in table.columns
+                    ]
             else:
                 dn = inf_schema.get(db_name)
                 if dn is None:
                     continue
-                tables = {}
-                for table_row in dn.get_tables():
-                    tables[table_row.TABLE_NAME] = [
-                        col['name']
-                        for col in dn.get_table_columns(table_row.TABLE_NAME)
-                    ]
+
+                if tables_names is None:
+                    tables_names = [t.TABLE_NAME for t in dn.get_tables()]
+                for table_name in tables_names:
+                    tables[table_name] = dn.get_table_columns(table_name)
 
             for table_name, table_columns in tables.items():
-                for i, column_name in enumerate(table_columns):
-                    result_row = row_templates["text"].copy()
-                    result_row[1] = db_name
-                    result_row[2] = table_name
-                    result_row[3] = column_name
-                    result_row[4] = i
-                    result.append(result_row)
+                for i, column in enumerate(table_columns):
+                    column_name = column['name']
+                    column_type = column.get('type', 'text')
+
+                    # region infer type
+                    if isinstance(column_type, MYSQL_DATA_TYPE) is False:
+                        if column_type in ('double precision', 'real', 'numeric', 'float'):
+                            column_type = MYSQL_DATA_TYPE.FLOAT
+                        elif column_type in ('integer', 'smallint', 'int', 'bigint'):
+                            column_type = MYSQL_DATA_TYPE.BIGINT
+                        elif column_type in (
+                            'timestamp without time zone',
+                            'timestamp with time zone',
+                            'date', 'timestamp'
+                        ):
+                            column_type = MYSQL_DATA_TYPE.DATETIME
+                        else:
+                            column_type = MYSQL_DATA_TYPE.VARCHAR
+                    # endregion
+
+                    column_row = astuple(
+                        ColumnsTableRow(
+                            TABLE_SCHEMA=db_name,
+                            TABLE_NAME=table_name,
+                            COLUMN_NAME=column_name,
+                            DATA_TYPE=column_type.value,
+                            ORDINAL_POSITION=i
+                        )
+                    )
+
+                    result.append(column_row)
 
         df = pd.DataFrame(result, columns=cls.columns)
         return df

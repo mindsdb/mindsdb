@@ -1,5 +1,6 @@
-from typing import List
 import copy
+from typing import List, Optional
+
 import numpy as np
 import pandas as pd
 
@@ -35,14 +36,28 @@ class Column:
         return f'{self.__class__.__name__}({self.__dict__})'
 
 
-class ResultSet:
-    def __init__(self, columns=None, values: List[List] = None, df: pd.DataFrame = None):
-        '''
+def rename_df_columns(df: pd.DataFrame, names: Optional[List] = None) -> None:
+    """Inplace rename of dataframe columns
 
-        :param columns: list of Columns
-        :param values: data of resultSet, have to be list of lists with length equal to column
-        :param df: injected dataframe, have to have enumerated columns and length equal to columns
-        '''
+    Args:
+        df (pd.DataFrame): dataframe
+        names (Optional[List]): columns names to set
+    """
+    if names is not None:
+        df.columns = names
+    else:
+        df.columns = list(range(len(df.columns)))
+
+
+class ResultSet:
+    def __init__(self, columns=None, values: List[List] = None, df: pd.DataFrame = None, affected_rows: int = None):
+        """
+        Args:
+            columns: list of Columns
+            values (List[List]): data of resultSet, have to be list of lists with length equal to column
+            df (pd.DataFrame): injected dataframe, have to have enumerated columns and length equal to columns
+            affected_rows (int): number of affected rows
+        """
         if columns is None:
             columns = []
         self._columns = columns
@@ -52,6 +67,8 @@ class ResultSet:
         elif df is None:
             df = pd.DataFrame(values)
         self._df = df
+
+        self.affected_rows = affected_rows
 
         self.is_prediction = False
 
@@ -73,20 +90,19 @@ class ResultSet:
     # --- converters ---
 
     def from_df(self, df, database=None, table_name=None, table_alias=None):
-
-        columns_dtypes = list(df.dtypes)
-
-        for i, col in enumerate(df.columns):
-            self._columns.append(Column(
-                name=col,
+        self._columns = [
+            Column(
+                name=column_name,
                 table_name=table_name,
                 table_alias=table_alias,
                 database=database,
-                type=columns_dtypes[i]
-            ))
+                type=column_dtype
+            ) for column_name, column_dtype
+            in zip(df.columns, df.dtypes)
+        ]
 
-        # rename columns to indexes
-        self._df = df.set_axis(range(len(df.columns)), axis=1)
+        rename_df_columns(df)
+        self._df = df
 
         return self
 
@@ -97,9 +113,6 @@ class ResultSet:
             if col.alias is not None:
                 alias_idx[col.alias] = col
 
-        # resp_dict = df.to_dict(orient='split')
-        # self._records = resp_dict['data']
-
         for col in df.columns:
             if col in col_names or strict:
                 column = col_names[col]
@@ -109,13 +122,16 @@ class ResultSet:
                 column = Column(col)
             self._columns.append(column)
 
-        self._df = df.set_axis(range(len(df.columns)), axis=1)
+        rename_df_columns(df)
+        self._df = df
 
         return self
 
     def to_df(self):
-        columns = self.get_column_names()
-        return self.get_raw_df().set_axis(columns, axis=1)
+        columns_names = self.get_column_names()
+        df = self.get_raw_df()
+        rename_df_columns(df, columns_names)
+        return df
 
     def to_df_cols(self, prefix=''):
         # returns dataframe and dict of columns
@@ -128,7 +144,9 @@ class ResultSet:
             columns.append(name)
             col_names[name] = col
 
-        return self.get_raw_df().set_axis(columns, axis=1), col_names
+        df = self.get_raw_df()
+        rename_df_columns(df, columns)
+        return df, col_names
 
     # --- tables ---
 
@@ -174,7 +192,7 @@ class ResultSet:
         self._columns.pop(idx)
 
         self._df.drop(idx, axis=1, inplace=True)
-        self._df = self._df.set_axis(range(len(self._df.columns)), axis=1)
+        rename_df_columns(self._df)
 
     @property
     def columns(self):
@@ -226,7 +244,7 @@ class ResultSet:
         if len(df.columns) != len(self._columns):
             raise WrongArgumentError(f'Record length mismatch columns length: {len(df.columns)} != {len(self.columns)}')
 
-        df = df.set_axis(range(len(df.columns)), axis=1)
+        rename_df_columns(df)
 
         if self._df is None:
             self._df = df
@@ -234,8 +252,14 @@ class ResultSet:
             self._df = pd.concat([self._df, df], ignore_index=True)
 
     def add_raw_values(self, values):
-
-        df = pd.DataFrame(values)
+        # If some values are None, the DataFrame could have incorrect integer types, since 'NaN' is technically a float, so it will convert ints to floats automatically.
+        df = pd.DataFrame(values).convert_dtypes(
+            convert_integer=True,
+            convert_floating=True,
+            infer_objects=False,
+            convert_string=False,
+            convert_boolean=False
+        )
         self.add_raw_df(df)
 
     def to_lists(self, json_types=False):
@@ -263,7 +287,7 @@ class ResultSet:
     def get_column_values(self, col_idx):
         # get by column index
         df = self.get_raw_df()
-        return list(df[col_idx])
+        return list(df[df.columns[col_idx]])
 
     def set_column_values(self, col_name, values):
         # values is one value or list of values

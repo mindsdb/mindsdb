@@ -14,9 +14,8 @@ from mindsdb_sql_parser.ast import (
 from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.api.executor.datahub.datanodes.datanode import DataNode
 from mindsdb.api.executor.datahub.classes.tables_row import TablesRow
-from mindsdb.api.executor import SQLQuery
-from mindsdb.api.executor.utilities.sql import query_df
-from mindsdb.interfaces.query_context.context_controller import query_context_controller
+from mindsdb.api.executor.datahub.classes.response import DataHubResponse
+from mindsdb.utilities.partitioning import process_dataframe_in_partitions
 
 
 class ProjectDataNode(DataNode):
@@ -47,11 +46,7 @@ class ProjectDataNode(DataNode):
         result = [TablesRow.from_dict(row) for row in tables]
         return result
 
-    def has_table(self, table_name):
-        tables = self.project.get_tables()
-        return table_name in tables
-
-    def get_table_columns(self, table_name):
+    def get_table_columns(self, table_name, schema_name=None):
         return [
             {'name': name}
             for name in self.project.get_columns(table_name)
@@ -65,9 +60,15 @@ class ProjectDataNode(DataNode):
         if model_metadata['update_status'] == 'available':
             raise Exception(f"model '{model_name}' is obsolete and needs to be updated. Run 'RETRAIN {model_name};'")
         ml_handler = self.integration_controller.get_ml_handler(model_metadata['engine_name'])
+        if params is not None and 'partition_size' in params:
+            def callback(chunk):
+                return ml_handler.predict(model_name, chunk, project_name=self.project.name,
+                                          version=version, params=params)
+            return pd.concat(process_dataframe_in_partitions(df, callback, params['partition_size']))
+
         return ml_handler.predict(model_name, df, project_name=self.project.name, version=version, params=params)
 
-    def query(self, query=None, native_query=None, session=None):
+    def query(self, query=None, native_query=None, session=None) -> DataHubResponse:
         if query is None and native_query is not None:
             query = parse_sql(native_query)
 
@@ -77,7 +78,7 @@ class ProjectDataNode(DataNode):
             if kb_table:
                 # this is the knowledge db
                 kb_table.update_query(query)
-                return pd.DataFrame(), []
+                return DataHubResponse()
 
             raise NotImplementedError(f"Can't update object: {query_table}")
 
@@ -87,7 +88,7 @@ class ProjectDataNode(DataNode):
             if kb_table:
                 # this is the knowledge db
                 kb_table.delete_query(query)
-                return pd.DataFrame(), []
+                return DataHubResponse()
 
             raise NotImplementedError(f"Can't delete object: {query_table}")
 
@@ -107,46 +108,24 @@ class ProjectDataNode(DataNode):
                         new_query.where,
                         project_filter
                     ])
-                df, columns_info = self.information_schema.query(new_query)
-                return df, columns_info
+                return self.information_schema.query(new_query)
             # endregion
 
             # other table from project
 
             if self.project.get_view(query_table):
                 # this is the view
+                df = self.project.query_view(query, session)
 
-                view_meta = self.project.query_view(query)
+                columns_info = [{
+                    'name': k,
+                    'type': v
+                } for k, v in df.dtypes.items()]
 
-                query_context_controller.set_context('view', view_meta['id'])
-
-                try:
-                    sqlquery = SQLQuery(
-                        view_meta['query_ast'],
-                        session=session
-                    )
-                    result = sqlquery.fetch(view='dataframe')
-
-                finally:
-                    query_context_controller.release_context('view', view_meta['id'])
-
-                if result['success'] is False:
-                    raise Exception(f"Cant execute view query: {view_meta['query_ast']}")
-                df = result['result']
-                # remove duplicated columns
-                df = df.loc[:, ~df.columns.duplicated()]
-
-                df = query_df(df, query, session=session)
-
-                columns_info = [
-                    {
-                        'name': k,
-                        'type': v
-                    }
-                    for k, v in df.dtypes.items()
-                ]
-
-                return df, columns_info
+                return DataHubResponse(
+                    data_frame=df,
+                    columns=columns_info
+                )
 
             kb_table = session.kb_controller.get_table(query_table, self.project.id)
             if kb_table:
@@ -160,13 +139,16 @@ class ProjectDataNode(DataNode):
                     for k, v in df.dtypes.items()
                 ]
 
-                return df, columns_info
+                return DataHubResponse(
+                    data_frame=df,
+                    columns=columns_info
+                )
 
             raise EntityNotExistsError(f"Can't select from {query_table} in project")
         else:
             raise NotImplementedError(f"Query not supported {query}")
 
-    def create_table(self, table_name: Identifier, result_set=None, is_replace=False, **kwargs):
+    def create_table(self, table_name: Identifier, result_set=None, is_replace=False, **kwargs) -> DataHubResponse:
         # is_create - create table
         # is_replace - drop table if exists
         # is_create==False and is_replace==False: just insert
@@ -182,5 +164,6 @@ class ProjectDataNode(DataNode):
                 kb_table.clear()
 
             df = result_set.to_df()
-            return kb_table.insert(df)
+            kb_table.insert(df)
+            return DataHubResponse()
         raise NotImplementedError(f"Can't create table {table_name}")

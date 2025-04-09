@@ -1,6 +1,8 @@
 {
     "config_version":"1.4",
-    "storage_dir": "/root/mdb_storage",
+    "paths": {
+        "root": "/root/mdb_storage"
+    },
     "debug": false,
     "integrations": {},
     "api": {
@@ -20,6 +22,10 @@
             "host": "0.0.0.0",
             "port": "47336",
             "database": "mindsdb"
+        },
+        "mcp": {
+            "host": "0.0.0.0",
+            "port": "47337"
         }
     }
 }

@@ -10,12 +10,14 @@ from mindsdb.integrations.libs.llm.config import (
     AnthropicConfig,
     AnyscaleConfig,
     BaseLLMConfig,
+    GoogleConfig,
     LiteLLMConfig,
     OllamaConfig,
     OpenAIConfig,
     NvidiaNIMConfig,
     MindsdbConfig,
 )
+from mindsdb.utilities.config import config
 from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
 
 
@@ -29,6 +31,8 @@ DEFAULT_ANTHROPIC_MODEL = "claude-3-haiku-20240307"
 
 DEFAULT_ANYSCALE_MODEL = "meta-llama/Llama-2-7b-chat-hf"
 DEFAULT_ANYSCALE_BASE_URL = "https://api.endpoints.anyscale.com/v1"
+
+DEFAULT_GOOGLE_MODEL = "gemini-2.5-pro-preview-03-25"
 
 DEFAULT_LITELLM_MODEL = "gpt-3.5-turbo"
 DEFAULT_LITELLM_PROVIDER = "openai"
@@ -115,6 +119,11 @@ def get_llm_config(provider: str, args: Dict) -> BaseLLMConfig:
     """
     temperature = min(1.0, max(0.0, args.get("temperature", 0.0)))
     if provider == "openai":
+
+        if any(x in args.get("model_name", "") for x in ['o1', 'o3']):
+            # for o1 and 03, 'temperature' does not support 0.0 with this model. Only the default (1) value is supported
+            temperature = 1
+
         return OpenAIConfig(
             model_name=args.get("model_name", DEFAULT_OPENAI_MODEL),
             temperature=temperature,
@@ -206,7 +215,7 @@ def get_llm_config(provider: str, args: Dict) -> BaseLLMConfig:
     if provider == "mindsdb":
         return MindsdbConfig(
             model_name=args["model_name"],
-            project_name=args.get("project_name", "mindsdb"),
+            project_name=args.get("project_name", config.get("default_project")),
         )
     if provider == "vllm":
         return OpenAIConfig(
@@ -218,6 +227,15 @@ def get_llm_config(provider: str, args: Dict) -> BaseLLMConfig:
             openai_api_key=args["api_keys"].get("vllm", "EMPTY`"),
             openai_organization=args.get("api_organization", None),
             request_timeout=args.get("request_timeout", None),
+        )
+    if provider == "google":
+        return GoogleConfig(
+            model=args.get("model_name", DEFAULT_GOOGLE_MODEL),
+            temperature=temperature,
+            top_p=args.get("top_p", None),
+            top_k=args.get("top_k", None),
+            max_output_tokens=args.get("max_tokens", None),
+            google_api_key=args["api_keys"].get("google", None),
         )
 
     raise ValueError(f"Provider {provider} is not supported.")

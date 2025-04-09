@@ -42,7 +42,7 @@ class TestHTTP(HTTPHelperMixin):
         resp = self.sql_via_http('show databases', RESPONSE_TYPE.TABLE)
         return [x[0] for x in resp['data']]
 
-    @pytest.mark.parametrize("util_uri", ["util/ping", "util/ping_native", "config/vars"])
+    @pytest.mark.parametrize("util_uri", ["util/ping", "util/ping_native"])
     def test_utils(self, util_uri):
         """
         Call utilities ping endpoint
@@ -88,7 +88,7 @@ class TestHTTP(HTTPHelperMixin):
         assert response.json()['auth']['http_auth_enabled'] is True
 
         response = session.get(f'{HTTP_API_ROOT}/tree/')
-        assert response.status_code == 403
+        assert response.status_code == 401
 
         response = session.post(f'{HTTP_API_ROOT}/login', json={
             'username': 'mindsdb',
@@ -103,7 +103,7 @@ class TestHTTP(HTTPHelperMixin):
         assert response.status_code == 200
 
         response = session.get(f'{HTTP_API_ROOT}/tree/')
-        assert response.status_code == 403
+        assert response.status_code == 401
 
         response = session.post(f'{HTTP_API_ROOT}/login', json={
             'username': 'mindsdb',

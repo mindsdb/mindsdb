@@ -46,40 +46,40 @@ class Test(BaseExecutorMockPredictor):
         assert len(ret.data) == 2
 
         ret = self.execute("DESCRIBE test_predictor")
-        assert len(ret.records) == 1
-        assert int(ret.records[0]['VERSION']) == 1
-        assert ret.records[0]['PROJECT'] == 'mindsdb'
+        assert len(ret.data.records) == 1
+        assert int(ret.data.records[0]['VERSION']) == 1
+        assert ret.data.records[0]['PROJECT'] == 'mindsdb'
 
         ret = self.execute("DESCRIBE proj.test_predictor")
-        assert len(ret.records) == 1
-        assert int(ret.records[0]['VERSION']) == 2
-        assert ret.records[0]['PROJECT'] == 'proj'
+        assert len(ret.data.records) == 1
+        assert int(ret.data.records[0]['VERSION']) == 2
+        assert ret.data.records[0]['PROJECT'] == 'proj'
 
         ret = self.execute("DESCRIBE proj.test_predictor.1")
-        assert int(ret.records[0]['VERSION']) == 1
-        assert ret.records[0]['PROJECT'] == 'proj'
+        assert int(ret.data.records[0]['VERSION']) == 1
+        assert ret.data.records[0]['PROJECT'] == 'proj'
 
         ret = self.execute("DESCRIBE proj.test_predictor.2")
-        assert int(ret.records[0]['VERSION']) == 2
-        assert ret.records[0]['PROJECT'] == 'proj'
+        assert int(ret.data.records[0]['VERSION']) == 2
+        assert ret.data.records[0]['PROJECT'] == 'proj'
 
         ret = self.execute("DESCRIBE proj.test_predictor.`1`.info")
-        assert 'type' in ret.records[0]
-        assert int(ret.records[0]['version']) == 1
+        assert 'type' in ret.data.records[0]
+        assert int(ret.data.records[0]['version']) == 1
 
         ret = self.execute("DESCRIBE proj.test_predictor.`2`.info")
-        assert 'type' in ret.records[0]
-        assert int(ret.records[0]['version']) == 2
+        assert 'type' in ret.data.records[0]
+        assert int(ret.data.records[0]['version']) == 2
 
         ret = self.execute("DESCRIBE proj.test_predictor.`1`.info.`0-1`")
-        assert 'attribute' in ret.records[0]
-        assert int(ret.records[0]['version']) == 1
-        assert ret.records[0]['attribute'] == 'info.0-1'
+        assert 'attribute' in ret.data.records[0]
+        assert int(ret.data.records[0]['version']) == 1
+        assert ret.data.records[0]['attribute'] == 'info.0-1'
 
         ret = self.execute("DESCRIBE proj.test_predictor.`2`.info.`1-2`")
-        assert 'attribute' in ret.records[0]
-        assert int(ret.records[0]['version']) == 2
-        assert ret.records[0]['attribute'] == 'info.1-2'
+        assert 'attribute' in ret.data.records[0]
+        assert int(ret.data.records[0]['version']) == 2
+        assert ret.data.records[0]['attribute'] == 'info.1-2'
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_integration_select(self, mock_handler):
@@ -219,14 +219,17 @@ class Test(BaseExecutorMockPredictor):
         # one key with max value of a
         assert len(data) == 2
         #  first row
-        assert data[0]['a'] == 3
-        assert data[0]['t'] == dt.datetime(2020, 1, 3)
-        assert data[0]['g'] == 'x'
-
-        # second
-        assert data[1]['a'] == 13
-        assert data[1]['t'] == dt.datetime(2021, 1, 3)
-        assert data[1]['g'] == 'y'
+        groups = [
+            ['x', 3, dt.datetime(2020, 1, 3)],
+            ['y', 13, dt.datetime(2021, 1, 3)],
+        ]
+        if data[0]['g'] == 'y':
+            # other sort order after duckdb join
+            groups.reverse()
+        for i, (group, val, date) in enumerate(groups):
+            assert data[i]['a'] == val
+            assert data[i]['t'] == date
+            assert data[i]['g'] == group
 
         # > latest ______________________
         ret = self.execute("""
@@ -548,6 +551,20 @@ class Test(BaseExecutorMockPredictor):
         assert ret_df.shape[0] == 3
         assert ret_df.t.min() == 2024.
 
+        # > latest with CTE
+        ret = self.execute("""
+            WITH trainingdata AS (
+                select a.t, a.* from files.tasks a
+            )
+            select t.t as t0, p.* from trainingdata t
+            join mindsdb.task_model p
+            where t.t > latest and t.g = 'x'
+        """)
+
+        ret_df = self.ret_to_df(ret)
+        assert ret_df.shape[0] == 3
+        assert ret_df.t.min() == 2024.
+
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_drop_database(self, mock_handler):
         from mindsdb.utilities.exception import EntityNotExistsError
@@ -609,19 +626,18 @@ class TestComplexQueries(BaseExecutorMockPredictor):
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_union(self, mock_handler):
-
         self.set_handler(mock_handler, name='pg', tables={'tasks': self.df})
 
         # --- use predictor ---
         self.set_predictor(self.task_predictor)
         sql = '''
-             SELECT a as a1, b as target
-              FROM pg.tasks
-           UNION {union}
-             SELECT model.a as a2, model.p as target2
-              FROM pg.tasks as t
-             JOIN mindsdb.task_model as model
-             WHERE t.a=1
+            SELECT a as a1, b as target
+            FROM pg.tasks
+            UNION {union}
+            SELECT model.a as a2, model.p as target2
+            FROM pg.tasks as t
+            JOIN mindsdb.task_model as model
+            WHERE t.a=1
         '''
         # union all
         ret = self.execute(sql.format(union='ALL'))
@@ -697,11 +713,11 @@ class TestComplexQueries(BaseExecutorMockPredictor):
         self.set_handler(mock_handler, name='pg', tables={})
 
         sql = '''
-             delete from
-                 pg.table2
-             where
-                 b1 = 'b'
-         '''
+            delete from
+                pg.table2
+            where
+                b1 = 'b'
+        '''
 
         self.execute(sql)
 
@@ -760,14 +776,14 @@ class TestComplexQueries(BaseExecutorMockPredictor):
 
         self.set_predictor(self.task_predictor)
         sql = '''
-               insert into pg.table1
-               (
-                       SELECT model.a as a, model.b as b, model.p as c
-                         FROM pg.tasks as t
-                        JOIN mindsdb.task_model as model
-                        WHERE t.a=1
-              )
-           '''
+            insert into pg.table1
+            (
+                SELECT model.a as a, model.b as b, model.p as c
+                FROM pg.tasks as t
+                JOIN mindsdb.task_model as model
+                WHERE t.a=1
+            )
+        '''
 
         self.execute(sql)
 
@@ -787,6 +803,26 @@ class TestComplexQueries(BaseExecutorMockPredictor):
         assert to_str(calls[1][0][0]) == "INSERT INTO table1 (a, b, c) VALUES (1, 'aaa', 'ccc'), (1, 'ccc', 'ccc')"
 
         assert len(calls) == 2
+
+    @patch('mindsdb.integrations.handlers.mysql_handler.Handler')
+    def test_affected_rows(self, mock_handler):
+        """Test that the `affected_rows` are returned correctly for Delete/Insert/Update
+        """
+        self.set_handler(mock_handler, name='pg', tables={'tasks': self.df}, engine='mysql')
+
+        del mock_handler().insert
+
+        sql = 'delete from pg.tasks where a = 2'
+        resp = self.execute(sql)
+        assert resp.affected_rows == 1
+
+        sql = "insert into pg.tasks (a) values (3), (4)"
+        resp = self.execute(sql)
+        assert resp.affected_rows == 2
+
+        sql = "update pg.tasks set a = 0"
+        resp = self.execute(sql)
+        assert resp.affected_rows == 3
 
     # @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     # def test_union_type_mismatch(self, mock_handler):
@@ -1030,7 +1066,7 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
         # input = one row whit a==2
         data_in = self.mock_predict.call_args[0][1]
         assert len(data_in) == 1
-        assert data_in.iloc[0]['a'] == 2
+        assert data_in._predict_df.iloc[0]['a'] == 2
 
         # check prediction
         assert ret.data.to_lists()[0][0] == predicted_value
@@ -1090,7 +1126,7 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
         assert mock_handler().native_query.call_args[0][0] == 'select * from tasks'
 
         # input to predictor all 9 rows
-        when_data = self.mock_predict.call_args[0][1]
+        when_data = self.mock_predict.call_args[0][1]._predict_df
         assert len(when_data) == 9
 
         # all group values in input
@@ -1439,13 +1475,13 @@ class TestIfExistsIfNotExists(BaseExecutorMockPredictor):
         ret = self.execute("""
             select * from information_schema.ml_engines where name = 'ml_test'
         """)
-        connection_data = json.loads(ret.records[0]['CONNECTION_DATA'])
+        connection_data = json.loads(ret.data.records[0]['CONNECTION_DATA'])
         assert connection_data['api_key'] == HIDDEN_PASSWORD
 
         ret = self.execute("""
             select * from information_schema.databases where name = 'pg';
         """)
-        connection_data = json.loads(ret.records[0]['CONNECTION_DATA'])
+        connection_data = json.loads(ret.data.records[0]['CONNECTION_DATA'])
         assert connection_data['password'] == HIDDEN_PASSWORD
 
         self.execute("""
@@ -1458,7 +1494,7 @@ class TestIfExistsIfNotExists(BaseExecutorMockPredictor):
         ret = self.execute("""
             show models where name = 'test_predictor';
         """)
-        training_options = json.loads(ret.records[0]['TRAINING_OPTIONS'])
+        training_options = json.loads(ret.data.records[0]['TRAINING_OPTIONS'])
         assert training_options['using']['api_key'] == HIDDEN_PASSWORD
         # endregion
 
@@ -1469,18 +1505,18 @@ class TestIfExistsIfNotExists(BaseExecutorMockPredictor):
         ret = self.execute("""
             select * from information_schema.ml_engines where name = 'ml_test'
         """)
-        connection_data = json.loads(ret.records[0]['CONNECTION_DATA'])
+        connection_data = json.loads(ret.data.records[0]['CONNECTION_DATA'])
         assert connection_data['api_key'] != HIDDEN_PASSWORD
 
         ret = self.execute("""
             select * from information_schema.databases where name = 'pg';
         """)
-        connection_data = json.loads(ret.records[0]['CONNECTION_DATA'])
+        connection_data = json.loads(ret.data.records[0]['CONNECTION_DATA'])
         assert connection_data['password'] != HIDDEN_PASSWORD
 
         ret = self.execute("""
             show models where name = 'test_predictor';
         """)
-        training_options = json.loads(ret.records[0]['TRAINING_OPTIONS'])
+        training_options = json.loads(ret.data.records[0]['TRAINING_OPTIONS'])
         assert training_options['using']['api_key'] != HIDDEN_PASSWORD
         # endregion

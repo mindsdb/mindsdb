@@ -17,7 +17,8 @@ from mindsdb.api.executor.planner.steps import (
     MapReduceStep, MultipleSteps,
     UpdateToTable, LimitOffsetStep,
     FetchDataframeStep,
-    ApplyTimeseriesPredictorStep
+    ApplyTimeseriesPredictorStep,
+    SubSelectStep
 )
 
 
@@ -1806,6 +1807,75 @@ class TestJoinTimeseriesPredictor:
                     query=Join(
                         left=Identifier('result_1'),
                         right=Identifier('result_2'),
+                        join_type=JoinType.JOIN
+                    )
+                )
+            ]
+        )
+
+        assert len(plan.steps) == len(expected_plan.steps)
+        assert plan.steps == expected_plan.steps
+
+    def test_ts_with_cte(self):
+        query = parse_sql(
+            '''
+            WITH tab AS (
+                select * from int1.tbl1 a
+            )
+            SELECT *
+            FROM tab as t
+            JOIN pred as m
+            WHERE t.date > LATEST
+            '''
+        )
+
+        plan = plan_query(
+            query,
+            integrations=['int1'],
+            default_namespace='proj',
+            predictor_metadata=[{
+                'name': 'pred',
+                'integration_name': 'proj',
+                'timeseries': True,
+                'window': 20, 'horizon': 10, 'order_by_column': 'date', 'group_by_columns': ['vendor_id']
+            }]
+        )
+
+        sub_select_query = parse_sql("SELECT * from t WHERE date IS NOT NULL AND vendor_id = '$var[vendor_id]' ORDER BY date DESC LIMIT 20")
+        sub_select_query.from_table = None
+
+        expected_plan = QueryPlan(
+            steps=[
+                FetchDataframeStep(
+                    integration='int1',
+                    query=parse_sql('select * from tbl1 a')
+                ),
+                SubSelectStep(
+                    dataframe=Result(0),
+                    query=parse_sql("select distinct vendor_id"),
+                    table_name='t'
+                ),
+                MapReduceStep(
+                    values=Result(1),
+                    reduce='union',
+                    step=SubSelectStep(
+                        dataframe=Result(0),
+                        query=sub_select_query,
+                        table_name='t'
+                    ),
+                ),
+                ApplyTimeseriesPredictorStep(
+                    namespace='proj',
+                    predictor=Identifier('pred', alias=Identifier('m')),
+                    dataframe=Result(2),
+                    output_time_filter=BinaryOperation('>', args=[Identifier('date'), Latest()]),
+                ),
+                JoinStep(
+                    left=Result(2),
+                    right=Result(3),
+                    query=Join(
+                        left=Identifier('result_2'),
+                        right=Identifier('result_3'),
                         join_type=JoinType.JOIN
                     )
                 )

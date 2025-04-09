@@ -4,7 +4,7 @@
 
 <div align="center">
 	<a href="https://pypi.org/project/MindsDB/" target="_blank"><img src="https://badge.fury.io/py/MindsDB.svg" alt="MindsDB Release"></a>
-	<a href="https://www.python.org/downloads/" target="_blank"><img src="https://img.shields.io/badge/python-3.9.x%7C%203.10.x%7C%203.11.x-brightgreen.svg" alt="Python supported"></a>
+	<a href="https://www.python.org/downloads/" target="_blank"><img src="https://img.shields.io/badge/python-3.10.x%7C%203.11.x-brightgreen.svg" alt="Python supported"></a>
 	<a href="https://ossrank.com/p/630"><img src="https://shields.io/endpoint?url=https://ossrank.com/shield/630"></a>
 	<img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/Mindsdb">
 	<a href="https://hub.docker.com/u/mindsdb" target="_blank"><img src="https://img.shields.io/docker/pulls/mindsdb/mindsdb" alt="Docker pulls"></a>
@@ -13,7 +13,7 @@
   <br />
 
   <a href="https://github.com/mindsdb/mindsdb">
-    <img src="/docs/assets/mindsdb_logo.jpg" alt="MindsDB" width="300">
+    <img src="/docs/assets/mindsdb_logo.png" alt="MindsDB" width="300">
   </a>
 
   <p align="center">
@@ -22,94 +22,119 @@
     ·
     <a href="https://docs.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Docs</a>
     ·
+    <a href="https://mdb.ai/register">Demo</a>
+    ·
     <a href="https://mindsdb.com/joincommunity?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Community Slack</a>
   </p>
 </div>
 
 ----------------------------------------
 
-[MindsDB](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) is the world’s most widely used platform for building AI that can learn from and answer questions across federated data.
 
-[![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=The%20platform%20for%20building%20AI,%20from%20enterprise%20data&url=https://github.com/mindsdb/mindsdb&via=mindsdb&hashtags=ai,opensource)
+MindsDB is an AI data solution that enables humans, AI, agents, and applications to query data in natural language and SQL, and get highly accurate answers across disparate data sources and types.
 
-## 📖 About Us
+![image](https://github.com/user-attachments/assets/03b779e8-7008-485e-989a-e8733cb94e4c)
 
-MindsDB is a federated query engine designed for AI agents and applications that need to answer questions from one or multiple [data sources](https://docs.mindsdb.com/integrations/data-overview?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo), including both structured and unstructured data..
+A federated query engine that tidies up your data-sprawl chaos while meticulously answering every single question you throw at it. 
 
-## 🚀 Get Started
+[MindsDB has an MCP server built in](https://docs.mindsdb.com/mcp/overview) that enables your MCP applications to connect, unify and respond to questions over large-scale federated data—spanning databases, data warehouses, and SaaS applications.
 
-* **[Install MindsDB](https://docs.mindsdb.com/setup/self-hosted/docker-desktop?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo)** using [Docker](https://docs.mindsdb.com/setup/self-hosted/docker?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
-* **[Connect Your Data](https://docs.mindsdb.com/mindsdb_sql/sql/create/database)** — Connect and query hundreds of different [data sources](https://docs.mindsdb.com/integrations/data-overview?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
-* **[Prepare Your Data](https://docs.mindsdb.com/use-cases/data_enrichment/overview)** — Prepare, [organize](https://docs.mindsdb.com/mindsdb_sql/sql/create/view), and [automate](https://docs.mindsdb.com/mindsdb_sql/sql/create/jobs) data transformations using AI and ML to fit your needs.
+## Minds [Demo](https://mdb.ai/register)
+Play with [Minds demo](https://mdb.ai/register), and see the power of MindsDB at answering questions from structured to unstructured data, whether it's scattered across SaaS applications, databases, or... hibernating in data warehouses like that $100 bill in your tuxedo pocket from prom night, lost, waiting to be discovered.
+ 
+## Install MindsDB Server 
 
-## 🎯 Use Cases
+MindsDB is an open-source server that can be deployed anywhere - from your laptop to the cloud, and everywhere in between. And yes, you can customize it to your heart's content.
 
-After [connecting](https://docs.mindsdb.com/mindsdb_sql/sql/create/database) and [preparing](https://docs.mindsdb.com/use-cases/data_enrichment/overview) your data, you can leverage MindsDB to implement the following use cases:
+  * [Using Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop). This is the fastest and recommended way to get started and have it all running.
+  * [Using Docker](https://docs.mindsdb.com/setup/self-hosted/docker). This is also simple, but gives you more flexibility on how to further customize your server.
+  * [Using PyPI](https://docs.mindsdb.com/contribute/install). This option enables you to contribute to MindsDB.
 
-| 🎯 Use Case                 | ⚙️ Description | Python SDK | SQL |
-|---------------------------|-----------|---------| ----- |
-| [RAG](https://docs.mindsdb.com/agents/knowledge-bases?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo)  | Comprehensive RAG that can be populated from numerous data sources | [(Python)](https://docs.mindsdb.com/sdks/python/agents_knowledge_bases) | [(SQL)](https://docs.mindsdb.com/mindsdb_sql/agents/knowledge-bases) |
-| [Agents](https://docs.mindsdb.com/agents/agent?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo)  | Equip agents to answer questions over structured and unstructured data in MindsDB | [(Python)](https://docs.mindsdb.com/sdks/python/agents) | [(SQL)](https://docs.mindsdb.com/mindsdb_sql/agents/agent) |
-| [Automation](https://docs.mindsdb.com/mindsdb_sql/sql/create/jobs) | Automate AI-data workflows using Jobs | [(Python)](https://docs.mindsdb.com/sdks/python/create_job) | [(SQL)](https://docs.mindsdb.com/mindsdb_sql/sql/create/jobs) |
+## Connect Your Data
 
-## 💡 Example
+You can connect to hundreds of [data sources (learn more)](https://docs.mindsdb.com/integrations/data-overview). This is just an example of a Postgres database.
 
-### Connecting AI Agents to structured and unstructired data
-
-
-A common use case involves connecting agents to data. The following example shows how to connect an AI agent to a database so it can perform search over structured data:
-
-
-First we connect the datasource, in this case we connect a postgres database (you can do this via the SQL editor or SDK)
 ```sql
--- Step 1: Connect a data source to MindsDB
+-- Connect to demo postgres DB
 CREATE DATABASE demo_postgres_db
 WITH ENGINE = "postgres",
 PARAMETERS = {
-    "user": "demo_user",
-    "password": "demo_password",
-    "host": "samples.mindsdb.com",
-    "port": "5432",
-    "database": "demo",
-    "schema": "demo_data"
+  "user": "demo_user",
+  "password": "demo_password",
+  "host": "samples.mindsdb.com",
+  "port": "5432",
+  "database": "demo",
+  "schema": "demo_data"
 };
-
--- See some of the data in there
-SELECT * FROM demo_postgres_db.car_sales;
-
 ```
 
-Now you can create an egent that can answer questions over unstructued information in this database (let's use the Python SDK)
+Once you've connected your data sources, you can [combine](https://docs.mindsdb.com/mindsdb_sql/sql/api/join-on), [slice it, dice it](https://docs.mindsdb.com/mindsdb_sql/sql/api/select), and [transform](https://docs.mindsdb.com/use-cases/data_enrichment/overview) it however your heart desires using good ol' standard SQL [(learn more)](https://docs.mindsdb.com/mindsdb_sql/overview). 
+
+After you've whipped your data into shape, it's time to build AI that actually learns!
+
+## Build AI Knowledge
+
+Our Knowledge Bases are state-of-the-art autonomous RAG systems that can digest data from any source MindsDB supports. Whether your data is structured and neater than a Swiss watch factory or unstructured and messy as a teenager's bedroom, our Knowledge Base engine will figure out how to find the relevant information. 
+
+**In this example** we will create a knowledge base that knows everything about amazon reviews. 
+
+```sql
+-- first create a knowledge base
+CREATE KNOWLEDGE_BASE mindsdb.reviews_kb;
+
+-- now insert everything from the amazon reviews table into it, so it can learn it
+INSERT INTO mindsdb.reviews_kb (
+  SELECT review as content FROM demo_pg_db.amazon_reviews
+);
+
+-- check the status of your loads here
+SELECT * FROM information_schema.knowledge_bases;
+
+-- query the content of the knowledge base
+SELECT * FROM mindsdb.reviews_kb;
+```
+
+For the tinkerers and optimization enthusiasts out there, you can dive as deep as you want. [(Learn more about knowledge Bases)](https://docs.mindsdb.com/mindsdb_sql/agents/knowledge-bases)
+
++ Want to [hand-pick your embedding model? Go for it](https://docs.mindsdb.com/mindsdb_sql/agents/knowledge-bases#knowledge-base-with-openai-embedding-model)! 
++ Have strong [opinions about vector databases? We're here for it!](https://docs.mindsdb.com/mindsdb_sql/agents/knowledge-bases#knowledge-base-with-custom-vector-store). 
+
+But if you'd rather spend your time on other things (like finally building that billion-dollar AI App), that's perfectly fine too. By default, it's all handled automatically - you don't need to worry about the nitty-gritty details like data embedding, chunking, vector optimization, etc.
+
+## Search 
+
+Now that your knowledge base is loaded and ready. Let's hunt for some juicy info!
+
+#### Via SQL
+
+```sql
+-- Find the reviews that about Iphone in beast of lights
+SELECT *  FROM mindsdb.reviews_kb
+WHERE content LIKE 'what are the best kindle reviews'
+LIMIT 10;
+```
+
+#### Via Python SDK
+
+Install MindsDB SDK
+
+```shell
+pip install mindsdb_sdk
+```
+
+You can call this AI knowledge base from your app with the following code:
 
 ```python
 import mindsdb_sdk
 
-# connects to the default port (47334) on localhost 
-server = mindsdb_sdk.connect()
 
-# create an agent (lets create one that can answer questions over car_sales table
-agent = server.agents.create('my_agent')
-agent.add_database(
-    database='demo_postgres_db',
-    tables=['car_sales'], # alternatively, all tables will be taken into account if none specified []
-    description='The table "car_sales" contains car sales data')
+# connects to the specified host and port
+server = mindsdb_sdk.connect('http://127.0.0.1:47334')
 
-# send questions to the agent
-agent = agents.get('my_agent')
-answer = agent.completion([{'question': 'What cars do we have with normal transmission and gas?'}])
-print(answer.content)
+my_kb = server.knowledge_bases.get('mindsdb.reviews_kb');
+df = my_kb.find('what are the best kindle reviews').fetch()
+
 ```
-
-You add more data to the agent, lets add some unstructured data:
-
-```python
-agent.add_file('./cars_info.pdf', 'Details about the cars')
-answer = agent.completion([{'question': 'What cars do we have with normal transmission and gas? also include valuable info for a buyer of these cars?'}])
-print(answer.content)
-```
-
-
-[Agents are also accessible via API endpoints](https://docs.mindsdb.com/rest/agents/agent?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
 
 ## 🤝 Contribute
 
@@ -145,4 +170,4 @@ Generated with [contributors-img](https://contributors-img.web.app).
 
 ## 🔔 Subscribe for Updates
 
-Join our [Slack community](https://mindsdb.com/j
+Join our [Slack community](https://mindsdb.com/joincommunity)

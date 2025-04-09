@@ -7,6 +7,7 @@ from mindsdb_sql_parser import ast
 from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.integrations.utilities.query_traversal import query_traversal
+from mindsdb.utilities.config import config
 
 
 class FilterOperator(Enum):
@@ -67,13 +68,14 @@ class SortColumn:
     def __init__(self, column: str, ascending: bool = True):
         self.column = column
         self.ascending = ascending
+        self.applied = False
 
 
 def make_sql_session():
     from mindsdb.api.executor.controllers.session_controller import SessionController
 
     sql_session = SessionController()
-    sql_session.database = 'mindsdb'
+    sql_session.database = config.get('default_project')
     return sql_session
 
 
@@ -177,7 +179,7 @@ def project_dataframe(df, targets, table_columns):
 
     # adapt column names to projection
     if len(df_col_rename) > 0:
-        df = df.rename(columns=df_col_rename)
+        df.rename(columns=df_col_rename, inplace=True)
     return df
 
 

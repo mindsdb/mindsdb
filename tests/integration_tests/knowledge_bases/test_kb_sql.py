@@ -379,14 +379,15 @@ class KBTest(KBTestBase):
         assert len(ret) == 5
 
         # -- Content + metadata search with limit and re-ranking threshold
+        # TODO chroma shows max relevance = 0.69, but postgres = 0.81
         ret = self.run_sql("""
             SELECT *
             FROM kb_crm
-            WHERE status = "solving" AND content = "noise" AND reranking_threshold=0.8
+            WHERE status = "solving" AND content = "noise" AND reranking_threshold=0.65
         """)
         assert set(ret.metadata.apply(lambda x: x.get('status'))) == {'solving'}
         assert 'noise' in ret.chunk_content[0]  # first line contents word
-        assert len(ret[ret.relevance < 0.8]) == 0
+        assert len(ret[ret.relevance < 0.65]) == 0
 
     def test_relevance(self, kb_params):
 

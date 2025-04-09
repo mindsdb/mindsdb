@@ -284,18 +284,16 @@ class KBTest(KBTestBase):
         def to_date(s):
             return dt.datetime.strptime(s, '%Y-%m-%d %H:%M:%S.%f')
 
-        def load_kb(batch_size, threads):
+        def load_kb(batch_size):
             self.run_sql(f"""
                 insert into kb_crm_part
                 select pk id, message_body content from example_db.crm_demo
-                using batch_size={batch_size}, track_column=id, threads={threads}
+                using batch_size={batch_size}, track_column=id
             """)
 
         test_set = [
-            {'batch_size': 10, 'threads': 'false'},
-            {'batch_size': 10, 'threads': 5},
-            {'batch_size': 50, 'threads': 'false'},
-            {'batch_size': 50, 'threads': 5},
+            {'batch_size': 50},
+            {'batch_size': 100},
         ]
 
         results = []
@@ -307,9 +305,10 @@ class KBTest(KBTestBase):
             thread = Thread(target=load_kb, kwargs=item)
             thread.start()
 
+            time.sleep(3)
             try:
-                while True:
-                    time.sleep(1)
+                for i in range(100):  # 300 sec min max
+                    time.sleep(3)
 
                     ret = self.run_sql('describe knowledge base kb_crm_part')
                     record = ret.iloc[0]

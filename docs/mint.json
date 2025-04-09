@@ -1082,6 +1082,12 @@
           ]
         },
         {
+          "group": "Embedding Models",
+          "pages": [
+            "integrations/ai-engines/langchain_embedding"
+          ]
+        },
+        {
           "group": "Bring Your Own Models",
           "pages": [
             "integrations/ai-engines/byom",

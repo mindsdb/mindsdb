@@ -66,9 +66,8 @@ class KBTestBase:
 
         name = f'test_emb_model_{engine}'
         try:
-            self.con.models.get(name)
-            return name
-        except AttributeError:
+            self.con.models.drop(name)
+        except Exception:
             ...
 
         if engine == 'openai':

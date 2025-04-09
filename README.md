@@ -31,7 +31,7 @@
 ----------------------------------------
 
 
-MindsDB is a solution that enables humans, AI, agents, and applications to query data in natural language and SQL and get highly accurate answers across disparate data sources and types.
+MindsDB is an AI data solution that enables humans, AI, agents, and applications to query data in natural language and SQL, and get highly accurate answers across disparate data sources and types.
 
 ![image](https://github.com/user-attachments/assets/03b779e8-7008-485e-989a-e8733cb94e4c)
 

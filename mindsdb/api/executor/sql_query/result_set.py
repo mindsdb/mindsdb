@@ -50,7 +50,14 @@ def rename_df_columns(df: pd.DataFrame, names: Optional[List] = None) -> None:
 
 
 class ResultSet:
-    def __init__(self, columns=None, values: List[List] = None, df: pd.DataFrame = None, affected_rows: int = None):
+    def __init__(
+        self,
+        columns=None,
+        values: List[List] = None,
+        df: pd.DataFrame = None,
+        affected_rows: int = None,
+        is_prediction: bool = False
+    ):
         """
         Args:
             columns: list of Columns
@@ -70,7 +77,7 @@ class ResultSet:
 
         self.affected_rows = affected_rows
 
-        self.is_prediction = False
+        self.is_prediction = is_prediction
 
     def __repr__(self):
         col_names = ', '.join([col.name for col in self._columns])
@@ -89,8 +96,9 @@ class ResultSet:
 
     # --- converters ---
 
-    def from_df(self, df, database=None, table_name=None, table_alias=None):
-        self._columns = [
+    @classmethod
+    def from_df(cls, df, database=None, table_name=None, table_alias=None, is_prediction: bool = False):
+        columns = [
             Column(
                 name=column_name,
                 table_name=table_name,
@@ -100,11 +108,12 @@ class ResultSet:
             ) for column_name, column_dtype
             in zip(df.columns, df.dtypes)
         ]
-
         rename_df_columns(df)
-        self._df = df
-
-        return self
+        return cls(
+            df=df,
+            columns=columns,
+            is_prediction=is_prediction
+        )
 
     def from_df_cols(self, df, col_names, strict=True):
         # find column by alias

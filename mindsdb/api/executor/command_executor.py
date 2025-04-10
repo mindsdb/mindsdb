@@ -336,7 +336,7 @@ class ExecuteCommands:
                 df2 = query_df(df, new_statement)
 
                 return ExecuteAnswer(
-                    data=ResultSet().from_df(df2, table_name="session_variables")
+                    data=ResultSet.from_df(df2, table_name="session_variables")
                 )
             elif sql_category == "search_path":
                 return ExecuteAnswer(
@@ -896,7 +896,7 @@ class ExecuteCommands:
         )
 
         return ExecuteAnswer(
-            data=ResultSet().from_df(df, table_name="")
+            data=ResultSet.from_df(df, table_name="")
         )
 
     def _get_model_info(self, identifier, except_absent=True, database_name=None):
@@ -992,7 +992,7 @@ class ExecuteCommands:
         df = self.session.model_controller.retrain_model(statement, ml_handler)
 
         return ExecuteAnswer(
-            data=ResultSet().from_df(df)
+            data=ResultSet.from_df(df)
         )
 
     @profiler.profile()
@@ -1022,7 +1022,7 @@ class ExecuteCommands:
         df = self.session.model_controller.finetune_model(statement, ml_handler)
 
         return ExecuteAnswer(
-            data=ResultSet().from_df(df)
+            data=ResultSet.from_df(df)
         )
 
     def _create_integration(self, name: str, engine: str, connection_args: dict):
@@ -1532,7 +1532,7 @@ class ExecuteCommands:
         try:
             df = self.session.model_controller.create_model(statement, ml_handler)
 
-            return ExecuteAnswer(data=ResultSet().from_df(df))
+            return ExecuteAnswer(data=ResultSet.from_df(df))
         except EntityExistsError:
             if getattr(statement, "if_not_exists", False) is True:
                 return ExecuteAnswer()

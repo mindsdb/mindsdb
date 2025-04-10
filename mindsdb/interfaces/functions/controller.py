@@ -1,6 +1,7 @@
 import os
 
 from duckdb.typing import BIGINT, DOUBLE, VARCHAR, BLOB, BOOLEAN
+from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.interfaces.functions.to_markdown import ToMarkdown
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
 
@@ -163,7 +164,14 @@ class FunctionController(BYOMFunctionsController):
         if name in self.callbacks:
             return self.callbacks[name]
 
-        def callback(file_path_or_url, use_llm):
+        def callback(file_path_or_url_or_name, use_llm):
+            file_controller = FileController()
+            try:
+                mindsdb_file_path = file_controller.get_file_path(file_path_or_url_or_name)
+                file_path_or_url = mindsdb_file_path
+            except FileNotFoundError:
+                pass
+
             chat_model_params = self._parse_chat_model_params()
 
             llm_client = None

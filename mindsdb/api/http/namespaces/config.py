@@ -4,7 +4,7 @@ import tempfile
 from pathlib import Path
 from http import HTTPStatus
 
-from flask import request
+from flask import request, make_response
 from flask_restx import Resource
 from flask import current_app as ca
 
@@ -27,37 +27,81 @@ class GetConfig(Resource):
     @api_endpoint_metrics('GET', '/config')
     def get(self):
         config = Config()
+        # Print all keys and values of config
+        for key, value in config.get_all().items():
+            logger.info(f"Config key: {key}, value: {value}")
+        headers = {
+            'X-Config-Version': '1.0',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+        }
         return {
             'auth': {
                 'http_auth_enabled': config['auth']['http_auth_enabled']
-            }
-        }
+            },
+            'config': config.get_all()
+        }, 200, headers
 
     @ns_conf.doc('put_config')
     @api_endpoint_metrics('PUT', '/config')
     def put(self):
         data = request.json
+        
+        # Define CORS headers
+        cors_headers = {
+            'Access-Control-Allow-Origin': '*',  # Replace with specific origin in production, e.g., 'http://example.com'
+            'Access-Control-Allow-Methods': 'PUT, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+        }
 
-        unknown_argumens = list(set(data.keys()) - {'auth'})
+        # Merge with existing headers
+        headers = {
+            'X-Config-Version': '1.0',
+            **cors_headers
+        }
+
+        # Print all keys and values of data
+        for key, value in data.items():
+            logger.info(f"Data key: {key}, value: {value}")
+
+        unknown_argumens = list(set(data.keys()) - {'auth'} - {'defaultLLM'} - {'defaultEmbeddingModel'})
         if len(unknown_argumens) > 0:
             return http_error(
                 HTTPStatus.BAD_REQUEST, 'Wrong arguments',
                 f'Unknown argumens: {unknown_argumens}'
             )
 
-        for key in data.keys():
-            unknown_argumens = list(
-                set(data[key].keys()) - set(Config()[key].keys())
-            )
-            if len(unknown_argumens) > 0:
-                return http_error(
-                    HTTPStatus.BAD_REQUEST, 'Wrong arguments',
-                    f'Unknown argumens: {unknown_argumens}'
-                )
+        # for key in data.keys():
+        #     unknown_argumens = list(
+        #         set(data[key].keys()) - set(Config()[key].keys())
+        #     )
+        #     if len(unknown_argumens) > 0:
+        #         return http_error(
+        #             HTTPStatus.BAD_REQUEST, 'Wrong arguments',
+        #             f'Unknown argumens: {unknown_argumens}'
+        #         )
 
-        Config().update(data)
+        # Config().update(data)
 
-        return '', 200
+        return '', 200, headers
+    
+    @ns_conf.doc('options_config')
+    @api_endpoint_metrics('OPTIONS', '/config')
+    def options(self):
+        # Define CORS headers for preflight response
+        headers = {
+            'X-Config-Version': '1.0',
+            'Access-Control-Allow-Origin': '*',  # Replace with specific origin in production
+            'Access-Control-Allow-Methods': 'PUT, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            'Access-Control-Max-Age': '86400'  # Cache preflight for 24 hours
+        }
+        # Return empty response for preflight
+        response = make_response('', 204)
+        response.headers.extend(headers)
+        return response
+
 
 
 @ns_conf.route('/integrations')

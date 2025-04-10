@@ -170,7 +170,7 @@ class FunctionController(BYOMFunctionsController):
                 mindsdb_file_path = file_controller.get_file_path(file_path_or_url_or_name)
                 file_path_or_url = mindsdb_file_path
             except FileNotFoundError:
-                pass
+                file_path_or_url = file_path_or_url_or_name
 
             chat_model_params = self._parse_chat_model_params()
 

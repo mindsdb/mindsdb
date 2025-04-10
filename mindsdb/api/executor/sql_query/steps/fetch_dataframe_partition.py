@@ -222,6 +222,7 @@ class FetchDataframePartitionCall(BaseStepCall):
                         if on_error == 'skip':
                             logger.error(e)
                         else:
+                            executor.shutdown()
                             raise e
 
                 # TODO

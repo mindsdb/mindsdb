@@ -58,8 +58,8 @@ class TestForecastQuaterlyHouseSales(HTTPHelperMixin):
         self.sql_via_http(self, QueryStorage.delete_db)
         self.sql_via_http(self, QueryStorage.delete_model)
 
-    def test_create_db(self, demo_db_def):
-        self.sql_via_http(demo_db_def, RESPONSE_TYPE.OK)
+    def test_create_db(self):
+        self.sql_via_http(QueryStorage.create_db, RESPONSE_TYPE.OK)
 
     def test_db_created(self):
         sql = QueryStorage.check_db_created

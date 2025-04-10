@@ -714,7 +714,7 @@ class KnowledgeBaseTable:
             return f"{provided_id}_{content_column}"
 
         id_string = f"content={content}_column={content_column}"
-        return hashlib.sha256(id_string.encode()).hexdigest() + "_column_" + content_column
+        return f"{hashlib.sha256(id_string.encode()).hexdigest()}_{content_column}"
 
     def _convert_metadata_value(self, value):
         """

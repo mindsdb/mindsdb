@@ -16,22 +16,20 @@ It intelligently organizes information in semantically meaningful ways, allowing
 Here is the syntax for creating a knowledge base:
 
 <Note>
-MindsDB stores objects, such as models or knowledge bases, inside projects. The default project is called `mindsdb`. You can [create other projects](/mindsdb_sql/sql/create/project) to store your objects.
-
-To refer to an object stored in a defined project, specify both project and object names separated by a dot: `project_name.object_name`. For example, `my_project.my_kb`. If no project is defined with the object name, the object is stored in the default `mindsdb` project.
+MindsDB stores objects, such as models or knowledge bases, inside projects. Learn more about [projects here](/mindsdb_sql/sql/create/project).
 </Note>
 
-<CodeGroup>
-
-```sql OpenAI
+```sql
 CREATE KNOWLEDGE_BASE my_kb
 USING
      embedding_model = {
-         "provider": "OpenAI",
+         "provider": "OpenAI", -- choose one of OpenAI or Azure_OpenAI
          "model_name" : "text-embedding-ada-002",
          "api_key": "sk-..."  -- optional, default from env variable
+         "azure_endpoint" : "https://ai-2249ai742481026689.openai.azure.com/", -- required only when provider = Azure_OpenAI
+         "openai_api_version": "2024-12-01-preview" -- required only when provider = Azure_OpenAI
      },
-     reranking_model = {
+     reranking_model = { -- optional
          "provider": "OpenAI",
          "model_name": 'gpt-4o',
          "api_key": "sk-..."  -- optional, default from env variable
@@ -41,51 +39,38 @@ USING
      content_columns = ['review', 'content', ...], -- optional, default content
      id_column = 'id'; -- optional
 ```
-
-```sql OpenAI via Azure
-CREATE KNOWLEDGE_BASE my_kb
-USING
-     embedding_model = {
-         "provider": "Azure_OpenAI",
-         "model_name" : "text-embedding-ada-002",
-         "api_key": "sk-...",  -- optional, default from env variable
-         "azure_endpoint" : "https://ai-2249ai742481026689.openai.azure.com/",
-         "openai_api_version": "2024-12-01-preview"
-     },
-     reranking_model = {
-         "provider": "OpenAI",
-         "model_name": 'gpt-4o',
-         "api_key": "sk-..."  -- optional, default from env variable
-     },
-     storage = my_vector_store.storage_table, -- optional, default ChromaDB
-     metadata_columns = ['date', 'creator', ...], -- optional
-     content_columns = ['review', 'content', ...], -- optional, default content
-     id_column = 'id'; -- optional
-```
-
-</CodeGroup>
 
 Upon execution, it registers `my_kb` and associates the specified models and storage.
 
 The following is an explanation of the syntax and parameters:
 
 * `embedding_model` stores specifications of the embedding model to be used.
-      * `provider` defines the model provider. Currently, the supported providers include OpenAI and its models via Azure.
+      * `provider` defines the model provider. Currently, the supported providers include OpenAI and OpenAI via Azure.
       * `model_name` defines the embedding model name as specified by the provider. Users can choose one of the [OpenAI embedding models](https://platform.openai.com/docs/guides/embeddings/embedding-models#embedding-models).
       * `api_key` stores your OpenAI API key. Alternatively, you can use the `OPENAI_API_KEY` environment variable to store your OpenAI API key.
       * `azure_endpoint` is required when using `Azure_OpenAI` as the provider.
       * `openai_api_version` is required when using `Azure_OpenAI` as the provider.
 
-* `reranking_model` stores specification of the reranking model to be used.
+* `reranking_model` is an optional parameter that stores specification of the reranking model to be used.
       * `provider` defines the model provider. Currently, the supported providers include OpenAI.
       * `model_name` defines the reranking model name as specified by the provider. Users can choose one of the [OpenAI chat models](https://platform.openai.com/docs/models).
       * `api_key` stores your OpenAI API key. Alternatively, you can use the `OPENAI_API_KEY` environment variable to store your OpenAI API key.
 
-* `storage` is an optional parameter. It assigns the name of the vector store created within MindsDB with the [`CREATE DATABASE` command](/mindsdb_sql/sql/create/database), which is either [PGVector](/integrations/vector-db-integrations/pgvector) or [ChromaDB](/integrations/vector-db-integrations/chromadb), followed by a table name present in that vector database where the knowledge base stores its content. If not provided, the system uses the default ChromaDB vector database.
+<Info>
+Note that providing the reranking model is optional. If provided, it is used an LLM to rerank the output based on relevance, or `reranking_threshold`.
 
-* `metadata_columns` provides the list of column names that will be used as the `metadata` of the knowledge base. Users can use these column names to filter the results by metadata and insert them into the knowledge base. If not set, the metadata is not used.
+- When the ranking model is provided, the default `reranking_threshold` is 0, unless defined otherwise in the `WHERE` clause.
 
-* `content_columns` provides the list of column names that will be used as the `content` of the knowledge base. Users can use these column names to filter the results by content and insert them into the knowledge base. If not set, the `content` column is used by default.
+- When the reranking model is not provided and the `reranking_threshold` is not defined in the query, then no relevance filtering is applied and the output includes all rows matched based on the similarity and metadata search.
+
+- When the reranking model is not provided but the `reranking_threshold` is defined in the query, then the relevance is calculated based on the `distance` column (`1/(1+ distance)`) and the `reranking_threshold` value is compared with this relevance value to filter the output.
+</Info>
+
+* `storage` is an optional parameter. It assigns the name of the vector store created within MindsDB with the [`CREATE DATABASE` command](/mindsdb_sql/sql/create/database), which is either [PGVector](/integrations/vector-db-integrations/pgvector) or [ChromaDB](/integrations/vector-db-integrations/chromadb), followed by a table name present in that vector database where the knowledge base stores its content. If not provided, the system creates the default ChromaDB vector database called `<kb_name>_chromadb` with the default tables called `default_collection` that stores the embedded data.
+
+* `metadata_columns` provides the list of column names that will be used as the metadata of the knowledge base. Users can use these column names to insert them into the knowledge base and filter the search results by metadata. If not set, the metadata is not used.
+
+* `content_columns` provides the list of column names that will be embedded as the content of the knowledge base. Users can use these column names to insert them into the knowledge base and filter the search results by content. If not set, the `content` column is used by default.
 
 * `id_column` is the column name that will be used as the unique identifier by the knowledge base. If not set, the `id` column is used by default.
 
@@ -95,40 +80,23 @@ Get details about the knowledge base using the `DESCRIBE` command.
 DESCRIBE KNOWLEDGE_BASE my_kb;
 ```
 
-<Accordion title="Examples">
+Here is the sample output:
 
-Here are the usage examples:
-
-* Creating a knowledge base:
 
 ```sql
-CREATE KNOWLEDGE_BASE my_kb
-USING
-     embedding_model = {
-         "provider": "OpenAI",
-         "model_name" : "text-embedding-ada-002",
-         "api_key": "sk-..."  -- optional, default from env variable
-     },
-     reranking_model = {
-         "provider": "OpenAI",
-         "model_name": 'gpt-4o',
-         "api_key": "sk-..."  -- optional, default from env variable
-     },
-     metadata_columns = ['country'],
-     content_columns = ['country', 'population', 'areasquarekm', 'populationdensity'],
-     id_column = 'country_id';
+| NAME     | PROJECT | MODEL  | STORAGE                                | PARAMS                                                                                                                                                                                                                                          | INSERT_STARTED_AT | INSERT_FINISHED_AT | PROCESSED_ROWS | ERROR | QUERY_ID |
+|----------|---------|--------|----------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------|--------------------|----------------|-------|----------|
+| kb_testx | mindsdb | [NULL] | my_kb_chromadb.default_collection   | {"embedding_model": {"provider": "OpenAI", "model_name": "text-embedding-ada-002", "api_key": "sk-xxx"}, "reranking_model": {"provider": "OpenAI", "model_name": "gpt-4o", "api_key": "sk-xxx"}, "default_vector_storage": "my_kb_chromadb"} | [NULL]            | [NULL]             | [NULL]         | [NULL]| [NULL]   |
 ```
-</Accordion>
 
 ## Insert into a Knowledge Base
 
 Here is the syntax for inserting into a knowledge base:
 
 ```sql
-INSERT INTO my_kb ( 
-      SELECT <id_col> AS id, <text_col> AS content 
-      FROM <source_table> 
-);
+INSERT INTO my_kb
+SELECT <id_col> AS id, <text_col> AS content 
+FROM <source_table>;
 ```
 
 Upon execution, it inserts data into a knowledge base, using the embedding model to embed it into vectors before inserting into an underlying vector database.
@@ -136,8 +104,8 @@ Upon execution, it inserts data into a knowledge base, using the embedding model
 The following is an explanation of the syntax and parameters:
 
 * `my_kb` is a unique identifier of a knowledge base.
-* `<id_col>` is a column that contains unique identifiers of data. Note that if you specified the `id_column` parameter when creating the knowledge base, you can insert this column name into the knowledge base without the `AS id` alias.
-* `<text_col>` is a column that contains the text content. Note that if you specified the `content_columns` parameter when creating the knowledge base, you can insert these column names into the knowledge base without the `AS content` alias.
+* `<id_col>` is a column that contains unique identifiers of data. The knowledge base expects the `id` column name, unless specified differently in the `id_column` parameter when creating the knowledge base.
+* `<text_col>` is a column that contains the text content. The knowledge base expects the `content` column name, unless specified differently in the `content_columns` parameter when creating the knowledge base.
 
 <Accordion title="Partitioning Queries for Better Performance">
 
@@ -145,7 +113,7 @@ The following features are covered here:
 
 - Run the `INSERT INTO` query in partitions where a batch can be split into separate workers for improved performance.
 - Track progress of the query and resume or cancel ongoing queries.
-- When a query is finished, it is stored in the `information_schema.queries` table with the `finished_at` timestamp. If a user runs another query, all finished queries older than one day are removed.
+- When a query is finished, it is stored in the `information_schema.queries` table, which automatically removes entries older than one day.
 - Option to skip errors in partitions.
 
 **Examples of statements**
@@ -154,47 +122,52 @@ The following features are covered here:
 -- Insert data from table into a knowledge base
 INSERT INTO my_kb 
 SELECT * 
-FROM db1.table1
-WHERE ws_id = 3
+FROM source_database.source_table
+WHERE id = 3
 USING 
-      batch_size=200,
-      track_column=id;
+    batch_size = 200,
+    track_column = id;
 
 -- Insert predictions (made by joining a table with a model) into a knowledge base
 INSERT INTO my_kb
 SELECT * 
-FROM db1.table1
-JOIN my_model
+FROM source_database.source_table
+JOIN model_name -- model created within MindsDB with CREATE MODEL
 USING 
-      batch_size=200, 
-      track_column=id, 
-      threads=true;
+    batch_size = 200,
+    track_column = id,
+    threads = true;
 
 -- Insert data from table into a knowledge base while skipping errors
-INSERT INTO my_kb
 SELECT * 
-FROM db1.table1
+FROM source_database.source_table
 USING 
-      batch_size=200, 
-      track_column=id, 
-      threads=10, 
-      error='skip';
+    batch_size = 200,
+    track_column = id,
+    threads = 10,
+    error = 'skip';
 
 -- Perform prediction in threads and return data 
 INSERT INTO my_kb
 SELECT * 
-FROM db1.table1
-JOIN my_model
+FROM source_database.source_table
+JOIN model_name -- model created within MindsDB with CREATE MODEL
 USING 
-      batch_size=200, 
-      track_column=id, 
-      threads=10;
+    batch_size = 200,
+    track_column = id,
+    threads = 10;
 
 -- View queries in progress
 SELECT * FROM information_schema.queries;
+
+-- Resume queries using query ID
+SELECT query_resume(1);
+
+-- Cancel queries using query ID
+SELECT query_cancel(1);
 ```
 
-**Parameters**
+**Parameters for partitioning queries**
 
 - **batch_size** - Number of rows fetched per iteration/batch (default: `1000`) to optimize data extraction from the source.
 - **threads** - Defines threads to run partitions in. Note that if the [ML task queue](/setup/custom-config#overview-of-config-parameters) is enabled, threads are automatically used for prediction. Allowed values for `threads` include:
@@ -202,27 +175,7 @@ SELECT * FROM information_schema.queries;
   - `true` - Auto-detect thread count.
   - `false` - Disable threads, even if the ML task queue is enabled.
 - **track_column** - Column used for partitioning. The query is sorted by this column and limited by `batch_size`.
-- **error** - Defines the error processing. Its default value is `raise`. To skip errors in partitions, use `error='skip'`.
-
-**Repeat a query**
-
-If a query fails, its state is saved as follows:
-- Current step number (in database)
-- Current step data (cached in files or Redis)
-
-Users can resolve the issue and resume the query:
-
-```sql
--- Use the query ID
-SELECT query_resume(1);
-```
-
-Or, remove/cancel a query:
-
-```sql
--- Use the query ID
-SELECT query_cancel(1);
-```
+- **error** - Defines the error processing options. The available values include `raise` (default) and `skip`.
 </Accordion>
 
 <Accordion title="Examples">
@@ -232,7 +185,9 @@ Here are the usage examples:
 * Inserting into a knowledge base where the `content_columns` and `id_column` parameters were not specified:
 
 ```sql
-INSERT INTO my_kb ( SELECT book_id AS id, book_summary AS content FROM my_books );
+INSERT INTO my_kb
+SELECT book_id AS id, book_summary AS content 
+FROM my_books;
 ```
 
 * Inserting into a knowledge base where the `content_columns` and `id_column` parameters were specified as follows:
@@ -243,7 +198,9 @@ id_column = "book_id"
 ```
 
 ```sql
-INSERT INTO my_kb ( SELECT book_id, book_title, book_summary FROM my_books );
+INSERT INTO my_kb
+SELECT book_id, book_title, book_summary 
+FROM my_books;
 ```
 </Accordion>
 
@@ -268,7 +225,7 @@ The following is an explanation of the syntax and parameters:
 * `SELECT id, relevance` specifies that the unique document identifier and its calculated relevance score should be returned.
 * `<kb_name>` is a unique identifier of a knowledge base.
 * `WHERE content = '<query_text>'` triggers semantic search based on the meaning of `<query_text>`.
-* `AND reranking_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1.
+* `AND reranking_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1. It defines the minimum relevance value for the data row to appear in the output. Its default value is 0.
 * `LIMIT <N>` restricts results to the top N most relevant documents.
 
 <Note>
@@ -314,7 +271,7 @@ The following is an explanation of the syntax and parameters:
 * `SELECT id, chunk_id, chunk_content, metadata, distance, relevance` specifies that the unique document identifier, chunk identifier, chunk content, metadata (if defined), distance, and relevance should be returned.
 * `<kb_name>` is a unique identifier of a knowledge base.
 * `WHERE content = '<query_text>'` triggers semantic search based on the meaning of `<query_text>`.
-* `AND reranking_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1.
+* `AND reranking_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1. It defines the minimum relevance value for the data row to appear in the output. Its default value is 0.
 * `LIMIT <N>` restricts results to the top N most relevant documents.
 
 <Accordion title="Examples">
@@ -339,7 +296,7 @@ KBs combine semantic search with standard SQL filtering on metadata.
 ```sql
 SELECT id, chunk_content, relevance 
 FROM my_kb 
-WHERE id LIKE '<id_pattern>' -- metadata filtering conditions
+WHERE <metadata_colums> = '<metadata>' -- metadata filtering conditions
 AND content = '<query_text>' -- semantic search condition
 AND reranking_threshold = 0.6; -- optional
 ```
@@ -350,9 +307,9 @@ The following is an explanation of the syntax and parameters:
 
 * `SELECT id, chunk_content, relevance` specifies that the unique document identifier, chunk content, and the relevance score should be returned.
 * `<kb_name>` is a unique identifier of a knowledge base.
-* `WHERE id LIKE '<id_pattern>'` is the metadata filtering condition.
+* `WHERE <metadata_colums> = '<metadata>'` is the metadata filtering condition.
 * `WHERE content = '<query_text>'` is the semantic search condition.
-* `AND reranking_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1.
+* `AND reranking_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1. It defines the minimum relevance value for the data row to appear in the output. Its default value is 0.
 
 <Accordion title="Examples">
 

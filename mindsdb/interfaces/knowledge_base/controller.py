@@ -455,7 +455,6 @@ class KnowledgeBaseTable:
                         **base_metadata,
                         'original_row_id': str(row_id),
                         'content_column': col,
-                        'original_doc_id': str(row_id),
                         'delete_existing': delete_existing,
                     }
 
@@ -766,19 +765,26 @@ class KnowledgeBaseTable:
         """
         Generate a deterministic document ID from content and column name.
         If provided_id exists, combines it with content_column.
+        For generated IDs, uses a short hash of just the content to ensure
+        same content gets same base ID across different columns.
 
         Args:
             content: The content string
             content_column: Name of the content column
             provided_id: Optional user-provided ID
         Returns:
-            Deterministic document ID
+            Deterministic document ID in format: <base_id>_<column>
+            where base_id is either the provided_id or a 16-char hash of content
         """
         if provided_id is not None:
-            return f"{provided_id}_{content_column}"
+            base_id = provided_id
+        else:
+            # Generate a shorter 16-character hash based only on content
+            hash_obj = hashlib.md5(content.encode())
+            base_id = hash_obj.hexdigest()[:16]
 
-        id_string = f"content={content}_column={content_column}"
-        return f"{hashlib.sha256(id_string.encode()).hexdigest()}_{content_column}"
+        # Append column name to maintain uniqueness across columns
+        return f"{base_id}_{content_column}"
 
     def _convert_metadata_value(self, value):
         """

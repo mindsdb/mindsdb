@@ -323,7 +323,7 @@ class VectorStoreHandler(BaseHandler):
         if doc_ids_to_delete:
             # Delete existing chunks for these documents using metadata filter
             conditions = [FilterCondition(
-                column=f"{metadata_col}->>'original_doc_id'",
+                column='original_doc_id',
                 op=FilterOperator.IN,
                 value=list(doc_ids_to_delete)
             )]

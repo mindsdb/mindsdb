@@ -278,8 +278,16 @@ class VectorStoreHandler(BaseHandler):
         return self.do_upsert(table_name, df)
 
     def do_upsert(self, table_name, df):
-        # if handler supports it, call upsert method
+        """Upsert data into table, handling document updates and deletions.
 
+        Args:
+            table_name (str): Name of the table
+            df (pd.DataFrame): DataFrame containing the data to upsert
+
+        The function handles three cases:
+        1. New documents: Insert them
+        2. Updated documents: Delete old chunks and insert new ones
+        """
         id_col = TableField.ID.value
         content_col = TableField.CONTENT.value
 

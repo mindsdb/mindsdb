@@ -3,7 +3,6 @@ import copy
 from typing import Dict, List, Optional
 
 import pandas as pd
-import hashlib
 import numpy as np
 
 from mindsdb_sql_parser.ast import (
@@ -409,7 +408,11 @@ class KnowledgeBaseTable:
         db_handler.delete(self._kb.vector_database_table)
 
     def insert(self, df: pd.DataFrame):
-        """Insert dataframe to KB table."""
+        """Insert dataframe to KB table.
+
+        Args:
+            df: DataFrame to insert
+        """
         if df.empty:
             return
 
@@ -754,22 +757,9 @@ class KnowledgeBaseTable:
         return {}
 
     def _generate_document_id(self, content: str, content_column: str, provided_id: str = None) -> str:
-        """
-        Generate a deterministic document ID from content and column name.
-        If provided_id exists, combines it with content_column.
-
-        Args:
-            content: The content string
-            content_column: Name of the content column
-            provided_id: Optional user-provided ID
-        Returns:
-            Deterministic document ID
-        """
-        if provided_id is not None:
-            return f"{provided_id}_{content_column}"
-
-        id_string = f"content={content}_column={content_column}"
-        return hashlib.sha256(id_string.encode()).hexdigest()
+        """Generate a deterministic document ID using the utility function."""
+        from mindsdb.interfaces.knowledge_base.utils import generate_document_id
+        return generate_document_id(content, content_column, provided_id)
 
     def _convert_metadata_value(self, value):
         """

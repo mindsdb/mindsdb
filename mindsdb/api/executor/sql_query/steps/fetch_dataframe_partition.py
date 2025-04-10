@@ -197,7 +197,7 @@ class FetchDataframePartitionCall(BaseStepCall):
 
         try:
             for i in range(thread_count):
-                worker = threading.Thread(target=self._worker, daemon=True, args=(ctx.dump(), queue_in,
+                worker = threading.Thread(target=self._worker, daemon=True, args=(ctx.dump(), i, queue_in,
                                                                                   queue_out, self.stop_event))
                 worker.start()
                 workers.append(worker)
@@ -227,14 +227,15 @@ class FetchDataframePartitionCall(BaseStepCall):
 
                 batch_results = []
                 for i in range(sent_chunks):
-                    res = queue_out.get()
+                    # if no response from queue for two minutes: something went wrong
+                    res = queue_out.get(timeout=120)
                     if 'error' in res:
                         if on_error == 'skip':
                             logger.error(res['error'])
                         else:
                             raise RuntimeError(res['error'])
 
-                    if res['data']:
+                    if res.get('data'):
                         batch_results.append(res)
 
                 # sort results
@@ -263,11 +264,14 @@ class FetchDataframePartitionCall(BaseStepCall):
             if worker.is_alive():
                 worker.join()
 
-    def _worker(self, context: Context, queue_in: queue.Queue, queue_out: queue.Queue, stop_event: threading.Event):
+    def _worker(self, context: Context, num: int, queue_in: queue.Queue, queue_out: queue.Queue, stop_event: threading.Event):
         """
         Worker function. Execute incoming tasks unless stop_event is set
         """
         ctx.load(context)
+        logger.info(f'Worker {num} started')
+        chunk_num = None
+
         while True:
             if stop_event.is_set():
                 break
@@ -275,14 +279,16 @@ class FetchDataframePartitionCall(BaseStepCall):
             try:
                 chunk_num, df = queue_in.get(timeout=1)
                 if df is None:
+                    queue_out.put({})
                     continue
 
                 sub_data = self.exec_sub_steps(df)
 
+                logger.info(f'Worker {num} executed chunk {chunk_num}')
                 queue_out.put({'data': sub_data, 'num': chunk_num})
             except queue.Empty:
                 continue
 
             except Exception as e:
+                logger.info(f'Worker {num}/ {chunk_num} error {e}')
                 queue_out.put({'error': str(e)})
-                stop_event.set()

@@ -22,22 +22,21 @@ with patch.dict('sys.modules', {
 class TestDocumentPreprocessor:
     def test_deterministic_id_generation(self):
         """Test that ID generation is deterministic for same content"""
+        from mindsdb.interfaces.knowledge_base.utils import generate_document_id
         # Same content should generate same ID
         content = "test content"
-        preprocessor = DocumentPreprocessor()
-        id1 = preprocessor._generate_deterministic_id(content)
-        id2 = preprocessor._generate_deterministic_id(content)
+        content_column = "test_column"
+        id1 = generate_document_id(content, content_column)
+        id2 = generate_document_id(content, content_column)
         assert id1 == id2
+        assert len(id1.split('_')[0]) == 16  # Check hash length
         # Different content should generate different IDs
         different_content = "different content"
-        id3 = preprocessor._generate_deterministic_id(different_content)
+        id3 = generate_document_id(different_content, content_column)
         assert id1 != id3
         # Test with provided_id
         provided_id = "test_id"
-        content_column = "test_column"
-        id4 = preprocessor._generate_deterministic_id(
-            content, content_column, provided_id
-        )
+        id4 = generate_document_id(content, content_column, provided_id)
         assert id4 == f"{provided_id}_{content_column}"
 
     def test_chunk_id_generation(self):
@@ -73,10 +72,12 @@ class TestDocumentPreprocessor:
 
     def test_chunk_overlap(self):
         """Test chunk overlap"""
+        from mindsdb.interfaces.knowledge_base.utils import generate_document_id
         config = TextChunkingConfig(chunk_size=10, chunk_overlap=5)
         preprocessor = TextChunkingPreprocessor(config)
         long_content = " ".join(["word"] * 50)
-        doc = Document(content=long_content)
+        doc_id = generate_document_id(long_content, "test_column")
+        doc = Document(content=long_content, id=doc_id)
         chunks = preprocessor.process_documents([doc])
         # Ensure correct number of chunks is created
         assert len(chunks) > 1
@@ -88,12 +89,16 @@ class TestDocumentPreprocessor:
 
     def test_standard_chunking_strategy(self):
         """Test standard chunking strategy with different overlap values"""
+        from mindsdb.interfaces.knowledge_base.utils import generate_document_id
+        content = " ".join(["word"] * 30)
+        doc_id = generate_document_id(content, "test_column")
+        doc = Document(content=content, id=doc_id)
+
         # Test with no overlap
         config_no_overlap = TextChunkingConfig(chunk_size=10, chunk_overlap=0)
         preprocessor_no_overlap = TextChunkingPreprocessor(config_no_overlap)
-        content = " ".join(["word"] * 30)
-        doc = Document(content=content)
         chunks_no_overlap = preprocessor_no_overlap.process_documents([doc])
+
         # Test with medium overlap
         config_medium_overlap = TextChunkingConfig(chunk_size=10, chunk_overlap=3)
         preprocessor_medium_overlap = TextChunkingPreprocessor(config_medium_overlap)
@@ -195,11 +200,51 @@ class TestDocumentPreprocessor:
                 assert "to" in chunk_id_parts[2]
 
 
+def test_document_id_generation():
+    """Test the new document ID generation logic"""
+    from mindsdb.interfaces.knowledge_base.utils import generate_document_id
+    preprocessor = TextChunkingPreprocessor()
+
+    # Test consistent base ID across different columns
+    content = "test content"
+    content_column = "test_column"
+    doc_id1 = generate_document_id(content, content_column)
+    doc_id2 = generate_document_id(content, content_column)
+
+    # Same content should get same doc ID
+    assert doc_id1 == doc_id2
+    # Doc ID should be 16 chars (MD5 hash truncated) + column name
+    assert len(doc_id1.split('_')[0]) == 16
+
+    # Test different content gets different IDs
+    different_content = "different content"
+    doc_id3 = generate_document_id(different_content, content_column)
+    assert doc_id3 != doc_id1
+
+    # Test provided ID is preserved
+    custom_id = "custom_doc_123"
+    doc_id4 = generate_document_id(content, content_column, custom_id)
+    assert doc_id4.startswith(custom_id)
+
+    # Test chunk ID format
+    doc = Document(content=content, id=doc_id1)
+    chunks = preprocessor.process_documents([doc])
+    for chunk in chunks:
+        # Format should be: <doc_id>:<chunk_number>of<total_chunks>:<start_char>to<end_char>
+        parts = chunk.id.split(':')
+        assert len(parts) == 3
+        assert 'of' in parts[1]
+        assert 'to' in parts[2]
+
+
 def test_metadata_preservation():
     """Test that metadata is preserved during processing"""
+    from mindsdb.interfaces.knowledge_base.utils import generate_document_id
     preprocessor = TextChunkingPreprocessor()
     metadata = {"key": "value", "content_column": "test_column"}
-    doc = Document(content="Test content", metadata=metadata)
+    content = "Test content"
+    doc_id = generate_document_id(content, "test_column")
+    doc = Document(content=content, metadata=metadata, id=doc_id)
     chunks = preprocessor.process_documents([doc])
     # Verify metadata is preserved and includes source
     assert chunks[0].metadata["source"] == "TextChunkingPreprocessor"
@@ -209,9 +254,12 @@ def test_metadata_preservation():
 
 def test_content_column_handling():
     """Test handling of content column in metadata"""
+    from mindsdb.interfaces.knowledge_base.utils import generate_document_id
     preprocessor = TextChunkingPreprocessor()
+    content = "Test content"
     metadata = {"content_column": "test_column"}
-    doc = Document(content="Test content", metadata=metadata)
+    doc_id = generate_document_id(content, "test_column")
+    doc = Document(content=content, metadata=metadata, id=doc_id)
     chunks = preprocessor.process_documents([doc])
     # Verify content column is preserved in metadata
     assert "content_column" in chunks[0].metadata
@@ -229,16 +277,22 @@ def test_provided_id_handling():
 
 def test_empty_content_handling():
     """Test handling of empty content"""
+    from mindsdb.interfaces.knowledge_base.utils import generate_document_id
     preprocessor = TextChunkingPreprocessor()
-    doc = Document(content="")
+    content = ""
+    doc_id = generate_document_id(content, "test_column")
+    doc = Document(content=content, id=doc_id)
     chunks = preprocessor.process_documents([doc])
     assert len(chunks) == 0
 
 
 def test_whitespace_content_handling():
     """Test handling of whitespace-only content"""
+    from mindsdb.interfaces.knowledge_base.utils import generate_document_id
     preprocessor = TextChunkingPreprocessor()
-    doc = Document(content="   \n   \t   ")
+    content = "   \n   \t   "
+    doc_id = generate_document_id(content, "test_column")
+    doc = Document(content=content, id=doc_id)
     chunks = preprocessor.process_documents([doc])
     assert len(chunks) == 0
 
@@ -253,8 +307,10 @@ def test_whitespace_content_handling():
 )
 def test_source_metadata(content, metadata, expected_source):
     """Test source metadata is correctly set"""
+    from mindsdb.interfaces.knowledge_base.utils import generate_document_id
     preprocessor = TextChunkingPreprocessor()
-    doc = Document(content=content, metadata=metadata)
+    doc_id = generate_document_id(content, "test_column")
+    doc = Document(content=content, metadata=metadata, id=doc_id)
     chunks = preprocessor.process_documents([doc])
     assert chunks[0].metadata["source"] == expected_source
 

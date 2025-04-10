@@ -1,7 +1,6 @@
 from typing import List, Dict, Optional, Any
 import pandas as pd
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-import hashlib
 import asyncio
 
 
@@ -83,16 +82,6 @@ class DocumentPreprocessor:
             embeddings=data.get("embeddings"),
             metadata=data.get("metadata", {}),
         )
-
-    def _generate_deterministic_id(
-        self, content: str, content_column: str = None, provided_id: str = None
-    ) -> str:
-        """Generate a deterministic ID based on content and column"""
-        if provided_id is not None:
-            return f"{provided_id}_{content_column}"
-
-        id_string = f"content={content}_column={content_column}"
-        return hashlib.sha256(id_string.encode()).hexdigest()
 
     def _generate_chunk_id(
         self,
@@ -216,14 +205,10 @@ Please give a short succinct context to situate this chunk within the overall do
         processed_chunks = []
 
         for doc_index, doc in enumerate(documents):
-            # Get content_column from metadata if available
-            content_column = (
-                doc.metadata.get("content_column") if doc.metadata else None
-            )
 
-            # Ensure document has an ID
+            # Document ID must be provided by this point
             if doc.id is None:
-                doc.id = self._generate_deterministic_id(doc.content, content_column)
+                raise ValueError("Document ID must be provided before preprocessing")
 
             # Skip empty or whitespace-only content
             if not doc.content or not doc.content.strip():
@@ -307,14 +292,10 @@ class TextChunkingPreprocessor(DocumentPreprocessor):
         processed_chunks = []
 
         for doc in documents:
-            # Get content_column from metadata if available
-            content_column = (
-                doc.metadata.get("content_column") if doc.metadata else None
-            )
 
-            # Ensure document has an ID
+            # Document ID must be provided by this point
             if doc.id is None:
-                doc.id = self._generate_deterministic_id(doc.content, content_column)
+                raise ValueError("Document ID must be provided before preprocessing")
 
             # Skip empty or whitespace-only content
             if not doc.content or not doc.content.strip():

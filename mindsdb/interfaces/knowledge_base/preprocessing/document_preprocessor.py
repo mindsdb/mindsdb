@@ -120,6 +120,7 @@ class DocumentPreprocessor:
         doc_id: Optional[str],
         chunk_index: Optional[int],
         base_metadata: Optional[Dict] = None,
+        delete_existing: bool = False,
     ) -> Dict:
         """Centralized method for preparing chunk metadata"""
         metadata = base_metadata or {}
@@ -134,6 +135,9 @@ class DocumentPreprocessor:
 
         # Always set source
         metadata["source"] = self._get_source()
+
+        # Always set delete_existing flag
+        metadata["delete_existing"] = delete_existing
 
         return metadata
 
@@ -306,7 +310,7 @@ class TextChunkingPreprocessor(DocumentPreprocessor):
         # Use base class implementation
         return super()._split_document(doc)
 
-    def process_documents(self, documents: List[Document]) -> List[ProcessedChunk]:
+    def process_documents(self, documents: List[Document], delete_existing: bool = False) -> List[ProcessedChunk]:
         processed_chunks = []
 
         for doc in documents:
@@ -324,54 +328,45 @@ class TextChunkingPreprocessor(DocumentPreprocessor):
                 continue
 
             chunk_docs = self._split_document(doc)
+            total_chunks = len(chunk_docs)
 
-            # Single chunk case
-            if len(chunk_docs) == 1:
-                chunk_doc = chunk_docs[0]
+            # Track character positions
+            current_pos = 0
+            for i, chunk_doc in enumerate(chunk_docs):
                 if not chunk_doc.content or not chunk_doc.content.strip():
                     continue
+
+                # Calculate chunk positions
+                start_char = current_pos
+                end_char = start_char + len(chunk_doc.content)
+                current_pos = end_char + 1  # +1 for separator
 
                 # Initialize metadata
                 metadata = {}
                 if doc.metadata:
                     metadata.update(doc.metadata)
 
-                # Pass through doc.id and content_column
-                id = self._generate_chunk_id(
-                    chunk_index=0, provided_id=doc.id
+                # Add position metadata
+                metadata["start_char"] = start_char
+                metadata["end_char"] = end_char
+
+                # Generate chunk ID with total chunks
+                chunk_id = self._generate_chunk_id(
+                    chunk_index=i,
+                    total_chunks=total_chunks,
+                    start_char=start_char,
+                    end_char=end_char,
+                    provided_id=doc.id
                 )
+
                 processed_chunks.append(
                     ProcessedChunk(
-                        id=id,
+                        id=chunk_id,
                         content=chunk_doc.content,
                         embeddings=doc.embeddings,
-                        metadata=self._prepare_chunk_metadata(doc.id, None, metadata),
+                        metadata=self._prepare_chunk_metadata(doc.id, i, metadata, delete_existing),
                     )
                 )
-            else:
-                # Multiple chunks case
-                for i, chunk_doc in enumerate(chunk_docs):
-                    if not chunk_doc.content or not chunk_doc.content.strip():
-                        continue
-
-                    # Initialize metadata
-                    metadata = {}
-                    if doc.metadata:
-                        metadata.update(doc.metadata)
-
-                    # Pass through doc.id and content_column
-                    chunk_id = self._generate_chunk_id(
-                        chunk_index=i,
-                        provided_id=doc.id,
-                    )
-                    processed_chunks.append(
-                        ProcessedChunk(
-                            id=chunk_id,
-                            content=chunk_doc.content,
-                            embeddings=doc.embeddings,
-                            metadata=self._prepare_chunk_metadata(doc.id, i, metadata),
-                        )
-                    )
 
         return processed_chunks
 

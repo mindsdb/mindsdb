@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 from langchain.retrievers.document_compressors.base import BaseDocumentCompressor
 from langchain_core.callbacks import Callbacks, dispatch_custom_event
 from langchain_core.documents import Document
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, AsyncAzureOpenAI
 
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RERANKING_MODEL, DEFAULT_LLM_ENDPOINT
 
@@ -44,15 +44,25 @@ class LLMReranker(BaseDocumentCompressor):
 
     async def _init_client(self):
         if self.client is None:
-            openai_api_key = self.openai_api_key or os.getenv(self._api_key_var)
-            if not openai_api_key:
-                raise ValueError(f"OpenAI API key not found in environment variable {self._api_key_var}")
-            self.client = AsyncOpenAI(
-                api_key=openai_api_key,
-                base_url=self.base_url,
-                timeout=self.request_timeout,
-                max_retries=2  # Client-level retries
-            )
+
+            provider = os.environ.get("RERANKING_PROVIDER")
+            if provider == "azure":
+
+                azure_api_key = os.environ.get("AZURE_OPENAI_API_KEY")
+                azure_api_endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
+                azure_api_version = os.environ.get("AZURE_OPENAI_API_VERSION")
+                self.client = AsyncAzureOpenAI(api_key=azure_api_key,
+                                               azure_endpoint=azure_api_endpoint,
+                                               api_version=azure_api_version,
+                                               timeout=self.request_timeout,
+                                               max_retries=2)
+            elif provider == "openai":
+
+                openai_api_key = self.openai_api_key or os.getenv(self._api_key_var)
+                if not openai_api_key:
+                    raise ValueError(f"OpenAI API key not found in environment variable {self._api_key_var}")
+
+                self.client = AsyncOpenAI(api_key=openai_api_key, base_url=self.base_url, timeout=self.request_timeout, max_retries=2)
 
     async def search_relevancy(self, query: str, document: str, custom_event: bool = True) -> Any:
         await self._init_client()

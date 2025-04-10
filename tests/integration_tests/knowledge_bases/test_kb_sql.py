@@ -394,14 +394,14 @@ class KBTest(KBTestBase):
         # prepare KB
         kb_params = {
             'embedding_model': {
-              "provider": "openai",
-              "model_name": "text-embedding-ada-002",
-              "api_key": openai_api_key
+                "provider": "openai",
+                "model_name": "text-embedding-ada-002",
+                "api_key": openai_api_key
             },
             'reranking_model': {
-              "provider": "openai",
-              "model_name": "gpt-4",
-              "api_key":  openai_api_key
+                "provider": "openai",
+                "model_name": "gpt-4",
+                "api_key": openai_api_key
             },
             'metadata_columns': ['status', 'category'],
             'content_columns': ['message_body'],

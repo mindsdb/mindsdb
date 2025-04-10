@@ -66,8 +66,8 @@ class TestForecastQuaterlyHouseSales(HTTPHelperMixin):
         resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
         assert len(resp['data']) == 10
 
-    def test_create_model(self, demo_model_def):
-        resp = self.sql_via_http(demo_model_def, RESPONSE_TYPE.TABLE)
+    def test_create_model(self):
+        resp = self.sql_via_http(QueryStorage.create_model, RESPONSE_TYPE.TABLE)
         assert len(resp['data']) == 1
         status = resp['column_names'].index('STATUS')
         assert resp['data'][0][status] == 'generating'

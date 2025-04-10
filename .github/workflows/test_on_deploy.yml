@@ -53,6 +53,7 @@ jobs:
         cache-dependency-glob: "**/requirements*.txt"
     - name: Install dependencies
       run: |
+        uv venv
         uv pip install .
         uv pip install -r requirements/requirements-test.txt
         uv pip install .[lightwood]  # TODO: for now some tests rely on lightwood and huggingface
@@ -105,16 +106,16 @@ jobs:
           # pytest -svx mindsdb/integrations/handlers/file_handler/
 
           echo -e "\n===============Home Rental Home Prices===============\n"
-          pytest -vx tests/integration_tests/flows/test_home_rental_prices_tutorial.py
+          uv run pytest -vx tests/integration_tests/flows/test_home_rental_prices_tutorial.py
 
           echo -e "\n===============Forecast Quaterly House Sales===============\n"
-          pytest -vx tests/integration_tests/flows/test_forecast_quaterly_house_tutorial.py
+          uv run pytest -vx tests/integration_tests/flows/test_forecast_quaterly_house_tutorial.py
 
           echo -e "\n===============Predict Text Sentiment Wih Huggingface===============\n"
-          pytest -vx tests/integration_tests/flows/test_predict_text_sentiment_huggingface_tutorial.py
+          uv run pytest -vx tests/integration_tests/flows/test_predict_text_sentiment_huggingface_tutorial.py
 
           echo -e "\n===============Predict Text Sentiment Wih OpenAI===============\n"
-          pytest -vx tests/integration_tests/flows/test_predict_text_sentiment_openai_tutorial.py
+          uv run pytest -vx tests/integration_tests/flows/test_predict_text_sentiment_openai_tutorial.py
       env:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         INTERNAL_URL: ${{ vars.INTERNAL_URL }}

@@ -35,7 +35,7 @@ jobs:
       name: ${{ inputs.deploy-env }}
       url: ${{ vars.ENV_URL }}
     name: Run integration tests
-    runs-on: ${{ matrix.runs_on }}
+    runs-on: mdb-dev
     if: github.ref_type == 'branch'
     steps:
     - uses: actions/checkout@v4

@@ -154,6 +154,9 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "**/requirements*.txt"
+      - name: Install FreeTDS (macOS)
+        if: ${{ runner.os == 'macOS' && needs.changes.outputs.not-docs == 'true' }}
+        run: brew install freetds
       - name: Install dependencies
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |

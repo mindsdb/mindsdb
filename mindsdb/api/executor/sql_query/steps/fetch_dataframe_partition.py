@@ -11,9 +11,10 @@ from mindsdb.interfaces.query_context.context_controller import RunningQuery
 from mindsdb.api.executor.sql_query.result_set import ResultSet
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
-from mindsdb.utilities.context import Context, context as ctx
 from mindsdb.utilities.partitioning import get_max_thread_count, split_data_frame
 from mindsdb.api.executor.sql_query.steps.fetch_dataframe import get_table_alias, get_fill_param_fnc
+from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
+
 
 from .base import BaseStepCall
 
@@ -178,9 +179,6 @@ class FetchDataframePartitionCall(BaseStepCall):
         """
 
         # create communication queues
-        queue_in = queue.Queue()
-        queue_out = queue.Queue()
-        self.stop_event = threading.Event()
 
         if thread_count is None:
             thread_count = get_max_thread_count()
@@ -191,16 +189,9 @@ class FetchDataframePartitionCall(BaseStepCall):
         if partition_size < 10:
             partition_size = 10
 
-        # create N workers pool
-        workers = []
         results = []
 
-        try:
-            for i in range(thread_count):
-                worker = threading.Thread(target=self._worker, daemon=True, args=(ctx.dump(), i, queue_in,
-                                                                                  queue_out, self.stop_event))
-                worker.start()
-                workers.append(worker)
+        with ContextThreadPoolExecutor(max_workers=thread_count) as executor:
 
             while True:
                 # fetch batch
@@ -220,75 +211,22 @@ class FetchDataframePartitionCall(BaseStepCall):
                 max_track_value = run_query.get_max_track_value(df)
 
                 # split into chunks and send to workers
-                sent_chunks = 0
+                futures = []
                 for df2 in split_data_frame(df, partition_size):
-                    queue_in.put([sent_chunks, df2])
-                    sent_chunks += 1
+                    futures.append(executor.submit(self.exec_sub_steps, df2))
 
-                batch_results = []
-                for i in range(sent_chunks):
-                    # if no response from queue for two minutes: something went wrong
-                    res = queue_out.get(timeout=120)
-                    if 'error' in res:
+                for future in futures:
+                    try:
+                        results.append(future.result())
+                    except Exception as e:
                         if on_error == 'skip':
-                            logger.error(res['error'])
+                            logger.error(e)
                         else:
-                            raise RuntimeError(res['error'])
-
-                    if res.get('data'):
-                        batch_results.append(res)
-
-                # sort results
-                batch_results.sort(key=lambda x: x['num'])
-
-                results.append(self.concat_results(
-                    [item['data'] for item in batch_results]
-                ))
+                            raise e
 
                 # TODO
                 #  1. get next batch without updating track_value:
                 #    it allows to keep queue_in filled with data between fetching batches
                 run_query.set_progress(df, max_track_value)
-        finally:
-            self.close_workers(workers)
 
         return self.concat_results(results)
-
-    def close_workers(self, workers: List[threading.Thread]):
-        """
-        Sent signal to workers to stop
-        """
-
-        self.stop_event.set()
-        for worker in workers:
-            if worker.is_alive():
-                worker.join()
-
-    def _worker(self, context: Context, num: int, queue_in: queue.Queue, queue_out: queue.Queue, stop_event: threading.Event):
-        """
-        Worker function. Execute incoming tasks unless stop_event is set
-        """
-        ctx.load(context)
-        logger.info(f'Worker {num} started')
-        chunk_num = None
-
-        while True:
-            if stop_event.is_set():
-                break
-
-            try:
-                chunk_num, df = queue_in.get(timeout=1)
-                if df is None:
-                    queue_out.put({})
-                    continue
-
-                sub_data = self.exec_sub_steps(df)
-
-                logger.info(f'Worker {num} executed chunk {chunk_num}')
-                queue_out.put({'data': sub_data, 'num': chunk_num})
-            except queue.Empty:
-                continue
-
-            except Exception as e:
-                logger.info(f'Worker {num}/ {chunk_num} error {e}')
-                queue_out.put({'error': str(e)})

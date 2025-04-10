@@ -5,6 +5,7 @@ from mindsdb_sql_parser.ast import BinaryOperation, Constant, Select
 from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.interfaces.agents.agents_controller import AgentsController
+from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
 from mindsdb.interfaces.skills.skills_controller import SkillsController
 from mindsdb.interfaces.database.views import ViewController
@@ -468,3 +469,20 @@ class QueriesTable(MdbTable):
         data = [[row[k] for k in columns_lower] for row in data]
 
         return pd.DataFrame(data, columns=cls.columns)
+
+
+class FilesTable(MdbTable):
+    name = 'FILES'
+    columns = ["NAME", "ROW_COUNT", "COLUMNS"]
+
+    @classmethod
+    def get_data(cls, **kwargs):
+        """
+        Returns all files uploaded to MindsDB.
+        """
+        file_controller = FileController()
+        files = file_controller.get_files()
+
+        df = pd.DataFrame(files)
+        df.columns = cls.columns
+        return df

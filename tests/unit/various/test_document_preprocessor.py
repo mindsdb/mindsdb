@@ -134,17 +134,13 @@ class TestDocumentPreprocessor:
         for chunk in chunks:
             assert "original_doc_id" in chunk.metadata
             assert chunk.metadata["original_doc_id"] == "parent_doc"
-            assert "delete_existing" in chunk.metadata
-            assert chunk.metadata["delete_existing"] is False
             # Verify chunk position metadata
             assert "start_char" in chunk.metadata
             assert "end_char" in chunk.metadata
             assert chunk.metadata["end_char"] > chunk.metadata["start_char"]
 
         # Test with delete_existing=True
-        chunks = preprocessor.process_documents([parent_doc], delete_existing=True)
-        for chunk in chunks:
-            assert chunk.metadata["delete_existing"] is True
+        chunks = preprocessor.process_documents([parent_doc])
 
         # Verify chunk IDs follow the new format
         for i, chunk in enumerate(chunks):
@@ -174,22 +170,19 @@ class TestDocumentPreprocessor:
 
         # Verify initial chunks have delete_existing=False
         for chunk in initial_chunks:
-            assert chunk.metadata["delete_existing"] is False
             assert chunk.metadata["original_doc_id"] == doc_id
 
         # Verify updated chunks also have delete_existing=False
         for chunk in updated_chunks_1:
-            assert chunk.metadata["delete_existing"] is False
             assert chunk.metadata["original_doc_id"] == doc_id
 
         # Test full document deletion mode (delete_existing=True)
         updated_content_2 = " ".join(["updated2"] * 20)
         updated_doc_2 = Document(content=updated_content_2, id=doc_id)
-        updated_chunks_2 = preprocessor.process_documents([updated_doc_2], delete_existing=True)
+        updated_chunks_2 = preprocessor.process_documents([updated_doc_2])
 
         # Verify chunks are marked for full document deletion
         for chunk in updated_chunks_2:
-            assert chunk.metadata["delete_existing"] is True
             assert chunk.metadata["original_doc_id"] == doc_id
 
         # Verify chunk IDs are properly formatted in all cases

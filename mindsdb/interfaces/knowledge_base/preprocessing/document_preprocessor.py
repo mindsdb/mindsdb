@@ -42,14 +42,11 @@ class DocumentPreprocessor:
         """Initialize preprocessor"""
         self.splitter = None  # Will be set by child classes
 
-    def process_documents(self, documents: List[Document], delete_existing: bool = False) -> List[ProcessedChunk]:
+    def process_documents(self, documents: List[Document]) -> List[ProcessedChunk]:
         """Base implementation - should be overridden by child classes
 
         Args:
             documents: List of documents to process
-            delete_existing: If True, existing chunks for these documents will be marked for deletion.
-                           Defaults to False to only update/delete the specific chunks being inserted.
-                           Set to True to delete ALL chunks for a document before inserting new ones.
         """
         raise NotImplementedError("Subclasses must implement process_documents")
 
@@ -120,7 +117,6 @@ class DocumentPreprocessor:
         doc_id: Optional[str],
         chunk_index: Optional[int],
         base_metadata: Optional[Dict] = None,
-        delete_existing: bool = False,
     ) -> Dict:
         """Centralized method for preparing chunk metadata"""
         metadata = base_metadata or {}
@@ -135,9 +131,6 @@ class DocumentPreprocessor:
 
         # Always set source
         metadata["source"] = self._get_source()
-
-        # Always set delete_existing flag
-        metadata["delete_existing"] = delete_existing
 
         return metadata
 
@@ -310,7 +303,7 @@ class TextChunkingPreprocessor(DocumentPreprocessor):
         # Use base class implementation
         return super()._split_document(doc)
 
-    def process_documents(self, documents: List[Document], delete_existing: bool = False) -> List[ProcessedChunk]:
+    def process_documents(self, documents: List[Document]) -> List[ProcessedChunk]:
         processed_chunks = []
 
         for doc in documents:
@@ -364,7 +357,7 @@ class TextChunkingPreprocessor(DocumentPreprocessor):
                         id=chunk_id,
                         content=chunk_doc.content,
                         embeddings=doc.embeddings,
-                        metadata=self._prepare_chunk_metadata(doc.id, i, metadata, delete_existing),
+                        metadata=self._prepare_chunk_metadata(doc.id, i, metadata),
                     )
                 )
 

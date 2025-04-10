@@ -66,9 +66,8 @@ class KBTestBase:
 
         name = f'test_emb_model_{engine}'
         try:
-            self.con.models.get(name)
-            return name
-        except AttributeError:
+            self.con.models.drop(name)
+        except Exception:
             ...
 
         if engine == 'openai':
@@ -285,18 +284,16 @@ class KBTest(KBTestBase):
         def to_date(s):
             return dt.datetime.strptime(s, '%Y-%m-%d %H:%M:%S.%f')
 
-        def load_kb(batch_size, threads):
+        def load_kb(batch_size):
             self.run_sql(f"""
                 insert into kb_crm_part
                 select pk id, message_body content from example_db.crm_demo
-                using batch_size={batch_size}, track_column=id, threads={threads}
+                using batch_size={batch_size}, track_column=id
             """)
 
         test_set = [
-            {'batch_size': 10, 'threads': 'false'},
-            {'batch_size': 10, 'threads': 5},
-            {'batch_size': 50, 'threads': 'false'},
-            {'batch_size': 50, 'threads': 5},
+            {'batch_size': 50},
+            {'batch_size': 100},
         ]
 
         results = []
@@ -308,9 +305,10 @@ class KBTest(KBTestBase):
             thread = Thread(target=load_kb, kwargs=item)
             thread.start()
 
+            time.sleep(3)
             try:
-                while True:
-                    time.sleep(1)
+                for i in range(100):  # 300 sec min max
+                    time.sleep(3)
 
                     ret = self.run_sql('describe knowledge base kb_crm_part')
                     record = ret.iloc[0]
@@ -340,8 +338,7 @@ class KBTest(KBTestBase):
 
         self.run_sql("""
             INSERT INTO kb_crm (
-                  SELECT *
-                  FROM example_db.crm_demo
+                SELECT * FROM example_db.crm_demo
             );
         """)
 
@@ -382,20 +379,50 @@ class KBTest(KBTestBase):
         assert len(ret) == 5
 
         # -- Content + metadata search with limit and re-ranking threshold
+        # TODO chroma shows max relevance = 0.69, but postgres = 0.81
+        ret = self.run_sql("""
+            SELECT *
+            FROM kb_crm
+            WHERE status = "solving" AND content = "noise" AND reranking_threshold=0.65
+        """)
+        assert set(ret.metadata.apply(lambda x: x.get('status'))) == {'solving'}
+        assert 'noise' in ret.chunk_content[0]  # first line contents word
+        assert len(ret[ret.relevance < 0.65]) == 0
+
+    def test_relevance(self, openai_api_key):
+
+        # prepare KB
+        kb_params = {
+            'embedding_model': {
+              "provider": "openai",
+              "model_name": "text-embedding-ada-002",
+              "api_key": openai_api_key
+            },
+            'reranking_model': {
+              "provider": "openai",
+              "model_name": "gpt-4",
+              "api_key":  openai_api_key
+            },
+            'metadata_columns': ['status', 'category'],
+            'content_columns': ['message_body'],
+            'id_column': 'id',
+        }
+
+        self.create_kb('kb_crm', params=kb_params)
+
+        self.run_sql("""
+            INSERT INTO kb_crm (
+                SELECT * FROM example_db.crm_demo
+            );
+        """)
+
         ret = self.run_sql("""
             SELECT *
             FROM kb_crm
             WHERE status = "solving" AND content = "noise" AND reranking_threshold=0.8
         """)
         assert set(ret.metadata.apply(lambda x: x.get('status'))) == {'solving'}
-        assert 'noise' in ret.chunk_content[0]
+        for item in ret.chunk_content:
+            assert 'noise' in item  # all lines line contents word
+
         assert len(ret[ret.relevance < 0.8]) == 0
-
-    def test_relevance(self):
-        """
-        SELECT id, relevance FROM my_kb WHERE content = 'a novel about epic inter planetary intelligence' LIMIT 10;
-
-        SELECT id, chunk_id, chunk_content,chunk_relevance FROM my_kb WHERE content = 'a novel about epic inter planetary intelligence' LIMIT 10;
-
-        """
-        # TODO

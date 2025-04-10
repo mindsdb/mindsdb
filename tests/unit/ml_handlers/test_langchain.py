@@ -8,6 +8,7 @@ from ..executor_test_base import BaseExecutorTest
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 ANYSCALE_API_KEY = os.environ.get("ANYSCALE_API_KEY")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
 
 
 def ollama_model_exists(model_name: str) -> bool:
@@ -116,6 +117,31 @@ class TestLangchain(BaseExecutorTest):
             """
             SELECT answer
             FROM proj.test_anyscale_langchain_model
+            WHERE question='What is the capital of Sweden?'
+        """
+        )
+        assert "stockholm" in result_df['answer'].iloc[0].lower()
+
+    @pytest.mark.skipif(GOOGLE_API_KEY is None, reason='Missing Google API key (GOOGLE_API_KEY env variable)')
+    def test_google_provider(self):
+        self.run_sql(
+            f"""
+           create model proj.test_google_langchain_model
+           predict answer
+           using
+             engine='langchain',
+             provider='google',
+             model_name='gemini-1.5-pro',
+             prompt_template='Answer the user in a useful way: {{{{question}}}}',
+             google_api_key='{GOOGLE_API_KEY}';
+        """
+        )
+        self.wait_predictor("proj", "test_google_langchain_model")
+
+        result_df = self.run_sql(
+            """
+            SELECT answer
+            FROM proj.test_google_langchain_model
             WHERE question='What is the capital of Sweden?'
         """
         )

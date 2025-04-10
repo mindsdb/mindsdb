@@ -181,7 +181,7 @@ class FileController:
             .first()
         )
         if file_record is None:
-            raise Exception(f"File '{name}' does not exists")
+            raise FileNotFoundError(f"File '{name}' does not exists")
         file_dir = f"file_{ctx.company_id}_{file_record.id}"
         self.fs_store.get(file_dir, base_dir=self.dir)
         return str(

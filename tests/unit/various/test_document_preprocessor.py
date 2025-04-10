@@ -41,12 +41,28 @@ class TestDocumentPreprocessor:
         assert id4 == f"{provided_id}_{content_column}"
 
     def test_chunk_id_generation(self):
-        """Test chunk ID generation with and without indices"""
+        """Test human-readable chunk ID generation"""
         provided_id = "test_id"
-        # Test basic ID generation
         preprocessor = DocumentPreprocessor()
-        chunk_id = preprocessor._generate_chunk_id(provided_id=provided_id, chunk_index=0)
-        assert chunk_id == 'test_id_chunk_0'
+
+        # Test with all parameters
+        chunk_id = preprocessor._generate_chunk_id(
+            chunk_index=0,
+            total_chunks=3,
+            start_char=0,
+            end_char=100,
+            provided_id=provided_id
+        )
+        assert chunk_id == 'test_id:1of3:0to100'
+
+        # Test error when no document ID provided
+        with pytest.raises(ValueError, match="Document ID must be provided"):
+            preprocessor._generate_chunk_id(
+                chunk_index=0,
+                total_chunks=3,
+                start_char=0,
+                end_char=100
+            )
 
     def test_split_document_without_splitter(self):
         """Test that splitting without a configured splitter raises error"""
@@ -111,14 +127,68 @@ class TestDocumentPreprocessor:
         preprocessor = TextChunkingPreprocessor(config)
         parent_content = " ".join(["parent"] * 30)
         parent_doc = Document(content=parent_content, id="parent_doc")
-        chunks = preprocessor.process_documents([parent_doc])
+
+        # Test without delete_existing flag
+        chunks = preprocessor.process_documents([parent_doc], delete_existing=False)
         # Verify that all chunks have reference to the parent document
         for chunk in chunks:
             assert "original_doc_id" in chunk.metadata
             assert chunk.metadata["original_doc_id"] == "parent_doc"
-        # Verify that chunk IDs follow the expected pattern with parent ID
+            assert "delete_existing" not in chunk.metadata
+            # Verify chunk position metadata
+            assert "start_char" in chunk.metadata
+            assert "end_char" in chunk.metadata
+            assert chunk.metadata["end_char"] > chunk.metadata["start_char"]
+
+        # Test with delete_existing flag
+        chunks = preprocessor.process_documents([parent_doc], delete_existing=True)
+        for chunk in chunks:
+            assert chunk.metadata["delete_existing"] is True
+
+        # Verify chunk IDs follow the new format
         for i, chunk in enumerate(chunks):
-            assert f"parent_doc_chunk_{i}" == chunk.id
+            chunk_id_parts = chunk.id.split(":")
+            assert len(chunk_id_parts) == 3
+            assert chunk_id_parts[0] == "parent_doc"
+            assert chunk_id_parts[1].endswith(f"of{len(chunks)}")
+            assert "to" in chunk_id_parts[2]
+
+    def test_document_update(self):
+        """Test document update behavior with delete_existing flag"""
+        config = TextChunkingConfig(chunk_size=10, chunk_overlap=2)
+        preprocessor = TextChunkingPreprocessor(config)
+
+        # Create initial document
+        doc_id = "test_doc"
+        initial_content = " ".join(["initial"] * 20)
+        initial_doc = Document(content=initial_content, id=doc_id)
+
+        # Process with delete_existing=True (should mark chunks for deletion)
+        updated_content = " ".join(["updated"] * 20)
+        updated_doc = Document(content=updated_content, id=doc_id)
+
+        # Process both versions
+        initial_chunks = preprocessor.process_documents([initial_doc], delete_existing=False)
+        updated_chunks = preprocessor.process_documents([updated_doc], delete_existing=True)
+
+        # Verify initial chunks don't have delete flag
+        for chunk in initial_chunks:
+            assert "delete_existing" not in chunk.metadata
+            assert chunk.metadata["original_doc_id"] == doc_id
+
+        # Verify updated chunks have delete flag
+        for chunk in updated_chunks:
+            assert chunk.metadata["delete_existing"] is True
+            assert chunk.metadata["original_doc_id"] == doc_id
+
+        # Verify chunk IDs are properly formatted
+        for chunks in [initial_chunks, updated_chunks]:
+            for i, chunk in enumerate(chunks):
+                chunk_id_parts = chunk.id.split(":")
+                assert len(chunk_id_parts) == 3
+                assert chunk_id_parts[0] == doc_id
+                assert chunk_id_parts[1].endswith(f"of{len(chunks)}")
+                assert "to" in chunk_id_parts[2]
 
 
 def test_metadata_preservation():

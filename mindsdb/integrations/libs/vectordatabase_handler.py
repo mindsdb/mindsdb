@@ -278,10 +278,20 @@ class VectorStoreHandler(BaseHandler):
         return self.do_upsert(table_name, df)
 
     def do_upsert(self, table_name, df):
-        # if handler supports it, call upsert method
+        """Upsert data into table, handling document updates and deletions.
 
+        Args:
+            table_name (str): Name of the table
+            df (pd.DataFrame): DataFrame containing the data to upsert
+
+        The function handles three cases:
+        1. New documents: Insert them
+        2. Updated documents: Delete old chunks and insert new ones
+        3. Document deletion: Delete chunks based on original_doc_id in metadata
+        """
         id_col = TableField.ID.value
         content_col = TableField.CONTENT.value
+        metadata_col = TableField.METADATA.value
 
         def gen_hash(v):
             return hashlib.md5(str(v).encode()).hexdigest()
@@ -300,6 +310,25 @@ class VectorStoreHandler(BaseHandler):
 
         # id is string TODO is it ok?
         df[id_col] = df[id_col].apply(str)
+
+        # Handle document deletions first
+        doc_ids_to_delete = set()
+        for _, row in df.iterrows():
+            metadata = row.get(metadata_col, {})
+            if metadata and metadata.get('delete_existing') is True:
+                doc_id = metadata.get('original_doc_id')
+                if doc_id:
+                    doc_ids_to_delete.add(doc_id)
+
+        if doc_ids_to_delete:
+            # Delete existing chunks for these documents using metadata filter
+            conditions = [FilterCondition(
+                column=f"{metadata_col}->>'original_doc_id'",
+                op=FilterOperator.IN,
+                value=list(doc_ids_to_delete)
+            )]
+            self.delete(table_name, conditions)
+            LOG.debug(f"Deleted chunks for documents: {doc_ids_to_delete}")
 
         if hasattr(self, 'upsert'):
             self.upsert(table_name, df)

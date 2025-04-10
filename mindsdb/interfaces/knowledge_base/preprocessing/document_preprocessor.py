@@ -42,8 +42,13 @@ class DocumentPreprocessor:
         """Initialize preprocessor"""
         self.splitter = None  # Will be set by child classes
 
-    def process_documents(self, documents: List[Document]) -> List[ProcessedChunk]:
-        """Base implementation - should be overridden by child classes"""
+    def process_documents(self, documents: List[Document], delete_existing: bool = True) -> List[ProcessedChunk]:
+        """Base implementation - should be overridden by child classes
+
+        Args:
+            documents: List of documents to process
+            delete_existing: If True, existing chunks for these documents will be marked for deletion
+        """
         raise NotImplementedError("Subclasses must implement process_documents")
 
     def _split_document(self, doc: Document) -> List[Document]:
@@ -93,14 +98,19 @@ class DocumentPreprocessor:
     def _generate_chunk_id(
         self,
         chunk_index: Optional[int] = None,
+        total_chunks: Optional[int] = None,
+        start_char: Optional[int] = None,
+        end_char: Optional[int] = None,
         provided_id: str = None,
     ) -> str:
-        """Generate deterministic ID for a chunk"""
-        base_id = provided_id
-        chunk_id = (
-            f"{base_id}_chunk_{chunk_index}" if chunk_index is not None else base_id
-        )
-        logger.debug(f"Generated chunk ID: {chunk_id} for content hash: {base_id}")
+        """Generate human-readable deterministic ID for a chunk
+        Format: <doc_id>:<chunk_number>of<total_chunks>:<start_char>to<end_char>
+        """
+        if provided_id is None:
+            raise ValueError("Document ID must be provided for chunk ID generation")
+
+        chunk_id = f"{provided_id}:{chunk_index + 1}of{total_chunks}:{start_char}to{end_char}"
+        logger.debug(f"Generated chunk ID: {chunk_id}")
         return chunk_id
 
     def _prepare_chunk_metadata(

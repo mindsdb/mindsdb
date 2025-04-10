@@ -368,8 +368,13 @@ class KnowledgeBaseTable:
         db_handler = self.get_vector_db()
         db_handler.delete(self._kb.vector_database_table)
 
-    def insert(self, df: pd.DataFrame):
-        """Insert dataframe to KB table."""
+    def insert(self, df: pd.DataFrame, delete_existing: bool = True):
+        """Insert dataframe to KB table.
+
+        Args:
+            df: DataFrame to insert
+            delete_existing: If True, delete existing chunks for documents being inserted
+        """
         if df.empty:
             return
 
@@ -398,6 +403,8 @@ class KnowledgeBaseTable:
                         **base_metadata,
                         'original_row_id': str(row_id),
                         'content_column': col,
+                        'original_doc_id': str(row_id),
+                        'delete_existing': delete_existing,
                     }
 
                     raw_documents.append(Document(
@@ -705,7 +712,7 @@ class KnowledgeBaseTable:
             return f"{provided_id}_{content_column}"
 
         id_string = f"content={content}_column={content_column}"
-        return hashlib.sha256(id_string.encode()).hexdigest()
+        return hashlib.sha256(id_string.encode()).hexdigest() + "_column_" + content_column
 
     def _convert_metadata_value(self, value):
         """

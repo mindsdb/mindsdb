@@ -30,6 +30,9 @@ DROP DATABASE example_sentiment_openai_db;
 CREATE ML_ENGINE openai2
 FROM openai USING openai_api_key='%s';
 """
+    delete_engine = """
+DROP ML_ENGINE openai2;
+"""
     create_model = """
 CREATE MODEL sentiment_classifier_gpt3
 PREDICT sentiment
@@ -67,6 +70,7 @@ class TestPredictTextSentimentOpenAI(HTTPHelperMixin):
 
     def setup_class(self):
         self.sql_via_http(self, QueryStorage.delete_db)
+        self.sql_via_http(self, QueryStorage.delete_engine)
         self.sql_via_http(self, QueryStorage.delete_model)
 
     def test_create_db(self):

@@ -128,19 +128,20 @@ class TestDocumentPreprocessor:
         parent_content = " ".join(["parent"] * 30)
         parent_doc = Document(content=parent_content, id="parent_doc")
 
-        # Test without delete_existing flag
-        chunks = preprocessor.process_documents([parent_doc], delete_existing=False)
+        # Test default behavior (delete_existing=False)
+        chunks = preprocessor.process_documents([parent_doc])
         # Verify that all chunks have reference to the parent document
         for chunk in chunks:
             assert "original_doc_id" in chunk.metadata
             assert chunk.metadata["original_doc_id"] == "parent_doc"
-            assert "delete_existing" not in chunk.metadata
+            assert "delete_existing" in chunk.metadata
+            assert chunk.metadata["delete_existing"] is False
             # Verify chunk position metadata
             assert "start_char" in chunk.metadata
             assert "end_char" in chunk.metadata
             assert chunk.metadata["end_char"] > chunk.metadata["start_char"]
 
-        # Test with delete_existing flag
+        # Test with delete_existing=True
         chunks = preprocessor.process_documents([parent_doc], delete_existing=True)
         for chunk in chunks:
             assert chunk.metadata["delete_existing"] is True
@@ -153,8 +154,8 @@ class TestDocumentPreprocessor:
             assert chunk_id_parts[1].endswith(f"of{len(chunks)}")
             assert "to" in chunk_id_parts[2]
 
-    def test_document_update(self):
-        """Test document update behavior with delete_existing flag"""
+    def test_document_update_modes(self):
+        """Test document update behavior in different modes"""
         config = TextChunkingConfig(chunk_size=10, chunk_overlap=2)
         preprocessor = TextChunkingPreprocessor(config)
 
@@ -163,26 +164,36 @@ class TestDocumentPreprocessor:
         initial_content = " ".join(["initial"] * 20)
         initial_doc = Document(content=initial_content, id=doc_id)
 
-        # Process with delete_existing=True (should mark chunks for deletion)
-        updated_content = " ".join(["updated"] * 20)
-        updated_doc = Document(content=updated_content, id=doc_id)
+        # Test default mode (delete_existing=False)
+        updated_content_1 = " ".join(["updated1"] * 20)
+        updated_doc_1 = Document(content=updated_content_1, id=doc_id)
 
-        # Process both versions
-        initial_chunks = preprocessor.process_documents([initial_doc], delete_existing=False)
-        updated_chunks = preprocessor.process_documents([updated_doc], delete_existing=True)
+        # Process both versions with default settings
+        initial_chunks = preprocessor.process_documents([initial_doc])
+        updated_chunks_1 = preprocessor.process_documents([updated_doc_1])
 
-        # Verify initial chunks don't have delete flag
+        # Verify initial chunks have delete_existing=False
         for chunk in initial_chunks:
-            assert "delete_existing" not in chunk.metadata
+            assert chunk.metadata["delete_existing"] is False
             assert chunk.metadata["original_doc_id"] == doc_id
 
-        # Verify updated chunks have delete flag
-        for chunk in updated_chunks:
+        # Verify updated chunks also have delete_existing=False
+        for chunk in updated_chunks_1:
+            assert chunk.metadata["delete_existing"] is False
+            assert chunk.metadata["original_doc_id"] == doc_id
+
+        # Test full document deletion mode (delete_existing=True)
+        updated_content_2 = " ".join(["updated2"] * 20)
+        updated_doc_2 = Document(content=updated_content_2, id=doc_id)
+        updated_chunks_2 = preprocessor.process_documents([updated_doc_2], delete_existing=True)
+
+        # Verify chunks are marked for full document deletion
+        for chunk in updated_chunks_2:
             assert chunk.metadata["delete_existing"] is True
             assert chunk.metadata["original_doc_id"] == doc_id
 
-        # Verify chunk IDs are properly formatted
-        for chunks in [initial_chunks, updated_chunks]:
+        # Verify chunk IDs are properly formatted in all cases
+        for chunks in [initial_chunks, updated_chunks_1, updated_chunks_2]:
             for i, chunk in enumerate(chunks):
                 chunk_id_parts = chunk.id.split(":")
                 assert len(chunk_id_parts) == 3

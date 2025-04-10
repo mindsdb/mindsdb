@@ -42,12 +42,14 @@ class DocumentPreprocessor:
         """Initialize preprocessor"""
         self.splitter = None  # Will be set by child classes
 
-    def process_documents(self, documents: List[Document], delete_existing: bool = True) -> List[ProcessedChunk]:
+    def process_documents(self, documents: List[Document], delete_existing: bool = False) -> List[ProcessedChunk]:
         """Base implementation - should be overridden by child classes
 
         Args:
             documents: List of documents to process
-            delete_existing: If True, existing chunks for these documents will be marked for deletion
+            delete_existing: If True, existing chunks for these documents will be marked for deletion.
+                           Defaults to False to only update/delete the specific chunks being inserted.
+                           Set to True to delete ALL chunks for a document before inserting new ones.
         """
         raise NotImplementedError("Subclasses must implement process_documents")
 

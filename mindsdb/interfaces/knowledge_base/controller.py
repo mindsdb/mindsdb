@@ -368,12 +368,14 @@ class KnowledgeBaseTable:
         db_handler = self.get_vector_db()
         db_handler.delete(self._kb.vector_database_table)
 
-    def insert(self, df: pd.DataFrame, delete_existing: bool = True):
+    def insert(self, df: pd.DataFrame, delete_existing: bool = False):
         """Insert dataframe to KB table.
 
         Args:
             df: DataFrame to insert
-            delete_existing: If True, delete existing chunks for documents being inserted
+            delete_existing: If True, delete existing chunks for documents being inserted.
+                           Defaults to False to only update/delete the specific chunks being inserted.
+                           Set to True to delete ALL chunks for a document before inserting new ones.
         """
         if df.empty:
             return

@@ -3,238 +3,452 @@ title: Knowledge Base
 sidebarTitle: Knowledge Base
 ---
 
-A knowledge base is a batteries-included RAG system that you can create and insert data into, as well as query as if it were a table.
-
-Internally, knowledge bases use a vector store and an embedding model. By default, it uses the ChromaDB vector store and the OpenAI embedding model, which requires an OpenAI API key set as an evironment variable. You can define a vector store and an embedding model as in the examples below.
+A knowledge base is an advanced system designed to go beyond traditional data storage. Its components include embedding and reranking models and a vector store.
 
 <p align="center">
   <img src="https://docs.google.com/drawings/d/e/2PACX-1vTVmUqhoFXLF3ncL0NWwgdPjI7Hj19f-5xU8ED31ntYvlsTM3poM9zZKwcrEwzvxJrOhl2raIFKWlsp/pub?w=1342&h=681" />
 </p>
 
-## Syntax
+It intelligently organizes information in semantically meaningful ways, allowing for context-aware retrieval based on meaning rather than just keywords. With the ability to perform semantic reasoning across multiple pieces of information, it delivers deeper insights and more accurate responses.
 
-Here is a general syntax for creating a knowledge base:
+## Create a Knowledge Base
+
+Here is the syntax for creating a knowledge base:
+
+<Note>
+MindsDB stores objects, such as models or knowledge bases, inside projects. The default project is called `mindsdb`. You can [create other projects](/mindsdb_sql/sql/create/project) to store your objects.
+
+To refer to an object stored in a defined project, specify both project and object names separated by a dot: `project_name.object_name`. For example, `my_project.my_kb`. If no project is defined with the object name, the object is stored in the default `mindsdb` project.
+</Note>
+
+<CodeGroup>
+
+```sql OpenAI
+CREATE KNOWLEDGE_BASE my_kb
+USING
+     embedding_model = {
+         "provider": "OpenAI",
+         "model_name" : "text-embedding-ada-002",
+         "api_key": "sk-..."  -- optional, default from env variable
+     },
+     reranking_model = {
+         "provider": "OpenAI",
+         "model_name": 'gpt-4o',
+         "api_key": "sk-..."  -- optional, default from env variable
+     },
+     storage = my_vector_store.storage_table, -- optional, default ChromaDB
+     metadata_columns = ['date', 'creator', ...], -- optional
+     content_columns = ['review', 'content', ...], -- optional, default content
+     id_column = 'id'; -- optional
+```
+
+```sql OpenAI via Azure
+CREATE KNOWLEDGE_BASE my_kb
+USING
+     embedding_model = {
+         "provider": "Azure_OpenAI",
+         "model_name" : "text-embedding-ada-002",
+         "api_key": "sk-...",  -- optional, default from env variable
+         "azure_endpoint" : "https://ai-2249ai742481026689.openai.azure.com/",
+         "openai_api_version": "2024-12-01-preview"
+     },
+     reranking_model = {
+         "provider": "OpenAI",
+         "model_name": 'gpt-4o',
+         "api_key": "sk-..."  -- optional, default from env variable
+     },
+     storage = my_vector_store.storage_table, -- optional, default ChromaDB
+     metadata_columns = ['date', 'creator', ...], -- optional
+     content_columns = ['review', 'content', ...], -- optional, default content
+     id_column = 'id'; -- optional
+```
+
+</CodeGroup>
+
+Upon execution, it registers `my_kb` and associates the specified models and storage.
+
+The following is an explanation of the syntax and parameters:
+
+* `embedding_model` stores specifications of the embedding model to be used.
+      * `provider` defines the model provider. Currently, the supported providers include OpenAI and its models via Azure.
+      * `model_name` defines the embedding model name as specified by the provider. Users can choose one of the [OpenAI embedding models](https://platform.openai.com/docs/guides/embeddings/embedding-models#embedding-models).
+      * `api_key` stores your OpenAI API key. Alternatively, you can use the `OPENAI_API_KEY` environment variable to store your OpenAI API key.
+      * `azure_endpoint` is required when using `Azure_OpenAI` as the provider.
+      * `openai_api_version` is required when using `Azure_OpenAI` as the provider.
+
+* `reranking_model` stores specification of the reranking model to be used.
+      * `provider` defines the model provider. Currently, the supported providers include OpenAI.
+      * `model_name` defines the reranking model name as specified by the provider. Users can choose one of the [OpenAI chat models](https://platform.openai.com/docs/models).
+      * `api_key` stores your OpenAI API key. Alternatively, you can use the `OPENAI_API_KEY` environment variable to store your OpenAI API key.
+
+* `storage` is an optional parameter. It assigns the name of the vector store created within MindsDB with the [`CREATE DATABASE` command](/mindsdb_sql/sql/create/database), which is either [PGVector](/integrations/vector-db-integrations/pgvector) or [ChromaDB](/integrations/vector-db-integrations/chromadb), followed by a table name present in that vector database where the knowledge base stores its content. If not provided, the system uses the default ChromaDB vector database.
+
+* `metadata_columns` provides the list of column names that will be used as the `metadata` of the knowledge base. Users can use these column names to filter the results by metadata and insert them into the knowledge base. If not set, the metadata is not used.
+
+* `content_columns` provides the list of column names that will be used as the `content` of the knowledge base. Users can use these column names to filter the results by content and insert them into the knowledge base. If not set, the `content` column is used by default.
+
+* `id_column` is the column name that will be used as the unique identifier by the knowledge base. If not set, the `id` column is used by default.
+
+Get details about the knowledge base using the `DESCRIBE` command.
+
+```sql
+DESCRIBE KNOWLEDGE_BASE my_kb;
+```
+
+<Accordion title="Examples">
+
+Here are the usage examples:
+
+* Creating a knowledge base:
 
 ```sql
 CREATE KNOWLEDGE_BASE my_kb
 USING
-   model = embedding_model, -- optional
-   storage = vector_database.storage_table, -- optional
-   metadata_columns = ['date', 'creator', ...], -- optional
-   content_columns = ['review', 'content', ...], -- optional
-   id_column = 'index'; -- optional
+     embedding_model = {
+         "provider": "OpenAI",
+         "model_name" : "text-embedding-ada-002",
+         "api_key": "sk-..."  -- optional, default from env variable
+     },
+     reranking_model = {
+         "provider": "OpenAI",
+         "model_name": 'gpt-4o',
+         "api_key": "sk-..."  -- optional, default from env variable
+     },
+     metadata_columns = ['country'],
+     content_columns = ['country', 'population', 'areasquarekm', 'populationdensity'],
+     id_column = 'country_id';
+```
+</Accordion>
+
+## Insert into a Knowledge Base
+
+Here is the syntax for inserting into a knowledge base:
+
+```sql
+INSERT INTO my_kb ( 
+      SELECT <id_col> AS id, <text_col> AS content 
+      FROM <source_table> 
+);
 ```
 
-Where all the parameters are optional:
+Upon execution, it inserts data into a knowledge base, using the embedding model to embed it into vectors before inserting into an underlying vector database.
 
-- `model`: This is an embedding model created within MindsDB with `CREATE MODEL embedding_model`. If you do not provide the `model` parameter, then the OpenAI's text-embedding-ada-002 model is used by default, provided that the `OPENAI_API_KEY` environment variable is defined.
-- `storage`: This is a vector database that stores embedded data. It defaults to ChromaDB, or you can connect your vector store to MindsDB with `CREATE DATABASE vector_database`.
-- `metadata_columns`: The list of column names that will be stored in the `metadata` column of the knowledge base. If not set, the `metadata` column is not used.
-- `content_columns`: The list of column names that will be stored in the `content` column of the knowledge base. If not set, all columns are stored in the `content` column.
-- `id_column`: The column name that will be stored in the `id` column of the knowledge base to uniquely identitify the data.
+The following is an explanation of the syntax and parameters:
+
+* `my_kb` is a unique identifier of a knowledge base.
+* `<id_col>` is a column that contains unique identifiers of data. Note that if you specified the `id_column` parameter when creating the knowledge base, you can insert this column name into the knowledge base without the `AS id` alias.
+* `<text_col>` is a column that contains the text content. Note that if you specified the `content_columns` parameter when creating the knowledge base, you can insert these column names into the knowledge base without the `AS content` alias.
+
+<Accordion title="Partitioning Queries for Better Performance">
+
+The following features are covered here:
+
+- Run the `INSERT INTO` query in partitions where a batch can be split into separate workers for improved performance.
+- Track progress of the query and resume or cancel ongoing queries.
+- When a query is finished, it is stored in the `information_schema.queries` table with the `finished_at` timestamp. If a user runs another query, all finished queries older than one day are removed.
+- Option to skip errors in partitions.
+
+**Examples of statements**
+
+```sql
+-- Insert data from table into a knowledge base
+INSERT INTO my_kb 
+SELECT * 
+FROM db1.table1
+WHERE ws_id = 3
+USING 
+      batch_size=200,
+      track_column=id;
+
+-- Insert predictions (made by joining a table with a model) into a knowledge base
+INSERT INTO my_kb
+SELECT * 
+FROM db1.table1
+JOIN my_model
+USING 
+      batch_size=200, 
+      track_column=id, 
+      threads=true;
+
+-- Insert data from table into a knowledge base while skipping errors
+INSERT INTO my_kb
+SELECT * 
+FROM db1.table1
+USING 
+      batch_size=200, 
+      track_column=id, 
+      threads=10, 
+      error='skip';
+
+-- Perform prediction in threads and return data 
+INSERT INTO my_kb
+SELECT * 
+FROM db1.table1
+JOIN my_model
+USING 
+      batch_size=200, 
+      track_column=id, 
+      threads=10;
+
+-- View queries in progress
+SELECT * FROM information_schema.queries;
+```
+
+**Parameters**
+
+- **batch_size** - Number of rows fetched per iteration/batch (default: `1000`) to optimize data extraction from the source.
+- **threads** - Defines threads to run partitions in. Note that if the [ML task queue](/setup/custom-config#overview-of-config-parameters) is enabled, threads are automatically used for prediction. Allowed values for `threads` include:
+  - `int` - Number of threads.
+  - `true` - Auto-detect thread count.
+  - `false` - Disable threads, even if the ML task queue is enabled.
+- **track_column** - Column used for partitioning. The query is sorted by this column and limited by `batch_size`.
+- **error** - Defines the error processing. Its default value is `raise`. To skip errors in partitions, use `error='skip'`.
+
+**Repeat a query**
+
+If a query fails, its state is saved as follows:
+- Current step number (in database)
+- Current step data (cached in files or Redis)
+
+Users can resolve the issue and resume the query:
+
+```sql
+-- Use the query ID
+SELECT query_resume(1);
+```
+
+Or, remove/cancel a query:
+
+```sql
+-- Use the query ID
+SELECT query_cancel(1);
+```
+</Accordion>
+
+<Accordion title="Examples">
+
+Here are the usage examples:
+
+* Inserting into a knowledge base where the `content_columns` and `id_column` parameters were not specified:
+
+```sql
+INSERT INTO my_kb ( SELECT book_id AS id, book_summary AS content FROM my_books );
+```
+
+* Inserting into a knowledge base where the `content_columns` and `id_column` parameters were specified as follows:
+
+```sql
+content_columns = ["book_title", "book_summary"]
+id_column = "book_id"
+```
+
+```sql
+INSERT INTO my_kb ( SELECT book_id, book_title, book_summary FROM my_books );
+```
+</Accordion>
+
+## Search a Knowledge Base
+
+### Semantic Search at the Document Level
+
+KBs provide semantic search returning document-level relevance.
+
+```sql
+SELECT id, relevance 
+FROM <kb_name> 
+WHERE content = '<query_text>' 
+AND reranking_threshold = 0.6 -- optional
+LIMIT <N>;
+```
+
+Upon execution, it performs the semantic search workflow (including embedding the query, searching vectors, and optionally reranking) and returns document identifiers and relevance scores.
+
+The following is an explanation of the syntax and parameters:
+
+* `SELECT id, relevance` specifies that the unique document identifier and its calculated relevance score should be returned.
+* `<kb_name>` is a unique identifier of a knowledge base.
+* `WHERE content = '<query_text>'` triggers semantic search based on the meaning of `<query_text>`.
+* `AND reranking_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1.
+* `LIMIT <N>` restricts results to the top N most relevant documents.
 
 <Note>
-Each knowledge base comprises the `id`, `content`, and `metadata` columns that store data defined in the parameters.
+Here are the conditions supported by the available vector stores:
+
+| Handler  |  IN, NOT IN | LIKE, NOT LIKE | < and > | !=  |
+| -------- | ----------- | -------------- | ------- | --- |
+| PgVector | +           | +              | +       | +   |
+| ChromaDB | +           | -              | -       | +   |
 </Note>
 
-## Examples
+<Accordion title="Examples">
 
-This section presents examples of how to create knowledge bases and insert data for storage in the form of embeddings.
+Here are the usage examples:
 
-### Knowledge Base with OpenAI Embedding Model
-
-Note that using OpenAI's embedding model requires OpenAI API key.
-
-First, create an engine through which the model is accessed.
+* Returning top k most relevant documents:
 
 ```sql
-CREATE ML_ENGINE embedding
-FROM langchain_embedding;
+SELECT id, relevance 
+FROM my_kb 
+WHERE content = 'a novel about epic inter planetary intelligence' 
+AND reranking_threshold = 0.7
+LIMIT 10;
 ```
+</Accordion>
 
-Next, create an embedding model, providing an OpenAI API key.
+### Semantic Search at the Chunk Level
+
+KBs provide semantic search returning chunk-level details.
 
 ```sql
-CREATE MODEL embedding_model
-PREDICT embeddings
-USING
-      engine = "embedding",
-      class = "openai",
-      model = "text-embedding-ada-002",
-      openai_api_key = "sk-xxx",
-      input_columns = ["content"];
+SELECT id, chunk_id, chunk_content, metadata, distance, relevance
+FROM <kb_name> 
+WHERE content = '<query_text>' 
+AND reranking_threshold = 0.6 -- optional
+LIMIT <N>;
 ```
 
-Analyze the data that you want to insert into a knowledge base:
+Upon execution, it performs the semantic search workflow (including embedding the query, searching vectors, and optionally reranking) and returns details pertaining to the specific text chunks that matched the query most closely.
+
+The following is an explanation of the syntax and parameters:
+
+* `SELECT id, chunk_id, chunk_content, metadata, distance, relevance` specifies that the unique document identifier, chunk identifier, chunk content, metadata (if defined), distance, and relevance should be returned.
+* `<kb_name>` is a unique identifier of a knowledge base.
+* `WHERE content = '<query_text>'` triggers semantic search based on the meaning of `<query_text>`.
+* `AND reranking_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1.
+* `LIMIT <N>` restricts results to the top N most relevant documents.
+
+<Accordion title="Examples">
+
+Here are the usage examples:
+
+* Returning top k most relevant chunks:
 
 ```sql
-SELECT *
-FROM example_db.home_rentals;
+SELECT id, chunk_id, chunk_content, relevance 
+FROM my_kb 
+WHERE content = 'a novel about epic inter planetary intelligence' 
+AND reranking_threshold = 0.7
+LIMIT 10;
 ```
+</Accordion>
 
-Here is the output:
+### Metadata Filtering with Semantic Search
+
+KBs combine semantic search with standard SQL filtering on metadata.
 
 ```sql
-+-------------------+-------------------+------+----------+----------------+----------------+--------------+----------------------------+
-| number_of_rooms   | number_of_bathrooms | sqft | location | days_on_market | neighborhood   | rental_price | created_at                 |
-+-------------------+-------------------+------+----------+----------------+----------------+--------------+----------------------------+
-| 2                 | 1                 | 917  | great    | 13             | berkeley_hills | 3901         | 2024-02-24 02:28:21.746167 |
-| 0                 | 1                 | 194  | great    | 10             | berkeley_hills | 2042         | 2024-02-19 06:10:59.693052 |
-| 1                 | 1                 | 543  | poor     | 18             | westbrae       | 1871         | 2024-02-12 07:53:45.914146 |
-+-------------------+-------------------+------+----------+----------------+----------------+--------------+----------------------------+
+SELECT id, chunk_content, relevance 
+FROM my_kb 
+WHERE id LIKE '<id_pattern>' -- metadata filtering conditions
+AND content = '<query_text>' -- semantic search condition
+AND reranking_threshold = 0.6; -- optional
 ```
 
-Decide which columns to use as `content` and which ones as `metadata`. For example, we use the `days_on_market` and `neighborhood` columns as `metadata` and the `location` and `rental_price` columns as `content`.
+Upon execution, it performs the conjunctive filtering, that is, results must satisfy both the metadata condition(s) and the semantic search condition.
 
-Now that you have an embedding model, create a knowledge base, passing this embedding model and defining the `content` and `metadata` columns.
+The following is an explanation of the syntax and parameters:
+
+* `SELECT id, chunk_content, relevance` specifies that the unique document identifier, chunk content, and the relevance score should be returned.
+* `<kb_name>` is a unique identifier of a knowledge base.
+* `WHERE id LIKE '<id_pattern>'` is the metadata filtering condition.
+* `WHERE content = '<query_text>'` is the semantic search condition.
+* `AND reranking_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1.
+
+<Accordion title="Examples">
+
+Here are the usage examples:
+
+* Filtering results:
 
 ```sql
-CREATE KNOWLEDGE_BASE kb_custom_model
-USING
-	model = embedding_model,
-      metadata_columns = ['days_on_market', 'neighborhood'],
-      content_columns = ['location', 'rental_price'];
+SELECT id, chunk_content, relevance 
+FROM my_kb
+WHERE id LIKE 'fiction%' -- metadata filtering conditions
+AND content = 'a novel about ...' -- semantic search condition
+AND reranking_threshold = 0.6; -- optional
 ```
+</Accordion>
 
-After successful creation of a knowledge base, insert data to store it in the form of embeddings.
+## `JOIN` Support
+
+KBs can be used in the standard SQL JOIN statements.
 
 ```sql
-INSERT INTO kb_custom_model (
-      SELECT *
-      FROM example_db.home_rentals
-);
+SELECT t.id, t.title, kb.chunk_content, kb.relevance
+FROM <other_table> AS t
+JOIN <kb_name> AS kb 
+ON t.<key_col> = kb.id
+WHERE <table_filter_condition> -- filter on non-KB table
+AND kb.content = '<query_text>'; -- semantic search filter on a KB
 ```
 
-Finally, you can verify that the data has been inserted into the knowledge base by querying it.
+The following is an explanation of the syntax and parameters:
+
+* `SELECT t.id, t.title, kb.chunk_content, kb.relevance` specifies the columns selected from a table (`t`) and a knowledge base (`kb`).
+* `WHERE <table_filter_condition>` sets conditions on a table.
+* `AND kb.content = '<query_text>'` sets a semantic search condition on a knowledge base.
+
+<Accordion title="Examples">
+
+Here are the usage examples:
+
+* Joining a knowledge base with a data table:
 
 ```sql
-SELECT * FROM kb_custom_model;
+SELECT b.id, b.title, kb.chunk_content, kb.relevance
+FROM books AS b
+LEFT JOIN my_kb AS kb 
+ON b.id = kb.id
+WHERE b.topic = 'fantasy'
+AND kb.content = 'a novel about benevolent ai';
 ```
+</Accordion>
 
-Here is the output:
+## Delete from a Knowledge Base
+
+Here is the syntax for deleting from a knowledge base:
 
 ```sql
-+----+------------------------------+----------------------------------------+
-| id | content                      | metadata                               |
-+----+------------------------------+----------------------------------------+
-| 1  | days_on_market: 13           | {"location":great,"rental_price":3901} |
-|    | neighborhood: berkeley_hills |                                        |
-| 2  | days_on_market: 10           | {"location":great,"rental_price":2042} |
-|    | neighborhood: berkeley_hills |                                        |
-| 3  | days_on_market: 18           | {"location":poor,"rental_price":1871}  |
-|    | neighborhood: westbrae       |                                        |
-+----+------------------------------+----------------------------------------+
+DELETE FROM <kb_name> 
+WHERE <condition>;
 ```
 
-### Knowledge Base with Hugging Face Embedding Model
+Upon execution, it identifies matching records based on the user-defined condition and removes all associated data (metadata, content, chunks, embeddings) for matching records from the KB's storage.
 
-This example uses an open source embedding model.
+The following is an explanation of the syntax and parameters:
 
-First, create an engine through which the model is accessed.
+* `<kb_name>` is a unique identifier of a knowledge base.
+* `<condition>` is a standard SQL WHERE clause condition operating on metadata columns.
+
+<Accordion title="Examples">
+
+Here are the usage examples:
+
+* Deleting from a knowledge base:
 
 ```sql
-CREATE ML_ENGINE embedding
-FROM langchain_embedding;
+DELETE FROM my_kb 
+WHERE id IN ('scifi_001', 'scifi_0010', 'bus_89');
 ```
+</Accordion>
 
-Next, create an embedding model.
+## Drop a Knowledge Base
+
+Here is the syntax for deleting a knowledge base:
 
 ```sql
-CREATE MODEL embedding_model
-PREDICT embedding
-USING
-      engine = 'langchain_embedding',
-      class = 'HuggingFaceEmbeddings',
-      model_name = "sentence-transformers/all-mpnet-base-v2";
+DROP KNOWLEDGE_BASE <kb_name>;
 ```
 
-Now that you have an embedding model, create a knowledge base, passing this embedding model.
+Upon execution, it removes the knowledge base with its content.
+
+<Accordion title="Examples">
+
+Here are the usage examples:
+
+* Dropping a knowledge base:
 
 ```sql
-CREATE KNOWLEDGE_BASE kb_custom_model
-USING
-	model = embedding_model;
+DROP KNOWLEDGE_BASE my_kb;
 ```
-
-After successful creation of a knowledge base, insert data to store it in the form of embeddings.
-
-```sql
-INSERT INTO kb_custom_model (
-      SELECT review as content 
-      FROM example_db.amazon_reviews
-);
-```
-
-Finally, you can verify that the data has been inserted into the knowledge base by querying it.
-
-```sql
-SELECT * FROM kb_custom_model;
-```
-
-### Knowledge Base with Custom Vector Store
-
-This example shows how to create a knowledge base with custom vector database.
-
-First, connect to your vector database. Here, it is ChromaDB.
-
-```sql
-CREATE DATABASE chroma_dev_local
-WITH ENGINE = "chromadb",
-PARAMETERS = {
-	    "persist_directory": "persist path here"
-};
-```
-
-Create an index in the vector store and insert one example point.
-
-```sql
-CREATE TABLE chroma_dev_local.world_news_index (
-	SELECT content, embeddings FROM embedding_model
-	WHERE content = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Tristique sollicitudin nibh sit amet commodo nulla. Risus sed vulputate odio ut enim blandit volutpat. Suspendisse ultrices gravida dictum fusce ut placerat orci. Eget nulla facilisi etiam dignissim diam. Aenean euismod elementum nisi quis eleifend quam. Ac placerat vestibulum lectus mauris ultrices eros in. Sed turpis tincidunt id aliquet risus feugiat in ante metus. Pellentesque habitant morbi tristique senectus et netus. Imperdiet massa tincidunt nunc pulvinar sapien et ligula. Leo in vitae turpis massa sed elementum tempus egestas. Aliquam malesuada bibendum arcu vitae elementum curabitur. Sit amet tellus cras adipiscing. Enim ut tellus elementum sagittis vitae et leo. Donec pretium vulputate sapien nec."
-);
-```
-
-Next, create a knowledge base, passing this vector database connection.
-
-```sql
-CREATE KNOWLEDGE_BASE world_news_kb
-USING
-      storage = chroma_dev_local.world_news_index;
-```
-
-### Automate Data Sync with Knowledge Base
-
-This example shows how to set up a job that inserts newly available data from your database into a knowledge base.
-
-Here is how you can automate adding content to the knowledge base every time new data becomes available:
-
-```sql
-CREATE JOB keep_knowledge_base_up_to_date AS (
-
-    INSERT INTO world_news_kb (
-        SELECT id, text AS content
-        FROM world_news_with_ids
-        WHERE id > LAST
-    );
-
-) EVERY second;
-```
-
-<Note>
-The `LAST` keyword enables the quey to select only the newly added data. Learn more about the [`LAST` keyword here](/mindsdb_sql/sql/create/jobs#last).
-</Note>
-
-Query the knowledge base as below.
-
-```sql
-SELECT *
-FROM world_news_kb;
-
-SELECT *
-FROM world_news_kb
-WHERE content = "YouTube" LIMIT 1;
-
-SELECT *
-FROM world_news_kb
-WHERE content = "Canada and Google" LIMIT 1;
-```
+</Accordion>

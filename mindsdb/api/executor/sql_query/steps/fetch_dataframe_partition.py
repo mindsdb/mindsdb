@@ -1,6 +1,4 @@
 import pandas as pd
-import threading
-import queue
 from typing import List
 
 from mindsdb_sql_parser import ASTNode

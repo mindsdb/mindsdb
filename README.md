@@ -31,7 +31,7 @@
 ----------------------------------------
 
 
-MindsDB is a solution that enables humans, AI, agents, and applications to query data in natural language and SQL and get highly accurate answers across disparate data sources and types.
+MindsDB is an AI data solution that enables humans, AI, agents, and applications to query data in natural language and SQL, and get highly accurate answers across disparate data sources and types.
 
 ![image](https://github.com/user-attachments/assets/03b779e8-7008-485e-989a-e8733cb94e4c)
 
@@ -131,7 +131,7 @@ import mindsdb_sdk
 # connects to the specified host and port
 server = mindsdb_sdk.connect('http://127.0.0.1:47334')
 
-wiki_kb = server.knowledge_bases.get('mindsdb.reviews_kb');
+my_kb = server.knowledge_bases.get('mindsdb.reviews_kb');
 df = my_kb.find('what are the best kindle reviews').fetch()
 
 ```

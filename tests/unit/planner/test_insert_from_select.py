@@ -1,5 +1,3 @@
-import pytest
-
 from mindsdb_sql_parser.ast import (
     Identifier, Insert, Select, Constant,
     Star, BinaryOperation, Function,
@@ -10,7 +8,7 @@ from mindsdb.api.executor.planner import plan_query
 from mindsdb.api.executor.planner.query_plan import QueryPlan
 from mindsdb.api.executor.planner.step_result import Result
 from mindsdb.api.executor.planner.steps import (
-    FetchDataframeStep, 
+    FetchDataframeStep,
     InsertToTable,
     SubSelectStep,
     QueryStep
@@ -181,8 +179,4 @@ class TestPlanInsertFromSelect:
             if hasattr(step, 'from_table') and isinstance(step.from_table, pd.DataFrame) and isinstance(expected_step.from_table, pd.DataFrame):
                 assert step.from_table.equals(expected_step.from_table)
             else:
-                assert step == expected_step           
-
-
-if __name__ == '__main__':
-    pytest.main([__file__])
+                assert step == expected_step 

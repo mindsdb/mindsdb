@@ -473,7 +473,7 @@ class QueriesTable(MdbTable):
 
 class FilesTable(MdbTable):
     name = 'FILES'
-    columns = ["NAME", "ROW_COUNT", "COLUMNS"]
+    columns = ["NAME", "ROW_COUNT", "COLUMNS", "FILE_PATH"]
 
     @classmethod
     def get_data(cls, **kwargs):

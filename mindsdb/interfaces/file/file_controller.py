@@ -62,6 +62,7 @@ class FileController:
                 "name": record.name,
                 "row_count": record.row_count,
                 "columns": record.columns,
+                "file_path": self.get_file_path(record.name),
             }
             for record in file_records
         ]

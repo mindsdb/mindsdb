@@ -55,7 +55,6 @@ jobs:
     - name: Install dependencies
       run: |
         uv pip install . .[lightwood] .[huggingface] -r requirements/requirements-test.txt
-        uv pip freeze
 
     # - name: Run integration api and flow tests
     #   run: |
@@ -83,13 +82,6 @@ jobs:
     #       echo -e "\n===============test company independent===============\n"
     #       pytest -vx tests/integration_tests/flows/test_company_independent.py
     #     fi
-    #   env:
-    #     PROMETHEUS_MULTIPROC_DIR: ./prometheus_metrics
-    #     OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-
-    - name: Run Learning Hub Tests
-      run: |
-          # Currently requires a DB to be running. New testing system is being set up
           # echo -e "\n===============MySQL Handler===============\n"
           # pytest -svx mindsdb/integrations/handlers/mysql_handler/
 
@@ -102,18 +94,14 @@ jobs:
 
           # echo -e "\n===============File Handler===============\n"
           # pytest -svx mindsdb/integrations/handlers/file_handler/
+    #   env:
+    #     PROMETHEUS_MULTIPROC_DIR: ./prometheus_metrics
+    #     OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
-          echo -e "\n===============Home Rental Home Prices===============\n"
-          pytest -vx tests/integration_tests/tutorials/test_home_rental_prices_tutorial.py
-
-          echo -e "\n===============Forecast Quaterly House Sales===============\n"
-          pytest -vx tests/integration_tests/tutorials/test_forecast_quaterly_house_tutorial.py
-
-          echo -e "\n===============Predict Text Sentiment Wih Huggingface===============\n"
-          pytest -vx tests/integration_tests/tutorials/test_predict_text_sentiment_huggingface_tutorial.py
-
-          echo -e "\n===============Predict Text Sentiment Wih OpenAI===============\n"
-          pytest -vx tests/integration_tests/tutorials/test_predict_text_sentiment_openai_tutorial.py
+    - name: Run Learning Hub Tests
+      run: |
+          # Run tests in parallel and distribute a whole file to each worker
+          pytest -n 4 --dist loadscope -vx tests/integration_tests/tutorials
       env:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         INTERNAL_URL: ${{ vars.INTERNAL_URL }}

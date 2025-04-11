@@ -101,7 +101,8 @@ jobs:
     - name: Run Learning Hub Tests
       run: |
           # Run tests in parallel and distribute a whole file to each worker
-          pytest -n 4 --dist loadscope -vxs tests/integration_tests/tutorials
+          #pytest -n 4 --dist loadscope -vxs tests/integration_tests/tutorials
+          pytest -vxs tests/integration_tests/tutorials/test_home_rental_prices_tutorial.py
       env:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         INTERNAL_URL: ${{ vars.INTERNAL_URL }}

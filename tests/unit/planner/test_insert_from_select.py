@@ -1,14 +1,11 @@
 import pytest
 
 from mindsdb_sql_parser.ast import (
-    Identifier, Insert, Select, NullConstant, Constant,
-    Star, Parameter, BinaryOperation, Function,
-    TableColumn, OrderBy
+    Identifier, Insert, Select, Constant,
+    Star, BinaryOperation, Function,
 )
 import pandas as pd
-from mindsdb_sql_parser import parse_sql
 
-from mindsdb.api.executor.planner.exceptions import PlanningException
 from mindsdb.api.executor.planner import plan_query
 from mindsdb.api.executor.planner.query_plan import QueryPlan
 from mindsdb.api.executor.planner.step_result import Result

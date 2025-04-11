@@ -313,7 +313,7 @@ class ChromaDBHandler(VectorStoreHandler):
             TableField.ID.value: ids,
             TableField.CONTENT.value: documents,
             TableField.METADATA.value: metadatas,
-            TableField.EMBEDDINGS.value: [emb.tolist() if hasattr(emb, 'tolist') else emb for emb in embeddings] if embeddings is not None else embeddings,
+            TableField.EMBEDDINGS.value: list(embeddings),
         }
 
         if columns is not None:

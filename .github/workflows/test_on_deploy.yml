@@ -55,8 +55,8 @@ jobs:
     - name: Install dependencies
       run: |
         uv pip install . .[lightwood] .[huggingface] -r requirements/requirements-test.txt
-        uv pip freeze  uv
-        
+        uv pip freeze
+
     # - name: Run integration api and flow tests
     #   run: |
 

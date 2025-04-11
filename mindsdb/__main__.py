@@ -299,8 +299,13 @@ if __name__ == '__main__':
         logger.debug(f"Checking if default project {config.get('default_project')} exists")
         project_controller = ProjectController()
 
-        current_default_project = project_controller.get(is_default=True)
-        if current_default_project.record.name != config.get('default_project'):
+        try:
+            current_default_project = project_controller.get(is_default=True)
+        except EntityNotExistsError:
+            # In previous versions, the default project could be deleted.
+            current_default_project = None
+
+        if current_default_project and current_default_project.record.name != config.get('default_project'):
             try:
                 new_default_project = project_controller.get(name=config.get('default_project'))
                 log.critical(f"A project with the name '{config.get('default_project')}' already exists")
@@ -308,6 +313,23 @@ if __name__ == '__main__':
             except EntityNotExistsError:
                 pass
             project_controller.update(current_default_project.record.id, new_name=config.get('default_project'))
+
+        else:
+            try:
+                project_controller.get(name=config.get('default_project'))
+            except EntityNotExistsError:
+                log.critical(
+                    f"A project with the name '{config.get('default_project')}' does not exist"
+                )
+                raise
+
+            # If there is no existing default project (no longer possible) make the new one the default.
+            project_controller.update(
+                name=config.get('default_project'),
+                new_metadata={
+                    "is_default": True
+                }
+            )
 
     apis = os.getenv('MINDSDB_APIS') or config.cmd_args.api
 

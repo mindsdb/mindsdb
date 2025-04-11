@@ -179,4 +179,4 @@ class TestPlanInsertFromSelect:
             if hasattr(step, 'from_table') and isinstance(step.from_table, pd.DataFrame) and isinstance(expected_step.from_table, pd.DataFrame):
                 assert step.from_table.equals(expected_step.from_table)
             else:
-                assert step == expected_step 
+                assert step == expected_step

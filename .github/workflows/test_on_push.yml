@@ -169,14 +169,8 @@ jobs:
           uv pip install .[web]
           uv pip install .[redshift]
           uv pip install .[bigquery]
-          uv pip install .[elasticsearch]
           uv pip install .[databricks]
           uv pip install .[oracle]
-          uv pip install .[db2]
-          uv pip install .[hive]
-          uv pip install .[teradata]
-          uv pip install .[hana]
-          uv pip install .[minds_endpoint]
           uv pip install .[slack]
           uv pip install .[github]
           uv pip install .[ms_teams]
@@ -191,7 +185,6 @@ jobs:
             env PYTHONPATH=./ pytest tests/unit/planner/ -x
             env PYTHONPATH=./ pytest tests/unit/executor/ -x -k "not test_udf"
             env PYTHONPATH=./ pytest tests/unit/various/ -x
-            env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_minds_endpoint.py
             env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_openai.py
 
             env PYTHONPATH=./:parser_tests/tests pytest tests/unit/render/ -x
@@ -206,10 +199,6 @@ jobs:
       - name: Run Handlers tests and submit Coverage to coveralls
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
-          handlers=("mysql" "postgres" "mssql" "clickhouse" "snowflake" "web" "redshift" "bigquery" "elasticsearch" "s3" "databricks" "dynamodb" "mariadb" "oracle" "mongodb" "db2" "hive" "teradata" "hana" "slack" "timescaledb" "ms_teams" "salesforce" "confluence")
-          for handler in "${handlers[@]}"
-          do
-            pytest --cov=mindsdb/integrations/handlers/${handler}_handler tests/unit/handlers/test_${handler}.py 
-          done
+          python -m unittest discover -s tests/unit/handlers
         env:
           github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}

@@ -231,14 +231,23 @@ class MySQLHandler(DatabaseHandler):
         """
         q = f"""
             select
-                COLUMN_NAME AS FIELD, DATA_TYPE AS TYPE
+                COLUMN_NAME,
+                DATA_TYPE,
+                ORDINAL_POSITION,
+                COLUMN_DEFAULT,
+                IS_NULLABLE,
+                CHARACTER_MAXIMUM_LENGTH,
+                CHARACTER_OCTET_LENGTH,
+                NUMERIC_PRECISION,
+                NUMERIC_SCALE,
+                DATETIME_PRECISION,
+                CHARACTER_SET_NAME,
+                COLLATION_NAME
             from
                 information_schema.columns
             where
-                table_name = '{table_name}'
+                table_name = '{table_name}';
         """
         result = self.native_query(q)
-        if result.resp_type is RESPONSE_TYPE.TABLE:
-            result.data_frame = result.data_frame.rename(columns={'FIELD': 'Field', 'TYPE': 'Type'})
-            result.data_frame['mysql_data_type'] = result.data_frame['Type'].apply(_map_type)
+        result.to_columns_table_response(map_type_fn=_map_type)
         return result

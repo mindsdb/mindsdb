@@ -48,8 +48,18 @@ class TestTimescaleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
     def get_columns_query(self):
         return f"""
             SELECT
-                column_name as "Field",
-                data_type as "Type"
+                COLUMN_NAME,
+                DATA_TYPE,
+                ORDINAL_POSITION,
+                COLUMN_DEFAULT,
+                IS_NULLABLE,
+                CHARACTER_MAXIMUM_LENGTH,
+                CHARACTER_OCTET_LENGTH,
+                NUMERIC_PRECISION,
+                NUMERIC_SCALE,
+                DATETIME_PRECISION,
+                CHARACTER_SET_NAME,
+                COLLATION_NAME
             FROM
                 information_schema.columns
             WHERE

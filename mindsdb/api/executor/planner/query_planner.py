@@ -762,7 +762,8 @@ class QueryPlanner:
         elif from_table is None:
             # one line select
             step = QueryStep(query, from_table=pd.DataFrame([None]))
-            self.plan.add_step(step)
+            last_step = self.plan.add_step(step)
+            return self.plan_sub_select(query, last_step, add_absent_cols=True)
         else:
             raise PlanningException(f'Unsupported from_table {type(from_table)}')
 
@@ -778,12 +779,12 @@ class QueryPlanner:
             or len(query.targets) != 1
             or not isinstance(query.targets[0], Star)
         ):
-            if query.from_table.alias is not None:
-                table_name = query.from_table.alias.parts[-1]
-            elif isinstance(query.from_table, Identifier):
-                table_name = query.from_table.parts[-1]
-            else:
-                table_name = None
+            table_name = None
+            if query.from_table:
+                if query.from_table.alias is not None:
+                    table_name = query.from_table.alias.parts[-1]
+                elif isinstance(query.from_table, Identifier):
+                    table_name = query.from_table.parts[-1]
 
             query2 = copy.deepcopy(query)
             query2.from_table = None

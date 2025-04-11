@@ -332,12 +332,21 @@ class KnowledgeBaseTable:
 
         emb_col = TableField.EMBEDDINGS.value
         cont_col = TableField.CONTENT.value
+
+        db_handler = self.get_vector_db()
+        conditions = db_handler.extract_conditions(query.where)
+        doc_id = None
+        for condition in conditions:
+            if condition.column == 'chunk_id' and condition.op == FilterOperator.EQUAL:
+                doc_id = condition.value
+
         if cont_col in query.update_columns:
             content = query.update_columns[cont_col]
 
             # Apply preprocessing to content if configured
             if self.document_preprocessor:
                 doc = Document(
+                    id=doc_id,
                     content=content.value,
                     metadata={}  # Empty metadata for content-only updates
                 )
@@ -353,8 +362,6 @@ class KnowledgeBaseTable:
         query.table = Identifier(parts=[self._kb.vector_database_table])
 
         # send to vectordb
-        db_handler = self.get_vector_db()
-        conditions = db_handler.extract_conditions(query.where)
         self.addapt_conditions_columns(conditions)
         db_handler.dispatch_update(query, conditions)
 

@@ -51,13 +51,12 @@ jobs:
       with:
         enable-cache: true
         cache-dependency-glob: "**/requirements*.txt"
+        prune-cache: false
     - name: Install dependencies
       run: |
-        uv pip install .
-        uv pip install -r requirements/requirements-test.txt
-        uv pip install .[lightwood]  # TODO: for now some tests rely on lightwood and huggingface
-        uv pip install .[huggingface]
-        uv pip freeze  
+        uv pip install . .[lightwood] .[huggingface] -r requirements/requirements-test.txt
+        uv pip freeze  uv
+        
     # - name: Run integration api and flow tests
     #   run: |
 

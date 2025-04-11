@@ -389,7 +389,14 @@ class KBTest(KBTestBase):
         assert 'noise' in ret.chunk_content[0]  # first line contents word
         assert len(ret[ret.relevance < 0.65]) == 0
 
-    def test_relevance(self, openai_api_key):
+    def test_relevance(self, openai_api_key, reranking_model=None):
+
+        if reranking_model is None:
+            reranking_model = {
+                "provider": "openai",
+                "model_name": "gpt-4",
+                "api_key": openai_api_key
+            }
 
         # prepare KB
         kb_params = {
@@ -398,11 +405,7 @@ class KBTest(KBTestBase):
                 "model_name": "text-embedding-ada-002",
                 "api_key": openai_api_key
             },
-            'reranking_model': {
-                "provider": "openai",
-                "model_name": "gpt-4",
-                "api_key": openai_api_key
-            },
+            'reranking_model': reranking_model,
             'metadata_columns': ['status', 'category'],
             'content_columns': ['message_body'],
             'id_column': 'id',

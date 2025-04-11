@@ -472,7 +472,7 @@ class ProjectController:
 
         if new_metadata is not None:
             project.metadata = new_metadata
-            project.record.metadata = new_metadata
+            project.record.metadata_ = new_metadata
             flag_modified(project.record, 'metadata_')
 
         db.session.commit()

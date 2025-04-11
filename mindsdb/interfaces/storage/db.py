@@ -523,6 +523,7 @@ class KnowledgeBase(Base):
     embedding_model = relationship(
         "Predictor", foreign_keys=[embedding_model_id], doc="embedding model"
     )
+    query_id = Column(Integer, nullable=True)
 
     created_at = Column(DateTime, default=datetime.datetime.now)
     updated_at = Column(
@@ -557,6 +558,28 @@ class QueryContext(Base):
     query: str = Column(String, nullable=False)
     context_name: str = Column(String, nullable=False)
     values: dict = Column(JSON)
+
+    updated_at: datetime.datetime = Column(
+        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
+    )
+    created_at: datetime.datetime = Column(DateTime, default=datetime.datetime.now)
+
+
+class Queries(Base):
+    __tablename__ = "queries"
+    id: int = Column(Integer, primary_key=True)
+    company_id: int = Column(Integer, nullable=True)
+
+    sql: str = Column(String, nullable=False)
+    # step_data: JSON = Column(JSON, nullable=True)
+
+    started_at: datetime.datetime = Column(DateTime, default=datetime.datetime.now)
+    finished_at: datetime.datetime = Column(DateTime)
+
+    parameters = Column(JSON, default={})
+    context = Column(JSON, default={})
+    processed_rows = Column(Integer, default=0)
+    error: str = Column(String, nullable=True)
 
     updated_at: datetime.datetime = Column(
         DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now

@@ -406,6 +406,7 @@ class LLMReranker(BaseDocumentCompressor):
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
 
+        # documents_and_scores = loop.run_until_complete(self._rank(query_document_pairs, custom_event=custom_event))
         documents_and_scores = loop.run_until_complete(self._rank_score(query_document_pairs))
         scores = [score for _, score in documents_and_scores]
         return scores

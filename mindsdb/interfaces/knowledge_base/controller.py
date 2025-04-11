@@ -78,11 +78,11 @@ def get_reranking_model_from_params(reranking_model_params: dict):
     Create reranking model from parameters.
     """
     params_copy = copy.deepcopy(reranking_model_params)
-    provider = params_copy.pop('provider', "openai").lower()
-    if provider != 'openai':
-        raise ValueError("Only OpenAI provider is supported for the reranking model.")
-    params_copy[f"{provider}_api_key"] = get_api_key(provider, params_copy, strict=False) or params_copy.get('api_key')
-    params_copy.pop('api_key', None)
+    provider = params_copy.get('provider', "openai").lower()
+    if provider not in ('openai', 'azure'):
+        raise ValueError("Only OpenAI and AzureOpenAI provider are supported for the reranking model.")
+    if "api_key" not in params_copy:
+        params_copy["api_key"] = get_api_key(provider, params_copy, strict=False)
     params_copy['model'] = params_copy.pop('model_name', None)
 
     return LLMReranker(**params_copy)

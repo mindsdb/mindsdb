@@ -46,7 +46,7 @@ class LLMReranker(BaseDocumentCompressor):
     async def _init_client(self):
         if self.client is None:
 
-            if self.provider == "azure":
+            if self.provider == "azure_openai":
 
                 azure_api_key = self.api_key or os.getenv("AZURE_OPENAI_API_KEY")
                 azure_api_endpoint = self.base_url or os.environ.get("AZURE_OPENAI_ENDPOINT")

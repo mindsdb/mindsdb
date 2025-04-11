@@ -65,9 +65,12 @@ HIVE_HANDLER_DEPS = ["thrift-sasl"]
 # The `gcsfs` package is required to interact with GCS as a file system.
 GCS_HANDLER_DEPS = ["gcsfs"]
 
+SNOWFLAKE_HANDLER_DEPS = ["pyarrow"]
+
 HANDLER_RULE_IGNORES = {
     "DEP002": OPTIONAL_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS + BYOM_HANLDER_DEPS + HIVE_HANDLER_DEPS + GCS_HANDLER_DEPS,
-    "DEP001": ["tests", "pyarrow", "IfxPyDbi", "ingres_sa_dialect"]  # 'tests' is the mindsdb tests folder in the repo root, 'pyarrow' used in snowflake handler
+    "DEP001": ["tests", "pyarrow", "IfxPyDbi", "ingres_sa_dialect"],  # 'tests' is the mindsdb tests folder in the repo root, 'pyarrow' used in snowflake handler
+    "DEP003": SNOWFLAKE_HANDLER_DEPS
 }
 
 PACKAGE_NAME_MAP = {

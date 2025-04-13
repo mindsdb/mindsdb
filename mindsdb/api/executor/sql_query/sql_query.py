@@ -10,9 +10,9 @@
 """
 import inspect
 from textwrap import dedent
-from typing import Dict
+from typing import Union, Dict
 
-from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser import parse_sql, ASTNode
 from mindsdb.api.executor.planner.steps import (
     ApplyTimeseriesPredictorStep,
     ApplyPredictorRowStep,
@@ -33,6 +33,9 @@ from mindsdb.api.executor.exceptions import (
 import mindsdb.utilities.profiler as profiler
 from mindsdb.utilities.fs import create_process_mark, delete_process_mark
 from mindsdb.utilities.exception import EntityNotExistsError
+from mindsdb.interfaces.query_context.context_controller import query_context_controller
+from mindsdb.utilities.context import context as ctx
+
 
 from . import steps
 from .result_set import ResultSet, Column
@@ -43,7 +46,8 @@ class SQLQuery:
 
     step_handlers = {}
 
-    def __init__(self, sql, session, execute=True, database=None):
+    def __init__(self, sql: Union[ASTNode, str], session, execute: bool = True,
+                 database: str = None, query_id: int = None):
         self.session = session
 
         if database is not None:
@@ -62,6 +66,15 @@ class SQLQuery:
         self.planner: query_planner.QueryPlanner = None
         self.parameters = []
         self.fetched_data: ResultSet = None
+
+        self.outer_query = None
+        self.run_query = None
+        self.query_id = query_id
+        if query_id is not None:
+            # resume query
+            run_query = query_context_controller.get_query(self.query_id)
+            run_query.clear_error()
+            sql = run_query.sql
 
         if isinstance(sql, str):
             self.query = parse_sql(sql)
@@ -217,10 +230,22 @@ class SQLQuery:
             # no need to execute
             return
 
+        try:
+            steps = list(self.planner.execute_steps())
+        except PlanningException as e:
+            raise LogicError(e)
+
+        if self.planner.plan.is_resumable:
+            # create query
+            if self.query_id is not None:
+                self.run_query = query_context_controller.get_query(self.query_id)
+            else:
+                self.run_query = query_context_controller.create_query(self.context['query_str'])
+            ctx.run_query_id = self.run_query.record.id
+
         step_result = None
         process_mark = None
         try:
-            steps = list(self.planner.execute_steps())
             steps_classes = (x.__class__ for x in steps)
             predict_steps = (ApplyPredictorRowStep, ApplyPredictorStep, ApplyTimeseriesPredictorStep)
             if any(s in predict_steps for s in steps_classes):
@@ -229,10 +254,16 @@ class SQLQuery:
                 with profiler.Context(f'step: {step.__class__.__name__}'):
                     step_result = self.execute_step(step)
                 self.steps_data[step.step_num] = step_result
-        except PlanningException as e:
-            raise LogicError(e)
         except Exception as e:
+            if self.run_query is not None:
+                # set error and place where it stopped
+                self.run_query.on_error(e, step.step_num, self.steps_data)
             raise e
+        else:
+            # mark running query as completed
+            if self.run_query is not None:
+                self.run_query.finish()
+                ctx.run_query_id = None
         finally:
             if process_mark is not None:
                 delete_process_mark('predict', process_mark)

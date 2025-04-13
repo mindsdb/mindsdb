@@ -7,7 +7,7 @@ from threading import Thread
 import pandas as pd
 
 
-class KBTest:
+class KBTestBase:
 
     def __init__(self, vectordb=None, emb_model=None, mindsdb_server=None):
         self.vectordb = vectordb
@@ -30,8 +30,9 @@ class KBTest:
 
         try:
             self.con.databases.drop(name)
-        except RuntimeError:
-            pass
+        except RuntimeError as e:
+            if 'Database does not exists' not in str(e):
+                raise e
         # if engine == 'pgvector':
         #     connection_args = {}
         # elif engine == 'chromadb':
@@ -65,9 +66,8 @@ class KBTest:
 
         name = f'test_emb_model_{engine}'
         try:
-            self.con.models.get(name)
-            return name
-        except AttributeError:
+            self.con.models.drop(name)
+        except Exception:
             ...
 
         if engine == 'openai':
@@ -91,6 +91,10 @@ class KBTest:
         return resp
 
     def prepare(self):
+        # drop existed kb:
+        for name in ('kb_crm', 'kb_crm_part', 'kb_home_rentals'):
+            self.run_sql(f'drop knowledge base if exists {name}')
+
         # create vector_db
         self.vectordb_name = self.create_vector_db(self.vectordb)
 
@@ -100,24 +104,26 @@ class KBTest:
         # connect database
         self.db_name = self.create_db()
 
-    def create_kb(self, name):
+    def create_kb(self, name, params=None):
         self.run_sql(f'drop knowledge base if exists {name}')
 
-        self.run_sql(f'''
-                    create knowledge base {name}
-                    using  model={self.emb_model},
-                    storage={self.vectordb_name}.crm_table
-                ''')
+        storage = self.con.databases.get(self.vectordb_name).tables.get(f'tbl_{name}')
+        self.con.knowledge_bases.create(
+            name,
+            model=self.con.models.get(self.emb_model),
+            storage=storage,
+            params=params,
+        )
 
         # clean
-        try:
-            self.run_sql(f'delete from kb_crm where id in (select id from {name})')
-        except Exception:
-            ...
+        if len(self.run_sql(f'select * from {name}')) > 0:
+            self.run_sql(f'delete from {name} where id in (select id from {name})')
 
         ret = self.run_sql(f'describe knowledge base {name}')
         assert len(ret) == 1
 
+
+class KBTest(KBTestBase):
     def test_base_syntax(self):
         # TODO, what is "Confirm data persistence and integrity in vector store"
 
@@ -278,18 +284,16 @@ class KBTest:
         def to_date(s):
             return dt.datetime.strptime(s, '%Y-%m-%d %H:%M:%S.%f')
 
-        def load_kb(batch_size, threads):
+        def load_kb(batch_size):
             self.run_sql(f"""
                 insert into kb_crm_part
                 select pk id, message_body content from example_db.crm_demo
-                using batch_size={batch_size}, track_column=id, threads={threads}
+                using batch_size={batch_size}, track_column=id
             """)
 
         test_set = [
-            {'batch_size': 10, 'threads': 'false'},
-            {'batch_size': 10, 'threads': 5},
-            {'batch_size': 50, 'threads': 'false'},
-            {'batch_size': 50, 'threads': 5},
+            {'batch_size': 50},
+            {'batch_size': 100},
         ]
 
         results = []
@@ -301,12 +305,16 @@ class KBTest:
             thread = Thread(target=load_kb, kwargs=item)
             thread.start()
 
+            time.sleep(3)
             try:
-                while True:
-                    time.sleep(1)
+                for i in range(100):  # 300 sec min max
+                    time.sleep(3)
 
                     ret = self.run_sql('describe knowledge base kb_crm_part')
                     record = ret.iloc[0]
+
+                    if record['QUERY_ID'] is None:
+                        raise RuntimeError('Query is not partitioned')
 
                     if record['INSERT_FINISHED_AT'] is not None:
                         print('loading completed')
@@ -321,11 +329,100 @@ class KBTest:
         print('========= Tests summary ==========')
         print(pd.DataFrame(results))
 
-    def test_relevance(self):
-        """
-        SELECT id, relevance FROM my_kb WHERE content = 'a novel about epic inter planetary intelligence' LIMIT 10;
+    def test_metadata(self):
+        self.create_kb('kb_crm', params={
+            'metadata_columns': ['status', 'category'],
+            'content_columns': ['message_body'],
+            'id_column': 'id',
+        })
 
-        SELECT id, chunk_id, chunk_content,chunk_relevance FROM my_kb WHERE content = 'a novel about epic inter planetary intelligence' LIMIT 10;
+        self.run_sql("""
+            INSERT INTO kb_crm (
+                SELECT * FROM example_db.crm_demo
+            );
+        """)
 
-        """
-        # TODO
+        # -- Metadata search
+        ret = self.run_sql("""
+            SELECT *
+            FROM kb_crm
+            WHERE category = "Battery";
+        """)
+        assert set(ret.metadata.apply(lambda x: x.get('category'))) == {'Battery'}
+
+        ret = self.run_sql("""
+            SELECT *
+            FROM kb_crm
+            WHERE status = "solving" AND category = "Battery"
+        """)
+        assert set(ret.metadata.apply(lambda x: x.get('category'))) == {'Battery'}
+        assert set(ret.metadata.apply(lambda x: x.get('status'))) == {'solving'}
+
+        # -- Content + metadata search
+        ret = self.run_sql("""
+            SELECT *
+            FROM kb_crm
+            WHERE status = "solving" AND content = "noise";
+        """)
+        assert set(ret.metadata.apply(lambda x: x.get('status'))) == {'solving'}
+        assert 'noise' in ret.chunk_content[0]
+
+        # -- Content + metadata search with limit
+        ret = self.run_sql("""
+            SELECT *
+            FROM kb_crm
+            WHERE status = "solving" AND content = "noise"
+            LIMIT 5;
+        """)
+        assert set(ret.metadata.apply(lambda x: x.get('status'))) == {'solving'}
+        assert 'noise' in ret.chunk_content[0]
+        assert len(ret) == 5
+
+        # -- Content + metadata search with limit and re-ranking threshold
+        # TODO chroma shows max relevance = 0.69, but postgres = 0.81
+        ret = self.run_sql("""
+            SELECT *
+            FROM kb_crm
+            WHERE status = "solving" AND content = "noise" AND reranking_threshold=0.65
+        """)
+        assert set(ret.metadata.apply(lambda x: x.get('status'))) == {'solving'}
+        assert 'noise' in ret.chunk_content[0]  # first line contents word
+        assert len(ret[ret.relevance < 0.65]) == 0
+
+    def test_relevance(self, openai_api_key):
+
+        # prepare KB
+        kb_params = {
+            'embedding_model': {
+                "provider": "openai",
+                "model_name": "text-embedding-ada-002",
+                "api_key": openai_api_key
+            },
+            'reranking_model': {
+                "provider": "openai",
+                "model_name": "gpt-4",
+                "api_key": openai_api_key
+            },
+            'metadata_columns': ['status', 'category'],
+            'content_columns': ['message_body'],
+            'id_column': 'id',
+        }
+
+        self.create_kb('kb_crm', params=kb_params)
+
+        self.run_sql("""
+            INSERT INTO kb_crm (
+                SELECT * FROM example_db.crm_demo
+            );
+        """)
+
+        ret = self.run_sql("""
+            SELECT *
+            FROM kb_crm
+            WHERE status = "solving" AND content = "noise" AND reranking_threshold=0.8
+        """)
+        assert set(ret.metadata.apply(lambda x: x.get('status'))) == {'solving'}
+        for item in ret.chunk_content:
+            assert 'noise' in item  # all lines line contents word
+
+        assert len(ret[ret.relevance < 0.8]) == 0

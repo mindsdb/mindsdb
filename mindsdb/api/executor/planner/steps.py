@@ -104,11 +104,19 @@ class LimitOffsetStep(PlanStep):
 
 class FetchDataframeStep(PlanStep):
     """Fetches a dataframe from external integration"""
-    def __init__(self, integration, query=None, raw_query=None, *args, **kwargs):
+    def __init__(self, integration, query=None, raw_query=None, params=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.integration = integration
         self.query = query
         self.raw_query = raw_query
+        self.params = params
+
+
+class FetchDataframeStepPartition(FetchDataframeStep):
+    """Fetches a dataframe from external integration in partitions"""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.steps = []
 
 
 class ApplyPredictorStep(PlanStep):

@@ -14,3 +14,4 @@ ollama >= 0.1.7 # Langchain tests
 anthropic >= 0.21.3 # Langchain tests
 langchain-google-genai>=2.0.0 # Langchain tests
 mindsdb-sdk
+filelock==3.18.0

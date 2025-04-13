@@ -47,7 +47,7 @@ jobs:
         prune-cache: false
     - name: Install dependencies
       run: |
-        export
+        cd mindsdb
         uv pip install --python=3.10 . .[lightwood] .[huggingface] -r requirements/requirements-test.txt
 
     # - name: Run integration api and flow tests

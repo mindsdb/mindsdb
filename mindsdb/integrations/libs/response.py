@@ -69,7 +69,6 @@ class HandlerResponse:
         ].apply(map_type_fn)
 
         # region validate df
-        self.data_frame.columns = [name.upper() for name in self.data_frame.columns]
         current_columns_set = set(self.data_frame.columns)
         if IS_COLUMNS_NAMES_SET != current_columns_set:
             raise ValueError(

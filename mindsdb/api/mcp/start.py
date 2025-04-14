@@ -4,11 +4,14 @@ from typing import Optional, Dict, Any
 from dataclasses import dataclass
 
 from mcp.server.fastmcp import FastMCP
+from starlette.applications import Starlette
+from starlette.middleware.cors import CORSMiddleware
 from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE as SQL_RESPONSE_TYPE
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage import db
+import uvicorn
 
 logger = log.getLogger(__name__)
 
@@ -141,8 +144,18 @@ def start(*args, **kwargs):
     mcp.settings.host = host
     mcp.settings.port = port
 
+    app = Starlette()
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:3001"],  # Your React app’s URL
+        allow_credentials=True,                  # Allow cookies/auth if needed
+        allow_methods=["GET", "POST", "OPTIONS"],  # Match your frontend’s needs
+        allow_headers=["*"],                     # Allow all headers
+    )
+
     try:
-        mcp.run(transport="sse")  # Use SSE transport instead of stdio
+        app.mount("/", app=mcp.sse_app())
+        uvicorn.run(app, host=host, port=port)
     except Exception as e:
         logger.error(f"Error starting MCP server: {str(e)}")
         raise

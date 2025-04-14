@@ -154,19 +154,19 @@ class KnowledgeBaseTable:
         # extract values from conditions and prepare for vectordb
         conditions = []
         query_text = None
-        reranking_threshold = None
+        relevance_threshold = None
         query_conditions = db_handler.extract_conditions(query.where)
         if query_conditions is not None:
             for item in query_conditions:
-                if item.column == "reranking_threshold" and item.op.value == "=":
+                if item.column == "relevance_threshold" and item.op.value == "=":
                     try:
-                        reranking_threshold = float(item.value)
+                        relevance_threshold = float(item.value)
                         # Validate range: must be between 0 and 1
-                        if not (0 <= reranking_threshold <= 1):
-                            raise ValueError(f"reranking_threshold must be between 0 and 1, got: {reranking_threshold}")
-                        logger.debug(f"Found reranking_threshold in query: {reranking_threshold}")
+                        if not (0 <= relevance_threshold <= 1):
+                            raise ValueError(f"relevance_threshold must be between 0 and 1, got: {relevance_threshold}")
+                        logger.debug(f"Found relevance_threshold in query: {relevance_threshold}")
                     except (ValueError, TypeError) as e:
-                        error_msg = f"Invalid reranking_threshold value: {item.value}. {str(e)}"
+                        error_msg = f"Invalid relevance_threshold value: {item.value}. {str(e)}"
                         logger.error(error_msg)
                         raise ValueError(error_msg)
                 elif item.column == TableField.CONTENT.value:
@@ -191,14 +191,14 @@ class KnowledgeBaseTable:
         logger.debug(f"Columns in response: {df.columns.tolist()}")
         # Check if we have a rerank_model configured in KB params
 
-        df = self.add_relevance(df, query_text, reranking_threshold)
+        df = self.add_relevance(df, query_text, relevance_threshold)
 
         # filter by targets
         if requested_kb_columns is not None:
             df = df[requested_kb_columns]
         return df
 
-    def add_relevance(self, df, query_text, reranking_threshold=None):
+    def add_relevance(self, df, query_text, relevance_threshold=None):
         relevance_column = TableField.RELEVANCE.value
 
         reranking_model_params = self._kb.params.get("reranking_model")
@@ -207,9 +207,9 @@ class KnowledgeBaseTable:
             try:
                 logger.info(f"Using knowledge reranking model from params: {reranking_model_params}")
                 # Apply custom filtering threshold if provided
-                if reranking_threshold is not None:
-                    reranking_model_params["filtering_threshold"] = reranking_threshold
-                    logger.info(f"Using custom filtering threshold: {reranking_threshold}")
+                if relevance_threshold is not None:
+                    reranking_model_params["filtering_threshold"] = relevance_threshold
+                    logger.info(f"Using custom filtering threshold: {relevance_threshold}")
 
                 reranker = get_reranking_model_from_params(reranking_model_params)
                 # Get documents to rerank
@@ -235,8 +235,8 @@ class KnowledgeBaseTable:
             # Calculate relevance from distance
             logger.info("Calculating relevance from vector distance")
             df[relevance_column] = 1 / (1 + df['distance'])
-            if reranking_threshold is not None:
-                df = df[df[relevance_column] > reranking_threshold]
+            if relevance_threshold is not None:
+                df = df[df[relevance_column] > relevance_threshold]
 
         else:
             df[relevance_column] = None

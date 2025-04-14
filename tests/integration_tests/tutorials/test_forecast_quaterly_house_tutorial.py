@@ -67,7 +67,7 @@ class TestForecastQuaterlyHouseSales(HTTPHelperMixin):
         assert len(resp['data']) == 10
 
     def test_create_model(self, train_finetune_lock):
-        with train_finetune_local.aquire(timeout=600):
+        with train_finetune_lock.aquire(timeout=600):
             resp = self.sql_via_http(QueryStorage.create_model, RESPONSE_TYPE.TABLE)
             assert len(resp['data']) == 1
             status = resp['column_names'].index('STATUS')

@@ -119,5 +119,6 @@ class FetchDataframeStepCall(BaseStepCall):
             df,
             table_name=table_alias[1],
             table_alias=table_alias[2],
-            database=table_alias[0]
+            database=table_alias[0],
+            mysql_types=response.mysql_types
         )

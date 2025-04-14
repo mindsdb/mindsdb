@@ -6,6 +6,7 @@ import pandas
 
 from mindsdb.utilities import log
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 from mindsdb_sql_parser.ast import ASTNode
 
 
@@ -39,8 +40,11 @@ IS_COLUMNS_NAMES_SET = set(f.name for f in fields(IS_COLUMNS_NAMES))
 
 
 class HandlerResponse:
-    def __init__(self, resp_type: RESPONSE_TYPE, data_frame: pandas.DataFrame = None, query: ASTNode = 0, error_code: int = 0,
-                 error_message: str | None = None, affected_rows: int | None = None) -> None:
+    def __init__(
+            self, resp_type: RESPONSE_TYPE, data_frame: pandas.DataFrame = None, query: ASTNode = 0,
+            error_code: int = 0, error_message: str | None = None, affected_rows: int | None = None,
+            mysql_types: list[MYSQL_DATA_TYPE] | None = None
+        ) -> None:
         self.resp_type = resp_type
         self.query = query
         self.data_frame = data_frame
@@ -49,6 +53,7 @@ class HandlerResponse:
         self.affected_rows = affected_rows
         if isinstance(self.affected_rows, int) is False or self.affected_rows < 0:
             self.affected_rows = 0
+        self.mysql_types = mysql_types
 
     @property
     def type(self):

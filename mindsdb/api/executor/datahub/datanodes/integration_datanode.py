@@ -311,7 +311,8 @@ class IntegrationDataNode(DataNode):
 
         try:
             # replace python's Nan, np.NaN, np.nan and pd.NA to None
-            df.replace([np.NaN, pd.NA], None, inplace=True)
+            # TODO keep all NAN to the end of processing, bacause replacing also change types of data
+            df.replace([np.NaN, pd.NA, pd.NaT], None, inplace=True)
         except Exception as e:
             logger.error(f"Issue with clearing DF from NaN values: {e}")
         # endregion
@@ -327,5 +328,6 @@ class IntegrationDataNode(DataNode):
         return DataHubResponse(
             data_frame=df,
             columns=columns_info,
-            affected_rows=result.affected_rows
+            affected_rows=result.affected_rows,
+            mysql_types=result.mysql_types
         )

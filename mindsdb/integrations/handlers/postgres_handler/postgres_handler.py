@@ -4,7 +4,8 @@ from typing import Optional
 
 import pandas as pd
 import psycopg
-from psycopg.postgres import types
+from psycopg import Column as PGColumn, Cursor
+from psycopg.postgres import TypeInfo, types as pg_types
 from psycopg.pq import ExecStatus
 from pandas import DataFrame
 
@@ -27,7 +28,7 @@ logger = log.getLogger(__name__)
 SUBSCRIBE_SLEEP_INTERVAL = 1
 
 
-def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
+def _map_type(internal_type_name: str | None) -> MYSQL_DATA_TYPE:
     """Map Postgres types to MySQL types.
 
     Args:
@@ -36,11 +37,16 @@ def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
     Returns:
         MYSQL_DATA_TYPE: The MySQL type that corresponds to the Postgres type.
     """
+    fallback_type = MYSQL_DATA_TYPE.VARCHAR
+
+    if internal_type_name is None:
+        return fallback_type
+
     internal_type_name = internal_type_name.lower()
     types_map = {
         ('smallint', 'integer', 'bigint', 'int', 'smallserial', 'serial', 'bigserial'): MYSQL_DATA_TYPE.INT,
-        ('real', 'money', 'float'): MYSQL_DATA_TYPE.FLOAT,
-        ('numeric', 'decimal'): MYSQL_DATA_TYPE.DECIMAL,
+        ('real', 'float'): MYSQL_DATA_TYPE.FLOAT,
+        ('money', 'numeric', 'decimal'): MYSQL_DATA_TYPE.DECIMAL,
         ('double precision',): MYSQL_DATA_TYPE.DOUBLE,
         ('character varying', 'varchar'): MYSQL_DATA_TYPE.VARCHAR,
         ('character', 'char', 'bpchar', 'bpchar', 'text'): MYSQL_DATA_TYPE.TEXT,
@@ -56,7 +62,35 @@ def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
             return mysql_data_type
 
     logger.warning(f"Postgres handler type mapping: unknown type: {internal_type_name}, use VARCHAR as fallback.")
-    return MYSQL_DATA_TYPE.VARCHAR
+    return fallback_type
+
+
+def _make_table_response(result: list[dict], cursor: Cursor) -> Response:
+    # 1. cast response types to correct python's types
+    # 2. create DataFrame with correct columns and dtypes
+    # 3. add MySQL types to response
+    description: list[PGColumn] = cursor.description
+    mysql_types: list[MYSQL_DATA_TYPE] = []
+    for column in description:
+        pg_type_info: TypeInfo = pg_types.get(column.type_code)
+        if pg_type_info is None:
+            logger.warning(f'Postgres handler: unknown type: {column.type_code}')
+        regtype: str = pg_type_info.regtype if pg_type_info is not None else None
+        mysql_type = _map_type(regtype)
+        mysql_types.append(mysql_type)
+
+    df = DataFrame(
+        result,
+        columns=[column.name for column in description]
+        # TODO add dtypes, otherwise datetime.date is just object
+    )
+
+    return Response(
+        RESPONSE_TYPE.TABLE,
+        data_frame=df,
+        affected_rows=cursor.rowcount,
+        mysql_types=mysql_types
+    )
 
 
 class PostgresHandler(DatabaseHandler):
@@ -199,13 +233,13 @@ class PostgresHandler(DatabaseHandler):
         for column_index, column_name in enumerate(df.columns):
             col = df[column_name]
             if str(col.dtype) == 'object':
-                pg_type = types.get(description[column_index].type_code)
-                if pg_type is not None and pg_type.name in types_map:
-                    col = col.fillna(0)
+                pg_type_info: TypeInfo = pg_types.get(description[column_index].type_code)        # type_code is int!?
+                if pg_type_info is not None and pg_type_info.name in types_map:
+                    col = col.fillna(0)   # TODO rework
                     try:
-                        df[column_name] = col.astype(types_map[pg_type.name])
+                        df[column_name] = col.astype(types_map[pg_type_info.name])
                     except ValueError as e:
-                        logger.error(f'Error casting column {col.name} to {types_map[pg_type.name]}: {e}')
+                        logger.error(f'Error casting column {col.name} to {types_map[pg_type_info.name]}: {e}')
         df.columns = columns
 
     @profiler.profile()
@@ -232,16 +266,7 @@ class PostgresHandler(DatabaseHandler):
                     response = Response(RESPONSE_TYPE.OK, affected_rows=cur.rowcount)
                 else:
                     result = cur.fetchall()
-                    df = DataFrame(
-                        result,
-                        columns=[x.name for x in cur.description]
-                    )
-                    self._cast_dtypes(df, cur.description)
-                    response = Response(
-                        RESPONSE_TYPE.TABLE,
-                        data_frame=df,
-                        affected_rows=cur.rowcount
-                    )
+                    response = _make_table_response(result, cur)
                 connection.commit()
             except Exception as e:
                 logger.error(f'Error running query: {query} on {self.database}, {e}!')

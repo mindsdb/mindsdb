@@ -21,15 +21,10 @@ import sys
 import tempfile
 import traceback
 from functools import partial
-from typing import Dict, List, Optional
+from typing import List, Any
 from dataclasses import dataclass
 
-from numpy import dtype as np_dtype
-from pandas.api import types as pd_types
-
-from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import NULL_VALUE
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum
-
 import mindsdb.utilities.hooks as hooks
 import mindsdb.utilities.profiler as profiler
 from mindsdb.api.mysql.mysql_proxy.classes.client_capabilities import ClentCapabilities
@@ -63,14 +58,14 @@ from mindsdb.api.mysql.mysql_proxy.external_libs.mysql_scramble import (
     scramble as scramble_func,
 )
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
-    CAPABILITIES,
-    CHARSET_NUMBERS,
-    COMMANDS,
     DEFAULT_AUTH_METHOD,
-    ERR,
+    CHARSET_NUMBERS,
     SERVER_STATUS,
-    TYPES,
-    getConstName,
+    CAPABILITIES,
+    NULL_VALUE,
+    COMMANDS,
+    ERR,
+    getConstName
 )
 from mindsdb.api.executor.data_types.answer import ExecuteAnswer
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
@@ -81,7 +76,8 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
 from mindsdb.api.executor import exceptions as exec_exc
 
 from mindsdb.api.common.check_auth import check_auth
-from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
+from mindsdb.api.executor.sql_query.result_set import Column, ResultSet
 from mindsdb.utilities import log
 from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
@@ -98,17 +94,42 @@ def empty_fn():
 @dataclass
 class SQLAnswer:
     resp_type: RESPONSE_TYPE = RESPONSE_TYPE.OK
-    columns: Optional[List[Dict]] = None
-    data: Optional[List[Dict]] = None   # resultSet ?
-    status: Optional[int] = None
-    state_track: Optional[List[List]] = None
-    error_code: Optional[int] = None
-    error_message: Optional[str] = None
-    affected_rows: Optional[int] = None
+    result_set: ResultSet | None = None
+    status: int | None = None
+    state_track: List[List] | None = None
+    error_code: int | None = None
+    error_message: str | None = None
+    affected_rows: int | None = None
+    mysql_types: list[MYSQL_DATA_TYPE] | None = None
 
     @property
     def type(self):
         return self.resp_type
+
+    def dump_http_response(self) -> dict:
+        if self.resp_type == RESPONSE_TYPE.OK:
+            return {
+                "type": self.resp_type,
+                "affected_rows": self.affected_rows,
+            }
+        elif self.resp_type in (RESPONSE_TYPE.TABLE, RESPONSE_TYPE.COLUMNS_TABLE):
+            data = self.result_set.to_lists(json_types=True)
+            return {
+                "type": RESPONSE_TYPE.TABLE,
+                "data": data,
+                "column_names": [
+                    column.alias or column.name
+                    for column in self.result_set.columns
+                ],
+            }
+        elif self.resp_type == RESPONSE_TYPE.ERROR:
+            return {
+                "type": RESPONSE_TYPE.ERROR,
+                "error_code": self.error_code or 0,
+                "error_message": self.error_message,
+            }
+        else:
+            raise ValueError(f"Unsupported response type for dump HTTP response: {self.resp_type}")
 
 
 class MysqlProxy(SocketServer.BaseRequestHandler):
@@ -312,14 +333,35 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         self.session.unregister_stmt(stmt_id)
 
     def send_query_answer(self, answer: SQLAnswer):
-        if answer.type == RESPONSE_TYPE.TABLE:
+        if answer.type in (RESPONSE_TYPE.TABLE, RESPONSE_TYPE.COLUMNS_TABLE):
             packages = []
 
-            if len(answer.data) > 1000:
+            c, d = answer.result_set.dump_to_mysql()
+
+            # df = answer.data.df
+
+            # import datetime
+            # def dump_date(var: datetime.date) -> str:
+            #     return var.strftime("%Y-%m-%d")
+
+            # def dump_datetime(var: datetime.datetime) -> str:
+            #     return var.strftime("%Y-%m-%d %H:%M:%S")
+
+            # # TODO convert data types
+            # for i, column in enumerate(answer.columns):
+            #     match column['type']:
+            #         case TYPES.MYSQL_TYPE_DATE:
+            #             df.iloc[:, i] = df.iloc[:, i].apply(dump_date)
+            #         case TYPES.MYSQL_TYPE_DATETIME:
+            #             df.iloc[:, i] = df.iloc[:, i].apply(dump_datetime)
+
+            columns_dicts = self.to_mysql_columns(answer.result_set.columns)
+            # answer.get_mysql_columns(database_name=?)
+            if len(answer.result_set) > 1000:
                 # for big responses leverage pandas map function to convert data to packages
-                self.send_table_packets(columns=answer.columns, data=answer.data)
+                self.send_table_packets(columns=columns_dicts, data=answer.result_set)
             else:
-                packages += self.get_table_packets(columns=answer.columns, data=answer.data.to_lists())
+                packages += self.get_table_packets(columns=columns_dicts, data=answer.result_set.to_lists())
 
             if answer.status is not None:
                 packages.append(self.last_packet(status=answer.status))
@@ -377,7 +419,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             )
         return packets
 
-    def get_table_packets(self, columns, data, status=0):
+    def get_table_packets(self, columns: list[dict[str, str | int]], data: list[list[Any]], status=0):
         # TODO remove columns order
         packets = [self.packet(ColumnCountPacket, count=len(columns))]
         packets.extend(self._get_column_defenition_packets(columns, data))
@@ -388,7 +430,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         packets += [self.packet(ResultsetRowPacket, data=x) for x in data]
         return packets
 
-    def send_table_packets(self, columns, data, status=0):
+    def send_table_packets(self, columns: list[dict[str, str | int]], data, status=0):
         # text protocol, convert all to string and serialize as packages
         df = data.get_raw_df()
 
@@ -488,57 +530,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         return {"is_cloud": False}
 
-    def to_mysql_columns(self, columns_list):
-        """Converts raw columns data into convinient format(list of lists) for the futher usage.
-        Plus, it is also converts column types into internal ones."""
-
-        result = []
-
-        database = (
-            None if self.session.database == "" else self.session.database.lower()
-        )
-        for column_record in columns_list:
-
-            field_type = column_record.type
-
-            column_type = TYPES.MYSQL_TYPE_VAR_STRING
-            # is already in mysql protocol type?
-            if isinstance(field_type, int):
-                column_type = field_type
-            # pandas checks
-            elif isinstance(field_type, np_dtype):
-                if pd_types.is_integer_dtype(field_type):
-                    column_type = TYPES.MYSQL_TYPE_LONG
-                elif pd_types.is_numeric_dtype(field_type):
-                    column_type = TYPES.MYSQL_TYPE_DOUBLE
-                elif pd_types.is_datetime64_any_dtype(field_type):
-                    column_type = TYPES.MYSQL_TYPE_DATETIME
-            # lightwood checks
-            elif field_type == dtype.date:
-                column_type = TYPES.MYSQL_TYPE_DATE
-            elif field_type == dtype.datetime:
-                column_type = TYPES.MYSQL_TYPE_DATETIME
-            elif field_type == dtype.float:
-                column_type = TYPES.MYSQL_TYPE_DOUBLE
-            elif field_type == dtype.integer:
-                column_type = TYPES.MYSQL_TYPE_LONG
-
-            result.append(
-                {
-                    "database": column_record.database or database,
-                    #  TODO add 'original_table'
-                    "table_name": column_record.table_name,
-                    "name": column_record.name,
-                    "alias": column_record.alias or column_record.name,
-                    # NOTE all work with text-type, but if/when wanted change types to real,
-                    # it will need to check all types casts in BinaryResultsetRowPacket
-                    "type": column_type,
-                }
-            )
-        return result
+    def to_mysql_columns(self, columns_list: list[Column]) -> list[dict[str, str | int]]:
+        database_name = None if self.session.database == "" else self.session.database.lower()
+        return [column.to_mysql_column_dict(database_name=database_name) for column in columns_list]
 
     @profiler.profile()
-    def process_query(self, sql):
+    def process_query(self, sql) -> SQLAnswer:
         executor = Executor(session=self.session, sqlserver=self)
         executor.query_execute(sql)
         executor_answer = executor.executor_answer
@@ -553,10 +550,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             resp = SQLAnswer(
                 resp_type=RESPONSE_TYPE.TABLE,
                 state_track=executor_answer.state_track,
-                columns=self.to_mysql_columns(executor_answer.data.columns),
-                data=executor_answer.data,
+                # columns=self.to_mysql_columns(executor_answer.data.columns),
+                result_set=executor_answer.data,
                 status=executor.server_status,
-                affected_rows=executor_answer.affected_rows
+                affected_rows=executor_answer.affected_rows,
+                mysql_types=executor_answer.data.mysql_types  # не нужен
             )
 
         # Increment the counter and include metadata in attributes

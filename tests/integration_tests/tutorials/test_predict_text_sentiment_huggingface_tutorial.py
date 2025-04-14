@@ -66,7 +66,7 @@ class TestPredictTextSentimentHuggingface(HTTPHelperMixin):
         assert len(resp['data']) == 3
 
     def test_create_model(self, train_finetune_lock):
-        with train_finetune_lock.aquire(timeout=600):
+        with train_finetune_lock.acquire(timeout=600):
             sql = QueryStorage.create_model
             resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
             assert len(resp['data']) == 1

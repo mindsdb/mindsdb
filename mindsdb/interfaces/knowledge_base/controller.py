@@ -65,6 +65,11 @@ def get_embedding_model_from_params(embedding_model_params: dict):
     if provider == 'azure_openai':
         # Azure OpenAI expects the api_key to be passed as 'openai_api_key'.
         params_copy['openai_api_key'] = api_key
+        params_copy['azure_endpoint'] = params_copy['base_url']
+        if 'chunk_size' not in params_copy:
+            params_copy['chunk_size'] = 2048
+        if 'api_version' in params_copy:
+            params_copy['openai_api_version'] = params_copy['api_version']
     else:
         params_copy[f"{provider}_api_key"] = api_key
     params_copy.pop('api_key', None)

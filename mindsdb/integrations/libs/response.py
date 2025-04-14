@@ -33,8 +33,8 @@ class _INFORMATION_SCHEMA_COLUMNS_NAMES:
     MYSQL_DATA_TYPE: str = 'MYSQL_DATA_TYPE'
 
 
-IS_COLUMNS_NAMES = _INFORMATION_SCHEMA_COLUMNS_NAMES()
-IS_COLUMNS_NAMES_SET = set(f.name for f in fields(IS_COLUMNS_NAMES))
+INF_SCHEMA_COLUMNS_NAMES = _INFORMATION_SCHEMA_COLUMNS_NAMES()
+INF_SCHEMA_COLUMNS_NAMES_SET = set(f.name for f in fields(INF_SCHEMA_COLUMNS_NAMES))
 
 
 
@@ -64,31 +64,31 @@ class HandlerResponse:
             raise ValueError(f"Cannot convert {self.resp_type} to {RESPONSE_TYPE.COLUMNS_TABLE}")
 
         self.data_frame.columns = [name.upper() for name in self.data_frame.columns]
-        self.data_frame[IS_COLUMNS_NAMES.MYSQL_DATA_TYPE] = self.data_frame[
-            IS_COLUMNS_NAMES.DATA_TYPE
+        self.data_frame[INF_SCHEMA_COLUMNS_NAMES.MYSQL_DATA_TYPE] = self.data_frame[
+            INF_SCHEMA_COLUMNS_NAMES.DATA_TYPE
         ].apply(map_type_fn)
 
         # region validate df
         current_columns_set = set(self.data_frame.columns)
-        if IS_COLUMNS_NAMES_SET != current_columns_set:
+        if INF_SCHEMA_COLUMNS_NAMES_SET != current_columns_set:
             raise ValueError(
                 f'Columns set for INFORMATION_SCHEMA.COLUMNS is wrong: {list(current_columns_set)}'
             )
         # endregion
 
         self.data_frame = self.data_frame.astype({
-            IS_COLUMNS_NAMES.COLUMN_NAME: 'string',
-            IS_COLUMNS_NAMES.DATA_TYPE: 'string',
-            IS_COLUMNS_NAMES.ORDINAL_POSITION: 'Int32',
-            IS_COLUMNS_NAMES.COLUMN_DEFAULT: 'string',
-            IS_COLUMNS_NAMES.IS_NULLABLE: 'string',
-            IS_COLUMNS_NAMES.CHARACTER_MAXIMUM_LENGTH: 'Int32',
-            IS_COLUMNS_NAMES.CHARACTER_OCTET_LENGTH: 'Int32',
-            IS_COLUMNS_NAMES.NUMERIC_PRECISION: 'Int32',
-            IS_COLUMNS_NAMES.NUMERIC_SCALE: 'Int32',
-            IS_COLUMNS_NAMES.DATETIME_PRECISION: 'Int32',
-            IS_COLUMNS_NAMES.CHARACTER_SET_NAME: 'string',
-            IS_COLUMNS_NAMES.COLLATION_NAME: 'string',
+            INF_SCHEMA_COLUMNS_NAMES.COLUMN_NAME: 'string',
+            INF_SCHEMA_COLUMNS_NAMES.DATA_TYPE: 'string',
+            INF_SCHEMA_COLUMNS_NAMES.ORDINAL_POSITION: 'Int32',
+            INF_SCHEMA_COLUMNS_NAMES.COLUMN_DEFAULT: 'string',
+            INF_SCHEMA_COLUMNS_NAMES.IS_NULLABLE: 'string',
+            INF_SCHEMA_COLUMNS_NAMES.CHARACTER_MAXIMUM_LENGTH: 'Int32',
+            INF_SCHEMA_COLUMNS_NAMES.CHARACTER_OCTET_LENGTH: 'Int32',
+            INF_SCHEMA_COLUMNS_NAMES.NUMERIC_PRECISION: 'Int32',
+            INF_SCHEMA_COLUMNS_NAMES.NUMERIC_SCALE: 'Int32',
+            INF_SCHEMA_COLUMNS_NAMES.DATETIME_PRECISION: 'Int32',
+            INF_SCHEMA_COLUMNS_NAMES.CHARACTER_SET_NAME: 'string',
+            INF_SCHEMA_COLUMNS_NAMES.COLLATION_NAME: 'string',
         })
         self.data_frame.replace([numpy.NaN, pandas.NA], None, inplace=True)
 

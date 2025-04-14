@@ -11,7 +11,7 @@ from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.api.executor.utilities.sql import get_query_tables
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.api.executor.datahub.classes.response import DataHubResponse
-from mindsdb.integrations.libs.response import IS_COLUMNS_NAMES
+from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES
 from mindsdb.utilities import log
 
 from .system_tables import (
@@ -121,7 +121,7 @@ class InformationSchemaDataNode(DataNode):
 
         Returns:
             pd.DataFrame: A DataFrame containing representation of information_schema.columns for the specified table.
-                          The DataFrame has list of columns as in the integrations.libs.response.IS_COLUMNS_NAMES
+                          The DataFrame has list of columns as in the integrations.libs.response.INF_SCHEMA_COLUMNS_NAMES
                           but only 'COLUMN_NAME' column is filled with the actual column names.
                           Other columns are filled with None.
         """
@@ -131,9 +131,9 @@ class InformationSchemaDataNode(DataNode):
                 f"Table information_schema.{table_name} does not exists"
             )
         table_columns_names = self.tables[table_name].columns
-        df = pd.DataFrame([[table_columns_names]], columns=[IS_COLUMNS_NAMES.COLUMN_NAME])
-        for column_name in astuple(IS_COLUMNS_NAMES):
-            if column_name == IS_COLUMNS_NAMES.COLUMN_NAME:
+        df = pd.DataFrame([[table_columns_names]], columns=[INF_SCHEMA_COLUMNS_NAMES.COLUMN_NAME])
+        for column_name in astuple(INF_SCHEMA_COLUMNS_NAMES):
+            if column_name == INF_SCHEMA_COLUMNS_NAMES.COLUMN_NAME:
                 continue
             df[column_name] = None
         return df

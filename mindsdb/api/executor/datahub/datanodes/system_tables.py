@@ -7,7 +7,7 @@ from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb.utilities import log
 from mindsdb.utilities.config import config
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
-from mindsdb.integrations.libs.response import IS_COLUMNS_NAMES
+from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE, MYSQL_DATA_TYPE_COLUMNS_DEFAULT
 from mindsdb.api.executor.datahub.classes.tables_row import TABLES_ROW_TYPE, TablesRow
 
@@ -232,8 +232,8 @@ class ColumnsTableRow:
         Returns:
             ColumnsTableRow: A row in the MindsDB's internal INFORMATION_SCHEMA.COLUMNS table.
         """
-        original_type: str = row[IS_COLUMNS_NAMES.DATA_TYPE] or ''
-        data_type: MYSQL_DATA_TYPE | None = row[IS_COLUMNS_NAMES.MYSQL_DATA_TYPE]
+        original_type: str = row[INF_SCHEMA_COLUMNS_NAMES.DATA_TYPE] or ''
+        data_type: MYSQL_DATA_TYPE | None = row[INF_SCHEMA_COLUMNS_NAMES.MYSQL_DATA_TYPE]
         if isinstance(data_type, MYSQL_DATA_TYPE) is False:
             data_type = infer_mysql_type(original_type)
 
@@ -247,11 +247,11 @@ class ColumnsTableRow:
         # region determine COLUMN_TYPE - it is text representation of DATA_TYPE with additioan attributes
         match data_type:
             case MYSQL_DATA_TYPE.DECIMAL:
-                column_type = f'decimal({row[IS_COLUMNS_NAMES.NUMERIC_PRECISION]},{IS_COLUMNS_NAMES.NUMERIC_SCALE})'
+                column_type = f'decimal({row[INF_SCHEMA_COLUMNS_NAMES.NUMERIC_PRECISION]},{INF_SCHEMA_COLUMNS_NAMES.NUMERIC_SCALE})'
             case MYSQL_DATA_TYPE.VARCHAR:
-                column_type = f'varchar({row[IS_COLUMNS_NAMES.CHARACTER_MAXIMUM_LENGTH]})'
+                column_type = f'varchar({row[INF_SCHEMA_COLUMNS_NAMES.CHARACTER_MAXIMUM_LENGTH]})'
             case MYSQL_DATA_TYPE.VARBINARY:
-                column_type = f'varbinary({row[IS_COLUMNS_NAMES.CHARACTER_MAXIMUM_LENGTH]})'
+                column_type = f'varbinary({row[INF_SCHEMA_COLUMNS_NAMES.CHARACTER_MAXIMUM_LENGTH]})'
             case MYSQL_DATA_TYPE.BIT | MYSQL_DATA_TYPE.BINARY | MYSQL_DATA_TYPE.CHAR:
                 column_type = f'{data_type.value.lower()}(1)'
             case MYSQL_DATA_TYPE.BOOL | MYSQL_DATA_TYPE.BOOLEAN:
@@ -269,18 +269,18 @@ class ColumnsTableRow:
         return cls(
             TABLE_SCHEMA=table_schema,
             TABLE_NAME=table_name,
-            COLUMN_NAME=row[IS_COLUMNS_NAMES.COLUMN_NAME],
-            ORDINAL_POSITION=row[IS_COLUMNS_NAMES.ORDINAL_POSITION],
-            COLUMN_DEFAULT=row[IS_COLUMNS_NAMES.COLUMN_DEFAULT],
-            IS_NULLABLE=row[IS_COLUMNS_NAMES.IS_NULLABLE],
+            COLUMN_NAME=row[INF_SCHEMA_COLUMNS_NAMES.COLUMN_NAME],
+            ORDINAL_POSITION=row[INF_SCHEMA_COLUMNS_NAMES.ORDINAL_POSITION],
+            COLUMN_DEFAULT=row[INF_SCHEMA_COLUMNS_NAMES.COLUMN_DEFAULT],
+            IS_NULLABLE=row[INF_SCHEMA_COLUMNS_NAMES.IS_NULLABLE],
             DATA_TYPE=data_type,
-            CHARACTER_MAXIMUM_LENGTH=row[IS_COLUMNS_NAMES.CHARACTER_MAXIMUM_LENGTH],
-            CHARACTER_OCTET_LENGTH=row[IS_COLUMNS_NAMES.CHARACTER_OCTET_LENGTH],
-            NUMERIC_PRECISION=row[IS_COLUMNS_NAMES.NUMERIC_PRECISION],
-            NUMERIC_SCALE=row[IS_COLUMNS_NAMES.NUMERIC_SCALE],
-            DATETIME_PRECISION=row[IS_COLUMNS_NAMES.DATETIME_PRECISION],
-            CHARACTER_SET_NAME=row[IS_COLUMNS_NAMES.CHARACTER_SET_NAME],
-            COLLATION_NAME=row[IS_COLUMNS_NAMES.COLLATION_NAME],
+            CHARACTER_MAXIMUM_LENGTH=row[INF_SCHEMA_COLUMNS_NAMES.CHARACTER_MAXIMUM_LENGTH],
+            CHARACTER_OCTET_LENGTH=row[INF_SCHEMA_COLUMNS_NAMES.CHARACTER_OCTET_LENGTH],
+            NUMERIC_PRECISION=row[INF_SCHEMA_COLUMNS_NAMES.NUMERIC_PRECISION],
+            NUMERIC_SCALE=row[INF_SCHEMA_COLUMNS_NAMES.NUMERIC_SCALE],
+            DATETIME_PRECISION=row[INF_SCHEMA_COLUMNS_NAMES.DATETIME_PRECISION],
+            CHARACTER_SET_NAME=row[INF_SCHEMA_COLUMNS_NAMES.CHARACTER_SET_NAME],
+            COLLATION_NAME=row[INF_SCHEMA_COLUMNS_NAMES.COLLATION_NAME],
             COLUMN_TYPE=column_type,
             ORIGINAL_TYPE=original_type
         )

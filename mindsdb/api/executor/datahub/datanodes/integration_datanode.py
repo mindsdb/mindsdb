@@ -18,7 +18,7 @@ from mindsdb.api.executor.datahub.datanodes.datanode import DataNode
 from mindsdb.api.executor.datahub.classes.tables_row import TablesRow
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.api.executor.sql_query.result_set import ResultSet
-from mindsdb.integrations.libs.response import HandlerResponse, IS_COLUMNS_NAMES
+from mindsdb.integrations.libs.response import HandlerResponse, INF_SCHEMA_COLUMNS_NAMES
 from mindsdb.integrations.utilities.utils import get_class_name
 from mindsdb.metrics import metrics
 from mindsdb.utilities import log
@@ -65,7 +65,7 @@ class IntegrationDataNode(DataNode):
 
         Returns:
             pd.DataFrame: A DataFrame containing representation of information_schema.columns for the specified table.
-                          The DataFrame has list of columns as in the integrations.libs.response.IS_COLUMNS_NAMES.
+                          The DataFrame has list of columns as in the integrations.libs.response.INF_SCHEMA_COLUMNS_NAMES.
         """
         if 'schema_name' in inspect.signature(self.integration_handler.get_columns).parameters:
             response = self.integration_handler.get_columns(table_name, schema_name)
@@ -77,7 +77,7 @@ class IntegrationDataNode(DataNode):
 
         if response.type != RESPONSE_TYPE.TABLE:
             logger.warning(f"Wrong response type for handler's `get_columns` call: {response.type}")
-            return pd.DataFrame([], columns=astuple(IS_COLUMNS_NAMES))
+            return pd.DataFrame([], columns=astuple(INF_SCHEMA_COLUMNS_NAMES))
 
         # region fallback for old handlers
         df = response.data_frame
@@ -86,16 +86,16 @@ class IntegrationDataNode(DataNode):
             logger.warning(
                 f"Response from the handler's `get_columns` call does not contain required columns: f{df.columns}"
             )
-            return pd.DataFrame([], columns=astuple(IS_COLUMNS_NAMES))
+            return pd.DataFrame([], columns=astuple(INF_SCHEMA_COLUMNS_NAMES))
 
         new_df = df[['FIELD', 'TYPE']]
         new_df.columns = ['COLUMN_NAME', 'DATA_TYPE']
 
-        new_df[IS_COLUMNS_NAMES.MYSQL_DATA_TYPE] = new_df[
-            IS_COLUMNS_NAMES.DATA_TYPE
+        new_df[INF_SCHEMA_COLUMNS_NAMES.MYSQL_DATA_TYPE] = new_df[
+            INF_SCHEMA_COLUMNS_NAMES.DATA_TYPE
         ].apply(lambda x: infer_mysql_type(x).value)
 
-        for column_name in astuple(IS_COLUMNS_NAMES):
+        for column_name in astuple(INF_SCHEMA_COLUMNS_NAMES):
             if column_name in new_df.columns:
                 continue
             new_df[column_name] = None
@@ -114,7 +114,7 @@ class IntegrationDataNode(DataNode):
             list[str]: A list of column names for the specified table.
         """
         df = self.get_table_columns_df(table_name, schema_name)
-        return df[IS_COLUMNS_NAMES.COLUMN_NAME].to_list()
+        return df[INF_SCHEMA_COLUMNS_NAMES.COLUMN_NAME].to_list()
 
     def drop_table(self, name: Identifier, if_exists=False):
         drop_ast = DropTables(

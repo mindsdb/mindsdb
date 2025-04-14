@@ -17,7 +17,7 @@ from mindsdb.api.executor.datahub.datanodes.datanode import DataNode
 from mindsdb.api.executor.datahub.classes.tables_row import TablesRow
 from mindsdb.api.executor.datahub.classes.response import DataHubResponse
 from mindsdb.utilities.partitioning import process_dataframe_in_partitions
-from mindsdb.integrations.libs.response import IS_COLUMNS_NAMES
+from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES
 
 
 class ProjectDataNode(DataNode):
@@ -57,20 +57,20 @@ class ProjectDataNode(DataNode):
 
         Returns:
             pd.DataFrame: A DataFrame containing representation of information_schema.columns for the specified table.
-                          The DataFrame has list of columns as in the integrations.libs.response.IS_COLUMNS_NAMES
+                          The DataFrame has list of columns as in the integrations.libs.response.INF_SCHEMA_COLUMNS_NAMES
                           but only 'COLUMN_NAME' column is filled with the actual column names.
                           Other columns are filled with None.
         """
         columns = self.project.get_columns(table_name)
 
         data = []
-        row = {name: None for name in astuple(IS_COLUMNS_NAMES)}
+        row = {name: None for name in astuple(INF_SCHEMA_COLUMNS_NAMES)}
         for column_name in columns:
             r = row.copy()
-            r[IS_COLUMNS_NAMES.COLUMN_NAME] = column_name
+            r[INF_SCHEMA_COLUMNS_NAMES.COLUMN_NAME] = column_name
             data.append(r)
 
-        return pd.DataFrame(data, columns=astuple(IS_COLUMNS_NAMES))
+        return pd.DataFrame(data, columns=astuple(INF_SCHEMA_COLUMNS_NAMES))
 
     def get_table_columns_names(self, table_name: str, schema_name: str | None = None) -> list[str]:
         """Get a list of column names for the specified table.

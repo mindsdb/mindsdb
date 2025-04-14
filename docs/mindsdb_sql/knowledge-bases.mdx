@@ -1,6 +1,6 @@
 ---
 title: Knowledge Base
-sidebarTitle: Knowledge Base
+sidebarTitle: Knowledge Bases
 ---
 
 A knowledge base is an advanced system designed to go beyond traditional data storage. Its components include embedding and reranking models and a vector store.
@@ -226,16 +226,14 @@ The following is an explanation of the syntax and parameters:
 * `<kb_name>` is a unique identifier of a knowledge base.
 * `WHERE content = '<query_text>'` triggers semantic search based on the meaning of `<query_text>`.
 * `AND reranking_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1. It defines the minimum relevance value for the data row to appear in the output. Its default value is 0.
-* `LIMIT <N>` restricts results to the top N most relevant documents.
+* `LIMIT <N>` restricts results to the top N most relevant documents. The default limit is 10 and the maximum limit is 100.
 
-<Note>
 Here are the conditions supported by the available vector stores:
 
 | Handler  |  IN, NOT IN | LIKE, NOT LIKE | < and > | !=  |
 | -------- | ----------- | -------------- | ------- | --- |
 | PgVector | +           | +              | +       | +   |
 | ChromaDB | +           | -              | -       | +   |
-</Note>
 
 <Accordion title="Examples">
 
@@ -272,7 +270,7 @@ The following is an explanation of the syntax and parameters:
 * `<kb_name>` is a unique identifier of a knowledge base.
 * `WHERE content = '<query_text>'` triggers semantic search based on the meaning of `<query_text>`.
 * `AND reranking_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1. It defines the minimum relevance value for the data row to appear in the output. Its default value is 0.
-* `LIMIT <N>` restricts results to the top N most relevant documents.
+* `LIMIT <N>` restricts results to the top N most relevant documents. The default limit is 10 and the maximum limit is 100.
 
 <Accordion title="Examples">
 
@@ -298,7 +296,8 @@ SELECT id, chunk_content, relevance
 FROM my_kb 
 WHERE <metadata_colums> = '<metadata>' -- metadata filtering conditions
 AND content = '<query_text>' -- semantic search condition
-AND reranking_threshold = 0.6; -- optional
+AND reranking_threshold = 0.6 -- optional
+LIMIT <N>;
 ```
 
 Upon execution, it performs the conjunctive filtering, that is, results must satisfy both the metadata condition(s) and the semantic search condition.
@@ -310,6 +309,7 @@ The following is an explanation of the syntax and parameters:
 * `WHERE <metadata_colums> = '<metadata>'` is the metadata filtering condition.
 * `WHERE content = '<query_text>'` is the semantic search condition.
 * `AND reranking_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1. It defines the minimum relevance value for the data row to appear in the output. Its default value is 0.
+* `LIMIT <N>` restricts results to the top N most relevant documents. The default limit is 10 and the maximum limit is 100.
 
 <Accordion title="Examples">
 

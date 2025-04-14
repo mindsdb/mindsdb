@@ -66,14 +66,13 @@ class TestForecastQuaterlyHouseSales(HTTPHelperMixin):
         resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
         assert len(resp['data']) == 10
 
-    def test_create_model(self):
-        resp = self.sql_via_http(QueryStorage.create_model, RESPONSE_TYPE.TABLE)
-        assert len(resp['data']) == 1
-        status = resp['column_names'].index('STATUS')
-        assert resp['data'][0][status] == 'generating'
-
-    def test_wait_training_complete(self):
-        self.await_model("house_sales_model", timeout=600)
+    def test_create_model(self, train_finetune_lock):
+        with train_finetune_local.aquire(timeout=600):
+            resp = self.sql_via_http(QueryStorage.create_model, RESPONSE_TYPE.TABLE)
+            assert len(resp['data']) == 1
+            status = resp['column_names'].index('STATUS')
+            assert resp['data'][0][status] == 'generating'
+            self.await_model("house_sales_model", timeout=600)     
 
     def test_prediction(self):
         sql = QueryStorage.prediction

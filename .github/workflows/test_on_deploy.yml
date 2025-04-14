@@ -43,11 +43,10 @@ jobs:
       with:
         python-version: "3.10"
         enable-cache: true
-        cache-dependency-glob: "**/requirements*.txt"
         prune-cache: false
     - name: Install dependencies
       run: |
-        uv pip install . .[lightwood] .[huggingface] -r requirements/requirements-test.txt
+        uv pip install -r requirements/requirements-test.txt
 
     # - name: Run integration api and flow tests
     #   run: |

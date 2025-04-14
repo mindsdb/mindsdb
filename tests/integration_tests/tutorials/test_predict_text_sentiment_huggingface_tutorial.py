@@ -65,18 +65,15 @@ class TestPredictTextSentimentHuggingface(HTTPHelperMixin):
         resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
         assert len(resp['data']) == 3
 
-    def test_create_model(self):
-        sql = QueryStorage.create_model
-        resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
-
-        assert len(resp['data']) == 1
-        status = resp['column_names'].index('STATUS')
-        assert resp['data'][0][status] == 'generating'
-
-    def test_wait_training_complete(self):
-        status = self.await_model_by_query(QueryStorage.check_status, timeout=600)
-        assert status == 'complete'
-        # self.await_model("home_rentals_model", timeout=600)
+    def test_create_model(self, train_finetune_local):
+        with train_finetune_local.aquire(timeout=600):
+            sql = QueryStorage.create_model
+            resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
+            assert len(resp['data']) == 1
+            status = resp['column_names'].index('STATUS')
+            assert resp['data'][0][status] == 'generating'
+            status = self.await_model_by_query(QueryStorage.check_status, timeout=600)
+            assert status == 'complete'
 
     def test_prediction(self):
         sql = QueryStorage.prediction

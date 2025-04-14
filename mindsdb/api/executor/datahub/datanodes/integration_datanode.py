@@ -23,7 +23,7 @@ from mindsdb.integrations.utilities.utils import get_class_name
 from mindsdb.metrics import metrics
 from mindsdb.utilities import log
 from mindsdb.utilities.profiler import profiler
-from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
+from mindsdb.api.executor.datahub.datanodes.system_tables import infer_mysql_type
 
 logger = log.getLogger(__name__)
 
@@ -88,29 +88,12 @@ class IntegrationDataNode(DataNode):
             )
             return pd.DataFrame([], columns=astuple(IS_COLUMNS_NAMES))
 
-        new_df = pd.DataFrame([], columns=astuple(IS_COLUMNS_NAMES))
         new_df = df[['FIELD', 'TYPE']]
         new_df.columns = ['COLUMN_NAME', 'DATA_TYPE']
 
-        def infer_mysql_type(column_type: str):
-            if column_type in ('double precision', 'real', 'numeric', 'float'):
-                column_type = MYSQL_DATA_TYPE.FLOAT
-            elif column_type in ('integer', 'smallint', 'int', 'bigint'):
-                column_type = MYSQL_DATA_TYPE.BIGINT
-            elif column_type in (
-                'timestamp without time zone',
-                'timestamp with time zone',
-                'date', 'timestamp'
-            ):
-                column_type = MYSQL_DATA_TYPE.DATETIME
-            else:
-                column_type = MYSQL_DATA_TYPE.VARCHAR
-
-            return column_type.value
-
         new_df[IS_COLUMNS_NAMES.MYSQL_DATA_TYPE] = new_df[
             IS_COLUMNS_NAMES.DATA_TYPE
-        ].apply(infer_mysql_type)
+        ].apply(lambda x: infer_mysql_type(x).value)
 
         for column_name in astuple(IS_COLUMNS_NAMES):
             if column_name in new_df.columns:

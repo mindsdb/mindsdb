@@ -164,6 +164,27 @@ class TablesTable(Table):
         return df
 
 
+def infer_mysql_type(original_type: str) -> MYSQL_DATA_TYPE:
+    """Infer MySQL data type from original type string from a database.
+
+    Args:
+        original_type (str): The original type string from a database.
+
+    Returns:
+        MYSQL_DATA_TYPE: The inferred MySQL data type.
+    """
+    match original_type.lower():
+        case 'double precision' | 'real' | 'numeric' | 'float':
+            data_type = MYSQL_DATA_TYPE.FLOAT
+        case 'integer' | 'smallint' | 'int' | 'bigint':
+            data_type = MYSQL_DATA_TYPE.BIGINT
+        case 'timestamp without time zone' | 'timestamp with time zone' | 'date' | 'timestamp':
+            data_type = MYSQL_DATA_TYPE.DATETIME
+        case _:
+            data_type = MYSQL_DATA_TYPE.VARCHAR
+    return data_type
+
+
 @dataclass(slots=True, kw_only=True)
 class ColumnsTableRow:
     """Represents a row in the MindsDB's internal INFORMATION_SCHEMA.COLUMNS table.
@@ -214,17 +235,7 @@ class ColumnsTableRow:
         original_type: str = row[IS_COLUMNS_NAMES.DATA_TYPE] or ''
         data_type: MYSQL_DATA_TYPE | None = row[IS_COLUMNS_NAMES.MYSQL_DATA_TYPE]
         if isinstance(data_type, MYSQL_DATA_TYPE) is False:
-            # region try to infer type if `MYSQL_DATA_TYPE` is not set
-            match original_type.lower():
-                case 'double precision' | 'real' | 'numeric' | 'float':
-                    data_type = MYSQL_DATA_TYPE.FLOAT
-                case 'integer' | 'smallint' | 'int' | 'bigint':
-                    data_type = MYSQL_DATA_TYPE.BIGINT
-                case 'timestamp without time zone' | 'timestamp with time zone' | 'date' | 'timestamp':
-                    data_type = MYSQL_DATA_TYPE.DATETIME
-                case _:
-                    data_type = MYSQL_DATA_TYPE.VARCHAR
-            # endregion
+            data_type = infer_mysql_type(original_type)
 
         # region set default values depend on type
         defaults = MYSQL_DATA_TYPE_COLUMNS_DEFAULT.get(data_type)

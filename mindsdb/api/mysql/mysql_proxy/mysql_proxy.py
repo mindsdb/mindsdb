@@ -279,7 +279,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             password = switch_auth("mysql_native_password")
 
         try:
-            self.session.database = handshake_resp.database.value.decode()
+            self.session.database = handshake_resp.database.value.decode() or config.get('default_project')
         except Exception:
             self.session.database = None
         logger.debug(

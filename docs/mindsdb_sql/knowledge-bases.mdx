@@ -66,7 +66,7 @@ Note that providing the reranking model is optional. If provided, it is used an 
 - When the reranking model is not provided but the `reranking_threshold` is defined in the query, then the relevance is calculated based on the `distance` column (`1/(1+ distance)`) and the `reranking_threshold` value is compared with this relevance value to filter the output.
 </Info>
 
-* `storage` is an optional parameter. It assigns the name of the vector store created within MindsDB with the [`CREATE DATABASE` command](/mindsdb_sql/sql/create/database), which is either [PGVector](/integrations/vector-db-integrations/pgvector) or [ChromaDB](/integrations/vector-db-integrations/chromadb), followed by a table name present in that vector database where the knowledge base stores its content. If not provided, the system creates the default ChromaDB vector database called `<kb_name>_chromadb` with the default tables called `default_collection` that stores the embedded data.
+* `storage` is an optional parameter. It assigns the name of the vector store created within MindsDB with the [`CREATE DATABASE` command](/mindsdb_sql/sql/create/database), which is either [PGVector](/integrations/vector-db-integrations/pgvector) or [ChromaDB](/integrations/vector-db-integrations/chromadb), followed by a table name where the knowledge base stores its content; note that this table is created within the vector store automatically. If not provided, the system creates the default ChromaDB vector database called `<kb_name>_chromadb` with the default tables called `default_collection` that stores the embedded data.
 
 * `metadata_columns` provides the list of column names that will be used as the metadata of the knowledge base. Users can use these column names to insert them into the knowledge base and filter the search results by metadata. If not set, the metadata is not used.
 
@@ -176,6 +176,27 @@ SELECT query_cancel(1);
   - `false` - Disable threads, even if the ML task queue is enabled.
 - **track_column** - Column used for partitioning. The query is sorted by this column and limited by `batch_size`.
 - **error** - Defines the error processing options. The available values include `raise` (default) and `skip`.
+</Accordion>
+
+<Accordion title="Underlying Vector Store">
+
+Each knowledge base has its underlying vector store that store data inserted into the knowledge base in the form of embeddings.
+
+Users can query the underlying vector store as follows.
+
+* KB with the default ChromaDB vector store:
+
+```sql
+SELECT id, content, metadata, embeddings
+FROM <kb_name>_chromadb.storage_table;
+```
+
+* KB with user-defined vector store (either ChromaDB or PGVector):
+
+```sql
+SELECT id, content, metadata, embeddings
+FROM <vector_store_connection_name>.<table_name>;
+```
 </Accordion>
 
 <Accordion title="Examples">

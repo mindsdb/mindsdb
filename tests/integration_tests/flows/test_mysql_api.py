@@ -164,7 +164,6 @@ class TestMySqlApi(BaseStuff):
 
     @classmethod
     def setup_class(cls):
-
         cls.docker_client = docker.from_env()
         cls.mysql_image = 'mysql:9.1.0'
         cls.config = json.loads(Path(os.path.join(TEMP_DIR, "config.json")).read_text())

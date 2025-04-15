@@ -251,7 +251,7 @@ The following is an explanation of the syntax and parameters:
 * `<kb_name>` is a unique identifier of a knowledge base.
 * `WHERE content = '<query_text>'` triggers semantic search based on the meaning of `<query_text>`.
 * `AND relevance_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1. It defines the minimum relevance value for the data row to appear in the output. Its default value is 0.
-* `LIMIT <N>` restricts results to the top N most relevant documents. The default limit is 10 and the maximum limit is 100.
+* `LIMIT <N>` restricts results to the top N most relevant documents. When using the semantic search (as opposed to metadata-only search), the default limit is 10 and the maximum limit is 100.
 
 Here are the conditions supported by the available vector stores:
 
@@ -295,7 +295,7 @@ The following is an explanation of the syntax and parameters:
 * `<kb_name>` is a unique identifier of a knowledge base.
 * `WHERE content = '<query_text>'` triggers semantic search based on the meaning of `<query_text>`.
 * `AND relevance_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1. It defines the minimum relevance value for the data row to appear in the output. Its default value is 0.
-* `LIMIT <N>` restricts results to the top N most relevant documents. The default limit is 10 and the maximum limit is 100.
+* `LIMIT <N>` restricts results to the top N most relevant documents. When using the semantic search (as opposed to metadata-only search), the default limit is 10 and the maximum limit is 100.
 
 <Accordion title="Examples">
 
@@ -334,7 +334,7 @@ The following is an explanation of the syntax and parameters:
 * `WHERE <metadata_colums> = '<metadata>'` is the metadata filtering condition.
 * `WHERE content = '<query_text>'` is the semantic search condition.
 * `AND relevance_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1. It defines the minimum relevance value for the data row to appear in the output. Its default value is 0.
-* `LIMIT <N>` restricts results to the top N most relevant documents. The default limit is 10 and the maximum limit is 100.
+* `LIMIT <N>` restricts results to the top N most relevant documents. When using the semantic search (as opposed to metadata-only search), the default limit is 10 and the maximum limit is 100.
 
 <Accordion title="Examples">
 

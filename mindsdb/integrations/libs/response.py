@@ -63,8 +63,8 @@ class HandlerResponse:
         if self.resp_type != RESPONSE_TYPE.TABLE:
             if self.resp_type == RESPONSE_TYPE.ERROR:
                 raise ValueError(
-                    f"Cannot convert {self.resp_type} to {RESPONSE_TYPE.COLUMNS_TABLE},"
-                    f"the error is {self.error_message}"
+                    f"Cannot convert {self.resp_type} to {RESPONSE_TYPE.COLUMNS_TABLE}, "
+                    f"the error is: {self.error_message}"
                 )
             raise ValueError(f"Cannot convert {self.resp_type} to {RESPONSE_TYPE.COLUMNS_TABLE}")
 

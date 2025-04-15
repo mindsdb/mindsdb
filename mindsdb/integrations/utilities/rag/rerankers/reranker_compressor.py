@@ -161,56 +161,56 @@ class LLMReranker(BaseDocumentCompressor):
                         messages=[
                             {"role": "system", "content": """
                                 You are an intelligent assistant that evaluates how relevant a given document chunk is to a user's search query.
-                                Your task is to analyze the similarity between the search query and the document chunk, and return **only the bucket label** that best represents the relevance:
+                                Your task is to analyze the similarity between the search query and the document chunk, and return **only the class label** that best represents the relevance:
 
-                                - "bucket_1": Not relevant (score between 0.0 and 0.25)
-                                - "bucket_2": Slightly relevant (score between 0.25 and 0.5)
-                                - "bucket_3": Moderately relevant (score between 0.5 and 0.75)
-                                - "bucket_4": Highly relevant (score between 0.75 and 1.0)
+                                - "class_1": Not relevant (score between 0.0 and 0.25)
+                                - "class_2": Slightly relevant (score between 0.25 and 0.5)
+                                - "class_3": Moderately relevant (score between 0.5 and 0.75)
+                                - "class_4": Highly relevant (score between 0.75 and 1.0)
 
-                                Respond with only one of: "bucket_1", "bucket_2", "bucket_3", or "bucket_4".
+                                Respond with only one of: "class_1", "class_2", "class_3", or "class_4".
 
                                 Examples:
 
                                 Search query: "How to reset a router to factory settings?"
                                 Document chunk: "Computers often come with customizable parental control settings."
-                                Score: bucket_1
+                                Score: class_1
 
                                 Search query: "Symptoms of vitamin D deficiency"
                                 Document chunk: "Vitamin D deficiency has been linked to fatigue, bone pain, and muscle weakness."
-                                Score: bucket_4
+                                Score: class_4
 
                                 Search query: "Best practices for onboarding remote employees"
                                 Document chunk: "An employee handbook can be useful for new hires, outlining company policies and benefits."
-                                Score: bucket_2
+                                Score: class_2
 
                                 Search query: "Benefits of mindfulness meditation"
                                 Document chunk: "Practicing mindfulness has shown to reduce stress and improve focus in multiple studies."
-                                Score: bucket_3
+                                Score: class_3
 
                                 Search query: "What is Kubernetes used for?"
                                 Document chunk: "Kubernetes is an open-source system for automating deployment, scaling, and management of containerized applications."
-                                Score: bucket_4
+                                Score: class_4
 
                                 Search query: "How to bake sourdough bread at home"
                                 Document chunk: "The French Revolution began in 1789 and radically transformed society."
-                                Score: bucket_1
+                                Score: class_1
 
                                 Search query: "Machine learning algorithms for image classification"
                                 Document chunk: "Convolutional Neural Networks (CNNs) are particularly effective in image classification tasks."
-                                Score: bucket_4
+                                Score: class_4
 
                                 Search query: "How to improve focus while working remotely"
                                 Document chunk: "Creating a dedicated workspace and setting a consistent schedule can significantly improve focus during remote work."
-                                Score: bucket_4
+                                Score: class_4
 
                                 Search query: "Carbon emissions from electric vehicles vs gas cars"
                                 Document chunk: "Electric vehicles produce zero emissions while driving, but battery production has environmental impacts."
-                                Score: bucket_3
+                                Score: class_3
 
                                 Search query: "Time zones in the United States"
                                 Document chunk: "The U.S. is divided into six primary time zones: Eastern, Central, Mountain, Pacific, Alaska, and Hawaii-Aleutian."
-                                Score: bucket_4
+                                Score: class_4
                              """},
 
                             {"role": "user", "content": f"""
@@ -219,7 +219,7 @@ class LLMReranker(BaseDocumentCompressor):
                                 Search query: {query}
                                 Document chunk: {document}
 
-                                Which bucket best represents the relevance?
+                                Which class best represents the relevance?
                             """}
                         ],
                         temperature=self.temperature,
@@ -230,32 +230,32 @@ class LLMReranker(BaseDocumentCompressor):
                     )
 
                     # Extract response and logprobs
-                    bucket = response.choices[0].message.content.strip()
+                    class_label = response.choices[0].message.content.strip()
                     token_logprobs = response.choices[0].logprobs.content
                     # Reconstruct the prediction and extract the top logprobs from the final token (e.g., "1")
                     final_token_logprob = token_logprobs[-1]
                     top_logprobs = final_token_logprob.top_logprobs
-                    # Create a map of 'bucket_1' -> probability, using token combinations
-                    bucket_probs = {}
+                    # Create a map of 'class_1' -> probability, using token combinations
+                    class_probs = {}
                     for top_token in top_logprobs:
-                        full_label = f"bucket_{top_token.token}"
+                        full_label = f"class_{top_token.token}"
                         prob = math.exp(top_token.logprob)
-                        bucket_probs[full_label] = prob
+                        class_probs[full_label] = prob
                     # Optional: normalize in case some are missing
-                    total_prob = sum(bucket_probs.values())
-                    bucket_probs = {k: v / total_prob for k, v in bucket_probs.items()}
-                    # Assign weights to buckets (midpoints of ranges)
-                    bucket_weights = {
-                        "bucket_1": 0.25,
-                        "bucket_2": 0.5,
-                        "bucket_3": 0.75,
-                        "bucket_4": 1.0
+                    total_prob = sum(class_probs.values())
+                    class_probs = {k: v / total_prob for k, v in class_probs.items()}
+                    # Assign weights to classes
+                    class_weights = {
+                        "class_1": 0.25,
+                        "class_2": 0.5,
+                        "class_3": 0.75,
+                        "class_4": 1.0
                     }
                     # Compute the final smooth score
-                    relevance_score = sum(bucket_weights.get(bucket, 0) * prob for bucket, prob in bucket_probs.items())
+                    relevance_score = sum(class_weights.get(class_label, 0) * prob for class_label, prob in class_probs.items())
                     rerank_data = {
                         "document": document,
-                        "answer": bucket,
+                        "answer": class_label,
                         "relevance_score": relevance_score
                     }
                     return rerank_data

@@ -24,7 +24,8 @@ from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.utilities.config import config
 from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.utilities.starters import (
-    start_http, start_mysql, start_mongo, start_postgres, start_ml_task_queue, start_scheduler, start_tasks
+    start_http, start_mysql, start_mongo, start_postgres, start_ml_task_queue, start_scheduler, start_tasks,
+    start_mcp
 )
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 from mindsdb.utilities.functions import get_versions_where_predictors_become_obsolete
@@ -57,6 +58,7 @@ class TrunkProcessEnum(Enum):
     JOBS = 'jobs'
     TASKS = 'tasks'
     ML_TASK_QUEUE = 'ml_task_queue'
+    MCP = 'mcp'
 
     @classmethod
     def _missing_(cls, value):
@@ -221,9 +223,9 @@ if __name__ == '__main__':
     ctx.set_default()
 
     # ---- CHECK SYSTEM ----
-    if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 9):
+    if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 10):
         print("""
-     MindsDB requires Python >= 3.9 to run
+     MindsDB requires Python >= 3.10 to run
 
      Once you have supported Python version installed you can start mindsdb as follows:
 
@@ -297,15 +299,38 @@ if __name__ == '__main__':
         logger.debug(f"Checking if default project {config.get('default_project')} exists")
         project_controller = ProjectController()
 
-        current_default_project = project_controller.get(is_default=True)
-        if current_default_project.record.name != config.get('default_project'):
+        try:
+            current_default_project = project_controller.get(is_default=True)
+        except EntityNotExistsError:
+            # In previous versions, the default project could be deleted. This is no longer possible.
+            current_default_project = None
+
+        if current_default_project:
+            if current_default_project.record.name != config.get('default_project'):
+                try:
+                    project_controller.get(name=config.get('default_project'))
+                    log.critical(f"A project with the name '{config.get('default_project')}' already exists")
+                    sys.exit(1)
+                except EntityNotExistsError:
+                    pass
+                project_controller.update(current_default_project.record.id, new_name=config.get('default_project'))
+
+        # Legacy: If the default project does not exist, mark the new one as default.
+        else:
             try:
-                new_default_project = project_controller.get(name=config.get('default_project'))
-                log.critical(f"A project with the name '{config.get('default_project')}' already exists")
-                sys.exit(1)
+                project_controller.get(name=config.get('default_project'))
             except EntityNotExistsError:
-                pass
-            project_controller.update(current_default_project.record.id, new_name=config.get('default_project'))
+                log.critical(
+                    f"A project with the name '{config.get('default_project')}' does not exist"
+                )
+                raise
+
+            project_controller.update(
+                name=config.get('default_project'),
+                new_metadata={
+                    "is_default": True
+                }
+            )
 
     apis = os.getenv('MINDSDB_APIS') or config.cmd_args.api
 
@@ -385,6 +410,7 @@ if __name__ == '__main__':
 
     http_api_config = config['api']['http']
     mysql_api_config = config['api']['mysql']
+    mcp_api_config = config['api']['mcp']
     trunc_processes_struct = {
         TrunkProcessEnum.HTTP: TrunkProcessData(
             name=TrunkProcessEnum.HTTP.value,
@@ -434,11 +460,25 @@ if __name__ == '__main__':
             name=TrunkProcessEnum.ML_TASK_QUEUE.value,
             entrypoint=start_ml_task_queue,
             args=(config.cmd_args.verbose,)
+        ),
+        TrunkProcessEnum.MCP: TrunkProcessData(
+            name=TrunkProcessEnum.MCP.value,
+            entrypoint=start_mcp,
+            port=mcp_api_config.get('port', 47337),
+            args=(config.cmd_args.verbose,),
+            restart_on_failure=mcp_api_config.get('restart_on_failure', False),
+            max_restart_count=mcp_api_config.get('max_restart_count', TrunkProcessData.max_restart_count),
+            max_restart_interval_seconds=mcp_api_config.get(
+                'max_restart_interval_seconds', TrunkProcessData.max_restart_interval_seconds
+            )
         )
     }
 
     for api_enum in api_arr:
-        trunc_processes_struct[api_enum].need_to_run = True
+        if api_enum in trunc_processes_struct:
+            trunc_processes_struct[api_enum].need_to_run = True
+        else:
+            logger.error(f"ERROR: {api_enum} API is not a valid api in config")
 
     if config['jobs']['disable'] is False:
         trunc_processes_struct[TrunkProcessEnum.JOBS].need_to_run = True

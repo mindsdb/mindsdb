@@ -1,8 +1,10 @@
 from collections import OrderedDict
 import unittest
 from unittest.mock import patch, MagicMock
+
 import mysql.connector
 from pandas import DataFrame
+
 from base_handler_test import BaseDatabaseHandlerTest
 from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
 from mindsdb.integrations.libs.response import (
@@ -110,6 +112,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_conn.is_connected = MagicMock(return_value=True)
 
         mock_cursor.with_rows = False
+        mock_cursor.rowcount = 1
 
         query_str = "INSERT INTO test_table VALUES (1, 'test')"
         data = self.handler.native_query(query_str)
@@ -120,6 +123,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         assert isinstance(data, Response)
         self.assertFalse(data.error_code)
         self.assertEqual(data.type, RESPONSE_TYPE.OK)
+        self.assertEqual(data.affected_rows, 1)
 
     def test_native_query_error(self):
         """
@@ -329,7 +333,14 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.handler.native_query.assert_called_once()
         call_args = self.handler.native_query.call_args[0][0]
 
-        expected_sql = f"DESCRIBE `{table_name}`;"
+        expected_sql = f"""
+            select
+                COLUMN_NAME AS FIELD, DATA_TYPE AS TYPE
+            from
+                information_schema.columns
+            where
+                table_name = '{table_name}'
+        """
         self.assertEqual(call_args, expected_sql)
         self.assertEqual(response, expected_response)
 

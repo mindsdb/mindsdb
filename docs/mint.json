@@ -68,6 +68,10 @@
       "url": "sdks"
     },
     {
+      "name": "MCP API",
+      "url": "mcp"
+    },
+    {
       "name": "REST API",
       "url": "rest"
     },
@@ -388,6 +392,14 @@
             "use-cases/ai_workflow_automation/customer-reviews-notifications",
             "use-cases/ai_workflow_automation/real-time-trading-forecasts"
           ]
+        },
+        {
+          "group": "MCP API",
+          "pages": [
+            "use-cases/mcp_api/overview",
+            "use-cases/mcp_api/mindsdb_mcp_server",
+            "use-cases/mcp_api/cursor"
+          ]
         }
       ]
     },
@@ -508,7 +520,8 @@
           "group": "Functions",
           "pages": [
             "mindsdb_sql/functions/custom_functions",
-            "mindsdb_sql/functions/llm_function"
+            "mindsdb_sql/functions/llm_function",
+            "mindsdb_sql/functions/to_markdown"
           ]
         },
         {
@@ -520,6 +533,14 @@
             "mindsdb_sql/sql_support/window-functions"
           ]
         }
+      ]
+    },
+    {
+      "group": "MCP API",
+      "pages": [
+        "mcp/overview",
+        "mcp/tools",
+        "mcp/cursor_usage"
       ]
     },
     {
@@ -948,7 +969,6 @@
         {
           "group": "Databases",
           "pages": [
-            "integrations/data-integrations/all-data-integrations",
             "integrations/data-integrations/airtable",
             "integrations/data-integrations/amazon-aurora",
             "integrations/data-integrations/amazon-dynamodb",
@@ -1020,6 +1040,7 @@
           "pages": [
             "integrations/vector-db-integrations/chromadb",
             "integrations/vector-db-integrations/couchbase",
+            "integrations/vector-db-integrations/milvus",
             "integrations/vector-db-integrations/pgvector",
             "integrations/vector-db-integrations/pinecone",
             "integrations/vector-db-integrations/weaviate"
@@ -1058,6 +1079,12 @@
             "integrations/ai-engines/portkey",
             "integrations/ai-engines/replicate-llm",
             "integrations/ai-engines/vertex"       
+          ]
+        },
+        {
+          "group": "Embedding Models",
+          "pages": [
+            "integrations/ai-engines/langchain_embedding"
           ]
         },
         {

@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 
 class LLMReranker(BaseDocumentCompressor):
-    filtering_threshold: float = 0.5  # Default threshold for filtering
+    filtering_threshold: float = 0.0  # Default threshold for filtering
     model: str = DEFAULT_RERANKING_MODEL  # Model to use for reranking
     temperature: float = 0.0  # Temperature for the model
     openai_api_key: Optional[str] = None
@@ -54,7 +54,7 @@ class LLMReranker(BaseDocumentCompressor):
                 max_retries=2  # Client-level retries
             )
 
-    async def search_relevancy(self, query: str, document: str) -> Any:
+    async def search_relevancy(self, query: str, document: str, custom_event: bool = True) -> Any:
         await self._init_client()
 
         async with self._semaphore:
@@ -82,7 +82,8 @@ class LLMReranker(BaseDocumentCompressor):
                     }
 
                     # Stream reranking update.
-                    dispatch_custom_event("rerank", rerank_data)
+                    if custom_event:
+                        dispatch_custom_event("rerank", rerank_data)
                     return rerank_data
 
                 except Exception as e:
@@ -93,7 +94,7 @@ class LLMReranker(BaseDocumentCompressor):
                     retry_delay = self.retry_delay * (2 ** attempt) + random.uniform(0, 0.1)
                     await asyncio.sleep(retry_delay)
 
-    async def _rank(self, query_document_pairs: List[Tuple[str, str]]) -> List[Tuple[str, float]]:
+    async def _rank(self, query_document_pairs: List[Tuple[str, str]], custom_event: bool = True) -> List[Tuple[str, float]]:
         ranked_results = []
 
         # Process in larger batches for better throughput
@@ -102,7 +103,7 @@ class LLMReranker(BaseDocumentCompressor):
             batch = query_document_pairs[i:i + batch_size]
             try:
                 results = await asyncio.gather(
-                    *[self.search_relevancy(query=query, document=document) for (query, document) in batch],
+                    *[self.search_relevancy(query=query, document=document, custom_event=custom_event) for (query, document) in batch],
                     return_exceptions=True
                 )
 
@@ -127,17 +128,21 @@ class LLMReranker(BaseDocumentCompressor):
                     ranked_results.append((batch[idx][1], score))
 
                     # Check if we should stop early
-                    high_scoring_docs = [r for r in ranked_results if r[1] >= self.filtering_threshold]
-                    can_stop_early = (
-                        self.early_stop  # Early stopping is enabled
-                        and self.num_docs_to_keep  # We have a target number of docs
-                        and len(high_scoring_docs) >= self.num_docs_to_keep  # Found enough good docs
-                        and score >= self.early_stop_threshold  # Current doc is good enough
-                    )
+                    try:
+                        high_scoring_docs = [r for r in ranked_results if r[1] >= self.filtering_threshold]
+                        can_stop_early = (
+                            self.early_stop  # Early stopping is enabled
+                            and self.num_docs_to_keep  # We have a target number of docs
+                            and len(high_scoring_docs) >= self.num_docs_to_keep  # Found enough good docs
+                            and score >= self.early_stop_threshold  # Current doc is good enough
+                        )
 
-                    if can_stop_early:
-                        log.info(f"Early stopping after finding {self.num_docs_to_keep} documents with high confidence")
-                        return ranked_results
+                        if can_stop_early:
+                            log.info(f"Early stopping after finding {self.num_docs_to_keep} documents with high confidence")
+                            return ranked_results
+                    except Exception as e:
+                        # Don't let early stopping errors stop the whole process
+                        log.warning(f"Error in early stopping check: {str(e)}")
 
             except Exception as e:
                 log.error(f"Batch processing error: {str(e)}")
@@ -222,3 +227,18 @@ class LLMReranker(BaseDocumentCompressor):
             "temperature": self.temperature,
             "remove_irrelevant": self.remove_irrelevant,
         }
+
+    def get_scores(self, query: str, documents: list[str], custom_event: bool = False):
+        query_document_pairs = [(query, doc) for doc in documents]
+        # Create event loop and run async code
+        import asyncio
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # If no running loop exists, create a new one
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        documents_and_scores = loop.run_until_complete(self._rank(query_document_pairs, custom_event=custom_event))
+        scores = [score for _, score in documents_and_scores]
+        return scores

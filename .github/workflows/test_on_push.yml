@@ -137,7 +137,6 @@ jobs:
     strategy:
       matrix: ${{fromJson(needs.matrix_prep.outputs.matrix)}}
     runs-on: ${{ matrix.runs_on }}
-    if: github.ref_type == 'branch'
     steps:
       - name: Checkout
         if: ${{ needs.changes.outputs.not-docs == 'true' }}

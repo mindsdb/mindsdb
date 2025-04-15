@@ -244,12 +244,6 @@ class ChromaDBHandler(VectorStoreHandler):
         offset: int = None,
         limit: int = None,
     ) -> pd.DataFrame:
-        # Set default limit if conditions are present
-        if conditions:
-            if limit is None:
-                limit = 10
-            elif limit > 100:
-                limit = 100
 
         collection = self._client.get_collection(table_name)
         filters = self._translate_metadata_condition(conditions)

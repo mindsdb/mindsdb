@@ -15,6 +15,7 @@ from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.skills.skills_controller import SkillsController
 from mindsdb.utilities.config import config
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
+from mindsdb.interfaces.agents.pydantic_agent import PydanticAgent
 
 from .constants import ASSISTANT_COLUMN, SUPPORTED_PROVIDERS, PROVIDER_TO_MODELS
 from .langchain_agent import get_llm_provider
@@ -409,8 +410,13 @@ class AgentsController:
             agent.provider = provider
             db.session.commit()
 
-        lang_agent = LangchainAgent(agent, model)
-        return lang_agent.get_completion(messages)
+        # Check for experimental agents flag
+        if agent.params and agent.params.get('use_experimental_agents'):
+            agent_implementation = PydanticAgent(agent, model)
+        else:
+            agent_implementation = LangchainAgent(agent, model)
+            
+        return agent_implementation.get_completion(messages)
 
     def _get_completion_stream(
             self,
@@ -445,5 +451,10 @@ class AgentsController:
             agent.provider = provider
             db.session.commit()
 
-        lang_agent = LangchainAgent(agent, model=model)
-        return lang_agent.get_completion(messages, stream=True)
+        # Check for experimental agents flag
+        if agent.params and agent.params.get('use_experimental_agents'):
+            agent_implementation = PydanticAgent(agent, model)
+        else:
+            agent_implementation = LangchainAgent(agent, model=model)
+            
+        return agent_implementation.get_completion(messages, stream=True)

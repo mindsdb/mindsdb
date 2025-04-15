@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class BaseLLMConfig(BaseModel):
@@ -104,3 +104,13 @@ class NvidiaNIMConfig(BaseLLMConfig):
 class MindsdbConfig(BaseLLMConfig):
     model_name: str
     project_name: str
+
+
+# See https://python.langchain.com/api_reference/google_genai/chat_models/langchain_google_genai.chat_models.ChatGoogleGenerativeAI.html
+class GoogleConfig(BaseLLMConfig):
+    model: str = Field(description="Gemini model name to use (e.g., 'gemini-1.5-pro')")
+    temperature: Optional[float] = Field(default=None, description="Controls randomness in responses")
+    top_p: Optional[float] = Field(default=None, description="Nucleus sampling parameter")
+    top_k: Optional[int] = Field(default=None, description="Number of highest probability tokens to consider")
+    max_output_tokens: Optional[int] = Field(default=None, description="Maximum number of tokens to generate")
+    google_api_key: Optional[str] = Field(default=None, description="API key for Google Generative AI")

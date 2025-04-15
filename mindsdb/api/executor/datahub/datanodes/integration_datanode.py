@@ -10,16 +10,19 @@ from sqlalchemy.types import (
     Integer, Float, Text
 )
 
+from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb_sql_parser.ast import Insert, Identifier, CreateTable, TableColumn, DropTables
 
+from mindsdb.api.executor.datahub.classes.response import DataHubResponse
 from mindsdb.api.executor.datahub.datanodes.datanode import DataNode
-from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.api.executor.datahub.classes.tables_row import TablesRow
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.api.executor.sql_query.result_set import ResultSet
 from mindsdb.integrations.utilities.utils import get_class_name
 from mindsdb.metrics import metrics
 from mindsdb.utilities import log
 from mindsdb.utilities.profiler import profiler
+from mindsdb.integrations.libs.response import HandlerResponse
 
 logger = log.getLogger(__name__)
 
@@ -51,9 +54,6 @@ class IntegrationDataNode(DataNode):
             return result
         else:
             raise Exception(f"Can't get tables: {response.error_message}")
-
-    def has_table(self, tableName):
-        return True
 
     def get_table_columns(self, table_name: str, schema_name: Optional[str] = None):
         if 'schema_name' in inspect.signature(self.integration_handler.get_columns).parameters:
@@ -107,7 +107,7 @@ class IntegrationDataNode(DataNode):
             raise Exception(result.error_message)
 
     def create_table(self, table_name: Identifier, result_set: ResultSet = None, columns=None,
-                     is_replace=False, is_create=False):
+                     is_replace=False, is_create=False) -> DataHubResponse:
         # is_create - create table
         # is_replace - drop table if exists
         # is_create==False and is_replace==False: just insert
@@ -164,14 +164,14 @@ class IntegrationDataNode(DataNode):
 
         if result_set is None:
             # it is just a 'create table'
-            return
+            return DataHubResponse()
 
         # native insert
         if hasattr(self.integration_handler, 'insert'):
             df = result_set.to_df()
 
-            self.integration_handler.insert(table_name.parts[-1], df)
-            return
+            result: HandlerResponse = self.integration_handler.insert(table_name.parts[-1], df)
+            return DataHubResponse(affected_rows=result.affected_rows)
 
         insert_columns = [Identifier(parts=[x.alias]) for x in result_set.columns]
 
@@ -195,7 +195,7 @@ class IntegrationDataNode(DataNode):
 
         if len(values) == 0:
             # not need to insert
-            return
+            return DataHubResponse()
 
         insert_ast = Insert(
             table=table_name,
@@ -213,7 +213,9 @@ class IntegrationDataNode(DataNode):
         if result.type == RESPONSE_TYPE.ERROR:
             raise Exception(result.error_message)
 
-    def _query(self, query):
+        return DataHubResponse(affected_rows=result.affected_rows)
+
+    def _query(self, query) -> HandlerResponse:
         time_before_query = time.perf_counter()
         result = self.integration_handler.query(query)
         elapsed_seconds = time.perf_counter() - time_before_query
@@ -229,7 +231,7 @@ class IntegrationDataNode(DataNode):
         response_size_with_labels.observe(num_rows)
         return result
 
-    def _native_query(self, native_query):
+    def _native_query(self, native_query) -> HandlerResponse:
         time_before_query = time.perf_counter()
         result = self.integration_handler.native_query(native_query)
         elapsed_seconds = time.perf_counter() - time_before_query
@@ -246,13 +248,13 @@ class IntegrationDataNode(DataNode):
         return result
 
     @profiler.profile()
-    def query(self, query=None, native_query=None, session=None):
+    def query(self, query: Optional[ASTNode] = None, native_query: Optional[str] = None, session=None) -> DataHubResponse:
         try:
             if query is not None:
-                result = self._query(query)
+                result: HandlerResponse = self._query(query)
             else:
                 # try to fetch native query
-                result = self._native_query(native_query)
+                result: HandlerResponse = self._native_query(native_query)
         except Exception as e:
             msg = str(e).strip()
             if msg == '':
@@ -263,7 +265,7 @@ class IntegrationDataNode(DataNode):
         if result.type == RESPONSE_TYPE.ERROR:
             raise Exception(f'Error in {self.integration_name}: {result.error_message}')
         if result.type == RESPONSE_TYPE.OK:
-            return pd.DataFrame(), []
+            return DataHubResponse(affected_rows=result.affected_rows)
 
         df = result.data_frame
         # region clearing df from NaN values
@@ -286,4 +288,8 @@ class IntegrationDataNode(DataNode):
             for k, v in df.dtypes.items()
         ]
 
-        return df, columns_info
+        return DataHubResponse(
+            data_frame=df,
+            columns=columns_info,
+            affected_rows=result.affected_rows
+        )

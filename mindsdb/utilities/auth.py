@@ -15,9 +15,11 @@ def get_aws_meta_data() -> dict:
         'ami-id': None,
         'instance-id': None
     }
+    aws_token = requests.put("http://169.254.169.254/latest/api/token", headers={'X-aws-ec2-metadata-token-ttl-seconds': '30'}).text
     for key in aws_meta_data.keys():
         resp = requests.get(
             f'http://169.254.169.254/latest/meta-data/{key}',
+            headers={'X-aws-ec2-metadata-token': aws_token},
             timeout=1
         )
         if resp.status_code != 200:
@@ -35,7 +37,9 @@ def register_oauth_client():
     aws_meta_data = get_aws_meta_data()
 
     current_aws_meta_data = config.get('aws_meta_data', {})
-    oauth_meta = config.get('auth', {}).get('oauth', {})
+    oauth_meta = config.get('auth', {}).get('oauth')
+    if oauth_meta is None:
+        return
 
     public_hostname = aws_meta_data['public-hostname']
     if (

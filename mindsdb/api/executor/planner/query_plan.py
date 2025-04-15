@@ -2,6 +2,7 @@
 class QueryPlan:
     def __init__(self, steps=None, **kwargs):
         self.steps = []
+        self.is_resumable = False
 
         if steps:
             for step in steps:

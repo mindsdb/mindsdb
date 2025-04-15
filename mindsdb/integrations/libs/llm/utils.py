@@ -10,6 +10,7 @@ from mindsdb.integrations.libs.llm.config import (
     AnthropicConfig,
     AnyscaleConfig,
     BaseLLMConfig,
+    GoogleConfig,
     LiteLLMConfig,
     OllamaConfig,
     OpenAIConfig,
@@ -30,6 +31,8 @@ DEFAULT_ANTHROPIC_MODEL = "claude-3-haiku-20240307"
 
 DEFAULT_ANYSCALE_MODEL = "meta-llama/Llama-2-7b-chat-hf"
 DEFAULT_ANYSCALE_BASE_URL = "https://api.endpoints.anyscale.com/v1"
+
+DEFAULT_GOOGLE_MODEL = "gemini-2.5-pro-preview-03-25"
 
 DEFAULT_LITELLM_MODEL = "gpt-3.5-turbo"
 DEFAULT_LITELLM_PROVIDER = "openai"
@@ -224,6 +227,15 @@ def get_llm_config(provider: str, args: Dict) -> BaseLLMConfig:
             openai_api_key=args["api_keys"].get("vllm", "EMPTY`"),
             openai_organization=args.get("api_organization", None),
             request_timeout=args.get("request_timeout", None),
+        )
+    if provider == "google":
+        return GoogleConfig(
+            model=args.get("model_name", DEFAULT_GOOGLE_MODEL),
+            temperature=temperature,
+            top_p=args.get("top_p", None),
+            top_k=args.get("top_k", None),
+            max_output_tokens=args.get("max_tokens", None),
+            google_api_key=args["api_keys"].get("google", None),
         )
 
     raise ValueError(f"Provider {provider} is not supported.")

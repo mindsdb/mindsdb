@@ -52,6 +52,34 @@ jobs:
           git-sha: ${{ github.event.pull_request.head.sha }}
           target: cloud-cpu
           platforms: linux/amd64
+          push-cache: false
+
+  # Push cache layers to docker registry
+  # This is separate to the build step so we can do other stuff in parallel
+  build-cache:
+    name: Push Docker Cache
+    runs-on: mdb-dev
+    needs: [build]
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-cache
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Pull MindsDB Github Actions
+        uses: actions/checkout@v4
+        with:
+          repository: mindsdb/github-actions
+          path: github-actions
+      # Build the bakefile and push
+      - uses: ./github-actions/docker-bake
+        with:
+          git-sha: ${{ github.event.pull_request.head.sha }}
+          target: cloud-cpu
+          platforms: linux/amd64
+          push-cache: true
+          cache-only: true
 
   # Call our deployment workflow, so long as this is not a forked PR
   # This will run the deployment workflow in the base branch, not in the PR.

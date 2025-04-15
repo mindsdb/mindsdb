@@ -12,14 +12,13 @@ from mindsdb.api.executor.planner.exceptions import PlanningException
 from mindsdb.api.executor.planner import utils
 from mindsdb.api.executor.planner.query_plan import QueryPlan
 from mindsdb.api.executor.planner.steps import (
-    FetchDataframeStep, ProjectStep, ApplyPredictorStep,
+    PlanStep, FetchDataframeStep, ProjectStep, ApplyPredictorStep,
     ApplyPredictorRowStep, UnionStep, GetPredictorColumns, SaveToTable,
-    InsertToTable, UpdateToTable, SubSelectStep, QueryStep,
-    DeleteStep, DataStep, CreateTableStep
+    InsertToTable, UpdateToTable, SubSelectStep, QueryStep, JoinStep,
+    DeleteStep, DataStep, CreateTableStep, FetchDataframeStepPartition
 )
 from mindsdb.api.executor.planner.utils import (
     disambiguate_predictor_column_identifier,
-    get_deepest_select,
     recursively_extract_column_values,
     query_traversal, filters_to_bin_op
 )
@@ -166,7 +165,11 @@ class QueryPlanner:
 
         query_traversal(query, _prepare_integration_select)
 
-    def get_integration_select_step(self, select):
+    def get_integration_select_step(self, select: Select, params: dict = None) -> PlanStep:
+        """
+        Generate planner step to execute query over integration or over results of previous step (if it is CTE)
+        """
+
         if isinstance(select.from_table, NativeQuery):
             integration_name = select.from_table.integration.parts[-1]
         else:
@@ -188,12 +191,22 @@ class QueryPlanner:
         if fetch_df_select.using is not None:
             fetch_df_select.using = None
 
-        return FetchDataframeStep(integration=integration_name, query=fetch_df_select)
+        if params:
+            fetch_params = params.copy()
+            # remove partition parameters
+            for key in ('batch_size', 'track_column'):
+                if key in params:
+                    del params[key]
+            if 'track_column' in fetch_params and isinstance(fetch_params['track_column'], Identifier):
+                fetch_params['track_column'] = fetch_params['track_column'].parts[-1]
+        else:
+            fetch_params = None
+        return FetchDataframeStep(integration=integration_name, query=fetch_df_select, params=fetch_params)
 
     def plan_integration_select(self, select):
         """Plan for a select query that can be fully executed in an integration"""
 
-        return self.plan.add_step(self.get_integration_select_step(select))
+        return self.plan.add_step(self.get_integration_select_step(select, params=select.using))
 
     def resolve_database_table(self, node: Identifier):
         # resolves integration name and table name
@@ -413,12 +426,6 @@ class QueryPlanner:
         #         return self.plan_integration_nested_select(select, int_name)
 
         return self.plan_mdb_nested_select(select)
-
-    def plan_integration_nested_select(self, select, integration_name):
-        fetch_df_select = copy.deepcopy(select)
-        deepest_select = get_deepest_select(fetch_df_select)
-        self.prepare_integration_select(integration_name, deepest_select)
-        return self.plan.add_step(FetchDataframeStep(integration=integration_name, query=fetch_df_select))
 
     def plan_mdb_nested_select(self, select):
         # plan nested select
@@ -818,7 +825,72 @@ class QueryPlanner:
         else:
             raise PlanningException(f'Unsupported query type {type(query)}')
 
-        return self.plan
+        plan = self.handle_partitioning(self.plan)
+
+        return plan
+
+    def handle_partitioning(self, plan: QueryPlan) -> QueryPlan:
+        """
+        If plan has fetching in partitions:
+          try to rebuild plan to send fetched chunk of data through the following steps, if it is possible
+        """
+
+        # handle fetchdataframe partitioning
+        steps_out = []
+
+        partition_step = None
+        for step in plan.steps:
+            if isinstance(step, FetchDataframeStep) and step.params is not None:
+                batch_size = step.params.get('batch_size')
+                if batch_size is not None:
+                    # found batched fetch
+                    partition_step = FetchDataframeStepPartition(
+                        step_num=step.step_num,
+                        integration=step.integration,
+                        query=step.query,
+                        raw_query=step.raw_query,
+                        params=step.params
+                    )
+                    steps_out.append(partition_step)
+                    # mark plan
+                    plan.is_resumable = True
+                    continue
+                else:
+                    step.params = None
+
+            if partition_step is not None:
+                # check and add step into partition
+
+                can_be_partitioned = False
+                if isinstance(step, (JoinStep, ApplyPredictorStep, InsertToTable)):
+                    can_be_partitioned = True
+                elif isinstance(step, QueryStep):
+                    query = step.query
+                    if (
+                        query.group_by is None and query.order_by is None and query.distinct is False
+                        and query.limit is None and query.offset is None
+                    ):
+                        no_identifiers = [
+                            target
+                            for target in step.query.targets
+                            if not isinstance(target, (Star, Identifier))
+                        ]
+                        if len(no_identifiers) == 0:
+                            can_be_partitioned = True
+
+                if not can_be_partitioned:
+                    if len(partition_step.steps) == 0:
+                        # Nothing can be partitioned, failback to old plan
+                        plan.is_resumable = False
+                        return plan
+                    partition_step = None
+                else:
+                    partition_step.steps.append(step)
+                    continue
+
+            steps_out.append(step)
+        plan.steps = steps_out
+        return plan
 
     def prepare_steps(self, query):
         statement_planner = PreparedStatementPlanner(self)

@@ -3,13 +3,7 @@ from collections import defaultdict
 import pandas as pd
 
 from mindsdb_sql_parser.ast import (
-    Identifier,
-    Select,
-    Star,
-    Constant,
-    Parameter,
-    Function,
-    Variable
+    Identifier, Select, Star, Constant, Parameter, Function, Variable, BinaryOperation
 )
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import SERVER_VARIABLES
@@ -87,7 +81,7 @@ class QueryStepCall(BaseStepCall):
 
     bind = QueryStep
 
-    def call(self, step):
+    def call(self, step: QueryStep):
         query = step.query
 
         if step.from_table is not None:
@@ -189,6 +183,24 @@ class QueryStepCall(BaseStepCall):
         # fill params
         fill_params = get_fill_param_fnc(self.steps_data)
         query_traversal(query, fill_params)
+
+        if not step.strict_where:
+            # remove conditions with not-existed columns.
+            #   these conditions can be already used as input to model or knowledge base
+            #   but can be absent in their output
+
+            def remove_not_used_conditions(node, **kwargs):
+                # find last in where
+                if isinstance(node, BinaryOperation):
+                    for arg in node.args:
+                        if isinstance(arg, Identifier) and len(arg.parts) > 1:
+                            key = tuple(arg.parts[-2:])
+                            if key not in col_idx:
+                                # exclude
+                                node.args = [Constant(0), Constant(0)]
+                                node.op = '='
+
+            query_traversal(query.where, remove_not_used_conditions)
 
         query_traversal(query, check_fields)
         query.where = query_context_controller.remove_lasts(query.where)

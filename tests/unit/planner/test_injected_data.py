@@ -95,7 +95,7 @@ class TestInjectedData:
                          query=Join(left=Identifier('tab1'),
                                     right=Identifier('tab2'),
                                     join_type=JoinType.JOIN)),
-                QueryStep(subquery, from_table=Result(3)),
+                QueryStep(subquery, from_table=Result(3), strict_where=False),
             ],
         )
 

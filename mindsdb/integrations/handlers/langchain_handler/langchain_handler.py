@@ -50,6 +50,7 @@ class LangChainHandler(BaseMLEngine):
         - OpenAI
         - Anthropic
         - Anyscale
+        - Google
         - LiteLLM
         - Ollama
 

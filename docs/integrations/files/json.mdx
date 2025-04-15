@@ -7,6 +7,60 @@ You can upload JSON files of any size to MindsDB that runs locally via [Docker](
 
 JSON files are converted into a table, if the JSON file structure allows for it. Otherwise, JSON files are stored similarly to text files.
 
+<Accordion title="Sample format of a JSON file">
+Here is the sample format of a JSON file that can be uploaded to MindsDB:
+
+```
+[
+    {
+        "id": 1,
+        "name": "Alice",
+        "contact": {
+            "email": "alice@example.com",
+            "phone": "123-456-7890"
+        },
+        "address": {
+            "street": "123 Maple Street",
+            "city": "Wonderland",
+            "zip": "12345"
+        }
+    },
+    {
+        "id": 2,
+        "name": "Bob",
+        "contact": {
+            "email": "bob@example.com",
+            "phone": "987-654-3210"
+        },
+        "address": {
+            "street": "456 Oak Avenue",
+            "city": "Builderland",
+            "zip": "67890"
+        }
+    }
+]
+```
+
+MindsDB converts it into a table where each row stores the high-level object.
+
+```sql
+| id  | name  | contact                                              | address                                                         |
+| --- | ----- | ---------------------------------------------------- | --------------------------------------------------------------- |
+| 1   | Alice | {"email":"alice@example.com","phone":"123-456-7890"} | {"city":"Wonderland","street":"123 Maple Street","zip":"12345"} |
+| 2   | Bob   | {"email":"bob@example.com","phone":"987-654-3210"}   | {"city":"Builderland","street":"456 Oak Avenue","zip":"67890"}  |
+```
+
+You can extract the JSON fields from `contact` and `address` columns with the `json_extract` function.
+
+```sql
+SELECT id, 
+       name, 
+       json_extract(contact, '$.email') AS email, 
+       json_extract(address, '$.city') AS city
+FROM files.json_file_name;
+```
+</Accordion>
+
 ## Upload files
 
 Follow the steps below to upload a file:

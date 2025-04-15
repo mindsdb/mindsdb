@@ -1,6 +1,7 @@
 import time
 import json
 from typing import Optional
+import threading
 
 import pandas as pd
 import psycopg
@@ -76,6 +77,8 @@ class PostgresHandler(DatabaseHandler):
         self.connection = None
         self.is_connected = False
         self.thread_safe = True
+
+        self._insert_lock = threading.Lock()
 
     def __del__(self):
         if self.is_connected:
@@ -228,7 +231,7 @@ class PostgresHandler(DatabaseHandler):
                 else:
                     cur.execute(query)
                 if cur.pgresult is None or ExecStatus(cur.pgresult.status) == ExecStatus.COMMAND_OK:
-                    response = Response(RESPONSE_TYPE.OK)
+                    response = Response(RESPONSE_TYPE.OK, affected_rows=cur.rowcount)
                 else:
                     result = cur.fetchall()
                     df = DataFrame(
@@ -238,7 +241,8 @@ class PostgresHandler(DatabaseHandler):
                     self._cast_dtypes(df, cur.description)
                     response = Response(
                         RESPONSE_TYPE.TABLE,
-                        df
+                        data_frame=df,
+                        affected_rows=cur.rowcount
                     )
                 connection.commit()
             except Exception as e:
@@ -255,25 +259,50 @@ class PostgresHandler(DatabaseHandler):
 
         return response
 
-    def insert(self, table_name: str, df: pd.DataFrame):
+    def insert(self, table_name: str, df: pd.DataFrame) -> Response:
         need_to_close = not self.is_connected
 
         connection = self.connect()
 
-        columns = [f'"{c}"' for c in df.columns]
+        columns = df.columns
+
+        # postgres 'copy' is not thread safe. use lock to prevent concurrent execution
+        with self._insert_lock:
+            resp = self.get_columns(table_name)
+
+        # copy requires precise cases of names: get current column names from table and adapt input dataframe columns
+        if resp.data_frame is not None and not resp.data_frame.empty:
+            db_columns = {
+                c.lower(): c
+                for c in resp.data_frame['Field']
+            }
+
+            # try to get case of existing column
+            columns = [
+                db_columns.get(c.lower(), c)
+                for c in columns
+            ]
+
+        columns = [f'"{c}"' for c in columns]
+        rowcount = None
+
         with connection.cursor() as cur:
             try:
-                with cur.copy(f'copy "{table_name}" ({",".join(columns)}) from STDIN  WITH CSV') as copy:
-                    df.to_csv(copy, index=False, header=False)
+                with self._insert_lock:
+                    with cur.copy(f'copy "{table_name}" ({",".join(columns)}) from STDIN WITH CSV') as copy:
+                        df.to_csv(copy, index=False, header=False)
 
-                connection.commit()
+                    connection.commit()
             except Exception as e:
                 logger.error(f'Error running insert to {table_name} on {self.database}, {e}!')
                 connection.rollback()
                 raise e
+            rowcount = cur.rowcount
 
         if need_to_close:
             self.disconnect()
+
+        return Response(RESPONSE_TYPE.OK, affected_rows=rowcount)
 
     @profiler.profile()
     def query(self, query: ASTNode) -> Response:

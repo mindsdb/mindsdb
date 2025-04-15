@@ -18,8 +18,6 @@ class UpdateToTableCall(BaseStepCall):
     bind = UpdateToTable
 
     def call(self, step):
-        data = ResultSet()
-
         if len(step.table.parts) > 1:
             integration_name = step.table.parts[0]
             table_name_parts = step.table.parts[1:]
@@ -85,8 +83,8 @@ class UpdateToTableCall(BaseStepCall):
 
             if result_step is None:
                 # run as is
-                dn.query(query=update_query, session=self.session)
-                return data
+                response = dn.query(query=update_query, session=self.session)
+                return ResultSet(affected_rows=response.affected_rows)
             result_data = self.steps_data[result_step.result.step_num]
 
             # link nodes with parameters for fast replacing with values
@@ -125,5 +123,5 @@ class UpdateToTableCall(BaseStepCall):
             for param_name, param in params_map_index:
                 param.value = row[param_name]
 
-            dn.query(query=update_query, session=self.session)
-        return data
+            response = dn.query(query=update_query, session=self.session)
+        return ResultSet(affected_rows=response.affected_rows)

@@ -89,10 +89,11 @@ class FetchDataframeStepCall(BaseStepCall):
             table_alias = (self.context.get('database'), 'result', 'result')
 
             # fetch raw_query
-            df, columns_info = dn.query(
+            response = dn.query(
                 native_query=step.raw_query,
                 session=self.session
             )
+            df = response.data_frame
         else:
             table_alias = get_table_alias(step.query.from_table, self.context.get('database'))
 
@@ -104,13 +105,14 @@ class FetchDataframeStepCall(BaseStepCall):
 
             query, context_callback = query_context_controller.handle_db_context_vars(query, dn, self.session)
 
-            df, columns_info = dn.query(
+            response = dn.query(
                 query=query,
                 session=self.session
             )
+            df = response.data_frame
 
             if context_callback:
-                context_callback(df, columns_info)
+                context_callback(df, response.columns)
 
         result = ResultSet()
 

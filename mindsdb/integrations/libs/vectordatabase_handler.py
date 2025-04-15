@@ -20,7 +20,7 @@ from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.integrations.libs.response import RESPONSE_TYPE, HandlerResponse
 from mindsdb.utilities import log
-from mindsdb.integrations.utilities.sql_utils import conditions_to_filter, FilterCondition, FilterOperator
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
 
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 from .base import BaseHandler
@@ -39,6 +39,7 @@ class TableField(Enum):
     METADATA = "metadata"
     SEARCH_VECTOR = "search_vector"
     DISTANCE = "distance"
+    RELEVANCE = "relevance"
 
 
 class DistanceFunction(Enum):
@@ -68,6 +69,10 @@ class VectorStoreHandler(BaseHandler):
         {
             "name": TableField.METADATA.value,
             "data_type": "json",
+        },
+        {
+            "name": TableField.DISTANCE.value,
+            "data_type": "float",
         },
     ]
 
@@ -231,7 +236,7 @@ class VectorStoreHandler(BaseHandler):
 
         return self.do_upsert(table_name, pd.DataFrame(data))
 
-    def _dispatch_update(self, query: Update):
+    def dispatch_update(self, query: Update, conditions: List[FilterCondition] = None):
         """
         Dispatch update query to the appropriate method.
         """
@@ -250,8 +255,15 @@ class VectorStoreHandler(BaseHandler):
                     pass
             row[k] = v
 
-        filters = conditions_to_filter(query.where)
-        row.update(filters)
+        if conditions is None:
+            where_statement = query.where
+            conditions = self.extract_conditions(where_statement)
+
+        for condition in conditions:
+            if condition.op != FilterOperator.EQUAL:
+                raise NotImplementedError
+
+            row[condition.column] = condition.value
 
         # checks
         if TableField.EMBEDDINGS.value not in row:
@@ -266,8 +278,16 @@ class VectorStoreHandler(BaseHandler):
         return self.do_upsert(table_name, df)
 
     def do_upsert(self, table_name, df):
-        # if handler supports it, call upsert method
+        """Upsert data into table, handling document updates and deletions.
 
+        Args:
+            table_name (str): Name of the table
+            df (pd.DataFrame): DataFrame containing the data to upsert
+
+        The function handles three cases:
+        1. New documents: Insert them
+        2. Updated documents: Delete old chunks and insert new ones
+        """
         id_col = TableField.ID.value
         content_col = TableField.CONTENT.value
 
@@ -381,7 +401,7 @@ class VectorStoreHandler(BaseHandler):
             CreateTable: self._dispatch_create_table,
             DropTables: self._dispatch_drop_table,
             Insert: self._dispatch_insert,
-            Update: self._dispatch_update,
+            Update: self.dispatch_update,
             Delete: self.dispatch_delete,
             Select: self.dispatch_select,
         }

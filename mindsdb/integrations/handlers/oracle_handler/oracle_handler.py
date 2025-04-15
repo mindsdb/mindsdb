@@ -205,8 +205,10 @@ class OracleHandler(DatabaseHandler):
         with connection.cursor() as cur:
             try:
                 cur.execute(query)
-                result = cur.fetchall()
-                if result:
+                if cur.description is None:
+                    response = Response(RESPONSE_TYPE.OK, affected_rows=cur.rowcount)
+                else:
+                    result = cur.fetchall()
                     response = Response(
                         RESPONSE_TYPE.TABLE,
                         data_frame=pd.DataFrame(
@@ -214,8 +216,6 @@ class OracleHandler(DatabaseHandler):
                             columns=[row[0] for row in cur.description],
                         ),
                     )
-                else:
-                    response = Response(RESPONSE_TYPE.OK)
 
                 connection.commit()
             except DatabaseError as database_error:

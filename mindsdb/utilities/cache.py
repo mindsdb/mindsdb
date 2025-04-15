@@ -56,6 +56,7 @@ import os
 import time
 from abc import ABC
 from pathlib import Path
+import re
 import hashlib
 import typing as t
 
@@ -154,7 +155,9 @@ class FileCache(BaseCache):
                     pass
 
     def file_path(self, name):
-        return self.path / name
+        # Sanitize the key to avoid table (file) names with backticks and slashes.
+        sanitized_name = re.sub(r'[^\w\-.]', '_', name)
+        return self.path / sanitized_name
 
     def set_df(self, name, df):
         path = self.file_path(name)

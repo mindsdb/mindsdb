@@ -15,7 +15,8 @@ SUPPORTED_PROVIDERS = {
     "litellm",
     "ollama",
     "nvidia_nim",
-    "vllm"
+    "vllm",
+    "google"
 }
 # Chat models
 ANTHROPIC_CHAT_MODELS = (
@@ -153,6 +154,15 @@ NVIDIA_NIM_CHAT_MODELS = (
     "ibm/granite-34b-code-instruct",
 )
 
+GOOGLE_GEMINI_CHAT_MODELS = (
+    "gemini-2.5-pro-preview-03-25",
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-lite",
+    "gemini-1.5-flash",
+    "gemini-1.5-flash-8b",
+    "gemini-1.5-pro",
+)
+
 # Define a read-only dictionary mapping providers to their models
 PROVIDER_TO_MODELS = MappingProxyType(
     {
@@ -160,6 +170,7 @@ PROVIDER_TO_MODELS = MappingProxyType(
         "ollama": OLLAMA_CHAT_MODELS,
         "openai": OPEN_AI_CHAT_MODELS,
         "nvidia_nim": NVIDIA_NIM_CHAT_MODELS,
+        "google": GOOGLE_GEMINI_CHAT_MODELS,
     }
 )
 

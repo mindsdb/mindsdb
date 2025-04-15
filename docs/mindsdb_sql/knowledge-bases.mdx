@@ -20,24 +20,26 @@ MindsDB stores objects, such as models or knowledge bases, inside projects. Lear
 </Note>
 
 ```sql
-CREATE KNOWLEDGE_BASE my_kb
+CREATE KNOWLEDGE_BASE test_kb_ms_teams
 USING
-     embedding_model = {
-         "provider": "OpenAI", -- choose one of OpenAI or Azure_OpenAI
-         "model_name" : "text-embedding-ada-002",
-         "api_key": "sk-..."  -- optional, default from env variable
-         "azure_endpoint" : "https://ai-2249ai742481026689.openai.azure.com/", -- required only when provider = Azure_OpenAI
-         "openai_api_version": "2024-12-01-preview" -- required only when provider = Azure_OpenAI
-     },
-     reranking_model = { -- optional
-         "provider": "OpenAI",
-         "model_name": 'gpt-4o',
-         "api_key": "sk-..."  -- optional, default from env variable
-     },
-     storage = my_vector_store.storage_table, -- optional, default ChromaDB
-     metadata_columns = ['date', 'creator', ...], -- optional
-     content_columns = ['review', 'content', ...], -- optional, default content
-     id_column = 'id'; -- optional
+    embedding_model = {
+       "provider": "OpenAI", -- choose one of OpenAI or Azure_OpenAI
+       "model_name" : "text-embedding-3-large",
+       "base_url": "https://ai-6689.openai.azure.com/", -- required only when provider = Azure_OpenAI
+       "api_key": "sk-..."  -- optional, default from env variable
+       "api_version": "2024-02-01" -- required only when provider = Azure_OpenAI
+    },
+    reranking_model = {
+       "provider": "OpenAI", -- choose one of OpenAI or Azure_OpenAI
+       "model_name": "gpt-4o",
+       "base_url": "https://ai-6689.openai.azure.com/", -- required only when provider = Azure_OpenAI
+       "api_key": "sk-..."  -- optional, default from env variable
+       "api_version": "2024-02-01" -- required only when provider = Azure_OpenAI
+    },
+    storage = my_vector_store.storage_table, -- optional, default ChromaDB
+    metadata_columns = ['date', 'creator', ...], -- optional
+    content_columns = ['review', 'content', ...], -- optional, default content
+    id_column = 'id'; -- optional
 ```
 
 Upon execution, it registers `my_kb` and associates the specified models and storage.
@@ -47,14 +49,16 @@ The following is an explanation of the syntax and parameters:
 * `embedding_model` stores specifications of the embedding model to be used.
       * `provider` defines the model provider. Currently, the supported providers include OpenAI and OpenAI via Azure.
       * `model_name` defines the embedding model name as specified by the provider. Users can choose one of the [OpenAI embedding models](https://platform.openai.com/docs/guides/embeddings/embedding-models#embedding-models).
+      * `base_url` is the root URL used to send API requests. It is required when using `Azure_OpenAI` as the provider. Its default value is `https://api.openai.com/v1/`.
       * `api_key` stores your OpenAI API key. Alternatively, you can use the `OPENAI_API_KEY` environment variable to store your OpenAI API key.
-      * `azure_endpoint` is required when using `Azure_OpenAI` as the provider.
-      * `openai_api_version` is required when using `Azure_OpenAI` as the provider.
+      * `api_version` is required when using `Azure_OpenAI` as the provider.
 
 * `reranking_model` is an optional parameter that stores specification of the reranking model to be used.
-      * `provider` defines the model provider. Currently, the supported providers include OpenAI.
+      * `provider` defines the model provider. Currently, the supported providers include OpenAI and OpenAI via Azure.
       * `model_name` defines the reranking model name as specified by the provider. Users can choose one of the [OpenAI chat models](https://platform.openai.com/docs/models).
+      * `base_url` is the root URL used to send API requests. It is required when using `Azure_OpenAI` as the provider. Its default value is `https://api.openai.com/v1/`.
       * `api_key` stores your OpenAI API key. Alternatively, you can use the `OPENAI_API_KEY` environment variable to store your OpenAI API key.
+      * `api_version` is required when using `Azure_OpenAI` as the provider.
 
 <Info>
 Note that providing the reranking model is optional. If provided, it is used an LLM to rerank the output based on relevance, or `relevance_threshold`.
@@ -419,14 +423,3 @@ DROP KNOWLEDGE_BASE <kb_name>;
 ```
 
 Upon execution, it removes the knowledge base with its content.
-
-<Accordion title="Examples">
-
-Here are the usage examples:
-
-* Dropping a knowledge base:
-
-```sql
-DROP KNOWLEDGE_BASE my_kb;
-```
-</Accordion>

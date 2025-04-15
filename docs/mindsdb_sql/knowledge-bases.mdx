@@ -67,12 +67,12 @@ The following is an explanation of the syntax and parameters:
 
 The `multi-class` reranking method classifies each document chunk (that meets any specified metadata filtering conditions) into one of four relevance classes:
 
-1. Not relevant with score between 0.0 and 0.25 and class probability of 0.25.
-2. Slightly relevant with score between 0.25 and 0.5 and class probability of 0.5.
-3. Moderately relevant with score between 0.5 and 0.75 and class probability of 0.75.
-4. Highly relevant with score between 0.75 and 1.0 and class probability of 1.
+1. Not relevant with class weight between 0.0 and 0.25 and class probability of 0.25.
+2. Slightly relevant with class weight between 0.25 and 0.5 and class probability of 0.5.
+3. Moderately relevant with class weight between 0.5 and 0.75 and class probability of 0.75.
+4. Highly relevant with class weight between 0.75 and 1.0 and class probability of 1.
 
-The overall `relevance_score` of a document is calculated as the sum of each chunk’s score multiplied by its class probability.
+The overall `relevance_score` of a document is calculated as the sum of each chunk’s class weight multiplied by its class probability (from model logprob output).
 
 The `binary` reranking method simplifies classification by determining whether a document is relevant or not, without intermediate relevance levels. With this method, the overall `relevance_score` of a document is calculated based on the model log probability.
 </Info>

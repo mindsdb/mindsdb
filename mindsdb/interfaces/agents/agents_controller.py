@@ -415,7 +415,7 @@ class AgentsController:
             agent_implementation = PydanticAgent(agent, model)
         else:
             agent_implementation = LangchainAgent(agent, model)
-            
+
         return agent_implementation.get_completion(messages)
 
     def _get_completion_stream(
@@ -456,5 +456,5 @@ class AgentsController:
             agent_implementation = PydanticAgent(agent, model)
         else:
             agent_implementation = LangchainAgent(agent, model=model)
-            
+
         return agent_implementation.get_completion(messages, stream=True)

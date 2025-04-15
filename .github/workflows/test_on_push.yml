@@ -153,16 +153,12 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "**/requirements*.txt"
-      - name: Install FreeTDS (macOS)
-        if: ${{ runner.os == 'macOS' && needs.changes.outputs.not-docs == 'true' }}
-        run: brew install freetds
       - name: Install dependencies
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
           uv pip install .
           uv pip install -r requirements/requirements-test.txt
           uv pip install .[lightwood]  # TODO: for now some tests rely on lightwood
-          uv pip install .[mssql]
           uv pip install .[clickhouse]
           uv pip install .[snowflake]
           uv pip install .[web]
@@ -177,6 +173,16 @@ jobs:
           uv pip install .[mysql]
           uv pip freeze
           git clone https://github.com/mindsdb/mindsdb_sql_parser.git parser_tests
+     - name: Install FreeTDS (macOS)
+        if: ${{ runner.os == 'macOS' && needs.changes.outputs.not-docs == 'true' }}
+        run: brew install freetds
+     - name: Install mssql dependencies
+        if: ${{ needs.changes.outputs.not-docs == 'true' }}
+        env:
+          LDFLAGS: "-L$(brew --prefix freetds)/lib"
+          CFLAGS: "-I$(brew --prefix freetds)/include"
+        run: |
+          uv pip install --no-cache-dir .[mssql]
       - name: Run unit tests
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |

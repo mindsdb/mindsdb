@@ -76,7 +76,7 @@ class PostgresHandler(DatabaseHandler):
 
         self.connection = None
         self.is_connected = False
-        self.thread_safe = True
+        self.thread_safe = False
 
         self._insert_lock = threading.Lock()
 
@@ -267,14 +267,13 @@ class PostgresHandler(DatabaseHandler):
         columns = df.columns
 
         # postgres 'copy' is not thread safe. use lock to prevent concurrent execution
-        with self._insert_lock:
-            resp = self.get_columns(table_name)
+        resp = self.get_columns(table_name)
 
         # copy requires precise cases of names: get current column names from table and adapt input dataframe columns
         if resp.data_frame is not None and not resp.data_frame.empty:
             db_columns = {
                 c.lower(): c
-                for c in resp.data_frame['Field']
+                for c in resp.data_frame['field']
             }
 
             # try to get case of existing column
@@ -288,11 +287,10 @@ class PostgresHandler(DatabaseHandler):
 
         with connection.cursor() as cur:
             try:
-                with self._insert_lock:
-                    with cur.copy(f'copy "{table_name}" ({",".join(columns)}) from STDIN WITH CSV') as copy:
-                        df.to_csv(copy, index=False, header=False)
+                with cur.copy(f'copy "{table_name}" ({",".join(columns)}) from STDIN WITH CSV') as copy:
+                    df.to_csv(copy, index=False, header=False)
 
-                    connection.commit()
+                connection.commit()
             except Exception as e:
                 logger.error(f'Error running insert to {table_name} on {self.database}, {e}!')
                 connection.rollback()

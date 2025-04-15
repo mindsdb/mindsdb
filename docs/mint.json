@@ -266,7 +266,8 @@
     {"source": "/data-integrations","destination": "/features/data-integrations"},
     {"source": "/automation","destination": "/features/automation"},
     {"source": "/features/ai-integrations","destination": "/integrations/ai-overview"},
-    {"source": "/features/data-integrations","destination": "/integrations/data-overview"}
+    {"source": "/features/data-integrations","destination": "/integrations/data-overview"},
+    {"source": "/mindsdb_sql/agents/knowledge-bases","destination": "/mindsdb_sql/knowledge-bases"}
   ],
   "navigation": [
     {
@@ -512,10 +513,10 @@
           "group": "AI Agents",
           "pages": [
             "mindsdb_sql/agents/agent",
-            "mindsdb_sql/agents/chatbot",
-            "mindsdb_sql/agents/knowledge-bases"
+            "mindsdb_sql/agents/chatbot"
           ]
         },
+        "mindsdb_sql/knowledge-bases",
         {
           "group": "Functions",
           "pages": [

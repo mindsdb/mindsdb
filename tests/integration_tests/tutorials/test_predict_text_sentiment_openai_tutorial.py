@@ -70,8 +70,8 @@ class TestPredictTextSentimentOpenAI(HTTPHelperMixin):
 
     def setup_class(self):
         self.sql_via_http(self, QueryStorage.delete_db)
-        self.sql_via_http(self, QueryStorage.delete_engine)
         self.sql_via_http(self, QueryStorage.delete_model)
+        self.sql_via_http(self, QueryStorage.delete_engine)
 
     def test_create_db(self):
         sql = QueryStorage.create_db

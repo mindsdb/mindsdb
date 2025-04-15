@@ -27,6 +27,7 @@ docker/dist/*
 .directory
 MindsDB.egg-info/*
 /build
+train_finetune.lock
 
 # Autokeras generated files
 auto_model

@@ -1,6 +1,6 @@
 ---
 title: Knowledge Base
-sidebarTitle: Knowledge Base
+sidebarTitle: Knowledge Bases
 ---
 
 A knowledge base is an advanced system designed to go beyond traditional data storage. Its components include embedding and reranking models and a vector store.
@@ -20,24 +20,26 @@ MindsDB stores objects, such as models or knowledge bases, inside projects. Lear
 </Note>
 
 ```sql
-CREATE KNOWLEDGE_BASE my_kb
+CREATE KNOWLEDGE_BASE test_kb_ms_teams
 USING
-     embedding_model = {
-         "provider": "OpenAI", -- choose one of OpenAI or Azure_OpenAI
-         "model_name" : "text-embedding-ada-002",
-         "api_key": "sk-..."  -- optional, default from env variable
-         "azure_endpoint" : "https://ai-2249ai742481026689.openai.azure.com/", -- required only when provider = Azure_OpenAI
-         "openai_api_version": "2024-12-01-preview" -- required only when provider = Azure_OpenAI
-     },
-     reranking_model = { -- optional
-         "provider": "OpenAI",
-         "model_name": 'gpt-4o',
-         "api_key": "sk-..."  -- optional, default from env variable
-     },
-     storage = my_vector_store.storage_table, -- optional, default ChromaDB
-     metadata_columns = ['date', 'creator', ...], -- optional
-     content_columns = ['review', 'content', ...], -- optional, default content
-     id_column = 'id'; -- optional
+    embedding_model = {
+       "provider": "OpenAI", -- choose one of OpenAI or Azure_OpenAI
+       "model_name" : "text-embedding-3-large",
+       "base_url": "https://ai-6689.openai.azure.com/", -- required only when provider = Azure_OpenAI
+       "api_key": "sk-..."  -- optional, default from env variable
+       "api_version": "2024-02-01" -- required only when provider = Azure_OpenAI
+    },
+    reranking_model = {
+       "provider": "OpenAI", -- choose one of OpenAI or Azure_OpenAI
+       "model_name": "gpt-4o",
+       "base_url": "https://ai-6689.openai.azure.com/", -- required only when provider = Azure_OpenAI
+       "api_key": "sk-..."  -- optional, default from env variable
+       "api_version": "2024-02-01" -- required only when provider = Azure_OpenAI
+    },
+    storage = my_vector_store.storage_table, -- optional, default ChromaDB
+    metadata_columns = ['date', 'creator', ...], -- optional
+    content_columns = ['review', 'content', ...], -- optional, default content
+    id_column = 'id'; -- optional
 ```
 
 Upon execution, it registers `my_kb` and associates the specified models and storage.
@@ -47,26 +49,28 @@ The following is an explanation of the syntax and parameters:
 * `embedding_model` stores specifications of the embedding model to be used.
       * `provider` defines the model provider. Currently, the supported providers include OpenAI and OpenAI via Azure.
       * `model_name` defines the embedding model name as specified by the provider. Users can choose one of the [OpenAI embedding models](https://platform.openai.com/docs/guides/embeddings/embedding-models#embedding-models).
+      * `base_url` is the root URL used to send API requests. It is required when using `Azure_OpenAI` as the provider. Its default value is `https://api.openai.com/v1/`.
       * `api_key` stores your OpenAI API key. Alternatively, you can use the `OPENAI_API_KEY` environment variable to store your OpenAI API key.
-      * `azure_endpoint` is required when using `Azure_OpenAI` as the provider.
-      * `openai_api_version` is required when using `Azure_OpenAI` as the provider.
+      * `api_version` is required when using `Azure_OpenAI` as the provider.
 
 * `reranking_model` is an optional parameter that stores specification of the reranking model to be used.
-      * `provider` defines the model provider. Currently, the supported providers include OpenAI.
+      * `provider` defines the model provider. Currently, the supported providers include OpenAI and OpenAI via Azure.
       * `model_name` defines the reranking model name as specified by the provider. Users can choose one of the [OpenAI chat models](https://platform.openai.com/docs/models).
+      * `base_url` is the root URL used to send API requests. It is required when using `Azure_OpenAI` as the provider. Its default value is `https://api.openai.com/v1/`.
       * `api_key` stores your OpenAI API key. Alternatively, you can use the `OPENAI_API_KEY` environment variable to store your OpenAI API key.
+      * `api_version` is required when using `Azure_OpenAI` as the provider.
 
 <Info>
-Note that providing the reranking model is optional. If provided, it is used an LLM to rerank the output based on relevance, or `reranking_threshold`.
+Note that providing the reranking model is optional. If provided, it is used an LLM to rerank the output based on relevance, or `relevance_threshold`.
 
-- When the ranking model is provided, the default `reranking_threshold` is 0, unless defined otherwise in the `WHERE` clause.
+- When the ranking model is provided, the default `relevance_threshold` is 0, unless defined otherwise in the `WHERE` clause.
 
-- When the reranking model is not provided and the `reranking_threshold` is not defined in the query, then no relevance filtering is applied and the output includes all rows matched based on the similarity and metadata search.
+- When the reranking model is not provided and the `relevance_threshold` is not defined in the query, then no relevance filtering is applied and the output includes all rows matched based on the similarity and metadata search.
 
-- When the reranking model is not provided but the `reranking_threshold` is defined in the query, then the relevance is calculated based on the `distance` column (`1/(1+ distance)`) and the `reranking_threshold` value is compared with this relevance value to filter the output.
+- When the reranking model is not provided but the `relevance_threshold` is defined in the query, then the relevance is calculated based on the `distance` column (`1/(1+ distance)`) and the `relevance_threshold` value is compared with this relevance value to filter the output.
 </Info>
 
-* `storage` is an optional parameter. It assigns the name of the vector store created within MindsDB with the [`CREATE DATABASE` command](/mindsdb_sql/sql/create/database), which is either [PGVector](/integrations/vector-db-integrations/pgvector) or [ChromaDB](/integrations/vector-db-integrations/chromadb), followed by a table name present in that vector database where the knowledge base stores its content. If not provided, the system creates the default ChromaDB vector database called `<kb_name>_chromadb` with the default tables called `default_collection` that stores the embedded data.
+* `storage` is an optional parameter. It assigns the name of the vector store created within MindsDB with the [`CREATE DATABASE` command](/mindsdb_sql/sql/create/database), which is either [PGVector](/integrations/vector-db-integrations/pgvector) or [ChromaDB](/integrations/vector-db-integrations/chromadb), followed by a table name where the knowledge base stores its content; note that this table is created within the vector store automatically. If not provided, the system creates the default ChromaDB vector database called `<kb_name>_chromadb` with the default tables called `default_collection` that stores the embedded data.
 
 * `metadata_columns` provides the list of column names that will be used as the metadata of the knowledge base. Users can use these column names to insert them into the knowledge base and filter the search results by metadata. If not set, the metadata is not used.
 
@@ -178,6 +182,27 @@ SELECT query_cancel(1);
 - **error** - Defines the error processing options. The available values include `raise` (default) and `skip`.
 </Accordion>
 
+<Accordion title="Underlying Vector Store">
+
+Each knowledge base has its underlying vector store that store data inserted into the knowledge base in the form of embeddings.
+
+Users can query the underlying vector store as follows.
+
+* KB with the default ChromaDB vector store:
+
+```sql
+SELECT id, content, metadata, embeddings
+FROM <kb_name>_chromadb.storage_table;
+```
+
+* KB with user-defined vector store (either ChromaDB or PGVector):
+
+```sql
+SELECT id, content, metadata, embeddings
+FROM <vector_store_connection_name>.<table_name>;
+```
+</Accordion>
+
 <Accordion title="Examples">
 
 Here are the usage examples:
@@ -214,7 +239,7 @@ KBs provide semantic search returning document-level relevance.
 SELECT id, relevance 
 FROM <kb_name> 
 WHERE content = '<query_text>' 
-AND reranking_threshold = 0.6 -- optional
+AND relevance_threshold = 0.6 -- optional
 LIMIT <N>;
 ```
 
@@ -225,17 +250,15 @@ The following is an explanation of the syntax and parameters:
 * `SELECT id, relevance` specifies that the unique document identifier and its calculated relevance score should be returned.
 * `<kb_name>` is a unique identifier of a knowledge base.
 * `WHERE content = '<query_text>'` triggers semantic search based on the meaning of `<query_text>`.
-* `AND reranking_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1. It defines the minimum relevance value for the data row to appear in the output. Its default value is 0.
-* `LIMIT <N>` restricts results to the top N most relevant documents.
+* `AND relevance_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1. It defines the minimum relevance value for the data row to appear in the output. Its default value is 0.
+* `LIMIT <N>` restricts results to the top N most relevant documents. When using the semantic search (as opposed to metadata-only search), the default limit is 10 and the maximum limit is 100.
 
-<Note>
 Here are the conditions supported by the available vector stores:
 
 | Handler  |  IN, NOT IN | LIKE, NOT LIKE | < and > | !=  |
 | -------- | ----------- | -------------- | ------- | --- |
 | PgVector | +           | +              | +       | +   |
 | ChromaDB | +           | -              | -       | +   |
-</Note>
 
 <Accordion title="Examples">
 
@@ -247,7 +270,7 @@ Here are the usage examples:
 SELECT id, relevance 
 FROM my_kb 
 WHERE content = 'a novel about epic inter planetary intelligence' 
-AND reranking_threshold = 0.7
+AND relevance_threshold = 0.7
 LIMIT 10;
 ```
 </Accordion>
@@ -260,7 +283,7 @@ KBs provide semantic search returning chunk-level details.
 SELECT id, chunk_id, chunk_content, metadata, distance, relevance
 FROM <kb_name> 
 WHERE content = '<query_text>' 
-AND reranking_threshold = 0.6 -- optional
+AND relevance_threshold = 0.6 -- optional
 LIMIT <N>;
 ```
 
@@ -271,8 +294,8 @@ The following is an explanation of the syntax and parameters:
 * `SELECT id, chunk_id, chunk_content, metadata, distance, relevance` specifies that the unique document identifier, chunk identifier, chunk content, metadata (if defined), distance, and relevance should be returned.
 * `<kb_name>` is a unique identifier of a knowledge base.
 * `WHERE content = '<query_text>'` triggers semantic search based on the meaning of `<query_text>`.
-* `AND reranking_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1. It defines the minimum relevance value for the data row to appear in the output. Its default value is 0.
-* `LIMIT <N>` restricts results to the top N most relevant documents.
+* `AND relevance_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1. It defines the minimum relevance value for the data row to appear in the output. Its default value is 0.
+* `LIMIT <N>` restricts results to the top N most relevant documents. When using the semantic search (as opposed to metadata-only search), the default limit is 10 and the maximum limit is 100.
 
 <Accordion title="Examples">
 
@@ -284,7 +307,7 @@ Here are the usage examples:
 SELECT id, chunk_id, chunk_content, relevance 
 FROM my_kb 
 WHERE content = 'a novel about epic inter planetary intelligence' 
-AND reranking_threshold = 0.7
+AND relevance_threshold = 0.7
 LIMIT 10;
 ```
 </Accordion>
@@ -298,7 +321,8 @@ SELECT id, chunk_content, relevance
 FROM my_kb 
 WHERE <metadata_colums> = '<metadata>' -- metadata filtering conditions
 AND content = '<query_text>' -- semantic search condition
-AND reranking_threshold = 0.6; -- optional
+AND relevance_threshold = 0.6 -- optional
+LIMIT <N>;
 ```
 
 Upon execution, it performs the conjunctive filtering, that is, results must satisfy both the metadata condition(s) and the semantic search condition.
@@ -309,7 +333,8 @@ The following is an explanation of the syntax and parameters:
 * `<kb_name>` is a unique identifier of a knowledge base.
 * `WHERE <metadata_colums> = '<metadata>'` is the metadata filtering condition.
 * `WHERE content = '<query_text>'` is the semantic search condition.
-* `AND reranking_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1. It defines the minimum relevance value for the data row to appear in the output. Its default value is 0.
+* `AND relevance_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1. It defines the minimum relevance value for the data row to appear in the output. Its default value is 0.
+* `LIMIT <N>` restricts results to the top N most relevant documents. When using the semantic search (as opposed to metadata-only search), the default limit is 10 and the maximum limit is 100.
 
 <Accordion title="Examples">
 
@@ -322,7 +347,7 @@ SELECT id, chunk_content, relevance
 FROM my_kb
 WHERE id LIKE 'fiction%' -- metadata filtering conditions
 AND content = 'a novel about ...' -- semantic search condition
-AND reranking_threshold = 0.6; -- optional
+AND relevance_threshold = 0.6; -- optional
 ```
 </Accordion>
 
@@ -398,14 +423,3 @@ DROP KNOWLEDGE_BASE <kb_name>;
 ```
 
 Upon execution, it removes the knowledge base with its content.
-
-<Accordion title="Examples">
-
-Here are the usage examples:
-
-* Dropping a knowledge base:
-
-```sql
-DROP KNOWLEDGE_BASE my_kb;
-```
-</Accordion>

@@ -4,6 +4,7 @@ netifaces >= 0.11.0
 openai<2.0.0,>=1.54.0
 pytest >= 8.3.5, < 9.0.0
 pytest-subtests
+pytest-xdist
 lightwood==25.3.3.3  # This is required for tests/unit/test_executor.py. These tests need to be refactored.
 responses
 pytest-cov 
@@ -13,3 +14,4 @@ ollama >= 0.1.7 # Langchain tests
 anthropic >= 0.21.3 # Langchain tests
 langchain-google-genai>=2.0.0 # Langchain tests
 mindsdb-sdk
+filelock==3.18.0

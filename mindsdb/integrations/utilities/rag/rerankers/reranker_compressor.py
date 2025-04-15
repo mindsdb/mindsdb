@@ -25,6 +25,7 @@ class LLMReranker(BaseDocumentCompressor):
     remove_irrelevant: bool = True  # New flag to control removal of irrelevant documents
     base_url: str = DEFAULT_LLM_ENDPOINT
     num_docs_to_keep: Optional[int] = None  # How many of the top documents to keep after reranking & compressing.
+    method: str = "multi-class"  # Scoring method: 'multi-class' or 'binary'
     _api_key_var: str = "OPENAI_API_KEY"
     client: Optional[AsyncOpenAI] = None
     _semaphore: Optional[asyncio.Semaphore] = None
@@ -393,6 +394,7 @@ class LLMReranker(BaseDocumentCompressor):
             "model": self.model,
             "temperature": self.temperature,
             "remove_irrelevant": self.remove_irrelevant,
+            "method": self.method,
         }
 
     def get_scores(self, query: str, documents: list[str], custom_event: bool = False):
@@ -406,7 +408,10 @@ class LLMReranker(BaseDocumentCompressor):
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
 
-        # documents_and_scores = loop.run_until_complete(self._rank(query_document_pairs, custom_event=custom_event))
-        documents_and_scores = loop.run_until_complete(self._rank_score(query_document_pairs))
+        if self.method == "multi-class":  # default 'multi-class' method
+            documents_and_scores = loop.run_until_complete(self._rank_score(query_document_pairs))
+        else:
+            documents_and_scores = loop.run_until_complete(self._rank(query_document_pairs, custom_event=custom_event))
+
         scores = [score for _, score in documents_and_scores]
         return scores

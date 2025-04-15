@@ -218,6 +218,8 @@ class InsertToTable(PlanStep):
         self.table = table
         self.dataframe = dataframe
         self.query = query
+        if params is None:
+            params = {}
         self.params = params
 
 

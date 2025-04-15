@@ -383,7 +383,7 @@ class KBTest(KBTestBase):
         ret = self.run_sql("""
             SELECT *
             FROM kb_crm
-            WHERE status = "solving" AND content = "noise" AND reranking_threshold=0.65
+            WHERE status = "solving" AND content = "noise" AND relevance_threshold=0.65
         """)
         assert set(ret.metadata.apply(lambda x: x.get('status'))) == {'solving'}
         assert 'noise' in ret.chunk_content[0]  # first line contents word
@@ -419,7 +419,7 @@ class KBTest(KBTestBase):
         ret = self.run_sql("""
             SELECT *
             FROM kb_crm
-            WHERE status = "solving" AND content = "noise" AND reranking_threshold=0.8
+            WHERE status = "solving" AND content = "noise" AND relevance_threshold=0.8
         """)
         assert set(ret.metadata.apply(lambda x: x.get('status'))) == {'solving'}
         for item in ret.chunk_content:

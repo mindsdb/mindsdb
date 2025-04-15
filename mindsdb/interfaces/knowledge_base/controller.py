@@ -184,6 +184,16 @@ class KnowledgeBaseTable:
         logger.debug(f"Extracted query text: {query_text}")
 
         self.addapt_conditions_columns(conditions)
+
+        # Set default limit if query is present
+        if query_text is not None:
+            limit = query.limit.value if query.limit is not None else None
+            if limit is None:
+                limit = 10
+            elif limit > 100:
+                limit = 100
+            query.limit = Constant(limit)
+
         df = db_handler.dispatch_select(query, conditions)
         df = self.addapt_result_columns(df)
 

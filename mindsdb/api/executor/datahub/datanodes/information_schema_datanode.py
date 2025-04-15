@@ -19,7 +19,7 @@ from .system_tables import (
     PluginsTable, EnginesTable, KeyColumnUsageTable, StatisticsTable,
     CharacterSetsTable, CollationsTable)
 from .mindsdb_tables import (
-    ModelsTable, DatabasesTable, MLEnginesTable, HandlersTable, JobsTable,
+    ModelsTable, DatabasesTable, MLEnginesTable, HandlersTable, JobsTable, QueriesTable,
     ChatbotsTable, KBTable, SkillsTable, AgentsTable, ViewsTable, TriggersTable)
 
 
@@ -34,7 +34,8 @@ class InformationSchemaDataNode(DataNode):
         PluginsTable, EnginesTable, KeyColumnUsageTable, StatisticsTable,
         CharacterSetsTable, CollationsTable,
         ModelsTable, DatabasesTable, MLEnginesTable, HandlersTable, JobsTable,
-        ChatbotsTable, KBTable, SkillsTable, AgentsTable, ViewsTable, TriggersTable
+        ChatbotsTable, KBTable, SkillsTable, AgentsTable, ViewsTable, TriggersTable,
+        QueriesTable
     ]
 
     def __init__(self, session):

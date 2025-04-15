@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 
 class LLMReranker(BaseDocumentCompressor):
-    filtering_threshold: float = 0.5  # Default threshold for filtering
+    filtering_threshold: float = 0.0  # Default threshold for filtering
     model: str = DEFAULT_RERANKING_MODEL  # Model to use for reranking
     temperature: float = 0.0  # Temperature for the model
     openai_api_key: Optional[str] = None

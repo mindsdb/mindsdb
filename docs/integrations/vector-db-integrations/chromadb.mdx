@@ -27,7 +27,7 @@ WITH ENGINE = 'chromadb'
 PARAMETERS = {
     "host": "YOUR_HOST",
     "port": YOUR_PORT,
-    "distance": "l2/cosine/ip" -- optional
+    "distance": "l2/cosine/ip" -- optional, default is cosine
 }
 ```
 

@@ -520,7 +520,8 @@
           "group": "Functions",
           "pages": [
             "mindsdb_sql/functions/custom_functions",
-            "mindsdb_sql/functions/llm_function"
+            "mindsdb_sql/functions/llm_function",
+            "mindsdb_sql/functions/to_markdown"
           ]
         },
         {
@@ -1078,6 +1079,12 @@
             "integrations/ai-engines/portkey",
             "integrations/ai-engines/replicate-llm",
             "integrations/ai-engines/vertex"       
+          ]
+        },
+        {
+          "group": "Embedding Models",
+          "pages": [
+            "integrations/ai-engines/langchain_embedding"
           ]
         },
         {

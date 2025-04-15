@@ -185,7 +185,7 @@ class KnowledgeBaseTable:
 
         self.addapt_conditions_columns(conditions)
 
-        # Set default limit if query are present
+        # Set default limit if query is present
         if query_text is not None:
             limit = query.limit.value if query.limit is not None else None
             if limit is None:

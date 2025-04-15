@@ -69,6 +69,12 @@ class Project:
         self.id = record.id
 
     def delete(self):
+        if self.record.metadata_ and self.record.metadata_.get('is_default', False):
+            raise Exception(
+                f"Project '{self.name}' can not be deleted, because it is default project."
+                "The default project can be changed in the config file or by setting the environment variable MINDSDB_DEFAULT_PROJECT."
+            )
+
         tables = self.get_tables()
         tables = [key for key, val in tables.items() if val['type'] != 'table']
         if len(tables) > 0:
@@ -466,7 +472,7 @@ class ProjectController:
 
         if new_metadata is not None:
             project.metadata = new_metadata
-            project.record.metadata = new_metadata
+            project.record.metadata_ = new_metadata
             flag_modified(project.record, 'metadata_')
 
         db.session.commit()

@@ -241,7 +241,6 @@ FROM tool_based_agent
 WHERE question = 'Could you describe the `mysql_demo_db.house_sales` table please?'
 USING
     verbose = True,
-    tools = [],
     max_iterations = 10;
 ```
 
@@ -267,7 +266,6 @@ FROM tool_based_agent
 WHERE question = 'I want to know the average number of rooms in the downtown neighborhood as per the `mysql_demo_db.home_rentals` table'
 USING
     verbose = True,
-    tools = [],
     max_iterations = 10;
 ```
 
@@ -297,7 +295,6 @@ FROM tool_based_agent
 WHERE question = 'There is a property in the south_side neighborhood with an initial price of 2543 the `mysql_demo_db.home_rentals` table. What are some other details of this listing?'
 USING
     verbose = True,
-    tools = [],
     max_iterations = 10;
 ```
 

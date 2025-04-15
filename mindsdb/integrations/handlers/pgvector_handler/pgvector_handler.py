@@ -270,6 +270,13 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         if columns is None:
             columns = ["id", "content", "embeddings", "metadata"]
 
+        # Set default limit if conditions are present
+        if conditions:
+            if limit is None:
+                limit = 10
+            elif limit > 100:
+                limit = 100
+
         query = self._build_select_query(table_name, columns, conditions, limit, offset)
         result = self.raw_query(query)
 

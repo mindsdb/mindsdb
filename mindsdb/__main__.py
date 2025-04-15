@@ -299,15 +299,38 @@ if __name__ == '__main__':
         logger.debug(f"Checking if default project {config.get('default_project')} exists")
         project_controller = ProjectController()
 
-        current_default_project = project_controller.get(is_default=True)
-        if current_default_project.record.name != config.get('default_project'):
+        try:
+            current_default_project = project_controller.get(is_default=True)
+        except EntityNotExistsError:
+            # In previous versions, the default project could be deleted. This is no longer possible.
+            current_default_project = None
+
+        if current_default_project:
+            if current_default_project.record.name != config.get('default_project'):
+                try:
+                    project_controller.get(name=config.get('default_project'))
+                    log.critical(f"A project with the name '{config.get('default_project')}' already exists")
+                    sys.exit(1)
+                except EntityNotExistsError:
+                    pass
+                project_controller.update(current_default_project.record.id, new_name=config.get('default_project'))
+
+        # Legacy: If the default project does not exist, mark the new one as default.
+        else:
             try:
-                new_default_project = project_controller.get(name=config.get('default_project'))
-                log.critical(f"A project with the name '{config.get('default_project')}' already exists")
-                sys.exit(1)
+                project_controller.get(name=config.get('default_project'))
             except EntityNotExistsError:
-                pass
-            project_controller.update(current_default_project.record.id, new_name=config.get('default_project'))
+                log.critical(
+                    f"A project with the name '{config.get('default_project')}' does not exist"
+                )
+                raise
+
+            project_controller.update(
+                name=config.get('default_project'),
+                new_metadata={
+                    "is_default": True
+                }
+            )
 
     apis = os.getenv('MINDSDB_APIS') or config.cmd_args.api
 

@@ -177,7 +177,7 @@ jobs:
       - name: Install FreeTDS (macOS)
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
-          if [ "$RUNNER_OS" == "Linux" ]; then
+          if [ "$RUNNER_OS" == "macOS" ]; then
             brew install freetds
       - name: Install mssql dependencies
         if: ${{ needs.changes.outputs.not-docs == 'true' }}

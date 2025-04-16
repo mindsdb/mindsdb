@@ -15,6 +15,12 @@ from mindsdb.integrations.libs.response import (
 )
 
 
+class ColumnDescription:
+    def __init__(self, name, type_code):
+        self.name = name
+        self.type_code = type_code
+
+
 class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
     @property
@@ -341,6 +347,19 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         copy_obj.__enter__ = MagicMock(return_value=copy_obj)
         copy_obj.__exit__ = MagicMock(return_value=None)
 
+        # region add result for 'get_columns' call
+        mock_pgresult = MagicMock()
+        mock_pgresult.status = ExecStatus.TUPLES_OK
+        mock_cursor.pgresult = mock_pgresult
+        mock_cursor.fetchall = MagicMock(return_value=[
+            ['col1', 'type1']
+        ])
+        mock_cursor.description = [
+            ColumnDescription('Field', 23),
+            ColumnDescription('Type', 23)
+        ]
+        # endregino
+
         df = pd.DataFrame({
             'id': [1, 2, 3],
             'name': ['a', 'b', 'c']
@@ -351,7 +370,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         # Verify copy was called with correct SQL
         copy_sql = 'copy "test_table" ("id","name") from STDIN WITH CSV'
         mock_cursor.copy.assert_called_once_with(copy_sql)
-        mock_conn.commit.assert_called_once()
+        mock_conn.commit.assert_called()
 
     def test_insert_error(self):
         """

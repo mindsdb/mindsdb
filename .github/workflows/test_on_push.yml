@@ -179,6 +179,7 @@ jobs:
         run: |
           if [ "$RUNNER_OS" == "macOS" ]; then
             brew install freetds
+          fi
       - name: Install mssql dependencies
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         env:

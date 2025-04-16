@@ -7,7 +7,7 @@ from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb.utilities import log
 from mindsdb.utilities.config import config
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
-from mindsdb.integrations.libs.response import IS_COLUMNS_NAMES
+from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE, MYSQL_DATA_TYPE_COLUMNS_DEFAULT
 from mindsdb.api.executor.datahub.classes.tables_row import TABLES_ROW_TYPE, TablesRow
 
@@ -164,6 +164,27 @@ class TablesTable(Table):
         return df
 
 
+def infer_mysql_type(original_type: str) -> MYSQL_DATA_TYPE:
+    """Infer MySQL data type from original type string from a database.
+
+    Args:
+        original_type (str): The original type string from a database.
+
+    Returns:
+        MYSQL_DATA_TYPE: The inferred MySQL data type.
+    """
+    match original_type.lower():
+        case 'double precision' | 'real' | 'numeric' | 'float':
+            data_type = MYSQL_DATA_TYPE.FLOAT
+        case 'integer' | 'smallint' | 'int' | 'bigint':
+            data_type = MYSQL_DATA_TYPE.BIGINT
+        case 'timestamp without time zone' | 'timestamp with time zone' | 'date' | 'timestamp':
+            data_type = MYSQL_DATA_TYPE.DATETIME
+        case _:
+            data_type = MYSQL_DATA_TYPE.VARCHAR
+    return data_type
+
+
 @dataclass(slots=True, kw_only=True)
 class ColumnsTableRow:
     """Represents a row in the MindsDB's internal INFORMATION_SCHEMA.COLUMNS table.
@@ -211,20 +232,10 @@ class ColumnsTableRow:
         Returns:
             ColumnsTableRow: A row in the MindsDB's internal INFORMATION_SCHEMA.COLUMNS table.
         """
-        original_type: str = row[IS_COLUMNS_NAMES.DATA_TYPE] or ''
-        data_type: MYSQL_DATA_TYPE | None = row[IS_COLUMNS_NAMES.MYSQL_DATA_TYPE]
+        original_type: str = row[INF_SCHEMA_COLUMNS_NAMES.DATA_TYPE] or ''
+        data_type: MYSQL_DATA_TYPE | None = row[INF_SCHEMA_COLUMNS_NAMES.MYSQL_DATA_TYPE]
         if isinstance(data_type, MYSQL_DATA_TYPE) is False:
-            # region try to infer type if `MYSQL_DATA_TYPE` is not set
-            match original_type.lower():
-                case 'double precision' | 'real' | 'numeric' | 'float':
-                    data_type = MYSQL_DATA_TYPE.FLOAT
-                case 'integer' | 'smallint' | 'int' | 'bigint':
-                    data_type = MYSQL_DATA_TYPE.BIGINT
-                case 'timestamp without time zone' | 'timestamp with time zone' | 'date' | 'timestamp':
-                    data_type = MYSQL_DATA_TYPE.DATETIME
-                case _:
-                    data_type = MYSQL_DATA_TYPE.VARCHAR
-            # endregion
+            data_type = infer_mysql_type(original_type)
 
         # region set default values depend on type
         defaults = MYSQL_DATA_TYPE_COLUMNS_DEFAULT.get(data_type)
@@ -236,11 +247,11 @@ class ColumnsTableRow:
         # region determine COLUMN_TYPE - it is text representation of DATA_TYPE with additioan attributes
         match data_type:
             case MYSQL_DATA_TYPE.DECIMAL:
-                column_type = f'decimal({row[IS_COLUMNS_NAMES.NUMERIC_PRECISION]},{IS_COLUMNS_NAMES.NUMERIC_SCALE})'
+                column_type = f'decimal({row[INF_SCHEMA_COLUMNS_NAMES.NUMERIC_PRECISION]},{INF_SCHEMA_COLUMNS_NAMES.NUMERIC_SCALE})'
             case MYSQL_DATA_TYPE.VARCHAR:
-                column_type = f'varchar({row[IS_COLUMNS_NAMES.CHARACTER_MAXIMUM_LENGTH]})'
+                column_type = f'varchar({row[INF_SCHEMA_COLUMNS_NAMES.CHARACTER_MAXIMUM_LENGTH]})'
             case MYSQL_DATA_TYPE.VARBINARY:
-                column_type = f'varbinary({row[IS_COLUMNS_NAMES.CHARACTER_MAXIMUM_LENGTH]})'
+                column_type = f'varbinary({row[INF_SCHEMA_COLUMNS_NAMES.CHARACTER_MAXIMUM_LENGTH]})'
             case MYSQL_DATA_TYPE.BIT | MYSQL_DATA_TYPE.BINARY | MYSQL_DATA_TYPE.CHAR:
                 column_type = f'{data_type.value.lower()}(1)'
             case MYSQL_DATA_TYPE.BOOL | MYSQL_DATA_TYPE.BOOLEAN:
@@ -258,18 +269,18 @@ class ColumnsTableRow:
         return cls(
             TABLE_SCHEMA=table_schema,
             TABLE_NAME=table_name,
-            COLUMN_NAME=row[IS_COLUMNS_NAMES.COLUMN_NAME],
-            ORDINAL_POSITION=row[IS_COLUMNS_NAMES.ORDINAL_POSITION],
-            COLUMN_DEFAULT=row[IS_COLUMNS_NAMES.COLUMN_DEFAULT],
-            IS_NULLABLE=row[IS_COLUMNS_NAMES.IS_NULLABLE],
+            COLUMN_NAME=row[INF_SCHEMA_COLUMNS_NAMES.COLUMN_NAME],
+            ORDINAL_POSITION=row[INF_SCHEMA_COLUMNS_NAMES.ORDINAL_POSITION],
+            COLUMN_DEFAULT=row[INF_SCHEMA_COLUMNS_NAMES.COLUMN_DEFAULT],
+            IS_NULLABLE=row[INF_SCHEMA_COLUMNS_NAMES.IS_NULLABLE],
             DATA_TYPE=data_type,
-            CHARACTER_MAXIMUM_LENGTH=row[IS_COLUMNS_NAMES.CHARACTER_MAXIMUM_LENGTH],
-            CHARACTER_OCTET_LENGTH=row[IS_COLUMNS_NAMES.CHARACTER_OCTET_LENGTH],
-            NUMERIC_PRECISION=row[IS_COLUMNS_NAMES.NUMERIC_PRECISION],
-            NUMERIC_SCALE=row[IS_COLUMNS_NAMES.NUMERIC_SCALE],
-            DATETIME_PRECISION=row[IS_COLUMNS_NAMES.DATETIME_PRECISION],
-            CHARACTER_SET_NAME=row[IS_COLUMNS_NAMES.CHARACTER_SET_NAME],
-            COLLATION_NAME=row[IS_COLUMNS_NAMES.COLLATION_NAME],
+            CHARACTER_MAXIMUM_LENGTH=row[INF_SCHEMA_COLUMNS_NAMES.CHARACTER_MAXIMUM_LENGTH],
+            CHARACTER_OCTET_LENGTH=row[INF_SCHEMA_COLUMNS_NAMES.CHARACTER_OCTET_LENGTH],
+            NUMERIC_PRECISION=row[INF_SCHEMA_COLUMNS_NAMES.NUMERIC_PRECISION],
+            NUMERIC_SCALE=row[INF_SCHEMA_COLUMNS_NAMES.NUMERIC_SCALE],
+            DATETIME_PRECISION=row[INF_SCHEMA_COLUMNS_NAMES.DATETIME_PRECISION],
+            CHARACTER_SET_NAME=row[INF_SCHEMA_COLUMNS_NAMES.CHARACTER_SET_NAME],
+            COLLATION_NAME=row[INF_SCHEMA_COLUMNS_NAMES.COLLATION_NAME],
             COLUMN_TYPE=column_type,
             ORIGINAL_TYPE=original_type
         )
@@ -297,6 +308,7 @@ class ColumnsTable(Table):
                 'files'
             ]
 
+        result = []
         for db_name in databases:
             tables = {}
             if db_name == 'information_schema':
@@ -314,7 +326,6 @@ class ColumnsTable(Table):
                 for table_name in tables_names:
                     tables[table_name] = dn.get_table_columns_df(table_name)
 
-            result = []
             for table_name, table_columns_df in tables.items():
                 for _, row in table_columns_df.iterrows():
                     result.append(

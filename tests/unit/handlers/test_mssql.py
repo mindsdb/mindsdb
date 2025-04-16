@@ -9,7 +9,7 @@ from base_handler_test import BaseDatabaseHandlerTest
 from mindsdb.integrations.handlers.mssql_handler.mssql_handler import SqlServerHandler
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
-    IS_COLUMNS_NAMES_SET,
+    INF_SCHEMA_COLUMNS_NAMES_SET,
     RESPONSE_TYPE
 )
 
@@ -196,7 +196,10 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         """
         Tests that get_columns calls native_query with the correct SQL
         """
-        expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=DataFrame([], columns=list(IS_COLUMNS_NAMES_SET)))
+        expected_response = Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=DataFrame([], columns=list(INF_SCHEMA_COLUMNS_NAMES_SET))
+        )
         self.handler.native_query = MagicMock(return_value=expected_response)
 
         table_name = "test_table"

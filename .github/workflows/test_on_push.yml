@@ -174,25 +174,20 @@ jobs:
           uv pip install .[mysql]
           uv pip freeze
           git clone https://github.com/mindsdb/mindsdb_sql_parser.git parser_tests
-      - name: Install FreeTDS (macOS)
-        if: ${{ needs.changes.outputs.not-docs == 'true' }}
-        run: |
-          if [ "$RUNNER_OS" == "macOS" ]; then
-            brew install freetds
-          elif [[ "$RUNNER_OS" == "Linux" ]]; then
-            sudo apt-get update -y
-            sudo apt-get install -y freetds-dev libkrb5-dev
-          fi
       - name: Install mssql dependencies
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
           # Set FreeTDS build flags only on macOS
           if [[ "$RUNNER_OS" == "macOS" ]]; then
+            brew install freetds
             echo "Setting FreeTDS flags for macOS pymssql build"
             export LDFLAGS="-L$(brew --prefix freetds)/lib"
             export CFLAGS="-I$(brew --prefix freetds)/include"
+            uv pip install pymssql==2.3.1 --no-binary :all:
+          else
+            uv pip install .[pymssql]
           fi
-          uv pip install pymssql==2.3.1 --no-binary :all:
+          
       - name: Run unit tests
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |

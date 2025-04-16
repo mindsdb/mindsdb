@@ -59,15 +59,21 @@ The following is an explanation of the syntax and parameters:
       * `base_url` is the root URL used to send API requests. It is required when using `azure_openai` as the provider. Its default value is `https://api.openai.com/v1/`.
       * `api_key` stores your OpenAI API key. Alternatively, you can use the `OPENAI_API_KEY` environment variable to store your OpenAI API key.
       * `api_version` is required when using `azure_openai` as the provider.
+      * `method` defines the method used to calculate the relevance of the output rows. The available options include `multi-class` and `binary`. It defaults to `multi-class`.
 
 <Info>
-Note that providing the reranking model is optional. If provided, it is used an LLM to rerank the output based on relevance, or `relevance_threshold`.
+**Reranking Method**
 
-- When the ranking model is provided, the default `relevance_threshold` is 0, unless defined otherwise in the `WHERE` clause.
+The `multi-class` reranking method classifies each document chunk (that meets any specified metadata filtering conditions) into one of four relevance classes:
 
-- When the reranking model is not provided and the `relevance_threshold` is not defined in the query, then no relevance filtering is applied and the output includes all rows matched based on the similarity and metadata search.
+1. Not relevant with class weight of 0.25.
+2. Slightly relevant with class weight of 0.5.
+3. Moderately relevant with class weight of 0.75.
+4. Highly relevant with class weight of 1.
 
-- When the reranking model is not provided but the `relevance_threshold` is defined in the query, then the relevance is calculated based on the `distance` column (`1/(1+ distance)`) and the `relevance_threshold` value is compared with this relevance value to filter the output.
+The overall `relevance_score` of a document is calculated as the sum of each chunk’s class weight multiplied by its class probability (from model logprob output).
+
+The `binary` reranking method simplifies classification by determining whether a document is relevant or not, without intermediate relevance levels. With this method, the overall `relevance_score` of a document is calculated based on the model log probability.
 </Info>
 
 * `storage` is an optional parameter. It assigns the name of the vector store created within MindsDB with the [`CREATE DATABASE` command](/mindsdb_sql/sql/create/database), which is either [PGVector](/integrations/vector-db-integrations/pgvector) or [ChromaDB](/integrations/vector-db-integrations/chromadb), followed by a table name where the knowledge base stores its content; note that this table is created within the vector store automatically. If not provided, the system creates the default ChromaDB vector database called `<kb_name>_chromadb` with the default tables called `default_collection` that stores the embedded data.
@@ -86,9 +92,8 @@ DESCRIBE KNOWLEDGE_BASE my_kb;
 
 Here is the sample output:
 
-
 ```sql
-| NAME     | PROJECT | MODEL  | STORAGE                                | PARAMS                                                                                                                                                                                                                                          | INSERT_STARTED_AT | INSERT_FINISHED_AT | PROCESSED_ROWS | ERROR | QUERY_ID |
+| NAME     | PROJECT | MODEL  | STORAGE                                | PARAMS                                                                                                                                                                                                                                           | INSERT_STARTED_AT | INSERT_FINISHED_AT | PROCESSED_ROWS | ERROR | QUERY_ID |
 |----------|---------|--------|----------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------|--------------------|----------------|-------|----------|
 | kb_testx | mindsdb | [NULL] | my_kb_chromadb.default_collection   | {"embedding_model": {"provider": "openai", "model_name": "text-embedding-ada-002", "api_key": "sk-xxx"}, "reranking_model": {"provider": "openai", "model_name": "gpt-4o", "api_key": "sk-xxx"}, "default_vector_storage": "my_kb_chromadb"} | [NULL]            | [NULL]             | [NULL]         | [NULL]| [NULL]   |
 ```
@@ -252,6 +257,16 @@ The following is an explanation of the syntax and parameters:
 * `WHERE content = '<query_text>'` triggers semantic search based on the meaning of `<query_text>`.
 * `AND relevance_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1. It defines the minimum relevance value for the data row to appear in the output. Its default value is 0.
 * `LIMIT <N>` restricts results to the top N most relevant documents. When using the semantic search (as opposed to metadata-only search), the default limit is 10 and the maximum limit is 100.
+
+<Accordion title="Relevance Threshold Usage">
+Note that providing the reranking model is optional. If provided, it uses an LLM to rerank the output based on relevance, or `relevance_threshold`.
+
+- When the ranking model is provided, the default `relevance_threshold` is 0, unless defined otherwise in the `WHERE` clause.
+
+- When the reranking model is not provided and the `relevance_threshold` is not defined in the query, then no relevance filtering is applied and the output includes all rows matched based on the similarity and metadata search.
+
+- When the reranking model is not provided but the `relevance_threshold` is defined in the query, then the relevance is calculated based on the `distance` column (`1/(1+ distance)`) and the `relevance_threshold` value is compared with this relevance value to filter the output.
+</Accordion>
 
 Here are the conditions supported by the available vector stores:
 

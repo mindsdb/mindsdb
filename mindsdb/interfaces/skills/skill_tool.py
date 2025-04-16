@@ -249,7 +249,7 @@ class SkillToolController:
             elif hasattr(res, 'content'):
                 return '\n'.join(res.content)
             else:
-                return "No content found in knowledge base response"
+                return "No content or chunk_content found in knowledge base response"
 
         return _answer_question
 

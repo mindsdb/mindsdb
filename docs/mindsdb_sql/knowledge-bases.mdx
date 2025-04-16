@@ -23,18 +23,18 @@ MindsDB stores objects, such as models or knowledge bases, inside projects. Lear
 CREATE KNOWLEDGE_BASE test_kb_ms_teams
 USING
     embedding_model = {
-       "provider": "openai", -- choose one of OpenAI or Azure_OpenAI
+       "provider": "openai", -- choose one of openai or azure_openai
        "model_name" : "text-embedding-3-large",
-       "base_url": "https://ai-6689.openai.azure.com/", -- required only when provider = Azure_OpenAI
+       "base_url": "https://ai-6689.openai.azure.com/", -- required only when provider = azure_openai
        "api_key": "sk-..."  -- optional, default from env variable
-       "api_version": "2024-02-01" -- required only when provider = Azure_OpenAI
+       "api_version": "2024-02-01" -- required only when provider = azure_openai
     },
     reranking_model = {
-       "provider": "openai", -- choose one of OpenAI or Azure_OpenAI
+       "provider": "openai", -- choose one of openai or azure_openai
        "model_name": "gpt-4o",
-       "base_url": "https://ai-6689.openai.azure.com/", -- required only when provider = Azure_OpenAI
+       "base_url": "https://ai-6689.openai.azure.com/", -- required only when provider = azure_openai
        "api_key": "sk-..."  -- optional, default from env variable
-       "api_version": "2024-02-01" -- required only when provider = Azure_OpenAI
+       "api_version": "2024-02-01" -- required only when provider = azure_openai
     },
     storage = my_vector_store.storage_table, -- optional, default ChromaDB
     metadata_columns = ['date', 'creator', ...], -- optional
@@ -49,16 +49,16 @@ The following is an explanation of the syntax and parameters:
 * `embedding_model` stores specifications of the embedding model to be used.
       * `provider` defines the model provider. Currently, the supported providers include OpenAI and OpenAI via Azure.
       * `model_name` defines the embedding model name as specified by the provider. Users can choose one of the [OpenAI embedding models](https://platform.openai.com/docs/guides/embeddings/embedding-models#embedding-models).
-      * `base_url` is the root URL used to send API requests. It is required when using `Azure_OpenAI` as the provider. Its default value is `https://api.openai.com/v1/`.
+      * `base_url` is the root URL used to send API requests. It is required when using `azure_openai` as the provider. Its default value is `https://api.openai.com/v1/`.
       * `api_key` stores your OpenAI API key. Alternatively, you can use the `OPENAI_API_KEY` environment variable to store your OpenAI API key.
-      * `api_version` is required when using `Azure_OpenAI` as the provider.
+      * `api_version` is required when using `azure_openai` as the provider.
 
 * `reranking_model` is an optional parameter that stores specification of the reranking model to be used.
       * `provider` defines the model provider. Currently, the supported providers include OpenAI and OpenAI via Azure.
       * `model_name` defines the reranking model name as specified by the provider. Users can choose one of the [OpenAI chat models](https://platform.openai.com/docs/models).
-      * `base_url` is the root URL used to send API requests. It is required when using `Azure_OpenAI` as the provider. Its default value is `https://api.openai.com/v1/`.
+      * `base_url` is the root URL used to send API requests. It is required when using `azure_openai` as the provider. Its default value is `https://api.openai.com/v1/`.
       * `api_key` stores your OpenAI API key. Alternatively, you can use the `OPENAI_API_KEY` environment variable to store your OpenAI API key.
-      * `api_version` is required when using `Azure_OpenAI` as the provider.
+      * `api_version` is required when using `azure_openai` as the provider.
 
 <Info>
 Note that providing the reranking model is optional. If provided, it is used an LLM to rerank the output based on relevance, or `relevance_threshold`.
@@ -90,7 +90,7 @@ Here is the sample output:
 ```sql
 | NAME     | PROJECT | MODEL  | STORAGE                                | PARAMS                                                                                                                                                                                                                                          | INSERT_STARTED_AT | INSERT_FINISHED_AT | PROCESSED_ROWS | ERROR | QUERY_ID |
 |----------|---------|--------|----------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------|--------------------|----------------|-------|----------|
-| kb_testx | mindsdb | [NULL] | my_kb_chromadb.default_collection   | {"embedding_model": {"provider": "OpenAI", "model_name": "text-embedding-ada-002", "api_key": "sk-xxx"}, "reranking_model": {"provider": "OpenAI", "model_name": "gpt-4o", "api_key": "sk-xxx"}, "default_vector_storage": "my_kb_chromadb"} | [NULL]            | [NULL]             | [NULL]         | [NULL]| [NULL]   |
+| kb_testx | mindsdb | [NULL] | my_kb_chromadb.default_collection   | {"embedding_model": {"provider": "openai", "model_name": "text-embedding-ada-002", "api_key": "sk-xxx"}, "reranking_model": {"provider": "openai", "model_name": "gpt-4o", "api_key": "sk-xxx"}, "default_vector_storage": "my_kb_chromadb"} | [NULL]            | [NULL]             | [NULL]         | [NULL]| [NULL]   |
 ```
 
 ## Insert into a Knowledge Base

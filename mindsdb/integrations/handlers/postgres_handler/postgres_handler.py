@@ -274,7 +274,7 @@ class PostgresHandler(DatabaseHandler):
         if resp.data_frame is not None and not resp.data_frame.empty:
             db_columns = {
                 c.lower(): c
-                for c in resp.data_frame['Field']
+                for c in resp.data_frame['field']
             }
 
             # try to get case of existing column

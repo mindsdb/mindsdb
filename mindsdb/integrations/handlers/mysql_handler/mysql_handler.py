@@ -14,6 +14,7 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.integrations.handlers.mysql_handler.settings import ConnectionConfig
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import C_TYPES, DATA_C_TYPE_MAP
 
 logger = log.getLogger(__name__)
 
@@ -32,6 +33,54 @@ def _map_type(mysql_type_text: str) -> MYSQL_DATA_TYPE:
     except Exception:
         logger.warning(f'MySQL handler: unknown type: {mysql_type_text}, use TEXT as fallback.')
         return MYSQL_DATA_TYPE.TEXT
+
+
+def _make_table_response(result: list[dict], cursor: mysql.connector.cursor.MySQLCursor) -> Response:
+    # NOTE: every text/blob sub-type in MySQL returns with c-type = 252, but with different flags
+    """
+    NOTE: TYNIINT types (tinint, bool, boolen) are not differ
+    """
+    description = cursor.description
+    reverse_c_type_map = {v: k for k, v in DATA_C_TYPE_MAP.items() if v != C_TYPES.MYSQL_TYPE_BLOB}
+    mysql_types: list[MYSQL_DATA_TYPE] = []
+    for col in description:
+        type_int = col[1]
+        if type_int == C_TYPES.MYSQL_TYPE_TINY:
+            # There are 3 types that returns as TINYINT: TINYINT, BOOL, BOOLEAN.
+            mysql_types.append(MYSQL_DATA_TYPE.TINYINT)
+            continue
+
+        if type_int in reverse_c_type_map:
+            mysql_types.append(reverse_c_type_map[type_int])
+            continue
+
+        if type_int != C_TYPES.MYSQL_TYPE_BLOB:
+            raise ValueError(f'Unknown MySQL type id={type_int} in column {col[0]}')
+
+        # region determine text/blob type by flags
+        # Unfortunately, there is no way to determine particular type of text/blob column by flags.
+        # Subtype have to be determined by 8-s element of description tuple, but mysql.conector
+        # return the same value for all text types (TINYTEXT, TEXT, MEDIUMTEXT, LONGTEXT), and for
+        # all blob types (TINYBLOB, BLOB, MEDIUMBLOB, LONGBLOB).
+        if col[7] == 16:  # and col[8] == 45
+            mysql_types.append(MYSQL_DATA_TYPE.TEXT)
+        elif col[7] == 144:  # and col[8] == 63
+            mysql_types.append(MYSQL_DATA_TYPE.BLOB)
+        else:
+            logger.info()
+            mysql_types.append(MYSQL_DATA_TYPE.TEXT)
+        # endregion
+
+    response = Response(
+        RESPONSE_TYPE.TABLE,
+        pd.DataFrame(
+            result,
+            columns=[x[0] for x in description]
+        ),
+        affected_rows=cursor.rowcount,
+        mysql_types=mysql_types
+    )
+    return response
 
 
 class MySQLHandler(DatabaseHandler):
@@ -173,14 +222,7 @@ class MySQLHandler(DatabaseHandler):
                 cur.execute(query)
                 if cur.with_rows:
                     result = cur.fetchall()
-                    response = Response(
-                        RESPONSE_TYPE.TABLE,
-                        pd.DataFrame(
-                            result,
-                            columns=[x[0] for x in cur.description]
-                        ),
-                        affected_rows=cur.rowcount
-                    )
+                    response = _make_table_response(result, cur)
                 else:
                     response = Response(RESPONSE_TYPE.OK, affected_rows=cur.rowcount)
         except mysql.connector.Error as e:

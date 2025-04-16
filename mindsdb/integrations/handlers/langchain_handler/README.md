@@ -102,7 +102,7 @@ USING
      user_column = 'question',          -- column name that stores input from the user
      assistant_column = 'answer',       -- column name that stores output of the model (see PREDICT column)
      verbose = True,
-     prompt_template = 'Answer the users input in a helpful way: {{question}}';
+     prompt_template = 'Answer the user\'s input in a helpful way: {{question}}';
 ```
 </Accordion>
 
@@ -124,7 +124,7 @@ USING
      user_column = 'question',             -- column name that stores input from the user
      assistant_column = 'answer',          -- column name that stores output of the model (see PREDICT column)
      verbose = True,
-     prompt_template = 'Answer the users input in a helpful way: {{question}}';
+     prompt_template = 'Answer the user\'s input in a helpful way: {{question}}';
 ```
 </Accordion>
 
@@ -147,7 +147,7 @@ USING
      assistant_column = 'answer',       -- column name that stores output of the model (see PREDICT column) 
      base_url = 'https://api.endpoints.anyscale.com/v1',
      verbose = True,
-     prompt_template = 'Answer the users input in a helpful way: {{question}}';
+     prompt_template = 'Answer the user\'s input in a helpful way: {{question}}';
 ```
 </Accordion>
 
@@ -166,7 +166,7 @@ USING
      user_column = 'question',          -- column name that stores input from the user
      assistant_column = 'answer',       -- column name that stores output of the model (see PREDICT column) 
      verbose = True,
-     prompt_template = 'Answer the users input in a helpful way: {{question}}';
+     prompt_template = 'Answer the user\'s input in a helpful way: {{question}}';
 ```
 Ensure to have Ollama set up locally by following this guide on [how to download Ollama](https://ollama.com/download).
 </Accordion>
@@ -190,7 +190,7 @@ USING
      assistant_column = 'answer',            -- column name that stores output of the model (see PREDICT column)
      base_url = 'https://ai.dev.mindsdb.com',
      verbose = True,
-     prompt_template = 'Answer the users input in a helpful way: {{question}}';
+     prompt_template = 'Answer the user\'s input in a helpful way: {{question}}';
 ```
 </Accordion>
 
@@ -209,7 +209,7 @@ USING
      user_column = 'question',          -- column name that stores input from the user
      assistant_column = 'answer',       -- column name that stores output of the model (see PREDICT column)
      verbose = True,
-     prompt_template = 'Answer the users input in a helpful way: {{question}}';
+     prompt_template = 'Answer the user\'s input in a helpful way: {{question}}';
 ```
 </Accordion>
 
@@ -226,7 +226,7 @@ CREATE MODEL tool_based_agent
 PREDICT completion
 USING
     engine = 'langchain_engine',
-    prompt_template = 'Answer the users input in a helpful way: {{question}}';
+    prompt_template = 'Answer the user\'s input in a helpful way: {{question}}';
 ```
 
 Here, we create the `tool_based_agent` model using the LangChain engine, as defined in the `engine` parameter. This model answers users' questions in a helpful way, as defined in the `prompt_template` parameter, which specifies `input` as the input column when calling the model.

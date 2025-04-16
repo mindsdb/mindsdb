@@ -431,7 +431,10 @@ class ResultSet:
                         logger.info(f'Unexpected dtype: {series.dtype} for column with type DATETIME')
                         series = series.apply(dump_str)
                 case TYPES.MYSQL_TYPE_TIME | TYPES.MYSQL_TYPE_TIME2:
-                    if pd_types.is_object_dtype(series.dtype):
+                    if pd_types.is_timedelta64_ns_dtype(series.dtype):
+                        base_time = pd.Timestamp('2000-01-01')
+                        series = ((base_time + series).dt.strftime('%H:%M:%S'))
+                    elif pd_types.is_object_dtype(series.dtype):
                         series = series.apply(dump_time)
                     else:
                         logger.info(f'Unexpected dtype: {series.dtype} for column with type TIME')

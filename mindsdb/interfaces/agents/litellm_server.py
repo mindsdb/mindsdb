@@ -305,9 +305,7 @@ def run_server(
     port: int = 8000
 ):
     """Run the FastAPI server"""
-    print("\nMake sure MindsDB server is running with MCP enabled:")
-    print("python -m mindsdb --api=mysql,mcp,http\n")
-
+    logger.info("Make sure MindsDB server is running with MCP enabled: python -m mindsdb --api=mysql,mcp,http")
     # Initialize database
     from mindsdb.interfaces.storage import db
     db.init()
@@ -316,11 +314,10 @@ def run_server(
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     result = loop.run_until_complete(run_server_async(agent_name, project_name, mcp_host, mcp_port))
-
     if result != 0:
         return result
-
     # Run the server
+    logger.info(f"Starting server on {host}:{port}")
     uvicorn.run(app, host=host, port=port)
     return 0
 

@@ -189,7 +189,7 @@ jobs:
             export LDFLAGS="-L$(brew --prefix freetds)/lib"
             export CFLAGS="-I$(brew --prefix freetds)/include"
           fi
-          uv pip install --pre --no-binary :all: pymssql --no-cache --force
+          uv pip install pymssql==2.3.1 --no-binary :all:
       - name: Run unit tests
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |

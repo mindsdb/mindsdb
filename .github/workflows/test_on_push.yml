@@ -186,7 +186,7 @@ jobs:
           LDFLAGS: "-L$(brew --prefix freetds)/lib"
           CFLAGS: "-I$(brew --prefix freetds)/include"
         run: |
-          uv pip install --no-cache-dir .[mssql]
+          uv pip install --pre --no-binary :all: pymssql --no-cache
       - name: Run unit tests
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |

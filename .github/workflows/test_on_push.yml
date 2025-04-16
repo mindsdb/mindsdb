@@ -185,7 +185,7 @@ jobs:
             export CFLAGS="-I$(brew --prefix freetds)/include"
             uv pip install pymssql==2.3.1 --no-binary :all:
           else
-            uv pip install .[pymssql]
+            uv pip install .[mssql]
           fi
           
       - name: Run unit tests

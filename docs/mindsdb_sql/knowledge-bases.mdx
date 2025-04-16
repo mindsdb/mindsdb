@@ -23,14 +23,14 @@ MindsDB stores objects, such as models or knowledge bases, inside projects. Lear
 CREATE KNOWLEDGE_BASE test_kb_ms_teams
 USING
     embedding_model = {
-       "provider": "OpenAI", -- choose one of OpenAI or Azure_OpenAI
+       "provider": "openai", -- choose one of OpenAI or Azure_OpenAI
        "model_name" : "text-embedding-3-large",
        "base_url": "https://ai-6689.openai.azure.com/", -- required only when provider = Azure_OpenAI
        "api_key": "sk-..."  -- optional, default from env variable
        "api_version": "2024-02-01" -- required only when provider = Azure_OpenAI
     },
     reranking_model = {
-       "provider": "OpenAI", -- choose one of OpenAI or Azure_OpenAI
+       "provider": "openai", -- choose one of OpenAI or Azure_OpenAI
        "model_name": "gpt-4o",
        "base_url": "https://ai-6689.openai.azure.com/", -- required only when provider = Azure_OpenAI
        "api_key": "sk-..."  -- optional, default from env variable

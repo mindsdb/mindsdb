@@ -95,21 +95,8 @@ class FetchDataframePartitionCall(BaseStepCall):
         """
 
         results = []
-        while True:
 
-            # fetch batch
-            query2 = run_query.get_partition_query(self.current_step_num, query)
-            response = self.dn.query(
-                query=query2,
-                session=self.session
-            )
-            df = response.data_frame
-
-            if df is None or len(df) == 0:
-                break
-
-            # executing of sub steps can modify dataframe columns, lets memorise max tracking value
-            max_track_value = run_query.get_max_track_value(df)
+        for df in run_query.get_partitions(self.dn, query):
             try:
                 sub_data = self.exec_sub_steps(df)
                 results.append(sub_data)
@@ -118,8 +105,6 @@ class FetchDataframePartitionCall(BaseStepCall):
                     logger.error(e)
                 else:
                     raise e
-
-            run_query.set_progress(df, max_track_value)
 
         return self.concat_results(results)
 
@@ -191,22 +176,7 @@ class FetchDataframePartitionCall(BaseStepCall):
 
         with ContextThreadPoolExecutor(max_workers=thread_count) as executor:
 
-            while True:
-                # fetch batch
-                query2 = run_query.get_partition_query(self.current_step_num, query)
-                response = self.dn.query(
-                    query=query2,
-                    session=self.session
-                )
-                df = response.data_frame
-
-                if df is None or len(df) == 0:
-                    # TODO detect circles: data handler ignores condition and output is repeated
-
-                    # exit & stop workers
-                    break
-
-                max_track_value = run_query.get_max_track_value(df)
+            for df in run_query.get_partitions(self.dn, query):
 
                 # split into chunks and send to workers
                 futures = []
@@ -222,10 +192,5 @@ class FetchDataframePartitionCall(BaseStepCall):
                         else:
                             executor.shutdown()
                             raise e
-
-                # TODO
-                #  1. get next batch without updating track_value:
-                #    it allows to keep queue_in filled with data between fetching batches
-                run_query.set_progress(df, max_track_value)
 
         return self.concat_results(results)

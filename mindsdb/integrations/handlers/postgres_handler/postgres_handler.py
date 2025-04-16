@@ -259,6 +259,37 @@ class PostgresHandler(DatabaseHandler):
 
         return response
 
+    def query_stream(self, query: str, params=None, fetch_size=1000):
+        query_str, params = self.renderer.get_exec_params(query, with_failback=True)
+
+        need_to_close = not self.is_connected
+
+        connection = self.connect()
+        with connection.cursor() as cur:
+            try:
+                if params is not None:
+                    cur.executemany(query, params)
+                else:
+                    cur.execute(query)
+
+                if cur.pgresult is not None and ExecStatus(cur.pgresult.status) != ExecStatus.COMMAND_OK:
+                    while True:
+                        result = cur.fetch(fetch_size)
+                        if not result:
+                            break
+                        df = DataFrame(
+                            result,
+                            columns=[x.name for x in cur.description]
+                        )
+                        self._cast_dtypes(df, cur.description)
+                        yield df
+                connection.commit()
+            finally:
+                connection.rollback()
+
+        if need_to_close:
+            self.disconnect()
+
     def insert(self, table_name: str, df: pd.DataFrame) -> Response:
         need_to_close = not self.is_connected
 

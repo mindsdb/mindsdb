@@ -28,7 +28,33 @@ class RunningQuery:
         self.record = record
         self.sql = record.sql
 
-    def get_partition_query(self, step_num: int, query: Select) -> Select:
+    def get_partitions(self, dn, query: Select ):
+        if dn.is_support_stream():
+            query2 = run_query.get_partition_query(self.current_step_num, query, with_limit=False)
+
+            for df in dn.query_stream(query2):
+                max_track_value = self.get_max_track_value(df)
+                yield df
+                self.set_progress(df, max_track_value)
+
+        else:
+            while True;
+                query2 = run_query.get_partition_query(self.current_step_num, query, with_limit=True)
+
+                response = self.dn.query(
+                    query=query2,
+                    session=self.session
+                )
+                df = response.data_frame
+
+                if df is None or len(df) == 0:
+                    break
+
+                max_track_value = self.get_max_track_value(df)
+                yield df
+                self.set_progress(df, max_track_value)
+
+    def get_partition_query(self, step_num: int, query: Select, with_limit=True) -> Select:
         """
            Generate query for fetching the next partition
            It wraps query to
@@ -45,8 +71,10 @@ class RunningQuery:
             targets=[Star()],
             from_table=query,
             order_by=[OrderBy(Identifier(track_column))],
-            limit=Constant(self.batch_size)
+
         )
+        if with_limit:
+            query.limit = Constant(self.batch_size)
 
         track_value = self.record.context.get('track_value')
         # is it different step?

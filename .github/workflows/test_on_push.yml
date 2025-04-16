@@ -175,7 +175,7 @@ jobs:
           uv pip freeze
           git clone https://github.com/mindsdb/mindsdb_sql_parser.git parser_tests
       - name: Install FreeTDS (macOS)
-        if: ${{ runner.os == 'macOS' && needs.changes.outputs.not-docs == 'true' }}
+        if: ${{ "$RUNNER_OS" == "Linux" && needs.changes.outputs.not-docs == 'true' }}
         run: brew install freetds
       - name: Install mssql dependencies
         if: ${{ needs.changes.outputs.not-docs == 'true' }}

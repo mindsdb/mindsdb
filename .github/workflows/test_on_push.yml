@@ -179,6 +179,9 @@ jobs:
         run: |
           if [ "$RUNNER_OS" == "macOS" ]; then
             brew install freetds
+          elif [[ "$RUNNER_OS" == "Linux" ]]; then
+            sudo apt-get update -y
+            sudo apt-get install -y freetds-dev
           fi
       - name: Install mssql dependencies
         if: ${{ needs.changes.outputs.not-docs == 'true' }}

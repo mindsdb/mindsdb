@@ -308,6 +308,7 @@ class ColumnsTable(Table):
                 'files'
             ]
 
+        result = []
         for db_name in databases:
             tables = {}
             if db_name == 'information_schema':
@@ -325,7 +326,6 @@ class ColumnsTable(Table):
                 for table_name in tables_names:
                     tables[table_name] = dn.get_table_columns_df(table_name)
 
-            result = []
             for table_name, table_columns_df in tables.items():
                 for _, row in table_columns_df.iterrows():
                     result.append(

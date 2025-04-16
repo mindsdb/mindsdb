@@ -106,6 +106,11 @@ class SQLQuery:
     def create_planner(self):
         databases = self.session.database_controller.get_list()
 
+        #  Raise error if the requested datasource/integration does not exist
+        
+        if self.database and self.database.lower() not in [db.lower() for db in databases]:
+            raise BadTableError(f"The datasource/database '{self.database}' does not exist.")
+
         predictor_metadata = []
 
         query_tables = get_query_models(self.query, default_database=self.database)

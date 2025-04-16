@@ -15,6 +15,12 @@ from mindsdb.integrations.libs.response import (
 )
 
 
+class ColumnDescription:
+    def __init__(self, **kwargs):
+        self.name = kwargs.get('name')
+        self.type_code = kwargs.get('type_code')
+
+
 class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
     @property
@@ -52,8 +58,18 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
     def get_columns_query(self):
         return f"""
             SELECT
-                column_name as "Field",
-                data_type as "Type"
+                COLUMN_NAME,
+                DATA_TYPE,
+                ORDINAL_POSITION,
+                COLUMN_DEFAULT,
+                IS_NULLABLE,
+                CHARACTER_MAXIMUM_LENGTH,
+                CHARACTER_OCTET_LENGTH,
+                NUMERIC_PRECISION,
+                NUMERIC_SCALE,
+                DATETIME_PRECISION,
+                CHARACTER_SET_NAME,
+                COLLATION_NAME
             FROM
                 information_schema.columns
             WHERE
@@ -113,14 +129,9 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         ])
 
         # Create proper description objects with necessary type_code for _cast_dtypes
-        class ColumnDescription:
-            def __init__(self, name, type_code=None):
-                self.name = name
-                self.type_code = type_code  # Needed for the _cast_dtypes method
-
         mock_cursor.description = [
-            ColumnDescription('id', 23),  # int4 type code
-            ColumnDescription('name', 25)  # text type code
+            ColumnDescription(name='id', type_code=23),  # int4 type code
+            ColumnDescription(name='name', type_code=25)  # text type code
         ]
 
         # Make sure pgresult doesn't have COMMAND_OK status
@@ -202,12 +213,6 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             'text_col': ['a', 'b']
         })
 
-        # Create a proper description class to mimic psycopg cursor description items
-        class ColumnDescription:
-            def __init__(self, name, type_code):
-                self.name = name
-                self.type_code = type_code
-
         # Create type code mapping
         type_codes = {
             'int2': 21,    # Typical OID for int2
@@ -242,13 +247,13 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             psycopg.postgres.types.get = mock_get
 
             description = [
-                ColumnDescription('int2_col', type_codes['int2']),
-                ColumnDescription('int4_col', type_codes['int4']),
-                ColumnDescription('int8_col', type_codes['int8']),
-                ColumnDescription('numeric_col', type_codes['numeric']),
-                ColumnDescription('float4_col', type_codes['float4']),
-                ColumnDescription('float8_col', type_codes['float8']),
-                ColumnDescription('text_col', type_codes['text'])
+                ColumnDescription(name='int2_col', type_code=type_codes['int2']),
+                ColumnDescription(name='int4_col', type_code=type_codes['int4']),
+                ColumnDescription(name='int8_col', type_code=type_codes['int8']),
+                ColumnDescription(name='numeric_col', type_code=type_codes['numeric']),
+                ColumnDescription(name='float4_col', type_code=type_codes['float4']),
+                ColumnDescription(name='float8_col', type_code=type_codes['float8']),
+                ColumnDescription(name='text_col', type_code=type_codes['text'])
             ]
 
             self.handler._cast_dtypes(df, description)
@@ -273,12 +278,6 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             'int2_col': ['1', None],
             'float4_col': ['1.1', None]
         })
-
-        # Create a proper description class to mimic psycopg cursor description items
-        class ColumnDescription:
-            def __init__(self, name, type_code):
-                self.name = name
-                self.type_code = type_code
 
         # Create type code mapping
         type_codes = {
@@ -309,8 +308,8 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
             # Set up description with our custom class
             description = [
-                ColumnDescription('int2_col', type_codes['int2']),
-                ColumnDescription('float4_col', type_codes['float4'])
+                ColumnDescription(name='int2_col', type_code=type_codes['int2']),
+                ColumnDescription(name='float4_col', type_code=type_codes['float4'])
             ]
 
             self.handler._cast_dtypes(df, description)
@@ -334,6 +333,30 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.handler.connect = MagicMock(return_value=mock_conn)
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
 
+        mock_pgresult = MagicMock()
+        mock_pgresult.status = ExecStatus.TUPLES_OK
+        mock_cursor.pgresult = mock_pgresult
+        mock_cursor.rowcount = 1
+        mock_cursor.fetchall = MagicMock(return_value=[
+            ['a', 'int', 1, None, 'YES', None, None, None, None, None, None, None],
+            ['b', 'int', 2, None, 'YES', None, None, None, None, None, None, None],
+            ['c', 'int', 3, None, 'YES', None, None, None, None, None, None, None]
+        ])
+        mock_cursor.description = [
+            ColumnDescription(name='COLUMN_NAME', type_code=23),
+            ColumnDescription(name='DATA_TYPE', type_code=23),
+            ColumnDescription(name='ORDINAL_POSITION', type_code=23),
+            ColumnDescription(name='COLUMN_DEFAULT', type_code=23),
+            ColumnDescription(name='IS_NULLABLE', type_code=23),
+            ColumnDescription(name='CHARACTER_MAXIMUM_LENGTH', type_code=23),
+            ColumnDescription(name='CHARACTER_OCTET_LENGTH', type_code=23),
+            ColumnDescription(name='NUMERIC_PRECISION', type_code=23),
+            ColumnDescription(name='NUMERIC_SCALE', type_code=23),
+            ColumnDescription(name='DATETIME_PRECISION', type_code=23),
+            ColumnDescription(name='CHARACTER_SET_NAME', type_code=23),
+            ColumnDescription(name='COLLATION_NAME', type_code=23),
+        ]
+
         # Create mock for copy operation
         copy_obj = MagicMock()
         mock_cursor.copy = MagicMock(return_value=copy_obj)
@@ -351,7 +374,8 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         # Verify copy was called with correct SQL
         copy_sql = 'copy "test_table" ("id","name") from STDIN WITH CSV'
         mock_cursor.copy.assert_called_once_with(copy_sql)
-        mock_conn.commit.assert_called_once()
+        # commit for get_columns and insert
+        self.assertEqual(mock_conn.commit.call_count, 2)
 
     def test_insert_error(self):
         """
@@ -365,6 +389,8 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         error_msg = "Table doesn't exist"
         error = psycopg.Error(error_msg)
+        # Before calling copy, get_columns is called
+        mock_cursor.execute = MagicMock(side_effect=error)
         mock_cursor.copy = MagicMock(side_effect=error)
 
         df = pd.DataFrame({
@@ -373,7 +399,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         })
 
         # Call the insert method and expect an exception
-        with self.assertRaises(psycopg.Error):
+        with self.assertRaisesRegex(ValueError, "Table doesn't exist"):
             self.handler.insert('nonexistent_table', df)
 
         mock_conn.rollback.assert_called()

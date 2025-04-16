@@ -17,24 +17,33 @@ async def run_conversation(agent_wrapper, messages: List[Dict[str, str]], stream
     """Run a conversation with the agent and print responses"""
     try:
         if stream:
-            print("Streaming response:")
+            logger.info("Streaming response:")
             async for chunk in agent_wrapper.acompletion_stream(messages):
                 content = chunk["choices"][0]["delta"].get("content", "")
                 if content:
-                    print(content, end="", flush=True)
-            print("\n")
+                    # We still need to print content for streaming display
+                    # but we'll log it as debug as well
+                    logger.debug(f"Stream content: {content}")
+                    sys.stdout.write(content)
+                    sys.stdout.flush()
+            logger.debug("End of stream")
+            sys.stdout.write("\n\n")
+            sys.stdout.flush()
         else:
-            print("Getting response...")
+            logger.info("Getting response...")
             response = await agent_wrapper.acompletion(messages)
-            print(response["choices"][0]["message"]["content"])
+            content = response["choices"][0]["message"]["content"]
+            logger.info(f"Response: {content}")
+            # We still need to display the response to the user
+            sys.stdout.write(f"{content}\n")
+            sys.stdout.flush()
     except Exception as e:
         logger.error(f"Error during agent conversation: {str(e)}")
-        print(f"Error: {str(e)}")
 
 
 async def execute_direct_query(query):
     """Execute a direct SQL query using MCP"""
-    print(f"Executing direct SQL query: {query}")
+    logger.info(f"Executing direct SQL query: {query}")
 
     # Set up MCP client to connect to the running server
     async with AsyncExitStack() as stack:
@@ -54,7 +63,8 @@ async def execute_direct_query(query):
 
             # List available tools
             tools_response = await session.list_tools()
-            print("Available tools:", [tool.name for tool in tools_response.tools])
+            tool_names = [tool.name for tool in tools_response.tools]
+            logger.info(f"Available tools: {tool_names}")
 
             # Find query tool
             query_tool = None
@@ -64,16 +74,15 @@ async def execute_direct_query(query):
                     break
 
             if not query_tool:
-                print("Error: No 'query' tool found")
+                logger.error("No 'query' tool found in MCP server")
                 return
 
             # Execute query
             result = await session.call_tool("query", {"query": query})
-            print("Result:", result.content)
+            logger.info(f"Query result: {result.content}")
         except Exception as e:
-            print(f"Error: {str(e)}")
-            print("\nMake sure the MindsDB server is running with MCP enabled:")
-            print("python -m mindsdb --api=mysql,mcp,http")
+            logger.error(f"Error executing query: {str(e)}")
+            logger.info("Make sure the MindsDB server is running with MCP enabled: python -m mindsdb --api=mysql,mcp,http")
 
 
 async def main():
@@ -103,9 +112,9 @@ async def main():
             parser.error("the --agent argument is required unless --execute-direct is used")
 
         # Create the agent
-        print(f"Creating MCP client agent for '{args.agent}' in project '{args.project}'")
-        print(f"Connecting to MCP server at {args.host}:{args.port}")
-        print("\n(Make sure MindsDB server is running with MCP enabled: python -m mindsdb --api=mysql,mcp,http)")
+        logger.info(f"Creating MCP client agent for '{args.agent}' in project '{args.project}'")
+        logger.info(f"Connecting to MCP server at {args.host}:{args.port}")
+        logger.info("Make sure MindsDB server is running with MCP enabled: python -m mindsdb --api=mysql,mcp,http")
 
         agent_wrapper = create_mcp_agent(
             agent_name=args.agent,
@@ -120,37 +129,53 @@ async def main():
             await run_conversation(agent_wrapper, messages, args.stream)
         else:
             # Interactive mode
-            print("\nEntering interactive mode. Type 'exit' to quit.")
-            print("\nAvailable commands:")
-            print("  exit, quit - Exit the program")
-            print("  clear - Clear conversation history")
-            print("  sql: <query> - Execute a direct SQL query via MCP")
+            logger.info("Entering interactive mode. Type 'exit' to quit.")
+            logger.info("Available commands: exit/quit, clear, sql:")
+
+            # We still need to show these instructions to the user
+            sys.stdout.write("\nEntering interactive mode. Type 'exit' to quit.\n")
+            sys.stdout.write("\nAvailable commands:\n")
+            sys.stdout.write("  exit, quit - Exit the program\n")
+            sys.stdout.write("  clear - Clear conversation history\n")
+            sys.stdout.write("  sql: <query> - Execute a direct SQL query via MCP\n")
+            sys.stdout.flush()
 
             messages = []
 
             while True:
+                # We need to keep input for user interaction
                 user_input = input("\nYou: ")
 
                 # Check for special commands
                 if user_input.lower() in ["exit", "quit"]:
+                    logger.info("Exiting interactive mode")
                     break
                 elif user_input.lower() == "clear":
                     messages = []
-                    print("Conversation history cleared")
+                    logger.info("Conversation history cleared")
+                    sys.stdout.write("Conversation history cleared\n")
+                    sys.stdout.flush()
                     continue
                 elif user_input.lower().startswith("sql:"):
                     # Direct SQL execution using the agent's session
                     sql_query = user_input[4:].strip()
-                    print(f"Executing SQL: {sql_query}")
+                    logger.info(f"Executing SQL: {sql_query}")
                     try:
                         # Use the tool from the agent
                         if hasattr(agent_wrapper.agent, "session") and agent_wrapper.agent.session:
                             result = await agent_wrapper.agent.session.call_tool("query", {"query": sql_query})
-                            print("Result:", result.content)
+                            logger.info(f"SQL result: {result.content}")
+                            # We need to show the result to the user
+                            sys.stdout.write(f"Result: {result.content}\n")
+                            sys.stdout.flush()
                         else:
-                            print("Error: No active MCP session")
+                            logger.error("No active MCP session")
+                            sys.stdout.write("Error: No active MCP session\n")
+                            sys.stdout.flush()
                     except Exception as e:
-                        print(f"SQL Error: {str(e)}")
+                        logger.error(f"SQL Error: {str(e)}")
+                        sys.stdout.write(f"SQL Error: {str(e)}\n")
+                        sys.stdout.flush()
                     continue
 
                 messages.append({"role": "user", "content": user_input})
@@ -165,13 +190,12 @@ async def main():
                     })
 
         # Clean up resources
+        logger.info("Cleaning up resources")
         await agent_wrapper.cleanup()
 
     except Exception as e:
         logger.error(f"Error running MCP agent: {str(e)}")
-        print(f"Error: {str(e)}")
-        print("\nMake sure the MindsDB server is running with MCP enabled:")
-        print("python -m mindsdb --api=mysql,mcp,http")
+        logger.info("Make sure the MindsDB server is running with MCP enabled: python -m mindsdb --api=mysql,mcp,http")
         return 1
 
     return 0

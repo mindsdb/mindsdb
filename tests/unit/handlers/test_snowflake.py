@@ -371,5 +371,6 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         del self.handler.native_query
 
+
 if __name__ == '__main__':
     unittest.main()

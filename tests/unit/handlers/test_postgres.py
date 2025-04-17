@@ -372,8 +372,8 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ['col1', 'type1']
         ])
         mock_cursor.description = [
-            ColumnDescription('Field', 23),
-            ColumnDescription('Type', 23)
+            ColumnDescription(name='Field', type_code=23),
+            ColumnDescription(name='Type', type_code=23)
         ]
         # endregino
 

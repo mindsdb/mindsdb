@@ -11,6 +11,7 @@ from langchain.retrievers.document_compressors.base import BaseDocumentCompresso
 from langchain_core.callbacks import Callbacks, dispatch_custom_event
 from langchain_core.documents import Document
 from openai import AsyncOpenAI, AsyncAzureOpenAI
+from pydantic import field_validator
 
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RERANKING_MODEL, DEFAULT_LLM_ENDPOINT
 
@@ -40,6 +41,15 @@ class LLMReranker(BaseDocumentCompressor):
 
     class Config:
         arbitrary_types_allowed = True
+
+    @field_validator('provider')
+    @classmethod
+    def validate_provider(cls, v: str) -> str:
+        allowed = {'openai', 'azure_openai', 'azureopenai'}
+        v_lower = v.lower()
+        if v_lower not in allowed:
+            raise ValueError(f"Unsupported provider: {v}.")
+        return v_lower
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

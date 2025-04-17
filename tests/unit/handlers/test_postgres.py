@@ -369,11 +369,22 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_pgresult.status = ExecStatus.TUPLES_OK
         mock_cursor.pgresult = mock_pgresult
         mock_cursor.fetchall = MagicMock(return_value=[
-            ['col1', 'type1']
+            ['id', 'int', 1, None, 'YES', None, None, None, None, None, None, None],
+            ['name', 'text', 2, None, 'YES', None, None, None, None, None, None, None],
         ])
         mock_cursor.description = [
-            ColumnDescription(name='Field', type_code=23),
-            ColumnDescription(name='Type', type_code=23)
+            ColumnDescription(name='COLUMN_NAME', type_code=23),
+            ColumnDescription(name='DATA_TYPE', type_code=23),
+            ColumnDescription(name='ORDINAL_POSITION', type_code=23),
+            ColumnDescription(name='COLUMN_DEFAULT', type_code=23),
+            ColumnDescription(name='IS_NULLABLE', type_code=23),
+            ColumnDescription(name='CHARACTER_MAXIMUM_LENGTH', type_code=23),
+            ColumnDescription(name='CHARACTER_OCTET_LENGTH', type_code=23),
+            ColumnDescription(name='NUMERIC_PRECISION', type_code=23),
+            ColumnDescription(name='NUMERIC_SCALE', type_code=23),
+            ColumnDescription(name='DATETIME_PRECISION', type_code=23),
+            ColumnDescription(name='CHARACTER_SET_NAME', type_code=23),
+            ColumnDescription(name='COLLATION_NAME', type_code=23),
         ]
         # endregino
 

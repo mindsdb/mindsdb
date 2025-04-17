@@ -364,6 +364,30 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         copy_obj.__enter__ = MagicMock(return_value=copy_obj)
         copy_obj.__exit__ = MagicMock(return_value=None)
 
+        # region add result for 'get_columns' call
+        mock_pgresult = MagicMock()
+        mock_pgresult.status = ExecStatus.TUPLES_OK
+        mock_cursor.pgresult = mock_pgresult
+        mock_cursor.fetchall = MagicMock(return_value=[
+            ['id', 'int', 1, None, 'YES', None, None, None, None, None, None, None],
+            ['name', 'text', 2, None, 'YES', None, None, None, None, None, None, None],
+        ])
+        mock_cursor.description = [
+            ColumnDescription(name='COLUMN_NAME', type_code=23),
+            ColumnDescription(name='DATA_TYPE', type_code=23),
+            ColumnDescription(name='ORDINAL_POSITION', type_code=23),
+            ColumnDescription(name='COLUMN_DEFAULT', type_code=23),
+            ColumnDescription(name='IS_NULLABLE', type_code=23),
+            ColumnDescription(name='CHARACTER_MAXIMUM_LENGTH', type_code=23),
+            ColumnDescription(name='CHARACTER_OCTET_LENGTH', type_code=23),
+            ColumnDescription(name='NUMERIC_PRECISION', type_code=23),
+            ColumnDescription(name='NUMERIC_SCALE', type_code=23),
+            ColumnDescription(name='DATETIME_PRECISION', type_code=23),
+            ColumnDescription(name='CHARACTER_SET_NAME', type_code=23),
+            ColumnDescription(name='COLLATION_NAME', type_code=23),
+        ]
+        # endregino
+
         df = pd.DataFrame({
             'id': [1, 2, 3],
             'name': ['a', 'b', 'c']

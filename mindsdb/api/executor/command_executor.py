@@ -869,6 +869,12 @@ class ExecuteCommands:
                 raise WrongArgumentError(f'Unknown describe type: {obj_type}')
 
         parts = obj_name.parts
+        if len(parts) > 2:
+            raise WrongArgumentError(
+                f"Invalid object name: {obj_name.to_string()}.\n"
+                "Only models support three-part namespaces."
+            )
+
         name = parts[-1]
         where = BinaryOperation(op='=', args=[
             Identifier('name'),

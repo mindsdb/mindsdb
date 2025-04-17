@@ -119,7 +119,7 @@ class HandlerResponse:
                  "error": self.error_message}
 
     def __repr__(self):
-        return "%s: resp_type=%s, query=%s, data_frame=%s, err_code=%s, error=%s, affected_rows=%s" % (
+        return "%s: resp_type=%s, query=%s, data_frame=\n%s\nerr_code=%s, error=%s, affected_rows=%s" % (
                 self.__class__.__name__,
                 self.resp_type,
                 self.query,

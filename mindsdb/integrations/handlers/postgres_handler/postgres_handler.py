@@ -1,6 +1,6 @@
 import time
 import json
-from typing import Optional
+from typing import Optional, Any
 import threading
 
 import pandas as pd
@@ -66,7 +66,7 @@ def _map_type(internal_type_name: str | None) -> MYSQL_DATA_TYPE:
     return fallback_type
 
 
-def _make_table_response(result: list[dict], cursor: Cursor) -> Response:
+def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
     # 1. cast response types to correct python's types
     # 2. create DataFrame with correct columns and dtypes
     # 3. add MySQL types to response

@@ -133,7 +133,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertTrue(response.success)
         self.assertIsNone(response.error_message)
 
-        self.handler.connect = MagicMock() # Reset connect mock
+        self.handler.connect = MagicMock()
         connect_error = snowflake.connector.errors.Error("Connection error")
         self.handler.connect.side_effect = connect_error
 
@@ -157,7 +157,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.handler.connect = MagicMock(return_value=mock_conn)
         mock_conn.cursor.return_value = mock_cursor
 
-        expected_columns = ['ID', 'NAME'] # Snowflake often returns uppercase
+        expected_columns = ['ID', 'NAME']
         batch1_data = [(1, 'test1')]
         batch2_data = [(2, 'test2')]
         mock_df_batch1 = DataFrame(batch1_data, columns=expected_columns)
@@ -202,8 +202,6 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         self.handler.connect = MagicMock(return_value=mock_conn)
         mock_conn.cursor.return_value = mock_cursor
-
-
         mock_cursor.description = None
         mock_cursor.fetch_pandas_batches.side_effect = snowflake.connector.errors.NotSupportedError()
         mock_cursor.fetchall.return_value = [{'number of rows inserted': 1}]
@@ -212,7 +210,6 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         query_str = "INSERT INTO test_table VALUES (1, 'test')"
         data = self.handler.native_query(query_str)
 
- 
         mock_conn.cursor.assert_called_once_with(snowflake.connector.DictCursor)
         mock_cursor.execute.assert_called_once_with(query_str)
         mock_cursor.fetch_pandas_batches.assert_called_once()
@@ -254,7 +251,6 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         mock_conn.rollback.assert_not_called()
         mock_conn.commit.assert_not_called()
-
 
     def test_query_method(self):
         """

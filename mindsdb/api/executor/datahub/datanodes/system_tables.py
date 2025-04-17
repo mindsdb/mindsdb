@@ -1,5 +1,5 @@
 from typing import Optional, Literal
-from dataclasses import dataclass, astuple, fields
+from dataclasses import dataclass, fields
 
 import pandas as pd
 from mindsdb_sql_parser.ast.base import ASTNode
@@ -7,11 +7,10 @@ from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb.utilities import log
 from mindsdb.utilities.config import config
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
-from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
-from mindsdb.api.executor.datahub.classes.tables_row import (
-    TABLES_ROW_TYPE,
-    TablesRow,
-)
+from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE, MYSQL_DATA_TYPE_COLUMNS_DEFAULT
+from mindsdb.api.executor.datahub.classes.tables_row import TABLES_ROW_TYPE, TablesRow
+
 
 logger = log.getLogger(__name__)
 
@@ -165,11 +164,36 @@ class TablesTable(Table):
         return df
 
 
-@dataclass
+def infer_mysql_type(original_type: str) -> MYSQL_DATA_TYPE:
+    """Infer MySQL data type from original type string from a database.
+
+    Args:
+        original_type (str): The original type string from a database.
+
+    Returns:
+        MYSQL_DATA_TYPE: The inferred MySQL data type.
+    """
+    match original_type.lower():
+        case 'double precision' | 'real' | 'numeric' | 'float':
+            data_type = MYSQL_DATA_TYPE.FLOAT
+        case 'integer' | 'smallint' | 'int' | 'bigint':
+            data_type = MYSQL_DATA_TYPE.BIGINT
+        case 'timestamp without time zone' | 'timestamp with time zone' | 'date' | 'timestamp':
+            data_type = MYSQL_DATA_TYPE.DATETIME
+        case _:
+            data_type = MYSQL_DATA_TYPE.VARCHAR
+    return data_type
+
+
+@dataclass(slots=True, kw_only=True)
 class ColumnsTableRow:
-    """Represents a row in the COLUMNS table.
-    Fields description: https://dev.mysql.com/doc/refman/8.4/en/information-schema-columns-table.html
-    NOTE: attrs order matter, don't change it.
+    """Represents a row in the MindsDB's internal INFORMATION_SCHEMA.COLUMNS table.
+    This class follows the MySQL-compatible COLUMNS table structure.
+
+    Detailed field descriptions can be found in MySQL documentation:
+    https://dev.mysql.com/doc/refman/8.4/en/information-schema-columns-table.html
+
+    NOTE: The order of attributes is significant and matches the MySQL column order.
     """
     TABLE_CATALOG: Literal['def'] = 'def'
     TABLE_SCHEMA: Optional[str] = None
@@ -192,73 +216,81 @@ class ColumnsTableRow:
     PRIVILEGES: str = 'select'
     COLUMN_COMMENT: Optional[str] = None
     GENERATION_EXPRESSION: Optional[str] = None
+    SRS_ID: Optional[str] = None
+    # MindsDB's specific columns:
+    ORIGINAL_TYPE: Optional[str] = None
+
+    @classmethod
+    def from_is_columns_row(cls, table_schema: str, table_name: str, row: pd.Series) -> 'ColumnsTableRow':
+        """Transform row from response of `handler.get_columns(...)` to internal information_schema.columns row.
+
+        Args:
+            table_schema (str): The name of the schema of the table which columns are described.
+            table_name (str): The name of the table which columns are described.
+            row (pd.Series): A row from the response of `handler.get_columns(...)`.
+
+        Returns:
+            ColumnsTableRow: A row in the MindsDB's internal INFORMATION_SCHEMA.COLUMNS table.
+        """
+        original_type: str = row[INF_SCHEMA_COLUMNS_NAMES.DATA_TYPE] or ''
+        data_type: MYSQL_DATA_TYPE | None = row[INF_SCHEMA_COLUMNS_NAMES.MYSQL_DATA_TYPE]
+        if isinstance(data_type, MYSQL_DATA_TYPE) is False:
+            data_type = infer_mysql_type(original_type)
+
+        # region set default values depend on type
+        defaults = MYSQL_DATA_TYPE_COLUMNS_DEFAULT.get(data_type)
+        if defaults is not None:
+            for key, value in defaults.items():
+                if key in row and row[key] is None:
+                    row[key] = value
+
+        # region determine COLUMN_TYPE - it is text representation of DATA_TYPE with additioan attributes
+        match data_type:
+            case MYSQL_DATA_TYPE.DECIMAL:
+                column_type = f'decimal({row[INF_SCHEMA_COLUMNS_NAMES.NUMERIC_PRECISION]},{INF_SCHEMA_COLUMNS_NAMES.NUMERIC_SCALE})'
+            case MYSQL_DATA_TYPE.VARCHAR:
+                column_type = f'varchar({row[INF_SCHEMA_COLUMNS_NAMES.CHARACTER_MAXIMUM_LENGTH]})'
+            case MYSQL_DATA_TYPE.VARBINARY:
+                column_type = f'varbinary({row[INF_SCHEMA_COLUMNS_NAMES.CHARACTER_MAXIMUM_LENGTH]})'
+            case MYSQL_DATA_TYPE.BIT | MYSQL_DATA_TYPE.BINARY | MYSQL_DATA_TYPE.CHAR:
+                column_type = f'{data_type.value.lower()}(1)'
+            case MYSQL_DATA_TYPE.BOOL | MYSQL_DATA_TYPE.BOOLEAN:
+                column_type = 'tinyint(1)'
+            case _:
+                column_type = data_type.value.lower()
+        # endregion
+
+        # BOOLean types had 'tinyint' DATA_TYPE in MySQL
+        if data_type in (MYSQL_DATA_TYPE.BOOL, MYSQL_DATA_TYPE.BOOLEAN):
+            data_type = 'tinyint'
+        else:
+            data_type = data_type.value.lower()
+
+        return cls(
+            TABLE_SCHEMA=table_schema,
+            TABLE_NAME=table_name,
+            COLUMN_NAME=row[INF_SCHEMA_COLUMNS_NAMES.COLUMN_NAME],
+            ORDINAL_POSITION=row[INF_SCHEMA_COLUMNS_NAMES.ORDINAL_POSITION],
+            COLUMN_DEFAULT=row[INF_SCHEMA_COLUMNS_NAMES.COLUMN_DEFAULT],
+            IS_NULLABLE=row[INF_SCHEMA_COLUMNS_NAMES.IS_NULLABLE],
+            DATA_TYPE=data_type,
+            CHARACTER_MAXIMUM_LENGTH=row[INF_SCHEMA_COLUMNS_NAMES.CHARACTER_MAXIMUM_LENGTH],
+            CHARACTER_OCTET_LENGTH=row[INF_SCHEMA_COLUMNS_NAMES.CHARACTER_OCTET_LENGTH],
+            NUMERIC_PRECISION=row[INF_SCHEMA_COLUMNS_NAMES.NUMERIC_PRECISION],
+            NUMERIC_SCALE=row[INF_SCHEMA_COLUMNS_NAMES.NUMERIC_SCALE],
+            DATETIME_PRECISION=row[INF_SCHEMA_COLUMNS_NAMES.DATETIME_PRECISION],
+            CHARACTER_SET_NAME=row[INF_SCHEMA_COLUMNS_NAMES.CHARACTER_SET_NAME],
+            COLLATION_NAME=row[INF_SCHEMA_COLUMNS_NAMES.COLLATION_NAME],
+            COLUMN_TYPE=column_type,
+            ORIGINAL_TYPE=original_type
+        )
 
     def __post_init__(self):
-        # region check mandatory fields
+        """Check if all mandatory fields are filled.
+        """
         mandatory_fields = ['TABLE_SCHEMA', 'TABLE_NAME', 'COLUMN_NAME']
         if any(getattr(self, field_name) is None for field_name in mandatory_fields):
             raise ValueError('One of mandatory fields is missed when creating ColumnsTableRow')
-        # endregion
-
-        # region set default values depend on type
-        defaults = {
-            'COLUMN_TYPE': self.DATA_TYPE
-        }
-        if MYSQL_DATA_TYPE(self.DATA_TYPE) in (
-            MYSQL_DATA_TYPE.TIMESTAMP,
-            MYSQL_DATA_TYPE.DATETIME,
-            MYSQL_DATA_TYPE.DATE
-        ):
-            defaults = {
-                'DATETIME_PRECISION': 0,
-                'COLUMN_TYPE': self.DATA_TYPE
-            }
-        elif MYSQL_DATA_TYPE(self.DATA_TYPE) in (
-            MYSQL_DATA_TYPE.FLOAT,
-            MYSQL_DATA_TYPE.DOUBLE,
-            MYSQL_DATA_TYPE.DECIMAL
-        ):
-            defaults = {
-                'NUMERIC_PRECISION': 12,
-                'NUMERIC_SCALE': 0,
-                'COLUMN_TYPE': self.DATA_TYPE
-            }
-        elif MYSQL_DATA_TYPE(self.DATA_TYPE) in (
-            MYSQL_DATA_TYPE.TINYINT,
-            MYSQL_DATA_TYPE.SMALLINT,
-            MYSQL_DATA_TYPE.MEDIUMINT,
-            MYSQL_DATA_TYPE.INT,
-            MYSQL_DATA_TYPE.BIGINT
-        ):
-            defaults = {
-                'NUMERIC_PRECISION': 20,
-                'NUMERIC_SCALE': 0,
-                'COLUMN_TYPE': self.DATA_TYPE
-            }
-        elif MYSQL_DATA_TYPE(self.DATA_TYPE) is MYSQL_DATA_TYPE.VARCHAR:
-            defaults = {
-                'CHARACTER_MAXIMUM_LENGTH': 1024,
-                'CHARACTER_OCTET_LENGTH': 3072,
-                'CHARACTER_SET_NAME': 'utf8',
-                'COLLATION_NAME': 'utf8_bin',
-                'COLUMN_TYPE': 'varchar(1024)'
-            }
-        else:
-            # show as MYSQL_DATA_TYPE.TEXT:
-            defaults = {
-                'CHARACTER_MAXIMUM_LENGTH': 65535,      # from https://bugs.mysql.com/bug.php?id=90685
-                'CHARACTER_OCTET_LENGTH': 65535,        #
-                'CHARACTER_SET_NAME': 'utf8',
-                'COLLATION_NAME': 'utf8_bin',
-                'COLUMN_TYPE': 'text'
-            }
-
-        for key, value in defaults.items():
-            setattr(self, key, value)
-
-        self.DATA_TYPE = self.DATA_TYPE.lower()
-        self.COLUMN_TYPE = self.COLUMN_TYPE.lower()
-        # endregion
 
 
 class ColumnsTable(Table):
@@ -266,9 +298,7 @@ class ColumnsTable(Table):
     columns = [field.name for field in fields(ColumnsTableRow)]
 
     @classmethod
-    def get_data(cls, inf_schema=None, query: ASTNode = None, **kwargs):
-        result = []
-
+    def get_data(cls, inf_schema=None, query: ASTNode = None, **kwargs) -> pd.DataFrame:
         databases, tables_names = _get_scope(query)
 
         if databases is None:
@@ -278,6 +308,7 @@ class ColumnsTable(Table):
                 'files'
             ]
 
+        result = []
         for db_name in databases:
             tables = {}
             if db_name == 'information_schema':
@@ -293,43 +324,19 @@ class ColumnsTable(Table):
                 if tables_names is None:
                     tables_names = [t.TABLE_NAME for t in dn.get_tables()]
                 for table_name in tables_names:
-                    tables[table_name] = dn.get_table_columns(table_name)
+                    tables[table_name] = dn.get_table_columns_df(table_name)
 
-            for table_name, table_columns in tables.items():
-                for i, column in enumerate(table_columns):
-                    column_name = column['name']
-                    column_type = column.get('type', 'text')
-
-                    # region infer type
-                    if isinstance(column_type, MYSQL_DATA_TYPE) is False:
-                        if column_type in ('double precision', 'real', 'numeric', 'float'):
-                            column_type = MYSQL_DATA_TYPE.FLOAT
-                        elif column_type in ('integer', 'smallint', 'int', 'bigint'):
-                            column_type = MYSQL_DATA_TYPE.BIGINT
-                        elif column_type in (
-                            'timestamp without time zone',
-                            'timestamp with time zone',
-                            'date', 'timestamp'
-                        ):
-                            column_type = MYSQL_DATA_TYPE.DATETIME
-                        else:
-                            column_type = MYSQL_DATA_TYPE.VARCHAR
-                    # endregion
-
-                    column_row = astuple(
-                        ColumnsTableRow(
-                            TABLE_SCHEMA=db_name,
-                            TABLE_NAME=table_name,
-                            COLUMN_NAME=column_name,
-                            DATA_TYPE=column_type.value,
-                            ORDINAL_POSITION=i
+            for table_name, table_columns_df in tables.items():
+                for _, row in table_columns_df.iterrows():
+                    result.append(
+                        ColumnsTableRow.from_is_columns_row(
+                            table_schema=db_name,
+                            table_name=table_name,
+                            row=row
                         )
                     )
 
-                    result.append(column_row)
-
-        df = pd.DataFrame(result, columns=cls.columns)
-        return df
+        return pd.DataFrame(result, columns=cls.columns)
 
 
 class EventsTable(Table):

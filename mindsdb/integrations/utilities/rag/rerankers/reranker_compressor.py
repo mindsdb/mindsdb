@@ -45,7 +45,7 @@ class LLMReranker(BaseDocumentCompressor):
     @field_validator('provider')
     @classmethod
     def validate_provider(cls, v: str) -> str:
-        allowed = {'openai', 'azure_openai', 'azureopenai'}
+        allowed = {'openai', 'azure_openai'}
         v_lower = v.lower()
         if v_lower not in allowed:
             raise ValueError(f"Unsupported provider: {v}.")

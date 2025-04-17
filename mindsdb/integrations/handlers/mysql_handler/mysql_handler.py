@@ -45,6 +45,10 @@ def _make_table_response(result: list[dict], cursor: mysql.connector.cursor.MySQ
     mysql_types: list[MYSQL_DATA_TYPE] = []
     for col in description:
         type_int = col[1]
+        if isinstance(type_int, int) is False:
+            mysql_types.append(MYSQL_DATA_TYPE.TEXT)
+            continue
+
         if type_int == C_TYPES.MYSQL_TYPE_TINY:
             # There are 3 types that returns as TINYINT: TINYINT, BOOL, BOOLEAN.
             mysql_types.append(MYSQL_DATA_TYPE.TINYINT)

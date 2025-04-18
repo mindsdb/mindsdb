@@ -60,7 +60,7 @@ def start(verbose=False):
     result = loop.run_until_complete(start_async(verbose))
 
     if result == 0:
-        # Run the server (this is blocking)
+        # Run the server
         config = Config()
         agent_name = config.cmd_args.agent
         project_name = config.cmd_args.project or "mindsdb"

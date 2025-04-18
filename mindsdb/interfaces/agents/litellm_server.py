@@ -1,10 +1,13 @@
 import asyncio
 import argparse
+import json
+
 from typing import List, Dict, Optional, Any, Union
 from contextlib import AsyncExitStack
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from mcp import ClientSession, StdioServerParameters
@@ -66,7 +69,7 @@ class DirectSQLRequest(BaseModel):
     query: str
 
 
-@app.post("/v1/chat/completions", response_model=Union[ChatCompletionResponse, Any])
+@app.post("/v1/chat/completions")
 async def chat_completions(request: ChatCompletionRequest):
     global agent_wrapper
 
@@ -83,12 +86,14 @@ async def chat_completions(request: ChatCompletionRequest):
         if request.stream:
             # Return a streaming response
             async def generate():
-                async for chunk in agent_wrapper.acompletion_stream(messages):
-                    # Format as SSE event
-                    yield f"data: {chunk}\n\n"
-                yield "data: [DONE]\n\n"
-
-            return generate()
+                try:
+                    async for chunk in agent_wrapper.acompletion_stream(messages, model=request.model):
+                        yield f"data: {json.dumps(chunk)}\n\n"
+                    yield "data: [DONE]\n\n"
+                except Exception as e:
+                    logger.error(f"Streaming error: {str(e)}")
+                    yield f"data: {{'error': 'Streaming failed: {str(e)}'}}\n\n"
+            return StreamingResponse(generate(), media_type="text/event-stream")
         else:
             # Return a regular response
             response = await agent_wrapper.acompletion(messages)
@@ -96,10 +101,7 @@ async def chat_completions(request: ChatCompletionRequest):
             # Ensure the content is a string
             content = response["choices"][0]["message"].get("content", "")
             if not isinstance(content, str):
-                if hasattr(content, 'to_string'):  # It's a DataFrame
-                    content = content.to_string()
-                else:
-                    content = str(content)
+                content = str(content)
 
             # Transform to proper OpenAI format
             return ChatCompletionResponse(

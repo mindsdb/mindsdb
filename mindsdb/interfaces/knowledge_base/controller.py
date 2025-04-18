@@ -53,6 +53,18 @@ KB_TO_VECTORDB_COLUMNS = {
 }
 
 
+def get_model_params(model_params: dict, default_config_key: str):
+    """
+    Get model parameters by combining default config with user provided parameters.
+    """
+    combined_model_params = config.get(default_config_key, {})
+
+    if model_params:
+        combined_model_params.update(model_params)
+
+    return combined_model_params
+
+
 def get_embedding_model_from_params(embedding_model_params: dict):
     """
     Create embedding model from parameters.
@@ -217,7 +229,7 @@ class KnowledgeBaseTable:
     def add_relevance(self, df, query_text, relevance_threshold=None):
         relevance_column = TableField.RELEVANCE.value
 
-        reranking_model_params = self._kb.params.get("reranking_model") or config.get("default_llm")
+        reranking_model_params = get_model_params(self._kb.params.get("reranking_model"), "default_llm")
         if reranking_model_params and query_text and len(df) > 0:
             # Use reranker for relevance score
             try:
@@ -657,7 +669,7 @@ class KnowledgeBaseTable:
         df = df[[TableField.CONTENT.value]]
 
         model_id = self._kb.embedding_model_id
-        embedding_model_params = self._kb.params.get('embedding_model') or config.get('default_embedding_model', None)
+        embedding_model_params = get_model_params(self._kb.params.get('embedding_model', {}), 'default_embedding_model')
         if model_id:
             # get the input columns
             model_rec = db.session.query(db.Predictor).filter_by(id=model_id).first()
@@ -725,7 +737,7 @@ class KnowledgeBaseTable:
         """
         # Get embedding model from knowledge base
         embeddings_model = None
-        embedding_model_params = self._kb.params.get('embedding_model') or config.get('default_embedding_model', None)
+        embedding_model_params = get_model_params(self._kb.params.get('embedding_model', {}), 'default_embedding_model')
         if self._kb.embedding_model:
             # Extract embedding model args from knowledge base table
             embedding_args = self._kb.embedding_model.learn_args.get('using', {})
@@ -867,8 +879,8 @@ class KnowledgeBaseController:
                 return kb
             raise EntityExistsError("Knowledge base already exists", name)
 
-        embedding_model_params = params.get('embedding_model', None) or config.get('default_embedding_model', None)
-        reranking_model_params = params.get('reranking_model', None) or config.get('default_llm', None)
+        embedding_model_params = get_model_params(params.get('embedding_model', {}), 'default_embedding_model')
+        reranking_model_params = get_model_params(params.get('reranking_model', {}), 'default_reranking_model')
 
         if embedding_model:
             model_name = embedding_model.parts[-1]

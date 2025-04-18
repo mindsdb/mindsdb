@@ -66,6 +66,11 @@ def get_embedding_model_from_params(embedding_model_params: dict):
     if provider == 'azure_openai':
         # Azure OpenAI expects the api_key to be passed as 'openai_api_key'.
         params_copy['openai_api_key'] = api_key
+        params_copy['azure_endpoint'] = params_copy.pop('base_url')
+        if 'chunk_size' not in params_copy:
+            params_copy['chunk_size'] = 2048
+        if 'api_version' in params_copy:
+            params_copy['openai_api_version'] = params_copy['api_version']
     else:
         params_copy[f"{provider}_api_key"] = api_key
     params_copy.pop('api_key', None)
@@ -79,11 +84,11 @@ def get_reranking_model_from_params(reranking_model_params: dict):
     Create reranking model from parameters.
     """
     params_copy = copy.deepcopy(reranking_model_params)
-    provider = params_copy.pop('provider', "openai").lower()
-    if provider != 'openai':
-        raise ValueError("Only OpenAI provider is supported for the reranking model.")
-    params_copy[f"{provider}_api_key"] = get_api_key(provider, params_copy, strict=False) or params_copy.get('api_key')
-    params_copy.pop('api_key', None)
+    provider = params_copy.get('provider', "openai").lower()
+    if provider not in ('openai', 'azure_openai'):
+        raise ValueError("Only OpenAI and AzureOpenAI provider are supported for the reranking model.")
+    if "api_key" not in params_copy:
+        params_copy["api_key"] = get_api_key(provider, params_copy, strict=False)
     params_copy['model'] = params_copy.pop('model_name', None)
 
     return LLMReranker(**params_copy)
@@ -155,19 +160,19 @@ class KnowledgeBaseTable:
         # extract values from conditions and prepare for vectordb
         conditions = []
         query_text = None
-        reranking_threshold = None
+        relevance_threshold = None
         query_conditions = db_handler.extract_conditions(query.where)
         if query_conditions is not None:
             for item in query_conditions:
-                if item.column == "reranking_threshold" and item.op.value == "=":
+                if item.column == "relevance_threshold" and item.op.value == "=":
                     try:
-                        reranking_threshold = float(item.value)
+                        relevance_threshold = float(item.value)
                         # Validate range: must be between 0 and 1
-                        if not (0 <= reranking_threshold <= 1):
-                            raise ValueError(f"reranking_threshold must be between 0 and 1, got: {reranking_threshold}")
-                        logger.debug(f"Found reranking_threshold in query: {reranking_threshold}")
+                        if not (0 <= relevance_threshold <= 1):
+                            raise ValueError(f"relevance_threshold must be between 0 and 1, got: {relevance_threshold}")
+                        logger.debug(f"Found relevance_threshold in query: {relevance_threshold}")
                     except (ValueError, TypeError) as e:
-                        error_msg = f"Invalid reranking_threshold value: {item.value}. {str(e)}"
+                        error_msg = f"Invalid relevance_threshold value: {item.value}. {str(e)}"
                         logger.error(error_msg)
                         raise ValueError(error_msg)
                 elif item.column == TableField.CONTENT.value:
@@ -185,6 +190,16 @@ class KnowledgeBaseTable:
         logger.debug(f"Extracted query text: {query_text}")
 
         self.addapt_conditions_columns(conditions)
+
+        # Set default limit if query is present
+        if query_text is not None:
+            limit = query.limit.value if query.limit is not None else None
+            if limit is None:
+                limit = 10
+            elif limit > 100:
+                limit = 100
+            query.limit = Constant(limit)
+
         df = db_handler.dispatch_select(query, conditions)
         df = self.addapt_result_columns(df)
 
@@ -192,14 +207,14 @@ class KnowledgeBaseTable:
         logger.debug(f"Columns in response: {df.columns.tolist()}")
         # Check if we have a rerank_model configured in KB params
 
-        df = self.add_relevance(df, query_text, reranking_threshold)
+        df = self.add_relevance(df, query_text, relevance_threshold)
 
         # filter by targets
         if requested_kb_columns is not None:
             df = df[requested_kb_columns]
         return df
 
-    def add_relevance(self, df, query_text, reranking_threshold=None):
+    def add_relevance(self, df, query_text, relevance_threshold=None):
         relevance_column = TableField.RELEVANCE.value
 
         reranking_model_params = self._kb.params.get("reranking_model") or config.get("default_llm")
@@ -208,9 +223,9 @@ class KnowledgeBaseTable:
             try:
                 logger.info(f"Using knowledge reranking model from params: {reranking_model_params}")
                 # Apply custom filtering threshold if provided
-                if reranking_threshold is not None:
-                    reranking_model_params["filtering_threshold"] = reranking_threshold
-                    logger.info(f"Using custom filtering threshold: {reranking_threshold}")
+                if relevance_threshold is not None:
+                    reranking_model_params["filtering_threshold"] = relevance_threshold
+                    logger.info(f"Using custom filtering threshold: {relevance_threshold}")
 
                 reranker = get_reranking_model_from_params(reranking_model_params)
                 # Get documents to rerank
@@ -236,8 +251,8 @@ class KnowledgeBaseTable:
             # Calculate relevance from distance
             logger.info("Calculating relevance from vector distance")
             df[relevance_column] = 1 / (1 + df['distance'])
-            if reranking_threshold is not None:
-                df = df[df[relevance_column] > reranking_threshold]
+            if relevance_threshold is not None:
+                df = df[df[relevance_column] > relevance_threshold]
 
         else:
             df[relevance_column] = None
@@ -333,12 +348,21 @@ class KnowledgeBaseTable:
 
         emb_col = TableField.EMBEDDINGS.value
         cont_col = TableField.CONTENT.value
+
+        db_handler = self.get_vector_db()
+        conditions = db_handler.extract_conditions(query.where)
+        doc_id = None
+        for condition in conditions:
+            if condition.column == 'chunk_id' and condition.op == FilterOperator.EQUAL:
+                doc_id = condition.value
+
         if cont_col in query.update_columns:
             content = query.update_columns[cont_col]
 
             # Apply preprocessing to content if configured
             if self.document_preprocessor:
                 doc = Document(
+                    id=doc_id,
                     content=content.value,
                     metadata={}  # Empty metadata for content-only updates
                 )
@@ -354,8 +378,6 @@ class KnowledgeBaseTable:
         query.table = Identifier(parts=[self._kb.vector_database_table])
 
         # send to vectordb
-        db_handler = self.get_vector_db()
-        conditions = db_handler.extract_conditions(query.where)
         self.addapt_conditions_columns(conditions)
         db_handler.dispatch_update(query, conditions)
 

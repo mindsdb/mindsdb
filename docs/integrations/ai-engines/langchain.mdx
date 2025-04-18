@@ -52,7 +52,8 @@ USING
       engine = 'langchain_engine',           -- engine name as created via CREATE ML_ENGINE
       <provider>_api_key = 'api-key-value',  -- if not provided in CREATE ML_ENGINE (replace <provider> with one of the available values)
       model_name = 'model-name',             -- optional, model to be used (for example, 'gpt-4' if 'openai_api_key' provided)
-      prompt_template = 'message to the model that may include some {{input}} columns as variables';
+      prompt_template = 'message to the model that may include some {{input}} columns as variables',
+      max_tokens = 4096; -- defines the maximum number of tokens
 ```
 
 <Info>
@@ -102,7 +103,8 @@ USING
      user_column = 'question',          -- column name that stores input from the user
      assistant_column = 'answer',       -- column name that stores output of the model (see PREDICT column)
      verbose = True,
-     prompt_template = 'Answer the users input in a helpful way: {{question}}';
+     prompt_template = 'Answer the users input in a helpful way: {{question}}',
+     max_tokens = 4096;
 ```
 </Accordion>
 
@@ -124,7 +126,8 @@ USING
      user_column = 'question',             -- column name that stores input from the user
      assistant_column = 'answer',          -- column name that stores output of the model (see PREDICT column)
      verbose = True,
-     prompt_template = 'Answer the users input in a helpful way: {{question}}';
+     prompt_template = 'Answer the users input in a helpful way: {{question}}',
+     max_tokens = 4096;
 ```
 </Accordion>
 
@@ -147,7 +150,8 @@ USING
      assistant_column = 'answer',       -- column name that stores output of the model (see PREDICT column) 
      base_url = 'https://api.endpoints.anyscale.com/v1',
      verbose = True,
-     prompt_template = 'Answer the users input in a helpful way: {{question}}';
+     prompt_template = 'Answer the users input in a helpful way: {{question}}',
+     max_tokens = 4096;
 ```
 </Accordion>
 
@@ -166,7 +170,8 @@ USING
      user_column = 'question',          -- column name that stores input from the user
      assistant_column = 'answer',       -- column name that stores output of the model (see PREDICT column) 
      verbose = True,
-     prompt_template = 'Answer the users input in a helpful way: {{question}}';
+     prompt_template = 'Answer the users input in a helpful way: {{question}}',
+     max_tokens = 4096;
 ```
 Ensure to have Ollama set up locally by following this guide on [how to download Ollama](https://ollama.com/download).
 </Accordion>
@@ -190,7 +195,8 @@ USING
      assistant_column = 'answer',            -- column name that stores output of the model (see PREDICT column)
      base_url = 'https://ai.dev.mindsdb.com',
      verbose = True,
-     prompt_template = 'Answer the users input in a helpful way: {{question}}';
+     prompt_template = 'Answer the users input in a helpful way: {{question}}',
+     max_tokens = 4096;
 ```
 </Accordion>
 
@@ -209,7 +215,8 @@ USING
      user_column = 'question',          -- column name that stores input from the user
      assistant_column = 'answer',       -- column name that stores output of the model (see PREDICT column)
      verbose = True,
-     prompt_template = 'Answer the users input in a helpful way: {{question}}';
+     prompt_template = 'Answer the users input in a helpful way: {{question}}',
+     max_tokens = 4096;
 ```
 </Accordion>
 
@@ -226,7 +233,8 @@ CREATE MODEL tool_based_agent
 PREDICT completion
 USING
     engine = 'langchain_engine',
-    prompt_template = 'Answer the users input in a helpful way: {{question}}';
+    prompt_template = 'Answer the users input in a helpful way: {{question}}',
+     max_tokens = 4096;
 ```
 
 Here, we create the `tool_based_agent` model using the LangChain engine, as defined in the `engine` parameter. This model answers users' questions in a helpful way, as defined in the `prompt_template` parameter, which specifies `input` as the input column when calling the model.
@@ -241,7 +249,6 @@ FROM tool_based_agent
 WHERE question = 'Could you describe the `mysql_demo_db.house_sales` table please?'
 USING
     verbose = True,
-    tools = [],
     max_iterations = 10;
 ```
 
@@ -267,7 +274,6 @@ FROM tool_based_agent
 WHERE question = 'I want to know the average number of rooms in the downtown neighborhood as per the `mysql_demo_db.home_rentals` table'
 USING
     verbose = True,
-    tools = [],
     max_iterations = 10;
 ```
 
@@ -297,7 +303,6 @@ FROM tool_based_agent
 WHERE question = 'There is a property in the south_side neighborhood with an initial price of 2543 the `mysql_demo_db.home_rentals` table. What are some other details of this listing?'
 USING
     verbose = True,
-    tools = [],
     max_iterations = 10;
 ```
 

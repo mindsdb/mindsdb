@@ -9,6 +9,7 @@ from base_handler_test import BaseDatabaseHandlerTest
 from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
+    INF_SCHEMA_COLUMNS_NAMES_SET,
     RESPONSE_TYPE
 )
 
@@ -324,22 +325,37 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         """
         Tests that get_columns calls native_query with the correct SQL
         """
-        expected_response = Response(RESPONSE_TYPE.OK)
+        expected_response = Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=DataFrame([], columns=list(INF_SCHEMA_COLUMNS_NAMES_SET))
+        )
         self.handler.native_query = MagicMock(return_value=expected_response)
 
         table_name = "test_table"
         response = self.handler.get_columns(table_name)
+        assert response.type == RESPONSE_TYPE.COLUMNS_TABLE
 
         self.handler.native_query.assert_called_once()
         call_args = self.handler.native_query.call_args[0][0]
 
         expected_sql = f"""
             select
-                COLUMN_NAME AS FIELD, DATA_TYPE AS TYPE
+                COLUMN_NAME,
+                DATA_TYPE,
+                ORDINAL_POSITION,
+                COLUMN_DEFAULT,
+                IS_NULLABLE,
+                CHARACTER_MAXIMUM_LENGTH,
+                CHARACTER_OCTET_LENGTH,
+                NUMERIC_PRECISION,
+                NUMERIC_SCALE,
+                DATETIME_PRECISION,
+                CHARACTER_SET_NAME,
+                COLLATION_NAME
             from
                 information_schema.columns
             where
-                table_name = '{table_name}'
+                table_name = '{table_name}';
         """
         self.assertEqual(call_args, expected_sql)
         self.assertEqual(response, expected_response)

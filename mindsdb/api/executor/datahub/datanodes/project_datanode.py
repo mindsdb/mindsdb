@@ -1,4 +1,5 @@
 from copy import deepcopy
+from dataclasses import astuple
 
 import pandas as pd
 from mindsdb_sql_parser import parse_sql
@@ -16,6 +17,7 @@ from mindsdb.api.executor.datahub.datanodes.datanode import DataNode
 from mindsdb.api.executor.datahub.classes.tables_row import TablesRow
 from mindsdb.api.executor.datahub.classes.response import DataHubResponse
 from mindsdb.utilities.partitioning import process_dataframe_in_partitions
+from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES
 
 
 class ProjectDataNode(DataNode):
@@ -46,11 +48,41 @@ class ProjectDataNode(DataNode):
         result = [TablesRow.from_dict(row) for row in tables]
         return result
 
-    def get_table_columns(self, table_name, schema_name=None):
-        return [
-            {'name': name}
-            for name in self.project.get_columns(table_name)
-        ]
+    def get_table_columns_df(self, table_name: str, schema_name: str | None = None) -> pd.DataFrame:
+        """Get a DataFrame containing representation of information_schema.columns for the specified table.
+
+        Args:
+            table_name (str): The name of the table to get columns from.
+            schema_name (str | None): Not in use. The name of the schema to get columns from.
+
+        Returns:
+            pd.DataFrame: A DataFrame containing representation of information_schema.columns for the specified table.
+                          The DataFrame has list of columns as in the integrations.libs.response.INF_SCHEMA_COLUMNS_NAMES
+                          but only 'COLUMN_NAME' column is filled with the actual column names.
+                          Other columns are filled with None.
+        """
+        columns = self.project.get_columns(table_name)
+
+        data = []
+        row = {name: None for name in astuple(INF_SCHEMA_COLUMNS_NAMES)}
+        for column_name in columns:
+            r = row.copy()
+            r[INF_SCHEMA_COLUMNS_NAMES.COLUMN_NAME] = column_name
+            data.append(r)
+
+        return pd.DataFrame(data, columns=astuple(INF_SCHEMA_COLUMNS_NAMES))
+
+    def get_table_columns_names(self, table_name: str, schema_name: str | None = None) -> list[str]:
+        """Get a list of column names for the specified table.
+
+        Args:
+            table_name (str): The name of the table to get columns from.
+            schema_name (str | None): Not in use. The name of the schema to get columns from.
+
+        Returns:
+            list[str]: A list of column names for the specified table.
+        """
+        return self.project.get_columns(table_name)
 
     def predict(self, model_name: str, df, version=None, params=None):
         model_metadata = self.project.get_model(model_name)

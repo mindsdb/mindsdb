@@ -429,11 +429,12 @@ class KnowledgeBaseTable:
         db_handler = self.get_vector_db()
         db_handler.delete(self._kb.vector_database_table)
 
-    def insert(self, df: pd.DataFrame):
+    def insert(self, df: pd.DataFrame, params: dict = None):
         """Insert dataframe to KB table.
 
         Args:
             df: DataFrame to insert
+            params: User parameters of insert
         """
         if df.empty:
             return
@@ -502,7 +503,12 @@ class KnowledgeBaseTable:
         df_emb = self._df_to_embeddings(df)
         df = pd.concat([df, df_emb], axis=1)
         db_handler = self.get_vector_db()
-        db_handler.do_upsert(self._kb.vector_database_table, df)
+
+        if params is not None and params.get('kb_no_upsert', False):
+            # speed up inserting by disable checking existing records
+            db_handler.insert(self._kb.vector_database_table, df)
+        else:
+            db_handler.do_upsert(self._kb.vector_database_table, df)
 
     def _adapt_column_names(self, df: pd.DataFrame) -> pd.DataFrame:
         '''

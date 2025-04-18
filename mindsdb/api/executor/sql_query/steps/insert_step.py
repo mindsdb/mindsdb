@@ -95,7 +95,8 @@ class InsertToTableCall(BaseStepCall):
             table_name=table_name,
             result_set=data,
             is_replace=is_replace,
-            is_create=is_create
+            is_create=is_create,
+            params=step.params
         )
         return ResultSet(affected_rows=response.affected_rows)
 

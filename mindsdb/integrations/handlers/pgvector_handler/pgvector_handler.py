@@ -418,18 +418,14 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         """
         table_name = self._check_table(table_name)
 
-        data_dict = data.to_dict(orient="list")
+        if 'metadata' in data.columns:
+             data['metadata'] = data['metadata'].apply(json.dumps)
 
-        if 'metadata' in data_dict:
-            data_dict['metadata'] = [json.dumps(i) for i in data_dict['metadata']]
-        transposed_data = list(zip(*data_dict.values()))
-
-        columns = ", ".join(data.keys())
-        values = ", ".join(["%s"] * len(data.keys()))
-
-        insert_statement = f"INSERT INTO {table_name} ({columns}) VALUES ({values})"
-
-        self.raw_query(insert_statement, params=transposed_data)
+        resp = super().insert(table_name, data)
+        if resp.resp_type == RESPONSE_TYPE.ERROR:
+            raise RuntimeError(resp.error_message)
+        if resp.resp_type == RESPONSE_TYPE.TABLE:
+            return resp.data_frame
 
     def update(
         self, table_name: str, data: pd.DataFrame, key_columns: List[str] = None

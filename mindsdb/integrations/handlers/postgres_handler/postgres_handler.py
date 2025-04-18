@@ -1,7 +1,6 @@
 import time
 import json
 from typing import Optional
-import threading
 
 import pandas as pd
 import psycopg
@@ -78,8 +77,6 @@ class PostgresHandler(DatabaseHandler):
         self.connection = None
         self.is_connected = False
         self.thread_safe = False
-
-        self._insert_lock = threading.Lock()
 
     def __del__(self):
         if self.is_connected:
@@ -267,7 +264,6 @@ class PostgresHandler(DatabaseHandler):
 
         columns = df.columns
 
-        # postgres 'copy' is not thread safe. use lock to prevent concurrent execution
         resp = self.get_columns(table_name)
 
         # copy requires precise cases of names: get current column names from table and adapt input dataframe columns

@@ -2,7 +2,7 @@ import asyncio
 import argparse
 import json
 
-from typing import List, Dict, Optional, Any, Union
+from typing import List, Dict, Optional
 from contextlib import AsyncExitStack
 
 import uvicorn

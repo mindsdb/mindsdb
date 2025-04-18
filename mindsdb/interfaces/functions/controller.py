@@ -164,7 +164,7 @@ class FunctionController(BYOMFunctionsController):
             return self.callbacks[name]
 
         def callback(file_path_or_url, use_llm):
-            chat_model_params = self._parse_chat_model_params()
+            chat_model_params = self._parse_chat_model_params('TO_MARKDOWN_FUNCTION_')
 
             llm_client = None
             llm_model = None

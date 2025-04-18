@@ -62,6 +62,10 @@ def get_api_key(
     api_cfg = config.get(api_name, {})
     if f"{api_name.lower()}_api_key" in api_cfg:
         return api_cfg[f"{api_name.lower()}_api_key"]
+    
+    # 6
+    if 'api_keys' in create_args and api_name in create_args['api_keys']:
+        return create_args['api_keys'][api_name]
 
     if strict:
         raise Exception(

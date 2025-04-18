@@ -92,7 +92,7 @@ async def chat_completions(request: ChatCompletionRequest):
                     yield "data: [DONE]\n\n"
                 except Exception as e:
                     logger.error(f"Streaming error: {str(e)}")
-                    yield f"data: {{'error': 'Streaming failed due to an internal error.'}}\n\n"
+                    yield "data: {{'error': 'Streaming failed due to an internal error.'}}\n\n"
             return StreamingResponse(generate(), media_type="text/event-stream")
         else:
             # Return a regular response

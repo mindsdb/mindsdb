@@ -635,6 +635,7 @@ class KnowledgeBaseTable:
         df = df[[TableField.CONTENT.value]]
 
         model_id = self._kb.embedding_model_id
+        embedding_model_params = self._kb.params.get('embedding_model') or config.get('default_embedding_model', None)
         if model_id:
             # get the input columns
             model_rec = db.session.query(db.Predictor).filter_by(id=model_id).first()
@@ -663,8 +664,8 @@ class KnowledgeBaseTable:
                 # adapt output for vectordb
                 df_out = df_out.rename(columns={target: TableField.EMBEDDINGS.value})
 
-        elif self._kb.params.get('embedding_model') or config.get('default_embedding_model', None):
-            embedding_model = get_embedding_model_from_params(self._kb.params.get('embedding_model'))
+        elif embedding_model_params:
+            embedding_model = get_embedding_model_from_params(embedding_model_params)
 
             df_texts = df.apply(row_to_document, axis=1)
             embeddings = embedding_model.embed_documents(df_texts.tolist())
@@ -702,14 +703,15 @@ class KnowledgeBaseTable:
         """
         # Get embedding model from knowledge base
         embeddings_model = None
+        embedding_model_params = self._kb.params.get('embedding_model') or config.get('default_embedding_model', None)
         if self._kb.embedding_model:
             # Extract embedding model args from knowledge base table
             embedding_args = self._kb.embedding_model.learn_args.get('using', {})
             # Construct the embedding model directly
             embeddings_model = construct_model_from_args(embedding_args)
             logger.debug(f"Using knowledge base embedding model with args: {embedding_args}")
-        elif self._kb.params.get('embedding_model') or config.get('default_embedding_model', None):
-            embeddings_model = get_embedding_model_from_params(self._kb.params['embedding_model'])
+        elif embedding_model_params:
+            embeddings_model = get_embedding_model_from_params(embedding_model_params)
             logger.debug(f"Using knowledge base embedding model from params: {self._kb.params['embedding_model']}")
         else:
             embeddings_model = DEFAULT_EMBEDDINGS_MODEL_CLASS()

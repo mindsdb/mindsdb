@@ -208,29 +208,22 @@ class LiteLLMAgentWrapper:
         ]
 
         # Stream completion from agent
-        for chunk in self.agent._get_completion_stream(formatted_messages):
-            content = chunk.get("content", "")
-
-            # Ensure content is a string
-            if not isinstance(content, str):
-                if hasattr(content, 'to_string'):  # It's a DataFrame
-                    content = content.to_string()
-                else:
-                    content = str(content)
-
-            # Format chunk in LiteLLM expected format
-            yield {
-                "choices": [
-                    {
-                        "delta": {
-                            "role": "assistant" if "content" in chunk else "",
-                            "content": content
-                        }
+        model_name = kwargs.get("model", self.agent.args.get("model_name", "mcp-agent"))
+        try:
+            # Handle synchronous generator from _get_completion_stream
+            for chunk in self.agent._get_completion_stream(formatted_messages):
+                content = chunk.get("output", "")
+                if content and isinstance(content, str):
+                    yield {
+                        "choices": [{"delta": {"role": "assistant", "content": content}}],
+                        "model": model_name,
+                        "object": "chat.completion.chunk"
                     }
-                ],
-                "model": self.agent.args["model_name"],
-                "object": "chat.completion.chunk"
-            }
+                # Allow async context switch
+                await asyncio.sleep(0)
+        except Exception as e:
+            logger.error(f"Streaming error: {str(e)}")
+            raise
 
     async def cleanup(self):
         """Clean up resources"""

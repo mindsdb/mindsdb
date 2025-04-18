@@ -209,6 +209,10 @@ class Config:
                     "restart_on_failure": True,
                     "max_restart_count": 1,
                     "max_restart_interval_seconds": 60
+                },
+                "litellm": {
+                    "host": "0.0.0.0",  # API server binds to all interfaces by default
+                    "port": "8000"
                 }
             },
             "cache": {
@@ -378,7 +382,8 @@ class Config:
         ):
             self._cmd_args = argparse.Namespace(
                 api=None, config=None, install_handlers=None, verbose=False,
-                no_studio=False, version=False, ml_task_queue_consumer=None
+                no_studio=False, version=False, ml_task_queue_consumer=None,
+                agent=None, project=None
             )
             return
 
@@ -390,6 +395,8 @@ class Config:
         parser.add_argument('--no_studio', action='store_true')
         parser.add_argument('-v', '--version', action='store_true')
         parser.add_argument('--ml_task_queue_consumer', action='store_true', default=None)
+        parser.add_argument('--agent', type=str, default=None, help='Name of the agent to use with litellm APIs')
+        parser.add_argument('--project', type=str, default=None, help='Project containing the agent (default: mindsdb)')
         self._cmd_args = parser.parse_args()
 
     def fetch_auto_config(self) -> bool:

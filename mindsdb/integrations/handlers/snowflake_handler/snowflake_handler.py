@@ -74,6 +74,7 @@ def _make_table_response(result: DataFrame, cursor: SnowflakeCursor) -> Response
     mysql_types: list[MYSQL_DATA_TYPE] = []
     for column in description:
         column_dtype = result[column.name].dtype
+        description_column_type = connector.constants.FIELD_ID_TO_NAME.get(column.type_code)
         if pd_types.is_integer_dtype(column_dtype):
             column_dtype_name = column_dtype.name
             if column_dtype_name in ('int8', 'Int8'):
@@ -98,8 +99,20 @@ def _make_table_response(result: DataFrame, cursor: SnowflakeCursor) -> Response
             else:
                 mysql_types.append(MYSQL_DATA_TYPE.FLOAT)
             continue
+        if pd_types.is_bool_dtype(column_dtype):
+            mysql_types.append(MYSQL_DATA_TYPE.BOOLEAN)
+            continue
 
-        description_column_type = connector.constants.FIELD_ID_TO_NAME.get(column.type_code)
+        if pd_types.is_object_dtype(column_dtype):
+            if description_column_type == 'TEXT':
+                # we can also check column.internal_size, if == 16777216 then it is TEXT, else VARCHAR(internal_size)
+                mysql_types.append(MYSQL_DATA_TYPE.TEXT)
+                continue
+            elif description_column_type == 'BINARY':
+                # if column.internal_size == 8388608 then BINARY, else VARBINARY(internal_size)
+                mysql_types.append(MYSQL_DATA_TYPE.BINARY)
+                continue
+
         if description_column_type == 'FIXED':
             if column.scale == 0:
                 mysql_types.append(MYSQL_DATA_TYPE.INT)

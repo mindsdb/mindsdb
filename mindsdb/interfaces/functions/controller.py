@@ -3,6 +3,7 @@ import os
 from duckdb.typing import BIGINT, DOUBLE, VARCHAR, BLOB, BOOLEAN
 from mindsdb.interfaces.functions.to_markdown import ToMarkdown
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
+from mindsdb.utilities.config import config
 
 
 def python_to_duckdb_type(py_type):
@@ -192,7 +193,7 @@ class FunctionController(BYOMFunctionsController):
         """
         Parses the environment variables for chat model parameters.
         """
-        chat_model_params = {}
+        chat_model_params = config.get("default_llm") or {}
         for k, v in os.environ.items():
             if k.startswith(param_prefix):
                 param_name = k[len(param_prefix):]

@@ -226,7 +226,9 @@ class Config:
             "tasks": {
                 "disable": False
             },
-            "default_project": "mindsdb"
+            "default_project": "mindsdb",
+            "default_llm": {},
+            "default_embedding_model": {}
         }
         # endregion
 
@@ -364,6 +366,15 @@ class Config:
 
         if os.environ.get('MINDSDB_DEFAULT_PROJECT', '') != '':
             self._env_config['default_project'] = os.environ['MINDSDB_DEFAULT_PROJECT'].lower()
+
+        if os.environ.get('MINDSDB_DEFAULT_LLM_API_KEY', '') != '':
+            self._env_config['default_llm'] = {
+                'api_key': os.environ['MINDSDB_DEFAULT_LLM_API_KEY']
+            }
+        if os.environ.get('MINDSDB_DEFAULT_EMBEDDING_MODEL_API_KEY', '') != '':
+            self._env_config['default_embedding_model'] = {
+                'api_key': os.environ['MINDSDB_DEFAULT_EMBEDDING_MODEL_API_KEY']
+            }
 
     def parse_cmd_args(self) -> None:
         """Collect cmd args to self._cmd_args (accessable as self.cmd_args)

@@ -38,22 +38,25 @@ class GetConfig(Resource):
     def put(self):
         data = request.json
 
-        unknown_argumens = list(set(data.keys()) - {'auth'})
-        if len(unknown_argumens) > 0:
+        allowed_arguments = {'auth', 'default_llm', 'default_embedding_model'}
+        unknown_arguments = list(set(data.keys()) - allowed_arguments)
+        if len(unknown_arguments) > 0:
             return http_error(
                 HTTPStatus.BAD_REQUEST, 'Wrong arguments',
-                f'Unknown argumens: {unknown_argumens}'
+                f'Unknown argumens: {unknown_arguments}'
             )
 
+        nested_keys_to_validate = {'auth'}
         for key in data.keys():
-            unknown_argumens = list(
-                set(data[key].keys()) - set(Config()[key].keys())
-            )
-            if len(unknown_argumens) > 0:
-                return http_error(
-                    HTTPStatus.BAD_REQUEST, 'Wrong arguments',
-                    f'Unknown argumens: {unknown_argumens}'
+            if key in nested_keys_to_validate:
+                unknown_arguments = list(
+                    set(data[key].keys()) - set(Config()[key].keys())
                 )
+                if len(unknown_arguments) > 0:
+                    return http_error(
+                        HTTPStatus.BAD_REQUEST, 'Wrong arguments',
+                        f'Unknown argumens: {unknown_arguments}'
+                    )
 
         Config().update(data)
 

@@ -1,8 +1,11 @@
-from collections import OrderedDict
 import unittest
 from unittest.mock import patch, MagicMock
+from collections import OrderedDict
+from decimal import Decimal
 
 import snowflake
+import snowflake.connector
+import pandas as pd
 from pandas import DataFrame
 
 from base_handler_test import BaseDatabaseHandlerTest
@@ -12,6 +15,13 @@ from mindsdb.integrations.libs.response import (
     INF_SCHEMA_COLUMNS_NAMES_SET,
     RESPONSE_TYPE
 )
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
+
+
+class ColumnDescription:
+    def __init__(self, **kwargs):
+        for key in kwargs:
+            setattr(self, key, kwargs[key])
 
 
 class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
@@ -164,7 +174,10 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_df_batch2 = DataFrame(batch2_data, columns=expected_columns)
         mock_cursor.fetch_pandas_batches.return_value = iter([mock_df_batch1, mock_df_batch2])
 
-        mock_cursor.description = [('ID',), ('NAME',)]
+        mock_cursor.description = [
+            ColumnDescription(name='ID', type_code=snowflake.connector.constants.FIELD_NAME_TO_ID['FIXED']),
+            ColumnDescription(name='NAME', type_code=snowflake.connector.constants.FIELD_NAME_TO_ID['TEXT'])
+        ]
         mock_cursor.rowcount = 2
 
         query_str = "SELECT ID, NAME FROM test_table"
@@ -370,6 +383,250 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertIsNotNone(response.data_frame.iloc[0]['MYSQL_DATA_TYPE'])
 
         del self.handler.native_query
+
+    def test_types_casting(self):
+        """Test that types are casted correctly
+        """
+        query_str = "SELECT * FROM test_table"
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=None)
+        mock_conn.cursor.return_value = mock_cursor
+        self.handler.connect = MagicMock(return_value=mock_conn)
+
+        # region test numeric types
+        """Test data obtained using:
+            CREATE TABLE test_numeric_types (
+                n_number NUMBER,
+                n_number_p NUMBER(38),
+                n_number_ps NUMBER(10,2),
+                n_int INTEGER,
+                n_integer INTEGER,
+                n_bigint BIGINT,
+                n_smallint SMALLINT,
+                n_tinyint TINYINT,
+                n_byteint BYTEINT,
+                n_float FLOAT,
+                n_float4 FLOAT4,
+                n_float8 FLOAT8,
+                n_double DOUBLE,
+                n_double_precision DOUBLE PRECISION,
+                n_real REAL,
+                n_decimal DECIMAL(10,2),
+                n_numeric NUMERIC(10,2)
+            );
+
+            INSERT INTO test_numeric_types (
+                n_number,
+                n_number_p,
+                n_number_ps,
+                n_int,
+                n_integer,
+                n_bigint,
+                n_smallint,
+                n_tinyint,
+                n_byteint,
+                n_float,
+                n_float4,
+                n_float8,
+                n_double,
+                n_double_precision,
+                n_real,
+                n_decimal,
+                n_numeric
+            ) VALUES (
+                123456.789,                       -- n_number
+                12345678901234567890123456789012345678, -- n_number_p (38 numbers)
+                1234.56,                          -- n_number_ps
+                2147483647,                       -- n_int
+                -2147483648,                      -- n_integer
+                9223372036854775807,              -- n_bigint
+                32767,                            -- n_smallint
+                255,                              -- n_tinyint
+                127,                              -- n_byteint
+                3.14159265358979,                 -- n_float
+                3.14159,                          -- n_float4
+                3.141592653589793238,             -- n_float8
+                2.7182818284590452,               -- n_double
+                1.6180339887498948,               -- n_double_precision
+                0.5772156649015329,               -- n_real
+                9876.54,                          -- n_decimal
+                1234.56                           -- n_numeric
+            );
+        """
+        input_data = pd.DataFrame({
+            'N_NUMBER': pd.Series([123457], dtype='int32'),
+            'N_NUMBER_P': pd.Series([Decimal('12345678901234567890123456789012345678')], dtype='object'),
+            'N_NUMBER_PS': pd.Series([1234.56], dtype='float64'),
+            'N_INT': pd.Series([2147483647], dtype='int32'),
+            'N_INTEGER': pd.Series([-2147483648], dtype='int32'),
+            'N_BIGINT': pd.Series([9223372036854775807], dtype='int64'),
+            'N_SMALLINT': pd.Series([32767], dtype='int16'),
+            'N_TINYINT': pd.Series([255], dtype='int16'),
+            'N_BYTEINT': pd.Series([127], dtype='int8'),
+            'N_FLOAT': pd.Series([3.14159265358979], dtype='float64'),
+            'N_FLOAT4': pd.Series([3.14159], dtype='float64'),
+            'N_FLOAT8': pd.Series([3.141592653589793], dtype='float64'),
+            'N_DOUBLE': pd.Series([2.718281828459045], dtype='float64'),
+            'N_DOUBLE_PRECISION': pd.Series([1.618033988749895], dtype='float64'),
+            'N_REAL': pd.Series([0.5772156649015329], dtype='float64'),
+            'N_DECIMAL': pd.Series([9876.54], dtype='float64'),
+            'N_NUMERIC': pd.Series([1234.56], dtype='float64')
+        })
+        mock_cursor.fetch_pandas_batches.return_value = iter([input_data])
+        mock_cursor.description = [
+            ColumnDescription(name='N_NUMBER', type_code=0, display_size=None, internal_size=None, precision=38, scale=0, is_nullable=True),
+            ColumnDescription(name='N_NUMBER_P', type_code=0, display_size=None, internal_size=None, precision=38, scale=0, is_nullable=True),
+            ColumnDescription(name='N_NUMBER_PS', type_code=0, display_size=None, internal_size=None, precision=10, scale=2, is_nullable=True),
+            ColumnDescription(name='N_INT', type_code=0, display_size=None, internal_size=None, precision=38, scale=0, is_nullable=True),
+            ColumnDescription(name='N_INTEGER', type_code=0, display_size=None, internal_size=None, precision=38, scale=0, is_nullable=True),
+            ColumnDescription(name='N_BIGINT', type_code=0, display_size=None, internal_size=None, precision=38, scale=0, is_nullable=True),
+            ColumnDescription(name='N_SMALLINT', type_code=0, display_size=None, internal_size=None, precision=38, scale=0, is_nullable=True),
+            ColumnDescription(name='N_TINYINT', type_code=0, display_size=None, internal_size=None, precision=38, scale=0, is_nullable=True),
+            ColumnDescription(name='N_BYTEINT', type_code=0, display_size=None, internal_size=None, precision=38, scale=0, is_nullable=True),
+            ColumnDescription(name='N_FLOAT', type_code=1, display_size=None, internal_size=None, precision=None, scale=None, is_nullable=True),
+            ColumnDescription(name='N_FLOAT4', type_code=1, display_size=None, internal_size=None, precision=None, scale=None, is_nullable=True),
+            ColumnDescription(name='N_FLOAT8', type_code=1, display_size=None, internal_size=None, precision=None, scale=None, is_nullable=True),
+            ColumnDescription(name='N_DOUBLE', type_code=1, display_size=None, internal_size=None, precision=None, scale=None, is_nullable=True),
+            ColumnDescription(name='N_DOUBLE_PRECISION', type_code=1, display_size=None, internal_size=None, precision=None, scale=None, is_nullable=True),
+            ColumnDescription(name='N_REAL', type_code=1, display_size=None, internal_size=None, precision=None, scale=None, is_nullable=True),
+            ColumnDescription(name='N_DECIMAL', type_code=0, display_size=None, internal_size=None, precision=10, scale=2, is_nullable=True),
+            ColumnDescription(name='N_NUMERIC', type_code=0, display_size=None, internal_size=None, precision=10, scale=2, is_nullable=True)
+        ]
+
+        excepted_mysql_types = [
+            MYSQL_DATA_TYPE.MEDIUMINT,
+            MYSQL_DATA_TYPE.INT,
+            MYSQL_DATA_TYPE.DOUBLE,
+            MYSQL_DATA_TYPE.MEDIUMINT,
+            MYSQL_DATA_TYPE.MEDIUMINT,
+            MYSQL_DATA_TYPE.BIGINT,
+            MYSQL_DATA_TYPE.SMALLINT,
+            MYSQL_DATA_TYPE.SMALLINT,
+            MYSQL_DATA_TYPE.TINYINT,
+            MYSQL_DATA_TYPE.DOUBLE,
+            MYSQL_DATA_TYPE.DOUBLE,
+            MYSQL_DATA_TYPE.DOUBLE,
+            MYSQL_DATA_TYPE.DOUBLE,
+            MYSQL_DATA_TYPE.DOUBLE,
+            MYSQL_DATA_TYPE.DOUBLE,
+            MYSQL_DATA_TYPE.DOUBLE,
+            MYSQL_DATA_TYPE.DOUBLE
+        ]
+
+        response = self.handler.native_query(query_str)
+        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        for column_name in input_data.columns:
+            result_value = response.data_frame[column_name][0]
+            self.assertEqual(result_value, input_data[column_name][0])
+        # endregion
+
+        # region test string/blob types
+        """Data obtained using:
+            CREATE TABLE test_text_blob_types (
+                t_string STRING,                      -- up to 16 МБ
+                t_string_size STRING(100),            -- STRING with max len
+                t_char CHAR(10),                      -- fix len
+                t_varchar VARCHAR(100),               -- STRING alias
+                t_text TEXT,                          -- STRING alias
+                t_binary BINARY,                      -- bin data up to 8 МБ
+                t_binary_size BINARY(100),            -- bin with max len
+                t_varbinary VARBINARY(100)            -- BINARY alias
+            );
+
+            INSERT INTO test_text_blob_types (
+                t_string,
+                t_string_size,
+                t_char,
+                t_varchar,
+                t_text,
+                t_binary,
+                t_binary_size,
+                t_varbinary
+            ) VALUES (
+                't_string',                  -- t_string
+                't_string_size',             -- t_string_size
+                't_char',                    -- t_char
+                't_varchar',                 -- t_varchar
+                't_text',                    -- t_text
+                TO_BINARY('t_binary', 'UTF-8'),         -- t_binary
+                TO_BINARY('t_binary_size', 'UTF-8'),    -- t_binary_size
+                TO_BINARY('t_variant', 'UTF-8')         -- t_varbinary
+            );
+        """
+        input_data = pd.DataFrame([[
+            't_string', 't_string_size', 't_char', 't_varchar', 't_text',
+            b't_binary', b't_binary_size', b't_variant'
+        ]], columns=[
+            'T_STRING', 'T_STRING_SIZE', 'T_CHAR', 'T_VARCHAR', 'T_TEXT',
+            'T_BINARY', 'T_BINARY_SIZE', 'T_VARBINARY'
+        ], dtype='object')
+        mock_cursor.fetch_pandas_batches.return_value = iter([input_data])
+        mock_cursor.description = [
+            ColumnDescription(name='T_STRING', type_code=2, display_size=None, internal_size=16777216, precision=None, scale=None, is_nullable=True),
+            ColumnDescription(name='T_STRING_SIZE', type_code=2, display_size=None, internal_size=100, precision=None, scale=None, is_nullable=True),
+            ColumnDescription(name='T_CHAR', type_code=2, display_size=None, internal_size=10, precision=None, scale=None, is_nullable=True),
+            ColumnDescription(name='T_VARCHAR', type_code=2, display_size=None, internal_size=100, precision=None, scale=None, is_nullable=True),
+            ColumnDescription(name='T_TEXT', type_code=2, display_size=None, internal_size=16777216, precision=None, scale=None, is_nullable=True),
+            ColumnDescription(name='T_BINARY', type_code=11, display_size=None, internal_size=8388608, precision=None, scale=None, is_nullable=True),
+            ColumnDescription(name='T_BINARY_SIZE', type_code=11, display_size=None, internal_size=100, precision=None, scale=None, is_nullable=True),
+            ColumnDescription(name='T_VARBINARY', type_code=11, display_size=None, internal_size=100, precision=None, scale=None, is_nullable=True)
+        ]
+        excepted_mysql_types = [
+            MYSQL_DATA_TYPE.TEXT,
+            MYSQL_DATA_TYPE.TEXT,
+            MYSQL_DATA_TYPE.TEXT,
+            MYSQL_DATA_TYPE.TEXT,
+            MYSQL_DATA_TYPE.TEXT,
+            MYSQL_DATA_TYPE.BINARY,
+            MYSQL_DATA_TYPE.BINARY,
+            MYSQL_DATA_TYPE.BINARY
+        ]
+
+        response = self.handler.native_query(query_str)
+        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        for column_name in input_data.columns:
+            result_value = response.data_frame[column_name][0]
+            self.assertEqual(result_value, input_data[column_name][0])
+        # endregion
+
+        # region test bool types
+        """Data obtained using:
+        CREATE TABLE test_boolean_types (
+            b_boolean BOOLEAN
+        );
+
+        INSERT INTO test_boolean_types (
+            b_boolean
+        ) VALUES (
+            TRUE                   -- b_boolean
+        );
+        """
+        input_data = pd.DataFrame([[
+            True
+        ]], columns=[
+            'B_BOOLEAN'
+        ], dtype='bool')
+        mock_cursor.fetch_pandas_batches.return_value = iter([input_data])
+        mock_cursor.description = [
+            ColumnDescription(name='B_BOOLEAN', type_code=13, display_size=None, internal_size=None, precision=None, scale=None, is_nullable=True)
+        ]
+        excepted_mysql_types = [
+            MYSQL_DATA_TYPE.BOOLEAN
+        ]
+
+        response = self.handler.native_query(query_str)
+        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        for column_name in input_data.columns:
+            result_value = response.data_frame[column_name][0]
+            self.assertEqual(result_value, input_data[column_name][0])
+        # endregion
+
+        # region test date/time types
+        """Data obtained using:
+        """
+        # endregion
 
 
 if __name__ == '__main__':

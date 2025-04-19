@@ -1,69 +1,96 @@
-# ChromaDB Handler
+---
+title: ChromaDB
+sidebarTitle: ChromaDB
+---
 
-This is the implementation of the ChromaDB for MindsDB.
+In this section, we present how to connect ChromaDB to MindsDB.
 
-## ChromaDB
+[ChromaDB](https://www.trychroma.com/) is the open-source embedding database. Chroma makes it easy to build LLM apps by making knowledge, facts, and skills pluggable for LLMs.
 
-Chroma is the open-source embedding database. Chroma makes it easy to build LLM apps by making knowledge, facts, and skills pluggable for LLMs.
+## Prerequisites
 
-## Implementation
+Before proceeding, ensure the following prerequisites are met:
 
-This handler uses `chromadb` python library connect to a chromadb instance, it uses langchain to make use of their pre-existing semantic search functionality
+1. Install MindsDB locally via [Docker](/setup/self-hosted/docker) or [Docker Desktop](/setup/self-hosted/docker-desktop).
+2. To connect ChromaDB to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to ChromaDB.
 
-The required arguments to establish a connection are:
+## Connection
 
-* `host`: the host name or IP address of the ChromaDB instance
-* `port`: the port to use when connecting
-* `persist_directory`: the directory to use for persisting data
+This handler is implemented using the `chromadb` Python library.
 
+To connect to a remote ChromaDB instance, use the following statement:
+
+```sql
+CREATE DATABASE chromadb_datasource
+WITH ENGINE = 'chromadb'
+PARAMETERS = {
+    "host": "YOUR_HOST",
+    "port": YOUR_PORT,
+    "distance": "l2/cosine/ip" -- optional, default is cosine
+}
+```
+
+The required parameters are:
+
+* `host`: The host name or IP address of the ChromaDB instance.
+* `port`: The TCP/IP port of the ChromaDB instance.
+* `distance`: It defines how the distance between vectors is calculated. Available method include l2, cosine, and ip, as [explained here](https://docs.trychroma.com/docs/collections/configure).
+
+To connect to an in-memory ChromaDB instance, use the following statement:
+
+```sql
+CREATE DATABASE chromadb_datasource
+WITH ENGINE = "chromadb",
+PARAMETERS = {
+    "persist_directory": "YOUR_PERSIST_DIRECTORY",
+    "distance": "l2/cosine/ip" -- optional
+}
+```
+
+The required parameters are:
+
+* `persist_directory`: The directory to use for persisting data.
+* `distance`: It defines how the distance between vectors is calculated. Available method include l2, cosine, and ip, as [explained here](https://docs.trychroma.com/docs/collections/configure).
 
 ## Usage
 
-In order to make use of this handler and connect to a hosted ChromaDB instance in MindsDB, the following syntax can be used:
+Now, you can use the established connection to create a collection (or table in the context of MindsDB) in ChromaDB and insert data into it:
 
 ```sql
-CREATE DATABASE chroma_dev
-WITH ENGINE = "chromadb",
-PARAMETERS = {
-   "host": "localhost",
-   "port": "8000"
-    }
-```
-
-Another option is to use in memory ChromaDB instance, you can do so by using the following syntax:
-
-```sql
-CREATE DATABASE chroma_dev
-WITH ENGINE = "chromadb",
-PARAMETERS = {
-   "persist_directory": "<persist_directory>"
-    }
-```
-
-You can insert data into a new collection like so
-
-```sql
-create table chroma_dev.test_embeddings (
-SELECT embeddings,'{"source": "fda"}' as metadata FROM mysql_demo_db.test_embeddings
+CREATE TABLE chromadb_datasource.test_embeddings (
+    SELECT embeddings,'{"source": "fda"}' as metadata
+    FROM mysql_datasource.test_embeddings
 );
 ```
 
-You can query a collection within your ChromaDB as follows:
+<Note>
+`mysql_datasource` is another MindsDB data source that has been created by connecting to a MySQL database. The `test_embeddings` table in the `mysql_datasource` data source contains the embeddings that we want to store in ChromaDB.
+</Note>
+
+You can query your collection (table) as shown below:
 
 ```sql
-SELECT * FROM chroma_dev.test_embeddings;
+SELECT * 
+FROM chromadb_datasource.test_embeddings;
 ```
 
-filter by metadata
+To filter the data in your collection (table) by metadata, you can use the following query:
 
 ```sql
-SELECT * FROM chroma_dev.test_embeddings
-where `metadata.source` = "fda";
+SELECT * 
+FROM chromadb_datasource.test_embeddings
+WHERE `metadata.source` = "fda";
+
 ```
 
-search for similar embeddings
+To conduct a similarity search, the following query can be used:
 
 ```sql
-SELECT * FROM chroma_dev.test_embeddings
-WHERE search_vector = (select embeddings from mysql_demo_db.test_embeddings limit 1);
-```
+SELECT *
+FROM chromadb_datasource.test_embeddings
+WHERE search_vector = (
+    SELECT embeddings
+    FROM mysql_datasource.test_embeddings
+    LIMIT 1
+);

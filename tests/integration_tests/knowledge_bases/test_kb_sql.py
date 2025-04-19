@@ -176,7 +176,7 @@ class KBTest(KBTestBase):
         assert len(ret) == 4
 
         print('Limit with content')
-        ret = self.run_sql("select id, chunk_content from kb_crm where content = 'help' limit 4")
+        ret = self.run_sql("select id, chunk_content, distance from kb_crm where content = 'help' limit 4")
         assert len(ret) == 4
         assert ret['id'][0] == '1000'  # id is string
 

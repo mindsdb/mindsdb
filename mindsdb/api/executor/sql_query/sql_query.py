@@ -12,7 +12,9 @@ import inspect
 from textwrap import dedent
 from typing import Union, Dict
 
+import pandas as pd
 from mindsdb_sql_parser import parse_sql, ASTNode
+
 from mindsdb.api.executor.planner.steps import (
     ApplyTimeseriesPredictorStep,
     ApplyPredictorRowStep,
@@ -47,7 +49,7 @@ class SQLQuery:
     step_handlers = {}
 
     def __init__(self, sql: Union[ASTNode, str], session, execute: bool = True,
-                 database: str = None, query_id: int = None):
+                 database: str = None, query_id: int = None, stop_event=None):
         self.session = session
 
         if database is not None:
@@ -70,10 +72,11 @@ class SQLQuery:
         self.outer_query = None
         self.run_query = None
         self.query_id = query_id
+        self.stop_event = stop_event
         if query_id is not None:
             # resume query
             run_query = query_context_controller.get_query(self.query_id)
-            run_query.clear_error()
+            run_query.mark_as_run()
             sql = run_query.sql
 
         if isinstance(sql, str):
@@ -241,6 +244,14 @@ class SQLQuery:
                 self.run_query = query_context_controller.get_query(self.query_id)
             else:
                 self.run_query = query_context_controller.create_query(self.context['query_str'])
+
+            if self.planner.plan.is_async and ctx.is_background_task is not True:
+                # add to task
+                self.run_query.add_to_tasks()
+                # return query info
+                rec = self.run_query.get_info()
+                self.fetched_data = ResultSet().from_df(pd.DataFrame([rec]))
+
             ctx.run_query_id = self.run_query.record.id
 
         step_result = None

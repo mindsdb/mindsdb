@@ -24,6 +24,8 @@ class RunningQuery:
       Query in progres
     """
 
+    OBJECT_TYPE = 'query'
+
     def __init__(self, record: db.Queries):
         self.record = record
         self.sql = record.sql
@@ -66,6 +68,43 @@ class RunningQuery:
             )
 
         return query
+
+    def get_info(self):
+        record = self.record
+        return {
+            'id': record.id,
+            'sql': record.sql,
+            'started_at': record.started_at,
+            'finished_at': record.finished_at,
+            'parameters': record.parameters,
+            'context': record.context,
+            'processed_rows': record.processed_rows,
+            'error': record.error,
+            'updated_at': record.updated_at,
+        }
+
+    def add_to_task(self):
+
+        task_record = db.Tasks(
+            company_id=ctx.company_id,
+            user_class=ctx.user_class,
+
+            object_type=self.OBJECT_TYPE,
+            object_id=self.record.id,
+        )
+        db.session.add(task_record)
+        db.session.commit()
+
+    def remove_from_task(self):
+        task = db.Tasks.query.filter(
+            db.Tasks.object_type == self.OBJECT_TYPE,
+            db.Tasks.object_id == self.record.id,
+            db.Tasks.company_id == ctx.company_id,
+        ).first()
+
+        if task is not None:
+            db.session.delete(task)
+            db.session.commit()
 
     def set_params(self, params: dict):
         """
@@ -126,14 +165,18 @@ class RunningQuery:
 
         db.session.commit()
 
-    def clear_error(self):
+    def mark_as_run(self):
         """
             Reset error of the query in database
         """
+        if self.record.finished_at is not None:
+            raise RuntimeError('The query already finished')
 
         if self.record.error is not None:
             self.record.error = None
             db.session.commit()
+        else:
+            raise RuntimeError('The query might be running already')
 
     def get_state(self) -> dict:
         """
@@ -479,17 +522,7 @@ class QueryContextController:
             db.Queries.company_id == ctx.company_id
         )
         return [
-            {
-                'id': record.id,
-                'sql': record.sql,
-                'started_at': record.started_at,
-                'finished_at': record.finished_at,
-                'parameters': record.parameters,
-                'context': record.context,
-                'processed_rows': record.processed_rows,
-                'error': record.error,
-                'updated_at': record.updated_at,
-            }
+            RunningQuery(record).get_info()
             for record in query
         ]
 

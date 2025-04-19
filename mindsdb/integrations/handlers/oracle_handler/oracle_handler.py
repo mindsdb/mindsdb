@@ -300,6 +300,5 @@ class OracleHandler(DatabaseHandler):
         """
         result = self.native_query(query)
         if result.resp_type is RESPONSE_TYPE.TABLE:
-            result.data_frame.columns = [name.lower() for name in result.data_frame.columns]
-            result.data_frame['mysql_data_type'] = result.data_frame['type'].apply(_map_type)
+            result.to_columns_table_response(map_type_fn=_map_type)
         return result

@@ -151,7 +151,7 @@ def get_all_website_links(url) -> dict:
             # Parse HTML content with BeautifulSoup
             soup = BeautifulSoup(content_html, "html.parser")
             content_text = get_readable_text_from_soup(soup)
-            for a_tag in soup.findAll("a"):
+            for a_tag in soup.find_all("a"):
                 href = a_tag.attrs.get("href")
                 if href == "" or href is None:
                     continue

@@ -38,7 +38,7 @@ class RunningQuery:
                 self.set_progress(df, max_track_value)
 
         else:
-            while True;
+            while True:
                 query2 = run_query.get_partition_query(self.current_step_num, query, with_limit=True)
 
                 response = self.dn.query(

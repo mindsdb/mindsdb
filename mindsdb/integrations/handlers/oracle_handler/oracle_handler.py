@@ -1,8 +1,8 @@
-from typing import Text, Dict, Optional
+from typing import Text, Dict, Optional, Any
 
 import oracledb
 import pandas as pd
-from oracledb import connect, Connection, DatabaseError
+from oracledb import connect, Connection, DatabaseError, Cursor
 from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.integrations.libs.base import DatabaseHandler
@@ -56,6 +56,39 @@ def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
 
     logger.warning(f"Oracle handler type mapping: unknown type: {internal_type_name}, use VARCHAR as fallback.")
     return MYSQL_DATA_TYPE.VARCHAR
+
+
+def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
+    description: list[tuple[Any]] = cursor.description
+    mysql_types: list[MYSQL_DATA_TYPE] = []
+
+    for column in description:
+        db_type = column[1]
+        scale = column[5]
+        if db_type is oracledb.DB_TYPE_NUMBER:
+            if scale != 0:
+                mysql_types.append(MYSQL_DATA_TYPE.FLOAT)
+            else:
+                mysql_types.append(MYSQL_DATA_TYPE.INT)
+        elif db_type is oracledb.DB_TYPE_BINARY_FLOAT:
+            mysql_types.append(MYSQL_DATA_TYPE.FLOAT)
+        elif db_type is oracledb.DB_TYPE_BINARY_DOUBLE:
+            mysql_types.append(MYSQL_DATA_TYPE.FLOAT)
+        elif db_type is oracledb.DB_TYPE_BINARY_INTEGER:
+            mysql_types.append(MYSQL_DATA_TYPE.INT)
+        elif db_type is oracledb.DB_TYPE_BOOLEAN:
+            mysql_types.append(MYSQL_DATA_TYPE.BOOLEAN)
+        else:
+            mysql_types.append(MYSQL_DATA_TYPE.TEXT)
+
+    return Response(
+        RESPONSE_TYPE.TABLE,
+        data_frame=pd.DataFrame(
+            result,
+            columns=[row[0] for row in cursor.description],
+        ),
+        mysql_types=mysql_types
+    )
 
 
 class OracleHandler(DatabaseHandler):
@@ -209,14 +242,7 @@ class OracleHandler(DatabaseHandler):
                     response = Response(RESPONSE_TYPE.OK, affected_rows=cur.rowcount)
                 else:
                     result = cur.fetchall()
-                    response = Response(
-                        RESPONSE_TYPE.TABLE,
-                        data_frame=pd.DataFrame(
-                            result,
-                            columns=[row[0] for row in cur.description],
-                        ),
-                    )
-
+                    response = _make_table_response(result, cur)
                 connection.commit()
             except DatabaseError as database_error:
                 logger.error(f"Error running query: {query} on Oracle, {database_error}!")

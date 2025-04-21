@@ -139,6 +139,9 @@ class OracleHandler(DatabaseHandler):
         if not all(key in self.connection_data for key in ['user', 'password']):
             raise ValueError('Required parameters (user, password) must be provided.')
 
+        if self.connection_data.get('thick_mode', False):
+            oracledb.init_oracle_client()
+
         config = {
             'user': self.connection_data['user'],
             'password': self.connection_data['password'],

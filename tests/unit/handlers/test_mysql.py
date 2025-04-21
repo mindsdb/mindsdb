@@ -94,7 +94,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         query_str = f"SELECT * FROM {self.mock_table}"
         data = self.handler.native_query(query_str)
 
-        assert isinstance(data, Response)
+        self.assertIsInstance(data, Response)
         self.assertFalse(data.error_code)
 
     def test_native_query_with_results(self):

@@ -762,7 +762,7 @@ class QueryPlanner:
         elif from_table is None:
             # one line select
             step = QueryStep(query, from_table=pd.DataFrame([None]))
-            self.plan.add_step(step)
+            return self.plan.add_step(step)
         else:
             raise PlanningException(f'Unsupported from_table {type(from_table)}')
 

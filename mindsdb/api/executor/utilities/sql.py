@@ -130,6 +130,7 @@ def query_df(df, query, session=None):
                 node.parts = [node.parts[-1]]
                 return node
         if isinstance(node, Function):
+            # These functions also exist in DuckDB, therefore, the results need to be replaced.
             fnc_results = {
                 "database": session.database if session else None,
                 "version": "8.0.17",
@@ -151,6 +152,7 @@ def query_df(df, query, session=None):
                     user_functions.check_function(node)
         # If a variable is used in the target list, add quotes around the value.
         if isinstance(node, Variable):
+            # Variables in the targets will cause an error in DuckDB due to the '@@' or '@' prefix.
             if kwargs.get('is_target'):
                 node = Identifier(parts=[node.get_string()])
                 return node

@@ -65,6 +65,11 @@ def get_embedding_model_from_params(embedding_model_params: dict):
     if provider == 'azure_openai':
         # Azure OpenAI expects the api_key to be passed as 'openai_api_key'.
         params_copy['openai_api_key'] = api_key
+        params_copy['azure_endpoint'] = params_copy.pop('base_url')
+        if 'chunk_size' not in params_copy:
+            params_copy['chunk_size'] = 2048
+        if 'api_version' in params_copy:
+            params_copy['openai_api_version'] = params_copy['api_version']
     else:
         params_copy[f"{provider}_api_key"] = api_key
     params_copy.pop('api_key', None)
@@ -78,11 +83,11 @@ def get_reranking_model_from_params(reranking_model_params: dict):
     Create reranking model from parameters.
     """
     params_copy = copy.deepcopy(reranking_model_params)
-    provider = params_copy.pop('provider', "openai").lower()
-    if provider != 'openai':
-        raise ValueError("Only OpenAI provider is supported for the reranking model.")
-    params_copy[f"{provider}_api_key"] = get_api_key(provider, params_copy, strict=False) or params_copy.get('api_key')
-    params_copy.pop('api_key', None)
+    provider = params_copy.get('provider', "openai").lower()
+    if provider not in ('openai', 'azure_openai'):
+        raise ValueError("Only OpenAI and AzureOpenAI provider are supported for the reranking model.")
+    if "api_key" not in params_copy:
+        params_copy["api_key"] = get_api_key(provider, params_copy, strict=False)
     params_copy['model'] = params_copy.pop('model_name', None)
 
     return LLMReranker(**params_copy)
@@ -184,6 +189,16 @@ class KnowledgeBaseTable:
         logger.debug(f"Extracted query text: {query_text}")
 
         self.addapt_conditions_columns(conditions)
+
+        # Set default limit if query is present
+        if query_text is not None:
+            limit = query.limit.value if query.limit is not None else None
+            if limit is None:
+                limit = 10
+            elif limit > 100:
+                limit = 100
+            query.limit = Constant(limit)
+
         df = db_handler.dispatch_select(query, conditions)
         df = self.addapt_result_columns(df)
 
@@ -332,12 +347,21 @@ class KnowledgeBaseTable:
 
         emb_col = TableField.EMBEDDINGS.value
         cont_col = TableField.CONTENT.value
+
+        db_handler = self.get_vector_db()
+        conditions = db_handler.extract_conditions(query.where)
+        doc_id = None
+        for condition in conditions:
+            if condition.column == 'chunk_id' and condition.op == FilterOperator.EQUAL:
+                doc_id = condition.value
+
         if cont_col in query.update_columns:
             content = query.update_columns[cont_col]
 
             # Apply preprocessing to content if configured
             if self.document_preprocessor:
                 doc = Document(
+                    id=doc_id,
                     content=content.value,
                     metadata={}  # Empty metadata for content-only updates
                 )
@@ -353,8 +377,6 @@ class KnowledgeBaseTable:
         query.table = Identifier(parts=[self._kb.vector_database_table])
 
         # send to vectordb
-        db_handler = self.get_vector_db()
-        conditions = db_handler.extract_conditions(query.where)
         self.addapt_conditions_columns(conditions)
         db_handler.dispatch_update(query, conditions)
 

@@ -480,6 +480,74 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             self.assertEqual(result_value, input_value)
         # endregion
 
+        # region test text types
+        """Data obtained using:
+        CREATE TABLE test_text_types (
+            t_char CHAR(10),
+            t_nchar NCHAR(10),          -- unicode
+            t_varchar2 VARCHAR2(100),
+            t_nvarchar2 NVARCHAR2(100), -- unicode
+            t_long LONG,
+            t_clob CLOB,
+            t_nclob NCLOB,              -- unicode
+            t_raw RAW(100),
+            t_blob BLOB
+        );
+
+        INSERT INTO test_text_types (
+            t_char,
+            t_nchar,
+            t_varchar2,
+            t_nvarchar2,
+            t_long,
+            t_clob,
+            t_nclob,
+            t_raw,
+            t_blob
+        ) VALUES (
+            'Test',             -- t_char
+            N'Unicode',         -- t_nchar
+            'Test',             -- t_varchar2
+            N'Unicode',         -- t_nvarchar2
+            'Test',             -- t_long
+            TO_CLOB('Test'),    -- t_clob
+            TO_NCLOB('Test'),   -- t_nclob
+            HEXTORAW('54657374'),     -- t_raw
+            HEXTORAW('54657374')      -- t_blob
+        );
+        """
+        input_row = ('Test      ', 'Unicode   ', 'Test', 'Unicode', 'Test', 'Test', 'Test', b'Test', b'Test')
+        mock_cursor.fetchall.return_value = [input_row]
+
+        mock_cursor.description = [
+            ('T_CHAR', oracledb.DB_TYPE_CHAR, 10, 10, None, None, True),
+            ('T_NCHAR', oracledb.DB_TYPE_NCHAR, 10, 20, None, None, True),
+            ('T_VARCHAR2', oracledb.DB_TYPE_VARCHAR, 100, 100, None, None, True),
+            ('T_NVARCHAR2', oracledb.DB_TYPE_NVARCHAR, 100, 200, None, None, True),
+            ('T_LONG', oracledb.DB_TYPE_LONG, None, None, None, None, True),
+            ('T_CLOB', oracledb.DB_TYPE_LONG, None, None, None, None, True),
+            ('T_NCLOB', oracledb.DB_TYPE_LONG_NVARCHAR, None, None, None, None, True),
+            ('T_RAW', oracledb.DB_TYPE_RAW, 100, 100, None, None, True),
+            ('T_BLOB', oracledb.DB_TYPE_LONG_RAW, None, None, None, None, True)
+        ]
+        response: Response = self.handler.native_query(query_str)
+        excepted_mysql_types = [
+            MYSQL_DATA_TYPE.TEXT,
+            MYSQL_DATA_TYPE.TEXT,
+            MYSQL_DATA_TYPE.TEXT,
+            MYSQL_DATA_TYPE.TEXT,
+            MYSQL_DATA_TYPE.TEXT,
+            MYSQL_DATA_TYPE.TEXT,
+            MYSQL_DATA_TYPE.TEXT,
+            MYSQL_DATA_TYPE.BINARY,
+            MYSQL_DATA_TYPE.BINARY
+        ]
+        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        for i, input_value in enumerate(input_row):
+            result_value = response.data_frame[response.data_frame.columns[i]][0]
+            self.assertEqual(result_value, input_value)
+        # endregion
+
 
 if __name__ == '__main__':
     unittest.main()

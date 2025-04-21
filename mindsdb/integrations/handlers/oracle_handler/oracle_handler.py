@@ -78,7 +78,15 @@ def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
             mysql_types.append(MYSQL_DATA_TYPE.INT)
         elif db_type is oracledb.DB_TYPE_BOOLEAN:
             mysql_types.append(MYSQL_DATA_TYPE.BOOLEAN)
+        elif db_type in (
+            oracledb.DB_TYPE_CHAR, oracledb.DB_TYPE_NCHAR, oracledb.DB_TYPE_LONG,
+            oracledb.DB_TYPE_NVARCHAR, oracledb.DB_TYPE_VARCHAR, oracledb.DB_TYPE_LONG_NVARCHAR,
+        ):
+            mysql_types.append(MYSQL_DATA_TYPE.TEXT)
+        elif db_type in (oracledb.DB_TYPE_RAW, oracledb.DB_TYPE_LONG_RAW):
+            mysql_types.append(MYSQL_DATA_TYPE.BINARY)
         else:
+            # fallback
             mysql_types.append(MYSQL_DATA_TYPE.TEXT)
 
     return Response(

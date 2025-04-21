@@ -126,7 +126,7 @@ class IntegrationDataNode(DataNode):
             raise Exception(result.error_message)
 
     def create_table(self, table_name: Identifier, result_set: ResultSet = None, columns=None,
-                     is_replace=False, is_create=False) -> DataHubResponse:
+                     is_replace=False, is_create=False, **kwargs) -> DataHubResponse:
         # is_create - create table
         # is_replace - drop table if exists
         # is_create==False and is_replace==False: just insert

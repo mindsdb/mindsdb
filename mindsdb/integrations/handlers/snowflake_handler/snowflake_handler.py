@@ -102,6 +102,13 @@ def _make_table_response(result: DataFrame, cursor: SnowflakeCursor) -> Response
         if pd_types.is_bool_dtype(column_dtype):
             mysql_types.append(MYSQL_DATA_TYPE.BOOLEAN)
             continue
+        if pd_types.is_datetime64_any_dtype(column_dtype):
+            mysql_types.append(MYSQL_DATA_TYPE.DATETIME)
+            series = result[column.name]
+            if series.dt.tz is not None and series.dt.tz.zone != 'UTC':
+                series = series.dt.tz_convert('UTC')
+                result[column.name] = series.dt.tz_localize(None)
+            continue
 
         if pd_types.is_object_dtype(column_dtype):
             if description_column_type == 'TEXT':
@@ -111,6 +118,12 @@ def _make_table_response(result: DataFrame, cursor: SnowflakeCursor) -> Response
             elif description_column_type == 'BINARY':
                 # if column.internal_size == 8388608 then BINARY, else VARBINARY(internal_size)
                 mysql_types.append(MYSQL_DATA_TYPE.BINARY)
+                continue
+            elif description_column_type == 'DATE':
+                mysql_types.append(MYSQL_DATA_TYPE.DATE)
+                continue
+            elif description_column_type == 'TIME':
+                mysql_types.append(MYSQL_DATA_TYPE.TIME)
                 continue
 
         if description_column_type == 'FIXED':

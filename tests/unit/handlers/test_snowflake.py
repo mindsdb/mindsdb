@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 from collections import OrderedDict
 from decimal import Decimal
+import datetime
 
 import snowflake
 import snowflake.connector
@@ -625,7 +626,128 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         # region test date/time types
         """Data obtained using:
+        CREATE TABLE test_datetime_types (
+            d_date DATE,
+            d_datetime DATETIME,
+            d_datetime_p DATETIME(3),
+            d_time TIME,
+            d_time_p TIME(6),
+            d_timestamp TIMESTAMP,
+            d_timestamp_p TIMESTAMP(9),
+            d_timestamp_ltz TIMESTAMP_LTZ,      -- timestamp with local tz
+            d_timestamp_ltz_p TIMESTAMP_LTZ(3),
+            d_timestamp_ntz TIMESTAMP_NTZ,      -- timestamp no tz
+            d_timestamp_ntz_p TIMESTAMP_NTZ(6),
+            d_timestamp_tz TIMESTAMP_TZ,        -- timestamp with tz
+            d_timestamp_tz_p TIMESTAMP_TZ(9)
+        );
+
+        INSERT INTO test_datetime_types (
+            d_date,
+            d_datetime,
+            d_datetime_p,
+            d_time,
+            d_time_p,
+            d_timestamp,
+            d_timestamp_p,
+            d_timestamp_ltz,
+            d_timestamp_ltz_p,
+            d_timestamp_ntz,
+            d_timestamp_ntz_p,
+            d_timestamp_tz,
+            d_timestamp_tz_p
+        ) VALUES (
+            '2023-10-15',                                -- d_date
+            '2023-10-15 14:30:45.123456789',             -- d_datetime
+            '2023-10-15 14:30:45.123',                   -- d_datetime_p
+            '14:30:45',                                  -- d_time
+            '14:30:45.123456',                           -- d_time_p
+            '2023-10-15 14:30:45.123456789 +03:00',      -- d_timestamp
+            '2023-10-15 14:30:45.123456789 +03:00',      -- d_timestamp_p
+            '2023-10-15 14:30:45.123 +03:00',            -- d_timestamp_ltz
+            '2023-10-15 14:30:45.123 +03:00',            -- d_timestamp_ltz_p
+            '2023-10-15 14:30:45.123456',                -- d_timestamp_ntz
+            '2023-10-15 14:30:45.123456',                -- d_timestamp_ntz_p
+            '2023-10-15 14:30:45.123456789 +03:00',      -- d_timestamp_tz
+            '2023-10-15 14:30:45.123456789 +03:00'       -- d_timestamp_tz_p
+        );
         """
+        input_data = pd.DataFrame({
+            'D_DATE': pd.Series([datetime.date(2023, 10, 15)], dtype='object'),
+            'D_DATETIME': pd.Series([pd.Timestamp('2023-10-15 14:30:45.123456789')], dtype='datetime64[ns]'),
+            'D_DATETIME_P': pd.Series([pd.Timestamp('2023-10-15 14:30:45.123000')], dtype='datetime64[ms]'),
+            'D_TIME': pd.Series([datetime.time(14, 30, 45)], dtype='object'),
+            'D_TIME_P': pd.Series([datetime.time(14, 30, 45, 123456)], dtype='object'),
+            'D_TIMESTAMP': pd.Series([pd.Timestamp('2023-10-15 14:30:45.123456789')], dtype='datetime64[ns]'),
+            'D_TIMESTAMP_P': pd.Series([pd.Timestamp('2023-10-15 14:30:45.123456789')], dtype='datetime64[ns]'),
+            'D_TIMESTAMP_LTZ': pd.Series(
+                [pd.Timestamp('2023-10-15 04:30:45.123000-0700', tz='America/Los_Angeles')],
+                dtype='datetime64[ns, America/Los_Angeles]'
+            ),
+            'D_TIMESTAMP_LTZ_P': pd.Series(
+                [pd.Timestamp('2023-10-15 04:30:45.123000-0700', tz='America/Los_Angeles')],
+                dtype='datetime64[ns, America/Los_Angeles]'
+            ),
+            'D_TIMESTAMP_NTZ': pd.Series([pd.Timestamp('2023-10-15 14:30:45.123456')], dtype='datetime64[ns]'),
+            'D_TIMESTAMP_NTZ_P': pd.Series([pd.Timestamp('2023-10-15 14:30:45.123456')], dtype='datetime64[ns]'),
+            'D_TIMESTAMP_TZ': pd.Series(
+                [pd.Timestamp('2023-10-15 04:30:45.123456789-0700', tz='America/Los_Angeles')],
+                dtype='datetime64[ns, America/Los_Angeles]'
+            ),
+            'D_TIMESTAMP_TZ_P': pd.Series(
+                [pd.Timestamp('2023-10-15 04:30:45.123456789-0700', tz='America/Los_Angeles')],
+                dtype='datetime64[ns, America/Los_Angeles]'
+            )
+        })
+        mock_cursor.fetch_pandas_batches.return_value = iter([input_data])
+        mock_cursor.description = [
+            ColumnDescription(name='D_DATE', type_code=3, display_size=None, internal_size=None, precision=None, scale=None, is_nullable=True),
+            ColumnDescription(name='D_DATETIME', type_code=8, display_size=None, internal_size=None, precision=0, scale=9, is_nullable=True),
+            ColumnDescription(name='D_DATETIME_P', type_code=8, display_size=None, internal_size=None, precision=0, scale=3, is_nullable=True),
+            ColumnDescription(name='D_TIME', type_code=12, display_size=None, internal_size=None, precision=0, scale=9, is_nullable=True),
+            ColumnDescription(name='D_TIME_P', type_code=12, display_size=None, internal_size=None, precision=0, scale=6, is_nullable=True),
+            ColumnDescription(name='D_TIMESTAMP', type_code=8, display_size=None, internal_size=None, precision=0, scale=9, is_nullable=True),
+            ColumnDescription(name='D_TIMESTAMP_P', type_code=8, display_size=None, internal_size=None, precision=0, scale=9, is_nullable=True),
+            ColumnDescription(name='D_TIMESTAMP_LTZ', type_code=6, display_size=None, internal_size=None, precision=0, scale=9, is_nullable=True),
+            ColumnDescription(name='D_TIMESTAMP_LTZ_P', type_code=6, display_size=None, internal_size=None, precision=0, scale=3, is_nullable=True),
+            ColumnDescription(name='D_TIMESTAMP_NTZ', type_code=8, display_size=None, internal_size=None, precision=0, scale=9, is_nullable=True),
+            ColumnDescription(name='D_TIMESTAMP_NTZ_P', type_code=8, display_size=None, internal_size=None, precision=0, scale=6, is_nullable=True),
+            ColumnDescription(name='D_TIMESTAMP_TZ', type_code=7, display_size=None, internal_size=None, precision=0, scale=9, is_nullable=True),
+            ColumnDescription(name='D_TIMESTAMP_TZ_P', type_code=7, display_size=None, internal_size=None, precision=0, scale=9, is_nullable=True)
+        ]
+        excepted_mysql_types = [
+            MYSQL_DATA_TYPE.DATE,
+            MYSQL_DATA_TYPE.DATETIME,
+            MYSQL_DATA_TYPE.DATETIME,
+            MYSQL_DATA_TYPE.TIME,
+            MYSQL_DATA_TYPE.TIME,
+            MYSQL_DATA_TYPE.DATETIME,
+            MYSQL_DATA_TYPE.DATETIME,
+            MYSQL_DATA_TYPE.DATETIME,
+            MYSQL_DATA_TYPE.DATETIME,
+            MYSQL_DATA_TYPE.DATETIME,
+            MYSQL_DATA_TYPE.DATETIME,
+            MYSQL_DATA_TYPE.DATETIME,
+            MYSQL_DATA_TYPE.DATETIME
+        ]
+        expected_result_df = pd.DataFrame({
+            'D_DATE': pd.Series([datetime.date(2023, 10, 15)], dtype='object'),
+            'D_DATETIME': pd.Series([pd.Timestamp('2023-10-15 14:30:45.123456789')], dtype='datetime64[ns]'),
+            'D_DATETIME_P': pd.Series([pd.Timestamp('2023-10-15 14:30:45.123000')], dtype='datetime64[ms]'),
+            'D_TIME': pd.Series([datetime.time(14, 30, 45)], dtype='object'),
+            'D_TIME_P': pd.Series([datetime.time(14, 30, 45, 123456)], dtype='object'),
+            'D_TIMESTAMP': pd.Series([pd.Timestamp('2023-10-15 14:30:45.123456789')], dtype='datetime64[ns]'),
+            'D_TIMESTAMP_P': pd.Series([pd.Timestamp('2023-10-15 14:30:45.123456789')], dtype='datetime64[ns]'),
+            'D_TIMESTAMP_LTZ': pd.Series([pd.Timestamp('2023-10-15 11:30:45.123000')], dtype='datetime64[ns]'),
+            'D_TIMESTAMP_LTZ_P': pd.Series([pd.Timestamp('2023-10-15 11:30:45.123000')], dtype='datetime64[ns]'),
+            'D_TIMESTAMP_NTZ': pd.Series([pd.Timestamp('2023-10-15 14:30:45.123456')], dtype='datetime64[ns]'),
+            'D_TIMESTAMP_NTZ_P': pd.Series([pd.Timestamp('2023-10-15 14:30:45.123456')], dtype='datetime64[ns]'),
+            'D_TIMESTAMP_TZ': pd.Series([pd.Timestamp('2023-10-15 11:30:45.123456789')], dtype='datetime64[ns]'),
+            'D_TIMESTAMP_TZ_P': pd.Series([pd.Timestamp('2023-10-15 11:30:45.123456789')], dtype='datetime64[ns]')
+        })
+        response = self.handler.native_query(query_str)
+        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertTrue(response.data_frame.equals(expected_result_df))
         # endregion
 
 

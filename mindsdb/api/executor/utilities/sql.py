@@ -10,7 +10,7 @@ from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb_sql_parser.ast import (
     ASTNode, Select, Identifier,
-    Function, Constant
+    Function, Constant, Variable
 )
 from mindsdb.utilities.functions import resolve_table_identifier, resolve_model_identifier
 
@@ -147,6 +147,11 @@ def query_df(df, query, session=None):
             else:
                 if user_functions is not None:
                     user_functions.check_function(node)
+        # If a variable is used in the target list, add quotes around the value.
+        if isinstance(node, Variable):
+            if kwargs.get('is_target'):
+                node = Identifier(parts=[node.get_string()])
+                return node
 
     query_traversal(query_ast, adapt_query)
 

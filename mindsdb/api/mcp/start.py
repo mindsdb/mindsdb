@@ -1,3 +1,5 @@
+import requests
+
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
 from typing import Optional, Dict, Any
@@ -124,6 +126,57 @@ def list_databases() -> Dict[str, Any]:
             "type": "error",
             "error_code": 0,
             "error_message": str(e),
+        }
+
+
+@mcp.tool()
+def create_view(view_name: str, data_query: str):
+    """
+    Create a view in MindsDB
+
+    Arguments:
+        view_name: The name of the view to create
+        data_query: The query to create the view from
+
+    Returns:
+        Dict containing the list of databases and their tables
+    """
+
+    url = "http://127.0.0.1:47334/api/projects/mindsdb/views"
+
+    payload = {"view": {
+            "name": view_name,
+            "query": data_query
+        }}
+    headers = {"Content-Type": "application/json"}
+
+    try:
+        # Add timeout to prevent hanging
+        response = requests.request("POST", url, json=payload, headers=headers, timeout=10)
+        
+        # Check status code and handle errors
+        response.raise_for_status()
+        
+        # Return structured response
+        return {
+            "status": "success",
+            "message": f"View {view_name} created successfully",
+            "details": response.json() if response.text else None
+        }
+    except requests.exceptions.Timeout:
+        return {
+            "status": "error",
+            "message": "Request timed out after 10 seconds. The server took too long to respond."
+        }
+    except requests.exceptions.ConnectionError:
+        return {
+            "status": "error",
+            "message": f"Failed to connect to MindsDB server at {url}. Please check if the server is running."
+        }
+    except requests.exceptions.RequestException as e:
+        return {
+            "status": "error",
+            "message": f"Error creating view: {str(e)}"
         }
 
 

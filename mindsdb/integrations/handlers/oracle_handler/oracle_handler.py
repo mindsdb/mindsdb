@@ -85,6 +85,10 @@ def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
             mysql_types.append(MYSQL_DATA_TYPE.TEXT)
         elif db_type in (oracledb.DB_TYPE_RAW, oracledb.DB_TYPE_LONG_RAW):
             mysql_types.append(MYSQL_DATA_TYPE.BINARY)
+        elif db_type is oracledb.DB_TYPE_DATE:
+            mysql_types.append(MYSQL_DATA_TYPE.DATE)
+        elif db_type is oracledb.DB_TYPE_TIMESTAMP:
+            mysql_types.append(MYSQL_DATA_TYPE.TIMESTAMP)
         else:
             # fallback
             mysql_types.append(MYSQL_DATA_TYPE.TEXT)

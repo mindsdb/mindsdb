@@ -1,5 +1,6 @@
-from collections import OrderedDict
 import unittest
+import datetime
+from collections import OrderedDict
 from unittest.mock import patch, MagicMock
 
 import oracledb
@@ -541,6 +542,59 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.TEXT,
             MYSQL_DATA_TYPE.BINARY,
             MYSQL_DATA_TYPE.BINARY
+        ]
+        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        for i, input_value in enumerate(input_row):
+            result_value = response.data_frame[response.data_frame.columns[i]][0]
+            self.assertEqual(result_value, input_value)
+        # endregion
+
+        # region test date types
+        """Data obtained using:
+        CREATE TABLE test_datetime_types (
+            d_date DATE,
+            d_timestamp TIMESTAMP,
+            d_timestamp_p TIMESTAMP(9)
+            -- timezone is not supported in thin mode
+            -- d_timestamp_tz TIMESTAMP WITH TIME ZONE,
+            -- d_timestamp_tz_p TIMESTAMP(6) WITH TIME ZONE,
+            -- d_timestamp_ltz TIMESTAMP WITH LOCAL TIME ZONE
+        );
+
+        INSERT INTO test_datetime_types (
+            d_date,
+            d_timestamp,
+            d_timestamp_p
+            -- timezone is not supported in thin mode
+            -- d_timestamp_tz,
+            -- d_timestamp_tz_p,
+            -- d_timestamp_ltz
+        ) VALUES (
+            DATE '2023-10-15',                                                -- d_date
+            TIMESTAMP '2023-10-15 10:30:45.123456789',                        -- d_timestamp
+            TIMESTAMP '2023-10-15 10:30:45.123456789'                         -- d_timestamp_p
+            -- timezone is not supported in thin mode
+            -- TIMESTAMP '2023-10-15 10:30:45.123456' AT TIME ZONE 'America/Los_Angeles', -- d_timestamp_tz
+            -- TIMESTAMP '2023-10-15 10:30:45.123456' AT TIME ZONE '-07:00',     -- d_timestamp_tz_p
+            -- TIMESTAMP '2023-10-15 10:30:45.123456'                            -- d_timestamp_ltz
+        );
+        """
+        input_row = (
+            datetime.datetime(2023, 10, 15, 0, 0),
+            datetime.datetime(2023, 10, 15, 10, 30, 45, 123457),
+            datetime.datetime(2023, 10, 15, 10, 30, 45, 123456)
+        )
+        mock_cursor.fetchall.return_value = [input_row]
+        mock_cursor.description = [
+            ('D_DATE', oracledb.DB_TYPE_DATE, 23, None, None, None, True),
+            ('D_TIMESTAMP', oracledb.DB_TYPE_TIMESTAMP, 23, None, 0, 6, True),
+            ('D_TIMESTAMP_P', oracledb.DB_TYPE_TIMESTAMP, 23, None, 0, 9, True)
+        ]
+        response: Response = self.handler.native_query(query_str)
+        excepted_mysql_types = [
+            MYSQL_DATA_TYPE.DATE,
+            MYSQL_DATA_TYPE.TIMESTAMP,
+            MYSQL_DATA_TYPE.TIMESTAMP
         ]
         self.assertEquals(response.mysql_types, excepted_mysql_types)
         for i, input_value in enumerate(input_row):

@@ -130,13 +130,15 @@ def query_df(df, query, session=None):
                 node.parts = [node.parts[-1]]
                 return node
         if isinstance(node, Function):
+            fnc_results = {
+                "database": session.database if session else None,
+                "version": "8.0.17",
+                "current_schema": "public"
+            }
             fnc_name = node.op.lower()
-            if fnc_name == 'database' and len(node.args) == 0:
-                if session is not None:
-                    cur_db = session.database
-                else:
-                    cur_db = None
-                return Constant(cur_db)
+            if fnc_name in fnc_results:
+                node = Constant(fnc_results[fnc_name], alias=Identifier(parts=[fnc_name]))
+                return node
             elif fnc_name == 'truncate':
                 # replace mysql 'truncate' function to duckdb 'round'
                 node.op = 'round'

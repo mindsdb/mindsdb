@@ -6,7 +6,6 @@ import pandas as pd
 
 from mindsdb.api.executor.planner import plan_query
 from mindsdb.api.executor.planner.query_plan import QueryPlan
-from mindsdb.api.executor.planner.step_result import Result
 from mindsdb.api.executor.planner.steps import (
     FetchDataframeStep,
     InsertToTable,

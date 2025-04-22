@@ -29,6 +29,7 @@ class RunningQuery:
     def __init__(self, record: db.Queries):
         self.record = record
         self.sql = record.sql
+        self.database = record.database or 'mindsdb'
 
     def get_partition_query(self, step_num: int, query: Select) -> Select:
         """
@@ -74,6 +75,7 @@ class RunningQuery:
         return {
             'id': record.id,
             'sql': record.sql,
+            'database': record.database,
             'started_at': record.started_at,
             'finished_at': record.finished_at,
             'parameters': record.parameters,
@@ -491,7 +493,7 @@ class QueryContextController:
             raise RuntimeError(f'Query not found: {query_id}')
         return RunningQuery(rec)
 
-    def create_query(self, query: ASTNode) -> RunningQuery:
+    def create_query(self, query: ASTNode, database: str = None) -> RunningQuery:
         """
            Create a new running query from AST query
         """
@@ -506,6 +508,7 @@ class QueryContextController:
 
         rec = db.Queries(
             sql=str(query),
+            database=database,
             company_id=ctx.company_id,
         )
 

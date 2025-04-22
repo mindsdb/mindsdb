@@ -571,7 +571,7 @@ class Queries(Base):
     company_id: int = Column(Integer, nullable=True)
 
     sql: str = Column(String, nullable=False)
-    # step_data: JSON = Column(JSON, nullable=True)
+    database: str = Column(String, nullable=True)
 
     started_at: datetime.datetime = Column(DateTime, default=datetime.datetime.now)
     finished_at: datetime.datetime = Column(DateTime)

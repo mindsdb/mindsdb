@@ -176,7 +176,7 @@ class KBTest(KBTestBase):
         assert len(ret) == 4
 
         print('Limit with content')
-        ret = self.run_sql("select id, chunk_content from kb_crm where content = 'help' limit 4")
+        ret = self.run_sql("select id, chunk_content, distance from kb_crm where content = 'help' limit 4")
         assert len(ret) == 4
         assert ret['id'][0] == '1000'  # id is string
 
@@ -419,13 +419,14 @@ class KBTest(KBTestBase):
             );
         """)
 
-        ret = self.run_sql("""
+        threshold = 0.5
+        ret = self.run_sql(f"""
             SELECT *
             FROM kb_crm
-            WHERE status = "solving" AND content = "noise" AND relevance_threshold=0.8
+            WHERE status = "solving" AND content = "noise" AND relevance_threshold={threshold}
         """)
         assert set(ret.metadata.apply(lambda x: x.get('status'))) == {'solving'}
         for item in ret.chunk_content:
             assert 'noise' in item  # all lines line contents word
 
-        assert len(ret[ret.relevance < 0.8]) == 0
+        assert len(ret[ret.relevance < threshold]) == 0

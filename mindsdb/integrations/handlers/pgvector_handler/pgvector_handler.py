@@ -40,8 +40,31 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         # we get these from the connection args on PostgresHandler parent
         self._is_sparse = self.connection_args.get('is_sparse', False)
         self._vector_size = self.connection_args.get('vector_size', None) 
-        if self._is_sparse and not self._vector_size:
-            raise ValueError("vector_size is required when is_sparse=True")
+
+        if self._is_sparse:
+            if not self._vector_size:
+                raise ValueError("vector_size is required when is_sparse=True")
+
+                # Use inner product for sparse vectors
+                distance_op = "<#>"
+
+        else:
+            distance_op = '<=>'
+            if 'distance' in self.connection_args:
+                distance_ops = {
+                    'l1': '<+>',
+                    'l2': '<->',
+                    'ip': '<#>',  # inner product
+                    'cosine': '<=>',
+                    'hamming': '<~>',
+                    'jaccard': '<%>'
+                }
+
+                distance_op = distance_ops.get(self.connection_args['distance'])
+                if distance_op is None:
+                    raise ValueError(f'Wrong distance type. Allowed options are {list(distance_ops.keys())}')
+
+        self.distance_op = distance_op
         self.connect()
 
     def _make_connection_args(self):
@@ -224,20 +247,16 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
                         from pgvector.utils import SparseVector
                         embedding = SparseVector(search_vector, self._vector_size)
                         search_vector = embedding.to_text()
-                    # Use inner product for sparse vectors
-                    distance_op = "<#>"
                 else:
                     # Convert list to vector string if needed
                     if isinstance(search_vector, list):
                         search_vector = f"[{','.join(str(x) for x in search_vector)}]"
-                    # Use cosine similarity for dense vectors
-                    distance_op = "<=>"
 
                 # Calculate distance as part of the query if needed
                 if has_distance:
-                    targets = f"{targets}, (embeddings {distance_op} '{search_vector}') as distance"
+                    targets = f"{targets}, (embeddings {self.distance_op} '{search_vector}') as distance"
                 
-                return f"SELECT {targets} FROM {table_name} {where_clause} ORDER BY embeddings {distance_op} '{search_vector}' ASC {limit_clause} {offset_clause} "
+                return f"SELECT {targets} FROM {table_name} {where_clause} ORDER BY embeddings {self.distance_op} '{search_vector}' ASC {limit_clause} {offset_clause} "
 
             else:
                 # if filter conditions, return rows that satisfy the conditions

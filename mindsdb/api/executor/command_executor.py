@@ -868,13 +868,21 @@ class ExecuteCommands:
             else:
                 raise WrongArgumentError(f'Unknown describe type: {obj_type}')
 
-        name = obj_name.parts[-1]
+        parts = obj_name.parts
+        if len(parts) > 2:
+            raise WrongArgumentError(
+                f"Invalid object name: {obj_name.to_string()}.\n"
+                "Only models support three-part namespaces."
+            )
+
+        name = parts[-1]
         where = BinaryOperation(op='=', args=[
             Identifier('name'),
             Constant(name)
         ])
 
         if obj_type in project_objects:
+            database_name = parts[0] if len(parts) > 1 else database_name
             where = BinaryOperation(op='and', args=[
                 where,
                 BinaryOperation(op='=', args=[Identifier('project'), Constant(database_name)])

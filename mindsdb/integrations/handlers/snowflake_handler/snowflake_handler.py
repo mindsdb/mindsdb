@@ -7,10 +7,10 @@ from snowflake import connector
 from snowflake.connector.errors import NotSupportedError
 from snowflake.connector.cursor import SnowflakeCursor, ResultMetadata
 
-from mindsdb.utilities import log
 from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb_sql_parser.ast import Select, Identifier
 
+from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.response import (
@@ -105,7 +105,8 @@ def _make_table_response(result: DataFrame, cursor: SnowflakeCursor) -> Response
         if pd_types.is_datetime64_any_dtype(column_dtype):
             mysql_types.append(MYSQL_DATA_TYPE.DATETIME)
             series = result[column.name]
-            if series.dt.tz is not None and series.dt.tz.zone != 'UTC':
+            # snowflake use pytz.timezone
+            if series.dt.tz is not None and getattr(series.dt.tz, 'zone', 'UTC') != 'UTC':
                 series = series.dt.tz_convert('UTC')
                 result[column.name] = series.dt.tz_localize(None)
             continue

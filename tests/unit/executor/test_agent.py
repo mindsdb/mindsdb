@@ -461,9 +461,7 @@ class TestKB(BaseExecutorDummyML):
         assert metadata['url'] == record['url']
         assert metadata['product'] == record['product']
 
-    def test_join_kb_table(self):
-        self._create_embedding_model('emb_model')
-
+    def _get_ral_table(self):
         data = [
             ['1000', 'Green beige', 'Beige verdastro'],
             ['1004', 'Golden yellow', 'Giallo oro'],
@@ -471,7 +469,12 @@ class TestKB(BaseExecutorDummyML):
             ['9023', 'Pearl dark grey', 'Grigio scuro perlato'],
         ]
 
-        df = pd.DataFrame(data, columns=['ral', 'english', 'italian'])
+        return pd.DataFrame(data, columns=['ral', 'english', 'italian'])
+
+    def test_join_kb_table(self):
+        self._create_embedding_model('emb_model')
+
+        df = self._get_ral_table()
         self.save_file('ral', df)
 
         self.run_sql('''
@@ -524,3 +527,87 @@ class TestKB(BaseExecutorDummyML):
         """)
         assert len(ret) == 2
         assert set(ret['id']) == {'9016', '9023'}
+
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_kb_partitions(self, mock_handler):
+        self._create_embedding_model('emb_model')
+
+        df = self._get_ral_table()
+        self.save_file('ral', df)
+
+        df = pd.concat([df] * 30)
+        # unique ids
+        df['id'] = list(map(str, range(len(df))))
+
+        self.set_handler(mock_handler, name='pg', tables={'ral': df})
+
+        def check_partition(sql):
+            # create empty kb
+            self.run_sql('DROP KNOWLEDGE_BASE IF EXISTS kb_part')
+            self.run_sql('create knowledge base kb_part using model=emb_model')
+
+            # load kb
+            self.run_sql(sql)
+
+            # check content
+            ret = self.run_sql('select * from kb_part')
+            assert len(ret) == len(df)
+
+            # check queries table
+            ret = self.run_sql('select * from information_schema.queries')
+            assert len(ret) == 1
+            rec = ret.iloc[0]
+            assert 'kb_part' in ret['SQL'][0]
+            assert ret['ERROR'][0] is None
+            assert ret['FINISHED_AT'][0] is not None
+
+            # test describe
+            ret = self.run_sql('describe knowledge base kb_part')
+            assert len(ret) == 1
+            rec_d = ret.iloc[0]
+            assert rec_d['PROCESSED_ROWS'] == rec['PROCESSED_ROWS']
+            assert rec_d['INSERT_STARTED_AT'] == rec['STARTED_AT']
+            assert rec_d['INSERT_FINISHED_AT'] == rec['FINISHED_AT']
+            assert rec_d['QUERY_ID'] == rec['ID']
+
+            # del query
+            self.run_sql(f"SELECT query_cancel({rec['ID']})")
+            ret = self.run_sql('select * from information_schema.queries')
+            assert len(ret) == 0
+
+            ret = self.run_sql('describe knowledge base kb_part')
+            assert len(ret) == 1
+            rec_d = ret.iloc[0]
+            assert rec_d['PROCESSED_ROWS'] is None
+            assert rec_d['INSERT_STARTED_AT'] is None
+            assert rec_d['INSERT_FINISHED_AT'] is None
+            assert rec_d['QUERY_ID'] is None
+
+        # test iterate
+        check_partition('''
+            insert into kb_part
+            SELECT id, english content FROM  pg.ral
+            using batch_size=20, track_column=id
+        ''')
+
+        # test threads
+        check_partition('''
+            insert into kb_part
+            SELECT id, english content FROM  pg.ral
+            using batch_size=20, track_column=id, threads = 3
+        ''')
+
+        # check select join using partitions
+        ret = self.run_sql('''
+            SELECT * FROM  pg.ral t
+            join emb_model
+            using batch_size=20, track_column=id
+        ''')
+        assert len(ret) == len(df)
+
+        ret = self.run_sql('''
+            SELECT * FROM  pg.ral t
+            join emb_model
+            using batch_size=20, track_column=id, threads = 3
+        ''')
+        assert len(ret) == len(df)

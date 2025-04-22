@@ -42,7 +42,8 @@ def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
         ('real', 'money', 'float'): MYSQL_DATA_TYPE.FLOAT,
         ('numeric', 'decimal'): MYSQL_DATA_TYPE.DECIMAL,
         ('double precision',): MYSQL_DATA_TYPE.DOUBLE,
-        ('character varying', 'varchar', 'character', 'char', 'bpchar', 'bpchar', 'text'): MYSQL_DATA_TYPE.TEXT,
+        ('character varying', 'varchar'): MYSQL_DATA_TYPE.VARCHAR,
+        ('character', 'char', 'bpchar', 'bpchar', 'text'): MYSQL_DATA_TYPE.TEXT,
         ('timestamp', 'timestamp without time zone', 'timestamp with time zone'): MYSQL_DATA_TYPE.DATETIME,
         ('date', ): MYSQL_DATA_TYPE.DATE,
         ('time', 'time without time zone', 'time with time zone'): MYSQL_DATA_TYPE.TIME,
@@ -75,7 +76,7 @@ class PostgresHandler(DatabaseHandler):
 
         self.connection = None
         self.is_connected = False
-        self.thread_safe = True
+        self.thread_safe = False
 
     def __del__(self):
         if self.is_connected:
@@ -261,8 +262,26 @@ class PostgresHandler(DatabaseHandler):
 
         connection = self.connect()
 
-        columns = [f'"{c}"' for c in df.columns]
+        columns = df.columns
+
+        resp = self.get_columns(table_name)
+
+        # copy requires precise cases of names: get current column names from table and adapt input dataframe columns
+        if resp.data_frame is not None and not resp.data_frame.empty:
+            db_columns = {
+                c.lower(): c
+                for c in resp.data_frame['COLUMN_NAME']
+            }
+
+            # try to get case of existing column
+            columns = [
+                db_columns.get(c.lower(), c)
+                for c in columns
+            ]
+
+        columns = [f'"{c}"' for c in columns]
         rowcount = None
+
         with connection.cursor() as cur:
             try:
                 with cur.copy(f'copy "{table_name}" ({",".join(columns)}) from STDIN WITH CSV') as copy:
@@ -342,8 +361,18 @@ class PostgresHandler(DatabaseHandler):
             schema_name = 'current_schema()'
         query = f"""
             SELECT
-                column_name as "Field",
-                data_type as "Type"
+                COLUMN_NAME,
+                DATA_TYPE,
+                ORDINAL_POSITION,
+                COLUMN_DEFAULT,
+                IS_NULLABLE,
+                CHARACTER_MAXIMUM_LENGTH,
+                CHARACTER_OCTET_LENGTH,
+                NUMERIC_PRECISION,
+                NUMERIC_SCALE,
+                DATETIME_PRECISION,
+                CHARACTER_SET_NAME,
+                COLLATION_NAME
             FROM
                 information_schema.columns
             WHERE
@@ -352,9 +381,7 @@ class PostgresHandler(DatabaseHandler):
                 table_schema = {schema_name}
         """
         result = self.native_query(query)
-        if result.resp_type is RESPONSE_TYPE.TABLE:
-            result.data_frame.columns = [name.lower() for name in result.data_frame.columns]
-            result.data_frame['mysql_data_type'] = result.data_frame['type'].apply(_map_type)
+        result.to_columns_table_response(map_type_fn=_map_type)
         return result
 
     def subscribe(self, stop_event, callback, table_name, columns=None, **kwargs):

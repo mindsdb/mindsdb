@@ -340,14 +340,24 @@ class SnowflakeHandler(DatabaseHandler):
             raise ValueError("Invalid table name provided.")
 
         query = f"""
-            SELECT COLUMN_NAME AS FIELD, DATA_TYPE AS TYPE
+            SELECT
+                COLUMN_NAME,
+                DATA_TYPE,
+                ORDINAL_POSITION,
+                COLUMN_DEFAULT,
+                IS_NULLABLE,
+                CHARACTER_MAXIMUM_LENGTH,
+                CHARACTER_OCTET_LENGTH,
+                NUMERIC_PRECISION,
+                NUMERIC_SCALE,
+                DATETIME_PRECISION,
+                CHARACTER_SET_NAME,
+                COLLATION_NAME
             FROM INFORMATION_SCHEMA.COLUMNS
             WHERE TABLE_NAME = '{table_name}'
               AND TABLE_SCHEMA = current_schema()
         """
         result = self.native_query(query)
-        if result.resp_type is RESPONSE_TYPE.TABLE:
-            result.data_frame = result.data_frame.rename(columns={'FIELD': 'Field', 'TYPE': 'Type'})
-            result.data_frame['mysql_data_type'] = result.data_frame['Type'].apply(_map_type)
+        result.to_columns_table_response(map_type_fn=_map_type)
 
         return result

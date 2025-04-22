@@ -160,20 +160,13 @@ jobs:
           uv pip install .
           uv pip install -r requirements/requirements-test.txt
           uv pip install .[lightwood]  # TODO: for now some tests rely on lightwood
-          uv pip install .[mssql]
           uv pip install .[clickhouse]
           uv pip install .[snowflake]
           uv pip install .[web]
           uv pip install .[redshift]
           uv pip install .[bigquery]
-          uv pip install .[elasticsearch]
           uv pip install .[databricks]
           uv pip install .[oracle]
-          uv pip install .[db2]
-          uv pip install .[hive]
-          uv pip install .[teradata]
-          uv pip install .[hana]
-          uv pip install .[minds_endpoint]
           uv pip install .[slack]
           uv pip install .[github]
           uv pip install .[ms_teams]
@@ -181,6 +174,20 @@ jobs:
           uv pip install .[mysql]
           uv pip freeze
           git clone https://github.com/mindsdb/mindsdb_sql_parser.git parser_tests
+      - name: Install mssql dependencies
+        if: ${{ needs.changes.outputs.not-docs == 'true' }}
+        run: |
+          # Set FreeTDS build flags only on macOS
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            brew install freetds
+            echo "Setting FreeTDS flags for macOS pymssql build"
+            export LDFLAGS="-L$(brew --prefix freetds)/lib"
+            export CFLAGS="-I$(brew --prefix freetds)/include"
+            uv pip install pymssql==2.3.1 --no-binary :all:
+          else
+            uv pip install .[mssql]
+          fi
+          
       - name: Run unit tests
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
@@ -188,7 +195,6 @@ jobs:
             env PYTHONPATH=./ pytest tests/unit/planner/ -x
             env PYTHONPATH=./ pytest tests/unit/executor/ -x -k "not test_udf"
             env PYTHONPATH=./ pytest tests/unit/various/ -x
-            env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_minds_endpoint.py
             env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_openai.py
 
             env PYTHONPATH=./:parser_tests/tests pytest tests/unit/render/ -x
@@ -203,16 +209,6 @@ jobs:
       - name: Run Handlers tests and submit Coverage to coveralls
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
-          handlers=("mysql" "postgres" "mssql" "clickhouse" "snowflake" "web" "redshift" "bigquery" "elasticsearch" "s3" "databricks" "dynamodb" "mariadb" "oracle" "mongodb" "db2" "hive" "teradata" "hana" "slack" "timescaledb" "ms_teams" "salesforce" "confluence")
-          for handler in "${handlers[@]}"
-          do
-            pytest --cov=mindsdb/integrations/handlers/${handler}_handler tests/unit/handlers/test_${handler}.py 
-          done
-
-          # Dont run coveralls for PRs from forks
-          if [ ${{ github.event.pull_request.head.repo.full_name }} == ${{ github.repository }} ]; then
-            coveralls --service=github --basedir=mindsdb/integrations/handlers
-          fi
+          python -m unittest discover -s tests/unit/handlers
         env:
-          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
           github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}

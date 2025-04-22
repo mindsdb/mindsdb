@@ -266,7 +266,8 @@
     {"source": "/data-integrations","destination": "/features/data-integrations"},
     {"source": "/automation","destination": "/features/automation"},
     {"source": "/features/ai-integrations","destination": "/integrations/ai-overview"},
-    {"source": "/features/data-integrations","destination": "/integrations/data-overview"}
+    {"source": "/features/data-integrations","destination": "/integrations/data-overview"},
+    {"source": "/mindsdb_sql/agents/knowledge-bases","destination": "/mindsdb_sql/knowledge-bases"}
   ],
   "navigation": [
     {
@@ -512,15 +513,16 @@
           "group": "AI Agents",
           "pages": [
             "mindsdb_sql/agents/agent",
-            "mindsdb_sql/agents/chatbot",
-            "mindsdb_sql/agents/knowledge-bases"
+            "mindsdb_sql/agents/chatbot"
           ]
         },
+        "mindsdb_sql/knowledge-bases",
         {
           "group": "Functions",
           "pages": [
             "mindsdb_sql/functions/custom_functions",
-            "mindsdb_sql/functions/llm_function"
+            "mindsdb_sql/functions/llm_function",
+            "mindsdb_sql/functions/to_markdown"
           ]
         },
         {
@@ -1078,6 +1080,12 @@
             "integrations/ai-engines/portkey",
             "integrations/ai-engines/replicate-llm",
             "integrations/ai-engines/vertex"       
+          ]
+        },
+        {
+          "group": "Embedding Models",
+          "pages": [
+            "integrations/ai-engines/langchain_embedding"
           ]
         },
         {

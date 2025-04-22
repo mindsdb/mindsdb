@@ -169,12 +169,15 @@ class RunningQuery:
 
     def mark_as_run(self):
         """
-            Reset error of the query in database
+            Mark query as running and reset error of the query
         """
         if self.record.finished_at is not None:
             raise RuntimeError('The query already finished')
 
-        if self.record.error is not None:
+        if self.record.started_at is None:
+            self.record.started_at = dt.datetime.now()
+            db.session.commit()
+        elif self.record.error is not None:
             self.record.error = None
             db.session.commit()
         else:

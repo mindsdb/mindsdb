@@ -573,7 +573,7 @@ class Queries(Base):
     sql: str = Column(String, nullable=False)
     database: str = Column(String, nullable=True)
 
-    started_at: datetime.datetime = Column(DateTime, default=datetime.datetime.now)
+    started_at: datetime.datetime = Column(DateTime)
     finished_at: datetime.datetime = Column(DateTime)
 
     parameters = Column(JSON, default={})

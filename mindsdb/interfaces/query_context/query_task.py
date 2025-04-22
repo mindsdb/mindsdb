@@ -1,5 +1,5 @@
 from mindsdb.api.executor.sql_query import SQLQuery
-from mindsdb.interfaces.query_context.context_controller import RunningQuery
+from mindsdb.interfaces.query_context.context_controller import query_context_controller
 from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.interfaces.tasks.task import BaseTask
 
@@ -13,7 +13,7 @@ class QueryTask(BaseTask):
 
         # TODO database name
         session = SessionController()
-        SQLQuery(query_id=self.query_id, session=session, stop_event=stop_event)
+        SQLQuery(None, query_id=self.query_id, session=session, stop_event=stop_event)
 
         # clear task
-        RunningQuery(self.query_id).remove_from_tasks()
+        query_context_controller.get_query(self.query_id).remove_from_task()

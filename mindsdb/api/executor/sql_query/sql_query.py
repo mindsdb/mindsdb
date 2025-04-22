@@ -52,6 +52,13 @@ class SQLQuery:
                  database: str = None, query_id: int = None, stop_event=None):
         self.session = session
 
+        self.query_id = query_id
+        if self.query_id is not None:
+            # get sql and database from resumed query
+            run_query = query_context_controller.get_query(self.query_id)
+            sql = run_query.sql
+            database = run_query.database
+
         if database is not None:
             self.database = database
         else:
@@ -71,13 +78,7 @@ class SQLQuery:
 
         self.outer_query = None
         self.run_query = None
-        self.query_id = query_id
         self.stop_event = stop_event
-        if query_id is not None:
-            # resume query
-            run_query = query_context_controller.get_query(self.query_id)
-            run_query.mark_as_run()
-            sql = run_query.sql
 
         if isinstance(sql, str):
             self.query = parse_sql(sql)
@@ -243,14 +244,18 @@ class SQLQuery:
             if self.query_id is not None:
                 self.run_query = query_context_controller.get_query(self.query_id)
             else:
-                self.run_query = query_context_controller.create_query(self.context['query_str'])
+                self.run_query = query_context_controller.create_query(self.context['query_str'], database=self.database)
 
-            if self.planner.plan.is_async and ctx.is_background_task is not True:
+            if self.planner.plan.is_async and ctx.task_id is None:
                 # add to task
-                self.run_query.add_to_tasks()
+                self.run_query.add_to_task()
                 # return query info
-                rec = self.run_query.get_info()
+                # columns in upper case
+                rec = {k.upper(): v for k, v in self.run_query.get_info().items()}
                 self.fetched_data = ResultSet().from_df(pd.DataFrame([rec]))
+                self.columns_list = self.fetched_data.columns
+                return
+            self.run_query.mark_as_run()
 
             ctx.run_query_id = self.run_query.record.id
 

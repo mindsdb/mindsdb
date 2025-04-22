@@ -29,7 +29,7 @@ class TaskThread(threading.Thread):
         ctx.company_id = task_record.company_id
         if task_record.user_class is not None:
             ctx.user_class = task_record.user_class
-        ctx.is_background_task = True
+        ctx.task_id = task_record.id
 
         self.object_type = task_record.object_type
         self.object_id = task_record.object_id

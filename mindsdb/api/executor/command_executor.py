@@ -585,6 +585,8 @@ class ExecuteCommands:
             )
         elif statement_type is Insert:
             query = SQLQuery(statement, session=self.session, database=database_name)
+            if query.fetched_data.length() > 0:
+                return self.answer_select(query)
             return ExecuteAnswer(
                 affected_rows=query.fetched_data.affected_rows
             )

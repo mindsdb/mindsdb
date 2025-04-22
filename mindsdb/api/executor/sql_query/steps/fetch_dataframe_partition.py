@@ -222,7 +222,7 @@ class FetchDataframePartitionCall(BaseStepCall):
                         else:
                             executor.shutdown()
                             raise e
-                if self.sql_query.stop_event.is_set():
+                if self.sql_query.stop_event is not None and self.sql_query.stop_event.is_set():
                     executor.shutdown()
                     raise RuntimeError('Query is interrupted')
                 # TODO

@@ -54,7 +54,7 @@ class TogetherAIHandler(OpenAIHandler):
 
     def create_engine(self, connection_args):
         """
-        Validate the Groq API credentials on engine creation.
+        Validate the TogetherAI API credentials on engine creation.
 
         Args:
             connection_args (dict): Connection arguments.
@@ -121,7 +121,7 @@ class TogetherAIHandler(OpenAIHandler):
                     Please provide one of
                         1) a `prompt_template`
                         2) a `question_column` and an optional `context_column`
-                        3) a `prompt', 'user_column' and 'assistant_column`
+                        3) a `prompt`, `user_column` and `assistant_column`
                 """
                     )
                 )

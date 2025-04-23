@@ -8,7 +8,7 @@ from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.interfaces.query_context.context_controller import RunningQuery
 from mindsdb.api.executor.sql_query.result_set import ResultSet
 from mindsdb.utilities import log
-from mindsdb.utilities.config import Config
+from mindsdb.utilities.config import config
 from mindsdb.utilities.partitioning import get_max_thread_count, split_data_frame
 from mindsdb.api.executor.sql_query.steps.fetch_dataframe import get_table_alias, get_fill_param_fnc
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
@@ -63,8 +63,6 @@ class FetchDataframePartitionCall(BaseStepCall):
         self.table_alias = get_table_alias(step.query.from_table, self.context.get('database'))
         self.current_step_num = step.step_num
         self.substeps = step.steps
-
-        config = Config()
 
         # ml task queue enabled?
         use_threads, thread_count = False, None
@@ -135,7 +133,7 @@ class FetchDataframePartitionCall(BaseStepCall):
 
         data = ResultSet()
         if len(df_list) > 0:
-            data.from_df_cols(pd.concat(df_list), col_names)
+            data = ResultSet.from_df_cols(pd.concat(df_list), col_names)
 
         return data
 
@@ -147,10 +145,7 @@ class FetchDataframePartitionCall(BaseStepCall):
         - substep are executed using result of previos step (like it is all fetched data is available)
         - the final result is returned and used outside to concatenate with results of other's batches
         """
-
-        input_data = ResultSet()
-
-        input_data.from_df(
+        input_data = ResultSet.from_df(
             df,
             table_name=self.table_alias[1],
             table_alias=self.table_alias[2],

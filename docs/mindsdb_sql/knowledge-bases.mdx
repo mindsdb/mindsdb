@@ -1,0 +1,455 @@
+---
+title: Knowledge Base
+sidebarTitle: Knowledge Bases
+---
+
+A knowledge base is an advanced system designed to go beyond traditional data storage. Its components include embedding and reranking models and a vector store.
+
+<p align="center">
+  <img src="https://docs.google.com/drawings/d/e/2PACX-1vTVmUqhoFXLF3ncL0NWwgdPjI7Hj19f-5xU8ED31ntYvlsTM3poM9zZKwcrEwzvxJrOhl2raIFKWlsp/pub?w=1342&h=681" />
+</p>
+
+It intelligently organizes information in semantically meaningful ways, allowing for context-aware retrieval based on meaning rather than just keywords. With the ability to perform semantic reasoning across multiple pieces of information, it delivers deeper insights and more accurate responses.
+
+## Create a Knowledge Base
+
+Here is the syntax for creating a knowledge base:
+
+<Note>
+MindsDB stores objects, such as models or knowledge bases, inside projects. Learn more about [projects here](/mindsdb_sql/sql/create/project).
+</Note>
+
+```sql
+CREATE KNOWLEDGE_BASE my_kb
+USING
+    embedding_model = {
+       "provider": "openai", -- choose one of openai or azure_openai
+       "model_name" : "text-embedding-3-large",
+       "base_url": "https://ai-6689.openai.azure.com/", -- required only when provider = azure_openai
+       "api_key": "sk-..."  -- optional, default from env variable
+       "api_version": "2024-02-01" -- required only when provider = azure_openai
+    },
+    reranking_model = {
+       "provider": "openai", -- choose one of openai or azure_openai
+       "model_name": "gpt-4o",
+       "base_url": "https://ai-6689.openai.azure.com/", -- required only when provider = azure_openai
+       "api_key": "sk-..."  -- optional, default from env variable
+       "api_version": "2024-02-01" -- required only when provider = azure_openai
+    },
+    storage = my_vector_store.storage_table, -- optional, default ChromaDB
+    metadata_columns = ['date', 'creator', ...], -- optional
+    content_columns = ['review', 'content', ...], -- optional, default content
+    id_column = 'id'; -- optional
+```
+
+Upon execution, it registers `my_kb` and associates the specified models and storage.
+
+The following is an explanation of the syntax and parameters:
+
+* `embedding_model` stores specifications of the embedding model to be used.
+      * `provider` defines the model provider. Currently, the supported providers include OpenAI and OpenAI via Azure.
+      * `model_name` defines the embedding model name as specified by the provider. Users can choose one of the [OpenAI embedding models](https://platform.openai.com/docs/guides/embeddings/embedding-models#embedding-models).
+      * `base_url` is the root URL used to send API requests. It is required when using `azure_openai` as the provider. Its default value is `https://api.openai.com/v1/`.
+      * `api_key` stores your OpenAI API key. Alternatively, you can use the `OPENAI_API_KEY` environment variable to store your OpenAI API key.
+      * `api_version` is required when using `azure_openai` as the provider.
+
+* `reranking_model` is an optional parameter that stores specification of the reranking model to be used.
+      * `provider` defines the model provider. Currently, the supported providers include OpenAI and OpenAI via Azure.
+      * `model_name` defines the reranking model name as specified by the provider. Users can choose one of the [OpenAI chat models](https://platform.openai.com/docs/models).
+      * `base_url` is the root URL used to send API requests. It is required when using `azure_openai` as the provider. Its default value is `https://api.openai.com/v1/`.
+      * `api_key` stores your OpenAI API key. Alternatively, you can use the `OPENAI_API_KEY` environment variable to store your OpenAI API key.
+      * `api_version` is required when using `azure_openai` as the provider.
+      * `method` defines the method used to calculate the relevance of the output rows. The available options include `multi-class` and `binary`. It defaults to `multi-class`.
+
+<Info>
+**Reranking Method**
+
+The `multi-class` reranking method classifies each document chunk (that meets any specified metadata filtering conditions) into one of four relevance classes:
+
+1. Not relevant with class weight of 0.25.
+2. Slightly relevant with class weight of 0.5.
+3. Moderately relevant with class weight of 0.75.
+4. Highly relevant with class weight of 1.
+
+The overall `relevance_score` of a document is calculated as the sum of each chunk’s class weight multiplied by its class probability (from model logprob output).
+
+The `binary` reranking method simplifies classification by determining whether a document is relevant or not, without intermediate relevance levels. With this method, the overall `relevance_score` of a document is calculated based on the model log probability.
+</Info>
+
+* `storage` is an optional parameter. It assigns the name of the vector store created within MindsDB with the [`CREATE DATABASE` command](/mindsdb_sql/sql/create/database), which is either [PGVector](/integrations/vector-db-integrations/pgvector) or [ChromaDB](/integrations/vector-db-integrations/chromadb), followed by a table name where the knowledge base stores its content; note that this table is created within the vector store automatically. If not provided, the system creates the default ChromaDB vector database called `<kb_name>_chromadb` with the default tables called `default_collection` that stores the embedded data.
+
+* `metadata_columns` provides the list of column names that will be used as the metadata of the knowledge base. Users can use these column names to insert them into the knowledge base and filter the search results by metadata. If not set, the metadata is not used.
+
+* `content_columns` provides the list of column names that will be embedded as the content of the knowledge base. Users can use these column names to insert them into the knowledge base and filter the search results by content. If not set, the `content` column is used by default.
+
+* `id_column` is the column name that will be used as the unique identifier by the knowledge base. If not set, the `id` column is used by default.
+
+<Info>
+When the `id_column` parameter is provided, the knowledge base uses this ID to identify rows from the source data.
+
+When the `id_column` is not provided, the knowledge base uses an auto-generated sequence of numbers to identify rows from the source data. Note that these auto-generated IDs are duplicated in the following cases:
+
+1. If the source data row is chunked into multiple chunks, then these rows in the knowledge base have the same auto-generated ID as they come from the same source data row.
+2. If the data from another data source is inserted, then the auto-generated sequence starts from zero again.
+</Info>
+
+Get details about the knowledge base using the `DESCRIBE` command.
+
+```sql
+DESCRIBE KNOWLEDGE_BASE my_kb;
+```
+
+Here is the sample output:
+
+```sql
+| NAME     | PROJECT | MODEL  | STORAGE                                | PARAMS                                                                                                                                                                                                                                           | INSERT_STARTED_AT | INSERT_FINISHED_AT | PROCESSED_ROWS | ERROR | QUERY_ID |
+|----------|---------|--------|----------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------|--------------------|----------------|-------|----------|
+| kb_testx | mindsdb | [NULL] | my_kb_chromadb.default_collection   | {"embedding_model": {"provider": "openai", "model_name": "text-embedding-ada-002", "api_key": "sk-xxx"}, "reranking_model": {"provider": "openai", "model_name": "gpt-4o", "api_key": "sk-xxx"}, "default_vector_storage": "my_kb_chromadb"} | [NULL]            | [NULL]             | [NULL]         | [NULL]| [NULL]   |
+```
+
+## Insert into a Knowledge Base
+
+Here is the syntax for inserting into a knowledge base:
+
+```sql
+INSERT INTO my_kb
+SELECT <id_col> AS id, <text_col> AS content 
+FROM <source_table>;
+```
+
+Upon execution, it inserts data into a knowledge base, using the embedding model to embed it into vectors before inserting into an underlying vector database.
+
+The following is an explanation of the syntax and parameters:
+
+* `my_kb` is a unique identifier of a knowledge base.
+* `<id_col>` is a column that contains unique identifiers of data. The knowledge base expects the `id` column name, unless specified differently in the `id_column` parameter when creating the knowledge base.
+* `<text_col>` is a column that contains the text content. The knowledge base expects the `content` column name, unless specified differently in the `content_columns` parameter when creating the knowledge base.
+
+<Note>
+Note that when inserting the same data into the knowledge base again, then no new rows are inserted, as the content already exists in the knowledge base.
+
+In order to update existing data in the knowledge base, insert data with the column ID that you want to update and the updated content.
+</Note>
+
+<Accordion title="Partitioning Queries for Better Performance">
+
+The following features are covered here:
+
+- Run the `INSERT INTO` query in partitions where a batch can be split into separate workers for improved performance.
+- Track progress of the query and resume or cancel ongoing queries.
+- When a query is finished, it is stored in the `information_schema.queries` table, which automatically removes entries older than one day.
+- Option to skip errors in partitions.
+
+**Examples of statements**
+
+```sql
+-- Insert data from table into a knowledge base
+INSERT INTO my_kb 
+SELECT * 
+FROM source_database.source_table
+WHERE id = 3
+USING 
+    batch_size = 200,
+    track_column = id;
+
+-- Insert predictions (made by joining a table with a model) into a knowledge base
+INSERT INTO my_kb
+SELECT * 
+FROM source_database.source_table
+JOIN model_name -- model created within MindsDB with CREATE MODEL
+USING 
+    batch_size = 200,
+    track_column = id,
+    threads = true;
+
+-- Insert data from table into a knowledge base while skipping errors
+SELECT * 
+FROM source_database.source_table
+USING 
+    batch_size = 200,
+    track_column = id,
+    threads = 10,
+    error = 'skip';
+
+-- Perform prediction in threads and return data 
+INSERT INTO my_kb
+SELECT * 
+FROM source_database.source_table
+JOIN model_name -- model created within MindsDB with CREATE MODEL
+USING 
+    batch_size = 200,
+    track_column = id,
+    threads = 10;
+
+-- View queries in progress
+SELECT * FROM information_schema.queries;
+
+-- Resume queries using query ID
+SELECT query_resume(1);
+
+-- Cancel queries using query ID
+SELECT query_cancel(1);
+```
+
+**Parameters for partitioning queries**
+
+- **batch_size** - Number of rows fetched per iteration/batch (default: `1000`) to optimize data extraction from the source.
+- **threads** - Defines threads to run partitions in. Note that if the [ML task queue](/setup/custom-config#overview-of-config-parameters) is enabled, threads are automatically used for prediction. Allowed values for `threads` include:
+  - `int` - Number of threads.
+  - `true` - Auto-detect thread count.
+  - `false` - Disable threads, even if the ML task queue is enabled.
+- **track_column** - Column used for partitioning. The query is sorted by this column and limited by `batch_size`.
+- **error** - Defines the error processing options. The available values include `raise` (default) and `skip`.
+</Accordion>
+
+<Accordion title="Underlying Vector Store">
+
+Each knowledge base has its underlying vector store that store data inserted into the knowledge base in the form of embeddings.
+
+Users can query the underlying vector store as follows.
+
+* KB with the default ChromaDB vector store:
+
+```sql
+SELECT id, content, metadata, embeddings
+FROM <kb_name>_chromadb.storage_table;
+```
+
+* KB with user-defined vector store (either ChromaDB or PGVector):
+
+```sql
+SELECT id, content, metadata, embeddings
+FROM <vector_store_connection_name>.<table_name>;
+```
+</Accordion>
+
+<Accordion title="Examples">
+
+Here are the usage examples:
+
+* Inserting into a knowledge base where the `content_columns` and `id_column` parameters were not specified:
+
+```sql
+INSERT INTO my_kb
+SELECT book_id AS id, book_summary AS content 
+FROM my_books;
+```
+
+* Inserting into a knowledge base where the `content_columns` and `id_column` parameters were specified as follows:
+
+```sql
+content_columns = ["book_title", "book_summary"]
+id_column = "book_id"
+```
+
+```sql
+INSERT INTO my_kb
+SELECT book_id, book_title, book_summary 
+FROM my_books;
+```
+</Accordion>
+
+## Search a Knowledge Base
+
+### Semantic Search at the Document Level
+
+KBs provide semantic search returning document-level relevance.
+
+```sql
+SELECT id, relevance 
+FROM <kb_name> 
+WHERE content = '<query_text>' 
+AND relevance_threshold = 0.6 -- optional
+LIMIT <N>;
+```
+
+Upon execution, it performs the semantic search workflow (including embedding the query, searching vectors, and optionally reranking) and returns document identifiers and relevance scores.
+
+The following is an explanation of the syntax and parameters:
+
+* `SELECT id, relevance` specifies that the unique document identifier and its calculated relevance score should be returned.
+* `<kb_name>` is a unique identifier of a knowledge base.
+* `WHERE content = '<query_text>'` triggers semantic search based on the meaning of `<query_text>`.
+* `AND relevance_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1. It defines the minimum relevance value for the data row to appear in the output. Its default value is 0.
+* `LIMIT <N>` restricts results to the top N most relevant documents. When using the semantic search (as opposed to metadata-only search), the default limit is 10 and the maximum limit is 100.
+
+<Accordion title="Relevance Threshold Usage">
+Note that providing the reranking model is optional. If provided, it uses an LLM to rerank the output based on relevance, or `relevance_threshold`.
+
+- When the ranking model is provided, the default `relevance_threshold` is 0, unless defined otherwise in the `WHERE` clause.
+
+- When the reranking model is not provided and the `relevance_threshold` is not defined in the query, then no relevance filtering is applied and the output includes all rows matched based on the similarity and metadata search.
+
+- When the reranking model is not provided but the `relevance_threshold` is defined in the query, then the relevance is calculated based on the `distance` column (`1/(1+ distance)`) and the `relevance_threshold` value is compared with this relevance value to filter the output.
+</Accordion>
+
+Here are the conditions supported by the available vector stores:
+
+| Handler  |  IN, NOT IN | LIKE, NOT LIKE | < and > | !=  |
+| -------- | ----------- | -------------- | ------- | --- |
+| PgVector | +           | +              | +       | +   |
+| ChromaDB | +           | -              | -       | +   |
+
+<Accordion title="Examples">
+
+Here are the usage examples:
+
+* Returning top k most relevant documents:
+
+```sql
+SELECT id, relevance 
+FROM my_kb 
+WHERE content = 'a novel about epic inter planetary intelligence' 
+AND relevance_threshold = 0.7
+LIMIT 10;
+```
+</Accordion>
+
+### Semantic Search at the Chunk Level
+
+KBs provide semantic search returning chunk-level details.
+
+```sql
+SELECT id, chunk_id, chunk_content, metadata, distance, relevance
+FROM <kb_name> 
+WHERE content = '<query_text>' 
+AND relevance_threshold = 0.6 -- optional
+LIMIT <N>;
+```
+
+Upon execution, it performs the semantic search workflow (including embedding the query, searching vectors, and optionally reranking) and returns details pertaining to the specific text chunks that matched the query most closely.
+
+The following is an explanation of the syntax and parameters:
+
+* `SELECT id, chunk_id, chunk_content, metadata, distance, relevance` specifies that the unique document identifier, chunk identifier, chunk content, metadata (if defined), distance, and relevance should be returned.
+* `<kb_name>` is a unique identifier of a knowledge base.
+* `WHERE content = '<query_text>'` triggers semantic search based on the meaning of `<query_text>`.
+* `AND relevance_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1. It defines the minimum relevance value for the data row to appear in the output. Its default value is 0.
+* `LIMIT <N>` restricts results to the top N most relevant documents. When using the semantic search (as opposed to metadata-only search), the default limit is 10 and the maximum limit is 100.
+
+<Accordion title="Examples">
+
+Here are the usage examples:
+
+* Returning top k most relevant chunks:
+
+```sql
+SELECT id, chunk_id, chunk_content, relevance 
+FROM my_kb 
+WHERE content = 'a novel about epic inter planetary intelligence' 
+AND relevance_threshold = 0.7
+LIMIT 10;
+```
+</Accordion>
+
+### Metadata Filtering with Semantic Search
+
+KBs combine semantic search with standard SQL filtering on metadata.
+
+```sql
+SELECT id, chunk_content, relevance 
+FROM my_kb 
+WHERE <metadata_colums> = '<metadata>' -- metadata filtering conditions
+AND content = '<query_text>' -- semantic search condition
+AND relevance_threshold = 0.6 -- optional
+LIMIT <N>;
+```
+
+Upon execution, it performs the conjunctive filtering, that is, results must satisfy both the metadata condition(s) and the semantic search condition.
+
+The following is an explanation of the syntax and parameters:
+
+* `SELECT id, chunk_content, relevance` specifies that the unique document identifier, chunk content, and the relevance score should be returned.
+* `<kb_name>` is a unique identifier of a knowledge base.
+* `WHERE <metadata_colums> = '<metadata>'` is the metadata filtering condition.
+* `WHERE content = '<query_text>'` is the semantic search condition.
+* `AND relevance_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1. It defines the minimum relevance value for the data row to appear in the output. Its default value is 0.
+* `LIMIT <N>` restricts results to the top N most relevant documents. When using the semantic search (as opposed to metadata-only search), the default limit is 10 and the maximum limit is 100.
+
+<Accordion title="Examples">
+
+Here are the usage examples:
+
+* Filtering results:
+
+```sql
+SELECT id, chunk_content, relevance 
+FROM my_kb
+WHERE id LIKE 'fiction%' -- metadata filtering conditions
+AND content = 'a novel about ...' -- semantic search condition
+AND relevance_threshold = 0.6; -- optional
+```
+</Accordion>
+
+## `JOIN` Support
+
+KBs can be used in the standard SQL JOIN statements.
+
+```sql
+SELECT t.id, t.title, kb.chunk_content, kb.relevance
+FROM <other_table> AS t
+JOIN <kb_name> AS kb 
+ON t.<key_col> = kb.id
+WHERE <table_filter_condition> -- filter on non-KB table
+AND kb.content = '<query_text>'; -- semantic search filter on a KB
+```
+
+The following is an explanation of the syntax and parameters:
+
+* `SELECT t.id, t.title, kb.chunk_content, kb.relevance` specifies the columns selected from a table (`t`) and a knowledge base (`kb`).
+* `WHERE <table_filter_condition>` sets conditions on a table.
+* `AND kb.content = '<query_text>'` sets a semantic search condition on a knowledge base.
+
+<Accordion title="Examples">
+
+Here are the usage examples:
+
+* Joining a knowledge base with a data table:
+
+```sql
+SELECT b.id, b.title, kb.chunk_content, kb.relevance
+FROM books AS b
+LEFT JOIN my_kb AS kb 
+ON b.id = kb.id
+WHERE b.topic = 'fantasy'
+AND kb.content = 'a novel about benevolent ai';
+```
+</Accordion>
+
+## Delete from a Knowledge Base
+
+Here is the syntax for deleting from a knowledge base:
+
+```sql
+DELETE FROM <kb_name> 
+WHERE <condition>;
+```
+
+Upon execution, it identifies matching records based on the user-defined condition and removes all associated data (metadata, content, chunks, embeddings) for matching records from the KB's storage.
+
+The following is an explanation of the syntax and parameters:
+
+* `<kb_name>` is a unique identifier of a knowledge base.
+* `<condition>` is a standard SQL WHERE clause condition operating on metadata columns.
+
+<Accordion title="Examples">
+
+Here are the usage examples:
+
+* Deleting from a knowledge base:
+
+```sql
+DELETE FROM my_kb 
+WHERE id IN ('scifi_001', 'scifi_0010', 'bus_89');
+```
+</Accordion>
+
+## Drop a Knowledge Base
+
+Here is the syntax for deleting a knowledge base:
+
+```sql
+DROP KNOWLEDGE_BASE <kb_name>;
+```
+
+Upon execution, it removes the knowledge base with its content.

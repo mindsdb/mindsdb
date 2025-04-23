@@ -34,8 +34,8 @@
     }
   ],
   "topbarCtaButton": {
-    "name": "Get Started",
-    "url": "https://github.com/mindsdb/mindsdb"
+    "name": "Try Demo",
+    "url": "http://mdb.ai/register"
   },
   "anchors": [
     {
@@ -66,6 +66,10 @@
     {
       "name": "SDKs",
       "url": "sdks"
+    },
+    {
+      "name": "MCP API",
+      "url": "mcp"
     },
     {
       "name": "REST API",
@@ -262,7 +266,8 @@
     {"source": "/data-integrations","destination": "/features/data-integrations"},
     {"source": "/automation","destination": "/features/automation"},
     {"source": "/features/ai-integrations","destination": "/integrations/ai-overview"},
-    {"source": "/features/data-integrations","destination": "/integrations/data-overview"}
+    {"source": "/features/data-integrations","destination": "/integrations/data-overview"},
+    {"source": "/mindsdb_sql/agents/knowledge-bases","destination": "/mindsdb_sql/knowledge-bases"}
   ],
   "navigation": [
     {
@@ -388,6 +393,14 @@
             "use-cases/ai_workflow_automation/customer-reviews-notifications",
             "use-cases/ai_workflow_automation/real-time-trading-forecasts"
           ]
+        },
+        {
+          "group": "MCP API",
+          "pages": [
+            "use-cases/mcp_api/overview",
+            "use-cases/mcp_api/mindsdb_mcp_server",
+            "use-cases/mcp_api/cursor"
+          ]
         }
       ]
     },
@@ -436,7 +449,8 @@
           "pages": [
             "mindsdb_sql/sql/create/project",
             "mindsdb_sql/sql/drop/project",
-            "mindsdb_sql/sql/list-projects"
+            "mindsdb_sql/sql/list-projects",
+            "mindsdb_sql/sql/use/project"
           ]
         },
         {
@@ -499,15 +513,16 @@
           "group": "AI Agents",
           "pages": [
             "mindsdb_sql/agents/agent",
-            "mindsdb_sql/agents/chatbot",
-            "mindsdb_sql/agents/knowledge-bases"
+            "mindsdb_sql/agents/chatbot"
           ]
         },
+        "mindsdb_sql/knowledge-bases",
         {
           "group": "Functions",
           "pages": [
             "mindsdb_sql/functions/custom_functions",
-            "mindsdb_sql/functions/llm_function"
+            "mindsdb_sql/functions/llm_function",
+            "mindsdb_sql/functions/to_markdown"
           ]
         },
         {
@@ -519,6 +534,14 @@
             "mindsdb_sql/sql_support/window-functions"
           ]
         }
+      ]
+    },
+    {
+      "group": "MCP API",
+      "pages": [
+        "mcp/overview",
+        "mcp/tools",
+        "mcp/cursor_usage"
       ]
     },
     {
@@ -923,6 +946,7 @@
             "integrations/app-integrations/hackernews",
             "integrations/app-integrations/instatus",
             "integrations/app-integrations/intercom",
+            "integrations/app-integrations/jira",
             "integrations/app-integrations/mediawiki",
             "integrations/app-integrations/microsoft-onedrive",
             "integrations/app-integrations/microsoft-teams",
@@ -946,7 +970,6 @@
         {
           "group": "Databases",
           "pages": [
-            "integrations/data-integrations/all-data-integrations",
             "integrations/data-integrations/airtable",
             "integrations/data-integrations/amazon-aurora",
             "integrations/data-integrations/amazon-dynamodb",
@@ -1018,6 +1041,7 @@
           "pages": [
             "integrations/vector-db-integrations/chromadb",
             "integrations/vector-db-integrations/couchbase",
+            "integrations/vector-db-integrations/milvus",
             "integrations/vector-db-integrations/pgvector",
             "integrations/vector-db-integrations/pinecone",
             "integrations/vector-db-integrations/weaviate"
@@ -1056,6 +1080,12 @@
             "integrations/ai-engines/portkey",
             "integrations/ai-engines/replicate-llm",
             "integrations/ai-engines/vertex"       
+          ]
+        },
+        {
+          "group": "Embedding Models",
+          "pages": [
+            "integrations/ai-engines/langchain_embedding"
           ]
         },
         {

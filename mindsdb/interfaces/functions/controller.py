@@ -1,7 +1,9 @@
 import os
 
 from duckdb.typing import BIGINT, DOUBLE, VARCHAR, BLOB, BOOLEAN
+from mindsdb.interfaces.functions.to_markdown import ToMarkdown
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
+from mindsdb.utilities.config import config
 
 
 def python_to_duckdb_type(py_type):
@@ -121,9 +123,12 @@ class FunctionController(BYOMFunctionsController):
         if meta is not None:
             return meta
 
-        # builtin function
+        # builtin functions
         if node.op.lower() == 'llm':
             return self.llm_call_function(node)
+
+        elif node.op.lower() == 'to_markdown':
+            return self.to_markdown_call_function(node)
 
     def llm_call_function(self, node):
         name = node.op.lower()
@@ -131,22 +136,7 @@ class FunctionController(BYOMFunctionsController):
         if name in self.callbacks:
             return self.callbacks[name]
 
-        param_prefix = 'LLM_FUNCTION_'
-        chat_model_params = {}
-        for k, v in os.environ.items():
-            if k.startswith(param_prefix):
-                param_name = k[len(param_prefix):]
-                if param_name == 'MODEL':
-                    chat_model_params['model_name'] = v
-                else:
-                    chat_model_params[param_name.lower()] = v
-
-        if 'provider' not in chat_model_params:
-            chat_model_params['provider'] = 'openai'
-
-        if 'api_key' in chat_model_params:
-            # move to api_keys dict
-            chat_model_params["api_keys"] = {chat_model_params['provider']: chat_model_params['api_key']}
+        chat_model_params = self._parse_chat_model_params()
 
         try:
             from langchain_core.messages import HumanMessage
@@ -167,6 +157,59 @@ class FunctionController(BYOMFunctionsController):
         }
         self.callbacks[name] = meta
         return meta
+
+    def to_markdown_call_function(self, node):
+        name = node.op.lower()
+
+        if name in self.callbacks:
+            return self.callbacks[name]
+
+        def callback(file_path_or_url, use_llm):
+            chat_model_params = self._parse_chat_model_params('TO_MARKDOWN_FUNCTION_')
+
+            llm_client = None
+            llm_model = None
+            try:
+                from mindsdb.interfaces.agents.langchain_agent import create_chat_model
+                llm = create_chat_model(chat_model_params)
+                llm_client = llm.root_client
+                llm_model = llm.model_name
+            except Exception:
+                pass
+
+            to_markdown = ToMarkdown(use_llm, llm_client, llm_model)
+            return to_markdown.call(file_path_or_url)
+
+        meta = {
+            'name': name,
+            'callback': callback,
+            'input_types': ['str', 'bool'],
+            'output_type': 'str'
+        }
+        self.callbacks[name] = meta
+        return meta
+
+    def _parse_chat_model_params(self, param_prefix: str = 'LLM_FUNCTION_'):
+        """
+        Parses the environment variables for chat model parameters.
+        """
+        chat_model_params = config.get("default_llm") or {}
+        for k, v in os.environ.items():
+            if k.startswith(param_prefix):
+                param_name = k[len(param_prefix):]
+                if param_name == 'MODEL':
+                    chat_model_params['model_name'] = v
+                else:
+                    chat_model_params[param_name.lower()] = v
+
+        if 'provider' not in chat_model_params:
+            chat_model_params['provider'] = 'openai'
+
+        if 'api_key' in chat_model_params:
+            # move to api_keys dict
+            chat_model_params["api_keys"] = {chat_model_params['provider']: chat_model_params['api_key']}
+
+        return chat_model_params
 
 
 class DuckDBFunctions:

@@ -27,7 +27,7 @@ logger = log.getLogger(__name__)
 
 
 # todo Issue #7316 add support for different indexes and search algorithms e.g. cosine similarity or L2 norm
-class PgVectorHandler(VectorStoreHandler, PostgresHandler):
+class PgVectorHandler(PostgresHandler, VectorStoreHandler):
     """This handler handles connection and execution of the PostgreSQL with pgvector extension statements."""
 
     name = "pgvector"
@@ -40,13 +40,37 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         # we get these from the connection args on PostgresHandler parent
         self._is_sparse = self.connection_args.get('is_sparse', False)
         self._vector_size = self.connection_args.get('vector_size', None) 
-        if self._is_sparse and not self._vector_size:
-            raise ValueError("vector_size is required when is_sparse=True")
+
+        if self._is_sparse:
+            if not self._vector_size:
+                raise ValueError("vector_size is required when is_sparse=True")
+
+                # Use inner product for sparse vectors
+                distance_op = "<#>"
+
+        else:
+            distance_op = '<=>'
+            if 'distance' in self.connection_args:
+                distance_ops = {
+                    'l1': '<+>',
+                    'l2': '<->',
+                    'ip': '<#>',  # inner product
+                    'cosine': '<=>',
+                    'hamming': '<~>',
+                    'jaccard': '<%>'
+                }
+
+                distance_op = distance_ops.get(self.connection_args['distance'])
+                if distance_op is None:
+                    raise ValueError(f'Wrong distance type. Allowed options are {list(distance_ops.keys())}')
+
+        self.distance_op = distance_op
         self.connect()
 
     def _make_connection_args(self):
         cloud_pgvector_url = os.environ.get('KB_PGVECTOR_URL')
-        if cloud_pgvector_url is not None:
+        # if no connection args and shared pg vector defined - use it
+        if len(self.connection_args) == 0 and cloud_pgvector_url is not None:
             result = urlparse(cloud_pgvector_url)
             self.connection_args = {
                 'host': result.hostname,
@@ -64,11 +88,11 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
             return Response(RESPONSE_TYPE.OK)
         return super().get_tables()
 
-    def native_query(self, query) -> Response:
+    def native_query(self, query, params=None) -> Response:
         # Prevent execute native queries
         if self._is_shared_db:
             return Response(RESPONSE_TYPE.OK)
-        return super().native_query(query)
+        return super().native_query(query, params=params)
 
     def raw_query(self, query, params=None) -> Response:
         resp = super().native_query(query, params)
@@ -114,13 +138,27 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         if conditions is None:
             return {}
 
-        return {
-            condition.column.split(".")[-1]: {
+        filter_conditions = {}
+
+        for condition in conditions:
+
+            parts = condition.column.split(".")
+            key = parts[0]
+            # converts 'col.el1.el2' to col->'el1'->>'el2'
+            if len(parts) > 1:
+                # intermediate elements
+                for el in parts[1:-1]:
+                    key += f" -> '{el}'"
+
+                # last element
+                key += f" ->> '{parts[-1]}'"
+
+            filter_conditions[key] = {
                 "op": condition.op.value,
                 "value": condition.value,
             }
-            for condition in conditions
-        }
+
+        return filter_conditions
 
     @staticmethod
     def _construct_where_clause(filter_conditions=None):
@@ -135,7 +173,7 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         for key, value in filter_conditions.items():
             if key == "embeddings":
                 continue
-            if value['op'].lower() == 'in':
+            if value['op'].lower() in ('in', 'not in'):
                 values = list(repr(i) for i in value['value'])
                 value['value'] = '({})'.format(', '.join(values))
             else:
@@ -143,7 +181,7 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
             where_clauses.append(f'{key} {value["op"]} {value["value"]}')
 
         if len(where_clauses) > 1:
-            return f"WHERE{' AND '.join(where_clauses)}"
+            return f"WHERE {' AND '.join(where_clauses)}"
         elif len(where_clauses) == 1:
             return f"WHERE {where_clauses[0]}"
         else:
@@ -151,9 +189,9 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
 
     @staticmethod
     def _construct_full_after_from_clause(
+        where_clause: str,
         offset_clause: str,
         limit_clause: str,
-        where_clause: str,
     ) -> str:
 
         return f"{where_clause} {offset_clause} {limit_clause}"
@@ -181,21 +219,26 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         # given filter conditions, construct where clause
         where_clause = self._construct_where_clause(filter_conditions)
 
-        # construct full after from clause, where clause + offset clause + limit clause
-        after_from_clause = self._construct_full_after_from_clause(
-            where_clause, offset_clause, limit_clause
-        )
-
-        if columns is None:
-            targets = '*'
+        # Handle distance column specially since it's calculated, not stored
+        modified_columns = []
+        has_distance = False
+        if columns is not None:
+            for col in columns:
+                if col == TableField.DISTANCE.value:
+                    has_distance = True
+                else:
+                    modified_columns.append(col)
         else:
-            targets = ', '.join(columns)
+            modified_columns = ['id', 'content', 'embeddings', 'metadata']
+            has_distance = True
+
+        targets = ', '.join(modified_columns)
 
 
         if filter_conditions:
 
             if embedding_search:
-                search_vector = filter_conditions["embeddings"]["value"][0]
+                search_vector = filter_conditions["embeddings"]["value"]
                 filter_conditions.pop("embeddings")
 
                 if self._is_sparse:
@@ -204,24 +247,24 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
                         from pgvector.utils import SparseVector
                         embedding = SparseVector(search_vector, self._vector_size)
                         search_vector = embedding.to_text()
-                    # Use inner product for sparse vectors
-                    distance_op = "<#>"
                 else:
                     # Convert list to vector string if needed
                     if isinstance(search_vector, list):
                         search_vector = f"[{','.join(str(x) for x in search_vector)}]"
-                    # Use cosine similarity for dense vectors
-                    distance_op = "<=>"
 
-                return f"SELECT {targets} FROM {table_name} ORDER BY embeddings {distance_op} '{search_vector}' ASC {after_from_clause}"
+                # Calculate distance as part of the query if needed
+                if has_distance:
+                    targets = f"{targets}, (embeddings {self.distance_op} '{search_vector}') as distance"
+                
+                return f"SELECT {targets} FROM {table_name} {where_clause} ORDER BY embeddings {self.distance_op} '{search_vector}' ASC {limit_clause} {offset_clause} "
 
             else:
                 # if filter conditions, return rows that satisfy the conditions
-                return f"SELECT {targets} FROM {table_name} {after_from_clause}"
+                return f"SELECT {targets} FROM {table_name} {where_clause} {limit_clause} {offset_clause}"
 
         else:
             # if no filter conditions, return all rows
-            return f"SELECT {targets} FROM {table_name} {after_from_clause}"
+            return f"SELECT {targets} FROM {table_name} {limit_clause} {offset_clause}"
 
     def _check_table(self, table_name: str):
         # Apply namespace for a user
@@ -394,18 +437,14 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         """
         table_name = self._check_table(table_name)
 
-        data_dict = data.to_dict(orient="list")
+        if 'metadata' in data.columns:
+             data['metadata'] = data['metadata'].apply(json.dumps)
 
-        if 'metadata' in data_dict:
-            data_dict['metadata'] = [json.dumps(i) for i in data_dict['metadata']]
-        transposed_data = list(zip(*data_dict.values()))
-
-        columns = ", ".join(data.keys())
-        values = ", ".join(["%s"] * len(data.keys()))
-
-        insert_statement = f"INSERT INTO {table_name} ({columns}) VALUES ({values})"
-
-        self.raw_query(insert_statement, params=transposed_data)
+        resp = super().insert(table_name, data)
+        if resp.resp_type == RESPONSE_TYPE.ERROR:
+            raise RuntimeError(resp.error_message)
+        if resp.resp_type == RESPONSE_TYPE.TABLE:
+            return resp.data_frame
 
     def update(
         self, table_name: str, data: pd.DataFrame, key_columns: List[str] = None

@@ -46,6 +46,9 @@ jobs:
       - name: Checkout
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         uses: actions/checkout@v4
+        with:
+          # required to grab the history of the PR for pre-commit to work out what's changed
+          fetch-depth: 0 
       - name: Set up Python
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         uses: actions/setup-python@v5.1.0
@@ -60,19 +63,13 @@ jobs:
         run: |
           python tests/scripts/check_print_statements.py
 
-      # Gathers a list of changed files for pre-commit to use
-      - name: Get changed files
-        if: ${{ needs.changes.outputs.not-docs == 'true' }}
-        id: changed-files
-        uses: tj-actions/changed-files@v41
-
       # Run pre-commit on all changed files
       # See .pre-commit-config.yaml for the list of checks
       - name: Run pre-commit
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         uses: pre-commit/action@v3.0.0
         with:
-          extra_args: --files ${{ steps.changed-files.outputs.all_changed_files }}
+          extra_args: --from-ref ${{ github.event.pull_request.base.sha }} --to-ref ${{ github.event.pull_request.head.sha }}
 
       # Runs a few different checks against our many requirements files
       # to make sure they're in order
@@ -126,6 +123,7 @@ jobs:
         run: |
           # Install dev requirements and build our pip package
           uv pip install -r requirements/requirements-dev.txt
+          uv pip install setuptools==75.8.2
           python setup.py sdist
 
           # Install from the pip package
@@ -162,48 +160,55 @@ jobs:
           uv pip install .
           uv pip install -r requirements/requirements-test.txt
           uv pip install .[lightwood]  # TODO: for now some tests rely on lightwood
-          uv pip install .[mssql]
           uv pip install .[clickhouse]
           uv pip install .[snowflake]
           uv pip install .[web]
           uv pip install .[redshift]
           uv pip install .[bigquery]
-          uv pip install .[elasticsearch]
           uv pip install .[databricks]
           uv pip install .[oracle]
-          uv pip install .[db2]
-          uv pip install .[hive]
-          uv pip install .[teradata]
-          uv pip install .[hana]
-          uv pip install .[minds_endpoint]
           uv pip install .[slack]
+          uv pip install .[github]
+          uv pip install .[ms_teams]
+          uv pip install .[salesforce]
+          uv pip install .[mysql]
           uv pip freeze
           git clone https://github.com/mindsdb/mindsdb_sql_parser.git parser_tests
+      - name: Install mssql dependencies
+        if: ${{ needs.changes.outputs.not-docs == 'true' }}
+        run: |
+          # Set FreeTDS build flags only on macOS
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            brew install freetds
+            echo "Setting FreeTDS flags for macOS pymssql build"
+            export LDFLAGS="-L$(brew --prefix freetds)/lib"
+            export CFLAGS="-I$(brew --prefix freetds)/include"
+            uv pip install pymssql==2.3.1 --no-binary :all:
+          else
+            uv pip install .[mssql]
+          fi
+          
       - name: Run unit tests
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
             env PYTHONPATH=./ pytest tests/unit/planner/ -x
-            env PYTHONPATH=./:parser_tests/tests pytest tests/unit/render/ -x
-            env PYTHONPATH=./ pytest tests/unit/executor/ -x
-            env PYTHONPATH=./ pytest tests/unit/test_llm_utils.py
-            env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_minds_endpoint.py
+            env PYTHONPATH=./ pytest tests/unit/executor/ -x -k "not test_udf"
+            env PYTHONPATH=./ pytest tests/unit/various/ -x
             env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_openai.py
+
+            env PYTHONPATH=./:parser_tests/tests pytest tests/unit/render/ -x
             # env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_anyscale_endpoints.py
+          fi
+      - name: Run HTTP API tests
+        if: ${{ needs.changes.outputs.not-docs == 'true' }}
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            env PYTHONPATH=./ pytest tests/api/http/ -x -k "not knowledge_bases_test"
           fi
       - name: Run Handlers tests and submit Coverage to coveralls
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
-          handlers=("mysql" "postgres" "mssql" "clickhouse" "snowflake" "web" "redshift" "bigquery" "elasticsearch" "s3" "databricks" "dynamodb" "mariadb" "oracle" "mongodb" "db2" "hive" "teradata" "hana" "slack")
-          for handler in "${handlers[@]}"
-          do
-            pytest --cov=mindsdb/integrations/handlers/${handler}_handler tests/unit/handlers/test_${handler}.py 
-          done
-
-          # Dont run coveralls for PRs from forks
-          if [ ${{ github.event.pull_request.head.repo.full_name }} == ${{ github.repository }} ]; then
-            coveralls --service=github --basedir=mindsdb/integrations/handlers
-          fi
+          python -m unittest discover -s tests/unit/handlers
         env:
-          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
           github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}

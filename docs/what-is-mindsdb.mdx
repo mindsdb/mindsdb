@@ -1,11 +1,10 @@
 ---
-title: Minds[DB] - AGI's Query Engine
+title: Minds[DB] - AI's Query Engine
 sidebarTitle: Introduction
 icon: "house"
 ---
 
-
-MindsDB is the world's most effective solution for building AI applications that talk to messy enterprise data sources. Think of it as a librarian Marie Kondo.
+MindsDB is an AI data solution that enables humans, AI, agents, and applications to query data in natural language and SQL, and get highly accurate answers across disparate data sources and types.
 
 <p align="center">
   <img src="/assets/cloud/main_mdb.png"/>
@@ -102,7 +101,7 @@ import mindsdb_sdk
 # connects to the specified host and port
 server = mindsdb_sdk.connect('http://127.0.0.1:47334')
 
-wiki_kb = server.knowledge_bases.get('mindsdb.reviews_kb');
+my_kb = server.knowledge_bases.get('mindsdb.reviews_kb');
 df = my_kb.find('what are the best kindle reviews').fetch()
 
 ```

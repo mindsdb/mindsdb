@@ -11,11 +11,6 @@ on:
 env:
   UV_SYSTEM_PYTHON: 1
 
-# Cancel any existing runs of this workflow on the same branch/pr
-# We always want to build/deploy/test a new commit over an older one
-concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
 
 jobs:
   # Check that the version defined in the github release is valid
@@ -23,6 +18,9 @@ jobs:
     name: Check Code Version
     runs-on: mdb-dev
     if: github.actor != 'mindsdbadmin'
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-check-version
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
       - uses: FranzDiebold/github-env-vars-action@v2
@@ -40,6 +38,9 @@ jobs:
     runs-on: mdb-dev
     needs: check-version
     if: github.actor != 'mindsdbadmin'
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-pypi
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -66,6 +67,9 @@ jobs:
     runs-on: mdb-dev
     needs: [check-version]
     if: github.actor != 'mindsdbadmin'
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-build
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
       - name: Docker Login
@@ -83,26 +87,31 @@ jobs:
       - uses: ./github-actions/docker-bake
         with:
           push-to-dockerhub: true
+          push-cache: false
 
-  # Build our docker images based on our bake file
-  # This job only pushes the layers to the cache repo
-  # It's done separately so other jobs can run without waiting for this one
-  build_cache:
-    name: Build Docker Cache
+  # Push cache layers to docker registry
+  # This is separate to the build step so we can do other stuff in parallel
+  build-cache:
+    name: Push Docker Cache
     runs-on: mdb-dev
     needs: [build]
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-cache
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Pull MindsDB Github Actions
         uses: actions/checkout@v4
         with:
           repository: mindsdb/github-actions
           path: github-actions
-          ssh-key: ${{ secrets.GH_ACTIONS_PULL_SSH }}
-      - uses: ./github-actions/docker-bake-cache
+      # Build the bakefile and push
+      - uses: ./github-actions/docker-bake
         with:
-          cache-prefix: main
-
+          push-cache: true
+          cache-only: true
 
   # Call our deployment workflow
   deploy:
@@ -121,6 +130,9 @@ jobs:
     runs-on: mdb-dev
     needs: [build]
     if: github.actor != 'mindsdbadmin'
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-extension
+      cancel-in-progress: true
     environment:
       name: prod
     steps:
@@ -139,5 +151,8 @@ jobs:
   run_tests:
     name: Run Integration Tests
     needs: [deploy]
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-tests
+      cancel-in-progress: true
     uses: ./.github/workflows/test_on_deploy.yml
     secrets: inherit

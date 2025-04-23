@@ -37,9 +37,9 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 # and not explicitly imported in mindsdb.
 # transformers is required for langchain_core and not explicitly imported by mindsdb.
 MAIN_RULE_IGNORES = {
-    "DEP003": ["torch"],
+    "DEP003": ["torch", "pyarrow"],
     "DEP001": ["torch", "pgvector", "pyarrow", "openai"],
-    "DEP002": ["psycopg2-binary", "lark", "transformers", "langchain-experimental", "lxml", "openpyxl"]
+    "DEP002": ["psycopg2-binary", "lark", "transformers", "langchain-experimental", "lxml", "openpyxl", "onnxruntime"]
 }
 
 
@@ -65,9 +65,12 @@ HIVE_HANDLER_DEPS = ["thrift-sasl"]
 # The `gcsfs` package is required to interact with GCS as a file system.
 GCS_HANDLER_DEPS = ["gcsfs"]
 
+SNOWFLAKE_HANDLER_DEPS = ["pyarrow"]
+
 HANDLER_RULE_IGNORES = {
     "DEP002": OPTIONAL_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS + BYOM_HANLDER_DEPS + HIVE_HANDLER_DEPS + GCS_HANDLER_DEPS,
-    "DEP001": ["tests", "pyarrow", "IfxPyDbi", "ingres_sa_dialect"]  # 'tests' is the mindsdb tests folder in the repo root, 'pyarrow' used in snowflake handler
+    "DEP001": ["tests", "pyarrow", "IfxPyDbi", "ingres_sa_dialect"],  # 'tests' is the mindsdb tests folder in the repo root, 'pyarrow' used in snowflake handler
+    "DEP003": SNOWFLAKE_HANDLER_DEPS
 }
 
 PACKAGE_NAME_MAP = {
@@ -122,7 +125,6 @@ PACKAGE_NAME_MAP = {
     "scikit-learn": ["sklearn"],
     "influxdb3-python": ["influxdb_client_3"],
     "hubspot-api-client": ["hubspot"],
-    "pytest-lazy-fixture": ["pytest_lazyfixture"],
     "eventbrite-python": ["eventbrite"],
     "clickhouse-sqlalchemy": ["clickhouse_sqlalchemy"],
     "pillow": ["PIL"],
@@ -138,7 +140,8 @@ PACKAGE_NAME_MAP = {
     "opentelemetry-instrumentation-requests": ["opentelemetry"],
     "opentelemetry-instrumentation-flask": ["opentelemetry"],
     "opentelemetry-distro": ["opentelemetry"],
-    "sqlalchemy-ingres": ["ingres_sa_dialect"]
+    "sqlalchemy-ingres": ["ingres_sa_dialect"],
+    "pyaml": ["yaml"],
 }
 
 # We use this to exit with a non-zero status code if any check fails

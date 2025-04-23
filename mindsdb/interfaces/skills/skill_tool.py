@@ -223,8 +223,8 @@ class SkillToolController:
         pred_args = {}
         pred_args['llm'] = llm
 
-        from .retrieval_tool import build_retrieval_tool
-        return build_retrieval_tool(tool, pred_args, skill)
+        from .retrieval_tool import build_retrieval_tools
+        return build_retrieval_tools(tool, pred_args, skill)
 
     def _get_rag_query_function(self, skill: db.Skills):
         session_controller = self.get_command_executor().session
@@ -243,7 +243,13 @@ class SkillToolController:
             kb_table = session_controller.kb_controller.get_table(knowledge_base_name, skill.project_id)
 
             res = kb_table.select_query(query)
-            return '\n'.join(res.content)
+            # Handle both chunk_content and content column names
+            if hasattr(res, 'chunk_content'):
+                return '\n'.join(res.chunk_content)
+            elif hasattr(res, 'content'):
+                return '\n'.join(res.content)
+            else:
+                return "No content or chunk_content found in knowledge base response"
 
         return _answer_question
 
@@ -296,10 +302,9 @@ class SkillToolController:
                     for skill in skills
                 ]
             elif skill_type == SkillType.RETRIEVAL:
-                tools[skill_type] = [
-                    self._make_retrieval_tools(skill, llm, embedding_model)
-                    for skill in skills
-                ]
+                tools[skill_type] = []
+                for skill in skills:
+                    tools[skill_type] += self._make_retrieval_tools(skill, llm, embedding_model)
         return tools
 
 

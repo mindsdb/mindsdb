@@ -1,19 +1,17 @@
+from dataclasses import astuple
 
 import pandas as pd
 from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.api.executor.datahub.datanodes.datanode import DataNode
-from mindsdb.api.executor.datahub.datanodes.integration_datanode import (
-    IntegrationDataNode,
-)
-from mindsdb.api.executor.datahub.datanodes.project_datanode import (
-    ProjectDataNode,
-)
+from mindsdb.api.executor.datahub.datanodes.integration_datanode import IntegrationDataNode
+from mindsdb.api.executor.datahub.datanodes.project_datanode import ProjectDataNode
 from mindsdb.api.executor import exceptions as exc
 from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.api.executor.utilities.sql import get_query_tables
 from mindsdb.interfaces.database.projects import ProjectController
-
+from mindsdb.api.executor.datahub.classes.response import DataHubResponse
+from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES
 from mindsdb.utilities import log
 
 from .system_tables import (
@@ -21,7 +19,7 @@ from .system_tables import (
     PluginsTable, EnginesTable, KeyColumnUsageTable, StatisticsTable,
     CharacterSetsTable, CollationsTable)
 from .mindsdb_tables import (
-    ModelsTable, DatabasesTable, MLEnginesTable, HandlersTable, JobsTable,
+    ModelsTable, DatabasesTable, MLEnginesTable, HandlersTable, JobsTable, QueriesTable,
     ChatbotsTable, KBTable, SkillsTable, AgentsTable, ViewsTable, TriggersTable)
 
 
@@ -36,7 +34,8 @@ class InformationSchemaDataNode(DataNode):
         PluginsTable, EnginesTable, KeyColumnUsageTable, StatisticsTable,
         CharacterSetsTable, CollationsTable,
         ModelsTable, DatabasesTable, MLEnginesTable, HandlersTable, JobsTable,
-        ChatbotsTable, KBTable, SkillsTable, AgentsTable, ViewsTable, TriggersTable
+        ChatbotsTable, KBTable, SkillsTable, AgentsTable, ViewsTable, TriggersTable,
+        QueriesTable
     ]
 
     def __init__(self, session):
@@ -114,22 +113,48 @@ class InformationSchemaDataNode(DataNode):
 
         return None
 
-    def has_table(self, tableName):
-        tn = tableName.upper()
-        if tn in self.tables:
-            return True
-        return False
+    def get_table_columns_df(self, table_name: str, schema_name: str | None = None) -> pd.DataFrame:
+        """Get a DataFrame containing representation of information_schema.columns for the specified table.
 
-    def get_table_columns(self, tableName, schema_name=None):
-        tn = tableName.upper()
-        if tn in self.tables:
-            return [
-                {'name': name}
-                for name in self.tables[tn].columns
-            ]
-        raise exc.TableNotExistError(
-            f"Table information_schema.{tableName} does not exists"
-        )
+        Args:
+            table_name (str): The name of the table to get columns from.
+            schema_name (str | None): Not in use. The name of the schema to get columns from.
+
+        Returns:
+            pd.DataFrame: A DataFrame containing representation of information_schema.columns for the specified table.
+                          The DataFrame has list of columns as in the integrations.libs.response.INF_SCHEMA_COLUMNS_NAMES
+                          but only 'COLUMN_NAME' column is filled with the actual column names.
+                          Other columns are filled with None.
+        """
+        table_name = table_name.upper()
+        if table_name not in self.tables:
+            raise exc.TableNotExistError(
+                f"Table information_schema.{table_name} does not exists"
+            )
+        table_columns_names = self.tables[table_name].columns
+        df = pd.DataFrame([[table_columns_names]], columns=[INF_SCHEMA_COLUMNS_NAMES.COLUMN_NAME])
+        for column_name in astuple(INF_SCHEMA_COLUMNS_NAMES):
+            if column_name == INF_SCHEMA_COLUMNS_NAMES.COLUMN_NAME:
+                continue
+            df[column_name] = None
+        return df
+
+    def get_table_columns_names(self, table_name: str, schema_name: str | None = None) -> list[str]:
+        """Get a list of column names for the specified table.
+
+        Args:
+            table_name (str): The name of the table to get columns from.
+            schema_name (str | None): Not in use. The name of the schema to get columns from.
+
+        Returns:
+            list[str]: A list of column names for the specified table.
+        """
+        table_name = table_name.upper()
+        if table_name not in self.tables:
+            raise exc.TableNotExistError(
+                f"Table information_schema.{table_name} does not exists"
+            )
+        return self.tables[table_name].columns
 
     def get_integrations_names(self):
         integration_names = self.integration_controller.get_all().keys()
@@ -147,7 +172,7 @@ class InformationSchemaDataNode(DataNode):
             if table.visible
         }
 
-    def query(self, query: ASTNode, session=None):
+    def query(self, query: ASTNode, session=None) -> DataHubResponse:
         query_tables = [x[1] for x in get_query_tables(query)]
 
         if len(query_tables) != 1:
@@ -170,7 +195,11 @@ class InformationSchemaDataNode(DataNode):
 
         columns_info = [{"name": k, "type": v} for k, v in data.dtypes.items()]
 
-        return data, columns_info
+        return DataHubResponse(
+            data_frame=data,
+            columns=columns_info,
+            affected_rows=0
+        )
 
     def _get_empty_table(self, table):
         columns = table.columns

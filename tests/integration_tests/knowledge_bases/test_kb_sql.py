@@ -1,3 +1,4 @@
+import json
 import time
 import datetime as dt
 
@@ -104,16 +105,28 @@ class KBTestBase:
         # connect database
         self.db_name = self.create_db()
 
-    def create_kb(self, name, params=None):
+    def create_kb(self, name, params=None, with_model=True):
+        model_str = ''
+        if with_model:
+            model_str = f'model = {self.con.models.get(self.emb_model)}, '
+
         self.run_sql(f'drop knowledge base if exists {name}')
 
         storage = self.con.databases.get(self.vectordb_name).tables.get(f'tbl_{name}')
-        self.con.knowledge_bases.create(
-            name,
-            model=self.con.models.get(self.emb_model),
-            storage=storage,
-            params=params,
-        )
+
+        param_str = ''
+        if params:
+            param_items = []
+            for k, v in params.items():
+                param_items.append(f'{k}={json.dumps(v)}')
+            param_str = ',' + ','.join(param_items)
+
+        self.run_sql(f'''
+            create knowledge base {name}
+            using {model_str}
+               storage = {self.vectordb_name}.tbl_{name}
+               {param_str}
+        ''')
 
         # clean
         if len(self.run_sql(f'select * from {name}')) > 0:
@@ -391,6 +404,27 @@ class KBTest(KBTestBase):
 
     def test_relevance(self, openai_api_key, reranking_model=None):
 
+        def _check_kb(kb_params):
+            self.create_kb('kb_crm', params=kb_params, with_model=False)
+
+            self.run_sql("""
+                INSERT INTO kb_crm (
+                    SELECT * FROM example_db.crm_demo
+                );
+            """)
+
+            threshold = 0.5
+            ret = self.run_sql(f"""
+                SELECT *
+                FROM kb_crm
+                WHERE status = "solving" AND content = "noise" AND relevance_threshold={threshold}
+            """)
+            assert set(ret.metadata.apply(lambda x: x.get('status'))) == {'solving'}
+            for item in ret.chunk_content:
+                assert 'noise' in item  # all lines line contents word
+
+            assert len(ret[ret.relevance < threshold]) == 0
+
         if reranking_model is None:
             reranking_model = {
                 "provider": "openai",
@@ -411,22 +445,9 @@ class KBTest(KBTestBase):
             'id_column': 'id',
         }
 
-        self.create_kb('kb_crm', params=kb_params)
+        _check_kb(kb_params)
 
-        self.run_sql("""
-            INSERT INTO kb_crm (
-                SELECT * FROM example_db.crm_demo
-            );
-        """)
+        # check with model name
+        kb_params['embedding_model'] = self.emb_model
 
-        threshold = 0.5
-        ret = self.run_sql(f"""
-            SELECT *
-            FROM kb_crm
-            WHERE status = "solving" AND content = "noise" AND relevance_threshold={threshold}
-        """)
-        assert set(ret.metadata.apply(lambda x: x.get('status'))) == {'solving'}
-        for item in ret.chunk_content:
-            assert 'noise' in item  # all lines line contents word
-
-        assert len(ret[ret.relevance < threshold]) == 0
+        _check_kb(kb_params)

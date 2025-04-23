@@ -884,35 +884,39 @@ class KnowledgeBaseController:
                 return kb
             raise EntityExistsError("Knowledge base already exists", name)
 
-        embedding_model_params = get_model_params(params.get('embedding_model', {}), 'default_embedding_model')
         reranking_model_params = get_model_params(params.get('reranking_model', {}), 'default_reranking_model')
 
+        model_name = None
         if embedding_model:
             model_name = embedding_model.parts[-1]
 
-        elif embedding_model_params:
-            # Get embedding model from params.
-            # This is called here to check validaity of the parameters.
-            get_embedding_model_from_params(
-                embedding_model_params
-            )
+        elif 'embedding_model' in params and isinstance(params['embedding_model'], str):
+            model_name = params.pop('embedding_model')
 
-        else:
-            model_name = self._get_default_embedding_model(
-                project.name,
-                params=params
-            )
-            params['default_embedding_model'] = model_name
+        if model_name is None:
+            embedding_model_params = get_model_params(params['embedding_model'], 'default_embedding_model')
 
-        model_project = None
+            if embedding_model_params:
+                # Get embedding model from params.
+                # This is called here to check validaity of the parameters.
+                get_embedding_model_from_params(
+                    embedding_model_params
+                )
+            else:
+                model_name = self._get_default_embedding_model(
+                    project.name,
+                    params=params
+                )
+                params['default_embedding_model'] = model_name
+
         if embedding_model is not None and len(embedding_model.parts) > 1:
             # model project is set
             model_project = self.session.database_controller.get_project(embedding_model.parts[-2])
-        elif not embedding_model_params:
+        else:
             model_project = project
 
         embedding_model_id = None
-        if model_project:
+        if model_name is not None:
             model = self.session.model_controller.get_model(
                 name=model_name,
                 project_name=model_project.name

@@ -884,11 +884,27 @@ class KnowledgeBaseController:
                 return kb
             raise EntityExistsError("Knowledge base already exists", name)
 
-        embedding_model_params = get_model_params(params.get('embedding_model', {}), 'default_embedding_model')
-        reranking_model_params = get_model_params(params.get('reranking_model', {}), 'default_llm')
+        embedding_model_id = None
+        embedding_model_params = None
+        reranking_model_id = None
+        reranking_model_params = None
+        # embedding_model and reranking_model are can either be predefined MindsDB models or model parameters.
+        if type(params.get('embedding_model')) == str:
+            embedding_model = Identifier(parts=[project_name, params['embedding_model']])
+        else:
+            embedding_model_params = get_model_params(params.get('embedding_model', {}), 'default_embedding_model')
+        
+        if type(params.get('reranking_model')) == str:
+            reranking_model = Identifier(parts=[project_name, params['reranking_model']])
+        else:
+            reranking_model_params = get_model_params(params.get('reranking_model', {}), 'default_llm')
 
         if embedding_model:
             model_name = embedding_model.parts[-1]
+            embedding_model_id = self._get_model_id(
+                model_name,
+                project_name
+            )
 
         elif embedding_model_params:
             # Get embedding model from params.
@@ -902,28 +918,25 @@ class KnowledgeBaseController:
                 project.name,
                 params=params
             )
+            embedding_model_id = self._get_model_id(
+                model_name,
+                project_name
+            )
             params['default_embedding_model'] = model_name
 
-        model_project = None
-        if embedding_model is not None and len(embedding_model.parts) > 1:
-            # model project is set
-            model_project = self.session.database_controller.get_project(embedding_model.parts[-2])
-        elif not embedding_model_params:
-            model_project = project
-
-        embedding_model_id = None
-        if model_project:
-            model = self.session.model_controller.get_model(
-                name=model_name,
-                project_name=model_project.name
+        if reranking_model:
+            model_name = reranking_model.parts[-1]
+            reranking_model_id = self._get_model_id(
+                model_name,
+                project_name
             )
-            model_record = db.Predictor.query.get(model['id'])
-            embedding_model_id = model_record.id
 
-        if reranking_model_params:
+        elif reranking_model_params:
             # Get reranking model from params.
             # This is called here to check validaity of the parameters.
             get_reranking_model_from_params(reranking_model_params)
+
+        # TODO: Should we support a default reranking model?
 
         # search for the vector database table
         if storage is None:
@@ -972,11 +985,26 @@ class KnowledgeBaseController:
             vector_database_id=vector_database_id,
             vector_database_table=vector_table_name,
             embedding_model_id=embedding_model_id,
+            reranking_model_id=reranking_model_id,
             params=params,
         )
         db.session.add(kb)
         db.session.commit()
         return kb
+    
+    def _get_model_id(self, model_name: str, project_name: str):
+        """
+        Get the model ID from the database using the model name and project name.
+        """
+        if len(model_name.parts) > 1:
+            project_name = self.session.database_controller.get_project(model_name.parts[-2])
+
+        model = self.session.model_controller.get_model(
+            name=model_name,
+            project_name=project_name.name
+        )
+        model_record = db.Predictor.query.get(model['id'])
+        return model_record.id
 
     def _create_persistent_pgvector(self, params=None):
         """Create default vector database for knowledge base, if not specified"""

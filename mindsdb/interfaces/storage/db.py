@@ -519,10 +519,18 @@ class KnowledgeBase(Base):
         ForeignKey("predictor.id", name="fk_knowledge_base_embedding_model_id"),
         doc="fk to the embedding model",
     )
-
     embedding_model = relationship(
         "Predictor", foreign_keys=[embedding_model_id], doc="embedding model"
     )
+
+    reranking_model_id = Column(
+        ForeignKey("predictor.id", name="fk_knowledge_base_reranking_model_id"),
+        doc="fk to the reranking model",
+    )
+    reranking_model = relationship(
+        "Predictor", foreign_keys=[reranking_model_id], doc="reranking model"
+    )
+
     query_id = Column(Integer, nullable=True)
 
     created_at = Column(DateTime, default=datetime.datetime.now)
@@ -542,6 +550,7 @@ class KnowledgeBase(Base):
             "name": self.name,
             "project_id": self.project_id,
             "embedding_model": None if self.embedding_model is None else self.embedding_model.name,
+            "reranking_model": None if self.reranking_model is None else self.reranking_model.name,
             "vector_database": None if self.vector_database is None else self.vector_database.name,
             "vector_database_table": self.vector_database_table,
             "updated_at": self.updated_at,

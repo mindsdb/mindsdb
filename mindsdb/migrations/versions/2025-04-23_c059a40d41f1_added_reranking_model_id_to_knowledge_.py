@@ -23,7 +23,7 @@ def upgrade():
         batch_op.add_column(sa.Column("reranking_model_id", sa.Integer(), nullable=True))
         batch_op.create_foreign_key(
             "fk_knowledge_base_reranking_model_id",
-            "predictor"
+            "predictor",
             ["reranking_model_id"],
             ["id"]
         )

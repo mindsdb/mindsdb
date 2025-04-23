@@ -7,6 +7,9 @@ import numpy as np
 import pandas as pd
 from numpy import dtype as np_dtype
 from pandas.api import types as pd_types
+import sqlalchemy.types as sqlalchemy_types
+
+from mindsdb_sql_parser.ast import TableColumn
 
 from mindsdb.utilities import log
 from mindsdb.api.executor.exceptions import WrongArgumentError
@@ -88,6 +91,39 @@ class Column:
             "type": column_mysql_type,
         }
         return result
+
+
+def get_mysql_data_type_from_series(series: pd.Series, do_infer: bool = False) -> MYSQL_DATA_TYPE:
+    """Maps pandas Series data type to corresponding MySQL data type.
+
+    This function examines the dtype of a pandas Series and returns the appropriate
+    MySQL data type enum value. For object dtypes, it can optionally attempt to infer
+    a more specific type.
+
+    Args:
+        series (pd.Series): The pandas Series to determine the MySQL type for
+        do_infer (bool): If True and series has object dtype, attempt to infer a more specific type
+
+    Returns:
+        MYSQL_DATA_TYPE: The corresponding MySQL data type enum value
+    """
+    dtype = series.dtype
+    if pd_types.is_object_dtype(dtype) and do_infer is True:
+        dtype = series.infer_objects().dtype
+
+    if pd_types.is_object_dtype(dtype):
+        return MYSQL_DATA_TYPE.TEXT
+    if pd_types.is_datetime64_dtype(dtype):
+        return MYSQL_DATA_TYPE.DATETIME
+    if pd_types.is_string_dtype(dtype):
+        return MYSQL_DATA_TYPE.TEXT
+    if pd_types.is_bool_dtype(dtype):
+        return MYSQL_DATA_TYPE.BOOL
+    if pd_types.is_integer_dtype(dtype):
+        return MYSQL_DATA_TYPE.INT
+    if pd_types.is_numeric_dtype(dtype):
+        return MYSQL_DATA_TYPE.FLOAT
+    return MYSQL_DATA_TYPE.TEXT
 
 
 def rename_df_columns(df: pd.DataFrame, names: Optional[List] = None) -> None:
@@ -360,6 +396,57 @@ class ResultSet:
         )
         self.add_raw_df(df)
 
+    def get_ast_columns(self) -> list[TableColumn]:
+        """Converts ResultSet columns to a list of TableColumn objects with SQLAlchemy types.
+
+        This method processes each column in the ResultSet, determines its MySQL data type
+        (inferring it if necessary), and maps it to the appropriate SQLAlchemy type.
+        The resulting TableColumn objects most likely will be used in CREATE TABLE statement.
+
+        Returns:
+            list[TableColumn]: A list of TableColumn objects with properly mapped SQLAlchemy types
+        """
+        columns: list[TableColumn] = []
+
+        type_mapping = {
+            MYSQL_DATA_TYPE.TINYINT: sqlalchemy_types.INTEGER,
+            MYSQL_DATA_TYPE.SMALLINT: sqlalchemy_types.INTEGER,
+            MYSQL_DATA_TYPE.MEDIUMINT: sqlalchemy_types.INTEGER,
+            MYSQL_DATA_TYPE.INT: sqlalchemy_types.INTEGER,
+            MYSQL_DATA_TYPE.BIGINT: sqlalchemy_types.INTEGER,
+            MYSQL_DATA_TYPE.YEAR: sqlalchemy_types.INTEGER,
+            MYSQL_DATA_TYPE.BOOL: sqlalchemy_types.BOOLEAN,
+            MYSQL_DATA_TYPE.BOOLEAN: sqlalchemy_types.BOOLEAN,
+            MYSQL_DATA_TYPE.FLOAT: sqlalchemy_types.FLOAT,
+            MYSQL_DATA_TYPE.DOUBLE: sqlalchemy_types.FLOAT,
+            MYSQL_DATA_TYPE.TIME: sqlalchemy_types.TIME,
+            MYSQL_DATA_TYPE.DATE: sqlalchemy_types.DATE,
+            MYSQL_DATA_TYPE.DATETIME: sqlalchemy_types.DATETIME,
+            MYSQL_DATA_TYPE.TIMESTAMP: sqlalchemy_types.TIMESTAMP,
+        }
+
+        for i, column in enumerate(self._columns):
+            column_type: MYSQL_DATA_TYPE | None = column.type
+
+            # infer MYSQL_DATA_TYPE if not set
+            if isinstance(column_type, MYSQL_DATA_TYPE) is False:
+                if column_type is not None:
+                    logger.warning(f'Unexpected column type: {column_type}')
+                if self._df is None:
+                    column_type = MYSQL_DATA_TYPE.TEXT
+                else:
+                    column_type = get_mysql_data_type_from_series(self._df.iloc[:, i])
+
+            sqlalchemy_type = type_mapping.get(column_type, sqlalchemy_types.TEXT)
+
+            columns.append(
+                TableColumn(
+                    name=column.alias,
+                    type=sqlalchemy_type
+                )
+            )
+        return columns
+
     def dump_to_mysql(self):
         def dump_date(var: datetime.date | str | None) -> str | None:
             if isinstance(var, datetime.date):  # it is also datetime.datetime
@@ -412,7 +499,13 @@ class ResultSet:
             columns_dict = column.to_mysql_column_dict()
             columns_dicts.append(columns_dict)
             series = df[i]
-            match columns_dict['type']:
+            # series_dtype = series.dtype
+            column_type: MYSQL_DATA_TYPE | None = columns_dict['type']
+
+            if isinstance(column_type, MYSQL_DATA_TYPE) is False:
+                column_type = get_mysql_data_type_from_series(series)
+
+            match column_type:
                 case TYPES.MYSQL_TYPE_DATE:
                     if pd_types.is_datetime64_any_dtype(series.dtype):
                         series = series.dt.strftime('%Y-%m-%d')

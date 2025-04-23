@@ -3,11 +3,9 @@ import inspect
 from dataclasses import astuple
 
 import numpy as np
-from numpy import dtype as np_dtype
 import pandas as pd
-from pandas.api import types as pd_types
 from sqlalchemy.types import (
-    Integer, Float, Text
+    Integer, Float
 )
 
 from mindsdb_sql_parser.ast.base import ASTNode
@@ -138,27 +136,11 @@ class IntegrationDataNode(DataNode):
 
             df = result_set.get_raw_df()
 
-            for idx, col in enumerate(result_set.columns):
-                dtype = col.type
-                # assume this is pandas type
-                column_type = Text
-                if isinstance(dtype, np_dtype):
-                    if pd_types.is_object_dtype(dtype):
-                        # try to infer
-                        dtype = df[idx].infer_objects().dtype
-
-                    if pd_types.is_integer_dtype(dtype):
-                        column_type = Integer
-                    elif pd_types.is_numeric_dtype(dtype):
-                        column_type = Float
-
-                columns.append(
-                    TableColumn(
-                        name=col.alias,
-                        type=column_type
-                    )
-                )
-                table_columns_meta[col.alias] = column_type
+            columns: list[TableColumn] = result_set.get_ast_columns()
+            table_columns_meta = {
+                column.name: column.type
+                for column in columns
+            }
 
         if is_replace:
             # drop

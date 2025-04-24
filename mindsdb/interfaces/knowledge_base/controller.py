@@ -65,30 +65,30 @@ def get_model_params(model_params: dict, default_config_key: str):
     return combined_model_params
 
 
-def get_embedding_model_from_params(embedding_model_params: dict):
-    """
-    Create embedding model from parameters.
-    """
-    params_copy = copy.deepcopy(embedding_model_params)
-    provider = params_copy.pop('provider', None).lower()
-    api_key = get_api_key(provider, params_copy, strict=False) or params_copy.get('api_key')
-    # Underscores are replaced because the provider name ultimately gets mapped to a class name.
-    # This is mostly to support Azure OpenAI (azure_openai); the mapped class name is 'AzureOpenAIEmbeddings'.
-    params_copy['class'] = provider.replace('_', '')
-    if provider == 'azure_openai':
-        # Azure OpenAI expects the api_key to be passed as 'openai_api_key'.
-        params_copy['openai_api_key'] = api_key
-        params_copy['azure_endpoint'] = params_copy.pop('base_url')
-        if 'chunk_size' not in params_copy:
-            params_copy['chunk_size'] = 2048
-        if 'api_version' in params_copy:
-            params_copy['openai_api_version'] = params_copy['api_version']
-    else:
-        params_copy[f"{provider}_api_key"] = api_key
-    params_copy.pop('api_key', None)
-    params_copy['model'] = params_copy.pop('model_name', None)
-
-    return construct_model_from_args(params_copy)
+# def get_embedding_model_from_params(embedding_model_params: dict):
+#     """
+#     Create embedding model from parameters.
+#     """
+#     params_copy = copy.deepcopy(embedding_model_params)
+#     provider = params_copy.pop('provider', None).lower()
+#     api_key = get_api_key(provider, params_copy, strict=False) or params_copy.get('api_key')
+#     # Underscores are replaced because the provider name ultimately gets mapped to a class name.
+#     # This is mostly to support Azure OpenAI (azure_openai); the mapped class name is 'AzureOpenAIEmbeddings'.
+#     params_copy['class'] = provider.replace('_', '')
+#     if provider == 'azure_openai':
+#         # Azure OpenAI expects the api_key to be passed as 'openai_api_key'.
+#         params_copy['openai_api_key'] = api_key
+#         params_copy['azure_endpoint'] = params_copy.pop('base_url')
+#         if 'chunk_size' not in params_copy:
+#             params_copy['chunk_size'] = 2048
+#         if 'api_version' in params_copy:
+#             params_copy['openai_api_version'] = params_copy['api_version']
+#     else:
+#         params_copy[f"{provider}_api_key"] = api_key
+#     params_copy.pop('api_key', None)
+#     params_copy['model'] = params_copy.pop('model_name', None)
+#
+#     return construct_model_from_args(params_copy)
 
 
 def get_reranking_model_from_params(reranking_model_params: dict):
@@ -884,36 +884,30 @@ class KnowledgeBaseController:
                 return kb
             raise EntityExistsError("Knowledge base already exists", name)
 
-        reranking_model_params = get_model_params(params.get('reranking_model', {}), 'default_reranking_model')
+        embedding_params = config.get('default_embedding_model', {})
 
         model_name = None
+        model_project = project
         if embedding_model:
             model_name = embedding_model.parts[-1]
+            if len(embedding_model.parts) > 1:
+                model_project = self.session.database_controller.get_project(embedding_model.parts[-2])
 
-        elif 'embedding_model' in params and isinstance(params['embedding_model'], str):
-            model_name = params.pop('embedding_model')
+        elif 'embedding_model' in params:
+            if isinstance(params['embedding_model'], str):
+                # it is model name
+                model_name = params['embedding_model']
+            else:
+                # it is params for model
+                embedding_params.update(params['embedding_model'])
 
         if model_name is None:
-            embedding_model_params = get_model_params(params['embedding_model'], 'default_embedding_model')
-
-            if embedding_model_params:
-                # Get embedding model from params.
-                # This is called here to check validaity of the parameters.
-                get_embedding_model_from_params(
-                    embedding_model_params
-                )
-            else:
-                model_name = self._get_default_embedding_model(
-                    project.name,
-                    params=params
-                )
-                params['default_embedding_model'] = model_name
-
-        if embedding_model is not None and len(embedding_model.parts) > 1:
-            # model project is set
-            model_project = self.session.database_controller.get_project(embedding_model.parts[-2])
-        else:
-            model_project = project
+            model_name = self._create_embedding_model(
+                project.name,
+                params=embedding_params,
+                kb_name=name,
+            )
+            params['default_embedding_model'] = model_name
 
         embedding_model_id = None
         if model_name is not None:
@@ -924,6 +918,7 @@ class KnowledgeBaseController:
             model_record = db.Predictor.query.get(model['id'])
             embedding_model_id = model_record.id
 
+        reranking_model_params = get_model_params(params.get('reranking_model', {}), 'default_reranking_model')
         if reranking_model_params:
             # Get reranking model from params.
             # This is called here to check validaity of the parameters.
@@ -1008,30 +1003,38 @@ class KnowledgeBaseController:
         self.session.integration_controller.add(vector_store_name, engine, connection_args)
         return vector_store_name
 
-    def _get_default_embedding_model(self, project_name, engine="langchain_embedding", params: dict = None):
+    def _create_embedding_model(self, project_name, engine="openai", params: dict = None, kb_name=''):
         """create a default embedding model for knowledge base, if not specified"""
-        model_name = "kb_default_embedding_model"
+        model_name = f"kb_emb_{kb_name}"
 
         # check exists
         try:
             model = self.session.model_controller.get_model(model_name, project_name=project_name)
+
+            if error remove
+
             if model is not None:
                 return model_name
         except PredictorRecordNotFound:
             pass
 
-        using_args = {
-            'engine': engine
-        }
-        if engine == 'langchain_embedding':
-            # Use default embeddings.
-            using_args['class'] = 'openai'
+        if 'provider' in params:
+            engine = params.pop('provider').lower()
+
+        if engine == 'openai':
+            if 'question_column' not in params:
+                params['question_column'] = 'content'
+            if 'api_key' in params:
+                params[f"{engine}_api_key"] = params.pop('api_key')
+
+        params['engine'] = engine
+        params['join_learn_process'] = True
+        params['mode'] = 'embedding'
 
         # Include API key if provided.
-        using_args.update({k: v for k, v in params.items() if 'api_key' in k})
         statement = CreatePredictor(
             name=Identifier(parts=[project_name, model_name]),
-            using=using_args,
+            using=params,
             targets=[
                 Identifier(parts=[TableField.EMBEDDINGS.value])
             ]

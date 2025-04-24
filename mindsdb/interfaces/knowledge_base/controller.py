@@ -225,31 +225,39 @@ class KnowledgeBaseTable:
             df = df[requested_kb_columns]
         return df
 
-    def add_relevance(self, df, query_text, relevance_threshold=None):
-        relevance_column = TableField.RELEVANCE.value
+    def add_relevance(self, df, query_text, relevance_threshold=0.0):
+        relevance_column = None
 
+        reranking_model = self._kb.reranking_model
         reranking_model_params = get_model_params(self._kb.params.get("reranking_model"), "default_llm")
-        if reranking_model_params and query_text and len(df) > 0:
-            # Use reranker for relevance score
+        if (reranking_model or reranking_model_params) and query_text and len(df) > 0:
             try:
-                logger.info(f"Using knowledge reranking model from params: {reranking_model_params}")
-                # Apply custom filtering threshold if provided
-                if relevance_threshold is not None:
-                    reranking_model_params["filtering_threshold"] = relevance_threshold
-                    logger.info(f"Using custom filtering threshold: {relevance_threshold}")
+                if reranking_model:
+                    relevance_column = reranking_model.to_predict[0]
 
-                reranker = get_reranking_model_from_params(reranking_model_params)
-                # Get documents to rerank
-                documents = df['chunk_content'].tolist()
-                # Use the get_scores method with disable_events=True
-                scores = reranker.get_scores(query_text, documents)
+                    scores = self.add_relevance_from_model(
+                        reranking_model,
+                        df,
+                        query_text,
+                        relevance_threshold
+                    )
+
+                elif reranking_model_params:
+                    relevance_column = TableField.RELEVANCE.value
+
+                    scores = self._add_relevance_from_model_params(
+                        reranking_model_params,
+                        df,
+                        query_text,
+                        relevance_threshold
+                    )
+
                 # Add scores as the relevance column
                 df[relevance_column] = scores
 
                 # Filter by threshold
                 scores_array = np.array(scores)
-                df = df[scores_array > reranker.filtering_threshold]
-                logger.debug(f"Applied reranking with params: {reranking_model_params}")
+                df = df[scores_array > relevance_threshold]
             except Exception as e:
                 logger.error(f"Error during reranking: {str(e)}")
                 # Fallback to distance-based relevance
@@ -271,6 +279,40 @@ class KnowledgeBaseTable:
         # Sort by relevance
         df = df.sort_values(by=relevance_column, ascending=False)
         return df
+    
+    def add_relevance_from_model(
+        self,
+        reranking_model: db.Predictor,
+        df: pd.DataFrame,
+        query_text: str,
+        relevance_threshold: float = None
+    ):
+        """
+        Add relevance column to the dataframe based on the reranking model.
+        """
+        pass
+    
+    def _add_relevance_from_model_params(
+        self,
+        reranking_model_params: dict,
+        df: pd.DataFrame,
+        query_text: str,
+        relevance_threshold: float = None
+    ):
+        """
+        Add relevance column to the dataframe based on the reranking model parameters.
+        """
+        logger.info(f"Using knowledge reranking model from params: {reranking_model_params}")
+        # Apply custom filtering threshold if provided.
+        if relevance_threshold is not None:
+            reranking_model_params["filtering_threshold"] = relevance_threshold
+            logger.info(f"Using custom filtering threshold: {relevance_threshold}")
+
+        reranker = get_reranking_model_from_params(reranking_model_params)
+        documents = df['chunk_content'].tolist()
+
+        # Use the get_scores method with disable_events=True
+        return reranker.get_scores(query_text, documents)
 
     def addapt_conditions_columns(self, conditions):
         if conditions is None:

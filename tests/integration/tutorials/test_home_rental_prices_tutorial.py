@@ -87,8 +87,6 @@ class TestHomeRentalPrices(HTTPHelperMixin):
             assert resp['data'][0][status] == 'generating'
             self.await_model("home_rentals_model", timeout=600)
 
-
-
     def test_prediction(self):
         sql = QueryStorage.prediction
         resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)

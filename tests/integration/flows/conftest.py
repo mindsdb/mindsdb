@@ -3,6 +3,7 @@ import time
 import json
 from pathlib import Path
 
+
 import pytest
 import pandas as pd
 
@@ -11,7 +12,6 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
-HTTP_API_ROOT = os.environ.get("INTERNAL_URL") + "/api"
 USE_PERSISTENT_STORAGE = bool(int(os.getenv('USE_PERSISTENT_STORAGE') or "0"))
 TEST_CONFIG = os.path.dirname(os.path.realpath(__file__)) + '/config/config.json'
 TEMP_DIR = Path(__file__).parent.absolute().joinpath('../../').joinpath(
@@ -19,6 +19,11 @@ TEMP_DIR = Path(__file__).parent.absolute().joinpath('../../').joinpath(
 ).resolve()
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
 CONFIG_PATH = TEMP_DIR.joinpath('config.json')
+
+
+# Makes pytest print the name of parameters for parametrized tests
+def pytest_make_parametrize_id(config, val, argname):
+    return f"{argname}={val}"
 
 
 def make_test_csv(name, data):

@@ -72,7 +72,7 @@ class TestForecastQuaterlyHouseSales(HTTPHelperMixin):
             assert len(resp['data']) == 1
             status = resp['column_names'].index('STATUS')
             assert resp['data'][0][status] == 'generating'
-            self.await_model("house_sales_model", timeout=600)     
+            self.await_model("house_sales_model", timeout=600)
 
     def test_prediction(self):
         sql = QueryStorage.prediction

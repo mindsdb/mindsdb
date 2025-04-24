@@ -1,4 +1,5 @@
 import json
+import os
 
 import pytest
 from walrus import Database
@@ -7,26 +8,16 @@ from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.utilities.ml_task_queue.const import TASKS_STREAM_NAME
 
 from tests.utils.http_test_helpers import HTTPHelperMixin
+from tests.utils.config import HTTP_API_ROOT
+
+REDIS_HOST = os.environ.get("INTERNAL_URL").replace("mindsdb", "redis-master")
 
 
-# used by mindsdb_app fixture in conftest
-OVERRIDE_CONFIG = {
-    'ml_task_queue': {
-        'type': 'redis'
-    },
-    'tasks': {'disable': True},
-    'jobs': {'disable': True}
-}
-
-ML_TASK_QUEUE_CONSUMER = True
-
-API_LIST = ["http"]
-
-
-@pytest.mark.usefixtures('redis', 'postgres_db', 'mindsdb_app')
+@pytest.mark.skipif("localhost" in HTTP_API_ROOT or "127.0.0.1" in HTTP_API_ROOT, reason="Requires redis")
 class TestMLTaskQueue(HTTPHelperMixin):
+
     def test_redis_connection(self):
-        db = Database(protocol=3)
+        db = Database(protocol=3, host=REDIS_HOST)
         db.ping()
 
     def test_create_model(self):
@@ -38,52 +29,51 @@ class TestMLTaskQueue(HTTPHelperMixin):
             6. 2 messages in redis stream
         """
 
+        db_details = {
+            "type": "postgres",
+            "connection_data": {
+                "type": "postgres",
+                "host": "samples.mindsdb.com",
+                "port": "5432",
+                "user": "demo_user",
+                "password": "demo_password",
+                "database": "demo"
+            }
+        }
+
+        self.sql_via_http("DROP MODEL IF EXISTS p_test_queue_async;", RESPONSE_TYPE.OK)
+        self.sql_via_http("DROP MODEL IF EXISTS p_test_queue_sync;", RESPONSE_TYPE.OK)
+
         query = f"""
-            CREATE DATABASE pg
+            CREATE DATABASE IF NOT EXISTS test_demo_queue
             WITH ENGINE = 'postgres',
-            PARAMETERS = {json.dumps(self.postgres_db['connection_data'])};
+            PARAMETERS = {json.dumps(db_details['connection_data'])};
         """
         self.sql_via_http(query, RESPONSE_TYPE.OK)
 
         query = """
-            SELECT * FROM pg (
-                CREATE TABLE test_data AS
-                SELECT
-                    generate_series as id,
-                    random()*100 as var_a,
-                    random()*100 as var_b
-                FROM generate_series(1,50)
-            )
-        """
-        self.sql_via_http(query, RESPONSE_TYPE.TABLE)
-
-        query = """
-            CREATE MODEL
-            mindsdb.test_model_async
-            FROM pg
-            (SELECT * FROM test_data)
-            PREDICT var_a;
+            create predictor p_test_queue_async
+            from test_demo_queue (select sqft, location, rental_price from demo_data.home_rentals limit 30)
+            predict rental_price;
         """
         response = self.sql_via_http(query, RESPONSE_TYPE.TABLE)
         status = response['data'][0][response['column_names'].index('STATUS')]
         assert status in ('generating', 'training')
 
         query = """
-            CREATE MODEL
-            mindsdb.test_model_sync
-            FROM pg
-            (SELECT * FROM test_data)
-            PREDICT var_a
+            create predictor p_test_queue_sync
+            from test_demo_queue (select sqft, location, rental_price from demo_data.home_rentals limit 30)
+            predict rental_price
             USING join_learn_process=true;
         """
         response = self.sql_via_http(query, RESPONSE_TYPE.TABLE)
         status = response['data'][0][response['column_names'].index('STATUS')]
         assert status == 'complete'
 
-        status = self.await_model('test_model_async')
+        status = self.await_model('p_test_queue_async')
         assert status == 'complete'
 
-        db = Database(protocol=3)
+        db = Database(protocol=3, host=REDIS_HOST)
         assert TASKS_STREAM_NAME in db.keys()
         assert db.type(TASKS_STREAM_NAME) == b'stream'
         assert db.xlen(TASKS_STREAM_NAME) == 0
@@ -93,9 +83,9 @@ class TestMLTaskQueue(HTTPHelperMixin):
         """
 
         query = """
-            SELECT var_a,
-                var_a_explain
-            FROM mindsdb.test_model_async
+            SELECT rental_price,
+                rental_price_explain
+            FROM mindsdb.p_test_queue_async
             WHERE b = 10;
         """
         response = self.sql_via_http(query, RESPONSE_TYPE.TABLE)
@@ -103,43 +93,43 @@ class TestMLTaskQueue(HTTPHelperMixin):
         assert len(response['data'][0]) == 2
 
         query = """
-            SELECT var_a,
-                var_a_explain
-            FROM pg.test_data
-            JOIN mindsdb.test_model_sync
+            SELECT rental_price,
+                rental_price_explain
+            FROM test_demo_queue.demo_data.home_rentals
+            JOIN mindsdb.p_test_queue_async
             LIMIT 3;
         """
         response = self.sql_via_http(query, RESPONSE_TYPE.TABLE)
         assert len(response['data']) == 3
         assert len(response['data'][0]) == 2
 
-        db = Database(protocol=3)
+        db = Database(protocol=3, host=REDIS_HOST)
         assert db.xlen(TASKS_STREAM_NAME) == 0
 
     def test_finetune(self):
-        """ check that finetune is work
+        """ check that finetune is working
         """
 
         query = """
-            FINETUNE test_model_async
-            FROM pg (SELECT * FROM test_data LIMIT 10);
-        """
-        response = self.sql_via_http(query, RESPONSE_TYPE.TABLE)
-        status = response['data'][0][response['column_names'].index('STATUS')]
-        # FINETUNE in this case may be very fast, so add 'complete' to check
-        assert status in ('generating', 'training', 'complete')
-
-        query = """
-            FINETUNE test_model_sync
-            FROM pg (SELECT * FROM test_data LIMIT 10)
+            FINETUNE p_test_queue_sync
+            FROM test_demo_queue (SELECT * FROM demo_data.home_rentals LIMIT 10)
             USING join_learn_process=true;
         """
         response = self.sql_via_http(query, RESPONSE_TYPE.TABLE)
         status = response['data'][0][response['column_names'].index('STATUS')]
         assert status == 'complete'
 
-        status = self.await_model('test_model_async', version_number=2)
+        query = """
+            FINETUNE p_test_queue_async
+            FROM test_demo_queue (SELECT * FROM demo_data.home_rentals LIMIT 10);
+        """
+        response = self.sql_via_http(query, RESPONSE_TYPE.TABLE)
+        status = response['data'][0][response['column_names'].index('STATUS')]
+        # FINETUNE in this case may be very fast, so add 'complete' to check
+        assert status in ('generating', 'training', 'complete')
+
+        status = self.await_model('p_test_queue_async', version_number=2)
         assert status == 'complete'
 
-        db = Database(protocol=3)
+        db = Database(protocol=3, host=REDIS_HOST)
         assert db.xlen(TASKS_STREAM_NAME) == 0

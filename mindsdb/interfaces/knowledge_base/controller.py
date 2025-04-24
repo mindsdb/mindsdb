@@ -1011,7 +1011,7 @@ class KnowledgeBaseController:
         try:
             model = self.session.model_controller.get_model(model_name, project_name=project_name)
 
-            if error remove
+            # if error remove
 
             if model is not None:
                 return model_name
@@ -1021,11 +1021,17 @@ class KnowledgeBaseController:
         if 'provider' in params:
             engine = params.pop('provider').lower()
 
+        if engine == 'azure_openai':
+            engine = 'openai'
+            params['provider'] = 'azure'
+
         if engine == 'openai':
             if 'question_column' not in params:
                 params['question_column'] = 'content'
             if 'api_key' in params:
                 params[f"{engine}_api_key"] = params.pop('api_key')
+            if 'base_url' in params:
+                params['api_base'] = params.pop('base_url')
 
         params['engine'] = engine
         params['join_learn_process'] = True

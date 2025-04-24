@@ -5,7 +5,10 @@ from botocore.config import Config
 import time
 from mindsdb.integrations.handlers.s3_handler.s3_handler import S3Handler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
+from dotenv import load_dotenv
 
+# Load environment variables
+load_dotenv()
 
 class S3EndpointHandlerTest(unittest.TestCase):
     @classmethod
@@ -21,19 +24,19 @@ class S3EndpointHandlerTest(unittest.TestCase):
 
         # Test with MinIO (custom endpoint)
         cls.minio_kwargs = {
-            "aws_access_key_id": "minioadmin",
-            "aws_secret_access_key": "minioadmin",
+            "aws_access_key_id": os.getenv('MINIO_ACCESS_KEY', 'minioadmin'),
+            "aws_secret_access_key": os.getenv('MINIO_SECRET_KEY', 'minioadmin'),
             "bucket": "test-bucket",
-            "endpoint_url": "http://localhost:9000"
+            "endpoint_url": os.getenv('MINIO_ENDPOINT_URL', 'http://localhost:9000')
         }
         cls.minio_handler = S3Handler('test_s3_minio', cls.minio_kwargs)
 
         # Setup MinIO client for direct operations
         cls.minio_client = boto3.client(
             's3',
-            endpoint_url='http://localhost:9000',
-            aws_access_key_id='minioadmin',
-            aws_secret_access_key='minioadmin',
+            endpoint_url=os.getenv('MINIO_ENDPOINT_URL', 'http://localhost:9000'),
+            aws_access_key_id=os.getenv('MINIO_ACCESS_KEY', 'minioadmin'),
+            aws_secret_access_key=os.getenv('MINIO_SECRET_KEY', 'minioadmin'),
             config=Config(connect_timeout=5, read_timeout=5)
         )
 

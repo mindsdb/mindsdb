@@ -139,6 +139,158 @@ def rename_df_columns(df: pd.DataFrame, names: Optional[List] = None) -> None:
         df.columns = list(range(len(df.columns)))
 
 
+def _dump_bool(var: Any) -> int | None:
+    """Dumps a boolean value to an integer, as in MySQL boolean type is tinyint with values 0 and 1.
+
+    Args:
+        var (Any): The boolean value to dump
+
+    Returns:
+        int | None: 1 or 0 or None
+    """
+    if pd.isna(var):
+        return None
+    return 1 if var else 0
+
+
+def _dump_str(var: Any) -> str | None:
+    """Dumps a value to a string.
+
+    Args:
+        var (Any): The value to dump
+
+    Returns:
+        str | None: The string representation of the value or None if the value is None
+    """
+    if pd.isna(var):
+        return None
+    return str(var)
+
+
+def _dump_date(var: datetime.date | str | None) -> str | None:
+    """Dumps a date value to a string.
+
+    Args:
+        var (datetime.date | str | None): The date value to dump
+
+    Returns:
+        str | None: The string representation of the date value or None if the value is None
+    """
+    if isinstance(var, datetime.date):  # it is also True for datetime.datetime
+        return var.strftime("%Y-%m-%d")
+    elif isinstance(var, str):
+        return var
+    elif pd.isna(var):
+        return None
+    logger.warning(f'Unexpected value type for DATE: {type(var)}, {var}')
+    return _dump_str(var)
+
+
+def _dump_datetime(var: datetime.datetime | str | None) -> str | None:
+    """Dumps a datetime value to a string.
+    # NOTE mysql may display only %Y-%m-%d %H:%M:%S format for datetime column
+
+    Args:
+        var (datetime.datetime | str | None): The datetime value to dump
+
+    Returns:
+        str | None: The string representation of the datetime value or None if the value is None
+    """
+    if isinstance(var, datetime.date):  # it is also datetime.datetime
+        return var.strftime("%Y-%m-%d %H:%M:%S")
+    elif isinstance(var, str):
+        return var
+    elif pd.isna(var):
+        return None
+    logger.warning(f'Unexpected value type for DATETIME: {type(var)}, {var}')
+    return _dump_str(var)
+
+
+def _dump_time(var: datetime.time | str | None) -> str | None:
+    """Dumps a time value to a string.
+
+    Args:
+        var (datetime.time | str | None): The time value to dump
+
+    Returns:
+        str | None: The string representation of the time value or None if the value is None
+    """
+    if isinstance(var, datetime.time):
+        if var.tzinfo is not None:
+            # NOTE strftime does not support timezone, so we need to convert to UTC
+            offset_seconds = var.tzinfo.utcoffset(None).total_seconds()
+            time_seconds = var.hour * 3600 + var.minute * 60 + var.second
+            utc_seconds = (time_seconds - offset_seconds) % (24 * 3600)
+            hours = int(utc_seconds // 3600)
+            minutes = int((utc_seconds % 3600) // 60)
+            seconds = int(utc_seconds % 60)
+            var = datetime.time(hours, minutes, seconds, var.microsecond)
+        return var.strftime("%H:%M:%S")
+    elif isinstance(var, str):
+        return var
+    elif pd.isna(var):
+        return None
+    logger.warning(f'Unexpected value type for TIME: {type(var)}, {var}')
+    return _dump_str(var)
+
+
+def _handle_series_as_date(series: pd.Series) -> pd.Series:
+    """Convert values in a series to a string representation of a date.
+    NOTE: MySQL require exactly %Y-%m-%d for DATE type.
+
+    Args:
+        series (pd.Series): The series to handle
+
+    Returns:
+        pd.Series: The series with the date values as strings
+    """
+    if pd_types.is_datetime64_any_dtype(series.dtype):
+        return series.dt.strftime('%Y-%m-%d')
+    elif pd_types.is_object_dtype(series.dtype):
+        return series.apply(_dump_date)
+    logger.info(f'Unexpected dtype: {series.dtype} for column with type DATE')
+    return series.apply(_dump_str)
+
+
+def _handle_series_as_datetime(series: pd.Series) -> pd.Series:
+    """Convert values in a series to a string representation of a datetime.
+    NOTE: MySQL's DATETIME type require exactly %Y-%m-%d %H:%M:%S format.
+
+    Args:
+        series (pd.Series): The series to handle
+
+    Returns:
+        pd.Series: The series with the datetime values as strings
+    """
+    if pd_types.is_datetime64_any_dtype(series.dtype):
+        return series.dt.strftime('%Y-%m-%d %H:%M:%S')
+    elif pd_types.is_object_dtype(series.dtype):
+        return series.apply(_dump_datetime)
+    logger.info(f'Unexpected dtype: {series.dtype} for column with type DATETIME')
+    return series.apply(_dump_str)
+
+
+def _handle_series_as_time(series: pd.Series) -> pd.Series:
+    """Convert values in a series to a string representation of a time.
+    NOTE: MySQL's TIME type require exactly %H:%M:%S format.
+
+    Args:
+        series (pd.Series): The series to handle
+
+    Returns:
+        pd.Series: The series with the time values as strings
+    """
+    if pd_types.is_timedelta64_ns_dtype(series.dtype):
+        base_time = pd.Timestamp('2000-01-01')
+        series = ((base_time + series).dt.strftime('%H:%M:%S'))
+    elif pd_types.is_object_dtype(series.dtype):
+        series = series.apply(_dump_time)
+    else:
+        logger.info(f'Unexpected dtype: {series.dtype} for column with type TIME')
+        series = series.apply(_dump_str)
+    return series
+
+
 class ResultSet:
     def __init__(
         self,
@@ -447,96 +599,47 @@ class ResultSet:
             )
         return columns
 
-    def dump_to_mysql(self):
-        def dump_date(var: datetime.date | str | None) -> str | None:
-            if isinstance(var, datetime.date):  # it is also datetime.datetime
-                return var.strftime("%Y-%m-%d")
-            elif isinstance(var, str):
-                return var
-            elif pd.isna(var):
-                return None
-            else:
-                raise WrongArgumentError(f'Unsupported dtype: {type(var)}')
+    def dump_to_mysql(self) -> tuple[pd.DataFrame, list[dict[str, str | int]]]:
+        """
+        Dumps the ResultSet to a format that can be used to send as MySQL response packet.
+        NOTE: This method modifies the original DataFrame and columns.
 
-        def dump_datetime(var: datetime.datetime | str | None) -> str | None:
-            if isinstance(var, datetime.date):  # it is also datetime.datetime
-                # NOTE mysql may display only this format for datetime column
-                return var.strftime("%Y-%m-%d %H:%M:%S")
-            elif isinstance(var, str):
-                return var
-            elif pd.isna(var):
-                return None
-            else:
-                raise WrongArgumentError(f'Unsupported dtype: {type(var)}')
-
-        def dump_time(var: datetime.time | str | None) -> str | None:
-            if isinstance(var, datetime.time):
-                if var.tzinfo is not None:
-                    # NOTE strftime does not support timezone, so we need to convert to UTC
-                    offset_seconds = var.tzinfo.utcoffset(None).total_seconds()
-                    time_seconds = var.hour * 3600 + var.minute * 60 + var.second
-                    utc_seconds = (time_seconds - offset_seconds) % (24 * 3600)
-                    hours = int(utc_seconds // 3600)
-                    minutes = int((utc_seconds % 3600) // 60)
-                    seconds = int(utc_seconds % 60)
-                    var = datetime.time(hours, minutes, seconds, var.microsecond)
-                return var.strftime("%H:%M:%S")
-            elif isinstance(var, str):
-                return var
-            elif pd.isna(var):
-                return None
-
-        def dump_str(var: Any) -> str | None:
-            if pd.isna(var):
-                return None
-            else:
-                return str(var)
-
+        Returns:
+            tuple[pd.DataFrame, list[dict[str, str | int]]]: A tuple containing the modified DataFrame and a list
+                                                             of MySQL column dictionaries
+        """
         df = self._df
-        columns_dicts = []
-        # TODO convert data types
-        for i, column in enumerate(self.columns):
-            columns_dict = column.to_mysql_column_dict()
-            columns_dicts.append(columns_dict)
-            series = df[i]
-            # series_dtype = series.dtype
-            column_type: MYSQL_DATA_TYPE | None = columns_dict['type']
 
-            if isinstance(column_type, MYSQL_DATA_TYPE) is False:
-                column_type = get_mysql_data_type_from_series(series)
+        if df is None:
+            raise ValueError('ResultSet is empty')
+
+        for i, column in enumerate(self.columns):
+            series = df[i]
+            if isinstance(column.type, MYSQL_DATA_TYPE) is False:
+                column.type = get_mysql_data_type_from_series(series)
+
+            column_type: MYSQL_DATA_TYPE = column.type
 
             match column_type:
-                case TYPES.MYSQL_TYPE_DATE:
-                    if pd_types.is_datetime64_any_dtype(series.dtype):
-                        series = series.dt.strftime('%Y-%m-%d')
-                    elif pd_types.is_object_dtype(series.dtype):
-                        series = series.apply(dump_date)
-                    else:
-                        logger.info(f'Unexpected dtype: {series.dtype} for column with type DATE')
-                        series = series.apply(dump_str)
-                case TYPES.MYSQL_TYPE_DATETIME | TYPES.MYSQL_TYPE_DATETIME2:
-                    # NOTE MySQL's DATETIME type require exactly this format. If need another format, use VARCHAR type
-                    if pd_types.is_datetime64_any_dtype(series.dtype):
-                        series = series.dt.strftime('%Y-%m-%d %H:%M:%S')
-                    elif pd_types.is_object_dtype(series.dtype):
-                        series = series.apply(dump_datetime)
-                    else:
-                        logger.info(f'Unexpected dtype: {series.dtype} for column with type DATETIME')
-                        series = series.apply(dump_str)
-                case TYPES.MYSQL_TYPE_TIME | TYPES.MYSQL_TYPE_TIME2:
-                    if pd_types.is_timedelta64_ns_dtype(series.dtype):
-                        base_time = pd.Timestamp('2000-01-01')
-                        series = ((base_time + series).dt.strftime('%H:%M:%S'))
-                    elif pd_types.is_object_dtype(series.dtype):
-                        series = series.apply(dump_time)
-                    else:
-                        logger.info(f'Unexpected dtype: {series.dtype} for column with type TIME')
-                        series = series.apply(dump_str)
+                case MYSQL_DATA_TYPE.BOOL | MYSQL_DATA_TYPE.BOOLEAN:
+                    series = series.apply(_dump_bool)
+                case MYSQL_DATA_TYPE.DATE:
+                    series = _handle_series_as_date(series)
+                case MYSQL_DATA_TYPE.DATETIME:
+                    series = _handle_series_as_datetime(series)
+                case MYSQL_DATA_TYPE.TIME:
+                    series = _handle_series_as_time(series)
                 case _:
-                    series = series.apply(dump_str)
+                    series = series.apply(_dump_str)
+
             # inplace modification of dt types raise SettingWithCopyWarning, so do regular replace
             # we may split this operation for dt and other types for optimisation
             df[i] = series.replace([np.NaN, pd.NA, pd.NaT], None)
+
+        columns_dicts = [
+            column.to_mysql_column_dict()
+            for column in self.columns
+        ]
 
         return df, columns_dicts
 

@@ -25,7 +25,7 @@ from mindsdb.utilities.config import config
 from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.utilities.starters import (
     start_http, start_mysql, start_mongo, start_postgres, start_ml_task_queue, start_scheduler, start_tasks,
-    start_mcp
+    start_mcp, start_litellm
 )
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 from mindsdb.utilities.functions import get_versions_where_predictors_become_obsolete
@@ -59,6 +59,7 @@ class TrunkProcessEnum(Enum):
     TASKS = 'tasks'
     ML_TASK_QUEUE = 'ml_task_queue'
     MCP = 'mcp'
+    LITELLM = 'litellm'
 
     @classmethod
     def _missing_(cls, value):
@@ -408,9 +409,11 @@ if __name__ == '__main__':
 
     clean_process_marks()
 
-    http_api_config = config['api']['http']
-    mysql_api_config = config['api']['mysql']
-    mcp_api_config = config['api']['mcp']
+    # Get config values for APIs
+    http_api_config = config.get('api', {}).get('http', {})
+    mysql_api_config = config.get('api', {}).get('mysql', {})
+    mcp_api_config = config.get('api', {}).get('mcp', {})
+    litellm_api_config = config.get('api', {}).get('litellm', {})
     trunc_processes_struct = {
         TrunkProcessEnum.HTTP: TrunkProcessData(
             name=TrunkProcessEnum.HTTP.value,
@@ -469,6 +472,17 @@ if __name__ == '__main__':
             restart_on_failure=mcp_api_config.get('restart_on_failure', False),
             max_restart_count=mcp_api_config.get('max_restart_count', TrunkProcessData.max_restart_count),
             max_restart_interval_seconds=mcp_api_config.get(
+                'max_restart_interval_seconds', TrunkProcessData.max_restart_interval_seconds
+            )
+        ),
+        TrunkProcessEnum.LITELLM: TrunkProcessData(
+            name=TrunkProcessEnum.LITELLM.value,
+            entrypoint=start_litellm,
+            port=litellm_api_config.get('port', 8000),
+            args=(config.cmd_args.verbose,),
+            restart_on_failure=litellm_api_config.get('restart_on_failure', False),
+            max_restart_count=litellm_api_config.get('max_restart_count', TrunkProcessData.max_restart_count),
+            max_restart_interval_seconds=litellm_api_config.get(
                 'max_restart_interval_seconds', TrunkProcessData.max_restart_interval_seconds
             )
         )

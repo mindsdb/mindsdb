@@ -656,9 +656,18 @@ class QueryPlanner:
             # plan sub-select first
             last_step = self.plan_select(query.from_select, integration=integration_name)
 
+            # possible knowledge base parameters
+            select = query.from_select
+            params = {}
+            if isinstance(select, Select) and select.using is not None:
+                for k, v in select.using.items():
+                    if k.startswith('kb_'):
+                        params[k] = v
+
             self.plan.add_step(InsertToTable(
                 table=table,
                 dataframe=last_step,
+                params=params,
             ))
         else:
             self.plan.add_step(InsertToTable(
@@ -762,7 +771,7 @@ class QueryPlanner:
         elif from_table is None:
             # one line select
             step = QueryStep(query, from_table=pd.DataFrame([None]))
-            self.plan.add_step(step)
+            return self.plan.add_step(step)
         else:
             raise PlanningException(f'Unsupported from_table {type(from_table)}')
 

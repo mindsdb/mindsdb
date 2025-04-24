@@ -61,6 +61,8 @@ opentelemetry-instrumentation-flask==0.48b0
 opentelemetry-distro==0.48b0
 pyaml==23.12.0
 mcp==1.6.0
+fastapi>=0.110.0, <1.0.0  # Required for LiteLLM server
+uvicorn>=0.30.0, <1.0.0   # Required for LiteLLM server
 
 # files reading
 pymupdf==1.25.2

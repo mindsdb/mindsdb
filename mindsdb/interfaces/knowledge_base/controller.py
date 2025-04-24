@@ -37,6 +37,7 @@ from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor impor
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
+from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
 
 from mindsdb.api.executor.command_executor import ExecuteCommands
@@ -50,6 +51,18 @@ KB_TO_VECTORDB_COLUMNS = {
     'chunk_id': 'id',
     'chunk_content': 'content'
 }
+
+
+def get_model_params(model_params: dict, default_config_key: str):
+    """
+    Get model parameters by combining default config with user provided parameters.
+    """
+    combined_model_params = config.get(default_config_key, {})
+
+    if model_params:
+        combined_model_params.update(model_params)
+
+    return combined_model_params
 
 
 def get_embedding_model_from_params(embedding_model_params: dict):
@@ -84,8 +97,7 @@ def get_reranking_model_from_params(reranking_model_params: dict):
     """
     params_copy = copy.deepcopy(reranking_model_params)
     provider = params_copy.get('provider', "openai").lower()
-    if provider not in ('openai', 'azure_openai'):
-        raise ValueError("Only OpenAI and AzureOpenAI provider are supported for the reranking model.")
+
     if "api_key" not in params_copy:
         params_copy["api_key"] = get_api_key(provider, params_copy, strict=False)
     params_copy['model'] = params_copy.pop('model_name', None)
@@ -216,7 +228,7 @@ class KnowledgeBaseTable:
     def add_relevance(self, df, query_text, relevance_threshold=None):
         relevance_column = TableField.RELEVANCE.value
 
-        reranking_model_params = self._kb.params.get("reranking_model")
+        reranking_model_params = get_model_params(self._kb.params.get("reranking_model"), "default_llm")
         if reranking_model_params and query_text and len(df) > 0:
             # Use reranker for relevance score
             try:
@@ -429,11 +441,12 @@ class KnowledgeBaseTable:
         db_handler = self.get_vector_db()
         db_handler.delete(self._kb.vector_database_table)
 
-    def insert(self, df: pd.DataFrame):
+    def insert(self, df: pd.DataFrame, params: dict = None):
         """Insert dataframe to KB table.
 
         Args:
             df: DataFrame to insert
+            params: User parameters of insert
         """
         if df.empty:
             return
@@ -502,7 +515,12 @@ class KnowledgeBaseTable:
         df_emb = self._df_to_embeddings(df)
         df = pd.concat([df, df_emb], axis=1)
         db_handler = self.get_vector_db()
-        db_handler.do_upsert(self._kb.vector_database_table, df)
+
+        if params is not None and params.get('kb_no_upsert', False):
+            # speed up inserting by disable checking existing records
+            db_handler.insert(self._kb.vector_database_table, df)
+        else:
+            db_handler.do_upsert(self._kb.vector_database_table, df)
 
     def _adapt_column_names(self, df: pd.DataFrame) -> pd.DataFrame:
         '''
@@ -656,6 +674,7 @@ class KnowledgeBaseTable:
         df = df[[TableField.CONTENT.value]]
 
         model_id = self._kb.embedding_model_id
+        embedding_model_params = get_model_params(self._kb.params.get('embedding_model', {}), 'default_embedding_model')
         if model_id:
             # get the input columns
             model_rec = db.session.query(db.Predictor).filter_by(id=model_id).first()
@@ -684,8 +703,8 @@ class KnowledgeBaseTable:
                 # adapt output for vectordb
                 df_out = df_out.rename(columns={target: TableField.EMBEDDINGS.value})
 
-        elif self._kb.params.get('embedding_model'):
-            embedding_model = get_embedding_model_from_params(self._kb.params.get('embedding_model'))
+        elif embedding_model_params:
+            embedding_model = get_embedding_model_from_params(embedding_model_params)
 
             df_texts = df.apply(row_to_document, axis=1)
             embeddings = embedding_model.embed_documents(df_texts.tolist())
@@ -723,14 +742,15 @@ class KnowledgeBaseTable:
         """
         # Get embedding model from knowledge base
         embeddings_model = None
+        embedding_model_params = get_model_params(self._kb.params.get('embedding_model', {}), 'default_embedding_model')
         if self._kb.embedding_model:
             # Extract embedding model args from knowledge base table
             embedding_args = self._kb.embedding_model.learn_args.get('using', {})
             # Construct the embedding model directly
             embeddings_model = construct_model_from_args(embedding_args)
             logger.debug(f"Using knowledge base embedding model with args: {embedding_args}")
-        elif self._kb.params.get('embedding_model'):
-            embeddings_model = get_embedding_model_from_params(self._kb.params['embedding_model'])
+        elif embedding_model_params:
+            embeddings_model = get_embedding_model_from_params(embedding_model_params)
             logger.debug(f"Using knowledge base embedding model from params: {self._kb.params['embedding_model']}")
         else:
             embeddings_model = DEFAULT_EMBEDDINGS_MODEL_CLASS()
@@ -864,8 +884,8 @@ class KnowledgeBaseController:
                 return kb
             raise EntityExistsError("Knowledge base already exists", name)
 
-        embedding_model_params = params.get('embedding_model', None)
-        reranking_model_params = params.get('reranking_model', None)
+        embedding_model_params = get_model_params(params.get('embedding_model', {}), 'default_embedding_model')
+        reranking_model_params = get_model_params(params.get('reranking_model', {}), 'default_reranking_model')
 
         if embedding_model:
             model_name = embedding_model.parts[-1]

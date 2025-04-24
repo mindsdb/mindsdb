@@ -12,8 +12,8 @@ class S3EndpointHandlerTest(unittest.TestCase):
     def setUpClass(cls):
         # Test with AWS S3 (default endpoint)
         cls.aws_kwargs = {
-            "aws_access_key_id": "AKIASEV6KZOYWUYK5KX3",
-            "aws_secret_access_key": "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",
+            "aws_access_key_id": os.getenv('AWS_ACCESS_KEY_ID', 'test_access_key'),
+            "aws_secret_access_key": os.getenv('AWS_SECRET_ACCESS_KEY', 'test_secret_key'),
             "region_name": "us-east-1",
             "bucket": "mindsdb-bucket-testing-endpoints"
         }

@@ -885,7 +885,7 @@ class KnowledgeBaseController:
             raise EntityExistsError("Knowledge base already exists", name)
 
         embedding_model_params = get_model_params(params.get('embedding_model', {}), 'default_embedding_model')
-        reranking_model_params = get_model_params(params.get('reranking_model', {}), 'default_reranking_model')
+        reranking_model_params = get_model_params(params.get('reranking_model', {}), 'default_llm')
 
         if embedding_model:
             model_name = embedding_model.parts[-1]

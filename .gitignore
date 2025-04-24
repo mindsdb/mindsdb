@@ -58,3 +58,5 @@ xgboost
 
 # Docs
 node_modules
+.env
+.env

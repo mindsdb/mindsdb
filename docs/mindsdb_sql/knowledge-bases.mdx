@@ -84,6 +84,15 @@ The `binary` reranking method simplifies classification by determining whether a
 
 * `id_column` is the column name that will be used as the unique identifier by the knowledge base. If not set, the `id` column is used by default.
 
+<Info>
+When the `id_column` parameter is provided, the knowledge base uses this ID to identify rows from the source data.
+
+When the `id_column` is not provided, the knowledge base uses an auto-generated sequence of numbers to identify rows from the source data. Note that these auto-generated IDs are duplicated in the following cases:
+
+1. If the source data row is chunked into multiple chunks, then these rows in the knowledge base have the same auto-generated ID as they come from the same source data row.
+2. If the data from another data source is inserted, then the auto-generated sequence starts from zero again.
+</Info>
+
 Get details about the knowledge base using the `DESCRIBE` command.
 
 ```sql
@@ -115,6 +124,12 @@ The following is an explanation of the syntax and parameters:
 * `my_kb` is a unique identifier of a knowledge base.
 * `<id_col>` is a column that contains unique identifiers of data. The knowledge base expects the `id` column name, unless specified differently in the `id_column` parameter when creating the knowledge base.
 * `<text_col>` is a column that contains the text content. The knowledge base expects the `content` column name, unless specified differently in the `content_columns` parameter when creating the knowledge base.
+
+<Note>
+Note that when inserting the same data into the knowledge base again, then no new rows are inserted, as the content already exists in the knowledge base.
+
+In order to update existing data in the knowledge base, insert data with the column ID that you want to update and the updated content.
+</Note>
 
 <Accordion title="Partitioning Queries for Better Performance">
 

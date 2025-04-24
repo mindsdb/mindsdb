@@ -63,6 +63,10 @@ def get_api_key(
     if f"{api_name.lower()}_api_key" in api_cfg:
         return api_cfg[f"{api_name.lower()}_api_key"]
 
+    # 6
+    if 'api_keys' in create_args and api_name in create_args['api_keys']:
+        return create_args['api_keys'][api_name]
+
     if strict:
         raise Exception(
             f"Missing API key '{api_name.lower()}_api_key'. Either re-create this ML_ENGINE specifying the '{api_name.lower()}_api_key' parameter, or re-create this model and pass the API key with `USING` syntax."

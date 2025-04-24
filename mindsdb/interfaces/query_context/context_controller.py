@@ -15,6 +15,7 @@ from mindsdb.utilities.cache import get_cache
 
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.config import config
 
 from .last_query import LastQuery
 
@@ -29,7 +30,7 @@ class RunningQuery:
     def __init__(self, record: db.Queries):
         self.record = record
         self.sql = record.sql
-        self.database = record.database or 'mindsdb'
+        self.database = record.database or config.get('default_project')
 
     def get_partition_query(self, step_num: int, query: Select) -> Select:
         """

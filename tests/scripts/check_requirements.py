@@ -29,7 +29,11 @@ HANDLER_REQS_PATHS = list(
     - set(glob.glob("requirements/requirements*.txt"))
 )
 
-MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.toml"]
+MAIN_EXCLUDE_PATHS = [
+    "mindsdb/integrations/handlers/.*_handler",
+    "mindsdb/integrations/utilities/handlers",
+    "pryproject.toml"
+]
 
 # Torch.multiprocessing is imported in a 'try'. Falls back to multiprocessing so we dont NEED it.
 # Psycopg2 is needed in core codebase for sqlalchemy.

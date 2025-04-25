@@ -286,17 +286,15 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
                 parsed_date = dateparser.parse(samples[0])
                 if parsed_date is None:
                     raise ValueError("Could not parse date")
-                
+
                 # Verify the format works for all samples
                 for sample in samples[1:]:
                     if dateparser.parse(sample) is None:
                         raise ValueError("Inconsistent date formats in samples")
-                    
                 # Convert to strftime format based on the input
                 if re.search(r'\d{2}:\d{2}:\d{2}', samples[0]):
                     return '%Y-%m-%d %H:%M:%S'
                 return '%Y-%m-%d'
-                
             except (ValueError, AttributeError):
                 # If dateparser fails, return a basic format as last resort
                 return '%Y-%m-%d'

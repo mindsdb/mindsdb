@@ -4,6 +4,7 @@ from typing import Any, AsyncIterable, Dict, Optional
 from dotenv import load_dotenv
 #from flat_ai import FlatAI
 import os
+import constants
 
 def get_api_key() -> str:
   """Helper method to handle API Key."""
@@ -24,26 +25,33 @@ class MindsDBAgent:
     return {"content": "Use stream method to get the results!"}
 
   async def stream(self, query, session_id) -> AsyncIterable[Dict[str, Any]]:
-
+    import asyncio
+    
+    subtypes = ["plan", "query", "curate", "validate", "respond"]
     for i in range(5):
-      subtype = ["plan_task", "read_schema", "compose_query", "execute_query", "evaluate_results"]
+      await asyncio.sleep(1) # Simulate processing time
+      
       yield {
           "is_task_complete": False,
           "parts": [{
             "type": 'text',
-            "text":"Processing the reimbursement request...",
+            "text": constants.TEXT_BY_SUBTYPE[subtypes[i]],
           }],
           "metadata": {
             "type": "reasoning",
-            "subtype": subtype[i],
+            "subtype": subtypes[i],
           }
       }
+    
+    # One final delay before the completion
+    await asyncio.sleep(0.2)
+    
     yield {
         "is_task_complete": True,
         "parts":[
           {
             "type": 'text',
-            "text":"Processing the reimbursement request...",
+            "text": constants.TEXT_BY_SUBTYPE[subtypes[4]],
           },
           {
             "type": 'data',
@@ -54,8 +62,3 @@ class MindsDBAgent:
           }
         ] 
     }
-
-  
-
-
-

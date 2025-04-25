@@ -1,4 +1,5 @@
 from starlette.applications import Starlette
+from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
 from sse_starlette.sse import EventSourceResponse
 from starlette.requests import Request
@@ -45,6 +46,14 @@ class A2AServer:
         self.app.add_route(self.endpoint, self._process_request, methods=["POST"])
         self.app.add_route(
             "/.well-known/agent.json", self._get_agent_card, methods=["GET"]
+        )
+        # TODO: Remove this when we have a proper CORS policy
+        self.app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
         )
 
     def start(self):

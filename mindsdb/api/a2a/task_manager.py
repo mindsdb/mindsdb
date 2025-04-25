@@ -18,7 +18,7 @@ from common.types import (
     SendTaskStreamingResponse,
 )
 from common.server.task_manager import InMemoryTaskManager
-from agent import ReimbursementAgent
+from agent import MindsDBAgent
 import common.server.utils as utils
 from typing import Union
 import logging
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 class AgentTaskManager(InMemoryTaskManager):
 
-    def __init__(self, agent: ReimbursementAgent):
+    def __init__(self, agent: MindsDBAgent):
         super().__init__()
         self.agent = agent
 
@@ -90,12 +90,12 @@ class AgentTaskManager(InMemoryTaskManager):
     ) -> None:
         task_send_params: TaskSendParams = request.params
         if not utils.are_modalities_compatible(
-            task_send_params.acceptedOutputModes, ReimbursementAgent.SUPPORTED_CONTENT_TYPES
+            task_send_params.acceptedOutputModes, MindsDBAgent.SUPPORTED_CONTENT_TYPES
         ):
             logger.warning(
                 "Unsupported output mode. Received %s, Support %s",
                 task_send_params.acceptedOutputModes,
-                ReimbursementAgent.SUPPORTED_CONTENT_TYPES,
+                MindsDBAgent.SUPPORTED_CONTENT_TYPES,
             )
             return utils.new_incompatible_types_error(request.id)
     async def on_send_task(self, request: SendTaskRequest) -> SendTaskResponse:

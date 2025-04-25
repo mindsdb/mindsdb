@@ -1,7 +1,7 @@
 [project]
-name = "a2a-sample-agent-adk"
+name = "a2a-mindsdb-agent"
 version = "0.1.0"
-description = "Sample Google ADK-based Expense Reimbursement agent hosted as an A2A server." 
+description = "MindsDB A2A server." 
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

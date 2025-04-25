@@ -42,7 +42,7 @@ from mindsdb.utilities.context import context as ctx
 
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.utilities import log
-from mindsdb.integrations.utilities.rag.rerankers.reranker_compressor import LLMReranker
+from mindsdb.integrations.utilities.rag.rerankers.base_reranker import BaseLLMReranker
 
 logger = log.getLogger(__name__)
 
@@ -102,7 +102,7 @@ def get_reranking_model_from_params(reranking_model_params: dict):
         params_copy["api_key"] = get_api_key(provider, params_copy, strict=False)
     params_copy['model'] = params_copy.pop('model_name', None)
 
-    return LLMReranker(**params_copy)
+    return BaseLLMReranker(**params_copy)
 
 
 class KnowledgeBaseTable:

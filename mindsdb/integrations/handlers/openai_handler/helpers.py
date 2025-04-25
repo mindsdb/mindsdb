@@ -4,7 +4,6 @@ import time
 import math
 
 import openai
-from openai import OpenAI
 
 import tiktoken
 

@@ -112,8 +112,6 @@ class KBTestBase:
 
         self.run_sql(f'drop knowledge base if exists {name}')
 
-        storage = self.con.databases.get(self.vectordb_name).tables.get(f'tbl_{name}')
-
         param_str = ''
         if params:
             param_items = []
@@ -402,7 +400,7 @@ class KBTest(KBTestBase):
         assert 'noise' in ret.chunk_content[0]  # first line contents word
         assert len(ret[ret.relevance < 0.65]) == 0
 
-    def test_relevance(self, openai_api_key, reranking_model=None):
+    def test_dict_as_model(self, openai_api_key, reranking_model=None, embedding_model=None):
 
         def _check_kb(kb_params):
             self.create_kb('kb_crm', params=kb_params, with_model=False)
@@ -432,13 +430,16 @@ class KBTest(KBTestBase):
                 "api_key": openai_api_key
             }
 
-        # prepare KB
-        kb_params = {
-            'embedding_model': {
+        if embedding_model is None:
+            embedding_model = {
                 "provider": "openai",
                 "model_name": "text-embedding-ada-002",
                 "api_key": openai_api_key
-            },
+            }
+
+        # prepare KB
+        kb_params = {
+            'embedding_model': embedding_model,
             'reranking_model': reranking_model,
             'metadata_columns': ['status', 'category'],
             'content_columns': ['message_body'],

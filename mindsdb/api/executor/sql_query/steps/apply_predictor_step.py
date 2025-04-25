@@ -95,8 +95,8 @@ class ApplyPredictorRowStepCall(ApplyPredictorBaseCall):
         result = ResultSet()
         result.is_prediction = True
         if len(predictions) == 0:
-            columns = [col['name'] for col in project_datanode.get_table_columns(predictor_name)]
-            predictions = pd.DataFrame([], columns=columns)
+            columns_names = project_datanode.get_table_columns_names(predictor_name)
+            predictions = pd.DataFrame([], columns=columns_names)
 
         result.from_df(
             predictions,
@@ -173,10 +173,10 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
 
         project_datanode = self.session.datahub.get(project_name)
         if len(data) == 0:
-            cols = [col['name'] for col in project_datanode.get_table_columns(predictor_name)] + ['__mindsdb_row_id']
-            for col in cols:
+            columns_names = project_datanode.get_table_columns_names(predictor_name) + ['__mindsdb_row_id']
+            for column_name in columns_names:
                 result.add_column(Column(
-                    name=col,
+                    name=column_name,
                     database=table_name[0],
                     table_name=table_name[1],
                     table_alias=table_name[2]

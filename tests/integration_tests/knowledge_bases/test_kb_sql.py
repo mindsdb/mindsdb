@@ -176,7 +176,7 @@ class KBTest(KBTestBase):
         assert len(ret) == 4
 
         print('Limit with content')
-        ret = self.run_sql("select id, chunk_content from kb_crm where content = 'help' limit 4")
+        ret = self.run_sql("select id, chunk_content, distance from kb_crm where content = 'help' limit 4")
         assert len(ret) == 4
         assert ret['id'][0] == '1000'  # id is string
 
@@ -383,13 +383,20 @@ class KBTest(KBTestBase):
         ret = self.run_sql("""
             SELECT *
             FROM kb_crm
-            WHERE status = "solving" AND content = "noise" AND reranking_threshold=0.65
+            WHERE status = "solving" AND content = "noise" AND relevance_threshold=0.65
         """)
         assert set(ret.metadata.apply(lambda x: x.get('status'))) == {'solving'}
         assert 'noise' in ret.chunk_content[0]  # first line contents word
         assert len(ret[ret.relevance < 0.65]) == 0
 
-    def test_relevance(self, openai_api_key):
+    def test_relevance(self, openai_api_key, reranking_model=None):
+
+        if reranking_model is None:
+            reranking_model = {
+                "provider": "openai",
+                "model_name": "gpt-4",
+                "api_key": openai_api_key
+            }
 
         # prepare KB
         kb_params = {
@@ -398,11 +405,7 @@ class KBTest(KBTestBase):
                 "model_name": "text-embedding-ada-002",
                 "api_key": openai_api_key
             },
-            'reranking_model': {
-                "provider": "openai",
-                "model_name": "gpt-4",
-                "api_key": openai_api_key
-            },
+            'reranking_model': reranking_model,
             'metadata_columns': ['status', 'category'],
             'content_columns': ['message_body'],
             'id_column': 'id',
@@ -416,13 +419,14 @@ class KBTest(KBTestBase):
             );
         """)
 
-        ret = self.run_sql("""
+        threshold = 0.5
+        ret = self.run_sql(f"""
             SELECT *
             FROM kb_crm
-            WHERE status = "solving" AND content = "noise" AND reranking_threshold=0.8
+            WHERE status = "solving" AND content = "noise" AND relevance_threshold={threshold}
         """)
         assert set(ret.metadata.apply(lambda x: x.get('status'))) == {'solving'}
         for item in ret.chunk_content:
             assert 'noise' in item  # all lines line contents word
 
-        assert len(ret[ret.relevance < 0.8]) == 0
+        assert len(ret[ret.relevance < threshold]) == 0

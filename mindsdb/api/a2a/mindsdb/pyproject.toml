@@ -1,0 +1,21 @@
+[project]
+name = "a2a-sample-agent-adk"
+version = "0.1.0"
+description = "Sample Google ADK-based Expense Reimbursement agent hosted as an A2A server." 
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "google-genai>=1.9.0",
+    "a2a-samples",
+    "flat-ai>=0.6.1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+
+[tool.uv.sources]
+a2a-samples = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

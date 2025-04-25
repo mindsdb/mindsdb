@@ -73,8 +73,12 @@ SNOWFLAKE_HANDLER_DEPS = ["pyarrow"]
 
 LINDORM_HANDLER_DEPS = ["protobuf"]
 
+# Dependencies for handler utilities.
+# These are required by the utilities, which are used by the handlers.
+HANDLER_UTILITIES_DEPS = ["google-auth-oauthlib"]
+
 HANDLER_RULE_IGNORES = {
-    "DEP002": OPTIONAL_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS + BYOM_HANLDER_DEPS + HIVE_HANDLER_DEPS + GCS_HANDLER_DEPS + LINDORM_HANDLER_DEPS,
+    "DEP002": OPTIONAL_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS + BYOM_HANLDER_DEPS + HIVE_HANDLER_DEPS + GCS_HANDLER_DEPS + LINDORM_HANDLER_DEPS + HANDLER_UTILITIES_DEPS,
     "DEP001": ["tests", "pyarrow", "IfxPyDbi", "ingres_sa_dialect"],  # 'tests' is the mindsdb tests folder in the repo root, 'pyarrow' used in snowflake handler
     "DEP003": SNOWFLAKE_HANDLER_DEPS
 }

@@ -18,29 +18,14 @@ The agent takes natural language queries from users and translates them into app
 
 ## Running the Sample
 
-1. Navigate to the samples directory:
+1. Ensure you are in the a2a directory:
     ```bash
-    cd samples/python/agents/mindsdb
+    cd mindsdb/api/a2a
     ```
 
-2. Create an environment file with your API keys:
-   ```bash
-   echo "GOOGLE_API_KEY=your_api_key_here" > .env
-   ```
-
-3. Run the agent:
+2. Run the agent:
     ```bash
     uv run .
-    ```
-
-4. In a separate terminal, run the A2A client:
-    ```bash
-    # Connect to the agent (specify the agent URL with correct port)
-    cd samples/python/hosts/cli
-    uv run . --agent http://localhost:10002
-
-    # If you changed the port when starting the agent, use that port instead
-    # uv run . --agent http://localhost:YOUR_PORT
     ```
 
 ## Example Queries

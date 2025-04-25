@@ -6,7 +6,6 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "google-genai>=1.9.0",
-    "a2a-samples",
     "flat-ai>=0.6.1",
     "httpx>=0.28.1",
     "httpx-sse>=0.4.0",
@@ -21,9 +20,6 @@ dependencies = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["."]
-
-[tool.uv.sources]
-a2a-samples = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

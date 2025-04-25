@@ -336,32 +336,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if answer.type in (RESPONSE_TYPE.TABLE, RESPONSE_TYPE.COLUMNS_TABLE):
             packages = []
 
-            c, d = answer.result_set.dump_to_mysql()
-
-            # df = answer.data.df
-
-            # import datetime
-            # def dump_date(var: datetime.date) -> str:
-            #     return var.strftime("%Y-%m-%d")
-
-            # def dump_datetime(var: datetime.datetime) -> str:
-            #     return var.strftime("%Y-%m-%d %H:%M:%S")
-
-            # # TODO convert data types
-            # for i, column in enumerate(answer.columns):
-            #     match column['type']:
-            #         case TYPES.MYSQL_TYPE_DATE:
-            #             df.iloc[:, i] = df.iloc[:, i].apply(dump_date)
-            #         case TYPES.MYSQL_TYPE_DATETIME:
-            #             df.iloc[:, i] = df.iloc[:, i].apply(dump_datetime)
-
-            columns_dicts = self.to_mysql_columns(answer.result_set.columns)
             # answer.get_mysql_columns(database_name=?)
             if len(answer.result_set) > 1000:
                 # for big responses leverage pandas map function to convert data to packages
-                self.send_table_packets(columns=columns_dicts, data=answer.result_set)
+                self.send_table_packets(result_set=answer.result_set)
             else:
-                packages += self.get_table_packets(columns=columns_dicts, data=answer.result_set.to_lists())
+                packages += self.get_table_packets(result_set=answer.result_set)
 
             if answer.status is not None:
                 packages.append(self.last_packet(status=answer.status))
@@ -375,7 +355,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 ErrPacket, err_code=answer.error_code, msg=answer.error_message
             ).send()
 
-    def _get_column_defenition_packets(self, columns, data=None, columns_len=None):
+    def _get_column_defenition_packets(self, columns: dict, data=None):
         if data is None:
             data = []
         packets = []
@@ -390,18 +370,16 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             column_name = column.get("name", "column_name")
             column_alias = column.get("alias", column_name)
             flags = column.get("flags", 0)
-            if columns_len is not None:
-                length = columns_len[i]
-            else:
-                if len(data) == 0:
-                    length = 0xFFFF
-                else:
-                    length = 1
-                    for row in data:
-                        if isinstance(row, dict):
-                            length = max(len(str(row[column_alias])), length)
-                        else:
-                            length = max(len(str(row[i])), length)
+            if isinstance(flags, list):
+                flags = sum(flags)
+            if column.get('size') is None:
+                length = 1
+                for row in data:
+                    if isinstance(row, dict):
+                        length = max(len(str(row[column_alias])), length)
+                    else:
+                        length = max(len(str(row[i])), length)
+                column['size'] = 1
 
             packets.append(
                 self.packet(
@@ -413,16 +391,20 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     column_name=column_name,
                     column_type=column["type"],
                     charset=column.get("charset", CHARSET_NUMBERS["utf8_unicode_ci"]),
-                    max_length=length,
+                    max_length=column['size'],
                     flags=flags,
                 )
             )
         return packets
 
-    def get_table_packets(self, columns: list[dict[str, str | int]], data: list[list[Any]], status=0):
+    def get_table_packets(self, result_set: ResultSet, status=0):
+        data_frame, columns_dict = result_set.dump_to_mysql()
+        data = data_frame.to_dict('split')['data']
+
+        # data = result_set.to_lists()
         # TODO remove columns order
-        packets = [self.packet(ColumnCountPacket, count=len(columns))]
-        packets.extend(self._get_column_defenition_packets(columns, data))
+        packets = [self.packet(ColumnCountPacket, count=len(columns_dict))]
+        packets.extend(self._get_column_defenition_packets(columns_dict, data))
 
         if self.client_capabilities.DEPRECATE_EOF is False:
             packets.append(self.packet(EofPacket, status=status))
@@ -430,9 +412,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         packets += [self.packet(ResultsetRowPacket, data=x) for x in data]
         return packets
 
-    def send_table_packets(self, columns: list[dict[str, str | int]], data, status=0):
+    def send_table_packets(self, result_set: ResultSet, status: int = 0):
+        df, columns_dicts = result_set.dump_to_mysql(infer_column_size=True)
         # text protocol, convert all to string and serialize as packages
-        df = data.get_raw_df()
+        # df = result_set.get_raw_df()
 
         def apply_f(v):
             if v is None:
@@ -441,23 +424,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 v = str(v)
             return Datum.serialize_str(v)
 
-        # get column max size
-        # column_len is used by mysql client to determine width of columns, so it is not mandatory
-        # to get exactly max value. We can approximate them by sample.
-        columns_len = None
-        if len(df) > 0:
-            sample = df.head(100)
-            columns_len = []
-            for column in sample.columns:
-                try:
-                    columns_len.append(sample[column].astype(str).str.len().max())
-                except Exception:
-                    columns_len.append(1)
-
         # columns packages
-        packets = [self.packet(ColumnCountPacket, count=len(columns))]
+        packets = [self.packet(ColumnCountPacket, count=len(columns_dicts))]
 
-        packets.extend(self._get_column_defenition_packets(columns, columns_len=columns_len))
+        packets.extend(self._get_column_defenition_packets(columns_dicts))
 
         if self.client_capabilities.DEPRECATE_EOF is False:
             packets.append(self.packet(EofPacket, status=status))

@@ -15,7 +15,7 @@ from mindsdb.utilities import log
 from mindsdb.api.executor.exceptions import WrongArgumentError
 from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype as lightwood_dtype
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
-from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import TYPES, DATA_C_TYPE_MAP
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import DATA_C_TYPE_MAP, CTypeProperties
 
 logger = log.getLogger(__name__)
 
@@ -45,40 +45,37 @@ class Column:
         return name
 
     def to_mysql_column_dict(self, database_name: str | None = None) -> dict[str, str | int]:
-        column_mysql_type: int = TYPES.MYSQL_TYPE_VAR_STRING
-
-        if isinstance(self.type, MYSQL_DATA_TYPE):
-            column_mysql_type = DATA_C_TYPE_MAP[self.type]
-        elif isinstance(self.type, int):
-            # it is already mysql type
-            column_mysql_type = self.type
-        elif self.type is None:
-            column_mysql_type = TYPES.MYSQL_TYPE_VAR_STRING
-        else:
-            # region if type is numpy/pandas dtype
-            if self.type == lightwood_dtype.date:
-                column_mysql_type = TYPES.MYSQL_TYPE_DATE
-            elif self.type == lightwood_dtype.datetime:
-                column_mysql_type = TYPES.MYSQL_TYPE_DATETIME
-            elif self.type == lightwood_dtype.float:
-                column_mysql_type = TYPES.MYSQL_TYPE_DOUBLE
-            elif self.type == lightwood_dtype.integer:
-                column_mysql_type = TYPES.MYSQL_TYPE_LONG
-            elif isinstance(self.type, np_dtype):
-                if pd_types.is_integer_dtype(self.type):
-                    column_mysql_type = TYPES.MYSQL_TYPE_LONG
-                elif pd_types.is_numeric_dtype(self.type):
-                    column_mysql_type = TYPES.MYSQL_TYPE_DOUBLE
-                elif pd_types.is_datetime64_any_dtype(self.type):
-                    column_mysql_type = TYPES.MYSQL_TYPE_DATETIME
+        # region infer type. Should not happen, but is it dtype of lightwood type?
+        if isinstance(self.type, str):
+            try:
+                self.type = MYSQL_DATA_TYPE(self.type)
+            except ValueError:
+                if self.type == lightwood_dtype.date:
+                    self.type = MYSQL_DATA_TYPE.DATE
+                elif self.type == lightwood_dtype.datetime:
+                    self.type = MYSQL_DATA_TYPE.DATETIME
+                elif self.type == lightwood_dtype.float:
+                    self.type = MYSQL_DATA_TYPE.FLOAT
+                elif self.type == lightwood_dtype.integer:
+                    self.type = MYSQL_DATA_TYPE.INT
                 else:
-                    column_mysql_type = TYPES.MYSQL_TYPE_VAR_STRING
+                    self.type = MYSQL_DATA_TYPE.TEXT
+        elif isinstance(self.type, np_dtype):
+            if pd_types.is_integer_dtype(self.type):
+                self.type = MYSQL_DATA_TYPE.INT
+            elif pd_types.is_numeric_dtype(self.type):
+                self.type = MYSQL_DATA_TYPE.FLOAT
+            elif pd_types.is_datetime64_any_dtype(self.type):
+                self.type = MYSQL_DATA_TYPE.DATETIME
             else:
-                logger.warning(
-                    f"Can't convert column type to MySQL type: {self.type}. Use VAR_STRING as fallback."
-                )
-                column_mysql_type = TYPES.MYSQL_TYPE_VAR_STRING
-            # endregion
+                self.type = MYSQL_DATA_TYPE.TEXT
+        # endregion
+
+        if isinstance(self.type, MYSQL_DATA_TYPE) is False:
+            logger.warning(f'Unexpected column type: {self.type}. Use TEXT as fallback.')
+            self.type = MYSQL_DATA_TYPE.TEXT
+
+        type_properties: CTypeProperties = DATA_C_TYPE_MAP[self.type]
 
         result = {
             "database": self.database or database_name,
@@ -86,9 +83,11 @@ class Column:
             "table_name": self.table_name,
             "name": self.name,
             "alias": self.alias or self.name,
+            "size": type_properties.size,
+            "flags": type_properties.flags,
             # NOTE all work with text-type, but if/when wanted change types to real,
             # it will need to check all types casts in BinaryResultsetRowPacket
-            "type": column_mysql_type,
+            "type": type_properties.code,
         }
         return result
 
@@ -599,10 +598,14 @@ class ResultSet:
             )
         return columns
 
-    def dump_to_mysql(self) -> tuple[pd.DataFrame, list[dict[str, str | int]]]:
+    def dump_to_mysql(self, infer_column_size: bool = False) -> tuple[pd.DataFrame, list[dict[str, str | int]]]:
         """
         Dumps the ResultSet to a format that can be used to send as MySQL response packet.
         NOTE: This method modifies the original DataFrame and columns.
+
+        Args:
+            infer_column_size (bool): If True, infer the 'size' attribute of the column from the data.
+                                      Exact size is not necessary, approximate is enough.
 
         Returns:
             tuple[pd.DataFrame, list[dict[str, str | int]]]: A tuple containing the modified DataFrame and a list
@@ -640,6 +643,19 @@ class ResultSet:
             column.to_mysql_column_dict()
             for column in self.columns
         ]
+
+        if infer_column_size and any(column_info.size is None for column_info in columns_dicts):
+            if len(df) == 0:
+                for column_info in columns_dicts:
+                    if column_info['size'] is None:
+                        column_info['size'] = 1
+            else:
+                sample = df.head(100)
+                for i, column_info in enumerate(columns_dicts):
+                    try:
+                        column_info['size'] = sample[sample.columns[i]].astype(str).str.len().max()
+                    except Exception:
+                        column_info['size'] = 1
 
         return df, columns_dicts
 

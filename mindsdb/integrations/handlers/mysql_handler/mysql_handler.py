@@ -41,7 +41,7 @@ def _make_table_response(result: list[dict], cursor: mysql.connector.cursor.MySQ
     NOTE: TYNIINT types (tinint, bool, boolen) are not differ
     """
     description = cursor.description
-    reverse_c_type_map = {v: k for k, v in DATA_C_TYPE_MAP.items() if v != C_TYPES.MYSQL_TYPE_BLOB}
+    reverse_c_type_map = {v.code: k for k, v in DATA_C_TYPE_MAP.items() if v.code != C_TYPES.MYSQL_TYPE_BLOB}
     mysql_types: list[MYSQL_DATA_TYPE] = []
     for col in description:
         type_int = col[1]

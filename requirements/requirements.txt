@@ -35,7 +35,6 @@ scikit-learn==1.5.2
 protobuf==3.20.3
 hierarchicalforecast~=0.4.0
 google-auth-oauthlib
-msal
 langchain==0.3.7
 langchain-community==0.3.5
 langchain-core==0.3.35

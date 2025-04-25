@@ -904,7 +904,7 @@ class KnowledgeBaseController:
             model_record = db.Predictor.query.get(model['id'])
             embedding_model_id = model_record.id
 
-        reranking_model_params = get_model_params(params.get('reranking_model', {}), 'default_reranking_model')
+        reranking_model_params = get_model_params(params.get('reranking_model', {}), 'default_llm')
         if reranking_model_params:
             # Get reranking model from params.
             # This is called here to check validaity of the parameters.

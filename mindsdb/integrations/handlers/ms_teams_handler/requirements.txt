@@ -1,2 +1,3 @@
 botframework-connector
 botbuilder-schema
+msal

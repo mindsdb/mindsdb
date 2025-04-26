@@ -91,13 +91,14 @@ class InsertToTableCall(BaseStepCall):
             else:
                 col_names.add(col.alias)
 
-        dn.create_table(
+        response = dn.create_table(
             table_name=table_name,
             result_set=data,
             is_replace=is_replace,
-            is_create=is_create
+            is_create=is_create,
+            params=step.params
         )
-        return ResultSet()
+        return ResultSet(affected_rows=response.affected_rows)
 
 
 class SaveToTableCall(InsertToTableCall):

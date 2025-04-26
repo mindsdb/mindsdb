@@ -164,7 +164,6 @@ class TestMySqlApi(BaseStuff):
 
     @classmethod
     def setup_class(cls):
-
         cls.docker_client = docker.from_env()
         cls.mysql_image = 'mysql:9.1.0'
         cls.config = json.loads(Path(os.path.join(TEMP_DIR, "config.json")).read_text())
@@ -230,6 +229,30 @@ class TestMySqlApi(BaseStuff):
     ])
     def test_service_requests(self, service_req):
         self.query(service_req)
+
+    def test_show_columns(self):
+        ret = self.query(f"""
+            SELECT
+                *
+            FROM information_schema.columns
+            WHERE table_name = 'rentals' and table_schema='{self.postgres_db["type"]}'
+        """)
+        assert len(ret) == 8
+        assert sorted([x['ORDINAL_POSITION'] for x in ret]) == list(range(1, 9))
+
+        rental_price_column = next(x for x in ret if x['COLUMN_NAME'] == 'rental_price')
+        assert rental_price_column['DATA_TYPE'] == 'double'
+        assert rental_price_column['COLUMN_TYPE'] == 'double'
+        assert rental_price_column['ORIGINAL_TYPE'] == 'double precision'
+        assert rental_price_column['NUMERIC_PRECISION'] is not None
+
+        location_column = next(x for x in ret if x['COLUMN_NAME'] == 'location')
+        assert location_column['DATA_TYPE'] == 'varchar'
+        assert location_column['COLUMN_TYPE'].startswith('varchar(')    # varchar(###)
+        assert location_column['ORIGINAL_TYPE'] == 'character varying'
+        assert location_column['NUMERIC_PRECISION'] is None
+        assert location_column['CHARACTER_MAXIMUM_LENGTH'] is not None
+        assert location_column['CHARACTER_OCTET_LENGTH'] is not None
 
     def test_train_model_from_files(self):
         df = pd.DataFrame({

@@ -20,10 +20,43 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 import mindsdb.utilities.profiler as profiler
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 logger = log.getLogger(__name__)
 
 SUBSCRIBE_SLEEP_INTERVAL = 1
+
+
+def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
+    """Map Postgres types to MySQL types.
+
+    Args:
+        internal_type_name (str): The name of the Postgres type to map.
+
+    Returns:
+        MYSQL_DATA_TYPE: The MySQL type that corresponds to the Postgres type.
+    """
+    internal_type_name = internal_type_name.lower()
+    types_map = {
+        ('smallint', 'integer', 'bigint', 'int', 'smallserial', 'serial', 'bigserial'): MYSQL_DATA_TYPE.INT,
+        ('real', 'money', 'float'): MYSQL_DATA_TYPE.FLOAT,
+        ('numeric', 'decimal'): MYSQL_DATA_TYPE.DECIMAL,
+        ('double precision',): MYSQL_DATA_TYPE.DOUBLE,
+        ('character varying', 'varchar'): MYSQL_DATA_TYPE.VARCHAR,
+        ('character', 'char', 'bpchar', 'bpchar', 'text'): MYSQL_DATA_TYPE.TEXT,
+        ('timestamp', 'timestamp without time zone', 'timestamp with time zone'): MYSQL_DATA_TYPE.DATETIME,
+        ('date', ): MYSQL_DATA_TYPE.DATE,
+        ('time', 'time without time zone', 'time with time zone'): MYSQL_DATA_TYPE.TIME,
+        ('boolean',): MYSQL_DATA_TYPE.BOOL,
+        ('bytea',): MYSQL_DATA_TYPE.BINARY,
+    }
+
+    for db_types_list, mysql_data_type in types_map.items():
+        if internal_type_name in db_types_list:
+            return mysql_data_type
+
+    logger.warning(f"Postgres handler type mapping: unknown type: {internal_type_name}, use VARCHAR as fallback.")
+    return MYSQL_DATA_TYPE.VARCHAR
 
 
 class PostgresHandler(DatabaseHandler):
@@ -43,7 +76,7 @@ class PostgresHandler(DatabaseHandler):
 
         self.connection = None
         self.is_connected = False
-        self.thread_safe = True
+        self.thread_safe = False
 
     def __del__(self):
         if self.is_connected:
@@ -196,7 +229,7 @@ class PostgresHandler(DatabaseHandler):
                 else:
                     cur.execute(query)
                 if cur.pgresult is None or ExecStatus(cur.pgresult.status) == ExecStatus.COMMAND_OK:
-                    response = Response(RESPONSE_TYPE.OK)
+                    response = Response(RESPONSE_TYPE.OK, affected_rows=cur.rowcount)
                 else:
                     result = cur.fetchall()
                     df = DataFrame(
@@ -206,7 +239,8 @@ class PostgresHandler(DatabaseHandler):
                     self._cast_dtypes(df, cur.description)
                     response = Response(
                         RESPONSE_TYPE.TABLE,
-                        df
+                        data_frame=df,
+                        affected_rows=cur.rowcount
                     )
                 connection.commit()
             except Exception as e:
@@ -223,15 +257,34 @@ class PostgresHandler(DatabaseHandler):
 
         return response
 
-    def insert(self, table_name: str, df: pd.DataFrame):
+    def insert(self, table_name: str, df: pd.DataFrame) -> Response:
         need_to_close = not self.is_connected
 
         connection = self.connect()
 
-        columns = [f'"{c}"' for c in df.columns]
+        columns = df.columns
+
+        resp = self.get_columns(table_name)
+
+        # copy requires precise cases of names: get current column names from table and adapt input dataframe columns
+        if resp.data_frame is not None and not resp.data_frame.empty:
+            db_columns = {
+                c.lower(): c
+                for c in resp.data_frame['COLUMN_NAME']
+            }
+
+            # try to get case of existing column
+            columns = [
+                db_columns.get(c.lower(), c)
+                for c in columns
+            ]
+
+        columns = [f'"{c}"' for c in columns]
+        rowcount = None
+
         with connection.cursor() as cur:
             try:
-                with cur.copy(f'copy "{table_name}" ({",".join(columns)}) from STDIN  WITH CSV') as copy:
+                with cur.copy(f'copy "{table_name}" ({",".join(columns)}) from STDIN WITH CSV') as copy:
                     df.to_csv(copy, index=False, header=False)
 
                 connection.commit()
@@ -239,9 +292,12 @@ class PostgresHandler(DatabaseHandler):
                 logger.error(f'Error running insert to {table_name} on {self.database}, {e}!')
                 connection.rollback()
                 raise e
+            rowcount = cur.rowcount
 
         if need_to_close:
             self.disconnect()
+
+        return Response(RESPONSE_TYPE.OK, affected_rows=rowcount)
 
     @profiler.profile()
     def query(self, query: ASTNode) -> Response:
@@ -305,8 +361,18 @@ class PostgresHandler(DatabaseHandler):
             schema_name = 'current_schema()'
         query = f"""
             SELECT
-                column_name as "Field",
-                data_type as "Type"
+                COLUMN_NAME,
+                DATA_TYPE,
+                ORDINAL_POSITION,
+                COLUMN_DEFAULT,
+                IS_NULLABLE,
+                CHARACTER_MAXIMUM_LENGTH,
+                CHARACTER_OCTET_LENGTH,
+                NUMERIC_PRECISION,
+                NUMERIC_SCALE,
+                DATETIME_PRECISION,
+                CHARACTER_SET_NAME,
+                COLLATION_NAME
             FROM
                 information_schema.columns
             WHERE
@@ -314,7 +380,9 @@ class PostgresHandler(DatabaseHandler):
             AND
                 table_schema = {schema_name}
         """
-        return self.native_query(query)
+        result = self.native_query(query)
+        result.to_columns_table_response(map_type_fn=_map_type)
+        return result
 
     def subscribe(self, stop_event, callback, table_name, columns=None, **kwargs):
         config = self._make_connection_args()

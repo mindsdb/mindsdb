@@ -20,7 +20,7 @@ from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.integrations.libs.response import RESPONSE_TYPE, HandlerResponse
 from mindsdb.utilities import log
-from mindsdb.integrations.utilities.sql_utils import conditions_to_filter, FilterCondition, FilterOperator
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
 
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 from .base import BaseHandler
@@ -39,6 +39,7 @@ class TableField(Enum):
     METADATA = "metadata"
     SEARCH_VECTOR = "search_vector"
     DISTANCE = "distance"
+    RELEVANCE = "relevance"
 
 
 class DistanceFunction(Enum):
@@ -69,6 +70,10 @@ class VectorStoreHandler(BaseHandler):
             "name": TableField.METADATA.value,
             "data_type": "json",
         },
+        {
+            "name": TableField.DISTANCE.value,
+            "data_type": "float",
+        },
     ]
 
     def validate_connection_parameters(self, name, **kwargs):
@@ -89,7 +94,7 @@ class VectorStoreHandler(BaseHandler):
         else:
             return value
 
-    def _extract_conditions(self, where_statement) -> Optional[List[FilterCondition]]:
+    def extract_conditions(self, where_statement) -> Optional[List[FilterCondition]]:
         conditions = []
         # parse conditions
         if where_statement is not None:
@@ -110,13 +115,7 @@ class VectorStoreHandler(BaseHandler):
                             right_hand = node.args[1].value
                     elif isinstance(node.args[1], Tuple):
                         # Constant could be actually a list i.e. [1.2, 3.2]
-                        right_hand = [
-                            ast.literal_eval(item.value)
-                            if isinstance(item, Constant)
-                            and not isinstance(item.value, list)
-                            else item.value
-                            for item in node.args[1].items
-                        ]
+                        right_hand = [item.value for item in node.args[1].items]
                     else:
                         raise Exception(f"Unsupported right hand side: {node.args[1]}")
                     conditions.append(
@@ -125,17 +124,20 @@ class VectorStoreHandler(BaseHandler):
 
             query_traversal(where_statement, _extract_comparison_conditions)
 
-            # try to treat conditions that are not in TableField as metadata conditions
-            for condition in conditions:
-                if not self._is_condition_allowed(condition):
-                    condition.column = (
-                        TableField.METADATA.value + "." + condition.column
-                    )
-
         else:
             conditions = None
 
         return conditions
+
+    def _convert_metadata_filters(self, conditions):
+        if conditions is None:
+            return
+        # try to treat conditions that are not in TableField as metadata conditions
+        for condition in conditions:
+            if not self._is_condition_allowed(condition):
+                condition.column = (
+                    TableField.METADATA.value + "." + condition.column
+                )
 
     def _is_columns_allowed(self, columns: List[str]) -> bool:
         """
@@ -234,7 +236,7 @@ class VectorStoreHandler(BaseHandler):
 
         return self.do_upsert(table_name, pd.DataFrame(data))
 
-    def _dispatch_update(self, query: Update):
+    def dispatch_update(self, query: Update, conditions: List[FilterCondition] = None):
         """
         Dispatch update query to the appropriate method.
         """
@@ -253,8 +255,15 @@ class VectorStoreHandler(BaseHandler):
                     pass
             row[k] = v
 
-        filters = conditions_to_filter(query.where)
-        row.update(filters)
+        if conditions is None:
+            where_statement = query.where
+            conditions = self.extract_conditions(where_statement)
+
+        for condition in conditions:
+            if condition.op != FilterOperator.EQUAL:
+                raise NotImplementedError
+
+            row[condition.column] = condition.value
 
         # checks
         if TableField.EMBEDDINGS.value not in row:
@@ -269,8 +278,16 @@ class VectorStoreHandler(BaseHandler):
         return self.do_upsert(table_name, df)
 
     def do_upsert(self, table_name, df):
-        # if handler supports it, call upsert method
+        """Upsert data into table, handling document updates and deletions.
 
+        Args:
+            table_name (str): Name of the table
+            df (pd.DataFrame): DataFrame containing the data to upsert
+
+        The function handles three cases:
+        1. New documents: Insert them
+        2. Updated documents: Delete old chunks and insert new ones
+        """
         id_col = TableField.ID.value
         content_col = TableField.CONTENT.value
 
@@ -325,14 +342,16 @@ class VectorStoreHandler(BaseHandler):
         if not df_insert.empty:
             self.insert(table_name, df_insert)
 
-    def _dispatch_delete(self, query: Delete):
+    def dispatch_delete(self, query: Delete, conditions: List[FilterCondition] = None):
         """
         Dispatch delete query to the appropriate method.
         """
         # parse key arguments
         table_name = query.table.parts[-1]
-        where_statement = query.where
-        conditions = self._extract_conditions(where_statement)
+        if conditions is None:
+            where_statement = query.where
+            conditions = self.extract_conditions(where_statement)
+        self._convert_metadata_filters(conditions)
 
         # dispatch delete
         return self.delete(table_name, conditions=conditions)
@@ -356,9 +375,10 @@ class VectorStoreHandler(BaseHandler):
             )
 
         # check if columns are allowed
-        where_statement = query.where
         if conditions is None:
-            conditions = self._extract_conditions(where_statement)
+            where_statement = query.where
+            conditions = self.extract_conditions(where_statement)
+        self._convert_metadata_filters(conditions)
 
         # get offset and limit
         offset = query.offset.value if query.offset is not None else None
@@ -381,8 +401,8 @@ class VectorStoreHandler(BaseHandler):
             CreateTable: self._dispatch_create_table,
             DropTables: self._dispatch_drop_table,
             Insert: self._dispatch_insert,
-            Update: self._dispatch_update,
-            Delete: self._dispatch_delete,
+            Update: self.dispatch_update,
+            Delete: self.dispatch_delete,
             Select: self.dispatch_select,
         }
         if type(query) in dispatch_router:

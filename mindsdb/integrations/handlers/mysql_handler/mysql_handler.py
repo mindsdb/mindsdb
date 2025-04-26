@@ -13,8 +13,25 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 from mindsdb.integrations.handlers.mysql_handler.settings import ConnectionConfig
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 logger = log.getLogger(__name__)
+
+
+def _map_type(mysql_type_text: str) -> MYSQL_DATA_TYPE:
+    """ Map MySQL text types names to MySQL types as enum.
+
+    Args:
+        mysql_type_text (str): The name of the MySQL type to map.
+
+    Returns:
+        MYSQL_DATA_TYPE: The MySQL type enum that corresponds to the MySQL text type name.
+    """
+    try:
+        return MYSQL_DATA_TYPE(mysql_type_text.upper())
+    except Exception:
+        logger.warning(f'MySQL handler: unknown type: {mysql_type_text}, use TEXT as fallback.')
+        return MYSQL_DATA_TYPE.TEXT
 
 
 class MySQLHandler(DatabaseHandler):
@@ -94,6 +111,8 @@ class MySQLHandler(DatabaseHandler):
                 config["ssl_key"] = ssl_key
         if 'collation' not in config:
             config['collation'] = 'utf8mb4_general_ci'
+        if 'use_pure' not in config:
+            config['use_pure'] = True
         try:
             connection = mysql.connector.connect(**config)
             connection.autocommit = True
@@ -159,10 +178,11 @@ class MySQLHandler(DatabaseHandler):
                         pd.DataFrame(
                             result,
                             columns=[x[0] for x in cur.description]
-                        )
+                        ),
+                        affected_rows=cur.rowcount
                     )
                 else:
-                    response = Response(RESPONSE_TYPE.OK)
+                    response = Response(RESPONSE_TYPE.OK, affected_rows=cur.rowcount)
         except mysql.connector.Error as e:
             logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
             response = Response(
@@ -209,6 +229,25 @@ class MySQLHandler(DatabaseHandler):
         """
         Show details about the table
         """
-        q = f"DESCRIBE `{table_name}`;"
+        q = f"""
+            select
+                COLUMN_NAME,
+                DATA_TYPE,
+                ORDINAL_POSITION,
+                COLUMN_DEFAULT,
+                IS_NULLABLE,
+                CHARACTER_MAXIMUM_LENGTH,
+                CHARACTER_OCTET_LENGTH,
+                NUMERIC_PRECISION,
+                NUMERIC_SCALE,
+                DATETIME_PRECISION,
+                CHARACTER_SET_NAME,
+                COLLATION_NAME
+            from
+                information_schema.columns
+            where
+                table_name = '{table_name}';
+        """
         result = self.native_query(q)
+        result.to_columns_table_response(map_type_fn=_map_type)
         return result

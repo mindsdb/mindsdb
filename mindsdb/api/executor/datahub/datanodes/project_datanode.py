@@ -1,4 +1,5 @@
 from copy import deepcopy
+from dataclasses import astuple
 
 import pandas as pd
 from mindsdb_sql_parser import parse_sql
@@ -14,7 +15,9 @@ from mindsdb_sql_parser.ast import (
 from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.api.executor.datahub.datanodes.datanode import DataNode
 from mindsdb.api.executor.datahub.classes.tables_row import TablesRow
+from mindsdb.api.executor.datahub.classes.response import DataHubResponse
 from mindsdb.utilities.partitioning import process_dataframe_in_partitions
+from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES
 
 
 class ProjectDataNode(DataNode):
@@ -45,15 +48,41 @@ class ProjectDataNode(DataNode):
         result = [TablesRow.from_dict(row) for row in tables]
         return result
 
-    def has_table(self, table_name):
-        tables = self.project.get_tables()
-        return table_name in tables
+    def get_table_columns_df(self, table_name: str, schema_name: str | None = None) -> pd.DataFrame:
+        """Get a DataFrame containing representation of information_schema.columns for the specified table.
 
-    def get_table_columns(self, table_name, schema_name=None):
-        return [
-            {'name': name}
-            for name in self.project.get_columns(table_name)
-        ]
+        Args:
+            table_name (str): The name of the table to get columns from.
+            schema_name (str | None): Not in use. The name of the schema to get columns from.
+
+        Returns:
+            pd.DataFrame: A DataFrame containing representation of information_schema.columns for the specified table.
+                          The DataFrame has list of columns as in the integrations.libs.response.INF_SCHEMA_COLUMNS_NAMES
+                          but only 'COLUMN_NAME' column is filled with the actual column names.
+                          Other columns are filled with None.
+        """
+        columns = self.project.get_columns(table_name)
+
+        data = []
+        row = {name: None for name in astuple(INF_SCHEMA_COLUMNS_NAMES)}
+        for column_name in columns:
+            r = row.copy()
+            r[INF_SCHEMA_COLUMNS_NAMES.COLUMN_NAME] = column_name
+            data.append(r)
+
+        return pd.DataFrame(data, columns=astuple(INF_SCHEMA_COLUMNS_NAMES))
+
+    def get_table_columns_names(self, table_name: str, schema_name: str | None = None) -> list[str]:
+        """Get a list of column names for the specified table.
+
+        Args:
+            table_name (str): The name of the table to get columns from.
+            schema_name (str | None): Not in use. The name of the schema to get columns from.
+
+        Returns:
+            list[str]: A list of column names for the specified table.
+        """
+        return self.project.get_columns(table_name)
 
     def predict(self, model_name: str, df, version=None, params=None):
         model_metadata = self.project.get_model(model_name)
@@ -71,7 +100,7 @@ class ProjectDataNode(DataNode):
 
         return ml_handler.predict(model_name, df, project_name=self.project.name, version=version, params=params)
 
-    def query(self, query=None, native_query=None, session=None):
+    def query(self, query=None, native_query=None, session=None) -> DataHubResponse:
         if query is None and native_query is not None:
             query = parse_sql(native_query)
 
@@ -81,7 +110,7 @@ class ProjectDataNode(DataNode):
             if kb_table:
                 # this is the knowledge db
                 kb_table.update_query(query)
-                return pd.DataFrame(), []
+                return DataHubResponse()
 
             raise NotImplementedError(f"Can't update object: {query_table}")
 
@@ -91,7 +120,7 @@ class ProjectDataNode(DataNode):
             if kb_table:
                 # this is the knowledge db
                 kb_table.delete_query(query)
-                return pd.DataFrame(), []
+                return DataHubResponse()
 
             raise NotImplementedError(f"Can't delete object: {query_table}")
 
@@ -111,8 +140,7 @@ class ProjectDataNode(DataNode):
                         new_query.where,
                         project_filter
                     ])
-                df, columns_info = self.information_schema.query(new_query)
-                return df, columns_info
+                return self.information_schema.query(new_query)
             # endregion
 
             # other table from project
@@ -121,15 +149,15 @@ class ProjectDataNode(DataNode):
                 # this is the view
                 df = self.project.query_view(query, session)
 
-                columns_info = [
-                    {
-                        'name': k,
-                        'type': v
-                    }
-                    for k, v in df.dtypes.items()
-                ]
+                columns_info = [{
+                    'name': k,
+                    'type': v
+                } for k, v in df.dtypes.items()]
 
-                return df, columns_info
+                return DataHubResponse(
+                    data_frame=df,
+                    columns=columns_info
+                )
 
             kb_table = session.kb_controller.get_table(query_table, self.project.id)
             if kb_table:
@@ -143,13 +171,16 @@ class ProjectDataNode(DataNode):
                     for k, v in df.dtypes.items()
                 ]
 
-                return df, columns_info
+                return DataHubResponse(
+                    data_frame=df,
+                    columns=columns_info
+                )
 
             raise EntityNotExistsError(f"Can't select from {query_table} in project")
         else:
             raise NotImplementedError(f"Query not supported {query}")
 
-    def create_table(self, table_name: Identifier, result_set=None, is_replace=False, **kwargs):
+    def create_table(self, table_name: Identifier, result_set=None, is_replace=False, params=None, **kwargs) -> DataHubResponse:
         # is_create - create table
         # is_replace - drop table if exists
         # is_create==False and is_replace==False: just insert
@@ -165,5 +196,6 @@ class ProjectDataNode(DataNode):
                 kb_table.clear()
 
             df = result_set.to_df()
-            return kb_table.insert(df)
+            kb_table.insert(df, params=params)
+            return DataHubResponse()
         raise NotImplementedError(f"Can't create table {table_name}")

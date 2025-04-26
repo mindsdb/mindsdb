@@ -7,6 +7,8 @@ from snowflake.connector.errors import NotSupportedError
 
 from mindsdb.utilities import log
 from mindsdb_sql_parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast import Select, Identifier
+
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.response import (
@@ -14,6 +16,7 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 try:
     import pyarrow as pa
@@ -23,6 +26,43 @@ except Exception:
 
 
 logger = log.getLogger(__name__)
+
+
+def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
+    """ Map Snowflake types to MySQL types.
+
+    Args:
+        internal_type_name (str): The name of the Snowflake type to map.
+
+    Returns:
+        MYSQL_DATA_TYPE: The MySQL type that corresponds to the Snowflake type.
+    """
+    internal_type_name = internal_type_name.upper()
+    types_map = {
+        ('NUMBER', 'DECIMAL', 'DEC', 'NUMERIC'): MYSQL_DATA_TYPE.DECIMAL,
+        ('INT , INTEGER , BIGINT , SMALLINT , TINYINT , BYTEINT'): MYSQL_DATA_TYPE.INT,
+        ('FLOAT', 'FLOAT4', 'FLOAT8'): MYSQL_DATA_TYPE.FLOAT,
+        ('DOUBLE', 'DOUBLE PRECISION', 'REAL'): MYSQL_DATA_TYPE.DOUBLE,
+        ('VARCHAR'): MYSQL_DATA_TYPE.VARCHAR,
+        ('CHAR', 'CHARACTER', 'NCHAR'): MYSQL_DATA_TYPE.CHAR,
+        ('STRING', 'TEXT', 'NVARCHAR'): MYSQL_DATA_TYPE.TEXT,
+        ('NVARCHAR2', 'CHAR VARYING', 'NCHAR VARYING'): MYSQL_DATA_TYPE.VARCHAR,
+        ('BINARY', 'VARBINARY'): MYSQL_DATA_TYPE.BINARY,
+        ('BOOLEAN',): MYSQL_DATA_TYPE.BOOL,
+        ('TIMESTAMP_NTZ', 'DATETIME'): MYSQL_DATA_TYPE.DATETIME,
+        ('DATE',): MYSQL_DATA_TYPE.DATE,
+        ('TIME',): MYSQL_DATA_TYPE.TIME,
+        ('TIMESTAMP_LTZ'): MYSQL_DATA_TYPE.DATETIME,
+        ('TIMESTAMP_TZ'): MYSQL_DATA_TYPE.DATETIME,
+        ('VARIANT', 'OBJECT', 'ARRAY', 'MAP', 'GEOGRAPHY', 'GEOMETRY', 'VECTOR'): MYSQL_DATA_TYPE.VARCHAR
+    }
+
+    for db_types_list, mysql_data_type in types_map.items():
+        if internal_type_name in db_types_list:
+            return mysql_data_type
+
+    logger.warning(f"Snowflake handler type mapping: unknown type: {internal_type_name}, use VARCHAR as fallback.")
+    return MYSQL_DATA_TYPE.VARCHAR
 
 
 class SnowflakeHandler(DatabaseHandler):
@@ -190,18 +230,25 @@ class SnowflakeHandler(DatabaseHandler):
                     # Fallback for CREATE/DELETE/UPDATE. These commands returns table with single column,
                     # but it cannot be retrieved as pandas DataFrame.
                     result = cur.fetchall()
-                    if result:
-                        response = Response(
-                            RESPONSE_TYPE.TABLE,
-                            DataFrame(
-                                result,
-                                columns=[x[0] for x in cur.description]
+                    match result:
+                        case (
+                            [{'number of rows inserted': affected_rows}]
+                            | [{'number of rows deleted': affected_rows}]
+                            | [{'number of rows updated': affected_rows, 'number of multi-joined rows updated': _}]
+                        ):
+                            response = Response(RESPONSE_TYPE.OK, affected_rows=affected_rows)
+                        case list():
+                            response = Response(
+                                RESPONSE_TYPE.TABLE,
+                                DataFrame(
+                                    result,
+                                    columns=[x[0] for x in cur.description]
+                                )
                             )
-                        )
-                    else:
-                        # Looks like SnowFlake always returns something in response, so this is suspicious
-                        logger.warning('Snowflake did not return any data in response.')
-                        response = Response(RESPONSE_TYPE.OK)
+                        case _:
+                            # Looks like SnowFlake always returns something in response, so this is suspicious
+                            logger.warning('Snowflake did not return any data in response.')
+                            response = Response(RESPONSE_TYPE.OK)
             except Exception as e:
                 logger.error(f"Error running query: {query} on {self.connection_data.get('database')}, {e}!")
                 response = Response(
@@ -234,7 +281,30 @@ class SnowflakeHandler(DatabaseHandler):
 
         query_str = self.renderer.get_string(query, with_failback=True)
         logger.debug(f"Executing SQL query: {query_str}")
-        return self.native_query(query_str)
+        result = self.native_query(query_str)
+        return self.lowercase_columns(result, query)
+
+    def lowercase_columns(self, result, query):
+        if not isinstance(query, Select) or result.data_frame is None:
+            return result
+
+        quoted_columns = []
+        if query.targets is not None:
+            for column in query.targets:
+                if hasattr(column, 'alias') and column.alias is not None:
+                    if column.alias.is_quoted[-1]:
+                        quoted_columns.append(column.alias.parts[-1])
+                elif isinstance(column, Identifier):
+                    if column.is_quoted[-1]:
+                        quoted_columns.append(column.parts[-1])
+
+        rename_columns = {}
+        for col in result.data_frame.columns:
+            if col.isupper() and col not in quoted_columns:
+                rename_columns[col] = col.lower()
+        if rename_columns:
+            result.data_frame = result.data_frame.rename(columns=rename_columns)
+        return result
 
     def get_tables(self) -> Response:
         """
@@ -261,6 +331,7 @@ class SnowflakeHandler(DatabaseHandler):
 
         Returns:
             Response: A response object containing the column details, formatted as per the `Response` class.
+
         Raises:
             ValueError: If the 'table_name' is not a valid string.
         """
@@ -269,12 +340,24 @@ class SnowflakeHandler(DatabaseHandler):
             raise ValueError("Invalid table name provided.")
 
         query = f"""
-            SELECT COLUMN_NAME AS FIELD, DATA_TYPE AS TYPE
+            SELECT
+                COLUMN_NAME,
+                DATA_TYPE,
+                ORDINAL_POSITION,
+                COLUMN_DEFAULT,
+                IS_NULLABLE,
+                CHARACTER_MAXIMUM_LENGTH,
+                CHARACTER_OCTET_LENGTH,
+                NUMERIC_PRECISION,
+                NUMERIC_SCALE,
+                DATETIME_PRECISION,
+                CHARACTER_SET_NAME,
+                COLLATION_NAME
             FROM INFORMATION_SCHEMA.COLUMNS
             WHERE TABLE_NAME = '{table_name}'
               AND TABLE_SCHEMA = current_schema()
         """
         result = self.native_query(query)
-        result.data_frame = result.data_frame.rename(columns={'FIELD': 'Field', 'TYPE': 'Type'})
+        result.to_columns_table_response(map_type_fn=_map_type)
 
         return result

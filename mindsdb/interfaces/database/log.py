@@ -1,21 +1,21 @@
+from typing import List
 from copy import deepcopy
 from abc import ABC, abstractmethod
-from typing import List, Union, Tuple
 from collections import OrderedDict
 
 import pandas as pd
-
 from mindsdb_sql_parser import parse_sql
 from mindsdb_sql_parser.ast import Select, Identifier, Star, BinaryOperation, Constant, Join, Function
 from mindsdb_sql_parser.utils import JoinType
+
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.utilities.query_traversal import query_traversal
-
 from mindsdb.utilities.functions import resolve_table_identifier
 from mindsdb.api.executor.utilities.sql import get_query_tables
 from mindsdb.utilities.exception import EntityNotExistsError
 import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.context import context as ctx
+from mindsdb.api.executor.datahub.classes.response import DataHubResponse
 from mindsdb.api.executor.datahub.classes.tables_row import (
     TABLES_ROW_TYPE,
     TablesRow,
@@ -223,8 +223,7 @@ class LogDBController:
             for table_name in self._tables.keys()
         ]
 
-    def query(self, query: Select = None, native_query: str = None,
-              session=None, return_as: str = 'split') -> Union[pd.DataFrame, Tuple[pd.DataFrame, list]]:
+    def query(self, query: Select = None, native_query: str = None, session=None) -> DataHubResponse:
         if native_query is not None:
             if query is not None:
                 raise Exception("'query' and 'native_query' arguments can not be used together")
@@ -286,12 +285,12 @@ class LogDBController:
                     df[df_column_name] = df[df_column_name].astype(column_type)
         # endregion
 
-        if return_as != 'split':
-            return df
-
         columns_info = [{
             'name': k,
             'type': v
         } for k, v in df.dtypes.items()]
 
-        return df, columns_info
+        return DataHubResponse(
+            data_frame=df,
+            columns=columns_info
+        )

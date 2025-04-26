@@ -34,6 +34,7 @@ from mindsdb_sql_parser.ast import (
     Update,
     Use,
     Tuple,
+    Function,
 )
 
 # typed models
@@ -164,18 +165,17 @@ class ExecuteCommands:
         self.datahub = session.datahub
 
     @profiler.profile()
-    def execute_command(self, statement, database_name: str = None) -> ExecuteAnswer:
-        sql = None
-        if isinstance(statement, ASTNode):
-            sql = statement.to_string()
-        sql_lower = sql.lower()
+    def execute_command(self, statement: ASTNode, database_name: str = None) -> ExecuteAnswer:
+        sql: str = statement.to_string()
+        sql_lower: str = sql.lower()
 
         if database_name is None:
             database_name = self.session.database
 
-        if type(statement) is CreateDatabase:
+        statement_type = type(statement)
+        if statement_type is CreateDatabase:
             return self.answer_create_database(statement)
-        elif type(statement) is CreateMLEngine:
+        elif statement_type is CreateMLEngine:
             name = statement.name.parts[-1]
 
             return self.answer_create_ml_engine(
@@ -184,16 +184,16 @@ class ExecuteCommands:
                 params=statement.params,
                 if_not_exists=getattr(statement, "if_not_exists", False)
             )
-        elif type(statement) is DropMLEngine:
+        elif statement_type is DropMLEngine:
             return self.answer_drop_ml_engine(statement)
-        elif type(statement) is DropPredictor:
+        elif statement_type is DropPredictor:
             return self.answer_drop_model(statement, database_name)
 
-        elif type(statement) is DropTables:
+        elif statement_type is DropTables:
             return self.answer_drop_tables(statement, database_name)
-        elif type(statement) is DropDatasource or type(statement) is DropDatabase:
+        elif statement_type is DropDatasource or statement_type is DropDatabase:
             return self.answer_drop_database(statement)
-        elif type(statement) is Describe:
+        elif statement_type is Describe:
             # NOTE in sql 'describe table' is same as 'show columns'
             obj_type = statement.type
 
@@ -202,11 +202,11 @@ class ExecuteCommands:
             else:
                 return self.answer_describe_object(obj_type.upper(), statement.value, database_name)
 
-        elif type(statement) is RetrainPredictor:
+        elif statement_type is RetrainPredictor:
             return self.answer_retrain_predictor(statement, database_name)
-        elif type(statement) is FinetunePredictor:
+        elif statement_type is FinetunePredictor:
             return self.answer_finetune_predictor(statement, database_name)
-        elif type(statement) is Show:
+        elif statement_type is Show:
             sql_category = statement.category.lower()
             if hasattr(statement, "modes"):
                 if isinstance(statement.modes, list) is False:
@@ -508,13 +508,13 @@ class ExecuteCommands:
                 return self.answer_select(query)
             else:
                 raise NotSupportedYet(f"Statement not implemented: {sql}")
-        elif type(statement) in (
+        elif statement_type in (
             StartTransaction,
             CommitTransaction,
             RollbackTransaction,
         ):
             return ExecuteAnswer()
-        elif type(statement) is Set:
+        elif statement_type is Set:
             category = (statement.category or "").lower()
             if category == "" and isinstance(statement.name, Identifier):
                 param = statement.name.parts[0].lower()
@@ -569,84 +569,119 @@ class ExecuteCommands:
                     f"SQL statement is not processable, return OK package: {sql}"
                 )
                 return ExecuteAnswer()
-        elif type(statement) is Use:
+        elif statement_type is Use:
             db_name = statement.value.parts[-1]
             self.change_default_db(db_name)
             return ExecuteAnswer()
-        elif type(statement) in (
+        elif statement_type in (
             CreatePredictor,
             CreateAnomalyDetectionModel,  # we may want to specialize these in the future
         ):
             return self.answer_create_predictor(statement, database_name)
-        elif type(statement) is CreateView:
+        elif statement_type is CreateView:
             return self.answer_create_view(statement, database_name)
-        elif type(statement) is DropView:
+        elif statement_type is DropView:
             return self.answer_drop_view(statement, database_name)
-        elif type(statement) is Delete:
-            SQLQuery(statement, session=self.session, execute=True, database=database_name)
-            return ExecuteAnswer()
-
-        elif type(statement) is Insert:
-            SQLQuery(statement, session=self.session, execute=True, database=database_name)
-            return ExecuteAnswer()
-        elif type(statement) is Update:
-            SQLQuery(statement, session=self.session, execute=True, database=database_name)
-            return ExecuteAnswer()
+        elif statement_type is Delete:
+            query = SQLQuery(statement, session=self.session, database=database_name)
+            return ExecuteAnswer(
+                affected_rows=query.fetched_data.affected_rows
+            )
+        elif statement_type is Insert:
+            query = SQLQuery(statement, session=self.session, database=database_name)
+            if query.fetched_data.length() > 0:
+                return self.answer_select(query)
+            return ExecuteAnswer(
+                affected_rows=query.fetched_data.affected_rows
+            )
+        elif statement_type is Update:
+            query = SQLQuery(statement, session=self.session, database=database_name)
+            return ExecuteAnswer(
+                affected_rows=query.fetched_data.affected_rows
+            )
         elif (
-            type(statement) is Alter
+            statement_type is Alter
             and ("disable keys" in sql_lower)
             or ("enable keys" in sql_lower)
         ):
             return ExecuteAnswer()
-        elif type(statement) is Select:
+        elif statement_type is Select:
+            ret = self.exec_service_function(statement, database_name)
+            if ret is not None:
+                return ret
             query = SQLQuery(statement, session=self.session, database=database_name)
             return self.answer_select(query)
-        elif type(statement) is Union:
+        elif statement_type is Union:
             query = SQLQuery(statement, session=self.session, database=database_name)
             return self.answer_select(query)
-        elif type(statement) is Explain:
+        elif statement_type is Explain:
             return self.answer_show_columns(statement.target, database_name=database_name)
-        elif type(statement) is CreateTable:
+        elif statement_type is CreateTable:
             return self.answer_create_table(statement, database_name)
         # -- jobs --
-        elif type(statement) is CreateJob:
+        elif statement_type is CreateJob:
             return self.answer_create_job(statement, database_name)
-        elif type(statement) is DropJob:
+        elif statement_type is DropJob:
             return self.answer_drop_job(statement, database_name)
         # -- triggers --
-        elif type(statement) is CreateTrigger:
+        elif statement_type is CreateTrigger:
             return self.answer_create_trigger(statement, database_name)
-        elif type(statement) is DropTrigger:
+        elif statement_type is DropTrigger:
             return self.answer_drop_trigger(statement, database_name)
         # -- chatbots
-        elif type(statement) is CreateChatBot:
+        elif statement_type is CreateChatBot:
             return self.answer_create_chatbot(statement, database_name)
-        elif type(statement) is UpdateChatBot:
+        elif statement_type is UpdateChatBot:
             return self.answer_update_chatbot(statement, database_name)
-        elif type(statement) is DropChatBot:
+        elif statement_type is DropChatBot:
             return self.answer_drop_chatbot(statement, database_name)
-        elif type(statement) is CreateKnowledgeBase:
+        elif statement_type is CreateKnowledgeBase:
             return self.answer_create_kb(statement, database_name)
-        elif type(statement) is DropKnowledgeBase:
+        elif statement_type is DropKnowledgeBase:
             return self.answer_drop_kb(statement, database_name)
-        elif type(statement) is CreateSkill:
+        elif statement_type is CreateSkill:
             return self.answer_create_skill(statement, database_name)
-        elif type(statement) is DropSkill:
+        elif statement_type is DropSkill:
             return self.answer_drop_skill(statement, database_name)
-        elif type(statement) is UpdateSkill:
+        elif statement_type is UpdateSkill:
             return self.answer_update_skill(statement, database_name)
-        elif type(statement) is CreateAgent:
+        elif statement_type is CreateAgent:
             return self.answer_create_agent(statement, database_name)
-        elif type(statement) is DropAgent:
+        elif statement_type is DropAgent:
             return self.answer_drop_agent(statement, database_name)
-        elif type(statement) is UpdateAgent:
+        elif statement_type is UpdateAgent:
             return self.answer_update_agent(statement, database_name)
-        elif type(statement) is Evaluate:
+        elif statement_type is Evaluate:
             statement.data = parse_sql(statement.query_str)
             return self.answer_evaluate_metric(statement, database_name)
         else:
             logger.warning(f"Unknown SQL statement: {sql}")
             raise NotSupportedYet(f"Unknown SQL statement: {sql}")
+
+    def exec_service_function(self, statement: Select, database_name: str) -> Optional[ExecuteAnswer]:
+        """
+        If input query is a single line select without FROM
+          and has function in targets that matches with one of the mindsdb service functions:
+          - execute this function and return response
+        Otherwise, return None to allow to continue execution query outside
+        """
+
+        if statement.from_table is not None or len(statement.targets) != 1:
+            return
+
+        target = statement.targets[0]
+        if not isinstance(target, Function):
+            return
+
+        command = target.op.lower()
+        args = [arg.value for arg in target.args if isinstance(arg, Constant)]
+        if command == 'query_resume':
+            ret = SQLQuery(None, session=self.session, query_id=args[0])
+            return self.answer_select(ret)
+
+        elif command == 'query_cancel':
+            query_context_controller.cancel_query(*args)
+            return ExecuteAnswer()
 
     def answer_create_trigger(self, statement, database_name):
         triggers_controller = TriggersController()
@@ -789,11 +824,13 @@ class ExecuteCommands:
             raise Exception(
                 f'Nested query failed to execute with error: "{e}", please check and try again.'
             )
+ 
 
         if sqlquery.fetched_data is None:
             raise Exception("Query did not return any data")
 
         df, _ = sqlquery.fetched_data.to_df_cols()
+
         df.columns = [
             str(t.alias) if hasattr(t, "alias") else str(t.parts[-1])
             for t in statement.data.targets
@@ -843,13 +880,21 @@ class ExecuteCommands:
             else:
                 raise WrongArgumentError(f'Unknown describe type: {obj_type}')
 
-        name = obj_name.parts[-1]
+        parts = obj_name.parts
+        if len(parts) > 2:
+            raise WrongArgumentError(
+                f"Invalid object name: {obj_name.to_string()}.\n"
+                "Only models support three-part namespaces."
+            )
+
+        name = parts[-1]
         where = BinaryOperation(op='=', args=[
             Identifier('name'),
             Constant(name)
         ])
 
         if obj_type in project_objects:
+            database_name = parts[0] if len(parts) > 1 else database_name
             where = BinaryOperation(op='and', args=[
                 where,
                 BinaryOperation(op='=', args=[Identifier('project'), Constant(database_name)])
@@ -1260,7 +1305,6 @@ class ExecuteCommands:
             project_name = parts[0]
 
         query_str = statement.query_str
-        query = parse_sql(query_str)
 
         if isinstance(statement.from_table, Identifier):
             query = Select(
@@ -1270,6 +1314,8 @@ class ExecuteCommands:
                 ),
             )
             query_str = str(query)
+        else:
+            query = parse_sql(query_str)
 
         if isinstance(query, Select):
             # check create view sql
@@ -1279,9 +1325,7 @@ class ExecuteCommands:
                 query_context_controller.IGNORE_CONTEXT
             )
             try:
-                sqlquery = SQLQuery(query, session=self.session, database=database_name)
-                if sqlquery.fetch()["success"] is not True:
-                    raise ExecutorException("Wrong view query")
+                SQLQuery(query, session=self.session, database=database_name)
             finally:
                 query_context_controller.release_context(
                     query_context_controller.IGNORE_CONTEXT
@@ -1927,9 +1971,11 @@ class ExecuteCommands:
         return ExecuteAnswer()
 
     def answer_select(self, query):
+
         if query.fetched_data is None:
             raise Exception("Query did not return any data")
         return ExecuteAnswer(data=query.fetched_data)
+
 
     def answer_update_model_version(self, model_version, database_name):
         if not isinstance(model_version, Identifier):

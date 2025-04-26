@@ -8,6 +8,7 @@
  * permission of MindsDB Inc
  *******************************************************
 """
+import enum
 
 # CAPABILITIES
 # As defined in : https://dev.mysql.com/doc/dev/mysql-server/8.0.0/group__group__cs__capabilities__flags.html
@@ -93,6 +94,7 @@ class COMMANDS(object):
     COM_STMT_PREPARE = int('0x16', 0)
     COM_STMT_EXECUTE = int('0x17', 0)
     COM_STMT_FETCH = int('0x1c', 0)
+    COM_STMT_RESET = int('0x1a', 0)
     COM_STMT_CLOSE = int('0x19', 0)
     COM_FIELD_LIST = int('0x04', 0)  # deprecated
 
@@ -101,6 +103,8 @@ COMMANDS = COMMANDS()
 
 
 # FIELD TYPES
+# https://dev.mysql.com/doc/dev/mysql-server/latest/field__types_8h_source.html
+# https://mariadb.com/kb/en/result-set-packets/
 class TYPES(object):
     __slots__ = ()
     MYSQL_TYPE_DECIMAL = 0
@@ -123,6 +127,11 @@ class TYPES(object):
     MYSQL_TYPE_TIMESTAMP2 = 17
     MYSQL_TYPE_DATETIME2 = 18
     MYSQL_TYPE_TIME2 = 19
+    MYSQL_TYPE_TYPED_ARRAY = 20
+    MYSQL_TYPE_VECTOR = 242,
+    MYSQL_TYPE_INVALID = 243,
+    MYSQL_TYPE_BOOL = 244,
+    MYSQL_TYPE_JSON = 245,
     MYSQL_TYPE_NEWDECIMAL = 246
     MYSQL_TYPE_ENUM = 247
     MYSQL_TYPE_SET = 248
@@ -135,7 +144,206 @@ class TYPES(object):
     MYSQL_TYPE_GEOMETRY = 255
 
 
+C_TYPES = TYPES()
 TYPES = TYPES()
+
+
+class MYSQL_DATA_TYPE(enum.Enum):
+    TINYINT = 'TINYINT'
+    SMALLINT = 'SMALLINT'
+    MEDIUMINT = 'MEDIUMINT'
+    INT = 'INT'
+    BIGINT = 'BIGINT'
+    FLOAT = 'FLOAT'
+    DOUBLE = 'DOUBLE'
+    DECIMAL = 'DECIMAL'
+    YEAR = 'YEAR'
+    TIME = 'TIME'
+    DATE = 'DATE'
+    DATETIME = 'DATETIME'
+    TIMESTAMP = 'TIMESTAMP'
+    CHAR = 'CHAR'
+    BINARY = 'BINARY'
+    VARCHAR = 'VARCHAR'
+    VARBINARY = 'VARBINARY'
+    TINYBLOB = 'TINYBLOB'
+    TINYTEXT = 'TINYTEXT'
+    BLOB = 'BLOB'
+    TEXT = 'TEXT'
+    MEDIUMBLOB = 'MEDIUMBLOB'
+    MEDIUMTEXT = 'MEDIUMTEXT'
+    LONGBLOB = 'LONGBLOB'
+    LONGTEXT = 'LONGTEXT'
+    BIT = 'BIT'
+    BOOL = 'BOOL'
+    BOOLEAN = 'BOOLEAN'
+
+
+# Default values for attributes of MySQL data types as they appear in information_schema.columns
+# These values match the MySQL v8.0.37 defaults and are used to properly represent column metadata
+MYSQL_DATA_TYPE_COLUMNS_DEFAULT = {
+    MYSQL_DATA_TYPE.TINYINT: {
+        'NUMERIC_PRECISION': 3,
+        'NUMERIC_SCALE': 0
+    },
+    MYSQL_DATA_TYPE.SMALLINT: {
+        'NUMERIC_PRECISION': 5,
+        'NUMERIC_SCALE': 0
+    },
+    MYSQL_DATA_TYPE.MEDIUMINT: {
+        'NUMERIC_PRECISION': 7,
+        'NUMERIC_SCALE': 0
+    },
+    MYSQL_DATA_TYPE.INT: {
+        'NUMERIC_PRECISION': 10,
+        'NUMERIC_SCALE': 0
+    },
+    MYSQL_DATA_TYPE.BIGINT: {
+        'NUMERIC_PRECISION': 19,
+        'NUMERIC_SCALE': 0
+    },
+    MYSQL_DATA_TYPE.FLOAT: {
+        'NUMERIC_PRECISION': 12
+    },
+    MYSQL_DATA_TYPE.DOUBLE: {
+        'NUMERIC_PRECISION': 22
+    },
+    MYSQL_DATA_TYPE.DECIMAL: {
+        'NUMERIC_PRECISION': 10,
+        'NUMERIC_SCALE': 0,
+        'COLUMN_TYPE': 'decimal(10,0)'
+    },
+    MYSQL_DATA_TYPE.YEAR: {
+        # every column is null
+    },
+    MYSQL_DATA_TYPE.TIME: {
+        'DATETIME_PRECISION': 0
+    },
+    MYSQL_DATA_TYPE.DATE: {
+        # every column is null
+    },
+    MYSQL_DATA_TYPE.DATETIME: {
+        'DATETIME_PRECISION': 0
+    },
+    MYSQL_DATA_TYPE.TIMESTAMP: {
+        'DATETIME_PRECISION': 0
+    },
+    MYSQL_DATA_TYPE.CHAR: {
+        'CHARACTER_MAXIMUM_LENGTH': 1,
+        'CHARACTER_OCTET_LENGTH': 4,
+        'CHARACTER_SET_NAME': 'utf8',
+        'COLLATION_NAME': 'utf8_bin',
+        'COLUMN_TYPE': 'char(1)'
+    },
+    MYSQL_DATA_TYPE.BINARY: {
+        'CHARACTER_MAXIMUM_LENGTH': 1,
+        'CHARACTER_OCTET_LENGTH': 1,
+        'COLUMN_TYPE': 'binary(1)'
+    },
+    MYSQL_DATA_TYPE.VARCHAR: {
+        'CHARACTER_MAXIMUM_LENGTH': 1024,   # NOTE mandatory for field creation
+        'CHARACTER_OCTET_LENGTH': 4096,     # NOTE mandatory for field creation
+        'CHARACTER_SET_NAME': 'utf8',
+        'COLLATION_NAME': 'utf8_bin',
+        'COLUMN_TYPE': 'varchar(1024)'
+    },
+    MYSQL_DATA_TYPE.VARBINARY: {
+        'CHARACTER_MAXIMUM_LENGTH': 1024,   # NOTE mandatory for field creation
+        'CHARACTER_OCTET_LENGTH': 1024,     # NOTE mandatory for field creation
+        'COLUMN_TYPE': 'varbinary(1024)'
+    },
+    MYSQL_DATA_TYPE.TINYBLOB: {
+        'CHARACTER_MAXIMUM_LENGTH': 255,
+        'CHARACTER_OCTET_LENGTH': 255
+    },
+    MYSQL_DATA_TYPE.TINYTEXT: {
+        'CHARACTER_MAXIMUM_LENGTH': 255,
+        'CHARACTER_OCTET_LENGTH': 255,
+        'CHARACTER_SET_NAME': 'utf8',
+        'COLLATION_NAME': 'utf8_bin'
+    },
+    MYSQL_DATA_TYPE.BLOB: {
+        'CHARACTER_MAXIMUM_LENGTH': 65535,
+        'CHARACTER_OCTET_LENGTH': 65535
+    },
+    MYSQL_DATA_TYPE.TEXT: {
+        'CHARACTER_MAXIMUM_LENGTH': 65535,
+        'CHARACTER_OCTET_LENGTH': 65535,
+        'CHARACTER_SET_NAME': 'utf8',
+        'COLLATION_NAME': 'utf8_bin'
+    },
+    MYSQL_DATA_TYPE.MEDIUMBLOB: {
+        'CHARACTER_MAXIMUM_LENGTH': 16777215,
+        'CHARACTER_OCTET_LENGTH': 16777215
+    },
+    MYSQL_DATA_TYPE.MEDIUMTEXT: {
+        'CHARACTER_MAXIMUM_LENGTH': 16777215,
+        'CHARACTER_OCTET_LENGTH': 16777215,
+        'CHARACTER_SET_NAME': 'utf8',
+        'COLLATION_NAME': 'utf8_bin'
+    },
+    MYSQL_DATA_TYPE.LONGBLOB: {
+        'CHARACTER_MAXIMUM_LENGTH': 4294967295,
+        'CHARACTER_OCTET_LENGTH': 4294967295,
+    },
+    MYSQL_DATA_TYPE.LONGTEXT: {
+        'CHARACTER_MAXIMUM_LENGTH': 4294967295,
+        'CHARACTER_OCTET_LENGTH': 4294967295,
+        'CHARACTER_SET_NAME': 'utf8',
+        'COLLATION_NAME': 'utf8_bin'
+    },
+    MYSQL_DATA_TYPE.BIT: {
+        'NUMERIC_PRECISION': 1,
+        'COLUMN_TYPE': 'bit(1)'
+        # 'NUMERIC_SCALE': null
+    },
+    MYSQL_DATA_TYPE.BOOL: {
+        'DATA_TYPE': 'tinyint',
+        'NUMERIC_PRECISION': 3,
+        'NUMERIC_SCALE': 0,
+        'COLUMN_TYPE': 'tinyint(1)'
+    },
+    MYSQL_DATA_TYPE.BOOLEAN: {
+        'DATA_TYPE': 'tinyint',
+        'NUMERIC_PRECISION': 3,
+        'NUMERIC_SCALE': 0,
+        'COLUMN_TYPE': 'tinyint(1)'
+    }
+}
+
+
+# Map between data types and C types
+# https://dev.mysql.com/doc/c-api/8.0/en/c-api-prepared-statement-type-codes.html
+DATA_C_TYPE_MAP = {
+    MYSQL_DATA_TYPE.TINYINT: C_TYPES.MYSQL_TYPE_TINY,
+    MYSQL_DATA_TYPE.SMALLINT: C_TYPES.MYSQL_TYPE_SHORT,
+    MYSQL_DATA_TYPE.MEDIUMINT: C_TYPES.MYSQL_TYPE_INT24,
+    MYSQL_DATA_TYPE.INT: C_TYPES.MYSQL_TYPE_LONG,
+    MYSQL_DATA_TYPE.BIGINT: C_TYPES.MYSQL_TYPE_LONGLONG,
+    MYSQL_DATA_TYPE.FLOAT: C_TYPES.MYSQL_TYPE_FLOAT,
+    MYSQL_DATA_TYPE.DOUBLE: C_TYPES.MYSQL_TYPE_DOUBLE,
+    MYSQL_DATA_TYPE.DECIMAL: C_TYPES.MYSQL_TYPE_NEWDECIMAL,
+    MYSQL_DATA_TYPE.YEAR: C_TYPES.MYSQL_TYPE_SHORT,
+    MYSQL_DATA_TYPE.TIME: C_TYPES.MYSQL_TYPE_TIME,
+    MYSQL_DATA_TYPE.DATE: C_TYPES.MYSQL_TYPE_DATE,
+    MYSQL_DATA_TYPE.DATETIME: C_TYPES.MYSQL_TYPE_DATETIME,
+    MYSQL_DATA_TYPE.TIMESTAMP: C_TYPES.MYSQL_TYPE_TIMESTAMP,
+    MYSQL_DATA_TYPE.CHAR: C_TYPES.MYSQL_TYPE_STRING,
+    MYSQL_DATA_TYPE.BINARY: C_TYPES.MYSQL_TYPE_STRING,
+    MYSQL_DATA_TYPE.VARCHAR: C_TYPES.MYSQL_TYPE_VAR_STRING,
+    MYSQL_DATA_TYPE.VARBINARY: C_TYPES.MYSQL_TYPE_VAR_STRING,
+    MYSQL_DATA_TYPE.TINYBLOB: C_TYPES.MYSQL_TYPE_TINY_BLOB,
+    MYSQL_DATA_TYPE.TINYTEXT: C_TYPES.MYSQL_TYPE_TINY_BLOB,
+    MYSQL_DATA_TYPE.BLOB: C_TYPES.MYSQL_TYPE_BLOB,
+    MYSQL_DATA_TYPE.TEXT: C_TYPES.MYSQL_TYPE_BLOB,
+    MYSQL_DATA_TYPE.MEDIUMBLOB: C_TYPES.MYSQL_TYPE_MEDIUM_BLOB,
+    MYSQL_DATA_TYPE.MEDIUMTEXT: C_TYPES.MYSQL_TYPE_MEDIUM_BLOB,
+    MYSQL_DATA_TYPE.LONGBLOB: C_TYPES.MYSQL_TYPE_LONG_BLOB,
+    MYSQL_DATA_TYPE.LONGTEXT: C_TYPES.MYSQL_TYPE_LONG_BLOB,
+    MYSQL_DATA_TYPE.BIT: C_TYPES.MYSQL_TYPE_BIT,
+    MYSQL_DATA_TYPE.BOOL: C_TYPES.MYSQL_TYPE_TINY,
+    MYSQL_DATA_TYPE.BOOLEAN: C_TYPES.MYSQL_TYPE_TINY
+}
 
 
 class FIELD_FLAG(object):

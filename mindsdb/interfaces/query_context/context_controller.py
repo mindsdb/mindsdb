@@ -1,16 +1,212 @@
 from typing import List
+import pickle
+import datetime as dt
 
+from sqlalchemy.orm.attributes import flag_modified
 import pandas as pd
+
+from mindsdb_sql_parser import Select, Star, OrderBy
 
 from mindsdb_sql_parser.ast import (
     Identifier, BinaryOperation, Last, Constant, ASTNode
 )
 from mindsdb.integrations.utilities.query_traversal import query_traversal
+from mindsdb.utilities.cache import get_cache
 
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.config import config
 
 from .last_query import LastQuery
+
+
+class RunningQuery:
+    """
+      Query in progres
+    """
+
+    OBJECT_TYPE = 'query'
+
+    def __init__(self, record: db.Queries):
+        self.record = record
+        self.sql = record.sql
+        self.database = record.database or config.get('default_project')
+
+    def get_partition_query(self, step_num: int, query: Select) -> Select:
+        """
+           Generate query for fetching the next partition
+           It wraps query to
+              select * from ({query})
+              where {track_column} > {previous_value}
+              order by track_column
+              limit size {batch_size}
+           And fill track_column, previous_value, batch_size
+        """
+
+        track_column = self.record.parameters['track_column']
+
+        query = Select(
+            targets=[Star()],
+            from_table=query,
+            order_by=[OrderBy(Identifier(track_column))],
+            limit=Constant(self.batch_size)
+        )
+
+        track_value = self.record.context.get('track_value')
+        # is it different step?
+        cur_step_num = self.record.context.get('step_num')
+        if cur_step_num is not None and cur_step_num != step_num:
+            # reset track_value
+            track_value = None
+            self.record.context['track_value'] = None
+            self.record.context['step_num'] = step_num
+            flag_modified(self.record, 'context')
+            db.session.commit()
+
+        if track_value is not None:
+            query.where = BinaryOperation(
+                op='>',
+                args=[Identifier(track_column), Constant(track_value)],
+            )
+
+        return query
+
+    def get_info(self):
+        record = self.record
+        return {
+            'id': record.id,
+            'sql': record.sql,
+            'database': record.database,
+            'started_at': record.started_at,
+            'finished_at': record.finished_at,
+            'parameters': record.parameters,
+            'context': record.context,
+            'processed_rows': record.processed_rows,
+            'error': record.error,
+            'updated_at': record.updated_at,
+        }
+
+    def add_to_task(self):
+
+        task_record = db.Tasks(
+            company_id=ctx.company_id,
+            user_class=ctx.user_class,
+
+            object_type=self.OBJECT_TYPE,
+            object_id=self.record.id,
+        )
+        db.session.add(task_record)
+        db.session.commit()
+
+    def remove_from_task(self):
+        task = db.Tasks.query.filter(
+            db.Tasks.object_type == self.OBJECT_TYPE,
+            db.Tasks.object_id == self.record.id,
+            db.Tasks.company_id == ctx.company_id,
+        ).first()
+
+        if task is not None:
+            db.session.delete(task)
+            db.session.commit()
+
+    def set_params(self, params: dict):
+        """
+            Store parameters of the step which is about to be split into partitions
+        """
+
+        if 'track_column' not in params:
+            raise ValueError('Track column is not defined')
+        if 'batch_size' not in params:
+            params['batch_size'] = 1000
+
+        self.record.parameters = params
+        self.batch_size = self.record.parameters['batch_size']
+        db.session.commit()
+
+    def get_max_track_value(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+            return max value to use in `set_progress`.
+            this function is called before execution substeps,
+             `set_progress` function - after
+        """
+
+        track_column = self.record.parameters['track_column']
+        return df[track_column].max()
+
+    def set_progress(self, df: pd.DataFrame, max_track_value: int):
+        """
+           Store progres of the query, it is called after processing of batch
+        """
+
+        if len(df) == 0:
+            return
+
+        self.record.processed_rows = self.record.processed_rows + len(df)
+
+        cur_value = self.record.context.get('track_value')
+        new_value = max_track_value
+        if new_value is not None:
+            if cur_value is None or new_value > cur_value:
+                self.record.context['track_value'] = new_value
+                flag_modified(self.record, 'context')
+
+        db.session.commit()
+
+    def on_error(self, error: Exception, step_num: int, steps_data: dict):
+        """
+            Saves error of the query in database
+            Also saves step data and current step num to be able to resume query
+        """
+        self.record.error = str(error)
+        self.record.context['step_num'] = step_num
+        flag_modified(self.record, 'context')
+
+        # save steps_data
+        cache = get_cache('steps_data')
+        data = pickle.dumps(steps_data, protocol=5)
+        cache.set(str(self.record.id), data)
+
+        db.session.commit()
+
+    def mark_as_run(self):
+        """
+            Mark query as running and reset error of the query
+        """
+        if self.record.finished_at is not None:
+            raise RuntimeError('The query already finished')
+
+        if self.record.started_at is None:
+            self.record.started_at = dt.datetime.now()
+            db.session.commit()
+        elif self.record.error is not None:
+            self.record.error = None
+            db.session.commit()
+        else:
+            raise RuntimeError('The query might be running already')
+
+    def get_state(self) -> dict:
+        """
+            Returns stored state for resuming the query
+        """
+        cache = get_cache('steps_data')
+        key = self.record.id
+        data = cache.get(key)
+        cache.delete(key)
+
+        steps_data = pickle.loads(data)
+
+        return {
+            'step_num': self.record.context.get('step_num'),
+            'steps_data': steps_data,
+        }
+
+    def finish(self):
+        """
+            Mark query as finished
+        """
+
+        self.record.finished_at = dt.datetime.now()
+        db.session.commit()
 
 
 class QueryContextController:
@@ -156,10 +352,12 @@ class QueryContextController:
         last_values = {}
         for query, info in l_query.get_init_queries():
 
-            data, columns_info = dn.query(
+            response = dn.query(
                 query=query,
                 session=session
             )
+            data = response.data_frame
+            columns_info = response.columns
 
             if len(data) == 0:
                 value = None
@@ -283,6 +481,71 @@ class QueryContextController:
         """
         rec = self._get_context_record(context_name, query_str)
         rec.values = values
+        db.session.commit()
+
+    def get_query(self, query_id: int) -> RunningQuery:
+        """
+           Get running query by id
+        """
+
+        rec = db.Queries.query.filter(
+            db.Queries.id == query_id,
+            db.Queries.company_id == ctx.company_id
+        ).first()
+
+        if rec is None:
+            raise RuntimeError(f'Query not found: {query_id}')
+        return RunningQuery(rec)
+
+    def create_query(self, query: ASTNode, database: str = None) -> RunningQuery:
+        """
+           Create a new running query from AST query
+        """
+
+        # remove old queries
+        remove_query = db.session.query(db.Queries).filter(
+            db.Queries.company_id == ctx.company_id,
+            db.Queries.finished_at < (dt.datetime.now() - dt.timedelta(days=1))
+        )
+        for rec in remove_query.all():
+            db.session.delete(rec)
+
+        rec = db.Queries(
+            sql=str(query),
+            database=database,
+            company_id=ctx.company_id,
+        )
+
+        db.session.add(rec)
+        db.session.commit()
+        return RunningQuery(rec)
+
+    def list_queries(self) -> List[dict]:
+        """
+           Get list of all running queries with metadata
+        """
+
+        query = db.session.query(db.Queries).filter(
+            db.Queries.company_id == ctx.company_id
+        )
+        return [
+            RunningQuery(record).get_info()
+            for record in query
+        ]
+
+    def cancel_query(self, query_id: int):
+        """
+           Cancels running query by id
+        """
+        rec = db.Queries.query.filter(
+            db.Queries.id == query_id,
+            db.Queries.company_id == ctx.company_id
+        ).first()
+        if rec is None:
+            raise RuntimeError(f'Query not found: {query_id}')
+
+        # the query in progress will fail when it tries to update status
+        db.session.delete(rec)
         db.session.commit()
 
 

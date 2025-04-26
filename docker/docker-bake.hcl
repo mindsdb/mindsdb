@@ -1,6 +1,6 @@
 # The default targets to be built if none are specified
 group "default" {
-  targets = ["bare", "devel", "cloud", "lightwood", "huggingface"]
+  targets = ["bare", "devel", "cloud", "cloud-cpu", "lightwood", "huggingface", "huggingface-cpu"]
 }
 
 variable "PUSH_TO_DOCKERHUB" {
@@ -25,19 +25,25 @@ variable "BRANCH" {
 variable "ECR_REPO" {
   default = "454861456664.dkr.ecr.us-east-2.amazonaws.com"
 }
+variable "PUSH_CACHE" {
+  default = true
+}
+variable "CACHE_ONLY" {
+  default = false
+}
 
 function "get_cache_to" {
   params = [image]
-  result = length(PLATFORM_LIST) > 1 ? [] : [
-    "type=registry,image-manifest=true,oci-mediatypes=true,mode=max,ref=${ECR_REPO}/${IMAGE}-cache:${replace("${BRANCH}", "/", "-")}-${image}-${replace("${PLATFORM_LIST[0]}", "linux/", "")}"
-  ]
+  result = PUSH_CACHE ? [
+    "type=registry,image-manifest=true,oci-mediatypes=true,mode=max,ref=${ECR_REPO}/${IMAGE}-cache:${replace("${BRANCH}", "/", "-")}-${image}"
+  ] : []
 }
 function "get_cache_from" {
   params = [image]
   result = flatten([for p in PLATFORM_LIST:
     split("\n", <<EOT
-type=registry,ref=${ECR_REPO}/${IMAGE}-cache:${replace("${BRANCH}", "/", "-")}-${image}-${replace("${p}", "linux/", "")}
-type=registry,ref=${ECR_REPO}/${IMAGE}-cache:main-${image}-${replace("${p}", "linux/", "")}
+type=registry,ref=${ECR_REPO}/${IMAGE}-cache:${replace("${BRANCH}", "/", "-")}-${image}
+type=registry,ref=${ECR_REPO}/${IMAGE}-cache:main-${image}
 EOT
     )
   ])
@@ -61,6 +67,12 @@ function "get_tags" {
 
 
 ### OUTPUT IMAGES ###
+target "base" {
+  dockerfile = "docker/mindsdb.Dockerfile"
+  platforms = PLATFORM_LIST
+  target = "build"
+  output = ["type=registry"]
+}
 
 target "images" {
   name = item.name
@@ -84,13 +96,25 @@ target "images" {
         target = ""
       },
       {
+        # If you make any changes here, make them to huggingface-cpu as well
         name = "huggingface"
         extras = ".[huggingface]"
         target = ""
       },
       {
+        name = "huggingface-cpu"
+        extras = ".[huggingface_cpu]"
+        target = ""
+      },
+      {
+        # If you make any changes here, make them to cloud-cpu as well
         name = "cloud"
         extras = ".[lightwood,huggingface,statsforecast-extra,neuralforecast-extra,timegpt,mssql,youtube,gmail,pgvector,writer,rag,github,snowflake,clickhouse,bigquery,elasticsearch,s3,dynamodb,databricks,oracle,teradata,hive,one_drive] darts datasetsforecast"
+        target = ""
+      },
+      {
+        name = "cloud-cpu"
+        extras = ".[lightwood,huggingface_cpu,statsforecast-extra,neuralforecast-extra,timegpt,mssql,youtube,gmail,pgvector,writer,rag,github,snowflake,clickhouse,bigquery,elasticsearch,s3,dynamodb,databricks,oracle,teradata,hive,one_drive] darts datasetsforecast"
         target = ""
       },
     ]
@@ -102,5 +126,9 @@ target "images" {
   }
   cache-to = get_cache_to(item.name)
   cache-from = get_cache_from(item.name)
+  contexts = {
+    build = "target:base"
+  }
+  output = CACHE_ONLY ? ["type=cacheonly"] : ["type=registry"]
 }
 

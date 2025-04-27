@@ -84,7 +84,7 @@ jobs:
         if: needs.run_tests.result == 'failure'
         uses: slackapi/slack-github-action@v1.26.0
         with:
-          channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
+          channel-id: ${{ secrets.SLACK_DEPLOYMENTS_CHANNEL_ID }}
           payload: |
             {
               "attachments": [

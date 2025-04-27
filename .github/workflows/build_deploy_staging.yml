@@ -3,13 +3,15 @@ name: Build and deploy to staging
 on:
   # Using pull_request instead of push on main because we want access to the pull request's details via 'github.event'
   # But it means we need to check below if this PR was merged and not just closed
-  push:
+  pull_request:
+    types:
+      - closed
 
 jobs:
   
   # Build our docker images based on our bake file
   build:
-    #if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true
     name: Build Docker Images
     runs-on: mdb-dev
     concurrency:
@@ -65,7 +67,7 @@ jobs:
   # Run integration tests
   # TODO: Run these against the deployed environment
   run_tests:
-    #if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true
     name: Run Integration Tests
     needs: [deploy]
     concurrency:

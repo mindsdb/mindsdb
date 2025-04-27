@@ -65,7 +65,6 @@ jobs:
   # Run integration tests
   # TODO: Run these against the deployed environment
   run_tests:
-    continue-on-error: true
     if: github.event.pull_request.merged == true
     name: Run Integration Tests
     needs: [deploy]

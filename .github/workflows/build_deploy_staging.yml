@@ -78,15 +78,14 @@ jobs:
   slack_message:
     if: github.event.pull_request.merged == true && failure()
     name: Notify Slack
-    needs: [deploy]
-    runs-on: ubuntu-latest
+    needs: [run_tests]
+    runs-on: mdb-dev
     steps:
-      - name: Notify of test failure
+      - name: Notify of deployment
         uses: slackapi/slack-github-action@v1.26.0
         with:
-          channel-id: ${{ secrets.SLACK_DEPLOYMENTS_CHANNEL_ID }}
           payload: |
-              {
+            {
               "attachments": [
                 {
                   "color": "#FF4444",

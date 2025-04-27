@@ -134,6 +134,103 @@ This handler allows MindsDB to work with Amazon S3 and S3-compatible storage ser
 }
 ```
 
+## Custom Endpoint Support
+
+The S3 handler now supports custom endpoints, allowing you to connect to any S3-compatible service like MinIO, Ceph, or Wasabi.
+
+### Configuration
+
+To use a custom endpoint, add the `endpoint_url` parameter to your configuration:
+
+```json
+{
+    "aws_access_key_id": "your_access_key",
+    "aws_secret_access_key": "your_secret_key",
+    "bucket": "your_bucket",
+    "endpoint_url": "http://your-endpoint:9000"
+}
+```
+
+### Features
+
+- Connect to any S3-compatible service
+- Use HTTP or HTTPS endpoints
+- Automatic path-style addressing for custom endpoints
+- Compatible with MinIO and other S3-compatible services
+- Same interface as AWS S3
+
+### Example: MinIO Setup
+
+1. Start MinIO server:
+```bash
+docker run -p 9000:9000 -p 9001:9001 \
+  --name minio \
+  -e "MINIO_ROOT_USER=minioadmin" \
+  -e "MINIO_ROOT_PASSWORD=minioadmin" \
+  -v minio_data:/data \
+  minio/minio server /data --console-address ":9001"
+```
+
+2. Create a bucket in MinIO
+3. Connect using the handler:
+```sql
+CREATE DATABASE minio_datasource
+WITH
+    engine = 's3',
+    parameters = {
+      "aws_access_key_id": "minioadmin",
+      "aws_secret_access_key": "minioadmin",
+      "bucket": "test-bucket",
+      "endpoint_url": "http://localhost:9000"
+    };
+```
+
+### Usage with Custom Endpoints
+
+```sql
+-- Read from custom endpoint
+SELECT * FROM minio_datasource.`test.csv`;
+
+-- Write to custom endpoint
+INSERT INTO minio_datasource.`output.csv`
+SELECT * FROM source_table;
+
+-- List files in custom endpoint
+SELECT * FROM minio_datasource.files;
+```
+
+### Troubleshooting Custom Endpoints
+
+- **Connection Issues**:
+  - Verify the endpoint URL is correct
+  - Check if the service is running
+  - Ensure proper credentials are used
+
+- **File Operation Issues**:
+  - Verify bucket exists
+  - Check file permissions
+  - Ensure proper path formatting
+
+- **Performance**:
+  - Use appropriate timeout settings
+  - Consider network latency
+  - Optimize file sizes
+
+### Testing Custom Endpoints
+
+The handler includes comprehensive tests for custom endpoints. To run the tests:
+
+```bash
+python -m unittest mindsdb/integrations/handlers/s3_handler/tests/test_s3_endpoints.py
+```
+
+These tests verify:
+- Connection to custom endpoints
+- File operations (read/write)
+- Error handling
+- Timeout scenarios
+- Cleanup procedures
+
 ## Testing
 
 ### Prerequisites

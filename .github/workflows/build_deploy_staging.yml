@@ -75,7 +75,7 @@ jobs:
     secrets: inherit
   
   slack_message:
-    #if: github.event.pull_request.merged == true && failure()
+    if: failure()
     name: Notify Slack
     needs: [run_tests]
     runs-on: mdb-dev

@@ -2,6 +2,7 @@ import datetime as dt
 import os
 import socket
 import time
+from threading import Event
 
 import sqlalchemy as sa
 
@@ -22,7 +23,7 @@ class TaskMonitor:
     def __init__(self):
         self._active_tasks = {}
 
-    def start(self):
+    def start(self, stop_event: Event = None):
         config = Config()
         db.init()
         self.config = config
@@ -41,6 +42,9 @@ class TaskMonitor:
             except Exception as e:
                 logger.error(e)
                 db.session.rollback()
+
+            if stop_event is not None and stop_event.is_set():
+                return
 
     def stop_all_tasks(self):
 

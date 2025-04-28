@@ -57,7 +57,7 @@ def get_model_params(model_params: dict, default_config_key: str):
     """
     Get model parameters by combining default config with user provided parameters.
     """
-    combined_model_params = config.get(default_config_key, {})
+    combined_model_params = copy.deepcopy(config.get(default_config_key, {}))
 
     if model_params:
         combined_model_params.update(model_params)

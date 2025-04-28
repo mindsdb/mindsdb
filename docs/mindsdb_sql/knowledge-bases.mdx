@@ -39,7 +39,7 @@ USING
     storage = my_vector_store.storage_table, -- optional, default ChromaDB
     metadata_columns = ['date', 'creator', ...], -- optional
     content_columns = ['review', 'content', ...], -- optional, default content
-    id_column = 'id';
+    id_column = 'id'; -- optional
 ```
 
 Upon execution, it registers `my_kb` and associates the specified models and storage.
@@ -82,12 +82,15 @@ The `binary` reranking method simplifies classification by determining whether a
 
 * `content_columns` provides the list of column names that will be embedded as the content of the knowledge base. Users can use these column names to insert them into the knowledge base and filter the search results by content. If not set, the `content` column is used by default.
 
-* `id_column` is the column name that uniquely identifies each source data row.
+* `id_column` is the column name that will be used as the unique identifier by the knowledge base. If not set, the `id` column is used by default.
 
 <Info>
-The `id_column` parameter is mandatory and the knowledge base uses it to identify rows from the source data.
+When the `id_column` parameter is provided, the knowledge base uses this ID to identify rows from the source data.
 
-Note that if the source data row is chunked into multiple chunks, then these rows in the knowledge base have the same ID value that identifies chunks from one source data row.
+When the `id_column` is not provided, the knowledge base uses an auto-generated sequence of numbers to identify rows from the source data. Note that these auto-generated IDs are duplicated in the following cases:
+
+1. If the source data row is chunked into multiple chunks, then these rows in the knowledge base have the same auto-generated ID as they come from the same source data row.
+2. If the data from another data source is inserted, then the auto-generated sequence starts from zero again.
 </Info>
 
 Get details about the knowledge base using the `DESCRIBE` command.

@@ -356,9 +356,9 @@ class TestKB(BaseExecutorDummyML):
 
         self._create_embedding_model('emb_model')
 
-        self.run_sql('create knowledge base kb_review using model=emb_model')
+        self.run_sql('create knowledge base kb_review using model=emb_model,id_column=\'id\'')
         self.run_sql('drop knowledge base kb_review')  # drop chromadb left since the last failed test
-        self.run_sql('create knowledge base kb_review using model=emb_model')
+        self.run_sql('create knowledge base kb_review using model=emb_model,id_column=\'id\'')
 
         self.run_sql("insert into kb_review (content) values ('review')")
 
@@ -388,9 +388,9 @@ class TestKB(BaseExecutorDummyML):
         self.save_file('reviews', df)
 
         # ---  case 1: kb with default columns settings ---
-        self.run_sql('create knowledge base kb_review using model=emb_model')
+        self.run_sql('create knowledge base kb_review using model=emb_model,id_column=\'id\'')
         self.run_sql('drop knowledge base kb_review')  # drop chromadb left since the last failed test
-        self.run_sql('create knowledge base kb_review using model=emb_model')
+        self.run_sql('create knowledge base kb_review using model=emb_model,id_column=\'id\'')
 
         self.run_sql("""
             insert into kb_review
@@ -459,7 +459,8 @@ class TestKB(BaseExecutorDummyML):
         self.run_sql('''
         create knowledge base kb_review
          using model=emb_model,
-         content_columns=['review']
+         content_columns=['review'],
+         id_column='id'
         ''')
 
         self.run_sql("""
@@ -496,7 +497,8 @@ class TestKB(BaseExecutorDummyML):
 
         self.run_sql('''
           create knowledge base kb_ral
-            using model=emb_model
+            using model=emb_model,
+            id_column='id'
         ''')
 
         self.run_sql("""
@@ -561,7 +563,7 @@ class TestKB(BaseExecutorDummyML):
         def check_partition(insert_sql):
             # create empty kb
             self.run_sql('DROP KNOWLEDGE_BASE IF EXISTS kb_part')
-            self.run_sql('create knowledge base kb_part using model=emb_model')
+            self.run_sql('create knowledge base kb_part using model=emb_model,id_column=\'id\'')
 
             # load kb
             ret = self.run_sql(insert_sql)

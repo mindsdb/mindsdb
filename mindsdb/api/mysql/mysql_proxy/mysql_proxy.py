@@ -21,7 +21,7 @@ import sys
 import tempfile
 import traceback
 from functools import partial
-from typing import List, Any
+from typing import List
 from dataclasses import dataclass
 
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum

@@ -149,7 +149,7 @@ def _dump_bool(var: Any) -> int | None:
     """
     if pd.isna(var):
         return None
-    return 1 if var else 0
+    return '1' if var else '0'
 
 
 def _dump_str(var: Any) -> str | None:
@@ -609,7 +609,8 @@ class ResultSet:
 
         Returns:
             tuple[pd.DataFrame, list[dict[str, str | int]]]: A tuple containing the modified DataFrame and a list
-                                                             of MySQL column dictionaries
+                                                             of MySQL column dictionaries. The dataframe values are
+                                                             str or None, dtype=object
         """
         df = self._df
 

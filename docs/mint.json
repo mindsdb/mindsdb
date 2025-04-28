@@ -522,7 +522,7 @@
           "pages": [
             "mindsdb_sql/functions/custom_functions",
             "mindsdb_sql/functions/llm_function",
-            "mindsdb_sql/functions/to_markdown"
+            "mindsdb_sql/functions/to_markdown_function"
           ]
         },
         {

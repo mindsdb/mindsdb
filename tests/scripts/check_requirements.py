@@ -28,7 +28,6 @@ TEST_REQS_PATH = "requirements/requirements-test.txt"
 # These are used only within handlers.
 UTILITIES_REQS_PATHS = [
     "mindsdb/integrations/utilities/handlers/auth_utilities/microsoft/requirements.txt",
-    "mindsdb/integrations/utilities/handlers/api_utilities/microsoft/requirements.txt",
     "mindsdb/integrations/utilities/handlers/auth_utilities/google/requirements.txt"
 ]
 

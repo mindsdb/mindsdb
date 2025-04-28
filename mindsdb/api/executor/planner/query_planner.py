@@ -847,6 +847,7 @@ class QueryPlanner:
         # handle fetchdataframe partitioning
         steps_out = []
 
+        step = None
         partition_step = None
         for step in plan.steps:
             if isinstance(step, FetchDataframeStep) and step.params is not None:
@@ -898,6 +899,10 @@ class QueryPlanner:
                     continue
 
             steps_out.append(step)
+
+        if plan.is_resumable and isinstance(step, InsertToTable):
+            plan.is_async = True
+
         plan.steps = steps_out
         return plan
 

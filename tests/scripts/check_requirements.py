@@ -115,7 +115,7 @@ MAIN_REQUIREMENTS_DEPS = get_requirements_from_file(MAIN_REQS_PATH) + get_requir
     TEST_REQS_PATH)
 
 HANDLER_RULE_IGNORES = {
-    "DEP002": DEP002_IGNORE_HANDLER_DEPS,
+    "DEP002": DEP002_IGNORE_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS,
     "DEP001": ["tests", "pyarrow", "IfxPyDbi", "ingres_sa_dialect"],  # 'tests' is the mindsdb tests folder in the repo root, 'pyarrow' used in snowflake handler
     "DEP003": DEP003_IGNORE_HANDLER_DEPS
 }

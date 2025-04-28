@@ -255,7 +255,7 @@ class TestAgent(BaseExecutorDummyML):
             '''
         )
 
-        self.run_sql('create knowledge base kb_review using model=emb_model')
+        self.run_sql('create knowledge base kb_review using model=emb_model,id_column=\'id\'')
 
         self.run_sql('''
           create skill retr_skill

@@ -893,7 +893,7 @@ class KnowledgeBaseController:
                 params=embedding_params,
                 kb_name=name,
             )
-            params['default_embedding_model'] = model_name
+            params['created_embedding_model'] = model_name
 
         embedding_model_id = None
         if model_name is not None:
@@ -1068,9 +1068,9 @@ class KnowledgeBaseController:
                 self.session.integration_controller.delete(kb.params['default_vector_storage'])
             except EntityNotExistsError:
                 pass
-        if 'default_embedding_model' in kb.params:
+        if 'created_embedding_model' in kb.params:
             try:
-                self.session.model_controller.delete_model(kb.params['default_embedding_model'], project_name)
+                self.session.model_controller.delete_model(kb.params['created_embedding_model'], project_name)
             except EntityNotExistsError:
                 pass
 

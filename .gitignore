@@ -15,6 +15,7 @@ tests/integration/flows/my_model.zip
 distributions/docker-compose/*/storage
 venv/*
 env/*
+.envrc
 *.env
 mindsdb-venv/*
 root

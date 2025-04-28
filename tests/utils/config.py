@@ -2,7 +2,9 @@ import os
 import random
 import json
 
-HTTP_API_ROOT = "http://" + os.environ.get("INTERNAL_URL") + "/api"
+HTTP_PORT = "80" if "svc.cluster.local" in os.environ.get("INTERNAL_URL", "") else "47334"
+
+HTTP_API_ROOT = f"http://{os.environ.get('INTERNAL_URL')}:{HTTP_PORT}/api"
 MYSQL_API_ROOT = os.environ.get("INTERNAL_URL")
 
 

@@ -31,7 +31,6 @@ HANDLER_REQS_PATHS = list(
 
 MAIN_EXCLUDE_PATHS = [
     "mindsdb/integrations/handlers/.*_handler",
-    "mindsdb/integrations/utilities/handlers",
     "pryproject.toml"
 ]
 

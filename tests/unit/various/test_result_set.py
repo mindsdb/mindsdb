@@ -119,4 +119,3 @@ str_test = [{
     'output': ['a', '1', None, None],
     'mysql_type': MYSQL_DATA_TYPE.TEXT
 }]
-

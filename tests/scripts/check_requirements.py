@@ -24,6 +24,14 @@ MAIN_REQS_PATH = "requirements/requirements.txt"
 DEV_REQS_PATH = "requirements/requirements-dev.txt"
 TEST_REQS_PATH = "requirements/requirements-test.txt"
 
+# Utilities that have their own requirements.txt files.
+# These are used only within handlers.
+UTILITIES_REQS_PATHS = [
+    "mindsdb/integrations/utilities/handlers/auth_utilities/microsoft/requirements.txt",
+    "mindsdb/integrations/utilities/handlers/api_utilities/microsoft/requirements.txt",
+    "mindsdb/integrations/utilities/handlers/auth_utilities/google/requirements.txt"
+]
+
 HANDLER_REQS_PATHS = list(
     set(glob.glob("**/requirements*.txt", recursive=True))
     - set(glob.glob("requirements/requirements*.txt"))
@@ -72,12 +80,8 @@ SNOWFLAKE_HANDLER_DEPS = ["pyarrow"]
 
 LINDORM_HANDLER_DEPS = ["protobuf"]
 
-# Dependencies for handler utilities.
-# These are required by the utilities, which are used by the handlers.
-HANDLER_UTILITIES_DEPS = ["google-auth-oauthlib"]
-
 HANDLER_RULE_IGNORES = {
-    "DEP002": OPTIONAL_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS + BYOM_HANLDER_DEPS + HIVE_HANDLER_DEPS + GCS_HANDLER_DEPS + LINDORM_HANDLER_DEPS + HANDLER_UTILITIES_DEPS,
+    "DEP002": OPTIONAL_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS + BYOM_HANLDER_DEPS + HIVE_HANDLER_DEPS + GCS_HANDLER_DEPS + LINDORM_HANDLER_DEPS,
     "DEP001": ["tests", "pyarrow", "IfxPyDbi", "ingres_sa_dialect"],  # 'tests' is the mindsdb tests folder in the repo root, 'pyarrow' used in snowflake handler
     "DEP003": SNOWFLAKE_HANDLER_DEPS
 }
@@ -313,7 +317,7 @@ def check_requirements_imports():
 
     # Run against the main codebase
     errors = run_deptry(
-        ','.join([MAIN_REQS_PATH]),
+        ','.join([MAIN_REQS_PATH] + UTILITIES_REQS_PATHS),
         get_ignores_str(MAIN_RULE_IGNORES),
         ".",
         f"--extend-exclude \"{'|'.join(MAIN_EXCLUDE_PATHS)}\"",

@@ -41,7 +41,7 @@ jobs:
     - name: Setup uv
       uses: astral-sh/setup-uv@v5
       with:
-        python-version: "3.10"
+        python-version: ${{ vars.CI_PYTHON_VERSION || '3.10' }}
         enable-cache: true
         prune-cache: false
     - name: Install dependencies

@@ -106,13 +106,12 @@ jobs:
       - name: Checkout
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         uses: actions/checkout@v4
-      # We have to install UV because (for now) these run in GH's runners
+      # Install python and setup UV
       - name: Setup uv
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-          prune-cache: false
           python-version: ${{ matrix.python-version }}
       - name: Check requirements files are installable
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
@@ -141,13 +140,12 @@ jobs:
       - name: Install FreeTDS (macOS)
         if: ${{ runner.os == 'macOS' && needs.changes.outputs.not-docs == 'true' }}
         run: brew install freetds
-      # We have to install UV because (for now) these run in GH's runners
+      # Install python and setup UV
       - name: Setup uv
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-          prune-cache: false
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         if: ${{ needs.changes.outputs.not-docs == 'true' }}

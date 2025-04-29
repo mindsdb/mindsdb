@@ -70,6 +70,10 @@ USING
 
 **Option 2.** Define the default embedding model in the [MindsDB configuration file](/setup/custom-config).
 
+<Note>
+Note that if you define `default_embedding_model` in the configuration file, you do not need to provide the `embedding_model` parameter when creating a knowledge base. If provide both, then the values from the `embedding_model` parameter are used.
+</Note>
+
 ```bash
 "default_embedding_model": {
     "provider": "openai_azure",
@@ -89,7 +93,7 @@ It is a required parameter. It defines the model provider. Currently, the suppor
 It is a required parameter. It defines the embedding model name as specified by the provider. Users can choose one of the [OpenAI embedding models](https://platform.openai.com/docs/guides/embeddings/embedding-models#embedding-models).
 
 * `api_key`
-It is an optional parameter, which defaults to the value stored in the `OPENAI_API_KEY` environment variable. It stores your OpenAI API key. Note that if you do not provide the `api_key` parameter when creating the knowledge base, you require to have the `OPENAI_API_KEY` environment variable set.
+The API key is required to access the embedding model assigned to a knowledge base. Users can provide it either in this `api_key` parameter, or in the `OPENAI_API_KEY` environment variable.
 
 * `base_url`
 It is an optional parameter, which defaults to `https://api.openai.com/v1/`. It is a required parameter when using the `azure_openai` provider. It is the root URL used to send API requests.
@@ -99,7 +103,7 @@ It is an optional parameter. It is a required parameter when using the `azure_op
 
 ### `reranking_model`
 
-The reranking model is a required component of the knowledge base. It stores specifications of the reranking model to be used.
+The reranking model is an optional component of the knowledge base. It stores specifications of the reranking model to be used.
 
 Users can define the reranking model choosing one of the following options.
 
@@ -122,6 +126,10 @@ USING
 
 **Option 2.** Define the default reranking model in the [MindsDB configuration file](/setup/custom-config).
 
+<Note>
+Note that if you define `default_llm` in the configuration file, you do not need to provide the `reranking_model` parameter when creating a knowledge base. If provide both, then the values from the `reranking_model` parameter are used.
+</Note>
+
 ```bash
 "default_llm": {
     "provider": "openai_azure",
@@ -142,7 +150,7 @@ It is a required parameter. It defines the model provider. Currently, the suppor
 It is a required parameter. It defines the embedding model name as specified by the provider. Users can choose one of the [OpenAI chat models](https://platform.openai.com/docs/models).
 
 * `api_key`
-It is an optional parameter, which defaults to the value stored in the `OPENAI_API_KEY` environment variable. It stores your OpenAI API key. Note that if you do not provide the `api_key` parameter when creating the knowledge base, you require to have the `OPENAI_API_KEY` environment variable set.
+The API key is required to access the reranking model assigned to a knowledge base. Users can provide it either in this `api_key` parameter, or in the `OPENAI_API_KEY` environment variable.
 
 * `base_url`
 It is an optional parameter, which defaults to `https://api.openai.com/v1/`. It is a required parameter when using the `azure_openai` provider. It is the root URL used to send API requests.
@@ -197,15 +205,25 @@ USING
     ...
 ```
 
+<Info>
 Note that you do not need to have the `storage_table` created as it is created when creating a knowledge base.
+</Info>
 
 The available options include either [PGVector](/integrations/vector-db-integrations/pgvector) or [ChromaDB](/integrations/vector-db-integrations/chromadb).
 
 If the `storage` parameter is not provided, the system creates the default ChromaDB vector database called `<kb_name>_chromadb` with the default table called `default_collection` that stores the embedded data.
 
+<Note>
+This default ChromaDB vector database is stored in MindsDB's storage. In order to define a different storage directory, create your own ChromaDB referring to [this documentation page](/integrations/vector-db-integrations/chromadb).
+</Note>
+
 ### `metadata_columns`
 
 The data inserted into the knowledge base can be classified as metadata, which enables users to filter the search results using defined data fields.
+
+<Note>
+Note that source data column(s) included in `metadata_columns` cannot be used in `content_columns`, and vice versa.
+</Note>
 
 This parameter is an array of strings that lists column names from the source data to be used as metadata. If not provided, the metadata is not used.
 
@@ -234,6 +252,10 @@ USING
 ### `content_columns`
 
 The data inserted into the knowledge base can be classified as content, which is embedded by the embedding model and stored in the underlying vector store.
+
+<Note>
+Note that source data column(s) included in `content_columns` cannot be used in `metadata_columns`, and vice versa.
+</Note>
 
 This parameter is an array of strings that lists column names from the source data to be used as content and processed into embeddings. If not provided, the `content` column is expected by the knowledge base by default.
 
@@ -338,7 +360,7 @@ Here is the syntax for inserting data into a knowledge base:
 ```sql
 INSERT INTO my_kb
     SELECT order_id, product, notes
-    FROM orders;
+    FROM sample_data.orders;
 ```
 
 Upon execution, it inserts data into a knowledge base, using the embedding model to embed it into vectors before inserting into an underlying vector database.
@@ -380,7 +402,7 @@ Here is how to propagate this change into the knowledge base.
 ```sql
 INSERT INTO my_kb
     SELECT order_id, product, notes
-    FROM orders
+    FROM sample_data.orders
     WHERE order_id = 'Q7P';
 ```
 
@@ -395,7 +417,7 @@ Here is an example.
 ```sql
 INSERT INTO my_kb
     SELECT order_id, product, notes
-    FROM orders
+    FROM sample_data.orders
 USING
     batch_size = 200,
     track_column = order_id,
@@ -407,11 +429,14 @@ The parameters include the following:
 
 * `batch_size` defines the number of rows fetched per iteration to optimize data extraction from the source. It defaults to 1000.
 
-* `threads` defines threads for running partitions. Note that if the [ML task queue](/setup/custom-config#overview-of-config-parameters) is enabled, threads are used automatically. The available values for include `int` (for example, `10`), which defines the number of threads to be used, or `boolean` (for example, `true` or `false`), which defines whether to enable or disable threads.
+* `threads` defines threads for running partitions. Note that if the [ML task queue](/setup/custom-config#overview-of-config-parameters) is enabled, threads are used automatically. The available values for include:
+
+- A number of threads to be used, for example, `threads = 10`,
+- A boolean value that defines whether to enable threads, setting `threads = true`, or disable threads, setting `threads = false`.
 
 * `track_column` defines the column used for sorting data before partitioning.
 
-* `error` defines the error processing options. The available values include `raise` or `skip`. It defaults to `raise` if not provided.
+* `error` defines the error processing options. The available values include `raise`, used to raise errors as they come, or `skip`, used to subside errors. It defaults to `raise` if not provided.
 
 After executing the `INSERT INTO` statement with the above parameters, users can view the data insertion progress by querying the `information_schema.queries` table.
 
@@ -466,11 +491,11 @@ Here a sample knowledge base created in the previous **Example** section is inse
 ```sql
 INSERT INTO my_kb
     SELECT order_id, product, notes
-    FROM orders;
+    FROM sample_data.orders;
 ```
 
 <Note>
-When inserting into a knowledge base where the `content_columns` parameter was not specified, the column storing content must be aliased `AS content`.
+When inserting into a knowledge base where the `content_columns` parameter was not specified, the column storing content must be aliased `AS content` as below.
 
 ```sql
 CREATE KNOWLEDGE_BASE my_kb
@@ -483,7 +508,7 @@ USING
 ```sql
 INSERT INTO my_kb
     SELECT order_id, notes AS content 
-    FROM orders;
+    FROM sample_data.orders;
 ```
 </Note>
 
@@ -706,6 +731,23 @@ Here is the data that will be inserted into the knowledge base.
 +----------+-------------------+------------------------+
 ```
 
+You can access this sample data as below:
+
+```sql
+CREATE DATABASE sample_data
+WITH ENGINE = 'postgres', 
+PARAMETERS = {
+    "user": "demo_user",
+    "password": "demo_password",
+    "host": "samples.mindsdb.com",
+    "port": "5432",
+    "database": "demo",
+    "schema": "demo_data"
+};
+
+SELECT * FROM sample_data.orders;
+```
+
 Here is how to create a knowledge base specifically for the data.
 
 ```sql
@@ -731,7 +773,7 @@ Here is how to insert the data.
 ```sql
 INSERT INTO my_kb
     SELECT order_id, product, notes
-    FROM orders;
+    FROM sample_data.orders;
 ```
 
 Here is how to query the knowledge base.

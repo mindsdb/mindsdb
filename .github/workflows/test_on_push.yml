@@ -9,10 +9,6 @@ defaults:
   run:
     shell: bash
 
-# UV will use the system python by default
-env:
-  UV_SYSTEM_PYTHON: 1
-
 # Cancel any existing runs of this workflow on the same branch/pr
 # We always want to build/deploy/test a new commit over an older one
 concurrency:
@@ -113,7 +109,7 @@ jobs:
         with:
           enable-cache: true
           python-version: ${{ matrix.python-version }}
-      - name: Check requirements files are installable
+      - name: Check pip package builds and installs
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
           # Install dev requirements and build our pip package

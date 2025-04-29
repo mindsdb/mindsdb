@@ -1,0 +1,1 @@
+from mindsdb.interfaces.agents.crewai_pipeline import CrewAITextToSQLPipeline, CrewAIAgentManager

@@ -62,23 +62,24 @@ jobs:
           # The pyproject file confuses uv: https://github.com/astral-sh/uv/issues/6838
           rm pyproject.toml
           uv run tests/scripts/check_print_statements.py
+      
+      - name: Install MDB dev requirements
+        if: ${{ needs.changes.outputs.not-docs == 'true' }}
+        run: |
+          uv pip install -r requirements/requirements-dev.txt
 
       # Run pre-commit on all changed files
       # See .pre-commit-config.yaml for the list of checks
       - name: Run pre-commit
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
-        uses: pre-commit/action@v3.0.0
-        with:
-          extra_args: --from-ref ${{ github.event.pull_request.base.sha }} --to-ref ${{ github.event.pull_request.head.sha }}
+        run: |
+          pre-commit run --show-diff-on-failure --color=always --from-ref ${{ github.event.pull_request.base.sha }} --to-ref ${{ github.event.pull_request.head.sha }}
 
       # Runs a few different checks against our many requirements files
       # to make sure they're in order
       - name: Check requirements files
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
-          # We don't need to install mindsdb itself here because these are just static code checks
-          uv pip install -r requirements/requirements-dev.txt
-
           uv run tests/scripts/check_requirements.py
 
   # Creates a matrix of environments to test against using matrix_includes.json

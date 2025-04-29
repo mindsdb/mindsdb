@@ -20,7 +20,7 @@ class TestMLTaskQueue(HTTPHelperMixin):
         db = Database(protocol=3, host=REDIS_HOST)
         db.ping()
 
-    def test_create_model(self):
+    def test_create_model(self, train_finetune_lock):
         """ 1. create db connection
             2. create test dataset
             3. start to train model in 'async' mode: check status
@@ -51,27 +51,28 @@ class TestMLTaskQueue(HTTPHelperMixin):
         """
         self.sql_via_http(query, RESPONSE_TYPE.OK)
 
-        query = """
-            create predictor p_test_queue_async
-            from test_demo_queue (select sqft, location, rental_price from demo_data.home_rentals limit 30)
-            predict rental_price;
-        """
-        response = self.sql_via_http(query, RESPONSE_TYPE.TABLE)
-        status = response['data'][0][response['column_names'].index('STATUS')]
-        assert status in ('generating', 'training')
+        with train_finetune_lock.acquire(timeout=600):
+            query = """
+                create predictor p_test_queue_async
+                from test_demo_queue (select sqft, location, rental_price from demo_data.home_rentals limit 30)
+                predict rental_price;
+            """
+            response = self.sql_via_http(query, RESPONSE_TYPE.TABLE)
+            status = response['data'][0][response['column_names'].index('STATUS')]
+            assert status in ('generating', 'training')
 
-        query = """
-            create predictor p_test_queue_sync
-            from test_demo_queue (select sqft, location, rental_price from demo_data.home_rentals limit 30)
-            predict rental_price
-            USING join_learn_process=true;
-        """
-        response = self.sql_via_http(query, RESPONSE_TYPE.TABLE)
-        status = response['data'][0][response['column_names'].index('STATUS')]
-        assert status == 'complete'
+            query = """
+                create predictor p_test_queue_sync
+                from test_demo_queue (select sqft, location, rental_price from demo_data.home_rentals limit 30)
+                predict rental_price
+                USING join_learn_process=true;
+            """
+            response = self.sql_via_http(query, RESPONSE_TYPE.TABLE)
+            status = response['data'][0][response['column_names'].index('STATUS')]
+            assert status == 'complete'
 
-        status = self.await_model('p_test_queue_async')
-        assert status == 'complete'
+            status = self.await_model('p_test_queue_async')
+            assert status == 'complete'
 
         db = Database(protocol=3, host=REDIS_HOST)
         assert TASKS_STREAM_NAME in db.keys()
@@ -111,30 +112,31 @@ class TestMLTaskQueue(HTTPHelperMixin):
         db = Database(protocol=3, host=REDIS_HOST)
         assert db.xlen(TASKS_STREAM_NAME) == 0
 
-    def test_finetune(self):
+    def test_finetune(self, train_finetune_lock):
         """ check that finetune is working
         """
 
-        query = """
-            FINETUNE p_test_queue_sync
-            FROM test_demo_queue (SELECT * FROM demo_data.home_rentals LIMIT 10)
-            USING join_learn_process=true;
-        """
-        response = self.sql_via_http(query, RESPONSE_TYPE.TABLE)
-        status = response['data'][0][response['column_names'].index('STATUS')]
-        assert status == 'complete'
+        with train_finetune_lock.acquire(timeout=600):
+            query = """
+                FINETUNE p_test_queue_sync
+                FROM test_demo_queue (SELECT * FROM demo_data.home_rentals LIMIT 10)
+                USING join_learn_process=true;
+            """
+            response = self.sql_via_http(query, RESPONSE_TYPE.TABLE)
+            status = response['data'][0][response['column_names'].index('STATUS')]
+            assert status == 'complete'
 
-        query = """
-            FINETUNE p_test_queue_async
-            FROM test_demo_queue (SELECT * FROM demo_data.home_rentals LIMIT 10);
-        """
-        response = self.sql_via_http(query, RESPONSE_TYPE.TABLE)
-        status = response['data'][0][response['column_names'].index('STATUS')]
-        # FINETUNE in this case may be very fast, so add 'complete' to check
-        assert status in ('generating', 'training', 'complete')
+            query = """
+                FINETUNE p_test_queue_async
+                FROM test_demo_queue (SELECT * FROM demo_data.home_rentals LIMIT 10);
+            """
+            response = self.sql_via_http(query, RESPONSE_TYPE.TABLE)
+            status = response['data'][0][response['column_names'].index('STATUS')]
+            # FINETUNE in this case may be very fast, so add 'complete' to check
+            assert status in ('generating', 'training', 'complete')
 
-        status = self.await_model('p_test_queue_async', version_number=2)
-        assert status == 'complete'
+            status = self.await_model('p_test_queue_async', version_number=2)
+            assert status == 'complete'
 
         db = Database(protocol=3, host=REDIS_HOST)
         assert db.xlen(TASKS_STREAM_NAME) == 0

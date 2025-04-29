@@ -255,7 +255,7 @@ class TestCompanyIndependent(HTTPHelperMixin):
                 expected_resp_type=RESPONSE_TYPE.ERROR
             )
 
-    def test_model(self):
+    def test_model(self, train_finetune_lock):
         query = """
             CREATE MODEL model_{}
             FROM test_integration_{} (
@@ -269,11 +269,12 @@ class TestCompanyIndependent(HTTPHelperMixin):
         """
 
         for cid, char in [(CID_A, 'a'), (CID_B, 'b')]:
-            self.sql_via_http(
-                query.format(char, char),
-                company_id=cid,
-                expected_resp_type=RESPONSE_TYPE.TABLE
-            )
+            with train_finetune_lock.acquire(timeout=600):
+                self.sql_via_http(
+                    query.format(char, char),
+                    company_id=cid,
+                    expected_resp_type=RESPONSE_TYPE.TABLE
+                )
             response = self.sql_via_http(
                 predict_query.format(char),
                 company_id=cid,

@@ -337,16 +337,17 @@ class TestHTTP(HTTPHelperMixin):
         self.create_database("test_http_mysql", db_details)
         self.validate_database_creation("test_http_mysql")
 
-    def test_sql_create_predictor(self):
+    def test_sql_create_predictor(self, train_finetune_lock):
         self.sql_via_http("USE mindsdb;", RESPONSE_TYPE.OK)
         self.sql_via_http("DROP MODEL IF EXISTS p_test_http_1;", RESPONSE_TYPE.OK)
 
-        self.sql_via_http('''
-            create predictor p_test_http_1
-            from test_http_postgres (select sqft, location, rental_price from demo_data.home_rentals limit 30)
-            predict rental_price
-        ''', RESPONSE_TYPE.TABLE)
-        status = self.await_model('p_test_http_1', timeout=120)
+        with train_finetune_lock.acquire(timeout=600):
+            self.sql_via_http('''
+                create predictor p_test_http_1
+                from test_http_postgres (select sqft, location, rental_price from demo_data.home_rentals limit 30)
+                predict rental_price
+            ''', RESPONSE_TYPE.TABLE)
+            status = self.await_model('p_test_http_1', timeout=120)
         assert status == 'complete'
 
         resp = self.sql_via_http('''

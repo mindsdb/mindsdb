@@ -585,6 +585,8 @@ class ExecuteCommands:
             )
         elif statement_type is Insert:
             query = SQLQuery(statement, session=self.session, database=database_name)
+            if query.fetched_data.length() > 0:
+                return self.answer_select(query)
             return ExecuteAnswer(
                 affected_rows=query.fetched_data.affected_rows
             )
@@ -670,7 +672,7 @@ class ExecuteCommands:
         command = target.op.lower()
         args = [arg.value for arg in target.args if isinstance(arg, Constant)]
         if command == 'query_resume':
-            ret = SQLQuery(None, session=self.session, database=database_name, query_id=args[0])
+            ret = SQLQuery(None, session=self.session, query_id=args[0])
             return self.answer_select(ret)
 
         elif command == 'query_cancel':
@@ -868,13 +870,21 @@ class ExecuteCommands:
             else:
                 raise WrongArgumentError(f'Unknown describe type: {obj_type}')
 
-        name = obj_name.parts[-1]
+        parts = obj_name.parts
+        if len(parts) > 2:
+            raise WrongArgumentError(
+                f"Invalid object name: {obj_name.to_string()}.\n"
+                "Only models support three-part namespaces."
+            )
+
+        name = parts[-1]
         where = BinaryOperation(op='=', args=[
             Identifier('name'),
             Constant(name)
         ])
 
         if obj_type in project_objects:
+            database_name = parts[0] if len(parts) > 1 else database_name
             where = BinaryOperation(op='and', args=[
                 where,
                 BinaryOperation(op='=', args=[Identifier('project'), Constant(database_name)])

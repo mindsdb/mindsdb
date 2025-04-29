@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, astuple
 from datetime import datetime
 
 
@@ -12,7 +12,7 @@ class TABLES_ROW_TYPE:
 TABLES_ROW_TYPE = TABLES_ROW_TYPE()
 
 
-@dataclass
+@dataclass(slots=True)
 class TablesRow:
     TABLE_CATALOG: str = 'def'
     TABLE_SCHEMA: str = 'information_schema'
@@ -37,17 +37,10 @@ class TablesRow:
     TABLE_COMMENT: str = ''
 
     def to_list(self) -> list:
-        return [self.TABLE_CATALOG, self.TABLE_SCHEMA, self.TABLE_NAME,
-                self.TABLE_TYPE, self.ENGINE, self.VERSION, self.ROW_FORMAT,
-                self.TABLE_ROWS, self.AVG_ROW_LENGTH, self.DATA_LENGTH,
-                self.MAX_DATA_LENGTH, self.INDEX_LENGTH, self.DATA_FREE,
-                self.AUTO_INCREMENT, self.CREATE_TIME, self.UPDATE_TIME,
-                self.CHECK_TIME, self.TABLE_COLLATION, self.CHECKSUM,
-                self.CREATE_OPTIONS, self.TABLE_COMMENT]
+        return list(astuple(self))
 
     @staticmethod
     def from_dict(data: dict):
-
         del_keys = []
         data = {k.upper(): v for k, v in data.items()}
 

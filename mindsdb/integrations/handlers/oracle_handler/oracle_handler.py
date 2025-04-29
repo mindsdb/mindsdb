@@ -282,13 +282,23 @@ class OracleHandler(DatabaseHandler):
         """
         query = f"""
             SELECT
-                column_name AS field,
-                data_type AS type
+                COLUMN_NAME,
+                DATA_TYPE,
+                COLUMN_ID AS ORDINAL_POSITION,
+                DATA_DEFAULT AS COLUMN_DEFAULT,
+                CASE NULLABLE WHEN 'Y' THEN 'YES' ELSE 'NO' END AS IS_NULLABLE,
+                CHAR_LENGTH AS CHARACTER_MAXIMUM_LENGTH,
+                NULL AS CHARACTER_OCTET_LENGTH,
+                DATA_PRECISION AS NUMERIC_PRECISION,
+                DATA_SCALE AS NUMERIC_SCALE,
+                NULL AS DATETIME_PRECISION,
+                CHARACTER_SET_NAME,
+                NULL AS COLLATION_NAME
             FROM USER_TAB_COLUMNS
             WHERE table_name = '{table_name}'
+            ORDER BY TABLE_NAME, COLUMN_ID;
         """
         result = self.native_query(query)
         if result.resp_type is RESPONSE_TYPE.TABLE:
-            result.data_frame.columns = [name.lower() for name in result.data_frame.columns]
-            result.data_frame['mysql_data_type'] = result.data_frame['type'].apply(_map_type)
+            result.to_columns_table_response(map_type_fn=_map_type)
         return result

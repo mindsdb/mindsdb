@@ -68,6 +68,10 @@ class ChromaDBHandler(VectorStoreHandler):
             "persist_directory": self.persist_directory,
         }
 
+        self.create_collection_metadata = {
+            "hnsw:space": config.distance,
+        }
+
         self._use_handler_storage = False
 
         self.connect()
@@ -244,6 +248,7 @@ class ChromaDBHandler(VectorStoreHandler):
         offset: int = None,
         limit: int = None,
     ) -> pd.DataFrame:
+
         collection = self._client.get_collection(table_name)
         filters = self._translate_metadata_condition(conditions)
 
@@ -313,7 +318,7 @@ class ChromaDBHandler(VectorStoreHandler):
             TableField.ID.value: ids,
             TableField.CONTENT.value: documents,
             TableField.METADATA.value: metadatas,
-            TableField.EMBEDDINGS.value: embeddings,
+            TableField.EMBEDDINGS.value: list(embeddings),
         }
 
         if columns is not None:
@@ -397,7 +402,7 @@ class ChromaDBHandler(VectorStoreHandler):
         Insert/Upsert data into ChromaDB collection.
         If records with same IDs exist, they will be updated.
         """
-        collection = self._client.get_or_create_collection(collection_name)
+        collection = self._client.get_or_create_collection(collection_name, metadata=self.create_collection_metadata)
 
         # Convert metadata from string to dict if needed
         if TableField.METADATA.value in df.columns:
@@ -483,7 +488,8 @@ class ChromaDBHandler(VectorStoreHandler):
         """
         Create a collection with the given name in the ChromaDB database.
         """
-        self._client.create_collection(table_name, get_or_create=if_not_exists)
+        self._client.create_collection(table_name, get_or_create=if_not_exists,
+                                       metadata=self.create_collection_metadata)
         self._sync()
 
     def drop_table(self, table_name: str, if_exists=True):

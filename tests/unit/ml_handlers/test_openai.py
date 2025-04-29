@@ -82,9 +82,8 @@ class TestOpenAI(unittest.TestCase):
 
         self.handler.create_validation('target', args={'using': {'prompt_template': 'dummy_prompt_template'}}, handler_storage=self.mock_engine_storage)
 
-    @patch('mindsdb.integrations.handlers.openai_handler.helpers.OpenAI')
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
-    def test_create_with_invalid_mode_raises_exception(self, mock_openai_handler_openai_client, mock_openai_helpers_openai_client):
+    def test_create_with_invalid_mode_raises_exception(self, mock_openai_handler_openai_client):
         """
         Test if model creation raises an exception with an invalid mode.
         """
@@ -96,14 +95,12 @@ class TestOpenAI(unittest.TestCase):
         ]
 
         mock_openai_handler_openai_client.return_value.models.list.return_value = mock_models_list
-        mock_openai_helpers_openai_client.return_value.models.list.return_value = mock_models_list
 
         with self.assertRaisesRegex(Exception, "^Invalid operation mode."):
             self.handler.create('dummy_target', args={'using': {'prompt_template': 'dummy_prompt_template', 'mode': 'dummy_mode'}})
 
-    @patch('mindsdb.integrations.handlers.openai_handler.helpers.OpenAI')
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
-    def test_create_with_unsupported_model_raises_exception(self, mock_openai_handler_openai_client, mock_openai_helpers_openai_client):
+    def test_create_with_unsupported_model_raises_exception(self, mock_openai_handler_openai_client):
         """
         Test if model creation raises an exception with an invalid model name.
         """
@@ -115,14 +112,12 @@ class TestOpenAI(unittest.TestCase):
         ]
 
         mock_openai_handler_openai_client.return_value.models.list.return_value = mock_models_list
-        mock_openai_helpers_openai_client.return_value.models.list.return_value = mock_models_list
 
         with self.assertRaisesRegex(Exception, "^Invalid model name."):
             self.handler.create('dummy_target', args={'using': {'model_name': 'dummy_unsupported_model_name', 'prompt_template': 'dummy_prompt_template'}})
 
-    @patch('mindsdb.integrations.handlers.openai_handler.helpers.OpenAI')
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
-    def test_create_with_valid_arguments_runs_no_errors(self, mock_openai_handler_openai_client, mock_openai_helpers_openai_client):
+    def test_create_with_valid_arguments_runs_no_errors(self, mock_openai_handler_openai_client):
         """
         Test if model creation runs without errors with valid arguments.
         """
@@ -134,7 +129,6 @@ class TestOpenAI(unittest.TestCase):
         ]
 
         mock_openai_handler_openai_client.return_value.models.list.return_value = mock_models_list
-        mock_openai_helpers_openai_client.return_value.models.list.return_value = mock_models_list
 
         self.handler.create('dummy_target', args={'using': {'prompt_template': 'dummy_prompt_template'}})
 

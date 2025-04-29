@@ -1,3 +1,4 @@
+import json
 import time
 import datetime as dt
 
@@ -104,16 +105,26 @@ class KBTestBase:
         # connect database
         self.db_name = self.create_db()
 
-    def create_kb(self, name, params=None):
+    def create_kb(self, name, params=None, with_model=True):
+        model_str = ''
+        if with_model:
+            model_str = f'model = {self.con.models.get(self.emb_model)}, '
+
         self.run_sql(f'drop knowledge base if exists {name}')
 
-        storage = self.con.databases.get(self.vectordb_name).tables.get(f'tbl_{name}')
-        self.con.knowledge_bases.create(
-            name,
-            model=self.con.models.get(self.emb_model),
-            storage=storage,
-            params=params,
-        )
+        param_str = ''
+        if params:
+            param_items = []
+            for k, v in params.items():
+                param_items.append(f'{k}={json.dumps(v)}')
+            param_str = ',' + ','.join(param_items)
+
+        self.run_sql(f'''
+            create knowledge base {name}
+            using {model_str}
+               storage = {self.vectordb_name}.tbl_{name}
+               {param_str}
+        ''')
 
         # clean
         if len(self.run_sql(f'select * from {name}')) > 0:
@@ -176,7 +187,7 @@ class KBTest(KBTestBase):
         assert len(ret) == 4
 
         print('Limit with content')
-        ret = self.run_sql("select id, chunk_content from kb_crm where content = 'help' limit 4")
+        ret = self.run_sql("select id, chunk_content, distance from kb_crm where content = 'help' limit 4")
         assert len(ret) == 4
         assert ret['id'][0] == '1000'  # id is string
 
@@ -383,46 +394,61 @@ class KBTest(KBTestBase):
         ret = self.run_sql("""
             SELECT *
             FROM kb_crm
-            WHERE status = "solving" AND content = "noise" AND reranking_threshold=0.65
+            WHERE status = "solving" AND content = "noise" AND relevance_threshold=0.65
         """)
         assert set(ret.metadata.apply(lambda x: x.get('status'))) == {'solving'}
         assert 'noise' in ret.chunk_content[0]  # first line contents word
         assert len(ret[ret.relevance < 0.65]) == 0
 
-    def test_relevance(self, openai_api_key):
+    def test_dict_as_model(self, openai_api_key, reranking_model=None, embedding_model=None):
 
-        # prepare KB
-        kb_params = {
-            'embedding_model': {
-                "provider": "openai",
-                "model_name": "text-embedding-ada-002",
-                "api_key": openai_api_key
-            },
-            'reranking_model': {
+        def _check_kb(kb_params):
+            self.create_kb('kb_crm', params=kb_params, with_model=False)
+
+            self.run_sql("""
+                INSERT INTO kb_crm (
+                    SELECT * FROM example_db.crm_demo
+                );
+            """)
+
+            threshold = 0.5
+            ret = self.run_sql(f"""
+                SELECT *
+                FROM kb_crm
+                WHERE status = "solving" AND content = "noise" AND relevance_threshold={threshold}
+            """)
+            assert set(ret.metadata.apply(lambda x: x.get('status'))) == {'solving'}
+            for item in ret.chunk_content:
+                assert 'noise' in item  # all lines line contents word
+
+            assert len(ret[ret.relevance < threshold]) == 0
+
+        if reranking_model is None:
+            reranking_model = {
                 "provider": "openai",
                 "model_name": "gpt-4",
                 "api_key": openai_api_key
-            },
+            }
+
+        if embedding_model is None:
+            embedding_model = {
+                "provider": "openai",
+                "model_name": "text-embedding-ada-002",
+                "api_key": openai_api_key
+            }
+
+        # prepare KB
+        kb_params = {
+            'embedding_model': embedding_model,
+            'reranking_model': reranking_model,
             'metadata_columns': ['status', 'category'],
             'content_columns': ['message_body'],
             'id_column': 'id',
         }
 
-        self.create_kb('kb_crm', params=kb_params)
+        _check_kb(kb_params)
 
-        self.run_sql("""
-            INSERT INTO kb_crm (
-                SELECT * FROM example_db.crm_demo
-            );
-        """)
+        # check with model name
+        kb_params['embedding_model'] = self.emb_model
 
-        ret = self.run_sql("""
-            SELECT *
-            FROM kb_crm
-            WHERE status = "solving" AND content = "noise" AND reranking_threshold=0.8
-        """)
-        assert set(ret.metadata.apply(lambda x: x.get('status'))) == {'solving'}
-        for item in ret.chunk_content:
-            assert 'noise' in item  # all lines line contents word
-
-        assert len(ret[ret.relevance < 0.8]) == 0
+        _check_kb(kb_params)

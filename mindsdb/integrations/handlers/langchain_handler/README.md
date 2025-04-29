@@ -23,7 +23,7 @@ Available models include the following:
 - Anyscale ([how to get the API key](https://docs.endpoints.anyscale.com/guides/authenticate/))
 - Ollama ([how to download Ollama](https://ollama.com/download))
 
-The LiteLLM model provider is available in MindsDB Cloud only. Use the MindsDB API key, which can be generated in the MindsDB Cloud editor at `cloud.mindsdb.com/account`.
+The LiteLLM model provider is available through [Minds Cloud](https://mdb.ai/) where you can generate the API key.
 </Info>
 
 ## Setup
@@ -33,14 +33,14 @@ Create an AI engine from the [LangChain handler](https://github.com/mindsdb/mind
 ```sql
 CREATE ML_ENGINE langchain_engine
 FROM langchain
-[USING
+USING
       serper_api_key = 'your-serper-api-key', -- it is an optional parameter (if provided, the model will use serper.dev search to enhance the output)
 
       -- provide one of the below parameters
       anthropic_api_key = 'api-key-value',
       anyscale_api_key = 'api-key-value',
       litellm_api_key = 'api-key-value',
-      openai_api_key = 'api-key-value'];
+      openai_api_key = 'api-key-value';
 ```
 
 Create a model using `langchain_engine` as an engine and one of OpenAI/Anthropic/Anyscale/LiteLLM as a model provider.
@@ -86,6 +86,11 @@ Create a conversational model using `langchain_engine` as an engine and one of O
 
 <Accordion title="OpenAI">
 ```sql
+CREATE ML_ENGINE langchain_engine
+FROM langchain
+USING
+      openai_api_key = 'api-key-value';
+
 CREATE MODEL langchain_openai_model
 PREDICT answer
 USING
@@ -97,12 +102,17 @@ USING
      user_column = 'question',          -- column name that stores input from the user
      assistant_column = 'answer',       -- column name that stores output of the model (see PREDICT column)
      verbose = True,
-     prompt_template = 'Answer the user input in a helpful way';
+     prompt_template = 'Answer the user\'s input in a helpful way: {{question}}';
 ```
 </Accordion>
 
 <Accordion title="Anthropic">
 ```sql
+CREATE ML_ENGINE langchain_engine
+FROM langchain
+USING
+      anthropic_api_key = 'api-key-value';
+
 CREATE MODEL langchain_openai_model
 PREDICT answer
 USING
@@ -114,12 +124,17 @@ USING
      user_column = 'question',             -- column name that stores input from the user
      assistant_column = 'answer',          -- column name that stores output of the model (see PREDICT column)
      verbose = True,
-     prompt_template = 'Answer the user input in a helpful way';
+     prompt_template = 'Answer the user\'s input in a helpful way: {{question}}';
 ```
 </Accordion>
 
 <Accordion title="Anyscale">
 ```sql
+CREATE ML_ENGINE langchain_engine
+FROM langchain
+USING
+      anyscale_api_key = 'api-key-value';
+
 CREATE MODEL langchain_anyscale_model
 PREDICT answer 
 USING
@@ -132,12 +147,37 @@ USING
      assistant_column = 'answer',       -- column name that stores output of the model (see PREDICT column) 
      base_url = 'https://api.endpoints.anyscale.com/v1',
      verbose = True,
-     prompt_template = 'Answer the user input in a helpful way';
+     prompt_template = 'Answer the user\'s input in a helpful way: {{question}}';
 ```
+</Accordion>
+
+<Accordion title="Ollama">
+```sql
+CREATE ML_ENGINE langchain_engine
+FROM langchain;
+
+CREATE MODEL langchain_ollama_model
+PREDICT answer 
+USING
+     engine = 'langchain_engine',       -- engine name as created via CREATE ML_ENGINE
+     provider = 'ollama',               -- one of the available providers
+     model_name = 'llama2',             -- choose one of the models available from Ollama
+     mode = 'conversational',           -- conversational mode
+     user_column = 'question',          -- column name that stores input from the user
+     assistant_column = 'answer',       -- column name that stores output of the model (see PREDICT column) 
+     verbose = True,
+     prompt_template = 'Answer the user\'s input in a helpful way: {{question}}';
+```
+Ensure to have Ollama set up locally by following this guide on [how to download Ollama](https://ollama.com/download).
 </Accordion>
 
 <Accordion title="LiteLLM">
 ```sql
+CREATE ML_ENGINE langchain_engine
+FROM langchain
+USING
+      litellm_api_key = 'api-key-value';
+
 CREATE MODEL langchain_litellm_model
 PREDICT answer 
 USING
@@ -150,25 +190,26 @@ USING
      assistant_column = 'answer',            -- column name that stores output of the model (see PREDICT column)
      base_url = 'https://ai.dev.mindsdb.com',
      verbose = True,
-     prompt_template = 'Answer the user input in a helpful way';
+     prompt_template = 'Answer the user\'s input in a helpful way: {{question}}';
 ```
 </Accordion>
 
-<Accordion title="Mindsdb">
-
-Using mindsdb model in langchain:
+<Accordion title="MindsDB">
 ```sql
+CREATE ML_ENGINE langchain_engine
+FROM langchain;
+
 CREATE MODEL langchain_mindsdb_model
 PREDICT answer
 USING
      engine = 'langchain_engine',       -- engine name as created via CREATE ML_ENGINE
      provider = 'mindsdb',              -- one of the available providers
-     model_name = 'gpt_model',          -- mindsdb model
+     model_name = 'gpt_model',          -- any model created within MindsDB
      mode = 'conversational',           -- conversational mode
      user_column = 'question',          -- column name that stores input from the user
      assistant_column = 'answer',       -- column name that stores output of the model (see PREDICT column)
      verbose = True,
-     prompt_template = 'Answer the user input in a helpful way';
+     prompt_template = 'Answer the user\'s input in a helpful way: {{question}}';
 ```
 </Accordion>
 
@@ -185,7 +226,7 @@ CREATE MODEL tool_based_agent
 PREDICT completion
 USING
     engine = 'langchain_engine',
-    prompt_template = 'Answer the users input in a helpful way: {{input}}';
+    prompt_template = 'Answer the user\'s input in a helpful way: {{question}}';
 ```
 
 Here, we create the `tool_based_agent` model using the LangChain engine, as defined in the `engine` parameter. This model answers users' questions in a helpful way, as defined in the `prompt_template` parameter, which specifies `input` as the input column when calling the model.
@@ -195,12 +236,11 @@ Here, we create the `tool_based_agent` model using the LangChain engine, as defi
 Query the model to describe data.
 
 ```sql
-SELECT input, completion
+SELECT question, completion
 FROM tool_based_agent
-WHERE input = 'Could you describe the `mysql_demo_db.house_sales` table please?'
+WHERE question = 'Could you describe the `mysql_demo_db.house_sales` table please?'
 USING
     verbose = True,
-    tools = [],
     max_iterations = 10;
 ```
 
@@ -221,12 +261,11 @@ To get information about the `mysql_demo_db.house_sales` table, the agent uses t
 Query the model to analyze data.
 
 ```sql
-SELECT input, completion
+SELECT question, completion
 FROM tool_based_agent
-WHERE input = 'I want to know the average number of rooms in the downtown neighborhood as per the `mysql_demo_db.home_rentals` table'
+WHERE question = 'I want to know the average number of rooms in the downtown neighborhood as per the `mysql_demo_db.home_rentals` table'
 USING
     verbose = True,
-    tools = [],
     max_iterations = 10;
 ```
 
@@ -251,12 +290,11 @@ This query returns the value of 1.6, which is then used to write an answer.
 Query the model to retrieve data.
 
 ```sql
-SELECT input, completion
+SELECT question, completion
 FROM tool_based_agent
-WHERE input = 'There is a property in the south_side neighborhood with an initial price of 2543 the `mysql_demo_db.home_rentals` table. What are some other details of this listing?'
+WHERE question = 'There is a property in the south_side neighborhood with an initial price of 2543 the `mysql_demo_db.home_rentals` table. What are some other details of this listing?'
 USING
     verbose = True,
-    tools = [],
     max_iterations = 10;
 ```
 

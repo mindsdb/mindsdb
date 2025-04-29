@@ -38,3 +38,10 @@ def start_mcp(*args, **kwargs):
     from mindsdb.api.mcp.start import start
 
     start(*args, **kwargs)
+
+
+def start_litellm(*args, **kwargs):
+    """Start the LiteLLM server"""
+    from mindsdb.api.litellm.start import start
+
+    start(*args, **kwargs)

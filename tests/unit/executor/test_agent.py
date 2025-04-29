@@ -1,11 +1,28 @@
+import time
 import os
 from unittest.mock import patch
+import threading
 
 import pandas as pd
 import pytest
 
 from tests.unit.executor_test_base import BaseExecutorDummyML
 from mindsdb.interfaces.agents.langchain_agent import SkillData
+
+
+@pytest.fixture(scope="function")
+def task_monitor():
+    from mindsdb.interfaces.tasks.task_monitor import TaskMonitor
+    monitor = TaskMonitor()
+
+    stop_event = threading.Event()
+    worker = threading.Thread(target=monitor.start, daemon=True, args=(stop_event,))
+    worker.start()
+
+    yield worker
+
+    stop_event.set()
+    worker.join()
 
 
 def set_openai_completion(mock_openai, response):
@@ -529,7 +546,7 @@ class TestKB(BaseExecutorDummyML):
         assert set(ret['id']) == {'9016', '9023'}
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def test_kb_partitions(self, mock_handler):
+    def test_kb_partitions(self, mock_handler, task_monitor):
         self._create_embedding_model('emb_model')
 
         df = self._get_ral_table()
@@ -541,13 +558,22 @@ class TestKB(BaseExecutorDummyML):
 
         self.set_handler(mock_handler, name='pg', tables={'ral': df})
 
-        def check_partition(sql):
+        def check_partition(insert_sql):
             # create empty kb
             self.run_sql('DROP KNOWLEDGE_BASE IF EXISTS kb_part')
             self.run_sql('create knowledge base kb_part using model=emb_model')
 
             # load kb
-            self.run_sql(sql)
+            ret = self.run_sql(insert_sql)
+            # inserts returns query
+            query_id = ret['ID'][0]
+
+            # wait loaded
+            for i in range(1000):
+                time.sleep(0.2)
+                ret = self.run_sql(f'select * from information_schema.queries where id = {query_id}')
+                if ret['FINISHED_AT'][0] is not None:
+                    break
 
             # check content
             ret = self.run_sql('select * from kb_part')
@@ -568,7 +594,7 @@ class TestKB(BaseExecutorDummyML):
             assert rec_d['PROCESSED_ROWS'] == rec['PROCESSED_ROWS']
             assert rec_d['INSERT_STARTED_AT'] == rec['STARTED_AT']
             assert rec_d['INSERT_FINISHED_AT'] == rec['FINISHED_AT']
-            assert rec_d['QUERY_ID'] == rec['ID']
+            assert rec_d['QUERY_ID'] == query_id
 
             # del query
             self.run_sql(f"SELECT query_cancel({rec['ID']})")

@@ -255,7 +255,7 @@ class TestAgent(BaseExecutorDummyML):
             '''
         )
 
-        self.run_sql('create knowledge base kb_review using model=emb_model, id_column = "id"')
+        self.run_sql('create knowledge base kb_review using model=emb_model')
 
         self.run_sql('''
           create skill retr_skill
@@ -406,10 +406,10 @@ class TestKB(BaseExecutorDummyML):
         ret = self.run_sql("select * from kb_review where original_row_id = '123'")
         assert len(ret) == 0
 
-        # insert
+        # insert without id
         self.run_sql("""
             insert into kb_review
-            select review as content, product, url, id from files.reviews
+            select review as content, product, url from files.reviews
         """)
 
         # product/url in metadata
@@ -558,7 +558,7 @@ class TestKB(BaseExecutorDummyML):
         def check_partition(insert_sql):
             # create empty kb
             self.run_sql('DROP KNOWLEDGE_BASE IF EXISTS kb_part')
-            self.run_sql('create knowledge base kb_part using model=emb_model')
+            self.run_sql('create knowledge base kb_part using model=emb_model,id_column="id"')
 
             # load kb
             ret = self.run_sql(insert_sql)

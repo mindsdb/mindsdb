@@ -540,7 +540,7 @@ class KnowledgeBaseTable:
             raise ValueError(f'The ID column {params.get("id_column")} not found in dataset: {columns}')
 
         if id_column is None:
-            raise ValueError(f'The id_column parameter is required')
+            raise ValueError('The id_column parameter is required')
 
         if id_column is not None:
             columns.remove(id_column)

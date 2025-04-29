@@ -406,10 +406,10 @@ class TestKB(BaseExecutorDummyML):
         ret = self.run_sql("select * from kb_review where original_row_id = '123'")
         assert len(ret) == 0
 
-        # insert without id
+        # insert
         self.run_sql("""
             insert into kb_review
-            select review as content, product, url from files.reviews
+            select review as content, product, url, id from files.reviews
         """)
 
         # product/url in metadata

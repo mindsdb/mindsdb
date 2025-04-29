@@ -45,10 +45,12 @@ jobs:
         with:
           # required to grab the history of the PR for pre-commit to work out what's changed
           fetch-depth: 0 
-      - name: Set up Python
+      # Install python and setup UV
+      - name: Setup uv
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
-        uses: actions/setup-python@v5.1.0
+        uses: astral-sh/setup-uv@v5
         with:
+          enable-cache: true
           # I can't work out how to use vars.CI_PYTHON_VERSION for forks here in a nice way, so we have to hardcode it for forks
           python-version: ${{ vars.CI_PYTHON_VERSION || '3.10' }}
 
@@ -57,7 +59,7 @@ jobs:
       - name: Check for print statements
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
-          python tests/scripts/check_print_statements.py
+          uv run tests/scripts/check_print_statements.py
 
       # Run pre-commit on all changed files
       # See .pre-commit-config.yaml for the list of checks
@@ -75,7 +77,7 @@ jobs:
           # We don't need to install mindsdb itself here because these are just static code checks
           uv pip install -r requirements/requirements-dev.txt
 
-          python tests/scripts/check_requirements.py
+          uv run tests/scripts/check_requirements.py
 
   # Creates a matrix of environments to test against using matrix_includes.json
   # Used for installation checks below

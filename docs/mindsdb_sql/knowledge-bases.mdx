@@ -446,9 +446,8 @@ The parameters include the following:
 * `batch_size` defines the number of rows fetched per iteration to optimize data extraction from the source. It defaults to 1000.
 
 * `threads` defines threads for running partitions. Note that if the [ML task queue](/setup/custom-config#overview-of-config-parameters) is enabled, threads are used automatically. The available values for include:
-
-- A number of threads to be used, for example, `threads = 10`,
-- A boolean value that defines whether to enable threads, setting `threads = true`, or disable threads, setting `threads = false`.
+    * A number of threads to be used, for example, `threads = 10`,
+    * A boolean value that defines whether to enable threads, setting `threads = true`, or disable threads, setting `threads = false`.
 
 * `track_column` defines the column used for sorting data before partitioning.
 

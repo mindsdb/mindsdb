@@ -27,4 +27,10 @@ build_docker:
 run_docker: build_docker
 	docker run -it -p 47334:47334 mdb
 
-.PHONY: install_mindsdb install_handler precommit run_mindsdb check build_docker run_docker
+integration_tests:
+	pytest -n 8 --dist loadfile -vsx tests/integration/tutorials/ tests/integration/flows/
+
+integration_tests_debug:
+	pytest -vsx tests/integration/tutorials/ tests/integration/flows/
+
+.PHONY: install_mindsdb install_handler precommit run_mindsdb check build_docker run_docker integration_tests integration_tests_debug

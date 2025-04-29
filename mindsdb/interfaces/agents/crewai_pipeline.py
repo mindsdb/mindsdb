@@ -223,7 +223,7 @@ class CrewAITextToSQLPipeline:
             requested, and determine which tables or knowledge bases are relevant.""",
             verbose=self.verbose,
             allow_delegation=False,
-            tools=[self.tools["list_tables"], self.tools["get_schema"]],
+            tools=[self.tools["list_tables"]],
             llm=self.llm
         )
         
@@ -237,7 +237,7 @@ class CrewAITextToSQLPipeline:
             semantic search functionality.""",
             verbose=self.verbose,
             allow_delegation=False,
-            tools=[self.tools["list_tables"], self.tools["get_schema"], self.tools["check_sql"]],
+            tools=[self.tools["list_tables"], self.tools["check_sql"]],
             llm=self.llm
         )
         
@@ -293,7 +293,7 @@ class CrewAITextToSQLPipeline:
             If the user input relates to unstructured data or requires information from documents, articles, 
             or general knowledge, then it has to do semantic similarity search in the knowledge base. It still needs 
             to convert the natural language question into an SQL query, but in this case it has to generate a sql 
-            query that has a WHERE condition on the "content" column and the condition term should be extracted 
+            query on the knowledge basethat has a WHERE condition on the "content" column and the condition term should be extracted 
             from the user input.
             
             If the user is asking about available databases, tables, or schema information,
@@ -312,13 +312,17 @@ class CrewAITextToSQLPipeline:
             - Include all necessary joins, filters, and aggregations
             - Ensure proper syntax and column references
             
-            For knowledge base queries for semantic similarity search, put WHERE condition on "content" column.  
-            This is the only column that is used for semantic search:
+            For knowledge base queries for semantic similarity search, generate a query on knowledge base and 
+            put WHERE condition on "content" column.  
+            "content" column is the only column that is used for semantic search.
             - This is an example query for knowledge base search:
               SELECT id, chunk_content, relevance, distance
               FROM [knowledge_base_name]
-              WHERE content = "[search_term]" AND relevance_threshold=0.6 LIMIT 50;
-            
+              WHERE content = "search_term" AND relevance_threshold=0.6 LIMIT 50;
+            In this example "search_term" is the term that is extracted from the user input, and 
+            "knowledge_base_name" is the name of the knowledge base, and "relevance_threshold" is the 
+            relevance threshold for the semantic search and it should be between 0 and 1. and always should you "=" operator for it not 
+            "<=" or ">=" or ">" or "<". You can choose default value for relevance_threshold of 0.6 if not provided in the user query.
             Validate your SQL with the check_sql tool before finalizing.
             """,
             agent=self.sql_generation_agent,
@@ -364,13 +368,13 @@ class CrewAITextToSQLPipeline:
                 self.query_understanding_agent,
                 self.sql_generation_agent,
                 self.sql_execution_agent,
-                self.sql_validation_agent
+                #self.sql_validation_agent
             ],
             tasks=[
                 understand_task,
                 generate_sql_task,
                 execute_sql_task,
-                validate_results_task
+                #validate_results_task
             ],
             verbose=self.verbose,
             process=Process.sequential

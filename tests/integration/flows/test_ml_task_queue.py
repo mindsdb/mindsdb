@@ -75,7 +75,12 @@ class TestMLTaskQueue(HTTPHelperMixin):
 
         db = Database(protocol=3, host=REDIS_HOST)
         assert TASKS_STREAM_NAME in db.keys()
+
         assert db.type(TASKS_STREAM_NAME) == b'stream'
+        xlen = db.xlen(TASKS_STREAM_NAME)
+        if xlen != 0:
+            lol = db.xrange(TASKS_STREAM_NAME)
+            assert False, "Caught non-zero length ml queue: " + str(lol)
         assert db.xlen(TASKS_STREAM_NAME) == 0
 
     def test_predict(self):

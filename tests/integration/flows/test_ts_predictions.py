@@ -21,8 +21,9 @@ class TestHTTP(HTTPHelperMixin):
         cls._sql_via_http_context = {}
 
     def test_create_model(self):
+        self.sql_via_http("DROP DATABASE IF EXISTS test_ts_demo_postgres;", RESPONSE_TYPE.OK)
         sql = '''
-        CREATE DATABASE example_db
+        CREATE DATABASE test_ts_demo_postgres
         WITH ENGINE = "postgres",
         PARAMETERS = {
             "user": "demo_user",
@@ -43,14 +44,15 @@ class TestHTTP(HTTPHelperMixin):
                 selects.append(f"select '{day_str}' as date, '{group}' as group, {value} as value")
         selects = ' union all '.join(selects)
 
+        self.sql_via_http("DROP VIEW IF EXISTS testv;", RESPONSE_TYPE.OK)
         sql = f'''
             create view testv as (
-                select * from example_db ({selects})
+                select * from test_ts_demo_postgres ({selects})
             )
         '''
+        self.sql_via_http(sql, RESPONSE_TYPE.OK)
 
-        resp = self.sql_via_http(sql, RESPONSE_TYPE.OK)
-
+        self.sql_via_http("DROP MODEL IF EXISTS mindsdb.tstest;", RESPONSE_TYPE.OK)
         sql = '''
             CREATE MODEL
                 mindsdb.tstest

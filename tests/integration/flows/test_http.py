@@ -129,7 +129,7 @@ class TestHTTP(HTTPHelperMixin):
             upload file again
         '''
         self.sql_via_http("DROP TABLE IF EXISTS files.movies;", RESPONSE_TYPE.OK)
-        assert "test_file" not in [file["name"] for file in self.get_files_list()]
+        assert "movies" not in [file["name"] for file in self.get_files_list()]
 
         with open("tests/data/movies.csv") as f:
             files = {

@@ -690,6 +690,6 @@ class TextSplitEval:
         separators = ["\n\n", ".\n", ". ", " ", ""]
         splitter = TextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap, separators=separators)
         text = SAMPLE_DOC
-        chunks = splitter.split(text)
+        chunks = splitter.split_text(text)
 
         self.evaluate(text, chunks, chunk_overlap)

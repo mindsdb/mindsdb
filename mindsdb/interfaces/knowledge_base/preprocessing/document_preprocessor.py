@@ -1,15 +1,14 @@
 from typing import List, Dict, Optional, Any
-import pandas as pd
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 import asyncio
 
+import pandas as pd
+
+from mindsdb.interfaces.knowledge_base.preprocessing.text_splitter import TextSplitter
 
 from mindsdb.integrations.utilities.rag.splitters.file_splitter import (
     FileSplitter,
     FileSplitterConfig,
 )
-
-from mindsdb.interfaces.agents.langchain_agent import create_chat_model
 
 from mindsdb.interfaces.knowledge_base.preprocessing.models import (
     PreprocessingConfig,
@@ -20,8 +19,6 @@ from mindsdb.interfaces.knowledge_base.preprocessing.models import (
     TextChunkingConfig,
 )
 from mindsdb.utilities import log
-
-from langchain_core.documents import Document as LangchainDocument
 
 logger = log.getLogger(__name__)
 
@@ -54,15 +51,12 @@ class DocumentPreprocessor:
         if self.splitter is None:
             raise ValueError("Splitter not configured")
 
-        # Convert to langchain Document for splitting
-        langchain_doc = LangchainDocument(
-            page_content=doc.content, metadata=doc.metadata or {}
-        )
+        metadata = doc.metadata or {}
         # Split and convert back to our Document type
-        split_docs = self.splitter.split_documents([langchain_doc])
+        split_texts = self.splitter.split_text(doc.content)
         return [
-            Document(content=split_doc.page_content, metadata=split_doc.metadata)
-            for split_doc in split_docs
+            Document(content=text, metadata=metadata)
+            for text in split_texts
         ]
 
     def _get_source(self) -> str:
@@ -146,6 +140,7 @@ Please give a short succinct context to situate this chunk within the overall do
                 chunk_size=config.chunk_size, chunk_overlap=config.chunk_overlap
             )
         )
+        from mindsdb.interfaces.agents.langchain_agent import create_chat_model
         self.llm = create_chat_model(
             {
                 "model_name": self.config.llm_config.model_name,
@@ -270,16 +265,15 @@ Please give a short succinct context to situate this chunk within the overall do
 
 
 class TextChunkingPreprocessor(DocumentPreprocessor):
-    """Default text chunking preprocessor using RecursiveCharacterTextSplitter"""
+    """Default text chunking preprocessor using TextSplitter"""
 
     def __init__(self, config: Optional[TextChunkingConfig] = None):
         """Initialize with text chunking configuration"""
         super().__init__()
         self.config = config or TextChunkingConfig()
-        self.splitter = RecursiveCharacterTextSplitter(
+        self.splitter = TextSplitter(
             chunk_size=self.config.chunk_size,
             chunk_overlap=self.config.chunk_overlap,
-            length_function=self.config.length_function,
             separators=self.config.separators,
         )
 

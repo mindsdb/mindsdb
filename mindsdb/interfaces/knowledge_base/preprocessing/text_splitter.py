@@ -29,7 +29,7 @@ class TextSplitter:
         self.k_range = k_range
         self.k_ratio = k_ratio
 
-    def split(self, text: str) -> List[str]:
+    def split_text(self, text: str) -> List[str]:
         chunks = []
 
         while True:

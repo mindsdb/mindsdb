@@ -9,6 +9,7 @@ from mindsdb.integrations.utilities.rag.splitters.file_splitter import (
     FileSplitter,
     FileSplitterConfig,
 )
+from mindsdb.interfaces.agents.langchain_agent import create_chat_model
 
 from mindsdb.interfaces.knowledge_base.preprocessing.models import (
     PreprocessingConfig,
@@ -140,7 +141,6 @@ Please give a short succinct context to situate this chunk within the overall do
                 chunk_size=config.chunk_size, chunk_overlap=config.chunk_overlap
             )
         )
-        from mindsdb.interfaces.agents.langchain_agent import create_chat_model
         self.llm = create_chat_model(
             {
                 "model_name": self.config.llm_config.model_name,

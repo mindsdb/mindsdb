@@ -33,7 +33,7 @@ class CrewAITextToSQLPipeline:
         temperature: float = 0.0,
         api_key: Optional[str] = None,
         verbose: bool = True,
-        max_tokens: int = 2000
+        max_tokens: int = 4000
     ):
         """Initialize the CrewAI Text-to-SQL Pipeline.
         
@@ -95,6 +95,16 @@ class CrewAITextToSQLPipeline:
             
             # Now execute the parsed query
             result = command_executor.execute_command(ast_query)
+            
+            # Convert ExecuteAnswer to a readable format
+            if hasattr(result, 'data') and hasattr(result.data, 'data_frame'):
+                # Convert DataFrame to readable format
+                df = result.data.data_frame
+                if not df.empty:
+                    return df.to_string(index=False)
+                else:
+                    return "Query executed successfully, but returned no data."
+            
             return str(result)
         except Exception as e:
             import traceback
@@ -261,10 +271,11 @@ class CrewAITextToSQLPipeline:
         # 3. SQL Execution Agent
         self.sql_execution_agent = Agent(
             role="SQL Execution Agent",
-            goal="Execute the SQL query and return raw data rows",
+            goal="Execute SQL queries accurately and return complete results",
             backstory="""You are responsible for running SQL queries and
-            returning the raw results. You make sure queries run successfully and handle any
-            execution errors appropriately.""",
+            returning the complete results exactly as received from the database. 
+            You understand that queries may contain long string literals that must be 
+            preserved perfectly for accurate results.""",
             verbose=self.verbose,
             allow_delegation=False,
             tools=[self.tools["execute_sql"]],
@@ -304,8 +315,12 @@ class CrewAITextToSQLPipeline:
             3. Whether this requires regular SQL or semantic search
             4. Any filters, aggregations, or specific fields needed
             
-            If user input pertains to structured data (e.g., databases, tables), then should convert the natural 
-            language question into an SQL query, based on the provide information in the user question
+            IMPORTANT: NEVER modify, truncate, or abbreviate any string literals, product names, or search terms 
+            from the original query. Always preserve the EXACT and COMPLETE text of any quoted strings, 
+            especially in filter conditions.
+            
+            If user input pertains to structured data (e.g., databases, tables), then convert the natural 
+            language question into an SQL query, based on the provided information in the user question.
 
             If the user input relates to unstructured data or requires information from documents, articles, 
             or general knowledge, then it has to do semantic similarity search in the knowledge base. For this: 
@@ -325,13 +340,19 @@ class CrewAITextToSQLPipeline:
             description="""
             Based on the query understanding, generate the appropriate SQL query.
             
+            CRITICAL: NEVER truncate, abbreviate, or modify string literals in any way.
+            Always keep quoted values EXACTLY as they appear in the original query, including
+            full product names, long text strings, and search terms. Even very long strings
+            must be preserved completely.
+            
             For standard database queries:
             - Include all necessary joins, filters, and aggregations
             - Ensure proper syntax and column references
+            - Preserve the EXACT text of string literals in WHERE clauses
             
             For knowledge base queries for semantic similarity search, generate a query on knowledge base and 
             put WHERE condition on "content" column.  
-            "content" column is the only column that is used for semantic search.
+            "content" column is the only column that is used for semantic search. 
             - This is an example query for knowledge base search:
               SELECT *
               FROM knowledge_base_name
@@ -344,22 +365,32 @@ class CrewAITextToSQLPipeline:
             Validate your SQL with the check_sql tool before finalizing.
 
             Also ensure you use single quotes (') not double quotes (") for string literals in SQL.
+            
+            Validate your SQL with the check_sql tool before finalizing.
             """,
             agent=self.sql_generation_agent,
-            expected_output="A valid SQL query that addresses the user's question",
+            expected_output="A valid SQL query that addresses the user's question with exact string values preserved",
             context=[understand_task]
         )
         
         # Task 3: Execute SQL
         execute_sql_task = Task(
             description="""
-            Execute the generated SQL query using the execute_sql tool.
+            Execute the EXACT SQL query using the execute_sql tool WITHOUT modifying it.
+            
+            IMPORTANT: 
+            - Never modify, truncate, or change the SQL query in any way
+            - Execute the exact query as provided, even if it contains very long string literals
+            - Preserve the complete structure and values of the original query
             
             Capture and report any execution errors that occur.
-            Return the complete result set from the query.
+            Format the results in a clear, tabular format when possible.
+            
+            Do not simply return the raw ExecuteAnswer object - extract the data in a readable format.
+            If the results contain rows of data, present them in a clean table format.
             """,
             agent=self.sql_execution_agent,
-            expected_output="The results from executing the SQL query",
+            expected_output="The complete, formatted results from executing the SQL query",
             context=[generate_sql_task]
         )
         
@@ -435,7 +466,7 @@ class CrewAIAgentManager:
         model: str = 'gpt-4o',
         prompt_template: str = None,
         verbose: bool = True,
-        max_tokens: int = 200,
+        max_tokens: int = 4000,
         api_key: str = None
     ) -> CrewAITextToSQLPipeline:
         """Create a CrewAI pipeline with the specified configuration.

@@ -216,7 +216,7 @@ class TestMySqlApi(BaseStuff):
     def test_service_requests(self, query, use_binary):
         self.query(query)
 
-    def test_show_columns(self):
+    def test_show_columns(self, use_binary):
         ret = self.query("""
             SELECT
                 *

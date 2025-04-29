@@ -459,7 +459,7 @@ class Config:
         """
         updated = self.fetch_auto_config()
         if updated:
-            self.init_config()
+            self.merge_configs()
 
     def merge_configs(self) -> None:
         """Merge multiple configs to one.

@@ -85,15 +85,32 @@ class CrewAITextToSQLPipeline:
             String representation of the execution result or error message
         """
         try:
+            # Log the query for debugging
+            logger.info(f"Executing SQL query: {sql_query}")
+            
             command_executor = self.skill_tool.get_command_executor()
             # Parse the SQL string to an AST object first
             from mindsdb_sql_parser import parse_sql
             ast_query = parse_sql(sql_query)
+            
             # Now execute the parsed query
             result = command_executor.execute_command(ast_query)
             return str(result)
         except Exception as e:
-            return f"Error executing SQL query: {str(e)}"
+            import traceback
+            error_trace = traceback.format_exc()
+            logger.error(f"Error executing SQL query: {sql_query}\nError: {str(e)}\nTrace: {error_trace}")
+            
+            # Try to provide more helpful error messages for common issues
+            error_msg = str(e)
+            if "Model not found" in error_msg and "knowledge_base" in sql_query.lower():
+                return (f"Error: The knowledge base may not exist or the query syntax is incorrect. "
+                        f"For knowledge base queries, use simple syntax: SELECT * FROM knowledge_base_name "
+                        f"WHERE content = 'search term'; - Original error: {error_msg}")
+            elif "table" in error_msg.lower() and "not found" in error_msg.lower():
+                return f"Error: The table referenced in the query doesn't exist. Please check available tables using the list_tables tool. - Original error: {error_msg}"
+            
+            return f"Error executing SQL query: {error_msg}"
     
     def _setup_tools(self):
         """Set up the tools needed by the agents."""
@@ -291,8 +308,8 @@ class CrewAITextToSQLPipeline:
             language question into an SQL query, based on the provide information in the user question
 
             If the user input relates to unstructured data or requires information from documents, articles, 
-            or general knowledge, then it has to do semantic similarity search in the knowledge base. It still needs 
-            to convert the natural language question into an SQL query, but in this case it has to generate a sql 
+            or general knowledge, then it has to do semantic similarity search in the knowledge base. For this: 
+            convert the natural language question into an SQL query, but in this case it has to generate a sql 
             query on the knowledge basethat has a WHERE condition on the "content" column and the condition term should be extracted 
             from the user input.
             
@@ -316,14 +333,17 @@ class CrewAITextToSQLPipeline:
             put WHERE condition on "content" column.  
             "content" column is the only column that is used for semantic search.
             - This is an example query for knowledge base search:
-              SELECT id, chunk_content, relevance, distance
-              FROM [knowledge_base_name]
-              WHERE content = "search_term" AND relevance_threshold=0.6 LIMIT 50;
-            In this example "search_term" is the term that is extracted from the user input, and 
+              SELECT *
+              FROM knowledge_base_name
+              WHERE content = 'search_term' AND relevance_threshold=0.6 LIMIT 50;
+            
+            Note: In this example 'search_term' is the term that is extracted from the user input, and 
             "knowledge_base_name" is the name of the knowledge base, and "relevance_threshold" is the 
             relevance threshold for the semantic search and it should be between 0 and 1. and always should you "=" operator for it not 
             "<=" or ">=" or ">" or "<". You can choose default value for relevance_threshold of 0.6 if not provided in the user query.
             Validate your SQL with the check_sql tool before finalizing.
+
+            Also ensure you use single quotes (') not double quotes (") for string literals in SQL.
             """,
             agent=self.sql_generation_agent,
             expected_output="A valid SQL query that addresses the user's question",

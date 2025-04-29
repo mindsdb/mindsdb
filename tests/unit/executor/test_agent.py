@@ -493,7 +493,8 @@ class TestKB(BaseExecutorDummyML):
 
         self.run_sql('''
           create knowledge base kb_ral
-            using model=emb_model
+            using model=emb_model,
+            id_column="id"
         ''')
 
         self.run_sql("""

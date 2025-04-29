@@ -33,7 +33,7 @@ class CrewAITextToSQLPipeline:
         temperature: float = 0.0,
         api_key: Optional[str] = None,
         verbose: bool = True,
-        max_tokens: int = 4000
+        max_tokens: int = 2000
     ):
         """Initialize the CrewAI Text-to-SQL Pipeline.
         
@@ -85,42 +85,15 @@ class CrewAITextToSQLPipeline:
             String representation of the execution result or error message
         """
         try:
-            # Log the query for debugging
-            logger.info(f"Executing SQL query: {sql_query}")
-            
             command_executor = self.skill_tool.get_command_executor()
             # Parse the SQL string to an AST object first
             from mindsdb_sql_parser import parse_sql
             ast_query = parse_sql(sql_query)
-            
             # Now execute the parsed query
             result = command_executor.execute_command(ast_query)
-            
-            # Convert ExecuteAnswer to a readable format
-            if hasattr(result, 'data') and hasattr(result.data, 'data_frame'):
-                # Convert DataFrame to readable format
-                df = result.data.data_frame
-                if not df.empty:
-                    return df.to_string(index=False)
-                else:
-                    return "Query executed successfully, but returned no data."
-            
             return str(result)
         except Exception as e:
-            import traceback
-            error_trace = traceback.format_exc()
-            logger.error(f"Error executing SQL query: {sql_query}\nError: {str(e)}\nTrace: {error_trace}")
-            
-            # Try to provide more helpful error messages for common issues
-            error_msg = str(e)
-            if "Model not found" in error_msg and "knowledge_base" in sql_query.lower():
-                return (f"Error: The knowledge base may not exist or the query syntax is incorrect. "
-                        f"For knowledge base queries, use simple syntax: SELECT * FROM knowledge_base_name "
-                        f"WHERE content = 'search term'; - Original error: {error_msg}")
-            elif "table" in error_msg.lower() and "not found" in error_msg.lower():
-                return f"Error: The table referenced in the query doesn't exist. Please check available tables using the list_tables tool. - Original error: {error_msg}"
-            
-            return f"Error executing SQL query: {error_msg}"
+            return f"Error executing SQL query: {str(e)}"
     
     def _setup_tools(self):
         """Set up the tools needed by the agents."""
@@ -250,7 +223,7 @@ class CrewAITextToSQLPipeline:
             requested, and determine which tables or knowledge bases are relevant.""",
             verbose=self.verbose,
             allow_delegation=False,
-            tools=[self.tools["list_tables"]],
+            tools=[self.tools["list_tables"], self.tools["get_schema"]],
             llm=self.llm
         )
         
@@ -264,18 +237,17 @@ class CrewAITextToSQLPipeline:
             semantic search functionality.""",
             verbose=self.verbose,
             allow_delegation=False,
-            tools=[self.tools["list_tables"], self.tools["check_sql"]],
+            tools=[self.tools["list_tables"], self.tools["get_schema"], self.tools["check_sql"]],
             llm=self.llm
         )
         
         # 3. SQL Execution Agent
         self.sql_execution_agent = Agent(
             role="SQL Execution Agent",
-            goal="Execute SQL queries accurately and return complete results",
+            goal="Execute the SQL query and return raw data rows",
             backstory="""You are responsible for running SQL queries and
-            returning the complete results exactly as received from the database. 
-            You understand that queries may contain long string literals that must be 
-            preserved perfectly for accurate results.""",
+            returning the raw results. You make sure queries run successfully and handle any
+            execution errors appropriately.""",
             verbose=self.verbose,
             allow_delegation=False,
             tools=[self.tools["execute_sql"]],
@@ -284,12 +256,12 @@ class CrewAITextToSQLPipeline:
         
         # 4. SQL Validation Agent
         self.sql_validation_agent = Agent(
-            role="Results Presentation Specialist",
-            goal="Present query results clearly and accurately to the user",
-            backstory="""You are responsible for formatting and presenting query results 
-            to users in a clear, readable format. For knowledge base similarity searches, 
-            you preserve the actual content returned from the database and never substitute 
-            with placeholder data. You always return the exact data retrieved from the database.""",
+            role="SQL Validation Agent",
+            goal="Ensure query results are valid and present them clearly to the user",
+            backstory="""You are responsible for validating query results and presenting them 
+            clearly to users. You verify results are well-formed and answer the original question,
+            then present ONLY the answer in a clear, concise format without any validation notes 
+            or agent communication.""",
             verbose=self.verbose,
             allow_delegation=False,
             llm=self.llm
@@ -315,17 +287,13 @@ class CrewAITextToSQLPipeline:
             3. Whether this requires regular SQL or semantic search
             4. Any filters, aggregations, or specific fields needed
             
-            IMPORTANT: NEVER modify, truncate, or abbreviate any string literals, product names, or search terms 
-            from the original query. Always preserve the EXACT and COMPLETE text of any quoted strings, 
-            especially in filter conditions.
-            
-            If user input pertains to structured data (e.g., databases, tables), then convert the natural 
-            language question into an SQL query, based on the provided information in the user question.
+            If user input pertains to structured data (e.g., databases, tables), then should convert the natural 
+            language question into an SQL query, based on the provide information in the user question
 
             If the user input relates to unstructured data or requires information from documents, articles, 
-            or general knowledge, then it has to do semantic similarity search in the knowledge base. For this: 
-            convert the natural language question into an SQL query, but in this case it has to generate a sql 
-            query on the knowledge basethat has a WHERE condition on the "content" column and the condition term should be extracted 
+            or general knowledge, then it has to do semantic similarity search in the knowledge base. It still needs 
+            to convert the natural language question into an SQL query, but in this case it has to generate a sql 
+            query that has a WHERE condition on the "content" column and the condition term should be extracted 
             from the user input.
             
             If the user is asking about available databases, tables, or schema information,
@@ -340,86 +308,53 @@ class CrewAITextToSQLPipeline:
             description="""
             Based on the query understanding, generate the appropriate SQL query.
             
-            CRITICAL: NEVER truncate, abbreviate, or modify string literals in any way.
-            Always keep quoted values EXACTLY as they appear in the original query, including
-            full product names, long text strings, and search terms. Even very long strings
-            must be preserved completely.
-            
             For standard database queries:
             - Include all necessary joins, filters, and aggregations
             - Ensure proper syntax and column references
-            - Preserve the EXACT text of string literals in WHERE clauses
             
-            For knowledge base queries for semantic similarity search, generate a query on knowledge base and 
-            put WHERE condition on "content" column.  
-            "content" column is the only column that is used for semantic search. 
+            For knowledge base queries for semantic similarity search, put WHERE condition on "content" column.  
+            This is the only column that is used for semantic search:
             - This is an example query for knowledge base search:
-              SELECT *
-              FROM knowledge_base_name
-              WHERE content = 'search_term' AND relevance_threshold=0.6 LIMIT 50;
-            
-            Note: In this example 'search_term' is the term that is extracted from the user input, and 
-            "knowledge_base_name" is the name of the knowledge base, and "relevance_threshold" is the 
-            relevance threshold for the semantic search and it should be between 0 and 1. and always should you "=" operator for it not 
-            "<=" or ">=" or ">" or "<". You can choose default value for relevance_threshold of 0.6 if not provided in the user query.
-            Validate your SQL with the check_sql tool before finalizing.
-
-            Also ensure you use single quotes (') not double quotes (") for string literals in SQL.
+              SELECT id, chunk_content, relevance, distance
+              FROM [knowledge_base_name]
+              WHERE content = "[search_term]" AND relevance_threshold=0.6 LIMIT 50;
             
             Validate your SQL with the check_sql tool before finalizing.
             """,
             agent=self.sql_generation_agent,
-            expected_output="A valid SQL query that addresses the user's question with exact string values preserved",
+            expected_output="A valid SQL query that addresses the user's question",
             context=[understand_task]
         )
         
         # Task 3: Execute SQL
         execute_sql_task = Task(
             description="""
-            Execute the EXACT SQL query using the execute_sql tool WITHOUT modifying it.
-            
-            IMPORTANT: 
-            - Never modify, truncate, or change the SQL query in any way
-            - Execute the exact query as provided, even if it contains very long string literals
-            - Preserve the complete structure and values of the original query
+            Execute the generated SQL query using the execute_sql tool.
             
             Capture and report any execution errors that occur.
-            Format the results in a clear, tabular format when possible.
-            
-            Do not simply return the raw ExecuteAnswer object - extract the data in a readable format.
-            If the results contain rows of data, present them in a clean table format.
+            Return the complete result set from the query.
             """,
             agent=self.sql_execution_agent,
-            expected_output="The complete, formatted results from executing the SQL query",
+            expected_output="The results from executing the SQL query",
             context=[generate_sql_task]
         )
         
         # Task 4: Validate Results
         validate_results_task = Task(
             description="""
-            Present the query results in a clear, readable format:
+            Examine the query results and present them to the user:
             
-            For normal database queries:
-            - Format as a clean table with headers
-            - Preserve all returned data exactly as received
-            
-            For knowledge base similarity searches:
-            - Show the ACTUAL retrieved content exactly as returned from the database
-            - NEVER EVER substitute with placeholder values like 'Content A', 'Meta A', etc.
-            - If you see actual content about "Kindle Voyage" or any other specific product, 
-              preserve it EXACTLY as received from the database
-            - DO NOT create fake/sample data under any circumstances
-            
-            CRITICAL WARNING: You must NEVER generate placeholder data or substitute real data with examples.
-            Using placeholders like "Content A" or "Meta A" is strictly prohibited and is considered a critical error.
+            1. Verify the results answer the original question
+            2. Format the results in a clear, readable way
+            3. Provide ONLY the final answer - DO NOT include any validation notes or analysis
+            4. DO NOT include any 'Validation Report', just present the information requested
             
             IMPORTANT: Your job is to format and present ONLY the final results.
-            DO NOT include any text about validation process or assessment.
-            NEVER use placeholder data - use EXACTLY what was returned by the execute_sql tool.
-            Just present the information directly without adding any commentary.
+            DO NOT include any text about your validation process or assessment.
+            Return ONLY the information the user asked for.
             """,
             agent=self.sql_validation_agent,
-            expected_output="The actual database query results with real data, exactly as returned from the database",
+            expected_output="The final answer to the user's question, without any validation details or analysis notes",
             context=[execute_sql_task]
         )
         
@@ -476,7 +411,7 @@ class CrewAIAgentManager:
         model: str = 'gpt-4o',
         prompt_template: str = None,
         verbose: bool = True,
-        max_tokens: int = 4000,
+        max_tokens: int = 200,
         api_key: str = None
     ) -> CrewAITextToSQLPipeline:
         """Create a CrewAI pipeline with the specified configuration.

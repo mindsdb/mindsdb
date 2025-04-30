@@ -8,7 +8,7 @@ from typing import Dict
 from mindsdb.utilities.config import Config
 from tests.utils.http_test_helpers import HTTPHelperMixin
 # TODO: Refactor common fixtures out of conftest.
-from tests.integration_tests.flows.conftest import config, mindsdb_app, config, temp_dir # noqa
+from tests.integration.flows.conftest import config, mindsdb_app, config, temp_dir # noqa
 
 # U by mindsdb_app fixture in conftest
 OVERRIDE_CONFIG = {

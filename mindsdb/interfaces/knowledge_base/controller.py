@@ -27,7 +27,7 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
 from mindsdb.integrations.utilities.rag.config_loader import load_rag_config
 from mindsdb.integrations.utilities.handler_utils import get_api_key
-from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args, row_to_document
+from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
 
 from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS
 from mindsdb.interfaces.agents.langchain_agent import create_chat_model, get_llm_provider
@@ -42,7 +42,7 @@ from mindsdb.utilities.context import context as ctx
 
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.utilities import log
-from mindsdb.integrations.utilities.rag.rerankers.reranker_compressor import LLMReranker
+from mindsdb.integrations.utilities.rag.rerankers.base_reranker import BaseLLMReranker
 
 logger = log.getLogger(__name__)
 
@@ -102,7 +102,7 @@ def get_reranking_model_from_params(reranking_model_params: dict):
         params_copy["api_key"] = get_api_key(provider, params_copy, strict=False)
     params_copy['model'] = params_copy.pop('model_name', None)
 
-    return LLMReranker(**params_copy)
+    return BaseLLMReranker(**params_copy)
 
 
 class KnowledgeBaseTable:
@@ -670,48 +670,34 @@ class KnowledgeBaseTable:
         if df.empty:
             return pd.DataFrame([], columns=[TableField.EMBEDDINGS.value])
 
-        # keep only content
-        df = df[[TableField.CONTENT.value]]
-
         model_id = self._kb.embedding_model_id
-        embedding_model_params = get_model_params(self._kb.params.get('embedding_model', {}), 'default_embedding_model')
-        if model_id:
-            # get the input columns
-            model_rec = db.session.query(db.Predictor).filter_by(id=model_id).first()
 
-            assert model_rec is not None, f"Model not found: {model_id}"
-            model_project = db.session.query(db.Project).filter_by(id=model_rec.project_id).first()
+        # get the input columns
+        model_rec = db.session.query(db.Predictor).filter_by(id=model_id).first()
 
-            project_datanode = self.session.datahub.get(model_project.name)
+        assert model_rec is not None, f"Model not found: {model_id}"
+        model_project = db.session.query(db.Project).filter_by(id=model_rec.project_id).first()
 
-            model_using = model_rec.learn_args.get('using', {})
-            input_col = model_using.get('question_column')
-            if input_col is None:
-                input_col = model_using.get('input_column')
+        project_datanode = self.session.datahub.get(model_project.name)
 
-            if input_col is not None and input_col != TableField.CONTENT.value:
-                df = df.rename(columns={TableField.CONTENT.value: input_col})
+        model_using = model_rec.learn_args.get('using', {})
+        input_col = model_using.get('question_column')
+        if input_col is None:
+            input_col = model_using.get('input_column')
 
-            df_out = project_datanode.predict(
-                model_name=model_rec.name,
-                df=df,
-                params=self.model_params
-            )
+        if input_col is not None and input_col != TableField.CONTENT.value:
+            df = df.rename(columns={TableField.CONTENT.value: input_col})
 
-            target = model_rec.to_predict[0]
-            if target != TableField.EMBEDDINGS.value:
-                # adapt output for vectordb
-                df_out = df_out.rename(columns={target: TableField.EMBEDDINGS.value})
+        df_out = project_datanode.predict(
+            model_name=model_rec.name,
+            df=df,
+            params=self.model_params
+        )
 
-        elif embedding_model_params:
-            embedding_model = get_embedding_model_from_params(embedding_model_params)
-
-            df_texts = df.apply(row_to_document, axis=1)
-            embeddings = embedding_model.embed_documents(df_texts.tolist())
-            df_out = df.copy().assign(**{TableField.EMBEDDINGS.value: embeddings})
-
-        else:
-            raise ValueError("No embedding model found for the knowledge base.")
+        target = model_rec.to_predict[0]
+        if target != TableField.EMBEDDINGS.value:
+            # adapt output for vectordb
+            df_out = df_out.rename(columns={target: TableField.EMBEDDINGS.value})
 
         df_out = df_out[[TableField.EMBEDDINGS.value]]
 
@@ -884,35 +870,33 @@ class KnowledgeBaseController:
                 return kb
             raise EntityExistsError("Knowledge base already exists", name)
 
-        embedding_model_params = get_model_params(params.get('embedding_model', {}), 'default_embedding_model')
-        reranking_model_params = get_model_params(params.get('reranking_model', {}), 'default_llm')
+        embedding_params = copy.deepcopy(config.get('default_embedding_model', {}))
 
+        model_name = None
+        model_project = project
         if embedding_model:
             model_name = embedding_model.parts[-1]
+            if len(embedding_model.parts) > 1:
+                model_project = self.session.database_controller.get_project(embedding_model.parts[-2])
 
-        elif embedding_model_params:
-            # Get embedding model from params.
-            # This is called here to check validaity of the parameters.
-            get_embedding_model_from_params(
-                embedding_model_params
-            )
+        elif 'embedding_model' in params:
+            if isinstance(params['embedding_model'], str):
+                # it is model name
+                model_name = params['embedding_model']
+            else:
+                # it is params for model
+                embedding_params.update(params['embedding_model'])
 
-        else:
-            model_name = self._get_default_embedding_model(
+        if model_name is None:
+            model_name = self._create_embedding_model(
                 project.name,
-                params=params
+                params=embedding_params,
+                kb_name=name,
             )
-            params['default_embedding_model'] = model_name
-
-        model_project = None
-        if embedding_model is not None and len(embedding_model.parts) > 1:
-            # model project is set
-            model_project = self.session.database_controller.get_project(embedding_model.parts[-2])
-        elif not embedding_model_params:
-            model_project = project
+            params['created_embedding_model'] = model_name
 
         embedding_model_id = None
-        if model_project:
+        if model_name is not None:
             model = self.session.model_controller.get_model(
                 name=model_name,
                 project_name=model_project.name
@@ -920,6 +904,7 @@ class KnowledgeBaseController:
             model_record = db.Predictor.query.get(model['id'])
             embedding_model_id = model_record.id
 
+        reranking_model_params = get_model_params(params.get('reranking_model', {}), 'default_llm')
         if reranking_model_params:
             # Get reranking model from params.
             # This is called here to check validaity of the parameters.
@@ -1004,38 +989,52 @@ class KnowledgeBaseController:
         self.session.integration_controller.add(vector_store_name, engine, connection_args)
         return vector_store_name
 
-    def _get_default_embedding_model(self, project_name, engine="langchain_embedding", params: dict = None):
+    def _create_embedding_model(self, project_name, engine="openai", params: dict = None, kb_name=''):
         """create a default embedding model for knowledge base, if not specified"""
-        model_name = "kb_default_embedding_model"
+        model_name = f"kb_embedding_{kb_name}"
 
-        # check exists
+        # drop if exists - parameters can be different
         try:
             model = self.session.model_controller.get_model(model_name, project_name=project_name)
             if model is not None:
-                return model_name
+                self.session.model_controller.delete_model(model_name, project_name)
         except PredictorRecordNotFound:
             pass
 
-        using_args = {
-            'engine': engine
-        }
-        if engine == 'langchain_embedding':
-            # Use default embeddings.
-            using_args['class'] = 'openai'
+        if 'provider' in params:
+            engine = params.pop('provider').lower()
+
+        if engine == 'azure_openai':
+            engine = 'openai'
+            params['provider'] = 'azure'
+
+        if engine == 'openai':
+            if 'question_column' not in params:
+                params['question_column'] = 'content'
+            if 'api_key' in params:
+                params[f"{engine}_api_key"] = params.pop('api_key')
+            if 'base_url' in params:
+                params['api_base'] = params.pop('base_url')
+
+        params['engine'] = engine
+        params['join_learn_process'] = True
+        params['mode'] = 'embedding'
 
         # Include API key if provided.
-        using_args.update({k: v for k, v in params.items() if 'api_key' in k})
         statement = CreatePredictor(
             name=Identifier(parts=[project_name, model_name]),
-            using=using_args,
+            using=params,
             targets=[
                 Identifier(parts=[TableField.EMBEDDINGS.value])
             ]
         )
 
         command_executor = ExecuteCommands(self.session)
-        command_executor.answer_create_predictor(statement, project_name)
-
+        resp = command_executor.answer_create_predictor(statement, project_name)
+        # check model status
+        record = resp.data.records[0]
+        if record['STATUS'] == 'error':
+            raise ValueError('Embedding model error:' + record['ERROR'])
         return model_name
 
     def delete(self, name: str, project_name: int, if_exists: bool = False) -> None:
@@ -1069,9 +1068,9 @@ class KnowledgeBaseController:
                 self.session.integration_controller.delete(kb.params['default_vector_storage'])
             except EntityNotExistsError:
                 pass
-        if 'default_embedding_model' in kb.params:
+        if 'created_embedding_model' in kb.params:
             try:
-                self.session.model_controller.delete_model(kb.params['default_embedding_model'], project_name)
+                self.session.model_controller.delete_model(kb.params['created_embedding_model'], project_name)
             except EntityNotExistsError:
                 pass
 

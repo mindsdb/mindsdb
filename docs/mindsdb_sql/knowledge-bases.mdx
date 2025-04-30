@@ -3,63 +3,163 @@ title: Knowledge Base
 sidebarTitle: Knowledge Bases
 ---
 
-A knowledge base is an advanced system designed to go beyond traditional data storage. Its components include embedding and reranking models and a vector store.
+A knowledge base is an advanced system that organizes information based on semantic meaning rather than simple keyword matching. It integrates embedding models, reranking models, and vector stores to enable context-aware data retrieval.
 
-<p align="center">
-  <img src="https://docs.google.com/drawings/d/e/2PACX-1vTVmUqhoFXLF3ncL0NWwgdPjI7Hj19f-5xU8ED31ntYvlsTM3poM9zZKwcrEwzvxJrOhl2raIFKWlsp/pub?w=1342&h=681" />
-</p>
+By performing semantic reasoning across multiple data points, a knowledge base delivers deeper insights and more accurate responses, making it a powerful tool for intelligent data access.
 
-It intelligently organizes information in semantically meaningful ways, allowing for context-aware retrieval based on meaning rather than just keywords. With the ability to perform semantic reasoning across multiple pieces of information, it delivers deeper insights and more accurate responses.
-
-## Create a Knowledge Base
+## `CREATE KNOWLEDGE_BASE` Syntax
 
 Here is the syntax for creating a knowledge base:
-
-<Note>
-MindsDB stores objects, such as models or knowledge bases, inside projects. Learn more about [projects here](/mindsdb_sql/sql/create/project).
-</Note>
 
 ```sql
 CREATE KNOWLEDGE_BASE my_kb
 USING
     embedding_model = {
-       "provider": "openai", -- choose one of openai or azure_openai
+       "provider": "openai",
        "model_name" : "text-embedding-3-large",
-       "base_url": "https://ai-6689.openai.azure.com/", -- required only when provider = azure_openai
-       "api_key": "sk-..."  -- optional, default from env variable
-       "api_version": "2024-02-01" -- required only when provider = azure_openai
+       "api_key": "sk-..."
     },
     reranking_model = {
-       "provider": "openai", -- choose one of openai or azure_openai
+       "provider": "openai",
        "model_name": "gpt-4o",
-       "base_url": "https://ai-6689.openai.azure.com/", -- required only when provider = azure_openai
-       "api_key": "sk-..."  -- optional, default from env variable
-       "api_version": "2024-02-01" -- required only when provider = azure_openai
+       "api_key": "sk-..."
     },
-    storage = my_vector_store.storage_table, -- optional, default ChromaDB
-    metadata_columns = ['date', 'creator', ...], -- optional
-    content_columns = ['review', 'content', ...], -- optional, default content
-    id_column = 'id'; -- optional
+    storage = my_vector_store.storage_table,
+    metadata_columns = ['date', 'creator', ...],
+    content_columns = ['review', 'content', ...],
+    id_column = 'id';
 ```
 
 Upon execution, it registers `my_kb` and associates the specified models and storage.
 
-The following is an explanation of the syntax and parameters:
+`my_kb` is a unique identifier of the knowledge base within MindsDB.
 
-* `embedding_model` stores specifications of the embedding model to be used.
-      * `provider` defines the model provider. Currently, the supported providers include OpenAI and OpenAI via Azure.
-      * `model_name` defines the embedding model name as specified by the provider. Users can choose one of the [OpenAI embedding models](https://platform.openai.com/docs/guides/embeddings/embedding-models#embedding-models).
-      * `base_url` is the root URL used to send API requests. It is required when using `azure_openai` as the provider. Its default value is `https://api.openai.com/v1/`.
-      * `api_key` stores your OpenAI API key. Alternatively, you can use the `OPENAI_API_KEY` environment variable to store your OpenAI API key.
-      * `api_version` is required when using `azure_openai` as the provider.
+<Note>
+As MindsDB stores objects, such as models or knowledge bases, inside [projects](/mindsdb_sql/sql/create/project), you can create a knowledge base inside a custom project.
 
-* `reranking_model` is an optional parameter that stores specification of the reranking model to be used.
-      * `provider` defines the model provider. Currently, the supported providers include OpenAI and OpenAI via Azure.
-      * `model_name` defines the reranking model name as specified by the provider. Users can choose one of the [OpenAI chat models](https://platform.openai.com/docs/models).
-      * `base_url` is the root URL used to send API requests. It is required when using `azure_openai` as the provider. Its default value is `https://api.openai.com/v1/`.
-      * `api_key` stores your OpenAI API key. Alternatively, you can use the `OPENAI_API_KEY` environment variable to store your OpenAI API key.
-      * `api_version` is required when using `azure_openai` as the provider.
-      * `method` defines the method used to calculate the relevance of the output rows. The available options include `multi-class` and `binary`. It defaults to `multi-class`.
+```sql
+CREATE PROJECT my_project;
+
+CREATE KNOWLEDGE_BASE my_project.my_kb
+USING
+    ...
+```
+</Note>
+
+### `embedding_model`
+
+The embedding model is a required component of the knowledge base. It stores specifications of the embedding model to be used.
+
+Users can define the embedding model choosing one of the following options.
+
+**Option 1.** Use the `embedding_model` parameter to define the specification.
+
+```sql
+CREATE KNOWLEDGE_BASE my_kb
+USING
+...
+    embedding_model = {
+       "provider": "openai_azure",
+       "model_name" : "text-embedding-3-large",
+       "api_key": "sk-abc123",
+       "base_url": "https://ai-6689.openai.azure.com/",
+       "api_version": "2024-02-01"
+    },
+...
+```
+
+**Option 2.** Define the default embedding model in the [MindsDB configuration file](/setup/custom-config).
+
+<Note>
+Note that if you define `default_embedding_model` in the configuration file, you do not need to provide the `embedding_model` parameter when creating a knowledge base. If provide both, then the values from the `embedding_model` parameter are used.
+</Note>
+
+```bash
+"default_embedding_model": {
+    "provider": "openai_azure",
+    "model_name" : "text-embedding-3-large",
+    "api_key": "sk-abc123",
+    "base_url": "https://ai-6689.openai.azure.com/",
+    "api_version": "2024-02-01"
+}
+```
+
+The embedding model specification includes:
+
+* `provider`
+It is a required parameter. It defines the model provider. Currently, the supported providers include OpenAI (`openai`) and OpenAI via Azure (`azure_openai`).
+
+* `model_name`
+It is a required parameter. It defines the embedding model name as specified by the provider. Users can choose one of the [OpenAI embedding models](https://platform.openai.com/docs/guides/embeddings/embedding-models#embedding-models).
+
+* `api_key`
+The API key is required to access the embedding model assigned to a knowledge base. Users can provide it either in this `api_key` parameter, or in the `OPENAI_API_KEY` environment variable.
+
+* `base_url`
+It is an optional parameter, which defaults to `https://api.openai.com/v1/`. It is a required parameter when using the `azure_openai` provider. It is the root URL used to send API requests.
+
+* `api_version`
+It is an optional parameter. It is a required parameter when using the `azure_openai` provider. It defines the API version.
+
+### `reranking_model`
+
+The reranking model is an optional component of the knowledge base. It stores specifications of the reranking model to be used.
+
+Users can define the reranking model choosing one of the following options.
+
+**Option 1.** Use the `reranking_model` parameter to define the specification.
+
+```sql
+CREATE KNOWLEDGE_BASE my_kb
+USING
+...
+    reranking_model = {
+       "provider": "openai_azure",
+       "model_name" : "gpt-4o",
+       "api_key": "sk-abc123",
+       "base_url": "https://ai-6689.openai.azure.com/",
+       "api_version": "2024-02-01",
+       "method": "multi-class"
+    },
+...
+```
+
+**Option 2.** Define the default reranking model in the [MindsDB configuration file](/setup/custom-config).
+
+<Note>
+Note that if you define `default_llm` in the configuration file, you do not need to provide the `reranking_model` parameter when creating a knowledge base. If provide both, then the values from the `reranking_model` parameter are used.
+</Note>
+
+```bash
+"default_llm": {
+    "provider": "openai_azure",
+    "model_name" : "gpt-4o",
+    "api_key": "sk-abc123",
+    "base_url": "https://ai-6689.openai.azure.com/",
+    "api_version": "2024-02-01",
+    "method": "multi-class"
+}
+```
+
+The reranking model specification includes:
+
+* `provider`
+It is a required parameter. It defines the model provider. Currently, the supported providers include OpenAI (`openai`) and OpenAI via Azure (`azure_openai`).
+
+* `model_name`
+It is a required parameter. It defines the embedding model name as specified by the provider. Users can choose one of the [OpenAI chat models](https://platform.openai.com/docs/models).
+
+* `api_key`
+The API key is required to access the reranking model assigned to a knowledge base. Users can provide it either in this `api_key` parameter, or in the `OPENAI_API_KEY` environment variable.
+
+* `base_url`
+It is an optional parameter, which defaults to `https://api.openai.com/v1/`. It is a required parameter when using the `azure_openai` provider. It is the root URL used to send API requests.
+
+* `api_version`
+It is an optional parameter. It is a required parameter when using the `azure_openai` provider. It defines the API version.
+
+* `method`
+It is an optional parameter. It defines the method used to calculate the relevance of the output rows. The available options include `multi-class` and `binary`. It defaults to `multi-class`.
 
 <Info>
 **Reranking Method**
@@ -76,24 +176,180 @@ The overall `relevance_score` of a document is calculated as the sum of each chu
 The `binary` reranking method simplifies classification by determining whether a document is relevant or not, without intermediate relevance levels. With this method, the overall `relevance_score` of a document is calculated based on the model log probability.
 </Info>
 
-* `storage` is an optional parameter. It assigns the name of the vector store created within MindsDB with the [`CREATE DATABASE` command](/mindsdb_sql/sql/create/database), which is either [PGVector](/integrations/vector-db-integrations/pgvector) or [ChromaDB](/integrations/vector-db-integrations/chromadb), followed by a table name where the knowledge base stores its content; note that this table is created within the vector store automatically. If not provided, the system creates the default ChromaDB vector database called `<kb_name>_chromadb` with the default tables called `default_collection` that stores the embedded data.
+### `storage`
 
-* `metadata_columns` provides the list of column names that will be used as the metadata of the knowledge base. Users can use these column names to insert them into the knowledge base and filter the search results by metadata. If not set, the metadata is not used.
+The vector store is a required component of the knowledge base. It stores data in the form of embeddings.
 
-* `content_columns` provides the list of column names that will be embedded as the content of the knowledge base. Users can use these column names to insert them into the knowledge base and filter the search results by content. If not set, the `content` column is used by default.
+It is optional for users to provide the `storage` parameter. If not provided, the default ChromaDB is created when creating a knowledge base.
 
-* `id_column` is the column name that will be used as the unique identifier by the knowledge base. If not set, the `id` column is used by default.
+In order to provide the storage vector database, it is required to connect it to MindsDB beforehand.
+
+Here is an example for [PGVector](/integrations/vector-db-integrations/pgvector).
+
+```sql
+CREATE DATABASE my_pgvector
+WITH ENGINE = 'pgvector',
+PARAMETERS = {
+    "host": "127.0.0.1",
+    "port": 5432,
+    "database": "postgres",
+    "user": "user",
+    "password": "password",
+    "distance": "cosine"
+    };
+
+CREATE KNOWLEDGE_BASE my_kb
+USING
+    ...
+    storage = my_pgvector.storage_table,
+    ...
+```
 
 <Info>
-When the `id_column` parameter is provided, the knowledge base uses this ID to identify rows from the source data.
-
-When the `id_column` is not provided, the knowledge base uses an auto-generated sequence of numbers to identify rows from the source data. Note that these auto-generated IDs are duplicated in the following cases:
-
-1. If the source data row is chunked into multiple chunks, then these rows in the knowledge base have the same auto-generated ID as they come from the same source data row.
-2. If the data from another data source is inserted, then the auto-generated sequence starts from zero again.
+Note that you do not need to have the `storage_table` created as it is created when creating a knowledge base.
 </Info>
 
-Get details about the knowledge base using the `DESCRIBE` command.
+The available options include either [PGVector](/integrations/vector-db-integrations/pgvector) or [ChromaDB](/integrations/vector-db-integrations/chromadb).
+
+If the `storage` parameter is not provided, the system creates the default ChromaDB vector database called `<kb_name>_chromadb` with the default table called `default_collection` that stores the embedded data.
+
+<Note>
+This default ChromaDB vector database is stored in MindsDB's storage. In order to define a different storage directory, create your own ChromaDB referring to [this documentation page](/integrations/vector-db-integrations/chromadb).
+</Note>
+
+### `metadata_columns`
+
+The data inserted into the knowledge base can be classified as metadata, which enables users to filter the search results using defined data fields.
+
+<Note>
+Note that source data column(s) included in `metadata_columns` cannot be used in `content_columns`, and vice versa.
+</Note>
+
+This parameter is an array of strings that lists column names from the source data to be used as metadata. If not provided, the metadata is not used.
+
+Here is an example of usage. A user wants to store the following data in a knowledge base.
+
+```sql
++----------+-------------------+------------------------+
+| order_id | product           | notes                  |
++----------+-------------------+------------------------+
+| A1B      | Wireless Mouse    | Request color: black   |
+| 3XZ      | Bluetooth Speaker | Gift wrap requested    |
+| Q7P      | Laptop Stand      | Prefer aluminum finish |
++----------+-------------------+------------------------+
+```
+
+<Tip>
+Go to the *Complete Example* section below to find out how to access this sample data.
+</Tip>
+
+The `product` column can be used as metadata to enable metadata filtering.
+
+```sql
+CREATE KNOWLEDGE_BASE my_kb
+USING
+    ...
+    metadata_columns = ['product'],
+    ...
+```
+
+### `content_columns`
+
+The data inserted into the knowledge base can be classified as content, which is embedded by the embedding model and stored in the underlying vector store.
+
+<Note>
+Note that source data column(s) included in `content_columns` cannot be used in `metadata_columns`, and vice versa.
+</Note>
+
+This parameter is an array of strings that lists column names from the source data to be used as content and processed into embeddings. If not provided, the `content` column is expected by the knowledge base by default.
+
+Here is an example of usage. A user wants to store the following data in a knowledge base.
+
+```sql
++----------+-------------------+------------------------+
+| order_id | product           | notes                  |
++----------+-------------------+------------------------+
+| A1B      | Wireless Mouse    | Request color: black   |
+| 3XZ      | Bluetooth Speaker | Gift wrap requested    |
+| Q7P      | Laptop Stand      | Prefer aluminum finish |
++----------+-------------------+------------------------+
+```
+
+<Tip>
+Go to the *Complete Example* section below to find out how to access this sample data.
+</Tip>
+
+The `notes` column can be used as content.
+
+```sql
+CREATE KNOWLEDGE_BASE my_kb
+USING
+    ...
+    content_columns = ['notes'],
+    ...
+```
+
+### `id_column`
+
+The data inserted into the knowledge base can be classified as ID, which is a column in the source data that uniquely identifies each row.
+
+It is mandatory for users to provide the `id_column` parameter. This parameter is a string that contains the source data ID column name.
+
+Here is an example of usage. A user wants to store the following data in a knowledge base.
+
+```sql
++----------+-------------------+------------------------+
+| order_id | product           | notes                  |
++----------+-------------------+------------------------+
+| A1B      | Wireless Mouse    | Request color: black   |
+| 3XZ      | Bluetooth Speaker | Gift wrap requested    |
+| Q7P      | Laptop Stand      | Prefer aluminum finish |
++----------+-------------------+------------------------+
+```
+
+<Tip>
+Go to the *Complete Example* section below to find out how to access this sample data.
+</Tip>
+
+The `order_id` column can be used as ID.
+
+```sql
+CREATE KNOWLEDGE_BASE my_kb
+USING
+    ...
+    id_column = 'order_id',
+    ...
+```
+
+<Info>
+Note that if the source data row is chunked into multiple chunks by the knowledge base (that is, to optimize the storage), then these rows in the knowledge base have the same ID value that identifies chunks from one source data row.
+</Info>
+
+### Example
+
+Here is a sample knowledge base that will be used for examples in the following content.
+
+```sql
+CREATE KNOWLEDGE_BASE my_kb
+USING
+    embedding_model = {
+       "provider": "openai",
+       "model_name" : "text-embedding-3-large",
+       "api_key": "sk-abc123"
+    },
+    reranking_model = {
+       "provider": "openai",
+       "model_name": "gpt-4o",
+       "api_key": "sk-abc123"
+    },
+    metadata_columns = ['product'],
+    content_columns = ['notes'],
+    id_column = 'order_id';
+```
+
+## `DESCRIBE KNOWLEDGE_BASE` Syntax
+
+Users can get details about the knowledge base using the `DESCRIBE KNOWLEDGE_BASE` command.
 
 ```sql
 DESCRIBE KNOWLEDGE_BASE my_kb;
@@ -102,109 +358,130 @@ DESCRIBE KNOWLEDGE_BASE my_kb;
 Here is the sample output:
 
 ```sql
-| NAME     | PROJECT | MODEL  | STORAGE                                | PARAMS                                                                                                                                                                                                                                           | INSERT_STARTED_AT | INSERT_FINISHED_AT | PROCESSED_ROWS | ERROR | QUERY_ID |
-|----------|---------|--------|----------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------|--------------------|----------------|-------|----------|
-| kb_testx | mindsdb | [NULL] | my_kb_chromadb.default_collection   | {"embedding_model": {"provider": "openai", "model_name": "text-embedding-ada-002", "api_key": "sk-xxx"}, "reranking_model": {"provider": "openai", "model_name": "gpt-4o", "api_key": "sk-xxx"}, "default_vector_storage": "my_kb_chromadb"} | [NULL]            | [NULL]             | [NULL]         | [NULL]| [NULL]   |
++---------+---------+--------+----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-------------------+--------------------+----------------+-------+----------+
+| NAME    | PROJECT | MODEL  | STORAGE                                | PARAMS                                                                                                                                                                                                                                       | INSERT_STARTED_AT | INSERT_FINISHED_AT | PROCESSED_ROWS | ERROR | QUERY_ID |
++---------+---------+--------+----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-------------------+--------------------+----------------+-------+----------+
+| my_kb   | mindsdb | [NULL] | my_kb_chromadb.default_collection      | {"embedding_model": {"provider": "openai", "model_name": "text-embedding-ada-002", "api_key": "sk-xxx"}, "reranking_model": {"provider": "openai", "model_name": "gpt-4o", "api_key": "sk-xxx"}, "default_vector_storage": "my_kb_chromadb"} | [NULL]            | [NULL]             | [NULL]         | [NULL]| [NULL]   |
++---------+---------+--------+----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-------------------+--------------------+----------------+-------+----------+
 ```
 
-## Insert into a Knowledge Base
+## `INSERT INTO` Syntax
 
-Here is the syntax for inserting into a knowledge base:
+Here is the syntax for inserting data into a knowledge base:
 
 ```sql
 INSERT INTO my_kb
-SELECT <id_col> AS id, <text_col> AS content 
-FROM <source_table>;
+    SELECT order_id, product, notes
+    FROM sample_data.orders;
 ```
 
 Upon execution, it inserts data into a knowledge base, using the embedding model to embed it into vectors before inserting into an underlying vector database.
 
-The following is an explanation of the syntax and parameters:
-
-* `my_kb` is a unique identifier of a knowledge base.
-* `<id_col>` is a column that contains unique identifiers of data. The knowledge base expects the `id` column name, unless specified differently in the `id_column` parameter when creating the knowledge base.
-* `<text_col>` is a column that contains the text content. The knowledge base expects the `content` column name, unless specified differently in the `content_columns` parameter when creating the knowledge base.
-
 <Note>
 Note that when inserting the same data into the knowledge base again, then no new rows are inserted, as the content already exists in the knowledge base.
-
-In order to update existing data in the knowledge base, insert data with the column ID that you want to update and the updated content.
 </Note>
 
-<Accordion title="Partitioning Queries for Better Performance">
+### Update Existing Data
 
-The following features are covered here:
+In order to update existing data in the knowledge base, insert data with the column ID that you want to update and the updated content.
 
-- Run the `INSERT INTO` query in partitions where a batch can be split into separate workers for improved performance.
-- Track progress of the query and resume or cancel ongoing queries.
-- When a query is finished, it is stored in the `information_schema.queries` table, which automatically removes entries older than one day.
-- Option to skip errors in partitions.
-
-**Examples of statements**
+Here is an example of usage. A knowledge base stores the following data.
 
 ```sql
--- Insert data from table into a knowledge base
-INSERT INTO my_kb 
-SELECT * 
-FROM source_database.source_table
-WHERE id = 3
-USING 
-    batch_size = 200,
-    track_column = id;
++----------+-------------------+------------------------+
+| order_id | product           | notes                  |
++----------+-------------------+------------------------+
+| A1B      | Wireless Mouse    | Request color: black   |
+| 3XZ      | Bluetooth Speaker | Gift wrap requested    |
+| Q7P      | Laptop Stand      | Prefer aluminum finish |
++----------+-------------------+------------------------+
+```
 
--- Insert predictions (made by joining a table with a model) into a knowledge base
+A user updated `Laptop Stand` to `Aluminum Laptop Stand`.
+
+```sql
++----------+-----------------------+------------------------+
+| order_id | product               | notes                  |
++----------+-----------------------+------------------------+
+| A1B      | Wireless Mouse        | Request color: black   |
+| 3XZ      | Bluetooth Speaker     | Gift wrap requested    |
+| Q7P      | Aluminum Laptop Stand | Prefer aluminum finish |
++----------+-----------------------+------------------------+
+```
+
+<Tip>
+Go to the *Complete Example* section below to find out how to access this sample data.
+</Tip>
+
+Here is how to propagate this change into the knowledge base.
+
+```sql
 INSERT INTO my_kb
-SELECT * 
-FROM source_database.source_table
-JOIN model_name -- model created within MindsDB with CREATE MODEL
-USING 
-    batch_size = 200,
-    track_column = id,
-    threads = true;
+    SELECT order_id, product, notes
+    FROM sample_data.orders
+    WHERE order_id = 'Q7P';
+```
 
--- Insert data from table into a knowledge base while skipping errors
-SELECT * 
-FROM source_database.source_table
-USING 
+The knowledge base matches the ID value to the existing one and updates the data if required.
+
+### Optimize Data Insertion
+
+In order to optimize the performance of data insertion into the knowledge base, users can set up partitions and threads to insert batches of data in parallel. This also enables tracking the progress of data insertion process including cancelling and resuming it if required.
+
+Here is an example.
+
+```sql
+INSERT INTO my_kb
+    SELECT order_id, product, notes
+    FROM sample_data.orders
+USING
     batch_size = 200,
-    track_column = id,
+    track_column = order_id,
     threads = 10,
     error = 'skip';
+```
 
--- Perform prediction in threads and return data 
-INSERT INTO my_kb
-SELECT * 
-FROM source_database.source_table
-JOIN model_name -- model created within MindsDB with CREATE MODEL
-USING 
-    batch_size = 200,
-    track_column = id,
-    threads = 10;
+The parameters include the following:
 
--- View queries in progress
+* `batch_size` defines the number of rows fetched per iteration to optimize data extraction from the source. It defaults to 1000.
+
+* `threads` defines threads for running partitions. Note that if the [ML task queue](/setup/custom-config#overview-of-config-parameters) is enabled, threads are used automatically. The available values for include:
+    * A number of threads to be used, for example, `threads = 10`,
+    * A boolean value that defines whether to enable threads, setting `threads = true`, or disable threads, setting `threads = false`.
+
+* `track_column` defines the column used for sorting data before partitioning.
+
+* `error` defines the error processing options. The available values include `raise`, used to raise errors as they come, or `skip`, used to subside errors. It defaults to `raise` if not provided.
+
+After executing the `INSERT INTO` statement with the above parameters, users can view the data insertion progress by querying the `information_schema.queries` table.
+
+```sql
 SELECT * FROM information_schema.queries;
+```
 
--- Resume queries using query ID
-SELECT query_resume(1);
+Users can cancel the data insertion process using the process ID from the `information_schema.queries` table.
 
--- Cancel queries using query ID
+```sql
 SELECT query_cancel(1);
 ```
 
-**Parameters for partitioning queries**
+Note that canceling the query will not remove the already inserted data.
 
-- **batch_size** - Number of rows fetched per iteration/batch (default: `1000`) to optimize data extraction from the source.
-- **threads** - Defines threads to run partitions in. Note that if the [ML task queue](/setup/custom-config#overview-of-config-parameters) is enabled, threads are automatically used for prediction. Allowed values for `threads` include:
-  - `int` - Number of threads.
-  - `true` - Auto-detect thread count.
-  - `false` - Disable threads, even if the ML task queue is enabled.
-- **track_column** - Column used for partitioning. The query is sorted by this column and limited by `batch_size`.
-- **error** - Defines the error processing options. The available values include `raise` (default) and `skip`.
-</Accordion>
+Users can resume the data insertion process using the process ID from the `information_schema.queries` table.
 
-<Accordion title="Underlying Vector Store">
+```sql
+SELECT query_resume(1);
+```
 
-Each knowledge base has its underlying vector store that store data inserted into the knowledge base in the form of embeddings.
+### Chunking Data
+
+Upon inserting data into the knowledge base, the data chunking is performed in order to optimize the storage and search of data.
+
+Each chunk is identified by its chunk ID of the following format: `<id>:<chunk_number>of<total_chunks>:<start_char_number>to<end_char_number>`.
+
+### Underlying Vector Store
+
+Each knowledge base has its underlying vector store that stores data inserted into the knowledge base in the form of embeddings.
 
 Users can query the underlying vector store as follows.
 
@@ -215,241 +492,311 @@ SELECT id, content, metadata, embeddings
 FROM <kb_name>_chromadb.storage_table;
 ```
 
-* KB with user-defined vector store (either ChromaDB or PGVector):
+* KB with user-defined vector store (either [PGVector](/integrations/vector-db-integrations/pgvector) or [ChromaDB](/integrations/vector-db-integrations/chromadb)):
 
 ```sql
 SELECT id, content, metadata, embeddings
 FROM <vector_store_connection_name>.<table_name>;
 ```
-</Accordion>
 
-<Accordion title="Examples">
+### Example
 
-Here are the usage examples:
-
-* Inserting into a knowledge base where the `content_columns` and `id_column` parameters were not specified:
+Here a sample knowledge base created in the previous **Example** section is inserted into.
 
 ```sql
 INSERT INTO my_kb
-SELECT book_id AS id, book_summary AS content 
-FROM my_books;
+    SELECT order_id, product, notes
+    FROM sample_data.orders;
 ```
 
-* Inserting into a knowledge base where the `content_columns` and `id_column` parameters were specified as follows:
+<Note>
+When inserting into a knowledge base where the `content_columns` parameter was not specified, the column storing content must be aliased `AS content` as below.
 
 ```sql
-content_columns = ["book_title", "book_summary"]
-id_column = "book_id"
+CREATE KNOWLEDGE_BASE my_kb
+USING
+    ...
+    id_column = 'order_id',
+    ...
 ```
 
 ```sql
 INSERT INTO my_kb
-SELECT book_id, book_title, book_summary 
-FROM my_books;
+    SELECT order_id, notes AS content 
+    FROM sample_data.orders;
 ```
-</Accordion>
+</Note>
 
-## Search a Knowledge Base
+## `SELECT FROM KB` Syntax
 
-### Semantic Search at the Document Level
+Knowledge bases provide an abstraction that enables users to see the stored data.
 
-KBs provide semantic search returning document-level relevance.
+Note that here a sample knowledge base created and inserted into in the previous **Example** sections is searched.
 
 ```sql
-SELECT id, relevance 
-FROM <kb_name> 
-WHERE content = '<query_text>' 
-AND relevance_threshold = 0.6 -- optional
-LIMIT <N>;
+SELECT *
+FROM my_kb;
 ```
 
-Upon execution, it performs the semantic search workflow (including embedding the query, searching vectors, and optionally reranking) and returns document identifiers and relevance scores.
+Here is the sample output:
 
-The following is an explanation of the syntax and parameters:
+```sql
++-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+| id  | chunk_id             | chunk_content           | metadata                                                                                                                                                                                            | distance           | relevance          |
++-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+| A1B | A1B_notes:1of1:0to20 | Request color: black    | {"chunk_index":0,"content_column":"notes","end_char":20,"original_doc_id":"A1B_notes","original_row_id":"A1B","product":"Wireless Mouse","source":"TextChunkingPreprocessor","start_char":0}        | 0.5743341242061104 | 0.5093188026135379 |
+| Q7P | Q7P_notes:1of1:0to22 | Prefer aluminum finish  | {"chunk_index":0,"content_column":"notes","end_char":22,"original_doc_id":"Q7P_notes","original_row_id":"Q7P","product":"Aluminum Laptop Stand","source":"TextChunkingPreprocessor","start_char":0} | 0.7744703514692067 | 0.2502580835880018 |
+| 3XZ | 3XZ_notes:1of1:0to19 | Gift wrap requested     | {"chunk_index":0,"content_column":"notes","end_char":19,"original_doc_id":"3XZ_notes","original_row_id":"3XZ","product":"Bluetooth Speaker","source":"TextChunkingPreprocessor","start_char":0}     | 0.8010851611432231 | 0.2500003885558766 |
++-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+```
 
-* `SELECT id, relevance` specifies that the unique document identifier and its calculated relevance score should be returned.
-* `<kb_name>` is a unique identifier of a knowledge base.
-* `WHERE content = '<query_text>'` triggers semantic search based on the meaning of `<query_text>`.
-* `AND relevance_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1. It defines the minimum relevance value for the data row to appear in the output. Its default value is 0.
-* `LIMIT <N>` restricts results to the top N most relevant documents. When using the semantic search (as opposed to metadata-only search), the default limit is 10 and the maximum limit is 100.
+### Data Stored in Knowledge Base
 
-<Accordion title="Relevance Threshold Usage">
-Note that providing the reranking model is optional. If provided, it uses an LLM to rerank the output based on relevance, or `relevance_threshold`.
+The following columns are stored in the knowledge base.
+
+`id`
+It stores values from the column defined in the `id_column` parameter when creating the knowledge base. These are the source data IDs.
+
+`chunk_id`
+Knowledge bases chunk the inserted data in order to fit the defined chunk size. If the chunking is performed, the following chunk ID format is used: `<id>:<chunk_number>of<total_chunks>:<start_char_number>to<end_char_number>`.
+
+`chunk_content`
+It stores values from the column(s) defined in the `content_columns` parameter when creating the knowledge base.
+
+`metadata`
+It stores the general metadata and the metadata defined in the `metadata_columns` parameter when creating the knowledge base.
+
+`distance`
+It stores the calculated distance between the chunk's content and the search phrase.
+
+`relevance`
+It stores the calculated relevance of the chunk as compared to the search phrase.
+
+<Note>
+Note that the calculation method of `relevance_threshold` differs as follows:
 
 - When the ranking model is provided, the default `relevance_threshold` is 0, unless defined otherwise in the `WHERE` clause.
-
 - When the reranking model is not provided and the `relevance_threshold` is not defined in the query, then no relevance filtering is applied and the output includes all rows matched based on the similarity and metadata search.
-
 - When the reranking model is not provided but the `relevance_threshold` is defined in the query, then the relevance is calculated based on the `distance` column (`1/(1+ distance)`) and the `relevance_threshold` value is compared with this relevance value to filter the output.
-</Accordion>
+</Note>
 
-Here are the conditions supported by the available vector stores:
+### Semantic Search
 
-| Handler  |  IN, NOT IN | LIKE, NOT LIKE | < and > | !=  |
-| -------- | ----------- | -------------- | ------- | --- |
-| PgVector | +           | +              | +       | +   |
-| ChromaDB | +           | -              | -       | +   |
-
-<Accordion title="Examples">
-
-Here are the usage examples:
-
-* Returning top k most relevant documents:
+Users can query a knowledge base using semantic search by providing the search phrase (called `content`) to be searched for.
 
 ```sql
-SELECT id, relevance 
-FROM my_kb 
-WHERE content = 'a novel about epic inter planetary intelligence' 
-AND relevance_threshold = 0.7
-LIMIT 10;
-```
-</Accordion>
-
-### Semantic Search at the Chunk Level
-
-KBs provide semantic search returning chunk-level details.
-
-```sql
-SELECT id, chunk_id, chunk_content, metadata, distance, relevance
-FROM <kb_name> 
-WHERE content = '<query_text>' 
-AND relevance_threshold = 0.6 -- optional
-LIMIT <N>;
-```
-
-Upon execution, it performs the semantic search workflow (including embedding the query, searching vectors, and optionally reranking) and returns details pertaining to the specific text chunks that matched the query most closely.
-
-The following is an explanation of the syntax and parameters:
-
-* `SELECT id, chunk_id, chunk_content, metadata, distance, relevance` specifies that the unique document identifier, chunk identifier, chunk content, metadata (if defined), distance, and relevance should be returned.
-* `<kb_name>` is a unique identifier of a knowledge base.
-* `WHERE content = '<query_text>'` triggers semantic search based on the meaning of `<query_text>`.
-* `AND relevance_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1. It defines the minimum relevance value for the data row to appear in the output. Its default value is 0.
-* `LIMIT <N>` restricts results to the top N most relevant documents. When using the semantic search (as opposed to metadata-only search), the default limit is 10 and the maximum limit is 100.
-
-<Accordion title="Examples">
-
-Here are the usage examples:
-
-* Returning top k most relevant chunks:
-
-```sql
-SELECT id, chunk_id, chunk_content, relevance 
-FROM my_kb 
-WHERE content = 'a novel about epic inter planetary intelligence' 
-AND relevance_threshold = 0.7
-LIMIT 10;
-```
-</Accordion>
-
-### Metadata Filtering with Semantic Search
-
-KBs combine semantic search with standard SQL filtering on metadata.
-
-```sql
-SELECT id, chunk_content, relevance 
-FROM my_kb 
-WHERE <metadata_colums> = '<metadata>' -- metadata filtering conditions
-AND content = '<query_text>' -- semantic search condition
-AND relevance_threshold = 0.6 -- optional
-LIMIT <N>;
-```
-
-Upon execution, it performs the conjunctive filtering, that is, results must satisfy both the metadata condition(s) and the semantic search condition.
-
-The following is an explanation of the syntax and parameters:
-
-* `SELECT id, chunk_content, relevance` specifies that the unique document identifier, chunk content, and the relevance score should be returned.
-* `<kb_name>` is a unique identifier of a knowledge base.
-* `WHERE <metadata_colums> = '<metadata>'` is the metadata filtering condition.
-* `WHERE content = '<query_text>'` is the semantic search condition.
-* `AND relevance_threshold = 0.6` is an optional filtering condition. It limits the output based on the relevance score and can have values between 0 and 1. It defines the minimum relevance value for the data row to appear in the output. Its default value is 0.
-* `LIMIT <N>` restricts results to the top N most relevant documents. When using the semantic search (as opposed to metadata-only search), the default limit is 10 and the maximum limit is 100.
-
-<Accordion title="Examples">
-
-Here are the usage examples:
-
-* Filtering results:
-
-```sql
-SELECT id, chunk_content, relevance 
+SELECT *
 FROM my_kb
-WHERE id LIKE 'fiction%' -- metadata filtering conditions
-AND content = 'a novel about ...' -- semantic search condition
-AND relevance_threshold = 0.6; -- optional
+WHERE content = 'color' 
 ```
-</Accordion>
 
-## `JOIN` Support
-
-KBs can be used in the standard SQL JOIN statements.
+Here is the output:
 
 ```sql
-SELECT t.id, t.title, kb.chunk_content, kb.relevance
-FROM <other_table> AS t
-JOIN <kb_name> AS kb 
-ON t.<key_col> = kb.id
-WHERE <table_filter_condition> -- filter on non-KB table
-AND kb.content = '<query_text>'; -- semantic search filter on a KB
++-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+| id  | chunk_id             | chunk_content           | metadata                                                                                                                                                                                            | distance           | relevance          |
++-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+| A1B | A1B_notes:1of1:0to20 | Request color: black    | {"chunk_index":0,"content_column":"notes","end_char":20,"original_doc_id":"A1B_notes","original_row_id":"A1B","product":"Wireless Mouse","source":"TextChunkingPreprocessor","start_char":0}        | 0.5743341242061104 | 0.5093188026135379 |
+| Q7P | Q7P_notes:1of1:0to22 | Prefer aluminum finish  | {"chunk_index":0,"content_column":"notes","end_char":22,"original_doc_id":"Q7P_notes","original_row_id":"Q7P","product":"Aluminum Laptop Stand","source":"TextChunkingPreprocessor","start_char":0} | 0.7744703514692067 | 0.2502580835880018 |
+| 3XZ | 3XZ_notes:1of1:0to19 | Gift wrap requested     | {"chunk_index":0,"content_column":"notes","end_char":19,"original_doc_id":"3XZ_notes","original_row_id":"3XZ","product":"Bluetooth Speaker","source":"TextChunkingPreprocessor","start_char":0}     | 0.8010851611432231 | 0.2500003885558766 |
++-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
 ```
 
-The following is an explanation of the syntax and parameters:
+Notice that the output is in this case the same as the one without specifying `content` in the `WHERE` clause. This is caused by the default `relevance_threshold` set to 0, which is its lowest value.
 
-* `SELECT t.id, t.title, kb.chunk_content, kb.relevance` specifies the columns selected from a table (`t`) and a knowledge base (`kb`).
-* `WHERE <table_filter_condition>` sets conditions on a table.
-* `AND kb.content = '<query_text>'` sets a semantic search condition on a knowledge base.
-
-<Accordion title="Examples">
-
-Here are the usage examples:
-
-* Joining a knowledge base with a data table:
+Users can limit the `relevance_threshold` in order to get only the most relevant results.
 
 ```sql
-SELECT b.id, b.title, kb.chunk_content, kb.relevance
-FROM books AS b
-LEFT JOIN my_kb AS kb 
-ON b.id = kb.id
-WHERE b.topic = 'fantasy'
-AND kb.content = 'a novel about benevolent ai';
+SELECT *
+FROM my_kb
+WHERE content = 'color'
+AND relevance_threshold = 0.5;
 ```
-</Accordion>
 
-## Delete from a Knowledge Base
+Here is the output:
+
+```sql
++-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+| id  | chunk_id             | chunk_content          | metadata                                                                                                                                                                                     | distance           | relevance          |
++-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+| A1B | A1B_notes:1of1:0to20 | Request color: black   | {"chunk_index":0,"content_column":"notes","end_char":20,"original_doc_id":"A1B_notes","original_row_id":"A1B","product":"Wireless Mouse","source":"TextChunkingPreprocessor","start_char":0} | 0.5743341242061104 | 0.5103766499957533 |
++-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+```
+
+By providing the `relevance_threshold` filter, the output is limited to only data with relevance score of the provided value or higher. The available value of `relevance_threshold` are between 0 and 1, and its default value is 0.
+
+Users can limit the number of rows returned.
+
+```sql
+SELECT *
+FROM my_kb
+WHERE content = 'color'
+LIMIT 2;
+```
+
+Here is the output:
+
+```sql
++-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+| id  | chunk_id             | chunk_content           | metadata                                                                                                                                                                                            | distance           | relevance          |
++-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+| A1B | A1B_notes:1of1:0to20 | Request color: black    | {"chunk_index":0,"content_column":"notes","end_char":20,"original_doc_id":"A1B_notes","original_row_id":"A1B","product":"Wireless Mouse","source":"TextChunkingPreprocessor","start_char":0}        | 0.5743341242061104 | 0.5093188026135379 |
+| Q7P | Q7P_notes:1of1:0to22 | Prefer aluminum finish  | {"chunk_index":0,"content_column":"notes","end_char":22,"original_doc_id":"Q7P_notes","original_row_id":"Q7P","product":"Aluminum Laptop Stand","source":"TextChunkingPreprocessor","start_char":0} | 0.7744703514692067 | 0.2502580835880018 |
++-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+```
+
+### Metadata Filtering
+
+Besides semantic search features, knowledge bases enable users to filter the result set by the defined metadata.
+
+```sql
+SELECT *
+FROM my_kb
+WHERE product = 'Wireless Mouse';
+```
+
+Here is the output:
+
+```sql
++-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------+----------+
+| id  | chunk_id             | chunk_content          | metadata                                                                                                                                                                                     | relevance | distance |
++-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------+----------+
+| A1B | A1B_notes:1of1:0to20 | Request color: black   | {"chunk_index":0,"content_column":"notes","end_char":20,"original_doc_id":"A1B_notes","original_row_id":"A1B","product":"Wireless Mouse","source":"TextChunkingPreprocessor","start_char":0} | [NULL]    | [NULL]   |
++-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------+----------+
+```
+
+Note that when searching by metadata alone, the `relevance` column values are not calculated.
+
+Users can do both, filter by metadata and search by content.
+
+```sql
+SELECT *
+FROM my_kb
+WHERE product = 'Wireless Mouse'
+AND content = 'color'
+AND relevance_threshold = 0.5;
+```
+
+Here is the output:
+
+```sql
++-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+-------------------+
+| id  | chunk_id             | chunk_content          | metadata                                                                                                                                                                                     | distance           | relevance         |
++-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+-------------------+
+| A1B | A1B_notes:1of1:0to20 | Request color: black   | {"chunk_index":0,"content_column":"notes","end_char":20,"original_doc_id":"A1B_notes","original_row_id":"A1B","product":"Wireless Mouse","source":"TextChunkingPreprocessor","start_char":0} | 0.5743341242061104 | 0.504396172197583 |
++-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+-------------------+
+```
+
+## `JOIN` Syntax
+
+Knowledge bases can be used in the standard SQL JOIN statements.
+
+```sql
+SELECT t.order_id, t.product, t.notes, kb.chunk_content, kb.relevance
+FROM local_postgres.orders AS t
+JOIN my_kb AS kb 
+ON t.order_id = kb.id
+WHERE t.order_id = 'A1B'
+AND kb.content = 'color'
+AND kb.product = 'Wireless Mouse';
+```
+
+Here is the output:
+
+```sql
++----------+------------------+------------------------+------------------------+--------------------+
+| order_id | product          | notes                  | chunk_content          | relevance          |
++----------+------------------+------------------------+------------------------+--------------------+
+| A1B      | Wireless Mouse   | Request color: black   | Request color: black   | 0.5106591666649376 |
++----------+------------------+------------------------+------------------------+--------------------+
+```
+
+## `DELETE FROM` Syntax
 
 Here is the syntax for deleting from a knowledge base:
 
 ```sql
-DELETE FROM <kb_name> 
-WHERE <condition>;
+DELETE FROM my_kb
+WHERE id = 'A1B';
 ```
 
 Upon execution, it identifies matching records based on the user-defined condition and removes all associated data (metadata, content, chunks, embeddings) for matching records from the KB's storage.
 
-The following is an explanation of the syntax and parameters:
-
-* `<kb_name>` is a unique identifier of a knowledge base.
-* `<condition>` is a standard SQL WHERE clause condition operating on metadata columns.
-
-<Accordion title="Examples">
-
-Here are the usage examples:
-
-* Deleting from a knowledge base:
-
-```sql
-DELETE FROM my_kb 
-WHERE id IN ('scifi_001', 'scifi_0010', 'bus_89');
-```
-</Accordion>
-
-## Drop a Knowledge Base
+## `DROP KNOWLEDGE_BASE` Syntax
 
 Here is the syntax for deleting a knowledge base:
 
 ```sql
-DROP KNOWLEDGE_BASE <kb_name>;
+DROP KNOWLEDGE_BASE my_kb;
 ```
 
 Upon execution, it removes the knowledge base with its content.
+
+## Complete Example
+
+Here is the data that will be inserted into the knowledge base.
+
+```sql
++----------+-------------------+------------------------+
+| order_id | product           | notes                  |
++----------+-------------------+------------------------+
+| A1B      | Wireless Mouse    | Request color: black   |
+| 3XZ      | Bluetooth Speaker | Gift wrap requested    |
+| Q7P      | Laptop Stand      | Prefer aluminum finish |
++----------+-------------------+------------------------+
+```
+
+You can access this sample data as below:
+
+```sql
+CREATE DATABASE sample_data
+WITH ENGINE = 'postgres', 
+PARAMETERS = {
+    "user": "demo_user",
+    "password": "demo_password",
+    "host": "samples.mindsdb.com",
+    "port": "5432",
+    "database": "demo",
+    "schema": "demo_data"
+};
+
+SELECT * FROM sample_data.orders;
+```
+
+Here is how to create a knowledge base specifically for the data.
+
+```sql
+CREATE KNOWLEDGE_BASE my_kb
+USING
+    embedding_model = {
+       "provider": "openai",
+       "model_name" : "text-embedding-3-large",
+       "api_key": "sk-abc123"
+    },
+    reranking_model = {
+       "provider": "openai",
+       "model_name": "gpt-4o",
+       "api_key": "sk-abc123"
+    },
+    metadata_columns = ['product'],
+    content_columns = ['notes'],
+    id_column = 'order_id';
+```
+
+Here is how to insert the data.
+
+```sql
+INSERT INTO my_kb
+    SELECT order_id, product, notes
+    FROM sample_data.orders;
+```
+
+Here is how to query the knowledge base.
+
+```sql
+SELECT *
+FROM my_kb
+WHERE product = 'Wireless Mouse'
+AND content = 'color'
+AND relevance_threshold = 0.5;
+```

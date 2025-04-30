@@ -238,7 +238,7 @@ class IntegrationDataNode(DataNode):
         return hasattr(self.integration_handler, 'query_stream')
 
     @profiler.profile()
-    def query_stream(self, query: Optional[ASTNode] = None, session=None):
+    def query_stream(self, query: ASTNode, session=None):
         return self.integration_handler.query_stream(query)
 
     @profiler.profile()

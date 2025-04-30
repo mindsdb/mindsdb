@@ -212,6 +212,7 @@ def do_clean_process_marks():
         if not config.is_cloud and len(unexisting_pids) > 0:
             set_error_model_status_by_pids(unexisting_pids)
 
+
 def create_permanent_integrations():
     """
     Create permanent integrations, for now only the 'files' integration.

@@ -143,7 +143,8 @@ class Config:
             'auth': {
                 'http_auth_enabled': False,
                 "http_permanent_session_lifetime": datetime.timedelta(days=31),
-                "username": "mindsdb"
+                "username": "mindsdb",
+                "password": ""
             },
             "logging": {
                 "handlers": {

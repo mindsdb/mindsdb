@@ -15,7 +15,7 @@ class ToMarkdown:
     def __init__(self):
         """
         Initializes the ToMarkdown class.
-        """ 
+        """
 
     def call(self, file_path_or_url: str, **kwargs) -> str:
         """

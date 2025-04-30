@@ -74,6 +74,8 @@ jobs:
       group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-tests
       cancel-in-progress: true
     uses: ./.github/workflows/test_on_deploy.yml
+    with:
+      deploy-env: staging
     secrets: inherit
   
   slack_message:

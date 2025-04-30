@@ -1,4 +1,5 @@
 import os
+import copy
 
 from duckdb.typing import BIGINT, DOUBLE, VARCHAR, BLOB, BOOLEAN
 from mindsdb.interfaces.functions.to_markdown import ToMarkdown
@@ -164,26 +165,21 @@ class FunctionController(BYOMFunctionsController):
         if name in self.callbacks:
             return self.callbacks[name]
 
-        def callback(file_path_or_url, use_llm):
+        def callback(file_path_or_url):
             chat_model_params = self._parse_chat_model_params('TO_MARKDOWN_FUNCTION_')
 
-            llm_client = None
-            llm_model = None
-            try:
-                from mindsdb.interfaces.agents.langchain_agent import create_chat_model
-                llm = create_chat_model(chat_model_params)
-                llm_client = llm.root_client
-                llm_model = llm.model_name
-            except Exception:
-                pass
+            params_copy = copy.deepcopy(chat_model_params)
+            params_copy['model'] = params_copy.pop('model_name')
+            params_copy.pop('api_keys')
+            params_copy.pop('provider')
 
-            to_markdown = ToMarkdown(use_llm, llm_client, llm_model)
-            return to_markdown.call(file_path_or_url)
+            to_markdown = ToMarkdown()
+            return to_markdown.call(file_path_or_url, **params_copy)
 
         meta = {
             'name': name,
             'callback': callback,
-            'input_types': ['str', 'bool'],
+            'input_types': ['str'],
             'output_type': 'str'
         }
         self.callbacks[name] = meta

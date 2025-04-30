@@ -238,6 +238,7 @@ class TestMySqlApi(BaseStuff):
         assert location_column['CHARACTER_OCTET_LENGTH'] is not None
 
     # TODO fix these after float/bool type issue is fixed
+    # test
     # def test_train_model_from_files(self):
     #     df = pd.DataFrame({
     #         'x1': [x for x in range(100, 210)] + [x for x in range(100, 210)],

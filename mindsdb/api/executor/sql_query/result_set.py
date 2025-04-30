@@ -166,6 +166,24 @@ def _dump_str(var: Any) -> str | None:
     return str(var)
 
 
+def _dump_int_or_str(var: Any) -> str | None:
+    """Dumps a value to a string.
+    If the value is numeric - then cast it to int to avoid float representation.
+
+    Args:
+        var (Any): The value to dump.
+
+    Returns:
+        str | None: The string representation of the value or None if the value is None
+    """
+    if pd.isna(var):
+        return None
+    try:
+        return str(int(var))
+    except ValueError:
+        return str(var)
+
+
 def _dump_date(var: datetime.date | str | None) -> str | None:
     """Dumps a date value to a string.
 
@@ -304,6 +322,21 @@ def _handle_series_as_time(series: pd.Series) -> pd.Series:
         logger.info(f'Unexpected dtype: {series.dtype} for column with type TIME')
         series = series.apply(_dump_str)
     return series
+
+
+def _handle_series_as_int(series: pd.Series) -> pd.Series:
+    """Dump series to str(int) (or just str, of can't case to int). This need because of DataFrame store imput int as
+    float if dtype is object: pd.DataFrame([None, 1], dtype='object') -> [NaN, 1.0]
+
+    Args:
+        series (pd.Series): The series to handle
+
+    Returns:
+        pd.Series: The series with the int values as strings
+    """
+    if pd_types.is_integer_dtype(series.dtype):
+        return series.apply(_dump_str)
+    return series.apply(_dump_int_or_str)
 
 
 class ResultSet:
@@ -649,6 +682,11 @@ class ResultSet:
                     series = _handle_series_as_datetime(series)
                 case MYSQL_DATA_TYPE.TIME:
                     series = _handle_series_as_time(series)
+                case (
+                    MYSQL_DATA_TYPE.INT | MYSQL_DATA_TYPE.TINYINT | MYSQL_DATA_TYPE.SMALLINT
+                    | MYSQL_DATA_TYPE.MEDIUMINT | MYSQL_DATA_TYPE.BIGINT | MYSQL_DATA_TYPE.YEAR
+                ):
+                    series = _handle_series_as_int(series)
                 case _:
                     series = series.apply(_dump_str)
 

@@ -9,13 +9,13 @@
   },
   "favicon": "/favicon.png",
   "navigation": {
-    "tabs": [
+    "dropdowns": [
       {
-        "tab": "Documentation",
-        "dropdowns": [
+        "dropdown": "MindsDB",
+        "icon": "database",
+        "tabs": [
           {
-            "dropdown": "MindsDB",
-            "icon": "database",
+            "tab": "Documentation",
             "groups": [
               {
                 "group": "Get Started",
@@ -70,25 +70,7 @@
             ]
           },
           {
-            "dropdown": "Minds",
-            "icon": "brain",
-            "groups": [
-              {
-                "group": "Minds",
-                "pages": [
-                  "minds/test"
-                ]
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "Use Cases",
-        "dropdowns": [
-          {
-            "dropdown": "MindsDB",
-            "icon": "database",
+            "tab": "Use Cases",
             "groups": [
               {
                 "group": "Use Cases",
@@ -177,25 +159,7 @@
             ]
           },
           {
-            "dropdown": "Minds",
-            "icon": "brain",
-            "groups": [
-              {
-                "group": "Minds",
-                "pages": [
-                  "minds/test2"
-                ]
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "SQL API",
-        "dropdowns": [
-          {
-            "dropdown": "MindsDB",
-            "icon": "database",
+            "tab": "SQL API",
             "groups": [
               {
                 "group": "SQL API",
@@ -332,17 +296,7 @@
             ]
           },
           {
-            "dropdown": "Minds",
-            "icon": "brain"
-          }
-        ]
-      },
-      {
-        "tab": "SDKs",
-        "dropdowns": [
-          {
-            "dropdown": "MindsDB",
-            "icon": "database",
+            "tab": "SDKs",
             "groups": [
               {
                 "group": "SDKs",
@@ -607,17 +561,7 @@
             ]
           },
           {
-            "dropdown": "Minds",
-            "icon": "brain"
-          }
-        ]
-      },
-      {
-        "tab": "MCP API",
-        "dropdowns": [
-          {
-            "dropdown": "MindsDB",
-            "icon": "database",
+            "tab": "MCP API",
             "groups": [
               {
                 "group": "MCP API",
@@ -630,17 +574,7 @@
             ]
           },
           {
-            "dropdown": "Minds",
-            "icon": "brain"
-          }
-        ]
-      },
-      {
-        "tab": "REST API",
-        "dropdowns": [
-          {
-            "dropdown": "MindsDB",
-            "icon": "database",
+            "tab": "REST API",
             "groups": [
               {
                 "group": "REST API",
@@ -760,17 +694,7 @@
             ]
           },
           {
-            "dropdown": "Minds",
-            "icon": "brain"
-          }
-        ]
-      },
-      {
-        "tab": "Integrations",
-        "dropdowns": [
-          {
-            "dropdown": "MindsDB",
-            "icon": "database",
+            "tab": "Integrations",
             "groups": [
               {
                 "group": "Integrations",
@@ -1008,17 +932,7 @@
             ]
           },
           {
-            "dropdown": "Minds",
-            "icon": "brain"
-          }
-        ]
-      },
-      {
-        "tab": "Contribute",
-        "dropdowns": [
-          {
-            "dropdown": "MindsDB",
-            "icon": "database",
+            "tab": "Contribute",
             "groups": [
               {
                 "group": "Contribute",
@@ -1042,17 +956,7 @@
             ]
           },
           {
-            "dropdown": "Minds",
-            "icon": "brain"
-          }
-        ]
-      },
-      {
-        "tab": "FAQs",
-        "dropdowns": [
-          {
-            "dropdown": "MindsDB",
-            "icon": "database",
+            "tab": "FAQs",
             "groups": [
               {
                 "group": "FAQs",
@@ -1065,10 +969,34 @@
                 ]
               }
             ]
+          }
+        ]
+      },
+      {
+        "dropdown": "Minds",
+        "icon": "brain",
+        "tabs": [
+          {
+            "tab": "Minds Test",
+            "groups": [
+              {
+                "group": "Get Started",
+                "pages": [
+                  "minds/test"
+                ]
+              }
+            ]
           },
           {
-            "dropdown": "Minds",
-            "icon": "brain"
+            "tab": "Minds Test 2",
+            "groups": [
+              {
+                "group": "Get Started",
+                "pages": [
+                  "minds/test2"
+                ]
+              }
+            ]
           }
         ]
       }

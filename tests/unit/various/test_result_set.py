@@ -126,6 +126,7 @@ dtype_tests = [
 # In this case output mysql_type should be the same as the input mysql_type.
 column_types_tests = []
 
+
 def _map_test_case(test_cases: list[dict], column_types: list[MYSQL_DATA_TYPE]):
     """Make test cases for each column type. Some test cases may be used with group of similar column types
     (like INT, BIGINT, SMALLINT etc.), so we clone test cases for each column type.

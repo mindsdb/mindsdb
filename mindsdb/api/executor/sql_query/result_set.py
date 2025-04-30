@@ -195,7 +195,13 @@ def _dump_datetime(var: datetime.datetime | str | None) -> str | None:
     Returns:
         str | None: The string representation of the datetime value or None if the value is None
     """
-    if isinstance(var, (datetime.date, pd.Timestamp)):  # it is also datetime.datetime
+    if isinstance(var, datetime.date):  # it is also datetime.datetime
+        if hasattr(var, 'tzinfo') and var.tzinfo is not None:
+            return var.astimezone(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        return var.strftime("%Y-%m-%d %H:%M:%S")
+    elif isinstance(var, pd.Timestamp):
+        if var.tzinfo is not None:
+            return var.tz_convert('UTC').strftime("%Y-%m-%d %H:%M:%S")
         return var.strftime("%Y-%m-%d %H:%M:%S")
     elif isinstance(var, str):
         return var
@@ -225,7 +231,13 @@ def _dump_time(var: datetime.time | str | None) -> str | None:
             seconds = int(utc_seconds % 60)
             var = datetime.time(hours, minutes, seconds, var.microsecond)
         return var.strftime("%H:%M:%S")
-    elif isinstance(var, (datetime.datetime, pd.Timestamp)):
+    elif isinstance(var, datetime.datetime):
+        if var.tzinfo is not None:
+            return var.astimezone(datetime.timezone.utc).strftime("%H:%M:%S")
+        return var.strftime("%H:%M:%S")
+    elif isinstance(var, pd.Timestamp):
+        if var.tzinfo is not None:
+            return var.tz_convert('UTC').strftime("%H:%M:%S")
         return var.strftime("%H:%M:%S")
     elif isinstance(var, str):
         return var

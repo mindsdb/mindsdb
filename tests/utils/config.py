@@ -2,6 +2,12 @@ import os
 import random
 import json
 
+INTERNAL_URL = os.environ.get("INTERNAL_URL", "localhost")
+HTTP_PORT = "80" if "svc.cluster.local" in INTERNAL_URL else "47334"
+
+HTTP_API_ROOT = f"http://{INTERNAL_URL}:{HTTP_PORT}/api"
+MYSQL_API_ROOT = INTERNAL_URL
+
 
 def generate_random_db_name(base_name: str, min_value: int = 1000, max_value: int = 9999) -> str:
     """

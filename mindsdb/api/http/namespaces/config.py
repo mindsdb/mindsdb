@@ -27,11 +27,16 @@ class GetConfig(Resource):
     @api_endpoint_metrics('GET', '/config')
     def get(self):
         config = Config()
-        return {
+        resp = {
             'auth': {
                 'http_auth_enabled': config['auth']['http_auth_enabled']
             }
         }
+        for key in ['default_llm', 'default_embedding_model']:
+            value = config.get(key)
+            if value is not None:
+                resp[key] = value
+        return resp
 
     @ns_conf.doc('put_config')
     @api_endpoint_metrics('PUT', '/config')

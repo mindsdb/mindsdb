@@ -10,7 +10,7 @@ from mindsdb.utilities.ml_task_queue.const import TASKS_STREAM_NAME
 from tests.utils.http_test_helpers import HTTPHelperMixin
 from tests.utils.config import HTTP_API_ROOT
 
-REDIS_HOST = os.environ.get("INTERNAL_URL").replace("mindsdb", "redis-master")
+REDIS_HOST = os.environ.get("INTERNAL_URL", "").replace("mindsdb", "redis-master")
 
 
 @pytest.mark.skipif("localhost" in HTTP_API_ROOT or "127.0.0.1" in HTTP_API_ROOT, reason="Requires redis")

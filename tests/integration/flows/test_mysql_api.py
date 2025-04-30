@@ -41,7 +41,6 @@ class BaseStuff:
             port=47335,
             database='mindsdb',
             user='mindsdb',
-            password='mindsdb'
         )
         # Force mysql to use either the text or binary protocol
         cursor = cnx.cursor(prepared=self.use_binary)

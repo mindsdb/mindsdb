@@ -1,3 +1,5 @@
+import gc
+gc.disable()
 import os
 import sys
 import time
@@ -46,6 +48,8 @@ try:
     mp.set_start_method('spawn')
 except RuntimeError:
     logger.info('Torch multiprocessing context already set, ignoring...')
+
+gc.enable()
 
 _stop_event = threading.Event()
 

@@ -9,8 +9,6 @@ from typing import List
 import filetype
 import pandas as pd
 from charset_normalizer import from_bytes
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-import fitz  # pymupdf
 
 from mindsdb.utilities import log
 
@@ -298,6 +296,8 @@ class FileReader(FormatDetector):
 
     @staticmethod
     def read_txt(file_obj: BytesIO, name=None, **kwargs):
+        # the lib is heavy, so import it only when needed
+        from langchain_text_splitters import RecursiveCharacterTextSplitter
         file_obj = decode(file_obj)
 
         try:
@@ -326,6 +326,9 @@ class FileReader(FormatDetector):
 
     @staticmethod
     def read_pdf(file_obj: BytesIO, name=None, **kwargs):
+        # the libs are heavy, so import it only when needed
+        import fitz  # pymupdf
+        from langchain_text_splitters import RecursiveCharacterTextSplitter
 
         with fitz.open(stream=file_obj.read()) as pdf:  # open pdf
             text = chr(12).join([page.get_text() for page in pdf])

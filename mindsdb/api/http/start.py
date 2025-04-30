@@ -1,3 +1,6 @@
+import gc
+gc.disable()
+
 from flask import Flask
 from waitress import serve
 
@@ -7,6 +10,8 @@ from mindsdb.utilities import log
 from mindsdb.utilities.config import config
 from mindsdb.utilities.functions import init_lexer_parsers
 from mindsdb.integrations.libs.ml_exec_base import process_cache
+
+gc.enable()
 
 logger = log.getLogger(__name__)
 
@@ -26,7 +31,7 @@ def start(verbose, no_studio, app: Flask = None):
     process_cache.init()
 
     if server_type == "waitress":
-        logger.debug("Serving HTTP app with waitress..")
+        logger.debug("Serving HTTP app with waitress...")
         serve(
             app,
             host='*' if host in ('', '0.0.0.0') else host,
@@ -34,7 +39,7 @@ def start(verbose, no_studio, app: Flask = None):
             **server_config
         )
     elif server_type == "flask":
-        logger.debug("Serving HTTP app with flask..")
+        logger.debug("Serving HTTP app with flask...")
         # that will 'disable access' log in console
 
         app.run(debug=False, port=port, host=host, **server_config)

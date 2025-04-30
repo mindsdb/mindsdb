@@ -13,6 +13,7 @@ ignore =
   E721
 per-file-ignores =
   mindsdb/__main__.py: E402
+  mindsdb/api/http/start.py: E402
   mindsdb/api/mysql/mysql_proxy/libs/constants/mysql.py: E241
 exclude =
   __init__.py,

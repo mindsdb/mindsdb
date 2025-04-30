@@ -585,6 +585,8 @@ class ExecuteCommands:
             )
         elif statement_type is Insert:
             query = SQLQuery(statement, session=self.session, database=database_name)
+            if query.fetched_data.length() > 0:
+                return self.answer_select(query)
             return ExecuteAnswer(
                 affected_rows=query.fetched_data.affected_rows
             )
@@ -670,7 +672,7 @@ class ExecuteCommands:
         command = target.op.lower()
         args = [arg.value for arg in target.args if isinstance(arg, Constant)]
         if command == 'query_resume':
-            ret = SQLQuery(None, session=self.session, database=database_name, query_id=args[0])
+            ret = SQLQuery(None, session=self.session, query_id=args[0])
             return self.answer_select(ret)
 
         elif command == 'query_cancel':

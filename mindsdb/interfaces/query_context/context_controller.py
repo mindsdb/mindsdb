@@ -15,6 +15,7 @@ from mindsdb.utilities.cache import get_cache
 
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.config import config
 
 from .last_query import LastQuery
 
@@ -24,9 +25,12 @@ class RunningQuery:
       Query in progres
     """
 
+    OBJECT_TYPE = 'query'
+
     def __init__(self, record: db.Queries):
         self.record = record
         self.sql = record.sql
+        self.database = record.database or config.get('default_project')
 
     def get_partition_query(self, step_num: int, query: Select) -> Select:
         """
@@ -66,6 +70,44 @@ class RunningQuery:
             )
 
         return query
+
+    def get_info(self):
+        record = self.record
+        return {
+            'id': record.id,
+            'sql': record.sql,
+            'database': record.database,
+            'started_at': record.started_at,
+            'finished_at': record.finished_at,
+            'parameters': record.parameters,
+            'context': record.context,
+            'processed_rows': record.processed_rows,
+            'error': record.error,
+            'updated_at': record.updated_at,
+        }
+
+    def add_to_task(self):
+
+        task_record = db.Tasks(
+            company_id=ctx.company_id,
+            user_class=ctx.user_class,
+
+            object_type=self.OBJECT_TYPE,
+            object_id=self.record.id,
+        )
+        db.session.add(task_record)
+        db.session.commit()
+
+    def remove_from_task(self):
+        task = db.Tasks.query.filter(
+            db.Tasks.object_type == self.OBJECT_TYPE,
+            db.Tasks.object_id == self.record.id,
+            db.Tasks.company_id == ctx.company_id,
+        ).first()
+
+        if task is not None:
+            db.session.delete(task)
+            db.session.commit()
 
     def set_params(self, params: dict):
         """
@@ -126,14 +168,21 @@ class RunningQuery:
 
         db.session.commit()
 
-    def clear_error(self):
+    def mark_as_run(self):
         """
-            Reset error of the query in database
+            Mark query as running and reset error of the query
         """
+        if self.record.finished_at is not None:
+            raise RuntimeError('The query already finished')
 
-        if self.record.error is not None:
+        if self.record.started_at is None:
+            self.record.started_at = dt.datetime.now()
+            db.session.commit()
+        elif self.record.error is not None:
             self.record.error = None
             db.session.commit()
+        else:
+            raise RuntimeError('The query might be running already')
 
     def get_state(self) -> dict:
         """
@@ -448,7 +497,7 @@ class QueryContextController:
             raise RuntimeError(f'Query not found: {query_id}')
         return RunningQuery(rec)
 
-    def create_query(self, query: ASTNode) -> RunningQuery:
+    def create_query(self, query: ASTNode, database: str = None) -> RunningQuery:
         """
            Create a new running query from AST query
         """
@@ -463,6 +512,7 @@ class QueryContextController:
 
         rec = db.Queries(
             sql=str(query),
+            database=database,
             company_id=ctx.company_id,
         )
 
@@ -479,17 +529,7 @@ class QueryContextController:
             db.Queries.company_id == ctx.company_id
         )
         return [
-            {
-                'id': record.id,
-                'sql': record.sql,
-                'started_at': record.started_at,
-                'finished_at': record.finished_at,
-                'parameters': record.parameters,
-                'context': record.context,
-                'processed_rows': record.processed_rows,
-                'error': record.error,
-                'updated_at': record.updated_at,
-            }
+            RunningQuery(record).get_info()
             for record in query
         ]
 

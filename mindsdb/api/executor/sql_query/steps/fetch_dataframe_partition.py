@@ -217,7 +217,9 @@ class FetchDataframePartitionCall(BaseStepCall):
                         else:
                             executor.shutdown()
                             raise e
-
+                if self.sql_query.stop_event is not None and self.sql_query.stop_event.is_set():
+                    executor.shutdown()
+                    raise RuntimeError('Query is interrupted')
                 # TODO
                 #  1. get next batch without updating track_value:
                 #    it allows to keep queue_in filled with data between fetching batches

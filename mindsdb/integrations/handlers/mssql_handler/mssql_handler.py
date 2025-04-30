@@ -55,7 +55,14 @@ def _map_type(mssql_type_text: str) -> MYSQL_DATA_TYPE:
 
 
 def _make_table_response(result: list[dict[str, Any]], cursor: pymssql.Cursor) -> Response:
-    """
+    """Build response from result and cursor.
+
+    Args:
+        result (list[dict[str, Any]]): result of the query.
+        cursor (pymssql.Cursor): cursor object.
+
+    Returns:
+        Response: response object.
     """
     description: list[tuple[Any]] = cursor.description
     mysql_types: list[MYSQL_DATA_TYPE] = []

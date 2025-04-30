@@ -66,9 +66,15 @@ def _map_type(internal_type_name: str | None) -> MYSQL_DATA_TYPE:
 
 
 def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
-    # 1. cast response types to correct python's types
-    # 2. create DataFrame with correct columns and dtypes
-    # 3. add MySQL types to response
+    """Build response from result and cursor.
+
+    Args:
+        result (list[tuple[Any]]): result of the query.
+        cursor (psycopg.Cursor): cursor object.
+
+    Returns:
+        Response: response object.
+    """
     description: list[PGColumn] = cursor.description
     mysql_types: list[MYSQL_DATA_TYPE] = []
     for column in description:
@@ -82,7 +88,7 @@ def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
     df = DataFrame(
         result,
         columns=[column.name for column in description]
-        # TODO add dtypes, otherwise datetime.date is just object
+        # TODO will be good to add dtypes, otherwise datetime.date is just object
     )
 
     return Response(

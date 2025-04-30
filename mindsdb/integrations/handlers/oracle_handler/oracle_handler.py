@@ -59,9 +59,17 @@ def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
 
 
 def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
+    """Build response from result and cursor.
+
+    Args:
+        result (list[tuple[Any]]): result of the query.
+        cursor (oracledb.Cursor): cursor object.
+
+    Returns:
+        Response: response object.
+    """
     description: list[tuple[Any]] = cursor.description
     mysql_types: list[MYSQL_DATA_TYPE] = []
-
     for column in description:
         db_type = column[1]
         scale = column[5]

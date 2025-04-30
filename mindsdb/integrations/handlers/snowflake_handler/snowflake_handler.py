@@ -68,7 +68,16 @@ def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
 
 
 def _make_table_response(result: DataFrame, cursor: SnowflakeCursor) -> Response:
-    """Snowflake return only 'general' type in description, so look on result's DF types and use types from description only if DF type is 'object'
+    """Build response from result and cursor.
+    NOTE: Snowflake return only 'general' type in description, so look on result's
+          DF types and use types from description only if DF type is 'object'
+
+    Args:
+        result (DataFrame): result of the query.
+        cursor (SnowflakeCursor): cursor object.
+
+    Returns:
+        Response: response object.
     """
     description: list[ResultMetadata] = cursor.description
     mysql_types: list[MYSQL_DATA_TYPE] = []

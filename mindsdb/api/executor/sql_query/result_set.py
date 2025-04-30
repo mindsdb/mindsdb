@@ -26,9 +26,9 @@ class Column:
     alias: str | None = None
     table_name: str | None = None
     table_alias: str | None = None
-    type: MYSQL_DATA_TYPE | None = None   # replaced from dtypes
+    type: MYSQL_DATA_TYPE | None = None
     database: str | None = None
-    flags: dict = None  # TODO dump it to packet
+    flags: dict = None
     charset: str | None = None
 
     def __post_init__(self):
@@ -45,7 +45,15 @@ class Column:
         return name
 
     def to_mysql_column_dict(self, database_name: str | None = None) -> dict[str, str | int]:
-        # region infer type. Should not happen, but is it dtype of lightwood type?
+        """Convert Column object to dict with column properties.
+
+        Args:
+            database_name (str | None): Name of the database.
+
+        Returns:
+           dict[str, str | int]: Dictionary with mysql column properties.
+        """
+        # region infer type. Should not happen, but what if it is dtype of lightwood type?
         if isinstance(self.type, str):
             try:
                 self.type = MYSQL_DATA_TYPE(self.type)
@@ -85,8 +93,6 @@ class Column:
             "alias": self.alias or self.name,
             "size": type_properties.size,
             "flags": type_properties.flags,
-            # NOTE all work with text-type, but if/when wanted change types to real,
-            # it will need to check all types casts in BinaryResultsetRowPacket
             "type": type_properties.code,
         }
         return result
@@ -140,6 +146,7 @@ def rename_df_columns(df: pd.DataFrame, names: Optional[List] = None) -> None:
 
 def _dump_bool(var: Any) -> int | None:
     """Dumps a boolean value to an integer, as in MySQL boolean type is tinyint with values 0 and 1.
+    NOTE: None consider as True in dataframe with dtype=bool, we can't change it
 
     Args:
         var (Any): The boolean value to dump
@@ -699,7 +706,7 @@ class ResultSet:
             for column in self.columns
         ]
 
-        if infer_column_size and any(column_info.size is None for column_info in columns_dicts):
+        if infer_column_size and any(column_info.get('size') is None for column_info in columns_dicts):
             if len(df) == 0:
                 for column_info in columns_dicts:
                     if column_info['size'] is None:

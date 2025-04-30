@@ -36,9 +36,14 @@ def _map_type(mysql_type_text: str) -> MYSQL_DATA_TYPE:
 
 
 def _make_table_response(result: list[dict], cursor: mysql.connector.cursor.MySQLCursor) -> Response:
-    # NOTE: every text/blob sub-type in MySQL returns with c-type = 252, but with different flags
-    """
-    NOTE: TYNIINT types (tinint, bool, boolen) are not differ
+    """Build response from result and cursor.
+
+    Args:
+        result (list[dict]): result of the query.
+        cursor (mysql.connector.cursor.MySQLCursor): cursor object.
+
+    Returns:
+        Response: response object.
     """
     description = cursor.description
     reverse_c_type_map = {v.code: k for k, v in DATA_C_TYPE_MAP.items() if v.code != C_TYPES.MYSQL_TYPE_BLOB}

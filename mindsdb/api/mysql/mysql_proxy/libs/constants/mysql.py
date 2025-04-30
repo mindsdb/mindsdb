@@ -337,10 +337,15 @@ FIELD_FLAG = FIELD_FLAG()
 
 @dataclass(frozen=True)
 class CTypeProperties:
-    """
+    """Properties that describe int-representation of mysql column.
+
+    Attributes:
+        code (int): Code of the mysql type.
+        size (int | None): Size of the column. If not specified, then size is variable (text/blob types).
+        flags (list[int]): Flags of the mysql type.
     """
     code: int
-    size: int = None
+    size: int | None = None
     flags: list[int] = field(default_factory=list)
 
 

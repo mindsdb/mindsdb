@@ -336,7 +336,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if answer.type in (RESPONSE_TYPE.TABLE, RESPONSE_TYPE.COLUMNS_TABLE):
             packages = []
 
-            # answer.get_mysql_columns(database_name=?)
             if len(answer.result_set) > 1000:
                 # for big responses leverage pandas map function to convert data to packages
                 self.send_table_packets(result_set=answer.result_set)
@@ -391,7 +390,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     column_name=column_name,
                     column_type=column["type"],
                     charset=column.get("charset", CHARSET_NUMBERS["utf8_unicode_ci"]),
-                    max_length=column['size'],
+                    max_length=column["size"],
                     flags=flags,
                 )
             )
@@ -401,7 +400,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         data_frame, columns_dict = result_set.dump_to_mysql()
         data = data_frame.to_dict('split')['data']
 
-        # data = result_set.to_lists()
         # TODO remove columns order
         packets = [self.packet(ColumnCountPacket, count=len(columns_dict))]
         packets.extend(self._get_column_defenition_packets(columns_dict, data))
@@ -415,7 +413,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     def send_table_packets(self, result_set: ResultSet, status: int = 0):
         df, columns_dicts = result_set.dump_to_mysql(infer_column_size=True)
         # text protocol, convert all to string and serialize as packages
-        # df = result_set.get_raw_df()
 
         def apply_f(v):
             if v is None:
@@ -520,11 +517,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             resp = SQLAnswer(
                 resp_type=RESPONSE_TYPE.TABLE,
                 state_track=executor_answer.state_track,
-                # columns=self.to_mysql_columns(executor_answer.data.columns),
                 result_set=executor_answer.data,
                 status=executor.server_status,
                 affected_rows=executor_answer.affected_rows,
-                mysql_types=executor_answer.data.mysql_types  # не нужен
+                mysql_types=executor_answer.data.mysql_types
             )
 
         # Increment the counter and include metadata in attributes

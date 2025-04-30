@@ -1,15 +1,17 @@
 docker >= 5.0.3
-hierarchicalforecast
-netifaces >= 0.11.0
 openai<2.0.0,>=1.54.0
 pytest >= 8.3.5, < 9.0.0
 pytest-subtests
+pytest-xdist
+pytest-cov 
 lightwood==25.3.3.3  # This is required for tests/unit/test_executor.py. These tests need to be refactored.
 responses
-pytest-cov 
 coveralls
 locust
 ollama >= 0.1.7 # Langchain tests
 anthropic >= 0.21.3 # Langchain tests
 langchain-google-genai>=2.0.0 # Langchain tests
 mindsdb-sdk
+filelock==3.18.0
+mysql-connector-python==9.1.0
+walrus==0.9.3

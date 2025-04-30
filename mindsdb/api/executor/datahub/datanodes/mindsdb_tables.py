@@ -451,7 +451,8 @@ class ViewsTable(MdbTable):
 
 class QueriesTable(MdbTable):
     name = 'QUERIES'
-    columns = ["ID", "STARTED_AT", "FINISHED_AT", "PROCESSED_ROWS", "ERROR", "SQL", "PARAMETERS", "CONTEXT", "UPDATED_AT"]
+    columns = ["ID", "STARTED_AT", "FINISHED_AT", "PROCESSED_ROWS", "ERROR", "SQL", "DATABASE",
+               "PARAMETERS", "CONTEXT", "UPDATED_AT"]
 
     @classmethod
     def get_data(cls, **kwargs):

@@ -2,7 +2,7 @@ import requests
 import time
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
-from tests.integration_tests.flows.conftest import HTTP_API_ROOT
+from tests.utils.config import HTTP_API_ROOT
 
 
 class HTTPHelperMixin:
@@ -26,6 +26,7 @@ class HTTPHelperMixin:
 
         if headers is None:
             headers = {}
+
         if company_id is not None:
             headers['company-id'] = str(company_id)
 

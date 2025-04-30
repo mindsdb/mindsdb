@@ -7,10 +7,6 @@ on:
       - "docs/**"
       - "README.md"
 
-# UV will use the system python by default
-env:
-  UV_SYSTEM_PYTHON: 1
-
 
 jobs:
   # Check that the version defined in the github release is valid
@@ -155,4 +151,6 @@ jobs:
       group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-tests
       cancel-in-progress: true
     uses: ./.github/workflows/test_on_deploy.yml
+    with:
+      deploy-env: prod
     secrets: inherit

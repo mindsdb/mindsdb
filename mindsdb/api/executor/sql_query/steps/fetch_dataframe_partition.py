@@ -167,7 +167,7 @@ class FetchDataframePartitionCall(BaseStepCall):
             thread_count = get_max_thread_count()
 
         # 3 tasks per worker during 1 batch
-        partition_size = int(run_query.batch_size / thread_count / 3)
+        partition_size = int(run_query.batch_size / thread_count)
         # min partition size
         if partition_size < 10:
             partition_size = 10
@@ -192,5 +192,8 @@ class FetchDataframePartitionCall(BaseStepCall):
                         else:
                             executor.shutdown()
                             raise e
+                if self.sql_query.stop_event is not None and self.sql_query.stop_event.is_set():
+                    executor.shutdown()
+                    raise RuntimeError('Query is interrupted')
 
         return self.concat_results(results)

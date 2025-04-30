@@ -87,7 +87,7 @@ target "images" {
       },
       {
         name = "devel"
-        extras = ""
+        extras = ".[lightwood]"  # Required for running integration tests
         target = "dev"
       },
       {

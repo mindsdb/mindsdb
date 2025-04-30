@@ -18,6 +18,7 @@ class Context:
             'user_id': None,
             'company_id': None,
             'session_id': "",
+            'task_id': None,
             'user_class': 0,
             'profiling': {
                 'level': 0,

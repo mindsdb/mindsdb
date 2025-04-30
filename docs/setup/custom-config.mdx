@@ -286,13 +286,41 @@ If this parameter is left empty (`[]`), users can upload files from any URL with
 
 ```bash
     "web_crawling_allowed_sites": [],
-}
 ```
 
 The `web_crawling_allowed_sites` parameter restricts web crawling operations to a specified list of allowed IPs or web addresses. This ensures that the application only accesses pre-approved and safe URLs (`"web_crawling_allowed_sites": ["https://example.com", "https://api.mysite.com"]`).
 
 If left empty (`[]`), the application allows access to all URLs by default (marked with a wildcard in the open-source version).
 
+The `default_llm` parameter specifies the default LLM that will be used with [knowledge bases](/mindsdb_sql/knowledge-bases) and [agents](/mindsdb_sql/agents/agent).
+
+```bash
+    "default_llm": {
+        "provider": "openai_azure",
+        "model_name" : "gpt-4o",
+        "api_key": "sk-abc123",
+        "base_url": "https://ai-6689.openai.azure.com/",
+        "api_version": "2024-02-01",
+        "method": "multi-class"
+    }
+```
+
+Learn more about the parameters following the [documentation of the `reranking_model` of knowledge bases](/mindsdb_sql/knowledge-bases#reranking-model).
+
+The `default_embedding_model` parameter specifies the default embedding model used with knowledge bases.
+
+```bash
+    "default_embedding_model": {
+        "provider": "openai_azure",
+        "model_name" : "text-embedding-3-large",
+        "api_key": "sk-abc123",
+        "base_url": "https://ai-6689.openai.azure.com/",
+        "api_version": "2024-02-01"
+    }
+}
+```
+
+Learn more about the parameters following the [documentation of the `embedding_model` of knowledge bases](/mindsdb_sql/knowledge-bases#embedding-model).
 </Accordion>
 
 <Accordion title="Example of Extended Config File">

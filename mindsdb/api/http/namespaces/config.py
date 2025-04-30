@@ -27,33 +27,41 @@ class GetConfig(Resource):
     @api_endpoint_metrics('GET', '/config')
     def get(self):
         config = Config()
-        return {
+        resp = {
             'auth': {
                 'http_auth_enabled': config['auth']['http_auth_enabled']
             }
         }
+        for key in ['default_llm', 'default_embedding_model']:
+            value = config.get(key)
+            if value is not None:
+                resp[key] = value
+        return resp
 
     @ns_conf.doc('put_config')
     @api_endpoint_metrics('PUT', '/config')
     def put(self):
         data = request.json
 
-        unknown_argumens = list(set(data.keys()) - {'auth'})
-        if len(unknown_argumens) > 0:
+        allowed_arguments = {'auth', 'default_llm', 'default_embedding_model'}
+        unknown_arguments = list(set(data.keys()) - allowed_arguments)
+        if len(unknown_arguments) > 0:
             return http_error(
                 HTTPStatus.BAD_REQUEST, 'Wrong arguments',
-                f'Unknown argumens: {unknown_argumens}'
+                f'Unknown argumens: {unknown_arguments}'
             )
 
+        nested_keys_to_validate = {'auth'}
         for key in data.keys():
-            unknown_argumens = list(
-                set(data[key].keys()) - set(Config()[key].keys())
-            )
-            if len(unknown_argumens) > 0:
-                return http_error(
-                    HTTPStatus.BAD_REQUEST, 'Wrong arguments',
-                    f'Unknown argumens: {unknown_argumens}'
+            if key in nested_keys_to_validate:
+                unknown_arguments = list(
+                    set(data[key].keys()) - set(Config()[key].keys())
                 )
+                if len(unknown_arguments) > 0:
+                    return http_error(
+                        HTTPStatus.BAD_REQUEST, 'Wrong arguments',
+                        f'Unknown argumens: {unknown_arguments}'
+                    )
 
         Config().update(data)
 

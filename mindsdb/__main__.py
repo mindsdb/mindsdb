@@ -1,3 +1,5 @@
+import gc
+gc.disable()
 import os
 import sys
 import time
@@ -12,7 +14,6 @@ from enum import Enum
 from dataclasses import dataclass, field
 from typing import Callable, Optional, Tuple, List
 
-from packaging import version
 from sqlalchemy.orm.attributes import flag_modified
 
 from mindsdb.utilities import log
@@ -25,10 +26,9 @@ from mindsdb.utilities.config import config
 from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.utilities.starters import (
     start_http, start_mysql, start_mongo, start_postgres, start_ml_task_queue, start_scheduler, start_tasks,
-    start_mcp
+    start_mcp, start_litellm
 )
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
-from mindsdb.utilities.functions import get_versions_where_predictors_become_obsolete
 from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.interfaces.database.projects import ProjectController
 import mindsdb.interfaces.storage.db as db
@@ -47,6 +47,8 @@ try:
 except RuntimeError:
     logger.info('Torch multiprocessing context already set, ignoring...')
 
+gc.enable()
+
 _stop_event = threading.Event()
 
 
@@ -59,6 +61,7 @@ class TrunkProcessEnum(Enum):
     TASKS = 'tasks'
     ML_TASK_QUEUE = 'ml_task_queue'
     MCP = 'mcp'
+    LITELLM = 'litellm'
 
     @classmethod
     def _missing_(cls, value):
@@ -309,7 +312,7 @@ if __name__ == '__main__':
             if current_default_project.record.name != config.get('default_project'):
                 try:
                     project_controller.get(name=config.get('default_project'))
-                    log.critical(f"A project with the name '{config.get('default_project')}' already exists")
+                    logger.critical(f"A project with the name '{config.get('default_project')}' already exists")
                     sys.exit(1)
                 except EntityNotExistsError:
                     pass
@@ -320,7 +323,7 @@ if __name__ == '__main__':
             try:
                 project_controller.get(name=config.get('default_project'))
             except EntityNotExistsError:
-                log.critical(
+                logger.critical(
                     f"A project with the name '{config.get('default_project')}' does not exist"
                 )
                 raise
@@ -377,40 +380,13 @@ if __name__ == '__main__':
 
         integration_controller.create_permanent_integrations()
 
-        # region Mark old predictors as outdated
-        is_modified = False
-        predictor_records = (
-            db.session.query(db.Predictor)
-            .filter(db.Predictor.deleted_at.is_(None))
-            .all()
-        )
-        if len(predictor_records) > 0:
-            (
-                sucess,
-                compatible_versions,
-            ) = get_versions_where_predictors_become_obsolete()
-            if sucess is True:
-                compatible_versions = [version.parse(x) for x in compatible_versions]
-                mindsdb_version_parsed = version.parse(mindsdb_version)
-                compatible_versions = [x for x in compatible_versions if x <= mindsdb_version_parsed]
-                if len(compatible_versions) > 0:
-                    last_compatible_version = compatible_versions[-1]
-                    for predictor_record in predictor_records:
-                        if (
-                            isinstance(predictor_record.mindsdb_version, str)
-                            and version.parse(predictor_record.mindsdb_version) < last_compatible_version
-                        ):
-                            predictor_record.update_status = "available"
-                            is_modified = True
-        if is_modified is True:
-            db.session.commit()
-        # endregion
-
     clean_process_marks()
 
-    http_api_config = config['api']['http']
-    mysql_api_config = config['api']['mysql']
-    mcp_api_config = config['api']['mcp']
+    # Get config values for APIs
+    http_api_config = config.get('api', {}).get('http', {})
+    mysql_api_config = config.get('api', {}).get('mysql', {})
+    mcp_api_config = config.get('api', {}).get('mcp', {})
+    litellm_api_config = config.get('api', {}).get('litellm', {})
     trunc_processes_struct = {
         TrunkProcessEnum.HTTP: TrunkProcessData(
             name=TrunkProcessEnum.HTTP.value,
@@ -469,6 +445,17 @@ if __name__ == '__main__':
             restart_on_failure=mcp_api_config.get('restart_on_failure', False),
             max_restart_count=mcp_api_config.get('max_restart_count', TrunkProcessData.max_restart_count),
             max_restart_interval_seconds=mcp_api_config.get(
+                'max_restart_interval_seconds', TrunkProcessData.max_restart_interval_seconds
+            )
+        ),
+        TrunkProcessEnum.LITELLM: TrunkProcessData(
+            name=TrunkProcessEnum.LITELLM.value,
+            entrypoint=start_litellm,
+            port=litellm_api_config.get('port', 8000),
+            args=(config.cmd_args.verbose,),
+            restart_on_failure=litellm_api_config.get('restart_on_failure', False),
+            max_restart_count=litellm_api_config.get('max_restart_count', TrunkProcessData.max_restart_count),
+            max_restart_interval_seconds=litellm_api_config.get(
                 'max_restart_interval_seconds', TrunkProcessData.max_restart_interval_seconds
             )
         )

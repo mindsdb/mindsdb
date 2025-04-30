@@ -7,7 +7,6 @@ import textwrap
 from functools import wraps
 from collections.abc import Callable
 
-import requests
 from cryptography.fernet import Fernet
 from mindsdb_sql_parser.ast import Identifier
 

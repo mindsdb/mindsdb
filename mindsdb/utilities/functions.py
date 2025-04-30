@@ -72,41 +72,6 @@ def mark_process(name: str, custom_mark: str = None) -> Callable:
     return mark_process_wrapper
 
 
-def get_versions_where_predictors_become_obsolete():
-    """ Get list of MindsDB versions in which predictors should be retrained
-        Returns:
-            list of str or False
-    """
-    versions_for_updating_predictors = []
-    try:
-        try:
-            res = requests.get(
-                'https://mindsdb-cloud-public-service-files.s3.us-east-2.amazonaws.com/version_for_updating_predictors.txt',
-                timeout=0.5
-            )
-        except (ConnectionError, requests.exceptions.ConnectionError) as e:
-            logger.error(f'Is no connection. {e}')
-            raise
-        except Exception as e:
-            logger.error(f'Is something wrong with getting version_for_updating_predictors.txt: {e}')
-            raise
-
-        if res.status_code != 200:
-            logger.error(f'Cant get version_for_updating_predictors.txt: returned status code = {res.status_code}')
-            raise
-
-        try:
-            versions_for_updating_predictors = res.text.replace(' \t\r', '').split('\n')
-        except Exception as e:
-            logger.error(f'Cant decode version_for_updating_predictors.txt: {e}')
-            raise
-    except Exception:
-        return False, versions_for_updating_predictors
-
-    versions_for_updating_predictors = [x for x in versions_for_updating_predictors if len(x) > 0]
-    return True, versions_for_updating_predictors
-
-
 def init_lexer_parsers():
     from mindsdb_sql_parser.lexer import MindsDBLexer
     from mindsdb_sql_parser.parser import MindsDBParser

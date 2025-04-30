@@ -175,7 +175,7 @@ def _dump_date(var: datetime.date | str | None) -> str | None:
     Returns:
         str | None: The string representation of the date value or None if the value is None
     """
-    if isinstance(var, datetime.date):  # it is also True for datetime.datetime
+    if isinstance(var, (datetime.date, pd.Timestamp)):  # it is also True for datetime.datetime
         return var.strftime("%Y-%m-%d")
     elif isinstance(var, str):
         return var
@@ -195,7 +195,7 @@ def _dump_datetime(var: datetime.datetime | str | None) -> str | None:
     Returns:
         str | None: The string representation of the datetime value or None if the value is None
     """
-    if isinstance(var, datetime.date):  # it is also datetime.datetime
+    if isinstance(var, (datetime.date, pd.Timestamp)):  # it is also datetime.datetime
         return var.strftime("%Y-%m-%d %H:%M:%S")
     elif isinstance(var, str):
         return var
@@ -224,6 +224,8 @@ def _dump_time(var: datetime.time | str | None) -> str | None:
             minutes = int((utc_seconds % 3600) // 60)
             seconds = int(utc_seconds % 60)
             var = datetime.time(hours, minutes, seconds, var.microsecond)
+        return var.strftime("%H:%M:%S")
+    elif isinstance(var, (datetime.datetime, pd.Timestamp)):
         return var.strftime("%H:%M:%S")
     elif isinstance(var, str):
         return var
@@ -282,6 +284,8 @@ def _handle_series_as_time(series: pd.Series) -> pd.Series:
     if pd_types.is_timedelta64_ns_dtype(series.dtype):
         base_time = pd.Timestamp('2000-01-01')
         series = ((base_time + series).dt.strftime('%H:%M:%S'))
+    elif pd_types.is_datetime64_dtype(series.dtype):
+        series = series.dt.strftime('%H:%M:%S')
     elif pd_types.is_object_dtype(series.dtype):
         series = series.apply(_dump_time)
     else:

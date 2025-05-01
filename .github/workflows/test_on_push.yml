@@ -50,6 +50,9 @@ jobs:
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         uses: astral-sh/setup-uv@v5
         with:
+          # Place cache in the tool dir because we mount this in our runnners
+          cache-local-path: "/home/runner/_work/_tool/uv-local-cache"
+          prune-cache: false
           # I can't work out how to use vars.CI_PYTHON_VERSION for forks here in a nice way, so we have to hardcode it for forks
           python-version: ${{ vars.CI_PYTHON_VERSION || '3.10' }}
 

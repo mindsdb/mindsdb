@@ -32,9 +32,9 @@ class RunningQuery:
         self.sql = record.sql
         self.database = record.database or config.get('default_project')
 
-    def get_partitions(self, dn, query: Select):
+    def get_partitions(self, dn, step_call, query: Select):
         if dn.is_support_stream():
-            query2 = self.get_partition_query(self.current_step_num, query, with_limit=False)
+            query2 = self.get_partition_query(step_call.current_step_num, query, with_limit=False)
 
             for df in dn.query_stream(query2):
                 max_track_value = self.get_max_track_value(df)
@@ -43,11 +43,11 @@ class RunningQuery:
 
         else:
             while True:
-                query2 = self.get_partition_query(self.current_step_num, query, with_limit=True)
+                query2 = self.get_partition_query(step_call.current_step_num, query, with_limit=True)
 
-                response = self.dn.query(
+                response = dn.query(
                     query=query2,
-                    session=self.session
+                    session=step_call.session
                 )
                 df = response.data_frame
 

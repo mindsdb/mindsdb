@@ -96,7 +96,7 @@ class FetchDataframePartitionCall(BaseStepCall):
 
         results = []
 
-        for df in run_query.get_partitions(self.dn, query):
+        for df in run_query.get_partitions(self.dn, self, query):
             try:
                 sub_data = self.exec_sub_steps(df)
                 results.append(sub_data)
@@ -176,7 +176,7 @@ class FetchDataframePartitionCall(BaseStepCall):
 
         with ContextThreadPoolExecutor(max_workers=thread_count) as executor:
 
-            for df in run_query.get_partitions(self.dn, query):
+            for df in run_query.get_partitions(self.dn, self, query):
 
                 # split into chunks and send to workers
                 futures = []

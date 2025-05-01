@@ -34,6 +34,9 @@ concurrency:
   group: test-${{ inputs.deploy-env }}
   cancel-in-progress: true
 
+env:
+  UV_SYSTEM_PYTHON: 1
+
 jobs:
 
   # Run our integration tests

@@ -213,7 +213,6 @@ class TestMySqlApi(BaseStuff):
     def test_service_requests(self, query, use_binary):
         self.query(query)
 
-    # TODO fix once executor is fixed
     # def test_show_columns(self, use_binary):
     #     ret = self.query("""
     #         SELECT
@@ -239,6 +238,7 @@ class TestMySqlApi(BaseStuff):
     #     assert location_column['CHARACTER_OCTET_LENGTH'] is not None
 
     # TODO fix these after float/bool type issue is fixed
+    # test
     # def test_train_model_from_files(self):
     #     df = pd.DataFrame({
     #         'x1': [x for x in range(100, 210)] + [x for x in range(100, 210)],

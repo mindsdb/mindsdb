@@ -96,7 +96,7 @@ jobs:
 
   # Run integration tests against the deployed environment
   run_tests:
-    name: Run Integration Tests - Test
+    name: Run Integration Tests
     needs: [deploy, get-deploy-labels]
     if: always()
     strategy:

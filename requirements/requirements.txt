@@ -32,7 +32,7 @@ boto3 >= 1.34.131
 python-dateutil
 gunicorn
 scikit-learn==1.5.2
-protobuf==3.20.3
+protobuf>=5.0
 hierarchicalforecast~=0.4.0
 google-auth-oauthlib
 msal
@@ -53,12 +53,17 @@ prometheus-client==0.20.0
 transformers >= 4.42.4
 sentry-sdk[flask] == 2.14.0
 openai<2.0.0,>=1.58.1
-opentelemetry-api==1.27.0
-opentelemetry-sdk==1.27.0
-opentelemetry-exporter-otlp==1.27.0
-opentelemetry-instrumentation-requests==0.48b0
-opentelemetry-instrumentation-flask==0.48b0
-opentelemetry-distro==0.48b0
+opentelemetry-api==1.32.1
+opentelemetry-sdk==1.32.1
+opentelemetry-semantic-conventions==0.53b1
+opentelemetry-instrumentation==0.53b1
+opentelemetry-instrumentation-flask==0.53b1
+opentelemetry-instrumentation-wsgi==0.53b1
+opentelemetry-instrumentation-requests==0.53b1
+opentelemetry-exporter-otlp==1.32.1
+opentelemetry-exporter-otlp-proto-grpc==1.32.1
+opentelemetry-exporter-otlp-proto-http==1.32.1
+opentelemetry-util-http==0.53b1
 pyaml==23.12.0
 mcp==1.6.0
 fastapi>=0.110.0, <1.0.0  # Required for LiteLLM server

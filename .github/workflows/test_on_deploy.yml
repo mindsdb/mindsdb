@@ -14,6 +14,17 @@ on:
       OPENAI_API_KEY:
         required: true
   workflow_dispatch:
+    inputs:
+      git-sha:
+        required: false
+        type: string
+        default: ""
+      deploy-env:
+        required: true
+        type: string
+    secrets:
+      OPENAI_API_KEY:
+        required: true
 
 defaults:
   run:

@@ -109,7 +109,6 @@ class PushNotificationReceiverAuth(PushNotificationAuth):
     async def verify_push_notification(self, request: Request) -> bool:
         auth_header = request.headers.get("Authorization")
         if not auth_header or not auth_header.startswith(AUTH_HEADER_PREFIX):
-            print("Invalid authorization header")
             return False
         
         token = auth_header[len(AUTH_HEADER_PREFIX):]

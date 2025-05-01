@@ -235,7 +235,7 @@ class IntegrationDataNode(DataNode):
         return DataHubResponse(affected_rows=result.affected_rows)
 
     def is_support_stream(self):
-        return hasattr(self.integration_handler, 'query_stream')
+        return hasattr(self.integration_handler, 'query_stream') and callable(self.integration_handler.query_stream)
 
     @profiler.profile()
     def query_stream(self, query: ASTNode, session=None):

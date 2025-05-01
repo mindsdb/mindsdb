@@ -284,12 +284,12 @@ class CrewAITextToSQLPipeline:
         
         # 4. SQL Validation Agent
         self.sql_validation_agent = Agent(
-            role="SQL Validation Agent",
-            goal="Ensure query results are valid and present them clearly to the user",
-            backstory="""You are responsible for validating query results and presenting them 
-            clearly to users. You verify results are well-formed and answer the original question,
-            then present ONLY the answer in a clear, concise format without any validation notes 
-            or agent communication.""",
+            role="Results Presentation Specialist",
+            goal="Present query results clearly and accurately to the user",
+            backstory="""You are responsible for formatting and presenting query results 
+            to users in a clear, readable format. For knowledge base similarity searches, 
+            you preserve the actual content returned from the database and never substitute 
+            with placeholder data. You always return the exact data retrieved from the database.""",
             verbose=self.verbose,
             allow_delegation=False,
             llm=self.llm
@@ -397,19 +397,29 @@ class CrewAITextToSQLPipeline:
         # Task 4: Validate Results
         validate_results_task = Task(
             description="""
-            Examine the query results and present them to the user:
+            Present the query results in a clear, readable format:
             
-            1. Verify the results answer the original question
-            2. Format the results in a clear, readable way
-            3. Provide ONLY the final answer - DO NOT include any validation notes or analysis
-            4. DO NOT include any 'Validation Report', just present the information requested
+            For normal database queries:
+            - Format as a clean table with headers
+            - Preserve all returned data exactly as received
+            
+            For knowledge base similarity searches:
+            - Show the ACTUAL retrieved content exactly as returned from the database
+            - NEVER EVER substitute with placeholder values like 'Content A', 'Meta A', etc.
+            - If you see actual content about "Kindle Voyage" or any other specific product, 
+              preserve it EXACTLY as received from the database
+            - DO NOT create fake/sample data under any circumstances
+            
+            CRITICAL WARNING: You must NEVER generate placeholder data or substitute real data with examples.
+            Using placeholders like "Content A" or "Meta A" is strictly prohibited and is considered a critical error.
             
             IMPORTANT: Your job is to format and present ONLY the final results.
-            DO NOT include any text about your validation process or assessment.
-            Return ONLY the information the user asked for.
+            DO NOT include any text about validation process or assessment.
+            NEVER use placeholder data - use EXACTLY what was returned by the execute_sql tool.
+            Just present the information directly without adding any commentary.
             """,
             agent=self.sql_validation_agent,
-            expected_output="The final answer to the user's question, without any validation details or analysis notes",
+            expected_output="The actual database query results with real data, exactly as returned from the database",
             context=[execute_sql_task]
         )
         
@@ -419,13 +429,13 @@ class CrewAITextToSQLPipeline:
                 self.query_understanding_agent,
                 self.sql_generation_agent,
                 self.sql_execution_agent,
-                #self.sql_validation_agent
+                self.sql_validation_agent
             ],
             tasks=[
                 understand_task,
                 generate_sql_task,
                 execute_sql_task,
-                #validate_results_task
+                validate_results_task
             ],
             verbose=self.verbose,
             process=Process.sequential

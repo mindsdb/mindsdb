@@ -1,7 +1,7 @@
 name: Build and deploy to dev
 
 on:
-  pull_request_target:
+  pull_request:
     types: [opened, reopened, synchronize, labeled]
     branches:
       - 'main'
@@ -96,8 +96,9 @@ jobs:
 
   # Run integration tests against the deployed environment
   run_tests:
-    name: Run Integration Tests
+    name: Run Integration Tests - Test
     needs: [deploy, get-deploy-labels]
+    if: always()
     strategy:
       fail-fast: false
       matrix:

@@ -2,7 +2,6 @@ import os
 import copy
 
 from duckdb.typing import BIGINT, DOUBLE, VARCHAR, BLOB, BOOLEAN
-from mindsdb.interfaces.functions.to_markdown import ToMarkdown
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.utilities.config import config
 
@@ -160,6 +159,8 @@ class FunctionController(BYOMFunctionsController):
         return meta
 
     def to_markdown_call_function(self, node):
+        # load on-demand because lib is heavy
+        from mindsdb.interfaces.functions.to_markdown import ToMarkdown
         name = node.op.lower()
 
         if name in self.callbacks:

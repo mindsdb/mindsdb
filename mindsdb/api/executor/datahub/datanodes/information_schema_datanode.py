@@ -22,6 +22,8 @@ from .mindsdb_tables import (
     ModelsTable, DatabasesTable, MLEnginesTable, HandlersTable, JobsTable, QueriesTable,
     ChatbotsTable, KBTable, SkillsTable, AgentsTable, ViewsTable, TriggersTable)
 
+from mindsdb.api.executor.datahub.classes.tables_row import TablesRow
+
 
 logger = log.getLogger(__name__)
 
@@ -166,11 +168,10 @@ class InformationSchemaDataNode(DataNode):
         return [x.lower() for x in projects]
 
     def get_tables(self):
-        return {
-            name: table
-            for name, table in self.tables.items()
-            if table.visible
-        }
+        return [
+            TablesRow(TABLE_NAME=name)
+            for name in self.tables.keys()
+        ]
 
     def query(self, query: ASTNode, session=None) -> DataHubResponse:
         query_tables = [x[1] for x in get_query_tables(query)]

@@ -98,6 +98,7 @@ jobs:
   run_tests:
     name: Run Integration Tests
     needs: [deploy, get-deploy-labels]
+    if: always()
     strategy:
       fail-fast: false
       matrix:
@@ -110,3 +111,13 @@ jobs:
       git-sha: ${{ github.event.pull_request.head.sha }}
       deploy-env: ${{ matrix.deploy-env }}
     secrets: inherit
+
+  tests_completed:
+    needs: run_tests
+    runs-on: mdb-dev
+    if: always()
+    steps:
+      - name: fail if tests failed or didnt run
+        if: ${{ needs.run_tests.result != 'success' }}
+        run: exit 1
+      - run: echo "Tests ran successfully"

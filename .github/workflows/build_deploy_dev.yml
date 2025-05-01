@@ -98,7 +98,6 @@ jobs:
   run_tests:
     name: Run Integration Tests
     needs: [deploy, get-deploy-labels]
-    if: always()
     strategy:
       fail-fast: false
       matrix:

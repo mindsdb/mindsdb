@@ -34,6 +34,9 @@ concurrency:
   group: test-${{ inputs.deploy-env }}
   cancel-in-progress: true
 
+env:
+  UV_LINK_MODE: "symlink"
+
 jobs:
 
   # Run our integration tests
@@ -52,9 +55,10 @@ jobs:
     - name: Setup uv
       uses: astral-sh/setup-uv@v5
       with:
-        python-version: ${{ vars.CI_PYTHON_VERSION || '3.10' }}
-        enable-cache: true
+        # Place cache in the tool dir because we mount this in our runnners
+        cache-local-path: "/home/runner/_work/_tool/uv-local-cache"
         prune-cache: false
+        python-version: ${{ vars.CI_PYTHON_VERSION || '3.10' }}
     - name: Install dependencies
       run: |
         uv pip install -r requirements/requirements-test.txt

@@ -173,6 +173,13 @@ class InformationSchemaDataNode(DataNode):
             for name in self.tables.keys()
         ]
 
+    def get_tree_tables(self):
+        return {
+            name: table
+            for name, table in self.tables.items()
+            if table.visible
+        }
+
     def query(self, query: ASTNode, session=None) -> DataHubResponse:
         query_tables = [x[1] for x in get_query_tables(query)]
 

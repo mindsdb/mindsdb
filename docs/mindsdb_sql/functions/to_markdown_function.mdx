@@ -119,3 +119,12 @@ www.yeslogic.com
 ```
 
 The content of each PDF page is intelligently extracted by first assessing how visually complex the page is. Based on this assessment, the system decides whether traditional text parsing is sufficient or if the page should be processed using an LLM.
+
+### Usage with Knowledge Bases
+
+You can also use the `TO_MARKDOWN()` function to extract content from documents and store it in a [Knowledge Base](/mindsdb_sql/agents/knowledge-bases). This is particularly useful for creating a Knowledge Base from a collection of documents.
+
+```sql
+INSERT INTO my_kb (
+  SELECT TO_MARKDOWN('https://www.princexml.com/howcome/2016/samples/invoice/index.pdf')
+)

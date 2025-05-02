@@ -537,16 +537,10 @@ class KnowledgeBaseTable:
         # -- prepare id --
         id_column = params.get('id_column')
         if id_column is not None and id_column not in columns:
-            id_column = None
+            raise ValueError(f'The ID column {params.get("id_column")} not found in dataset: {columns}')
 
-        if id_column is None and TableField.ID.value in columns:
-            id_column = TableField.ID.value
-
-        # Also check for case-insensitive 'id' column
         if id_column is None:
-            column_map = {col.lower(): col for col in columns}
-            if 'id' in column_map:
-                id_column = column_map['id']
+            raise ValueError('The id_column parameter is required')
 
         if id_column is not None:
             columns.remove(id_column)
@@ -856,6 +850,10 @@ class KnowledgeBaseController:
         vector_size = params.get('vector_size')
         if is_sparse and vector_size is None:
             raise ValueError("vector_size is required when is_sparse=True")
+
+        # Validate that id_column is provided
+        if params is not None and ('id_column' not in params):
+            raise ValueError("The id_column parameter is required")
 
         # get project id
         project = self.session.database_controller.get_project(project_name)

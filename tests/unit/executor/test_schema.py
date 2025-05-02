@@ -180,6 +180,14 @@ class TestSchema(BaseExecutorDummyML):
 
         # --- information_schema ---
 
+        df = self.run_sql('select * from information_schema.TABLES')
+        df = df[df.TABLE_SCHEMA == 'information_schema']
+        for table in ('TABLES', 'COLUMNS', 'MODELS', 'DATABASES', 'ML_ENGINES', 'HANDLERS', 'JOBS', 'CHATBOTS', 'KNOWLEDGE_BASES', 'AGENTS', 'VIEWS', 'TRIGGERS', 'QUERIES'):
+            assert table in list(df.TABLE_NAME)
+
+            # selectable
+            self.run_sql(f'select * from information_schema.{table}')
+
         # handlers
         df = self.run_sql('select * from information_schema.HANDLERS')
         assert 'dummy_ml' in list(df.NAME)

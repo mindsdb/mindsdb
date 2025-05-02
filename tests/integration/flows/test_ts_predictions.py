@@ -1,16 +1,8 @@
 import datetime
 import random
 
-import pytest
-
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from tests.utils.http_test_helpers import HTTPHelperMixin
-
-
-# used by (required for) mindsdb_app fixture in conftest
-API_LIST = ['http']
-
-HTTP_API_ROOT = 'http://127.0.0.1:47334/api'
 
 
 def to_dicts(data):
@@ -23,15 +15,15 @@ def to_dicts(data):
     return data
 
 
-@pytest.mark.usefixtures("mindsdb_app")
 class TestHTTP(HTTPHelperMixin):
     @classmethod
     def setup_class(cls):
         cls._sql_via_http_context = {}
 
-    def test_create_model(self):
+    def test_create_model(self, train_finetune_lock):
+        self.sql_via_http("DROP DATABASE IF EXISTS test_ts_demo_postgres;", RESPONSE_TYPE.OK)
         sql = '''
-        CREATE DATABASE example_db
+        CREATE DATABASE test_ts_demo_postgres
         WITH ENGINE = "postgres",
         PARAMETERS = {
             "user": "demo_user",
@@ -52,31 +44,33 @@ class TestHTTP(HTTPHelperMixin):
                 selects.append(f"select '{day_str}' as date, '{group}' as group, {value} as value")
         selects = ' union all '.join(selects)
 
+        self.sql_via_http("DROP VIEW IF EXISTS testv;", RESPONSE_TYPE.OK)
         sql = f'''
             create view testv as (
-                select * from example_db ({selects})
+                select * from test_ts_demo_postgres ({selects})
             )
         '''
+        self.sql_via_http(sql, RESPONSE_TYPE.OK)
 
-        resp = self.sql_via_http(sql, RESPONSE_TYPE.OK)
+        self.sql_via_http("DROP MODEL IF EXISTS mindsdb.tstest;", RESPONSE_TYPE.OK)
+        with train_finetune_lock.acquire(timeout=600):
+            sql = '''
+                CREATE MODEL
+                    mindsdb.tstest
+                FROM mindsdb (select * from testv)
+                PREDICT value
+                ORDER BY date
+                GROUP BY group
+                WINDOW 5
+                HORIZON 3;
+            '''
+            resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
 
-        sql = '''
-            CREATE MODEL
-                mindsdb.tstest
-            FROM mindsdb (select * from testv)
-            PREDICT value
-            ORDER BY date
-            GROUP BY group
-            WINDOW 5
-            HORIZON 3;
-        '''
-        resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
+            assert len(resp['data']) == 1
+            status = resp['column_names'].index('STATUS')
+            assert resp['data'][0][status] == 'generating'
 
-        assert len(resp['data']) == 1
-        status = resp['column_names'].index('STATUS')
-        assert resp['data'][0][status] == 'generating'
-
-        self.await_model('tstest')
+            self.await_model('tstest')
 
     def test_gt_latest_date(self):
         sql = '''

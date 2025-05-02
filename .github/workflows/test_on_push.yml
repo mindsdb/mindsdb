@@ -9,15 +9,14 @@ defaults:
   run:
     shell: bash
 
-# UV will use the system python by default
-env:
-  UV_SYSTEM_PYTHON: 1
-
 # Cancel any existing runs of this workflow on the same branch/pr
 # We always want to build/deploy/test a new commit over an older one
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
+
+env:
+  UV_LINK_MODE: "symlink"
 
 jobs:
   # Sets an output var to indicate if all changes are in docs files
@@ -49,10 +48,14 @@ jobs:
         with:
           # required to grab the history of the PR for pre-commit to work out what's changed
           fetch-depth: 0 
-      - name: Set up Python
+      # Install python and setup UV
+      - name: Setup uv
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
-        uses: actions/setup-python@v5.1.0
+        uses: astral-sh/setup-uv@v5
         with:
+          # Place cache in the tool dir because we mount this in our runnners
+          cache-local-path: "/home/runner/_work/_tool/uv-local-cache"
+          prune-cache: false
           # I can't work out how to use vars.CI_PYTHON_VERSION for forks here in a nice way, so we have to hardcode it for forks
           python-version: ${{ vars.CI_PYTHON_VERSION || '3.10' }}
 
@@ -61,25 +64,28 @@ jobs:
       - name: Check for print statements
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
-          python tests/scripts/check_print_statements.py
+          # The pyproject file confuses uv: https://github.com/astral-sh/uv/issues/6838
+          rm pyproject.toml
+          uv run tests/scripts/check_print_statements.py
+      
+      - name: Install MDB dev requirements
+        if: ${{ needs.changes.outputs.not-docs == 'true' }}
+        run: |
+          uv pip install -r requirements/requirements-dev.txt
 
       # Run pre-commit on all changed files
       # See .pre-commit-config.yaml for the list of checks
       - name: Run pre-commit
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
-        uses: pre-commit/action@v3.0.0
-        with:
-          extra_args: --from-ref ${{ github.event.pull_request.base.sha }} --to-ref ${{ github.event.pull_request.head.sha }}
+        run: |
+          pre-commit run --show-diff-on-failure --color=always --from-ref ${{ github.event.pull_request.base.sha }} --to-ref ${{ github.event.pull_request.head.sha }}
 
       # Runs a few different checks against our many requirements files
       # to make sure they're in order
       - name: Check requirements files
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
-          # We don't need to install mindsdb itself here because these are just static code checks
-          uv pip install -r requirements/requirements-dev.txt
-
-          python tests/scripts/check_requirements.py
+          uv run tests/scripts/check_requirements.py
 
   # Creates a matrix of environments to test against using matrix_includes.json
   # Used for installation checks below
@@ -106,19 +112,14 @@ jobs:
       - name: Checkout
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         uses: actions/checkout@v4
-      - name: Set up Python
-        if: ${{ needs.changes.outputs.not-docs == 'true' }}
-        uses: actions/setup-python@v5.1.0
-        with:
-          python-version: ${{ matrix.python-version }}
-      # We have to install UV because (for now) these run in GH's runners
+      # Install python and setup UV
       - name: Setup uv
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-          cache-dependency-glob: "**/requirements*.txt"
-      - name: Check requirements files are installable
+          python-version: ${{ matrix.python-version }}
+      - name: Check pip package builds and installs
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
           # Install dev requirements and build our pip package
@@ -142,18 +143,16 @@ jobs:
       - name: Checkout
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         uses: actions/checkout@v4
-      - name: Set up Python
-        if: ${{ needs.changes.outputs.not-docs == 'true' }}
-        uses: actions/setup-python@v5.1.0
-        with:
-          python-version: ${{ matrix.python-version }}
-      # We have to install UV because (for now) these run in GH's runners
+      - name: Install FreeTDS (macOS)
+        if: ${{ runner.os == 'macOS' && needs.changes.outputs.not-docs == 'true' }}
+        run: brew install freetds
+      # Install python and setup UV
       - name: Setup uv
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-          cache-dependency-glob: "**/requirements*.txt"
+          python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |

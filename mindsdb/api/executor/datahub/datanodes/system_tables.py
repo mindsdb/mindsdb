@@ -311,20 +311,17 @@ class ColumnsTable(Table):
         result = []
         for db_name in databases:
             tables = {}
-            if db_name == 'information_schema':
-                for table_name, table in inf_schema.tables.items():
-                    tables[table_name] = [
-                        {'name': name} for name in table.columns
-                    ]
-            else:
-                dn = inf_schema.get(db_name)
-                if dn is None:
-                    continue
 
-                if tables_names is None:
-                    tables_names = [t.TABLE_NAME for t in dn.get_tables()]
-                for table_name in tables_names:
-                    tables[table_name] = dn.get_table_columns_df(table_name)
+            dn = inf_schema.get(db_name)
+            if dn is None:
+                continue
+
+            if tables_names is None:
+                list_tables = [t.TABLE_NAME for t in dn.get_tables()]
+            else:
+                list_tables = tables_names
+            for table_name in list_tables:
+                tables[table_name] = dn.get_table_columns_df(table_name)
 
             for table_name, table_columns_df in tables.items():
                 for _, row in table_columns_df.iterrows():

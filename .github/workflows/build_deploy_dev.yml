@@ -94,15 +94,30 @@ jobs:
       image-tag: ${{ github.event.pull_request.head.sha }}
     secrets: inherit
 
-  # Run integration tests
-  # TODO: Run these against the deployed environment
+  # Run integration tests against the deployed environment
   run_tests:
     name: Run Integration Tests
-    needs: [deploy]
+    needs: [deploy, get-deploy-labels]
+    if: always()
+    strategy:
+      fail-fast: false
+      matrix:
+        deploy-env: ${{ fromJson(needs.get-deploy-labels.outputs.deploy-envs) }}
     concurrency:
       group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-tests
       cancel-in-progress: true
     uses: ./.github/workflows/test_on_deploy.yml
     with:
       git-sha: ${{ github.event.pull_request.head.sha }}
+      deploy-env: ${{ matrix.deploy-env }}
     secrets: inherit
+
+  tests_completed:
+    needs: run_tests
+    runs-on: mdb-dev
+    if: always()
+    steps:
+      - name: fail if tests failed or didnt run
+        if: ${{ needs.run_tests.result != 'success' }}
+        run: exit 1
+      - run: echo "Tests ran successfully"

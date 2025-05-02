@@ -7,14 +7,15 @@ mindsdb/logs
 mindsdb/logs
 logs
 tests/temp
-/integration_tests/flows/config/*
+tests/integration/flows/config/*
 my_model.zip
 model.py
-tests/integration_tests/flows/model.py
-tests/integration_tests/flows/my_model.zip
+tests/integration/flows/model.py
+tests/integration/flows/my_model.zip
 distributions/docker-compose/*/storage
 venv/*
 env/*
+.envrc
 *.env
 mindsdb-venv/*
 root
@@ -27,6 +28,7 @@ docker/dist/*
 .directory
 MindsDB.egg-info/*
 /build
+train_finetune.lock
 
 # Autokeras generated files
 auto_model

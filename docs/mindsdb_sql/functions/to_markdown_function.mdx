@@ -13,7 +13,9 @@ At the moment, the `TO_MARKDOWN()` function only supports PDF documents.
 
 The `TO_MARKDOWN()` function in MindsDB requires the use of an LLM. To enable this, select one of the supported model providers and set the relevant environment variables.
 
-The model provider can be set using the `TO_MARKDOWN_FUNCTION_PROVIDER` environment variable. The default provider is OpenAI.
+The model provider can be set using the `TO_MARKDOWN_FUNCTION_PROVIDER` environment variable. The default provider is OpenAI and the default model is gpt-4o. The following providers are supported:
+- OpenAI (`openai`)
+- Azure OpenAI (`azure_openai`)
 
 <Info>
 The model you select must support multi-modal inputs (e.g., both images and text). For example, OpenAI’s gpt-4o is a supported multi-modal model.
@@ -25,7 +27,7 @@ The model you select must support multi-modal inputs (e.g., both images and text
     Here are the environment variables for the OpenAI provider:
 
     ```
-    TO_MARKDOWN_FUNCTION_API_KEY
+    TO_MARKDOWN_FUNCTION_API_KEY (required)
     TO_MARKDOWN_FUNCTION_MODEL_NAME
     TO_MARKDOWN_FUNCTION_TEMPERATURE
     TO_MARKDOWN_FUNCTION_MAX_RETRIES
@@ -35,6 +37,22 @@ The model you select must support multi-modal inputs (e.g., both images and text
     TO_MARKDOWN_FUNCTION_REQUEST_TIMEOUT
     ```
 
+  </Accordion>
+
+  <Accordion title="Azure OpenAI">
+    Here are the environment variables for the Azure OpenAI provider:
+
+    ```
+    TO_MARKDOWN_FUNCTION_API_KEY (required)
+    TO_MARKDOWN_FUNCTION_BASE_URL (required)
+    TO_MARKDOWN_FUNCTION_API_VERSION (required)
+    TO_MARKDOWN_FUNCTION_MODEL_NAME
+    TO_MARKDOWN_FUNCTION_TEMPERATURE
+    TO_MARKDOWN_FUNCTION_MAX_RETRIES
+    TO_MARKDOWN_FUNCTION_MAX_TOKENS
+    TO_MARKDOWN_FUNCTION_API_ORGANIZATION
+    TO_MARKDOWN_FUNCTION_REQUEST_TIMEOUT
+    ```
   </Accordion>
 </AccordionGroup>
 

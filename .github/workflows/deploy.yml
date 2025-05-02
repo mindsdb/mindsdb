@@ -16,6 +16,8 @@ on:
         required: true
       REPO_DISPATCH_PAT_TOKEN:
         required: true
+permissions:
+  contents: read
 
 jobs:
   # Trigger private repo to deploy

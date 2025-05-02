@@ -7,6 +7,8 @@ on:
       - "docs/**"
       - "README.md"
 
+permissions:
+  contents: read
 
 jobs:
   # Check that the version defined in the github release is valid

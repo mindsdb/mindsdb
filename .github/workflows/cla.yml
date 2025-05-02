@@ -4,6 +4,10 @@ on:
     types: [created]
   pull_request_target:
     types: [opened,closed,synchronize]    
+
+permissions:
+  contents: read
+
 jobs:
   CLAssistant:
     runs-on: ubuntu-latest

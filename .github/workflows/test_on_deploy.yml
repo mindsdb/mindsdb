@@ -37,6 +37,9 @@ concurrency:
 env:
   UV_LINK_MODE: "symlink"
 
+permissions:
+  contents: read
+
 jobs:
 
   # Run our integration tests

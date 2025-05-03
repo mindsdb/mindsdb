@@ -238,8 +238,8 @@ class IntegrationDataNode(DataNode):
         return hasattr(self.integration_handler, 'query_stream') and callable(self.integration_handler.query_stream)
 
     @profiler.profile()
-    def query_stream(self, query: ASTNode, session=None):
-        return self.integration_handler.query_stream(query)
+    def query_stream(self, query: ASTNode, fetch_size=None):
+        return self.integration_handler.query_stream(query, fetch_size=fetch_size)
 
     @profiler.profile()
     def query(self, query: ASTNode | None = None, native_query: str | None = None, session=None) -> DataHubResponse:

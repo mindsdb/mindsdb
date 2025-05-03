@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 import pickle
 import datetime as dt
 
@@ -34,16 +34,16 @@ class RunningQuery:
 
     def get_partitions(self, dn, step_call, query: Select):
         if dn.is_support_stream():
-            query2 = self.get_partition_query(step_call.current_step_num, query, with_limit=False)
+            query2 = self.get_partition_query(step_call.current_step_num, query, stream=True)
 
-            for df in dn.query_stream(query2):
+            for df in dn.query_stream(query2, fetch_size=self.batch_size):
                 max_track_value = self.get_max_track_value(df)
                 yield df
                 self.set_progress(df, max_track_value)
 
         else:
             while True:
-                query2 = self.get_partition_query(step_call.current_step_num, query, with_limit=True)
+                query2 = self.get_partition_query(step_call.current_step_num, query, stream=False)
 
                 response = dn.query(
                     query=query2,
@@ -58,7 +58,7 @@ class RunningQuery:
                 yield df
                 self.set_progress(df, max_track_value)
 
-    def get_partition_query(self, step_num: int, query: Select, with_limit=True) -> Select:
+    def get_partition_query(self, step_num: int, query: Select, stream=False) -> Select:
         """
            Generate query for fetching the next partition
            It wraps query to
@@ -69,7 +69,17 @@ class RunningQuery:
            And fill track_column, previous_value, batch_size
         """
 
-        track_column = self.record.parameters['track_column']
+        track_column = self.record.parameters.get('track_column')
+        if track_column is None and stream:
+            # if no track column for stream fetching: it is not resumable query, execute original query
+
+            # check if it is first run of the query
+            if self.record.processed_rows > 0:
+                raise RuntimeError("Can't resume query without track_column")
+            return query
+
+        if not stream and track_column is None:
+            raise ValueError('Track column is not defined')
 
         query = Select(
             targets=[Star()],
@@ -77,7 +87,7 @@ class RunningQuery:
             order_by=[OrderBy(Identifier(track_column))],
 
         )
-        if with_limit:
+        if not stream:
             query.limit = Constant(self.batch_size)
 
         track_value = self.record.context.get('track_value')
@@ -142,8 +152,6 @@ class RunningQuery:
             Store parameters of the step which is about to be split into partitions
         """
 
-        if 'track_column' not in params:
-            raise ValueError('Track column is not defined')
         if 'batch_size' not in params:
             params['batch_size'] = 1000
 
@@ -151,15 +159,18 @@ class RunningQuery:
         self.batch_size = self.record.parameters['batch_size']
         db.session.commit()
 
-    def get_max_track_value(self, df: pd.DataFrame) -> pd.DataFrame:
+    def get_max_track_value(self, df: pd.DataFrame) -> Optional[pd.DataFrame]:
         """
             return max value to use in `set_progress`.
             this function is called before execution substeps,
              `set_progress` function - after
         """
-
-        track_column = self.record.parameters['track_column']
-        return df[track_column].max()
+        if 'track_column' in self.record.parameters:
+            track_column = self.record.parameters['track_column']
+            return df[track_column].max()
+        else:
+            # stream mode
+            return None
 
     def set_progress(self, df: pd.DataFrame, max_track_value: int):
         """

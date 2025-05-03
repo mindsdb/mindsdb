@@ -257,7 +257,7 @@ class PostgresHandler(DatabaseHandler):
 
         return response
 
-    def query_stream(self, query: str, params=None, fetch_size=1000):
+    def query_stream(self, query: str, fetch_size=1000):
         query_str, params = self.renderer.get_exec_params(query, with_failback=True)
 
         need_to_close = not self.is_connected
@@ -266,13 +266,13 @@ class PostgresHandler(DatabaseHandler):
         with connection.cursor() as cur:
             try:
                 if params is not None:
-                    cur.executemany(query, params)
+                    cur.executemany(query_str, params)
                 else:
-                    cur.execute(query)
+                    cur.execute(query_str)
 
                 if cur.pgresult is not None and ExecStatus(cur.pgresult.status) != ExecStatus.COMMAND_OK:
                     while True:
-                        result = cur.fetch(fetch_size)
+                        result = cur.fetchmany(fetch_size)
                         if not result:
                             break
                         df = DataFrame(

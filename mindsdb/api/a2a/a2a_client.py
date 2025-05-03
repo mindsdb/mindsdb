@@ -306,7 +306,7 @@ def _handle_stream_event(event: dict, *, verbose: bool = False) -> None:
     # Extract "result" or "error" from the JSON-RPC envelope.
     if "error" in event:
         err = event["error"]
-        print("⚠️  RPC error:", err.get("message"))
+        print("RPC error:", err.get("message"))
         return
 
     result = event.get("result")

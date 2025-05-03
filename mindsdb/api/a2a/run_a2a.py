@@ -10,15 +10,32 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger(__name__)
 
 def setup_python_path():
-    """Add the a2a directory to Python path for importing modules"""
-    # Get the directory containing this script (should be mindsdb root)
-    mindsdb_root = os.path.dirname(os.path.abspath(__file__))
-    
-    # Add the a2a directory to Python path
-    a2a_dir = os.path.join(mindsdb_root, 'mindsdb', 'api', 'a2a')
-    sys.path.insert(0, a2a_dir)
-    
-    logger.info(f"Added {a2a_dir} to Python path")
+    """Ensure the repository root directory is on *sys.path* so that the
+    ``mindsdb`` package (located at <repo>/mindsdb) can be imported when this
+    helper script is executed from inside *mindsdb/api/a2a*.
+
+    The layout we expect is:
+
+    <repo>/              ← repository root (this is what we want to add)
+        mindsdb/         ← Python package root (contains __init__.py)
+            api/
+                a2a/
+                    run_a2a.py  ← (this script)
+    """
+
+    # Absolute path to *this* file
+    this_file_dir = os.path.dirname(os.path.abspath(__file__))
+
+    # Walk three levels up:  a2a/ -> api/ -> mindsdb/ -> <repo_root>
+    repo_root = os.path.abspath(
+        os.path.join(this_file_dir, os.pardir, os.pardir, os.pardir)
+    )
+
+    # Prepend to PYTHONPATH if not already present
+    if repo_root not in sys.path:
+        sys.path.insert(0, repo_root)
+
+    logger.info("Added %s to PYTHONPATH", repo_root)
 
 def main():
     """

@@ -29,10 +29,8 @@ from mindsdb.utilities.starters import (
     start_mcp, start_litellm
 )
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
-from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.interfaces.database.projects import ProjectController
 import mindsdb.interfaces.storage.db as db
-from mindsdb.integrations.utilities.install import install_dependencies
 from mindsdb.utilities.fs import clean_process_marks, clean_unlinked_process_marks
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.auth import register_oauth_client, get_aws_meta_data
@@ -215,6 +213,28 @@ def do_clean_process_marks():
             set_error_model_status_by_pids(unexisting_pids)
 
 
+def create_permanent_integrations():
+    """
+    Create permanent integrations, for now only the 'files' integration.
+    NOTE: this is intentional to avoid importing integration_controller
+    """
+    integration_name = 'files'
+    existing = db.session.query(db.Integration).filter_by(name=integration_name, company_id=None).first()
+    if existing is None:
+        integration_record = db.Integration(
+            name=integration_name,
+            data={},
+            engine=integration_name,
+            company_id=None,
+        )
+        db.session.add(integration_record)
+        try:
+            db.session.commit()
+        except Exception as e:
+            logger.error(f"Failed to commit permanent integration {integration_name}: {e}")
+            db.session.rollback()
+
+
 if __name__ == '__main__':
     # warn if less than 1Gb of free RAM
     if psutil.virtual_memory().available < (1 << 30):
@@ -344,27 +364,6 @@ if __name__ == '__main__':
     else:  # The user has provided a list of APIs to start
         api_arr = [TrunkProcessEnum(name) for name in apis.split(',')]
 
-    if config.cmd_args.install_handlers is not None:
-        handlers_list = [s.strip() for s in config.cmd_args.install_handlers.split(",")]
-        # import_meta = handler_meta.get('import', {})
-        for handler_name, handler_meta in integration_controller.get_handlers_import_status().items():
-            if handler_name not in handlers_list:
-                continue
-            import_meta = handler_meta.get("import", {})
-            if import_meta.get("success") is True:
-                logger.info(f"{'{0: <18}'.format(handler_name)} - already installed")
-                continue
-            result = install_dependencies(import_meta.get("dependencies", []))
-            if result.get("success") is True:
-                logger.info(
-                    f"{'{0: <18}'.format(handler_name)} - successfully installed"
-                )
-            else:
-                logger.info(
-                    f"{'{0: <18}'.format(handler_name)} - error during dependencies installation: {result.get('error_message', 'unknown error')}"
-                )
-        sys.exit(0)
-
     logger.info(f"Version: {mindsdb_version}")
     logger.info(f"Configuration file: {config.config_path or 'absent'}")
     logger.info(f"Storage path: {config.paths['root']}")
@@ -377,8 +376,7 @@ if __name__ == '__main__':
         if len(unexisting_pids) > 0:
             set_error_model_status_by_pids(unexisting_pids)
         set_error_model_status_for_unfinished()
-
-        integration_controller.create_permanent_integrations()
+        create_permanent_integrations()
 
     clean_process_marks()
 

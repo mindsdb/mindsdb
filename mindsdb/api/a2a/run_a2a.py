@@ -13,14 +13,6 @@ def setup_python_path():
     """Ensure the repository root directory is on *sys.path* so that the
     ``mindsdb`` package (located at <repo>/mindsdb) can be imported when this
     helper script is executed from inside *mindsdb/api/a2a*.
-
-    The layout we expect is:
-
-    <repo>/              ← repository root (this is what we want to add)
-        mindsdb/         ← Python package root (contains __init__.py)
-            api/
-                a2a/
-                    run_a2a.py  ← (this script)
     """
 
     # Absolute path to *this* file

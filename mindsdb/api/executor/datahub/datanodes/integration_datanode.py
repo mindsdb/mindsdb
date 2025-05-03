@@ -121,7 +121,7 @@ class IntegrationDataNode(DataNode):
             tables=[name],
             if_exists=if_exists
         )
-        result = self._query(drop_ast)
+        result = self.query(drop_ast)
         if result.type == RESPONSE_TYPE.ERROR:
             raise Exception(result.error_message)
 
@@ -166,9 +166,7 @@ class IntegrationDataNode(DataNode):
                 tables=[table_name],
                 if_exists=True
             )
-            result = self._query(drop_ast)
-            if result.type == RESPONSE_TYPE.ERROR:
-                raise Exception(result.error_message)
+            self.query(drop_ast)
             is_create = True
 
         if is_create:
@@ -177,9 +175,7 @@ class IntegrationDataNode(DataNode):
                 columns=columns,
                 is_replace=is_replace
             )
-            result = self._query(create_table_ast)
-            if result.type == RESPONSE_TYPE.ERROR:
-                raise Exception(result.error_message)
+            self.query(create_table_ast)
 
         if result_set is None:
             # it is just a 'create table'
@@ -224,13 +220,10 @@ class IntegrationDataNode(DataNode):
         )
 
         try:
-            result = self._query(insert_ast)
+            result: DataHubResponse = self.query(insert_ast)
         except Exception as e:
             msg = f'[{self.ds_type}/{self.integration_name}]: {str(e)}'
             raise DBHandlerException(msg) from e
-
-        if result.type == RESPONSE_TYPE.ERROR:
-            raise Exception(result.error_message)
 
         return DataHubResponse(affected_rows=result.affected_rows)
 

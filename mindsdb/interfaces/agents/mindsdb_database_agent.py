@@ -68,3 +68,6 @@ class MindsDBSQL(SQLDatabase):
     def run_no_throw(self, command: str, fetch: str = "all") -> str:
         command = extract_essential(command)
         return self._sql_agent.query_safe(command)
+
+    def get_prompt_for_specific_datasources(self) -> str:
+        return self._sql_agent.get_prompt_for_specific_datasources()

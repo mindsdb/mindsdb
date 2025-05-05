@@ -221,6 +221,11 @@ class KBTest(KBTestBase):
             assert len(ret) == 4
             assert '1001' not in list(ret['id'])
 
+        print('distinct')
+        ret = self.run_sql("select distinct id from kb_crm")
+        assert len(ret) == 2
+        assert set(ret['id']) == {'1000', '1001'}
+
         # TODO filtering combination with content
 
         # ------------------- join with table -------------

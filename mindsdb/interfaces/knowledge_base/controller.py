@@ -150,13 +150,23 @@ class KnowledgeBaseTable:
         query.from_table = Identifier(parts=[self._kb.vector_database_table])
         logger.debug(f"Set table name to: {self._kb.vector_database_table}")
 
+        is_distinct = query.distinct
+
         requested_kb_columns = []
         for target in query.targets:
             if isinstance(target, Star):
+                # SELECT DISTINCT * is not allowed because it will not work with metadata
+                if is_distinct:
+                    raise ValueError("SELECT DISTINCT * is not allowed. Please specify columns explicitly.")
+                
                 requested_kb_columns = None
                 break
             else:
                 requested_kb_columns.append(target.parts[-1].lower())
+
+        # SELECT DISTINCT with metadata is not allowed
+        if requested_kb_columns and TableField.METADATA.value in requested_kb_columns and is_distinct:
+            raise ValueError("SELECT DISTINCT with metadata is not allowed. Please specify columns explicitly.")
 
         query.targets = [
             Identifier(TableField.ID.value),
@@ -225,7 +235,7 @@ class KnowledgeBaseTable:
             df = df[requested_kb_columns]
 
         # apply distinct if needed
-        if query.distinct:
+        if is_distinct:
             df = df.drop_duplicates()
 
         return df

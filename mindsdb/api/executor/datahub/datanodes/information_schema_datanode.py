@@ -22,6 +22,8 @@ from .mindsdb_tables import (
     ModelsTable, DatabasesTable, MLEnginesTable, HandlersTable, JobsTable, QueriesTable,
     ChatbotsTable, KBTable, SkillsTable, AgentsTable, ViewsTable, TriggersTable)
 
+from mindsdb.api.executor.datahub.classes.tables_row import TablesRow
+
 
 logger = log.getLogger(__name__)
 
@@ -166,6 +168,12 @@ class InformationSchemaDataNode(DataNode):
         return [x.lower() for x in projects]
 
     def get_tables(self):
+        return [
+            TablesRow(TABLE_NAME=name)
+            for name in self.tables.keys()
+        ]
+
+    def get_tree_tables(self):
         return {
             name: table
             for name, table in self.tables.items()

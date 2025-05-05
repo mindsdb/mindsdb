@@ -122,9 +122,7 @@ class IntegrationDataNode(DataNode):
             tables=[name],
             if_exists=if_exists
         )
-        result = self.query(drop_ast)
-        if result.type == RESPONSE_TYPE.ERROR:
-            raise Exception(result.error_message)
+        self.query(drop_ast)
 
     def create_table(self, table_name: Identifier, result_set: ResultSet = None, columns=None,
                      is_replace=False, is_create=False, **kwargs) -> DataHubResponse:

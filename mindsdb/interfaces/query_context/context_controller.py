@@ -561,6 +561,7 @@ class QueryContextController:
             db.Queries.finished_at < (dt.datetime.now() - dt.timedelta(days=1))
         )
         for rec in remove_query.all():
+            self.get_query(rec.id).remove_from_task()
             db.session.delete(rec)
 
         rec = db.Queries(
@@ -596,6 +597,8 @@ class QueryContextController:
         ).first()
         if rec is None:
             raise RuntimeError(f'Query not found: {query_id}')
+
+        self.get_query(rec.id).remove_from_task()
 
         # the query in progress will fail when it tries to update status
         db.session.delete(rec)

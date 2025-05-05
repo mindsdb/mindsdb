@@ -20,7 +20,7 @@ appdirs >= 1.0.0
 mindsdb-sql-parser ~= 0.6.0
 pydantic ~= 2.7.0
 mindsdb-evaluator >= 0.0.7, < 0.1.0
-duckdb ~= 1.2.1
+duckdb == 1.1.3
 requests == 2.32.3
 dateparser==1.2.0
 dataprep_ml==24.5.1.2

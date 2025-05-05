@@ -136,7 +136,7 @@ PACKAGE_NAME_MAP = {
     "google-analytics-admin": ["google"],
     "google-auth": ["google"],
     "google-cloud-storage": ["google"],
-    "google-auth-oauthlib": ["google"],
+    "google-auth-oauthlib": ["google_auth_oauthlib"],
     "google-api-python-client": ["googleapiclient"],
     "ibm-cos-sdk": ["ibm_boto3", "ibm_botocore"],
     "binance-connector": ["binance"],

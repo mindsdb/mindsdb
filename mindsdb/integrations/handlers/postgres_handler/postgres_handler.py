@@ -257,7 +257,14 @@ class PostgresHandler(DatabaseHandler):
 
         return response
 
-    def query_stream(self, query: str, fetch_size=1000):
+    def query_stream(self, query: ASTNode, fetch_size: int = 1000):
+        """
+        Executes a SQL query and stream results outside by batches
+
+        :param query: An ASTNode representing the SQL query to be executed.
+        :param fetch_size: size of the batch
+        :return: generator with query results
+        """
         query_str, params = self.renderer.get_exec_params(query, with_failback=True)
 
         need_to_close = not self.is_connected

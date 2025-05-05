@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Iterable
 import pickle
 import datetime as dt
 
@@ -32,8 +32,16 @@ class RunningQuery:
         self.sql = record.sql
         self.database = record.database or config.get('default_project')
 
-    def get_partitions(self, dn, step_call, query: Select):
-        if dn.is_support_stream():
+    def get_partitions(self, dn, step_call, query: Select) -> Iterable:
+        """
+        Gets chunks of data from data handler for executing them in next steps of the planner
+        Check if datanode supports fetch with stream
+        :param dn: datanode to execute query
+        :param step_call: instance of StepCall to get some parameters from it
+        :param query: AST query to execute
+        :return: generator with query results
+        """
+        if dn.has_support_stream():
             query2 = self.get_partition_query(step_call.current_step_num, query, stream=True)
 
             for df in dn.query_stream(query2, fetch_size=self.batch_size):
@@ -67,6 +75,12 @@ class RunningQuery:
               order by track_column
               limit size {batch_size}
            And fill track_column, previous_value, batch_size
+
+           If steam is true:
+             - if track_column is defined:
+                - don't add limit
+             - else:
+                - return user query without modifications
         """
 
         track_column = self.record.parameters.get('track_column')

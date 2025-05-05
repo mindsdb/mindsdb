@@ -1,6 +1,7 @@
 import time
 import inspect
 from dataclasses import astuple
+from typing import Iterable
 
 import numpy as np
 from numpy import dtype as np_dtype
@@ -227,11 +228,13 @@ class IntegrationDataNode(DataNode):
 
         return DataHubResponse(affected_rows=result.affected_rows)
 
-    def is_support_stream(self):
+    def has_support_stream(self) -> bool:
+        # checks if data handler has query_stream method
         return hasattr(self.integration_handler, 'query_stream') and callable(self.integration_handler.query_stream)
 
     @profiler.profile()
-    def query_stream(self, query: ASTNode, fetch_size=None):
+    def query_stream(self, query: ASTNode, fetch_size: int = None) -> Iterable:
+        # returns generator of results from handler (split by chunks)
         return self.integration_handler.query_stream(query, fetch_size=fetch_size)
 
     @profiler.profile()

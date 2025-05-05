@@ -979,7 +979,30 @@
         "description":"Commercial Product Docs",
         "tabs": [
           {
-            "tab": "Minds Test",
+            "tab": "Get Started",
+            "groups": [
+              {
+                "group": "Get Started",
+                "pages": [
+                  "minds/quickstart",
+                  "minds/quickstart_custom_mind",
+                  "minds/quickstart_best_practices"
+                ]
+              },
+              {
+                "group": "Resources",
+                "pages": [
+                  "minds/minds_overview",
+                  "minds/data_sources",
+                  "minds/sample_data",
+                  "minds/authentication",
+                  "minds/minds_ips"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Python SDK",
             "groups": [
               {
                 "group": "Get Started",
@@ -990,7 +1013,7 @@
             ]
           },
           {
-            "tab": "Minds Test 2",
+            "tab": "REST API",
             "groups": [
               {
                 "group": "Get Started",

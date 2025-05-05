@@ -223,6 +223,11 @@ class KnowledgeBaseTable:
         # filter by targets
         if requested_kb_columns is not None:
             df = df[requested_kb_columns]
+
+        # apply distinct if needed
+        if query.distinct:
+            df = df.drop_duplicates()
+
         return df
 
     def add_relevance(self, df, query_text, relevance_threshold=None):

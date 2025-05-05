@@ -1007,7 +1007,9 @@
               {
                 "group": "Get Started",
                 "pages": [
-                  "minds/test"
+                  "minds/python_sdk/mind_setup",
+                  "minds/python_sdk/completions_api",
+                  "minds/python_sdk/assistants_api"
                 ]
               }
             ]
@@ -1018,7 +1020,7 @@
               {
                 "group": "Get Started",
                 "pages": [
-                  "minds/test2"
+                  "minds/test"
                 ]
               }
             ]

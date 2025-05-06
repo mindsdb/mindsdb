@@ -128,5 +128,7 @@ You can also use the `TO_MARKDOWN()` function to extract content from documents 
 
 ```sql
 INSERT INTO my_kb (
-  SELECT TO_MARKDOWN('https://www.princexml.com/howcome/2016/samples/invoice/index.pdf')
+  SELECT
+    HASH('https://www.princexml.com/howcome/2016/samples/invoice/index.pdf') as id,
+    TO_MARKDOWN('https://www.princexml.com/howcome/2016/samples/invoice/index.pdf') as content
 )

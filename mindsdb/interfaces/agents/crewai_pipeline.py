@@ -94,7 +94,7 @@ class CrewAITextToSQLPipeline:
             ast_query = parse_sql(sql_query)
             
             # Now execute the parsed query
-            result = command_executor.execute_command(ast_query)
+            result = command_executor.execute_command(ast_query, database_name="mindsdb")
             
             # Convert ExecuteAnswer to a readable format
             if hasattr(result, 'data') and hasattr(result.data, 'data_frame'):
@@ -105,7 +105,7 @@ class CrewAITextToSQLPipeline:
                 else:
                     return "Query executed successfully, but returned no data."
             
-            return str(result)
+            return result.data.to_df().to_string(index=False)
         except Exception as e:
             import traceback
             error_trace = traceback.format_exc()
@@ -249,7 +249,7 @@ class CrewAITextToSQLPipeline:
             into structured intent. Your job is to analyze questions, identify what data is being 
             requested, and determine which tables or knowledge bases are relevant.""",
             verbose=self.verbose,
-            allow_delegation=False,
+            allow_delegation=True,
             tools=[self.tools["list_tables"]],
             llm=self.llm
         )
@@ -263,7 +263,7 @@ class CrewAITextToSQLPipeline:
             and filtering. You adapt your approach based on whether the query needs regular SQL or 
             semantic search functionality.""",
             verbose=self.verbose,
-            allow_delegation=False,
+            allow_delegation=True,
             tools=[self.tools["list_tables"], self.tools["check_sql"]],
             llm=self.llm
         )
@@ -271,13 +271,19 @@ class CrewAITextToSQLPipeline:
         # 3. SQL Execution Agent
         self.sql_execution_agent = Agent(
             role="SQL Execution Agent",
-            goal="Execute SQL queries accurately and return complete results",
-            backstory="""You are responsible for running SQL queries and
-            returning the complete results exactly as received from the database. 
-            You understand that queries may contain long string literals that must be 
-            preserved perfectly for accurate results.""",
+            goal="Execute SQL queries accurately and return complete results **without any alteration**",
+            backstory="""You are responsible for running SQL queries and returning the results **verbatim**.  
+                        - ABSOLUTELY NO CHANGES are permitted to the data returned by the database: do not summarise, 
+                        truncate, reorder, hide, or fabricate any part of it.
+                        - You must output the results EXACTLY as produced by the execute_sql tool, including **all** rows 
+                        and **all** columns in the same order.
+                        - If the tool returns a string representation of a table, simply pass that string along unchanged.
+                        - If the tool returns an error string, pass the error string unchanged.
+                        - Never perform any additional formatting, never remove or append columns, and never limit the row count.
+                        - If the result is extremely long, still provide the entire content.
+                        - Your ONLY task is to faithfully relay what you receive from the tool.""",
             verbose=self.verbose,
-            allow_delegation=False,
+            allow_delegation=True,
             tools=[self.tools["execute_sql"]],
             llm=self.llm
         )
@@ -285,13 +291,19 @@ class CrewAITextToSQLPipeline:
         # 4. SQL Validation Agent
         self.sql_validation_agent = Agent(
             role="Results Presentation Specialist",
-            goal="Present query results clearly and accurately to the user",
-            backstory="""You are responsible for formatting and presenting query results 
-            to users in a clear, readable format. For knowledge base similarity searches, 
-            you preserve the actual content returned from the database and never substitute 
-            with placeholder data. You always return the exact data retrieved from the database.""",
+            goal="Present query results clearly and accurately to the user **without altering the content in any way**",
+            backstory="""You format and present query results but must NEVER change the underlying data.
+                        - This means no adding/removing columns, no summarising rows, no re-ordering and no truncation.
+                        - You may add minimal markdown table formatting **only if** it requires zero change to the data itself.
+                        - The textual content between cells must remain exactly what the execution agent produced.
+                        - Under **no circumstances** may you fabricate placeholder data or drop information.
+                        - If the execution agent output is already formatted, simply relay it unchanged.
+                        Your response must therefore be either:
+                        1. The exact string you received; OR
+                        2. The same string wrapped in markdown triple back-ticks for readability.     
+                        Any deviation from these rules is a critical error.""",
             verbose=self.verbose,
-            allow_delegation=False,
+            allow_delegation=True,
             llm=self.llm
         )
     
@@ -377,46 +389,35 @@ class CrewAITextToSQLPipeline:
         execute_sql_task = Task(
             description="""
             Execute the EXACT SQL query using the execute_sql tool WITHOUT modifying it.
-            
-            IMPORTANT: 
-            - Never modify, truncate, or change the SQL query in any way
-            - Execute the exact query as provided, even if it contains very long string literals
-            - Preserve the complete structure and values of the original query
-            
-            Capture and report any execution errors that occur.
-            Format the results in a clear, tabular format when possible.
-            
-            Do not simply return the raw ExecuteAnswer object - extract the data in a readable format.
-            If the results contain rows of data, present them in a clean table format.
+            CRITICAL RULES:
+            1. Call the execute_sql tool with the query you received from the previous step **without any edits**.
+            2. Capture the tool output **exactly**. Do NOT re-format, filter, aggregate, summarise, or otherwise change the output.
+            3. Immediately return that raw output. If you wish, you may wrap it between <results> and </results> tags so the next 
+            agent can detect boundaries, but the text inside the tags must be 100% identical.
+            4. Include ALL rows and ALL columns provided by the database.
+            5. If an error occurs, relay the error string verbatim.
             """,
             agent=self.sql_execution_agent,
-            expected_output="The complete, formatted results from executing the SQL query",
+            expected_output="Raw query execution output enclosed verbatim (optionally within <results></results>)",
             context=[generate_sql_task]
         )
         
         # Task 4: Validate Results
         validate_results_task = Task(
             description="""
-            Present the query results in a clear, readable format:
-            
-            For normal database queries:
-            - Format as a clean table with headers
-            - Preserve all returned data exactly as received
-            
-            For knowledge base similarity searches:
-            - Show the ACTUAL retrieved content exactly as returned from the database
-            - NEVER EVER substitute with placeholder values like 'Content A', 'Meta A', etc.
-            - If you see actual content about "Kindle Voyage" or any other specific product, 
-              preserve it EXACTLY as received from the database
-            - DO NOT create fake/sample data under any circumstances
-            
-            CRITICAL WARNING: You must NEVER generate placeholder data or substitute real data with examples.
-            Using placeholders like "Content A" or "Meta A" is strictly prohibited and is considered a critical error.
-            
-            IMPORTANT: Your job is to format and present ONLY the final results.
-            DO NOT include any text about validation process or assessment.
-            NEVER use placeholder data - use EXACTLY what was returned by the execute_sql tool.
-            Just present the information directly without adding any commentary.
+            Your job is ONLY to present the execution results to the user **without altering them**.
+            RULES YOU MUST FOLLOW:
+            • Do NOT drop or add columns.
+            • Do NOT truncate or sample rows.
+            • Do NOT rename headers.
+            • Do NOT re-order data.
+            • Do NOT summarise or paraphrase.
+            • Do NOT insert commentary or analysis.
+            If the execution output is wrapped in <results></results>, copy everything between the tags exactly as is 
+            (you may wrap it in markdown triple back-ticks for readability).
+            If the execution output is already in plain text, pass it through unchanged or wrap it in markdown code 
+            block fences for readability.
+            Under **no circumstances** may you fabricate or remove information.
             """,
             agent=self.sql_validation_agent,
             expected_output="The actual database query results with real data, exactly as returned from the database",
@@ -438,7 +439,8 @@ class CrewAITextToSQLPipeline:
                 validate_results_task
             ],
             verbose=self.verbose,
-            process=Process.sequential
+            #process=Process.sequential,
+            planning=True
         )
         
         result = crew.kickoff()

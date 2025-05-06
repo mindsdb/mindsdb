@@ -264,7 +264,7 @@ def validate_default_project() -> None:
         existing_project.metadata_ = {'is_default': True}
         flag_modified(existing_project, 'metadata_')
         db.session.commit()
-    elif current_default_project.record.name != new_default_project_name:
+    elif current_default_project.name != new_default_project_name:
         # If the default project exists, but the name is different, update the name.
         existing_project = db.Project.query.filter(
             db.Project.company_id == filter_company_id,

@@ -41,6 +41,7 @@ from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
 
 from mindsdb.api.executor.command_executor import ExecuteCommands
+from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.utilities import log
 from mindsdb.integrations.utilities.rag.rerankers.base_reranker import BaseLLMReranker
 
@@ -145,19 +146,22 @@ class KnowledgeBaseTable:
 
         db_handler = self.get_vector_db()
 
+        # Copy query for complex execution via DuckDB: DISTINCT, GROUP BY etc.
+        query_copy = copy.deepcopy(query)
+
         logger.debug("Replaced content with embeddings in where clause")
         # set table name
         query.from_table = Identifier(parts=[self._kb.vector_database_table])
         logger.debug(f"Set table name to: {self._kb.vector_database_table}")
 
-        is_distinct = query.distinct
+        # is_distinct = query.distinct
 
         requested_kb_columns = []
         for target in query.targets:
             if isinstance(target, Star):
                 # SELECT DISTINCT * is not allowed because it will not work with metadata
-                if is_distinct:
-                    raise ValueError("SELECT DISTINCT * is not allowed. Please specify columns explicitly.")
+                # if is_distinct:
+                #     raise ValueError("SELECT DISTINCT * is not allowed. Please specify columns explicitly.")
                 
                 requested_kb_columns = None
                 break
@@ -165,8 +169,8 @@ class KnowledgeBaseTable:
                 requested_kb_columns.append(target.parts[-1].lower())
 
         # SELECT DISTINCT with metadata is not allowed
-        if requested_kb_columns and TableField.METADATA.value in requested_kb_columns and is_distinct:
-            raise ValueError("SELECT DISTINCT with metadata is not allowed. Please specify columns explicitly.")
+        # if requested_kb_columns and TableField.METADATA.value in requested_kb_columns and is_distinct:
+        #     raise ValueError("SELECT DISTINCT with metadata is not allowed. Please specify columns explicitly.")
 
         query.targets = [
             Identifier(TableField.ID.value),
@@ -234,9 +238,15 @@ class KnowledgeBaseTable:
         if requested_kb_columns is not None:
             df = df[requested_kb_columns]
 
-        # apply distinct if needed
-        if is_distinct:
-            df = df.drop_duplicates()
+        if (
+            query.group_by is not None
+            or query.order_by is not None
+            or query.having is not None
+            or query.distinct is True
+            or len(query.targets) != 1
+            or not isinstance(query.targets[0], Star)
+        ):
+            df = query_df(df, query_copy, session=self.session)
 
         return df
 

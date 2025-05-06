@@ -21,7 +21,7 @@
               {
                 "group": "Get Started",
                 "pages": [
-                  "what-is-mindsdb",
+                  "mindsdb",
                   "quickstart-tutorial",
                   {
                     "group": "Installation",
@@ -984,6 +984,7 @@
               {
                 "group": "Get Started",
                 "pages": [
+                  "minds",
                   "minds/quickstart",
                   "minds/quickstart_custom_mind",
                   "minds/quickstart_best_practices"
@@ -1079,21 +1080,7 @@
     ],
     "global": {
       "anchors": [
-        {
-          "anchor": "Join our Slack",
-          "href": "https://mindsdb.com/joincommunity",
-          "icon": "slack"
-        },
-        {
-          "anchor": "GitHub",
-          "href": "https://github.com/mindsdb/mindsdb",
-          "icon": "github"
-        },
-        {
-          "anchor": "Website",
-          "href": "https://mindsdb.com/",
-          "icon": "link"
-        }
+        
       ]
     }
   },
@@ -1109,16 +1096,16 @@
   "navbar": {
     "links": [
       {
-        "label": "Blog",
-        "href": "https://mindsdb.com/blog"
+        "label": "Slack",
+        "href": "https://mindsdb.com/joincommunity"
       },
       {
-        "label": "Events",
-        "href": "https://mindsdb.com/events"
+        "label": "GitHub",
+        "href": "https://github.com/mindsdb/mindsdb"
       },
       {
-        "label": "News",
-        "href": "https://mindsdb.com/newsroom"
+        "label": "Website",
+        "href": "https://mindsdb.com/"
       }
     ],
     "primary": {
@@ -1847,6 +1834,10 @@
     {
       "source": "/mindsdb_sql/agents/knowledge-bases",
       "destination": "/mindsdb_sql/knowledge-bases"
+    },
+    {
+      "source": "/what-is-mindsdb",
+      "destination": "/mindsdb"
     }
   ]
 }

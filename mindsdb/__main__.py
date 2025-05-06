@@ -374,18 +374,6 @@ if __name__ == '__main__':
         except Exception:
             pass
 
-    is_cloud = config.is_cloud
-
-    if not is_cloud:
-        logger.debug("Applying database migrations")
-        try:
-            from mindsdb.migrations import migrate
-            migrate.migrate_to_head()
-        except Exception as e:
-            logger.error(f"Error! Something went wrong during DB migrations: {e}")
-
-        validate_default_project()
-
     apis = os.getenv('MINDSDB_APIS') or config.cmd_args.api
 
     if apis is None:  # If "--api" option is not specified, start the default APIs
@@ -402,8 +390,18 @@ if __name__ == '__main__':
     logger.debug(f"System config: {config.auto_config}")
     logger.debug(f"Env config: {config.env_config}")
 
+    is_cloud = config.is_cloud
     unexisting_pids = clean_unlinked_process_marks()
     if not is_cloud:
+        logger.debug("Applying database migrations")
+        try:
+            from mindsdb.migrations import migrate
+            migrate.migrate_to_head()
+        except Exception as e:
+            logger.error(f"Error! Something went wrong during DB migrations: {e}")
+
+        validate_default_project()
+
         if len(unexisting_pids) > 0:
             set_error_model_status_by_pids(unexisting_pids)
         set_error_model_status_for_unfinished()

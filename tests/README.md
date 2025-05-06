@@ -3,7 +3,7 @@
 Our tests are organized into several subdirectories, each focusing on different aspects of our application:
 
 * api: Contains tests related to the MindsDB's API endpoints.
-* integration_tests: Contains the integration tests
+* integration: Contains the integration tests
 * load: Contains the load tests
 * scripts: Scripts and utilitis used for tests
 * unit: This directory contains the unit tests:

@@ -12,6 +12,7 @@ from mindsdb_sql_parser.ast import Select, Show, Describe, Explain, Identifier
 from mindsdb.utilities import log
 from mindsdb.utilities.context import context as ctx
 from mindsdb.integrations.utilities.query_traversal import query_traversal
+from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES
 
 logger = log.getLogger(__name__)
 
@@ -275,9 +276,13 @@ class SQLAgent:
         dn = self._command_executor.session.datahub.get(integration)
 
         fields, dtypes = [], []
-        for column in dn.get_table_columns(table_name, schema_name):
-            fields.append(column['name'])
-            dtypes.append(column.get('type', ''))
+        for df in dn.get_table_columns_df(table_name, schema_name):
+            df_records = df.to_dict(orient='records')
+            fields.append(df_records[INF_SCHEMA_COLUMNS_NAMES.COLUMN_NAME])
+            if df_records[INF_SCHEMA_COLUMNS_NAMES.MYSQL_DATA_TYPE] is not None:
+                dtypes.append(df_records[INF_SCHEMA_COLUMNS_NAMES.MYSQL_DATA_TYPE].value)
+            else:
+                dtypes.append(df_records[INF_SCHEMA_COLUMNS_NAMES.DATA_TYPE])
 
         info = f'Table named `{table_str}`:\n'
         info += f"\nSample with first {self._sample_rows_in_table_info} rows from table {table_str} in CSV format (dialect is 'excel'):\n"

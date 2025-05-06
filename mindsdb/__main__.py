@@ -1,3 +1,5 @@
+import gc
+gc.disable()
 import os
 import sys
 import time
@@ -12,7 +14,6 @@ from enum import Enum
 from dataclasses import dataclass, field
 from typing import Callable, Optional, Tuple, List
 
-from packaging import version
 from sqlalchemy.orm.attributes import flag_modified
 
 from mindsdb.utilities import log
@@ -25,14 +26,11 @@ from mindsdb.utilities.config import config
 from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.utilities.starters import (
     start_http, start_mysql, start_mongo, start_postgres, start_ml_task_queue, start_scheduler, start_tasks,
-    start_mcp
+    start_mcp, start_litellm
 )
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
-from mindsdb.utilities.functions import get_versions_where_predictors_become_obsolete
-from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.interfaces.database.projects import ProjectController
 import mindsdb.interfaces.storage.db as db
-from mindsdb.integrations.utilities.install import install_dependencies
 from mindsdb.utilities.fs import clean_process_marks, clean_unlinked_process_marks
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.auth import register_oauth_client, get_aws_meta_data
@@ -47,6 +45,8 @@ try:
 except RuntimeError:
     logger.info('Torch multiprocessing context already set, ignoring...')
 
+gc.enable()
+
 _stop_event = threading.Event()
 
 
@@ -59,6 +59,7 @@ class TrunkProcessEnum(Enum):
     TASKS = 'tasks'
     ML_TASK_QUEUE = 'ml_task_queue'
     MCP = 'mcp'
+    LITELLM = 'litellm'
 
     @classmethod
     def _missing_(cls, value):
@@ -212,6 +213,28 @@ def do_clean_process_marks():
             set_error_model_status_by_pids(unexisting_pids)
 
 
+def create_permanent_integrations():
+    """
+    Create permanent integrations, for now only the 'files' integration.
+    NOTE: this is intentional to avoid importing integration_controller
+    """
+    integration_name = 'files'
+    existing = db.session.query(db.Integration).filter_by(name=integration_name, company_id=None).first()
+    if existing is None:
+        integration_record = db.Integration(
+            name=integration_name,
+            data={},
+            engine=integration_name,
+            company_id=None,
+        )
+        db.session.add(integration_record)
+        try:
+            db.session.commit()
+        except Exception as e:
+            logger.error(f"Failed to commit permanent integration {integration_name}: {e}")
+            db.session.rollback()
+
+
 if __name__ == '__main__':
     # warn if less than 1Gb of free RAM
     if psutil.virtual_memory().available < (1 << 30):
@@ -299,15 +322,38 @@ if __name__ == '__main__':
         logger.debug(f"Checking if default project {config.get('default_project')} exists")
         project_controller = ProjectController()
 
-        current_default_project = project_controller.get(is_default=True)
-        if current_default_project.record.name != config.get('default_project'):
+        try:
+            current_default_project = project_controller.get(is_default=True)
+        except EntityNotExistsError:
+            # In previous versions, the default project could be deleted. This is no longer possible.
+            current_default_project = None
+
+        if current_default_project:
+            if current_default_project.record.name != config.get('default_project'):
+                try:
+                    project_controller.get(name=config.get('default_project'))
+                    logger.critical(f"A project with the name '{config.get('default_project')}' already exists")
+                    sys.exit(1)
+                except EntityNotExistsError:
+                    pass
+                project_controller.update(current_default_project.record.id, new_name=config.get('default_project'))
+
+        # Legacy: If the default project does not exist, mark the new one as default.
+        else:
             try:
-                new_default_project = project_controller.get(name=config.get('default_project'))
-                log.critical(f"A project with the name '{config.get('default_project')}' already exists")
-                sys.exit(1)
+                project_controller.get(name=config.get('default_project'))
             except EntityNotExistsError:
-                pass
-            project_controller.update(current_default_project.record.id, new_name=config.get('default_project'))
+                logger.critical(
+                    f"A project with the name '{config.get('default_project')}' does not exist"
+                )
+                raise
+
+            project_controller.update(
+                name=config.get('default_project'),
+                new_metadata={
+                    "is_default": True
+                }
+            )
 
     apis = os.getenv('MINDSDB_APIS') or config.cmd_args.api
 
@@ -317,27 +363,6 @@ if __name__ == '__main__':
         api_arr = []
     else:  # The user has provided a list of APIs to start
         api_arr = [TrunkProcessEnum(name) for name in apis.split(',')]
-
-    if config.cmd_args.install_handlers is not None:
-        handlers_list = [s.strip() for s in config.cmd_args.install_handlers.split(",")]
-        # import_meta = handler_meta.get('import', {})
-        for handler_name, handler_meta in integration_controller.get_handlers_import_status().items():
-            if handler_name not in handlers_list:
-                continue
-            import_meta = handler_meta.get("import", {})
-            if import_meta.get("success") is True:
-                logger.info(f"{'{0: <18}'.format(handler_name)} - already installed")
-                continue
-            result = install_dependencies(import_meta.get("dependencies", []))
-            if result.get("success") is True:
-                logger.info(
-                    f"{'{0: <18}'.format(handler_name)} - successfully installed"
-                )
-            else:
-                logger.info(
-                    f"{'{0: <18}'.format(handler_name)} - error during dependencies installation: {result.get('error_message', 'unknown error')}"
-                )
-        sys.exit(0)
 
     logger.info(f"Version: {mindsdb_version}")
     logger.info(f"Configuration file: {config.config_path or 'absent'}")
@@ -351,43 +376,15 @@ if __name__ == '__main__':
         if len(unexisting_pids) > 0:
             set_error_model_status_by_pids(unexisting_pids)
         set_error_model_status_for_unfinished()
-
-        integration_controller.create_permanent_integrations()
-
-        # region Mark old predictors as outdated
-        is_modified = False
-        predictor_records = (
-            db.session.query(db.Predictor)
-            .filter(db.Predictor.deleted_at.is_(None))
-            .all()
-        )
-        if len(predictor_records) > 0:
-            (
-                sucess,
-                compatible_versions,
-            ) = get_versions_where_predictors_become_obsolete()
-            if sucess is True:
-                compatible_versions = [version.parse(x) for x in compatible_versions]
-                mindsdb_version_parsed = version.parse(mindsdb_version)
-                compatible_versions = [x for x in compatible_versions if x <= mindsdb_version_parsed]
-                if len(compatible_versions) > 0:
-                    last_compatible_version = compatible_versions[-1]
-                    for predictor_record in predictor_records:
-                        if (
-                            isinstance(predictor_record.mindsdb_version, str)
-                            and version.parse(predictor_record.mindsdb_version) < last_compatible_version
-                        ):
-                            predictor_record.update_status = "available"
-                            is_modified = True
-        if is_modified is True:
-            db.session.commit()
-        # endregion
+        create_permanent_integrations()
 
     clean_process_marks()
 
-    http_api_config = config['api']['http']
-    mysql_api_config = config['api']['mysql']
-    mcp_api_config = config['api']['mcp']
+    # Get config values for APIs
+    http_api_config = config.get('api', {}).get('http', {})
+    mysql_api_config = config.get('api', {}).get('mysql', {})
+    mcp_api_config = config.get('api', {}).get('mcp', {})
+    litellm_api_config = config.get('api', {}).get('litellm', {})
     trunc_processes_struct = {
         TrunkProcessEnum.HTTP: TrunkProcessData(
             name=TrunkProcessEnum.HTTP.value,
@@ -446,6 +443,17 @@ if __name__ == '__main__':
             restart_on_failure=mcp_api_config.get('restart_on_failure', False),
             max_restart_count=mcp_api_config.get('max_restart_count', TrunkProcessData.max_restart_count),
             max_restart_interval_seconds=mcp_api_config.get(
+                'max_restart_interval_seconds', TrunkProcessData.max_restart_interval_seconds
+            )
+        ),
+        TrunkProcessEnum.LITELLM: TrunkProcessData(
+            name=TrunkProcessEnum.LITELLM.value,
+            entrypoint=start_litellm,
+            port=litellm_api_config.get('port', 8000),
+            args=(config.cmd_args.verbose,),
+            restart_on_failure=litellm_api_config.get('restart_on_failure', False),
+            max_restart_count=litellm_api_config.get('max_restart_count', TrunkProcessData.max_restart_count),
+            max_restart_interval_seconds=litellm_api_config.get(
                 'max_restart_interval_seconds', TrunkProcessData.max_restart_interval_seconds
             )
         )

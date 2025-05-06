@@ -1,11 +1,28 @@
+import time
 import os
 from unittest.mock import patch
+import threading
 
 import pandas as pd
 import pytest
 
 from tests.unit.executor_test_base import BaseExecutorDummyML
 from mindsdb.interfaces.agents.langchain_agent import SkillData
+
+
+@pytest.fixture(scope="function")
+def task_monitor():
+    from mindsdb.interfaces.tasks.task_monitor import TaskMonitor
+    monitor = TaskMonitor()
+
+    stop_event = threading.Event()
+    worker = threading.Thread(target=monitor.start, daemon=True, args=(stop_event,))
+    worker.start()
+
+    yield worker
+
+    stop_event.set()
+    worker.join()
 
 
 def set_openai_completion(mock_openai, response):
@@ -238,7 +255,7 @@ class TestAgent(BaseExecutorDummyML):
             '''
         )
 
-        self.run_sql('create knowledge base kb_review using model=emb_model')
+        self.run_sql('create knowledge base kb_review using model=emb_model, id_column = "id"')
 
         self.run_sql('''
           create skill retr_skill
@@ -339,11 +356,11 @@ class TestKB(BaseExecutorDummyML):
 
         self._create_embedding_model('emb_model')
 
-        self.run_sql('create knowledge base kb_review using model=emb_model')
+        self.run_sql('create knowledge base kb_review using model=emb_model, id_column = "id"')
         self.run_sql('drop knowledge base kb_review')  # drop chromadb left since the last failed test
-        self.run_sql('create knowledge base kb_review using model=emb_model')
+        self.run_sql('create knowledge base kb_review using model=emb_model, id_column = "id"')
 
-        self.run_sql("insert into kb_review (content) values ('review')")
+        self.run_sql("insert into kb_review (content, id) values ('review', 0)")
 
         # selectable
         ret = self.run_sql("select * from kb_review")
@@ -371,9 +388,9 @@ class TestKB(BaseExecutorDummyML):
         self.save_file('reviews', df)
 
         # ---  case 1: kb with default columns settings ---
-        self.run_sql('create knowledge base kb_review using model=emb_model')
+        self.run_sql('create knowledge base kb_review using model=emb_model, id_column = "id"')
         self.run_sql('drop knowledge base kb_review')  # drop chromadb left since the last failed test
-        self.run_sql('create knowledge base kb_review using model=emb_model')
+        self.run_sql('create knowledge base kb_review using model=emb_model, id_column = "id"')
 
         self.run_sql("""
             insert into kb_review
@@ -389,15 +406,11 @@ class TestKB(BaseExecutorDummyML):
         ret = self.run_sql("select * from kb_review where original_row_id = '123'")
         assert len(ret) == 0
 
-        # insert without id
+        # insert
         self.run_sql("""
             insert into kb_review
-            select review as content, product, url from files.reviews
+            select review as content, product, url, id from files.reviews
         """)
-
-        # id column wasn't used
-        ret = self.run_sql("select * from kb_review where original_row_id = '123'")
-        assert len(ret) == 0
 
         # product/url in metadata
         ret = self.run_sql("select * from kb_review where product = 'probook'")
@@ -442,7 +455,8 @@ class TestKB(BaseExecutorDummyML):
         self.run_sql('''
         create knowledge base kb_review
          using model=emb_model,
-         content_columns=['review']
+         content_columns=['review'],
+         id_column = "id"
         ''')
 
         self.run_sql("""
@@ -461,9 +475,7 @@ class TestKB(BaseExecutorDummyML):
         assert metadata['url'] == record['url']
         assert metadata['product'] == record['product']
 
-    def test_join_kb_table(self):
-        self._create_embedding_model('emb_model')
-
+    def _get_ral_table(self):
         data = [
             ['1000', 'Green beige', 'Beige verdastro'],
             ['1004', 'Golden yellow', 'Giallo oro'],
@@ -471,12 +483,18 @@ class TestKB(BaseExecutorDummyML):
             ['9023', 'Pearl dark grey', 'Grigio scuro perlato'],
         ]
 
-        df = pd.DataFrame(data, columns=['ral', 'english', 'italian'])
+        return pd.DataFrame(data, columns=['ral', 'english', 'italian'])
+
+    def test_join_kb_table(self):
+        self._create_embedding_model('emb_model')
+
+        df = self._get_ral_table()
         self.save_file('ral', df)
 
         self.run_sql('''
           create knowledge base kb_ral
-            using model=emb_model
+            using model=emb_model,
+            id_column="id"
         ''')
 
         self.run_sql("""
@@ -524,3 +542,96 @@ class TestKB(BaseExecutorDummyML):
         """)
         assert len(ret) == 2
         assert set(ret['id']) == {'9016', '9023'}
+
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_kb_partitions(self, mock_handler, task_monitor):
+        self._create_embedding_model('emb_model')
+
+        df = self._get_ral_table()
+        self.save_file('ral', df)
+
+        df = pd.concat([df] * 30)
+        # unique ids
+        df['id'] = list(map(str, range(len(df))))
+
+        self.set_handler(mock_handler, name='pg', tables={'ral': df})
+
+        def check_partition(insert_sql):
+            # create empty kb
+            self.run_sql('DROP KNOWLEDGE_BASE IF EXISTS kb_part')
+            self.run_sql('create knowledge base kb_part using model=emb_model,id_column="id"')
+
+            # load kb
+            ret = self.run_sql(insert_sql)
+            # inserts returns query
+            query_id = ret['ID'][0]
+
+            # wait loaded
+            for i in range(1000):
+                time.sleep(0.2)
+                ret = self.run_sql(f'select * from information_schema.queries where id = {query_id}')
+                if ret['FINISHED_AT'][0] is not None:
+                    break
+
+            # check content
+            ret = self.run_sql('select * from kb_part')
+            assert len(ret) == len(df)
+
+            # check queries table
+            ret = self.run_sql('select * from information_schema.queries')
+            assert len(ret) == 1
+            rec = ret.iloc[0]
+            assert 'kb_part' in ret['SQL'][0]
+            assert ret['ERROR'][0] is None
+            assert ret['FINISHED_AT'][0] is not None
+
+            # test describe
+            ret = self.run_sql('describe knowledge base kb_part')
+            assert len(ret) == 1
+            rec_d = ret.iloc[0]
+            assert rec_d['PROCESSED_ROWS'] == rec['PROCESSED_ROWS']
+            assert rec_d['INSERT_STARTED_AT'] == rec['STARTED_AT']
+            assert rec_d['INSERT_FINISHED_AT'] == rec['FINISHED_AT']
+            assert rec_d['QUERY_ID'] == query_id
+
+            # del query
+            self.run_sql(f"SELECT query_cancel({rec['ID']})")
+            ret = self.run_sql('select * from information_schema.queries')
+            assert len(ret) == 0
+
+            ret = self.run_sql('describe knowledge base kb_part')
+            assert len(ret) == 1
+            rec_d = ret.iloc[0]
+            assert rec_d['PROCESSED_ROWS'] is None
+            assert rec_d['INSERT_STARTED_AT'] is None
+            assert rec_d['INSERT_FINISHED_AT'] is None
+            assert rec_d['QUERY_ID'] is None
+
+        # test iterate
+        check_partition('''
+            insert into kb_part
+            SELECT id, english content FROM  pg.ral
+            using batch_size=20, track_column=id
+        ''')
+
+        # test threads
+        check_partition('''
+            insert into kb_part
+            SELECT id, english content FROM  pg.ral
+            using batch_size=20, track_column=id, threads = 3
+        ''')
+
+        # check select join using partitions
+        ret = self.run_sql('''
+            SELECT * FROM  pg.ral t
+            join emb_model
+            using batch_size=20, track_column=id
+        ''')
+        assert len(ret) == len(df)
+
+        ret = self.run_sql('''
+            SELECT * FROM  pg.ral t
+            join emb_model
+            using batch_size=20, track_column=id, threads = 3
+        ''')
+        assert len(ret) == len(df)

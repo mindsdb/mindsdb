@@ -1,5 +1,6 @@
 import ast
 import sys
+import os
 from typing import Dict, List, Optional, Union
 import hashlib
 
@@ -67,6 +68,12 @@ class ChromaDBHandler(VectorStoreHandler):
             "persist_directory": self.persist_directory,
         }
 
+        self.create_collection_metadata = {
+            "hnsw:space": config.distance,
+        }
+
+        self._use_handler_storage = False
+
         self.connect()
 
     def validate_connection_parameters(self, name, **kwargs):
@@ -79,11 +86,15 @@ class ChromaDBHandler(VectorStoreHandler):
 
         config = ChromaHandlerConfig(**_config)
 
-        if config.persist_directory and not self.handler_storage.is_temporal:
-            # get full persistence directory from handler storage
-            self.persist_directory = self.handler_storage.folder_get(
-                config.persist_directory
-            )
+        if config.persist_directory:
+            if os.path.isabs(config.persist_directory):
+                self.persist_directory = config.persist_directory
+            elif not self.handler_storage.is_temporal:
+                # get full persistence directory from handler storage
+                self.persist_directory = self.handler_storage.folder_get(
+                    config.persist_directory
+                )
+                self._use_handler_storage = True
 
         return config
 
@@ -105,7 +116,7 @@ class ChromaDBHandler(VectorStoreHandler):
 
     def _sync(self):
         """Sync the database to disk if using persistent storage"""
-        if self.persist_directory:
+        if self.persist_directory and self._use_handler_storage:
             self.handler_storage.folder_sync(self.persist_directory)
 
     def __del__(self):
@@ -237,6 +248,7 @@ class ChromaDBHandler(VectorStoreHandler):
         offset: int = None,
         limit: int = None,
     ) -> pd.DataFrame:
+
         collection = self._client.get_collection(table_name)
         filters = self._translate_metadata_condition(conditions)
 
@@ -306,7 +318,7 @@ class ChromaDBHandler(VectorStoreHandler):
             TableField.ID.value: ids,
             TableField.CONTENT.value: documents,
             TableField.METADATA.value: metadatas,
-            TableField.EMBEDDINGS.value: embeddings,
+            TableField.EMBEDDINGS.value: list(embeddings),
         }
 
         if columns is not None:
@@ -390,7 +402,7 @@ class ChromaDBHandler(VectorStoreHandler):
         Insert/Upsert data into ChromaDB collection.
         If records with same IDs exist, they will be updated.
         """
-        collection = self._client.get_or_create_collection(collection_name)
+        collection = self._client.get_or_create_collection(collection_name, metadata=self.create_collection_metadata)
 
         # Convert metadata from string to dict if needed
         if TableField.METADATA.value in df.columns:
@@ -416,8 +428,8 @@ class ChromaDBHandler(VectorStoreHandler):
             collection.upsert(
                 ids=data_dict[TableField.ID.value],
                 documents=data_dict[TableField.CONTENT.value],
-                embeddings=data_dict.get(TableField.EMBEDDINGS.value),
-                metadatas=data_dict.get(TableField.METADATA.value)
+                embeddings=data_dict.get(TableField.EMBEDDINGS.value, None),
+                metadatas=data_dict.get(TableField.METADATA.value, None)
             )
             self._sync()
         except Exception as e:
@@ -476,7 +488,8 @@ class ChromaDBHandler(VectorStoreHandler):
         """
         Create a collection with the given name in the ChromaDB database.
         """
-        self._client.create_collection(table_name, get_or_create=if_not_exists)
+        self._client.create_collection(table_name, get_or_create=if_not_exists,
+                                       metadata=self.create_collection_metadata)
         self._sync()
 
     def drop_table(self, table_name: str, if_exists=True):

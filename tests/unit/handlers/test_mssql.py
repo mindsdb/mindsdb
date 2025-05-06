@@ -9,6 +9,7 @@ from base_handler_test import BaseDatabaseHandlerTest
 from mindsdb.integrations.handlers.mssql_handler.mssql_handler import SqlServerHandler
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
+    INF_SCHEMA_COLUMNS_NAMES_SET,
     RESPONSE_TYPE
 )
 
@@ -195,18 +196,38 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         """
         Tests that get_columns calls native_query with the correct SQL
         """
-        expected_response = Response(RESPONSE_TYPE.OK)
+        expected_response = Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=DataFrame([], columns=list(INF_SCHEMA_COLUMNS_NAMES_SET))
+        )
         self.handler.native_query = MagicMock(return_value=expected_response)
 
         table_name = "test_table"
         response = self.handler.get_columns(table_name)
+        assert response.type == RESPONSE_TYPE.COLUMNS_TABLE
         self.handler.native_query.assert_called_once()
         call_args = self.handler.native_query.call_args[0][0]
 
-        self.assertIn('information_schema.columns', call_args)
-        self.assertIn('column_name', call_args)
-        self.assertIn('data_type', call_args)
-        self.assertIn(f"table_name = '{table_name}'", call_args)
+        expected_sql = f"""
+            SELECT
+                COLUMN_NAME,
+                DATA_TYPE,
+                ORDINAL_POSITION,
+                COLUMN_DEFAULT,
+                IS_NULLABLE,
+                CHARACTER_MAXIMUM_LENGTH,
+                CHARACTER_OCTET_LENGTH,
+                NUMERIC_PRECISION,
+                NUMERIC_SCALE,
+                DATETIME_PRECISION,
+                CHARACTER_SET_NAME,
+                COLLATION_NAME
+            FROM
+                information_schema.columns
+            WHERE
+                table_name = '{table_name}'
+        """
+        self.assertEqual(call_args, expected_sql)
         self.assertEqual(response, expected_response)
 
     def test_connect_validation(self):

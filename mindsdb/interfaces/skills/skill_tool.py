@@ -243,7 +243,13 @@ class SkillToolController:
             kb_table = session_controller.kb_controller.get_table(knowledge_base_name, skill.project_id)
 
             res = kb_table.select_query(query)
-            return '\n'.join(res.content)
+            # Handle both chunk_content and content column names
+            if hasattr(res, 'chunk_content'):
+                return '\n'.join(res.chunk_content)
+            elif hasattr(res, 'content'):
+                return '\n'.join(res.content)
+            else:
+                return "No content or chunk_content found in knowledge base response"
 
         return _answer_question
 

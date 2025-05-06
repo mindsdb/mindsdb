@@ -3,9 +3,9 @@
   "theme": "mint",
   "name": "MindsDB",
   "colors": {
-    "primary": "#2AB673",
-    "light": "#55D799",
-    "dark": "#117866"
+    "primary": "#3f8394",
+    "light": "#3f8394",
+    "dark": "#3f8394"
   },
   "favicon": "/favicon.png",
   "navigation": {
@@ -1018,9 +1018,58 @@
             "tab": "REST API",
             "groups": [
               {
-                "group": "Get Started",
+                "group": "API Reference",
                 "pages": [
-                  "minds/test"
+                  "minds/rest_api/overview",
+                  {
+                    "group": "Minds",
+                    "pages": [
+                      "minds/rest_api/create_mind",
+                      "minds/rest_api/list_minds",
+                      "minds/rest_api/get_mind",
+                      "minds/rest_api/update_mind",
+                      "minds/rest_api/add_data_to_mind",
+                      "minds/rest_api/delete_mind"
+                    ]
+                  },
+                  {
+                    "group": "Data Sources",
+                    "pages": [
+                      "minds/rest_api/create_datasource",
+                      "minds/rest_api/list_datasources",
+                      "minds/rest_api/get_datasource",
+                      "minds/rest_api/update_datasource",
+                      "minds/rest_api/delete_datasource"
+                    ]
+                  },
+                  "minds/rest_api/chat"
+                ]
+              },
+              {
+                "group": "Assistants API",
+                "pages": [
+                  "minds/rest_api/overview_assistants",
+                  {
+                    "group": "Threads",
+                    "pages": [
+                      "minds/rest_api/create_thread",
+                      "minds/rest_api/delete_thread"
+                    ]
+                  },
+                  {
+                    "group": "Messages",
+                    "pages": [
+                      "minds/rest_api/create_message",
+                      "minds/rest_api/list_messages"
+                    ]
+                  },
+                  {
+                    "group": "Runs",
+                    "pages": [
+                      "minds/rest_api/create_run",
+                      "minds/rest_api/retrieve_run"
+                    ]
+                  }
                 ]
               }
             ]

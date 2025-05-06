@@ -1,0 +1,15 @@
+---
+title: Minds as Assistants
+sidebarTitle: Minds as Assistants
+---
+
+Assistants enable Minds to engage in conversational interactions, keeping track of the conversational context. This contrasts with the [Chat Completions endpoint](/docs/api/chat#completions), which handles one-time requests without *remembering* past interactions.
+
+Here’s how to use **Minds as Assistants**:
+
+1. [Create a conversation Thread](/docs/api/assistants_threads#create-thread) and save the Thread ID.
+2. [Create a Message](/docs/api/assistants_messages#create-message) assigning it to the Thread. This is a question sent to the Mind.
+3. [List Messages](/docs/api/assistants_messages#list-messages) assigned to the Thread to ensure your message has been sent.
+4. [Create a Run](/docs/api/assistants_runs#create-run) assigning it to the Thread and providing the name of the [Mind created with this endpoint](/docs/api/minds#create-mind), and save the Run ID.
+5. [Retrieve a Run](/docs/api/assistants_runs#retrieve-run) assigned to the Thread to check the status of the Run. The status should read complete.
+6. [List Messages](/docs/api/assistants_messages#list-messages) assigned to the Thread that should contain the response from the Mind.

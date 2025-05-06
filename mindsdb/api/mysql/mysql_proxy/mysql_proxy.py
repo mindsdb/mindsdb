@@ -32,12 +32,10 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum
 
 import mindsdb.utilities.hooks as hooks
 import mindsdb.utilities.profiler as profiler
+from mindsdb.utilities.sql import clear_sql
 from mindsdb.api.mysql.mysql_proxy.classes.client_capabilities import ClentCapabilities
 from mindsdb.api.mysql.mysql_proxy.classes.server_capabilities import (
     server_capabilities,
-)
-from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import (
-    SqlStatementParser,
 )
 from mindsdb.api.executor.controllers import SessionController
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
@@ -741,7 +739,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             try:
                 if p.type.value == COMMANDS.COM_QUERY:
                     sql = self.decode_utf(p.sql.value)
-                    sql = SqlStatementParser.clear_sql(sql)
+                    sql = clear_sql(sql)
                     logger.debug(f'Incoming query: {sql}')
                     profiler.set_meta(
                         query=sql, api="mysql", environment=config.get("environment")

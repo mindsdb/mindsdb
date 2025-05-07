@@ -50,12 +50,6 @@ prometheus-client==0.20.0
 transformers >= 4.42.4
 sentry-sdk[flask] == 2.14.0
 openai<2.0.0,>=1.58.1
-opentelemetry-api==1.27.0
-opentelemetry-sdk==1.27.0
-opentelemetry-exporter-otlp==1.27.0
-opentelemetry-instrumentation-requests==0.48b0
-opentelemetry-instrumentation-flask==0.48b0
-opentelemetry-distro==0.48b0
 pyaml==23.12.0
 mcp==1.6.0
 fastapi>=0.110.0, <1.0.0  # Required for LiteLLM server

@@ -73,16 +73,17 @@ class CrewAITextToSQLPipeline:
         self._setup_tools()
         self._setup_agents()
     
-    def _execute_sql_safely(self, sql_query: str) -> str:
+    def _execute_sql_safely(self, sql_query: str, return_dict: bool = False) -> Union[str, Dict[str, Any]]:
         """Utility method to safely execute SQL by parsing it first.
         
         This centralizes SQL parsing and execution to avoid the 'to_string' error.
         
         Args:
             sql_query: The SQL query string to execute
+            return_dict: If True, return the results as a structured dictionary, otherwise a formatted string
             
         Returns:
-            String representation of the execution result or error message
+            String representation or dictionary representation of the execution result or an error message
         """
         try:
             # Log the query for debugging
@@ -96,23 +97,48 @@ class CrewAITextToSQLPipeline:
             # Now execute the parsed query
             result = command_executor.execute_command(ast_query, database_name="mindsdb")
             
-            # Convert ExecuteAnswer to a readable format
+            # Convert ExecuteAnswer to a DataFrame for easier manipulation
+            df = None
             if hasattr(result, 'data') and hasattr(result.data, 'data_frame'):
-                # Convert DataFrame to readable format
                 df = result.data.data_frame
+            else:
+                # Fallback to to_df when data_frame attr not available
+                try:
+                    df = result.data.to_df()
+                except Exception:
+                    df = None
+            
+            # If dictionary output requested
+            if return_dict:
+                if df is not None:
+                    # Build a serialisable structure
+                    data_dict = {
+                        "columns": df.columns.tolist(),
+                        "rows": df.to_dict(orient="records")
+                    }
+                    return data_dict
+                else:
+                    # No dataframe – return whatever string representation is available
+                    return {"message": str(result)}
+            
+            # Default behaviour (string)
+            if df is not None:
                 if not df.empty:
                     return df.to_string(index=False)
                 else:
                     return "Query executed successfully, but returned no data."
             
-            return result.data.to_df().to_string(index=False)
+            return str(result)
         except Exception as e:
             import traceback
             error_trace = traceback.format_exc()
             logger.error(f"Error executing SQL query: {sql_query}\nError: {str(e)}\nTrace: {error_trace}")
             
-            # Try to provide more helpful error messages for common issues
             error_msg = str(e)
+            if return_dict:
+                return {"error": error_msg}
+            
+            # Try to provide more helpful error messages for common issues
             if "Model not found" in error_msg and "knowledge_base" in sql_query.lower():
                 return (f"Error: The knowledge base may not exist or the query syntax is incorrect. "
                         f"For knowledge base queries, use simple syntax: SELECT * FROM knowledge_base_name "
@@ -201,16 +227,16 @@ class CrewAITextToSQLPipeline:
         
         # Tool for executing SQL queries
         @tool("execute_sql_tool")
-        def execute_sql(sql_query: str) -> str:
-            """Executes a SQL query and returns the results.
+        def execute_sql(sql_query: str) -> Dict[str, Any]:
+            """Executes a SQL query and returns the results as a dictionary.
             
             Args:
                 sql_query: The SQL query to execute
                 
             Returns:
-                Query results or error message
+                Dictionary containing query results or error message
             """
-            return self._execute_sql_safely(sql_query)
+            return self._execute_sql_safely(sql_query, return_dict=True)
         
         # Tool for checking SQL syntax
         @tool("check_sql_tool")
@@ -247,7 +273,13 @@ class CrewAITextToSQLPipeline:
             goal="Analyze natural language questions to identify intent and relevant data sources",
             backstory="""You are an expert at understanding user questions and translating them 
             into structured intent. Your job is to analyze questions, identify what data is being 
-            requested, and determine which tables or knowledge bases are relevant.""",
+            requested, and determine which tables or knowledge bases are relevant.
+
+            Note:
+            - If the user input is a general greeting or conversational phrase (e.g., "Hi", "Hello", "How are you?"), respond 
+            directly to the user to answer the general question based on your general knowledge.
+            - Do NOT proceed to SQL generation or execution for such inputs.
+            """,
             verbose=self.verbose,
             allow_delegation=True,
             tools=[self.tools["list_tables"]],
@@ -289,7 +321,11 @@ class CrewAITextToSQLPipeline:
             backstory="""You are responsible for formatting and presenting query results 
             to users in a clear, readable format. For knowledge base similarity searches, 
             you preserve the actual content returned from the database and never substitute 
-            with placeholder data. You always return the exact data retrieved from the database.""",
+            with placeholder data. You always return the exact data retrieved from the database.
+            Note:
+            - If the user input is a general greeting or question or conversational phrase (e.g., "Hi", "Hello", "How are you?"), 
+            respond directly to the user to answer the general question based on your general knowledge.
+            """,
             verbose=self.verbose,
             allow_delegation=True,
             llm=self.llm
@@ -315,34 +351,40 @@ class CrewAITextToSQLPipeline:
             3. Whether this requires regular SQL or semantic search
             4. Any filters, aggregations, or specific fields needed
             
-            IMPORTANT: NEVER modify, truncate, or abbreviate any string literals, product names, or search terms 
+            - IMPORTANT: NEVER modify, truncate, or abbreviate any string literals, product names, or search terms 
             from the original query. Always preserve the EXACT and COMPLETE text of any quoted strings, 
             especially in filter conditions.
             
-            If user input pertains to structured data (e.g., databases, tables), then convert the natural 
+            - If user input pertains to structured data (e.g., databases, tables), then convert the natural 
             language question into an SQL query, based on the provided information in the user question.
 
-            If the user input relates to unstructured data or requires information from documents, articles, 
+            -If the user input relates to unstructured data or requires information from documents, articles, 
             or general knowledge, then it has to do semantic similarity search in the knowledge base. For this: 
             convert the natural language question into an SQL query, but in this case it has to generate a sql 
-            query on the knowledge basethat has a WHERE condition on the "content" column and the condition term should be extracted 
-            from the user input.
+            query on the knowledge base that has a WHERE condition on the "content" column and the condition term should be 
+            extracted from the user input.
             
-            If the user is asking about available databases, tables, or schema information,
+            - If the user is asking about available databases, tables, or schema information,
             use the list_tables tool to get this information directly.
+            
+            IMPORTANT:
+            - If the user input is a general greeting or conversational phrase (e.g., "Hi", "Hello", "How are you?"), respond directly with an appropriate message.
+            - Do NOT proceed to SQL generation or execution for such inputs.
             """,
             agent=self.query_understanding_agent,
-            expected_output="Parsed query details, intent and required data sources"
+            expected_output="Parsed query details, intent and required data sources or direct response for general inputs"
         )
         
         # Task 2: Generate SQL
         generate_sql_task = Task(
             description="""
-            Based on the query understanding, generate the appropriate SQL query.
+            Based on the query understanding, generate the appropriate SQL query from the user input.
+            You need to generate a SQL query that result of its execution can directly answer user's request, later 
+            SQL Validation Agent can use this result to answer the users question.
             
             CRITICAL: NEVER truncate, abbreviate, or modify string literals in any way.
             Always keep quoted values EXACTLY as they appear in the original query, including
-            full product names, long text strings, and search terms. Even very long strings
+            full names, long text strings, and search terms. Even very long strings
             must be preserved completely.
             
             For standard database queries:
@@ -362,14 +404,16 @@ class CrewAITextToSQLPipeline:
             "knowledge_base_name" is the name of the knowledge base, and "relevance_threshold" is the 
             relevance threshold for the semantic search and it should be between 0 and 1. and always should you "=" operator for it not 
             "<=" or ">=" or ">" or "<". You can choose default value for relevance_threshold of 0.6 if not provided in the user query.
-            Validate your SQL with the check_sql tool before finalizing.
-
             Also ensure you use single quotes (') not double quotes (") for string literals in SQL.
             
             Validate your SQL with the check_sql tool before finalizing.
+
+            Note: 
+            - If the previous output indicates a general conversation or greeting, acknowledge that no SQL query is needed.
+            - Otherwise, generate the appropriate SQL query as per the user's intent.
             """,
             agent=self.sql_generation_agent,
-            expected_output="A valid SQL query that addresses the user's question with exact string values preserved",
+            expected_output="A valid SQL query that addresses the user's question with exact string values preserved or acknowledgment of non-requirement",
             context=[understand_task]
         )
         
@@ -382,45 +426,51 @@ class CrewAITextToSQLPipeline:
             - Never modify, truncate, or change the SQL query in any way
             - Execute the exact query as provided, even if it contains very long string literals
             - Preserve the complete structure and values of the original query
+            - If no SQL query is provided (due to the nature of the user input), acknowledge that execution is skipped.
             
-            Capture and report any execution errors that occur.
-            Format the results in a clear, tabular format when possible.
+            The output MUST be a JSON/dictionary object containing the raw query results.
+            Example output format:
+            {
+                "columns": ["col1", "col2"],
+                "rows": [
+                    {"col1": "value1", "col2": "value2"},
+                    {"col1": "value3", "col2": "value4"}
+                ]
+            }
             
-            Do not simply return the raw ExecuteAnswer object - extract the data in a readable format.
-            If the results contain rows of data, present them in a clean table format.
+            Capture and report any execution errors that occur, returning a dictionary like:
+            {"error": "<error message>"}
             """,
             agent=self.sql_execution_agent,
-            expected_output="Raw query execution output enclosed verbatim (optionally within <results></results>)",
+            expected_output="Dictionary object with either query results or an error message, or acknowledgment of skipped execution",
             context=[generate_sql_task]
         )
         
         # Task 4: Validate Results
         validate_results_task = Task(
             description="""
-            Present the query results in a clear, readable format:
+            - Review the dictionary from the previous step and return a final dictionary with the following structure:
+            {
+                "text": "<Short explanation about the process or explaining the executed query and resulted data or extract information from the result to answer the user's question or any error message>",
+                "data": <The dictionary received from the SQL Execution Agent>
+            }
             
-            For normal database queries:
-            - Format as a clean table with headers
-            - Preserve all returned data exactly as received
+            - NEVER manipulate or transform the contents of the 'data' key other than passing it verbatim.
+            - If there was an error, replicate the error information in the 'text' field and keep 'data' empty or as provided.
+
+            - If the original query was a general greeting or conversational input, present the direct response 
+            from the Query Understanding Agent. This is the user's original question or query: "{user_query}"
+            - If SQL execution was performed, format and present the results accordingly.
+
+            - If user asked a question that still needs to extract information or interpretation from the result, 
+            then extract and pass it into the 'text' field and still keep 'data' field as it is.
             
-            For knowledge base similarity searches:
-            - Show the ACTUAL retrieved content exactly as returned from the database
-            - NEVER EVER substitute with placeholder values like 'Content A', 'Meta A', etc.
-            - If you see actual content about "Kindle Voyage" or any other specific product, 
-              preserve it EXACTLY as received from the database
-            - DO NOT create fake/sample data under any circumstances
-            
-            CRITICAL WARNING: You must NEVER generate placeholder data or substitute real data with examples.
-            Using placeholders like "Content A" or "Meta A" is strictly prohibited and is considered a critical error.
-            
-            IMPORTANT: Your job is to format and present ONLY the final results.
-            DO NOT include any text about validation process or assessment.
-            NEVER use placeholder data - use EXACTLY what was returned by the execute_sql tool.
-            Just present the information directly without adding any commentary.
+            - Based on your evaluation if the result is not enough to answer the user's question, 
+            then you can pass your insight as string to Query Understanding Agent to start over a more complimentary solution.
             """,
             agent=self.sql_validation_agent,
-            expected_output="The actual database query results with real data, exactly as returned from the database",
-            context=[execute_sql_task]
+            expected_output="Dictionary with 'text' and 'data' keys as described above",
+            context=[execute_sql_task, understand_task]
         )
         
         # Create and run the crew
@@ -444,25 +494,32 @@ class CrewAITextToSQLPipeline:
         
         result = crew.kickoff()
         
-        # Try to remove any validation report heading and just return the actual answer
-        clean_result = result
-        if isinstance(result, str):
-            # Remove common validation headers
-            for header in ["Validation Report:", "Validation:", "Assessment:", "Analysis:"]:
-                if result.startswith(header):
-                    clean_result = result[len(header):].strip()
-                    
-            # Try to find and extract just the final answer if there's a clear section for it
-            for marker in ["Final Answer:", "Answer:", "Result:", "Response:"]:
-                if marker in result:
-                    parts = result.split(marker, 1)
-                    if len(parts) > 1:
-                        clean_result = parts[1].strip()
+        # Ensure the final output follows the desired dictionary structure
+        final_result: Dict[str, Any]
+        try:
+            # If the crew already returned a dict, use it directly
+            if isinstance(result, dict):
+                final_result = result
+            else:
+                # Attempt to parse JSON string to dict
+                import json
+                final_result = json.loads(result)
+                if not isinstance(final_result, dict):
+                    raise ValueError
+        except Exception:
+            # Fallback to wrapping raw output
+            final_result = {
+                "text": str(result),
+                "data": {}
+            }
         
-        return {
+        # Optionally include the original user query for traceability
+        final_output = {
             "user_query": user_query,
-            "result": clean_result
+            "result": final_result
         }
+        
+        return final_output
 
 
 class CrewAIAgentManager:

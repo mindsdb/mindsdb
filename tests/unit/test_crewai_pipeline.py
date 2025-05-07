@@ -52,7 +52,9 @@ class TestCrewAIPipeline(unittest.TestCase):
         
         # Check the result format
         self.assertEqual(result['user_query'], "What is the average sales for 2021?")
-        self.assertEqual(result['result'], "Sample crew result")
+        # The result should be a dict with 'test' and 'data'
+        self.assertIsInstance(result['result'], dict)
+        self.assertEqual(result['result'].get('text'), "Sample crew result")
 
     @patch('mindsdb.interfaces.database.projects.ProjectController')
     @patch('mindsdb.interfaces.skills.skills_controller.SkillsController')

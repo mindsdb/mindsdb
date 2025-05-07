@@ -47,7 +47,5 @@ def migrate_to_head():
 if __name__ == "__main__":
     # have to import this because
     # all env initialization happens here
-    from mindsdb.utilities.config import Config as MDBConfig
-    MDBConfig()
     db.init()
     migrate_to_head()

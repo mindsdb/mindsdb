@@ -3,7 +3,7 @@ title: Assistants API
 sidebarTitle: Assistants API
 ---
 
-Once the [Mind is created](/docs/data-mind), you can chat with the Mind using the OpenAI-compatible Assistants API. Therefore to follow this code, if you haven’t already, install the OpenAI SDK by running `pip install openai`, and use the Minds API key and name of the Mind you created.
+Once the Mind is created, you can chat with the Mind using the OpenAI-compatible Assistants API. Therefore to follow this code, if you haven’t already, install the OpenAI SDK by running `pip install openai`, and use the Minds API key and name of the Mind you created.
 
 The following code lets you have conversations with the Mind, create threads, messages, and runs.
 
@@ -16,7 +16,7 @@ mind_name = <NAME YOU GAVE TO YOUR MIND>
 # point the Openai SDK to the Minds Cloud
 client = OpenAI(
     api_key=your_minds_api_key,
-    base_url='https://llm.mdb.ai/'
+    base_url='https://mdb.ai/'
 )
 
 # print the message before making the API request

@@ -979,7 +979,7 @@
         "description":"Commercial Product Docs",
         "tabs": [
           {
-            "tab": "Get Started",
+            "tab": "Documentation",
             "groups": [
               {
                 "group": "Get Started",
@@ -1008,6 +1008,7 @@
               {
                 "group": "Get Started",
                 "pages": [
+                  "minds/python_sdk/overview",
                   "minds/python_sdk/mind_setup",
                   "minds/python_sdk/completions_api",
                   "minds/python_sdk/assistants_api"

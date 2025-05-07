@@ -461,8 +461,13 @@ class AgentsController:
         if not agent.params.get('agent_type') == 'crewai':
             raise ValueError(f'Agent {agent.name} is not a CrewAI agent')
             
-        # Get API key from configuration
-        api_key = config.get('openai', {}).get('api_key')
+        # Check for API key in agent parameters using both common parameter names
+        api_key = agent.params.get('api_key')
+        
+        # If not in agent params, check configuration
+        if not api_key:
+            api_key = config.get('openai', {}).get('api_key')
+
         
         # Convert the user_query to a proper format if it's in JSON format
         import json

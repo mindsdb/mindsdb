@@ -53,8 +53,14 @@ class CrewAITextToSQLPipeline:
         self.verbose = verbose
         self.max_tokens = max_tokens
         
-        # Get API key from environment if not provided
-        self.api_key = api_key or os.environ.get("OPENAI_API_KEY")
+
+        if not api_key:
+            self.api_key = os.environ.get("OPENAI_API_KEY")            
+        else:
+            self.api_key = api_key
+            # Set environment variable for CrewAI components that rely on it directly
+            os.environ["OPENAI_API_KEY"] = api_key
+            
         if not self.api_key:
             raise ValueError("OpenAI API key must be provided or set as OPENAI_API_KEY environment variable")
         

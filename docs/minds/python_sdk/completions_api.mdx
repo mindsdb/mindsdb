@@ -1,0 +1,109 @@
+---
+title: Completions API
+sidebarTitle: Completions API
+---
+
+Once the Mind is created, you can chat with the Mind using the OpenAI-compatible Completions API. Therefore to follow this code, if you haven’t already, install the OpenAI SDK by running `pip install openai`, and use the Minds API key and name of the Mind you created.
+
+The following code lets you chat with your Mind.
+
+```python
+from openai import OpenAI
+
+your_minds_api_key = <YOUR API KEY>
+mind_name = <NAME YOU GAVE TO YOUR MIND>
+
+# point the Openai SDK to the Minds Cloud
+client = OpenAI(
+    api_key=your_minds_api_key,
+    base_url='https://mdb.ai/'
+)
+
+# print the message before making the API request
+print('Answering the question may take up to 30 seconds...')
+
+# chat with the Mind you created
+completion = client.chat.completions.create(
+    model=mind_name,
+    messages=[
+        {'role': 'user', 'content': 'How many three-bedroom houses were sold in 2008?'}
+    ],
+    stream=False
+)
+
+print(completion.choices[0].message.content)
+```
+
+Alternatively, continue using the Minds SDK to access the OpenAI-compatible Completions API by calling the `completion` function on the `mind` object.
+
+```python
+print(mind.completion('How many three-bedroom houses were sold in 2008?', stream=False))
+```
+
+Here is the output:
+
+```
+There were 8 three-bedroom houses sold in 2008.
+```
+
+### Stream Mind's Thoughts
+
+This feature enables you to stream the thoughts of the Mind, which includes all the steps the Mind takes to answer the question.
+
+```python
+from openai import OpenAI
+
+your_minds_api_key = <YOUR API KEY>
+mind_name = <NAME YOU GAVE TO YOUR MIND>
+
+# point the Openai SDK to the Minds Cloud
+client = OpenAI(
+    api_key=your_minds_api_key,
+    base_url='https://mdb.ai/'
+)
+
+# print the message before making the API request
+print('Answering the question may take up to 30 seconds...')
+
+# chat with the Mind you created
+completion = client.chat.completions.create(
+    model=mind_name,
+    messages=[
+        {'role': 'user', 'content': 'How many three-bedroom houses were sold in 2008?'}
+    ],
+    stream=True
+)
+
+# print output in the form of chunks
+for chunk in completion:
+    print(chunk.choices[0].delta.content)
+    print()
+```
+
+Alternatively, continue using the Minds SDK to access the OpenAI-compatible Completions API by calling the `completion` function on the `mind` object.
+
+```python
+for chunk in mind.completion('How many three-bedroom houses were sold in 2008?', stream=True):
+	print(chunk.content)
+```
+
+Here is the output:
+
+```
+Answering the question may take up to 30 seconds...
+I understand your request. I'm working on a detailed response for you.
+
+content='Thought: I need to check the schema of the `house_sales` table to understand the structure and identify the relevant columns for querying the number of three-bedroom houses sold in 2008.\n\nAction: sql_db_schema714\nAction Input: mind_d315ac7e-8c53-467c-a378-0e20274cf0ee_datasource_03c058391f7c4716970edfea20c6f097.house_sales'
+
+content='Table named `house_sales`\n\n/* Sample with first 3 rows from table `mind_d315ac7e-8c53-467c-a378-0e20274cf0ee_datasource_03c058391f7c4716970edfea20c6f097`.house_sales:\nsaledate\tma\ttype\tbedrooms\tcreated_at\n2007-09-30\t441854\thouse\t2\t2007-02-02 15:41:51.922127\n2007-12-31\t441854\thouse\t2\t2007-02-23 22:36:08.540248\n2008-03-31\t441854\thouse\t2\t2007-02-25 19:23:52.585358\n*/\nColumn data types: `saledate` : `date`,\t`ma` : `integer`,\t`type` : `text`,\t`bedrooms` : `integer`,\t`created_at` : `timestamp without time zone`\n'
+
+content="To determine the number of three-bedroom houses sold in 2008, I need to query the `house_sales` table using the `bedrooms` and `saledate` columns. Specifically, I will filter for records where `bedrooms` is 3 and the `saledate` falls within the year 2008.\n\nFirst, I will ensure the SQL query is correct using the MindsDB SQL parser tool.\n\nAction: mindsdb_sql_parser_tool714\nAction Input: SELECT COUNT(*) FROM house_sales WHERE bedrooms = 3 AND saledate BETWEEN '2008-01-01' AND '2008-12-31'"
+
+content="valid query: SELECT count(*) FROM house_sales WHERE bedrooms = 3 AND saledate BETWEEN '2008-01-01' AND '2008-12-31'"
+
+content="The SQL query has been validated. Now, I will execute the query to find out how many three-bedroom houses were sold in 2008.\n\nAction: sql_db_query714\nAction Input: SELECT COUNT(*) FROM house_sales WHERE bedrooms = 3 AND saledate BETWEEN '2008-01-01' AND '2008-12-31'"
+
+content="Output columns: 'count'\nResult:\n8"
+
+In 2008, a total of 8 three-bedroom houses were sold.
+```

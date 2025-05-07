@@ -368,7 +368,8 @@ class CrewAITextToSQLPipeline:
             use the list_tables tool to get this information directly.
             
             IMPORTANT:
-            - If the user input is a general greeting or conversational phrase (e.g., "Hi", "Hello", "How are you?"), respond directly with an appropriate message.
+            - If the user input is a general greeting or conversational phrase (e.g., "Hi", "Hello", "How are you?"), respond 
+            directly to the user to answer the general question based on your general knowledge.
             - Do NOT proceed to SQL generation or execution for such inputs.
             """,
             agent=self.query_understanding_agent,
@@ -458,8 +459,9 @@ class CrewAITextToSQLPipeline:
             - NEVER manipulate or transform the contents of the 'data' key other than passing it verbatim.
             - If there was an error, replicate the error information in the 'text' field and keep 'data' empty or as provided.
 
-            - If the original query was a general greeting or conversational input, present the direct response 
-            from the Query Understanding Agent. This is the user's original question or query: "{user_query}"
+            - If the original query was a general greeting or conversational input, respond directly to 
+            the user to answer the general question based on your general knowledge. This is the user's original 
+            question or query: "{user_query}"
             - If SQL execution was performed, format and present the results accordingly.
 
             - If user asked a question that still needs to extract information or interpretation from the result, 

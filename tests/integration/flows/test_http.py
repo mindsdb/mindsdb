@@ -136,7 +136,7 @@ class TestHTTP(HTTPHelperMixin):
             }
 
             response = requests.request('PUT', f'{HTTP_API_ROOT}/files/movies', files=files)
-            assert response.status_code == 200
+            assert response.status_code == 200, f"Error uploading file. Response content: {response.content}"
 
         assert "movies" in [file["name"] for file in self.get_files_list()]
 

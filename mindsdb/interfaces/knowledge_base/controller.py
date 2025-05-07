@@ -47,7 +47,7 @@ from mindsdb.integrations.utilities.rag.rerankers.base_reranker import BaseLLMRe
 logger = log.getLogger(__name__)
 
 KB_TO_VECTORDB_COLUMNS = {
-    'id': 'original_row_id',
+    'id': 'original_doc_id',
     'chunk_id': 'id',
     'chunk_content': 'content'
 }
@@ -290,7 +290,7 @@ class KnowledgeBaseTable:
         columns = list(df.columns)
         # update id, get from metadata
         df[TableField.ID.value] = df[TableField.METADATA.value].apply(
-            lambda m: None if m is None else m.get('original_row_id')
+            lambda m: None if m is None else m.get('original_doc_id')
         )
 
         # id on first place
@@ -479,12 +479,9 @@ class KnowledgeBaseTable:
                     # Use provided_id directly if it exists, otherwise generate one
                     doc_id = self._generate_document_id(content_str, col, provided_id)
 
-                    # Need provided ID to link chunks back to original source (e.g. database row).
-                    row_id = provided_id if provided_id else idx
-
                     metadata = {
                         **base_metadata,
-                        'original_row_id': str(row_id),
+                        'original_row_index': str(idx),  # provide link to original row index
                         'content_column': col,
                     }
 

@@ -48,6 +48,4 @@ class UnionStepCall(BaseStepCall):
         })
         resp_df.replace({np.nan: None}, inplace=True)
 
-        data = ResultSet().from_df_cols(resp_df, col_names=names)
-
-        return data
+        return ResultSet.from_df_cols(df=resp_df, columns_dict=names)

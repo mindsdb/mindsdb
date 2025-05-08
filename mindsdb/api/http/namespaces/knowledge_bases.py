@@ -115,7 +115,7 @@ class KnowledgeBasesResource(Resource):
         if storage is not None:
             embedding_table_identifier = Identifier(parts=[storage['database'], storage['table']])
 
-        params = knowledge_base.get('params', {}),
+        params = knowledge_base.get('params', {})
 
         embedding_model = knowledge_base.get('embedding_model')
         if embedding_model is not None:

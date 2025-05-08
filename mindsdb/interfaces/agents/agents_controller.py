@@ -501,7 +501,6 @@ class AgentsController:
         # Use the column names expected by MindsDB - typically 'output' for the result
         df = pd.DataFrame({
             'output': [result['result']],
-            'query': [result['user_query']]
         })
         
         return df

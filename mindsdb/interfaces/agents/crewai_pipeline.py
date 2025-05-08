@@ -501,28 +501,39 @@ class CrewAITextToSQLPipeline:
         
         result = crew.kickoff()
         
-        # Ensure the final output follows the desired dictionary structure
+        # Convert the crew output into the expected dictionary shape.
         final_result: Dict[str, Any]
-        try:
-            # If the crew already returned a dict, use it directly
-            if isinstance(result, dict):
-                final_result = result
+
+        if isinstance(result.raw, dict):
+            # Crew already returned a proper dictionary.
+            final_result = result.raw
+        else:
+            # `result` is presumably a string – try several safe parsing methods.
+            parsed: Any = None
+            if isinstance(result.raw, str):
+                import json, ast
+                # 1) direct JSON   (double-quoted keys/values)
+                try:
+                    parsed = json.loads(result.raw)
+                except json.JSONDecodeError:
+                    # 2) python-literal style (single quotes)
+                    try:
+                        parsed = ast.literal_eval(result.raw)
+                    except Exception:
+                        parsed = None
+
+            # If parsing succeeded and produced a dict, use it.
+            if isinstance(parsed, dict):
+                final_result = parsed
             else:
-                # Attempt to parse JSON string to dict
-                import json
-                final_result = json.loads(result)
-                if not isinstance(final_result, dict):
-                    raise ValueError
-        except Exception:
-            # Fallback to wrapping raw output
-            final_result = {
-                "text": str(result),
-                "data": {}
-            }
+                # Last-ditch fallback – wrap raw text.
+                final_result = {
+                    "text": str(result),
+                    "data": {},
+                }
         
         # Optionally include the original user query for traceability
         final_output = {
-            "user_query": user_query,
             "result": final_result
         }
         

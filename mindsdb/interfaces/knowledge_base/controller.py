@@ -827,11 +827,11 @@ class KnowledgeBaseController:
             self,
             name: str,
             project_name: str,
-            embedding_model: Identifier,
             storage: Identifier,
             params: dict,
             preprocessing_config: Optional[dict] = None,
-            if_not_exists: bool = False
+            if_not_exists: bool = False,
+            embedding_model: Identifier = None, # Legacy: deprecated
     ) -> db.KnowledgeBase:
         """
         Add a new knowledge base to the database

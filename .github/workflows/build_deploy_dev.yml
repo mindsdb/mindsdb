@@ -6,6 +6,9 @@ on:
     branches:
       - 'main'
 
+permissions:
+  contents: read
+
 jobs:
 
   # Looks for labels like "deploy-to-<env>" attached to a PR so we can deploy to those envs

@@ -3,6 +3,10 @@ on:
   issues:
     types:
       - opened
+
+permissions:
+  contents: read
+
 jobs:
   add-to-project:
     name: Add issue to roadmap project

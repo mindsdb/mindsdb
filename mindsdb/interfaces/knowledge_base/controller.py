@@ -1011,7 +1011,7 @@ class KnowledgeBaseController:
         if engine == 'openai':
             if 'question_column' not in params:
                 params['question_column'] = 'content'
-            if 'api_key' in params:
+            if api_key:
                 params[f"{engine}_api_key"] = api_key
             if 'base_url' in params:
                 params['api_base'] = params.pop('base_url')

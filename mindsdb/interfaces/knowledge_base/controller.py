@@ -1153,3 +1153,236 @@ class KnowledgeBaseController:
         Update a knowledge base record
         """
         raise NotImplementedError()
+
+    def evaluate(
+            self,
+            name: str,
+            project_id: int,
+            test_queries: List[Dict],
+            metrics: List[str] = None,
+            top_k: int = 5,
+            test_set_name: str = None,
+            user_notes: str = None
+    ) -> Dict:
+        """Evaluate a knowledge base against a set of test queries
+
+        Args:
+            name: Knowledge base name
+            project_id: Project ID
+            test_queries: List of test queries with expected document IDs
+                Format: [{"query": "query text", "expected_ids": ["id1", "id2"]}]
+            metrics: List of metrics to calculate (default: ["precision", "recall", "mrr"])
+            top_k: Number of results to consider for metrics calculation
+            test_set_name: Optional name for the test set
+            user_notes: Optional notes about the evaluation
+
+        Returns:
+            Dictionary with evaluation results
+        """
+        from datetime import datetime
+
+        if metrics is None:
+            metrics = ["precision", "recall", "mrr"]
+
+        # Get knowledge base
+        kb = self.get(name, project_id)
+
+        # Run queries and get results
+        retrieved_results = []
+        for query in test_queries:
+            query_text = query.get("query")
+            results = self.query(name, project_id, query_text, limit=top_k)
+            retrieved_results.append(results)
+
+        # Calculate metrics
+        metrics_results = {}
+        per_query_results = []
+
+        for i, query in enumerate(test_queries):
+            expected_ids = set(query.get("expected_ids", []))
+            retrieved_ids = [doc.get("id") for doc in retrieved_results[i]]
+
+            # Calculate metrics for this query
+            query_metrics = self._calculate_metrics(retrieved_ids, list(expected_ids), metrics, top_k)
+
+            # Store per-query results
+            per_query_results.append({
+                "query": query["query"],
+                "expected_ids": list(expected_ids),
+                "retrieved_ids": retrieved_ids[:top_k],
+                "metrics": query_metrics
+            })
+
+            # Accumulate metrics
+            for metric, value in query_metrics.items():
+                if metric not in metrics_results:
+                    metrics_results[metric] = 0
+                metrics_results[metric] += value
+
+        # Average the metrics
+        num_queries = len(test_queries)
+        if num_queries > 0:
+            for metric in metrics_results:
+                metrics_results[metric] = metrics_results[metric] / num_queries
+
+        # Add per-query results
+        metrics_results["per_query"] = per_query_results
+
+        # Store evaluation in database
+        with self.session_transaction() as session:
+            evaluation = db.KnowledgeBaseEvaluation(
+                knowledge_base_id=kb.id,
+                project_id=project_id,
+                test_set_name=test_set_name,
+                metrics=metrics_results,
+                config={
+                    "top_k": top_k,
+                    "metrics": metrics,
+                    "num_queries": len(test_queries)
+                },
+                user_notes=user_notes,
+                created_at=datetime.now()
+            )
+
+            session.add(evaluation)
+            session.flush()
+            evaluation_id = evaluation.id
+            session.commit()
+
+        # Return evaluation results
+        return {
+            "evaluation_id": evaluation_id,
+            "knowledge_base_id": kb.id,
+            "project_id": project_id,
+            "test_set_name": test_set_name,
+            "created_at": evaluation.created_at,
+            "metrics": metrics_results,
+            "config": {
+                "top_k": top_k,
+                "metrics": metrics,
+                "num_queries": len(test_queries)
+            },
+            "user_notes": user_notes
+        }
+
+    def _calculate_metrics(self, result_ids: List[str], expected_ids: List[str],
+                           metrics: List[str], top_k: int
+                           ) -> Dict:
+        """Calculate evaluation metrics
+
+        Args:
+            result_ids: List of result document IDs
+            expected_ids: List of expected document IDs
+            metrics: List of metrics to calculate
+            top_k: Number of results to consider
+
+        Returns:
+            Dictionary with calculated metrics
+        """
+        metrics_results = {}
+
+        # Limit results to top_k
+        result_ids = result_ids[:top_k]
+
+        # Convert expected_ids to set for faster lookups
+        expected_ids_set = set(expected_ids)
+
+        # Calculate precision: fraction of retrieved documents that are relevant
+        if "precision" in metrics:
+            if result_ids:
+                relevant_retrieved = len([doc_id for doc_id in result_ids if doc_id in expected_ids_set])
+                metrics_results["precision"] = relevant_retrieved / len(result_ids)
+            else:
+                metrics_results["precision"] = 0.0
+
+        # Calculate recall: fraction of relevant documents that are retrieved
+        if "recall" in metrics:
+            if expected_ids:
+                relevant_retrieved = len([doc_id for doc_id in result_ids if doc_id in expected_ids_set])
+                metrics_results["recall"] = relevant_retrieved / len(expected_ids)
+            else:
+                metrics_results["recall"] = 0.0
+
+        # Calculate Mean Reciprocal Rank (MRR)
+        if "mrr" in metrics:
+            # Find the rank of the first relevant document
+            rank = 0
+            for i, doc_id in enumerate(result_ids):
+                if doc_id in expected_ids_set:
+                    rank = i + 1
+                    break
+
+            # Calculate reciprocal rank
+            if rank > 0:
+                metrics_results["mrr"] = 1.0 / rank
+            else:
+                metrics_results["mrr"] = 0.0
+
+        return metrics_results
+
+    def get_evaluations(self, name: str, project_id: int, limit: int = None) -> List[Dict]:
+        """Get evaluation history for a knowledge base
+
+        Args:
+            name: Knowledge base name
+            project_id: Project ID
+            limit: Maximum number of evaluations to return (default: all)
+
+        Returns:
+            List of evaluation records
+        """
+        # Get knowledge base
+        kb = self.get(name, project_id)
+
+        with self.session_transaction() as session:
+            query = session.query(db.KnowledgeBaseEvaluation).filter(
+                db.KnowledgeBaseEvaluation.knowledge_base_id == kb.id
+            ).order_by(db.KnowledgeBaseEvaluation.created_at.desc())
+
+            if limit is not None:
+                query = query.limit(limit)
+
+            evaluations = query.all()
+
+            results = []
+            for evaluation in evaluations:
+                results.append({
+                    "evaluation_id": evaluation.id,
+                    "knowledge_base_id": evaluation.knowledge_base_id,
+                    "project_id": evaluation.project_id,
+                    "test_set_name": evaluation.test_set_name,
+                    "created_at": evaluation.created_at,
+                    "metrics": evaluation.metrics,
+                    "config": evaluation.config,
+                    "user_notes": evaluation.user_notes
+                })
+
+            return results
+
+    def get_evaluation(self, evaluation_id: int) -> Dict:
+        """Get a specific evaluation by ID
+
+        Args:
+            evaluation_id: Evaluation ID
+
+        Returns:
+            Evaluation record
+        """
+        with self.session_transaction() as session:
+            evaluation = session.query(db.KnowledgeBaseEvaluation).filter(
+                db.KnowledgeBaseEvaluation.id == evaluation_id
+            ).first()
+
+            if evaluation is None:
+                raise EntityNotExistsError(f"Evaluation with ID {evaluation_id} does not exist")
+
+            return {
+                "evaluation_id": evaluation.id,
+                "knowledge_base_id": evaluation.knowledge_base_id,
+                "project_id": evaluation.project_id,
+                "test_set_name": evaluation.test_set_name,
+                "created_at": evaluation.created_at,
+                "metrics": evaluation.metrics,
+                "config": evaluation.config,
+                "user_notes": evaluation.user_notes
+            }

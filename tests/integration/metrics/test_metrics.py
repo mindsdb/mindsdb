@@ -7,63 +7,64 @@ from typing import Dict
 
 from mindsdb.utilities.config import Config
 from tests.utils.http_test_helpers import HTTPHelperMixin
-# TODO: Refactor common fixtures out of conftest.
-from tests.integration.flows.conftest import config, mindsdb_app, config, temp_dir # noqa
-
-# U by mindsdb_app fixture in conftest
-OVERRIDE_CONFIG = {
-    'tasks': {'disable': True},
-    'jobs': {'disable': True}
-}
-API_LIST = ["http"]
+from tests.utils.config import HTTP_API_ROOT
 
 
 def _get_metrics():
     cfg = Config()
-    base_host = cfg['api']['http']['host']
-    port = cfg['api']['http']['port']
-    url = f'http://{base_host}:{port}/metrics'
-    return requests.get(url).text
+    url = HTTP_API_ROOT.rstrip("api") + "metrics"
+    print(f"Getting metrics from {url}")
+    resp = requests.get(url).text
+    print(f"Metrics response: {resp}")
+    return resp
 
 
-def _wait_for_metric(name: str, labels: Dict[str, str], value: str, timeout: datetime.timedelta = None):
+def _wait_for_metric(name: str, labels: Dict[str, str], timeout: datetime.timedelta = None):
     if timeout is None:
         timeout = datetime.timedelta(seconds=30)
     start_time = datetime.datetime.now()
     while datetime.datetime.now() - start_time < timeout:
         metrics = _get_metrics()
-        print(metrics)
         for metrics_line in metrics.split('\n'):
             if name not in metrics_line:
                 continue
             # Check labels match metric.
+            found = True
             for label_name, label_value in labels.items():
                 if f'{label_name}="{label_value}"' not in metrics_line:
-                    continue
-                # Check value if labels match.
+                    found = False
+                    break
+            if found:
+                print(f"Found metric: {metrics_line}")
                 metrics_value = metrics_line.split()[-1]
-                return metrics_value == value
+                return float(metrics_value)
         time.sleep(0.5)
-    return False
+    return -1
 
 
-@pytest.mark.usefixtures('mindsdb_app')
 class TestMetrics(HTTPHelperMixin):
-    @pytest.mark.skipif(os.getenv('PROMETHEUS_MULTIPROC_DIR') is None, reason="PROMETHEUS_MULTIPROC_DIR environment variable is not set")
+    @pytest.mark.skipif(("localhost" in HTTP_API_ROOT or "127.0.0.1" in HTTP_API_ROOT) and os.getenv('PROMETHEUS_MULTIPROC_DIR') is None, reason="PROMETHEUS_MULTIPROC_DIR environment variable is not set")
     def test_http_metrics(self):
-        multiproc_dir = os.getenv('PROMETHEUS_MULTIPROC_DIR')
-        assert os.path.isdir(multiproc_dir)
         # Make an HTTP request and check for updated metrics.
         api_metric_labels = {
-            'endpoint': '/models',
+            'endpoint': '/util/ping_native',
             'method': 'GET',
             'status': '200'
         }
-        _ = self.api_request('get', '/projects/mindsdb/models')
+
+        before_metric = _wait_for_metric(
+            'mindsdb_rest_api_latency_seconds_count',
+            api_metric_labels,
+        )
+        print(f"Before metric: {before_metric}")
+        _ = self.api_request('get', '/util/ping_native')
         assert _wait_for_metric(
             'mindsdb_rest_api_latency_seconds_count',
             api_metric_labels,
-            '1.0'
-        )
+        ) == before_metric + 1
         # Check multiproc dir is populated.
-        assert len(os.listdir(os.getenv('PROMETHEUS_MULTIPROC_DIR'))) > 0
+        multiproc_dir = os.getenv('PROMETHEUS_MULTIPROC_DIR')
+        # We can't check this dir if we're running against a remote env.
+        if multiproc_dir is not None:
+            assert os.path.isdir(multiproc_dir)
+            assert len(os.listdir(os.getenv('PROMETHEUS_MULTIPROC_DIR'))) > 0

@@ -203,7 +203,7 @@ jobs:
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
-            env PYTHONPATH=./ pytest tests/api/http/ -x -k "not knowledge_bases_test"
+            env PYTHONPATH=./ pytest tests/unit/api/http/ -x -k "not knowledge_bases_test"
           fi
       - name: Run Handlers tests and submit Coverage to coveralls
         if: ${{ needs.changes.outputs.not-docs == 'true' }}

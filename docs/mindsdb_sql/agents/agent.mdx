@@ -3,7 +3,7 @@ title: Agent
 sidebarTitle: Agent
 ---
 
-With MindsDB, you can create and deploy AI agents that comprise AI models and customizable skills such as knowledge bases and text-to-SQL.
+With MindsDB, you can create and deploy AI agents that comprise AI models and customizable skills such as [knowledge bases](/mindsdb_sql/knowledge-bases) and text-to-SQL.
 
 <p align="center">
   <img src="/assets/agent_diagram.png" />
@@ -11,137 +11,165 @@ With MindsDB, you can create and deploy AI agents that comprise AI models and cu
 
 AI agents use a conversational model (like OpenAI) from LangChain utilizing [tools as skills](https://python.langchain.com/docs/modules/agents/tools/) to respond to user input. Users can customize AI agents with their own prompts to fit their use cases.
 
-A [chatbot](/agents/chatbot) can be thought of as an agent connected to some messaging interface.
+A [chatbot](/agents/chatbot) can be thought of as an agent connected to a messaging interface, such as Slack.
 
-## How to work with AI agents
+## `CREATE AGENT` Syntax
 
-### Create skills
+Here is the syntax for creating agents.
 
-Start by setting up the skills. Here is how you can create and manage skills using SQL API.
+```sql
+CREATE AGENT my_agent
+USING 
+    skills = ['text_to_sql_skill'],
+    provider = 'openai',
+    model = 'gpt-4',
+    prompt_template = 'Answer the user input in a helpful way using tools',
+    verbose = True,
+    max_tokens = 100;
+```
 
-* Creating, inserting into, updating, and deleting a knowledge base:
+<Note>
+Users can define a default model in the [MindsDB configuration under `default_llm`](/setup/custom-config) to be used with agents.
+</Note>
 
-    ```sql
-    CREATE KNOWLEDGE BASE my_knowledge_base
-    USING
-        model = embedding_model_name,              -- this parameter is optional; if not provided, a suitable embedding model is chosen for the task
-        storage = vector_database.storage_table;   -- this parameter is optional; if not provided, the default ChromaDB is used for storage
+### `skills`
 
-    -- inserts new data rows and generates id for each row if id is not provided
-    INSERT INTO my_knowledge_base
-        SELECT text AS content FROM datasource.data_table;
+Skills are essentially data connected to an agent, over which users can ask questions and get responses.
 
-    -- inserts new data rows and updates existing ones if id value matches
-    INSERT INTO my_knowledge_base
-        SELECT id, text AS content FROM datasource.data_table;
+Agents can have one or more skills of different types.
 
-    -- view content of a knowledge base (for example, to look up the generated id values)
-    SELECT * FROM my_knowledge_base;
+There are two types of skills:
 
-    DROP KNOWLEDGE BASE my_knowledge_base;
-    ```
-
-* Creating, updating, and deleting a `knowledge_base` skill:
-
-    ```sql
-    CREATE SKILL kb_skill
-    USING
-        type = 'knowledge_base',
-        source = 'my_knowledge_base', -- this must be created with CREATE KNOWLEDGE BASE
-        description = 'My data'; -- data description to help the agent know when to use the knowledge base
-
-    UPDATE SKILL kb_skill
-    SET
-       source = 'new_knowledge_base'; -- this must be created with CREATE KNOWLEDGE BASE
-
-    DROP SKILL kb_skill;
-    ```
-
-* Creating, updating, and deleting a `text2sql` skill:
+1. The `text2sql` skills translate users' questions into SQL to fetch relevant data and answer the question.
 
     ```sql
     CREATE SKILL text_to_sql_skill
     USING
         type = 'text2sql',
-        database = 'example_db', -- this must be created with CREATE DATABASE
-        tables = ['sales_data'], -- this is a list of tables passed to this skill
+        database = 'example_db',
+        tables = ['sales_data'],
         description = "this is sales data";
-
-    UPDATE SKILL text_to_sql_skill
-    SET
-        database = 'new_example_db', -- this must be created with CREATE DATABASE
-        tables = ['sales_data'];     -- this is a list of tables passed to this skill
-
-    DROP SKILL text_to_sql_skill;
     ```
 
-You can query all skills using this command:
+    The `type` parameter is set to `text2sql`.
+
+    The `database` parameter requires the name of the data source connected to MindsDB with the [`CREATE DATABASE` command](/mindsdb_sql/sql/create/database).
+
+    The `tables` parameter requires table names to be connected to an agent from this data source.
+
+    The `description` parameter stores the description of data. The more explicit and verbose description helps agent to identify skills required to answer questions.
+
+2. The `knowledge_base` skills store data in the form of embeddings and use similarity search to extract accurate data.
+
+    ```sql
+    CREATE SKILL kb_skill
+    USING
+        type = 'knowledge_base',
+        source = 'my_knowledge_base',
+        description = 'My data';
+    ```
+
+    Learn more about how to create and use [knowledge bases here](/mindsdb_sql/knowledge-bases).
+
+For both types of skills, users can update skills.
 
 ```sql
-SHOW KNOWLEDGE_BASES;
+UPDATE SKILL my_skill
+SET
+    <parameter> = <value>;
+```
 
+Query skills.
+
+```sql
 SHOW SKILLS;
 ```
 
-### Create an agent
-
-An agent can be created, deleted, queried, and updated. Here is how you can do that using SQL API.
-
-* Creating an AI agent:
-
-    ```sql
-    CREATE AGENT my_agent
-    USING
-       model = 'chatbot_agent', -- this must be a conversational model created with CREATE MODEL (as in the Example section)
-       skills = ['test_skill']; -- this must be created with CREATE SKILL
-    ```
-
-    Alternatively, you can create an agent and define the model to be used by an agent at the agent creation time based on [the model providers defined here](/integrations/ai-engines/langchain#openai).
-
-    ```sql
-    CREATE AGENT my_agent
-    USING 
-        skills=['text_to_sql_skill'], -- this must be created with CREATE SKILL
-        provider='openai', -- choose one of the available model providers (openai, anthropic, anyscale, ollama, litellm, mindsdb)
-        model='gpt-4', -- define the model from the provider
-        prompt_template='Answer the user input in a helpful way using tools', -- provide instruction to the model
-        verbose=True,
-        max_tokens=100;
-    ```
-
-* Updating an AI agent:
-
-    ```sql
-    UPDATE AGENT my_agent
-    SET
-       model = 'new_chatbot_agent',           -- this must be a conversational model created with CREATE MODEL
-       skills_to_remove = ['test_skill'],
-       skills_to_add = ['production_skill'];  -- this must be created with CREATE SKILL
-    ```
-
-* Querying an AI agent:
-
-    ```sql
-    SELECT *
-    FROM my_agent
-    WHERE question = "insert your question"; -- this is the user_column parameter as defined when creating a conversational model for the agent (as in the Example section)
-    ```
-
-* Deleting an AI agent:
-
-    ```sql
-    DROP AGENT my_agent;
-    ```
-
-You can query all agents using this command:
+And drop skills.
 
 ```sql
-SHOW AGENTS [FROM project_name];
-
-SELECT * FROM agents;
+DROP SKILL my_skill;
 ```
 
-## Example
+### `provider`
+
+Agents can be assigned different model available from [LangChain integration](/integrations/ai-engines/langchain).
+
+The `provider` parameter defined the provider of the model. Its available values include `openai`, `anthropic`, `anyscale`, `ollama`, `litellm`, and `mindsdb`.
+
+### `model`
+
+The `model` parameter stores the model name as defined by the selected provider.
+
+Alternatively, users can define models create within MindsDB with the `CREATE MODEL` command. In this case, other parameters, except for `skills`, are not required.
+
+```sql
+CREATE AGENT my_agent
+USING
+    model = 'my_model',
+    skills = ['my_skill'];
+```
+
+### `prompt_template`
+
+The `prompt_template` parameter is used to provide additional instructions to the agent.
+
+Alternatively, this instruction can be provided when creating a model within MindsDB with the `CREATE MODEL` command by assigning this model to an agent.
+
+### `max_tokens`
+
+The `max_tokens` parameter specifies the maximum number of tokens to be used by the model. This may affect the output by shortening the response if too less tokens are defined.
+
+## `UPDATE AGENT` Syntax
+
+Here is the syntax for updating an existing agent.
+
+```sql
+UPDATE AGENT my_agent
+SET
+    <parameter> = <value>;
+```
+
+Here `<parameter>` can be replaced by any parameter from the `CREATE AGENT` command.
+
+For example:
+
+```sql
+UPDATE AGENT my_agent
+SET
+    provider = 'openai',
+    model = 'gpt-4o',
+    prompt_template = 'Answer the user input in a helpful way using tools and provide references';
+```
+
+Users can add and remove skills with this syntax.
+
+```sql
+UPDATE AGENT text_to_sql_agent
+SET
+    skills_to_add = ['new_skill'],
+    skills_to_remove = ['old_skill'];
+```
+
+## `SELECT FROM AGENT` Syntax
+
+Users can query agents with the `SELECT` statement to get answers.
+
+```sql
+SELECT *
+FROM my_agent
+WHERE question = "how do the sales of past week compare to last year at this time?";
+```
+
+## `DROP AGENT` Syntax
+
+Here is the syntax for deleting agents.
+
+```sql
+DROP AGENT my_agent;
+```
+
+## Examples
 
 ### Agents with Text-to-SQL Skills
 
@@ -219,39 +247,7 @@ Learn about [chatbots here](/agents/chatbot).
 
 ### Agents with Knowledge Bases as Skills
 
-In this example, let's create an embedding model (using [OpenAI](/integrations/ai-engines/openai) or [LangChain](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/langchain_embedding_handler) as an engine) for the knowledge base. Note that this step is optional, as knowledge bases provide default embedding model.
-
-```sql
-CREATE ML_ENGINE openai_engine
-FROM openai
-USING
-   openai_api_key = 'your-openai-api-key';
-
-CREATE MODEL embedding_model
-PREDICT embeddings
-USING
-   engine = 'openai_engine',
-   mode='embedding',
-   model_name='text-embedding-ada-002',
-   question_column = 'content';
-```
-
-Now let's create a knowledge base that uses this embedding model and the default storage vector database (that is, ChromaDB).
-
-```sql
-CREATE KNOWLEDGE BASE my_knowledge_base
-USING
-   model = embedding_model; -- this is optional
-```
-
-This is how you can insert data into the knowledge base and select it.
-
-```sql
-INSERT INTO my_knowledge_base (content)
-VALUES ('I drink tea.');
-
-SELECT * FROM my_knowledge_base;
-```
+Create a knowledge base with the [`CREATE KNOWLEDGE_BASE` command](/mindsdb_sql/knowledge-bases).
 
 Use this knowledge base to create a skill for an agent:
 
@@ -263,14 +259,23 @@ USING
     description = 'My data';       -- data description to help the agent know when to use the knowledge base
 ```
 
-Now you can assign this skill to the agent ( that was created in the example above) and query it again:
+Now you can create an agent:
 
 ```sql
-UPDATE AGENT text_to_sql_agent
-SET
-    skills_to_add = ['kb_skill'];
+CREATE AGENT my_agent
+USING 
+    skills = ['kb_skill'],
+    provider = 'openai',
+    model = 'gpt-4',
+    prompt_template = 'Answer the user input in a helpful way using tools',
+    verbose = True,
+    max_tokens = 100;
+```
 
+And query it:
+
+```sql
 SELECT *
-FROM text_to_sql_agent
+FROM my_agent
 WHERE questions = "what is your data?";
 ```

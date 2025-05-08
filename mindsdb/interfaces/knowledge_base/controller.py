@@ -870,34 +870,38 @@ class KnowledgeBaseController:
 
         embedding_params = copy.deepcopy(config.get('default_embedding_model', {}))
 
-        model_name = None
-        model_project = project
-        if embedding_model:
-            model_name = embedding_model.parts[-1]
-            if len(embedding_model.parts) > 1:
-                model_project = self.session.database_controller.get_project(embedding_model.parts[-2])
+        # Legacy: Allow MindsDB models to be passed as embedding_model.
+        # model_name = None
+        # model_project = project
+        # if embedding_model:
+        #     model_name = embedding_model.parts[-1]
+        #     if len(embedding_model.parts) > 1:
+        #         model_project = self.session.database_controller.get_project(embedding_model.parts[-2])
 
-        elif 'embedding_model' in params:
-            if isinstance(params['embedding_model'], str):
-                # it is model name
-                model_name = params['embedding_model']
-            else:
-                # it is params for model
-                embedding_params.update(params['embedding_model'])
+        # elif 'embedding_model' in params:
+        #     if isinstance(params['embedding_model'], str):
+        #         # it is model name
+        #         model_name = params['embedding_model']
+        #     else:
+        #         # it is params for model
+        #         embedding_params.update(params['embedding_model'])
 
-        if model_name is None:
-            model_name = self._create_embedding_model(
-                project.name,
-                params=embedding_params,
-                kb_name=name,
-            )
-            params['created_embedding_model'] = model_name
+        if 'embedding_model' in params:
+            embedding_params.update(params['embedding_model'])
+
+        # if model_name is None:
+        model_name = self._create_embedding_model(
+            project.name,
+            params=embedding_params,
+            kb_name=name,
+        )
+        params['created_embedding_model'] = model_name
 
         embedding_model_id = None
         if model_name is not None:
             model = self.session.model_controller.get_model(
                 name=model_name,
-                project_name=model_project.name
+                project_name=project.name,
             )
             model_record = db.Predictor.query.get(model['id'])
             embedding_model_id = model_record.id

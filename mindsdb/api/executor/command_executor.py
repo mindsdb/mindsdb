@@ -275,6 +275,10 @@ class ExecuteCommands:
                     schema = statement.in_table.parts[-1]
                     statement.in_table = None
 
+                # Check if the specified database exists
+                if not self.session.database_controller.exists(schema):
+                    raise EntityNotExistsError(f"Database '{schema}' does not exist")
+
                 table_types = [Constant(t) for t in ['MODEL', 'BASE TABLE', 'SYSTEM VIEW', 'VIEW']]
                 where = BinaryOperation(
                     "and",
@@ -820,7 +824,13 @@ class ExecuteCommands:
             raise Exception(
                 f'Nested query failed to execute with error: "{e}", please check and try again.'
             )
-        df = sqlquery.fetched_data.to_df()
+ 
+
+        if sqlquery.fetched_data is None:
+            raise Exception("Query did not return any data")
+
+        df, _ = sqlquery.fetched_data.to_df_cols()
+
         df.columns = [
             str(t.alias) if hasattr(t, "alias") else str(t.parts[-1])
             for t in statement.data.targets
@@ -1961,8 +1971,11 @@ class ExecuteCommands:
         return ExecuteAnswer()
 
     def answer_select(self, query):
-        data = query.fetched_data
-        return ExecuteAnswer(data=data)
+
+        if query.fetched_data is None:
+            raise Exception("Query did not return any data")
+        return ExecuteAnswer(data=query.fetched_data)
+
 
     def answer_update_model_version(self, model_version, database_name):
         if not isinstance(model_version, Identifier):

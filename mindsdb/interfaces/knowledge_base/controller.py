@@ -887,6 +887,10 @@ class KnowledgeBaseController:
         #         embedding_params.update(params['embedding_model'])
 
         if 'embedding_model' in params:
+            if not isinstance(params['embedding_model'], dict):
+                raise ValueError(
+                    "embedding_model should be JSON object with model parameters."
+                )
             embedding_params.update(params['embedding_model'])
 
         # if model_name is None:

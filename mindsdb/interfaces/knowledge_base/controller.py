@@ -1002,6 +1002,8 @@ class KnowledgeBaseController:
         if 'provider' in params:
             engine = params.pop('provider').lower()
 
+        api_key = get_api_key(engine, params, strict=False) or params.pop('api_key')
+
         if engine == 'azure_openai':
             engine = 'openai'
             params['provider'] = 'azure'
@@ -1009,8 +1011,8 @@ class KnowledgeBaseController:
         if engine == 'openai':
             if 'question_column' not in params:
                 params['question_column'] = 'content'
-            if 'api_key' in params:
-                params[f"{engine}_api_key"] = params.pop('api_key')
+            if api_key:
+                params[f"{engine}_api_key"] = api_key
             if 'base_url' in params:
                 params['api_base'] = params.pop('base_url')
 

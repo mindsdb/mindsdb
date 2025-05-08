@@ -67,7 +67,7 @@ class KnowledgeBasesResource(Resource):
 
         knowledge_base = request.json['knowledge_base']
         # Explicitly require embedding model & vector database.
-        required_fields = ['name', 'model']
+        required_fields = ['name']
         for field in required_fields:
             if field not in knowledge_base:
                 return http_error(
@@ -105,20 +105,30 @@ class KnowledgeBasesResource(Resource):
                 f'Knowledge Base with name {kb_name} already exists'
             )
 
-        embedding_model_identifier = None
-        if knowledge_base.get('model'):
-            embedding_model_identifier = Identifier(parts=[knowledge_base['model']])
+        # Legacy: Support for embedding model identifier.
+        # embedding_model_identifier = None
+        # if knowledge_base.get('model'):
+        #     embedding_model_identifier = Identifier(parts=[knowledge_base['model']])
 
         storage = knowledge_base.get('storage')
         embedding_table_identifier = None
         if storage is not None:
             embedding_table_identifier = Identifier(parts=[storage['database'], storage['table']])
 
+        params = knowledge_base.get('params', {}),
+
+        embedding_model = knowledge_base.get('embedding_model')
+        if embedding_model is not None:
+            params.update(embedding_model)
+
+        reranking_model = knowledge_base.get('reranking_model')
+        if reranking_model is not None:
+            params.update(reranking_model)
+
         try:
             new_kb = session.kb_controller.add(
                 kb_name,
                 project.name,
-                embedding_model_identifier,
                 embedding_table_identifier,
                 params=knowledge_base.get('params', {}),
                 preprocessing_config=knowledge_base.get('preprocessing')

@@ -1,3 +1,4 @@
+import os
 import json
 import time
 import datetime as dt
@@ -10,10 +11,9 @@ import pandas as pd
 
 class KBTestBase:
 
-    def __init__(self, vectordb=None, emb_model=None, mindsdb_server=None):
+    def __init__(self, vectordb=None, mindsdb_server=None):
         self.vectordb = vectordb
         self.vectordb_engine = vectordb['engine']
-        self.emb_model = emb_model
         if mindsdb_server is None:
             # use localhost
             mindsdb_server = {
@@ -62,28 +62,6 @@ class KBTestBase:
         })
         return name
 
-    def create_emb_model(self, params):
-        engine = params.pop('engine')
-
-        name = f'test_emb_model_{engine}'
-        try:
-            self.con.models.drop(name)
-        except Exception:
-            ...
-
-        if engine == 'openai':
-            model = self.con.models.create(
-                name, predict='embedding', engine=engine,
-                options=params,
-            )
-        elif engine == 'langchain_embedding':
-            model = self.con.models.create(
-                name, predict='embedding', engine=engine,
-                options=params,
-            )
-        model.wait_complete()
-        return model.name
-
     def run_sql(self, sql):
         print('>>>', sql)
         resp = self.con.query(sql).fetch()
@@ -99,32 +77,51 @@ class KBTestBase:
         # create vector_db
         self.vectordb_name = self.create_vector_db(self.vectordb)
 
-        # create embedding model
-        self.emb_model = self.create_emb_model(self.emb_model)
-
         # connect database
         self.db_name = self.create_db()
 
-    def create_kb(self, name, params=None, with_model=True):
-        model_str = ''
-        if with_model:
-            model_str = f'model = {self.con.models.get(self.emb_model)}, '
+    def create_kb(self, name, reranking_model=None, embedding_model=None):
 
         self.run_sql(f'drop knowledge base if exists {name}')
 
+        openai_api_key = os.getenv('OPENAI_API_KEY')
+
+        if reranking_model is None:
+            reranking_model = {
+                "provider": "openai",
+                "model_name": "gpt-4",
+                "api_key": openai_api_key
+            }
+
+        if embedding_model is None:
+            embedding_model = {
+                "provider": "openai",
+                "model_name": "text-embedding-ada-002",
+                "api_key": openai_api_key
+            }
+
+        # prepare KB
+        kb_params = {
+            'embedding_model': embedding_model,
+            'reranking_model': reranking_model,
+            'metadata_columns': ['status', 'category'],
+            'content_columns': ['message_body'],
+            'id_column': 'id',
+        }
+
         param_str = ''
-        if params:
+        if kb_params:
             param_items = []
-            for k, v in params.items():
+            for k, v in kb_params.items():
                 param_items.append(f'{k}={json.dumps(v)}')
             param_str = ',' + ','.join(param_items)
 
         self.run_sql(f'''
             create knowledge base {name}
-            using {model_str}
-               storage = {self.vectordb_name}.tbl_{name}
-               {param_str}
-        ''')
+            using storage = {self.vectordb_name}.tbl_{name}
+                {param_str}
+        '''
+        )
 
         # clean
         if len(self.run_sql(f'select * from {name}')) > 0:
@@ -341,11 +338,7 @@ class KBTest(KBTestBase):
         print(pd.DataFrame(results))
 
     def test_metadata(self):
-        self.create_kb('kb_crm', params={
-            'metadata_columns': ['status', 'category'],
-            'content_columns': ['message_body'],
-            'id_column': 'id',
-        })
+        self.create_kb('kb_crm')
 
         self.run_sql("""
             INSERT INTO kb_crm (
@@ -400,55 +393,3 @@ class KBTest(KBTestBase):
         assert 'noise' in ret.chunk_content[0]  # first line contents word
         assert len(ret[ret.relevance < 0.65]) == 0
 
-    def test_dict_as_model(self, openai_api_key, reranking_model=None, embedding_model=None):
-
-        def _check_kb(kb_params):
-            self.create_kb('kb_crm', params=kb_params, with_model=False)
-
-            self.run_sql("""
-                INSERT INTO kb_crm (
-                    SELECT * FROM example_db.crm_demo
-                );
-            """)
-
-            threshold = 0.5
-            ret = self.run_sql(f"""
-                SELECT *
-                FROM kb_crm
-                WHERE status = "solving" AND content = "noise" AND relevance_threshold={threshold}
-            """)
-            assert set(ret.metadata.apply(lambda x: x.get('status'))) == {'solving'}
-            for item in ret.chunk_content:
-                assert 'noise' in item  # all lines line contents word
-
-            assert len(ret[ret.relevance < threshold]) == 0
-
-        if reranking_model is None:
-            reranking_model = {
-                "provider": "openai",
-                "model_name": "gpt-4",
-                "api_key": openai_api_key
-            }
-
-        if embedding_model is None:
-            embedding_model = {
-                "provider": "openai",
-                "model_name": "text-embedding-ada-002",
-                "api_key": openai_api_key
-            }
-
-        # prepare KB
-        kb_params = {
-            'embedding_model': embedding_model,
-            'reranking_model': reranking_model,
-            'metadata_columns': ['status', 'category'],
-            'content_columns': ['message_body'],
-            'id_column': 'id',
-        }
-
-        _check_kb(kb_params)
-
-        # check with model name
-        kb_params['embedding_model'] = self.emb_model
-
-        _check_kb(kb_params)

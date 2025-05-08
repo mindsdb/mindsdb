@@ -378,6 +378,7 @@ class OpenAIHandler(BaseMLEngine):
                 'best_of': pred_args.get('best_of', None),
                 'logit_bias': pred_args.get('logit_bias', None),
                 'user': pred_args.get('user', None),
+                'logprobs': pred_args.get('logprobs', None),
             }
 
             if (
@@ -474,7 +475,11 @@ class OpenAIHandler(BaseMLEngine):
         for i in sorted(empty_prompt_ids):
             completion.insert(i, None)
 
-        pred_df = pd.DataFrame(completion, columns=[args['target']])
+        pred_df = pd.DataFrame(completion)
+        if api_args.get('logprobs') is not True and 'logprobs' in pred_df.columns:
+            pred_df.drop('logprobs', axis=1, inplace=True)
+
+        pred_df = pred_df.rename(columns={'resp': args['target']})
 
         # restore json struct
         if args.get('json_struct', False):
@@ -530,7 +535,7 @@ class OpenAIHandler(BaseMLEngine):
         """
 
         @retry_with_exponential_backoff()
-        def _submit_completion(model_name: Text, prompts: List[Text], api_args: Dict, args: Dict, df: pd.DataFrame) -> List[Text]:
+        def _submit_completion(model_name: Text, prompts: List[Text], api_args: Dict, args: Dict, df: pd.DataFrame) -> List[dict]:
             """
             Submit a request to the relevant completion endpoint of the OpenAI API based on the type of task.
 
@@ -587,7 +592,7 @@ class OpenAIHandler(BaseMLEngine):
             params2.pop('user', None)
             logger.debug(f'>>>openai call: {params2}:\n{response}')
 
-        def _submit_normal_completion(kwargs: Dict, prompts: List[Text], api_args: Dict) -> List[Text]:
+        def _submit_normal_completion(kwargs: Dict, prompts: List[Text], api_args: Dict) -> List[dict]:
             """
             Submit a request to the completion endpoint of the OpenAI API.
 
@@ -603,7 +608,7 @@ class OpenAIHandler(BaseMLEngine):
                 List[Text]: List of text completions.
             """
 
-            def _tidy(comp: openai.types.completion.Completion) -> List[Text]:
+            def _tidy(comp: openai.types.completion.Completion) -> List[dict]:
                 """
                 Parse and tidy up the response from the completion endpoint of the OpenAI API.
 
@@ -616,7 +621,7 @@ class OpenAIHandler(BaseMLEngine):
                 tidy_comps = []
                 for c in comp.choices:
                     if hasattr(c, 'text'):
-                        tidy_comps.append(c.text.strip('\n').strip(''))
+                        tidy_comps.append({'resp': c.text.strip('\n').strip('')})
                 return tidy_comps
 
             kwargs['prompt'] = prompts
@@ -627,7 +632,7 @@ class OpenAIHandler(BaseMLEngine):
             _log_api_call(kwargs, resp)
             return resp
 
-        def _submit_embedding_completion(kwargs: Dict, prompts: List[Text], api_args: Dict) -> List[float]:
+        def _submit_embedding_completion(kwargs: Dict, prompts: List[Text], api_args: Dict) -> List[dict]:
             """
             Submit a request to the embeddings endpoint of the OpenAI API.
 
@@ -643,7 +648,7 @@ class OpenAIHandler(BaseMLEngine):
                 List[float]: List of embeddings as numbers.
             """
 
-            def _tidy(comp: openai.types.create_embedding_response.CreateEmbeddingResponse) -> List[float]:
+            def _tidy(comp: openai.types.create_embedding_response.CreateEmbeddingResponse) -> List[dict]:
                 """
                 Parse and tidy up the response from the embeddings endpoint of the OpenAI API.
 
@@ -656,7 +661,7 @@ class OpenAIHandler(BaseMLEngine):
                 tidy_comps = []
                 for c in comp.data:
                     if hasattr(c, 'embedding'):
-                        tidy_comps.append([c.embedding])
+                        tidy_comps.append([{'resp': c.embedding}])
                 return tidy_comps
 
             kwargs['input'] = prompts
@@ -667,7 +672,7 @@ class OpenAIHandler(BaseMLEngine):
             _log_api_call(kwargs, resp)
             return resp
 
-        def _submit_chat_completion(kwargs: Dict, prompts: List[Text], api_args: Dict, df: pd.DataFrame, mode: Text = 'conversational') -> List[Text]:
+        def _submit_chat_completion(kwargs: Dict, prompts: List[Text], api_args: Dict, df: pd.DataFrame, mode: Text = 'conversational') -> List[dict]:
             """
             Submit a request to the chat completion endpoint of the OpenAI API.
 
@@ -685,7 +690,7 @@ class OpenAIHandler(BaseMLEngine):
                 List[Text]: List of chat completions as text.
             """
 
-            def _tidy(comp: openai.types.chat.chat_completion.ChatCompletion) -> List[Text]:
+            def _tidy(comp: openai.types.chat.chat_completion.ChatCompletion) -> List[dict]:
                 """
                 Parse and tidy up the response from the chat completion endpoint of the OpenAI API.
 
@@ -698,7 +703,10 @@ class OpenAIHandler(BaseMLEngine):
                 tidy_comps = []
                 for c in comp.choices:
                     if hasattr(c, 'message'):
-                        tidy_comps.append(c.message.content.strip('\n').strip(''))
+                        rec = {'resp': c.message.content.strip('\n').strip('')}
+                        if c.logprobs is not None:
+                            rec['logprobs'] = [l.to_dict() for l in c.logprobs.content]
+                        tidy_comps.append(rec)
                 return tidy_comps
 
             completions = []
@@ -759,7 +767,7 @@ class OpenAIHandler(BaseMLEngine):
                 else:
                     # in "normal" conversational mode, we request completions only for the last row
                     last_completion_content = None
-                    completions.extend([''])
+                    completions.extend([{'resp': ''}])
 
                 if last_completion_content:
                     # interleave assistant responses with user input
@@ -769,7 +777,7 @@ class OpenAIHandler(BaseMLEngine):
 
             return completions
 
-        def _submit_image_completion(kwargs: Dict, prompts: List[Text], api_args: Dict) -> List[Text]:
+        def _submit_image_completion(kwargs: Dict, prompts: List[Text], api_args: Dict) -> List[dict]:
             """
             Submit a request to the image generation endpoint of the OpenAI API.
 
@@ -788,7 +796,7 @@ class OpenAIHandler(BaseMLEngine):
                 List[Text]: List of image completions as URLs or base64 encoded images.
             """
 
-            def _tidy(comp: List[openai.types.image.Image]) -> List[Text]:
+            def _tidy(comp: List[openai.types.image.Image]) -> List[dict]:
                 """
                 Parse and tidy up the response from the image generation endpoint of the OpenAI API.
 
@@ -799,7 +807,7 @@ class OpenAIHandler(BaseMLEngine):
                     List[Text]: List of image completions as URLs or base64 encoded images.
                 """
                 return [
-                    c.url if hasattr(c, 'url') else c.b64_json
+                    {'resp': c.url if hasattr(c, 'url') else c.b64_json}
                     for c in comp
                 ]
 

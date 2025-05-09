@@ -1109,7 +1109,7 @@ class KnowledgeBaseController:
 
             return table
 
-    def list(self, project_name: str = None) -> List[dict]:
+    def list(self, project_name: str = None, with_secrets: Optional[bool] = True) -> List[dict]:
         """
         List all knowledge bases from the database
         belonging to a project
@@ -1124,7 +1124,17 @@ class KnowledgeBaseController:
             .filter(db.KnowledgeBase.project_id.in_(list([p.id for p in projects])))
         )
 
-        return [kb.as_dict() for kb in query.all()]
+        records = [kb.as_dict() for kb in query.all()]
+
+        if not with_secrets:
+            for record in records:
+                if 'embedding_model' in record:
+                    record['embedding_model']['api_key'] = '******'
+
+                if 'reranking_model' in record:
+                    record['reranking_model']['api_key'] = '******'
+
+        return records
 
     def update(self, name: str, project_id: int, **kwargs) -> db.KnowledgeBase:
         """

@@ -1124,29 +1124,7 @@ class KnowledgeBaseController:
             .filter(db.KnowledgeBase.project_id.in_(list([p.id for p in projects])))
         )
 
-        data = []
-        project_names = {
-            i.id: i.name
-            for i in project_controller.get_list()
-        }
-
-        for record in query:
-            vector_database = record.vector_database
-            embedding_model = record.embedding_model
-
-            data.append({
-                'id': record.id,
-                'name': record.name,
-                'project_id': record.project_id,
-                'project_name': project_names[record.project_id],
-                'embedding_model': embedding_model.name if embedding_model is not None else None,
-                'vector_database': None if vector_database is None else vector_database.name,
-                'vector_database_table': record.vector_database_table,
-                'query_id': record.query_id,
-                'params': record.params
-            })
-
-        return data
+        return [kb.as_dict() for kb in query.all()]
 
     def update(self, name: str, project_id: int, **kwargs) -> db.KnowledgeBase:
         """

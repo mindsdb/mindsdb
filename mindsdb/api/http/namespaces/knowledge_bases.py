@@ -117,13 +117,17 @@ class KnowledgeBasesResource(Resource):
 
         params = knowledge_base.get('params', {})
 
-        embedding_model = knowledge_base.get('embedding_model')
-        if embedding_model is not None:
-            params.update(embedding_model)
+        optional_parameter_fields = [
+            'embedding_model',
+            'reranking_model',
+            'content_columns',
+            'metadata_columns',
+            'id_column',
+        ]
 
-        reranking_model = knowledge_base.get('reranking_model')
-        if reranking_model is not None:
-            params.update(reranking_model)
+        for field in optional_parameter_fields:
+            if field in knowledge_base:
+                params[field] = knowledge_base[field]
 
         try:
             new_kb = session.kb_controller.add(

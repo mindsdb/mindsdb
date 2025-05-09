@@ -537,16 +537,22 @@ class KnowledgeBase(Base):
     )
 
     def as_dict(self) -> Dict:
+        params = self.params.copy()
         return {
             "id": self.id,
             "name": self.name,
             "project_id": self.project_id,
-            "embedding_model": None if self.embedding_model is None else self.embedding_model.name,
             "vector_database": None if self.vector_database is None else self.vector_database.name,
             "vector_database_table": self.vector_database_table,
             "updated_at": self.updated_at,
             "created_at": self.created_at,
-            "params": self.params
+            "query_id": self.query_id,
+            "embedding_model": params.pop("embedding_model", None),
+            "reranking_model": params.pop("reranking_model", None),
+            "metadata_columns": params.pop("metadata_columns", None),
+            "content_columns": params.pop("content_columns", None),
+            "id_column": params.pop("id_column", None),
+            "params": params,
         }
 
 

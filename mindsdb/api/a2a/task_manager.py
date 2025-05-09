@@ -129,11 +129,27 @@ class AgentTaskManager(InMemoryTaskManager):
         query = self._get_user_query(task_send_params)
         try:
             result = self.agent.invoke(query, task_send_params.sessionId)
+
+            # Use the parts from the agent response if available, or create them
+            if "parts" in result:
+                parts = result["parts"]
+            else:
+                result_text = result.get("content", "No response from MindsDB")
+                parts = [{"type": "text", "text": result_text}]
+
+                # Check if we have structured data
+                if "data" in result and result["data"]:
+                    parts.append({
+                        "type": "data",
+                        "data": result["data"],
+                        "metadata": {"subtype": "json"}
+                    })
         except Exception as e:
             logger.error(f"Error invoking agent: {e}")
-            raise ValueError(f"Error invoking agent: {e}")
-        parts = [{"type": "text", "text": result}]
-        task_state = TaskState.INPUT_REQUIRED if "MISSING_INFO:" in result else TaskState.COMPLETED
+            result_text = f"Error invoking agent: {e}"
+            parts = [{"type": "text", "text": result_text}]
+
+        task_state = TaskState.COMPLETED
         task = await self._update_store(
             task_send_params.id,
             TaskStatus(

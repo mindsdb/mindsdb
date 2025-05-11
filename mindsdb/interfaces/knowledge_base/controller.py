@@ -339,13 +339,9 @@ class KnowledgeBaseTable:
         if not rows:
             return
 
-        documents = [Document(
-            content=row.get('content', ''),
-            id=row.get('id'),
-            metadata=row.get('metadata', {})
-        ) for row in rows]
+        df = pd.DataFrame(rows)
 
-        self.insert_documents(documents)
+        self.insert(df)
 
     def insert_documents(self, documents: List[Document]):
         """Process and insert documents with preprocessing if configured"""

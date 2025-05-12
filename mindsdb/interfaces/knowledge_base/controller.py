@@ -784,7 +784,7 @@ class KnowledgeBaseTable:
     def _generate_document_id(self, content: str, content_column: str, provided_id: str = None) -> str:
         """Generate a deterministic document ID using the utility function."""
         from mindsdb.interfaces.knowledge_base.utils import generate_document_id
-        return generate_document_id(content, content_column, provided_id)
+        return generate_document_id(content=content, provided_id=provided_id)
 
     def _convert_metadata_value(self, value):
         """

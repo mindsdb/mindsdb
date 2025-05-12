@@ -143,9 +143,6 @@ jobs:
       - name: Checkout
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         uses: actions/checkout@v4
-      - name: Install FreeTDS (macOS)
-        if: ${{ runner.os == 'macOS' && needs.changes.outputs.not-docs == 'true' }}
-        run: brew install freetds
       # Install python and setup UV
       - name: Setup uv
         if: ${{ needs.changes.outputs.not-docs == 'true' }}

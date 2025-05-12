@@ -63,6 +63,45 @@ class TextChunkingConfig(BaseModel):
         arbitrary_types_allowed = True
 
 
+class JSONChunkingConfig(BasePreprocessingConfig):
+    """Configuration for JSON chunking preprocessor"""
+    flatten_nested: bool = Field(
+        default=True,
+        description="Whether to flatten nested JSON structures"
+    )
+    include_metadata: bool = Field(
+        default=True,
+        description="Whether to include original metadata in chunks"
+    )
+    chunk_by_object: bool = Field(
+        default=True,
+        description="Whether to chunk by top-level objects (True) or create a single document (False)"
+    )
+    exclude_fields: List[str] = Field(
+        default_factory=list,
+        description="List of fields to exclude from chunking"
+    )
+    include_fields: List[str] = Field(
+        default_factory=list,
+        description="List of fields to include in chunking (if empty, all fields except excluded ones are included)"
+    )
+    metadata_fields: List[str] = Field(
+        default_factory=list,
+        description="List of fields to extract into metadata for filtering (can include nested fields using dot notation)"
+    )
+    extract_all_primitives: bool = Field(
+        default=False,
+        description="Whether to extract all primitive values (strings, numbers, booleans) into metadata"
+    )
+    nested_delimiter: str = Field(
+        default=".",
+        description="Delimiter for flattened nested field names"
+    )
+
+    class Config:
+        arbitrary_types_allowed = True
+
+
 class PreprocessingConfig(BaseModel):
     """Complete preprocessing configuration"""
     type: PreprocessorType = Field(
@@ -77,7 +116,7 @@ class PreprocessingConfig(BaseModel):
         default=None,
         description="Configuration for text chunking preprocessing"
     )
-    json_chunking_config: Optional[Any] = Field(
+    json_chunking_config: Optional[JSONChunkingConfig] = Field(
         default=None,
         description="Configuration for JSON chunking preprocessing"
     )

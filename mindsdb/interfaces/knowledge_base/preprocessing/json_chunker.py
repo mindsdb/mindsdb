@@ -1,53 +1,18 @@
 from typing import List, Dict, Any, Optional
 import json
 import pandas as pd
-from pydantic import Field
+import ast
 
 from mindsdb.interfaces.knowledge_base.preprocessing.models import (
     Document,
     ProcessedChunk,
-    BasePreprocessingConfig,
+    JSONChunkingConfig
 )
 from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor import DocumentPreprocessor
 from mindsdb.utilities import log
 
+# Set up logger
 logger = log.getLogger(__name__)
-
-
-class JSONChunkingConfig(BasePreprocessingConfig):
-    """Configuration for JSON chunking preprocessor"""
-    flatten_nested: bool = Field(
-        default=True,
-        description="Whether to flatten nested JSON structures"
-    )
-    include_metadata: bool = Field(
-        default=True,
-        description="Whether to include original metadata in chunks"
-    )
-    chunk_by_object: bool = Field(
-        default=True,
-        description="Whether to chunk by top-level objects (True) or create a single document (False)"
-    )
-    exclude_fields: List[str] = Field(
-        default_factory=list,
-        description="List of fields to exclude from chunking"
-    )
-    include_fields: List[str] = Field(
-        default_factory=list,
-        description="List of fields to include in chunking (if empty, all fields except excluded ones are included)"
-    )
-    metadata_fields: List[str] = Field(
-        default_factory=list,
-        description="List of fields to extract into metadata for filtering (can include nested fields using dot notation)"
-    )
-    extract_all_primitives: bool = Field(
-        default=False,
-        description="Whether to extract all primitive values (strings, numbers, booleans) into metadata"
-    )
-    nested_delimiter: str = Field(
-        default=".",
-        description="Delimiter for flattened nested field names"
-    )
 
 
 class JSONChunkingPreprocessor(DocumentPreprocessor):
@@ -72,39 +37,88 @@ class JSONChunkingPreprocessor(DocumentPreprocessor):
 
         for doc in documents:
             try:
-                # Parse JSON content
-                if isinstance(doc.content, str):
-                    json_data = json.loads(doc.content)
-                else:
-                    json_data = doc.content
+                # Parse document content into a Python object
+                json_data = self._parse_document_content(doc)
+                if json_data is None:
+                    # Handle parsing failure
+                    error_message = "Content is neither valid JSON nor a valid Python literal."
+                    error_chunk = self._create_error_chunk(doc, error_message)
+                    all_chunks.append(error_chunk)
+                    continue  # Skip to next document
 
-                # Handle different JSON structures
-                if isinstance(json_data, list):
-                    # List of objects - chunk by object
-                    chunks = self._process_json_list(json_data, doc)
-                elif isinstance(json_data, dict):
-                    # Single object - chunk according to config
-                    if self.config.chunk_by_object:
-                        chunks = [self._create_chunk_from_dict(json_data, doc, 0, 1)]
-                    else:
-                        chunks = self._process_json_dict(json_data, doc)
-                else:
-                    # Primitive value - create a single chunk
-                    chunks = [self._create_chunk_from_primitive(json_data, doc)]
-
+                # Process the JSON data based on its structure
+                chunks = self._process_json_data(json_data, doc)
                 all_chunks.extend(chunks)
-
             except Exception as e:
-                logger.error(f"Error processing JSON document: {e}")
-                # Create a chunk with the error information
-                error_chunk = ProcessedChunk(
-                    id=f"{doc.id or 'unknown'}_error",
-                    content=f"Error processing document: {str(e)}",
-                    metadata=self._prepare_chunk_metadata(doc.id, 0, doc.metadata)
-                )
+                logger.error(f"Error processing document {doc.id}: {e}")
+                error_chunk = self._create_error_chunk(doc, str(e))
                 all_chunks.append(error_chunk)
 
         return all_chunks
+
+    def _parse_document_content(self, doc: Document) -> Optional[Any]:
+        """Parse document content into a Python object
+
+        Args:
+            doc: Document with content to parse
+
+        Returns:
+            Parsed content as a Python object or None if parsing failed
+        """
+        # If content is not a string, assume it's already a Python object
+        if not isinstance(doc.content, str):
+            return doc.content
+
+        # Try to parse as JSON first
+        try:
+            return json.loads(doc.content)
+        except json.JSONDecodeError:
+            # If JSON parsing fails, try as Python literal
+            try:
+                return ast.literal_eval(doc.content)
+            except (SyntaxError, ValueError) as e:
+                logger.error(f"Error parsing content for document {doc.id}: {e}")
+                # We'll create the error chunk in the main process_documents method
+                return None
+
+    def _process_json_data(self, json_data: Any, doc: Document) -> List[ProcessedChunk]:
+        """Process JSON data based on its structure
+
+        Args:
+            json_data: Parsed JSON data as a Python object
+            doc: Original document
+
+        Returns:
+            List of processed chunks
+        """
+        if isinstance(json_data, list):
+            # List of objects - chunk by object
+            return self._process_json_list(json_data, doc)
+        elif isinstance(json_data, dict):
+            # Single object - chunk according to config
+            if self.config.chunk_by_object:
+                return [self._create_chunk_from_dict(json_data, doc, 0, 1)]
+            else:
+                return self._process_json_dict(json_data, doc)
+        else:
+            # Primitive value - create a single chunk
+            return [self._create_chunk_from_primitive(json_data, doc)]
+
+    def _create_error_chunk(self, doc: Document, error_message: str) -> ProcessedChunk:
+        """Create a chunk containing error information
+
+        Args:
+            doc: Original document
+            error_message: Error message to include in the chunk
+
+        Returns:
+            ProcessedChunk with error information
+        """
+        return ProcessedChunk(
+            id=f"{doc.id or 'unknown'}_error",
+            content=f"Error processing document: {error_message}",
+            metadata=self._prepare_chunk_metadata(doc.id, 0, doc.metadata)
+        )
 
     def _process_json_list(self, json_list: List, doc: Document) -> List[ProcessedChunk]:
         """Process a list of JSON objects into chunks"""

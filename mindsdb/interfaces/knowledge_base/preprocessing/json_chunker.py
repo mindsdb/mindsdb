@@ -115,7 +115,7 @@ class JSONChunkingPreprocessor(DocumentPreprocessor):
             ProcessedChunk with error information
         """
         return ProcessedChunk(
-            id=f"{doc.id or 'unknown'}_error",
+            id=f"{doc.id}_error",
             content=f"Error processing document: {error_message}",
             metadata=self._prepare_chunk_metadata(doc.id, 0, doc.metadata)
         )
@@ -154,6 +154,14 @@ class JSONChunkingPreprocessor(DocumentPreprocessor):
         """Process a single JSON object into chunks by fields"""
         chunks = []
 
+        # Ensure we're working with a dictionary
+        if isinstance(json_dict, str):
+            try:
+                json_dict = json.loads(json_dict)
+            except json.JSONDecodeError:
+                logger.error(f"Error parsing JSON string: {json_dict[:100]}...")
+                return [self._create_error_chunk(doc, "Invalid JSON string")]
+
         # Filter fields based on include/exclude lists
         fields_to_process = {}
         for key, value in json_dict.items():
@@ -172,13 +180,16 @@ class JSONChunkingPreprocessor(DocumentPreprocessor):
             metadata = self._prepare_chunk_metadata(doc.id, i, doc.metadata)
             metadata["field_name"] = key
 
+            # Extract fields to metadata for filtering
+            self._extract_fields_to_metadata(json_dict, metadata)
+
             # Generate chunk ID
             chunk_id = self._generate_chunk_id(
                 chunk_index=i,
                 total_chunks=total_fields,
                 start_char=0,
                 end_char=len(field_content),
-                provided_id=doc.id or "unknown"
+                provided_id=doc.id
             )
 
             # Create and add the chunk
@@ -197,6 +208,14 @@ class JSONChunkingPreprocessor(DocumentPreprocessor):
                                 chunk_index: int,
                                 total_chunks: int) -> ProcessedChunk:
         """Create a chunk from a JSON dictionary"""
+        # Ensure we're working with a dictionary
+        if isinstance(json_dict, str):
+            try:
+                json_dict = json.loads(json_dict)
+            except json.JSONDecodeError:
+                logger.error(f"Error parsing JSON string: {json_dict[:100]}...")
+                return self._create_error_chunk(doc, "Invalid JSON string")
+
         # Format the content
         if self.config.flatten_nested:
             flattened = self._flatten_dict(json_dict, self.config.nested_delimiter)
@@ -220,7 +239,7 @@ class JSONChunkingPreprocessor(DocumentPreprocessor):
             total_chunks=total_chunks,
             start_char=0,
             end_char=len(content),
-            provided_id=doc.id or "unknown"
+            provided_id=doc.id
         )
 
         return ProcessedChunk(
@@ -267,13 +286,18 @@ class JSONChunkingPreprocessor(DocumentPreprocessor):
         # Create metadata
         metadata = self._prepare_chunk_metadata(doc.id, chunk_index, doc.metadata)
 
+        # For primitive values, we don't have a JSON dictionary to extract fields from
+        # But we can add the value itself as a metadata field if configured
+        if self.config.extract_all_primitives:
+            metadata["field_value"] = value
+
         # Generate chunk ID
         chunk_id = self._generate_chunk_id(
             chunk_index=chunk_index,
             total_chunks=total_chunks,
             start_char=0,
             end_char=len(content),
-            provided_id=doc.id or "unknown"
+            provided_id=doc.id
         )
 
         return ProcessedChunk(
@@ -347,44 +371,60 @@ class JSONChunkingPreprocessor(DocumentPreprocessor):
             return f"{key}: {value}"
 
     def _extract_fields_to_metadata(self, json_dict: Dict, metadata: Dict) -> None:
-        """Extract specified fields to metadata for filtering"""
+        """Extract specified fields from JSON to metadata for filtering"""
+        # Ensure we're working with a dictionary
+        if isinstance(json_dict, str):
+            try:
+                json_dict = json.loads(json_dict)
+            except json.JSONDecodeError:
+                logger.error(f"Error parsing JSON string: {json_dict[:100]}...")
+                return
+
+        # Always flatten the dictionary for metadata extraction
+        flattened = self._flatten_dict(json_dict, self.config.nested_delimiter)
+
         # If extract_all_primitives is True, extract all primitive values
         if self.config.extract_all_primitives:
-            flattened = self._flatten_dict(json_dict, self.config.nested_delimiter)
             for key, value in flattened.items():
                 if isinstance(value, (str, int, float, bool)) and value is not None:
-                    # Prefix with 'field_' to avoid conflicts with reserved metadata fields
                     metadata[f"field_{key}"] = value
             return
 
-        # Otherwise, extract only specified fields
+        # If metadata_fields is empty and extract_all_primitives is False,
+        # assume all fields should be extracted
         if not self.config.metadata_fields:
-            return
+            # First try to extract top-level primitive fields
+            has_primitives = False
+            for key, value in json_dict.items():
+                if isinstance(value, (str, int, float, bool)) and value is not None:
+                    metadata[f"field_{key}"] = value
+                    has_primitives = True
 
-        # Handle both flattened and nested structures
-        flattened = self._flatten_dict(json_dict, self.config.nested_delimiter)
+            # If no top-level primitives were found, extract all primitives from flattened dict
+            if not has_primitives:
+                for key, value in flattened.items():
+                    if isinstance(value, (str, int, float, bool)) and value is not None:
+                        metadata[f"field_{key}"] = value
+        else:
+            # Extract only the specified fields
+            for field in self.config.metadata_fields:
+                if field in flattened and flattened[field] is not None:
+                    metadata[f"field_{field}"] = flattened[field]
+                else:
+                    # Try to navigate the nested structure manually
+                    parts = field.split(self.config.nested_delimiter)
+                    current = json_dict
+                    found = True
 
-        for field in self.config.metadata_fields:
-            # Check if the field exists in the flattened dictionary
-            if field in flattened and flattened[field] is not None:
-                # Prefix with 'field_' to avoid conflicts with reserved metadata fields
-                metadata[f"field_{field}"] = flattened[field]
-            else:
-                # Try to navigate the nested structure manually
-                parts = field.split(self.config.nested_delimiter)
-                current = json_dict
-                found = True
+                    for part in parts:
+                        if isinstance(current, dict) and part in current:
+                            current = current[part]
+                        else:
+                            found = False
+                            break
 
-                for part in parts:
-                    if isinstance(current, dict) and part in current:
-                        current = current[part]
-                    else:
-                        found = False
-                        break
-
-                if found and current is not None:
-                    # Prefix with 'field_' to avoid conflicts with reserved metadata fields
-                    metadata[f"field_{field}"] = current
+                    if found and current is not None:
+                        metadata[f"field_{field}"] = current
 
     def to_dataframe(self, chunks: List[ProcessedChunk]) -> pd.DataFrame:
         """Convert processed chunks to dataframe format"""

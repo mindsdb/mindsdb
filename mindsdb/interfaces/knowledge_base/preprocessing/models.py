@@ -87,7 +87,9 @@ class JSONChunkingConfig(BasePreprocessingConfig):
     )
     metadata_fields: List[str] = Field(
         default_factory=list,
-        description="List of fields to extract into metadata for filtering (can include nested fields using dot notation)"
+        description="List of fields to extract into metadata for filtering "
+                    "(can include nested fields using dot notation). "
+                    "If empty, all primitive fields will be extracted (top-level fields if available, otherwise all primitive fields in the flattened structure)."
     )
     extract_all_primitives: bool = Field(
         default=False,

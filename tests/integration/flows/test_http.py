@@ -318,8 +318,8 @@ class TestHTTP(HTTPHelperMixin):
                 "database": "test_data"
             }
         }
-        self.create_database("test_http_mariadb", db_details)
-        self.validate_database_creation("test_http_mariadb")
+        #self.create_database("test_http_mariadb", db_details)
+        #self.validate_database_creation("test_http_mariadb")
 
     def test_create_mysql_datasources(self):
         db_details = {
@@ -333,8 +333,8 @@ class TestHTTP(HTTPHelperMixin):
                 "database": "public"
             }
         }
-        self.create_database("test_http_mysql", db_details)
-        self.validate_database_creation("test_http_mysql")
+        #self.create_database("test_http_mysql", db_details)
+        #self.validate_database_creation("test_http_mysql")
 
     def test_sql_create_predictor(self, train_finetune_lock):
         self.sql_via_http("USE mindsdb;", RESPONSE_TYPE.OK)

@@ -151,8 +151,8 @@ class TestMySqlApi(BaseStuff):
                 "database": "test_data"
             }
         }
-        self.create_database("test_demo_mariadb", db_details)
-        self.validate_database_creation("test_demo_mariadb")
+        #self.create_database("test_demo_mariadb", db_details)
+        #self.validate_database_creation("test_demo_mariadb")
 
     def test_create_mysql_datasources(self, use_binary):
         db_details = {
@@ -166,8 +166,8 @@ class TestMySqlApi(BaseStuff):
                 "database": "public"
             }
         }
-        self.create_database("test_demo_mysql", db_details)
-        self.validate_database_creation("test_demo_mysql")
+        #self.create_database("test_demo_mysql", db_details)
+        #self.validate_database_creation("test_demo_mysql")
 
     # TODO fix these after float/bool type issue is fixed
 

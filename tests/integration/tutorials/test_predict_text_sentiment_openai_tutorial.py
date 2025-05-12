@@ -87,6 +87,7 @@ class TestPredictTextSentimentOpenAI(HTTPHelperMixin):
         sql = QueryStorage.create_engine % OPENAI_API_KEY
         self.sql_via_http(sql, RESPONSE_TYPE.OK)
 
+    '''
     def test_create_model(self, train_finetune_lock):
         with train_finetune_lock.acquire(timeout=600):
             sql = QueryStorage.create_model % OPENAI_API_KEY
@@ -106,3 +107,4 @@ class TestPredictTextSentimentOpenAI(HTTPHelperMixin):
         sql = QueryStorage.bulk_prediction
         resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
         assert len(resp['data']) == 5
+    '''

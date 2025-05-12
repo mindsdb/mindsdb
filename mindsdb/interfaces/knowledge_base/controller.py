@@ -893,7 +893,6 @@ class KnowledgeBaseController:
                 )
             embedding_params.update(params['embedding_model'])
 
-        model_name = None
         model_name = self._create_embedding_model(
             project.name,
             params=embedding_params,

@@ -174,12 +174,13 @@ jobs:
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
           # Set FreeTDS build flags only on macOS
+          # Currently broken due to new cython version, see https://github.com/pymssql/pymssql/issues/937
           if [[ "$RUNNER_OS" == "macOS" ]]; then
-            brew install freetds
-            echo "Setting FreeTDS flags for macOS pymssql build"
-            export LDFLAGS="-L$(brew --prefix freetds)/lib"
-            export CFLAGS="-I$(brew --prefix freetds)/include"
-            uv pip install pymssql==2.3.1 --no-binary :all:
+            # brew install freetds
+            # echo "Setting FreeTDS flags for macOS pymssql build"
+            # export LDFLAGS="-L$(brew --prefix freetds)/lib"
+            # export CFLAGS="-I$(brew --prefix freetds)/include"
+            # uv pip install pymssql==2.3.1 --no-binary :all:
           else
             uv pip install .[mssql]
           fi

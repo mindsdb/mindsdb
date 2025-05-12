@@ -13,6 +13,7 @@ from mindsdb.integrations.utilities.rag.settings import LLMConfig
 class PreprocessorType(Enum):
     CONTEXTUAL = "contextual"
     TEXT_CHUNKING = "text_chunking"
+    JSON_CHUNKING = "json_chunking"
 
 
 class BasePreprocessingConfig(BaseModel):
@@ -76,6 +77,10 @@ class PreprocessingConfig(BaseModel):
         default=None,
         description="Configuration for text chunking preprocessing"
     )
+    json_chunking_config: Optional[Any] = Field(
+        default=None,
+        description="Configuration for JSON chunking preprocessing"
+    )
 
     @model_validator(mode='after')
     def validate_config_presence(self) -> 'PreprocessingConfig':
@@ -84,6 +89,10 @@ class PreprocessingConfig(BaseModel):
             self.contextual_config = ContextualConfig()
         if self.type == PreprocessorType.TEXT_CHUNKING and not self.text_chunking_config:
             self.text_chunking_config = TextChunkingConfig()
+        if self.type == PreprocessorType.JSON_CHUNKING and not self.json_chunking_config:
+            # Import here to avoid circular imports
+            from mindsdb.interfaces.knowledge_base.preprocessing.json_chunker import JSONChunkingConfig
+            self.json_chunking_config = JSONChunkingConfig()
         return self
 
 

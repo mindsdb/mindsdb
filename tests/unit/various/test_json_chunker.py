@@ -210,6 +210,121 @@ class TestJSONChunker:
         assert "skills" not in chunks[0].content
         assert "contact" not in chunks[0].content
 
+    def test_utility_bill_schema(self):
+        """Test chunking of a utility bill JSON schema"""
+        # Create a utility bill JSON object based on the provided schema
+        utility_bill = {
+            "billingPeriod": "03/17/2025 - 04/14/2025",
+            "amountDue": 86.77,
+            "accountNumber": "110 167 082 509",
+            "dueDate": "05/09/2025",
+            "previousBalance": 99.51,
+            "payments": 99.51,
+            "kwhUsed": 592,
+            "balancesByCompany": [
+                {
+                    "previousBalance": 59.39,
+                    "payments": 59.39,
+                    "currentCharges": 52.49,
+                    "amountDue": 52.49
+                },
+                {
+                    "previousBalance": 40.12,
+                    "payments": 40.12,
+                    "currentCharges": 34.28,
+                    "amountDue": 34.28
+                }
+            ]
+        }
+
+        # Create document
+        doc = Document(
+            id="utility_bill_1",
+            content=json.dumps(utility_bill),
+            metadata={"source": "test", "document_type": "utility_bill"}
+        )
+
+        # Test 1: Default chunking (chunk by object, flatten nested)
+        preprocessor = JSONChunkingPreprocessor()
+        chunks = preprocessor.process_documents([doc])
+
+        # Check results
+        assert len(chunks) == 1  # One chunk for the whole bill
+        assert "billingPeriod: 03/17/2025 - 04/14/2025" in chunks[0].content
+        assert "accountNumber: 110 167 082 509" in chunks[0].content
+        assert "balancesByCompany[0].previousBalance: 59.39" in chunks[0].content
+        assert "balancesByCompany[1].amountDue: 34.28" in chunks[0].content
+
+        # Test 2: Chunk by field instead of object
+        config = JSONChunkingConfig(chunk_by_object=False)
+        preprocessor = JSONChunkingPreprocessor(config)
+        chunks = preprocessor.process_documents([doc])
+
+        # Check results - should have one chunk per top-level field
+        assert len(chunks) == 8  # One chunk per top-level field
+
+        # Verify field names in metadata
+        field_names = [chunk.metadata.get("field_name") for chunk in chunks]
+        assert "billingPeriod" in field_names
+        assert "amountDue" in field_names
+        assert "accountNumber" in field_names
+        assert "balancesByCompany" in field_names
+
+        # Test 3: Non-flattened nested structure
+        config = JSONChunkingConfig(flatten_nested=False)
+        preprocessor = JSONChunkingPreprocessor(config)
+        chunks = preprocessor.process_documents([doc])
+
+        # Check results
+        assert len(chunks) == 1
+        assert '"balancesByCompany": [' in chunks[0].content
+        assert '"previousBalance": 59.39' in chunks[0].content
+        assert '"currentCharges": 34.28' in chunks[0].content
+
+        # Test 4: Include only specific fields
+        config = JSONChunkingConfig(
+            include_fields=["accountNumber", "dueDate", "amountDue"]
+        )
+        preprocessor = JSONChunkingPreprocessor(config)
+        chunks = preprocessor.process_documents([doc])
+
+        # Check results
+        assert len(chunks) == 1
+        assert "accountNumber: 110 167 082 509" in chunks[0].content
+        assert "dueDate: 05/09/2025" in chunks[0].content
+        assert "amountDue: 86.77" in chunks[0].content
+        assert "billingPeriod" not in chunks[0].content
+        assert "kwhUsed" not in chunks[0].content
+        assert "balancesByCompany" not in chunks[0].content
+
+        # Test 5: Include nested fields
+        config = JSONChunkingConfig(
+            include_fields=["accountNumber", "balancesByCompany"],
+            flatten_nested=False
+        )
+        preprocessor = JSONChunkingPreprocessor(config)
+        chunks = preprocessor.process_documents([doc])
+
+        # Check results
+        assert len(chunks) == 1
+        assert "accountNumber" in chunks[0].content
+        assert "balancesByCompany" in chunks[0].content
+        assert "previousBalance" in chunks[0].content  # From the nested structure
+        assert "currentCharges" in chunks[0].content  # From the nested structure
+        assert "billingPeriod" not in chunks[0].content
+
+        # Test 6: Extract metadata fields
+        config = JSONChunkingConfig(
+            metadata_fields=["accountNumber", "dueDate", "amountDue"]
+        )
+        preprocessor = JSONChunkingPreprocessor(config)
+        chunks = preprocessor.process_documents([doc])
+
+        # Check metadata extraction
+        assert chunks[0].metadata.get("field_accountNumber") == "110 167 082 509"
+        assert chunks[0].metadata.get("field_dueDate") == "05/09/2025"
+        assert chunks[0].metadata.get("field_amountDue") == 86.77
+
     def test_error_handling(self):
         """Test handling of invalid JSON data"""
         # Create an invalid JSON document

@@ -182,7 +182,7 @@ jobs:
             echo "Setting FreeTDS flags for macOS pymssql build"
             export LDFLAGS="-L$(brew --prefix freetds)/lib"
             export CFLAGS="-I$(brew --prefix freetds)/include"
-            uv pip install pymssql==2.3.4 --no-binary :all:
+            uv pip install pymssql==2.3.1 --no-binary :all:
           else
             uv pip install .[mssql]
           fi

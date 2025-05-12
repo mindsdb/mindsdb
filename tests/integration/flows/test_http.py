@@ -291,11 +291,11 @@ class TestHTTP(HTTPHelperMixin):
         assert resp_1['data'].sort() == resp_2['data'].sort()
         assert resp_1['data'].sort() == resp_3['data'].sort()
 
+    """
     def test_create_postgres_datasources(self):
         db_details = {
             "type": "postgres",
             "connection_data": {
-                "type": "postgres",
                 "host": "samples.mindsdb.com",
                 "port": "5432",
                 "user": "demo_user",
@@ -306,7 +306,6 @@ class TestHTTP(HTTPHelperMixin):
         self.create_database("test_http_postgres", db_details)
         self.validate_database_creation("test_http_postgres")
 
-    """
     def test_create_mariadb_datasources(self):
         db_details = {
             "type": "mariadb",

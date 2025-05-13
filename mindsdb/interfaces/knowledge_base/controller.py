@@ -47,7 +47,7 @@ from mindsdb.integrations.utilities.rag.rerankers.base_reranker import BaseLLMRe
 logger = log.getLogger(__name__)
 
 KB_TO_VECTORDB_COLUMNS = {
-    'id': 'original_row_id',
+    'id': 'original_doc_id',
     'chunk_id': 'id',
     'chunk_content': 'content'
 }
@@ -290,7 +290,7 @@ class KnowledgeBaseTable:
         columns = list(df.columns)
         # update id, get from metadata
         df[TableField.ID.value] = df[TableField.METADATA.value].apply(
-            lambda m: None if m is None else m.get('original_row_id')
+            lambda m: None if m is None else m.get('original_doc_id')
         )
 
         # id on first place
@@ -479,12 +479,9 @@ class KnowledgeBaseTable:
                     # Use provided_id directly if it exists, otherwise generate one
                     doc_id = self._generate_document_id(content_str, col, provided_id)
 
-                    # Need provided ID to link chunks back to original source (e.g. database row).
-                    row_id = provided_id if provided_id else idx
-
                     metadata = {
                         **base_metadata,
-                        'original_row_id': str(row_id),
+                        'original_row_index': str(idx),  # provide link to original row index
                         'content_column': col,
                     }
 
@@ -537,10 +534,16 @@ class KnowledgeBaseTable:
         # -- prepare id --
         id_column = params.get('id_column')
         if id_column is not None and id_column not in columns:
-            raise ValueError(f'The ID column {params.get("id_column")} not found in dataset: {columns}')
+            id_column = None
 
+        if id_column is None and TableField.ID.value in columns:
+            id_column = TableField.ID.value
+
+        # Also check for case-insensitive 'id' column
         if id_column is None:
-            raise ValueError('The id_column parameter is required')
+            column_map = {col.lower(): col for col in columns}
+            if 'id' in column_map:
+                id_column = column_map['id']
 
         if id_column is not None:
             columns.remove(id_column)
@@ -781,7 +784,7 @@ class KnowledgeBaseTable:
     def _generate_document_id(self, content: str, content_column: str, provided_id: str = None) -> str:
         """Generate a deterministic document ID using the utility function."""
         from mindsdb.interfaces.knowledge_base.utils import generate_document_id
-        return generate_document_id(content, content_column, provided_id)
+        return generate_document_id(content=content, provided_id=provided_id)
 
     def _convert_metadata_value(self, value):
         """
@@ -850,10 +853,6 @@ class KnowledgeBaseController:
         vector_size = params.get('vector_size')
         if is_sparse and vector_size is None:
             raise ValueError("vector_size is required when is_sparse=True")
-
-        # Validate that id_column is provided
-        if params is not None and ('id_column' not in params):
-            raise ValueError("The id_column parameter is required")
 
         # get project id
         project = self.session.database_controller.get_project(project_name)

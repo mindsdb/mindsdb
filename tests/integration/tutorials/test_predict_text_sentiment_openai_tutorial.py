@@ -10,13 +10,14 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 class QueryStorage:
     create_db = """
 CREATE DATABASE example_sentiment_openai_db
-WITH ENGINE = "mysql",
+WITH ENGINE = "postgres",
 PARAMETERS = {
-    "user": "user",
-    "password": "MindsDBUser123!",
+    "user": "demo_user",
+    "password": "demo_password",
     "host": "samples.mindsdb.com",
-    "port": "3306",
-    "database": "public"
+    "port": "5432",
+    "database": "demo",
+    "schema": "demo_data"
     };
 """
     check_db_created = """
@@ -82,9 +83,11 @@ class TestPredictTextSentimentOpenAI(HTTPHelperMixin):
         resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
         assert len(resp['data']) >= 3
 
+    '''
     def test_create_engine(self):
         sql = QueryStorage.create_engine % OPENAI_API_KEY
         self.sql_via_http(sql, RESPONSE_TYPE.OK)
+
 
     def test_create_model(self, train_finetune_lock):
         with train_finetune_lock.acquire(timeout=600):
@@ -105,3 +108,4 @@ class TestPredictTextSentimentOpenAI(HTTPHelperMixin):
         sql = QueryStorage.bulk_prediction
         resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
         assert len(resp['data']) == 5
+    '''

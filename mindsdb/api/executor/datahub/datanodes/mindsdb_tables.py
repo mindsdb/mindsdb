@@ -327,8 +327,8 @@ class ChatbotsTable(MdbTable):
 
 class KBTable(MdbTable):
     name = 'KNOWLEDGE_BASES'
-    columns = ["NAME", "PROJECT", "MODEL", "STORAGE", "PARAMS",
-               "INSERT_STARTED_AT", "INSERT_FINISHED_AT", "PROCESSED_ROWS", "ERROR", "QUERY_ID"]
+    columns = ["NAME", "PROJECT", "EMBEDDING_MODEL", "RERANKING_MODEL", "STORAGE", "METADATA_COLUMNS", "CONTENT_COLUMNS",
+               "ID_COLUMN", "PARAMS", "INSERT_STARTED_AT", "INSERT_FINISHED_AT", "PROCESSED_ROWS", "ERROR", "QUERY_ID"]
 
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
@@ -336,7 +336,7 @@ class KBTable(MdbTable):
 
         from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseController
         controller = KnowledgeBaseController(inf_schema.session)
-        kb_list = controller.list(project_name)
+        kb_list = controller.list(project_name, with_secrets=inf_schema.session.show_secrets)
 
         # shouldn't be a lot of queries, we can fetch them all
         queries_data = {
@@ -346,8 +346,13 @@ class KBTable(MdbTable):
 
         data = []
 
+        project_controller = ProjectController()
+        project_names = {
+            i.id: i.name
+            for i in project_controller.get_list()
+        }
+
         for kb in kb_list:
-            vector_database_name = kb['vector_database'] or ''
 
             query_item = {}
             query_id = kb['query_id']
@@ -359,9 +364,13 @@ class KBTable(MdbTable):
 
             data.append((
                 kb['name'],
-                kb['project_name'],
-                kb['embedding_model'],
-                vector_database_name + '.' + kb['vector_database_table'],
+                project_names.get(kb['project_id']),
+                to_json(kb['embedding_model']),
+                to_json(kb['reranking_model']),
+                kb['vector_database'] + '.' + kb['vector_database_table'],
+                to_json(kb['metadata_columns']),
+                to_json(kb['content_columns']),
+                kb['id_column'],
                 to_json(kb['params']),
                 query_item.get('started_at'),
                 query_item.get('finished_at'),

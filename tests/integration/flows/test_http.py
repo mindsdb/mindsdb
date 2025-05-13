@@ -295,7 +295,6 @@ class TestHTTP(HTTPHelperMixin):
         db_details = {
             "type": "postgres",
             "connection_data": {
-                "type": "postgres",
                 "host": "samples.mindsdb.com",
                 "port": "5432",
                 "user": "demo_user",

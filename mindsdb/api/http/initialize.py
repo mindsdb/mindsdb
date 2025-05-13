@@ -50,10 +50,24 @@ from mindsdb.utilities.json_encoder import CustomJSONProvider
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
 from mindsdb.utilities.otel import trace  # noqa: F401
-from opentelemetry.instrumentation.flask import FlaskInstrumentor  # noqa: F401
-from opentelemetry.instrumentation.requests import RequestsInstrumentor  # noqa: F401
 
 logger = log.getLogger(__name__)
+
+class _NoOpFlaskInstrumentor:
+    def instrument_app(self, app):
+        pass
+
+class _NoOpRequestsInstrumentor:
+    def instrument(self):
+        pass
+
+try:
+    from opentelemetry.instrumentation.flask import FlaskInstrumentor
+    from opentelemetry.instrumentation.requests import RequestsInstrumentor
+except ImportError:
+    logger.debug("OpenTelemetry is not avaiable. Please run `pip install -r requirements/requirements-opentelemetry.txt` to use it.")
+    FlaskInstrumentor = _NoOpFlaskInstrumentor
+    RequestsInstrumentor = _NoOpRequestsInstrumentor
 
 
 class Swagger_Api(Api):
@@ -376,7 +390,7 @@ def initialize_flask(config, init_static_thread, no_studio):
     app = Flask(__name__, **kwargs)
     init_metrics(app)
 
-    # Instrument Flask app for OpenTelemetry
+    # Instrument Flask app and requests using either real or no-op instrumentors
     FlaskInstrumentor().instrument_app(app)
     RequestsInstrumentor().instrument()
 

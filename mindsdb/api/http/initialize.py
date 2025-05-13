@@ -53,13 +53,16 @@ from mindsdb.utilities.otel import trace  # noqa: F401
 
 logger = log.getLogger(__name__)
 
+
 class _NoOpFlaskInstrumentor:
     def instrument_app(self, app):
         pass
 
+
 class _NoOpRequestsInstrumentor:
     def instrument(self):
         pass
+
 
 try:
     from opentelemetry.instrumentation.flask import FlaskInstrumentor

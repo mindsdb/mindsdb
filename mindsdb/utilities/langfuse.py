@@ -1,8 +1,12 @@
 import os
 import typing
+from typing import TYPE_CHECKING
 
 from mindsdb.utilities import log
 
+if TYPE_CHECKING:
+    from langfuse.callback import CallbackHandler
+    from langfuse.client import StatefulSpanClient
 
 logger = log.getLogger(__name__)
 
@@ -167,7 +171,7 @@ class LangfuseClientWrapper:
 
     def start_span(self,
                    name: str,
-                   input: typing.Optional[typing.Any] = None) -> typing.Optional['StatefulSpanClient']:
+                   input: typing.Optional[typing.Any] = None) -> typing.Optional[StatefulSpanClient]:
         """
         Create span. If Langfuse is disabled, nothing will be done.
 
@@ -183,7 +187,7 @@ class LangfuseClientWrapper:
         return self.trace.span(name=name, input=input)
 
     def end_span_stream(self,
-                        span: typing.Optional['StatefulSpanClient'] = None) -> None:
+                        span: typing.Optional[StatefulSpanClient] = None) -> None:
         """
         End span. If Langfuse is disabled, nothing will happen.
         Args:
@@ -198,7 +202,7 @@ class LangfuseClientWrapper:
         self.trace.update()
 
     def end_span(self,
-                 span: typing.Optional['StatefulSpanClient'] = None,
+                 span: typing.Optional[StatefulSpanClient] = None,
                  output: typing.Optional[typing.Any] = None) -> None:
         """
         End trace. If Langfuse is disabled, nothing will be done.
@@ -230,7 +234,7 @@ class LangfuseClientWrapper:
         except Exception as e:
             logger.error(f'Something went wrong while processing Langfuse trace {self.trace.id}: {str(e)}')
 
-    def get_langchain_handler(self) -> typing.Optional['CallbackHandler']:
+    def get_langchain_handler(self) -> typing.Optional[CallbackHandler]:
         """
         Get Langchain handler. If Langfuse is disabled, returns None.
         """

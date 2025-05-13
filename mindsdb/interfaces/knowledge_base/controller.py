@@ -41,6 +41,7 @@ from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
 
 from mindsdb.api.executor.command_executor import ExecuteCommands
+from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.utilities import log
 from mindsdb.integrations.utilities.rag.rerankers.base_reranker import BaseLLMReranker
 
@@ -145,18 +146,13 @@ class KnowledgeBaseTable:
 
         db_handler = self.get_vector_db()
 
+        # Copy query for complex execution via DuckDB: DISTINCT, GROUP BY etc.
+        query_copy = copy.deepcopy(query)
+
         logger.debug("Replaced content with embeddings in where clause")
         # set table name
         query.from_table = Identifier(parts=[self._kb.vector_database_table])
         logger.debug(f"Set table name to: {self._kb.vector_database_table}")
-
-        requested_kb_columns = []
-        for target in query.targets:
-            if isinstance(target, Star):
-                requested_kb_columns = None
-                break
-            else:
-                requested_kb_columns.append(target.parts[-1].lower())
 
         query.targets = [
             Identifier(TableField.ID.value),
@@ -220,9 +216,17 @@ class KnowledgeBaseTable:
 
         df = self.add_relevance(df, query_text, relevance_threshold)
 
-        # filter by targets
-        if requested_kb_columns is not None:
-            df = df[requested_kb_columns]
+        if (
+            query.group_by is not None
+            or query.order_by is not None
+            or query.having is not None
+            or query.distinct is True
+            or len(query.targets) != 1
+            or not isinstance(query.targets[0], Star)
+        ):
+            query_copy.where = None
+            df = query_df(df, query_copy, session=self.session)
+
         return df
 
     def add_relevance(self, df, query_text, relevance_threshold=None):

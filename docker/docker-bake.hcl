@@ -23,7 +23,7 @@ variable "BRANCH" {
   default = "main"
 }
 variable "ECR_REPO" {
-  default = "454861456664.dkr.ecr.us-east-2.amazonaws.com"
+  default = "168681354662.dkr.ecr.us-east-1.amazonaws.com"
 }
 variable "PUSH_CACHE" {
   default = true

@@ -10,13 +10,14 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 class QueryStorage:
     create_db = """
 CREATE DATABASE example_sentiment_openai_db
-WITH ENGINE = "mysql",
+WITH ENGINE = "postgres",
 PARAMETERS = {
-    "user": "user",
-    "password": "MindsDBUser123!",
+    "user": "demo_user",
+    "password": "demo_password",
     "host": "samples.mindsdb.com",
-    "port": "3306",
-    "database": "public"
+    "port": "5432",
+    "database": "demo",
+    "schema": "demo_data"
     };
 """
     check_db_created = """

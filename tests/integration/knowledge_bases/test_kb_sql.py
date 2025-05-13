@@ -218,6 +218,33 @@ class KBTest(KBTestBase):
             assert len(ret) == 4
             assert '1001' not in list(ret['id'])
 
+        print('distinct')
+        ret = self.run_sql("select distinct id from kb_crm")
+        assert len(ret) == 2
+        assert set(ret['id']) == {'1000', '1001'}
+
+        print('group by')
+        ret = self.run_sql("select id, count(*) from kb_crm group by id")
+        assert len(ret) == 2
+        assert set(ret['id']) == {'1000', '1001'}
+        assert set(ret['count']) == {1}
+
+        print('order by')
+        ret = self.run_sql("select id, chunk_content from kb_crm order by id")
+        assert len(ret) == count_rows
+        assert ret['id'][0] == '1000'
+        assert ret['id'][1] == '1001'
+        assert ret['chunk_content'][0] == 'Help'
+        assert ret['chunk_content'][1] == 'Thank you'
+
+        print('order by desc')
+        ret = self.run_sql("select id, chunk_content from kb_crm order by id desc")
+        assert len(ret) == count_rows
+        assert ret['id'][0] == '1001'
+        assert ret['id'][1] == '1000'
+        assert ret['chunk_content'][0] == 'Thank you'
+        assert ret['chunk_content'][1] == 'Help'
+
         # TODO filtering combination with content
 
         # ------------------- join with table -------------

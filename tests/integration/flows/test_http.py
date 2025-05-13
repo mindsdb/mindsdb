@@ -291,7 +291,6 @@ class TestHTTP(HTTPHelperMixin):
         assert resp_1['data'].sort() == resp_2['data'].sort()
         assert resp_1['data'].sort() == resp_3['data'].sort()
 
-    """
     def test_create_postgres_datasources(self):
         db_details = {
             "type": "postgres",
@@ -335,7 +334,6 @@ class TestHTTP(HTTPHelperMixin):
         }
         self.create_database("test_http_mysql", db_details)
         self.validate_database_creation("test_http_mysql")
-    """
 
     def test_sql_create_predictor(self, train_finetune_lock):
         self.sql_via_http("USE mindsdb;", RESPONSE_TYPE.OK)

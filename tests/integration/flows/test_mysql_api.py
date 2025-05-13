@@ -124,7 +124,6 @@ class TestMySqlApi(BaseStuff):
     def use_binary(self, request):
         self.use_binary = request.param
 
-    """
     def test_create_postgres_datasources(self, use_binary):
         db_details = {
             "type": "postgres",
@@ -139,7 +138,6 @@ class TestMySqlApi(BaseStuff):
         }
         self.create_database("test_demo_postgres", db_details)
         self.validate_database_creation("test_demo_postgres")
-
 
     def test_create_mariadb_datasources(self, use_binary):
         db_details = {
@@ -170,7 +168,6 @@ class TestMySqlApi(BaseStuff):
         }
         self.create_database("test_demo_mysql", db_details)
         self.validate_database_creation("test_demo_mysql")
-    """
 
     # TODO fix these after float/bool type issue is fixed
 

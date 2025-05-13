@@ -171,7 +171,7 @@ class LangfuseClientWrapper:
 
     def start_span(self,
                    name: str,
-                   input: typing.Optional[typing.Any] = None) -> typing.Optional[StatefulSpanClient]:
+                   input: typing.Optional[typing.Any] = None) -> typing.Optional['StatefulSpanClient']:
         """
         Create span. If Langfuse is disabled, nothing will be done.
 

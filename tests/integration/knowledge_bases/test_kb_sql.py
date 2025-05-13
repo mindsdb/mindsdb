@@ -120,8 +120,7 @@ class KBTestBase:
             create knowledge base {name}
             using storage = {self.vectordb_name}.tbl_{name}
                 {param_str}
-        '''
-        )
+        ''')
 
         # clean
         if len(self.run_sql(f'select * from {name}')) > 0:

@@ -838,7 +838,7 @@ class KnowledgeBaseController:
             params: dict,
             preprocessing_config: Optional[dict] = None,
             if_not_exists: bool = False,
-            embedding_model: Identifier = None, # Legacy: deprecated
+            embedding_model: Identifier = None,  # Legacy: deprecated
     ) -> db.KnowledgeBase:
         """
         Add a new knowledge base to the database

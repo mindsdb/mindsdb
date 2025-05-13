@@ -29,6 +29,9 @@ from mindsdb.utilities.config import config
 
 default_project = config.get('default_project')
 
+# This includes built-in MindsDB SQL functions and functions to be executed via DuckDB consistently.
+MINDSDB_SQL_FUNCTIONS = {'llm', 'to_markdown', 'hash'}
+
 
 class QueryPlanner:
 
@@ -237,7 +240,7 @@ class QueryPlanner:
 
         def find_objects(node, is_table, **kwargs):
             if isinstance(node, Function):
-                if node.namespace is not None or node.op.lower() in ('llm',):
+                if node.namespace is not None or node.op.lower() in MINDSDB_SQL_FUNCTIONS:
                     user_functions.append(node)
 
             if is_table:

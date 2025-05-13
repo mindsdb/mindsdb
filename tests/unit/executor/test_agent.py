@@ -397,13 +397,13 @@ class TestKB(BaseExecutorDummyML):
             select review as content, id from files.reviews
         """)
 
-        ret = self.run_sql("select * from kb_review where original_doc_id = '123'")
+        ret = self.run_sql("select * from kb_review where original_doc_id = 123")
         assert len(ret) == 1
         assert ret['chunk_content'][0] == record['review']
 
         # delete by metadata
-        self.run_sql("delete from kb_review where original_doc_id = '123'")
-        ret = self.run_sql("select * from kb_review where original_doc_id = '123'")
+        self.run_sql("delete from kb_review where original_doc_id = 123")
+        ret = self.run_sql("select * from kb_review where original_doc_id = 123")
         assert len(ret) == 0
 
         # insert without id
@@ -413,7 +413,7 @@ class TestKB(BaseExecutorDummyML):
         """)
 
         # id column wasn't used
-        ret = self.run_sql("select * from kb_review where original_doc_id = '123'")
+        ret = self.run_sql("select * from kb_review where original_doc_id = 123")
         assert len(ret) == 0
 
         # product/url in metadata
@@ -467,7 +467,7 @@ class TestKB(BaseExecutorDummyML):
             select * from files.reviews
         """)
 
-        ret = self.run_sql("select * from kb_review where original_doc_id = '123'")  # id is id
+        ret = self.run_sql("select * from kb_review where original_doc_id = 123")  # id is id
         assert len(ret) == 1
         # review in content
         assert ret['chunk_content'][0] == record['review']

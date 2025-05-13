@@ -218,7 +218,6 @@ def check_relative_reqs():
     corresponding entry in a requirements.txt.
     """
 
-    global success
     # regex for finding relative imports of handlers like "from ..file_handler import FileHandler"
     # we're going to treat these as errors (and suggest using absolute imports instead)
     relative_import_pattern = re.compile("(?:\s|^)(?:from|import) \.\.\w+_handler")  # noqa: W605

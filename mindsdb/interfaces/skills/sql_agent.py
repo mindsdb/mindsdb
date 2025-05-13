@@ -1,4 +1,3 @@
-
 import re
 import csv
 import inspect
@@ -13,6 +12,7 @@ from mindsdb.utilities import log
 from mindsdb.utilities.context import context as ctx
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 logger = log.getLogger(__name__)
 
@@ -253,7 +253,7 @@ class SQLAgent:
         for table in all_tables:
             key = f"{ctx.company_id}_{table}_info"
             table_info = self._cache.get(key) if self._cache else None
-            if table_info is None:
+            if True or table_info is None:
                 table_info = self._get_single_table_info(table)
                 if self._cache:
                     self._cache.set(key, table_info)
@@ -276,19 +276,41 @@ class SQLAgent:
         dn = self._command_executor.session.datahub.get(integration)
 
         fields, dtypes = [], []
-        for df in dn.get_table_columns_df(table_name, schema_name):
-            df_records = df.to_dict(orient='records')
-            fields.append(df_records[INF_SCHEMA_COLUMNS_NAMES.COLUMN_NAME])
-            if df_records[INF_SCHEMA_COLUMNS_NAMES.MYSQL_DATA_TYPE] is not None:
-                dtypes.append(df_records[INF_SCHEMA_COLUMNS_NAMES.MYSQL_DATA_TYPE].value)
-            else:
-                dtypes.append(df_records[INF_SCHEMA_COLUMNS_NAMES.DATA_TYPE])
+        try:
+            df = dn.get_table_columns_df(table_name, schema_name)
+            if not isinstance(df, pd.DataFrame) or df.empty:
+                logger.warning(f"Received empty or invalid DataFrame for table columns of {table_str}")
+                return f"Table named `{table_str}`:\n [No column information available]"
+
+            fields = df[INF_SCHEMA_COLUMNS_NAMES.COLUMN_NAME].to_list()
+            dtypes = [
+                mysql_data_type.value if isinstance(mysql_data_type, MYSQL_DATA_TYPE) else (data_type or 'UNKNOWN')
+                for mysql_data_type, data_type
+                in zip(
+                    df[INF_SCHEMA_COLUMNS_NAMES.MYSQL_DATA_TYPE],
+                    df[INF_SCHEMA_COLUMNS_NAMES.DATA_TYPE]
+                )
+            ]
+        except Exception as e:
+            logger.error(f"Failed processing column info for {table_str}: {e}", exc_info=True)
+            raise ValueError(f"Failed to process column info for {table_str}") from e
+
+        if not fields:
+            logger.error(f"Could not extract column fields for {table_str}.")
+            return f"Table named `{table_str}`:\n [Could not extract column information]"
+
+        try:
+            sample_rows_info = self._get_sample_rows(table_str, fields)
+        except Exception as e:
+            logger.warning(f"Could not get sample rows for {table_str}: {e}")
+            sample_rows_info = "\n\t [error] Couldn't retrieve sample rows!"
 
         info = f'Table named `{table_str}`:\n'
         info += f"\nSample with first {self._sample_rows_in_table_info} rows from table {table_str} in CSV format (dialect is 'excel'):\n"
-        info += self._get_sample_rows(table_str, fields) + "\n"
+        info += sample_rows_info + "\n"
         info += '\nColumn data types: ' + ",\t".join(
-            [f'\n`{field}` : `{dtype}`' for field, dtype in zip(fields, dtypes)]) + '\n'  # noqa
+            [f'\n`{field}` : `{dtype}`' for field, dtype in zip(fields, dtypes)]
+        ) + '\n'
         return info
 
     def _get_sample_rows(self, table: str, fields: List[str]) -> str:

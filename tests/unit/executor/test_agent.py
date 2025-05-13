@@ -256,7 +256,7 @@ class TestAgent(BaseExecutorDummyML):
             '''
         )
 
-        self.run_sql('create knowledge base kb_review using model=emb_model, id_column = "id"')
+        self.run_sql('create knowledge base kb_review using model=emb_model')
 
         self.run_sql('''
           create skill retr_skill
@@ -357,11 +357,11 @@ class TestKB(BaseExecutorDummyML):
 
         self._create_embedding_model('emb_model')
 
-        self.run_sql('create knowledge base kb_review using model=emb_model, id_column = "id"')
+        self.run_sql('create knowledge base kb_review using model=emb_model')
         self.run_sql('drop knowledge base kb_review')  # drop chromadb left since the last failed test
-        self.run_sql('create knowledge base kb_review using model=emb_model, id_column = "id"')
+        self.run_sql('create knowledge base kb_review using model=emb_model')
 
-        self.run_sql("insert into kb_review (content, id) values ('review', 0)")
+        self.run_sql("insert into kb_review (content) values ('review')")
 
         # selectable
         ret = self.run_sql("select * from kb_review")
@@ -389,29 +389,33 @@ class TestKB(BaseExecutorDummyML):
         self.save_file('reviews', df)
 
         # ---  case 1: kb with default columns settings ---
-        self.run_sql('create knowledge base kb_review using model=emb_model, id_column = "id"')
+        self.run_sql('create knowledge base kb_review using model=emb_model')
         self.run_sql('drop knowledge base kb_review')  # drop chromadb left since the last failed test
-        self.run_sql('create knowledge base kb_review using model=emb_model, id_column = "id"')
+        self.run_sql('create knowledge base kb_review using model=emb_model')
 
         self.run_sql("""
             insert into kb_review
             select review as content, id from files.reviews
         """)
 
-        ret = self.run_sql("select * from kb_review where original_row_id = '123'")
+        ret = self.run_sql("select * from kb_review where original_doc_id = 123")
         assert len(ret) == 1
         assert ret['chunk_content'][0] == record['review']
 
         # delete by metadata
-        self.run_sql("delete from kb_review where original_row_id = '123'")
-        ret = self.run_sql("select * from kb_review where original_row_id = '123'")
+        self.run_sql("delete from kb_review where original_doc_id = 123")
+        ret = self.run_sql("select * from kb_review where original_doc_id = 123")
         assert len(ret) == 0
 
-        # insert
+        # insert without id
         self.run_sql("""
             insert into kb_review
-            select review as content, product, url, id from files.reviews
+            select review as content, product, url from files.reviews
         """)
+
+        # id column wasn't used
+        ret = self.run_sql("select * from kb_review where original_doc_id = 123")
+        assert len(ret) == 0
 
         # product/url in metadata
         ret = self.run_sql("select * from kb_review where product = 'probook'")
@@ -456,8 +460,7 @@ class TestKB(BaseExecutorDummyML):
         self.run_sql('''
         create knowledge base kb_review
          using model=emb_model,
-         content_columns=['review'],
-         id_column = "id"
+         content_columns=['review']
         ''')
 
         self.run_sql("""
@@ -465,7 +468,7 @@ class TestKB(BaseExecutorDummyML):
             select * from files.reviews
         """)
 
-        ret = self.run_sql("select * from kb_review where original_row_id = '123'")  # id is id
+        ret = self.run_sql("select * from kb_review where original_doc_id = 123")  # id is id
         assert len(ret) == 1
         # review in content
         assert ret['chunk_content'][0] == record['review']
@@ -494,8 +497,7 @@ class TestKB(BaseExecutorDummyML):
 
         self.run_sql('''
           create knowledge base kb_ral
-            using model=emb_model,
-            id_column="id"
+            using model=emb_model
         ''')
 
         self.run_sql("""
@@ -563,7 +565,7 @@ class TestKB(BaseExecutorDummyML):
                 self.run_sql('delete from kb_part where id in (select id from kb_part)')
                 self.run_sql('DROP KNOWLEDGE_BASE kb_part')
 
-            self.run_sql('create knowledge base kb_part using model=emb_model, content_columns=["english"], id_column="id"')
+            self.run_sql('create knowledge base kb_part using model=emb_model, content_columns=["english"]')
 
             # load kb
             ret = self.run_sql(insert_sql)

@@ -9,6 +9,7 @@ import subprocess
 import concurrent.futures
 from typing import Text, Tuple, Dict, List, Optional, Any
 import openai
+from openai.types.fine_tuning import FineTuningJob
 from openai import OpenAI, AzureOpenAI, NotFoundError, AuthenticationError
 import numpy as np
 import pandas as pd
@@ -1116,7 +1117,7 @@ class OpenAIHandler(BaseMLEngine):
         }
         return {**ft_params, **extra_params}
 
-    def _ft_call(self, ft_params: Dict, client: OpenAI, hour_budget: int) -> Tuple[openai.types.fine_tuning.FineTuningJob, Text]:
+    def _ft_call(self, ft_params: Dict, client: OpenAI, hour_budget: int) -> Tuple[FineTuningJob, Text]:
         """
         Submit a fine-tuning job via the OpenAI API.
         This method handles requests to both the legacy and new endpoints.
@@ -1134,7 +1135,7 @@ class OpenAIHandler(BaseMLEngine):
             PendingFT: If the fine-tuning process is still pending.
 
         Returns:
-            Tuple[openai.types.fine_tuning.FineTuningJob, Text]: Fine-tuning stats and result file ID.
+            Tuple[FineTuningJob, Text]: Fine-tuning stats and result file ID.
         """
         ft_result = client.fine_tuning.jobs.create(
             **{k: v for k, v in ft_params.items() if v is not None}
@@ -1143,7 +1144,7 @@ class OpenAIHandler(BaseMLEngine):
         @retry_with_exponential_backoff(
             hour_budget=hour_budget,
         )
-        def _check_ft_status(job_id: Text) -> openai.types.fine_tuning.FineTuningJob:
+        def _check_ft_status(job_id: Text) -> FineTuningJob:
             """
             Check the status of a fine-tuning job via the OpenAI API.
 
@@ -1154,7 +1155,7 @@ class OpenAIHandler(BaseMLEngine):
                 PendingFT: If the fine-tuning process is still pending.
 
             Returns:
-                openai.types.fine_tuning.FineTuningJob: Fine-tuning stats.
+                FineTuningJob: Fine-tuning stats.
             """
             ft_retrieved = client.fine_tuning.jobs.retrieve(fine_tuning_job_id=job_id)
             if ft_retrieved.status in ('succeeded', 'failed', 'cancelled'):

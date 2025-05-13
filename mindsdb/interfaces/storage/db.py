@@ -550,6 +550,44 @@ class KnowledgeBase(Base):
         }
 
 
+class KnowledgeBaseEvaluation(Base):
+    """Stores evaluation runs for knowledge bases"""
+    __tablename__ = "knowledge_base_evaluation"
+
+    id = Column(Integer, primary_key=True)
+    knowledge_base_id = Column(
+        ForeignKey("knowledge_base.id", name="fk_knowledge_base_evaluation_kb_id"),
+        nullable=False,
+        doc="Foreign key to the knowledge base"
+    )
+    knowledge_base = relationship(
+        "KnowledgeBase",
+        foreign_keys=[knowledge_base_id],
+        doc="Knowledge base being evaluated"
+    )
+
+    test_set_name = Column(String, nullable=True, doc="Name of the test set used for evaluation")
+    metrics = Column(JSON, nullable=False, doc="Evaluation metrics (precision, recall, etc.)")
+    config = Column(JSON, nullable=False, doc="Configuration used for the evaluation")
+    user_notes = Column(String, nullable=True, doc="Optional notes about the evaluation")
+
+    created_at = Column(DateTime, default=datetime.datetime.now)
+
+    def as_dict(self) -> Dict:
+        kb = self.knowledge_base
+        return {
+            "id": self.id,
+            "knowledge_base_id": self.knowledge_base_id,
+            "knowledge_base_name": kb.name if kb else None,
+            "project_id": kb.project_id if kb else None,
+            "test_set_name": self.test_set_name,
+            "metrics": self.metrics,
+            "config": self.config,
+            "user_notes": self.user_notes,
+            "created_at": self.created_at
+        }
+
+
 class QueryContext(Base):
     __tablename__ = "query_context"
     id: int = Column(Integer, primary_key=True)

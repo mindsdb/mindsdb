@@ -224,6 +224,7 @@ class KnowledgeBaseTable:
             or len(query.targets) != 1
             or not isinstance(query.targets[0], Star)
         ):
+            query_copy.where = None
             df = query_df(df, query_copy, session=self.session)
 
         return df

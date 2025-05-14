@@ -377,7 +377,6 @@ class TestKB(BaseExecutorDummyML):
             using {param_str}
         ''')
 
-
     def test_kb(self):
 
         self._create_kb('kb_review')

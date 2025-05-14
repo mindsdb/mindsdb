@@ -668,10 +668,7 @@ class ResultSet:
                                                              of MySQL column dictionaries. The dataframe values are
                                                              str or None, dtype=object
         """
-        df = self._df
-
-        if df is None:
-            raise ValueError('ResultSet is empty')
+        df = self.get_raw_df()
 
         for i, column in enumerate(self.columns):
             series = df[i]

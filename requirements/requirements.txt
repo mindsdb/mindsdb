@@ -16,7 +16,7 @@ redis >=5.0.0, < 6.0.0
 walrus==0.9.3
 flask-compress >= 1.0.0
 appdirs >= 1.0.0
-mindsdb-sql-parser ~= 0.6.0
+mindsdb-sql-parser ~= 0.6.1
 pydantic ~= 2.7.0
 mindsdb-evaluator == 0.0.17
 duckdb ~= 1.2.1
@@ -29,10 +29,7 @@ botocore
 boto3 >= 1.34.131
 python-dateutil
 scikit-learn==1.5.2
-protobuf==3.20.3
 hierarchicalforecast~=0.4.0
-google-auth-oauthlib
-msal
 langchain==0.3.7
 langchain-community==0.3.5
 langchain-core==0.3.35

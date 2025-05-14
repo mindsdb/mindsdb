@@ -60,7 +60,7 @@ jobs:
     needs: [build]
     uses: ./.github/workflows/deploy.yml
     with:
-      deploy-envs: '["staging", "hackathon", "dev", "alpha-dev"]'
+      deploy-envs: '["staging", "dev", "alpha-dev"]'
       image-tag: ${{ github.sha }}
     secrets: inherit
 

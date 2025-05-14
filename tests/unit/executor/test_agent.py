@@ -245,6 +245,19 @@ class TestAgent(BaseExecutorDummyML):
     @patch('openai.OpenAI')
     def test_agent_retrieval(self, mock_openai):
 
+        mock_openai().models.list.return_value = {
+            'data': [
+                {
+                    'id': 'gpt-3.5-turbo',
+                    'object': 'model',
+                    'owned_by': 'openai',
+                    'permission': [],
+                    'root': 'gpt-3.5-turbo',
+                    'parent': None
+                }
+            ]
+        }
+
         self.run_sql('''
             create knowledge base kb_review
             using
@@ -374,7 +387,8 @@ class TestKB(BaseExecutorDummyML):
 
         self.run_sql(f'''
             create knowledge base {name}
-            using {param_str}
+            using 
+                {param_str}
         ''')
 
     def test_kb(self):

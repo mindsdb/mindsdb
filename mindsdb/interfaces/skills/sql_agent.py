@@ -83,6 +83,8 @@ class SQLAgent:
             databases_struct: dict,
             include_tables: Optional[List[str]] = None,
             ignore_tables: Optional[List[str]] = None,
+            include_knowledge_bases: Optional[List[str]] = None,
+            ignore_knowledge_bases: Optional[List[str]] = None,
             sample_rows_in_table_info: int = 3,
             cache: Optional[dict] = None
     ):
@@ -93,11 +95,17 @@ class SQLAgent:
 
         self._tables_to_include = include_tables
         self._tables_to_ignore = []
+        self._knowledge_bases_to_include = include_knowledge_bases
+        self._knowledge_bases_to_ignore = []
         self._databases = databases
         if not self._tables_to_include:
             # ignore_tables and include_tables should not be used together.
             # include_tables takes priority if it's set.
             self._tables_to_ignore = ignore_tables or []
+        if not self._knowledge_bases_to_include:
+            # ignore_knowledge_bases and include_knowledge_bases should not be used together.
+            # include_knowledge_bases takes priority if it's set.
+            self._knowledge_bases_to_ignore = ignore_knowledge_bases or []
         self._cache = cache
 
     def _call_engine(self, query: str, database=None):
@@ -131,9 +139,28 @@ class SQLAgent:
 
             def _check_f(node, is_table=None, **kwargs):
                 if is_table and isinstance(node, Identifier):
-                    if node.parts not in tables_parts:
-                        raise ValueError(f"Table {'.'.join(node.parts)} not found. Available tables: {', '.join(self._tables_to_include)}")
+                    table_name = '.'.join(node.parts)
 
+                    # Get the list of available knowledge bases
+                    kb_names = self.get_usable_knowledge_base_names()
+
+                    # Check if this table is a knowledge base
+                    is_kb = table_name in kb_names
+
+                    # If it's a knowledge base and we have knowledge base restrictions
+                    if is_kb and self._knowledge_bases_to_include:
+                        kb_parts = [split_table_name(x) for x in self._knowledge_bases_to_include]
+                        if node.parts not in kb_parts:
+                            raise ValueError(f"Knowledge base {table_name} not found. Available knowledge bases: {', '.join(self._knowledge_bases_to_include)}")
+                    # Regular table check
+                    elif not is_kb and self._tables_to_include and node.parts not in tables_parts:
+                        raise ValueError(f"Table {table_name} not found. Available tables: {', '.join(self._tables_to_include)}")
+                    # Check if it's a restricted knowledge base
+                    elif is_kb and table_name in self._knowledge_bases_to_ignore:
+                        raise ValueError(f"Knowledge base {table_name} is not allowed.")
+                    # Check if it's a restricted table
+                    elif not is_kb and table_name in self._tables_to_ignore:
+                        raise ValueError(f"Table {table_name} is not allowed.")
             query_traversal(ast_query, _check_f)
 
     def get_usable_table_names(self) -> Iterable[str]:
@@ -199,6 +226,45 @@ class SQLAgent:
         if self._cache:
             self._cache.set(cache_key, set(result_tables))
         return result_tables
+
+    def get_usable_knowledge_base_names(self) -> Iterable[str]:
+        """Get a list of knowledge bases that the agent has access to.
+
+        Returns:
+            Iterable[str]: list with knowledge base names
+        """
+        cache_key = f'{ctx.company_id}_{",".join(self._databases)}_knowledge_bases'
+
+        # first check cache and return if found
+        if self._cache:
+            cached_kbs = self._cache.get(cache_key)
+            if cached_kbs:
+                return cached_kbs
+
+        if self._knowledge_bases_to_include:
+            return self._knowledge_bases_to_include
+
+        try:
+            # Query to get all knowledge bases
+            result = self._call_engine("SHOW KNOWLEDGE_BASES;")
+
+            if not result:
+                return []
+
+            # Filter knowledge bases based on ignore list
+            kb_names = []
+            for row in result:
+                kb_name = row['name']
+                if kb_name not in self._knowledge_bases_to_ignore:
+                    kb_names.append(kb_name)
+
+            if self._cache:
+                self._cache.set(cache_key, set(kb_names))
+
+            return kb_names
+        except Exception:
+            # If there's an error, return an empty list
+            return []
 
     def _resolve_table_names(self, table_names: List[str], all_tables: List[Identifier]) -> List[Identifier]:
         """

@@ -7,6 +7,11 @@ from langchain_community.tools import ListSQLDatabaseTool, InfoSQLDatabaseTool, 
 from langchain_core.tools import BaseTool
 
 from mindsdb.interfaces.skills.custom.text2sql.mindsdb_sql_tool import MindsDBSQLParserTool
+from mindsdb.interfaces.skills.custom.text2sql.mindsdb_kb_tools import (
+    KnowledgeBaseListTool,
+    KnowledgeBaseInfoTool,
+    KnowledgeBaseQueryTool
+)
 
 
 class MindsDBSQLToolkit(SQLDatabaseToolkit):
@@ -107,9 +112,64 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
             description=mindsdb_sql_parser_tool_description
         )
 
+        # Knowledge Base tools
+        kb_list_tool = KnowledgeBaseListTool(
+            name=f'kb_list_tool{prefix}',
+            db=self.db,
+            description=dedent("""\n
+                Input is an empty string, output is a comma-separated list of knowledge bases in the database.
+                Each knowledge base name is escaped using backticks.
+            """)
+        )
+
+        kb_info_tool_description = (
+            "Input: A comma-separated list of knowledge bases enclosed between the symbols $START$ and $STOP$. The knowledge base names must be escaped using backticks.\n"
+            "Output: Schema, metadata columns, and sample rows for those knowledge bases. \n"
+            "Use this tool to investigate knowledge base structure and available metadata fields. "
+            f"Ensure knowledge bases exist by calling {kb_list_tool.name} first. "
+            "Example of correct Input:\n    $START$ `kb1`, `kb2`, `kb3` $STOP$\n"
+            "Example of wrong Input:\n    $START$ kb1 kb2 kb3 $STOP$\n"
+        )
+        kb_info_tool = KnowledgeBaseInfoTool(
+            name=f'kb_info_tool{prefix}',
+            db=self.db,
+            description=kb_info_tool_description
+        )
+
+        kb_query_tool_description = dedent(f"""\
+            Input: A detailed and well-structured SQL query for knowledge bases. The query must be enclosed between the symbols $START$ and $STOP$.
+            Output: Knowledge base search results or error message. For errors, rewrite and retry the query.
+            This tool is designed to work with MindsDB knowledge bases for semantic search and metadata filtering.
+            Follow these instructions with utmost precision:
+            1. Knowledge Base Query Format:
+               - For semantic search, use: SELECT * FROM kb_name WHERE content = 'your search query';
+               - For metadata filtering, use: SELECT * FROM kb_name WHERE metadata_field = 'value';
+               - For combined search, use: SELECT * FROM kb_name WHERE content = 'query' AND metadata_field = 'value';
+               - To set relevance threshold: SELECT * FROM kb_name WHERE content = 'query' AND relevance_threshold = 0.7;
+            2. Sample Data:
+               - Before answering a question, if you don't have sample data about a knowledge base, **always** get sample data using `SELECT * FROM kb_name LIMIT 3`.
+            3. Result Format:
+               - Knowledge base results include: id, chunk_id, chunk_content, metadata, distance, and relevance columns.
+               - The metadata column contains a JSON object with all metadata fields.
+            4. Best Practices:
+               - Always check available knowledge bases with {kb_list_tool.name} before querying.
+               - Use {kb_info_tool.name} to understand the structure and available metadata fields.
+               - The input SQL query must end with a semicolon.
+            Adhere to these guidelines for all knowledge base queries and responses. Ask for clarification if needed.
+        """)
+        kb_query_tool = KnowledgeBaseQueryTool(
+            name=f'kb_query_tool{prefix}',
+            db=self.db,
+            description=kb_query_tool_description
+        )
+
+        # Return standard SQL tools and knowledge base tools
         return [
             query_sql_database_tool,
             info_sql_database_tool,
             list_sql_database_tool,
             mindsdb_sql_parser_tool,
+            kb_list_tool,
+            kb_info_tool,
+            kb_query_tool,
         ]

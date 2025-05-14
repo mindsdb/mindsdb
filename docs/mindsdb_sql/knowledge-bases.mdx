@@ -7,6 +7,101 @@ A knowledge base is an advanced system that organizes information based on seman
 
 By performing semantic reasoning across multiple data points, a knowledge base delivers deeper insights and more accurate responses, making it a powerful tool for intelligent data access.
 
+## How Knowledge Bases Work
+
+Before diving into the syntax, here is a quick walkthrough showing how knowledge bases work in MindsDB.
+
+We start by creating a knowledge base and inserting data. Next we can run semantic search queries with metadata filtering.
+
+<Steps>
+  <Step title="Create a knowledge base">
+    Use the `CREATE KNOWLEDGE_BASE` command to create a knowledge base, specifying all its components.
+
+    ```sql
+    CREATE KNOWLEDGE_BASE my_kb
+    USING
+        embedding_model = {
+            "provider": "openai",
+            "model_name" : "text-embedding-3-large",
+            "api_key": "sk-abc123"
+        },
+        reranking_model = {
+            "provider": "openai",
+            "model_name": "gpt-4o",
+            "api_key": "sk-abc123"
+        },
+        metadata_columns = ['product'],
+        content_columns = ['notes'],
+        id_column = 'order_id';
+    ```
+  </Step>
+  <Step title="Insert data into the knowledge base">
+    In this example, we use a simple dataset containing customer notes for product orders which will be inserted into the knowledge base.
+
+    ```sql
+    +----------+-----------------------+------------------------+
+    | order_id | product               | notes                  |
+    +----------+-----------------------+------------------------+
+    | A1B      | Wireless Mouse        | Request color: black   |
+    | 3XZ      | Bluetooth Speaker     | Gift wrap requested    |
+    | Q7P      | Aluminum Laptop Stand | Prefer aluminum finish |
+    +----------+-----------------------+------------------------+
+    ```
+
+    Use the `INSERT INTO` command to injest data into the knowledge base.
+
+    ```sql
+    INSERT INTO my_kb
+        SELECT order_id, product, notes
+        FROM sample_data.orders;
+    ```
+  </Step>
+  <Step title="Run semantic search on the knowledge base">
+    Query the knowledge base using semantic search and optionally defining the minimum `relevance_threshold` to receive only the best matching data.
+
+    ```sql
+    SELECT *
+    FROM my_kb
+    WHERE content = 'color'
+    AND relevance_threshold = 0.2502;
+    ```
+
+    This query returns:
+
+    ```sql
+    +-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+    | id  | chunk_id             | chunk_content           | metadata                                                                                                                                                                                            | distance           | relevance          |
+    +-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+    | A1B | A1B_notes:1of1:0to20 | Request color: black    | {"chunk_index":0,"content_column":"notes","end_char":20,"original_doc_id":"A1B_notes","original_row_id":"A1B","product":"Wireless Mouse","source":"TextChunkingPreprocessor","start_char":0}        | 0.5743341242061104 | 0.5093188026135379 |
+    | Q7P | Q7P_notes:1of1:0to22 | Prefer aluminum finish  | {"chunk_index":0,"content_column":"notes","end_char":22,"original_doc_id":"Q7P_notes","original_row_id":"Q7P","product":"Aluminum Laptop Stand","source":"TextChunkingPreprocessor","start_char":0} | 0.7744703514692067 | 0.2502580835880018 |
+    +-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+    ```
+  </Step>
+  <Step title="Filter results by metadata">
+    Add metadata filtering to focus your search.
+
+    ```sql
+    SELECT *
+    FROM my_kb
+    WHERE product = 'Wireless Mouse'
+    AND content = 'color'
+    AND relevance_threshold = 0.2502;
+    ```
+    
+    This query returns:
+
+    ```sql
+    +-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+-------------------+
+    | id  | chunk_id             | chunk_content          | metadata                                                                                                                                                                                     | distance           | relevance         |
+    +-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+-------------------+
+    | A1B | A1B_notes:1of1:0to20 | Request color: black   | {"chunk_index":0,"content_column":"notes","end_char":20,"original_doc_id":"A1B_notes","original_row_id":"A1B","product":"Wireless Mouse","source":"TextChunkingPreprocessor","start_char":0} | 0.5743341242061104 | 0.504396172197583 |
+    +-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+-------------------+
+    ```
+  </Step>
+</Steps>
+
+The following sections explain the syntax and other features of knowledge bases.
+
 ## `CREATE KNOWLEDGE_BASE` Syntax
 
 Here is the syntax for creating a knowledge base:
@@ -732,7 +827,7 @@ DROP KNOWLEDGE_BASE my_kb;
 
 Upon execution, it removes the knowledge base with its content.
 
-## Complete Example
+## Example
 
 Here is the data that will be inserted into the knowledge base.
 

@@ -52,6 +52,7 @@ jobs:
             not-docs:
               - '!docs/**'  
               - '!**/*.md'
+              - '!**/*.yml'
   # Run our integration tests
   test:
     needs: changes

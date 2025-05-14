@@ -383,7 +383,7 @@ class TestKB(BaseExecutorDummyML):
             param_items = []
             for k, v in kb_params.items():
                 param_items.append(f'{k}={json.dumps(v)}')
-            param_str = ',' + ','.join(param_items)
+            param_str = ','.join(param_items)
 
         self.run_sql(f'''
             create knowledge base {name}

@@ -171,26 +171,24 @@ class TestMySqlApi(BaseStuff):
         self.create_database("test_demo_mysql", db_details)
         self.validate_database_creation("test_demo_mysql")
 
-    # TODO fix these after float/bool type issue is fixed
+    def test_create_predictor(self, use_binary):
+        self.query(f"DROP MODEL IF EXISTS {self.predictor_name};")
+        # add file lock here
+        self.query(f"CREATE MODEL {self.predictor_name} from test_demo_postgres (select * from home_rentals) PREDICT rental_price;")
+        self.check_predictor_readiness(self.predictor_name)
 
-    # def test_create_predictor(self, use_binary):
-    #     self.query(f"DROP MODEL IF EXISTS {self.predictor_name};")
-    #     add file lock here
-    #     self.query(f"CREATE MODEL {self.predictor_name} from test_demo_mysql (select * from test_demo_mysql.home_rentals) PREDICT rental_price;")
-    #     self.check_predictor_readiness(self.predictor_name)
+    def test_making_prediction(self, use_binary):
+        _query = f"""
+            SELECT rental_price, rental_price_explain
+            FROM {self.predictor_name}
+            WHERE number_of_rooms = 2 and sqft = 400 and location = 'downtown' and days_on_market = 2 and initial_price= 2500;
+        """
+        res = self.query(_query)
+        assert 'rental_price' in res and 'rental_price_explain' in res, f"error getting prediction from {self.predictor_name} - {res}"
 
-    # def test_making_prediction(self, use_binary):
-    #     _query = f"""
-    #         SELECT rental_price, rental_price_explain
-    #         FROM {self.predictor_name}
-    #         WHERE number_of_rooms = 2 and sqft = 400 and location = 'downtown' and days_on_market = 2 and initial_price= 2500;
-    #     """
-    #     res = self.query(_query)
-    #     assert 'rental_price' in res and 'rental_price_explain' in res, f"error getting prediction from {self.predictor_name} - {res}"
-
-    # @pytest.mark.parametrize("describe_attr", ["model", "features", "ensemble"])
-    # def test_describe_predictor_attrs(self, describe_attr, use_binary):
-    #     self.query(f"describe mindsdb.{self.predictor_name}.{describe_attr};")
+    @pytest.mark.parametrize("describe_attr", ["model", "features", "ensemble"])
+    def test_describe_predictor_attrs(self, describe_attr, use_binary):
+        self.query(f"describe mindsdb.{self.predictor_name}.{describe_attr};")
 
     @pytest.mark.parametrize("query", [
         "show databases;",

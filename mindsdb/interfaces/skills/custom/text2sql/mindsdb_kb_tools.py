@@ -19,18 +19,7 @@ class KnowledgeBaseListTool(BaseTool):
 
     def _run(self, tool_input: str) -> str:
         """List all knowledge bases."""
-        try:
-            # Query to get all knowledge bases
-            result = self.db.run("SHOW KNOWLEDGE_BASES;")
-
-            if not result or len(result) == 0:
-                return "No knowledge bases found."
-
-            # Format the knowledge bases as a comma-separated list with backticks
-            kb_names = [f"`{row['name']}`" for row in result]
-            return ", ".join(kb_names)
-        except Exception as e:
-            return f"Error listing knowledge bases: {str(e)}"
+        return self.db.get_usable_knowledge_base_names()
 
 
 class KnowledgeBaseInfoToolInput(BaseModel):
@@ -71,14 +60,14 @@ class KnowledgeBaseInfoTool(BaseTool):
         for kb_name in kb_names:
             try:
                 # Get knowledge base schema
-                schema_result = self.db.run(f"DESCRIBE KNOWLEDGE_BASE `{kb_name}`;")
+                schema_result = self.db.run_no_throw(f"DESCRIBE KNOWLEDGE_BASE `{kb_name}`;")
 
                 if not schema_result:
                     results.append(f"Knowledge base `{kb_name}` not found or has no schema information.")
                     continue
 
                 # Get sample data
-                sample_data = self.db.run(f"SELECT * FROM `{kb_name}` LIMIT 3;")
+                sample_data = self.db.run_no_throw(f"SELECT * FROM `{kb_name}` LIMIT 10;")
 
                 # Format the results
                 kb_info = f"## Knowledge Base: `{kb_name}`\n\n"
@@ -153,28 +142,9 @@ class KnowledgeBaseQueryTool(BaseTool):
 
         try:
             # Execute the query
-            result = self.db.run(query)
-
+            result = self.db.run_no_throw_kb_query(query)
             if not result:
-                return "Query executed successfully, but no results were returned."
-
-            # Format the results as a markdown table
-            columns = list(result[0].keys())
-
-            # Create markdown table header
-            output = "| " + " | ".join(columns) + " |\n"
-            output += "| " + " | ".join(["---" for _ in columns]) + " |\n"
-
-            # Add rows
-            for row in result:
-                formatted_row = []
-                for col in columns:
-                    cell_value = row[col]
-                    if isinstance(cell_value, dict):
-                        cell_value = json.dumps(cell_value, ensure_ascii=False)
-                    formatted_row.append(str(cell_value).replace("|", "\\|"))
-                output += "| " + " | ".join(formatted_row) + " |\n"
-
-            return output
+                return "No results found for the provided query."
+            return result
         except Exception as e:
             return f"Error executing query: {str(e)}"

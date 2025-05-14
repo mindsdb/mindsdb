@@ -187,7 +187,7 @@ class TestMySqlApi(BaseStuff):
     #     assert 'rental_price' in res and 'rental_price_explain' in res, f"error getting prediction from {self.predictor_name} - {res}"
 
     # @pytest.mark.parametrize("describe_attr", ["model", "features", "ensemble"])
-    # def test_describe_predictor_attrs(self, describe_attr):
+    # def test_describe_predictor_attrs(self, describe_attr, use_binary):
     #     self.query(f"describe mindsdb.{self.predictor_name}.{describe_attr};")
 
     @pytest.mark.parametrize("query", [
@@ -205,10 +205,9 @@ class TestMySqlApi(BaseStuff):
         "show warnings;",
         "show charset;",
         "show collation;",
-        # TODO fix these after float/bool type issue is fixed
-        # "show models;",
-        # "show function status where db = 'mindsdb';",
-        # "show procedure status where db = 'mindsdb';"
+        "show models;",
+        "show function status where db = 'mindsdb';",
+        "show procedure status where db = 'mindsdb';"
     ])
     def test_service_requests(self, query, use_binary):
         self.query(query)

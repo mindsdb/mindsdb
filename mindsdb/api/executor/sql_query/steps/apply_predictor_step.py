@@ -2,7 +2,6 @@ import datetime as dt
 import re
 
 import pandas as pd
-import dateparser
 
 from mindsdb_sql_parser.ast import (
     BinaryOperation,
@@ -280,6 +279,8 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
             # Use dateparser as fallback and infer format
             try:
                 # Parse the first sample to get its format
+                # The import is heavy, so we do it here on-demand
+                import dateparser
                 parsed_date = dateparser.parse(samples[0])
                 if parsed_date is None:
                     raise ValueError("Could not parse date")

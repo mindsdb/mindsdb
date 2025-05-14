@@ -27,12 +27,10 @@ from dataclasses import dataclass
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum
 import mindsdb.utilities.hooks as hooks
 import mindsdb.utilities.profiler as profiler
+from mindsdb.utilities.sql import clear_sql
 from mindsdb.api.mysql.mysql_proxy.classes.client_capabilities import ClentCapabilities
 from mindsdb.api.mysql.mysql_proxy.classes.server_capabilities import (
     server_capabilities,
-)
-from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import (
-    SqlStatementParser,
 )
 from mindsdb.api.executor.controllers import SessionController
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
@@ -81,7 +79,7 @@ from mindsdb.api.executor.sql_query.result_set import Column, ResultSet
 from mindsdb.utilities import log
 from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities.otel.metric_handlers import get_query_request_counter
+from mindsdb.utilities.otel import increment_otel_query_request_counter
 from mindsdb.utilities.wizards import make_ssl_cert
 
 logger = log.getLogger(__name__)
@@ -524,9 +522,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             )
 
         # Increment the counter and include metadata in attributes
-        metadata = ctx.metadata(query=sql)
-        query_request_counter = get_query_request_counter()
-        query_request_counter.add(1, metadata)
+        increment_otel_query_request_counter(ctx.get_metadata(query=sql))
 
         return resp
 
@@ -705,7 +701,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             try:
                 if p.type.value == COMMANDS.COM_QUERY:
                     sql = self.decode_utf(p.sql.value)
-                    sql = SqlStatementParser.clear_sql(sql)
+                    sql = clear_sql(sql)
                     logger.debug(f'Incoming query: {sql}')
                     profiler.set_meta(
                         query=sql, api="mysql", environment=config.get("environment")

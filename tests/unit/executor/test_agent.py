@@ -387,7 +387,7 @@ class TestKB(BaseExecutorDummyML):
 
         self.run_sql(f'''
             create knowledge base {name}
-            using 
+            using
                 {param_str}
         ''')
 

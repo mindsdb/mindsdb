@@ -52,7 +52,8 @@ jobs:
             not-docs:
               - '!docs/**'  
               - '!**/*.md'
-              - '!**/*.yml'
+              - '!.github/workflows/build_deploy_dev.yml'
+              - '!.github/workflows/test_on_deploy.yml'
   # Run our integration tests
   test:
     needs: changes

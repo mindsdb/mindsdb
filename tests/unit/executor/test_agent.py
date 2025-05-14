@@ -245,7 +245,7 @@ class TestAgent(BaseExecutorDummyML):
     @patch('openai.OpenAI')
     def test_agent_retrieval(self, mock_openai):
 
-        mock_openai().models.list.return_value = {
+        mock_openai().models.retrieve.return_value = {
             'data': [
                 {
                     'id': 'gpt-3.5-turbo',

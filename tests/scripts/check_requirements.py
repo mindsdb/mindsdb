@@ -38,7 +38,7 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 # transformers is required for langchain_core and not explicitly imported by mindsdb.
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch", "pyarrow"],
-    "DEP001": ["torch", "pgvector", "pyarrow", "openai"],
+    "DEP001": ["torch", "pgvector", "pyarrow", "openai", "gunicorn", "dataprep_ml", "opentelemetry", "langfuse"],
     "DEP002": ["psycopg2-binary", "lark", "transformers", "langchain-experimental", "lxml", "openpyxl", "onnxruntime"]
 }
 
@@ -218,7 +218,6 @@ def check_relative_reqs():
     corresponding entry in a requirements.txt.
     """
 
-    global success
     # regex for finding relative imports of handlers like "from ..file_handler import FileHandler"
     # we're going to treat these as errors (and suggest using absolute imports instead)
     relative_import_pattern = re.compile("(?:\s|^)(?:from|import) \.\.\w+_handler")  # noqa: W605

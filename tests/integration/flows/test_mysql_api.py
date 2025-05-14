@@ -1,10 +1,11 @@
 import time
-import tempfile
 import json
+import tempfile
 
-import requests
 import pytest
+import requests
 import mysql.connector
+import pandas as pd
 
 from tests.utils.config import MYSQL_API_ROOT, HTTP_API_ROOT
 
@@ -91,7 +92,7 @@ class BaseStuff:
         threshold = time.time() + timeout
         res = ''
         while time.time() < threshold:
-            res = self.query("SHOW files.tables;")
+            res = self.query("SHOW tables from files;")
             if 'Tables_in_files' in res and res.get_record('Tables_in_files', ds_name):
                 break
             time.sleep(0.5)
@@ -133,7 +134,8 @@ class TestMySqlApi(BaseStuff):
                 "port": "5432",
                 "user": "demo_user",
                 "password": "demo_password",
-                "database": "demo"
+                "database": "demo",
+                "schema": "demo_data"
             }
         }
         self.create_database("test_demo_postgres", db_details)
@@ -212,186 +214,183 @@ class TestMySqlApi(BaseStuff):
     def test_service_requests(self, query, use_binary):
         self.query(query)
 
-    # def test_show_columns(self, use_binary):
-    #     ret = self.query("""
-    #         SELECT
-    #             *
-    #         FROM information_schema.columns
-    #         WHERE table_name = 'rentals' and table_schema='postgres'
-    #     """)
-    #     assert len(ret) == 8
-    #     assert sorted([x['ORDINAL_POSITION'] for x in ret]) == list(range(1, 9))
+    def test_show_columns(self, use_binary):
+        ret = self.query("""
+            SELECT
+                *
+            FROM information_schema.columns
+            WHERE table_name = 'home_rentals' and table_schema='test_demo_postgres'
+        """)
+        assert len(ret) == 8
+        # TODO FIX STR->INT casting
+        # assert sorted([x['ORDINAL_POSITION'] for x in ret]) == list(range(1, 9))
 
-    #     rental_price_column = next(x for x in ret if x['COLUMN_NAME'] == 'rental_price')
-    #     assert rental_price_column['DATA_TYPE'] == 'double'
-    #     assert rental_price_column['COLUMN_TYPE'] == 'double'
-    #     assert rental_price_column['ORIGINAL_TYPE'] == 'double precision'
-    #     assert rental_price_column['NUMERIC_PRECISION'] is not None
+        rental_price_column = next(x for x in ret if x['COLUMN_NAME'].lower() == 'rental_price')
+        assert rental_price_column['DATA_TYPE'] == 'int'
+        assert rental_price_column['COLUMN_TYPE'] == 'int'
+        assert rental_price_column['ORIGINAL_TYPE'] == 'integer'
+        assert rental_price_column['NUMERIC_PRECISION'] is not None
 
-    #     location_column = next(x for x in ret if x['COLUMN_NAME'] == 'location')
-    #     assert location_column['DATA_TYPE'] == 'varchar'
-    #     assert location_column['COLUMN_TYPE'].startswith('varchar(')    # varchar(###)
-    #     assert location_column['ORIGINAL_TYPE'] == 'character varying'
-    #     assert location_column['NUMERIC_PRECISION'] is None
-    #     assert location_column['CHARACTER_MAXIMUM_LENGTH'] is not None
-    #     assert location_column['CHARACTER_OCTET_LENGTH'] is not None
+        location_column = next(x for x in ret if x['COLUMN_NAME'].lower() == 'location')
+        assert location_column['DATA_TYPE'] == 'varchar'
+        assert location_column['COLUMN_TYPE'].startswith('varchar(')    # varchar(###)
+        assert location_column['ORIGINAL_TYPE'] == 'character varying'
+        assert location_column['NUMERIC_PRECISION'] is None
+        assert location_column['CHARACTER_MAXIMUM_LENGTH'] is not None
+        assert location_column['CHARACTER_OCTET_LENGTH'] is not None
 
-    # TODO fix these after float/bool type issue is fixed
-    # test
-    # def test_train_model_from_files(self):
-    #     df = pd.DataFrame({
-    #         'x1': [x for x in range(100, 210)] + [x for x in range(100, 210)],
-    #         'x2': [x * 2 for x in range(100, 210)] + [x * 3 for x in range(100, 210)],
-    #         'y': [x * 3 for x in range(100, 210)] + [x * 2 for x in range(100, 210)]
-    #     })
-    #     file_predictor_name = "predictor_from_file"
-    #     self.upload_ds(df, self.file_datasource_name)
-    #     self.verify_file_ds(self.file_datasource_name)
+    def test_train_model_from_files(self, use_binary):
+        df = pd.DataFrame({
+            'x1': [x for x in range(100, 210)] + [x for x in range(100, 210)],
+            'x2': [x * 2 for x in range(100, 210)] + [x * 3 for x in range(100, 210)],
+            'y': [x * 3 for x in range(100, 210)] + [x * 2 for x in range(100, 210)]
+        })
+        file_predictor_name = "predictor_from_file"
+        self.upload_ds(df, self.file_datasource_name)
+        self.verify_file_ds(self.file_datasource_name)
 
-    #     self.query(f"DROP MODEL IF EXISTS mindsdb.{file_predictor_name};")
-    #     add file lock here
-    #     _query = f"""
-    #         CREATE MODEL mindsdb.{file_predictor_name}
-    #         from files (select * from {self.file_datasource_name})
-    #         predict y;
-    #     """
-    #     self.query(_query)
-    #     self.check_predictor_readiness(file_predictor_name)
+        self.query(f"DROP MODEL IF EXISTS mindsdb.{file_predictor_name};")
+        # add file lock here
+        _query = f"""
+            CREATE MODEL mindsdb.{file_predictor_name}
+            from files (select * from {self.file_datasource_name})
+            predict y;
+        """
+        self.query(_query)
+        self.check_predictor_readiness(file_predictor_name)
 
-    # TODO fix these after float/bool type issue is fixed
-    # def test_select_from_files(self, use_binary):
-    #     _query = f"select * from files.{self.file_datasource_name};"
-    #     self.query(_query)
+    def test_select_from_files(self, use_binary):
+        _query = f"select * from files.{self.file_datasource_name};"
+        self.query(_query)
 
-    # TODO fix these after float/bool type issue is fixed
-    # def test_ts_train_and_predict(self, subtests, use_binary):
-    #     train_df = pd.DataFrame({
-    #         'gby': ["A" for _ in range(100, 210)] + ["B" for _ in range(100, 210)],
-    #         'oby': [x for x in range(100, 210)] + [x for x in range(200, 310)],
-    #         'x1': [x for x in range(100, 210)] + [x for x in range(100, 210)],
-    #         'x2': [x * 2 for x in range(100, 210)] + [x * 3 for x in range(100, 210)],
-    #         'y': [x * 3 for x in range(100, 210)] + [x * 2 for x in range(100, 210)]
-    #     })
+    def test_ts_train_and_predict(self, subtests, use_binary):
+        train_df = pd.DataFrame({
+            'gby': ["A" for _ in range(100, 210)] + ["B" for _ in range(100, 210)],
+            'oby': [x for x in range(100, 210)] + [x for x in range(200, 310)],
+            'x1': [x for x in range(100, 210)] + [x for x in range(100, 210)],
+            'x2': [x * 2 for x in range(100, 210)] + [x * 3 for x in range(100, 210)],
+            'y': [x * 3 for x in range(100, 210)] + [x * 2 for x in range(100, 210)]
+        })
 
-    #     test_df = pd.DataFrame({
-    #         'gby': ["A" for _ in range(210, 220)] + ["B" for _ in range(210, 220)],
-    #         'oby': [x for x in range(210, 220)] + [x for x in range(310, 320)],
-    #         'x1': [x for x in range(210, 220)] + [x for x in range(210, 220)],
-    #         'x2': [x * 2 for x in range(210, 220)] + [x * 3 for x in range(210, 220)],
-    #         'y': [x * 3 for x in range(210, 220)] + [x * 2 for x in range(210, 220)]
-    #     })
+        test_df = pd.DataFrame({
+            'gby': ["A" for _ in range(210, 220)] + ["B" for _ in range(210, 220)],
+            'oby': [x for x in range(210, 220)] + [x for x in range(310, 320)],
+            'x1': [x for x in range(210, 220)] + [x for x in range(210, 220)],
+            'x2': [x * 2 for x in range(210, 220)] + [x * 3 for x in range(210, 220)],
+            'y': [x * 3 for x in range(210, 220)] + [x * 2 for x in range(210, 220)]
+        })
 
-    #     train_ds_name = "train_ts_file_ds"
-    #     test_ds_name = "test_ts_file_ds"
-    #     for df, ds_name in [(train_df, train_ds_name), (test_df, test_ds_name)]:
-    #         self.upload_ds(df, ds_name)
-    #         self.verify_file_ds(ds_name)
+        train_ds_name = "train_ts_file_ds"
+        test_ds_name = "test_ts_file_ds"
+        for df, ds_name in [(train_df, train_ds_name), (test_df, test_ds_name)]:
+            self.upload_ds(df, ds_name)
+            self.verify_file_ds(ds_name)
 
-    #     params = [
-    #         ("with_group_by_hor1",
-    #             f"CREATE MODEL mindsdb.%s from files (select * from {train_ds_name}) PREDICT y ORDER BY oby GROUP BY gby WINDOW 10 HORIZON 1;",
-    #             f"SELECT res.gby, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res WHERE source.gby= 'A' LIMIT 1;",
-    #             1),
-    #         ("no_group_by_hor1",
-    #             f"CREATE MODEL mindsdb.%s from files (select * from {train_ds_name}) PREDICT y ORDER BY oby WINDOW 10 HORIZON 1;",
-    #             f"SELECT res.gby, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res LIMIT 1;",
-    #             1),
-    #         ("with_group_by_hor2",
-    #             f"CREATE MODEL mindsdb.%s from files (select * from {train_ds_name}) PREDICT y ORDER BY oby GROUP BY gby WINDOW 10 HORIZON 2;",
-    #             f"SELECT res.gby, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res WHERE source.gby= 'A' LIMIT 2;",
-    #             2),
-    #         ("no_group_by_hor2",
-    #             f"CREATE MODEL mindsdb.%s from files (select * from {train_ds_name}) PREDICT y ORDER BY oby WINDOW 10 HORIZON 2;",
-    #             f"SELECT res.gby, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res LIMIT 2;",
-    #             2),
-    #     ]
-    #     for predictor_name, create_query, select_query, res_len in params:
-    #         add file lock here
-    #         with subtests.test(msg=predictor_name,
-    #                            predictor_name=predictor_name,
-    #                            create_query=create_query,
-    #                            select_query=select_query,
-    #                            res_len=res_len):
-    #             self.query(create_query % predictor_name)
-    #             self.check_predictor_readiness(predictor_name)
-    #             res = self.query(select_query % predictor_name)
-    #             assert len(res) == res_len, f"prediction result {res} contains more that {res_len} records"
+        params = [
+            ("with_group_by_hor1",
+                f"CREATE MODEL mindsdb.%s from files (select * from {train_ds_name}) PREDICT y ORDER BY oby GROUP BY gby WINDOW 10 HORIZON 1;",
+                f"SELECT res.gby, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res WHERE source.gby= 'A' LIMIT 1;",
+                1),
+            ("no_group_by_hor1",
+                f"CREATE MODEL mindsdb.%s from files (select * from {train_ds_name}) PREDICT y ORDER BY oby WINDOW 10 HORIZON 1;",
+                f"SELECT res.gby, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res LIMIT 1;",
+                1),
+            ("with_group_by_hor2",
+                f"CREATE MODEL mindsdb.%s from files (select * from {train_ds_name}) PREDICT y ORDER BY oby GROUP BY gby WINDOW 10 HORIZON 2;",
+                f"SELECT res.gby, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res WHERE source.gby= 'A' LIMIT 2;",
+                2),
+            ("no_group_by_hor2",
+                f"CREATE MODEL mindsdb.%s from files (select * from {train_ds_name}) PREDICT y ORDER BY oby WINDOW 10 HORIZON 2;",
+                f"SELECT res.gby, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res LIMIT 2;",
+                2),
+        ]
+        for predictor_name, create_query, select_query, res_len in params:
+            # add file lock here
+            with subtests.test(msg=predictor_name,
+                               predictor_name=predictor_name,
+                               create_query=create_query,
+                               select_query=select_query,
+                               res_len=res_len):
+                self.query(f"DROP MODEL IF EXISTS mindsdb.{predictor_name};")
+                self.query(create_query % predictor_name)
+                self.check_predictor_readiness(predictor_name)
+                res = self.query(select_query % predictor_name)
+                assert len(res) == res_len, f"prediction result {res} contains more that {res_len} records"
 
-    # TODO fix these after float/bool type issue is fixed
-    # def test_tableau_queries(self, subtests, use_binary):
-    #     test_ds_name = self.file_datasource_name
-    #     predictor_name = "predictor_from_file"
-    #     integration = "files"
+    def test_tableau_queries(self, subtests, use_binary):
+        test_ds_name = self.file_datasource_name
+        predictor_name = "predictor_from_file"
+        integration = "files"
 
-    #     queries = [
-    #         f'''
-    #            SELECT TABLE_NAME,TABLE_COMMENT,IF(TABLE_TYPE='BASE TABLE', 'TABLE', TABLE_TYPE),
-    #            TABLE_SCHEMA FROM INFORMATION_SCHEMA.TABLES
-    #            WHERE TABLE_SCHEMA LIKE '{integration}'
-    #             AND ( TABLE_TYPE='BASE TABLE' OR TABLE_TYPE='VIEW' ) ORDER BY TABLE_SCHEMA, TABLE_NAME
-    #         ''',
-    #         f'''
-    #             SELECT SUM(1) AS `cnt__0B4A4E8BD11C48FFB4730D4D2C32191A_ok`,
-    #               max(`Custom SQL Query`.`x1`) AS `sum_height_ok`,
-    #               max(`Custom SQL Query`.`y`) AS `sum_length1_ok`
-    #             FROM (
-    #               SELECT res.x1, res.y
-    #                FROM files.{test_ds_name} as source
-    #                JOIN mindsdb.{predictor_name} as res
-    #             ) `Custom SQL Query`
-    #             HAVING (COUNT(1) > 0)
-    #         ''',
-    #         f'''
-    #             SHOW FULL TABLES FROM {integration}
-    #         ''',
-    #         '''
-    #             SELECT `table_name`, `column_name`
-    #             FROM `information_schema`.`columns`
-    #             WHERE `data_type`='enum' AND `table_schema`='views';
-    #         ''',
-    #         '''
-    #             SHOW KEYS FROM `mindsdb`.`predictors`
-    #         ''',
-    #         '''
-    #             show full columns from `predictors`
-    #         ''',
-    #         '''
-    #             SELECT `table_name`, `column_name` FROM `information_schema`.`columns`
-    #              WHERE `data_type`='enum' AND `table_schema`='mindsdb'
-    #         ''',
-    #         f'''
-    #             SELECT `Custom SQL Query`.`x1` AS `height`,
-    #               `Custom SQL Query`.`y` AS `length1`
-    #             FROM (
-    #                SELECT res.x1, res.y
-    #                FROM files.{test_ds_name} as source
-    #                JOIN mindsdb.{predictor_name} as res
-    #             ) `Custom SQL Query`
-    #             LIMIT 100
-    #         ''',
-    #         f'''
-    #         SELECT
-    #           `Custom SQL Query`.`x1` AS `x1`,
-    #           SUM(`Custom SQL Query`.`y2`) AS `sum_y2_ok`
-    #         FROM (
-    #            SELECT res.x1, res.y as y2
-    #            FROM files.{test_ds_name} as source
-    #            JOIN mindsdb.{predictor_name} as res
-    #         ) `Custom SQL Query`
-    #         GROUP BY 1
-    #         ''',
-    #         f'''
-    #         SELECT
-    #           `Custom SQL Query`.`x1` AS `x1`,
-    #           COUNT(DISTINCT TRUNCATE(`Custom SQL Query`.`y`,0)) AS `ctd_y_ok`
-    #         FROM (
-    #            SELECT res.x1, res.y
-    #            FROM files.{test_ds_name} as source
-    #            JOIN mindsdb.{predictor_name} as res
-    #         ) `Custom SQL Query`
-    #         GROUP BY 1
-    #         ''',
-    #     ]
-    #     for i, _query in enumerate(queries):
-    #         with subtests.test(msg=i, _query=_query):
-    #             self.query(_query)
+        queries = [
+            f'''
+               SELECT TABLE_NAME,TABLE_COMMENT,IF(TABLE_TYPE='BASE TABLE', 'TABLE', TABLE_TYPE),
+               TABLE_SCHEMA FROM INFORMATION_SCHEMA.TABLES
+               WHERE TABLE_SCHEMA LIKE '{integration}'
+                AND ( TABLE_TYPE='BASE TABLE' OR TABLE_TYPE='VIEW' ) ORDER BY TABLE_SCHEMA, TABLE_NAME
+            ''',
+            f'''
+                SELECT SUM(1) AS `cnt__0B4A4E8BD11C48FFB4730D4D2C32191A_ok`,
+                  max(`Custom SQL Query`.`x1`) AS `sum_height_ok`,
+                  max(`Custom SQL Query`.`y`) AS `sum_length1_ok`
+                FROM (
+                  SELECT res.x1, res.y
+                   FROM files.{test_ds_name} as source
+                   JOIN mindsdb.{predictor_name} as res
+                ) `Custom SQL Query`
+                HAVING (COUNT(1) > 0)
+            ''',
+            f'''
+                SHOW FULL TABLES FROM {integration}
+            ''',
+            '''
+                SELECT `table_name`, `column_name`
+                FROM `information_schema`.`columns`
+                WHERE `data_type`='enum' AND `table_schema`='views';
+            ''',
+            '''
+                SHOW KEYS FROM `mindsdb`.`predictors`
+            ''',
+            '''
+                show full columns from `predictors`
+            ''',
+            '''
+                SELECT `table_name`, `column_name` FROM `information_schema`.`columns`
+                 WHERE `data_type`='enum' AND `table_schema`='mindsdb'
+            ''',
+            f'''
+                SELECT `Custom SQL Query`.`x1` AS `height`,
+                  `Custom SQL Query`.`y` AS `length1`
+                FROM (
+                   SELECT res.x1, res.y
+                   FROM files.{test_ds_name} as source
+                   JOIN mindsdb.{predictor_name} as res
+                ) `Custom SQL Query`
+                LIMIT 100
+            ''',
+            f'''
+            SELECT
+              `Custom SQL Query`.`x1` AS `x1`,
+              SUM(`Custom SQL Query`.`y2`) AS `sum_y2_ok`
+            FROM (
+               SELECT res.x1, res.y as y2
+               FROM files.{test_ds_name} as source
+               JOIN mindsdb.{predictor_name} as res
+            ) `Custom SQL Query`
+            GROUP BY 1
+            ''',
+            f'''
+            SELECT
+              `Custom SQL Query`.`x1` AS `x1`,
+              COUNT(DISTINCT TRUNCATE(`Custom SQL Query`.`y`,0)) AS `ctd_y_ok`
+            FROM (
+               SELECT res.x1, res.y
+               FROM files.{test_ds_name} as source
+               JOIN mindsdb.{predictor_name} as res
+            ) `Custom SQL Query`
+            GROUP BY 1
+            ''',
+        ]
+        for i, _query in enumerate(queries):
+            with subtests.test(msg=i, _query=_query):
+                self.query(_query)

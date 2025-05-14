@@ -8,6 +8,23 @@ on:
 
 jobs:
 
+  changes:
+    name: Filter changed files
+    runs-on: mdb-dev
+    outputs:
+      not-docs: ${{ steps.filter.outputs.not-docs }}
+    steps:
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          predicate-quantifier: "every"
+          filters: |
+            not-docs:
+              - '!docs/**'  
+              - '!**/*.md'
+              - '!.github/workflows/build_deploy_dev.yml'
+              - '!.github/workflows/test_on_deploy.yml'
+
   # Looks for labels like "deploy-to-<env>" attached to a PR so we can deploy to those envs
   get-deploy-labels:
     name: Get Deploy Envs

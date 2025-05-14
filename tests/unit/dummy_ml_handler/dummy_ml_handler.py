@@ -2,6 +2,36 @@ import pandas as pd
 from mindsdb.integrations.libs.base import BaseMLEngine
 
 
+def to_dummy_embedding(string):
+    # Imitates embedding generation: create vectors which are similar for similar words in inputs
+
+    embeds = [0] * 25**2
+    base = 25
+
+    string = string.lower().replace(',', ' ').replace('.', ' ')
+    for word in string.split():
+        # encode letters to numbers
+        values = []
+        for letter in word:
+            val = ord(letter) - 97
+            val = min(max(val, 0), 122)
+            values.append(val)
+
+        # first two values are position in vector
+        pos = values[0] * base + values[1]
+
+        # the next 4: are value of the vector
+        values = values[2:6]
+        emb = sum([
+            val / base ** (i + 1)
+            for i, val in enumerate(values)
+        ])
+
+        embeds[pos] += emb
+
+    return embeds
+
+
 class DummyHandler(BaseMLEngine):
     name = 'dummy_ml'
 
@@ -33,6 +63,14 @@ class DummyHandler(BaseMLEngine):
 
         target = model_args['target']
         # check input
+        if model_args.get('mode') == 'embeddings':
+            input_col = model_args['input_column']
+            embedding = [
+                to_dummy_embedding(w)
+                for w in df[input_col]
+            ]
+            df[target] = embedding
+
         if 'output' in model_args:
             df[target] = [model_args['output']] * len(df)
             if target not in output_columns:

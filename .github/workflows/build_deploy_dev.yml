@@ -22,8 +22,8 @@ jobs:
             not-docs:
               - '!docs/**'  
               - '!**/*.md'
-              - '!.github/workflows/build_deploy_dev.yml'
-              - '!.github/workflows/test_on_deploy.yml'
+              - '!(.github/workflows/build_deploy_dev.yml)'
+              - '!(.github/workflows/test_on_deploy.yml)'
 
   # Looks for labels like "deploy-to-<env>" attached to a PR so we can deploy to those envs
   get-deploy-labels:

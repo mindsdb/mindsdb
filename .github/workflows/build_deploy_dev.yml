@@ -29,6 +29,8 @@ jobs:
   get-deploy-labels:
     name: Get Deploy Envs
     runs-on: mdb-dev
+    needs: [changes]
+    if: ${{ needs.changes.outputs.not-docs == 'true' }}
     concurrency:
       group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-labels
       cancel-in-progress: true
@@ -49,8 +51,8 @@ jobs:
   build:
     name: Build Docker Images
     runs-on: mdb-dev
-    needs: [get-deploy-labels]
-    if: needs.get-deploy-labels.outputs.deploy-envs != '[]'
+    needs: [get-deploy-labels, changes]
+    if: ${{ needs.get-deploy-labels.outputs.deploy-envs != '[]' }}
     concurrency:
       group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-build
       cancel-in-progress: true
@@ -129,7 +131,7 @@ jobs:
     secrets: inherit
 
   tests_completed:
-    needs: run_tests
+    needs: [run_tests]
     runs-on: mdb-dev
     if: always()
     steps:

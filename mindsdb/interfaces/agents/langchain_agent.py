@@ -56,7 +56,8 @@ from .constants import (
     NVIDIA_NIM_CHAT_MODELS,
     USER_COLUMN,
     ASSISTANT_COLUMN,
-    CONTEXT_COLUMN, TRACE_ID_COLUMN
+    CONTEXT_COLUMN, TRACE_ID_COLUMN,
+    DEFAULT_AGENT_SYSTEM_PROMPT
 )
 from mindsdb.interfaces.skills.skill_tool import skill_tool, SkillData
 from langchain_anthropic import ChatAnthropic
@@ -175,6 +176,10 @@ def create_chat_model(args: Dict):
 
 def prepare_prompts(df, base_template, input_variables, user_column=USER_COLUMN):
     empty_prompt_ids = np.where(df[input_variables].isna().all(axis=1).values)[0]
+
+    # Combine system prompt with user-provided template
+    base_template = f"{DEFAULT_AGENT_SYSTEM_PROMPT}\n\n{base_template}"
+
     base_template = base_template.replace('{{', '{').replace('}}', '}')
     prompts = []
 

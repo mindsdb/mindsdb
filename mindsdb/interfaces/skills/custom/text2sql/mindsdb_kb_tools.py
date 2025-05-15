@@ -142,7 +142,7 @@ class KnowledgeBaseQueryTool(BaseTool):
 
         try:
             # Execute the query
-            result = self.db.run_no_throw_kb_query(query)
+            result = self.db.run_no_throw(query)
             if not result:
                 return "No results found for the provided query."
             return result

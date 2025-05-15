@@ -35,7 +35,7 @@ def list_to_csv_str(array: List[List[Any]]) -> str:
 
 
 def split_table_name(table_name: str) -> List[str]:
-    """Split table name from llm to parst
+    """Split table name from llm to parts
 
     Args:
         table_name (str): input table name
@@ -72,6 +72,9 @@ def split_table_name(table_name: str) -> List[str]:
 
     if current:
         result.append(current.strip('`'))
+
+    # ensure we split the table name
+    result = [r.split(".") for r in result][0]
 
     return result
 
@@ -263,11 +266,15 @@ class SQLAgent:
         """
         cache_key = f'{ctx.company_id}_{self.knowledge_base_database}_knowledge_bases'
 
-        # first check cache and return if found
-        if self._cache:
-            cached_kbs = self._cache.get(cache_key)
-            if cached_kbs:
-                return cached_kbs
+        # todo we need to fix the cache, file cache can potentially store out of data information
+        # # first check cache and return if found
+        # if self._cache:
+        #     cached_kbs = self._cache.get(cache_key)
+        #     if cached_kbs:
+        #         return cached_kbs
+
+        if self._knowledge_bases_to_include:
+            return self._knowledge_bases_to_include
 
         try:
             # Query to get all knowledge bases
@@ -387,10 +394,19 @@ class SQLAgent:
         appended to each table description. This can increase performance as demonstrated in the paper.
         """
 
-        all_tables = [Identifier(name) for name in self.get_usable_table_names()]
+        all_tables = []
+        for name in self.get_usable_table_names():
+            # remove backticks
+            name = name.replace("`", "")
 
-        if table_names is not None:
-            all_tables = self._resolve_table_names(table_names, all_tables)
+            split = name.split(".")
+            if len(split) > 1:
+                all_tables.append(Identifier(parts=[split[0], split[1]]))
+            else:
+                all_tables.append(Identifier(name))
+
+        # if table_names is not None:
+        #     all_tables = self._resolve_table_names(table_names, all_tables)
 
         tables_info = []
         for table in all_tables:

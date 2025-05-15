@@ -78,7 +78,7 @@ class MindsDBSQL(SQLDatabase):
             table_names[i] = extract_essential(table_names[i])
         return self._sql_agent.get_table_info_safe(table_names)
 
-    def run_no_throw_kb_query(self, command: str, fetch: str = "all") -> str:
+    def run_no_throw(self, command: str, fetch: str = "all") -> str:
         """Execute a SQL command and return the result as a string.
 
         This method catches any exceptions and returns an error message instead of raising an exception.
@@ -96,6 +96,9 @@ class MindsDBSQL(SQLDatabase):
 
             # Log the query for debugging
             logger.info(f"Executing SQL query: {command}")
+
+            # remove backticks
+            command = command.replace('`', '')
 
             # Parse the SQL string to an AST object first
             from mindsdb_sql_parser import parse_sql
@@ -132,27 +135,27 @@ class MindsDBSQL(SQLDatabase):
                 return f"Error executing knowledge base query: {str(e)}. Please check that the knowledge base exists and your query syntax is correct."
             return f"Error: {str(e)}"
 
-    def run_no_throw(self, command: str, fetch: str = "all") -> str:
-        """Execute a SQL command and return the result as a string.
-
-        This method catches any exceptions and returns an error message instead of raising an exception.
-
-        Args:
-            command: The SQL command to execute
-            fetch: Whether to fetch 'all' results or just 'one'
-
-        Returns:
-            A string representation of the result or an error message
-        """
-        command = extract_essential(command)
-        try:
-            return self._sql_agent.query_safe(command)
-        except Exception as e:
-            logger.error(f"Error executing SQL command: {str(e)}")
-            # If this is a knowledge base query, provide a more helpful error message
-            if "knowledge_base" in command.lower() or any(kb in command for kb in self._sql_agent.get_usable_knowledge_base_names()):
-                return f"Error executing knowledge base query: {str(e)}. Please check that the knowledge base exists and your query syntax is correct."
-            return f"Error: {str(e)}"
+    # def run_no_throw(self, command: str, fetch: str = "all") -> str:
+    #     """Execute a SQL command and return the result as a string.
+    #
+    #     This method catches any exceptions and returns an error message instead of raising an exception.
+    #
+    #     Args:
+    #         command: The SQL command to execute
+    #         fetch: Whether to fetch 'all' results or just 'one'
+    #
+    #     Returns:
+    #         A string representation of the result or an error message
+    #     """
+    #     command = extract_essential(command)
+    #     try:
+    #         return self._sql_agent.query_safe(command)
+    #     except Exception as e:
+    #         logger.error(f"Error executing SQL command: {str(e)}")
+    #         # If this is a knowledge base query, provide a more helpful error message
+    #         if "knowledge_base" in command.lower() or any(kb in command for kb in self._sql_agent.get_usable_knowledge_base_names()):
+    #             return f"Error executing knowledge base query: {str(e)}. Please check that the knowledge base exists and your query syntax is correct."
+    #         return f"Error: {str(e)}"
 
     def get_usable_knowledge_base_names(self) -> List[str]:
         """Get a list of usable knowledge base names.

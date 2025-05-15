@@ -21,19 +21,21 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 
+
 @click.command()
 @click.option("--host", default="localhost", help="A2A server host")
 @click.option("--port", default=10002, help="A2A server port", type=int)
 @click.option("--mindsdb-host", default="localhost", help="MindsDB server host")
 @click.option("--mindsdb-port", default=47334, help="MindsDB server port", type=int)
-@click.option("--agent-name", default="my_agent", help="MindsDB agent name to connect to")
+@click.option(
+    "--agent-name", default="my_agent", help="MindsDB agent name to connect to"
+)
 @click.option("--project-name", default="mindsdb", help="MindsDB project name")
 @click.option(
     "--log-level",
     default="INFO",
     help="Logging level (DEBUG, INFO, WARNING, ERROR)",
 )
-
 def main(
     host: str,
     port: int,
@@ -120,4 +122,3 @@ def main(
 
 if __name__ == "__main__":
     main()
-

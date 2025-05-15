@@ -28,6 +28,7 @@ DEFAULT_PORT = 10002
 # Helper functions
 ###############################################################################
 
+
 def _log_json(log_func, obj: dict, *, prefix: str = "") -> None:
     """Log JSON helper."""
     log_func(prefix + json.dumps(obj, indent=2))
@@ -61,9 +62,11 @@ def get_agent_info(
 
     return None
 
+
 ###############################################################################
 # Task helpers
 ###############################################################################
+
 
 def _new_ids() -> tuple[str, str, str]:
     """Generate fresh UUID4 strings for taskId, sessionId, requestId."""
@@ -75,11 +78,15 @@ def _post_json(url: str, payload: dict, *, stream: bool = False) -> requests.Res
     headers = {"Content-Type": "application/json"}
     if stream:
         headers["Accept"] = "text/event-stream"
-    return requests.post(url, json=payload, headers=headers, stream=stream, timeout=None)
+    return requests.post(
+        url, json=payload, headers=headers, stream=stream, timeout=None
+    )
+
 
 ###############################################################################
 # Non-streaming request
 ###############################################################################
+
 
 def send_a2a_query(
     query: str,
@@ -158,9 +165,11 @@ def send_a2a_query(
 
     return True
 
+
 ###############################################################################
 # Streaming request helpers
 ###############################################################################
+
 
 def _iter_sse_lines(resp: requests.Response) -> Iterator[str]:
     """Yield raw Server-Sent-Event lines (decoded)."""
@@ -244,9 +253,11 @@ def send_streaming_query(
 
     return True
 
+
 ###############################################################################
 # Output helpers
 ###############################################################################
+
 
 def _log_parts(log_func, parts: list[dict]) -> None:
     for part in parts:
@@ -322,17 +333,25 @@ def _handle_stream_event(event: dict) -> None:
         _log_parts(logging.info, artifact.get("parts", []))
         return
 
+
 ###############################################################################
 # CLI argument parsing
 ###############################################################################
 
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Interact with an A2A server")
 
-    parser.add_argument("query", nargs="*", help="Query to send. If omitted, just fetch agent card.")
+    parser.add_argument(
+        "query", nargs="*", help="Query to send. If omitted, just fetch agent card."
+    )
 
-    parser.add_argument("--host", default=DEFAULT_HOST, help="A2A host (default: %(default)s)")
-    parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="A2A port (default: %(default)s)")
+    parser.add_argument(
+        "--host", default=DEFAULT_HOST, help="A2A host (default: %(default)s)"
+    )
+    parser.add_argument(
+        "--port", type=int, default=DEFAULT_PORT, help="A2A port (default: %(default)s)"
+    )
 
     parser.add_argument(
         "--stream",
@@ -344,20 +363,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
     return parser.parse_args(argv)
 
+
 ###############################################################################
 # Main entry-point
 ###############################################################################
+
 
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
 
     # Configure logging
     log_level = logging.DEBUG if args.verbose else logging.INFO
-    logging.basicConfig(
-        format='%(message)s',
-        level=log_level,
-        stream=sys.stdout
-    )
+    logging.basicConfig(format="%(message)s", level=log_level, stream=sys.stdout)
     if args.verbose:
         logging.debug("Verbose mode enabled.")
 
@@ -420,4 +437,4 @@ def main(argv: list[str] | None = None) -> None:
 
 
 if __name__ == "__main__":
-    main() 
+    main()

@@ -5,7 +5,6 @@ from typing import Optional
 from functools import reduce
 
 import pandas as pd
-from mindsdb_evaluator.accuracy.general import evaluate_accuracy
 from mindsdb_sql_parser import parse_sql
 from mindsdb_sql_parser.ast import (
     Alter,
@@ -814,6 +813,8 @@ class ExecuteCommands:
         return ExecuteAnswer()
 
     def answer_evaluate_metric(self, statement, database_name):
+        # heavy import, so we do it here on-demand
+        from mindsdb_evaluator.accuracy.general import evaluate_accuracy
         try:
             sqlquery = SQLQuery(statement.data, session=self.session, database=database_name)
         except Exception as e:
@@ -1468,7 +1469,6 @@ class ExecuteCommands:
 
         skills = statement.params.pop('skills', [])
         provider = statement.params.pop('provider', None)
-        
         # Check if this is a CrewAI agent
         agent_type = statement.params.get('agent_type', '')
         if agent_type == 'crewai':

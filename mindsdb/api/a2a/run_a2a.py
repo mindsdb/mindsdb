@@ -6,8 +6,7 @@ from dotenv import load_dotenv
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -89,6 +88,7 @@ def main():
     except Exception as e:
         logger.error(f"Error running a2a module: {e}")
         import traceback
+
         logger.error(traceback.format_exc())
         sys.exit(1)
 

@@ -1,6 +1,5 @@
 import unittest
 from unittest.mock import patch, MagicMock
-import pytest
 
 from mindsdb.interfaces.agents.crewai_pipeline import CrewAITextToSQLPipeline
 from mindsdb.interfaces.agents.agents_controller import AgentsController
@@ -46,13 +45,9 @@ class TestCrewAIPipeline(unittest.TestCase):
 
         result = pipeline.process_query("What is the average sales for 2021?")
 
-        # Check that the crew was created and kicked off
         self.assertTrue(mock_crew.called)
         self.assertTrue(mock_crew_instance.kickoff.called)
-        
-        # Check the result format
         self.assertEqual(result['user_query'], "What is the average sales for 2021?")
-        # The result should be a dict with 'test' and 'data'
         self.assertIsInstance(result['result'], dict)
         self.assertEqual(result['result'].get('text'), "Sample crew result")
 
@@ -64,14 +59,14 @@ class TestCrewAIPipeline(unittest.TestCase):
         # Set up the mocks
         mock_project = MagicMock()
         mock_project_controller.return_value.get.return_value = mock_project
-        
+
         # Create the controller
         agents_controller = AgentsController(
             project_controller=mock_project_controller(),
             skills_controller=mock_skills_controller(),
             model_controller=mock_model_controller()
         )
-        
+
         # Create a CrewAI agent
         agent = agents_controller.create_crewai_agents(
             name="crewai_agent",
@@ -82,7 +77,7 @@ class TestCrewAIPipeline(unittest.TestCase):
             provider="openai",
             params={"verbose": True, "max_tokens": 500}
         )
-        
+
         # Verify agent properties
         self.assertEqual(agent.name, "crewai_agent")
         self.assertEqual(agent.model_name, "gpt-4o")
@@ -93,4 +88,4 @@ class TestCrewAIPipeline(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main() 
+    unittest.main()

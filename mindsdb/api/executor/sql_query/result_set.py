@@ -1,4 +1,5 @@
 import copy
+import json
 import datetime
 from dataclasses import dataclass, field, MISSING
 from typing import List, Optional, Any
@@ -170,6 +171,16 @@ def _dump_str(var: Any) -> str | None:
     """
     if pd.isna(var):
         return None
+    if isinstance(var, bytes):
+        try:
+            return var.decode('utf-8')
+        except Exception:
+            return str(var)[2:-1]
+    if isinstance(var, dict):
+        try:
+            return json.dumps(var)
+        except Exception:
+            return str(var)
     return str(var)
 
 

@@ -44,12 +44,15 @@ def _map_type(internal_type_name: str | None) -> MYSQL_DATA_TYPE:
 
     internal_type_name = internal_type_name.lower()
     types_map = {
-        ('smallint', 'integer', 'bigint', 'int', 'smallserial', 'serial', 'bigserial'): MYSQL_DATA_TYPE.INT,
+        ('smallint', 'smallserial'): MYSQL_DATA_TYPE.SMALLINT,
+        ('integer', 'int', 'serial'): MYSQL_DATA_TYPE.INT,
+        ('bigint', 'bigserial'): MYSQL_DATA_TYPE.BIGINT,
         ('real', 'float'): MYSQL_DATA_TYPE.FLOAT,
-        ('money', 'numeric', 'decimal'): MYSQL_DATA_TYPE.DECIMAL,
+        ('numeric', 'decimal'): MYSQL_DATA_TYPE.DECIMAL,
         ('double precision',): MYSQL_DATA_TYPE.DOUBLE,
         ('character varying', 'varchar'): MYSQL_DATA_TYPE.VARCHAR,
-        ('character', 'char', 'bpchar', 'bpchar', 'text'): MYSQL_DATA_TYPE.TEXT,
+        # NOTE: if return chars-types as mysql's CHAR, then response will be padded with spaces, so return as TEXT
+        ('money', 'character', 'char', 'bpchar', 'bpchar', 'text'): MYSQL_DATA_TYPE.TEXT,
         ('timestamp', 'timestamp without time zone', 'timestamp with time zone'): MYSQL_DATA_TYPE.DATETIME,
         ('date', ): MYSQL_DATA_TYPE.DATE,
         ('time', 'time without time zone', 'time with time zone'): MYSQL_DATA_TYPE.TIME,
@@ -61,7 +64,7 @@ def _map_type(internal_type_name: str | None) -> MYSQL_DATA_TYPE:
         if internal_type_name in db_types_list:
             return mysql_data_type
 
-    logger.warning(f"Postgres handler type mapping: unknown type: {internal_type_name}, use VARCHAR as fallback.")
+    logger.debug(f"Postgres handler type mapping: unknown type: {internal_type_name}, use VARCHAR as fallback.")
     return fallback_type
 
 

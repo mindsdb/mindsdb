@@ -573,23 +573,25 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return self.send_query_answer(resp)
 
         # TODO prepared_stmt['type'] == 'lock' is not used but it works
-        columns_def = self.to_mysql_columns(executor_answer.data.columns)
-        packages = [self.packet(ColumnCountPacket, count=len(columns_def))]
+        result_set = executor_answer.data
+        data_frame, columns_dict = result_set.dump_to_mysql()
+        data = data_frame.to_dict('split')['data']
 
-        packages.extend(self._get_column_defenition_packets(columns_def))
+        packages = [self.packet(ColumnCountPacket, count=len(columns_dict))]
+        packages.extend(self._get_column_defenition_packets(columns_dict))
 
         if self.client_capabilities.DEPRECATE_EOF is False:
             packages.append(self.packet(EofPacket, status=0x0062))
 
         # send all
-        for row in executor_answer.data.to_lists():
+        for row in data:
             packages.append(
-                self.packet(BinaryResultsetRowPacket, data=row, columns=columns_def)
+                self.packet(BinaryResultsetRowPacket, data=row, columns=columns_dict)
             )
 
         server_status = executor.server_status or 0x0002
         packages.append(self.last_packet(status=server_status))
-        prepared_stmt["fetched"] += len(executor_answer.data)
+        prepared_stmt["fetched"] += len(data)
 
         return self.send_package_group(packages)
 

@@ -1,0 +1,79 @@
+---
+title: Add Data to Mind
+sidebarTitle: Add Data to Mind
+---
+
+This API endpoint adds a data source to a specific Mind using the `POST` method.
+
+### Body
+
+<ParamField body='name' type='string' required>
+
+The name of the data source to be added to the Mind. Use [this endpoint](/minds/rest_api/create_datasource) to create data sources.
+
+</ParamField>
+
+<ParamField body='check_connection' type='string'>
+
+Set this value to `true` to check the connection to the data source.
+
+</ParamField>
+
+### Response
+
+<ResponseField name="success" type="boolean" required>  
+
+Indicates whether the data source was successfully added to the Mind.
+
+</ResponseField>
+
+### Authorization
+
+A valid API key must be passed in the `Authorization` header:
+
+```
+Authorization: Bearer MINDS_API_KEY
+```
+
+Generate your [API key here](https://mdb.ai/apiKeys).
+
+### Path Parameters
+
+<ParamField body='mind_name' type='string' required>
+
+The name of the Mind to which the data source will be added.
+
+</ParamField>
+
+<RequestExample>
+
+```shell Shell
+curl --request POST \
+     --url 'https://mdb.ai/api/projects/mindsdb/minds/mind_name_new/datasources' \
+     --header 'Content-Type: application/json' \
+     --header 'Authorization: Bearer MINDS_API_KEY' \
+     --data '{
+         "name": "datasource_name",
+         "check_connection": true
+     }'
+```
+
+```python Python
+from minds.client import Client
+
+client = Client("MINDS_API_KEY", "https://mdb.ai/")
+
+mind.add_datasource(postgres_config)
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Response
+{
+  "success": true
+}
+```
+
+</ResponseExample>

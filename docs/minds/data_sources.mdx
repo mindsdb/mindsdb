@@ -1,0 +1,541 @@
+---
+title: Supported Data Sources
+sidebarTitle: Supported Data Sources
+icon: "database"
+---
+
+Below is a selection of available data sources along with the required and optional connection parameters.
+
+## Amazon DynamoDB
+
+Connect Amazon DynamoDB providing the following connection parameters:
+
+```python
+dynamodb_config = DatabaseConfig(
+    name='datasource_name',
+    description='<DESCRIPTION-OF-YOUR-DATA>',
+    engine='dynamodb',
+    connection_data={
+        'aws_access_key_id': 'ASIAW...XGTQ5',
+        'aws_secret_access_key': 'oOo2KYKAjd/jbu...AUAbx',
+        'aws_session_token': 'IQoJb3...xwaNwvQ=',
+        'region_name': 'us-east-2'
+    },
+    # Optionally, you can provide the list of tables to be accessed by the Mind. If not provided, the Mind accesses all available tables.
+    tables=['<TABLE-1>', '<TABLE-2>', ...]
+)
+```
+
+Note that sample parameter values are provided here for reference, and you should replace them with your connection parameters.
+
+Required connection parameters include the following:
+
+* `aws_access_key_id`: The AWS access key that identifies the user or IAM role.
+* `aws_secret_access_key`: The AWS secret access key that identifies the user or IAM role.
+* `region_name`: The AWS region to connect to.
+
+Optional connection parameters include the following:
+
+* `aws_session_token`: The AWS session token that identifies the user or IAM role. This becomes necessary when using temporary security credentials.
+
+## Amazon Redshift
+
+Connect Amazon Redshift providing the following connection parameters:
+
+```python
+redshift_config = DatabaseConfig(
+    name='datasource_name',
+    description='<DESCRIPTION-OF-YOUR-DATA>',
+    engine='redshift',
+    connection_data={
+        'host': 'samples.mindsdb.com',
+        'port': 5439,
+        'database': 'sample',
+        'user': 'admin',
+        'password': 'rXYZ92zXabcfdBXhMnrj6GTXYvcs8XXz'
+    },
+    # Optionally, you can provide the list of tables to be accessed by the Mind. If not provided, the Mind accesses all available tables.
+    tables=['<TABLE-1>', '<TABLE-2>', ...]
+)
+```
+
+Note that sample parameter values are provided here for reference, and you should replace them with your connection parameters.
+
+Required connection parameters include the following:
+
+* `host`: The host name or IP address of the Redshift cluster.
+* `port`: The port to use when connecting with the Redshift cluster.
+* `database`: The database name to use when connecting with the Redshift cluster.
+* `user`: The username to authenticate the user with the Redshift cluster.
+* `password`: The password to authenticate the user with the Redshift cluster.
+
+Optional connection parameters include the following:
+
+* `schema`: The database schema to use. Defaults to `public`.
+* `sslmode`: The SSL mode for the connection.
+
+## Amazon S3
+
+Connect Amazon S3 providing the following connection parameters:
+
+```python
+s3_config = DatabaseConfig(
+    name='datasource_name',
+    description='<DESCRIPTION-OF-YOUR-DATA>',
+    engine='s3',
+    connection_data={
+        'aws_access_key_id': 'ASIAW...XGTQ5',
+        'aws_secret_access_key': 'oOo2KYKAjd/jbu...AUAbx',
+        'aws_session_token': 'IQoJb3...xwaNwvQ=',
+        'bucket': 'my-bucket'
+    },
+    # Optionally, you can provide the list of tables to be accessed by the Mind. If not provided, the Mind accesses all available tables.
+    tables=['<TABLE-1>', '<TABLE-2>', ...]
+)
+```
+
+In the context of Amazon S3, the `tables` refer to the files available in the connected bucket(s). This can be a list of file names or file paths. For example, `tables=['file1.csv', 'folder/file2.csv']`.
+Additionally, a special table called `files` is available that lists all the files along with their content in the connected bucket(s).
+
+Note that sample parameter values are provided here for reference, and you should replace them with your connection parameters.
+
+Required connection parameters include the following:
+
+* `aws_access_key_id`: The AWS access key that identifies the user or IAM role.
+* `aws_secret_access_key`: The AWS secret access key that identifies the user or IAM role.
+
+Optional connection parameters include the following:
+
+* `aws_session_token`: The AWS session token that identifies the user or IAM role. This becomes necessary when using temporary security credentials.
+* `bucket`: The name of the Amazon S3 bucket. If not provided, all available buckets can be queried, however, this can affect performance, especially when listing all of the available objects.
+
+## ClickHouse
+
+Connect ClickHouse providing the following connection parameters:
+
+```python
+clickhouse_config = DatabaseConfig(
+    name='datasource_name',
+    description='<DESCRIPTION-OF-YOUR-DATA>',
+    engine='clickhouse',
+    connection_data={
+        'user': 'default',
+        'password': '3ZgXtMqAGxyzp4ZYuRndiXY8tXurptTx',
+        'host': 'samples.mindsdb.com',
+        'port': 8123,
+        'database': 'default',
+        'protocol': 'http'
+    },
+    # Optionally, you can provide the list of tables to be accessed by the Mind. If not provided, the Mind accesses all available tables.
+    tables=['<TABLE-1>', '<TABLE-2>', ...]
+)
+```
+
+Note that sample parameter values are provided here for reference, and you should replace them with your connection parameters.
+
+Required connection parameters include the following:
+
+* `host`: The hostname or IP address of the ClickHouse server.
+* `port`: The TCP/IP port of the ClickHouse server.
+* `user`: The username used to authenticate with the ClickHouse server.
+* `password`: The password to authenticate the user with the ClickHouse server.
+* `database`: The database name to use when connecting with the ClickHouse server. Defaults to `default`.
+
+Optional connection parameters include the following:
+
+* `protocol`: It is an optional parameter. Its supported values are `native`, `http` and `https`. Defaults to `native`.
+
+## Databricks
+
+Connect Databricks providing the following connection parameters:
+
+```python
+databricks_config = DatabaseConfig(
+    name='datasource_name',
+    description='<DESCRIPTION-OF-YOUR-DATA>',
+    engine='databricks',
+    connection_data={
+        'server_hostname': 'xyz-24x23abc-46x7.cloud.databricks.com',
+        'http_path': '/sql/1.0/warehouses/123zx7f456e789a7',
+        'access_token': 'dxyz9fa1234b6b12b1xyzc2e12345ebc9876',
+        'catalog': 'mindsdb',
+        'schema': 'default'
+    },
+    # Optionally, you can provide the list of tables to be accessed by the Mind. If not provided, the Mind accesses all available tables.
+    tables=['<TABLE-1>', '<TABLE-2>', ...]
+)
+```
+
+Note that sample parameter values are provided here for reference, and you should replace them with your connection parameters.
+
+Required connection parameters include the following:
+
+* `server_hostname`: The server hostname for the cluster or SQL warehouse.
+* `http_path`: The HTTP path of the cluster or SQL warehouse.
+* `access_token`: A Databricks personal access token for the workspace.
+
+Refer to the instructions [[1]](https://docs.databricks.com/en/integrations/compute-details.html) and [[2]](https://docs.databricks.com/en/dev-tools/python-sql-connector.html#authentication) to find the connection parameters mentioned above for your compute resource.
+
+Optional connection parameters include the following:
+
+* `session_configuration`: Additional (key, value) pairs to set as Spark session configuration parameters. This should be provided as a JSON string.
+* `http_headers`: Additional (key, value) pairs to set in HTTP headers on every RPC request the client makes. This should be provided as a JSON string.
+* `catalog`: The catalog to use for the connection.
+* `schema`: The schema (database) to use for the connection.
+
+## Elasticsearch
+
+Connect Elasticsearch providing the following connection parameters:
+
+```python
+elasticsearch_config = DatabaseConfig(
+    name='datasource_name',
+    description='<DESCRIPTION-OF-YOUR-DATA>',
+    engine='elasticsearch',
+    connection_data={
+        'cloud_id': 'a12345b...gxM2IwMDY4ZDM0',
+        'hosts': 'https://1234x419719b45479d4821c1234f8804.us-central1.gcp.cloud.es.io:443',
+        'api_key': 'ckXYZ2x...X3haZUhuZx==',
+        'user': 'elastic',
+        'password': 'XYi0XYoZxLhrXmwXYZt12M7g'
+    },
+    # Optionally, you can provide the list of tables to be accessed by the Mind. If not provided, the Mind accesses all available tables.
+    tables=['<TABLE-1>', '<TABLE-2>', ...]
+)
+```
+
+Note that sample parameter values are provided here for reference, and you should replace them with your connection parameters.
+
+The connection parameters include the following:
+
+* `cloud_id`: The Cloud ID provided with the ElasticSearch deployment. Required only when `hosts` is not provided.
+* `hosts`: The ElasticSearch endpoint provided with the ElasticSearch deployment. Required only when `cloud_id` is not provided.
+* `api_key`: The API key that you generated for the ElasticSearch deployment. Required only when `user` and `password` are not provided.
+* `user` and `password`: The user and password used to authenticate. Required only when `api_key` is not provided.
+
+## Google BigQuery
+
+Connect Google BigQuery providing the following connection parameters:
+
+```python
+bigquery_config = DatabaseConfig(
+    name='datasource_name',
+    description='<DESCRIPTION-OF-YOUR-DATA>',
+    engine='bigquery',
+    connection_data={
+        'project_id': 'my-project-12345',
+        'dataset': 'my_dataset',
+        'service_account_json': {
+                'type': 'service_account',
+                'project_id': 'my-project-12345',
+                'private_key_id': '03b20...364e609d1',
+                'private_key': '-----BEGIN PRIVATE KEY-----\xyz\n-----END PRIVATE KEY-----\n',
+                'client_email': 'mindsdb-app@expanded-pride-394015.iam.gserviceaccount.com',
+                'client_id': '1234...8123',
+                'auth_uri': 'https://accounts.google.com/o/oauth2/auth',
+                'token_uri': 'https://oauth2.googleapis.com/token',
+                'auth_provider_x509_cert_url': 'https://www.googleapis.com/oauth2/v1/certs',
+                'client_x509_cert_url': 'https://www.googleapis.com/robot/v1/metadata/x509/mindsdb-app%40expanded-pride-394015.iam.gserviceaccount.com',
+                'universe_domain': 'googleapis.com'
+            }
+    },
+    # Optionally, you can provide the list of tables to be accessed by the Mind. If not provided, the Mind accesses all available tables.
+    tables=['<TABLE-1>', '<TABLE-2>', ...]
+)
+```
+
+Note that sample parameter values are provided here for reference, and you should replace them with your connection parameters.
+
+Required connection parameters include the following:
+
+* `project_id`: The globally unique identifier for your project in Google Cloud where BigQuery is located.
+* `dataset`: The default dataset to connect to.
+* `service_account_json`: It stores the content of the service account keys file used to autheticate the user.
+
+## MariaDB
+
+Connect MariaDB providing the following connection parameters:
+
+```python
+mariadb_config = DatabaseConfig(
+    name='datasource_name',
+    description='<DESCRIPTION-OF-YOUR-DATA>',
+    engine='mariadb',
+    connection_data={
+        'user': 'user',
+        'password': 'password',
+        'host': 'samples.mindsdb.com',
+        'port': 3307,
+        'database': 'test_data'
+    },
+    # Optionally, you can provide the list of tables to be accessed by the Mind. If not provided, the Mind accesses all available tables.
+    tables=['<TABLE-1>', '<TABLE-2>', ...]
+)
+```
+
+Note that sample parameter values are provided here for reference, and you should replace them with your connection parameters.
+
+Required connection parameters include the following:
+
+* `user`: The username for the MariaDB database.
+* `password`: The password for the MariaDB database.
+* `host`: The hostname, IP address, or URL of the MariaDB server.
+* `port`: The port number for connecting to the MariaDB server.
+* `database`: The name of the MariaDB database to connect to.
+
+Alternatively, you can define the `url` parameter to specify a connection to MariaDB Server using a URI-like string. You can also use `mysql://` as the protocol prefix.
+
+## Microsoft OneDrive
+
+Before establishing a connection to Microsoft OneDrive, a few prerequisites steps are required:
+
+- Navigate to the [Azure Portal](https://portal.azure.com/#home) and sign in with your Microsoft account.
+- Locate the **Microsoft Entra ID** service and click on it.
+- Click on **App registrations** and then click on **New registration**.
+- Enter a name for your application and select the `Accounts in this organizational directory only` option for the **Supported account types** field.
+- Keep the **Redirect URI** field empty and click on **Register**.
+- Click on **API permissions** and then click on **Add a permission**.
+- Select **Microsoft Graph** and then click on **Delegated permissions**.
+- Search for the `Files.Read` permission and select it.
+- Click on **Add permissions**.
+- Request an administrator to grant consent for the above permissions. If you are the administrator, click on **Grant admin consent for [your organization]** and then click on **Yes**.
+- Copy the **Application (client) ID** and record it as the `client_id` parameter, and copy the **Directory (tenant) ID** and record it as the `tenant_id` parameter.
+- Click on **Certificates & secrets** and then click on **New client secret**.
+- Enter a description for your client secret and select an expiration period.
+- Click on **Add** and copy the generated client secret and record it as the `client_secret` parameter.
+- Click on **Authentication** and then click on **Add a platform**.
+- Select **Web** and enter `https://mdb.ai/verify-auth` in the **Redirect URIs** field.
+
+Now, connect Microsoft OneDrive providing the following connection parameters:
+
+```python
+ms_onedrive_config = DatabaseConfig(
+    name='datasource_name',
+    description='<DESCRIPTION-OF-YOUR-DATA>',
+    engine='one_drive',
+    connection_data={
+        'client_id': '12345678-90ab-cdef-1234-567890abcdef',
+        'client_secret': 'abcd1234efgh5678ijkl9012mnop3456qrst7890uvwx',
+        'tenant_id': 'abcdef12-3456-7890-abcd-ef1234567890'
+    },
+    # Optionally, you can provide the list of tables to be accessed by the Mind. If not provided, the Mind accesses all available tables.
+    tables=['<TABLE-1>', '<TABLE-2>', ...]
+)
+```
+
+In the context of Microsoft OneDrive, the `tables` refer to the files available in the connected account. This can be a list of file names or file paths. For example, `tables=['file1.csv', 'folder/file2.csv']`.
+Additionally, a special table called `files` is available that lists all the files along with their content in the connected account.
+
+Note that sample parameter values are provided here for reference, and you should replace them with your connection parameters.
+
+Required connection parameters include the following:
+
+* `client_id`: The client ID of the registered application.
+* `client_secret`: The client secret of the registered application.
+* `tenant_id`: The tenant ID of the registered application.
+
+## Microsoft SQL Server
+
+Connect Microsoft SQL Server providing the following connection parameters:
+
+```python
+mssql_config = DatabaseConfig(
+    name='datasource_name',
+    description='<DESCRIPTION-OF-YOUR-DATA>',
+    engine='mssql',
+    connection_data={
+        'host': 'samples.mindsdb.com',
+        'port': 1433,
+        'user': 'sa',
+        'password': '#eXY1RbcUkJXyy_L',
+        'database': 'master'
+    },
+    # Optionally, you can provide the list of tables to be accessed by the Mind. If not provided, the Mind accesses all available tables.
+    tables=['<TABLE-1>', '<TABLE-2>', ...]
+)
+```
+
+Note that sample parameter values are provided here for reference, and you should replace them with your connection parameters.
+
+Required connection parameters include the following:
+
+* `user`: The username for the Microsoft SQL Server.
+* `password`: The password for the Microsoft SQL Server.
+* `host` The hostname, IP address, or URL of the Microsoft SQL Server.
+* `database` The name of the Microsoft SQL Server database to connect to.
+
+Optional connection parameters include the following:
+
+* `port`: The port number for connecting to the Microsoft SQL Server. Defaults to `1433`.
+* `server`: The server name to connect to. Typically only used with named instances or Azure SQL Database.
+
+## MongoDB
+
+Connect MongoDB providing the following connection parameters:
+
+```python
+mongodb_config = DatabaseConfig(
+    name='datasource_name',
+    description='<DESCRIPTION-OF-YOUR-DATA>',
+    engine='mongodb',
+    connection_data={
+        'host': 'mongodb+srv://user:password@demo-data-mdb.trzfwvb.mongodb.net/',
+        'database': 'public'
+    },
+    # Optionally, you can provide the list of tables to be accessed by the Mind. If not provided, the Mind accesses all available tables.
+    tables=['<TABLE-1>', '<TABLE-2>', ...]
+)
+```
+
+Note that sample parameter values are provided here for reference, and you should replace them with your connection parameters.
+
+Use the following parameters to establish the connection:
+
+* `host`: The connection string of the MongoDB server that includes user (`user`), password (`password`), host and port (`demo-data-mdb.trzfwvb.mongodb.net`).
+* `database`: The name of the database.
+
+Alternatively, the following set of connection parameters can be used:
+
+* `username`: The username associated with the database.
+* `password`: The password to authenticate your access.
+* `host`: The host of the MongoDB server.
+* `port`: The port through which TCP/IP connection is to be made.
+* `database`: The database name to be connected.
+
+## MySQL
+
+Connect MySQL providing the following connection parameters:
+
+```python
+mysql_config = DatabaseConfig(
+    name='datasource_name',
+    description='<DESCRIPTION-OF-YOUR-DATA>',
+    engine='mysql',
+    connection_data={
+        'user': 'user',
+        'password': 'MindsXYZ123',
+        'host': 'samples.mindsdb.com',
+        'port': 3306,
+        'database': 'public'
+    },
+    # Optionally, you can provide the list of tables to be accessed by the Mind. If not provided, the Mind accesses all available tables.
+    tables=['<TABLE-1>', '<TABLE-2>', ...]
+)
+```
+
+Note that sample parameter values are provided here for reference, and you should replace them with your connection parameters.
+
+Required connection parameters include the following:
+
+*    `user`: The username for the MySQL database.
+*    `password`: The password for the MySQL database.
+*    `host`: The hostname, IP address, or URL of the MySQL server.
+*    `port`: The port number for connecting to the MySQL server.
+*    `database`: The name of the MySQL database to connect to.
+
+Alternatively, you can define the `url` parameter to specify a connection to MySQL Server using a URI-like string.
+
+## PostgreSQL
+
+Connect PostgreSQL providing the following connection parameters:
+
+```python
+postgres_config = DatabaseConfig(
+    name='datasource_name',
+    description='<DESCRIPTION-OF-YOUR-DATA>',
+    engine='postgres',
+    connection_data={
+        'user': 'demo_user',
+        'password': 'demo_password',
+        'host': 'samples.mindsdb.com',
+        'port': 5432,
+        'database': 'demo',
+        'schema': 'demo_data'
+    },
+    # Optionally, you can provide the list of tables to be accessed by the Mind. If not provided, the Mind accesses all available tables.
+    tables=['<TABLE-1>', '<TABLE-2>', ...]
+)
+```
+
+Note that the above connection parameters connect to the [sample database provided by MindsDB](/minds/sample_data_sources).
+
+Required connection parameters include the following:
+
+*    `user`: The username for the PostgreSQL database.
+*    `password`: The password for the PostgreSQL database.
+*    `host`: The hostname, IP address, or URL of the PostgreSQL server.
+*    `port`: The port number for connecting to the PostgreSQL server.
+*    `database`: The name of the PostgreSQL database to connect to.
+
+Optional connection parameters include the following:
+
+*    `schema`: The database schema to use. Defaults to `public`.
+*    `sslmode`: The SSL mode for the connection.
+
+## Snowflake
+
+Connect Snowflake providing the following connection parameters:
+
+```python
+snowflake_config = DatabaseConfig(
+    name='datasource_name',
+    description='<DESCRIPTION-OF-YOUR-DATA>',
+    engine='snowflake',
+    connection_data={
+        'account': 'abcxyzw-yz12345',
+        'user': 'USER',
+        'password': 'x1Y2z3f3i4r',
+        'database': 'SNOWFLAKE_SAMPLE_DATA',
+        'schema': 'SAMPLES'
+    },
+    # Optionally, you can provide the list of tables to be accessed by the Mind. If not provided, the Mind accesses all available tables.
+    tables=['<TABLE-1>', '<TABLE-2>', ...]
+)
+```
+
+Note that sample parameter values are provided here for reference, and you should replace them with your connection parameters.
+
+Required connection parameters include the following:
+
+* `account`: The Snowflake account identifier. [This guide](https://docs.snowflake.com/en/user-guide/admin-account-identifier) will help you find your account identifier.
+* `user`: The username for the Snowflake account.
+* `password`: The password for the Snowflake account.
+* `database`: The name of the Snowflake database to connect to.
+
+Optional connection parameters include the following:
+
+* `warehouse`: The Snowflake warehouse to use for running queries.
+* `schema`: The database schema to use within the Snowflake database. Defaults to `PUBLIC`.
+* `role`: The Snowflake role to use.
+
+## Teradata
+
+Connect Teradata providing the following connection parameters:
+
+```python
+teradata_config = DatabaseConfig(
+    name='datasource_name',
+    description='<DESCRIPTION-OF-YOUR-DATA>',
+    engine='teradata',
+    connection_data={
+        'host': '192.168.0.41',
+        'user': 'USER',
+        'password': 'x1Y2z3f3i4r',
+        'database': 'sample_db'
+    },
+    # Optionally, you can provide the list of tables to be accessed by the Mind. If not provided, the Mind accesses all available tables.
+    tables=['<TABLE-1>', '<TABLE-2>', ...]
+)
+```
+
+Note that sample parameter values are provided here for reference, and you should replace them with your connection parameters.
+
+Required connection parameters include the following:
+
+* `host`: The hostname, IP address, or URL of the Teradata server.
+* `user`: The username for the Teradata database.
+* `password`: The password for the Teradata database.
+
+Optional connection parameters include the following:
+
+* `database`: The name of the Teradata database to connect to. Defaults to the user’s default database.

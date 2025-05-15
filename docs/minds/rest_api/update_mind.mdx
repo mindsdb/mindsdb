@@ -1,0 +1,80 @@
+---
+title: Update Mind
+sidebarTitle: Update Mind
+---
+
+This API endpoint updates the Mind name and/or the connected data sources using the `PATCH` method.
+
+### Body
+
+<ParamField body='name' type='string'>
+
+Provide a new name for the Mind.
+
+</ParamField>
+
+<ParamField body='datasources' type='array'>
+
+Provide an updated list of data sources to be connected to the Mind. Use [this endpoint](/minds/rest_api/create_datasource) to create data sources.
+
+</ParamField>
+
+### Response
+
+<ResponseField name="status" type="string" required>  
+
+HTTP status code indicating success. `200 OK` confirms the Mind was updated.
+
+</ResponseField>
+
+### Authorization
+
+A valid API key must be passed in the `Authorization` header:
+
+```
+Authorization: Bearer MINDS_API_KEY
+```
+
+Generate your [API key here](https://mdb.ai/apiKeys).
+
+### Path Parameters
+
+<ParamField body='mind_name' type='string' required>
+
+The name of the Mind you want to update.
+
+</ParamField>
+
+<RequestExample>
+
+```shell Shell
+curl --request PATCH \
+     --url 'https://mdb.ai/api/projects/mindsdb/minds/mind_name' \
+     --header 'Content-Type: application/json' \
+     --header 'Authorization: Bearer MINDS_API_KEY' \
+     --data '{
+         "name": "mind_name_new",
+         "datasources": ["datasource_name"]
+     }'
+```
+
+```python Python
+from minds.client import Client
+
+client = Client("MINDS_API_KEY", "https://mdb.ai/")
+
+mind.update(
+  name='mind_name',  # this is required
+  datasources=[new_datasource_config]  # this will replace the existing datasources list
+)
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Response
+200 OK
+```
+
+</ResponseExample>

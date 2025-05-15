@@ -1,0 +1,67 @@
+---
+title: Mind Setup
+sidebarTitle: Mind Setup
+---
+
+Create a free account at [Minds Cloud](https://mdb.ai/) and use the Minds API key to create and chat with Minds via Python SDK.
+
+In the below sample code, we connect to our sample database ([see full details here](/minds/sample_data)) and create a Mind. As a **prerequisite**, install the latest version of Minds SDK by running `pip install minds_sdk`.
+
+Alternatively, you can create a Mind via [Minds Cloud](https://mdb.ai/) and use the code provided in the *API* tab to interact with the Mind via Python SDK. 
+
+```python
+from minds.client import Client
+from minds.datasources import DatabaseConfig
+
+client = Client("MINDS_API_KEY")
+
+postgres_config = DatabaseConfig(
+    name='unique_data_source_name',
+    description='House sales data',
+    engine='postgres',
+    connection_data={
+        'user': 'demo_user',
+        'password': 'demo_password',
+        'host': 'samples.mindsdb.com',
+        'port': '5432',
+        'database': 'demo',
+        'schema': 'demo_data'
+    },
+    tables=['house_sales']
+)
+
+datasource = client.datasources.create(postgres_config, update=True)
+
+mind = client.minds.create(
+                      name='unique_mind_name', 
+                      datasources=[datasource], 
+                      prompt_template='answer questions in a helpful way using the available data',
+                      update=True
+                    )
+
+print(f"{mind.name} was created successfully. You can now use this Mind using the OpenAI-compatible API, see docs for next steps.")
+```
+
+Remember to replace `MINDS_API_KEY` with your [Minds API key available here](https://mdb.ai/).
+
+Note that the `update=True` parameter of the `create` functions is used to update a data source or a Mind if it already exists. Alternatively, you can use the `replace=True` parameter when creating a Mind to replace an existing Mind with the new one, if one already exists.
+
+The following arguments are used to create a Data Source:
+
+- `name` is the unique name of the data source.
+- `description` is the description of the data source that helps the Mind decide which data source to use for answering certain questions.
+- `engine` is the engine of the data source to be connected. [See all supported data sources here](/minds/data_sources).
+- `connection_data` stores the connection parameters that allow Minds to access the data source. [See all supported data sources here](/minds/data_sources).
+- `tables` is an optional parameter that lists specific table(s) to be accessed by the Mind. Note that if it is not provided, then the Mind accesses the entire database.
+
+*Note that Minds do not store or copy your data. Instead, Minds poll data from the connected data sources using the provided connection parameters whenever required, so all changes to your data are reflected in Minds upon querying the data.*
+
+The following arguments are used to create a Mind:
+
+- `name` is the unique name of the Mind.
+- `datasources` is a list of configurations for data sources, such as databases, you can connect to your Mind. [See all supported data sources here](/minds/data_sources).
+
+**Now that you created the Mind, let's start the conversation with your data!**
+
+- [Completions API](/minds/python_sdk/completions_api) – suits for simple query-response interactions, yet is stateless.
+- [Assistants API](/minds/python_sdk/assistants_api) – for context persistence and advanced features like dynamic data retrieval or code execution.

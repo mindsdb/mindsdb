@@ -232,7 +232,7 @@ class SQLAgent:
             table_identifier = tables_idx.get(tuple(table_parts))
 
             if table_identifier is None:
-                raise ValueError(f"Table {table} not found in the database")
+                raise ValueError(f"Table {table_name} not found in the database")
             tables.append(table_identifier)
 
         return tables

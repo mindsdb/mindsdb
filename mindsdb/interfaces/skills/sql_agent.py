@@ -12,7 +12,9 @@ from mindsdb.utilities import log
 from mindsdb.utilities.context import context as ctx
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES
+from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
+
 
 logger = log.getLogger(__name__)
 
@@ -27,7 +29,7 @@ def list_to_csv_str(array: List[List[Any]]) -> str:
         str: The array formatted as a CSV string using Excel dialect
     """
     output = StringIO()
-    writer = csv.writer(output, dialect='excel')
+    writer = csv.writer(output, dialect="excel")
     str_array = [[str(item) for item in row] for row in array]
     writer.writerows(str_array)
     return output.getvalue()
@@ -54,37 +56,37 @@ def split_table_name(table_name: str) -> List[str]:
         'input': '`aaa`.`bbb.ccc`', 'output': ['aaa', 'bbb.ccc']
     """
     result = []
-    current = ''
+    current = ""
     in_backticks = False
 
     i = 0
     while i < len(table_name):
-        if table_name[i] == '`':
+        if table_name[i] == "`":
             in_backticks = not in_backticks
-        elif table_name[i] == '.' and not in_backticks:
+        elif table_name[i] == "." and not in_backticks:
             if current:
-                result.append(current.strip('`'))
-                current = ''
+                result.append(current.strip("`"))
+                current = ""
         else:
             current += table_name[i]
         i += 1
 
     if current:
-        result.append(current.strip('`'))
+        result.append(current.strip("`"))
 
     return result
 
 
 class SQLAgent:
     def __init__(
-            self,
-            command_executor,
-            databases: List[str],
-            databases_struct: dict,
-            include_tables: Optional[List[str]] = None,
-            ignore_tables: Optional[List[str]] = None,
-            sample_rows_in_table_info: int = 3,
-            cache: Optional[dict] = None
+        self,
+        command_executor,
+        databases: List[str],
+        databases_struct: dict,
+        include_tables: Optional[List[str]] = None,
+        ignore_tables: Optional[List[str]] = None,
+        sample_rows_in_table_info: int = 3,
+        cache: Optional[dict] = None,
     ):
         self._command_executor = command_executor
         self._mindsdb_db_struct = databases_struct
@@ -102,17 +104,14 @@ class SQLAgent:
 
     def _call_engine(self, query: str, database=None):
         # switch database
-        ast_query = parse_sql(query.strip('`'))
+        ast_query = parse_sql(query.strip("`"))
         self._check_permissions(ast_query)
 
         if database is None:
             # if we use tables with prefixes it should work for any database
             database = self._databases[0]
 
-        ret = self._command_executor.execute_command(
-            ast_query,
-            database_name=database
-        )
+        ret = self._command_executor.execute_command(ast_query, database_name=database)
         return ret
 
     def _check_permissions(self, ast_query):
@@ -132,7 +131,9 @@ class SQLAgent:
             def _check_f(node, is_table=None, **kwargs):
                 if is_table and isinstance(node, Identifier):
                     if node.parts not in tables_parts:
-                        raise ValueError(f"Table {'.'.join(node.parts)} not found. Available tables: {', '.join(self._tables_to_include)}")
+                        raise ValueError(
+                            f"Table {'.'.join(node.parts)} not found. Available tables: {', '.join(self._tables_to_include)}"
+                        )
 
             query_traversal(ast_query, _check_f)
 
@@ -156,17 +157,25 @@ class SQLAgent:
         result_tables = []
 
         for db_name in self._mindsdb_db_struct:
-            handler = self._command_executor.session.integration_controller.get_data_handler(db_name)
+            handler = (
+                self._command_executor.session.integration_controller.get_data_handler(
+                    db_name
+                )
+            )
 
             schemas_names = list(self._mindsdb_db_struct[db_name].keys())
             if len(schemas_names) > 1 and None in schemas_names:
-                raise Exception('default schema and named schemas can not be used in same filter')
+                raise Exception(
+                    "default schema and named schemas can not be used in same filter"
+                )
 
             if None in schemas_names:
                 # get tables only from default schema
                 response = handler.get_tables()
                 tables_in_default_schema = list(response.data_frame.table_name)
-                schema_tables_restrictions = self._mindsdb_db_struct[db_name][None]     # None - is default schema
+                schema_tables_restrictions = self._mindsdb_db_struct[db_name][
+                    None
+                ]  # None - is default schema
                 if schema_tables_restrictions is None:
                     for table_name in tables_in_default_schema:
                         result_tables.append([db_name, table_name])
@@ -175,32 +184,38 @@ class SQLAgent:
                         if table_name in tables_in_default_schema:
                             result_tables.append([db_name, table_name])
             else:
-                if 'all' in inspect.signature(handler.get_tables).parameters:
+                if "all" in inspect.signature(handler.get_tables).parameters:
                     response = handler.get_tables(all=True)
                 else:
                     response = handler.get_tables()
                 response_schema_names = list(response.data_frame.table_schema.unique())
                 schemas_intersection = set(schemas_names) & set(response_schema_names)
                 if len(schemas_intersection) == 0:
-                    raise Exception('There are no allowed schemas in ds')
+                    raise Exception("There are no allowed schemas in ds")
 
                 for schema_name in schemas_intersection:
-                    schema_sub_df = response.data_frame[response.data_frame['table_schema'] == schema_name]
+                    schema_sub_df = response.data_frame[
+                        response.data_frame["table_schema"] == schema_name
+                    ]
                     if self._mindsdb_db_struct[db_name][schema_name] is None:
                         # all tables from schema allowed
                         for row in schema_sub_df:
-                            result_tables.append([db_name, schema_name, row['table_name']])
+                            result_tables.append(
+                                [db_name, schema_name, row["table_name"]]
+                            )
                     else:
                         for table_name in self._mindsdb_db_struct[db_name][schema_name]:
-                            if table_name in schema_sub_df['table_name'].values:
+                            if table_name in schema_sub_df["table_name"].values:
                                 result_tables.append([db_name, schema_name, table_name])
 
-        result_tables = ['.'.join(x) for x in result_tables]
+        result_tables = [".".join(x) for x in result_tables]
         if self._cache:
             self._cache.set(cache_key, set(result_tables))
         return result_tables
 
-    def _resolve_table_names(self, table_names: List[str], all_tables: List[Identifier]) -> List[Identifier]:
+    def _resolve_table_names(
+        self, table_names: List[str], all_tables: List[Identifier]
+    ) -> List[Identifier]:
         """
         Tries to find table (which comes directly from an LLM) by its name
         Handles backticks (`) and tables without databases
@@ -238,7 +253,7 @@ class SQLAgent:
         return tables
 
     def get_table_info(self, table_names: Optional[List[str]] = None) -> str:
-        """ Get information about specified tables.
+        """Get information about specified tables.
         Follows best practices as specified in: Rajkumar et al, 2022 (https://arxiv.org/abs/2204.00498)
         If `sample_rows_in_table_info`, the specified number of sample rows will be
         appended to each table description. This can increase performance as demonstrated in the paper.
@@ -279,42 +294,95 @@ class SQLAgent:
         try:
             df = dn.get_table_columns_df(table_name, schema_name)
             if not isinstance(df, pd.DataFrame) or df.empty:
-                logger.warning(f"Received empty or invalid DataFrame for table columns of {table_str}")
+                logger.warning(
+                    f"Received empty or invalid DataFrame for table columns of {table_str}"
+                )
                 return f"Table named `{table_str}`:\n [No column information available]"
 
             fields = df[INF_SCHEMA_COLUMNS_NAMES.COLUMN_NAME].to_list()
             dtypes = [
-                mysql_data_type.value if isinstance(mysql_data_type, MYSQL_DATA_TYPE) else (data_type or 'UNKNOWN')
-                for mysql_data_type, data_type
-                in zip(
+                (
+                    mysql_data_type.value
+                    if isinstance(mysql_data_type, MYSQL_DATA_TYPE)
+                    else (data_type or "UNKNOWN")
+                )
+                for mysql_data_type, data_type in zip(
                     df[INF_SCHEMA_COLUMNS_NAMES.MYSQL_DATA_TYPE],
-                    df[INF_SCHEMA_COLUMNS_NAMES.DATA_TYPE]
+                    df[INF_SCHEMA_COLUMNS_NAMES.DATA_TYPE],
                 )
             ]
         except Exception as e:
-            logger.error(f"Failed processing column info for {table_str}: {e}", exc_info=True)
+            logger.error(
+                f"Failed processing column info for {table_str}: {e}", exc_info=True
+            )
             raise ValueError(f"Failed to process column info for {table_str}") from e
 
         if not fields:
             logger.error(f"Could not extract column fields for {table_str}.")
-            return f"Table named `{table_str}`:\n [Could not extract column information]"
+            return (
+                f"Table named `{table_str}`:\n [Could not extract column information]"
+            )
 
+        if issubclass(dn, APIHandler):
+            # generate an API description of the table if it is an API table.
+            info = f"Table named `{table_str}`:\n"
+            info += self._get_api_example(dn, table_str, fields)
+            info += "You must always specify the parameters with a SELECT statement when querying this table."
+            info += (
+                "\nColumn data types: "
+                + ",\t".join(
+                    [f"\n`{field}` : `{dtype}`" for field, dtype in zip(fields, dtypes)]
+                )
+                + "\n"
+            )
+            return info
+
+        else:
+            try:
+                sample_rows_info = self._get_sample_rows(table_str, fields)
+            except Exception as e:
+                logger.warning(f"Could not get sample rows for {table_str}: {e}")
+                sample_rows_info = "\n\t [error] Couldn't retrieve sample rows!"
+
+            info = f"Table named `{table_str}`:\n"
+            info += f"\nSample with first {self._sample_rows_in_table_info} rows from table {table_str} in CSV format (dialect is 'excel'):\n"
+            info += sample_rows_info + "\n"
+            info += (
+                "\nColumn data types: "
+                + ",\t".join(
+                    [f"\n`{field}` : `{dtype}`" for field, dtype in zip(fields, dtypes)]
+                )
+                + "\n"
+            )
+            return info
+
+    def _get_api_example(self, dn: APIHandler, table: str, fields: List[str]) -> str:
+        logger.info(f"_get_sample_rows: table={table} fields={fields}")
         try:
-            sample_rows_info = self._get_sample_rows(table_str, fields)
-        except Exception as e:
-            logger.warning(f"Could not get sample rows for {table_str}: {e}")
-            sample_rows_info = "\n\t [error] Couldn't retrieve sample rows!"
+            rest_api_table = dn.self._get_table(Identifier(table))
 
-        info = f'Table named `{table_str}`:\n'
-        info += f"\nSample with first {self._sample_rows_in_table_info} rows from table {table_str} in CSV format (dialect is 'excel'):\n"
-        info += sample_rows_info + "\n"
-        info += '\nColumn data types: ' + ",\t".join(
-            [f'\n`{field}` : `{dtype}`' for field, dtype in zip(fields, dtypes)]
-        ) + '\n'
-        return info
+            output_columns_str = ", ".join(rest_api_table.output_columns.keys())
+            single_value_params = ", ".join(rest_api_table.params)
+            list_value_params = ", ".join(rest_api_table.list_params)
+
+            return_str = "Output columns: " + output_columns_str + "\n"
+            return_str = (
+                return_str + "Single value parameters: " + single_value_params + "\n"
+            )
+            return_str = (
+                return_str + "List value parameters: " + list_value_params + "\n"
+            )
+
+            return return_str
+
+        except Exception as e:
+            logger.info(f"_get_api_example error: {e}")
+            sample_rows_str = "\n" + "\t [error] Couldn't retrieve api example!"
+
+        return sample_rows_str
 
     def _get_sample_rows(self, table: str, fields: List[str]) -> str:
-        logger.info(f'_get_sample_rows: table={table} fields={fields}')
+        logger.info(f"_get_sample_rows: table={table} fields={fields}")
         command = f"select {', '.join(fields)} from {table} limit {self._sample_rows_in_table_info};"
         try:
             ret = self._call_engine(command)
@@ -322,20 +390,21 @@ class SQLAgent:
 
             def truncate_value(val):
                 str_val = str(val)
-                return str_val if len(str_val) < 100 else (str_val[:100] + '...')
+                return str_val if len(str_val) < 100 else (str_val[:100] + "...")
 
             sample_rows = list(
-                map(lambda row: [truncate_value(value) for value in row], sample_rows))
+                map(lambda row: [truncate_value(value) for value in row], sample_rows)
+            )
             sample_rows_str = "\n" + list_to_csv_str([fields] + sample_rows)
         except Exception as e:
-            logger.info(f'_get_sample_rows error: {e}')
+            logger.info(f"_get_sample_rows error: {e}")
             sample_rows_str = "\n" + "\t [error] Couldn't retrieve sample rows!"
 
         return sample_rows_str
 
     def _clean_query(self, query: str) -> str:
         # Sometimes LLM can input markdown into query tools.
-        cmd = re.sub(r'```(sql)?', '', query)
+        cmd = re.sub(r"```(sql)?", "", query)
         return cmd
 
     def query(self, command: str, fetch: str = "all") -> str:
@@ -347,20 +416,22 @@ class SQLAgent:
         def _repr_result(ret):
             limit_rows = 30
 
-            columns_str = ', '.join([repr(col.name) for col in ret.columns])
-            res = f'Output columns: {columns_str}\n'
+            columns_str = ", ".join([repr(col.name) for col in ret.columns])
+            res = f"Output columns: {columns_str}\n"
 
             data = ret.to_lists()
             if len(data) > limit_rows:
                 df = pd.DataFrame(data, columns=[col.name for col in ret.columns])
 
-                res += f'Result has {len(data)} rows. Description of data:\n'
-                res += str(df.describe(include='all')) + '\n\n'
-                res += f'First {limit_rows} rows:\n'
+                res += f"Result has {len(data)} rows. Description of data:\n"
+                res += str(df.describe(include="all")) + "\n\n"
+                res += f"First {limit_rows} rows:\n"
 
             else:
                 res += "Result in CSV format (dialect is 'excel'):\n"
-            res += list_to_csv_str([[col.name for col in ret.columns]] + data[:limit_rows])
+            res += list_to_csv_str(
+                [[col.name for col in ret.columns]] + data[:limit_rows]
+            )
             return res
 
         ret = self._call_engine(self._clean_query(command))
@@ -368,26 +439,28 @@ class SQLAgent:
             result = _repr_result(ret.data)
         elif fetch == "one":
             result = "Result in CSV format (dialect is 'excel'):\n"
-            result += list_to_csv_str([[col.name for col in ret.data.columns]] + [ret.data.to_lists()[0]])
+            result += list_to_csv_str(
+                [[col.name for col in ret.data.columns]] + [ret.data.to_lists()[0]]
+            )
         else:
             raise ValueError("Fetch parameter must be either 'one' or 'all'")
         return str(result)
 
     def get_table_info_safe(self, table_names: Optional[List[str]] = None) -> str:
         try:
-            logger.info(f'get_table_info_safe: {table_names}')
+            logger.info(f"get_table_info_safe: {table_names}")
             return self.get_table_info(table_names)
         except Exception as e:
-            logger.info(f'get_table_info_safe error: {e}')
+            logger.info(f"get_table_info_safe error: {e}")
             return f"Error: {e}"
 
     def query_safe(self, command: str, fetch: str = "all") -> str:
         try:
-            logger.info(f'query_safe (fetch={fetch}): {command}')
+            logger.info(f"query_safe (fetch={fetch}): {command}")
             return self.query(command, fetch)
         except Exception as e:
-            logger.info(f'query_safe error: {e}')
+            logger.info(f"query_safe error: {e}")
             msg = f"Error: {e}"
-            if 'does not exist' in msg and ' relation ' in msg:
-                msg += '\nAvailable tables: ' + ', '.join(self.get_usable_table_names())
+            if "does not exist" in msg and " relation " in msg:
+                msg += "\nAvailable tables: " + ", ".join(self.get_usable_table_names())
             return msg

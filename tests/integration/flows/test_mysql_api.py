@@ -1,15 +1,15 @@
 import time
 import json
 import tempfile
-import datetime
-from decimal import Decimal
+# import datetime
+# from decimal import Decimal
 
 import pytest
 import requests
 import mysql.connector
 import pandas as pd
 
-from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import DATA_C_TYPE_MAP, MYSQL_DATA_TYPE
+# from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import DATA_C_TYPE_MAP, MYSQL_DATA_TYPE
 
 from tests.utils.config import MYSQL_API_ROOT, HTTP_API_ROOT
 

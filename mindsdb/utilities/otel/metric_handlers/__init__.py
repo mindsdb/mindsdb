@@ -1,4 +1,4 @@
-from mindsdb.utilities.otel import metrics, OTEL_SERVICE_NAME
+from mindsdb.utilities.otel.prepare import metrics, OTEL_SERVICE_NAME
 
 _query_request_counter = None
 
@@ -23,3 +23,7 @@ def get_query_request_counter():
         )
 
     return _query_request_counter
+
+def increment_otel_query_request_counter(metadata: dict) -> None:
+    query_request_counter = get_query_request_counter()
+    query_request_counter.add(1, metadata)

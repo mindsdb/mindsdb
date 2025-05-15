@@ -24,12 +24,22 @@ MAIN_REQS_PATH = "requirements/requirements.txt"
 DEV_REQS_PATH = "requirements/requirements-dev.txt"
 TEST_REQS_PATH = "requirements/requirements-test.txt"
 
+# Utilities that have their own requirements.txt files.
+# These are used only within handlers.
+UTILITIES_REQS_PATHS = [
+    "mindsdb/integrations/utilities/handlers/auth_utilities/microsoft/requirements.txt",
+    "mindsdb/integrations/utilities/handlers/auth_utilities/google/requirements.txt"
+]
+
 HANDLER_REQS_PATHS = list(
     set(glob.glob("**/requirements*.txt", recursive=True))
     - set(glob.glob("requirements/requirements*.txt"))
 )
 
-MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.toml"]
+MAIN_EXCLUDE_PATHS = [
+    "mindsdb/integrations/handlers/.*_handler",
+    "pryproject.toml"
+]
 
 # Torch.multiprocessing is imported in a 'try'. Falls back to multiprocessing so we dont NEED it.
 # Psycopg2 is needed in core codebase for sqlalchemy.
@@ -38,7 +48,7 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 # transformers is required for langchain_core and not explicitly imported by mindsdb.
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch", "pyarrow"],
-    "DEP001": ["torch", "pgvector", "pyarrow", "openai"],
+    "DEP001": ["torch", "pgvector", "pyarrow", "openai", "gunicorn", "dataprep_ml", "opentelemetry", "langfuse"],
     "DEP002": ["psycopg2-binary", "lark", "transformers", "langchain-experimental", "lxml", "openpyxl", "onnxruntime"]
 }
 
@@ -50,27 +60,67 @@ MAIN_RULE_IGNORES = {
 # Or 2) because they are imported in an unusual way. E.g.:
 #   - pysqlite3 in the chromadb handler
 #   - dspy-ai in langchain handler
-OPTIONAL_HANDLER_DEPS = ["torch", "tiktoken", "wikipedia",
-                         "sentence-transformers", "faiss-cpu", "litellm", "chromadb", "dspy-ai", "sqlalchemy-solr"]
+
+# The `pyarrow` package used for DataFrame serialization.
+# It is not explicitly imported in the code and used as follows:
+# modules.append('pyarrow==19.0.0')
+BYOM_DEP002_IGNORE_HANLDER_DEPS = ["pyarrow"]
+
+# The `thrift-sasl` package is required establish a connection via to Hive via `pyhive`, but it is not explicitly imported in the code.
+HIVE_DEP002_IGNORE_HANDLER_DEPS = ["thrift-sasl"]
+
+# The `gcsfs` package is required to interact with GCS as a file system.
+GCS_DEP002_IGNORE_HANDLER_DEPS = ["gcsfs"]
+
+LINDORM_DEP002_IGNORE_HANDLER_DEPS = ["protobuf"]
+
+HUGGINGFACE_DEP002_IGNORE_HANDLER_DEPS = ["torch"]
+
+DSPY_DEP002_IGNORE_HANDLER_DEPS = ["wikipedia", "dspy-ai", "chromadb", "tiktoken"]
+
+RAG_DEP002_IGNORE_HANDLER_DEPS = ["sentence-transformers", "faiss-cpu"]
+
+SOLR_DEP002_IGNORE_HANDLER_DEPS = ["sqlalchemy-solr"]
+
+LANGCHAIN_DEP002_IGNORE_HANDLER_DEPS = ["litellm", "chromadb", "tiktoken"]
+
+LANGCHAIN_EMBEDDING_DEP002_IGNORE_HANDLER_DEPS = ["tiktoken"]
+
+OPENAI_DEP002_IGNORE_HANDLER_DEPS = ["tiktoken"]
+
+CHROMADB_EP002_IGNORE_HANDLER_DEPS = ["onnxruntime"]
+
+# The `pyarrow` package is used only if it is installed.
+# The handler can work without it.
+SNOWFLAKE_DEP003_IGNORE_HANDLER_DEPS = ["pyarrow"]
+
+DEP002_IGNORE_HANDLER_DEPS = list(set(
+    BYOM_DEP002_IGNORE_HANLDER_DEPS
+    + HIVE_DEP002_IGNORE_HANDLER_DEPS
+    + GCS_DEP002_IGNORE_HANDLER_DEPS
+    + LINDORM_DEP002_IGNORE_HANDLER_DEPS
+    + HUGGINGFACE_DEP002_IGNORE_HANDLER_DEPS
+    + DSPY_DEP002_IGNORE_HANDLER_DEPS
+    + RAG_DEP002_IGNORE_HANDLER_DEPS
+    + SOLR_DEP002_IGNORE_HANDLER_DEPS
+    + LANGCHAIN_DEP002_IGNORE_HANDLER_DEPS
+    + LANGCHAIN_EMBEDDING_DEP002_IGNORE_HANDLER_DEPS
+    + OPENAI_DEP002_IGNORE_HANDLER_DEPS
+    + CHROMADB_EP002_IGNORE_HANDLER_DEPS
+))
+DEP003_IGNORE_HANDLER_DEPS = list(set(
+    SNOWFLAKE_DEP003_IGNORE_HANDLER_DEPS
+))
 
 # List of rules we can ignore for specific packages
 # Here we ignore any packages in the main requirements.txt for "listed but not used" errors, because they will be used for the core code but not necessarily in a given handler
 MAIN_REQUIREMENTS_DEPS = get_requirements_from_file(MAIN_REQS_PATH) + get_requirements_from_file(
     TEST_REQS_PATH)
 
-BYOM_HANLDER_DEPS = ["pyarrow"]
-# The `thrift-sasl` package is required establish a connection via to Hive via `pyhive`, but it is not explicitly imported in the code.
-HIVE_HANDLER_DEPS = ["thrift-sasl"]
-
-# The `gcsfs` package is required to interact with GCS as a file system.
-GCS_HANDLER_DEPS = ["gcsfs"]
-
-SNOWFLAKE_HANDLER_DEPS = ["pyarrow"]
-
 HANDLER_RULE_IGNORES = {
-    "DEP002": OPTIONAL_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS + BYOM_HANLDER_DEPS + HIVE_HANDLER_DEPS + GCS_HANDLER_DEPS,
+    "DEP002": DEP002_IGNORE_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS,
     "DEP001": ["tests", "pyarrow", "IfxPyDbi", "ingres_sa_dialect"],  # 'tests' is the mindsdb tests folder in the repo root, 'pyarrow' used in snowflake handler
-    "DEP003": SNOWFLAKE_HANDLER_DEPS
+    "DEP003": DEP003_IGNORE_HANDLER_DEPS
 }
 
 PACKAGE_NAME_MAP = {
@@ -89,7 +139,7 @@ PACKAGE_NAME_MAP = {
     "google-analytics-admin": ["google"],
     "google-auth": ["google"],
     "google-cloud-storage": ["google"],
-    "protobuf": ["google"],
+    "google-auth-oauthlib": ["google_auth_oauthlib"],
     "google-api-python-client": ["googleapiclient"],
     "ibm-cos-sdk": ["ibm_boto3", "ibm_botocore"],
     "binance-connector": ["binance"],
@@ -303,7 +353,7 @@ def check_requirements_imports():
 
     # Run against the main codebase
     errors = run_deptry(
-        ','.join([MAIN_REQS_PATH]),
+        ','.join([MAIN_REQS_PATH] + UTILITIES_REQS_PATHS),
         get_ignores_str(MAIN_RULE_IGNORES),
         ".",
         f"--extend-exclude \"{'|'.join(MAIN_EXCLUDE_PATHS)}\"",

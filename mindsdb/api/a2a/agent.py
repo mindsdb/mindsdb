@@ -2,8 +2,6 @@ import json
 import asyncio
 from typing import Any, AsyncIterable, Dict, Optional, List
 import requests
-import aiohttp
-import os
 import logging
 
 logger = logging.getLogger(__name__)

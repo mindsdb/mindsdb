@@ -14,7 +14,6 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-import time
 import uuid
 from typing import Iterator, Optional
 import logging

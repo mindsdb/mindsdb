@@ -10,7 +10,7 @@ import concurrent.futures
 from typing import Text, Tuple, Dict, List, Optional, Any
 import openai
 from openai.types.fine_tuning import FineTuningJob
-from openai import OpenAI, AzureOpenAI, NotFoundError, AuthenticationError
+from openai import NotFoundError, AuthenticationError
 import numpy as np
 import pandas as pd
 
@@ -92,7 +92,7 @@ class OpenAIHandler(BaseMLEngine):
             OpenAIHandler._check_client_connection(client)
 
     @staticmethod
-    def _check_client_connection(client: OpenAI) -> None:
+    def _check_client_connection(client: openai.OpenAI) -> None:
         """
         Check the OpenAI engine client connection by retrieving a model.
 
@@ -1117,7 +1117,7 @@ class OpenAIHandler(BaseMLEngine):
         }
         return {**ft_params, **extra_params}
 
-    def _ft_call(self, ft_params: Dict, client: OpenAI, hour_budget: int) -> Tuple[FineTuningJob, Text]:
+    def _ft_call(self, ft_params: Dict, client: openai.OpenAI, hour_budget: int) -> Tuple[FineTuningJob, Text]:
         """
         Submit a fine-tuning job via the OpenAI API.
         This method handles requests to both the legacy and new endpoints.
@@ -1179,7 +1179,7 @@ class OpenAIHandler(BaseMLEngine):
         return ft_stats, result_file_id
 
     @staticmethod
-    def _get_client(api_key: Text, base_url: Text, org: Optional[Text] = None, args: dict = None) -> OpenAI:
+    def _get_client(api_key: Text, base_url: Text, org: Optional[Text] = None, args: dict = None) -> openai.OpenAI:
         """
         Get an OpenAI client with the given API key, base URL, and organization.
 
@@ -1192,10 +1192,10 @@ class OpenAIHandler(BaseMLEngine):
             openai.OpenAI: OpenAI client.
         """
         if args is not None and args.get('provider') == 'azure':
-            return AzureOpenAI(
+            return openai.AzureOpenAI(
                 api_key=api_key,
                 azure_endpoint=base_url,
                 api_version=args.get('api_version'),
                 organization=org
             )
-        return OpenAI(api_key=api_key, base_url=base_url, organization=org)
+        return openai.OpenAI(api_key=api_key, base_url=base_url, organization=org)

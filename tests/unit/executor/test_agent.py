@@ -1,6 +1,6 @@
 import time
 import os
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, Mock
 import threading
 import json
 
@@ -245,10 +245,7 @@ class TestAgent(BaseExecutorDummyML):
     @patch('openai.OpenAI')
     def test_agent_retrieval(self, mock_openai):
 
-        mock_openai_client = MagicMock()
-        mock_openai_client.models.retrieve.return_value = MagicMock()
-
-        mock_openai.return_value = mock_openai_client
+        mock_openai().models.list().data = [Mock(id='text-embedding-ada-002')]
 
         self.run_sql('''
             create knowledge base kb_review

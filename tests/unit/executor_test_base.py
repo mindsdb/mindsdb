@@ -7,6 +7,7 @@ import tempfile
 import time
 from unittest import mock
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
 
 import duckdb
 import numpy as np
@@ -218,6 +219,10 @@ class BaseExecutorTest(BaseUnitTest):
         from mindsdb.api.executor.command_executor import (
             ExecuteCommands,
         )
+
+        cache_patcher = mock.patch("mindsdb.integrations.libs.process_cache.ProcessPoolExecutor", ThreadPoolExecutor)
+        cache_patcher.__enter__()
+
         # clear cache of previous test case to apply mocks of current test case
         from mindsdb.integrations.libs.process_cache import process_cache
         process_cache.cache = {}

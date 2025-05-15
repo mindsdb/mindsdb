@@ -32,7 +32,10 @@ class VariablesController:
         return self._data
 
     def get_value(self, name: str):
-        return self._get_data()[name]
+        data = self._get_data()
+        if name not in data:
+            raise ValueError(f"Variable {name} is not defined")
+        return data[name]
 
     def set_value(self, name: str, value):
         data = self._get_data()

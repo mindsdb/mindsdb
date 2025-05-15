@@ -17,6 +17,7 @@ import sys
 import time
 import uuid
 from typing import Iterator, Optional
+import logging
 
 import requests
 
@@ -27,43 +28,36 @@ DEFAULT_PORT = 10002
 # Helper functions
 ###############################################################################
 
-def _print_json(obj: dict, *, prefix: str = "", file=sys.stdout) -> None:
-    """Pretty-print JSON helper."""
-    print(prefix + json.dumps(obj, indent=2), file=file)
+def _log_json(log_func, obj: dict, *, prefix: str = "") -> None:
+    """Log JSON helper."""
+    log_func(prefix + json.dumps(obj, indent=2))
 
 
 def get_agent_info(
     a2a_host: str = DEFAULT_HOST,
     a2a_port: int = DEFAULT_PORT,
-    *,
-    verbose: bool = False,
 ) -> Optional[dict]:
     """Retrieve the agent card from `/.well-known/agent.json` (or legacy path)."""
 
     url = f"http://{a2a_host}:{a2a_port}/.well-known/agent.json"
 
-    if verbose:
-        print(f"Fetching agent info from {url} …")
+    logging.debug(f"Fetching agent info from {url} …")
 
     try:
         response = requests.get(url, timeout=10)
         if response.status_code == 404:
             legacy_url = f"http://{a2a_host}:{a2a_port}/agent-card"
-            if verbose:
-                print("Not found, trying legacy path", legacy_url)
+            logging.debug(f"Not found, trying legacy path {legacy_url}")
             response = requests.get(legacy_url, timeout=10)
 
         if response.ok:
             card = response.json()
-            if verbose:
-                _print_json(card, prefix="Received agent card:\n")
+            _log_json(logging.debug, card, prefix="Received agent card:\n")
             return card
 
-        if verbose:
-            print("Failed to fetch agent card – status:", response.status_code)
+        logging.debug(f"Failed to fetch agent card – status: {response.status_code}")
     except requests.RequestException as exc:
-        if verbose:
-            print("Connection error while fetching agent card:", exc)
+        logging.debug(f"Connection error while fetching agent card: {exc}")
 
     return None
 
@@ -92,7 +86,6 @@ def send_a2a_query(
     *,
     a2a_host: str = DEFAULT_HOST,
     a2a_port: int = DEFAULT_PORT,
-    verbose: bool = False,
 ) -> bool:
     """Send a *blocking* `tasks/send` request and print the result."""
 
@@ -116,55 +109,52 @@ def send_a2a_query(
     }
 
     url = f"http://{a2a_host}:{a2a_port}/a2a"
-    if verbose:
-        print("POST", url)
-        _print_json(payload, prefix="Request →\n")
-    else:
-        print("Sending query …")
+    logging.debug(f"POST {url}")
+    _log_json(logging.debug, payload, prefix="Request →\n")
+    logging.info("Sending query …")
 
     try:
         response = _post_json(url, payload)
     except requests.RequestException as exc:
-        print("⚠️  Network error:", exc)
+        logging.error(f"⚠️  Network error: {exc}")
         return False
 
     if not response.ok:
-        print(f"⚠️  HTTP {response.status_code}\n{response.text}")
+        logging.error(f"⚠️  HTTP {response.status_code}\n{response.text}")
         return False
 
     try:
         data = response.json()
     except ValueError:
-        print("⚠️  Invalid JSON response:", response.text[:200])
+        logging.error(f"⚠️  Invalid JSON response: {response.text[:200]}")
         return False
 
-    if verbose:
-        _print_json(data, prefix="Full response ←\n")
+    _log_json(logging.debug, data, prefix="Full response ←\n")
 
     if "error" in data:
-        print("⚠️  RPC error:", data["error"].get("message"))
+        logging.error(f"⚠️  RPC error: {data['error'].get('message')}")
         return False
 
     result = data.get("result")
     if not result:
-        print("⚠️  No result field in response")
+        logging.error("⚠️  No result field in response")
         return False
 
     # Print status/"thinking" message
     status = result.get("status", {})
     msg_parts = status.get("message", {}).get("parts", [])
     if msg_parts:
-        print("\nAgent thinking:")
-        _print_parts(msg_parts)
+        logging.info("\nAgent thinking:")
+        _log_parts(logging.info, msg_parts)
 
     # Print artifacts (agent answer)
     artifacts = result.get("artifacts") or []
     if artifacts:
-        print("\nAgent response:")
+        logging.info("\nAgent response:")
         for artifact in artifacts:
-            _print_parts(artifact.get("parts", []))
+            _log_parts(logging.info, artifact.get("parts", []))
     else:
-        print("(No artifacts returned)")
+        logging.info("(No artifacts returned)")
 
     return True
 
@@ -200,7 +190,6 @@ def send_streaming_query(
     *,
     a2a_host: str = DEFAULT_HOST,
     a2a_port: int = DEFAULT_PORT,
-    verbose: bool = False,
 ) -> bool:
     """Send a `tasks/sendSubscribe` request and stream responses as they arrive."""
 
@@ -224,21 +213,20 @@ def send_streaming_query(
     }
 
     url = f"http://{a2a_host}:{a2a_port}/a2a"
-    if verbose:
-        print("POST (stream)", url)
-        _print_json(payload, prefix="Request →\n")
+    logging.debug(f"POST (stream) {url}")
+    _log_json(logging.debug, payload, prefix="Request →\n")
 
     try:
         response = _post_json(url, payload, stream=True)
     except requests.RequestException as exc:
-        print("⚠️  Network error:", exc)
+        logging.error(f"⚠️  Network error: {exc}")
         return False
 
     if not response.ok:
-        print(f"⚠️  HTTP {response.status_code}\n{response.text}")
+        logging.error(f"⚠️  HTTP {response.status_code}\n{response.text}")
         return False
 
-    print("Streaming events (Ctrl-C to abort):")
+    logging.info("Streaming events (Ctrl-C to abort):")
 
     try:
         event_lines: list[str] = []
@@ -247,11 +235,11 @@ def send_streaming_query(
                 event = _parse_sse_event(event_lines)
                 event_lines.clear()
                 if event is not None:
-                    _handle_stream_event(event, verbose=verbose)
+                    _handle_stream_event(event)
                 continue
             event_lines.append(line)
     except KeyboardInterrupt:
-        print("\nInterrupted by user.")
+        logging.info("\nInterrupted by user.")
         return False
 
     return True
@@ -260,16 +248,16 @@ def send_streaming_query(
 # Output helpers
 ###############################################################################
 
-def _print_parts(parts: list[dict]) -> None:
+def _log_parts(log_func, parts: list[dict]) -> None:
     for part in parts:
         if part.get("type") == "text":
-            print(part.get("text", ""))
+            log_func(part.get("text", ""))
         elif part.get("type") == "data":
-            print("\nStructured data:")
-            _print_json(part.get("data", {}))
+            log_func("\nStructured data:")
+            _log_json(log_func, part.get("data", {}))
 
 
-def _handle_stream_event(event: dict, *, verbose: bool = False) -> None:
+def _handle_stream_event(event: dict) -> None:
     """Handle a single SSE event parsed as JSON.
 
     The server sends JSON-RPC messages of the form::
@@ -281,9 +269,11 @@ def _handle_stream_event(event: dict, *, verbose: bool = False) -> None:
     on their keys.
     """
 
-    # In verbose mode we just dump the event for inspection
-    if verbose:
-        _print_json(event, prefix="Event ← ")
+    # If logging level is DEBUG, log the raw event and mimic the original 'return' behavior
+    if logging.getLogger().isEnabledFor(logging.DEBUG):
+        _log_json(logging.debug, event, prefix="Raw Event (DEBUG) ← ")
+        # This return mimics the original behavior where verbose mode would
+        # print the raw event and skip further processing for this event.
         return
 
     # If the server uses an older "typed" envelope just keep legacy handling
@@ -293,20 +283,20 @@ def _handle_stream_event(event: dict, *, verbose: bool = False) -> None:
             message = event.get("status", {}).get("message", {})
             parts = message.get("parts", [])
             if parts:
-                _print_parts(parts)
+                _log_parts(logging.info, parts)
         elif etype == "artifact":
             artifacts = event.get("artifacts") or []
             for artifact in artifacts:
-                _print_parts(artifact.get("parts", []))
+                _log_parts(logging.info, artifact.get("parts", []))
         elif etype == "end":
-            print("\n[stream end]")
+            logging.info("\n[stream end]")
         return
 
     # ---- New A2A 0.2 style messages ---------------------------------------
     # Extract "result" or "error" from the JSON-RPC envelope.
     if "error" in event:
         err = event["error"]
-        print("RPC error:", err.get("message"))
+        logging.error(f"RPC error: {err.get('message')}")
         return
 
     result = event.get("result")
@@ -319,17 +309,17 @@ def _handle_stream_event(event: dict, *, verbose: bool = False) -> None:
         message = result["status"].get("message", {})
         parts = message.get("parts", [])
         if parts:
-            _print_parts(parts)
+            _log_parts(logging.info, parts)
 
         # If final flag present we can acknowledge.
         if result.get("final"):
-            print("\n[completed]")
+            logging.info("\n[completed]")
         return
 
     # Artifact update? (TaskArtifactUpdateEvent)
     if "artifact" in result:
         artifact = result["artifact"]
-        _print_parts(artifact.get("parts", []))
+        _log_parts(logging.info, artifact.get("parts", []))
         return
 
 ###############################################################################
@@ -361,22 +351,32 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
 
+    # Configure logging
+    log_level = logging.DEBUG if args.verbose else logging.INFO
+    logging.basicConfig(
+        format='%(message)s',
+        level=log_level,
+        stream=sys.stdout
+    )
+    if args.verbose:
+        logging.debug("Verbose mode enabled.")
+
     # 1. Always fetch agent-card first (helps verify server is live)
-    agent_info = get_agent_info(args.host, args.port, verbose=args.verbose)
+    agent_info = get_agent_info(args.host, args.port)
     if agent_info is None:
-        print("⚠️  Could not retrieve agent info – abort")
+        logging.critical("⚠️  Could not retrieve agent info – abort")
         sys.exit(1)
 
     if not args.query:
         # Enter interactive REPL style mode
-        print("Interactive mode – type 'exit' or Ctrl-D to quit.")
+        logging.info("Interactive mode – type 'exit' or Ctrl-D to quit.")
         try:
             while True:
                 try:
                     user_input = input("> ").strip()
                 except EOFError:
                     # Ctrl-D
-                    print()
+                    logging.info("")
                     break
 
                 if user_input.lower() in {"exit", "quit"}:
@@ -390,32 +390,30 @@ def main(argv: list[str] | None = None) -> None:
                         user_input,
                         a2a_host=args.host,
                         a2a_port=args.port,
-                        verbose=args.verbose,
                     )
                     if args.stream
                     else send_a2a_query(
                         user_input,
                         a2a_host=args.host,
                         a2a_port=args.port,
-                        verbose=args.verbose,
                     )
                 )
 
                 # Add separator between queries
                 if ok:
-                    print("\n" + "—" * 30)
+                    logging.info("\n" + "—" * 30)
         except KeyboardInterrupt:
             # Ctrl-C to exit
-            print()
+            logging.info("")
         sys.exit(0)
 
     # Single query passed via CLI
-    query = " ".join(args.query)
+    query_str = " ".join(args.query)
 
     ok = (
-        send_streaming_query(query, a2a_host=args.host, a2a_port=args.port, verbose=args.verbose)
+        send_streaming_query(query_str, a2a_host=args.host, a2a_port=args.port)
         if args.stream
-        else send_a2a_query(query, a2a_host=args.host, a2a_port=args.port, verbose=args.verbose)
+        else send_a2a_query(query_str, a2a_host=args.host, a2a_port=args.port)
     )
 
     sys.exit(0 if ok else 2)

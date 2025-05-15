@@ -20,7 +20,7 @@ class JiraProjectsTable(APIResource):
         targets: List[str] = None,
         **kwargs
     ) -> pd.DataFrame:
-        client = self.handler.connect()
+        client: Jira = self.handler.connect()
 
         projects = []
         for condition in conditions:
@@ -66,10 +66,9 @@ class JiraIssuesTable(APIResource):
         targets: List[str] = None,
         **kwargs
     ) -> pd.DataFrame:
-        client = self.handler.connect()
+        client: Jira = self.handler.connect()
 
         issues = []
-        are_conditions_valid = False
         for condition in conditions:
             if condition.column in ('id', 'key'): 
                 if condition.op == FilterOperator.EQUAL:
@@ -77,26 +76,21 @@ class JiraIssuesTable(APIResource):
                 elif condition.op == FilterOperator.IN:
                     issues = [client.get_issue(issue_id) for issue_id in condition.value]
                 condition.applied = True
-                are_conditions_valid = True
 
             elif condition.column in ('project_id', 'project_key', 'project_name'):
                 if condition.op == FilterOperator.EQUAL:
                     issues = client.get_all_project_issues(condition.value, limit=limit)
                 elif condition.op == FilterOperator.IN:
                     for project_id in condition.value:
-                        if limit:
-                            # NOTE: Does this have a limit? Paging?
-                            issues.extend(client.get_all_project_issues(project_id, limit=limit - len(issues)))
-                            if len(issues) >= limit:
-                                break
-                        else:
-                            issues.extend(client.get_all_project_issues(project_id))
+                        issues.extend(client.get_all_project_issues(project_id, limit=limit))
 
                 condition.applied = True
-                are_conditions_valid = True
-
-        if not are_conditions_valid:
-            raise ValueError("Either the issue 'id', 'key' or one of 'project_id', 'project_key', 'project_name' must be provided.")
+                
+        if not issues:
+            # NOTE: Does this have a limit? Paging?
+            project_ids = [project['id'] for project in client.get_all_projects()]
+            for project_id in project_ids:
+                issues.extend(self._get_project_issues_with_limit(client, project_id, limit=limit, current_issues=issues))
 
         if issues:
             issues_df = self.normalize(issues)
@@ -105,6 +99,20 @@ class JiraIssuesTable(APIResource):
 
         return issues_df
     
+    def _get_project_issues_with_limit(self, client: Jira, project_id, limit=None, current_issues=None):
+        """
+        Helper to get issues from a project, respecting the limit.
+        """
+        if current_issues is None:
+            current_issues = []
+        if limit:
+            remaining = limit - len(current_issues)
+            if remaining <= 0:
+                return []
+            return client.get_all_project_issues(project_id, limit=remaining)
+        else:
+            return client.get_all_project_issues(project_id)
+
     def normalize(self, issues: dict) -> pd.DataFrame:
         issues_df = pd.json_normalize(issues)
         issues_df.rename(

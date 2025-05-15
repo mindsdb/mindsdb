@@ -50,6 +50,7 @@ class BaseUnitTest:
         config = {"storage_db": "sqlite:///" + cls.db_file}
         # config temp file
         fdi, cfg_file = tempfile.mkstemp(prefix="mindsdb_conf_")
+        cls.cfg_file = cfg_file
 
         with os.fdopen(fdi, "w") as fd:
             json.dump(config, fd)
@@ -76,13 +77,12 @@ class BaseUnitTest:
             mp_patcher = mock.patch("multiprocessing.get_context").__enter__()
             mp_patcher.side_effect = lambda x: dummy
 
-        os.unlink(cfg_file)
-
     @staticmethod
     def teardown_class(cls):
         # remove tmp db file
         cls.db.session.close()
         try:
+            os.unlink(cls.cfg_file)
             os.unlink(cls.db_file)
         except PermissionError as e:
             logger.warning('Unable to clean up temporary database file: %s', str(e))

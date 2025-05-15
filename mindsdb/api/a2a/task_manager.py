@@ -26,17 +26,32 @@ logger = logging.getLogger(__name__)
 
 
 class AgentTaskManager(InMemoryTaskManager):
-    def __init__(self, agent: MindsDBAgent):
+
+    def __init__(self, project_name: str, mindsdb_host: str, mindsdb_port: int):
         super().__init__()
-        self.agent = agent
+        self.project_name = project_name
+        self.mindsdb_host = mindsdb_host
+        self.mindsdb_port = mindsdb_port
+
+    def _create_agent(self, agent_name: str) -> MindsDBAgent:
+        """Create a new MindsDBAgent instance for the given agent name."""
+        return MindsDBAgent(
+            agent_name=agent_name,
+            project_name=self.project_name,
+            host=self.mindsdb_host,
+            port=self.mindsdb_port,
+        )
 
     async def _stream_generator(
         self, request: SendTaskStreamingRequest
     ) -> AsyncIterable[SendTaskStreamingResponse] | JSONRPCResponse:
         task_send_params: TaskSendParams = request.params
         query = self._get_user_query(task_send_params)
+        agent_name = task_send_params.message.metadata.get('agent_name', 'my_agent')
+        agent = self._create_agent(agent_name)
+        
         try:
-            async for item in self.agent.stream(query, task_send_params.sessionId):
+            async for item in agent.stream(query, task_send_params.sessionId):
                 is_task_complete = item["is_task_complete"]
                 parts = item["parts"]
 
@@ -136,8 +151,11 @@ class AgentTaskManager(InMemoryTaskManager):
     async def _invoke(self, request: SendTaskRequest) -> SendTaskResponse:
         task_send_params: TaskSendParams = request.params
         query = self._get_user_query(task_send_params)
+        agent_name = task_send_params.message.metadata.get('agent_name', 'my_agent')
+        agent = self._create_agent(agent_name)
+        
         try:
-            result = self.agent.invoke(query, task_send_params.sessionId)
+            result = agent.invoke(query, task_send_params.sessionId)
 
             # Use the parts from the agent response if available, or create them
             if "parts" in result:

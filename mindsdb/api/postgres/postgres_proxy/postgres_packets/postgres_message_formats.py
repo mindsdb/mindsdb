@@ -1,6 +1,5 @@
 from typing import BinaryIO, Sequence, Dict, Type
 
-from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatementParser
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_fields import PostgresField
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_message import PostgresMessage
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_message_identifiers import \
@@ -8,6 +7,7 @@ from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_message_ident
 
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_packets import PostgresPacketReader
 from mindsdb.api.postgres.postgres_proxy.utilities import strip_null_byte
+from mindsdb.utilities.sql import clear_sql
 
 
 # All docstrings for Messages are taken from
@@ -507,7 +507,7 @@ class Query(PostgresMessage):
             raise Exception(f'SQL contains non {encoding} values: {self.sql}')
         # Remove null bytes from end of sql statement. This is important.
         sql = strip_null_byte(sql)
-        sql = SqlStatementParser.clear_sql(sql)
+        sql = clear_sql(sql)
         return sql
 
 

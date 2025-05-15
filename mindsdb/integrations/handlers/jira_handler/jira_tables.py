@@ -148,3 +148,50 @@ class JiraIssuesTable(APIResource):
             "status",
         ]
 
+
+class JiraUsersTable(APIResource):
+    def list(
+        self,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        sort: List[SortColumn] = None,
+        targets: List[str] = None,
+        **kwargs
+    ) -> pd.DataFrame:
+        client: Jira = self.handler.connect()
+
+        users = []
+        for condition in conditions:
+            if condition.column == 'accountId': 
+                if condition.op == FilterOperator.EQUAL:
+                    users = [client.user(account_id=condition.value)]
+                elif condition.op == FilterOperator.IN:
+                    users = [client.user(account_id=accountId) for accountId in condition.value]
+                else:
+                    raise ValueError(f"Unsupported operator {condition.op} for column {condition.column}.")
+                condition.applied = True
+
+        if not users:
+            if limit:
+                users = client.users_get_all(limit=limit)
+            else:
+                users = client.users_get_all()
+
+        if users:
+            users_df = pd.DataFrame(users)
+            users_df = users_df[self.get_columns()]
+        else:
+            users_df = pd.DataFrame([], columns=self.get_columns())
+
+        return users_df
+
+    def get_columns(self) -> List[str]:
+        return [
+            "accountId",
+            "accountType",
+            "emailAddress",
+            "displayName",
+            "active",
+            "timeZone",
+            "locale",
+        ]

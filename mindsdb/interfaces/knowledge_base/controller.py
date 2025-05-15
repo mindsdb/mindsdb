@@ -146,13 +146,13 @@ class KnowledgeBaseTable:
 
         db_handler = self.get_vector_db()
 
-        # Copy query for complex execution via DuckDB: DISTINCT, GROUP BY etc.
-        query_copy = copy.deepcopy(query)
-
         logger.debug("Replaced content with embeddings in where clause")
         # set table name
         query.from_table = Identifier(parts=[self._kb.vector_database_table])
         logger.debug(f"Set table name to: {self._kb.vector_database_table}")
+
+        # Copy query for complex execution via DuckDB: DISTINCT, GROUP BY etc.
+        query_copy = copy.deepcopy(query)
 
         query.targets = [
             Identifier(TableField.ID.value),

@@ -18,7 +18,7 @@ from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
 from .constants import ASSISTANT_COLUMN, SUPPORTED_PROVIDERS, PROVIDER_TO_MODELS
 from .langchain_agent import get_llm_provider
-from .crewai_pipeline import CrewAITextToSQLPipeline, CrewAIAgentManager
+from .crewai_pipeline import CrewAITextToSQLPipeline
 
 
 default_project = config.get('default_project')
@@ -401,7 +401,7 @@ class AgentsController:
         '''
         if project_name is None:
             project_name = default_project
-            
+
         project = self.project_controller.get(name=project_name)
         agent = self.get_agent(name, project_name)
 
@@ -410,20 +410,19 @@ class AgentsController:
 
         if provider.lower() != 'openai':
             raise ValueError(f'Provider {provider} is not supported for CrewAI agents. Only "openai" is supported.')
-            
+
         # Set default parameters if not provided
         if 'verbose' not in params:
             params['verbose'] = True
         if 'max_tokens' not in params:
             params['max_tokens'] = 2000
-        
+
         # Store CrewAI type in params
         params['agent_type'] = 'crewai'
-        
+
         # Store tables and knowledge bases in params
         params['tables'] = tables or []
         params['knowledge_bases'] = knowledge_bases or []
-            
         agent = db.Agents(
             name=name,
             project_id=project.id,
@@ -438,7 +437,7 @@ class AgentsController:
         db.session.commit()
 
         return agent
-        
+
     def get_completion_crewai(
             self,
             agent: db.Agents,
@@ -460,15 +459,14 @@ class AgentsController:
         """
         if not agent.params.get('agent_type') == 'crewai':
             raise ValueError(f'Agent {agent.name} is not a CrewAI agent')
-            
+
         # Check for API key in agent parameters using both common parameter names
         api_key = agent.params.get('api_key')
-        
+
         # If not in agent params, check configuration
         if not api_key:
             api_key = config.get('openai', {}).get('api_key')
 
-        
         # Convert the user_query to a proper format if it's in JSON format
         import json
         try:
@@ -480,7 +478,7 @@ class AgentsController:
         except (json.JSONDecodeError, TypeError):
             # If not JSON, just use the raw query
             pass
-        
+
         # Create the CrewAI pipeline
         pipeline = CrewAITextToSQLPipeline(
             tables=agent.params.get('tables', []),
@@ -490,19 +488,19 @@ class AgentsController:
             verbose=agent.params.get('verbose', True),
             max_tokens=agent.params.get('max_tokens', 2000)
         )
-        
+
         # Process the query
         result = pipeline.process_query(user_query)
-        
+
         # Convert the result to a DataFrame for compatibility with MindsDB SQL interface
         import pandas as pd
-        
+
         # Format the result data as a DataFrame
         # Use the column names expected by MindsDB - typically 'output' for the result
         df = pd.DataFrame({
             'output': [result['result']],
         })
-        
+
         return df
 
     def get_completion(
@@ -523,8 +521,7 @@ class AgentsController:
             stream (bool): Whether to stream the response
 
         Returns:
-            response (Union[Iterator[object], pd.DataFrame, Dict[str, Any]]): 
-                Completion as DataFrame, iterator of chunks, or dict for CrewAI
+            response (Union[Iterator[object], pd.DataFrame, Dict[str, Any]]):  Completion as DataFrame, iterator of chunks, or dict for CrewAI
 
         Raises:
             ValueError: Agent's model does not exist.
@@ -533,7 +530,7 @@ class AgentsController:
         if agent.params and agent.params.get('agent_type') == 'crewai':
             # For CrewAI agents, extract the user query
             user_query = None
-            
+
             # First check if the last message is a user message
             if messages and len(messages) > 0:
                 last_message = messages[-1]
@@ -543,7 +540,6 @@ class AgentsController:
                         if field in last_message:
                             user_query = last_message[field]
                             break
-                    
                     # If we still don't have a query and there's a role field
                     if user_query is None and 'role' in last_message and last_message['role'] == 'user':
                         # Try to find any string value to use as query
@@ -551,7 +547,7 @@ class AgentsController:
                             if isinstance(value, str) and key != 'role':
                                 user_query = value
                                 break
-            
+
             # If we couldn't extract a query from messages but have a DataFrame in messages
             if user_query is None and isinstance(messages, pd.DataFrame):
                 # Try to find the query in any common column names
@@ -562,15 +558,15 @@ class AgentsController:
                         if not values.empty:
                             user_query = values.iloc[0]
                             break
-            
+
             # If we still don't have a query, try to extract from any string in messages
             if user_query is None:
                 # Just use the string representation as a last resort
                 user_query = str(messages)
-            
+
             # Process the query with CrewAI
             return self.get_completion_crewai(agent, user_query, project_name)
-                
+
         # Handle regular LangChain agents
         if stream:
             return self._get_completion_stream(

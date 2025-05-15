@@ -1469,7 +1469,6 @@ class ExecuteCommands:
 
         skills = statement.params.pop('skills', [])
         provider = statement.params.pop('provider', None)
-        
         # Check if this is a CrewAI agent
         agent_type = statement.params.get('agent_type', '')
         if agent_type == 'crewai':

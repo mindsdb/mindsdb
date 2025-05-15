@@ -232,6 +232,12 @@ class SQLAgent:
             table_identifier = tables_idx.get(tuple(table_parts))
 
             if table_identifier is None:
+                # If the entire table name is enclosed in backticks, raise an error by mentioning this.
+                if len(table_parts) == 1 and (table_name.startswith('`') and table_name.endswith('`') and table_name.count('`') == 2):
+                    raise ValueError(
+                        "Only the table name should be enclosed in backticks.\n"
+                        "Do not include the database or schema inside the backticks."
+                    )
                 raise ValueError(f"Table {table_name} not found in the database")
             tables.append(table_identifier)
 

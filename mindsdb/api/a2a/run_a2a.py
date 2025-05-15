@@ -70,9 +70,6 @@ def main():
         if '--mindsdb-port' not in ' '.join(sys_argv) and a2a_config.get('mindsdb_port'):
             sys_argv.extend(['--mindsdb-port', str(a2a_config['mindsdb_port'])])
 
-        if '--agent-name' not in ' '.join(sys_argv) and a2a_config.get('agent_name'):
-            sys_argv.extend(['--agent-name', a2a_config['agent_name']])
-
         if '--project-name' not in ' '.join(sys_argv) and a2a_config.get('project_name'):
             sys_argv.extend(['--project-name', a2a_config['project_name']])
 

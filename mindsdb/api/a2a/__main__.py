@@ -26,7 +26,6 @@ logging.basicConfig(
 @click.option("--port", default=10002, help="A2A server port", type=int)
 @click.option("--mindsdb-host", default="localhost", help="MindsDB server host")
 @click.option("--mindsdb-port", default=47334, help="MindsDB server port", type=int)
-@click.option("--agent-name", default="my_agent", help="MindsDB agent name to connect to")
 @click.option("--project-name", default="mindsdb", help="MindsDB project name")
 @click.option(
     "--log-level",
@@ -39,7 +38,6 @@ def main(
     port: int,
     mindsdb_host: str,
     mindsdb_port: int,
-    agent_name: str,
     project_name: str,
     log_level: str,
 ):
@@ -53,53 +51,48 @@ def main(
 
     try:
         logger.info(
-            "Starting MindsDB A2A connector on http://%s:%s (project=%s, agent=%s)",
+            "Starting MindsDB A2A connector on http://%s:%s (project=%s)",
             host,
             port,
             project_name,
-            agent_name,
         )
 
-        # --- 1. Initialise MindsDB agent helper ---------------------------------
-        mindsdb_agent = MindsDBAgent(
-            agent_name=agent_name,
-            project_name=project_name,
-            host=mindsdb_host,
-            port=mindsdb_port,
-        )
-
-        # --- 2. Prepare A2A artefacts (agent card & task-manager) --------------
+        # --- 1. Prepare A2A artefacts (agent card & task-manager) --------------
         capabilities = AgentCapabilities(streaming=True)
         skill = AgentSkill(
             id="mindsdb_query",
             name="MindsDB Query",
-            description=f"Executes natural-language queries via MindsDB agent '{agent_name}'.",
+            description="Executes natural-language queries via MindsDB agents.",
             tags=["database", "mindsdb", "query", "analytics"],
             examples=[
                 "What trends exist in my sales data?",
                 "Generate insights from the support tickets dataset.",
             ],
-            inputModes=mindsdb_agent.SUPPORTED_CONTENT_TYPES,
-            outputModes=mindsdb_agent.SUPPORTED_CONTENT_TYPES,
+            inputModes=MindsDBAgent.SUPPORTED_CONTENT_TYPES,
+            outputModes=MindsDBAgent.SUPPORTED_CONTENT_TYPES,
         )
 
         agent_card = AgentCard(
-            name=f"MindsDB {agent_name} Connector",
+            name="MindsDB Agent Connector",
             description=(
-                "A2A connector that proxies requests to a MindsDB agent "
-                f"'{project_name}.{agent_name}'."
+                "A2A connector that proxies requests to MindsDB agents "
+                f"in project '{project_name}'."
             ),
             url=f"http://{host}:{port}",
             version="1.0.0",
-            defaultInputModes=mindsdb_agent.SUPPORTED_CONTENT_TYPES,
-            defaultOutputModes=mindsdb_agent.SUPPORTED_CONTENT_TYPES,
+            defaultInputModes=MindsDBAgent.SUPPORTED_CONTENT_TYPES,
+            defaultOutputModes=MindsDBAgent.SUPPORTED_CONTENT_TYPES,
             capabilities=capabilities,
             skills=[skill],
         )
 
-        task_manager = AgentTaskManager(agent=mindsdb_agent)
+        task_manager = AgentTaskManager(
+            project_name=project_name,
+            mindsdb_host=mindsdb_host,
+            mindsdb_port=mindsdb_port,
+        )
 
-        # --- 3. Start A2A server ----------------------------------------------
+        # --- 2. Start A2A server ----------------------------------------------
         logger.info("Starting A2A server…")
         server = A2AServer(
             agent_card=agent_card,

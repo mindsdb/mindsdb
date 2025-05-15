@@ -24,9 +24,6 @@ from langchain_core.messages.base import BaseMessage
 from langchain_core.prompts import PromptTemplate
 from langchain_core.tools import Tool
 
-from mindsdb.integrations.handlers.openai_handler.constants import (
-    CHAT_MODELS as OPEN_AI_CHAT_MODELS,
-)
 from mindsdb.integrations.libs.llm.utils import get_llm_config
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
@@ -42,7 +39,8 @@ from .callback_handlers import LogCallbackHandler, ContextCaptureCallback
 from .langfuse_callback_handler import LangfuseCallbackHandler, get_skills
 from .safe_output_parser import SafeOutputParser
 
-from .constants import (
+from mindsdb.interfaces.agents.constants import (
+    OPEN_AI_CHAT_MODELS,
     DEFAULT_AGENT_TIMEOUT_SECONDS,
     DEFAULT_AGENT_TYPE,
     DEFAULT_EMBEDDINGS_MODEL_PROVIDER,

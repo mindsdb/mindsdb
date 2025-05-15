@@ -100,7 +100,7 @@ class TaskStatusUpdateEvent(BaseModel):
 
 class TaskArtifactUpdateEvent(BaseModel):
     id: str
-    artifact: Artifact    
+    artifact: Artifact
     metadata: dict[str, Any] | None = None
 
 
@@ -141,7 +141,7 @@ class TaskPushNotificationConfig(BaseModel):
     pushNotificationConfig: PushNotificationConfig
 
 
-## RPC Messages
+# RPC Messages
 
 
 class JSONRPCMessage(BaseModel):
@@ -239,7 +239,7 @@ A2ARequest = TypeAdapter(
     ]
 )
 
-## Error types
+# Error types
 
 
 class JSONParseError(JSONRPCError):

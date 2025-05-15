@@ -21,11 +21,11 @@ from agent import MindsDBAgent
 import common.server.utils as utils
 from typing import Union
 import logging
+
 logger = logging.getLogger(__name__)
 
 
 class AgentTaskManager(InMemoryTaskManager):
-
     def __init__(self, agent: MindsDBAgent):
         super().__init__()
         self.agent = agent
@@ -51,13 +51,22 @@ class AgentTaskManager(InMemoryTaskManager):
                         status=task_status,
                         final=False,
                     )
-                    yield SendTaskStreamingResponse(id=request.id, result=task_update_event)
+                    yield SendTaskStreamingResponse(
+                        id=request.id, result=task_update_event
+                    )
                 else:
                     task_state = TaskState.COMPLETED
                     artifact = Artifact(parts=parts, index=0, append=False)
                     task_status = TaskStatus(state=task_state)
-                    yield SendTaskStreamingResponse(id=request.id, result=TaskArtifactUpdateEvent(id=task_send_params.id, artifact=artifact))
-                    await self._update_store(task_send_params.id, task_status, [artifact])
+                    yield SendTaskStreamingResponse(
+                        id=request.id,
+                        result=TaskArtifactUpdateEvent(
+                            id=task_send_params.id, artifact=artifact
+                        ),
+                    )
+                    await self._update_store(
+                        task_send_params.id, task_status, [artifact]
+                    )
                     yield SendTaskStreamingResponse(
                         id=request.id,
                         result=TaskStatusUpdateEvent(
@@ -65,8 +74,8 @@ class AgentTaskManager(InMemoryTaskManager):
                             status=TaskStatus(
                                 state=task_status.state,
                             ),
-                            final=True
-                        )
+                            final=True,
+                        ),
                     )
 
         except Exception as e:
@@ -139,11 +148,13 @@ class AgentTaskManager(InMemoryTaskManager):
 
                 # Check if we have structured data
                 if "data" in result and result["data"]:
-                    parts.append({
-                        "type": "data",
-                        "data": result["data"],
-                        "metadata": {"subtype": "json"}
-                    })
+                    parts.append(
+                        {
+                            "type": "data",
+                            "data": result["data"],
+                            "metadata": {"subtype": "json"},
+                        }
+                    )
         except Exception as e:
             logger.error(f"Error invoking agent: {e}")
             result_text = f"Error invoking agent: {e}"
@@ -152,9 +163,7 @@ class AgentTaskManager(InMemoryTaskManager):
         task_state = TaskState.COMPLETED
         task = await self._update_store(
             task_send_params.id,
-            TaskStatus(
-                state=task_state, message=Message(role="agent", parts=parts)
-            ),
+            TaskStatus(state=task_state, message=Message(role="agent", parts=parts)),
             [Artifact(parts=parts)],
         )
         return SendTaskResponse(id=request.id, result=task)

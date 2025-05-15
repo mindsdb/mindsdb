@@ -52,29 +52,35 @@ def main():
         logger.info("Successfully imported a2a module")
 
         # Get configuration from config system
-        a2a_config = config.get('a2a', {})
+        a2a_config = config.get("a2a", {})
 
         # Prepare command line arguments based on configuration
         sys_argv = sys.argv[:]  # Make a copy of the original argv
 
         # Only add args that aren't already in sys.argv
-        if '--host' not in ' '.join(sys_argv) and a2a_config.get('host'):
-            sys_argv.extend(['--host', a2a_config['host']])
+        if "--host" not in " ".join(sys_argv) and a2a_config.get("host"):
+            sys_argv.extend(["--host", a2a_config["host"]])
 
-        if '--port' not in ' '.join(sys_argv) and a2a_config.get('port'):
-            sys_argv.extend(['--port', str(a2a_config['port'])])
+        if "--port" not in " ".join(sys_argv) and a2a_config.get("port"):
+            sys_argv.extend(["--port", str(a2a_config["port"])])
 
-        if '--mindsdb-host' not in ' '.join(sys_argv) and a2a_config.get('mindsdb_host'):
-            sys_argv.extend(['--mindsdb-host', a2a_config['mindsdb_host']])
+        if "--mindsdb-host" not in " ".join(sys_argv) and a2a_config.get(
+            "mindsdb_host"
+        ):
+            sys_argv.extend(["--mindsdb-host", a2a_config["mindsdb_host"]])
 
-        if '--mindsdb-port' not in ' '.join(sys_argv) and a2a_config.get('mindsdb_port'):
-            sys_argv.extend(['--mindsdb-port', str(a2a_config['mindsdb_port'])])
+        if "--mindsdb-port" not in " ".join(sys_argv) and a2a_config.get(
+            "mindsdb_port"
+        ):
+            sys_argv.extend(["--mindsdb-port", str(a2a_config["mindsdb_port"])])
 
-        if '--agent-name' not in ' '.join(sys_argv) and a2a_config.get('agent_name'):
-            sys_argv.extend(['--agent-name', a2a_config['agent_name']])
+        if "--agent-name" not in " ".join(sys_argv) and a2a_config.get("agent_name"):
+            sys_argv.extend(["--agent-name", a2a_config["agent_name"]])
 
-        if '--project-name' not in ' '.join(sys_argv) and a2a_config.get('project_name'):
-            sys_argv.extend(['--project-name', a2a_config['project_name']])
+        if "--project-name" not in " ".join(sys_argv) and a2a_config.get(
+            "project_name"
+        ):
+            sys_argv.extend(["--project-name", a2a_config["project_name"]])
 
         # Temporarily replace sys.argv with our constructed arguments
         original_argv = sys.argv
@@ -92,6 +98,7 @@ def main():
     except Exception as e:
         logger.error(f"Error running a2a module: {e}")
         import traceback
+
         logger.error(traceback.format_exc())
         sys.exit(1)
 

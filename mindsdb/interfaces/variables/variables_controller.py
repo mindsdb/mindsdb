@@ -71,7 +71,8 @@ class VariablesController:
             value = value.value
 
         else:
-            raise ValueError("Value is not supported")
+            # ignore
+            return
 
         self.set_value(name, value)
 

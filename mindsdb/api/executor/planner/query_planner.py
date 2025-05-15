@@ -909,9 +909,9 @@ class QueryPlanner:
         else:
             # special case: register insert from select (it is the same as mark resumable)
             if (
-                    len(steps_in) == 2 and
-                    isinstance(steps_in[0], FetchDataframeStep)
-                    and isinstance(steps_in[1], InsertToTable)
+                len(steps_in) == 2
+                and isinstance(steps_in[0], FetchDataframeStep)
+                and isinstance(steps_in[1], InsertToTable)
             ):
                 plan.is_resumable = True
 

@@ -113,7 +113,7 @@ class PushNotificationReceiverAuth(PushNotificationAuth):
         if not auth_header or not auth_header.startswith(AUTH_HEADER_PREFIX):
             return False
 
-        token = auth_header[len(AUTH_HEADER_PREFIX) :]
+        token = auth_header[len(AUTH_HEADER_PREFIX):]
         signing_key = self.jwks_client.get_signing_key_from_jwt(token)
 
         decode_token = jwt.decode(

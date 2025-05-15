@@ -17,7 +17,6 @@ from common.types import (
     SendTaskResponse,
     SetTaskPushNotificationResponse,
     GetTaskPushNotificationResponse,
-    PushNotificationNotSupportedError,
     TaskSendParams,
     TaskStatus,
     TaskState,

@@ -184,7 +184,7 @@ def _iter_sse_lines(resp: requests.Response) -> Iterator[str]:
 
 def _parse_sse_event(lines: list[str]) -> dict | None:
     """Parse an SSE event block into a dict."""
-    data_lines = [l[6:] for l in lines if l.startswith("data: ")]
+    data_lines = [line_content[6:] for line_content in lines if line_content.startswith("data: ")]
     if not data_lines:
         return None
     try:

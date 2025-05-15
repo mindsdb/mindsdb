@@ -1,6 +1,6 @@
 import json
 import asyncio
-from typing import Any, AsyncIterable, Dict, Optional, List
+from typing import Any, AsyncIterable, Dict, List
 import requests
 import logging
 
@@ -73,7 +73,7 @@ class MindsDBAgent:
                         }
 
                 # If no specific column found, return the whole row as JSON
-                logger.info(f"No specific result column found, returning full row")
+                logger.info("No specific result column found, returning full row")
                 content = json.dumps(result_row, indent=2)
 
                 # Return structured data only if it is a dictionary (A2A `data` part
@@ -125,7 +125,7 @@ class MindsDBAgent:
         """Stream responses from the MindsDB agent (uses non-streaming as fallback)."""
         try:
             logger.info(
-                f"Note: MindsDB SQL API doesn't support streaming. Using regular query..."
+                "Note: MindsDB SQL API doesn't support streaming. Using regular query..."
             )
 
             # Use the non-streaming method and simulate streaming response
@@ -154,7 +154,7 @@ class MindsDBAgent:
             # Split content into chunks for more realistic streaming
             chunk_size = 150
             chunks = [
-                content[i : i + chunk_size] for i in range(0, len(content), chunk_size)
+                content[i:i + chunk_size] for i in range(0, len(content), chunk_size)
             ]
 
             for i, chunk in enumerate(chunks):

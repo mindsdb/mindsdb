@@ -147,6 +147,38 @@ class JiraIssuesTable(APIResource):
             "assignee",
             "status",
         ]
+        
+        
+class JiraGroupsTable(APIResource):
+    def list(
+        self,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        sort: List[SortColumn] = None,
+        targets: List[str] = None,
+        **kwargs
+    ) -> pd.DataFrame:
+        client: Jira = self.handler.connect()
+
+        if limit:
+            groups = client.get_groups(limit=limit)['groups']
+        else:
+            groups = client.get_groups()['groups']
+
+        if groups:
+            groups_df = pd.DataFrame(groups)
+            groups_df = groups_df[self.get_columns()]
+        else:
+            groups_df = pd.DataFrame([], columns=self.get_columns())
+
+        return groups_df
+
+    def get_columns(self) -> List[str]:
+        return [
+            "groupId",
+            "name",
+            "html",
+        ]
 
 
 class JiraUsersTable(APIResource):

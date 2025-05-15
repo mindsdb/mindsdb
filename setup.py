@@ -142,6 +142,12 @@ def define_deps():
 
     extra_requirements['all_handlers_extras'] = list(set(full_handlers_requirements))
 
+    with open(os.path.normpath('requirements/requirements-opentelemetry.txt')) as req_file:
+        extra_requirements['opentelemetry'] = [req.strip() for req in req_file.read().splitlines()]
+
+    with open(os.path.normpath('requirements/requirements-langfuse.txt')) as req_file:
+        extra_requirements['langfuse'] = [req.strip() for req in req_file.read().splitlines()]
+
     Deps.pkgs = requirements
     Deps.extras = extra_requirements
     Deps.new_links = links
@@ -171,5 +177,5 @@ setup(
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
     ],
-    python_requires=">=3.10,<3.12",
+    python_requires=">=3.10,<3.13",
 )

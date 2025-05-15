@@ -335,7 +335,7 @@ class SQLAgent:
             sample_rows_str = "\n" + list_to_csv_str([fields] + sample_rows)
         except Exception as e:
             logger.info(f'_get_sample_rows error: {e}')
-            sample_rows_str = "\n" + "\t [error] Couldn't retrieve sample rows!"
+            sample_rows_str = "\n" + "\t [error] Couldn't retrieve sample rows: " + str(e)
 
         return sample_rows_str
 

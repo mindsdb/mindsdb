@@ -84,8 +84,14 @@ class File(Resource):
             parser.finalize()
             parser.close()
 
-            if file_object is not None and not file_object.closed:
-                file_object.close()
+            if file_object is not None:
+                if not file_object.closed:
+                    try:
+                        file_object.flush()
+                    except (AttributeError, ValueError, OSError):
+                        logger.debug("Failed to flush file_object before closing.", exc_info=True)
+                    file_object.close()
+                file_object = None
         else:
             data = request.json
 

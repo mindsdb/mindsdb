@@ -685,20 +685,20 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_cursor.description = description
 
         excepted_mysql_types = [
-            MYSQL_DATA_TYPE.INT,        # n_smallint
+            MYSQL_DATA_TYPE.SMALLINT,   # n_smallint
             MYSQL_DATA_TYPE.INT,        # n_integer
-            MYSQL_DATA_TYPE.INT,        # n_bigint
+            MYSQL_DATA_TYPE.BIGINT,     # n_bigint
             MYSQL_DATA_TYPE.DECIMAL,    # n_decimal
             MYSQL_DATA_TYPE.DECIMAL,    # n_numeric
             MYSQL_DATA_TYPE.FLOAT,      # n_real
             MYSQL_DATA_TYPE.DOUBLE,     # n_double_precision
-            MYSQL_DATA_TYPE.INT,        # n_smallserial
+            MYSQL_DATA_TYPE.SMALLINT,   # n_smallserial
             MYSQL_DATA_TYPE.INT,        # n_serial
-            MYSQL_DATA_TYPE.INT,        # n_bigserial
-            MYSQL_DATA_TYPE.DECIMAL,    # n_money
-            MYSQL_DATA_TYPE.INT,        # n_int2
+            MYSQL_DATA_TYPE.BIGINT,     # n_bigserial
+            MYSQL_DATA_TYPE.TEXT,       # n_money
+            MYSQL_DATA_TYPE.SMALLINT,   # n_int2
             MYSQL_DATA_TYPE.INT,        # n_int4
-            MYSQL_DATA_TYPE.INT,        # n_int8
+            MYSQL_DATA_TYPE.BIGINT,     # n_int8
             MYSQL_DATA_TYPE.FLOAT,      # n_float4
             MYSQL_DATA_TYPE.DOUBLE      # n_float8
         ]

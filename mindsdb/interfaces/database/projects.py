@@ -4,7 +4,6 @@ from typing import List, Optional
 from collections import OrderedDict
 
 import sqlalchemy as sa
-from sqlalchemy.orm.attributes import flag_modified
 import numpy as np
 
 from mindsdb_sql_parser.ast.base import ASTNode
@@ -457,7 +456,7 @@ class ProjectController:
         project.create(name=name)
         return project
 
-    def update(self, id: Optional[int] = None, name: Optional[str] = None, new_name: str = None, new_metadata: dict = None) -> Project:
+    def update(self, id: Optional[int] = None, name: Optional[str] = None, new_name: str = None) -> Project:
         if id is not None and name is not None:
             raise ValueError("Both 'id' and 'name' can't be provided at the same time")
 
@@ -469,11 +468,6 @@ class ProjectController:
         if new_name is not None:
             project.name = new_name
             project.record.name = new_name
-
-        if new_metadata is not None:
-            project.metadata = new_metadata
-            project.record.metadata_ = new_metadata
-            flag_modified(project.record, 'metadata_')
 
         db.session.commit()
         return project

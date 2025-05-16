@@ -32,6 +32,7 @@ from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embeddi
 from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS
 from mindsdb.interfaces.agents.langchain_agent import create_chat_model, get_llm_provider
 from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.interfaces.variables.variables_controller import variables_controller
 from mindsdb.interfaces.knowledge_base.preprocessing.models import PreprocessingConfig, Document
 from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor import PreprocessorFactory
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
@@ -41,6 +42,7 @@ from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
 
 from mindsdb.api.executor.command_executor import ExecuteCommands
+from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.utilities import log
 from mindsdb.integrations.utilities.rag.rerankers.base_reranker import BaseLLMReranker
 
@@ -150,13 +152,8 @@ class KnowledgeBaseTable:
         query.from_table = Identifier(parts=[self._kb.vector_database_table])
         logger.debug(f"Set table name to: {self._kb.vector_database_table}")
 
-        requested_kb_columns = []
-        for target in query.targets:
-            if isinstance(target, Star):
-                requested_kb_columns = None
-                break
-            else:
-                requested_kb_columns.append(target.parts[-1].lower())
+        # Copy query for complex execution via DuckDB: DISTINCT, GROUP BY etc.
+        query_copy = copy.deepcopy(query)
 
         query.targets = [
             Identifier(TableField.ID.value),
@@ -220,9 +217,17 @@ class KnowledgeBaseTable:
 
         df = self.add_relevance(df, query_text, relevance_threshold)
 
-        # filter by targets
-        if requested_kb_columns is not None:
-            df = df[requested_kb_columns]
+        if (
+            query.group_by is not None
+            or query.order_by is not None
+            or query.having is not None
+            or query.distinct is True
+            or len(query.targets) != 1
+            or not isinstance(query.targets[0], Star)
+        ):
+            query_copy.where = None
+            df = query_df(df, query_copy, session=self.session)
+
         return df
 
     def add_relevance(self, df, query_text, relevance_threshold=None):
@@ -842,6 +847,9 @@ class KnowledgeBaseController:
         :param is_sparse: Whether to use sparse vectors for embeddings
         :param vector_size: Optional size specification for vectors, required when is_sparse=True
         """
+        # fill variables
+        params = variables_controller.fill_parameters(params)
+
         # Validate preprocessing config first if provided
         if preprocessing_config is not None:
             PreprocessingConfig(**preprocessing_config)  # Validate before storing
@@ -1012,6 +1020,8 @@ class KnowledgeBaseController:
                 params['question_column'] = 'content'
             if api_key:
                 params[f"{engine}_api_key"] = api_key
+                if 'api_key' in params:
+                    params.pop('api_key')
             if 'base_url' in params:
                 params['api_base'] = params.pop('base_url')
 

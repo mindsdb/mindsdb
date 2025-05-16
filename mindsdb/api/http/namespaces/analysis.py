@@ -77,8 +77,8 @@ class QueryAnalysis(Resource):
         if result.type != SQL_RESPONSE_TYPE.TABLE:
             return http_error(500, "Error", "Query does not return data")
 
-        column_names = [x["name"] for x in result.columns]
-        df = DataFrame(result.data, columns=column_names)
+        column_names = [column.name for column in result.result_set.columns]
+        df = result.result_set.to_df()
         try:
             analysis = analyze_df(df)
         except ImportError:
@@ -95,7 +95,7 @@ class QueryAnalysis(Resource):
         return {
             "analysis": analysis,
             "column_names": column_names,
-            "row_count": len(result.data),
+            "row_count": len(result.result_set),
             "timestamp": time.time(),
             "tables": query_tables,
         }

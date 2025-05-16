@@ -35,7 +35,7 @@ class InsertToTableCall(BaseStepCall):
         elif step.query is not None:
             data = ResultSet()
             for col in step.query.columns:
-                data.add_column(Column(col.name))
+                data.add_column(Column(name=col.name))
 
             records = []
             for row in step.query.values:

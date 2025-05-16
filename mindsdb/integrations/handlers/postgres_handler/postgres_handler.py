@@ -88,11 +88,17 @@ def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
         mysql_type = _map_type(regtype)
         mysql_types.append(mysql_type)
 
-    df = DataFrame(
-        result,
-        columns=[column.name for column in description]
-        # TODO will be good to add dtypes, otherwise datetime.date is just object
-    )
+    # region cast int and bool to nullable types
+    serieses = []
+    for i, mysql_type in enumerate(mysql_types):
+        expected_dtype = None
+        if mysql_type in (MYSQL_DATA_TYPE.SMALLINT, MYSQL_DATA_TYPE.INT, MYSQL_DATA_TYPE.BIGINT):
+            expected_dtype = 'Int64'
+        elif mysql_type == MYSQL_DATA_TYPE.BOOL:
+            expected_dtype = 'boolen'
+        serieses.append(pd.Series([row[i] for row in result], dtype=expected_dtype, name=description[i].name))
+    df = pd.concat(serieses, axis=1, copy=False)
+    # endregion
 
     return Response(
         RESPONSE_TYPE.TABLE,

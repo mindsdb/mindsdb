@@ -49,7 +49,7 @@ def set_openai_completion(mock_openai, response):
         }
 
     mock_openai().chat.completions.create.side_effect = resp_f
-    
+
 
 def set_openai_embedding(mock_openai, response):
     def resp_f(*args, **kwargs):
@@ -58,8 +58,8 @@ def set_openai_embedding(mock_openai, response):
         )
 
     mock_openai().embeddings.create.side_effect = resp_f
-    
-    
+
+
 def set_openai_models(mock_openai):
     mock_openai_client = MagicMock()
     mock_openai_client.models.list.return_value.data = [Mock(id='text-embedding-ada-002')]
@@ -522,7 +522,7 @@ class TestKB(BaseExecutorDummyML):
     @patch('openai.OpenAI')
     def test_join_kb_table(self, mock_openai):
         set_openai_models(mock_openai)
-        
+
         df = self._get_ral_table()
         self.save_file('ral', df)
 
@@ -593,7 +593,7 @@ class TestKB(BaseExecutorDummyML):
         def check_partition(insert_sql):
             # create empty kb
             self._create_kb('kb_part')
-            
+
             set_openai_embedding(mock_openai, [[0.1] * 1536] * len(df))
 
             # load kb

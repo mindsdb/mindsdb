@@ -11,11 +11,9 @@ Creating a chatbot requires either an [AI agent](/mindsdb_sql/agents/agent) or a
   <img src="/assets/chatbot_diagram.png" />
 </p>
 
-## Chatbot with an AI agent
+## `CREATE CHATBOT` Syntax
 
-[AI Agents](/mindsdb_sql/agents/agent) are customized AI models that can answer questions over your data. You can connect your data to agents in the form of [skills](/mindsdb_sql/agents/agent#create-skills).
-
-Here is how to create a chatbot that integrates an AI Agent and can be connected to a chat interface to have a conversation with your data.
+Here is how to create a chatbot that integrates an AI Agent and can be connected to a chat interface.
 
 ```sql
 CREATE CHATBOT my_chatbot
@@ -25,11 +23,37 @@ USING
     is_running = true;   -- default is true
 ```
 
-The parameters include the following:
+It creates a chatbot that users can interact with via the configured chat interface.
 
-* `database` stores connection to a chat app (like [Slack](/integrations/app-integrations/slack) or [MS Teams](/integrations/app-integrations/microsoft-teams)) that should be created with the `CREATE DATABASE` statement.
-* `agent` is an [AI agent](/mindsdb_sql/agents/agent) created with the `CREATE AGENT` command. It consists of an AI model and a set of skills, that is, defined data sets provided at inference time via RAG-based techniques.
-* `is_running` indicates whether or not to start the chatbot upon creation.
+View all chatbots with this command.
+
+```sql
+SHOW CHATBOTS;
+```
+
+### `database`
+
+In MindsDB, the [`CREATE DATABASE` command](/mindsdb_sql/sql/create/database) is used to connect data integrations including databases and applications such as chat interfaces.
+
+The `database` parameter stores the name of the chat interface connected to MindsDB with the [`CREATE DATABASE` command](/mindsdb_sql/sql/create/database), such as [Slack](/integrations/app-integrations/slack) or [MS Teams](/integrations/app-integrations/microsoft-teams).
+
+### `agent`
+
+The `agent` parameter stores the name of the agent created in MindsDB with the [`CREATE AGENT` command](/mindsdb_sql/agents/agent).
+
+Alternatively, user can use the `model` parameter, instead of `agent`, to connect an LLM created in MindsDB with the [`CREATE MODEL` command](/mindsdb_sql/sql/create/model).
+
+### `is_running`
+
+The `is_running` parameter defines whether the chatbot is going to be available right after its creation (`true`) or not (`false`).
+
+If it is set to `false`, users can enable it with this command.
+
+```sql
+UPDATE CHATBOT my_chatbot
+SET
+  is_running = true;
+```
 
 <Tip>
 Here are some tips for using the Slack integration:
@@ -43,38 +67,12 @@ Here are some tips for using the Slack integration:
   - Click on *Add an App*.
 </Tip>
 
-## Chatbot with an LLM
-
-ALternatively, you can create a chatbot that is equivalent to embedding an LLM of your choice into a chat app, like [Slack](/integrations/app-integrations/slack) or [MS Teams](/integrations/app-integrations/microsoft-teams).
-
-Here is how to create a chatbot that integrates an LLM and can be connected to a chat interface.
-
-```sql
-CREATE CHATBOT my_chatbot
-USING
-    database = 'my_slack',   -- created with CREATE DATABASE my_slack
-    model = 'my_model',   -- created with CREATE MODEL my_model
-    is_running = true;   -- default is true
-```
-
-The parameters include the following:
-
-* `database` stores connection to a chat app (like [Slack](/integrations/app-integrations/slack) or [MS Teams](/integrations/app-integrations/microsoft-teams)) that should be created with the `CREATE DATABASE` statement.
-* `model` is a conversational model created with the `CREATE MODEL` command using the [LangChain engine](/integrations/ai-engines/langchain).
-* `is_running` indicates whether or not to start the chatbot upon creation.
+## `DROP CHATBOT` Syntax
 
 Here is how to delete a chatbot:
 
-    ```sql
-    DROP CHATBOT my_chatbot;
-    ```
-
-And here is how to query all chatbots:
-
 ```sql
-SHOW CHATBOTS;
-
-SELECT * FROM chatbots;
+DROP CHATBOT my_chatbot;
 ```
 
 ## Example

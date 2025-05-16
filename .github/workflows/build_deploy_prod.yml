@@ -28,7 +28,6 @@ jobs:
         run: |
           PYTHONPATH=./ python tests/scripts/check_version.py ${{ env.CI_REF_NAME }} ${{ github.event.release.prerelease }}
       - name: Setup uv
-        if: ${{ needs.changes.outputs.not-docs == 'true' }}
         uses: astral-sh/setup-uv@v5
         with:
           cache-local-path: "/home/runner/_work/_tool/uv-local-cache"

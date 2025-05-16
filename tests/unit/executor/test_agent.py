@@ -67,289 +67,289 @@ def set_openai_models(mock_openai):
     mock_openai.return_value = mock_openai_client
 
 
-# class TestAgent(BaseExecutorDummyML):
+class TestAgent(BaseExecutorDummyML):
 
-#     def test_mindsdb_provider(self):
+    def test_mindsdb_provider(self):
 
-#         agent_response = 'how can I help you'
-#         # model
-#         self.run_sql(
-#             f'''
-#                 CREATE model base_model
-#                 PREDICT output
-#                 using
-#                   column='question',
-#                   output='{agent_response}',
-#                   engine='dummy_ml',
-#                   join_learn_process=true
-#             '''
-#         )
+        agent_response = 'how can I help you'
+        # model
+        self.run_sql(
+            f'''
+                CREATE model base_model
+                PREDICT output
+                using
+                  column='question',
+                  output='{agent_response}',
+                  engine='dummy_ml',
+                  join_learn_process=true
+            '''
+        )
 
-#         self.run_sql('CREATE ML_ENGINE langchain FROM langchain')
+        self.run_sql('CREATE ML_ENGINE langchain FROM langchain')
 
-#         self.run_sql('''
-#             CREATE AGENT my_agent
-#             USING
-#              provider='mindsdb',
-#              model = "base_model", -- <
-#              prompt_template="Answer the user input in a helpful way"
-#          ''')
-#         ret = self.run_sql("select * from my_agent where question = 'hi'")
+        self.run_sql('''
+            CREATE AGENT my_agent
+            USING
+             provider='mindsdb',
+             model = "base_model", -- <
+             prompt_template="Answer the user input in a helpful way"
+         ''')
+        ret = self.run_sql("select * from my_agent where question = 'hi'")
 
-#         assert agent_response in ret.answer[0]
+        assert agent_response in ret.answer[0]
 
-#     @patch('openai.OpenAI')
-#     def test_openai_provider_with_model(self, mock_openai):
-#         agent_response = 'how can I assist you today?'
-#         set_openai_completion(mock_openai, agent_response)
+    @patch('openai.OpenAI')
+    def test_openai_provider_with_model(self, mock_openai):
+        agent_response = 'how can I assist you today?'
+        set_openai_completion(mock_openai, agent_response)
 
-#         self.run_sql('CREATE ML_ENGINE langchain FROM langchain')
+        self.run_sql('CREATE ML_ENGINE langchain FROM langchain')
 
-#         self.run_sql('''
-#             CREATE MODEL lang_model
-#                 PREDICT answer USING
-#             engine = "langchain",
-#             model = "gpt-3.5-turbo",
-#             openai_api_key='--',
-#             prompt_template="Answer the user input in a helpful way";
-#          ''')
+        self.run_sql('''
+            CREATE MODEL lang_model
+                PREDICT answer USING
+            engine = "langchain",
+            model = "gpt-3.5-turbo",
+            openai_api_key='--',
+            prompt_template="Answer the user input in a helpful way";
+         ''')
 
-#         self.run_sql('''
-#             CREATE AGENT my_agent
-#             USING
-#               model='lang_model'
-#          ''')
-#         ret = self.run_sql("select * from my_agent where question = 'hi'")
+        self.run_sql('''
+            CREATE AGENT my_agent
+            USING
+              model='lang_model'
+         ''')
+        ret = self.run_sql("select * from my_agent where question = 'hi'")
 
-#         assert agent_response in ret.answer[0]
+        assert agent_response in ret.answer[0]
 
-#     @patch('openai.OpenAI')
-#     def test_openai_provider(self, mock_openai):
-#         agent_response = 'how can I assist you today?'
-#         set_openai_completion(mock_openai, agent_response)
+    @patch('openai.OpenAI')
+    def test_openai_provider(self, mock_openai):
+        agent_response = 'how can I assist you today?'
+        set_openai_completion(mock_openai, agent_response)
 
-#         self.run_sql('''
-#             CREATE AGENT my_agent
-#             USING
-#              provider='openai',
-#              model = "gpt-3.5-turbo",
-#              openai_api_key='--',
-#              prompt_template="Answer the user input in a helpful way"
-#          ''')
-#         ret = self.run_sql("select * from my_agent where question = 'hi'")
+        self.run_sql('''
+            CREATE AGENT my_agent
+            USING
+             provider='openai',
+             model = "gpt-3.5-turbo",
+             openai_api_key='--',
+             prompt_template="Answer the user input in a helpful way"
+         ''')
+        ret = self.run_sql("select * from my_agent where question = 'hi'")
 
-#         assert agent_response in ret.answer[0]
+        assert agent_response in ret.answer[0]
 
-#         # test join
-#         df = pd.DataFrame([
-#             {'q': 'hi'},
-#         ])
-#         self.save_file('questions', df)
+        # test join
+        df = pd.DataFrame([
+            {'q': 'hi'},
+        ])
+        self.save_file('questions', df)
 
-#         ret = self.run_sql('''
-#             select * from files.questions t
-#             join my_agent a on a.question=t.q
-#         ''')
+        ret = self.run_sql('''
+            select * from files.questions t
+            join my_agent a on a.question=t.q
+        ''')
 
-#         assert agent_response in ret.answer[0]
+        assert agent_response in ret.answer[0]
 
-#         # empty query
-#         ret = self.run_sql('''
-#             select * from files.questions t
-#             join my_agent a on a.question=t.q
-#             where t.q = ''
-#         ''')
-#         assert len(ret) == 0
+        # empty query
+        ret = self.run_sql('''
+            select * from files.questions t
+            join my_agent a on a.question=t.q
+            where t.q = ''
+        ''')
+        assert len(ret) == 0
 
-#     @patch('openai.OpenAI')
-#     def test_agent_with_tables(self, mock_openai):
-#         sd = SkillData(
-#             name='test', type='', project_id=1,
-#             params={'tables': []},
-#             agent_tables_list=[]
-#         )
+    @patch('openai.OpenAI')
+    def test_agent_with_tables(self, mock_openai):
+        sd = SkillData(
+            name='test', type='', project_id=1,
+            params={'tables': []},
+            agent_tables_list=[]
+        )
 
-#         sd.params = {'tables': ['x', 'y']}
-#         sd.agent_tables_list = ['x', 'y']
-#         assert sd.restriction_on_tables == {None: {'x', 'y'}}
+        sd.params = {'tables': ['x', 'y']}
+        sd.agent_tables_list = ['x', 'y']
+        assert sd.restriction_on_tables == {None: {'x', 'y'}}
 
-#         sd.params = {'tables': ['x', 'y']}
-#         sd.agent_tables_list = ['x', 'y', 'z']
-#         assert sd.restriction_on_tables == {None: {'x', 'y'}}
+        sd.params = {'tables': ['x', 'y']}
+        sd.agent_tables_list = ['x', 'y', 'z']
+        assert sd.restriction_on_tables == {None: {'x', 'y'}}
 
-#         sd.params = {'tables': ['x', 'y']}
-#         sd.agent_tables_list = ['x']
-#         assert sd.restriction_on_tables == {None: {'x'}}
+        sd.params = {'tables': ['x', 'y']}
+        sd.agent_tables_list = ['x']
+        assert sd.restriction_on_tables == {None: {'x'}}
 
-#         sd.params = {'tables': ['x', 'y']}
-#         sd.agent_tables_list = ['z']
-#         with pytest.raises(ValueError):
-#             print(sd.restriction_on_tables)
+        sd.params = {'tables': ['x', 'y']}
+        sd.agent_tables_list = ['z']
+        with pytest.raises(ValueError):
+            print(sd.restriction_on_tables)
 
-#         sd.params = {'tables': ['x', {'schema': 'S', 'table': 'y'}]}
-#         sd.agent_tables_list = ['x']
-#         assert sd.restriction_on_tables == {None: {'x'}}
+        sd.params = {'tables': ['x', {'schema': 'S', 'table': 'y'}]}
+        sd.agent_tables_list = ['x']
+        assert sd.restriction_on_tables == {None: {'x'}}
 
-#         sd.params = {'tables': ['x', {'schema': 'S', 'table': 'y'}]}
-#         sd.agent_tables_list = ['x', {'schema': 'S', 'table': 'y'}]
-#         assert sd.restriction_on_tables == {None: {'x'}, 'S': {'y'}}
+        sd.params = {'tables': ['x', {'schema': 'S', 'table': 'y'}]}
+        sd.agent_tables_list = ['x', {'schema': 'S', 'table': 'y'}]
+        assert sd.restriction_on_tables == {None: {'x'}, 'S': {'y'}}
 
-#         sd.params = {'tables': [{'schema': 'S', 'table': 'x'}, {'schema': 'S', 'table': 'y'}, {'schema': 'S', 'table': 'z'}]}
-#         sd.agent_tables_list = [{'schema': 'S', 'table': 'y'}, {'schema': 'S', 'table': 'z'}, {'schema': 'S', 'table': 'f'}]
-#         assert sd.restriction_on_tables == {'S': {'y', 'z'}}
+        sd.params = {'tables': [{'schema': 'S', 'table': 'x'}, {'schema': 'S', 'table': 'y'}, {'schema': 'S', 'table': 'z'}]}
+        sd.agent_tables_list = [{'schema': 'S', 'table': 'y'}, {'schema': 'S', 'table': 'z'}, {'schema': 'S', 'table': 'f'}]
+        assert sd.restriction_on_tables == {'S': {'y', 'z'}}
 
-#         sd.params = {'tables': [{'schema': 'S', 'table': 'x'}, {'schema': 'S', 'table': 'y'}]}
-#         sd.agent_tables_list = [{'schema': 'S', 'table': 'z'}]
-#         with pytest.raises(ValueError):
-#             print(sd.restriction_on_tables)
+        sd.params = {'tables': [{'schema': 'S', 'table': 'x'}, {'schema': 'S', 'table': 'y'}]}
+        sd.agent_tables_list = [{'schema': 'S', 'table': 'z'}]
+        with pytest.raises(ValueError):
+            print(sd.restriction_on_tables)
 
-#         self.run_sql('''
-#             create skill test_skill
-#             using
-#             type = 'text2sql',
-#             database = 'example_db',
-#             tables = ['table_1', 'table_2'],
-#             description = "this is sales data";
-#         ''')
+        self.run_sql('''
+            create skill test_skill
+            using
+            type = 'text2sql',
+            database = 'example_db',
+            tables = ['table_1', 'table_2'],
+            description = "this is sales data";
+        ''')
 
-#         self.run_sql('''
-#             create agent test_agent
-#             using
-#             model='gpt-3.5-turbo',
-#             provider='openai',
-#             openai_api_key='--',
-#             prompt_template='Answer the user input in a helpful way using tools',
-#             skills=[{
-#                 'name': 'test_skill',
-#                 'tables': ['table_2', 'table_3']
-#             }];
-#         ''')
+        self.run_sql('''
+            create agent test_agent
+            using
+            model='gpt-3.5-turbo',
+            provider='openai',
+            openai_api_key='--',
+            prompt_template='Answer the user input in a helpful way using tools',
+            skills=[{
+                'name': 'test_skill',
+                'tables': ['table_2', 'table_3']
+            }];
+        ''')
 
-#         resp = self.run_sql('''select * from information_schema.agents where name = 'test_agent';''')
-#         assert len(resp) == 1
-#         assert resp['SKILLS'][0] == ['test_skill']
+        resp = self.run_sql('''select * from information_schema.agents where name = 'test_agent';''')
+        assert len(resp) == 1
+        assert resp['SKILLS'][0] == ['test_skill']
 
-#         agent_response = 'how can I assist you today?'
-#         set_openai_completion(mock_openai, agent_response)
-#         self.run_sql("select * from test_agent where question = 'test?'")
+        agent_response = 'how can I assist you today?'
+        set_openai_completion(mock_openai, agent_response)
+        self.run_sql("select * from test_agent where question = 'test?'")
 
-#     @patch('openai.OpenAI')
-#     def test_agent_stream(self, mock_openai):
-#         agent_response = 'how can I assist you today?'
-#         set_openai_completion(mock_openai, agent_response)
+    @patch('openai.OpenAI')
+    def test_agent_stream(self, mock_openai):
+        agent_response = 'how can I assist you today?'
+        set_openai_completion(mock_openai, agent_response)
 
-#         self.run_sql('''
-#             CREATE AGENT my_agent
-#             USING
-#              provider='openai',
-#              model = "gpt-3.5-turbo",
-#              openai_api_key='--',
-#              prompt_template="Answer the user input in a helpful way"
-#          ''')
+        self.run_sql('''
+            CREATE AGENT my_agent
+            USING
+             provider='openai',
+             model = "gpt-3.5-turbo",
+             openai_api_key='--',
+             prompt_template="Answer the user input in a helpful way"
+         ''')
 
-#         agents_controller = self.command_executor.session.agents_controller
-#         agent = agents_controller.get_agent('my_agent')
+        agents_controller = self.command_executor.session.agents_controller
+        agent = agents_controller.get_agent('my_agent')
 
-#         messages = [{'question': 'hi'}]
-#         found = False
-#         for chunk in agents_controller.get_completion(agent, messages, stream=True):
-#             if chunk.get('output') == agent_response:
-#                 found = True
-#         if not found:
-#             raise AttributeError('Agent response is not found')
+        messages = [{'question': 'hi'}]
+        found = False
+        for chunk in agents_controller.get_completion(agent, messages, stream=True):
+            if chunk.get('output') == agent_response:
+                found = True
+        if not found:
+            raise AttributeError('Agent response is not found')
 
-#     @patch('openai.OpenAI')
-#     def test_agent_retrieval(self, mock_openai):
+    @patch('openai.OpenAI')
+    def test_agent_retrieval(self, mock_openai):
 
-#         mock_openai().models.list().data = [Mock(id='text-embedding-ada-002')]
+        mock_openai().models.list().data = [Mock(id='text-embedding-ada-002')]
 
-#         self.run_sql('''
-#             create knowledge base kb_review
-#             using
-#                 embedding_model = {
-#                     "provider": "openai",
-#                     "model_name": "text-embedding-ada-002",
-#                     "api_key": "dummy_key"
-#                 }
-#         ''')
+        self.run_sql('''
+            create knowledge base kb_review
+            using
+                embedding_model = {
+                    "provider": "openai",
+                    "model_name": "text-embedding-ada-002",
+                    "api_key": "dummy_key"
+                }
+        ''')
 
-#         self.run_sql('''
-#           create skill retr_skill
-#           using
-#               type = 'retrieval',
-#               source = 'kb_review',
-#               description = 'user reviews'
-#         ''')
+        self.run_sql('''
+          create skill retr_skill
+          using
+              type = 'retrieval',
+              source = 'kb_review',
+              description = 'user reviews'
+        ''')
 
-#         os.environ['OPENAI_API_KEY'] = '--'
+        os.environ['OPENAI_API_KEY'] = '--'
 
-#         self.run_sql('''
-#           create agent retrieve_agent
-#            using
-#           model='gpt-3.5-turbo',
-#           provider='openai',
-#           prompt_template='Answer the user input in a helpful way using tools',
-#           skills=['retr_skill'],
-#           max_iterations=5,
-#           mode='retrieval'
-#         ''')
+        self.run_sql('''
+          create agent retrieve_agent
+           using
+          model='gpt-3.5-turbo',
+          provider='openai',
+          prompt_template='Answer the user input in a helpful way using tools',
+          skills=['retr_skill'],
+          max_iterations=5,
+          mode='retrieval'
+        ''')
 
-#         agent_response = 'the answer is yes'
-#         user_question = 'answer my question'
-#         from textwrap import dedent
-#         set_openai_completion(mock_openai, [
-#             # first step, use kb
-#             dedent(f'''
-#               Thought: Do I need to use a tool? Yes
-#               Action: retr_skill
-#               Action Input: {user_question}
-#             '''),
+        agent_response = 'the answer is yes'
+        user_question = 'answer my question'
+        from textwrap import dedent
+        set_openai_completion(mock_openai, [
+            # first step, use kb
+            dedent(f'''
+              Thought: Do I need to use a tool? Yes
+              Action: retr_skill
+              Action Input: {user_question}
+            '''),
 
-#             # step2, answer to user
-#             agent_response
-#         ])
+            # step2, answer to user
+            agent_response
+        ])
 
-#         with patch('mindsdb.interfaces.knowledge_base.controller.KnowledgeBaseTable.select_query') as kb_select:
-#             # kb response
-#             kb_select.return_value = pd.DataFrame([{'id': 1, 'content': 'ok', 'metadata': {}}])
-#             ret = self.run_sql(f'''
-#                 select * from retrieve_agent where question = '{user_question}'
-#             ''')
+        with patch('mindsdb.interfaces.knowledge_base.controller.KnowledgeBaseTable.select_query') as kb_select:
+            # kb response
+            kb_select.return_value = pd.DataFrame([{'id': 1, 'content': 'ok', 'metadata': {}}])
+            ret = self.run_sql(f'''
+                select * from retrieve_agent where question = '{user_question}'
+            ''')
 
-#             # check agent output
-#             assert agent_response in ret.answer[0]
+            # check agent output
+            assert agent_response in ret.answer[0]
 
-#             # check kb input
-#             args, _ = kb_select.call_args
-#             assert user_question in args[0].where.args[1].value
+            # check kb input
+            args, _ = kb_select.call_args
+            assert user_question in args[0].where.args[1].value
 
-#     def test_drop_demo_agent(self):
-#         """should not be possible to drop demo agent
-#         """
-#         from mindsdb.api.executor.exceptions import ExecutorException
-#         self.run_sql('''
-#             CREATE AGENT my_demo_agent
-#             USING
-#                 provider='openai',
-#                 model = "gpt-3.5-turbo",
-#                 openai_api_key='--',
-#                 prompt_template="--",
-#                 is_demo=true;
-#          ''')
-#         with pytest.raises(ExecutorException):
-#             self.run_sql('drop agent my_agent')
+    def test_drop_demo_agent(self):
+        """should not be possible to drop demo agent
+        """
+        from mindsdb.api.executor.exceptions import ExecutorException
+        self.run_sql('''
+            CREATE AGENT my_demo_agent
+            USING
+                provider='openai',
+                model = "gpt-3.5-turbo",
+                openai_api_key='--',
+                prompt_template="--",
+                is_demo=true;
+         ''')
+        with pytest.raises(ExecutorException):
+            self.run_sql('drop agent my_agent')
 
-#         self.run_sql('''
-#             create skill my_demo_skill
-#             using
-#             type = 'text2sql',
-#             database = 'example_db',
-#             description = "",
-#             is_demo=true;
-#         ''')
+        self.run_sql('''
+            create skill my_demo_skill
+            using
+            type = 'text2sql',
+            database = 'example_db',
+            description = "",
+            is_demo=true;
+        ''')
 
-#         with pytest.raises(ExecutorException):
-#             self.run_sql('drop skill my_demo_skill')
+        with pytest.raises(ExecutorException):
+            self.run_sql('drop skill my_demo_skill')
 
 
 class TestKB(BaseExecutorDummyML):
@@ -389,125 +389,125 @@ class TestKB(BaseExecutorDummyML):
                 {param_str}
         ''')
 
-    # @patch('openai.OpenAI')
-    # def test_kb(self, mock_openai):
-    #     set_openai_models(mock_openai)
+    @patch('openai.OpenAI')
+    def test_kb(self, mock_openai):
+        set_openai_models(mock_openai)
 
-    #     self._create_kb('kb_review')
-    #     self.run_sql('drop knowledge base kb_review')  # drop chromadb left since the last failed test
-    #     self._create_kb('kb_review')
+        self._create_kb('kb_review')
+        self.run_sql('drop knowledge base kb_review')  # drop chromadb left since the last failed test
+        self._create_kb('kb_review')
 
-    #     self.run_sql("insert into kb_review (content) values ('review')")
+        self.run_sql("insert into kb_review (content) values ('review')")
 
-    #     # selectable
-    #     ret = self.run_sql("select * from kb_review")
-    #     assert len(ret) == 1
+        # selectable
+        ret = self.run_sql("select * from kb_review")
+        assert len(ret) == 1
 
-    #     # show tables in default chromadb
-    #     ret = self.run_sql("show knowledge bases")
+        # show tables in default chromadb
+        ret = self.run_sql("show knowledge bases")
 
-    #     db_name = ret.STORAGE[0].split('.')[0]
-    #     ret = self.run_sql(f"show tables from {db_name}")
-    #     # only one default collection there
-    #     assert len(ret) == 1
+        db_name = ret.STORAGE[0].split('.')[0]
+        ret = self.run_sql(f"show tables from {db_name}")
+        # only one default collection there
+        assert len(ret) == 1
 
-    # @patch('openai.OpenAI')
-    # def test_kb_metadata(self, mock_openai):
-    #     set_openai_models(mock_openai)
-    #     set_openai_embedding(mock_openai, [[0.1] * 1536])
+    @patch('openai.OpenAI')
+    def test_kb_metadata(self, mock_openai):
+        set_openai_models(mock_openai)
+        set_openai_embedding(mock_openai, [[0.1] * 1536])
 
-    #     record = {
-    #         'review': "all is good, haven't used yet",
-    #         'url': 'https://laptops.com/123',
-    #         'product': 'probook',
-    #         'specs': 'Core i5; 8Gb; 1920х1080',
-    #         'id': 123
-    #     }
-    #     df = pd.DataFrame([record])
-    #     self.save_file('reviews', df)
+        record = {
+            'review': "all is good, haven't used yet",
+            'url': 'https://laptops.com/123',
+            'product': 'probook',
+            'specs': 'Core i5; 8Gb; 1920х1080',
+            'id': 123
+        }
+        df = pd.DataFrame([record])
+        self.save_file('reviews', df)
 
-    #     # ---  case 1: kb with default columns settings ---
-    #     self._create_kb('kb_review')
-    #     self.run_sql('drop knowledge base kb_review')  # drop chromadb left since the last failed test
-    #     self._create_kb('kb_review')
+        # ---  case 1: kb with default columns settings ---
+        self._create_kb('kb_review')
+        self.run_sql('drop knowledge base kb_review')  # drop chromadb left since the last failed test
+        self._create_kb('kb_review')
 
-    #     self.run_sql("""
-    #         insert into kb_review
-    #         select review as content, id from files.reviews
-    #     """)
+        self.run_sql("""
+            insert into kb_review
+            select review as content, id from files.reviews
+        """)
 
-    #     ret = self.run_sql("select * from kb_review where original_doc_id = 123")
-    #     assert len(ret) == 1
-    #     assert ret['chunk_content'][0] == record['review']
+        ret = self.run_sql("select * from kb_review where original_doc_id = 123")
+        assert len(ret) == 1
+        assert ret['chunk_content'][0] == record['review']
 
-    #     # delete by metadata
-    #     self.run_sql("delete from kb_review where original_doc_id = 123")
-    #     ret = self.run_sql("select * from kb_review where original_doc_id = 123")
-    #     assert len(ret) == 0
+        # delete by metadata
+        self.run_sql("delete from kb_review where original_doc_id = 123")
+        ret = self.run_sql("select * from kb_review where original_doc_id = 123")
+        assert len(ret) == 0
 
-    #     # insert without id
-    #     self.run_sql("""
-    #         insert into kb_review
-    #         select review as content, product, url from files.reviews
-    #     """)
+        # insert without id
+        self.run_sql("""
+            insert into kb_review
+            select review as content, product, url from files.reviews
+        """)
 
-    #     # id column wasn't used
-    #     ret = self.run_sql("select * from kb_review where original_doc_id = 123")
-    #     assert len(ret) == 0
+        # id column wasn't used
+        ret = self.run_sql("select * from kb_review where original_doc_id = 123")
+        assert len(ret) == 0
 
-    #     # product/url in metadata
-    #     ret = self.run_sql("select * from kb_review where product = 'probook'")
-    #     assert len(ret) == 1
-    #     assert ret['metadata'][0]['product'] == record['product']
-    #     assert ret['metadata'][0]['url'] == record['url']
+        # product/url in metadata
+        ret = self.run_sql("select * from kb_review where product = 'probook'")
+        assert len(ret) == 1
+        assert ret['metadata'][0]['product'] == record['product']
+        assert ret['metadata'][0]['url'] == record['url']
 
-    #     self.run_sql("drop knowledge base kb_review")
+        self.run_sql("drop knowledge base kb_review")
 
-    #     # ---  case 2: kb with defined columns ---
+        # ---  case 2: kb with defined columns ---
 
-    #     self._create_kb('kb_review', content_columns=['review', 'product'],
-    #                     id_column='url', metadata_columns=['specs', 'id'])
+        self._create_kb('kb_review', content_columns=['review', 'product'],
+                        id_column='url', metadata_columns=['specs', 'id'])
 
-    #     set_openai_embedding(mock_openai, [[0.1] * 1536, [0.2] * 1536])
-    #     self.run_sql("""
-    #         insert into kb_review
-    #         select * from files.reviews
-    #     """)
+        set_openai_embedding(mock_openai, [[0.1] * 1536, [0.2] * 1536])
+        self.run_sql("""
+            insert into kb_review
+            select * from files.reviews
+        """)
 
-    #     ret = self.run_sql("select * from kb_review")  # url in id
+        ret = self.run_sql("select * from kb_review")  # url in id
 
-    #     assert len(ret) == 2  # two columns are split in two records
+        assert len(ret) == 2  # two columns are split in two records
 
-    #     # review/product in content
-    #     content = list(ret['chunk_content'])
-    #     assert record['review'] in content
-    #     assert record['product'] in content
+        # review/product in content
+        content = list(ret['chunk_content'])
+        assert record['review'] in content
+        assert record['product'] in content
 
-    #     # specs/id in metadata
-    #     metadata = ret['metadata'][0]
-    #     assert metadata['specs'] == record['specs']
-    #     assert str(metadata['id']) == str(record['id'])
+        # specs/id in metadata
+        metadata = ret['metadata'][0]
+        assert metadata['specs'] == record['specs']
+        assert str(metadata['id']) == str(record['id'])
 
-    #     self.run_sql("drop knowledge base kb_review")
+        self.run_sql("drop knowledge base kb_review")
 
-    #     # ---  case 3: content is defined, id is id, the rest goes to metadata ---
-    #     self._create_kb('kb_review', content_columns=['review'])
+        # ---  case 3: content is defined, id is id, the rest goes to metadata ---
+        self._create_kb('kb_review', content_columns=['review'])
 
-    #     self.run_sql("""
-    #         insert into kb_review
-    #         select * from files.reviews
-    #     """)
+        self.run_sql("""
+            insert into kb_review
+            select * from files.reviews
+        """)
 
-    #     ret = self.run_sql("select * from kb_review where original_doc_id = 123")  # id is id
-    #     assert len(ret) == 1
-    #     # review in content
-    #     assert ret['chunk_content'][0] == record['review']
+        ret = self.run_sql("select * from kb_review where original_doc_id = 123")  # id is id
+        assert len(ret) == 1
+        # review in content
+        assert ret['chunk_content'][0] == record['review']
 
-    #     # specs/url/product in metadata
-    #     metadata = ret['metadata'][0]
-    #     assert metadata['specs'] == record['specs']
-    #     assert metadata['url'] == record['url']
-    #     assert metadata['product'] == record['product']
+        # specs/url/product in metadata
+        metadata = ret['metadata'][0]
+        assert metadata['specs'] == record['specs']
+        assert metadata['url'] == record['url']
+        assert metadata['product'] == record['product']
 
     def _get_ral_table(self):
         data = [
@@ -519,62 +519,62 @@ class TestKB(BaseExecutorDummyML):
 
         return pd.DataFrame(data, columns=['ral', 'english', 'italian'])
 
-    # @patch('openai.OpenAI')
-    # def test_join_kb_table(self, mock_openai):
-    #     set_openai_models(mock_openai)
+    @patch('openai.OpenAI')
+    def test_join_kb_table(self, mock_openai):
+        set_openai_models(mock_openai)
         
-    #     df = self._get_ral_table()
-    #     self.save_file('ral', df)
+        df = self._get_ral_table()
+        self.save_file('ral', df)
 
-    #     self._create_kb('kb_ral')
+        self._create_kb('kb_ral')
 
-    #     set_openai_embedding(mock_openai, [[0.1] * 1536, [0.2] * 1536, [0.3] * 1536, [0.4] * 1536])
-    #     self.run_sql("""
-    #         insert into kb_ral
-    #         select ral id, english content from files.ral
-    #     """)
+        set_openai_embedding(mock_openai, [[0.1] * 1536, [0.2] * 1536, [0.3] * 1536, [0.4] * 1536])
+        self.run_sql("""
+            insert into kb_ral
+            select ral id, english content from files.ral
+        """)
 
-    #     set_openai_embedding(mock_openai, [[0.3] * 1536])
-    #     ret = self.run_sql("""
-    #         select t.italian, k.id, t.ral from kb_ral k
-    #         join files.ral t on t.ral = k.id
-    #         where k.content = 'white'
-    #         limit 2
-    #     """)
+        set_openai_embedding(mock_openai, [[0.3] * 1536])
+        ret = self.run_sql("""
+            select t.italian, k.id, t.ral from kb_ral k
+            join files.ral t on t.ral = k.id
+            where k.content = 'white'
+            limit 2
+        """)
 
-    #     assert len(ret) == 2
-    #     # values are matched
-    #     diff = ret[ret['ral'] != ret['id']]
-    #     assert len(diff) == 0
+        assert len(ret) == 2
+        # values are matched
+        diff = ret[ret['ral'] != ret['id']]
+        assert len(diff) == 0
 
-    #     # =================   operators  =================
-    #     ret = self.run_sql("""
-    #         select * from kb_ral
-    #         where id = '1000'
-    #     """)
-    #     assert len(ret) == 1
-    #     assert ret['id'][0] == '1000'
+        # =================   operators  =================
+        ret = self.run_sql("""
+            select * from kb_ral
+            where id = '1000'
+        """)
+        assert len(ret) == 1
+        assert ret['id'][0] == '1000'
 
-    #     ret = self.run_sql("""
-    #         select * from kb_ral
-    #         where id != '1000'
-    #     """)
-    #     assert len(ret) == 3
-    #     assert '1000' not in ret['id']
+        ret = self.run_sql("""
+            select * from kb_ral
+            where id != '1000'
+        """)
+        assert len(ret) == 3
+        assert '1000' not in ret['id']
 
-    #     ret = self.run_sql("""
-    #         select * from kb_ral
-    #         where id in ('1000', '1004')
-    #     """)
-    #     assert len(ret) == 2
-    #     assert set(ret['id']) == {'1000', '1004'}
+        ret = self.run_sql("""
+            select * from kb_ral
+            where id in ('1000', '1004')
+        """)
+        assert len(ret) == 2
+        assert set(ret['id']) == {'1000', '1004'}
 
-    #     ret = self.run_sql("""
-    #         select * from kb_ral
-    #         where id not in ('1000', '1004')
-    #     """)
-    #     assert len(ret) == 2
-    #     assert set(ret['id']) == {'9016', '9023'}
+        ret = self.run_sql("""
+            select * from kb_ral
+            where id not in ('1000', '1004')
+        """)
+        assert len(ret) == 2
+        assert set(ret['id']) == {'9016', '9023'}
 
     @patch('openai.OpenAI')
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')

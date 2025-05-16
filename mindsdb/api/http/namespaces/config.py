@@ -32,7 +32,7 @@ class GetConfig(Resource):
                 'http_auth_enabled': config['auth']['http_auth_enabled']
             }
         }
-        for key in ['default_llm', 'default_embedding_model']:
+        for key in ['default_llm', 'default_embedding_model', 'default_reranking_model']:
             value = config.get(key)
             if value is not None:
                 resp[key] = value
@@ -43,7 +43,7 @@ class GetConfig(Resource):
     def put(self):
         data = request.json
 
-        allowed_arguments = {'auth', 'default_llm', 'default_embedding_model'}
+        allowed_arguments = {'auth', 'default_llm', 'default_embedding_model', 'default_reranking_model'}
         unknown_arguments = list(set(data.keys()) - allowed_arguments)
         if len(unknown_arguments) > 0:
             return http_error(

@@ -233,7 +233,8 @@ class KnowledgeBaseTable:
     def add_relevance(self, df, query_text, relevance_threshold=None):
         relevance_column = TableField.RELEVANCE.value
 
-        reranking_model_params = get_model_params(self._kb.params.get("reranking_model"), "default_llm")
+        default_config_key = 'default_reranking_model' if config.get('default_reranking_model') else 'default_llm'
+        reranking_model_params = get_model_params(self._kb.params.get("reranking_model"), default_config_key)
         if reranking_model_params and query_text and len(df) > 0:
             # Use reranker for relevance score
             try:
@@ -909,7 +910,8 @@ class KnowledgeBaseController:
             model_record = db.Predictor.query.get(model['id'])
             embedding_model_id = model_record.id
 
-        reranking_model_params = get_model_params(params.get('reranking_model', {}), 'default_llm')
+        default_config_key = 'default_reranking_model' if config.get('default_reranking_model') else 'default_llm'
+        reranking_model_params = get_model_params(params.get('reranking_model', {}), default_config_key)
         if reranking_model_params:
             # Get reranking model from params.
             # This is called here to check validaity of the parameters.

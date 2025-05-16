@@ -27,6 +27,13 @@ jobs:
       - name: Check Version
         run: |
           PYTHONPATH=./ python tests/scripts/check_version.py ${{ env.CI_REF_NAME }} ${{ github.event.release.prerelease }}
+      - name: Setup uv
+        if: ${{ needs.changes.outputs.not-docs == 'true' }}
+        uses: astral-sh/setup-uv@v5
+        with:
+          cache-local-path: "/home/runner/_work/_tool/uv-local-cache"
+          prune-cache: false
+          python-version: ${{ vars.CI_PYTHON_VERSION || '3.10' }}
 
   # Push a new release to PyPI
   deploy_to_pypi:

@@ -2,7 +2,7 @@ packaging
 flask == 3.0.3
 werkzeug == 3.0.6
 flask-restx >= 1.3.0, < 2.0.0
-pandas >=2.0.0, <2.1.0
+pandas == 2.2.3
 python-multipart == 0.0.18
 cryptography>=35.0
 psycopg[binary]
@@ -16,7 +16,7 @@ redis >=5.0.0, < 6.0.0
 walrus==0.9.3
 flask-compress >= 1.0.0
 appdirs >= 1.0.0
-mindsdb-sql-parser ~= 0.6.0
+mindsdb-sql-parser ~= 0.7.1
 pydantic ~= 2.7.0
 mindsdb-evaluator == 0.0.17
 duckdb ~= 1.2.1
@@ -29,10 +29,7 @@ botocore
 boto3 >= 1.34.131
 python-dateutil
 scikit-learn==1.5.2
-protobuf==3.20.3
 hierarchicalforecast~=0.4.0
-google-auth-oauthlib
-msal
 langchain==0.3.7
 langchain-community==0.3.5
 langchain-core==0.3.35
@@ -59,5 +56,4 @@ pymupdf==1.25.2
 filetype
 charset-normalizer
 openpyxl # used by pandas to read txt and xlsx files
-markitdown[all]==0.1.1
-onnxruntime==1.20.1 # required by markitdown; 1.21.0 (latest as of April 10, 2025) causes issues in Windows
+aipdf==0.0.5

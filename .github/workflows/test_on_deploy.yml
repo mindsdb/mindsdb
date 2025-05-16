@@ -38,20 +38,36 @@ env:
   UV_LINK_MODE: "symlink"
 
 jobs:
-
+  changes:
+    name: Filter changed files
+    runs-on: mdb-dev
+    outputs:
+      not-docs: ${{ steps.filter.outputs.not-docs }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          predicate-quantifier: "every"
+          filters: |
+            not-docs:
+              - '!docs/**'  
+              - '!**/*.md'
+              - '!.github/workflows/build_deploy_dev.yml'
+              - '!.github/workflows/test_on_deploy.yml'
   # Run our integration tests
   test:
+    needs: changes
     environment:
       name: ${{ inputs.deploy-env }}
       url: ${{ vars.ENV_URL }}
     name: Run integration tests on deploy
     runs-on: mdb-dev
-    if: github.ref_type == 'branch'
+    if: ${{ github.ref_type == 'branch' && needs.changes.outputs.not-docs == 'true' }}
     steps:
     - uses: actions/checkout@v4
       with:
         ref: ${{ inputs.git-sha }}
-    # We have to install UV because (for now) these run in GH's runners
     - name: Setup uv
       uses: astral-sh/setup-uv@v5
       with:

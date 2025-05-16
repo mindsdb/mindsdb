@@ -7,6 +7,101 @@ A knowledge base is an advanced system that organizes information based on seman
 
 By performing semantic reasoning across multiple data points, a knowledge base delivers deeper insights and more accurate responses, making it a powerful tool for intelligent data access.
 
+## How Knowledge Bases Work
+
+Before diving into the syntax, here is a quick walkthrough showing how knowledge bases work in MindsDB.
+
+We start by creating a knowledge base and inserting data. Next we can run semantic search queries with metadata filtering.
+
+<Steps>
+  <Step title="Create a knowledge base">
+    Use the `CREATE KNOWLEDGE_BASE` command to create a knowledge base, specifying all its components.
+
+    ```sql
+    CREATE KNOWLEDGE_BASE my_kb
+    USING
+        embedding_model = {
+            "provider": "openai",
+            "model_name" : "text-embedding-3-large",
+            "api_key": "sk-abc123"
+        },
+        reranking_model = {
+            "provider": "openai",
+            "model_name": "gpt-4o",
+            "api_key": "sk-abc123"
+        },
+        metadata_columns = ['product'],
+        content_columns = ['notes'],
+        id_column = 'order_id';
+    ```
+  </Step>
+  <Step title="Insert data into the knowledge base">
+    In this example, we use a simple dataset containing customer notes for product orders which will be inserted into the knowledge base.
+
+    ```sql
+    +----------+-----------------------+------------------------+
+    | order_id | product               | notes                  |
+    +----------+-----------------------+------------------------+
+    | A1B      | Wireless Mouse        | Request color: black   |
+    | 3XZ      | Bluetooth Speaker     | Gift wrap requested    |
+    | Q7P      | Aluminum Laptop Stand | Prefer aluminum finish |
+    +----------+-----------------------+------------------------+
+    ```
+
+    Use the `INSERT INTO` command to injest data into the knowledge base.
+
+    ```sql
+    INSERT INTO my_kb
+        SELECT order_id, product, notes
+        FROM sample_data.orders;
+    ```
+  </Step>
+  <Step title="Run semantic search on the knowledge base">
+    Query the knowledge base using semantic search and optionally defining the minimum `relevance_threshold` to receive only the best matching data.
+
+    ```sql
+    SELECT *
+    FROM my_kb
+    WHERE content = 'color'
+    AND relevance_threshold = 0.2502;
+    ```
+
+    This query returns:
+
+    ```sql
+    +-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+    | id  | chunk_id             | chunk_content           | metadata                                                                                                                                                                                            | distance           | relevance          |
+    +-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+    | A1B | A1B_notes:1of1:0to20 | Request color: black    | {"chunk_index":0,"content_column":"notes","end_char":20,"original_doc_id":"A1B_notes","original_row_id":"A1B","product":"Wireless Mouse","source":"TextChunkingPreprocessor","start_char":0}        | 0.5743341242061104 | 0.5093188026135379 |
+    | Q7P | Q7P_notes:1of1:0to22 | Prefer aluminum finish  | {"chunk_index":0,"content_column":"notes","end_char":22,"original_doc_id":"Q7P_notes","original_row_id":"Q7P","product":"Aluminum Laptop Stand","source":"TextChunkingPreprocessor","start_char":0} | 0.7744703514692067 | 0.2502580835880018 |
+    +-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+    ```
+  </Step>
+  <Step title="Filter results by metadata">
+    Add metadata filtering to focus your search.
+
+    ```sql
+    SELECT *
+    FROM my_kb
+    WHERE product = 'Wireless Mouse'
+    AND content = 'color'
+    AND relevance_threshold = 0.2502;
+    ```
+    
+    This query returns:
+
+    ```sql
+    +-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+-------------------+
+    | id  | chunk_id             | chunk_content          | metadata                                                                                                                                                                                     | distance           | relevance         |
+    +-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+-------------------+
+    | A1B | A1B_notes:1of1:0to20 | Request color: black   | {"chunk_index":0,"content_column":"notes","end_char":20,"original_doc_id":"A1B_notes","original_row_id":"A1B","product":"Wireless Mouse","source":"TextChunkingPreprocessor","start_char":0} | 0.5743341242061104 | 0.504396172197583 |
+    +-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+-------------------+
+    ```
+  </Step>
+</Steps>
+
+The following sections explain the syntax and other features of knowledge bases.
+
 ## `CREATE KNOWLEDGE_BASE` Syntax
 
 Here is the syntax for creating a knowledge base:
@@ -15,14 +110,14 @@ Here is the syntax for creating a knowledge base:
 CREATE KNOWLEDGE_BASE my_kb
 USING
     embedding_model = {
-       "provider": "openai",
-       "model_name" : "text-embedding-3-large",
-       "api_key": "sk-..."
+        "provider": "openai",
+        "model_name" : "text-embedding-3-large",
+        "api_key": "sk-..."
     },
     reranking_model = {
-       "provider": "openai",
-       "model_name": "gpt-4o",
-       "api_key": "sk-..."
+        "provider": "openai",
+        "model_name": "gpt-4o",
+        "api_key": "sk-..."
     },
     storage = my_vector_store.storage_table,
     metadata_columns = ['date', 'creator', ...],
@@ -57,15 +152,17 @@ Users can define the embedding model choosing one of the following options.
 ```sql
 CREATE KNOWLEDGE_BASE my_kb
 USING
-...
+    ...
     embedding_model = {
-       "provider": "azure_openai",
-       "model_name" : "text-embedding-3-large",
-       "api_key": "sk-abc123",
-       "base_url": "https://ai-6689.openai.azure.com/",
-       "api_version": "2024-02-01"
+
+        "provider": "openai_azure",
+        "model_name" : "text-embedding-3-large",
+        "api_key": "sk-abc123",
+        "base_url": "https://ai-6689.openai.azure.com/",
+        "api_version": "2024-02-01"
+
     },
-...
+    ...
 ```
 
 **Option 2.** Define the default embedding model in the [MindsDB configuration file](/setup/custom-config).
@@ -76,11 +173,13 @@ Note that if you define `default_embedding_model` in the configuration file, you
 
 ```bash
 "default_embedding_model": {
-    "provider": "azure_openai",
-    "model_name" : "text-embedding-3-large",
-    "api_key": "sk-abc123",
-    "base_url": "https://ai-6689.openai.azure.com/",
-    "api_version": "2024-02-01"
+
+   "provider": "openai_azure",
+   "model_name" : "text-embedding-3-large",
+   "api_key": "sk-abc123",
+   "base_url": "https://ai-6689.openai.azure.com/",
+   "api_version": "2024-02-01"
+
 }
 ```
 
@@ -93,7 +192,7 @@ It is a required parameter. It defines the model provider. Currently, the suppor
 It is a required parameter. It defines the embedding model name as specified by the provider. Users can choose one of the [OpenAI embedding models](https://platform.openai.com/docs/guides/embeddings/embedding-models#embedding-models).
 
 * `api_key`
-The API key is required to access the embedding model assigned to a knowledge base. Users can provide it either in this `api_key` parameter, or in the `OPENAI_API_KEY` environment variable.
+The API key is required to access the embedding model assigned to a knowledge base. Users can provide it either in this `api_key` parameter, or in the `OPENAI_API_KEY` environment variable for `"provider": "openai"` and `AZURE_OPENAI_API_KEY` environment variable for `"provider": "azure_openai"`.
 
 * `base_url`
 It is an optional parameter, which defaults to `https://api.openai.com/v1/`. It is a required parameter when using the `azure_openai` provider. It is the root URL used to send API requests.
@@ -112,16 +211,18 @@ Users can define the reranking model choosing one of the following options.
 ```sql
 CREATE KNOWLEDGE_BASE my_kb
 USING
-...
+    ...
     reranking_model = {
-       "provider": "azure_openai",
-       "model_name" : "gpt-4o",
-       "api_key": "sk-abc123",
-       "base_url": "https://ai-6689.openai.azure.com/",
-       "api_version": "2024-02-01",
-       "method": "multi-class"
+
+        "provider": "openai_azure",
+        "model_name" : "gpt-4o",
+        "api_key": "sk-abc123",
+        "base_url": "https://ai-6689.openai.azure.com/",
+        "api_version": "2024-02-01",
+        "method": "multi-class"
+
     },
-...
+    ...
 ```
 
 **Option 2.** Define the default reranking model in the [MindsDB configuration file](/setup/custom-config).
@@ -132,12 +233,14 @@ Note that if you define `default_llm` in the configuration file, you do not need
 
 ```bash
 "default_llm": {
-    "provider": "azure_openai",
-    "model_name" : "gpt-4o",
-    "api_key": "sk-abc123",
-    "base_url": "https://ai-6689.openai.azure.com/",
-    "api_version": "2024-02-01",
-    "method": "multi-class"
+
+  "provider": "openai_azure",
+  "model_name" : "gpt-4o",
+  "api_key": "sk-abc123",
+  "base_url": "https://ai-6689.openai.azure.com/",
+  "api_version": "2024-02-01",
+  "method": "multi-class"
+
 }
 ```
 
@@ -150,7 +253,7 @@ It is a required parameter. It defines the model provider. Currently, the suppor
 It is a required parameter. It defines the embedding model name as specified by the provider. Users can choose one of the [OpenAI chat models](https://platform.openai.com/docs/models).
 
 * `api_key`
-The API key is required to access the reranking model assigned to a knowledge base. Users can provide it either in this `api_key` parameter, or in the `OPENAI_API_KEY` environment variable.
+The API key is required to access the embedding model assigned to a knowledge base. Users can provide it either in this `api_key` parameter, or in the `OPENAI_API_KEY` environment variable for `"provider": "openai"` and `AZURE_OPENAI_API_KEY` environment variable for `"provider": "azure_openai"`.
 
 * `base_url`
 It is an optional parameter, which defaults to `https://api.openai.com/v1/`. It is a required parameter when using the `azure_openai` provider. It is the root URL used to send API requests.
@@ -196,7 +299,7 @@ PARAMETERS = {
     "user": "user",
     "password": "password",
     "distance": "cosine"
-    };
+};
 
 CREATE KNOWLEDGE_BASE my_kb
 USING
@@ -261,7 +364,7 @@ The data inserted into the knowledge base can be classified as content, which is
 Note that source data column(s) included in `content_columns` cannot be used in `metadata_columns`, and vice versa.
 </Note>
 
-This parameter is an array of strings that lists column names from the source data to be used as content and processed into embeddings. If not provided, the `content` column is expected by the knowledge base by default.
+This parameter is an array of strings that lists column names from the source data to be used as content and processed into embeddings. If not provided, the `content` column is expected by default when inserting data into the knowledge base.
 
 Here is an example of usage. A user wants to store the following data in a knowledge base.
 
@@ -291,9 +394,9 @@ USING
 
 ### `id_column`
 
-The data inserted into the knowledge base can be classified as ID, which is a column in the source data that uniquely identifies each row.
+The ID column uniquely identifies each source data row in the knowledge base.
 
-It is mandatory for users to provide the `id_column` parameter. This parameter is a string that contains the source data ID column name.
+It is an optional parameter. If provided, this parameter is a string that contains the source data ID column name. If not provided, it is generated from the hash of the content columns.
 
 Here is an example of usage. A user wants to store the following data in a knowledge base.
 
@@ -325,6 +428,26 @@ USING
 Note that if the source data row is chunked into multiple chunks by the knowledge base (that is, to optimize the storage), then these rows in the knowledge base have the same ID value that identifies chunks from one source data row.
 </Info>
 
+<Note>
+**Available options for the ID column values**
+
+* User-Defined ID Column: <br></br>
+When users defined the `id_column` parameter, the values from the provided source data column are used to identify source data rows within the knowledge base.
+
+* User-Generated ID Column: <br></br>
+When users do not have a column that uniquely idetifies each row in their source data, they can generate the ID column values when inserting data into the knowledge base using functions like `HASH()` or `ROW_NUMBER()`.
+
+```sql
+INSERT INTO my_kb (
+    SELECT ROW_NUMBER() OVER (ORDER BY order_id) AS id, *
+    FROM sample_data.orders
+);
+```
+
+* Default ID Column: <br></br>
+If the `id_column` parameter is not defined, its default values are build from the hash of the content columns and follow the format: `<first 16 char of md5 hash of row content>`.
+</Note>
+
 ### Example
 
 Here is a sample knowledge base that will be used for examples in the following content.
@@ -333,14 +456,14 @@ Here is a sample knowledge base that will be used for examples in the following 
 CREATE KNOWLEDGE_BASE my_kb
 USING
     embedding_model = {
-       "provider": "openai",
-       "model_name" : "text-embedding-3-large",
-       "api_key": "sk-abc123"
+        "provider": "openai",
+        "model_name" : "text-embedding-3-large",
+        "api_key": "sk-abc123"
     },
     reranking_model = {
-       "provider": "openai",
-       "model_name": "gpt-4o",
-       "api_key": "sk-abc123"
+        "provider": "openai",
+        "model_name": "gpt-4o",
+        "api_key": "sk-abc123"
     },
     metadata_columns = ['product'],
     content_columns = ['notes'],
@@ -371,8 +494,8 @@ Here is the syntax for inserting data into a knowledge base:
 
 ```sql
 INSERT INTO my_kb
-    SELECT order_id, product, notes
-    FROM sample_data.orders;
+SELECT order_id, product, notes
+FROM sample_data.orders;
 ```
 
 Upon execution, it inserts data into a knowledge base, using the embedding model to embed it into vectors before inserting into an underlying vector database.
@@ -417,9 +540,9 @@ Here is how to propagate this change into the knowledge base.
 
 ```sql
 INSERT INTO my_kb
-    SELECT order_id, product, notes
-    FROM sample_data.orders
-    WHERE order_id = 'Q7P';
+SELECT order_id, product, notes
+FROM sample_data.orders
+WHERE order_id = 'Q7P';
 ```
 
 The knowledge base matches the ID value to the existing one and updates the data if required.
@@ -432,8 +555,8 @@ Here is an example.
 
 ```sql
 INSERT INTO my_kb
-    SELECT order_id, product, notes
-    FROM sample_data.orders
+SELECT order_id, product, notes
+FROM sample_data.orders
 USING
     batch_size = 200,
     track_column = order_id,
@@ -445,9 +568,7 @@ The parameters include the following:
 
 * `batch_size` defines the number of rows fetched per iteration to optimize data extraction from the source. It defaults to 1000.
 
-* `threads` defines threads for running partitions. Note that if the [ML task queue](/setup/custom-config#overview-of-config-parameters) is enabled, threads are used automatically. The available values for include:
-    * A number of threads to be used, for example, `threads = 10`,
-    * A boolean value that defines whether to enable threads, setting `threads = true`, or disable threads, setting `threads = false`.
+* `threads` defines threads for running partitions. Note that if the [ML task queue](/setup/custom-config#overview-of-config-parameters) is enabled, threads are used automatically. The available values for include a number of threads to be used, for example, `threads = 10`, or a boolean value that defines whether to enable threads, setting `threads = true`, or disable threads, setting `threads = false`.
 
 * `track_column` defines the column used for sorting data before partitioning.
 
@@ -505,8 +626,8 @@ Here a sample knowledge base created in the previous **Example** section is inse
 
 ```sql
 INSERT INTO my_kb
-    SELECT order_id, product, notes
-    FROM sample_data.orders;
+SELECT order_id, product, notes
+FROM sample_data.orders;
 ```
 
 <Note>
@@ -522,8 +643,8 @@ USING
 
 ```sql
 INSERT INTO my_kb
-    SELECT order_id, notes AS content 
-    FROM sample_data.orders;
+SELECT order_id, notes AS content
+FROM sample_data.orders;
 ```
 </Note>
 
@@ -587,7 +708,7 @@ Users can query a knowledge base using semantic search by providing the search p
 ```sql
 SELECT *
 FROM my_kb
-WHERE content = 'color' 
+WHERE content = 'color'
 ```
 
 Here is the output:
@@ -694,7 +815,7 @@ Knowledge bases can be used in the standard SQL JOIN statements.
 ```sql
 SELECT t.order_id, t.product, t.notes, kb.chunk_content, kb.relevance
 FROM local_postgres.orders AS t
-JOIN my_kb AS kb 
+JOIN my_kb AS kb
 ON t.order_id = kb.id
 WHERE t.order_id = 'A1B'
 AND kb.content = 'color'
@@ -732,7 +853,7 @@ DROP KNOWLEDGE_BASE my_kb;
 
 Upon execution, it removes the knowledge base with its content.
 
-## Complete Example
+## Example
 
 Here is the data that will be inserted into the knowledge base.
 
@@ -750,7 +871,7 @@ You can access this sample data as below:
 
 ```sql
 CREATE DATABASE sample_data
-WITH ENGINE = 'postgres', 
+WITH ENGINE = 'postgres',
 PARAMETERS = {
     "user": "demo_user",
     "password": "demo_password",
@@ -769,14 +890,14 @@ Here is how to create a knowledge base specifically for the data.
 CREATE KNOWLEDGE_BASE my_kb
 USING
     embedding_model = {
-       "provider": "openai",
-       "model_name" : "text-embedding-3-large",
-       "api_key": "sk-abc123"
+        "provider": "openai",
+        "model_name" : "text-embedding-3-large",
+        "api_key": "sk-abc123"
     },
     reranking_model = {
-       "provider": "openai",
-       "model_name": "gpt-4o",
-       "api_key": "sk-abc123"
+        "provider": "openai",
+        "model_name": "gpt-4o",
+        "api_key": "sk-abc123"
     },
     metadata_columns = ['product'],
     content_columns = ['notes'],
@@ -787,8 +908,8 @@ Here is how to insert the data.
 
 ```sql
 INSERT INTO my_kb
-    SELECT order_id, product, notes
-    FROM sample_data.orders;
+SELECT order_id, product, notes
+FROM sample_data.orders;
 ```
 
 Here is how to query the knowledge base.

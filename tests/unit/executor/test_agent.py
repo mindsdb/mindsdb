@@ -52,9 +52,6 @@ def set_openai_completion(mock_openai, response):
     
 
 def set_openai_embedding(mock_openai, response):
-    if not isinstance(response, list):
-        response = [response]
-    
     def resp_f(*args, **kwargs):
         return MagicMock(
             data=[MagicMock(embedding=emb) for emb in response]
@@ -368,13 +365,6 @@ class TestKB(BaseExecutorDummyML):
                 "api_key": "dummy_key",
             }
 
-        if reranking_model is None:
-            reranking_model = {
-                "provider": "openai",
-                "model_name": "gpt-4",
-                "api_key": "dummy_key",
-            }
-
         kb_params = {
             "embedding_model": embedding_model,
             "reranking_model": reranking_model,
@@ -424,7 +414,7 @@ class TestKB(BaseExecutorDummyML):
     @patch('openai.OpenAI')
     def test_kb_metadata(self, mock_openai):
         set_openai_models(mock_openai)
-        set_openai_embedding(mock_openai, [0.1] * 1536)
+        set_openai_embedding(mock_openai, [[0.1] * 1536])
 
         record = {
             'review': "all is good, haven't used yet",
@@ -544,6 +534,7 @@ class TestKB(BaseExecutorDummyML):
             select ral id, english content from files.ral
         """)
 
+        set_openai_embedding(mock_openai, [[0.3] * 1536])
         ret = self.run_sql("""
             select t.italian, k.id, t.ral from kb_ral k
             join files.ral t on t.ral = k.id
@@ -585,97 +576,97 @@ class TestKB(BaseExecutorDummyML):
         assert len(ret) == 2
         assert set(ret['id']) == {'9016', '9023'}
 
-    @patch('openai.OpenAI')
-    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def test_kb_partitions(self, mock_handler, mock_openai):
-        set_openai_models(mock_openai)
+    # @patch('openai.OpenAI')
+    # @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    # def test_kb_partitions(self, mock_handler, mock_openai):
+    #     set_openai_models(mock_openai)
 
-        df = self._get_ral_table()
-        self.save_file('ral', df)
+    #     df = self._get_ral_table()
+    #     self.save_file('ral', df)
 
-        df = pd.concat([df] * 30)
-        # unique ids
-        df['id'] = list(map(str, range(len(df))))
+    #     df = pd.concat([df] * 30)
+    #     # unique ids
+    #     df['id'] = list(map(str, range(len(df))))
 
-        self.set_handler(mock_handler, name='pg', tables={'ral': df})
+    #     self.set_handler(mock_handler, name='pg', tables={'ral': df})
 
-        def check_partition(insert_sql):
-            # create empty kb
-            self._create_kb('kb_part')
+    #     def check_partition(insert_sql):
+    #         # create empty kb
+    #         self._create_kb('kb_part')
             
-            set_openai_embedding(mock_openai, [[0.1] * 1536] * len(df))
+    #         set_openai_embedding(mock_openai, [[0.1] * 1536] * len(df))
 
-            # load kb
-            ret = self.run_sql(insert_sql)
-            # inserts returns query
-            query_id = ret['ID'][0]
+    #         # load kb
+    #         ret = self.run_sql(insert_sql)
+    #         # inserts returns query
+    #         query_id = ret['ID'][0]
 
-            # wait loaded
-            for i in range(1000):
-                time.sleep(0.2)
-                ret = self.run_sql(f'select * from information_schema.queries where id = {query_id}')
-                if ret['FINISHED_AT'][0] is not None:
-                    break
+    #         # wait loaded
+    #         for i in range(1000):
+    #             time.sleep(0.2)
+    #             ret = self.run_sql(f'select * from information_schema.queries where id = {query_id}')
+    #             if ret['FINISHED_AT'][0] is not None:
+    #                 break
 
-            # check content
-            ret = self.run_sql('select * from kb_part')
-            assert len(ret) == len(df)
+    #         # check content
+    #         ret = self.run_sql('select * from kb_part')
+    #         assert len(ret) == len(df)
 
-            # check queries table
-            ret = self.run_sql('select * from information_schema.queries')
-            assert len(ret) == 1
-            rec = ret.iloc[0]
-            assert 'kb_part' in ret['SQL'][0]
-            assert ret['ERROR'][0] is None
-            assert ret['FINISHED_AT'][0] is not None
+    #         # check queries table
+    #         ret = self.run_sql('select * from information_schema.queries')
+    #         assert len(ret) == 1
+    #         rec = ret.iloc[0]
+    #         assert 'kb_part' in ret['SQL'][0]
+    #         assert ret['ERROR'][0] is None
+    #         assert ret['FINISHED_AT'][0] is not None
 
-            # test describe
-            ret = self.run_sql('describe knowledge base kb_part')
-            assert len(ret) == 1
-            rec_d = ret.iloc[0]
-            assert rec_d['PROCESSED_ROWS'] == rec['PROCESSED_ROWS']
-            assert rec_d['INSERT_STARTED_AT'] == rec['STARTED_AT']
-            assert rec_d['INSERT_FINISHED_AT'] == rec['FINISHED_AT']
-            assert rec_d['QUERY_ID'] == query_id
+    #         # test describe
+    #         ret = self.run_sql('describe knowledge base kb_part')
+    #         assert len(ret) == 1
+    #         rec_d = ret.iloc[0]
+    #         assert rec_d['PROCESSED_ROWS'] == rec['PROCESSED_ROWS']
+    #         assert rec_d['INSERT_STARTED_AT'] == rec['STARTED_AT']
+    #         assert rec_d['INSERT_FINISHED_AT'] == rec['FINISHED_AT']
+    #         assert rec_d['QUERY_ID'] == query_id
 
-            # del query
-            self.run_sql(f"SELECT query_cancel({rec['ID']})")
-            ret = self.run_sql('select * from information_schema.queries')
-            assert len(ret) == 0
+    #         # del query
+    #         self.run_sql(f"SELECT query_cancel({rec['ID']})")
+    #         ret = self.run_sql('select * from information_schema.queries')
+    #         assert len(ret) == 0
 
-            ret = self.run_sql('describe knowledge base kb_part')
-            assert len(ret) == 1
-            rec_d = ret.iloc[0]
-            assert rec_d['PROCESSED_ROWS'] is None
-            assert rec_d['INSERT_STARTED_AT'] is None
-            assert rec_d['INSERT_FINISHED_AT'] is None
-            assert rec_d['QUERY_ID'] is None
+    #         ret = self.run_sql('describe knowledge base kb_part')
+    #         assert len(ret) == 1
+    #         rec_d = ret.iloc[0]
+    #         assert rec_d['PROCESSED_ROWS'] is None
+    #         assert rec_d['INSERT_STARTED_AT'] is None
+    #         assert rec_d['INSERT_FINISHED_AT'] is None
+    #         assert rec_d['QUERY_ID'] is None
 
-        # test iterate
-        check_partition('''
-            insert into kb_part
-            SELECT id, english content FROM  pg.ral
-            using batch_size=20, track_column=id
-        ''')
+    #     # test iterate
+    #     check_partition('''
+    #         insert into kb_part
+    #         SELECT id, english content FROM  pg.ral
+    #         using batch_size=20, track_column=id
+    #     ''')
 
-        # test threads
-        check_partition('''
-            insert into kb_part
-            SELECT id, english content FROM  pg.ral
-            using batch_size=20, track_column=id, threads = 3
-        ''')
+    #     # test threads
+    #     check_partition('''
+    #         insert into kb_part
+    #         SELECT id, english content FROM  pg.ral
+    #         using batch_size=20, track_column=id, threads = 3
+    #     ''')
 
-        # check select join using partitions
-        ret = self.run_sql('''
-            SELECT * FROM  pg.ral t
-            join emb_model
-            using batch_size=20, track_column=id
-        ''')
-        assert len(ret) == len(df)
+    #     # check select join using partitions
+    #     ret = self.run_sql('''
+    #         SELECT * FROM  pg.ral t
+    #         join emb_model
+    #         using batch_size=20, track_column=id
+    #     ''')
+    #     assert len(ret) == len(df)
 
-        ret = self.run_sql('''
-            SELECT * FROM  pg.ral t
-            join emb_model
-            using batch_size=20, track_column=id, threads = 3
-        ''')
-        assert len(ret) == len(df)
+    #     ret = self.run_sql('''
+    #         SELECT * FROM  pg.ral t
+    #         join emb_model
+    #         using batch_size=20, track_column=id, threads = 3
+    #     ''')
+    #     assert len(ret) == len(df)

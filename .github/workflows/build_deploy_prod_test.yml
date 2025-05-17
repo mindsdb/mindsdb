@@ -14,11 +14,6 @@ jobs:
   deploy_to_pypi:
     name: Publish to PyPI
     runs-on: mdb-dev
-    needs: check-version
-    if: github.actor != 'mindsdbadmin'
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-pypi
-      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
       - name: Setup uv

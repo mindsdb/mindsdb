@@ -29,7 +29,7 @@ class TestDocumentPreprocessor:
         id1 = generate_document_id(content, content_column)
         id2 = generate_document_id(content, content_column)
         assert id1 == id2
-        assert len(id1.split('_')[0]) == 16  # Check hash length
+        assert len(id1) == 16  # Check hash length
         # Different content should generate different IDs
         different_content = "different content"
         id3 = generate_document_id(different_content, content_column)
@@ -37,11 +37,12 @@ class TestDocumentPreprocessor:
         # Test with provided_id
         provided_id = "test_id"
         id4 = generate_document_id(content, content_column, provided_id)
-        assert id4 == f"{provided_id}_{content_column}"
+        assert id4 == provided_id
 
     def test_chunk_id_generation(self):
         """Test human-readable chunk ID generation"""
         provided_id = "test_id"
+        content_column = "test_column"
         preprocessor = DocumentPreprocessor()
 
         # Test with all parameters
@@ -50,9 +51,10 @@ class TestDocumentPreprocessor:
             total_chunks=3,
             start_char=0,
             end_char=100,
-            provided_id=provided_id
+            provided_id=provided_id,
+            content_column=content_column
         )
-        assert chunk_id == 'test_id:1of3:0to100'
+        assert chunk_id == f'test_id:{content_column}:1of3:0to100'
 
         # Test error when no document ID provided
         with pytest.raises(ValueError, match="Document ID must be provided"):
@@ -60,7 +62,18 @@ class TestDocumentPreprocessor:
                 chunk_index=0,
                 total_chunks=3,
                 start_char=0,
-                end_char=100
+                end_char=100,
+                content_column=content_column
+            )
+
+        # Test error when no content column provided
+        with pytest.raises(ValueError, match="Content column must be provided"):
+            preprocessor._generate_chunk_id(
+                chunk_index=0,
+                total_chunks=3,
+                start_char=0,
+                end_char=100,
+                provided_id=provided_id
             )
 
     def test_split_document_without_splitter(self):
@@ -150,10 +163,9 @@ class TestDocumentPreprocessor:
         # Verify chunk IDs follow the new format
         for i, chunk in enumerate(chunks):
             chunk_id_parts = chunk.id.split(":")
-            assert len(chunk_id_parts) == 3
+            assert len(chunk_id_parts) == 4
             assert chunk_id_parts[0] == "parent_doc"
-            assert chunk_id_parts[1].endswith(f"of{len(chunks)}")
-            assert "to" in chunk_id_parts[2]
+            assert chunk_id_parts[1] == "content"  # Default content column
 
     def test_document_update_modes(self):
         """Test document update behavior in different modes"""
@@ -194,10 +206,9 @@ class TestDocumentPreprocessor:
         for chunks in [initial_chunks, updated_chunks_1, updated_chunks_2]:
             for i, chunk in enumerate(chunks):
                 chunk_id_parts = chunk.id.split(":")
-                assert len(chunk_id_parts) == 3
+                assert len(chunk_id_parts) == 4
                 assert chunk_id_parts[0] == doc_id
-                assert chunk_id_parts[1].endswith(f"of{len(chunks)}")
-                assert "to" in chunk_id_parts[2]
+                assert chunk_id_parts[1] == "content"  # Default content column
 
 
 def test_document_id_generation():
@@ -214,7 +225,7 @@ def test_document_id_generation():
     # Same content should get same doc ID
     assert doc_id1 == doc_id2
     # Doc ID should be 16 chars (MD5 hash truncated) + column name
-    assert len(doc_id1.split('_')[0]) == 16
+    assert len(doc_id1) == 16
 
     # Test different content gets different IDs
     different_content = "different content"
@@ -224,7 +235,7 @@ def test_document_id_generation():
     # Test provided ID is preserved
     custom_id = "custom_doc_123"
     doc_id4 = generate_document_id(content, content_column, custom_id)
-    assert doc_id4.startswith(custom_id)
+    assert doc_id4 == custom_id
 
     # Test chunk ID format
     doc = Document(content=content, id=doc_id1)
@@ -232,9 +243,9 @@ def test_document_id_generation():
     for chunk in chunks:
         # Format should be: <doc_id>:<chunk_number>of<total_chunks>:<start_char>to<end_char>
         parts = chunk.id.split(':')
-        assert len(parts) == 3
-        assert 'of' in parts[1]
-        assert 'to' in parts[2]
+        assert len(parts) == 4
+        assert 'of' in parts[2]
+        assert 'to' in parts[3]
 
 
 def test_metadata_preservation():

@@ -79,7 +79,14 @@ class QueryAnalysis(Resource):
 
         column_names = [x["name"] for x in result.columns]
         df = DataFrame(result.data, columns=column_names)
-        analysis = analyze_df(df)
+        try:
+            analysis = analyze_df(df)
+        except ImportError:
+            return {
+                'analysis': {},
+                'timestamp': time.time(),
+                'error': 'To use this feature, please install the "dataprep_ml" package.'
+            }
 
         query_tables = [
             table.to_string() for table in get_query_tables(ast)
@@ -107,6 +114,12 @@ class DataAnalysis(Resource):
         try:
             analysis = analyze_df(DataFrame(data, columns=column_names))
             return {"analysis": analysis, "timestamp": time.time()}
+        except ImportError:
+            return {
+                'analysis': {},
+                'timestamp': timestamp,
+                'error': 'To use this feature, please install the "dataprep_ml" package.'
+            }
         except Exception as e:
             # Don't want analysis exceptions to show up on UI.
             # TODO: Fix analysis so it doesn't throw exceptions at all.

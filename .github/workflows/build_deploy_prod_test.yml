@@ -1,11 +1,7 @@
 name: Build and deploy release
 
 on:
-  release:
-    types: [published]
-    paths-ignore:
-      - "docs/**"
-      - "README.md"
+  push:
 
 env:
   UV_LINK_MODE: "symlink"

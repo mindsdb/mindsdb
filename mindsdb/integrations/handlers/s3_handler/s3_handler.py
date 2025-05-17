@@ -8,6 +8,7 @@ from mindsdb_sql_parser import parse_sql
 import pandas as pd
 from typing import Text, Dict, Optional
 from botocore.exceptions import ClientError
+from urllib.parse import urlparse
 
 from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb_sql_parser.ast import Select, Identifier, Insert, Star, Constant
@@ -165,16 +166,13 @@ class S3Handler(APIHandler):
 
         # Set custom endpoint if provided
         if 'endpoint_url' in self.connection_data:
-            endpoint = self.connection_data['endpoint_url']
-            # Remove http:// or https:// prefix if present
-            if endpoint.startswith('http://'):
-                endpoint = endpoint[7:]
-            elif endpoint.startswith('https://'):
-                endpoint = endpoint[8:]
-            duckdb_conn.execute(f"SET s3_endpoint='{endpoint}'")
-            # Force path-style addressing for custom endpoints
+            # Extract host and port from endpoint URL
+            raw_url = self.connection_data['endpoint_url']
+            parsed_url = urlparse(raw_url)
+            endpoint_host = (parsed_url.netloc or parsed_url.path).rstrip('/')  # handles cases like "http://localhost:9000" or "localhost:9000"
+
+            duckdb_conn.execute(f"SET s3_endpoint='{endpoint_host}'")
             duckdb_conn.execute("SET s3_url_style='path'")
-            # Use HTTP instead of HTTPS for custom endpoints
             duckdb_conn.execute("SET s3_use_ssl='false'")
 
         try:

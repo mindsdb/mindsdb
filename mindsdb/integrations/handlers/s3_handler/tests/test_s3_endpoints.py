@@ -5,6 +5,7 @@ from botocore.config import Config
 import time
 from mindsdb.integrations.handlers.s3_handler.s3_handler import S3Handler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
+from urllib.parse import urlparse
 
 
 class S3EndpointHandlerTest(unittest.TestCase):
@@ -62,6 +63,21 @@ class S3EndpointHandlerTest(unittest.TestCase):
         if not result.success:
             print(f"MinIO Connection Error: {result.error_message}")
         self.assertTrue(result.success)
+    
+    def test_endpoint_parsing(self):
+        test_cases = {
+            "http://localhost:9000": "localhost:9000",
+            "https://example.com:443": "example.com:443",
+            "localhost:8000": "localhost:8000",
+            "https://s3.wasabisys.com": "s3.wasabisys.com",
+            "http://127.0.0.1:9000/": "127.0.0.1:9000"
+        }
+
+        for raw_url, expected in test_cases.items():
+            with self.subTest(url=raw_url):
+                parsed = urlparse(raw_url)
+                endpoint = parsed.netloc or parsed.path
+                self.assertEqual(endpoint.rstrip('/'), expected)
 
     def test_minio_list_buckets(self):
         """Test listing MinIO buckets"""

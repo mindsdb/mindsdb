@@ -7,6 +7,8 @@ on:
       - "docs/**"
       - "README.md"
 
+env:
+  UV_LINK_MODE: "symlink"
 
 jobs:
   # Check that the version defined in the github release is valid

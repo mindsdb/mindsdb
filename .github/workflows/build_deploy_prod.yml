@@ -27,12 +27,6 @@ jobs:
       - name: Check Version
         run: |
           PYTHONPATH=./ python tests/scripts/check_version.py ${{ env.CI_REF_NAME }} ${{ github.event.release.prerelease }}
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          cache-local-path: "/home/runner/_work/_tool/uv-local-cache"
-          prune-cache: false
-          python-version: ${{ vars.CI_PYTHON_VERSION || '3.10' }}
 
   # Push a new release to PyPI
   deploy_to_pypi:
@@ -45,10 +39,13 @@ jobs:
       cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5.1.0
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: ${{ vars.CI_PYTHON_VERSION }}
+          # Place cache in the tool dir because we mount this in our runnners
+          cache-local-path: "/home/runner/_work/_tool/uv-local-cache"
+          prune-cache: false
+          python-version: ${{ vars.CI_PYTHON_VERSION || '3.10' }}
       - name: Install dependencies
         run: |
           uv pip install -r requirements/requirements-dev.txt

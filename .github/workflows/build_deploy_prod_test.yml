@@ -1,0 +1,38 @@
+name: Build and deploy release
+
+on:
+  release:
+    types: [published]
+    paths-ignore:
+      - "docs/**"
+      - "README.md"
+
+env:
+  UV_LINK_MODE: "symlink"
+
+jobs:
+  deploy_to_pypi:
+    name: Publish to PyPI
+    runs-on: mdb-dev
+    needs: check-version
+    if: github.actor != 'mindsdbadmin'
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-pypi
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          # Place cache in the tool dir because we mount this in our runnners
+          cache-local-path: "/home/runner/_work/_tool/uv-local-cache"
+          prune-cache: false
+          python-version: ${{ vars.CI_PYTHON_VERSION || '3.10' }}
+      - name: Install dependencies
+        run: |
+          uv pip install -r requirements/requirements-dev.txt
+      - name: Build and publish
+        run: |
+          # This uses the version string from __about__.py, which we checked matches the git tag above
+          uv pip install build
+          python -m build

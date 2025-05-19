@@ -5,6 +5,7 @@ from unittest.mock import patch, MagicMock
 
 import oracledb
 from oracledb import DatabaseError
+import pandas as pd
 from pandas import DataFrame
 
 from base_handler_test import BaseDatabaseHandlerTest
@@ -434,10 +435,10 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         response: Response = self.handler.native_query(query_str)
         excepted_mysql_types = [
             MYSQL_DATA_TYPE.FLOAT,
-            MYSQL_DATA_TYPE.INT,
+            MYSQL_DATA_TYPE.DECIMAL,
             MYSQL_DATA_TYPE.FLOAT,
-            MYSQL_DATA_TYPE.INT,
-            MYSQL_DATA_TYPE.INT,
+            MYSQL_DATA_TYPE.DECIMAL,
+            MYSQL_DATA_TYPE.DECIMAL,
             MYSQL_DATA_TYPE.FLOAT,
             MYSQL_DATA_TYPE.INT,
             MYSQL_DATA_TYPE.FLOAT,
@@ -600,6 +601,26 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[response.data_frame.columns[i]][0]
             self.assertEqual(result_value, input_value)
+        # endregion
+
+        # region test nullable types
+        bigint_val = 9223372036854775807
+        input_rows = [
+            (bigint_val, True),
+            (None, None)
+        ]
+        mock_cursor.fetchall.return_value = input_rows
+        mock_cursor.description = [
+            ('N_BIGINT', oracledb.DB_TYPE_NUMBER, 39, None, 17, 0, True),   # set 17 jsut to force cast to Int64
+            ('T_BOOLEAN', oracledb.DB_TYPE_BOOLEAN, None, None, None, None, True)
+        ]
+        response: Response = self.handler.native_query(query_str)
+        self.assertEquals(response.data_frame.dtypes[0], 'Int64')
+        self.assertEquals(response.data_frame.dtypes[1], 'boolean')
+        self.assertEquals(response.data_frame.iloc[0, 0], bigint_val)
+        self.assertEquals(response.data_frame.iloc[0, 1], True)
+        self.assertTrue(response.data_frame.iloc[1, 0] is pd.NA)
+        self.assertTrue(response.data_frame.iloc[1, 1] is pd.NA)
         # endregion
 
 

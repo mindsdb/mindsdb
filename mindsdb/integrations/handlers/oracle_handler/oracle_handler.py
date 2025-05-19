@@ -72,12 +72,17 @@ def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
     mysql_types: list[MYSQL_DATA_TYPE] = []
     for column in description:
         db_type = column[1]
+        precision = column[4]
         scale = column[5]
         if db_type is oracledb.DB_TYPE_NUMBER:
             if scale != 0:
                 mysql_types.append(MYSQL_DATA_TYPE.FLOAT)
             else:
-                mysql_types.append(MYSQL_DATA_TYPE.INT)
+                # python max int is 19 digits, oracle can return more
+                if precision > 18:
+                    mysql_types.append(MYSQL_DATA_TYPE.DECIMAL)
+                else:
+                    mysql_types.append(MYSQL_DATA_TYPE.INT)
         elif db_type is oracledb.DB_TYPE_BINARY_FLOAT:
             mysql_types.append(MYSQL_DATA_TYPE.FLOAT)
         elif db_type is oracledb.DB_TYPE_BINARY_DOUBLE:
@@ -101,12 +106,24 @@ def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
             # fallback
             mysql_types.append(MYSQL_DATA_TYPE.TEXT)
 
+    # region cast int and bool to nullable types
+    serieses = []
+    for i, mysql_type in enumerate(mysql_types):
+        expected_dtype = None
+        if mysql_type in (
+            MYSQL_DATA_TYPE.SMALLINT, MYSQL_DATA_TYPE.INT, MYSQL_DATA_TYPE.MEDIUMINT,
+            MYSQL_DATA_TYPE.BIGINT, MYSQL_DATA_TYPE.TINYINT
+        ):
+            expected_dtype = 'Int64'
+        elif mysql_type in (MYSQL_DATA_TYPE.BOOL, MYSQL_DATA_TYPE.BOOLEAN):
+            expected_dtype = 'boolean'
+        serieses.append(pd.Series([row[i] for row in result], dtype=expected_dtype, name=description[i][0]))
+    df = pd.concat(serieses, axis=1, copy=False)
+    # endregion
+
     return Response(
         RESPONSE_TYPE.TABLE,
-        data_frame=pd.DataFrame(
-            result,
-            columns=[row[0] for row in cursor.description],
-        ),
+        data_frame=df,
         mysql_types=mysql_types
     )
 

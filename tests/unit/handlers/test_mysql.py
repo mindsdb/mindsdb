@@ -5,6 +5,7 @@ from collections import OrderedDict
 from unittest.mock import patch, MagicMock
 
 import mysql.connector
+import pandas as pd
 from pandas import DataFrame
 from pandas.api import types as pd_types
 
@@ -84,7 +85,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         """
         mock_conn = MagicMock()
         mock_cursor = MockCursorContextManager(
-            data=[[1]],
+            data=[{'id': 1}],
             description=[('id', 3, None, None, None, None, 1, 0, 45)]
         )
 
@@ -558,6 +559,27 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         for key, input_value in input_row.items():
             result_value = response.data_frame[key][0]
             self.assertEqual(result_value, input_value)
+        # endregion
+
+        # region test casting of nullable types
+        bigint_val = 9223372036854775807
+        input_rows = [
+            {'t_bigint': bigint_val, 't_boolean': 1},
+            {'t_bigint': None, 't_boolean': None}
+        ]
+        mock_cursor.fetchall.return_value = input_rows
+        description = [
+            ('t_bigint', 8, None, None, None, None, 1, 0, 63),
+            ('t_boolean', 1, None, None, None, None, 1, 0, 63)
+        ]
+        mock_cursor.description = description
+        response: Response = self.handler.native_query(query_str)
+        self.assertEquals(response.data_frame.dtypes[0], 'Int64')
+        self.assertEquals(response.data_frame.dtypes[1], 'Int64')
+        self.assertEquals(response.data_frame.iloc[0, 0], bigint_val)
+        self.assertEquals(response.data_frame.iloc[0, 1], 1)
+        self.assertTrue(response.data_frame.iloc[1, 0] is pd.NA)
+        self.assertTrue(response.data_frame.iloc[1, 1] is pd.NA)
         # endregion
 
 

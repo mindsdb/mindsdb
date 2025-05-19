@@ -92,7 +92,10 @@ def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
     serieses = []
     for i, mysql_type in enumerate(mysql_types):
         expected_dtype = None
-        if mysql_type in (MYSQL_DATA_TYPE.SMALLINT, MYSQL_DATA_TYPE.INT, MYSQL_DATA_TYPE.BIGINT):
+        if mysql_type in (
+            MYSQL_DATA_TYPE.SMALLINT, MYSQL_DATA_TYPE.INT,
+            MYSQL_DATA_TYPE.BIGINT, MYSQL_DATA_TYPE.TINYINT
+        ):
             expected_dtype = 'Int64'
         elif mysql_type == MYSQL_DATA_TYPE.BOOL:
             expected_dtype = 'boolean'

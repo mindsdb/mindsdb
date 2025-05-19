@@ -76,16 +76,29 @@ def _make_table_response(result: list[dict], cursor: mysql.connector.cursor.MySQ
         elif col[7] == 144:  # and col[8] == 63
             mysql_types.append(MYSQL_DATA_TYPE.BLOB)
         else:
-            logger.info()
+            logger.debug(f'MySQL handler: unknown type code {col[7]}, use TEXT as fallback.')
             mysql_types.append(MYSQL_DATA_TYPE.TEXT)
         # endregion
 
+    # region cast int and bool to nullable types
+    serieses = []
+    for i, mysql_type in enumerate(mysql_types):
+        expected_dtype = None
+        column_name = description[i][0]
+        if mysql_type in (
+            MYSQL_DATA_TYPE.SMALLINT, MYSQL_DATA_TYPE.INT,
+            MYSQL_DATA_TYPE.BIGINT, MYSQL_DATA_TYPE.TINYINT
+        ):
+            expected_dtype = 'Int64'
+        elif mysql_type == MYSQL_DATA_TYPE.BOOL:
+            expected_dtype = 'boolean'
+        serieses.append(pd.Series([row[column_name] for row in result], dtype=expected_dtype, name=description[i][0]))
+    df = pd.concat(serieses, axis=1, copy=False)
+    # endregion
+
     response = Response(
         RESPONSE_TYPE.TABLE,
-        pd.DataFrame(
-            result,
-            columns=[x[0] for x in description]
-        ),
+        df,
         affected_rows=cursor.rowcount,
         mysql_types=mysql_types
     )

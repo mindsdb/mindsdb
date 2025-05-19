@@ -68,7 +68,7 @@ When working with many data sources, it’s important to prepare and unify your 
 
 Unification of data can be automated using JOBs
 
-* [**JOBS**](https://docs.mindsdb.com/setup/self-hosted/docker) – Schedule synchronization and transformation tasks for real-time processing.
+* [**JOBS**](https://docs.mindsdb.com/mindsdb_sql/sql/create/jobs) – Schedule synchronization and transformation tasks for real-time processing.
 
 
 ## [Respond](https://docs.mindsdb.com/mindsdb_sql/agents/agent) From Your Data

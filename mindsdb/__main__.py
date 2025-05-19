@@ -26,7 +26,7 @@ from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.utilities.config import config
 from mindsdb.utilities.starters import (
     start_http, start_mysql, start_mongo, start_postgres, start_ml_task_queue,
-    start_scheduler, start_tasks, start_mcp, start_litellm
+    start_scheduler, start_tasks, start_mcp, start_litellm, start_a2a
 )
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 import mindsdb.interfaces.storage.db as db
@@ -59,6 +59,7 @@ class TrunkProcessEnum(Enum):
     ML_TASK_QUEUE = 'ml_task_queue'
     MCP = 'mcp'
     LITELLM = 'litellm'
+    A2A = 'a2a'
 
     @classmethod
     def _missing_(cls, value):
@@ -418,73 +419,85 @@ if __name__ == '__main__':
         TrunkProcessEnum.HTTP: TrunkProcessData(
             name=TrunkProcessEnum.HTTP.value,
             entrypoint=start_http,
-            port=http_api_config['port'],
-            args=(config.cmd_args.verbose, config.cmd_args.no_studio),
-            restart_on_failure=http_api_config.get('restart_on_failure', False),
-            max_restart_count=http_api_config.get('max_restart_count', TrunkProcessData.max_restart_count),
-            max_restart_interval_seconds=http_api_config.get(
-                'max_restart_interval_seconds', TrunkProcessData.max_restart_interval_seconds
-            )
+            need_to_run=config.http_api_active,
+            port=config.http_api_port,
+            args=(config.cmd_args.verbose,),
+            restart_on_failure=True
         ),
         TrunkProcessEnum.MYSQL: TrunkProcessData(
             name=TrunkProcessEnum.MYSQL.value,
             entrypoint=start_mysql,
-            port=mysql_api_config['port'],
+            need_to_run=config.mysql_api_active,
+            port=config.mysql_api_port,
             args=(config.cmd_args.verbose,),
-            restart_on_failure=mysql_api_config.get('restart_on_failure', False),
-            max_restart_count=mysql_api_config.get('max_restart_count', TrunkProcessData.max_restart_count),
-            max_restart_interval_seconds=mysql_api_config.get(
-                'max_restart_interval_seconds', TrunkProcessData.max_restart_interval_seconds
-            )
+            restart_on_failure=True
         ),
         TrunkProcessEnum.MONGODB: TrunkProcessData(
             name=TrunkProcessEnum.MONGODB.value,
             entrypoint=start_mongo,
-            port=config['api']['mongodb']['port'],
-            args=(config.cmd_args.verbose,)
+            need_to_run=config.mongodb_api_active,
+            port=config.mongodb_api_port,
+            args=(config.cmd_args.verbose,),
+            restart_on_failure=True
         ),
         TrunkProcessEnum.POSTGRES: TrunkProcessData(
             name=TrunkProcessEnum.POSTGRES.value,
             entrypoint=start_postgres,
-            port=config['api']['postgres']['port'],
-            args=(config.cmd_args.verbose,)
+            need_to_run=config.postgres_api_active,
+            port=config.postgres_api_port,
+            args=(config.cmd_args.verbose,),
+            restart_on_failure=True
         ),
         TrunkProcessEnum.JOBS: TrunkProcessData(
             name=TrunkProcessEnum.JOBS.value,
             entrypoint=start_scheduler,
-            args=(config.cmd_args.verbose,)
+            need_to_run=config.jobs_scheduler_active,
+            args=(config.cmd_args.verbose,),
+            restart_on_failure=True
         ),
         TrunkProcessEnum.TASKS: TrunkProcessData(
             name=TrunkProcessEnum.TASKS.value,
             entrypoint=start_tasks,
-            args=(config.cmd_args.verbose,)
+            need_to_run=config.tasks_active,
+            args=(config.cmd_args.verbose,),
+            restart_on_failure=True
         ),
         TrunkProcessEnum.ML_TASK_QUEUE: TrunkProcessData(
             name=TrunkProcessEnum.ML_TASK_QUEUE.value,
             entrypoint=start_ml_task_queue,
-            args=(config.cmd_args.verbose,)
+            need_to_run=config.ml_task_queue_active,
+            args=(config.cmd_args.verbose,),
+            restart_on_failure=True
         ),
         TrunkProcessEnum.MCP: TrunkProcessData(
             name=TrunkProcessEnum.MCP.value,
             entrypoint=start_mcp,
-            port=mcp_api_config.get('port', 47337),
+            need_to_run=config.mcp_active,
+            port=config.mcp_port,
             args=(config.cmd_args.verbose,),
-            restart_on_failure=mcp_api_config.get('restart_on_failure', False),
-            max_restart_count=mcp_api_config.get('max_restart_count', TrunkProcessData.max_restart_count),
-            max_restart_interval_seconds=mcp_api_config.get(
-                'max_restart_interval_seconds', TrunkProcessData.max_restart_interval_seconds
-            )
+            restart_on_failure=True
         ),
         TrunkProcessEnum.LITELLM: TrunkProcessData(
             name=TrunkProcessEnum.LITELLM.value,
             entrypoint=start_litellm,
-            port=litellm_api_config.get('port', 8000),
+            need_to_run=config.litellm_api_active,
+            port=config.litellm_api_port,
             args=(config.cmd_args.verbose,),
-            restart_on_failure=litellm_api_config.get('restart_on_failure', False),
-            max_restart_count=litellm_api_config.get('max_restart_count', TrunkProcessData.max_restart_count),
+            restart_on_failure=config.litellm_api_config.get('restart_on_failure', True),
+            max_restart_count=litellm_api_config.get(
+                'max_restart_count', TrunkProcessData.max_restart_count
+            ),
             max_restart_interval_seconds=litellm_api_config.get(
                 'max_restart_interval_seconds', TrunkProcessData.max_restart_interval_seconds
             )
+        ),
+        TrunkProcessEnum.A2A: TrunkProcessData(
+            name=TrunkProcessEnum.A2A.value,
+            entrypoint=start_a2a,
+            need_to_run=config.get('a2a', {}).get('enabled', False),
+            port=config.get('a2a', {}).get('port', 8001),
+            args=(config.cmd_args.verbose,),
+            restart_on_failure=True
         )
     }
 

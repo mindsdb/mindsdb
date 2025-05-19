@@ -1,20 +1,20 @@
-import subprocess
+import html
+from http import HTTPStatus
+from unittest.mock import MagicMock
 
-from unittest.mock import patch, MagicMock
-from typing import Dict, Any, Optional
 
-from flask import Flask
+from flask import Flask, request
 
 from mindsdb.utilities.config import Config
 
 
 def test_update_a2a_agent() -> None:
     """
-    Test the update_a2a_agent function directly with mocked dependencies.
+    Test the update_a2a_agent API endpoint with mocked dependencies.
 
     This test verifies that:
-    1. The function correctly updates the agent configuration
-    2. It terminates the existing process and starts a new one
+    1. The API endpoint correctly updates the agent configuration
+    2. It communicates with the main process to restart the A2A service
     3. It handles error cases properly
     """
     # Create a Flask app context for testing
@@ -28,133 +28,160 @@ def test_update_a2a_agent() -> None:
         "host": "localhost",
         "port": 8000,
     }
+    mock_config.update = MagicMock()
 
+    # Mock the trunk process structure and related components
     mock_process = MagicMock()
     mock_process.terminate = MagicMock()
-    mock_process.wait = MagicMock()
-    mock_process.pid = 12345
+    mock_process.is_alive.return_value = True
 
-    mock_logger = MagicMock()
+    mock_trunk_process = MagicMock()
+    mock_trunk_process.name = "a2a"
+    mock_trunk_process.process = mock_process
 
-    # Create variables for the test function
-    a2a_enabled = True
-    a2a_process = mock_process
+    # Create a dictionary for the trunk processes structure
+    mock_trunc_processes_struct = {"a2a": mock_trunk_process}
 
-    # Mock the start_a2a_subprocess function
-    def mock_start_a2a_subprocess(config: Dict[str, Any]) -> subprocess.Popen:
-        """Mock implementation of start_a2a_subprocess."""
-        return mock_process
+    mock_start_process = MagicMock()
 
-    # Define the update_a2a_agent function with our context
-    with app.app_context():
-        with patch("mindsdb.api.http.initialize.logger", mock_logger):
-            # Define the function in the same way as in initialize.py
-            def update_a2a_agent(
-                new_agent_name: str, new_project_name: Optional[str] = None
-            ) -> bool:
-                """
-                Update the A2A agent configuration and restart the subprocess if needed.
+    # Define the API function to test
+    def api_update_a2a_agent():
+        """
+        Update the A2A agent configuration.
 
-                Args:
-                    new_agent_name: New agent name to use
-                    new_project_name: New project name to use
+        Expected JSON payload:
+        {
+            "agent_name": "new_agent_name",
+            "project_name": "optional_project_name"  # Optional
+        }
+        """
+        try:
+            data = request.json
+            if not data or "agent_name" not in data:
+                return {
+                    "error": "Missing required parameter: agent_name"
+                }, HTTPStatus.BAD_REQUEST
 
-                Returns:
-                    bool: True if update was successful, False otherwise
-                """
-                nonlocal a2a_process, a2a_enabled
+            new_agent_name = data["agent_name"]
+            new_project_name = data.get("project_name")  # Optional
 
-                if not a2a_enabled or a2a_process is None:
-                    mock_logger.warning(
-                        "A2A is not enabled or not running, can't update agent"
-                    )
-                    return False
+            # Update the configuration
+            a2a_config = mock_config.get("a2a", {}).copy()
+            a2a_config["agent_name"] = new_agent_name
+            if new_project_name:
+                a2a_config["project_name"] = new_project_name
 
-                # Update config
-                a2a_config = mock_config.get("a2a", {}).copy()
-                a2a_config["agent_name"] = new_agent_name
-                if new_project_name:
-                    a2a_config["project_name"] = new_project_name
+            # Update the global configuration
+            mock_config.update({"a2a": a2a_config})
 
-                # Store updated config
-                mock_config.update({"a2a": a2a_config})
-
-                # Terminate existing process
-                mock_logger.info(
-                    f"Terminating A2A process to update agent name to {new_agent_name}"
-                )
-                a2a_process.terminate()
-                try:
-                    a2a_process.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    mock_logger.warning(
-                        "A2A process did not terminate gracefully, forcing..."
-                    )
-                    a2a_process.kill()
-
-                # Start new process with updated config
-                mock_start_a2a_subprocess(a2a_config)
-                return True
-
-            # Test 1: Successful update with only agent_name
-            result = update_a2a_agent("new_agent")
-
-            # Verify the result
-            assert result is True
-
-            # Verify the process was terminated
-            mock_process.terminate.assert_called_once()
-
-            # Verify config was updated correctly
-            mock_config.update.assert_called_once()
-            args, kwargs = mock_config.update.call_args
-            assert "a2a" in args[0]
-            assert args[0]["a2a"]["agent_name"] == "new_agent"
-
-            # Reset mocks for next test
-            mock_process.reset_mock()
-            mock_config.reset_mock()
-            mock_logger.reset_mock()
-
-            # Test 2: Update with both agent_name and project_name
-            result = update_a2a_agent("new_agent2", "new_project2")
-
-            # Verify the result
-            assert result is True
-
-            # Verify config was updated with both values
-            args, kwargs = mock_config.update.call_args
-            assert args[0]["a2a"]["agent_name"] == "new_agent2"
-            assert args[0]["a2a"]["project_name"] == "new_project2"
-
-            # Test 3: Update when a2a is not enabled
-            a2a_enabled = False
-            result = update_a2a_agent("new_agent3")
-
-            # Verify the result
-            assert result is False
-
-            # Verify warning was logged
-            mock_logger.warning.assert_called_with(
-                "A2A is not enabled or not running, can't update agent"
-            )
-
-            # Test 4: Update when a2a_process is None
-            a2a_enabled = True
+            # Find the A2A process in the mock trunk processes struct
             a2a_process = None
-            result = update_a2a_agent("new_agent4")
+            for process_name, process in mock_trunc_processes_struct.items():
+                if process_name == "a2a":
+                    a2a_process = process
+                    break
 
-            # Verify the result
-            assert result is False
+            if a2a_process and a2a_process.process and a2a_process.process.is_alive():
+                # Terminate the existing process
+                a2a_process.process.terminate()
+
+                # Start a new process with the updated configuration
+                mock_start_process(a2a_process)
+
+                return {
+                    "status": "success",
+                    "agent_name": html.escape(new_agent_name),
+                    "project_name": new_project_name
+                    or a2a_config.get("project_name", "mindsdb"),
+                }
+            else:
+                return {
+                    "error": "A2A is not enabled or not running"
+                }, HTTPStatus.SERVICE_UNAVAILABLE
+
+        except Exception as e:
+            return {
+                "error": f"Error updating A2A agent: {str(e)}"
+            }, HTTPStatus.INTERNAL_SERVER_ERROR
+
+    # Register the route directly with the app
+    app.add_url_rule(
+        "/api/a2a/update_agent",
+        "api_update_a2a_agent",
+        api_update_a2a_agent,
+        methods=["POST"],
+    )
+
+    # Test 1: Successful update with only agent_name
+    with app.test_client() as client:
+        response = client.post(
+            "/api/a2a/update_agent", json={"agent_name": "new_agent"}
+        )
+
+        # Verify the result
+        assert response.status_code == 200
+        result = response.get_json()
+        assert result["status"] == "success"
+        assert result["agent_name"] == "new_agent"
+
+        # Verify config was updated correctly
+        mock_config.update.assert_called_once()
+        args, kwargs = mock_config.update.call_args
+        assert "a2a" in args[0]
+        assert args[0]["a2a"]["agent_name"] == "new_agent"
+
+        # Verify the process was terminated and restarted
+        mock_process.terminate.assert_called_once()
+        mock_start_process.assert_called_once_with(mock_trunk_process)
+
+        # Reset mocks for next test
+        mock_process.reset_mock()
+        mock_config.reset_mock()
+        mock_start_process.reset_mock()
+
+        # Test 2: Update with both agent_name and project_name
+        response = client.post(
+            "/api/a2a/update_agent",
+            json={"agent_name": "new_agent2", "project_name": "new_project2"},
+        )
+
+        # Verify the result
+        assert response.status_code == 200
+        result = response.get_json()
+        assert result["status"] == "success"
+        assert result["agent_name"] == "new_agent2"
+        assert result["project_name"] == "new_project2"
+
+        # Verify config was updated with both values
+        args, kwargs = mock_config.update.call_args
+        assert args[0]["a2a"]["agent_name"] == "new_agent2"
+        assert args[0]["a2a"]["project_name"] == "new_project2"
+
+        # Test 3: Missing agent_name parameter
+        response = client.post("/api/a2a/update_agent", json={})
+
+        # Verify the response
+        assert response.status_code == 400
+
+        # Test 4: A2A process not found or not running
+        mock_trunk_process.process.is_alive.return_value = False
+
+        # Call the function with valid parameters
+        response = client.post(
+            "/api/a2a/update_agent", json={"agent_name": "new_agent3"}
+        )
+
+        # Verify the response
+        assert response.status_code == 503
 
 
-def test_update_a2a_agent_with_timeout() -> None:
+def test_update_a2a_agent_with_exception() -> None:
     """
-    Test the update_a2a_agent function when the process doesn't terminate gracefully.
+    Test the update_a2a_agent API endpoint when an exception occurs.
 
     This test verifies that:
-    1. The function handles TimeoutExpired exception properly
-    2. It forces process termination with kill() when needed
+    1. The function handles exceptions properly
+    2. It returns an appropriate error response
     """
     # Create a Flask app context for testing
     app = Flask(__name__)
@@ -163,76 +190,67 @@ def test_update_a2a_agent_with_timeout() -> None:
     mock_config = MagicMock(spec=Config)
     mock_config.get.return_value = {"agent_name": "old_agent"}
 
-    mock_process = MagicMock()
-    mock_process.terminate = MagicMock()
-    # Make wait() raise TimeoutExpired
-    mock_process.wait.side_effect = subprocess.TimeoutExpired(cmd="test", timeout=5)
-    mock_process.kill = MagicMock()
+    # Mock update to raise an exception
+    mock_config.update.side_effect = Exception("Test exception")
 
-    mock_logger = MagicMock()
+    # Define the API function to test with the exception
+    def api_update_a2a_agent_with_exception():
+        """
+        Update the A2A agent configuration.
 
-    # Create variables for the test function
-    a2a_enabled = True
-    a2a_process = mock_process
+        Expected JSON payload:
+        {
+            "agent_name": "new_agent_name",
+            "project_name": "optional_project_name"  # Optional
+        }
+        """
+        try:
+            data = request.json
+            if not data or "agent_name" not in data:
+                return {
+                    "error": "Missing required parameter: agent_name"
+                }, HTTPStatus.BAD_REQUEST
 
-    # Mock the start_a2a_subprocess function
-    def mock_start_a2a_subprocess(config: Dict[str, Any]) -> subprocess.Popen:
-        """Mock implementation of start_a2a_subprocess."""
-        return mock_process
+            new_agent_name = data["agent_name"]
+            new_project_name = data.get("project_name")  # Optional
 
-    # Define the update_a2a_agent function with our context
-    with app.app_context():
-        with patch("mindsdb.api.http.initialize.logger", mock_logger):
-            # Define the function in the same way as in initialize.py
-            def update_a2a_agent(
-                new_agent_name: str, new_project_name: Optional[str] = None
-            ) -> bool:
-                """Update the A2A agent configuration and restart the subprocess if needed."""
-                nonlocal a2a_process, a2a_enabled
+            # Update the configuration - this will raise an exception
+            a2a_config = mock_config.get("a2a", {}).copy()
+            a2a_config["agent_name"] = new_agent_name
+            if new_project_name:
+                a2a_config["project_name"] = new_project_name
 
-                if not a2a_enabled or a2a_process is None:
-                    mock_logger.warning(
-                        "A2A is not enabled or not running, can't update agent"
-                    )
-                    return False
+            # This will raise the mocked exception
+            mock_config.update({"a2a": a2a_config})
 
-                # Update config
-                a2a_config = mock_config.get("a2a", {}).copy()
-                a2a_config["agent_name"] = new_agent_name
-                if new_project_name:
-                    a2a_config["project_name"] = new_project_name
+            # This code should not be reached due to the exception
+            return {
+                "status": "success",
+                "agent_name": html.escape(new_agent_name),
+                "project_name": new_project_name
+                or a2a_config.get("project_name", "mindsdb"),
+            }
+        except Exception as e:
+            return {
+                "error": f"Error updating A2A agent: {str(e)}"
+            }, HTTPStatus.INTERNAL_SERVER_ERROR
 
-                # Store updated config
-                mock_config.update({"a2a": a2a_config})
+    # Register the route directly with the app
+    app.add_url_rule(
+        "/api/a2a/update_agent",
+        "api_update_a2a_agent_with_exception",
+        api_update_a2a_agent_with_exception,
+        methods=["POST"],
+    )
 
-                # Terminate existing process
-                mock_logger.info(
-                    f"Terminating A2A process to update agent name to {new_agent_name}"
-                )
-                a2a_process.terminate()
-                try:
-                    a2a_process.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    mock_logger.warning(
-                        "A2A process did not terminate gracefully, forcing..."
-                    )
-                    a2a_process.kill()
+    # Test exception handling
+    with app.test_client() as client:
+        response = client.post(
+            "/api/a2a/update_agent", json={"agent_name": "new_agent"}
+        )
 
-                # Start new process with updated config
-                mock_start_a2a_subprocess(a2a_config)
-                return True
-
-            # Test: Process doesn't terminate gracefully
-            result = update_a2a_agent("new_agent")
-
-            # Verify the result
-            assert result is True
-
-            # Verify the process was terminated and then killed
-            mock_process.terminate.assert_called_once()
-            mock_process.kill.assert_called_once()
-
-            # Verify warning was logged
-            mock_logger.warning.assert_called_with(
-                "A2A process did not terminate gracefully, forcing..."
-            )
+        # Verify the response
+        assert response.status_code == 500
+        result = response.get_json()
+        assert "error" in result
+        assert "Test exception" in result["error"]

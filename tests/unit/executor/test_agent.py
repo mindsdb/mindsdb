@@ -2,6 +2,7 @@ import time
 import os
 from unittest.mock import patch
 import threading
+from contextlib import contextmanager
 
 import pandas as pd
 import pytest
@@ -10,7 +11,7 @@ from tests.unit.executor_test_base import BaseExecutorDummyML
 from mindsdb.interfaces.agents.langchain_agent import SkillData
 
 
-@pytest.fixture(scope="function")
+@contextmanager
 def task_monitor():
     from mindsdb.interfaces.tasks.task_monitor import TaskMonitor
     monitor = TaskMonitor()
@@ -397,13 +398,13 @@ class TestKB(BaseExecutorDummyML):
             select review as content, id from files.reviews
         """)
 
-        ret = self.run_sql("select * from kb_review where original_row_id = '123'")
+        ret = self.run_sql("select * from kb_review where original_doc_id = 123")
         assert len(ret) == 1
         assert ret['chunk_content'][0] == record['review']
 
         # delete by metadata
-        self.run_sql("delete from kb_review where original_row_id = '123'")
-        ret = self.run_sql("select * from kb_review where original_row_id = '123'")
+        self.run_sql("delete from kb_review where original_doc_id = 123")
+        ret = self.run_sql("select * from kb_review where original_doc_id = 123")
         assert len(ret) == 0
 
         # insert without id
@@ -413,7 +414,7 @@ class TestKB(BaseExecutorDummyML):
         """)
 
         # id column wasn't used
-        ret = self.run_sql("select * from kb_review where original_row_id = '123'")
+        ret = self.run_sql("select * from kb_review where original_doc_id = 123")
         assert len(ret) == 0
 
         # product/url in metadata
@@ -467,7 +468,7 @@ class TestKB(BaseExecutorDummyML):
             select * from files.reviews
         """)
 
-        ret = self.run_sql("select * from kb_review where original_row_id = '123'")  # id is id
+        ret = self.run_sql("select * from kb_review where original_doc_id = 123")  # id is id
         assert len(ret) == 1
         # review in content
         assert ret['chunk_content'][0] == record['review']
@@ -546,7 +547,7 @@ class TestKB(BaseExecutorDummyML):
         assert set(ret['id']) == {'9016', '9023'}
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def test_kb_partitions(self, mock_handler, task_monitor):
+    def test_kb_partitions(self, mock_handler):
         self._create_embedding_model('emb_model')
 
         df = self._get_ral_table()
@@ -560,8 +561,11 @@ class TestKB(BaseExecutorDummyML):
 
         def check_partition(insert_sql):
             # create empty kb
-            self.run_sql('DROP KNOWLEDGE_BASE IF EXISTS kb_part')
-            self.run_sql('create knowledge base kb_part using model=emb_model')
+            if len(self.run_sql('describe KNOWLEDGE_BASE kb_part')) > 0:
+                self.run_sql('delete from kb_part where id in (select id from kb_part)')
+                self.run_sql('DROP KNOWLEDGE_BASE kb_part')
+
+            self.run_sql('create knowledge base kb_part using model=emb_model, content_columns=["english"]')
 
             # load kb
             ret = self.run_sql(insert_sql)

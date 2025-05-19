@@ -79,7 +79,7 @@ def create_demo_db(client: FlaskClient):
 def create_dummy_ml(client: FlaskClient):
     from mindsdb.interfaces.database.integrations import integration_controller
 
-    test_handler_path = Path(__file__).parents[2] / 'unit'
+    test_handler_path = Path(__file__).parents[2]
     sys.path.append(str(test_handler_path))
 
     handler_dir = Path(test_handler_path) / 'dummy_ml_handler'

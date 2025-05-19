@@ -93,9 +93,9 @@ DROP SKILL my_skill;
 
 ### `provider`
 
-Agents can be assigned different model available from [LangChain integration](/integrations/ai-engines/langchain).
+Agents can be assigned different models available from [LangChain integration](/integrations/ai-engines/langchain).
 
-The `provider` parameter defined the provider of the model. Its available values include `openai`, `anthropic`, `anyscale`, `ollama`, `litellm`, and `mindsdb`.
+The supported providers include `openai`, `anthropic`, `anyscale`, `ollama`, `litellm`, and `mindsdb`.
 
 ### `model`
 
@@ -115,6 +115,10 @@ USING
 The `prompt_template` parameter is used to provide additional instructions to the agent.
 
 Alternatively, this instruction can be provided when creating a model within MindsDB with the `CREATE MODEL` command by assigning this model to an agent.
+
+### `verbose`
+
+The `verbose` parameter accepts two values: `True` to generate a more detailed and expansive response, or `False` to generate a shorter, more concise response.
 
 ### `max_tokens`
 

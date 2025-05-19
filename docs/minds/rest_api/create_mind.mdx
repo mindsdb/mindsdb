@@ -1,0 +1,79 @@
+---
+title: Create Mind
+sidebarTitle: Create Mind
+---
+
+This API endpoint creates a Mind using the `POST` method.
+
+### Body
+
+<ParamField body='name' type='string' required>
+
+A unique name for the Mind.
+
+</ParamField>
+
+<ParamField body='datasources' type='array' required>
+
+A list of data sources to be connected to the Mind. Each element can be:
+- A string specifying a data source name.
+- An object with `name` storing the data source name and an array of `tables` storing the table names.
+
+Use the [data sources endpoint](/minds/rest_api/create_datasource) to create datasources.
+
+</ParamField>
+
+### Response
+
+<ResponseField name="status" type="string" required>  
+
+HTTP status code indicating the success of the operation. `200 OK` means the Mind was created successfully.
+
+</ResponseField>
+
+### Authorization
+
+A valid API key must be passed in the `Authorization` header:
+
+```
+Authorization: Bearer MINDS_API_KEY
+```
+
+Generate your [API key here](https://mdb.ai/apiKeys).
+
+### Path Parameters
+
+None.
+
+<RequestExample>
+
+```shell Shell
+curl --request POST \
+     --url 'https://mdb.ai/api/projects/mindsdb/minds' \
+     --header 'Content-Type: application/json' \
+     --header 'Authorization: Bearer MINDS_API_KEY' \
+     --data '{
+         "name": "mind_name",
+         "datasources": [
+           "datasource_with_all_its_tables",
+           {"name": "datasource_with_selected_tables", "tables": ["table_name", ...]}
+         ]
+     }'
+```
+
+```python Python
+from minds.client import Client
+
+client = Client("MINDS_API_KEY", "https://mdb.ai/")
+mind = client.minds.create(name='mind_name')
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Response
+200 OK
+```
+
+</ResponseExample>

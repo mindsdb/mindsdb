@@ -3,6 +3,7 @@ import os
 from unittest.mock import patch, Mock, MagicMock
 import threading
 import json
+from contextlib import contextmanager
 
 import pandas as pd
 import pytest
@@ -11,7 +12,7 @@ from tests.unit.executor_test_base import BaseExecutorDummyML
 from mindsdb.interfaces.agents.langchain_agent import SkillData
 
 
-@pytest.fixture(scope="function")
+@contextmanager
 def task_monitor():
     from mindsdb.interfaces.tasks.task_monitor import TaskMonitor
     monitor = TaskMonitor()
@@ -592,7 +593,7 @@ class TestKB(BaseExecutorDummyML):
 
         def check_partition(insert_sql):
             # create empty kb
-            self._create_kb('kb_part')
+            self._create_kb('kb_part', content_columns=["english"])
 
             set_openai_embedding(mock_openai, [[0.1] * 1536] * len(df))
 
@@ -605,6 +606,8 @@ class TestKB(BaseExecutorDummyML):
             for i in range(1000):
                 time.sleep(0.2)
                 ret = self.run_sql(f'select * from information_schema.queries where id = {query_id}')
+                if ret['ERROR'][0] is not None:
+                    raise RuntimeError(ret['ERROR'][0])
                 if ret['FINISHED_AT'][0] is not None:
                     break
 
@@ -613,7 +616,7 @@ class TestKB(BaseExecutorDummyML):
             assert len(ret) == len(df)
 
             # check queries table
-            ret = self.run_sql('select * from information_schema.queries')
+            ret = self.run_sql(f'select * from information_schema.queries where id = {query_id}')
             assert len(ret) == 1
             rec = ret.iloc[0]
             assert 'kb_part' in ret['SQL'][0]
@@ -642,16 +645,44 @@ class TestKB(BaseExecutorDummyML):
             assert rec_d['INSERT_FINISHED_AT'] is None
             assert rec_d['QUERY_ID'] is None
 
-        # test iterate
-        check_partition('''
-            insert into kb_part
-            SELECT id, english content FROM  pg.ral
-            using batch_size=20, track_column=id
-        ''')
+        with task_monitor():
+            def stream_f(*args, **kwargs):
+                chunk_size = int(len(df) / 10) + 1
+                for i in range(10):
+                    yield df[chunk_size * i: chunk_size * (i + 1):]
 
-        # test threads
-        check_partition('''
-            insert into kb_part
-            SELECT id, english content FROM  pg.ral
-            using batch_size=20, track_column=id, threads = 3
-        ''')
+            # --- stream mode ---
+            mock_handler().query_stream.side_effect = stream_f
+
+            # test iterate
+            check_partition('''
+                insert into kb_part SELECT id, english FROM  pg.ral
+                using batch_size=20, track_column=id
+            ''')
+
+            # test threads
+            check_partition('''
+                insert into kb_part SELECT id, english FROM pg.ral
+                using batch_size=20, track_column=id, threads = 3
+            ''')
+
+            # without track column
+            check_partition('''
+                insert into kb_part SELECT id, english FROM  pg.ral
+                using batch_size=20
+            ''')
+
+            # --- general mode ---
+            mock_handler().query_stream = None
+
+            # test iterate
+            check_partition('''
+                insert into kb_part SELECT id, english FROM  pg.ral
+                using batch_size=20, track_column=id
+            ''')
+
+            # test threads
+            check_partition('''
+                insert into kb_part SELECT id, english FROM pg.ral
+                using batch_size=20, track_column=id, threads = 3
+            ''')

@@ -74,7 +74,7 @@ class TestMariaDBHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         """
         mock_conn = MagicMock()
         mock_cursor = MockCursorContextManager(
-            data=[[1]],
+            data=[{'id': 1}],
             description=[('id', 3, None, None, None, None, 1, 0, 45)]
         )
 

@@ -28,6 +28,7 @@ class RunningQuery:
     OBJECT_TYPE = 'query'
 
     def __init__(self, record: db.Queries):
+        self.record_id = record.id
         self.record = record
         self.sql = record.sql
         self.database = record.database or config.get('default_project')
@@ -257,8 +258,8 @@ class RunningQuery:
         """
             Mark query as finished
         """
-
-        self.record.finished_at = dt.datetime.now()
+        record = db.Queries.query.get(self.record.id)
+        record.finished_at = dt.datetime.now()
         db.session.commit()
 
 

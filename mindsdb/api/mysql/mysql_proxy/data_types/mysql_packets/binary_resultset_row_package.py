@@ -30,16 +30,18 @@ class BinaryResultsetRowPacket(Packet):
         columns = self._kwargs.get('columns', {})
 
         self.value = [b'\x00']
-        nulls = [0]
+
+        # NOTE: according to mysql's doc offset=0 only for COM_STMT_EXECUTE, mariadb's doc does't mention that
+        # but in fact it looks like offset=2 everywhere
+        offset = 2
+        nulls_bitmap = bytearray((len(columns) + offset + 7) // 8)
         for i, el in enumerate(data):
-            if i > 0 and (i + 2) % 8 == 0:
-                nulls.append(0)
-            if el is None:
-                if i < 6:
-                    nulls[-1] = nulls[-1] + (1 << ((i + 2) % 8))
-                else:
-                    nulls[-1] = nulls[-1] + (1 << ((i - 6) % 8))
-        self.value.append(bytes(nulls))
+            if el is not None:
+                continue
+            byte_index = (i + offset) // 8
+            bit_index = (i + offset) % 8
+            nulls_bitmap[byte_index] |= (1 << bit_index)
+        self.value.append(bytes(nulls_bitmap))
 
         for i, col in enumerate(columns):
             # NOTE at this moment all types sends as strings, and it works
@@ -67,6 +69,9 @@ class BinaryResultsetRowPacket(Packet):
                 val = int(float(val))
             elif col_type == TYPES.MYSQL_TYPE_SHORT:
                 enc = '<h'
+                val = int(val)
+            elif col_type == TYPES.MYSQL_TYPE_TINY:
+                enc = '<B'
                 val = int(val)
             elif col_type == TYPES.MYSQL_TYPE_DATE:
                 env_val = self.encode_date(val)

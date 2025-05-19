@@ -95,7 +95,7 @@ def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
         if mysql_type in (MYSQL_DATA_TYPE.SMALLINT, MYSQL_DATA_TYPE.INT, MYSQL_DATA_TYPE.BIGINT):
             expected_dtype = 'Int64'
         elif mysql_type == MYSQL_DATA_TYPE.BOOL:
-            expected_dtype = 'boolen'
+            expected_dtype = 'boolean'
         serieses.append(pd.Series([row[i] for row in result], dtype=expected_dtype, name=description[i].name))
     df = pd.concat(serieses, axis=1, copy=False)
     # endregion

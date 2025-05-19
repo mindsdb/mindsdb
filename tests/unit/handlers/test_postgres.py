@@ -8,6 +8,7 @@ from unittest.mock import patch, MagicMock
 
 import psycopg
 from psycopg.pq import ExecStatus
+from psycopg.postgres import types as pg_types
 import pandas as pd
 from pandas import DataFrame
 from pandas.api import types as pd_types
@@ -25,6 +26,11 @@ class ColumnDescription:
     def __init__(self, **kwargs):
         self.name = kwargs.get('name')
         self.type_code = kwargs.get('type_code')
+
+
+# map between regtype name and type id
+regtype_to_oid = {t.regtype: t.oid for t in pg_types}
+type_name_to_oid = {t.name: t.oid for t in pg_types}
 
 
 class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
@@ -136,8 +142,8 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         # Create proper description objects with necessary type_code for _cast_dtypes
         mock_cursor.description = [
-            ColumnDescription(name='id', type_code=23),  # int4 type code
-            ColumnDescription(name='name', type_code=25)  # text type code
+            ColumnDescription(name='id', type_code=regtype_to_oid['integer']),  # int4 type code
+            ColumnDescription(name='name', type_code=regtype_to_oid['text'])  # text type code
         ]
 
         # Make sure pgresult doesn't have COMMAND_OK status
@@ -219,22 +225,11 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             'text_col': ['a', 'b']
         })
 
-        # Create type code mapping
-        type_codes = {
-            'int2': 21,    # Typical OID for int2
-            'int4': 23,    # Typical OID for int4
-            'int8': 20,    # Typical OID for int8
-            'numeric': 1700,  # Typical OID for numeric
-            'float4': 700,  # Typical OID for float4
-            'float8': 701,  # Typical OID for float8
-            'text': 25     # Typical OID for text
-        }
-
         original_get = psycopg.postgres.types.get
 
         try:
             type_mocks = {}
-            for pg_type, oid in type_codes.items():
+            for pg_type, oid in type_name_to_oid.items():
                 type_mock = MagicMock()
                 type_mock.name = pg_type
                 type_mocks[oid] = type_mock
@@ -253,13 +248,13 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             psycopg.postgres.types.get = mock_get
 
             description = [
-                ColumnDescription(name='int2_col', type_code=type_codes['int2']),
-                ColumnDescription(name='int4_col', type_code=type_codes['int4']),
-                ColumnDescription(name='int8_col', type_code=type_codes['int8']),
-                ColumnDescription(name='numeric_col', type_code=type_codes['numeric']),
-                ColumnDescription(name='float4_col', type_code=type_codes['float4']),
-                ColumnDescription(name='float8_col', type_code=type_codes['float8']),
-                ColumnDescription(name='text_col', type_code=type_codes['text'])
+                ColumnDescription(name='int2_col', type_code=type_name_to_oid['int2']),
+                ColumnDescription(name='int4_col', type_code=type_name_to_oid['int4']),
+                ColumnDescription(name='int8_col', type_code=type_name_to_oid['int8']),
+                ColumnDescription(name='numeric_col', type_code=type_name_to_oid['numeric']),
+                ColumnDescription(name='float4_col', type_code=type_name_to_oid['float4']),
+                ColumnDescription(name='float8_col', type_code=type_name_to_oid['float8']),
+                ColumnDescription(name='text_col', type_code=type_name_to_oid['text'])
             ]
 
             self.handler._cast_dtypes(df, description)
@@ -348,20 +343,21 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ['b', 'int', 2, None, 'YES', None, None, None, None, None, None, None],
             ['c', 'int', 3, None, 'YES', None, None, None, None, None, None, None]
         ])
-        mock_cursor.description = [
-            ColumnDescription(name='COLUMN_NAME', type_code=23),
-            ColumnDescription(name='DATA_TYPE', type_code=23),
-            ColumnDescription(name='ORDINAL_POSITION', type_code=23),
-            ColumnDescription(name='COLUMN_DEFAULT', type_code=23),
-            ColumnDescription(name='IS_NULLABLE', type_code=23),
-            ColumnDescription(name='CHARACTER_MAXIMUM_LENGTH', type_code=23),
-            ColumnDescription(name='CHARACTER_OCTET_LENGTH', type_code=23),
-            ColumnDescription(name='NUMERIC_PRECISION', type_code=23),
-            ColumnDescription(name='NUMERIC_SCALE', type_code=23),
-            ColumnDescription(name='DATETIME_PRECISION', type_code=23),
-            ColumnDescription(name='CHARACTER_SET_NAME', type_code=23),
-            ColumnDescription(name='COLLATION_NAME', type_code=23),
+        information_schema_description = [
+            ColumnDescription(name='COLUMN_NAME', type_code=regtype_to_oid['text']),
+            ColumnDescription(name='DATA_TYPE', type_code=regtype_to_oid['text']),
+            ColumnDescription(name='ORDINAL_POSITION', type_code=regtype_to_oid['integer']),
+            ColumnDescription(name='COLUMN_DEFAULT', type_code=regtype_to_oid['text']),
+            ColumnDescription(name='IS_NULLABLE', type_code=regtype_to_oid['text']),
+            ColumnDescription(name='CHARACTER_MAXIMUM_LENGTH', type_code=regtype_to_oid['integer']),
+            ColumnDescription(name='CHARACTER_OCTET_LENGTH', type_code=regtype_to_oid['integer']),
+            ColumnDescription(name='NUMERIC_PRECISION', type_code=regtype_to_oid['integer']),
+            ColumnDescription(name='NUMERIC_SCALE', type_code=regtype_to_oid['integer']),
+            ColumnDescription(name='DATETIME_PRECISION', type_code=regtype_to_oid['integer']),
+            ColumnDescription(name='CHARACTER_SET_NAME', type_code=regtype_to_oid['text']),
+            ColumnDescription(name='COLLATION_NAME', type_code=regtype_to_oid['text']),
         ]
+        mock_cursor.description = information_schema_description
 
         # Create mock for copy operation
         copy_obj = MagicMock()
@@ -378,20 +374,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ['id', 'int', 1, None, 'YES', None, None, None, None, None, None, None],
             ['name', 'text', 2, None, 'YES', None, None, None, None, None, None, None],
         ])
-        mock_cursor.description = [
-            ColumnDescription(name='COLUMN_NAME', type_code=23),
-            ColumnDescription(name='DATA_TYPE', type_code=23),
-            ColumnDescription(name='ORDINAL_POSITION', type_code=23),
-            ColumnDescription(name='COLUMN_DEFAULT', type_code=23),
-            ColumnDescription(name='IS_NULLABLE', type_code=23),
-            ColumnDescription(name='CHARACTER_MAXIMUM_LENGTH', type_code=23),
-            ColumnDescription(name='CHARACTER_OCTET_LENGTH', type_code=23),
-            ColumnDescription(name='NUMERIC_PRECISION', type_code=23),
-            ColumnDescription(name='NUMERIC_SCALE', type_code=23),
-            ColumnDescription(name='DATETIME_PRECISION', type_code=23),
-            ColumnDescription(name='CHARACTER_SET_NAME', type_code=23),
-            ColumnDescription(name='COLLATION_NAME', type_code=23),
-        ]
+        mock_cursor.description = information_schema_description
         # endregino
 
         df = pd.DataFrame({
@@ -785,6 +768,27 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             result_value = response.data_frame[description[i].name][0]
             # self.assertEqual(type(result_value), type(input_value), f'type mistmatch: {result_value} != {input_value}')
             self.assertEqual(result_value, input_value, f'value mistmatch: {result_value} != {input_value}')
+        # endregion
+
+        # region test casting of nullable types
+        bigint_val = 9223372036854775807
+        input_rows = [
+            (bigint_val, True),
+            (None, None)
+        ]
+        mock_cursor.fetchall.return_value = input_rows
+        description = [
+            ColumnDescription(name='n_bigint', type_code=20),
+            ColumnDescription(name='t_boolean', type_code=16)
+        ]
+        mock_cursor.description = description
+        response: Response = self.handler.native_query(query_str)
+        self.assertEquals(response.data_frame.dtypes[0], 'Int64')
+        self.assertEquals(response.data_frame.dtypes[1], 'boolean')
+        self.assertEquals(response.data_frame.iloc[0, 0], bigint_val)
+        self.assertEquals(response.data_frame.iloc[0, 1], True)
+        self.assertTrue(response.data_frame.iloc[1, 0] is pd.NA)
+        self.assertTrue(response.data_frame.iloc[1, 1] is pd.NA)
         # endregion
 
 

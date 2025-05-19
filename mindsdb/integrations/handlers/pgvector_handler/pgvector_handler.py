@@ -537,33 +537,3 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         table_name = self._check_table(table_name)
         # Create the index
         self.raw_query(f"CREATE INDEX ON {table_name} USING {index_type} ({column_name} {metric_type})")
-
-    def drop_index(self, index_name: str):
-        """
-        Drop an index from the pgvector table.
-        Args:
-            index_name (str): Name of the index to drop.
-        """
-        self.raw_query(f"DROP INDEX {index_name}")
-
-    def list_indexes(self, table_name: str) -> pd.DataFrame:
-        """
-        List all indexes on the pgvector table.
-        Args:
-            table_name (str): Name of the table to list indexes for.
-        Returns:
-            pd.DataFrame: DataFrame containing the index names.
-        """
-        table_name = self._check_table(table_name)
-        query = f"""
-            SELECT indexname
-            FROM pg_indexes
-            WHERE tablename = '{table_name}';
-        """
-        result = self.raw_query(query)
-        if result.resp_type == RESPONSE_TYPE.ERROR:
-            raise RuntimeError(result.error_message)
-        if result.resp_type == RESPONSE_TYPE.TABLE:
-            return result.data_frame
-        else:
-            raise ValueError("Unexpected response type from query.")

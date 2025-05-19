@@ -674,6 +674,14 @@ class KnowledgeBaseTable:
 
         model_id = self._kb.embedding_model_id
 
+        if model_id is None:
+            # call litellm handler
+            messages = list(df[TableField.CONTENT.value])
+            args = self._kb.params['embedding_model']
+            results = self.call_litellm_embedding(self.session, args, messages)
+            results = [[val] for val in results]
+            return pd.DataFrame(results, columns=[TableField.EMBEDDINGS.value])
+
         # get the input columns
         model_rec = db.session.query(db.Predictor).filter_by(id=model_id).first()
 
@@ -714,6 +722,23 @@ class KnowledgeBaseTable:
         df = pd.DataFrame([[content]], columns=[TableField.CONTENT.value])
         res = self._df_to_embeddings(df)
         return res[TableField.EMBEDDINGS.value][0]
+
+    @staticmethod
+    def call_litellm_embedding(session, model_params, messages):
+        args = copy.deepcopy(model_params)
+
+        llm_model = args.pop('model_name')
+        engine = args.pop('provider')
+
+        args['model'] = f'{engine}/{llm_model}'
+
+        if 'base_url' in args:
+            args['api_base'] = args.pop('base_url')
+
+        module = session.integration_controller.get_handler_module('litellm')
+        if module is None or module.Handler is None:
+            raise ValueError(f'Unable to use "{engine}" provider. Litellm handler is not installed')
+        return module.Handler.embeddings(messages, args)
 
     def build_rag_pipeline(self, retrieval_config: dict):
         """
@@ -898,7 +923,8 @@ class KnowledgeBaseController:
                 params=embedding_params,
                 kb_name=name,
             )
-            params['created_embedding_model'] = model_name
+            if model_name is not None:
+                params['created_embedding_model'] = model_name
 
         embedding_model_id = None
         if model_name is not None:
@@ -1005,6 +1031,11 @@ class KnowledgeBaseController:
                 self.session.model_controller.delete_model(model_name, project_name)
         except PredictorRecordNotFound:
             pass
+
+        if params.get('provider', None) not in ('openai', 'azure'):
+            # try use litellm
+            KnowledgeBaseTable.call_litellm_embedding(self.session, params, ['test'])
+            return
 
         if 'provider' in params:
             engine = params.pop('provider').lower()

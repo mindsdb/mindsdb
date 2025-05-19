@@ -1,6 +1,8 @@
 import ast
 from typing import Dict, Optional, List
 
+
+from litellm import completion, batch_completion, embedding
 import pandas as pd
 
 from mindsdb.integrations.libs.base import BaseMLEngine
@@ -8,7 +10,6 @@ from mindsdb.utilities import log
 
 from mindsdb.integrations.handlers.litellm_handler.settings import CompletionParameters
 
-from litellm import completion, batch_completion
 
 
 logger = log.getLogger(__name__)
@@ -31,6 +32,14 @@ class LiteLLMHandler(BaseMLEngine):
             raise Exception(
                 "Litellm engine requires a USING clause. See settings.py for more info on supported args."
             )
+
+    @staticmethod
+    def embeddings(messages: List[str], args: dict) -> List[list]:
+        response = embedding(
+            input=messages,
+            **args
+        )
+        return [rec['embedding'] for rec in response.data]
 
     def create(
         self,

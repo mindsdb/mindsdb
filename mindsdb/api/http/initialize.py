@@ -12,6 +12,7 @@ import sys
 
 import requests
 from flask import Flask, url_for, make_response, request, send_from_directory, abort
+import html
 from flask.json import dumps
 from flask_compress import Compress
 from flask_restx import Api
@@ -453,7 +454,7 @@ def initialize_app(config, no_studio):
                 if success:
                     return {
                         "status": "success",
-                        "agent_name": new_agent_name,
+                        "agent_name": html.escape(new_agent_name),
                         "project_name": new_project_name
                         or config.get("a2a", {}).get("project_name", "mindsdb"),
                     }

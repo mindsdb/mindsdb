@@ -4,6 +4,7 @@ import json
 import os
 import sys
 import tempfile
+import shutil
 import time
 from unittest import mock
 from pathlib import Path
@@ -44,16 +45,20 @@ class BaseUnitTest:
         unload_module("mindsdb")
 
         # database temp file
-        cls.db_file = tempfile.mkstemp(prefix="mindsdb_db_")[1]
+
+        cls.storage_dir = tempfile.mkdtemp(prefix="mindsdb_db_")
+
+        cls.db_file = os.path.join(cls.storage_dir, "mindsdb.db")
 
         # config
         config = {"storage_db": "sqlite:///" + cls.db_file}
         # config temp file
-        fdi, cfg_file = tempfile.mkstemp(prefix="mindsdb_conf_")
+        cfg_file = os.path.join(cls.storage_dir, "config.json")
 
-        with os.fdopen(fdi, "w") as fd:
+        with open(cfg_file, "w") as fd:
             json.dump(config, fd)
 
+        os.environ["MINDSDB_STORAGE_DIR"] = cls.storage_dir
         os.environ["MINDSDB_CONFIG_PATH"] = cfg_file
 
         # initialize config
@@ -76,16 +81,11 @@ class BaseUnitTest:
             mp_patcher = mock.patch("multiprocessing.get_context").__enter__()
             mp_patcher.side_effect = lambda x: dummy
 
-        os.unlink(cfg_file)
-
     @staticmethod
     def teardown_class(cls):
         # remove tmp db file
         cls.db.session.close()
-        try:
-            os.unlink(cls.db_file)
-        except PermissionError as e:
-            logger.warning('Unable to clean up temporary database file: %s', str(e))
+        shutil.rmtree(cls.storage_dir, ignore_errors=True)
 
         # remove environ for next tests
         if 'MINDSDB_DB_CON' in os.environ:

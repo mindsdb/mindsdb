@@ -79,6 +79,8 @@ Chat with your data
 - [**MCP**](https://docs.mindsdb.com/mcp/overview) - Connect via MCP
 
 
+----------------------------------------
+
 ## 🤝 Contribute
 
 Interested in contributing to MindsDB? Follow our [installation guide for development](https://docs.mindsdb.com/contribute/install?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).

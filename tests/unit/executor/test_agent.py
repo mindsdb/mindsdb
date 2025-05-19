@@ -2,6 +2,7 @@ import time
 import os
 from unittest.mock import patch
 import threading
+from contextlib import contextmanager
 
 import pandas as pd
 import pytest
@@ -10,7 +11,7 @@ from tests.unit.executor_test_base import BaseExecutorDummyML
 from mindsdb.interfaces.agents.langchain_agent import SkillData
 
 
-@pytest.fixture(scope="function")
+@contextmanager
 def task_monitor():
     from mindsdb.interfaces.tasks.task_monitor import TaskMonitor
     monitor = TaskMonitor()
@@ -255,7 +256,7 @@ class TestAgent(BaseExecutorDummyML):
             '''
         )
 
-        self.run_sql('create knowledge base kb_review using model=emb_model, id_column = "id"')
+        self.run_sql('create knowledge base kb_review using model=emb_model')
 
         self.run_sql('''
           create skill retr_skill
@@ -356,11 +357,11 @@ class TestKB(BaseExecutorDummyML):
 
         self._create_embedding_model('emb_model')
 
-        self.run_sql('create knowledge base kb_review using model=emb_model, id_column = "id"')
+        self.run_sql('create knowledge base kb_review using model=emb_model')
         self.run_sql('drop knowledge base kb_review')  # drop chromadb left since the last failed test
-        self.run_sql('create knowledge base kb_review using model=emb_model, id_column = "id"')
+        self.run_sql('create knowledge base kb_review using model=emb_model')
 
-        self.run_sql("insert into kb_review (content, id) values ('review', 0)")
+        self.run_sql("insert into kb_review (content) values ('review')")
 
         # selectable
         ret = self.run_sql("select * from kb_review")
@@ -388,29 +389,33 @@ class TestKB(BaseExecutorDummyML):
         self.save_file('reviews', df)
 
         # ---  case 1: kb with default columns settings ---
-        self.run_sql('create knowledge base kb_review using model=emb_model, id_column = "id"')
+        self.run_sql('create knowledge base kb_review using model=emb_model')
         self.run_sql('drop knowledge base kb_review')  # drop chromadb left since the last failed test
-        self.run_sql('create knowledge base kb_review using model=emb_model, id_column = "id"')
+        self.run_sql('create knowledge base kb_review using model=emb_model')
 
         self.run_sql("""
             insert into kb_review
             select review as content, id from files.reviews
         """)
 
-        ret = self.run_sql("select * from kb_review where original_row_id = '123'")
+        ret = self.run_sql("select * from kb_review where original_doc_id = 123")
         assert len(ret) == 1
         assert ret['chunk_content'][0] == record['review']
 
         # delete by metadata
-        self.run_sql("delete from kb_review where original_row_id = '123'")
-        ret = self.run_sql("select * from kb_review where original_row_id = '123'")
+        self.run_sql("delete from kb_review where original_doc_id = 123")
+        ret = self.run_sql("select * from kb_review where original_doc_id = 123")
         assert len(ret) == 0
 
-        # insert
+        # insert without id
         self.run_sql("""
             insert into kb_review
-            select review as content, product, url, id from files.reviews
+            select review as content, product, url from files.reviews
         """)
+
+        # id column wasn't used
+        ret = self.run_sql("select * from kb_review where original_doc_id = 123")
+        assert len(ret) == 0
 
         # product/url in metadata
         ret = self.run_sql("select * from kb_review where product = 'probook'")
@@ -455,8 +460,7 @@ class TestKB(BaseExecutorDummyML):
         self.run_sql('''
         create knowledge base kb_review
          using model=emb_model,
-         content_columns=['review'],
-         id_column = "id"
+         content_columns=['review']
         ''')
 
         self.run_sql("""
@@ -464,7 +468,7 @@ class TestKB(BaseExecutorDummyML):
             select * from files.reviews
         """)
 
-        ret = self.run_sql("select * from kb_review where original_row_id = '123'")  # id is id
+        ret = self.run_sql("select * from kb_review where original_doc_id = 123")  # id is id
         assert len(ret) == 1
         # review in content
         assert ret['chunk_content'][0] == record['review']
@@ -493,8 +497,7 @@ class TestKB(BaseExecutorDummyML):
 
         self.run_sql('''
           create knowledge base kb_ral
-            using model=emb_model,
-            id_column="id"
+            using model=emb_model
         ''')
 
         self.run_sql("""
@@ -544,7 +547,7 @@ class TestKB(BaseExecutorDummyML):
         assert set(ret['id']) == {'9016', '9023'}
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def test_kb_partitions(self, mock_handler, task_monitor):
+    def test_kb_partitions(self, mock_handler):
         self._create_embedding_model('emb_model')
 
         df = self._get_ral_table()
@@ -558,8 +561,11 @@ class TestKB(BaseExecutorDummyML):
 
         def check_partition(insert_sql):
             # create empty kb
-            self.run_sql('DROP KNOWLEDGE_BASE IF EXISTS kb_part')
-            self.run_sql('create knowledge base kb_part using model=emb_model,id_column="id"')
+            if len(self.run_sql('describe KNOWLEDGE_BASE kb_part')) > 0:
+                self.run_sql('delete from kb_part where id in (select id from kb_part)')
+                self.run_sql('DROP KNOWLEDGE_BASE kb_part')
+
+            self.run_sql('create knowledge base kb_part using model=emb_model, content_columns=["english"]')
 
             # load kb
             ret = self.run_sql(insert_sql)
@@ -570,6 +576,8 @@ class TestKB(BaseExecutorDummyML):
             for i in range(1000):
                 time.sleep(0.2)
                 ret = self.run_sql(f'select * from information_schema.queries where id = {query_id}')
+                if ret['ERROR'][0] is not None:
+                    raise RuntimeError(ret['ERROR'][0])
                 if ret['FINISHED_AT'][0] is not None:
                     break
 
@@ -578,7 +586,7 @@ class TestKB(BaseExecutorDummyML):
             assert len(ret) == len(df)
 
             # check queries table
-            ret = self.run_sql('select * from information_schema.queries')
+            ret = self.run_sql(f'select * from information_schema.queries where id = {query_id}')
             assert len(ret) == 1
             rec = ret.iloc[0]
             assert 'kb_part' in ret['SQL'][0]
@@ -607,31 +615,59 @@ class TestKB(BaseExecutorDummyML):
             assert rec_d['INSERT_FINISHED_AT'] is None
             assert rec_d['QUERY_ID'] is None
 
-        # test iterate
-        check_partition('''
-            insert into kb_part
-            SELECT id, english content FROM  pg.ral
-            using batch_size=20, track_column=id
-        ''')
+        with task_monitor():
+            def stream_f(*args, **kwargs):
+                chunk_size = int(len(df) / 10) + 1
+                for i in range(10):
+                    yield df[chunk_size * i: chunk_size * (i + 1):]
 
-        # test threads
-        check_partition('''
-            insert into kb_part
-            SELECT id, english content FROM  pg.ral
-            using batch_size=20, track_column=id, threads = 3
-        ''')
+            # --- stream mode ---
+            mock_handler().query_stream.side_effect = stream_f
 
-        # check select join using partitions
-        ret = self.run_sql('''
-            SELECT * FROM  pg.ral t
-            join emb_model
-            using batch_size=20, track_column=id
-        ''')
-        assert len(ret) == len(df)
+            # test iterate
+            check_partition('''
+                insert into kb_part SELECT id, english FROM  pg.ral
+                using batch_size=20, track_column=id
+            ''')
 
-        ret = self.run_sql('''
-            SELECT * FROM  pg.ral t
-            join emb_model
-            using batch_size=20, track_column=id, threads = 3
-        ''')
-        assert len(ret) == len(df)
+            # test threads
+            check_partition('''
+                insert into kb_part SELECT id, english FROM pg.ral
+                using batch_size=20, track_column=id, threads = 3
+            ''')
+
+            # without track column
+            check_partition('''
+                insert into kb_part SELECT id, english FROM  pg.ral
+                using batch_size=20
+            ''')
+
+            # --- general mode ---
+            mock_handler().query_stream = None
+
+            # test iterate
+            check_partition('''
+                insert into kb_part SELECT id, english FROM  pg.ral
+                using batch_size=20, track_column=id
+            ''')
+
+            # test threads
+            check_partition('''
+                insert into kb_part SELECT id, english FROM pg.ral
+                using batch_size=20, track_column=id, threads = 3
+            ''')
+
+            # --- check select join using partitions ---
+            ret = self.run_sql('''
+                SELECT * FROM  pg.ral t
+                join emb_model
+                using batch_size=20, track_column=id
+            ''')
+            assert len(ret) == len(df)
+
+            ret = self.run_sql('''
+                SELECT * FROM  pg.ral t
+                join emb_model
+                using batch_size=20, track_column=id, threads = 3
+            ''')
+            assert len(ret) == len(df)

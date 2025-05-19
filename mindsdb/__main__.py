@@ -14,6 +14,7 @@ from enum import Enum
 from dataclasses import dataclass, field
 from typing import Callable, Optional, Tuple, List
 
+from sqlalchemy import func
 from sqlalchemy.orm.attributes import flag_modified
 
 from mindsdb.utilities import log
@@ -23,16 +24,12 @@ logger.debug("Starting MindsDB...")
 
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.utilities.config import config
-from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.utilities.starters import (
-    start_http, start_mysql, start_mongo, start_postgres, start_ml_task_queue, start_scheduler, start_tasks,
-    start_mcp, start_litellm
+    start_http, start_mysql, start_mongo, start_postgres, start_ml_task_queue,
+    start_scheduler, start_tasks, start_mcp, start_litellm
 )
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
-from mindsdb.interfaces.database.integrations import integration_controller
-from mindsdb.interfaces.database.projects import ProjectController
 import mindsdb.interfaces.storage.db as db
-from mindsdb.integrations.utilities.install import install_dependencies
 from mindsdb.utilities.fs import clean_process_marks, clean_unlinked_process_marks
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.auth import register_oauth_client, get_aws_meta_data
@@ -215,7 +212,96 @@ def do_clean_process_marks():
             set_error_model_status_by_pids(unexisting_pids)
 
 
+def create_permanent_integrations():
+    """
+    Create permanent integrations, for now only the 'files' integration.
+    NOTE: this is intentional to avoid importing integration_controller
+    """
+    integration_name = 'files'
+    existing = db.session.query(db.Integration).filter_by(name=integration_name, company_id=None).first()
+    if existing is None:
+        integration_record = db.Integration(
+            name=integration_name,
+            data={},
+            engine=integration_name,
+            company_id=None,
+        )
+        db.session.add(integration_record)
+        try:
+            db.session.commit()
+        except Exception as e:
+            logger.error(f"Failed to commit permanent integration {integration_name}: {e}")
+            db.session.rollback()
+
+
+def validate_default_project() -> None:
+    """Handle 'default_project' config option.
+    Project with the name specified in 'default_project' must exists and be marked with
+    'is_default' metadata. If it is not possible, then terminate the process with error.
+    Note: this can be done using 'project_controller', but we want to save init time and used RAM.
+    """
+    new_default_project_name = config.get('default_project')
+    logger.debug(f"Checking if default project {new_default_project_name} exists")
+    filter_company_id = ctx.company_id if ctx.company_id is not None else 0
+
+    current_default_project: db.Project | None = (
+        db.Project.query.filter(
+            db.Project.company_id == filter_company_id,
+            db.Project.metadata_['is_default'].as_boolean() == True  # noqa
+        ).first()
+    )
+
+    if current_default_project is None:
+        # Legacy: If the default project does not exist, mark the new one as default.
+        existing_project = db.Project.query.filter(
+            db.Project.company_id == filter_company_id,
+            func.lower(db.Project.name) == func.lower(new_default_project_name)
+        ).first()
+        if existing_project is None:
+            logger.critical(f"A project with the name '{new_default_project_name}' does not exist")
+            sys.exit(1)
+
+        existing_project.metadata_ = {'is_default': True}
+        flag_modified(existing_project, 'metadata_')
+        db.session.commit()
+    elif current_default_project.name != new_default_project_name:
+        # If the default project exists, but the name is different, update the name.
+        existing_project = db.Project.query.filter(
+            db.Project.company_id == filter_company_id,
+            func.lower(db.Project.name) == func.lower(new_default_project_name)
+        ).first()
+        if existing_project is not None:
+            logger.critical(f"A project with the name '{new_default_project_name}' already exists")
+            sys.exit(1)
+        current_default_project.name = new_default_project_name
+        db.session.commit()
+
+
+def start_process(trunc_process_data: TrunkProcessData) -> None:
+    """Start a process.
+
+    Args:
+        trunc_process_data (TrunkProcessData): The data of the process to start.
+    """
+    mp_ctx = mp.get_context("spawn")
+    logger.info(f"{trunc_process_data.name} API: starting...")
+    try:
+        trunc_process_data.process = mp_ctx.Process(
+            target=trunc_process_data.entrypoint,
+            args=trunc_process_data.args,
+            name=trunc_process_data.name
+        )
+        trunc_process_data.process.start()
+    except Exception as e:
+        logger.error(
+            f"Failed to start {trunc_process_data.name} API with exception {e}\n{traceback.format_exc()}"
+        )
+        close_api_gracefully(trunc_processes_struct)
+        raise e
+
+
 if __name__ == '__main__':
+    mp.freeze_support()
     # warn if less than 1Gb of free RAM
     if psutil.virtual_memory().available < (1 << 30):
         logger.warning(
@@ -272,7 +358,6 @@ if __name__ == '__main__':
             pass
 
     db.init()
-    mp.freeze_support()
 
     environment = config["environment"]
     if environment == "aws_marketplace":
@@ -289,52 +374,6 @@ if __name__ == '__main__':
         except Exception:
             pass
 
-    is_cloud = config.is_cloud
-
-    if not is_cloud:
-        logger.debug("Applying database migrations")
-        try:
-            from mindsdb.migrations import migrate
-            migrate.migrate_to_head()
-        except Exception as e:
-            logger.error(f"Error! Something went wrong during DB migrations: {e}")
-
-        logger.debug(f"Checking if default project {config.get('default_project')} exists")
-        project_controller = ProjectController()
-
-        try:
-            current_default_project = project_controller.get(is_default=True)
-        except EntityNotExistsError:
-            # In previous versions, the default project could be deleted. This is no longer possible.
-            current_default_project = None
-
-        if current_default_project:
-            if current_default_project.record.name != config.get('default_project'):
-                try:
-                    project_controller.get(name=config.get('default_project'))
-                    logger.critical(f"A project with the name '{config.get('default_project')}' already exists")
-                    sys.exit(1)
-                except EntityNotExistsError:
-                    pass
-                project_controller.update(current_default_project.record.id, new_name=config.get('default_project'))
-
-        # Legacy: If the default project does not exist, mark the new one as default.
-        else:
-            try:
-                project_controller.get(name=config.get('default_project'))
-            except EntityNotExistsError:
-                logger.critical(
-                    f"A project with the name '{config.get('default_project')}' does not exist"
-                )
-                raise
-
-            project_controller.update(
-                name=config.get('default_project'),
-                new_metadata={
-                    "is_default": True
-                }
-            )
-
     apis = os.getenv('MINDSDB_APIS') or config.cmd_args.api
 
     if apis is None:  # If "--api" option is not specified, start the default APIs
@@ -344,27 +383,6 @@ if __name__ == '__main__':
     else:  # The user has provided a list of APIs to start
         api_arr = [TrunkProcessEnum(name) for name in apis.split(',')]
 
-    if config.cmd_args.install_handlers is not None:
-        handlers_list = [s.strip() for s in config.cmd_args.install_handlers.split(",")]
-        # import_meta = handler_meta.get('import', {})
-        for handler_name, handler_meta in integration_controller.get_handlers_import_status().items():
-            if handler_name not in handlers_list:
-                continue
-            import_meta = handler_meta.get("import", {})
-            if import_meta.get("success") is True:
-                logger.info(f"{'{0: <18}'.format(handler_name)} - already installed")
-                continue
-            result = install_dependencies(import_meta.get("dependencies", []))
-            if result.get("success") is True:
-                logger.info(
-                    f"{'{0: <18}'.format(handler_name)} - successfully installed"
-                )
-            else:
-                logger.info(
-                    f"{'{0: <18}'.format(handler_name)} - error during dependencies installation: {result.get('error_message', 'unknown error')}"
-                )
-        sys.exit(0)
-
     logger.info(f"Version: {mindsdb_version}")
     logger.info(f"Configuration file: {config.config_path or 'absent'}")
     logger.info(f"Storage path: {config.paths['root']}")
@@ -372,13 +390,22 @@ if __name__ == '__main__':
     logger.debug(f"System config: {config.auto_config}")
     logger.debug(f"Env config: {config.env_config}")
 
+    is_cloud = config.is_cloud
     unexisting_pids = clean_unlinked_process_marks()
     if not is_cloud:
+        logger.debug("Applying database migrations")
+        try:
+            from mindsdb.migrations import migrate
+            migrate.migrate_to_head()
+        except Exception as e:
+            logger.error(f"Error! Something went wrong during DB migrations: {e}")
+
+        validate_default_project()
+
         if len(unexisting_pids) > 0:
             set_error_model_status_by_pids(unexisting_pids)
         set_error_model_status_for_unfinished()
-
-        integration_controller.create_permanent_integrations()
+        create_permanent_integrations()
 
     clean_process_marks()
 
@@ -475,24 +502,6 @@ if __name__ == '__main__':
 
     if config.cmd_args.ml_task_queue_consumer is True:
         trunc_processes_struct[TrunkProcessEnum.ML_TASK_QUEUE].need_to_run = True
-
-    def start_process(trunc_process_data):
-        # TODO this 'ctx' is eclipsing 'context' class imported as 'ctx'
-        ctx = mp.get_context("spawn")
-        logger.info(f"{trunc_process_data.name} API: starting...")
-        try:
-            trunc_process_data.process = ctx.Process(
-                target=trunc_process_data.entrypoint,
-                args=trunc_process_data.args,
-                name=trunc_process_data.name
-            )
-            trunc_process_data.process.start()
-        except Exception as e:
-            logger.error(
-                f"Failed to start {trunc_process_data.name} API with exception {e}\n{traceback.format_exc()}"
-            )
-            close_api_gracefully(trunc_processes_struct)
-            raise e
 
     for trunc_process_data in trunc_processes_struct.values():
         if trunc_process_data.started is True or trunc_process_data.need_to_run is False:

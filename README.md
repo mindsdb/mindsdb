@@ -76,7 +76,7 @@ Unification of data can be automated using JOBs
 Chat with Your Data
 
 * [**AGENTS**](https://docs.mindsdb.com/mindsdb_sql/agents/agent) – Configure built-in agents specialized in answering questions over your connected and unified data.
-* [**MCP**](https://docs.mindsdb.com/mcp/overview) – Connect to MindsDB through the MCP (Minds Communication Protocol) for seamless interaction.
+* [**MCP**](https://docs.mindsdb.com/mcp/overview) – Connect to MindsDB through the MCP (Model Context Protocol) for seamless interaction.
 
 
 ----------------------------------------

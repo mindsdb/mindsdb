@@ -56,7 +56,7 @@ MindsDB's architecture is built around three fundamental capabilities:
 
 You can connect to hundreds of enterprise [data sources (learn more)](https://docs.mindsdb.com/integrations/data-overview). These integrations allow MindsDB to access data wherever it resides, forming the foundation for all other capabilities.
 
-## [UNIFY](https://docs.mindsdb.com/mindsdb_sql/overview) Your Data
+## [Unify](https://docs.mindsdb.com/mindsdb_sql/overview) Your Data
 
 Once connected, these data sources can be queried using a full SQL dialect, as if they were all part of a single database. MindsDB’s federated query engine translates your SQL queries and executes them on the appropriate connected data sources.
 
@@ -71,12 +71,12 @@ Unification of data can be automated using JOBs
 * [**JOBS**](https://docs.mindsdb.com/setup/self-hosted/docker) – Schedule synchronization and transformation tasks for real-time processing.
 
 
-## [RESPOND](https://docs.mindsdb.com/mindsdb_sql/agents/agent) From Your Data
+## [Respond](https://docs.mindsdb.com/mindsdb_sql/agents/agent) From Your Data
 
-Chat with your data
+Chat with Your Data
 
-- [**AGENTS**](https://docs.mindsdb.com/mindsdb_sql/agents/agent) – Configure built-in agents specialized on answer questions over the data you have connected an unified.
-- [**MCP**](https://docs.mindsdb.com/mcp/overview) - Connect via MCP
+* [**AGENTS**](https://docs.mindsdb.com/mindsdb_sql/agents/agent) – Configure built-in agents specialized in answering questions over your connected and unified data.
+* [**MCP**](https://docs.mindsdb.com/mcp/overview) – Connect to MindsDB through the MCP (Minds Communication Protocol) for seamless interaction.
 
 
 ----------------------------------------

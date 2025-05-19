@@ -5,13 +5,11 @@ import requests
 import time
 from typing import Dict
 
-from mindsdb.utilities.config import Config
 from tests.utils.http_test_helpers import HTTPHelperMixin
 from tests.utils.config import HTTP_API_ROOT
 
 
 def _get_metrics():
-    cfg = Config()
     url = HTTP_API_ROOT.rstrip("api") + "metrics"
     print(f"Getting metrics from {url}")
     resp = requests.get(url).text

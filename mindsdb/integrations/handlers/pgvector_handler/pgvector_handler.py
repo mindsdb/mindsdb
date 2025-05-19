@@ -1,7 +1,7 @@
 import os
 import json
 from enum import Enum
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Literal
 from urllib.parse import urlparse
 
 import pandas as pd
@@ -521,3 +521,49 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         """
         table_name = self._check_table(table_name)
         self.raw_query(f"DROP TABLE IF EXISTS {table_name}")
+
+    def create_index(self, table_name: str, column_name: str = "embeddings", index_type: Literal['ivfflat', 'hnsw'] = "hnsw", metric_type: str = "vector_cosine_ops"):
+        """
+        Create an index on the pgvector table.
+        Args:
+            table_name (str): Name of the table to create the index on.
+            column_name (str): Name of the column to create the index on.
+            index_type (str): Type of the index to create. Supported types are 'ivfflat' and 'hnsw'.
+            metric_type (str): Metric type for the index. Supported types are 'vector_l2_ops', 'vector_ip_ops', and 'vector_cosine_ops'.
+        """
+        # Check if the index type is supported
+        if index_type not in ['ivfflat', 'hnsw']:
+            raise ValueError("Invalid index type. Supported types are 'ivfflat' and 'hnsw'.")
+        table_name = self._check_table(table_name)
+        # Create the index
+        self.raw_query(f"CREATE INDEX ON {table_name} USING {index_type} ({column_name} {metric_type})")
+
+    def drop_index(self, index_name: str):
+        """
+        Drop an index from the pgvector table.
+        Args:
+            index_name (str): Name of the index to drop.
+        """
+        self.raw_query(f"DROP INDEX {index_name}")
+
+    def list_indexes(self, table_name: str) -> pd.DataFrame:
+        """
+        List all indexes on the pgvector table.
+        Args:
+            table_name (str): Name of the table to list indexes for.
+        Returns:
+            pd.DataFrame: DataFrame containing the index names.
+        """
+        table_name = self._check_table(table_name)
+        query = f"""
+            SELECT indexname
+            FROM pg_indexes
+            WHERE tablename = '{table_name}';
+        """
+        result = self.raw_query(query)
+        if result.resp_type == RESPONSE_TYPE.ERROR:
+            raise RuntimeError(result.error_message)
+        if result.resp_type == RESPONSE_TYPE.TABLE:
+            return result.data_frame
+        else:
+            raise ValueError("Unexpected response type from query.")

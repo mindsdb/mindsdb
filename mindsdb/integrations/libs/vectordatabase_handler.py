@@ -553,3 +553,31 @@ class VectorStoreHandler(BaseHandler):
             df(pd.DataFrame): Hybrid search result, sorted by hybrid search rank
         '''
         raise NotImplementedError(f'Hybrid search not supported for VectorStoreHandler {self.name}')
+
+    def create_index(self, *args, **kwargs):
+        """
+        Create an index on the specified table.
+        """
+        raise NotImplementedError(f'create_index not supported for VectorStoreHandler {self.name}')
+
+    def drop_index(self, *args, **kwargs):
+        """
+        Drop the specified index from the table.
+
+        Args:
+            table_name (str): Name of the table.
+            index_name (str): Name of the index to drop.
+
+        Returns:
+            HandlerResponse: Response indicating success or failure.
+        """
+        raise NotImplementedError(f'drop_index not supported for VectorStoreHandler {self.name}')
+
+    def list_indexes(self, *args, **kwargs):
+        """
+        List all indexes in the database.
+
+        Returns:
+            HandlerResponse: Response containing a list of indexes.
+        """
+        raise NotImplementedError(f'list_indexes not supported for VectorStoreHandler {self.name}')

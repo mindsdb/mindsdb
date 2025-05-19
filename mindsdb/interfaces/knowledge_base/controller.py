@@ -1159,6 +1159,12 @@ class KnowledgeBaseController:
 
         return data
 
+    def create_index(self, table_name, project_name):
+        project_id = self.session.database_controller.get_project(project_name).id
+        kb_table = self.get_table(table_name, project_id)
+        db_handler = kb_table.get_vector_db()
+        db_handler.create_index(table_name=kb_table._kb.vector_database_table)
+
     def update(self, name: str, project_id: int, **kwargs) -> db.KnowledgeBase:
         """
         Update a knowledge base record

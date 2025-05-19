@@ -579,7 +579,7 @@ class TestKB(BaseExecutorDummyML):
 
     @patch('openai.OpenAI')
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def test_kb_partitions(self, mock_handler, mock_openai, task_monitor):
+    def test_kb_partitions(self, mock_handler, mock_openai):
         set_openai_models(mock_openai)
 
         df = self._get_ral_table()

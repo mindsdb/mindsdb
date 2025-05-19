@@ -445,6 +445,12 @@ def initialize_app(config, no_studio):
                     )
 
                 new_agent_name = data["agent_name"]
+                if not new_agent_name.isalnum():
+                    abort(
+                        HTTPStatus.BAD_REQUEST,
+                        "Invalid agent_name: must be alphanumeric"
+                    )
+
                 new_project_name = data.get("project_name")  # Optional
 
                 # Update the A2A agent

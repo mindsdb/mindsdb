@@ -67,6 +67,21 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         self.distance_op = distance_op
         self.connect()
 
+    def get_metric_type(self) -> str:
+        """
+        Get the metric type from the distance ops
+
+        """
+        distance_ops_to_metric_type_map = {
+            '<->': 'vector_l2_ops',
+            '<#>': 'vector_ip_ops',
+            '<=>': 'vector_cosine_ops',
+            '<+>': 'vector_l1_ops',
+            '<~>': 'bit_hamming_ops',
+            '<%>': 'bit_jaccard_ops'
+        }
+        return distance_ops_to_metric_type_map.get(self.distance_op, 'vector_cosine_ops')
+
     def _make_connection_args(self):
         cloud_pgvector_url = os.environ.get('KB_PGVECTOR_URL')
         # if no connection args and shared pg vector defined - use it
@@ -522,7 +537,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         table_name = self._check_table(table_name)
         self.raw_query(f"DROP TABLE IF EXISTS {table_name}")
 
-    def create_index(self, table_name: str, column_name: str = "embeddings", index_type: Literal['ivfflat', 'hnsw'] = "hnsw", metric_type: str = "vector_cosine_ops"):
+    def create_index(self, table_name: str, column_name: str = "embeddings", index_type: Literal['ivfflat', 'hnsw'] = "hnsw", metric_type: str = get_metric_type()):
         """
         Create an index on the pgvector table.
         Args:

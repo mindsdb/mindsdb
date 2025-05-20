@@ -7,7 +7,6 @@ from common.types import (
     Artifact,
     TaskStatusUpdateEvent,
     TaskArtifactUpdateEvent,
-    TextPart,
     TaskState,
     Task,
     SendTaskResponse,
@@ -47,9 +46,69 @@ class AgentTaskManager(InMemoryTaskManager):
     ) -> AsyncIterable[SendTaskStreamingResponse] | JSONRPCResponse:
         task_send_params: TaskSendParams = request.params
         query = self._get_user_query(task_send_params)
-        agent_name = task_send_params.message.metadata.get('agent_name', 'my_agent')
+        params = self._get_task_params(task_send_params)
+        agent_name = params.get("agent_name", "my_agent")
+        streaming = params.get("streaming", True)
         agent = self._create_agent(agent_name)
-        
+
+        if not streaming:
+            # If streaming is disabled, use invoke and return a single response
+            try:
+                result = agent.invoke(query, task_send_params.sessionId)
+
+                # Use the parts from the agent response if available, or create them
+                if "parts" in result:
+                    parts = result["parts"]
+                else:
+                    result_text = result.get("content", "No response from MindsDB")
+                    parts = [{"type": "text", "text": result_text}]
+
+                    # Check if we have structured data
+                    if "data" in result and result["data"]:
+                        parts.append(
+                            {
+                                "type": "data",
+                                "data": result["data"],
+                                "metadata": {"subtype": "json"},
+                            }
+                        )
+
+                # Create and yield the final response
+                task_state = TaskState.COMPLETED
+                artifact = Artifact(parts=parts, index=0, append=False)
+                task_status = TaskStatus(state=task_state)
+
+                # Update the task store
+                await self._update_store(task_send_params.id, task_status, [artifact])
+
+                # Yield the artifact update
+                yield SendTaskStreamingResponse(
+                    id=request.id,
+                    result=TaskArtifactUpdateEvent(
+                        id=task_send_params.id, artifact=artifact
+                    ),
+                )
+
+                # Yield the final status update
+                yield SendTaskStreamingResponse(
+                    id=request.id,
+                    result=TaskStatusUpdateEvent(
+                        id=task_send_params.id,
+                        status=TaskStatus(state=task_status.state),
+                        final=True,
+                    ),
+                )
+                return
+
+            except Exception as e:
+                logger.error(f"Error invoking agent: {e}")
+                yield JSONRPCResponse(
+                    id=request.id,
+                    error=InternalError(message=f"Error invoking agent: {str(e)}"),
+                )
+                return
+
+        # If streaming is enabled (default), use the streaming implementation
         try:
             async for item in agent.stream(query, task_send_params.sessionId):
                 is_task_complete = item["is_task_complete"]
@@ -148,14 +207,57 @@ class AgentTaskManager(InMemoryTaskManager):
                 task.artifacts.extend(artifacts)
             return task
 
+    def _get_user_query(self, task_send_params: TaskSendParams) -> str:
+        """Extract the user query from the task parameters."""
+        message = task_send_params.message
+        if not message.parts:
+            return ""
+
+        # Find the first text part
+        for part in message.parts:
+            if part.type == "text":
+                return part.text
+
+        # If no text part found, return empty string
+        return ""
+
+    def _get_task_params(self, task_send_params: TaskSendParams) -> dict:
+        """Extract common parameters from task metadata."""
+        metadata = task_send_params.message.metadata or {}
+        return {
+            "agent_name": metadata.get("agent_name", "my_agent"),
+            "streaming": metadata.get("streaming", True),
+            "session_id": task_send_params.sessionId,
+        }
+
     async def _invoke(self, request: SendTaskRequest) -> SendTaskResponse:
         task_send_params: TaskSendParams = request.params
         query = self._get_user_query(task_send_params)
-        agent_name = task_send_params.message.metadata.get('agent_name', 'my_agent')
+        params = self._get_task_params(task_send_params)
+        agent_name = params["agent_name"]
+        streaming = params["streaming"]
         agent = self._create_agent(agent_name)
-        
+
         try:
-            result = agent.invoke(query, task_send_params.sessionId)
+            if streaming:
+                # Use streaming but collect all chunks into a single response
+                parts = []
+                metadata = {}
+                async for chunk in agent.stream(query, task_send_params.sessionId):
+                    if "parts" in chunk:
+                        parts.extend(chunk["parts"])
+                    if "metadata" in chunk:
+                        metadata.update(chunk["metadata"])
+
+                # If we have parts from streaming, use them
+                if parts:
+                    result = {"parts": parts, "metadata": metadata}
+                else:
+                    # Fallback to non-streaming if streaming didn't return parts
+                    result = agent.invoke(query, task_send_params.sessionId)
+            else:
+                # Use non-streaming invocation
+                result = agent.invoke(query, task_send_params.sessionId)
 
             # Use the parts from the agent response if available, or create them
             if "parts" in result:
@@ -185,9 +287,3 @@ class AgentTaskManager(InMemoryTaskManager):
             [Artifact(parts=parts)],
         )
         return SendTaskResponse(id=request.id, result=task)
-
-    def _get_user_query(self, task_send_params: TaskSendParams) -> str:
-        part = task_send_params.message.parts[0]
-        if not isinstance(part, TextPart):
-            raise ValueError("Only text parts are supported")
-        return part.text

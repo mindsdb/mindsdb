@@ -194,9 +194,9 @@ jobs:
           if [ "$RUNNER_OS" == "Linux" ]; then
             # We have to run executor tests separately because they do weird things that break everything else
             env PYTHONPATH=./ pytest -xs tests/unit/executor
-            env PYTHONPATH=./ pytest -xs --ignore=tests/unit/handlers --ignore=tests/unit/executor tests/unit/
 
             env PYTHONPATH=./:parser_tests/tests pytest -xs tests/unit/render/
+            env PYTHONPATH=./ pytest -xs --ignore=tests/unit/handlers --ignore=tests/unit/executor --ignore=tests/unit/render tests/unit/
           fi
           
           python -m unittest discover -s tests/unit/handlers

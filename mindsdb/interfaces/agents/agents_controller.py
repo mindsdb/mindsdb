@@ -221,8 +221,8 @@ class AgentsController:
         if isinstance(ignore_knowledge_bases, str):
             ignore_knowledge_bases = [kb.strip() for kb in ignore_knowledge_bases.split(',')]
 
-        # Auto-create SQL skill if no skills are provided but table or KB params are
-        if not skills and (database or knowledge_base_database or include_tables or ignore_tables or include_knowledge_bases or ignore_knowledge_bases):
+        # Auto-create SQL skill if no skills are provided but include_tables or include_knowledge_bases params are provided
+        if not skills and (include_tables or include_knowledge_bases):
             # Determine database to use (default to 'mindsdb')
             db_name = database
             kb_db_name = knowledge_base_database

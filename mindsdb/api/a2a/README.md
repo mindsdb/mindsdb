@@ -11,9 +11,8 @@ The agent takes natural language queries from users and translates them into app
 
 ## Prerequisites
 
-- Python 3.9 or higher
+- Python 3.0 or higher
 - [UV](https://docs.astral.sh/uv/)
-- MindsDB account and API credentials
 - Access to an LLM and API Key
 
 ## Running the Sample

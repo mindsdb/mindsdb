@@ -1,0 +1,228 @@
+---
+title: Create Run
+sidebarTitle: Create Run
+---
+
+This API endpoint creates a Run on a specific Thread using the `POST` method.
+
+### Body
+
+<ParamField body='assistant_id' type='string' required>
+
+ID of the Assistant (Mind) that will be used to run the Thread.
+
+</ParamField>
+
+<ParamField body='stream' type='array'>
+
+Stream Mind's thoughts by setting this parameter to true.
+
+</ParamField>
+
+### Response
+
+<ResponseField name="id" type="string" required>  
+Unique identifier for the run.
+</ResponseField>
+
+<ResponseField name="assistant_id" type="string" required>  
+ID of the Assistant associated with the run.
+</ResponseField>
+
+<ResponseField name="cancelled_at" type="number">  
+Timestamp when the run was cancelled.
+</ResponseField>
+
+<ResponseField name="completed_at" type="number">  
+Timestamp when the run was completed.
+</ResponseField>
+
+<ResponseField name="created_at" type="number" required>  
+Timestamp when the run was created.
+</ResponseField>
+
+<ResponseField name="expires_at" type="number">  
+Expiration time for the run.
+</ResponseField>
+
+<ResponseField name="failed_at" type="number">  
+Timestamp when the run failed.
+</ResponseField>
+
+<ResponseField name="incomplete_details" type="object">  
+Details about why the run was incomplete, if applicable.
+</ResponseField>
+
+<ResponseField name="instructions" type="string">  
+Instructions sent to the Assistant.
+</ResponseField>
+
+<ResponseField name="last_error" type="object">  
+Details about the last error, if any.
+</ResponseField>
+
+<ResponseField name="max_completion_tokens" type="number">  
+Maximum number of tokens for the completion.
+</ResponseField>
+
+<ResponseField name="max_prompt_tokens" type="number">  
+Maximum number of tokens for the prompt.
+</ResponseField>
+
+<ResponseField name="metadata" type="object">  
+Additional metadata for the run.
+</ResponseField>
+
+<ResponseField name="model" type="string">  
+Model name used for the run.
+</ResponseField>
+
+<ResponseField name="object" type="string" required>  
+Type of the returned object (e.g., "thread.run").
+</ResponseField>
+
+<ResponseField name="required_action" type="object">  
+Actions required before proceeding.
+</ResponseField>
+
+<ResponseField name="response_format" type="string">  
+Format of the response.
+</ResponseField>
+
+<ResponseField name="started_at" type="number">  
+Timestamp when the run started.
+</ResponseField>
+
+<ResponseField name="status" type="string" required>  
+Current status of the run (e.g., "queued", "in_progress").
+</ResponseField>
+
+<ResponseField name="thread_id" type="string" required>  
+ID of the thread associated with the run.
+</ResponseField>
+
+<ResponseField name="tool_choice" type="string">  
+Chosen tool for the run.
+</ResponseField>
+
+<ResponseField name="tools" type="array">  
+List of tools used during the run.
+</ResponseField>
+
+<ResponseField name="truncation_strategy" type="string">  
+Strategy used to truncate input.
+</ResponseField>
+
+<ResponseField name="usage" type="object">  
+Usage statistics for the run.
+</ResponseField>
+
+<ResponseField name="temperature" type="number">  
+Sampling temperature for randomness.
+</ResponseField>
+
+<ResponseField name="top_p" type="number">  
+Top-p sampling parameter.
+</ResponseField>
+
+### Authorization
+
+A valid API key must be passed in the `Authorization` header:
+
+```
+Authorization: Bearer MINDS_API_KEY
+```
+
+Generate your [API key here](https://mdb.ai/apiKeys).
+
+### Path Parameters
+
+<ParamField body='thread_id' type='string' required>
+
+ID of the Thread to run.
+
+</ParamField>
+
+<RequestExample>
+
+```shell Shell
+curl -X POST "https://mdb.ai/threads/mdb_thread_4d3f3805c95f4c1a9d77d32cbdfbe3d9/runs" \
+  -H "Authorization: Bearer MINDS_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "assistant_id": "<name of the mind that you created>",
+    "stream": true
+  }'
+```
+
+```python Python
+from openai import OpenAI
+client = OpenAI(
+    api_key='MINDS_API_KEY',
+    base_url='https://mdb.ai/'
+)
+
+run = client.beta.threads.runs.create(
+  thread_id="thread_abc123",
+  assistant_id="<name of the mind that you created>"
+)
+
+print(run)
+```
+
+```js Node
+import OpenAI from "openai";
+
+const openai = new OpenAI(
+    api_key='MINDS_API_KEY',
+    baseURL='https://mdb.ai/'
+);
+
+async function main() {
+  const run = await openai.beta.threads.runs.create(
+    "thread_abc123",
+    { assistant_id: "<name of the mind that you created>" }
+  );
+
+  console.log(run);
+}
+
+main();
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Response
+{
+    "id": "mdb_run_8b425f3bf0a04ca584ad11106d37330c",
+    "assistant_id": "mdb_asst_cfde04f34a5e47548b705fbf091e06bc",
+    "cancelled_at": null,
+    "completed_at": null,
+    "created_at": 1718885800,
+    "expires_at": null,
+    "failed_at": null,
+    "incomplete_details": null,
+    "instructions": "",
+    "last_error": null,
+    "max_completion_tokens": null,
+    "max_prompt_tokens": null,
+    "metadata": null,
+    "model": "",
+    "object": "thread.run",
+    "required_action": null,
+    "response_format": null,
+    "started_at": null,
+    "status": "queued",
+    "thread_id": "mdb_thread_cfa0fac64cd94faab3ae269d768c0cb0",
+    "tool_choice": null,
+    "tools": [],
+    "truncation_strategy": null,
+    "usage": null,
+    "temperature": null,
+    "top_p": null
+}
+```
+
+</ResponseExample>

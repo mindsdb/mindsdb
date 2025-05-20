@@ -353,6 +353,9 @@ def _handle_series_as_int(series: pd.Series) -> pd.Series:
         pd.Series: The series with the int values as strings
     """
     if pd_types.is_integer_dtype(series.dtype):
+        if series.dtype == 'Int64':
+            # NOTE: 'apply' converts values to python floats
+            return series.astype(object).apply(_dump_str)
         return series.apply(_dump_str)
     return series.apply(_dump_int_or_str)
 

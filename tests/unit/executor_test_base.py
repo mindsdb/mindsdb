@@ -42,7 +42,7 @@ class BaseUnitTest:
     @staticmethod
     def setup_class(cls):
         # remove imports of mindsdb in previous tests
-        unload_module("mindsdb")
+        # unload_module("mindsdb")
 
         # database temp file
 

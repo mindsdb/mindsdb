@@ -537,7 +537,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         table_name = self._check_table(table_name)
         self.raw_query(f"DROP TABLE IF EXISTS {table_name}")
 
-    def create_index(self, table_name: str, column_name: str = "embeddings", index_type: Literal['ivfflat', 'hnsw'] = "hnsw", metric_type: str = get_metric_type()):
+    def create_index(self, table_name: str, column_name: str = "embeddings", index_type: Literal['ivfflat', 'hnsw'] = "hnsw", metric_type: str = None):
         """
         Create an index on the pgvector table.
         Args:
@@ -546,6 +546,8 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
             index_type (str): Type of the index to create. Supported types are 'ivfflat' and 'hnsw'.
             metric_type (str): Metric type for the index. Supported types are 'vector_l2_ops', 'vector_ip_ops', and 'vector_cosine_ops'.
         """
+        if metric_type is None:
+            metric_type = self.get_metric_type()
         # Check if the index type is supported
         if index_type not in ['ivfflat', 'hnsw']:
             raise ValueError("Invalid index type. Supported types are 'ivfflat' and 'hnsw'.")

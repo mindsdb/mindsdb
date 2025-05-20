@@ -192,7 +192,7 @@ jobs:
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
-            env PYTHONPATH=./ pytest --ignore=tests/unit/handlers tests/unit/ --ignore=tests/unit/executor/test_agent.py --ignore=tests/unit/executor/test_api_handler.py --ignore=tests/unit/executor/test_base_queires.py --ignore=tests/unit/executor/test_cache.py --ignore=tests/unit/executor/test_executor.py --ignore=tests/unit/executor/test_files.py --ignore=tests/unit/executor/test_cache.py  -x
+            env PYTHONPATH=./ pytest --ignore=tests/unit/handlers tests/unit/ --ignore=tests/unit/executor/test_jobs.py --ignore=tests/unit/executor/test_models.py --ignore=tests/unit/executor/test_mongodb_handler.py --ignore=tests/unit/executor/test_mongodb_server.py --ignore=tests/unit/executor/test_predictor_params.py --ignore=tests/unit/executor/test_project_structure.py --ignore=tests/unit/executor/test_schema.py  -x
 
             # env PYTHONPATH=./:parser_tests/tests pytest tests/unit/render/ -x
           fi

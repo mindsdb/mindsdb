@@ -611,3 +611,51 @@ class PostgresHandler(CatalogDatabaseHandler):
         result = self.native_query(query)
         return result
 
+    def get_column_statistics(self, table_names: Optional[list] = None) -> dict:
+        """
+        Retrieves column statistics (e.g., most common values, frequencies, null percentage, and distinct value count)
+        for the specified tables or all tables if no list is provided.
+
+        Args:
+            table_names (list): A list of table names for which to retrieve column statistics.
+
+        Returns:
+            dict: A dictionary containing the column statistics.
+        """
+        # If no table names are provided, retrieve all column statistics for all tables
+        if table_names is None or len(table_names) == 0:
+            query = f"""
+                SELECT
+                    ps.attname AS column_name,
+                    ps.tablename AS table_name,
+                    ps.most_common_vals AS most_common_values,
+                    ps.most_common_freqs AS most_common_frequencies,
+                    ps.null_frac * 100 AS null_percentage,
+                    ps.n_distinct AS distinct_values_count
+                FROM pg_stats ps
+                WHERE ps.schemaname = '{self.connection_args.get('schema')}'
+                AND ps.tablename NOT LIKE 'pg_%'
+                AND ps.tablename NOT LIKE 'sql_%'
+                ORDER BY ps.tablename, ps.attname;
+            """
+
+        # If specific table names are provided, filter by them
+        else:
+            query = f"""
+                SELECT
+                    ps.attname AS column_name,
+                    ps.tablename AS table_name,
+                    ps.most_common_vals AS most_common_values,
+                    ps.most_common_freqs AS most_common_frequencies,
+                    ps.null_frac * 100 AS null_percentage,
+                    ps.n_distinct AS distinct_values_count
+                FROM pg_stats ps
+                WHERE ps.schemaname = '{self.connection_args.get('schema')}'
+                AND ps.tablename IN ({','.join([f"'{t}'" for t in table_names])})
+                AND ps.tablename NOT LIKE 'pg_%'
+                AND ps.tablename NOT LIKE 'sql_%'
+                ORDER BY ps.tablename, ps.attname;
+            """
+
+        result = self.native_query(query)
+        return result

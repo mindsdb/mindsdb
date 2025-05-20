@@ -279,45 +279,17 @@ def initialize_app(config, no_studio):
                 config.update({"a2a": a2a_config})
 
                 # Signal the main process to restart the A2A service
-                # This is done by updating the config which the main process will detect
-                # on its next check cycle
+                # We don't need to directly access the main process's trunk_processes_struct
+                # The main process will detect the configuration change and handle the restart
 
-                # Find the A2A process in the main process's trunk_processes_struct
-                from mindsdb.__main__ import trunk_processes_struct, TrunkProcessEnum
+                logger.info(f"Updated A2A configuration with agent name: {new_agent_name}")
 
-                a2a_process = None
-                for process in trunk_processes_struct:
-                    if process.name == TrunkProcessEnum.A2A.value:
-                        a2a_process = process
-                        break
-
-                if (
-                    a2a_process
-                    and a2a_process.process
-                    and a2a_process.process.is_alive()
-                ):
-                    # Terminate the existing process
-                    logger.info(
-                        f"Terminating A2A process to update agent name to {new_agent_name}"
-                    )
-                    a2a_process.process.terminate()
-
-                    # Start a new process with the updated configuration
-                    from mindsdb.__main__ import start_process
-
-                    start_process(a2a_process)
-
-                    return {
-                        "status": "success",
-                        "agent_name": html.escape(new_agent_name),
-                        "project_name": new_project_name
-                        or a2a_config.get("project_name", "mindsdb"),
-                    }
-                else:
-                    abort(
-                        HTTPStatus.SERVICE_UNAVAILABLE,
-                        "A2A is not enabled or not running",
-                    )
+                return {
+                    "status": "success",
+                    "agent_name": html.escape(new_agent_name),
+                    "project_name": new_project_name
+                    or a2a_config.get("project_name", "mindsdb"),
+                }
 
             except Exception as e:
                 logger.error(f"Error updating A2A agent: {e}")

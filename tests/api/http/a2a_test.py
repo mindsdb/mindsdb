@@ -14,7 +14,7 @@ def test_update_a2a_agent() -> None:
 
     This test verifies that:
     1. The API endpoint correctly updates the agent configuration
-    2. It communicates with the main process to restart the A2A service
+    2. It returns a success response with the updated configuration
     3. It handles error cases properly
     """
     # Create a Flask app context for testing
@@ -29,20 +29,6 @@ def test_update_a2a_agent() -> None:
         "port": 8000,
     }
     mock_config.update = MagicMock()
-
-    # Mock the trunk process structure and related components
-    mock_process = MagicMock()
-    mock_process.terminate = MagicMock()
-    mock_process.is_alive.return_value = True
-
-    mock_trunk_process = MagicMock()
-    mock_trunk_process.name = "a2a"
-    mock_trunk_process.process = mock_process
-
-    # Create a dictionary for the trunk processes structure
-    mock_trunc_processes_struct = {"a2a": mock_trunk_process}
-
-    mock_start_process = MagicMock()
 
     # Define the API function to test
     def api_update_a2a_agent():
@@ -74,30 +60,12 @@ def test_update_a2a_agent() -> None:
             # Update the global configuration
             mock_config.update({"a2a": a2a_config})
 
-            # Find the A2A process in the mock trunk processes struct
-            a2a_process = None
-            for process_name, process in mock_trunc_processes_struct.items():
-                if process_name == "a2a":
-                    a2a_process = process
-                    break
-
-            if a2a_process and a2a_process.process and a2a_process.process.is_alive():
-                # Terminate the existing process
-                a2a_process.process.terminate()
-
-                # Start a new process with the updated configuration
-                mock_start_process(a2a_process)
-
-                return {
-                    "status": "success",
-                    "agent_name": html.escape(new_agent_name),
-                    "project_name": new_project_name
-                    or a2a_config.get("project_name", "mindsdb"),
-                }
-            else:
-                return {
-                    "error": "A2A is not enabled or not running"
-                }, HTTPStatus.SERVICE_UNAVAILABLE
+            return {
+                "status": "success",
+                "agent_name": html.escape(new_agent_name),
+                "project_name": new_project_name
+                or a2a_config.get("project_name", "mindsdb"),
+            }
 
         except Exception as e:
             return {
@@ -130,14 +98,8 @@ def test_update_a2a_agent() -> None:
         assert "a2a" in args[0]
         assert args[0]["a2a"]["agent_name"] == "new_agent"
 
-        # Verify the process was terminated and restarted
-        mock_process.terminate.assert_called_once()
-        mock_start_process.assert_called_once_with(mock_trunk_process)
-
         # Reset mocks for next test
-        mock_process.reset_mock()
         mock_config.reset_mock()
-        mock_start_process.reset_mock()
 
         # Test 2: Update with both agent_name and project_name
         response = client.post(
@@ -162,17 +124,6 @@ def test_update_a2a_agent() -> None:
 
         # Verify the response
         assert response.status_code == 400
-
-        # Test 4: A2A process not found or not running
-        mock_trunk_process.process.is_alive.return_value = False
-
-        # Call the function with valid parameters
-        response = client.post(
-            "/api/a2a/update_agent", json={"agent_name": "new_agent3"}
-        )
-
-        # Verify the response
-        assert response.status_code == 503
 
 
 def test_update_a2a_agent_with_exception() -> None:
@@ -214,22 +165,22 @@ def test_update_a2a_agent_with_exception() -> None:
             new_agent_name = data["agent_name"]
             new_project_name = data.get("project_name")  # Optional
 
-            # Update the configuration - this will raise an exception
+            # Update the configuration
             a2a_config = mock_config.get("a2a", {}).copy()
             a2a_config["agent_name"] = new_agent_name
             if new_project_name:
                 a2a_config["project_name"] = new_project_name
 
-            # This will raise the mocked exception
+            # Update the global configuration - this will raise an exception
             mock_config.update({"a2a": a2a_config})
 
-            # This code should not be reached due to the exception
             return {
                 "status": "success",
                 "agent_name": html.escape(new_agent_name),
                 "project_name": new_project_name
                 or a2a_config.get("project_name", "mindsdb"),
             }
+
         except Exception as e:
             return {
                 "error": f"Error updating A2A agent: {str(e)}"
@@ -237,16 +188,16 @@ def test_update_a2a_agent_with_exception() -> None:
 
     # Register the route directly with the app
     app.add_url_rule(
-        "/api/a2a/update_agent",
+        "/api/a2a/update_agent_exception",
         "api_update_a2a_agent_with_exception",
         api_update_a2a_agent_with_exception,
         methods=["POST"],
     )
 
-    # Test exception handling
+    # Test: Exception during update
     with app.test_client() as client:
         response = client.post(
-            "/api/a2a/update_agent", json={"agent_name": "new_agent"}
+            "/api/a2a/update_agent_exception", json={"agent_name": "new_agent"}
         )
 
         # Verify the response

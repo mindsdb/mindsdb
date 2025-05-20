@@ -233,7 +233,15 @@ class Config:
             },
             "default_project": "mindsdb",
             "default_llm": {},
-            "default_embedding_model": {}
+            "default_embedding_model": {},
+            "a2a": {
+                "host": "localhost",
+                "port": 10002,
+                "mindsdb_host": "localhost",
+                "mindsdb_port": 47334,
+                "agent_name": "my_agent",
+                "project_name": "mindsdb"
+            }
         }
         # endregion
 
@@ -270,7 +278,8 @@ class Config:
             'auth': {},
             'paths': {},
             'permanent_storage': {},
-            'ml_task_queue': {}
+            'ml_task_queue': {},
+            'a2a': {}
         }
 
         # region storage root path
@@ -381,35 +390,24 @@ class Config:
                 'api_key': os.environ['MINDSDB_DEFAULT_EMBEDDING_MODEL_API_KEY']
             }
 
-    def parse_cmd_args(self) -> None:
-        """Collect cmd args to self._cmd_args (accessable as self.cmd_args)
-        """
-        if self._cmd_args is not None:
-            return
+        # region vars: a2a configuration
+        a2a_config = {}
+        if os.environ.get('MINDSDB_A2A_HOST'):
+            a2a_config['host'] = os.environ.get('MINDSDB_A2A_HOST')
+        if os.environ.get('MINDSDB_A2A_PORT'):
+            a2a_config['port'] = int(os.environ.get('MINDSDB_A2A_PORT'))
+        if os.environ.get('MINDSDB_HOST'):
+            a2a_config['mindsdb_host'] = os.environ.get('MINDSDB_HOST')
+        if os.environ.get('MINDSDB_PORT'):
+            a2a_config['mindsdb_port'] = int(os.environ.get('MINDSDB_PORT'))
+        if os.environ.get('MINDSDB_AGENT_NAME'):
+            a2a_config['agent_name'] = os.environ.get('MINDSDB_AGENT_NAME')
+        if os.environ.get('MINDSDB_PROJECT_NAME'):
+            a2a_config['project_name'] = os.environ.get('MINDSDB_PROJECT_NAME')
 
-        # if it is not mindsdb run, then set args to empty
-        if (
-            (sys.modules['__main__'].__package__ or '').lower() != 'mindsdb'
-            and os.environ.get('MINDSDB_RUNTIME') != "1"
-        ):
-            self._cmd_args = argparse.Namespace(
-                api=None, config=None, install_handlers=None, verbose=False,
-                no_studio=False, version=False, ml_task_queue_consumer=None,
-                agent=None, project=None
-            )
-            return
-
-        parser = argparse.ArgumentParser(description='CL argument for mindsdb server')
-        parser.add_argument('--api', type=str, default=None)
-        parser.add_argument('--config', type=str, default=None)
-        parser.add_argument('--install-handlers', type=str, default=None)
-        parser.add_argument('--verbose', action='store_true')
-        parser.add_argument('--no_studio', action='store_true')
-        parser.add_argument('-v', '--version', action='store_true')
-        parser.add_argument('--ml_task_queue_consumer', action='store_true', default=None)
-        parser.add_argument('--agent', type=str, default=None, help='Name of the agent to use with litellm APIs')
-        parser.add_argument('--project', type=str, default=None, help='Project containing the agent (default: mindsdb)')
-        self._cmd_args = parser.parse_args()
+        if a2a_config:
+            self._env_config['a2a'] = a2a_config
+        # endregion
 
     def fetch_auto_config(self) -> bool:
         """Load dict readed from config.auto.json to `auto_config`.
@@ -537,6 +535,45 @@ class Config:
         if self._cmd_args is None:
             self.parse_cmd_args()
         return self._cmd_args
+
+    def parse_cmd_args(self) -> None:
+        """Collect cmd args to self._cmd_args (accessable as self.cmd_args)
+        """
+        if self._cmd_args is not None:
+            return
+
+        # if it is not mindsdb run, then set args to empty
+        if (
+            (sys.modules['__main__'].__package__ or '').lower() != 'mindsdb'
+            and os.environ.get('MINDSDB_RUNTIME') != "1"
+        ):
+            self._cmd_args = argparse.Namespace(
+                api=None, config=None, install_handlers=None, verbose=False,
+                no_studio=False, version=False, ml_task_queue_consumer=None,
+                agent=None, project=None
+            )
+            return
+
+        parser = argparse.ArgumentParser(description='CL argument for mindsdb server')
+        parser.add_argument('--api', type=str, default=None)
+        parser.add_argument('--config', type=str, default=None)
+        parser.add_argument('--install-handlers', type=str, default=None)
+        parser.add_argument('--verbose', action='store_true')
+        parser.add_argument('--no_studio', action='store_true')
+        parser.add_argument('-v', '--version', action='store_true')
+        parser.add_argument('--ml_task_queue_consumer', action='store_true', default=None)
+        parser.add_argument('--agent', type=str, default=None, help='Name of the agent to use with litellm APIs')
+        parser.add_argument('--project', type=str, default=None, help='Project containing the agent (default: mindsdb)')
+
+        # A2A specific arguments
+        parser.add_argument('--a2a-host', type=str, default=None, help='A2A server host')
+        parser.add_argument('--a2a-port', type=int, default=None, help='A2A server port')
+        parser.add_argument('--mindsdb-host', type=str, default=None, help='MindsDB server host')
+        parser.add_argument('--mindsdb-port', type=int, default=None, help='MindsDB server port')
+        parser.add_argument('--agent-name', type=str, default=None, help='MindsDB agent name to connect to')
+        parser.add_argument('--project-name', type=str, default=None, help='MindsDB project name')
+
+        self._cmd_args = parser.parse_args()
 
     @property
     def paths(self):

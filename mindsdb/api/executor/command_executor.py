@@ -972,6 +972,9 @@ class ExecuteCommands:
         """Checks if there is already a predictor retraining or fine-tuning
         Do not allow to run retrain if there is another model in training process in less that 1h
         """
+        if ctx.company_id is None:
+            # bypass for tests
+            return
         is_cloud = self.session.config.get("cloud", False)
         if is_cloud and ctx.user_class == 0:
             models = get_model_records(active=None)

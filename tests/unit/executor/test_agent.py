@@ -98,7 +98,7 @@ class TestAgent(BaseExecutorDummyML):
             prompt_template="Answer the user input in a helpful way";
          ''')
 
-        time.sleep(5)  # wait for model to be created
+        time.sleep(5)
 
         self.run_sql('''
             CREATE AGENT my_agent

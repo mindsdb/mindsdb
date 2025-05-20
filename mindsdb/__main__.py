@@ -1,5 +1,4 @@
 import gc
-
 gc.disable()
 import os
 import sys
@@ -446,94 +445,89 @@ if __name__ == "__main__":
         TrunkProcessEnum.HTTP: TrunkProcessData(
             name=TrunkProcessEnum.HTTP.value,
             entrypoint=start_http,
-            need_to_run=config.http_api_active,
-            port=config.http_api_port,
-            args=(config.cmd_args.verbose,),
-            restart_on_failure=True,
+            port=http_api_config['port'],
+            args=(config.cmd_args.verbose, config.cmd_args.no_studio),
+            restart_on_failure=http_api_config.get('restart_on_failure', False),
+            max_restart_count=http_api_config.get('max_restart_count', TrunkProcessData.max_restart_count),
+            max_restart_interval_seconds=http_api_config.get(
+                'max_restart_interval_seconds', TrunkProcessData.max_restart_interval_seconds
+            )
         ),
         TrunkProcessEnum.MYSQL: TrunkProcessData(
             name=TrunkProcessEnum.MYSQL.value,
             entrypoint=start_mysql,
-            need_to_run=config.mysql_api_active,
-            port=config.mysql_api_port,
+            port=mysql_api_config['port'],
             args=(config.cmd_args.verbose,),
-            restart_on_failure=True,
+            restart_on_failure=mysql_api_config.get('restart_on_failure', False),
+            max_restart_count=mysql_api_config.get('max_restart_count', TrunkProcessData.max_restart_count),
+            max_restart_interval_seconds=mysql_api_config.get(
+                'max_restart_interval_seconds', TrunkProcessData.max_restart_interval_seconds
+            )
         ),
         TrunkProcessEnum.MONGODB: TrunkProcessData(
             name=TrunkProcessEnum.MONGODB.value,
             entrypoint=start_mongo,
-            need_to_run=config.mongodb_api_active,
-            port=config.mongodb_api_port,
-            args=(config.cmd_args.verbose,),
-            restart_on_failure=True,
+            port=config['api']['mongodb']['port'],
+            args=(config.cmd_args.verbose,)
         ),
         TrunkProcessEnum.POSTGRES: TrunkProcessData(
             name=TrunkProcessEnum.POSTGRES.value,
             entrypoint=start_postgres,
-            need_to_run=config.postgres_api_active,
-            port=config.postgres_api_port,
-            args=(config.cmd_args.verbose,),
-            restart_on_failure=True,
+            port=config['api']['postgres']['port'],
+            args=(config.cmd_args.verbose,)
         ),
         TrunkProcessEnum.JOBS: TrunkProcessData(
             name=TrunkProcessEnum.JOBS.value,
             entrypoint=start_scheduler,
-            need_to_run=config.jobs_scheduler_active,
-            args=(config.cmd_args.verbose,),
-            restart_on_failure=True,
+            args=(config.cmd_args.verbose,)
         ),
         TrunkProcessEnum.TASKS: TrunkProcessData(
             name=TrunkProcessEnum.TASKS.value,
             entrypoint=start_tasks,
-            need_to_run=config.tasks_active,
-            args=(config.cmd_args.verbose,),
-            restart_on_failure=True,
+            args=(config.cmd_args.verbose,)
         ),
         TrunkProcessEnum.ML_TASK_QUEUE: TrunkProcessData(
             name=TrunkProcessEnum.ML_TASK_QUEUE.value,
             entrypoint=start_ml_task_queue,
-            need_to_run=config.ml_task_queue_active,
-            args=(config.cmd_args.verbose,),
-            restart_on_failure=True,
+            args=(config.cmd_args.verbose,)
         ),
         TrunkProcessEnum.MCP: TrunkProcessData(
             name=TrunkProcessEnum.MCP.value,
             entrypoint=start_mcp,
-            need_to_run=config.mcp_active,
-            port=config.mcp_port,
+            port=mcp_api_config.get('port', 47337),
             args=(config.cmd_args.verbose,),
-            restart_on_failure=True,
+            need_to_run=mcp_api_config.get('need_to_run', False),
+            restart_on_failure=mcp_api_config.get('restart_on_failure', False),
+            max_restart_count=mcp_api_config.get('max_restart_count', TrunkProcessData.max_restart_count),
+            max_restart_interval_seconds=mcp_api_config.get(
+                'max_restart_interval_seconds', TrunkProcessData.max_restart_interval_seconds
+            )
         ),
         TrunkProcessEnum.LITELLM: TrunkProcessData(
             name=TrunkProcessEnum.LITELLM.value,
             entrypoint=start_litellm,
-            need_to_run=config.litellm_api_active,
-            port=config.litellm_api_port,
+            port=litellm_api_config.get('port', 8000),
             args=(config.cmd_args.verbose,),
-            restart_on_failure=litellm_api_config.get("restart_on_failure", True),
-            max_restart_count=litellm_api_config.get(
-                "max_restart_count", TrunkProcessData.max_restart_count
-            ),
+            restart_on_failure=litellm_api_config.get('restart_on_failure', False),
+            max_restart_count=litellm_api_config.get('max_restart_count', TrunkProcessData.max_restart_count),
             max_restart_interval_seconds=litellm_api_config.get(
-                "max_restart_interval_seconds",
-                TrunkProcessData.max_restart_interval_seconds,
-            ),
+                'max_restart_interval_seconds', TrunkProcessData.max_restart_interval_seconds
+            )
         ),
         TrunkProcessEnum.A2A: TrunkProcessData(
             name=TrunkProcessEnum.A2A.value,
             entrypoint=start_a2a,
-            need_to_run=a2a_api_config.get("enabled", False),
-            port=a2a_api_config.get("port", 8001),
+            port=a2a_api_config.get('port', 8001),
             args=(config.cmd_args.verbose,),
-            restart_on_failure=a2a_api_config.get("restart_on_failure", True),
+            need_to_run=a2a_api_config.get('enabled', False),
+            restart_on_failure=a2a_api_config.get('restart_on_failure', True),
             max_restart_count=a2a_api_config.get(
-                "max_restart_count", TrunkProcessData.max_restart_count
+                'max_restart_count', TrunkProcessData.max_restart_count
             ),
             max_restart_interval_seconds=a2a_api_config.get(
-                "max_restart_interval_seconds",
-                TrunkProcessData.max_restart_interval_seconds,
-            ),
-        ),
+                'max_restart_interval_seconds', TrunkProcessData.max_restart_interval_seconds
+            )
+        )
     }
 
     for api_enum in api_arr:

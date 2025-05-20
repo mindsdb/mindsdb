@@ -47,8 +47,8 @@ class AgentTaskManager(InMemoryTaskManager):
         task_send_params: TaskSendParams = request.params
         query = self._get_user_query(task_send_params)
         params = self._get_task_params(task_send_params)
-        agent_name = params.get("agent_name", "my_agent")
-        streaming = params.get("streaming", True)
+        agent_name = params["agent_name"]
+        streaming = params["streaming"]
         agent = self._create_agent(agent_name)
 
         if not streaming:
@@ -110,13 +110,66 @@ class AgentTaskManager(InMemoryTaskManager):
 
         # If streaming is enabled (default), use the streaming implementation
         try:
+            # Track the chunks we've seen to avoid duplicates
+            seen_chunks = set()
+
             async for item in agent.stream(query, task_send_params.sessionId):
-                is_task_complete = item["is_task_complete"]
-                parts = item["parts"]
+                # Ensure item has the required fields or provide defaults
+                is_task_complete = item.get("is_task_complete", False)
+
+                # Extract parts from the chunk
+                parts = []
+
+                # Handle different chunk formats to extract text content
+                if "parts" in item and item["parts"]:
+                    parts = item["parts"]
+                elif "content" in item:
+                    parts = [{"type": "text", "text": item["content"]}]
+                elif "output" in item:
+                    parts = [{"type": "text", "text": item["output"]}]
+                elif "actions" in item:
+                    # Extract thought process from actions
+                    for action in item.get("actions", []):
+                        if "log" in action:
+                            parts.append({"type": "text", "text": action["log"]})
+                        if "tool_input" in action:
+                            # Include SQL queries
+                            tool_input = action.get("tool_input", "")
+                            if "$START$" in tool_input and "$STOP$" in tool_input:
+                                sql = tool_input.replace("$START$", "").replace("$STOP$", "")
+                                parts.append({"type": "text", "text": sql})
+                elif "steps" in item:
+                    # Extract observations from steps
+                    for step in item.get("steps", []):
+                        if "observation" in step:
+                            parts.append({"type": "text", "text": step["observation"]})
+                elif "messages" in item:
+                    # Extract content from messages
+                    for message in item.get("messages", []):
+                        if "content" in message:
+                            parts.append({"type": "text", "text": message["content"]})
+
+                # Skip if we have no parts to send
+                if not parts:
+                    continue
+
+                # Generate a unique key for this chunk to avoid duplicates
+                chunk_key = str(parts)
+                if chunk_key in seen_chunks:
+                    continue
+                seen_chunks.add(chunk_key)
+
+                # Ensure metadata exists
+                metadata = item.get("metadata", {})
+
+                # Handle error field if present
+                if "error" in item and not is_task_complete:
+                    logger.warning(f"Error in streaming response: {item['error']}")
+                    # Mark as complete if there's an error
+                    is_task_complete = True
 
                 if not is_task_complete:
                     task_state = TaskState.WORKING
-                    metadata = item["metadata"]
                     message = Message(role="agent", parts=parts, metadata=metadata)
                     task_status = TaskStatus(state=task_state, message=message)
                     await self._update_store(task_send_params.id, task_status, [])
@@ -154,10 +207,32 @@ class AgentTaskManager(InMemoryTaskManager):
 
         except Exception as e:
             logger.error(f"An error occurred while streaming the response: {e}")
-            yield JSONRPCResponse(
+            error_text = f"An error occurred while streaming the response: {str(e)}"
+            parts = [{"type": "text", "text": error_text}]
+
+            # First send the error as an artifact
+            artifact = Artifact(parts=parts, index=0, append=False)
+            yield SendTaskStreamingResponse(
                 id=request.id,
-                error=InternalError(
-                    message=f"An error occurred while streaming the response: {str(e)}"
+                result=TaskArtifactUpdateEvent(
+                    id=task_send_params.id, artifact=artifact
+                ),
+            )
+
+            # Then mark the task as completed with an error
+            task_state = TaskState.FAILED
+            task_status = TaskStatus(state=task_state)
+            await self._update_store(
+                task_send_params.id, task_status, [artifact]
+            )
+
+            # Send the final status update
+            yield SendTaskStreamingResponse(
+                id=request.id,
+                result=TaskStatusUpdateEvent(
+                    id=task_send_params.id,
+                    status=task_status,
+                    final=True,
                 ),
             )
 
@@ -239,51 +314,57 @@ class AgentTaskManager(InMemoryTaskManager):
         agent = self._create_agent(agent_name)
 
         try:
+            # Always use streaming internally, but handle the response differently based on the streaming parameter
+            all_parts = []
+            final_metadata = {}
+
+            # Create a streaming generator
+            stream_gen = agent.stream(query, task_send_params.sessionId)
+
             if streaming:
-                # Use streaming but collect all chunks into a single response
-                parts = []
-                metadata = {}
-                async for chunk in agent.stream(query, task_send_params.sessionId):
-                    if "parts" in chunk:
-                        parts.extend(chunk["parts"])
+                # For streaming mode, we'll use the streaming endpoint instead
+                # Just create a minimal response to acknowledge the request
+                task_state = TaskState.WORKING
+                task = await self._update_store(
+                    task_send_params.id,
+                    TaskStatus(state=task_state),
+                    []
+                )
+                return SendTaskResponse(id=request.id, result=task)
+            else:
+                # For non-streaming mode, collect all chunks into a single response
+                async for chunk in stream_gen:
+                    # Extract parts if they exist
+                    if "parts" in chunk and chunk["parts"]:
+                        all_parts.extend(chunk["parts"])
+                    elif "content" in chunk:
+                        all_parts.append({"type": "text", "text": chunk["content"]})
+
+                    # Extract metadata if it exists
                     if "metadata" in chunk:
-                        metadata.update(chunk["metadata"])
+                        final_metadata.update(chunk["metadata"])
 
-                # If we have parts from streaming, use them
-                if parts:
-                    result = {"parts": parts, "metadata": metadata}
-                else:
-                    # Fallback to non-streaming if streaming didn't return parts
-                    result = agent.invoke(query, task_send_params.sessionId)
-            else:
-                # Use non-streaming invocation
-                result = agent.invoke(query, task_send_params.sessionId)
+                # If we didn't get any parts, create a default part
+                if not all_parts:
+                    all_parts = [{"type": "text", "text": "No response from MindsDB"}]
 
-            # Use the parts from the agent response if available, or create them
-            if "parts" in result:
-                parts = result["parts"]
-            else:
-                result_text = result.get("content", "No response from MindsDB")
-                parts = [{"type": "text", "text": result_text}]
-
-                # Check if we have structured data
-                if "data" in result and result["data"]:
-                    parts.append(
-                        {
-                            "type": "data",
-                            "data": result["data"],
-                            "metadata": {"subtype": "json"},
-                        }
-                    )
+                # Create the final response
+                task_state = TaskState.COMPLETED
+                task = await self._update_store(
+                    task_send_params.id,
+                    TaskStatus(state=task_state, message=Message(role="agent", parts=all_parts, metadata=final_metadata)),
+                    [Artifact(parts=all_parts)],
+                )
+                return SendTaskResponse(id=request.id, result=task)
         except Exception as e:
             logger.error(f"Error invoking agent: {e}")
             result_text = f"Error invoking agent: {e}"
             parts = [{"type": "text", "text": result_text}]
 
-        task_state = TaskState.COMPLETED
-        task = await self._update_store(
-            task_send_params.id,
-            TaskStatus(state=task_state, message=Message(role="agent", parts=parts)),
-            [Artifact(parts=parts)],
-        )
-        return SendTaskResponse(id=request.id, result=task)
+            task_state = TaskState.FAILED
+            task = await self._update_store(
+                task_send_params.id,
+                TaskStatus(state=task_state, message=Message(role="agent", parts=parts)),
+                [Artifact(parts=parts)],
+            )
+            return SendTaskResponse(id=request.id, result=task)

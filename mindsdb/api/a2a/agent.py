@@ -122,7 +122,9 @@ class MindsDBAgent:
                 "parts": [{"type": "text", "text": error_msg}],
             }
 
-    def streaming_invoke(self, messages: List[dict], timeout: int = DEFAULT_STREAM_TIMEOUT) -> Iterator[Dict[str, Any]]:
+    def streaming_invoke(
+        self, messages: List[dict], timeout: int = DEFAULT_STREAM_TIMEOUT
+    ) -> Iterator[Dict[str, Any]]:
         """Stream responses from the MindsDB agent using the direct API endpoint.
 
         Args:
@@ -144,7 +146,9 @@ class MindsDBAgent:
             logger.debug(f"Request messages: {json.dumps(messages)[:200]}...")
 
             # Send the request to MindsDB streaming API with timeout
-            stream = requests.post(url, json={"messages": messages}, stream=True, timeout=timeout)
+            stream = requests.post(
+                url, json={"messages": messages}, stream=True, timeout=timeout
+            )
             stream.raise_for_status()
 
             # Process the streaming response directly
@@ -158,6 +162,7 @@ class MindsDBAgent:
                             data = line[6:]  # Remove 'data: ' prefix
                             try:
                                 chunk = json.loads(data)
+                                # Pass through the chunk with minimal modifications
                                 yield chunk
                             except json.JSONDecodeError as e:
                                 logger.warning(
@@ -167,11 +172,24 @@ class MindsDBAgent:
                                 yield {
                                     "error": f"JSON parse error: {str(e)}",
                                     "data": data,
-                                    "is_task_complete": False
+                                    "is_task_complete": False,
+                                    "parts": [
+                                        {
+                                            "type": "text",
+                                            "text": f"Error parsing response: {str(e)}",
+                                        }
+                                    ],
+                                    "metadata": {},
                                 }
                         else:
                             # Log other lines for debugging
                             logger.debug(f"Received non-data line: {line}")
+
+                            # If it looks like a raw text response (not SSE format), wrap it
+                            if not line.startswith("event:") and not line.startswith(
+                                ":"
+                            ):
+                                yield {"content": line, "is_task_complete": False}
                     except UnicodeDecodeError as e:
                         logger.warning(f"Failed to decode line: {str(e)}")
                         # Continue processing despite decode errors
@@ -183,7 +201,8 @@ class MindsDBAgent:
                 "content": error_msg,
                 "parts": [{"type": "text", "text": error_msg}],
                 "is_task_complete": True,
-                "error": "timeout"
+                "error": "timeout",
+                "metadata": {"error": True},
             }
 
         except requests.exceptions.ChunkedEncodingError as e:
@@ -193,7 +212,8 @@ class MindsDBAgent:
                 "content": error_msg,
                 "parts": [{"type": "text", "text": error_msg}],
                 "is_task_complete": True,
-                "error": "stream_interrupted"
+                "error": "stream_interrupted",
+                "metadata": {"error": True},
             }
 
         except requests.exceptions.ConnectionError as e:
@@ -203,7 +223,8 @@ class MindsDBAgent:
                 "content": error_msg,
                 "parts": [{"type": "text", "text": error_msg}],
                 "is_task_complete": True,
-                "error": "connection_error"
+                "error": "connection_error",
+                "metadata": {"error": True},
             }
 
         except requests.exceptions.RequestException as e:
@@ -213,7 +234,8 @@ class MindsDBAgent:
                 "content": error_msg,
                 "parts": [{"type": "text", "text": error_msg}],
                 "is_task_complete": True,
-                "error": "request_error"
+                "error": "request_error",
+                "metadata": {"error": True},
             }
 
         except Exception as e:
@@ -223,8 +245,12 @@ class MindsDBAgent:
                 "content": error_msg,
                 "parts": [{"type": "text", "text": error_msg}],
                 "is_task_complete": True,
-                "error": "unknown_error"
+                "error": "unknown_error",
+                "metadata": {"error": True},
             }
+
+        # Send a final completion message
+        yield {"is_task_complete": True, "metadata": {"complete": True}}
 
     async def stream(self, query, session_id) -> AsyncIterable[Dict[str, Any]]:
         """Stream responses from the MindsDB agent (uses streaming API endpoint)."""
@@ -239,6 +265,30 @@ class MindsDBAgent:
 
             # Yield all chunks directly from the streaming response
             for chunk in streaming_response:
+                # Only add required fields if they don't exist
+                # This preserves the original structure as much as possible
+                if "is_task_complete" not in chunk:
+                    chunk["is_task_complete"] = False
+
+                if "metadata" not in chunk:
+                    chunk["metadata"] = {}
+
+                # Ensure parts exist, but try to preserve original content
+                if "parts" not in chunk:
+                    # If content exists, create a part from it
+                    if "content" in chunk:
+                        chunk["parts"] = [{"type": "text", "text": chunk["content"]}]
+                    # If output exists, create a part from it
+                    elif "output" in chunk:
+                        chunk["parts"] = [{"type": "text", "text": chunk["output"]}]
+                    # If actions exist, create empty parts
+                    elif "actions" in chunk or "steps" in chunk or "messages" in chunk:
+                        # These chunks have their own format, just add empty parts
+                        chunk["parts"] = []
+                    else:
+                        # Skip chunks with no content
+                        continue
+
                 yield chunk
 
         except Exception as e:

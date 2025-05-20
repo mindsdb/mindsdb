@@ -1,0 +1,93 @@
+---
+title: Update Data Source
+sidebarTitle: Update Data Source
+---
+
+This API endpoint updates the Datasource's description and/or connection parameters and/or list of tables using the `PATCH` method.
+
+### Body
+
+<ParamField body='description' type='string'>
+
+Provide a new description for the Datasource, which is used by the Mind to decide the relevant datasources for each question.
+
+</ParamField>
+
+<ParamField body='connection_data' type='array'>
+
+Provide the updated connection parameters for the selected engine. [See available engines and connection parameters here](/minds/data_sources).
+
+</ParamField>
+
+<ParamField body='tables' type='array'>
+
+This is an optional parameter that lets you specify tables that can be accessed by the Mind.
+
+</ParamField>
+
+### Response
+
+<ResponseField name="status" type="string" required>  
+
+HTTP status code indicating success. `200 OK` confirms the Datasource was updated.
+
+</ResponseField>
+
+### Authorization
+
+A valid API key must be passed in the `Authorization` header:
+
+```
+Authorization: Bearer MINDS_API_KEY
+```
+
+Generate your [API key here](https://mdb.ai/apiKeys).
+
+### Path Parameters
+
+<ParamField body='datasource_name' type='string' required>
+
+The name of the Datasource you want to update.
+
+</ParamField>
+
+<RequestExample>
+
+```shell Shell
+curl --request PATCH \
+     --url 'https://mdb.ai/api/datasources/datasource_name' \
+     --header 'Content-Type: application/json' \
+     --header 'Authorization: Bearer MINDS_API_KEY' \
+     --data '{
+         "connection_data": {
+             "user": "demo_user",
+             "password": "demo_password",
+             "host": "samples.mindsdb.com",
+             "port": "5432",
+             "database": "demo",
+             "schema": "demo_data"
+         },
+         "tables": ["sales_data"],
+         "description": "Sales data" 
+     }'
+```
+
+```python Python
+from minds.client import Client
+
+client = Client("MINDS_API_KEY", "https://mdb.ai/")
+
+# the create function updates the datasource
+# provided that postgres_config's name is one of the existing datasources
+datasource = client.datasources.create(postgres_config)
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Response
+200 OK
+```
+
+</ResponseExample>

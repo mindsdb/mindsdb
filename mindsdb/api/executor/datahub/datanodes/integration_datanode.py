@@ -1,6 +1,7 @@
 import time
 import inspect
 from dataclasses import astuple
+from typing import Iterable
 
 import numpy as np
 import pandas as pd
@@ -119,9 +120,7 @@ class IntegrationDataNode(DataNode):
             tables=[name],
             if_exists=if_exists
         )
-        result = self._query(drop_ast)
-        if result.type == RESPONSE_TYPE.ERROR:
-            raise Exception(result.error_message)
+        self.query(drop_ast)
 
     def create_table(self, table_name: Identifier, result_set: ResultSet = None, columns=None,
                      is_replace=False, is_create=False, **kwargs) -> DataHubResponse:
@@ -148,9 +147,7 @@ class IntegrationDataNode(DataNode):
                 tables=[table_name],
                 if_exists=True
             )
-            result = self._query(drop_ast)
-            if result.type == RESPONSE_TYPE.ERROR:
-                raise Exception(result.error_message)
+            self.query(drop_ast)
             is_create = True
 
         if is_create:
@@ -159,9 +156,7 @@ class IntegrationDataNode(DataNode):
                 columns=columns,
                 is_replace=is_replace
             )
-            result = self._query(create_table_ast)
-            if result.type == RESPONSE_TYPE.ERROR:
-                raise Exception(result.error_message)
+            self.query(create_table_ast)
 
         if result_set is None:
             # it is just a 'create table'
@@ -206,56 +201,44 @@ class IntegrationDataNode(DataNode):
         )
 
         try:
-            result = self._query(insert_ast)
+            result: DataHubResponse = self.query(insert_ast)
         except Exception as e:
             msg = f'[{self.ds_type}/{self.integration_name}]: {str(e)}'
             raise DBHandlerException(msg) from e
 
-        if result.type == RESPONSE_TYPE.ERROR:
-            raise Exception(result.error_message)
-
         return DataHubResponse(affected_rows=result.affected_rows)
 
-    def _query(self, query) -> HandlerResponse:
-        time_before_query = time.perf_counter()
-        result = self.integration_handler.query(query)
-        elapsed_seconds = time.perf_counter() - time_before_query
-        query_time_with_labels = metrics.INTEGRATION_HANDLER_QUERY_TIME.labels(
-            get_class_name(self.integration_handler), result.type)
-        query_time_with_labels.observe(elapsed_seconds)
+    def has_support_stream(self) -> bool:
+        # checks if data handler has query_stream method
+        return hasattr(self.integration_handler, 'query_stream') and callable(self.integration_handler.query_stream)
 
-        num_rows = 0
-        if result.data_frame is not None:
-            num_rows = len(result.data_frame.index)
-        response_size_with_labels = metrics.INTEGRATION_HANDLER_RESPONSE_SIZE.labels(
-            get_class_name(self.integration_handler), result.type)
-        response_size_with_labels.observe(num_rows)
-        return result
-
-    def _native_query(self, native_query) -> HandlerResponse:
-        time_before_query = time.perf_counter()
-        result = self.integration_handler.native_query(native_query)
-        elapsed_seconds = time.perf_counter() - time_before_query
-        query_time_with_labels = metrics.INTEGRATION_HANDLER_QUERY_TIME.labels(
-            get_class_name(self.integration_handler), result.type)
-        query_time_with_labels.observe(elapsed_seconds)
-
-        num_rows = 0
-        if result.data_frame is not None:
-            num_rows = len(result.data_frame.index)
-        response_size_with_labels = metrics.INTEGRATION_HANDLER_RESPONSE_SIZE.labels(
-            get_class_name(self.integration_handler), result.type)
-        response_size_with_labels.observe(num_rows)
-        return result
+    @profiler.profile()
+    def query_stream(self, query: ASTNode, fetch_size: int = None) -> Iterable:
+        # returns generator of results from handler (split by chunks)
+        return self.integration_handler.query_stream(query, fetch_size=fetch_size)
 
     @profiler.profile()
     def query(self, query: ASTNode | None = None, native_query: str | None = None, session=None) -> DataHubResponse:
         try:
+            time_before_query = time.perf_counter()
             if query is not None:
-                result: HandlerResponse = self._query(query)
+                result: HandlerResponse = self.integration_handler.query(query)
             else:
                 # try to fetch native query
-                result: HandlerResponse = self._native_query(native_query)
+                result: HandlerResponse = self.integration_handler.native_query(native_query)
+
+            # metrics
+            elapsed_seconds = time.perf_counter() - time_before_query
+            query_time_with_labels = metrics.INTEGRATION_HANDLER_QUERY_TIME.labels(
+                get_class_name(self.integration_handler), result.type)
+            query_time_with_labels.observe(elapsed_seconds)
+
+            num_rows = 0
+            if result.data_frame is not None:
+                num_rows = len(result.data_frame.index)
+            response_size_with_labels = metrics.INTEGRATION_HANDLER_RESPONSE_SIZE.labels(
+                get_class_name(self.integration_handler), result.type)
+            response_size_with_labels.observe(num_rows)
         except Exception as e:
             msg = str(e).strip()
             if msg == '':

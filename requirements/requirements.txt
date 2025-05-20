@@ -43,7 +43,6 @@ lark
 lxml==5.3.0 # Required for knowledge base webpage embeddings
 pgvector==0.3.6 # Required for knowledge bases
 prometheus-client==0.20.0
-transformers >= 4.42.4
 sentry-sdk[flask] == 2.14.0
 openai<2.0.0,>=1.58.1
 pyaml==23.12.0

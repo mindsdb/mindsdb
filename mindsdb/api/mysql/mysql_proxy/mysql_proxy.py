@@ -81,6 +81,7 @@ from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.otel import increment_otel_query_request_counter
 from mindsdb.utilities.wizards import make_ssl_cert
+from mindsdb.api.mysql.mysql_proxy.utilities.dump import dump_result_set_to_mysql
 
 logger = log.getLogger(__name__)
 
@@ -395,7 +396,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         return packets
 
     def get_table_packets(self, result_set: ResultSet, status=0):
-        data_frame, columns_dict = result_set.dump_to_mysql()
+        data_frame, columns_dict = dump_result_set_to_mysql(result_set)
         data = data_frame.to_dict('split')['data']
 
         # TODO remove columns order
@@ -409,7 +410,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         return packets
 
     def send_table_packets(self, result_set: ResultSet, status: int = 0):
-        df, columns_dicts = result_set.dump_to_mysql(infer_column_size=True)
+        df, columns_dicts = dump_result_set_to_mysql(result_set, infer_column_size=True)
         # text protocol, convert all to string and serialize as packages
 
         def apply_f(v):
@@ -574,7 +575,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         # TODO prepared_stmt['type'] == 'lock' is not used but it works
         result_set = executor_answer.data
-        data_frame, columns_dict = result_set.dump_to_mysql()
+        data_frame, columns_dict = dump_result_set_to_mysql(result_set)
         data = data_frame.to_dict('split')['data']
 
         packages = [self.packet(ColumnCountPacket, count=len(columns_dict))]

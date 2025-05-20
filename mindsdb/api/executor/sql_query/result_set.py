@@ -1,8 +1,5 @@
 import copy
-import json
-import datetime
 from dataclasses import dataclass, field, MISSING
-from typing import List, Optional, Any
 
 import numpy as np
 import pandas as pd
@@ -19,6 +16,39 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import DATA_C_TYPE_MAP, CTypeProperties
 
 logger = log.getLogger(__name__)
+
+
+def get_mysql_data_type_from_series(series: pd.Series, do_infer: bool = False) -> MYSQL_DATA_TYPE:
+    """Maps pandas Series data type to corresponding MySQL data type.
+
+    This function examines the dtype of a pandas Series and returns the appropriate
+    MySQL data type enum value. For object dtypes, it can optionally attempt to infer
+    a more specific type.
+
+    Args:
+        series (pd.Series): The pandas Series to determine the MySQL type for
+        do_infer (bool): If True and series has object dtype, attempt to infer a more specific type
+
+    Returns:
+        MYSQL_DATA_TYPE: The corresponding MySQL data type enum value
+    """
+    dtype = series.dtype
+    if pd_types.is_object_dtype(dtype) and do_infer is True:
+        dtype = series.infer_objects().dtype
+
+    if pd_types.is_object_dtype(dtype):
+        return MYSQL_DATA_TYPE.TEXT
+    if pd_types.is_datetime64_dtype(dtype):
+        return MYSQL_DATA_TYPE.DATETIME
+    if pd_types.is_string_dtype(dtype):
+        return MYSQL_DATA_TYPE.TEXT
+    if pd_types.is_bool_dtype(dtype):
+        return MYSQL_DATA_TYPE.BOOL
+    if pd_types.is_integer_dtype(dtype):
+        return MYSQL_DATA_TYPE.INT
+    if pd_types.is_numeric_dtype(dtype):
+        return MYSQL_DATA_TYPE.FLOAT
+    return MYSQL_DATA_TYPE.TEXT
 
 
 @dataclass(kw_only=True, slots=True)
@@ -99,40 +129,7 @@ class Column:
         return result
 
 
-def get_mysql_data_type_from_series(series: pd.Series, do_infer: bool = False) -> MYSQL_DATA_TYPE:
-    """Maps pandas Series data type to corresponding MySQL data type.
-
-    This function examines the dtype of a pandas Series and returns the appropriate
-    MySQL data type enum value. For object dtypes, it can optionally attempt to infer
-    a more specific type.
-
-    Args:
-        series (pd.Series): The pandas Series to determine the MySQL type for
-        do_infer (bool): If True and series has object dtype, attempt to infer a more specific type
-
-    Returns:
-        MYSQL_DATA_TYPE: The corresponding MySQL data type enum value
-    """
-    dtype = series.dtype
-    if pd_types.is_object_dtype(dtype) and do_infer is True:
-        dtype = series.infer_objects().dtype
-
-    if pd_types.is_object_dtype(dtype):
-        return MYSQL_DATA_TYPE.TEXT
-    if pd_types.is_datetime64_dtype(dtype):
-        return MYSQL_DATA_TYPE.DATETIME
-    if pd_types.is_string_dtype(dtype):
-        return MYSQL_DATA_TYPE.TEXT
-    if pd_types.is_bool_dtype(dtype):
-        return MYSQL_DATA_TYPE.BOOL
-    if pd_types.is_integer_dtype(dtype):
-        return MYSQL_DATA_TYPE.INT
-    if pd_types.is_numeric_dtype(dtype):
-        return MYSQL_DATA_TYPE.FLOAT
-    return MYSQL_DATA_TYPE.TEXT
-
-
-def rename_df_columns(df: pd.DataFrame, names: Optional[List] = None) -> None:
+def rename_df_columns(df: pd.DataFrame, names: list | None = None) -> None:
     """Inplace rename of dataframe columns
 
     Args:
@@ -143,221 +140,6 @@ def rename_df_columns(df: pd.DataFrame, names: Optional[List] = None) -> None:
         df.columns = names
     else:
         df.columns = list(range(len(df.columns)))
-
-
-def _dump_bool(var: Any) -> int | None:
-    """Dumps a boolean value to an integer, as in MySQL boolean type is tinyint with values 0 and 1.
-    NOTE: None consider as True in dataframe with dtype=bool, we can't change it
-
-    Args:
-        var (Any): The boolean value to dump
-
-    Returns:
-        int | None: 1 or 0 or None
-    """
-    if pd.isna(var):
-        return None
-    return '1' if var else '0'
-
-
-def _dump_str(var: Any) -> str | None:
-    """Dumps a value to a string.
-
-    Args:
-        var (Any): The value to dump
-
-    Returns:
-        str | None: The string representation of the value or None if the value is None
-    """
-    if pd.isna(var):
-        return None
-    if isinstance(var, bytes):
-        try:
-            return var.decode('utf-8')
-        except Exception:
-            return str(var)[2:-1]
-    if isinstance(var, dict):
-        try:
-            return json.dumps(var)
-        except Exception:
-            return str(var)
-    return str(var)
-
-
-def _dump_int_or_str(var: Any) -> str | None:
-    """Dumps a value to a string.
-    If the value is numeric - then cast it to int to avoid float representation.
-
-    Args:
-        var (Any): The value to dump.
-
-    Returns:
-        str | None: The string representation of the value or None if the value is None
-    """
-    if pd.isna(var):
-        return None
-    try:
-        return str(int(var))
-    except ValueError:
-        return str(var)
-
-
-def _dump_date(var: datetime.date | str | None) -> str | None:
-    """Dumps a date value to a string.
-
-    Args:
-        var (datetime.date | str | None): The date value to dump
-
-    Returns:
-        str | None: The string representation of the date value or None if the value is None
-    """
-    if isinstance(var, (datetime.date, pd.Timestamp)):  # it is also True for datetime.datetime
-        return var.strftime("%Y-%m-%d")
-    elif isinstance(var, str):
-        return var
-    elif pd.isna(var):
-        return None
-    logger.warning(f'Unexpected value type for DATE: {type(var)}, {var}')
-    return _dump_str(var)
-
-
-def _dump_datetime(var: datetime.datetime | str | None) -> str | None:
-    """Dumps a datetime value to a string.
-    # NOTE mysql may display only %Y-%m-%d %H:%M:%S format for datetime column
-
-    Args:
-        var (datetime.datetime | str | None): The datetime value to dump
-
-    Returns:
-        str | None: The string representation of the datetime value or None if the value is None
-    """
-    if isinstance(var, datetime.date):  # it is also datetime.datetime
-        if hasattr(var, 'tzinfo') and var.tzinfo is not None:
-            return var.astimezone(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
-        return var.strftime("%Y-%m-%d %H:%M:%S")
-    elif isinstance(var, pd.Timestamp):
-        if var.tzinfo is not None:
-            return var.tz_convert('UTC').strftime("%Y-%m-%d %H:%M:%S")
-        return var.strftime("%Y-%m-%d %H:%M:%S")
-    elif isinstance(var, str):
-        return var
-    elif pd.isna(var):
-        return None
-    logger.warning(f'Unexpected value type for DATETIME: {type(var)}, {var}')
-    return _dump_str(var)
-
-
-def _dump_time(var: datetime.time | str | None) -> str | None:
-    """Dumps a time value to a string.
-
-    Args:
-        var (datetime.time | str | None): The time value to dump
-
-    Returns:
-        str | None: The string representation of the time value or None if the value is None
-    """
-    if isinstance(var, datetime.time):
-        if var.tzinfo is not None:
-            # NOTE strftime does not support timezone, so we need to convert to UTC
-            offset_seconds = var.tzinfo.utcoffset(None).total_seconds()
-            time_seconds = var.hour * 3600 + var.minute * 60 + var.second
-            utc_seconds = (time_seconds - offset_seconds) % (24 * 3600)
-            hours = int(utc_seconds // 3600)
-            minutes = int((utc_seconds % 3600) // 60)
-            seconds = int(utc_seconds % 60)
-            var = datetime.time(hours, minutes, seconds, var.microsecond)
-        return var.strftime("%H:%M:%S")
-    elif isinstance(var, datetime.datetime):
-        if var.tzinfo is not None:
-            return var.astimezone(datetime.timezone.utc).strftime("%H:%M:%S")
-        return var.strftime("%H:%M:%S")
-    elif isinstance(var, pd.Timestamp):
-        if var.tzinfo is not None:
-            return var.tz_convert('UTC').strftime("%H:%M:%S")
-        return var.strftime("%H:%M:%S")
-    elif isinstance(var, str):
-        return var
-    elif pd.isna(var):
-        return None
-    logger.warning(f'Unexpected value type for TIME: {type(var)}, {var}')
-    return _dump_str(var)
-
-
-def _handle_series_as_date(series: pd.Series) -> pd.Series:
-    """Convert values in a series to a string representation of a date.
-    NOTE: MySQL require exactly %Y-%m-%d for DATE type.
-
-    Args:
-        series (pd.Series): The series to handle
-
-    Returns:
-        pd.Series: The series with the date values as strings
-    """
-    if pd_types.is_datetime64_any_dtype(series.dtype):
-        return series.dt.strftime('%Y-%m-%d')
-    elif pd_types.is_object_dtype(series.dtype):
-        return series.apply(_dump_date)
-    logger.info(f'Unexpected dtype: {series.dtype} for column with type DATE')
-    return series.apply(_dump_str)
-
-
-def _handle_series_as_datetime(series: pd.Series) -> pd.Series:
-    """Convert values in a series to a string representation of a datetime.
-    NOTE: MySQL's DATETIME type require exactly %Y-%m-%d %H:%M:%S format.
-
-    Args:
-        series (pd.Series): The series to handle
-
-    Returns:
-        pd.Series: The series with the datetime values as strings
-    """
-    if pd_types.is_datetime64_any_dtype(series.dtype):
-        return series.dt.strftime('%Y-%m-%d %H:%M:%S')
-    elif pd_types.is_object_dtype(series.dtype):
-        return series.apply(_dump_datetime)
-    logger.info(f'Unexpected dtype: {series.dtype} for column with type DATETIME')
-    return series.apply(_dump_str)
-
-
-def _handle_series_as_time(series: pd.Series) -> pd.Series:
-    """Convert values in a series to a string representation of a time.
-    NOTE: MySQL's TIME type require exactly %H:%M:%S format.
-
-    Args:
-        series (pd.Series): The series to handle
-
-    Returns:
-        pd.Series: The series with the time values as strings
-    """
-    if pd_types.is_timedelta64_ns_dtype(series.dtype):
-        base_time = pd.Timestamp('2000-01-01')
-        series = ((base_time + series).dt.strftime('%H:%M:%S'))
-    elif pd_types.is_datetime64_dtype(series.dtype):
-        series = series.dt.strftime('%H:%M:%S')
-    elif pd_types.is_object_dtype(series.dtype):
-        series = series.apply(_dump_time)
-    else:
-        logger.info(f'Unexpected dtype: {series.dtype} for column with type TIME')
-        series = series.apply(_dump_str)
-    return series
-
-
-def _handle_series_as_int(series: pd.Series) -> pd.Series:
-    """Dump series to str(int) (or just str, of can't case to int). This need because of DataFrame store imput int as
-    float if dtype is object: pd.DataFrame([None, 1], dtype='object') -> [NaN, 1.0]
-
-    Args:
-        series (pd.Series): The series to handle
-
-    Returns:
-        pd.Series: The series with the int values as strings
-    """
-    if pd_types.is_integer_dtype(series.dtype):
-        if series.dtype == 'Int64':
-            # NOTE: 'apply' converts values to python floats
-            return series.astype(object).apply(_dump_str)
-        return series.apply(_dump_str)
-    return series.apply(_dump_int_or_str)
 
 
 class ResultSet:
@@ -667,70 +449,6 @@ class ResultSet:
                 )
             )
         return columns
-
-    def dump_to_mysql(self, infer_column_size: bool = False) -> tuple[pd.DataFrame, list[dict[str, str | int]]]:
-        """
-        Dumps the ResultSet to a format that can be used to send as MySQL response packet.
-        NOTE: This method modifies the original DataFrame and columns.
-
-        Args:
-            infer_column_size (bool): If True, infer the 'size' attribute of the column from the data.
-                                      Exact size is not necessary, approximate is enough.
-
-        Returns:
-            tuple[pd.DataFrame, list[dict[str, str | int]]]: A tuple containing the modified DataFrame and a list
-                                                             of MySQL column dictionaries. The dataframe values are
-                                                             str or None, dtype=object
-        """
-        df = self.get_raw_df()
-
-        for i, column in enumerate(self.columns):
-            series = df[i]
-            if isinstance(column.type, MYSQL_DATA_TYPE) is False:
-                column.type = get_mysql_data_type_from_series(series)
-
-            column_type: MYSQL_DATA_TYPE = column.type
-
-            match column_type:
-                case MYSQL_DATA_TYPE.BOOL | MYSQL_DATA_TYPE.BOOLEAN:
-                    series = series.apply(_dump_bool)
-                case MYSQL_DATA_TYPE.DATE:
-                    series = _handle_series_as_date(series)
-                case MYSQL_DATA_TYPE.DATETIME:
-                    series = _handle_series_as_datetime(series)
-                case MYSQL_DATA_TYPE.TIME:
-                    series = _handle_series_as_time(series)
-                case (
-                    MYSQL_DATA_TYPE.INT | MYSQL_DATA_TYPE.TINYINT | MYSQL_DATA_TYPE.SMALLINT
-                    | MYSQL_DATA_TYPE.MEDIUMINT | MYSQL_DATA_TYPE.BIGINT | MYSQL_DATA_TYPE.YEAR
-                ):
-                    series = _handle_series_as_int(series)
-                case _:
-                    series = series.apply(_dump_str)
-
-            # inplace modification of dt types raise SettingWithCopyWarning, so do regular replace
-            # we may split this operation for dt and other types for optimisation
-            df[i] = series.replace([np.NaN, pd.NA, pd.NaT], None)
-
-        columns_dicts = [
-            column.to_mysql_column_dict()
-            for column in self.columns
-        ]
-
-        if infer_column_size and any(column_info.get('size') is None for column_info in columns_dicts):
-            if len(df) == 0:
-                for column_info in columns_dicts:
-                    if column_info['size'] is None:
-                        column_info['size'] = 1
-            else:
-                sample = df.head(100)
-                for i, column_info in enumerate(columns_dicts):
-                    try:
-                        column_info['size'] = sample[sample.columns[i]].astype(str).str.len().max()
-                    except Exception:
-                        column_info['size'] = 1
-
-        return df, columns_dicts
 
     def to_lists(self, json_types=False):
         """

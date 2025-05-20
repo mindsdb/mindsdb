@@ -7,6 +7,7 @@ from pandas import DataFrame, NA, Timestamp
 
 from mindsdb.api.executor.sql_query.result_set import ResultSet
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE, DATA_C_TYPE_MAP
+from mindsdb.api.mysql.mysql_proxy.utilities.dump import dump_result_set_to_mysql
 
 
 # Test cases without specifying column's mysql_type.
@@ -422,7 +423,7 @@ def test_mysql_dump_int(test_index: int, test_case: dict):
     if 'column_type' in test_case:
         mysql_types = [test_case['column_type']]
     rs = ResultSet.from_df(df, mysql_types=mysql_types)
-    df, columns = rs.dump_to_mysql()
+    df, columns = dump_result_set_to_mysql(rs)
     type_attrs = DATA_C_TYPE_MAP[test_case['mysql_type']]
     for result_attr, expected_attr in [('type', 'code'), ('size', 'size'), ('flags', 'flags')]:
         assert columns[0][result_attr] == getattr(type_attrs, expected_attr), (

@@ -6,7 +6,9 @@ from langchain_core.tools import BaseTool
 
 
 class KnowledgeBaseListToolInput(BaseModel):
-    tool_input: str = Field("", description="An empty string to list all knowledge bases.")
+    tool_input: str = Field(
+        "", description="An empty string to list all knowledge bases."
+    )
 
 
 class KnowledgeBaseListTool(BaseTool):
@@ -25,7 +27,7 @@ class KnowledgeBaseListTool(BaseTool):
 class KnowledgeBaseInfoToolInput(BaseModel):
     tool_input: str = Field(
         ...,
-        description="A comma-separated list of knowledge base names enclosed between $START$ and $STOP$."
+        description="A comma-separated list of knowledge base names enclosed between $START$ and $STOP$.",
     )
 
 
@@ -39,13 +41,13 @@ class KnowledgeBaseInfoTool(BaseTool):
 
     def _extract_kb_names(self, tool_input: str) -> List[str]:
         """Extract knowledge base names from the tool input."""
-        match = re.search(r'\$START\$(.*?)\$STOP\$', tool_input, re.DOTALL)
+        match = re.search(r"\$START\$(.*?)\$STOP\$", tool_input, re.DOTALL)
         if not match:
             return []
 
         # Extract and clean the knowledge base names
         kb_names_str = match.group(1).strip()
-        kb_names = re.findall(r'`([^`]+)`', kb_names_str)
+        kb_names = re.findall(r"`([^`]+)`", kb_names_str)
         return kb_names
 
     def _run(self, tool_input: str) -> str:
@@ -60,14 +62,20 @@ class KnowledgeBaseInfoTool(BaseTool):
         for kb_name in kb_names:
             try:
                 # Get knowledge base schema
-                schema_result = self.db.run_no_throw(f"DESCRIBE KNOWLEDGE_BASE `{kb_name}`;")
+                schema_result = self.db.run_no_throw(
+                    f"DESCRIBE KNOWLEDGE_BASE `{kb_name}`;"
+                )
 
                 if not schema_result:
-                    results.append(f"Knowledge base `{kb_name}` not found or has no schema information.")
+                    results.append(
+                        f"Knowledge base `{kb_name}` not found or has no schema information."
+                    )
                     continue
 
                 # Get sample data
-                sample_data = self.db.run_no_throw(f"SELECT * FROM `{kb_name}` LIMIT 10;")
+                sample_data = self.db.run_no_throw(
+                    f"SELECT * FROM `{kb_name}` LIMIT 10;"
+                )
 
                 # Format the results
                 kb_info = f"## Knowledge Base: `{kb_name}`\n\n"
@@ -104,7 +112,9 @@ class KnowledgeBaseInfoTool(BaseTool):
                 results.append(kb_info)
 
             except Exception as e:
-                results.append(f"Error getting information for knowledge base `{kb_name}`: {str(e)}")
+                results.append(
+                    f"Error getting information for knowledge base `{kb_name}`: {str(e)}"
+                )
 
         return "\n\n".join(results)
 
@@ -112,7 +122,7 @@ class KnowledgeBaseInfoTool(BaseTool):
 class KnowledgeBaseQueryToolInput(BaseModel):
     tool_input: str = Field(
         ...,
-        description="A SQL query for knowledge bases enclosed between $START$ and $STOP$."
+        description="A SQL query for knowledge bases. Can be provided directly or enclosed between $START$ and $STOP$.",
     )
 
 
@@ -126,25 +136,55 @@ class KnowledgeBaseQueryTool(BaseTool):
 
     def _extract_query(self, tool_input: str) -> str:
         """Extract the SQL query from the tool input."""
-        match = re.search(r'\$START\$(.*?)\$STOP\$', tool_input, re.DOTALL)
-        if not match:
-            return ""
+        # First check if the input is wrapped in $START$ and $STOP$
+        match = re.search(r"\$START\$(.*?)\$STOP\$", tool_input, re.DOTALL)
+        if match:
+            return match.group(1).strip()
 
-        query = match.group(1).strip()
-        return query
+        # If not wrapped in delimiters, use the input directly
+        # Check for SQL keywords to validate it's likely a query
+        if re.search(
+            r"\b(SELECT|FROM|WHERE|LIMIT|ORDER BY)\b", tool_input, re.IGNORECASE
+        ):
+            return tool_input.strip()
+
+        return ""
 
     def _run(self, tool_input: str) -> str:
         """Execute a knowledge base query."""
         query = self._extract_query(tool_input)
 
         if not query:
-            return "No valid SQL query provided. Please provide a query between $START$ and $STOP$."
+            return "No valid SQL query provided. Please provide a SQL query that includes SELECT, FROM, or other SQL keywords."
 
         try:
             # Execute the query
             result = self.db.run_no_throw(query)
+
             if not result:
-                return "No results found for the provided query."
+                return "Query executed successfully, but no results were returned."
+
+            # Format the results as a markdown table
+            if isinstance(result, list) and len(result) > 0:
+                # Extract column names
+                columns = list(result[0].keys())
+
+                # Create markdown table header
+                table = "| " + " | ".join(columns) + " |\n"
+                table += "| " + " | ".join(["---" for _ in columns]) + " |\n"
+
+                # Add rows
+                for row in result:
+                    formatted_row = []
+                    for col in columns:
+                        cell_value = row[col]
+                        if isinstance(cell_value, dict):
+                            cell_value = json.dumps(cell_value, ensure_ascii=False)
+                        formatted_row.append(str(cell_value).replace("|", "\\|"))
+                    table += "| " + " | ".join(formatted_row) + " |\n"
+
+                return table
+
             return result
         except Exception as e:
             return f"Error executing query: {str(e)}"

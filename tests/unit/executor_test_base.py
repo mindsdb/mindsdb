@@ -92,7 +92,7 @@ class BaseUnitTest:
             del os.environ["MINDSDB_DB_CON"]
 
         # remove import of mindsdb for next tests
-        unload_module("mindsdb")
+        # unload_module("mindsdb")
 
     def setup_method(self):
         self._dummy_db_path = os.path.join(tempfile.mkdtemp(), '_mindsdb_duck_db')

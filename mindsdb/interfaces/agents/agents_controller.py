@@ -485,6 +485,7 @@ class AgentsController:
             knowledge_bases=agent.params.get('knowledge_bases', []),
             model=agent.model_name,
             api_key=api_key,
+            prompt_template=agent.params.get('prompt_template'),
             verbose=agent.params.get('verbose', True),
             max_tokens=agent.params.get('max_tokens', 2000)
         )

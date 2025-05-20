@@ -148,7 +148,9 @@ jobs:
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         uses: astral-sh/setup-uv@v5
         with:
-          enable-cache: true
+          # Place cache in the tool dir because we mount this in our runnners
+          cache-local-path: "/home/runner/_work/_tool/uv-local-cache"
+          prune-cache: false
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
@@ -192,8 +194,6 @@ jobs:
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
             env PYTHONPATH=./ pytest --ignore=tests/unit/handlers tests/unit/ -x
-
-            python -m unittest discover -s tests/unit/handlers
-
             # env PYTHONPATH=./:parser_tests/tests pytest tests/unit/render/ -x
           fi
+          python -m unittest discover -s tests/unit/handlers

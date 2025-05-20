@@ -196,7 +196,7 @@ jobs:
             env PYTHONPATH=./ pytest -xs tests/unit/executor
             env PYTHONPATH=./ pytest -xs --ignore=tests/unit/handlers --ignore=tests/unit/executor tests/unit/
 
-            env PYTHONPATH=./:parser_tests/tests pytest -xs tests/unit/render/ -x
+            env PYTHONPATH=./:parser_tests/tests pytest -xs tests/unit/render/
           fi
           
           python -m unittest discover -s tests/unit/handlers

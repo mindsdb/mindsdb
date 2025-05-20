@@ -653,3 +653,18 @@ class MetaColumns(Base):
     data_type: str = Column(String, nullable=True)
     description: str = Column(String, nullable=True)
     is_nullable: bool = Column(Boolean, nullable=True)
+    
+    meta_column_statistics: Mapped[List["MetaColumnStatistics"]] = relationship("MetaColumnStatistics", back_populates="meta_columns")
+    
+
+class MetaColumnStatistics(Base):
+    __tablename__ = "meta_column_statistics"
+    column_id: int = Column(Integer, ForeignKey("meta_columns.id"), primary_key=True)
+    meta_columns = relationship("MetaColumns", back_populates="meta_column_statistics")
+    
+    most_common_values: str = Column(String, nullable=True)
+    most_common_frequencies: str = Column(String, nullable=True)
+    null_percentage: float = Column(Numeric(5, 2), nullable=True)
+    distinct_values_count: int = Column(Integer, nullable=True)
+    # min_value: str = Column(String, nullable=True)
+    # max_value: str = Column(String, nullable=True)

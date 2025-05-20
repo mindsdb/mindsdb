@@ -49,10 +49,23 @@ def upgrade():
         sa.PrimaryKeyConstraint('id'),
     )
 
+    # Create the meta_column_statistics table
+    op.create_table(
+        'meta_column_statistics',
+        sa.Column('column_id', sa.Integer(), sa.ForeignKey('meta_columns.id'), primary_key=True),
+        sa.Column('most_common_values', sa.String(), nullable=True),
+        sa.Column('most_common_frequencies', sa.String(), nullable=True),
+        sa.Column('null_percentage', sa.Numeric(5, 2), nullable=True),
+        sa.Column('distinct_values_count', sa.Integer(), nullable=True),
+    )
+
 
 def downgrade():
     # Drop the meta_columns table
     op.drop_table('meta_columns')
 
+    # Drop the meta_tables table
+    op.drop_table('meta_tables')
+    
     # Drop the meta_tables table
     op.drop_table('meta_tables')

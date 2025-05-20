@@ -153,22 +153,23 @@ jobs:
       - name: Install dependencies
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
-          uv pip install .
           uv pip install -r requirements/requirements-test.txt
-          uv pip install .[lightwood]  # TODO: for now some tests rely on lightwood
-          uv pip install .[clickhouse]
-          uv pip install .[snowflake]
-          uv pip install .[web]
-          uv pip install .[redshift]
-          uv pip install .[bigquery]
-          uv pip install .[databricks]
-          uv pip install .[oracle]
-          uv pip install .[slack]
-          uv pip install .[github]
-          uv pip install .[ms_teams]
-          uv pip install .[salesforce]
-          uv pip install .[mysql]
-          uv pip install .[chromadb]
+          # TODO: for now some tests rely on lightwood
+          uv pip install . \
+            .[lightwood] \
+            .[clickhouse] \
+            .[snowflake] \
+            .[web] \
+            .[redshift] \
+            .[bigquery] \
+            .[databricks] \
+            .[oracle] \
+            .[slack] \
+            .[github] \
+            .[ms_teams] \
+            .[salesforce] \
+            .[mysql] \
+            .[chromadb]
           uv pip freeze
           git clone https://github.com/mindsdb/mindsdb_sql_parser.git parser_tests
       - name: Install mssql dependencies

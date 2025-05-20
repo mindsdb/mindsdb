@@ -231,6 +231,9 @@ class Integration(Base):
     engine = Column(String, nullable=False)
     data = Column(Json)
     company_id = Column(Integer)
+    
+    meta_tables = relationship("MetaTables", back_populates="integration")
+    
     __table_args__ = (
         UniqueConstraint(
             "name", "company_id", name="unique_integration_name_company_id"
@@ -621,3 +624,32 @@ class LLMData(Base):
     model_id: int = Column(Integer, nullable=False)
     created_at: datetime = Column(DateTime, default=datetime.datetime.now)
     updated_at: datetime = Column(DateTime, onupdate=datetime.datetime.now)
+
+
+# Data Catalog
+class MetaTables(Base):
+    __tablename__ = "meta_tables"
+    id: int = Column(Integer, primary_key=True)
+
+    integration_id: int = Column(Integer, ForeignKey("integration.id"))
+    integration = relationship("Integration", back_populates="meta_tables")
+
+    name: str = Column(String, nullable=False)
+    schema: str = Column(String, nullable=True)
+    description: str = Column(String, nullable=True)
+    row_count: int = Column(Integer, nullable=True)
+    
+    meta_columns: Mapped[List["MetaColumns"]] = relationship("MetaColumns", back_populates="meta_tables")
+    
+    
+class MetaColumns(Base):
+    __tablename__ = "meta_columns"
+    id: int = Column(Integer, primary_key=True)
+
+    table_id: int = Column(Integer, ForeignKey("meta_tables.id"))
+    meta_tables = relationship("MetaTables", back_populates="meta_columns")
+
+    name: str = Column(String, nullable=False)
+    data_type: str = Column(String, nullable=True)
+    description: str = Column(String, nullable=True)
+    is_nullable: bool = Column(Boolean, nullable=True)

@@ -1,0 +1,113 @@
+---
+title: Get Data Source
+sidebarTitle: Get Data Source
+---
+
+This API endpoint retrieves details about a specific Datasource using the `GET` method.
+
+### Body
+
+<ParamField body='check_connection' type='string'>
+
+Set this value to `true` to check the connection to the data source.
+
+</ParamField>
+
+### Response
+
+<ResponseField name="connection_data" type="object" required>  
+
+Details for connecting to the data source including host, port, user, password, etc.
+
+</ResponseField>
+
+<ResponseField name="connection_status" type="object">  
+
+The status of the connection test, if `check_connection=true`. Includes success flag and error message if applicable.
+
+</ResponseField>
+
+<ResponseField name="description" type="string">  
+
+Optional description of the datasource.
+
+</ResponseField>
+
+<ResponseField name="engine" type="string" required>  
+
+The engine type of the datasource (e.g., postgres).
+
+</ResponseField>
+
+<ResponseField name="name" type="string" required>  
+
+The unique name of the datasource.
+
+</ResponseField>
+
+<ResponseField name="tables" type="array">  
+
+List of tables that are accessible from this datasource.
+
+</ResponseField>
+
+### Authorization
+
+A valid API key must be passed in the `Authorization` header:
+
+```
+Authorization: Bearer MINDS_API_KEY
+```
+
+Generate your [API key here](https://mdb.ai/apiKeys).
+
+### Path Parameters
+
+<ParamField body='datasource_name' type='string' required>
+
+The name of the Datasource you want to retrieve.
+
+</ParamField>
+
+<RequestExample>
+
+```shell Shell
+curl --request GET \
+     --url 'https://mdb.ai/api/datasources/datasource_name?check_connection=true' \
+     --header 'Authorization: Bearer MINDS_API_KEY'
+```
+
+```python Python
+from minds.client import Client
+
+client = Client("MINDS_API_KEY", "https://mdb.ai/")
+
+datasource = client.datasources.get('datasource_name')
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Response
+{
+    "connection_data": {
+        "database": "demo",
+        "host": "samples.mindsdb.com",
+        "password": "demo_password",
+        "port": "5432",
+        "schema": "demo_data",
+        "user": "demo_user"
+    },
+    "connection_status": {
+        "error_message": null,
+        "success": true
+    },
+    "description": "House sales data",
+    "engine": "postgres",
+    "name": "my_datasource",
+    "tables": ["house_sales"]
+}
+```
+
+</ResponseExample>

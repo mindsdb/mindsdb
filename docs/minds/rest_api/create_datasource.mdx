@@ -1,0 +1,117 @@
+---
+title: Create Data Source
+sidebarTitle: Create Data Source
+---
+
+This API endpoint creates a Datasource using the `POST` method.
+
+### Body
+
+<ParamField body='name' type='string' required>
+
+Provide a unique name for the Datasource.
+
+</ParamField>
+
+<ParamField body='description' type='string'>
+
+Provide a description for the Datasource, which is used by the Mind to decide the relevant datasources for each question.
+
+</ParamField>
+
+<ParamField body='engine' type='array' required>
+
+Provide a datasource engine. [See available engines here](/minds/data_sources).
+
+</ParamField>
+
+<ParamField body='connection_data' type='array' required>
+
+Provide connection parameters for the selected engine. [See available engines and connection parameters here](/minds/data_sources).
+
+</ParamField>
+
+<ParamField body='tables' type='array'>
+
+This is an optional parameter that lets you specify tables that can be accessed by the Mind.
+
+</ParamField>
+
+### Response
+
+<ResponseField name="status" type="string" required>  
+
+HTTP status code indicating success. `200 OK` confirms the Datasource was created.
+
+</ResponseField>
+
+### Authorization
+
+A valid API key must be passed in the `Authorization` header:
+
+```
+Authorization: Bearer MINDS_API_KEY
+```
+
+Generate your [API key here](https://mdb.ai/apiKeys).
+
+### Path Parameters
+
+None.
+
+<RequestExample>
+
+```shell Shell
+curl --request POST \
+     --url 'https://mdb.ai/api/datasources' \
+     --header 'Content-Type: application/json' \
+     --header 'Authorization: Bearer MINDS_API_KEY' \
+     --data '{
+         "name": "datasource_name",
+         "engine": "postgres",
+         "connection_data": {
+             "user": "demo_user",
+             "password": "demo_password",
+             "host": "samples.mindsdb.com",
+             "port": "5432",
+             "database": "demo",
+             "schema": "demo_data"
+         },
+         "tables": ["house_sales"],
+         "description": "House sales data"
+     }'
+```
+
+```python Python
+from minds.client import Client
+from minds.datasources import DatabaseConfig
+
+client = Client("MINDS_API_KEY", "https://mdb.ai/")
+
+postgres_config = DatabaseConfig(
+    name='my_datasource',
+    description='<DESCRIPTION-OF-YOUR-DATA>',
+    engine='postgres',
+    connection_data={
+        'user': 'demo_user',
+        'password': 'demo_password',
+        'host': 'samples.mindsdb.com',
+        'port': 5432,
+        'database': 'demo',
+        'schema': 'demo_data'
+    },
+    tables=['<TABLE-1>', '<TABLE-2>']
+)
+
+datasource = client.datasources.create(postgres_config)
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Response
+200 OK
+```
+
+</ResponseExample>

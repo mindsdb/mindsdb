@@ -34,6 +34,7 @@ from mindsdb_sql_parser.ast import (
     Use,
     Tuple,
     Function,
+    Variable,
 )
 
 # typed models
@@ -101,6 +102,7 @@ from mindsdb.interfaces.model.functions import (
 )
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
 from mindsdb.interfaces.triggers.triggers_controller import TriggersController
+from mindsdb.interfaces.variables.variables_controller import variables_controller
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.functions import mark_process, resolve_model_identifier, get_handler_install_message
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
@@ -511,28 +513,30 @@ class ExecuteCommands:
             return ExecuteAnswer()
         elif statement_type is Set:
             category = (statement.category or "").lower()
-            if category == "" and isinstance(statement.name, Identifier):
-                param = statement.name.parts[0].lower()
+            if category == "":
+                if isinstance(statement.name, Identifier):
+                    param = statement.name.parts[0].lower()
 
-                value = None
-                if isinstance(statement.value, Constant):
-                    value = statement.value.value
+                    value = None
+                    if isinstance(statement.value, Constant):
+                        value = statement.value.value
 
-                if param == "profiling":
-                    self.session.profiling = value in (1, True)
-                    if self.session.profiling is True:
-                        profiler.enable()
-                    else:
-                        profiler.disable()
-                elif param == "predictor_cache":
-                    self.session.predictor_cache = value in (1, True)
-                elif param == "context":
-                    if value in (0, False, None):
-                        # drop context
-                        query_context_controller.drop_query_context(None)
-                elif param == "show_secrets":
-                    self.session.show_secrets = value in (1, True)
-
+                    if param == "profiling":
+                        self.session.profiling = value in (1, True)
+                        if self.session.profiling is True:
+                            profiler.enable()
+                        else:
+                            profiler.disable()
+                    elif param == "predictor_cache":
+                        self.session.predictor_cache = value in (1, True)
+                    elif param == "context":
+                        if value in (0, False, None):
+                            # drop context
+                            query_context_controller.drop_query_context(None)
+                    elif param == "show_secrets":
+                        self.session.show_secrets = value in (1, True)
+                elif isinstance(statement.name, Variable):
+                    variables_controller.set_variable(statement.name.value, statement.value)
                 return ExecuteAnswer()
             elif category == "autocommit":
                 return ExecuteAnswer()

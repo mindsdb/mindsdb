@@ -3,7 +3,6 @@ from dataclasses import dataclass, field, MISSING
 
 import numpy as np
 import pandas as pd
-from numpy import dtype as np_dtype
 from pandas.api import types as pd_types
 import sqlalchemy.types as sqlalchemy_types
 
@@ -11,9 +10,8 @@ from mindsdb_sql_parser.ast import TableColumn
 
 from mindsdb.utilities import log
 from mindsdb.api.executor.exceptions import WrongArgumentError
-from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype as lightwood_dtype
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
-from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import DATA_C_TYPE_MAP, CTypeProperties
+
 
 logger = log.getLogger(__name__)
 
@@ -74,59 +72,6 @@ class Column:
 
         name = f'{prefix}_{table_name}_{name}'
         return name
-
-    def to_mysql_column_dict(self, database_name: str | None = None) -> dict[str, str | int]:
-        """Convert Column object to dict with column properties.
-
-        Args:
-            database_name (str | None): Name of the database.
-
-        Returns:
-           dict[str, str | int]: Dictionary with mysql column properties.
-        """
-        # region infer type. Should not happen, but what if it is dtype of lightwood type?
-        if isinstance(self.type, str):
-            try:
-                self.type = MYSQL_DATA_TYPE(self.type)
-            except ValueError:
-                if self.type == lightwood_dtype.date:
-                    self.type = MYSQL_DATA_TYPE.DATE
-                elif self.type == lightwood_dtype.datetime:
-                    self.type = MYSQL_DATA_TYPE.DATETIME
-                elif self.type == lightwood_dtype.float:
-                    self.type = MYSQL_DATA_TYPE.FLOAT
-                elif self.type == lightwood_dtype.integer:
-                    self.type = MYSQL_DATA_TYPE.INT
-                else:
-                    self.type = MYSQL_DATA_TYPE.TEXT
-        elif isinstance(self.type, np_dtype):
-            if pd_types.is_integer_dtype(self.type):
-                self.type = MYSQL_DATA_TYPE.INT
-            elif pd_types.is_numeric_dtype(self.type):
-                self.type = MYSQL_DATA_TYPE.FLOAT
-            elif pd_types.is_datetime64_any_dtype(self.type):
-                self.type = MYSQL_DATA_TYPE.DATETIME
-            else:
-                self.type = MYSQL_DATA_TYPE.TEXT
-        # endregion
-
-        if isinstance(self.type, MYSQL_DATA_TYPE) is False:
-            logger.warning(f'Unexpected column type: {self.type}. Use TEXT as fallback.')
-            self.type = MYSQL_DATA_TYPE.TEXT
-
-        type_properties: CTypeProperties = DATA_C_TYPE_MAP[self.type]
-
-        result = {
-            "database": self.database or database_name,
-            #  TODO add 'original_table'
-            "table_name": self.table_name,
-            "name": self.name,
-            "alias": self.alias or self.name,
-            "size": type_properties.size,
-            "flags": type_properties.flags,
-            "type": type_properties.code,
-        }
-        return result
 
 
 def rename_df_columns(df: pd.DataFrame, names: list | None = None) -> None:

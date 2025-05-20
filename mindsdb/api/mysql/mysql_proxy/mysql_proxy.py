@@ -81,7 +81,7 @@ from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.otel import increment_otel_query_request_counter
 from mindsdb.utilities.wizards import make_ssl_cert
-from mindsdb.api.mysql.mysql_proxy.utilities.dump import dump_result_set_to_mysql
+from mindsdb.api.mysql.mysql_proxy.utilities.dump import dump_result_set_to_mysql, column_to_mysql_column_dict
 
 logger = log.getLogger(__name__)
 
@@ -498,7 +498,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
     def to_mysql_columns(self, columns_list: list[Column]) -> list[dict[str, str | int]]:
         database_name = None if self.session.database == "" else self.session.database.lower()
-        return [column.to_mysql_column_dict(database_name=database_name) for column in columns_list]
+        return [column_to_mysql_column_dict(column, database_name=database_name) for column in columns_list]
 
     @profiler.profile()
     def process_query(self, sql) -> SQLAnswer:

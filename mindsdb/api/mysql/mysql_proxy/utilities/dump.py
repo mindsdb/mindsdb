@@ -3,14 +3,71 @@ import datetime
 from typing import Any
 
 import numpy as np
+from numpy import dtype as np_dtype
 import pandas as pd
 from pandas.api import types as pd_types
 
-from mindsdb.api.executor.sql_query.result_set import ResultSet, get_mysql_data_type_from_series
-from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
+from mindsdb.api.executor.sql_query.result_set import ResultSet, get_mysql_data_type_from_series, Column
+from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype as lightwood_dtype
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE, DATA_C_TYPE_MAP, CTypeProperties
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
+
+
+def column_to_mysql_column_dict(column: Column, database_name: str | None = None) -> dict[str, str | int]:
+    """Convert Column object to dict with column properties.
+
+    Args:
+        column (Column): Column object to convert.
+        database_name (str | None): Name of the database.
+
+    Returns:
+        dict[str, str | int]: Dictionary with mysql column properties.
+    """
+    # region infer type. Should not happen, but what if it is dtype of lightwood type?
+    if isinstance(column.type, str):
+        try:
+            column.type = MYSQL_DATA_TYPE(column.type)
+        except ValueError:
+            if column.type == lightwood_dtype.date:
+                column.type = MYSQL_DATA_TYPE.DATE
+            elif column.type == lightwood_dtype.datetime:
+                column.type = MYSQL_DATA_TYPE.DATETIME
+            elif column.type == lightwood_dtype.float:
+                column.type = MYSQL_DATA_TYPE.FLOAT
+            elif column.type == lightwood_dtype.integer:
+                column.type = MYSQL_DATA_TYPE.INT
+            else:
+                column.type = MYSQL_DATA_TYPE.TEXT
+    elif isinstance(column.type, np_dtype):
+        if pd_types.is_integer_dtype(column.type):
+            column.type = MYSQL_DATA_TYPE.INT
+        elif pd_types.is_numeric_dtype(column.type):
+            column.type = MYSQL_DATA_TYPE.FLOAT
+        elif pd_types.is_datetime64_any_dtype(column.type):
+            column.type = MYSQL_DATA_TYPE.DATETIME
+        else:
+            column.type = MYSQL_DATA_TYPE.TEXT
+    # endregion
+
+    if isinstance(column.type, MYSQL_DATA_TYPE) is False:
+        logger.warning(f'Unexpected column type: {column.type}. Use TEXT as fallback.')
+        column.type = MYSQL_DATA_TYPE.TEXT
+
+    type_properties: CTypeProperties = DATA_C_TYPE_MAP[column.type]
+
+    result = {
+        "database": column.database or database_name,
+        #  TODO add 'original_table'
+        "table_name": column.table_name,
+        "name": column.name,
+        "alias": column.alias or column.name,
+        "size": type_properties.size,
+        "flags": type_properties.flags,
+        "type": type_properties.code,
+    }
+    return result
 
 
 def _dump_bool(var: Any) -> int | None:
@@ -274,7 +331,7 @@ def dump_result_set_to_mysql(result_set: ResultSet, infer_column_size: bool = Fa
         df[i] = series.replace([np.NaN, pd.NA, pd.NaT], None)
 
     columns_dicts = [
-        column.to_mysql_column_dict()
+        column_to_mysql_column_dict(column)
         for column in result_set.columns
     ]
 

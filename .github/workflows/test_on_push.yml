@@ -191,7 +191,9 @@ jobs:
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
-            env PYTHONPATH=./ pytest tests/unit/ -x
+            env PYTHONPATH=./ pytest --ignore=tests/unit/handlers tests/unit/ -x
+
+            python -m unittest discover -s tests/unit/handlers
 
             # env PYTHONPATH=./:parser_tests/tests pytest tests/unit/render/ -x
           fi

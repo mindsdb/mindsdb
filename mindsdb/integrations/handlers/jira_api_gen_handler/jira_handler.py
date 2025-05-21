@@ -76,3 +76,14 @@ class JiraHandler(APIHandler):
         self.is_connected = response.success
         return response
 
+    def get_table_info(self, table_name: str) -> Tuple[str, bool]:
+        """
+        Get information about the table that will help a Text-to-SQL generate more accurate queries.
+    
+        Args:
+            table_name (str): name of the table
+
+        Returns:
+            Tuple[str, bool]: A tuple containing the table information and a boolean indicating if the table has required parameters when running queries (SELECT).
+        """
+        return self._tables[table_name].get_table_info()

@@ -373,9 +373,9 @@ def check_requirements_imports():
 
     # Run against the main codebase
     errors = run_deptry(
-        ".",
         ','.join([MAIN_REQS_PATH] + UTILITIES_REQS_PATHS),
         get_ignores_str(MAIN_RULE_IGNORES),
+        ".",
         f"--extend-exclude \"{'|'.join(MAIN_EXCLUDE_PATHS)}\"",
     )
     print_errors(MAIN_REQS_PATH, errors)

@@ -220,7 +220,6 @@ class PostgresHandler(DatabaseHandler):
             Response: A response object containing the result of the query or an error message.
         """
         need_to_close = not self.is_connected
-
         connection = self.connect()
         with connection.cursor() as cur:
             try:
@@ -243,12 +242,22 @@ class PostgresHandler(DatabaseHandler):
                         affected_rows=cur.rowcount
                     )
                 connection.commit()
+            except psycopg.Error as e:
+                error_code = getattr(e, 'pgcode', 0)
+                error_message = f"PostgreSQL Error (Code: {error_code}): {str(e)}"
+                logger.error(f'Error running query: {query} on {self.database}, {error_message}')
+                response = Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_code=error_code,
+                    error_message=error_message
+                )
+                connection.rollback()
             except Exception as e:
-                logger.error(f'Error running query: {query} on {self.database}, {e}!')
+                logger.error(f'Unexpected error running query: {query} on {self.database}, {e}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_code=0,
-                    error_message=str(e)
+                    error_message=f"Unexpected error: {str(e)}"
                 )
                 connection.rollback()
 

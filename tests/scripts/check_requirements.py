@@ -38,7 +38,8 @@ HANDLER_REQS_PATHS = list(
 
 MAIN_EXCLUDE_PATHS = [
     "mindsdb/integrations/handlers/.*_handler",
-    "pryproject.toml"
+    "pryproject.toml",
+    "mindsdb/api/a2a/.*"  # Skip A2A API directory
 ]
 
 # Torch.multiprocessing is imported in a 'try'. Falls back to multiprocessing so we dont NEED it.
@@ -47,9 +48,11 @@ MAIN_EXCLUDE_PATHS = [
 # and not explicitly imported in mindsdb.
 # transformers is required for langchain_core and not explicitly imported by mindsdb.
 MAIN_RULE_IGNORES = {
-    "DEP003": ["torch", "pyarrow"],
+    "DEP003": ["torch", "pyarrow", "typing_extensions", "click"],
     "DEP001": [
         "torch", "pgvector", "pyarrow", "openai", "gunicorn", "dataprep_ml", "opentelemetry", "langfuse",
+        # A2A API dependencies - these are optional since A2A is not mandatory
+        "httpx", "httpx_sse", "starlette", "sse_starlette", "jwt", "jwcrypto", "dotenv", "python-dotenv",
         # A2A API internal imports
         "common", "task_manager", "agent"
     ],
@@ -370,9 +373,9 @@ def check_requirements_imports():
 
     # Run against the main codebase
     errors = run_deptry(
+        ".",
         ','.join([MAIN_REQS_PATH] + UTILITIES_REQS_PATHS),
         get_ignores_str(MAIN_RULE_IGNORES),
-        ".",
         f"--extend-exclude \"{'|'.join(MAIN_EXCLUDE_PATHS)}\"",
     )
     print_errors(MAIN_REQS_PATH, errors)

@@ -123,9 +123,22 @@ class A2AServer:
 
             async def event_generator(result) -> AsyncIterable[dict[str, str]]:
                 async for item in result:
-                    yield {"data": item.model_dump_json(exclude_none=True)}
+                    # Send the data event with immediate flush directive
+                    yield {
+                        "data": item.model_dump_json(exclude_none=True),
+                        "event": "message",
+                        "id": str(id(item)),  # Add a unique ID for each event
+                    }
+                    # Add an empty comment event to force flush
+                    yield {
+                        "comment": " ",  # Empty comment event to force flush
+                    }
 
-            return EventSourceResponse(event_generator(result))
+            return EventSourceResponse(
+                event_generator(result),
+                # Disable content encoding to prevent buffering
+                headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+            )
         elif isinstance(result, JSONRPCResponse):
             return JSONResponse(result.model_dump(exclude_none=True))
         else:

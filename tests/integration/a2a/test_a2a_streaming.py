@@ -1,0 +1,326 @@
+#!/usr/bin/env python
+import sys
+import json
+import time
+import requests
+import uuid
+import argparse
+import pytest
+import os
+from typing import Dict, List, Set, Generator
+
+# Default test configuration
+DEFAULT_HOST = "0.0.0.0"
+DEFAULT_PORT = 10002
+DEFAULT_TIMEOUT = 120  # seconds
+DEFAULT_QUERY = "What's the average price for a one bed?"
+
+"""
+Run instructions:
+
+start A2A server and mindsdb
+
+You should have an agent created in MindsDB (this script does NOT create the agent)
+
+source .venv/bin/activate
+python test_a2a_streaming.py --host 0.0.0.0 --port 10002 --timeout 180 "What's the average price of homes in berkeley_hills?"
+"""
+
+
+def generate_uuid() -> str:
+    """Generate a random UUID string."""
+    return str(uuid.uuid4()).replace("-", "")
+
+
+def stream_a2a_query(
+    query: str,
+    host: str = DEFAULT_HOST,
+    port: int = DEFAULT_PORT,
+    timeout: int = DEFAULT_TIMEOUT,
+    verbose: bool = False,
+) -> Generator[Dict, None, None]:
+    """
+    Stream a query to the A2A server and yield the responses incrementally.
+
+    Args:
+        query: The text query to send to the agent
+        host: A2A server host
+        port: A2A server port
+        timeout: Maximum time to wait for responses (seconds)
+        verbose: Whether to print responses to stdout
+
+    Yields:
+        Dict: Response messages from the A2A server
+    """
+    # Generate unique IDs for the request
+    task_id = generate_uuid()
+    session_id = generate_uuid()
+    request_id = generate_uuid()
+
+    # Prepare the request payload
+    payload = {
+        "jsonrpc": "2.0",
+        "id": request_id,
+        "method": "tasks/sendSubscribe",
+        "params": {
+            "id": task_id,
+            "sessionId": session_id,
+            "message": {
+                "role": "user",
+                "parts": [
+                    {"type": "text", "text": query},
+                ],
+            },
+            "acceptedOutputModes": ["text/plain"],
+        },
+    }
+
+    url = f"http://{host}:{port}/a2a"
+    if verbose:
+        print(f"Sending streaming request to {url}")
+        print(f"Query: {query}")
+        print("Streaming responses:")
+        print("-" * 60)
+
+    # Set up headers for SSE
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+    }
+
+    # Track seen messages to avoid duplicates
+    seen_messages: Set[str] = set()
+    all_responses: List[Dict] = []
+    start_time = time.time()
+
+    try:
+        # Make the streaming request
+        with requests.post(url, json=payload, headers=headers, stream=True) as response:
+            if not response.ok:
+                error_msg = f"Error: HTTP {response.status_code} - {response.text}"
+                if verbose:
+                    print(error_msg)
+                yield {"error": error_msg}
+                return
+
+            # Process the SSE stream
+            buffer = ""
+            for chunk in response.iter_content(chunk_size=1):
+                # Check timeout
+                if time.time() - start_time > timeout:
+                    error_msg = f"Timeout after {timeout} seconds"
+                    if verbose:
+                        print(error_msg)
+                    yield {"error": error_msg, "timeout": True}
+                    return
+
+                if not chunk:
+                    continue
+
+                # Decode the chunk and add to buffer
+                buffer += chunk.decode("utf-8")
+
+                # Process complete lines
+                while "\n" in buffer:
+                    line, buffer = buffer.split("\n", 1)
+                    line = line.rstrip()
+
+                    # Skip empty lines
+                    if not line:
+                        continue
+
+                    # Process data lines
+                    if line.startswith("data:"):
+                        data_str = line[5:].strip()
+                        if not data_str:
+                            continue
+
+                        try:
+                            # Parse the JSON data
+                            data = json.loads(data_str)
+
+                            # Extract and display content
+                            if "result" in data:
+                                result = data["result"]
+
+                                # Handle status updates
+                                if "status" in result:
+                                    message = result["status"].get("message", {})
+                                    parts = message.get("parts", [])
+
+                                    for part in parts:
+                                        # Get content and metadata
+                                        content = part.get("text", "")
+                                        metadata = part.get("metadata", {})
+                                        thought_type = metadata.get("thought_type", "")
+
+                                        # Create a unique key for deduplication
+                                        message_key = f"{thought_type}:{content}"
+
+                                        # Skip if we've seen this message before
+                                        if message_key in seen_messages:
+                                            continue
+
+                                        # Add to seen messages
+                                        seen_messages.add(message_key)
+
+                                        # Create response object
+                                        response_obj = {
+                                            "type": thought_type
+                                            or part.get("type", "text"),
+                                            "content": content,
+                                            "metadata": metadata,
+                                        }
+
+                                        # Display based on thought type
+                                        if verbose:
+                                            if thought_type == "thought":
+                                                print(f"Thought: {content}")
+                                            elif thought_type == "observation":
+                                                print(f"Observation: {content}")
+                                            elif thought_type == "sql":
+                                                print(f"SQL Query: {content}")
+                                            elif part.get("type") == "text":
+                                                print(content)
+                                            sys.stdout.flush()
+
+                                        # Yield the response
+                                        yield response_obj
+                                        all_responses.append(response_obj)
+
+                                # Handle artifact updates
+                                if "artifact" in result:
+                                    artifact = result["artifact"]
+                                    parts = artifact.get("parts", [])
+
+                                    for part in parts:
+                                        content = part.get("text", "")
+                                        if content:
+                                            response_obj = {
+                                                "type": "answer",
+                                                "content": content,
+                                            }
+                                            if verbose:
+                                                print(content)
+                                                sys.stdout.flush()
+                                            yield response_obj
+                                            all_responses.append(response_obj)
+
+                                # Handle completion
+                                if result.get("final"):
+                                    response_obj = {"type": "completion", "final": True}
+                                    if verbose:
+                                        print("\n[Completed]")
+                                        sys.stdout.flush()
+                                    yield response_obj
+                                    all_responses.append(response_obj)
+
+                            # Handle errors
+                            elif "error" in data:
+                                error_msg = data["error"].get("message", "")
+                                response_obj = {"error": error_msg}
+                                if verbose:
+                                    print(f"Error: {error_msg}")
+                                    sys.stdout.flush()
+                                yield response_obj
+                                all_responses.append(response_obj)
+
+                        except json.JSONDecodeError:
+                            if verbose:
+                                print(f"Warning: Invalid JSON: {data_str[:50]}...")
+                                sys.stdout.flush()
+
+                    # Process event end
+                    elif line == "":
+                        # Event boundary - process the event
+                        pass
+
+    except KeyboardInterrupt:
+        if verbose:
+            print("\nInterrupted by user")
+        yield {"error": "Interrupted by user"}
+    except Exception as e:
+        error_msg = f"Error: {str(e)}"
+        if verbose:
+            print(error_msg)
+        yield {"error": error_msg}
+
+    # Return all collected responses
+    return all_responses
+
+
+def run_manual_test():
+    """Run a manual test with command line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Test A2A streaming with direct requests"
+    )
+    parser.add_argument("--host", default=DEFAULT_HOST, help="A2A server host")
+    parser.add_argument(
+        "--port", type=int, default=DEFAULT_PORT, help="A2A server port"
+    )
+    parser.add_argument(
+        "--timeout", type=int, default=DEFAULT_TIMEOUT, help="Timeout in seconds"
+    )
+    parser.add_argument(
+        "query", nargs="?", default=DEFAULT_QUERY, help="Query to send to the agent"
+    )
+
+    args = parser.parse_args()
+
+    # Run with verbose output for manual testing
+    for _ in stream_a2a_query(
+        args.query, args.host, args.port, args.timeout, verbose=True
+    ):
+        pass  # Just consume the generator to display output
+
+
+@pytest.mark.integration
+def test_a2a_streaming_integration():
+    """
+    Integration test for A2A streaming functionality.
+
+    This test requires a running A2A server. It can be configured with environment variables:
+    - A2A_TEST_HOST: A2A server host (default: 0.0.0.0)
+    - A2A_TEST_PORT: A2A server port (default: 10002)
+    - A2A_TEST_QUERY: Query to send (default: "What's the average price for a one bed?")
+    - A2A_TEST_TIMEOUT: Timeout in seconds (default: 120)
+    """
+    # Get configuration from environment variables
+    host = os.environ.get("A2A_TEST_HOST", DEFAULT_HOST)
+    port = int(os.environ.get("A2A_TEST_PORT", DEFAULT_PORT))
+    query = os.environ.get("A2A_TEST_QUERY", DEFAULT_QUERY)
+    timeout = int(os.environ.get("A2A_TEST_TIMEOUT", DEFAULT_TIMEOUT))
+
+    # Collect all responses
+    responses = list(stream_a2a_query(query, host, port, timeout, verbose=False))
+
+    # Basic assertions
+    assert len(responses) > 0, "No responses received from A2A server"
+
+    # Check for error responses
+    errors = [r for r in responses if "error" in r]
+    assert len(errors) == 0, f"Errors in responses: {errors}"
+
+    # Verify we have different types of responses (thoughts, observations, etc.)
+    response_types = set(r.get("type", "") for r in responses)
+    assert len(response_types) > 1, f"Only found response types: {response_types}"
+
+    # Verify we have a final completion
+    completions = [
+        r for r in responses if r.get("type") == "completion" and r.get("final")
+    ]
+    assert len(completions) > 0, "No completion message received"
+
+    # Verify we have an answer
+    answers = [r for r in responses if r.get("type") == "answer"]
+    assert len(answers) > 0, "No answer received"
+
+    print(f"✅ Integration test passed with {len(responses)} responses")
+    return responses
+
+
+if __name__ == "__main__":
+    # If run directly, use the manual test mode
+    run_manual_test()

@@ -117,37 +117,126 @@ class AgentTaskManager(InMemoryTaskManager):
                 # Ensure item has the required fields or provide defaults
                 is_task_complete = item.get("is_task_complete", False)
 
-                # Extract parts from the chunk
+                # Create a structured thought dictionary to encapsulate the agent's thought process
+                thought_dict = {}
+
+                # Extract parts and structure the thought process
                 parts = []
 
                 # Handle different chunk formats to extract text content
-                if "parts" in item and item["parts"]:
-                    parts = item["parts"]
-                elif "content" in item:
-                    parts = [{"type": "text", "text": item["content"]}]
-                elif "output" in item:
-                    parts = [{"type": "text", "text": item["output"]}]
-                elif "actions" in item:
+                if "actions" in item:
                     # Extract thought process from actions
+                    thought_dict["type"] = "thought"
+                    thought_dict["actions"] = item["actions"]
+
                     for action in item.get("actions", []):
                         if "log" in action:
-                            parts.append({"type": "text", "text": action["log"]})
+                            # Use "text" type for all parts, but add a thought_type in metadata
+                            parts.append(
+                                {
+                                    "type": "text",
+                                    "text": action["log"],
+                                    "metadata": {"thought_type": "thought"},
+                                }
+                            )
                         if "tool_input" in action:
                             # Include SQL queries
                             tool_input = action.get("tool_input", "")
                             if "$START$" in tool_input and "$STOP$" in tool_input:
-                                sql = tool_input.replace("$START$", "").replace("$STOP$", "")
-                                parts.append({"type": "text", "text": sql})
+                                sql = tool_input.replace("$START$", "").replace(
+                                    "$STOP$", ""
+                                )
+                                parts.append(
+                                    {
+                                        "type": "text",
+                                        "text": sql,
+                                        "metadata": {"thought_type": "sql"},
+                                    }
+                                )
+
                 elif "steps" in item:
                     # Extract observations from steps
+                    thought_dict["type"] = "observation"
+                    thought_dict["steps"] = item["steps"]
+
                     for step in item.get("steps", []):
                         if "observation" in step:
-                            parts.append({"type": "text", "text": step["observation"]})
+                            parts.append(
+                                {
+                                    "type": "text",
+                                    "text": step["observation"],
+                                    "metadata": {"thought_type": "observation"},
+                                }
+                            )
+                        if "action" in step and "log" in step["action"]:
+                            parts.append(
+                                {
+                                    "type": "text",
+                                    "text": step["action"]["log"],
+                                    "metadata": {"thought_type": "thought"},
+                                }
+                            )
+
+                elif "output" in item:
+                    # Final answer
+                    thought_dict["type"] = "answer"
+                    thought_dict["output"] = item["output"]
+                    parts.append({"type": "text", "text": item["output"]})
+
+                elif "parts" in item and item["parts"]:
+                    # Use existing parts, but ensure they have valid types
+                    for part in item["parts"]:
+                        if part.get("type") in ["text", "file", "data"]:
+                            # Valid type, use as is
+                            parts.append(part)
+                        else:
+                            # Invalid type, convert to text
+                            text_content = part.get("text", "")
+                            if not text_content and "content" in part:
+                                text_content = part["content"]
+
+                            new_part = {"type": "text", "text": text_content}
+
+                            # Preserve metadata if it exists
+                            if "metadata" in part:
+                                new_part["metadata"] = part["metadata"]
+                            else:
+                                new_part["metadata"] = {
+                                    "thought_type": part.get("type", "text")
+                                }
+
+                            parts.append(new_part)
+
+                    # Try to determine the type from parts for the thought dictionary
+                    for part in item["parts"]:
+                        if part.get("type") == "text" and part.get(
+                            "text", ""
+                        ).startswith("$START$"):
+                            thought_dict["type"] = "sql"
+                            thought_dict["query"] = part.get("text")
+                        else:
+                            thought_dict["type"] = "text"
+
+                elif "content" in item:
+                    # Simple content
+                    thought_dict["type"] = "text"
+                    thought_dict["content"] = item["content"]
+                    parts.append({"type": "text", "text": item["content"]})
+
                 elif "messages" in item:
                     # Extract content from messages
+                    thought_dict["type"] = "message"
+                    thought_dict["messages"] = item["messages"]
+
                     for message in item.get("messages", []):
                         if "content" in message:
-                            parts.append({"type": "text", "text": message["content"]})
+                            parts.append(
+                                {
+                                    "type": "text",
+                                    "text": message["content"],
+                                    "metadata": {"thought_type": "message"},
+                                }
+                            )
 
                 # Skip if we have no parts to send
                 if not parts:
@@ -161,6 +250,10 @@ class AgentTaskManager(InMemoryTaskManager):
 
                 # Ensure metadata exists
                 metadata = item.get("metadata", {})
+
+                # Add the thought dictionary to metadata for frontend parsing
+                if thought_dict:
+                    metadata["thought_process"] = thought_dict
 
                 # Handle error field if present
                 if "error" in item and not is_task_complete:
@@ -222,9 +315,7 @@ class AgentTaskManager(InMemoryTaskManager):
             # Then mark the task as completed with an error
             task_state = TaskState.FAILED
             task_status = TaskStatus(state=task_state)
-            await self._update_store(
-                task_send_params.id, task_status, [artifact]
-            )
+            await self._update_store(task_send_params.id, task_status, [artifact])
 
             # Send the final status update
             yield SendTaskStreamingResponse(
@@ -326,9 +417,7 @@ class AgentTaskManager(InMemoryTaskManager):
                 # Just create a minimal response to acknowledge the request
                 task_state = TaskState.WORKING
                 task = await self._update_store(
-                    task_send_params.id,
-                    TaskStatus(state=task_state),
-                    []
+                    task_send_params.id, TaskStatus(state=task_state), []
                 )
                 return SendTaskResponse(id=request.id, result=task)
             else:
@@ -352,7 +441,12 @@ class AgentTaskManager(InMemoryTaskManager):
                 task_state = TaskState.COMPLETED
                 task = await self._update_store(
                     task_send_params.id,
-                    TaskStatus(state=task_state, message=Message(role="agent", parts=all_parts, metadata=final_metadata)),
+                    TaskStatus(
+                        state=task_state,
+                        message=Message(
+                            role="agent", parts=all_parts, metadata=final_metadata
+                        ),
+                    ),
                     [Artifact(parts=all_parts)],
                 )
                 return SendTaskResponse(id=request.id, result=task)
@@ -364,7 +458,9 @@ class AgentTaskManager(InMemoryTaskManager):
             task_state = TaskState.FAILED
             task = await self._update_store(
                 task_send_params.id,
-                TaskStatus(state=task_state, message=Message(role="agent", parts=parts)),
+                TaskStatus(
+                    state=task_state, message=Message(role="agent", parts=parts)
+                ),
                 [Artifact(parts=parts)],
             )
             return SendTaskResponse(id=request.id, result=task)

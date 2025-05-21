@@ -5,8 +5,8 @@ import requests
 import time
 from typing import Dict
 
-from tests.utils.http_test_helpers import HTTPHelperMixin
-from tests.utils.config import HTTP_API_ROOT
+from tests.integration.utils.http_test_helpers import HTTPHelperMixin
+from tests.integration.conftest import HTTP_API_ROOT
 
 
 def _get_metrics():

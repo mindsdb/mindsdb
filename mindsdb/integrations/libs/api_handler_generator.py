@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import re
 from io import StringIO
 import json
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Tuple
 import yaml
 try:
     from yaml import CLoader as Loader
@@ -58,6 +58,7 @@ class APIEndpointParam:
     type: APIResourceType
     where: str = None
     default: Any = None
+    description: str = None
 
 
 def find_common_url_prefix(urls):
@@ -243,6 +244,7 @@ class APIResourceGenerator:
                 type=type_name,
                 default=parameter['schema'].get('default'),
                 where=parameter['in'],
+                description=parameter.get('description')
             )
 
         return endpoint_parameters
@@ -490,6 +492,29 @@ class RestApiTable(APIResource):
             # response is one record, make table
             resp = [resp]
         return resp, total
+    
+    def get_table_info(self) -> Tuple[str, bool]:
+        """
+        Get information about the table that will help a Text-to-SQL generate more accurate queries.
+    
+        Args:
+            table_name (str): name of the table
+        Returns:
+            dict: information about the table
+        """
+        table_info = ""
+        has_required_params = False
+        url = self.connection_data['api_base'] + self.endpoint.url
+
+        required_params = re.findall(r"{(\w+)}", url)
+        if required_params:
+            has_required_params = True
+            table_info += "Required parameters to be included in the WHERE clause when running SELECT queries:\n"
+            for param in required_params:
+                desc = self.endpoint.params[param].description if param in self.endpoint.params and self.endpoint.params[param].description else ""
+                table_info += f"  - {param}: {desc}\n"
+            
+        return table_info, has_required_params
 
     def list(
         self,

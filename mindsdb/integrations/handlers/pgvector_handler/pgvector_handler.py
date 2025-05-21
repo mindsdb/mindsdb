@@ -1,7 +1,7 @@
 import os
 import json
 from enum import Enum
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Literal
 from urllib.parse import urlparse
 
 import pandas as pd
@@ -66,6 +66,21 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
 
         self.distance_op = distance_op
         self.connect()
+
+    def get_metric_type(self) -> str:
+        """
+        Get the metric type from the distance ops
+
+        """
+        distance_ops_to_metric_type_map = {
+            '<->': 'vector_l2_ops',
+            '<#>': 'vector_ip_ops',
+            '<=>': 'vector_cosine_ops',
+            '<+>': 'vector_l1_ops',
+            '<~>': 'bit_hamming_ops',
+            '<%>': 'bit_jaccard_ops'
+        }
+        return distance_ops_to_metric_type_map.get(self.distance_op, 'vector_cosine_ops')
 
     def _make_connection_args(self):
         cloud_pgvector_url = os.environ.get('KB_PGVECTOR_URL')
@@ -521,3 +536,21 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         """
         table_name = self._check_table(table_name)
         self.raw_query(f"DROP TABLE IF EXISTS {table_name}")
+
+    def create_index(self, table_name: str, column_name: str = "embeddings", index_type: Literal['ivfflat', 'hnsw'] = "hnsw", metric_type: str = None):
+        """
+        Create an index on the pgvector table.
+        Args:
+            table_name (str): Name of the table to create the index on.
+            column_name (str): Name of the column to create the index on.
+            index_type (str): Type of the index to create. Supported types are 'ivfflat' and 'hnsw'.
+            metric_type (str): Metric type for the index. Supported types are 'vector_l2_ops', 'vector_ip_ops', and 'vector_cosine_ops'.
+        """
+        if metric_type is None:
+            metric_type = self.get_metric_type()
+        # Check if the index type is supported
+        if index_type not in ['ivfflat', 'hnsw']:
+            raise ValueError("Invalid index type. Supported types are 'ivfflat' and 'hnsw'.")
+        table_name = self._check_table(table_name)
+        # Create the index
+        self.raw_query(f"CREATE INDEX ON {table_name} USING {index_type} ({column_name} {metric_type})")

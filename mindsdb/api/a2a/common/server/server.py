@@ -65,7 +65,15 @@ class A2AServer:
 
         import uvicorn
 
-        uvicorn.run(self.app, host=self.host, port=self.port)
+        # Configure uvicorn with optimized settings for streaming
+        uvicorn.run(
+            self.app,
+            host=self.host,
+            port=self.port,
+            http="h11",
+            timeout_keep_alive=65,
+            log_level="info"
+        )
 
     def _get_agent_card(self, request: Request) -> JSONResponse:
         return JSONResponse(self.agent_card.model_dump(exclude_none=True))
@@ -123,9 +131,31 @@ class A2AServer:
 
             async def event_generator(result) -> AsyncIterable[dict[str, str]]:
                 async for item in result:
-                    yield {"data": item.model_dump_json(exclude_none=True)}
+                    # Send the data event with immediate flush directive
+                    yield {
+                        "data": item.model_dump_json(exclude_none=True),
+                        "event": "message",
+                        "id": str(id(item)),  # Add a unique ID for each event
+                    }
+                    # Add an empty comment event to force flush
+                    yield {
+                        "comment": " ",  # Empty comment event to force flush
+                    }
 
-            return EventSourceResponse(event_generator(result))
+            # Create EventSourceResponse with complete headers for browser compatibility
+            return EventSourceResponse(
+                event_generator(result),
+                # Complete set of headers needed for browser streaming
+                headers={
+                    "Cache-Control": "no-cache, no-transform",
+                    "X-Accel-Buffering": "no",
+                    "Connection": "keep-alive",
+                    "Content-Type": "text/event-stream",
+                    "Transfer-Encoding": "chunked"
+                },
+                # Explicitly set media_type
+                media_type="text/event-stream"
+            )
         elif isinstance(result, JSONRPCResponse):
             return JSONResponse(result.model_dump(exclude_none=True))
         else:

@@ -884,7 +884,7 @@
                     ]
                   },
                   {
-                    "group": "MongoDB API",
+                    "group": "MQL API",
                     "pages": [
                       "sdks/mongo/mindsdb-mongo-ql-overview",
                       {

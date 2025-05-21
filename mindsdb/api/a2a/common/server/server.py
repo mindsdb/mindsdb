@@ -154,9 +154,7 @@ class A2AServer:
                     "Transfer-Encoding": "chunked"
                 },
                 # Explicitly set media_type
-                media_type="text/event-stream",
-                # Set ping interval to keep connection alive
-                ping_interval=15
+                media_type="text/event-stream"
             )
         elif isinstance(result, JSONRPCResponse):
             return JSONResponse(result.model_dump(exclude_none=True))

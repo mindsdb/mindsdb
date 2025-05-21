@@ -243,7 +243,7 @@ class PostgresHandler(DatabaseHandler):
                     )
                 connection.commit()
             except psycopg.Error as e:
-                error_code = getattr(e, 'pgcode', 0)
+                error_code = getattr(e, 'pgcode', None) or 'UNKNOWN'
                 error_message = f"PostgreSQL Error (Code: {error_code}): {str(e)}"
                 logger.error(f'Error running query: {query} on {self.database}, {error_message}')
                 response = Response(

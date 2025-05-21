@@ -11,9 +11,19 @@ The agent takes natural language queries from users and translates them into app
 
 ## Prerequisites
 
-- Python 3.0 or higher
+- Python 3.10 or higher
 - [UV](https://docs.astral.sh/uv/)
 - Access to an LLM and API Key
+
+## Optional Dependencies
+
+The A2A API requires several optional dependencies that are not included in the main MindsDB installation. To install these dependencies, run:
+
+```bash
+pip install httpx>=0.27.0 httpx-sse>=0.4.0 starlette>=0.36.3 sse-starlette>=2.0.0 PyJWT>=2.8.0 jwcrypto>=1.5.4 python-dotenv>=1.0.1
+```
+
+These dependencies are optional since the A2A functionality is not mandatory for using MindsDB.
 
 ## Running the Sample
 

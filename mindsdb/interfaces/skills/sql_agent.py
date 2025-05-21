@@ -331,7 +331,7 @@ class SQLAgent:
         if isinstance(handler, APIHandler):
             # generate an API description of the table if it is an API table.
             if hasattr(handler, "get_table_info"):
-                table_info, has_required_params = handler.get_table_info(table_str)
+                table_info, has_required_params = handler.get_table_info(table_name)
                 info += table_info + "\n"
 
         try:

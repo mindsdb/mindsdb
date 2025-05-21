@@ -325,11 +325,13 @@ class SQLAgent:
             
         info = f"Table named `{table_str}`:\n"
 
+        handler = dn.integration_handler
+
         has_required_params = False
-        if issubclass(dn, APIHandler):
+        if isinstance(handler, APIHandler):
             # generate an API description of the table if it is an API table.
-            table_info, has_required_params = self._get_api_table_info()
-            if table_info:
+            if hasattr(handler, "get_table_info"):
+                table_info, has_required_params = handler.get_table_info(table_str)
                 info += table_info + "\n"
 
         try:
@@ -351,9 +353,6 @@ class SQLAgent:
             + "\n"
         )
         return info
-
-    def _get_api_table_info(self) -> str:
-        """Get information about the API table."""
 
     def _get_sample_rows(self, table: str, fields: List[str]) -> str:
         logger.info(f"_get_sample_rows: table={table} fields={fields}")

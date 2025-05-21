@@ -19,7 +19,7 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
 from mindsdb.integrations.libs.api_handler import APIChatHandler
-from mindsdb.integrations.utilities.handlers.auth_utilities import (
+from mindsdb.integrations.utilities.handlers.auth_utilities.microsoft import (
     MSGraphAPIApplicationPermissionsManager,
     MSGraphAPIDelegatedPermissionsManager
 )

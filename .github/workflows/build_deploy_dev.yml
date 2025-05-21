@@ -8,6 +8,21 @@ on:
 
 jobs:
 
+  changes:
+    name: Filter changed files
+    runs-on: mdb-dev
+    outputs:
+      not-docs: ${{ steps.filter.outputs.not-docs }}
+    steps:
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          predicate-quantifier: "every"
+          filters: |
+            not-docs:
+              - '!docs/**'  
+              - '!**/*.md'
+
   # Looks for labels like "deploy-to-<env>" attached to a PR so we can deploy to those envs
   get-deploy-labels:
     name: Get Deploy Envs
@@ -33,7 +48,7 @@ jobs:
     name: Build Docker Images
     runs-on: mdb-dev
     needs: [get-deploy-labels]
-    if: needs.get-deploy-labels.outputs.deploy-envs != '[]'
+    if: ${{ needs.get-deploy-labels.outputs.deploy-envs != '[]' }}
     concurrency:
       group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-build
       cancel-in-progress: true
@@ -112,11 +127,11 @@ jobs:
     secrets: inherit
 
   tests_completed:
-    needs: run_tests
+    needs: [run_tests, changes]
     runs-on: mdb-dev
     if: always()
     steps:
       - name: fail if tests failed or didnt run
-        if: ${{ needs.run_tests.result != 'success' }}
+        if: ${{ needs.run_tests.result != 'success' && needs.changes.outputs.not-docs == 'true' }}
         run: exit 1
       - run: echo "Tests ran successfully"

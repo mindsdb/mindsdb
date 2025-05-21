@@ -79,7 +79,7 @@ class JiraHandler(APIHandler):
     def get_table_info(self, table_name: str) -> Tuple[str, bool]:
         """
         Get information about the table that will help a Text-to-SQL generate more accurate queries.
-    
+
         Args:
             table_name (str): name of the table
 

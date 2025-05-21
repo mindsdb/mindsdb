@@ -492,11 +492,11 @@ class RestApiTable(APIResource):
             # response is one record, make table
             resp = [resp]
         return resp, total
-    
+
     def get_table_info(self) -> Tuple[str, bool]:
         """
         Get information about the table that will help a Text-to-SQL generate more accurate queries.
-    
+
         Args:
             table_name (str): name of the table
         Returns:
@@ -513,9 +513,9 @@ class RestApiTable(APIResource):
             for param in required_params:
                 desc = self.endpoint.params[param].description if param in self.endpoint.params and self.endpoint.params[param].description else ""
                 table_info += f"  - {param}: {desc}\n"
-                
+
             table_info += "Find these parameters by querying other tables that are related to this table.\n"
-            
+
         return table_info, has_required_params
 
     def list(

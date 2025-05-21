@@ -322,7 +322,7 @@ class SQLAgent:
             return (
                 f"Table named `{table_str}`:\n [Could not extract column information]"
             )
-            
+
         info = f"Table named `{table_str}`:\n"
 
         handler = dn.integration_handler

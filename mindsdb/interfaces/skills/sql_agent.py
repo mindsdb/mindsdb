@@ -322,64 +322,38 @@ class SQLAgent:
             return (
                 f"Table named `{table_str}`:\n [Could not extract column information]"
             )
+            
+        info = f"Table named `{table_str}`:\n"
 
+        has_required_params = False
         if issubclass(dn, APIHandler):
             # generate an API description of the table if it is an API table.
-            info = f"Table named `{table_str}`:\n"
-            info += self._get_api_example(dn, table_str, fields)
-            info += "You must always specify the parameters with a SELECT statement when querying this table."
-            info += (
-                "\nColumn data types: "
-                + ",\t".join(
-                    [f"\n`{field}` : `{dtype}`" for field, dtype in zip(fields, dtypes)]
-                )
-                + "\n"
-            )
-            return info
+            table_info, has_required_params = self._get_api_table_info()
+            if table_info:
+                info += table_info + "\n"
 
-        else:
-            try:
-                sample_rows_info = self._get_sample_rows(table_str, fields)
-            except Exception as e:
-                logger.warning(f"Could not get sample rows for {table_str}: {e}")
-                sample_rows_info = "\n\t [error] Couldn't retrieve sample rows!"
-
-            info = f"Table named `{table_str}`:\n"
-            info += f"\nSample with first {self._sample_rows_in_table_info} rows from table {table_str} in CSV format (dialect is 'excel'):\n"
-            info += sample_rows_info + "\n"
-            info += (
-                "\nColumn data types: "
-                + ",\t".join(
-                    [f"\n`{field}` : `{dtype}`" for field, dtype in zip(fields, dtypes)]
-                )
-                + "\n"
-            )
-            return info
-
-    def _get_api_example(self, dn: APIHandler, table: str, fields: List[str]) -> str:
-        logger.info(f"_get_sample_rows: table={table} fields={fields}")
         try:
-            rest_api_table = dn.self._get_table(Identifier(table))
-
-            output_columns_str = ", ".join(rest_api_table.output_columns.keys())
-            single_value_params = ", ".join(rest_api_table.params)
-            list_value_params = ", ".join(rest_api_table.list_params)
-
-            return_str = "Output columns: " + output_columns_str + "\n"
-            return_str = (
-                return_str + "Single value parameters: " + single_value_params + "\n"
-            )
-            return_str = (
-                return_str + "List value parameters: " + list_value_params + "\n"
-            )
-
-            return return_str
-
+            if has_required_params:
+                sample_rows_info = "Sample rows were not retrieved because the table has required parameters."
+            else:
+                sample_rows_info = self._get_sample_rows(table_str, fields)
         except Exception as e:
-            logger.info(f"_get_api_example error: {e}")
-            sample_rows_str = "\n" + "\t [error] Couldn't retrieve api example!"
+            logger.warning(f"Could not get sample rows for {table_str}: {e}")
+            sample_rows_info = "\n\t [error] Couldn't retrieve sample rows: " + str(e)
 
-        return sample_rows_str
+        info += f"\nSample with first {self._sample_rows_in_table_info} rows from table {table_str} in CSV format (dialect is 'excel'):\n"
+        info += sample_rows_info + "\n"
+        info += (
+            "\nColumn data types: "
+            + ",\t".join(
+                [f"\n`{field}` : `{dtype}`" for field, dtype in zip(fields, dtypes)]
+            )
+            + "\n"
+        )
+        return info
+
+    def _get_api_table_info(self) -> str:
+        """Get information about the API table."""
 
     def _get_sample_rows(self, table: str, fields: List[str]) -> str:
         logger.info(f"_get_sample_rows: table={table} fields={fields}")

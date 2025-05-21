@@ -65,7 +65,15 @@ class A2AServer:
 
         import uvicorn
 
-        uvicorn.run(self.app, host=self.host, port=self.port)
+        # Configure uvicorn with optimized settings for streaming
+        uvicorn.run(
+            self.app,
+            host=self.host,
+            port=self.port,
+            http="h11",
+            timeout_keep_alive=65,
+            log_level="info"
+        )
 
     def _get_agent_card(self, request: Request) -> JSONResponse:
         return JSONResponse(self.agent_card.model_dump(exclude_none=True))
@@ -134,10 +142,21 @@ class A2AServer:
                         "comment": " ",  # Empty comment event to force flush
                     }
 
+            # Create EventSourceResponse with complete headers for browser compatibility
             return EventSourceResponse(
                 event_generator(result),
-                # Disable content encoding to prevent buffering
-                headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+                # Complete set of headers needed for browser streaming
+                headers={
+                    "Cache-Control": "no-cache, no-transform",
+                    "X-Accel-Buffering": "no",
+                    "Connection": "keep-alive",
+                    "Content-Type": "text/event-stream",
+                    "Transfer-Encoding": "chunked"
+                },
+                # Explicitly set media_type
+                media_type="text/event-stream",
+                # Set ping interval to keep connection alive
+                ping_interval=15
             )
         elif isinstance(result, JSONRPCResponse):
             return JSONResponse(result.model_dump(exclude_none=True))

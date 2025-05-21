@@ -11,7 +11,6 @@ from mindsdb.utilities import log
 from mindsdb.integrations.handlers.litellm_handler.settings import CompletionParameters
 
 
-
 logger = log.getLogger(__name__)
 
 

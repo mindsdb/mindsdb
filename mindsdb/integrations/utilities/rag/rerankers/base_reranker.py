@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import asyncio
 import logging
 import math
@@ -10,7 +11,6 @@ from textwrap import dedent
 from typing import Any, List, Optional, Tuple
 
 from openai import AsyncOpenAI, AsyncAzureOpenAI
-from pydantic import field_validator
 from pydantic import BaseModel
 
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RERANKING_MODEL, DEFAULT_LLM_ENDPOINT
@@ -42,15 +42,6 @@ class BaseLLMReranker(BaseModel, ABC):
 
     class Config:
         arbitrary_types_allowed = True
-
-    # @field_validator('provider')
-    # @classmethod
-    # def validate_provider(cls, v: str) -> str:
-    #     allowed = {'openai', 'azure_openai'}
-    #     v_lower = v.lower()
-    #     if v_lower not in allowed:
-    #         raise ValueError(f"Unsupported provider: {v}.")
-    #     return v_lower
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -104,8 +95,7 @@ class BaseLLMReranker(BaseModel, ABC):
                 kwargs['api_base'] = self.base_url
 
             return await self.client.acompletion(
-                messages=messages,
-                **kwargs
+                messages=messages, args=kwargs
             )
 
     async def _rank(self, query_document_pairs: List[Tuple[str, str]], rerank_callback=None) -> List[Tuple[str, float]]:
@@ -167,6 +157,7 @@ class BaseLLMReranker(BaseModel, ABC):
 
                     if rerank_callback is not None:
                         rerank_callback(rerank_data)
+                    return rerank_data
 
                 except Exception as e:
                     if attempt == self.max_retries - 1:
@@ -216,7 +207,7 @@ class BaseLLMReranker(BaseModel, ABC):
             Consider semantic meaning, key concepts, and contextual relevance.
             Search query: {query}
             Document: {document}
-            
+
             Return ONLY a numerical score between 0 and 100 per cents. No other text.
         """)
 
@@ -229,9 +220,10 @@ class BaseLLMReranker(BaseModel, ABC):
         answer = response.choices[0].message.content
 
         try:
-            score = float(answer) / 100
+            value = re.findall(r'[\d]+', answer)[0]
+            score = float(value) / 100
             score = max(0., min(score, 1.))
-        except ValueError:
+        except (ValueError, IndexError):
             score = 0.
 
         rerank_data = {
@@ -317,7 +309,6 @@ class BaseLLMReranker(BaseModel, ABC):
         )
 
         # Extract response and logprobs
-        class_label = response.choices[0].message.content.strip()
         token_logprobs = response.choices[0].logprobs.content
         # Reconstruct the prediction and extract the top logprobs from the final token (e.g., "1")
         final_token_logprob = token_logprobs[-1]

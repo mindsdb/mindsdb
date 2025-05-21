@@ -513,6 +513,8 @@ class RestApiTable(APIResource):
             for param in required_params:
                 desc = self.endpoint.params[param].description if param in self.endpoint.params and self.endpoint.params[param].description else ""
                 table_info += f"  - {param}: {desc}\n"
+                
+            table_info += "Find these parameters by querying other tables that are related to this table.\n"
             
         return table_info, has_required_params
 

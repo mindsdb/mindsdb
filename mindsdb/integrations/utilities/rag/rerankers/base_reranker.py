@@ -6,6 +6,7 @@ import math
 import os
 import random
 from abc import ABC
+from textwrap import dedent
 from typing import Any, List, Optional, Tuple
 
 from openai import AsyncOpenAI, AsyncAzureOpenAI
@@ -13,6 +14,7 @@ from pydantic import field_validator
 from pydantic import BaseModel
 
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RERANKING_MODEL, DEFAULT_LLM_ENDPOINT
+from mindsdb.integrations.libs.base import BaseMLEngine
 
 log = logging.getLogger(__name__)
 
@@ -29,7 +31,7 @@ class BaseLLMReranker(BaseModel, ABC):
     num_docs_to_keep: Optional[int] = None  # How many of the top documents to keep after reranking & compressing.
     method: str = "multi-class"  # Scoring method: 'multi-class' or 'binary'
     _api_key_var: str = "OPENAI_API_KEY"
-    client: Optional[AsyncOpenAI] = None
+    client: Optional[AsyncOpenAI | BaseMLEngine] = None
     _semaphore: Optional[asyncio.Semaphore] = None
     max_concurrent_requests: int = 20
     max_retries: int = 3
@@ -41,20 +43,21 @@ class BaseLLMReranker(BaseModel, ABC):
     class Config:
         arbitrary_types_allowed = True
 
-    @field_validator('provider')
-    @classmethod
-    def validate_provider(cls, v: str) -> str:
-        allowed = {'openai', 'azure_openai'}
-        v_lower = v.lower()
-        if v_lower not in allowed:
-            raise ValueError(f"Unsupported provider: {v}.")
-        return v_lower
+    # @field_validator('provider')
+    # @classmethod
+    # def validate_provider(cls, v: str) -> str:
+    #     allowed = {'openai', 'azure_openai'}
+    #     v_lower = v.lower()
+    #     if v_lower not in allowed:
+    #         raise ValueError(f"Unsupported provider: {v}.")
+    #     return v_lower
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._semaphore = asyncio.Semaphore(self.max_concurrent_requests)
+        self._init_client()
 
-    async def _init_client(self):
+    def _init_client(self):
         if self.client is None:
 
             if self.provider == "azure_openai":
@@ -76,60 +79,37 @@ class BaseLLMReranker(BaseModel, ABC):
                 base_url = self.base_url or DEFAULT_LLM_ENDPOINT
                 self.client = AsyncOpenAI(api_key=openai_api_key, base_url=base_url, timeout=self.request_timeout, max_retries=2)
 
-    async def search_relevancy(self, query: str, document: str, rerank_callback=None) -> Any:
-        await self._init_client()
+            else:
+                # try to use litellm
+                from mindsdb.api.executor.controllers.session_controller import SessionController
+                session = SessionController()
+                module = session.integration_controller.get_handler_module('litellm')
 
-        async with self._semaphore:
-            for attempt in range(self.max_retries):
-                try:
-                    response = await self.client.chat.completions.create(
-                        model=self.model,
-                        messages=[
-                            {"role": "system", "content": "Rate the relevance of the document to the query. Respond with 'yes' or 'no'."},
-                            {"role": "user", "content": f"Query: {query}\nDocument: {document}\nIs this document relevant?"}
-                        ],
-                        temperature=self.temperature,
-                        n=1,
-                        logprobs=True,
-                        max_tokens=1
-                    )
+                if module is None or module.Handler is None:
+                    raise ValueError(f'Unable to use "{self.provider}" provider. Litellm handler is not installed')
 
-                    # Extract response and logprobs
-                    answer = response.choices[0].message.content
-                    logprob = response.choices[0].logprobs.content[0].logprob
+                self.client = module.Handler
+                self.method = "no-logprobs"
 
-                    # Convert answer to score using the model's confidence
-                    if answer.lower().strip() == "yes":
-                        score = logprob  # If yes, use the model's confidence
-                    elif answer.lower().strip() == "no":
-                        score = 1 - logprob  # If no, invert the confidence
-                    else:
-                        score = 0.5 * logprob  # For unclear answers, reduce confidence
+    async def _call_llm(self, messages, **kwargs):
+        if self.provider in ("azure_openai", "openai"):
+            return await self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                **kwargs
+            )
+        else:
+            kwargs['model'] = f'{self.provider}/{self.model}'
+            if self.base_url is not None:
+                kwargs['api_base'] = self.base_url
 
-                    rerank_data = {
-                        "document": document,
-                        "relevance_score": score,
-                    }
+            return await self.client.acompletion(
+                messages=messages,
+                **kwargs
+            )
 
-                    # Stream reranking update.
-                    if rerank_callback is not None:
-                        rerank_callback(rerank_data)
-
-                    return rerank_data
-
-                except Exception as e:
-                    if attempt == self.max_retries - 1:
-                        log.error(f"Failed after {self.max_retries} attempts: {str(e)}")
-                        raise
-                    # Exponential backoff with jitter
-                    retry_delay = self.retry_delay * (2 ** attempt) + random.uniform(0, 0.1)
-                    await asyncio.sleep(retry_delay)
-
-    async def _rank(self, query_document_pairs: List[Tuple[str, str]], rerank_callback=None, rank_function=None) -> List[Tuple[str, float]]:
+    async def _rank(self, query_document_pairs: List[Tuple[str, str]], rerank_callback=None) -> List[Tuple[str, float]]:
         ranked_results = []
-
-        if rank_function is None:
-            rank_function = self.search_relevancy
 
         # Process in larger batches for better throughput
         batch_size = min(self.max_concurrent_requests * 2, len(query_document_pairs))
@@ -137,7 +117,7 @@ class BaseLLMReranker(BaseModel, ABC):
             batch = query_document_pairs[i:i + batch_size]
             try:
                 results = await asyncio.gather(
-                    *[rank_function(query=query, document=document, rerank_callback=rerank_callback) for (query, document) in batch],
+                    *[self._backoff_wrapper(query=query, document=document, rerank_callback=rerank_callback) for (query, document) in batch],
                     return_exceptions=True
                 )
 
@@ -173,121 +153,20 @@ class BaseLLMReranker(BaseModel, ABC):
                 continue
         return ranked_results
 
-    async def search_relevancy_score(self, query: str, document: str) -> Any:
-        await self._init_client()
+    async def _backoff_wrapper(self, query: str, document: str, rerank_callback=None) -> Any:
 
         async with self._semaphore:
             for attempt in range(self.max_retries):
                 try:
-                    response = await self.client.chat.completions.create(
-                        model=self.model,
-                        messages=[
-                            {"role": "system", "content": """
-                                You are an intelligent assistant that evaluates how relevant a given document chunk is to a user's search query.
-                                Your task is to analyze the similarity between the search query and the document chunk, and return **only the class label** that best represents the relevance:
+                    if self.method == "multi-class":
+                        rerank_data = await self.search_relevancy(query, document)
+                    elif self.method == "no-logprobs":
+                        rerank_data = await self.search_relevancy_no_logprob(query, document)
+                    else:
+                        rerank_data = await self.search_relevancy_score(query, document)
 
-                                - "class_1": Not relevant (score between 0.0 and 0.25)
-                                - "class_2": Slightly relevant (score between 0.25 and 0.5)
-                                - "class_3": Moderately relevant (score between 0.5 and 0.75)
-                                - "class_4": Highly relevant (score between 0.75 and 1.0)
-
-                                Respond with only one of: "class_1", "class_2", "class_3", or "class_4".
-
-                                Examples:
-
-                                Search query: "How to reset a router to factory settings?"
-                                Document chunk: "Computers often come with customizable parental control settings."
-                                Score: class_1
-
-                                Search query: "Symptoms of vitamin D deficiency"
-                                Document chunk: "Vitamin D deficiency has been linked to fatigue, bone pain, and muscle weakness."
-                                Score: class_4
-
-                                Search query: "Best practices for onboarding remote employees"
-                                Document chunk: "An employee handbook can be useful for new hires, outlining company policies and benefits."
-                                Score: class_2
-
-                                Search query: "Benefits of mindfulness meditation"
-                                Document chunk: "Practicing mindfulness has shown to reduce stress and improve focus in multiple studies."
-                                Score: class_3
-
-                                Search query: "What is Kubernetes used for?"
-                                Document chunk: "Kubernetes is an open-source system for automating deployment, scaling, and management of containerized applications."
-                                Score: class_4
-
-                                Search query: "How to bake sourdough bread at home"
-                                Document chunk: "The French Revolution began in 1789 and radically transformed society."
-                                Score: class_1
-
-                                Search query: "Machine learning algorithms for image classification"
-                                Document chunk: "Convolutional Neural Networks (CNNs) are particularly effective in image classification tasks."
-                                Score: class_4
-
-                                Search query: "How to improve focus while working remotely"
-                                Document chunk: "Creating a dedicated workspace and setting a consistent schedule can significantly improve focus during remote work."
-                                Score: class_4
-
-                                Search query: "Carbon emissions from electric vehicles vs gas cars"
-                                Document chunk: "Electric vehicles produce zero emissions while driving, but battery production has environmental impacts."
-                                Score: class_3
-
-                                Search query: "Time zones in the United States"
-                                Document chunk: "The U.S. is divided into six primary time zones: Eastern, Central, Mountain, Pacific, Alaska, and Hawaii-Aleutian."
-                                Score: class_4
-                             """},
-
-                            {"role": "user", "content": f"""
-                                Now evaluate the following pair:
-
-                                Search query: {query}
-                                Document chunk: {document}
-
-                                Which class best represents the relevance?
-                            """}
-                        ],
-                        temperature=self.temperature,
-                        n=1,
-                        logprobs=True,
-                        top_logprobs=4,
-                        max_tokens=3
-                    )
-
-                    # Extract response and logprobs
-                    class_label = response.choices[0].message.content.strip()
-                    token_logprobs = response.choices[0].logprobs.content
-                    # Reconstruct the prediction and extract the top logprobs from the final token (e.g., "1")
-                    final_token_logprob = token_logprobs[-1]
-                    top_logprobs = final_token_logprob.top_logprobs
-                    # Create a map of 'class_1' -> probability, using token combinations
-                    class_probs = {}
-                    for top_token in top_logprobs:
-                        full_label = f"class_{top_token.token}"
-                        prob = math.exp(top_token.logprob)
-                        class_probs[full_label] = prob
-                    # Optional: normalize in case some are missing
-                    total_prob = sum(class_probs.values())
-                    class_probs = {k: v / total_prob for k, v in class_probs.items()}
-                    # Assign weights to classes
-                    class_weights = {
-                        "class_1": 0.25,
-                        "class_2": 0.5,
-                        "class_3": 0.75,
-                        "class_4": 1.0
-                    }
-                    # Compute the final smooth score
-                    score = sum(class_weights.get(class_label, 0) * prob for class_label, prob in class_probs.items())
-                    if score is not None:
-                        if score > 1.0:
-                            score = 1.0
-                        elif score < 0.0:
-                            score = 0.0
-
-                    rerank_data = {
-                        "document": document,
-                        "answer": class_label,
-                        "relevance_score": score
-                    }
-                    return rerank_data
+                    if rerank_callback is not None:
+                        rerank_callback(rerank_data)
 
                 except Exception as e:
                     if attempt == self.max_retries - 1:
@@ -296,6 +175,182 @@ class BaseLLMReranker(BaseModel, ABC):
                     # Exponential backoff with jitter
                     retry_delay = self.retry_delay * (2 ** attempt) + random.uniform(0, 0.1)
                     await asyncio.sleep(retry_delay)
+
+    async def search_relevancy(self, query: str, document: str) -> Any:
+
+        response = await self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": "Rate the relevance of the document to the query. Respond with 'yes' or 'no'."},
+                {"role": "user", "content": f"Query: {query}\nDocument: {document}\nIs this document relevant?"}
+            ],
+            temperature=self.temperature,
+            n=1,
+            logprobs=True,
+            max_tokens=1
+        )
+
+        # Extract response and logprobs
+        answer = response.choices[0].message.content
+        logprob = response.choices[0].logprobs.content[0].logprob
+
+        # Convert answer to score using the model's confidence
+        if answer.lower().strip() == "yes":
+            score = logprob  # If yes, use the model's confidence
+        elif answer.lower().strip() == "no":
+            score = 1 - logprob  # If no, invert the confidence
+        else:
+            score = 0.5 * logprob  # For unclear answers, reduce confidence
+
+        rerank_data = {
+            "document": document,
+            "relevance_score": score,
+        }
+
+        return rerank_data
+
+    async def search_relevancy_no_logprob(self, query: str, document: str) -> Any:
+
+        message = dedent(f"""
+            Score the relevance between this search query and document on scale 0-100 per cents.
+            Consider semantic meaning, key concepts, and contextual relevance.
+            Search query: {query}
+            Document: {document}
+            
+            Return ONLY a numerical score between 0 and 100 per cents. No other text.
+        """)
+
+        response = await self._call_llm(
+            messages=[
+                {"role": "system", "content": message}
+            ],
+        )
+
+        answer = response.choices[0].message.content
+
+        try:
+            score = float(answer) / 100
+            score = max(0., min(score, 1.))
+        except ValueError:
+            score = 0.
+
+        rerank_data = {
+            "document": document,
+            "relevance_score": score,
+        }
+
+        return rerank_data
+
+    async def search_relevancy_score(self, query: str, document: str) -> Any:
+
+        response = await self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": """
+                    You are an intelligent assistant that evaluates how relevant a given document chunk is to a user's search query.
+                    Your task is to analyze the similarity between the search query and the document chunk, and return **only the class label** that best represents the relevance:
+
+                    - "class_1": Not relevant (score between 0.0 and 0.25)
+                    - "class_2": Slightly relevant (score between 0.25 and 0.5)
+                    - "class_3": Moderately relevant (score between 0.5 and 0.75)
+                    - "class_4": Highly relevant (score between 0.75 and 1.0)
+
+                    Respond with only one of: "class_1", "class_2", "class_3", or "class_4".
+
+                    Examples:
+
+                    Search query: "How to reset a router to factory settings?"
+                    Document chunk: "Computers often come with customizable parental control settings."
+                    Score: class_1
+
+                    Search query: "Symptoms of vitamin D deficiency"
+                    Document chunk: "Vitamin D deficiency has been linked to fatigue, bone pain, and muscle weakness."
+                    Score: class_4
+
+                    Search query: "Best practices for onboarding remote employees"
+                    Document chunk: "An employee handbook can be useful for new hires, outlining company policies and benefits."
+                    Score: class_2
+
+                    Search query: "Benefits of mindfulness meditation"
+                    Document chunk: "Practicing mindfulness has shown to reduce stress and improve focus in multiple studies."
+                    Score: class_3
+
+                    Search query: "What is Kubernetes used for?"
+                    Document chunk: "Kubernetes is an open-source system for automating deployment, scaling, and management of containerized applications."
+                    Score: class_4
+
+                    Search query: "How to bake sourdough bread at home"
+                    Document chunk: "The French Revolution began in 1789 and radically transformed society."
+                    Score: class_1
+
+                    Search query: "Machine learning algorithms for image classification"
+                    Document chunk: "Convolutional Neural Networks (CNNs) are particularly effective in image classification tasks."
+                    Score: class_4
+
+                    Search query: "How to improve focus while working remotely"
+                    Document chunk: "Creating a dedicated workspace and setting a consistent schedule can significantly improve focus during remote work."
+                    Score: class_4
+
+                    Search query: "Carbon emissions from electric vehicles vs gas cars"
+                    Document chunk: "Electric vehicles produce zero emissions while driving, but battery production has environmental impacts."
+                    Score: class_3
+
+                    Search query: "Time zones in the United States"
+                    Document chunk: "The U.S. is divided into six primary time zones: Eastern, Central, Mountain, Pacific, Alaska, and Hawaii-Aleutian."
+                    Score: class_4
+                 """},
+
+                {"role": "user", "content": f"""
+                    Now evaluate the following pair:
+
+                    Search query: {query}
+                    Document chunk: {document}
+
+                    Which class best represents the relevance?
+                """}
+            ],
+            temperature=self.temperature,
+            n=1,
+            logprobs=True,
+            top_logprobs=4,
+            max_tokens=3
+        )
+
+        # Extract response and logprobs
+        class_label = response.choices[0].message.content.strip()
+        token_logprobs = response.choices[0].logprobs.content
+        # Reconstruct the prediction and extract the top logprobs from the final token (e.g., "1")
+        final_token_logprob = token_logprobs[-1]
+        top_logprobs = final_token_logprob.top_logprobs
+        # Create a map of 'class_1' -> probability, using token combinations
+        class_probs = {}
+        for top_token in top_logprobs:
+            full_label = f"class_{top_token.token}"
+            prob = math.exp(top_token.logprob)
+            class_probs[full_label] = prob
+        # Optional: normalize in case some are missing
+        total_prob = sum(class_probs.values())
+        class_probs = {k: v / total_prob for k, v in class_probs.items()}
+        # Assign weights to classes
+        class_weights = {
+            "class_1": 0.25,
+            "class_2": 0.5,
+            "class_3": 0.75,
+            "class_4": 1.0
+        }
+        # Compute the final smooth score
+        score = sum(class_weights.get(class_label, 0) * prob for class_label, prob in class_probs.items())
+        if score is not None:
+            if score > 1.0:
+                score = 1.0
+            elif score < 0.0:
+                score = 0.0
+
+        rerank_data = {
+            "document": document,
+            "relevance_score": score
+        }
+        return rerank_data
 
     def get_scores(self, query: str, documents: list[str]):
         query_document_pairs = [(query, doc) for doc in documents]
@@ -308,11 +363,7 @@ class BaseLLMReranker(BaseModel, ABC):
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
 
-        if self.method == "multi-class":  # default 'multi-class' method
-            documents_and_scores = loop.run_until_complete(self._rank(query_document_pairs,
-                                                                      rank_function=self.search_relevancy_score))
-        else:
-            documents_and_scores = loop.run_until_complete(self._rank(query_document_pairs))
+        documents_and_scores = loop.run_until_complete(self._rank(query_document_pairs))
 
         scores = [score for _, score in documents_and_scores]
         return scores

@@ -41,6 +41,16 @@ class LiteLLMHandler(BaseMLEngine):
         )
         return [rec['embedding'] for rec in response.data]
 
+    @staticmethod
+    async def acompletion(messages: List[dict], args: dict):
+
+        from litellm import acompletion
+        return await acompletion(
+            messages=messages,
+            stream=False,
+            **args
+        )
+
     def create(
         self,
         target: str,

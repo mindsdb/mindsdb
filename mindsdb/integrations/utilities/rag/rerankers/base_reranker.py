@@ -97,10 +97,18 @@ class BaseLLMReranker(BaseModel, ABC):
                     # Extract response and logprobs
                     answer = response.choices[0].message.content
                     logprob = response.choices[0].logprobs.content[0].logprob
+
+                    # Convert answer to score using the model's confidence
+                    if answer.lower().strip() == "yes":
+                        score = logprob  # If yes, use the model's confidence
+                    elif answer.lower().strip() == "no":
+                        score = 1 - logprob  # If no, invert the confidence
+                    else:
+                        score = 0.5 * logprob  # For unclear answers, reduce confidence
+
                     rerank_data = {
                         "document": document,
-                        "answer": answer,
-                        "logprob": logprob
+                        "relevance_score": score,
                     }
 
                     # Stream reranking update.
@@ -117,8 +125,11 @@ class BaseLLMReranker(BaseModel, ABC):
                     retry_delay = self.retry_delay * (2 ** attempt) + random.uniform(0, 0.1)
                     await asyncio.sleep(retry_delay)
 
-    async def _rank(self, query_document_pairs: List[Tuple[str, str]], rerank_callback=None) -> List[Tuple[str, float]]:
+    async def _rank(self, query_document_pairs: List[Tuple[str, str]], rerank_callback=None, rank_function=None) -> List[Tuple[str, float]]:
         ranked_results = []
+
+        if rank_function is None:
+            rank_function = self.search_relevancy
 
         # Process in larger batches for better throughput
         batch_size = min(self.max_concurrent_requests * 2, len(query_document_pairs))
@@ -126,7 +137,7 @@ class BaseLLMReranker(BaseModel, ABC):
             batch = query_document_pairs[i:i + batch_size]
             try:
                 results = await asyncio.gather(
-                    *[self.search_relevancy(query=query, document=document, rerank_callback=rerank_callback) for (query, document) in batch],
+                    *[rank_function(query=query, document=document, rerank_callback=rerank_callback) for (query, document) in batch],
                     return_exceptions=True
                 )
 
@@ -136,17 +147,7 @@ class BaseLLMReranker(BaseModel, ABC):
                         ranked_results.append((batch[idx][1], 0.0))
                         continue
 
-                    answer = result["answer"]
-                    logprob = result["logprob"]
-                    prob = math.exp(logprob)
-
-                    # Convert answer to score using the model's confidence
-                    if answer.lower().strip() == "yes":
-                        score = prob  # If yes, use the model's confidence
-                    elif answer.lower().strip() == "no":
-                        score = 1 - prob  # If no, invert the confidence
-                    else:
-                        score = 0.5 * prob  # For unclear answers, reduce confidence
+                    score = result["relevance_score"]
 
                     ranked_results.append((batch[idx][1], score))
 
@@ -274,11 +275,17 @@ class BaseLLMReranker(BaseModel, ABC):
                         "class_4": 1.0
                     }
                     # Compute the final smooth score
-                    relevance_score = sum(class_weights.get(class_label, 0) * prob for class_label, prob in class_probs.items())
+                    score = sum(class_weights.get(class_label, 0) * prob for class_label, prob in class_probs.items())
+                    if score is not None:
+                        if score > 1.0:
+                            score = 1.0
+                        elif score < 0.0:
+                            score = 0.0
+
                     rerank_data = {
                         "document": document,
                         "answer": class_label,
-                        "relevance_score": relevance_score
+                        "relevance_score": score
                     }
                     return rerank_data
 
@@ -289,56 +296,6 @@ class BaseLLMReranker(BaseModel, ABC):
                     # Exponential backoff with jitter
                     retry_delay = self.retry_delay * (2 ** attempt) + random.uniform(0, 0.1)
                     await asyncio.sleep(retry_delay)
-
-    async def _rank_score(self, query_document_pairs: List[Tuple[str, str]]) -> List[Tuple[str, float]]:
-        ranked_results = []
-
-        # Process in larger batches for better throughput
-        batch_size = min(self.max_concurrent_requests * 2, len(query_document_pairs))
-        for i in range(0, len(query_document_pairs), batch_size):
-            batch = query_document_pairs[i:i + batch_size]
-            try:
-                results = await asyncio.gather(
-                    *[self.search_relevancy_score(query=query, document=document) for (query, document) in batch],
-                    return_exceptions=True
-                )
-
-                for idx, result in enumerate(results):
-                    if isinstance(result, Exception):
-                        log.error(f"Error processing document {i+idx}: {str(result)}")
-                        ranked_results.append((batch[idx][1], 0.0))
-                        continue
-
-                    score = result["relevance_score"]
-                    if score is not None:
-                        if score > 1.0:
-                            score = 1.0
-                        elif score < 0.0:
-                            score = 0.0
-
-                    ranked_results.append((batch[idx][1], score))
-                    # Check if we should stop early
-                    try:
-                        high_scoring_docs = [r for r in ranked_results if r[1] >= self.filtering_threshold]
-                        can_stop_early = (
-                            self.early_stop  # Early stopping is enabled
-                            and self.num_docs_to_keep  # We have a target number of docs
-                            and len(high_scoring_docs) >= self.num_docs_to_keep  # Found enough good docs
-                            and score >= self.early_stop_threshold  # Current doc is good enough
-                        )
-
-                        if can_stop_early:
-                            log.info(f"Early stopping after finding {self.num_docs_to_keep} documents with high confidence")
-                            return ranked_results
-                    except Exception as e:
-                        # Don't let early stopping errors stop the whole process
-                        log.warning(f"Error in early stopping check: {str(e)}")
-
-            except Exception as e:
-                log.error(f"Batch processing error: {str(e)}")
-                continue
-
-        return ranked_results
 
     def get_scores(self, query: str, documents: list[str]):
         query_document_pairs = [(query, doc) for doc in documents]
@@ -352,7 +309,8 @@ class BaseLLMReranker(BaseModel, ABC):
             asyncio.set_event_loop(loop)
 
         if self.method == "multi-class":  # default 'multi-class' method
-            documents_and_scores = loop.run_until_complete(self._rank_score(query_document_pairs))
+            documents_and_scores = loop.run_until_complete(self._rank(query_document_pairs,
+                                                                      rank_function=self.search_relevancy_score))
         else:
             documents_and_scores = loop.run_until_complete(self._rank(query_document_pairs))
 

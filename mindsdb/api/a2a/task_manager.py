@@ -49,7 +49,7 @@ class AgentTaskManager(InMemoryTaskManager):
         query = self._get_user_query(task_send_params)
         agent_name = task_send_params.message.metadata.get('agent_name', 'my_agent')
         agent = self._create_agent(agent_name)
-        
+
         try:
             async for item in agent.stream(query, task_send_params.sessionId):
                 is_task_complete = item["is_task_complete"]
@@ -153,7 +153,7 @@ class AgentTaskManager(InMemoryTaskManager):
         query = self._get_user_query(task_send_params)
         agent_name = task_send_params.message.metadata.get('agent_name', 'my_agent')
         agent = self._create_agent(agent_name)
-        
+
         try:
             result = agent.invoke(query, task_send_params.sessionId)
 

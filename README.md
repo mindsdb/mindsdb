@@ -80,8 +80,6 @@ Chat with Your Data
 * [**AGENTS**](https://docs.mindsdb.com/mindsdb_sql/agents/agent) – Configure built-in agents specialized in answering questions over your connected and unified data.
 * [**MCP**](https://docs.mindsdb.com/mcp/overview) – Connect to MindsDB through the MCP (Model Context Protocol) for seamless interaction.
 
-![image](https://github.com/user-attachments/assets/03b779e8-7008-485e-989a-e8733cb94e4c)
-
 ----------------------------------------
 
 ## 🤝 Contribute

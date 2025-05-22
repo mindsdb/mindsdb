@@ -120,11 +120,14 @@ class DataCatalogLoader:
             column_id = next(
                 (column.id for column in columns if column.name == row.get('column_name') and column.table_id == table_id)
             )
-            
+
+            # Convert the most_common_frequencies to a list of strings.
+            most_common_frequencies = [str(val) for val in row.get('most_common_frequencies') or []]
+
             record = db.MetaColumnStatistics(
                 column_id=column_id,
                 most_common_values=row.get('most_common_values'),
-                most_common_frequencies=[str(val) for val in row.get('most_common_frequencies') or []],
+                most_common_frequencies=most_common_frequencies,
                 null_percentage=row.get('null_percentage'),
                 distinct_values_count=row.get('distinct_values_count'),
                 minimum_value=row.get('minimum_value'),

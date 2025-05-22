@@ -1085,6 +1085,9 @@
       ]
     }
   },
+  "contextual": {
+    "options":["copy"]
+  },
   "logo": {
     "light": "/logo/light.svg",
     "dark": "/logo/dark.svg"

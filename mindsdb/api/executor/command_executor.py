@@ -50,7 +50,6 @@ from mindsdb_sql_parser.ast.mindsdb import (
     CreateSkill,
     CreateTrigger,
     CreateView,
-    CreateKnowledgeBaseIndex,
     DropAgent,
     DropChatBot,
     DropDatasource,
@@ -654,8 +653,6 @@ class ExecuteCommands:
         elif statement_type is Evaluate:
             statement.data = parse_sql(statement.query_str)
             return self.answer_evaluate_metric(statement, database_name)
-        elif statement_type is CreateKnowledgeBaseIndex:
-            return self.answer_create_kb_index(statement, database_name)
         else:
             logger.warning(f"Unknown SQL statement: {sql}")
             raise NotSupportedYet(f"Unknown SQL statement: {sql}")
@@ -945,16 +942,6 @@ class ExecuteCommands:
         return ExecuteAnswer(
             data=ResultSet().from_df(df, table_name="")
         )
-
-    def answer_create_kb_index(self, statement, database_name):
-        table_name = statement.name.parts[-1]
-        project_name = (
-            statement.name.parts[0]
-            if len(statement.name.parts) > 1
-            else database_name
-        )
-        self.session.kb_controller.create_index(table_name=table_name, project_name=project_name)
-        return ExecuteAnswer()
 
     def _get_model_info(self, identifier, except_absent=True, database_name=None):
         if len(identifier.parts) == 1:

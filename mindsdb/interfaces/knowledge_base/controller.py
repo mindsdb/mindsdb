@@ -821,15 +821,6 @@ class KnowledgeBaseTable:
         # Convert everything else to string
         return str(value)
 
-    def create_index(self):
-        """
-        Create an index on the knowledge base table
-        :param index_name: name of the index
-        :param params: parameters for the index
-        """
-        db_handler = self.get_vector_db()
-        db_handler.create_index(self._kb.vector_database_table)
-
 
 class KnowledgeBaseController:
     """
@@ -1167,11 +1158,6 @@ class KnowledgeBaseController:
             })
 
         return data
-
-    def create_index(self, table_name, project_name):
-        project_id = self.session.database_controller.get_project(project_name).id
-        kb_table = self.get_table(table_name, project_id)
-        kb_table.create_index()
 
     def update(self, name: str, project_id: int, **kwargs) -> db.KnowledgeBase:
         """

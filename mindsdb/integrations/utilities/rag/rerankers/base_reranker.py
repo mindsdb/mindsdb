@@ -42,6 +42,7 @@ class BaseLLMReranker(BaseModel, ABC):
 
     class Config:
         arbitrary_types_allowed = True
+        extra = 'allow'
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -82,14 +83,15 @@ class BaseLLMReranker(BaseModel, ABC):
                 self.client = module.Handler
                 self.method = "no-logprobs"
 
-    async def _call_llm(self, messages, **kwargs):
+    async def _call_llm(self, messages):
         if self.provider in ("azure_openai", "openai"):
             return await self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
-                **kwargs
             )
         else:
+            kwargs = self.model_extra.copy()
+
             kwargs['model'] = f'{self.provider}/{self.model}'
             if self.base_url is not None:
                 kwargs['api_base'] = self.base_url
@@ -202,18 +204,16 @@ class BaseLLMReranker(BaseModel, ABC):
 
     async def search_relevancy_no_logprob(self, query: str, document: str) -> Any:
 
-        message = dedent(f"""
+        prompt = dedent("""
             Score the relevance between this search query and document on scale 0-100 per cents.
             Consider semantic meaning, key concepts, and contextual relevance.
-            Search query: {query}
-            Document: {document}
-
             Return ONLY a numerical score between 0 and 100 per cents. No other text.
         """)
 
         response = await self._call_llm(
             messages=[
-                {"role": "system", "content": message}
+                {"role": "system", "content": prompt},
+                {"role": "user", "content": f"Query: {query}\nDocument: {document}\n"}
             ],
         )
 

@@ -7,6 +7,8 @@ on:
       - "docs/**"
       - "README.md"
 
+env:
+  UV_LINK_MODE: "symlink"
 
 jobs:
   # Check that the version defined in the github release is valid
@@ -39,10 +41,13 @@ jobs:
       cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5.1.0
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: ${{ vars.CI_PYTHON_VERSION }}
+          # Place cache in the tool dir because we mount this in our runnners
+          cache-local-path: "/home/runner/_work/_tool/uv-local-cache"
+          prune-cache: false
+          python-version: ${{ vars.CI_PYTHON_VERSION || '3.10' }}
       - name: Install dependencies
         run: |
           uv pip install -r requirements/requirements-dev.txt

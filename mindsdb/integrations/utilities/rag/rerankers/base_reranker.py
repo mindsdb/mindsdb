@@ -204,16 +204,17 @@ class BaseLLMReranker(BaseModel, ABC):
 
     async def search_relevancy_no_logprob(self, query: str, document: str) -> Any:
 
-        prompt = dedent("""
-            Score the relevance between this search query and document on scale 0-100 per cents.
+        prompt = dedent(f"""
+            Score the relevance between search query and user message on scale between 0 and 100 per cents.
             Consider semantic meaning, key concepts, and contextual relevance.
-            Return ONLY a numerical score between 0 and 100 per cents. No other text.
+            Return ONLY a numerical score between 0 and 100 per cents. No other text. Stop after sending a number
+            Search query: {query}
         """)
 
         response = await self._call_llm(
             messages=[
                 {"role": "system", "content": prompt},
-                {"role": "user", "content": f"Query: {query}\nDocument: {document}\n"}
+                {"role": "user", "content": document}
             ],
         )
 

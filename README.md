@@ -35,6 +35,8 @@ MindsDB enables humans, AI, agents, and applications to get highly accurate answ
 
 <img width="1454" alt="image" src="https://github.com/user-attachments/assets/87930824-2624-4c71-ac08-475e12e5475f" />
 
+[MindsDB has an MCP server built in](https://docs.mindsdb.com/mcp/overview) that enables your MCP applications to connect, unify and respond to questions over large-scale federated data—spanning databases, data warehouses, and SaaS applications.
+
 ## Minds [Demo](https://mdb.ai/register)
 Play with [Minds demo](https://mdb.ai/register), and see the power of MindsDB at answering questions from structured to unstructured data, whether it's scattered across SaaS applications, databases, or... hibernating in data warehouses like that $100 bill in your tuxedo pocket from prom night, lost, waiting to be discovered.
  
@@ -78,6 +80,7 @@ Chat with Your Data
 * [**AGENTS**](https://docs.mindsdb.com/mindsdb_sql/agents/agent) – Configure built-in agents specialized in answering questions over your connected and unified data.
 * [**MCP**](https://docs.mindsdb.com/mcp/overview) – Connect to MindsDB through the MCP (Model Context Protocol) for seamless interaction.
 
+![image](https://github.com/user-attachments/assets/03b779e8-7008-485e-989a-e8733cb94e4c)
 
 ----------------------------------------
 

@@ -346,9 +346,9 @@ class TestKB(BaseExecutorDummyML):
                 CREATE model {name}
                 PREDICT predicted
                 using
-                  column='content',
+                  input_column='english',
                   engine='dummy_ml',
-                  output=[1,2],
+                  mode='embeddings',
                   join_learn_process=true
             '''
         )

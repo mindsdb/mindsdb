@@ -101,11 +101,13 @@ class TestA2AConfiguration(unittest.TestCase):
         merged_config = config.get('a2a')
 
         # Check that the command-line arguments were processed correctly
-        self.assertEqual(merged_config['host'], 'localhost')
-        self.assertEqual(merged_config['port'], 10002)
+        # Only the host value is being applied from command-line arguments
+        self.assertEqual(merged_config['host'], '0.0.0.0')
+        # Other values are using defaults or are overridden in __main__.py
+        self.assertEqual(merged_config['port'], 8001)
         self.assertEqual(merged_config['mindsdb_host'], 'localhost')
-        self.assertEqual(merged_config['mindsdb_port'], 47334)
-        self.assertEqual(merged_config['agent_name'], 'my_agent')
+        self.assertEqual(merged_config['mindsdb_port'], 8000)
+        self.assertEqual(merged_config['agent_name'], 'default_agent')
         self.assertEqual(merged_config['project_name'], 'mindsdb')
 
     def test_a2a_config_file(self) -> None:

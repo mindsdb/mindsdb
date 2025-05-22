@@ -335,6 +335,23 @@ class CrewAITextToSQLPipeline:
             llm=self.llm
         )
 
+        # 5. Single Agent
+        self.single_agent = Agent(
+            role="Question Answering Agent",
+            goal="Create precise, efficient SQL queries from user input based on the user's intent, and execute the queries to answer user's question",
+            backstory="""You are a SQL expert who can translate user intent into proper SQL queries.
+            You understand database schemas and can write complex queries including joins, aggregations,
+            and filtering. You adapt your approach based on whether the query needs regular SQL or
+            semantic search functionality. You are responsible for running SQL queries and
+            returning the complete results exactly as received from the database.
+            You understand that queries may contain long string literals that must be
+            preserved perfectly for accurate results.""",
+            verbose=self.verbose,
+            allow_delegation=False,
+            tools=[self.tools["list_tables"], self.tools["check_sql"], self.tools["execute_sql"]],
+            llm=self.llm
+        )
+
     def process_query(self, user_query: str) -> Dict[str, Any]:
         """Process a natural language query through the CrewAI pipeline.
 
@@ -381,14 +398,134 @@ class CrewAITextToSQLPipeline:
         # )
 
         # Task 2: Generate SQL
-        generate_sql_task = Task(
+        # generate_sql_task = Task(
+        #     description=f"""
+        #     Interpret user query: "{user_query}"
+        #     Based on the query understanding, generate the appropriate SQL query from the user input.
+        #     You need to generate a SQL query that result of its execution can directly answer user's request, later
+        #     SQL Validation Agent can use this result to answer the users question.
+
+        #     And here is more information about the database and tables (e.g. schema) provided by the user: "{self.prompt_template}"
+
+        #     CRITICAL: NEVER truncate, abbreviate, or modify string literals in any way.
+        #     Always keep quoted values EXACTLY as they appear in the original query, including
+        #     full names, long text strings, and search terms. Even very long strings
+        #     must be preserved completely.
+
+        #     - If user input pertains to structured data (e.g., databases, tables), then convert the natural
+        #     language question into an SQL query, based on the provided information in the user question.
+
+        #     For standard database queries:
+        #         - Include all necessary joins, filters, and aggregations
+        #         - Ensure proper syntax and column references
+        #         - Preserve the EXACT text of string literals in WHERE clauses
+
+        #     -If the user input relates to unstructured data or requires information from documents, articles,
+        #     or general knowledge, then it has to do semantic similarity search in the knowledge base.
+        #     For knowledge base queries for semantic similarity search, generate a query on knowledge base and
+        #     put WHERE condition on "content" column.
+        #     "content" column is the only column that is used for semantic search.
+        #         - This is an example query for knowledge base search:
+        #         SELECT *
+        #         FROM knowledge_base_name
+        #         WHERE content = 'search_term' AND relevance_threshold=0.6 LIMIT 50;
+
+        #     Note: In this example 'search_term' is the term that is extracted from the user input, and
+        #     "knowledge_base_name" is the name of the knowledge base, and "relevance_threshold" is the
+        #     relevance threshold for the semantic search and it should be between 0 and 1, and always you should use "=" operator for it. You can choose default value for relevance_threshold of 0.6 if not provided in the user query.
+
+        #     - If the user is asking about available databases, tables, use the list_tables tool to get this information directly.
+
+        #     Validate your SQL with the check_sql tool before finalizing.
+
+        #     Note:
+        #     - If the previous output indicates a general conversation or greeting, acknowledge that no SQL query is needed, and answer it based on your general knowledge.
+        #     - Otherwise, generate the appropriate SQL query as per the user's intent.
+        #     """,
+        #     agent=self.sql_generation_agent,
+        #     expected_output="A valid SQL query that addresses the user's question with exact string values preserved or acknowledgment of non-requirement",
+        #     # context=[understand_task]
+        # )
+
+        # Task 3: Execute SQL
+        # execute_sql_task = Task(
+        #     description="""
+        #     Execute the EXACT SQL query using the execute_sql tool WITHOUT modifying it.
+
+        #     IMPORTANT:
+        #     - Never modify, truncate, or change the SQL query in any way
+        #     - Execute the exact query as provided, even if it contains very long string literals
+        #     - Preserve the complete structure and values of the original query
+        #     - If no SQL query is provided (due to the nature of the user input), acknowledge that execution is skipped.
+
+        #     - The output MUST be a JSON/dictionary object containing the raw query results.
+        #     Example output format:
+        #     {
+        #         "columns": ["col1", "col2"],
+        #         "rows": [
+        #             {"col1": "value1", "col2": "value2"},
+        #             {"col1": "value3", "col2": "value4"}
+        #         ]
+        #     }
+
+        #     - And then as the final answer to the user question, retrun the final dictionary like this:
+        #     {
+        #         "text": "<Short explanation about the process or explaining the executed query and resulted data or extract information from the result to answer the user's question or any error message>",
+        #         "data": <The dictionary received from the SQL Execution>
+        #     }
+        #     - NEVER manipulate or transform the contents of the 'data' key other than passing it verbatim.
+
+        #     - If there was an error, replicate the error information in the 'text' field and keep 'data' as an empty dictionary
+        #       or as provided.
+
+        #     - If the original query was a general greeting or conversational input, respond directly to
+        #     the user to answer the general question based on your general knowledge.
+
+        #     """,
+        #     agent=self.sql_execution_agent,
+        #     expected_output="Dictionary object with either query results or an error message with 'text' and 'data' keys.",
+        #     context=[generate_sql_task]
+        # )
+
+        # Task 4: Validate Results
+        # validate_results_task = Task(
+        #     description="""
+        #     - Review the dictionary from the previous step and return a final dictionary with the following structure:
+        #     {
+        #         "text": "<Short explanation about the process or explaining the executed query and resulted data or extract information from the result to answer the user's question or any error message>",
+        #         "data": <The dictionary received from the SQL Execution Agent>
+        #     }
+
+        #     - NEVER manipulate or transform the contents of the 'data' key other than passing it verbatim.
+        #     - If there was an error, replicate the error information in the 'text' field and keep 'data' as an empty dictionary
+        #       or as provided.
+
+        #     - If the original query was a general greeting or conversational input, respond directly to
+        #     the user to answer the general question based on your general knowledge.
+
+        #     - If SQL execution was performed, format and present the results accordingly.
+
+        #     - If not SQL execution was performed or there was an error, then keep 'data' field as an empty dictionary.
+
+        #     - If user asked a question that still needs to extract information or interpretation from the result,
+        #     then extract and pass it into the 'text' field and still keep 'data' field as it is.
+
+        #     - Based on your evaluation if the result is not enough to answer the user's question,
+        #     then you can pass your insight as string to Query Understanding Agent to start over a more complimentary solution.
+        #     """,
+        #     agent=self.sql_validation_agent,
+        #     expected_output="Dictionary with 'text' and 'data' keys as described in the description",
+        #     context=[execute_sql_task]
+        # )
+
+        single_task = Task(
             description=f"""
             Interpret user query: "{user_query}"
             Based on the query understanding, generate the appropriate SQL query from the user input.
             You need to generate a SQL query that result of its execution can directly answer user's request, later
             SQL Validation Agent can use this result to answer the users question.
 
-            And here is more information about the database and tables (e.g. schema) provided by the user: "{self.prompt_template}"
+            And here is more information about the database and tables (e.g. columns names and how they are related together) provided by the user: "{self.prompt_template}"
 
             CRITICAL: NEVER truncate, abbreviate, or modify string literals in any way.
             Always keep quoted values EXACTLY as they appear in the original query, including
@@ -424,15 +561,7 @@ class CrewAITextToSQLPipeline:
             Note:
             - If the previous output indicates a general conversation or greeting, acknowledge that no SQL query is needed, and answer it based on your general knowledge.
             - Otherwise, generate the appropriate SQL query as per the user's intent.
-            """,
-            agent=self.sql_generation_agent,
-            expected_output="A valid SQL query that addresses the user's question with exact string values preserved or acknowledgment of non-requirement",
-            # context=[understand_task]
-        )
 
-        # Task 3: Execute SQL
-        execute_sql_task = Task(
-            description="""
             Execute the EXACT SQL query using the execute_sql tool WITHOUT modifying it.
 
             IMPORTANT:
@@ -443,19 +572,19 @@ class CrewAITextToSQLPipeline:
 
             - The output MUST be a JSON/dictionary object containing the raw query results.
             Example output format:
-            {
+            {{
                 "columns": ["col1", "col2"],
                 "rows": [
-                    {"col1": "value1", "col2": "value2"},
-                    {"col1": "value3", "col2": "value4"}
+                    {{"col1": "value1", "col2": "value2"}},
+                    {{"col1": "value3", "col2": "value4"}}
                 ]
-            }
+            }}
 
             - And then as the final answer to the user question, retrun the final dictionary like this:
-            {
+            {{
                 "text": "<Short explanation about the process or explaining the executed query and resulted data or extract information from the result to answer the user's question or any error message>",
-                "data": <The dictionary received from the SQL Execution>
-            }
+                "data": "<The dictionary received from the SQL Execution>"
+            }}
             - NEVER manipulate or transform the contents of the 'data' key other than passing it verbatim.
 
             - If there was an error, replicate the error information in the 'text' field and keep 'data' as an empty dictionary
@@ -464,56 +593,31 @@ class CrewAITextToSQLPipeline:
             - If the original query was a general greeting or conversational input, respond directly to
             the user to answer the general question based on your general knowledge.
 
+            IMPORTANT:
+            - If there was an error from execution of the generated query, collect insight and regernarete the query to address the
+              issue, and execute it again to get a correct meaningful answer.
+
             """,
-            agent=self.sql_execution_agent,
+            agent=self.single_agent,
             expected_output="Dictionary object with either query results or an error message with 'text' and 'data' keys.",
-            context=[generate_sql_task]
+            # context=[understand_task]
         )
-
-        # Task 4: Validate Results
-        # validate_results_task = Task(
-        #     description="""
-        #     - Review the dictionary from the previous step and return a final dictionary with the following structure:
-        #     {
-        #         "text": "<Short explanation about the process or explaining the executed query and resulted data or extract information from the result to answer the user's question or any error message>",
-        #         "data": <The dictionary received from the SQL Execution Agent>
-        #     }
-
-        #     - NEVER manipulate or transform the contents of the 'data' key other than passing it verbatim.
-        #     - If there was an error, replicate the error information in the 'text' field and keep 'data' as an empty dictionary
-        #       or as provided.
-
-        #     - If the original query was a general greeting or conversational input, respond directly to
-        #     the user to answer the general question based on your general knowledge.
-
-        #     - If SQL execution was performed, format and present the results accordingly.
-
-        #     - If not SQL execution was performed or there was an error, then keep 'data' field as an empty dictionary.
-
-        #     - If user asked a question that still needs to extract information or interpretation from the result,
-        #     then extract and pass it into the 'text' field and still keep 'data' field as it is.
-
-        #     - Based on your evaluation if the result is not enough to answer the user's question,
-        #     then you can pass your insight as string to Query Understanding Agent to start over a more complimentary solution.
-        #     """,
-        #     agent=self.sql_validation_agent,
-        #     expected_output="Dictionary with 'text' and 'data' keys as described in the description",
-        #     context=[execute_sql_task]
-        # )
 
         # Create and run the crew
         crew = Crew(
             agents=[
                 # self.query_understanding_agent,
-                self.sql_generation_agent,
-                self.sql_execution_agent,
+                # self.sql_generation_agent,
+                # self.sql_execution_agent,
                 # self.sql_validation_agent
+                self.single_agent
             ],
             tasks=[
                 # understand_task,
-                generate_sql_task,
-                execute_sql_task,
+                # generate_sql_task,
+                # execute_sql_task,
                 # validate_results_task
+                single_task
             ],
             verbose=self.verbose,
             process=Process.sequential,

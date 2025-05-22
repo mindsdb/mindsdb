@@ -138,7 +138,7 @@ class CustomAuthMiddleware(BaseHTTPMiddleware):
     """Custom middleware to handle authentication basing on header 'Authorization'
     """
     async def dispatch(self, request: Request, call_next):
-        mcp_access_token = os.environ.get('MDB_MCP_ACCESS_TOKEN')
+        mcp_access_token = os.environ.get('MINDSDB_MCP_ACCESS_TOKEN')
         if mcp_access_token is not None:
             auth_token = request.headers.get('Authorization', '').partition('Bearer ')[-1]
             if mcp_access_token != auth_token:

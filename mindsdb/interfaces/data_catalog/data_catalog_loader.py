@@ -55,8 +55,9 @@ class DataCatalogLoader:
             record =db.MetaTables(
                 integration_id=self.integration_id,
                 name=row.get('table_name') or row.get('name'),
-                schema=row.get('schema'),
-                description=row.get('description'),
+                schema=row.get('table_schema'),
+                description=row.get('table_description'),
+                type=row.get('table_type'),
                 row_count=row.get('row_count')
             )
             tables.append(record)
@@ -87,6 +88,7 @@ class DataCatalogLoader:
                 ),
                 name=row.get('column_name'),
                 data_type=row.get('data_type'),
+                default_value=row.get('column_default'),
                 description=row.get('description'),
                 is_nullable=row.get('is_nullable')
             )
@@ -122,9 +124,11 @@ class DataCatalogLoader:
             record = db.MetaColumnStatistics(
                 column_id=column_id,
                 most_common_values=row.get('most_common_values'),
-                most_common_frequencies=str(row.get('most_common_frequencies')) if row.get('most_common_frequencies') else None,
+                most_common_frequencies=[str(val) for val in row.get('most_common_frequencies') or []],
                 null_percentage=row.get('null_percentage'),
-                distinct_values_count=row.get('distinct_values_count')
+                distinct_values_count=row.get('distinct_values_count'),
+                minimum_value=row.get('minimum_value'),
+                maximum_value=row.get('maximum_value'),
             )
             column_statistics.append(record)
 

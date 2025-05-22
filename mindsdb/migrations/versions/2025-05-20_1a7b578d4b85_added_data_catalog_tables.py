@@ -8,6 +8,7 @@ Create Date: 2025-05-20 13:51:28.562649
 from alembic import op
 import sqlalchemy as sa
 import mindsdb.interfaces.storage.db  # noqa
+from mindsdb.interfaces.storage.db import Array
 
 
 
@@ -27,6 +28,7 @@ def upgrade():
         sa.Column('name', sa.String(), nullable=False),
         sa.Column('schema', sa.String(), nullable=True),
         sa.Column('description', sa.String(), nullable=True),
+        sa.Column('type', sa.String(), nullable=True),
         sa.Column('row_count', sa.Integer(), nullable=True),
         sa.ForeignKeyConstraint(
             ['integration_id'], ['integration.id'], name='fk_meta_tables_integration_id'
@@ -41,6 +43,7 @@ def upgrade():
         sa.Column('table_id', sa.Integer(), nullable=True),
         sa.Column('name', sa.String(), nullable=False),
         sa.Column('data_type', sa.String(), nullable=True),
+        sa.Column('default_value', sa.String(), nullable=True),
         sa.Column('description', sa.String(), nullable=True),
         sa.Column('is_nullable', sa.Boolean(), nullable=True),
         sa.ForeignKeyConstraint(
@@ -53,10 +56,12 @@ def upgrade():
     op.create_table(
         'meta_column_statistics',
         sa.Column('column_id', sa.Integer(), sa.ForeignKey('meta_columns.id'), primary_key=True),
-        sa.Column('most_common_values', sa.String(), nullable=True),
-        sa.Column('most_common_frequencies', sa.String(), nullable=True),
+        sa.Column('most_common_values', Array(), nullable=True),
+        sa.Column('most_common_frequencies', Array(), nullable=True),
         sa.Column('null_percentage', sa.Numeric(5, 2), nullable=True),
         sa.Column('distinct_values_count', sa.Integer(), nullable=True),
+        sa.Column('minimum_value', sa.String(), nullable=True),
+        sa.Column('maximum_value', sa.String(), nullable=True),
     )
 
 

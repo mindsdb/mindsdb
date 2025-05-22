@@ -1,3 +1,6 @@
+import ast
+import csv
+import io
 import time
 import json
 from typing import Optional
@@ -517,45 +520,28 @@ class PostgresHandler(CatalogDatabaseHandler):
         Returns:
             Response: A response object containing the metadata information, formatted as per the `Response` class.
         """
-        # If no table names are provided, retrieve all tables
-        if table_names is None or len(table_names) == 0:
-            query = f"""
-                SELECT
-                    t.table_name,
-                    t.table_schema AS schema_name,
-                    obj_description(pgc.oid, 'pg_class') AS description,
-                    (SELECT COUNT(*) FROM information_schema.columns c 
-                    WHERE c.table_name = t.table_name AND c.table_schema = t.table_schema) AS row_count
-                FROM information_schema.tables t
-                JOIN pg_catalog.pg_class pgc ON pgc.relname = t.table_name
-                JOIN pg_catalog.pg_namespace pgn ON pgn.oid = pgc.relnamespace
-                WHERE t.table_schema = '{self.connection_args.get('schema')}'
-                AND t.table_type = 'BASE TABLE'
-                AND t.table_name NOT LIKE 'pg_%'
-                AND t.table_name NOT LIKE 'sql_%'
-                AND pgn.nspname = t.table_schema  -- Ensure it's in the correct schema
-                ORDER BY t.table_name;
-            """
-        
-        # If table names are provided, filter by the provided list
-        else:
-            query = f"""
-                SELECT
-                    t.table_name,
-                    t.table_schema AS schema_name,
-                    obj_description(pgc.oid, 'pg_class') AS description,
-                    (SELECT COUNT(*) FROM information_schema.columns c 
-                    WHERE c.table_name = t.table_name AND c.table_schema = t.table_schema) AS row_count
-                FROM information_schema.tables t
-                JOIN pg_catalog.pg_class pgc ON pgc.relname = t.table_name
-                JOIN pg_catalog.pg_namespace pgn ON pgn.oid = pgc.relnamespace
-                WHERE t.table_schema = '{self.connection_args.get('schema')}'
-                AND t.table_type = 'BASE TABLE'
-                AND t.table_name IN ({','.join([f"'{t}'" for t in table_names])})
-                AND pgn.nspname = t.table_schema  -- Ensure it's in the correct schema
-                ORDER BY t.table_name;
-            """
+        query = f"""
+            SELECT
+                t.table_name,
+                t.table_schema,
+                t.table_type,
+                obj_description(pgc.oid, 'pg_class') AS table_description,
+                (SELECT COUNT(*) FROM information_schema.columns c 
+                WHERE c.table_name = t.table_name AND c.table_schema = t.table_schema) AS row_count
+            FROM information_schema.tables t
+            JOIN pg_catalog.pg_class pgc ON pgc.relname = t.table_name
+            JOIN pg_catalog.pg_namespace pgn ON pgn.oid = pgc.relnamespace
+            WHERE t.table_schema = current_schema()
+            AND t.table_type in ('BASE TABLE', 'VIEW')
+            AND t.table_name NOT LIKE 'pg_%'
+            AND t.table_name NOT LIKE 'sql_%'
+            AND pgn.nspname = t.table_schema
+        """
 
+        if table_names is not None and len(table_names) > 0:
+            table_names = [f"'{t}'" for t in table_names]
+            query += f" AND t.table_name IN ({','.join(table_names)})"
+    
         result = self.native_query(query)
         return result
 
@@ -569,45 +555,28 @@ class PostgresHandler(CatalogDatabaseHandler):
         Returns:
             Response: A response object containing the column metadata.
         """
-        # If no table names are provided, retrieve all columns from all tables
-        if table_names is None or len(table_names) == 0:
-            query = f"""
-                SELECT
-                    c.column_name,
-                    c.data_type,
-                    (c.is_nullable = 'YES') AS is_nullable,
-                    col_description(pgc.oid, c.ordinal_position) AS description,
-                    c.table_name
-                FROM information_schema.columns c
-                JOIN pg_catalog.pg_class pgc ON pgc.relname = c.table_name
-                JOIN pg_catalog.pg_namespace pgn ON pgn.oid = pgc.relnamespace
-                WHERE c.table_schema = '{self.connection_args.get('schema')}'
-                AND pgc.relkind = 'r'  -- Only consider regular tables (avoids indexes, sequences, etc.)
-                AND c.table_name NOT LIKE 'pg_%'
-                AND c.table_name NOT LIKE 'sql_%'
-                AND pgn.nspname = c.table_schema  -- Ensure it's in the correct schema
-                ORDER BY c.table_name, c.ordinal_position;
-            """
+        query = f"""
+            SELECT
+                c.table_name,
+                c.column_name,
+                c.data_type,
+                col_description(pgc.oid, c.ordinal_position) AS column_description,
+                c.column_default,
+                (c.is_nullable = 'YES') AS is_nullable
+            FROM information_schema.columns c
+            JOIN pg_catalog.pg_class pgc ON pgc.relname = c.table_name
+            JOIN pg_catalog.pg_namespace pgn ON pgn.oid = pgc.relnamespace
+            WHERE c.table_schema = current_schema()
+            AND pgc.relkind = 'r'  -- Only consider regular tables (avoids indexes, sequences, etc.)
+            AND c.table_name NOT LIKE 'pg_%'
+            AND c.table_name NOT LIKE 'sql_%'
+            AND pgn.nspname = c.table_schema
+        """
 
-        # If specific table names are provided, filter by them
-        else:
-            query = f"""
-                SELECT
-                    c.column_name,
-                    c.data_type,
-                    (c.is_nullable = 'YES') AS is_nullable,
-                    col_description(pgc.oid, c.ordinal_position) AS description,
-                    c.table_name
-                FROM information_schema.columns c
-                JOIN pg_catalog.pg_class pgc ON pgc.relname = c.table_name
-                JOIN pg_catalog.pg_namespace pgn ON pgn.oid = pgc.relnamespace
-                WHERE c.table_schema = '{self.connection_args.get('schema')}'
-                AND pgc.relkind = 'r'  -- Only consider regular tables (avoids indexes, sequences, etc.)
-                AND c.table_name IN ({','.join([f"'{t}'" for t in table_names])})
-                AND pgn.nspname = c.table_schema  -- Ensure it's in the correct schema
-                ORDER BY c.table_name, c.ordinal_position;
-            """
-        
+        if table_names is not None and len(table_names) > 0:
+            table_names = [f"'{t}'" for t in table_names]
+            query += f" AND c.table_name IN ({','.join(table_names)})"
+
         result = self.native_query(query)
         return result
 
@@ -622,40 +591,48 @@ class PostgresHandler(CatalogDatabaseHandler):
         Returns:
             dict: A dictionary containing the column statistics.
         """
-        # If no table names are provided, retrieve all column statistics for all tables
-        if table_names is None or len(table_names) == 0:
-            query = f"""
-                SELECT
-                    ps.attname AS column_name,
-                    ps.tablename AS table_name,
-                    ps.most_common_vals AS most_common_values,
-                    ps.most_common_freqs AS most_common_frequencies,
-                    ps.null_frac * 100 AS null_percentage,
-                    ps.n_distinct AS distinct_values_count
-                FROM pg_stats ps
-                WHERE ps.schemaname = '{self.connection_args.get('schema')}'
-                AND ps.tablename NOT LIKE 'pg_%'
-                AND ps.tablename NOT LIKE 'sql_%'
-                ORDER BY ps.tablename, ps.attname;
-            """
+        query = f"""
+            SELECT
+                ps.attname AS column_name,
+                ps.tablename AS table_name,
+                ps.most_common_vals AS most_common_values,
+                ps.most_common_freqs AS most_common_frequencies,
+                ps.null_frac * 100 AS null_percentage,
+                ps.n_distinct AS distinct_values_count,
+                ps.histogram_bounds AS histogram_bounds
+            FROM pg_stats ps
+            WHERE ps.schemaname = current_schema()
+            AND ps.tablename NOT LIKE 'pg_%'
+            AND ps.tablename NOT LIKE 'sql_%'
+        """
 
-        # If specific table names are provided, filter by them
-        else:
-            query = f"""
-                SELECT
-                    ps.attname AS column_name,
-                    ps.tablename AS table_name,
-                    ps.most_common_vals AS most_common_values,
-                    ps.most_common_freqs AS most_common_frequencies,
-                    ps.null_frac * 100 AS null_percentage,
-                    ps.n_distinct AS distinct_values_count
-                FROM pg_stats ps
-                WHERE ps.schemaname = '{self.connection_args.get('schema')}'
-                AND ps.tablename IN ({','.join([f"'{t}'" for t in table_names])})
-                AND ps.tablename NOT LIKE 'pg_%'
-                AND ps.tablename NOT LIKE 'sql_%'
-                ORDER BY ps.tablename, ps.attname;
-            """
+        if table_names is not None and len(table_names) > 0:
+            table_names = [f"'{t}'" for t in table_names]
+            query += f" AND ps.tablename IN ({','.join(table_names)})"
 
         result = self.native_query(query)
+        df = result.data_frame
+        
+        def parse_pg_array_string(x):
+            return [
+                item.strip(' ,')
+                for row in csv.reader(io.StringIO(x.strip('{}')))
+                for item in row if item.strip()
+            ] if x else []
+
+        # Convert most_common_values to a list.
+        df['most_common_values'] = df['most_common_values'].apply(
+            lambda x: parse_pg_array_string(x)
+        )
+        
+        # Get the minimum and maximum values from the histogram bounds.
+        df['minimum_value'] = df['histogram_bounds'].apply(
+            lambda x: parse_pg_array_string(x)[0] if x else None
+        )
+        df['maximum_value'] = df['histogram_bounds'].apply(
+            lambda x: parse_pg_array_string(x)[-1] if x else None
+        )
+
+        result.data_frame = df.drop(columns=['histogram_bounds'])
+
         return result

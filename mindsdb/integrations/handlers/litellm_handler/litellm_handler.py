@@ -33,18 +33,22 @@ class LiteLLMHandler(BaseMLEngine):
             )
 
     @staticmethod
-    def embeddings(messages: List[str], args: dict) -> List[list]:
+    def embeddings(model: str, messages: List[str], args: dict) -> List[list]:
         response = embedding(
+            model=model,
             input=messages,
             **args
         )
         return [rec['embedding'] for rec in response.data]
 
     @staticmethod
-    async def acompletion(messages: List[dict], args: dict):
+    async def acompletion(model: str, messages: List[dict], args: dict):
+        if model.startswith('snowflake/') and 'snowflake_account_id' in args:
+            args['api_base'] = f"https://{args['snowflake_account_id']}.snowflakecomputing.com/api/v2/cortex/inference:complete"
 
         from litellm import acompletion
         return await acompletion(
+            model=model,
             messages=messages,
             stream=False,
             **args

@@ -730,7 +730,7 @@ class KnowledgeBaseTable:
         llm_model = args.pop('model_name')
         engine = args.pop('provider')
 
-        args['model'] = f'{engine}/{llm_model}'
+        llm_model = f'{engine}/{llm_model}'
 
         if 'base_url' in args:
             args['api_base'] = args.pop('base_url')
@@ -738,7 +738,7 @@ class KnowledgeBaseTable:
         module = session.integration_controller.get_handler_module('litellm')
         if module is None or module.Handler is None:
             raise ValueError(f'Unable to use "{engine}" provider. Litellm handler is not installed')
-        return module.Handler.embeddings(messages, args)
+        return module.Handler.embeddings(llm_model, messages, args)
 
     def build_rag_pipeline(self, retrieval_config: dict):
         """

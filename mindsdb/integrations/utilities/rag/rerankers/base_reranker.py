@@ -92,12 +92,16 @@ class BaseLLMReranker(BaseModel, ABC):
         else:
             kwargs = self.model_extra.copy()
 
-            kwargs['model'] = f'{self.provider}/{self.model}'
             if self.base_url is not None:
                 kwargs['api_base'] = self.base_url
 
+            if self.api_key is not None:
+                kwargs['api_key'] = self.api_key
+
             return await self.client.acompletion(
-                messages=messages, args=kwargs
+                model=f'{self.provider}/{self.model}',
+                messages=messages,
+                args=kwargs
             )
 
     async def _rank(self, query_document_pairs: List[Tuple[str, str]], rerank_callback=None) -> List[Tuple[str, float]]:
@@ -151,12 +155,11 @@ class BaseLLMReranker(BaseModel, ABC):
             for attempt in range(self.max_retries):
                 try:
                     if self.method == "multi-class":
-                        rerank_data = await self.search_relevancy(query, document)
+                        rerank_data = await self.search_relevancy_score(query, document)
                     elif self.method == "no-logprobs":
                         rerank_data = await self.search_relevancy_no_logprob(query, document)
                     else:
-                        rerank_data = await self.search_relevancy_score(query, document)
-
+                        rerank_data = await self.search_relevancy(query, document)
                     if rerank_callback is not None:
                         rerank_callback(rerank_data)
                     return rerank_data

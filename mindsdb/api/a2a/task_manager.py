@@ -21,22 +21,34 @@ from .agent import MindsDBAgent
 
 from typing import Union
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 
 
 class AgentTaskManager(InMemoryTaskManager):
 
-    def __init__(self, project_name: str, mindsdb_host: str, mindsdb_port: int, agent_name: str = None):
+    def __init__(
+        self,
+        project_name: str,
+        mindsdb_host: str,
+        mindsdb_port: int,
+        agent_name: str = None,
+    ):
         super().__init__()
         self.project_name = project_name
         self.mindsdb_host = mindsdb_host
         self.mindsdb_port = mindsdb_port
+        self.agent_name = agent_name
+        self.tasks = {}  # Task storage
+        self.lock = asyncio.Lock()  # Lock for task operations
 
     def _create_agent(self, agent_name: str = None) -> MindsDBAgent:
         """Create a new MindsDBAgent instance for the given agent name."""
         if not agent_name:
-            raise ValueError("Agent name is required but was not provided in the request")
+            raise ValueError(
+                "Agent name is required but was not provided in the request"
+            )
 
         return MindsDBAgent(
             agent_name=agent_name,
@@ -47,12 +59,24 @@ class AgentTaskManager(InMemoryTaskManager):
 
     async def _stream_generator(
         self, request: SendTaskStreamingRequest
-    ) -> AsyncIterable[SendTaskStreamingResponse] | JSONRPCResponse:
+    ) -> AsyncIterable[SendTaskStreamingResponse]:
         task_send_params: TaskSendParams = request.params
         query = self._get_user_query(task_send_params)
         params = self._get_task_params(task_send_params)
         agent_name = params["agent_name"]
         streaming = params["streaming"]
+
+        # Create and store the task first to ensure it exists
+        try:
+            await self.upsert_task(task_send_params)
+        except Exception as e:
+            logger.error(f"Error creating task: {str(e)}")
+            yield SendTaskStreamingResponse(
+                id=request.id,
+                error=InternalError(message=f"Error creating task: {str(e)}"),
+            )
+            return  # Early return from generator
+
         agent = self._create_agent(agent_name)
 
         if not streaming:
@@ -331,6 +355,42 @@ class AgentTaskManager(InMemoryTaskManager):
                 ),
             )
 
+    async def upsert_task(self, task_send_params: TaskSendParams) -> Task:
+        """Create or update a task in the task store.
+
+        Args:
+            task_send_params: The parameters for the task.
+
+        Returns:
+            The created or updated task.
+        """
+        logger.info(f"Upserting task {task_send_params.id}")
+        async with self.lock:
+            task = self.tasks.get(task_send_params.id)
+            if task is None:
+                # Convert the message to a dict if it's not already one
+                message = task_send_params.message
+                message_dict = message.dict() if hasattr(message, "dict") else message
+
+                # Create a new task
+                task = Task(
+                    id=task_send_params.id,
+                    sessionId=task_send_params.sessionId,
+                    messages=[message_dict],
+                    status=TaskStatus(state=TaskState.SUBMITTED),
+                    history=[message_dict],
+                    artifacts=[],
+                )
+                self.tasks[task_send_params.id] = task
+            else:
+                # Convert the message to a dict if it's not already one
+                message = task_send_params.message
+                message_dict = message.dict() if hasattr(message, "dict") else message
+
+                # Update the existing task
+                task.history.append(message_dict)
+            return task
+
     def _validate_request(
         self, request: Union[SendTaskRequest, SendTaskStreamingRequest]
     ) -> Union[None, JSONRPCResponse]:
@@ -350,7 +410,10 @@ class AgentTaskManager(InMemoryTaskManager):
             )
 
         # Check if the message has metadata
-        if not hasattr(request.params.message, "metadata") or not request.params.message.metadata:
+        if (
+            not hasattr(request.params.message, "metadata")
+            or not request.params.message.metadata
+        ):
             return JSONRPCResponse(
                 id=request.id,
                 error=InvalidRequestError(message="Missing metadata in message"),
@@ -362,7 +425,9 @@ class AgentTaskManager(InMemoryTaskManager):
         if not agent_name:
             return JSONRPCResponse(
                 id=request.id,
-                error=InvalidRequestError(message="Agent name is required but was not provided in the request metadata"),
+                error=InvalidRequestError(
+                    message="Agent name is required but was not provided in the request metadata"
+                ),
             )
 
         return None
@@ -379,11 +444,23 @@ class AgentTaskManager(InMemoryTaskManager):
     ) -> AsyncIterable[SendTaskStreamingResponse]:
         error = self._validate_request(request)
         if error:
-            yield error
+            # Convert JSONRPCResponse to SendTaskStreamingResponse
+            yield SendTaskStreamingResponse(id=request.id, error=error.error)
             return
 
-        async for response in self._stream_generator(request):
-            yield response
+        # We can't await an async generator directly, so we need to use it as is
+        try:
+            async for response in self._stream_generator(request):
+                yield response
+        except Exception as e:
+            # If an error occurs, yield an error response
+            logger.error(f"Error in on_send_task_subscribe: {str(e)}")
+            yield SendTaskStreamingResponse(
+                id=request.id,
+                error=InternalError(
+                    message=f"Error processing streaming request: {str(e)}"
+                ),
+            )
 
     async def _update_store(
         self, task_id: str, status: TaskStatus, artifacts: list[Artifact]
@@ -393,12 +470,28 @@ class AgentTaskManager(InMemoryTaskManager):
                 task = self.tasks[task_id]
             except KeyError:
                 logger.error(f"Task {task_id} not found for updating the task")
-                raise ValueError(f"Task {task_id} not found")
+                # Create a new task with the provided ID if it doesn't exist
+                # This ensures we don't fail when a task is not found
+                task = Task(
+                    id=task_id,
+                    sessionId="recovery-session",  # Use a placeholder session ID
+                    messages=[],  # No messages available
+                    status=status,  # Use the provided status
+                    history=[],  # No history available
+                )
+                self.tasks[task_id] = task
+
             task.status = status
             if artifacts is not None:
-                if task.artifacts is None:
-                    task.artifacts = []
-                task.artifacts.extend(artifacts)
+                for artifact in artifacts:
+                    if artifact.append and len(task.artifacts) > 0:
+                        # Append to the last artifact
+                        last_artifact = task.artifacts[-1]
+                        for part in artifact.parts:
+                            last_artifact.parts.append(part)
+                    else:
+                        # Add as a new artifact
+                        task.artifacts.append(artifact)
             return task
 
     def _get_user_query(self, task_send_params: TaskSendParams) -> str:

@@ -88,7 +88,8 @@ class A2AServer:
             elif isinstance(json_rpc_request, SendTaskRequest):
                 result = await self.task_manager.on_send_task(json_rpc_request)
             elif isinstance(json_rpc_request, SendTaskStreamingRequest):
-                result = await self.task_manager.on_send_task_subscribe(
+                # Don't await the async generator, just pass it to _create_response
+                result = self.task_manager.on_send_task_subscribe(
                     json_rpc_request
                 )
             elif isinstance(json_rpc_request, CancelTaskRequest):

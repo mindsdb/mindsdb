@@ -30,6 +30,10 @@ def setup_python_path():
     if repo_root not in sys.path:
         sys.path.insert(0, repo_root)
 
+    # Add the a2a directory to the Python path so that 'common' can be imported
+    if this_file_dir not in sys.path:
+        sys.path.insert(0, this_file_dir)
+
     logger.info("Added %s to PYTHONPATH", repo_root)
 
 
@@ -67,38 +71,45 @@ def main(config_override: Optional[Dict[str, Any]] = None, *args, **kwargs):
                 logger.info(f"Set log level to {a2a_config['log_level'].upper()}")
 
         # Prepare command line arguments based on configuration
-        sys_argv = sys.argv[:]  # Make a copy of the original argv
+        sys_argv = []  # Start with an empty list instead of copying sys.argv
 
         # Only add args that aren't already in sys.argv
-        if '--host' not in ' '.join(sys_argv) and a2a_config.get('host'):
+        if a2a_config.get('host'):
             sys_argv.extend(['--host', a2a_config['host']])
 
-        if '--port' not in ' '.join(sys_argv) and a2a_config.get('port'):
+        if a2a_config.get('port'):
             sys_argv.extend(['--port', str(a2a_config['port'])])
 
-        if '--mindsdb-host' not in ' '.join(sys_argv) and a2a_config.get('mindsdb_host'):
+        if a2a_config.get('mindsdb_host'):
             sys_argv.extend(['--mindsdb-host', a2a_config['mindsdb_host']])
 
-        if '--mindsdb-port' not in ' '.join(sys_argv) and a2a_config.get('mindsdb_port'):
+        if a2a_config.get('mindsdb_port'):
             sys_argv.extend(['--mindsdb-port', str(a2a_config['mindsdb_port'])])
 
-        if '--agent-name' not in ' '.join(sys_argv) and a2a_config.get('agent_name'):
-            sys_argv.extend(['--agent-name', a2a_config['agent_name']])
-
-        if '--project-name' not in ' '.join(sys_argv) and a2a_config.get('project_name'):
+        if a2a_config.get('project_name'):
             sys_argv.extend(['--project-name', a2a_config['project_name']])
 
-        if '--log-level' not in ' '.join(sys_argv) and a2a_config.get('log_level'):
+        if a2a_config.get('log_level'):
             sys_argv.extend(['--log-level', a2a_config['log_level']])
-
-        # Temporarily replace sys.argv with our constructed arguments
-        original_argv = sys.argv
-        sys.argv = sys_argv
 
         logger.info(f"Starting A2A with arguments: {' '.join(sys_argv)}")
 
+        # Temporarily replace sys.argv with our constructed arguments
+        original_argv = sys.argv
+        sys.argv = [sys.argv[0]] + sys_argv
+
         # Run the main function with the configured arguments
-        a2a_main()
+        a2a_args = []
+        for arg in sys_argv:
+            # Skip the --api argument and its value
+            if arg.startswith('--api=') or arg == '--api':
+                continue
+            # Skip the value of --api if the previous arg was --api
+            if arg.startswith('--') and sys_argv[sys_argv.index(arg) - 1] == '--api':
+                continue
+            a2a_args.append(arg)
+
+        a2a_main(a2a_args)
 
         # Restore original sys.argv
         sys.argv = original_argv

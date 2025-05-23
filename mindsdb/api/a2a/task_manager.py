@@ -1,5 +1,5 @@
 from typing import AsyncIterable
-from common.types import (
+from .common.types import (
     SendTaskRequest,
     TaskSendParams,
     Message,
@@ -14,10 +14,11 @@ from common.types import (
     JSONRPCResponse,
     SendTaskStreamingRequest,
     SendTaskStreamingResponse,
+    InvalidRequestError,
 )
-from common.server.task_manager import InMemoryTaskManager
-from agent import MindsDBAgent
-import common.server.utils as utils
+from .common.server.task_manager import InMemoryTaskManager
+from .agent import MindsDBAgent
+
 from typing import Union
 import logging
 
@@ -26,14 +27,17 @@ logger = logging.getLogger(__name__)
 
 class AgentTaskManager(InMemoryTaskManager):
 
-    def __init__(self, project_name: str, mindsdb_host: str, mindsdb_port: int):
+    def __init__(self, project_name: str, mindsdb_host: str, mindsdb_port: int, agent_name: str = None):
         super().__init__()
         self.project_name = project_name
         self.mindsdb_host = mindsdb_host
         self.mindsdb_port = mindsdb_port
 
-    def _create_agent(self, agent_name: str) -> MindsDBAgent:
+    def _create_agent(self, agent_name: str = None) -> MindsDBAgent:
         """Create a new MindsDBAgent instance for the given agent name."""
+        if not agent_name:
+            raise ValueError("Agent name is required but was not provided in the request")
+
         return MindsDBAgent(
             agent_name=agent_name,
             project_name=self.project_name,
@@ -329,33 +333,57 @@ class AgentTaskManager(InMemoryTaskManager):
 
     def _validate_request(
         self, request: Union[SendTaskRequest, SendTaskStreamingRequest]
-    ) -> None:
-        task_send_params: TaskSendParams = request.params
-        if not utils.are_modalities_compatible(
-            task_send_params.acceptedOutputModes, MindsDBAgent.SUPPORTED_CONTENT_TYPES
-        ):
-            logger.warning(
-                "Unsupported output mode. Received %s, Support %s",
-                task_send_params.acceptedOutputModes,
-                MindsDBAgent.SUPPORTED_CONTENT_TYPES,
+    ) -> Union[None, JSONRPCResponse]:
+        """Validate the request and return an error response if invalid."""
+        # Check if the request has the required parameters
+        if not hasattr(request, "params") or not request.params:
+            return JSONRPCResponse(
+                id=request.id,
+                error=InvalidRequestError(message="Missing params"),
             )
-            return utils.new_incompatible_types_error(request.id)
+
+        # Check if the request has a message
+        if not hasattr(request.params, "message") or not request.params.message:
+            return JSONRPCResponse(
+                id=request.id,
+                error=InvalidRequestError(message="Missing message in params"),
+            )
+
+        # Check if the message has metadata
+        if not hasattr(request.params.message, "metadata") or not request.params.message.metadata:
+            return JSONRPCResponse(
+                id=request.id,
+                error=InvalidRequestError(message="Missing metadata in message"),
+            )
+
+        # Check if the agent name is provided in the metadata
+        metadata = request.params.message.metadata
+        agent_name = metadata.get("agent_name", metadata.get("agentName"))
+        if not agent_name:
+            return JSONRPCResponse(
+                id=request.id,
+                error=InvalidRequestError(message="Agent name is required but was not provided in the request metadata"),
+            )
+
+        return None
 
     async def on_send_task(self, request: SendTaskRequest) -> SendTaskResponse:
         error = self._validate_request(request)
         if error:
             return error
-        await self.upsert_task(request.params)
+
         return await self._invoke(request)
 
     async def on_send_task_subscribe(
         self, request: SendTaskStreamingRequest
-    ) -> AsyncIterable[SendTaskStreamingResponse] | JSONRPCResponse:
+    ) -> AsyncIterable[SendTaskStreamingResponse]:
         error = self._validate_request(request)
         if error:
-            return error
-        await self.upsert_task(request.params)
-        return self._stream_generator(request)
+            yield error
+            return
+
+        async for response in self._stream_generator(request):
+            yield response
 
     async def _update_store(
         self, task_id: str, status: TaskStatus, artifacts: list[Artifact]
@@ -390,8 +418,10 @@ class AgentTaskManager(InMemoryTaskManager):
     def _get_task_params(self, task_send_params: TaskSendParams) -> dict:
         """Extract common parameters from task metadata."""
         metadata = task_send_params.message.metadata or {}
+        # Check for both agent_name and agentName in the metadata
+        agent_name = metadata.get("agent_name", metadata.get("agentName"))
         return {
-            "agent_name": metadata.get("agent_name", "my_agent"),
+            "agent_name": agent_name,
             "streaming": metadata.get("streaming", True),
             "session_id": task_send_params.sessionId,
         }

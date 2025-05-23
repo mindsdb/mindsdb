@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import pandas as pd
 
@@ -11,10 +11,10 @@ logger = log.getLogger("mindsdb")
 
 class DataCatalogLoader:
     """
-    This class is responsible for loading the metadata from a data source to the data catalog.
+    This class is responsible for loading the metadata from a data source (via the handler) and storing it in the data catalog.
     """
 
-    def __init__(self, database_name: str, table_names: Optional[List[str]] = None):
+    def __init__(self, database_name: str, table_names: Optional[List[str]] = None) -> None:
         """
         Initialize the DataCatalogLoader.
 
@@ -24,31 +24,66 @@ class DataCatalogLoader:
         """
         from mindsdb.api.executor.controllers.session_controller import SessionController
         session = SessionController()
-        
+
+        self.database_name = database_name
         self.data_handler = session.integration_controller.get_data_handler(database_name)
         self.integration_id = session.integration_controller.get(database_name)['id']
         self.table_names = table_names
 
-    def load_metadata(self):
-        tables = self._load_table_metadata()
-        
-        columns = self._load_column_metadata(tables)
-        
-        self._load_column_statistics(tables, columns)
-    
-    def _load_table_metadata(self):
+    def load_metadata(self) -> None:
         """
-        Load the metadata for the specified tables.
+        Load the metadata for the specified tables from the handler and store it in the database.
         """
-        logger.debug(f"Loading table metadata for {self.table_names}")
+        loaded_table_names = self._get_loaded_table_names()
+
+        tables = self._load_table_metadata(loaded_table_names)
+
+        if tables:
+            columns = self._load_column_metadata(tables)
+
+            self._load_column_statistics(tables, columns)
+
+    def _get_loaded_table_names(self) -> List[str]:
+        """
+        Retrieve the names of tables that are already present in the data catalog for the current integration. 
+        If table_names are provided, only those tables will be checked.
+
+        Returns:
+            List[str]: Names of tables already loaded in the data catalog.
+        """
+        query = db.session.query(db.MetaTables).filter_by(integration_id=self.integration_id)
+        if self.table_names:
+            query = query.filter(db.MetaTables.name.in_(self.table_names))
+
+        tables = query.all()
+        table_names = [table.name for table in tables]
+
+        if table_names:
+            logger.info(f"Tables already loaded in the data catalog: {', '.join(table_names)}.")
+
+        return table_names
+
+    def _load_table_metadata(self, loaded_table_names: List[str] = None) -> List[Union[db.MetaTables, None]]:
+        """
+        Load the table metadata from the handler.
+        """
+        logger.info(f"Loading table metadata for {self.database_name}")
         response = self.data_handler.get_table_metadata(self.table_names)
         df = response.data_frame
 
+        # Filter out tables that are already loaded in the data catalog
+        if loaded_table_names:
+            df = df[~df['table_name'].isin(loaded_table_names)]
+
+        if df.empty:
+            logger.info(f"No new tables to load for {self.database_name}.")
+            return []
+
         return self._add_table_metadata(df)
     
-    def _add_table_metadata(self, df: pd.DataFrame):
+    def _add_table_metadata(self, df: pd.DataFrame) -> List[db.MetaTables]:
         """
-        Add the metadata for the specified tables to the database.
+        Add the table metadata to the database.
         """
         tables = []
         for row in df.to_dict(orient='records'):
@@ -66,19 +101,19 @@ class DataCatalogLoader:
         db.session.commit()
         return tables
 
-    def _load_column_metadata(self, tables: db.MetaTables):
+    def _load_column_metadata(self, tables: db.MetaTables) -> List[db.MetaColumns]:
         """
-        Load the metadata for the specified columns.
+        Load the column metadata from the handler.
         """
-        logger.debug(f"Loading column metadata for {self.table_names}")
+        logger.info(f"Loading column metadata for {self.database_name}")
         response = self.data_handler.get_column_metadata(self.table_names)
         df = response.data_frame
 
         return self._add_column_metadata(df, tables)
     
-    def _add_column_metadata(self, df: pd.DataFrame, tables: db.MetaTables):
+    def _add_column_metadata(self, df: pd.DataFrame, tables: db.MetaTables) -> List[db.MetaColumns]:
         """
-        Add the metadata for the specified columns to the database.
+        Add the column metadata to the database.
         """
         columns = []
         for row in df.to_dict(orient='records'):
@@ -98,19 +133,19 @@ class DataCatalogLoader:
         db.session.commit()
         return columns
 
-    def _load_column_statistics(self, tables: db.MetaTables, columns: db.MetaColumns):
+    def _load_column_statistics(self, tables: db.MetaTables, columns: db.MetaColumns) -> None:
         """
-        Load the statistics for the specified columns.
+        Load the column statistics metadata from the handler.
         """
-        logger.debug(f"Loading column statistics for {self.table_names}")
+        logger.info(f"Loading column statistics for {self.database_name}")
         response = self.data_handler.get_column_statistics(self.table_names)
         df = response.data_frame
 
         return self._add_column_statistics(df, tables, columns)
 
-    def _add_column_statistics(self, df: pd.DataFrame, tables: db.MetaTables, columns: db.MetaColumns):
+    def _add_column_statistics(self, df: pd.DataFrame, tables: db.MetaTables, columns: db.MetaColumns) -> None:
         """
-        Add the statistics for the specified columns to the database.
+        Add the column statistics metadata to the database.
         """
         column_statistics = []
         for row in df.to_dict(orient='records'):

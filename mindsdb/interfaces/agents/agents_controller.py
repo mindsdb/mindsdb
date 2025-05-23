@@ -408,8 +408,8 @@ class AgentsController:
         if agent is not None:
             raise ValueError(f'Agent with name already exists: {name}')
 
-        if provider.lower() != 'openai':
-            raise ValueError(f'Provider {provider} is not supported for CrewAI agents. Only "openai" is supported.')
+        # if provider.lower() != 'openai':
+        #     raise ValueError(f'Provider {provider} is not supported for CrewAI agents. Only "openai" is supported.')
 
         # Set default parameters if not provided
         if 'verbose' not in params:
@@ -423,6 +423,8 @@ class AgentsController:
         # Store tables and knowledge bases in params
         params['tables'] = tables or []
         params['knowledge_bases'] = knowledge_bases or []
+        # Persist provider information inside params as well so it is available at run-time
+        params['provider'] = provider
         agent = db.Agents(
             name=name,
             project_id=project.id,
@@ -479,11 +481,14 @@ class AgentsController:
             # If not JSON, just use the raw query
             pass
 
+        # Determine provider – prefer explicit value stored in params, fallback to the column
+        provider = agent.params.get('provider') or agent.provider or 'openai'
         # Create the CrewAI pipeline
         pipeline = CrewAITextToSQLPipeline(
             tables=agent.params.get('tables', []),
             knowledge_bases=agent.params.get('knowledge_bases', []),
             model=agent.model_name,
+            provider=provider,
             api_key=api_key,
             prompt_template=agent.params.get('prompt_template'),
             verbose=agent.params.get('verbose', True),

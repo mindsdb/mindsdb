@@ -4,7 +4,7 @@ import ast
 from typing import List, Dict, Any, Optional, Union
 from crewai import Agent, Task, Crew, Process
 from crewai.tools import tool
-from langchain_openai import ChatOpenAI
+from crewai import LLM as CrewAILLM
 from mindsdb.utilities import log
 from mindsdb.interfaces.skills.skill_tool import SkillToolController
 
@@ -27,6 +27,7 @@ class CrewAITextToSQLPipeline:
         self,
         tables: Optional[List[str]] = None,
         knowledge_bases: Optional[List[str]] = None,
+        provider: str = "openai",
         model: str = "gpt-4o",
         temperature: float = 0.0,
         api_key: Optional[str] = None,
@@ -39,34 +40,48 @@ class CrewAITextToSQLPipeline:
         Args:
             tables: List of table names in format 'database.table'
             knowledge_bases: List of knowledge base names
-            model: OpenAI model to use
+            provider: LLM provider ('openai' or 'google')
+            model: Model name to use (e.g., 'gpt-4o', 'gemini-2.0-flash')
             temperature: Model temperature
-            api_key: OpenAI API key (defaults to OPENAI_API_KEY env var)
+            api_key: API key for the provider (OpenAI API key or Google API key)
             verbose: Whether to output detailed logs
             max_tokens: Maximum tokens for completion
         """
         self.tables = tables or []
         self.knowledge_bases = knowledge_bases or []
+        self.provider = provider.lower()
         self.model = model
         self.temperature = temperature
         self.verbose = verbose
         self.max_tokens = max_tokens
 
-        if api_key:
-            self.api_key = api_key
-            # Set environment variable for CrewAI components that rely on it directly
-            os.environ["OPENAI_API_KEY"] = api_key
-        else:
-            self.api_key = os.environ.get("OPENAI_API_KEY")
+        # Validate provider
+        if self.provider not in ['openai', 'google']:
+            raise ValueError("Provider must be either 'openai' or 'google'")
 
-        if not self.api_key:
-            raise ValueError("OpenAI API key must be provided or set as OPENAI_API_KEY environment variable")
-
-        # Initialize the LLM
-        self.llm = ChatOpenAI(
-            model=self.model,
-            temperature=self.temperature,
+        # Set up API key and environment variables based on provider
+        if self.provider == 'openai':
+            if api_key:
+                self.api_key = api_key
+            else:
+                self.api_key = os.environ.get("OPENAI_API_KEY")
+            if not self.api_key:
+                raise ValueError("OpenAI API key must be provided or set as OPENAI_API_KEY environment variable")
+            llm_model = self.model
+        elif self.provider == 'google':
+            # Ensure the API key is available and exported for downstream libraries
+            if api_key:
+                self.api_key = api_key
+            else:
+                self.api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+            if not self.api_key:
+                raise ValueError("Google API key must be provided or set as GOOGLE_API_KEY / GEMINI_API_KEY environment variable")
+            llm_model = self._prepare_gemini_model_name(self.model)
+        # Initialize the CrewAI LLM which delegates calls to LiteLLM underneath
+        self.llm = CrewAILLM(
+            model=llm_model,
             api_key=self.api_key,
+            temperature=self.temperature,
             max_tokens=self.max_tokens
         )
 
@@ -173,7 +188,6 @@ class CrewAITextToSQLPipeline:
                 "SHOW DATABASES",
                 "SHOW TABLES",
                 "SHOW AGENTS",
-                "SHOW SKILLS",
                 "SHOW KNOWLEDGE_BASES"
             ]
 
@@ -199,35 +213,6 @@ class CrewAITextToSQLPipeline:
                 result += f"- {kb}\n"
 
             return result
-
-        # Tool for getting schema information
-        @tool("get_schema_tool")
-        def get_schema(table_name: str) -> str:
-            """Gets schema information for a specified table.
-
-            Args:
-                table_name: Name of the table to get schema for
-
-            Returns:
-                Schema information including columns and data types
-            """
-            try:
-                # Parse the table name to extract database and table components
-                parts = table_name.split('.')
-                if len(parts) == 1:
-                    # Only table name provided, use a DESCRIBE command
-                    sql_command = f"DESCRIBE {table_name};"
-                elif len(parts) == 2:
-                    # Database and table provided
-                    sql_command = f"DESCRIBE {parts[0]}.{parts[1]};"
-                else:
-                    return f"Invalid table name format: {table_name}. Please use 'database.table' or just 'table'."
-
-                # Execute the DESCRIBE command to get schema information
-                schema_result = self._execute_sql_safely(sql_command)
-                return f"Schema for {table_name}:\n{schema_result}"
-            except Exception as e:
-                return f"Error getting schema for {table_name}: {str(e)}"
 
         # Tool for executing SQL queries
         @tool("execute_sql_tool")
@@ -263,7 +248,6 @@ class CrewAITextToSQLPipeline:
 
         self.tools = {
             "list_tables": list_tables,
-            "get_schema": get_schema,
             "execute_sql": execute_sql,
             "check_sql": check_sql
         }
@@ -663,6 +647,24 @@ class CrewAITextToSQLPipeline:
 
         return final_output
 
+    def _prepare_gemini_model_name(self, raw_name: str) -> str:
+        """Return a model name with the required `gemini/` prefix for LiteLLM.
+
+        LiteLLM infers the provider from the model prefix. For Google AI Studio
+        models the prefix must be `gemini/`. Examples:
+            - "gemini-2.5-pro-preview-05-06"  -> "gemini/gemini-2.5-pro-preview-05-06"
+            - "models/gemini-1.5-pro-latest" -> "gemini/gemini-1.5-pro-latest"
+            - "gemini/gemini-1.5-pro"        -> unchanged
+        """
+        name = raw_name.strip()
+        # Strip optional leading "models/"
+        if name.startswith("models/"):
+            name = name[len("models/"):]  # remove the prefix
+        # Add gemini/ if missing
+        if not name.startswith("gemini/"):
+            name = f"gemini/{name}"
+        return name
+
 
 class CrewAIAgentManager:
     """Manager class for CrewAI agents in MindsDB."""
@@ -703,6 +705,7 @@ class CrewAIAgentManager:
         return CrewAITextToSQLPipeline(
             tables=tables,
             knowledge_bases=knowledge_bases,
+            provider=provider,
             model=model,
             temperature=0.2,  # Default temperature
             api_key=api_key,

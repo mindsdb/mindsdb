@@ -1,7 +1,8 @@
 import time
 import os
-from unittest.mock import patch
+from unittest.mock import patch, Mock, MagicMock
 import threading
+import json
 from contextlib import contextmanager
 
 import pandas as pd
@@ -49,6 +50,22 @@ def set_openai_completion(mock_openai, response):
         }
 
     mock_openai().chat.completions.create.side_effect = resp_f
+
+
+def set_openai_embedding(mock_openai, response):
+    def resp_f(*args, **kwargs):
+        return MagicMock(
+            data=[MagicMock(embedding=emb) for emb in response]
+        )
+
+    mock_openai().embeddings.create.side_effect = resp_f
+
+
+def set_openai_models(mock_openai):
+    mock_openai_client = MagicMock()
+    mock_openai_client.models.list.return_value.data = [Mock(id='text-embedding-ada-002')]
+    mock_openai_client.models.retrieve.return_value.data = None
+    mock_openai.return_value = mock_openai_client
 
 
 class TestAgent(BaseExecutorDummyML):
@@ -245,18 +262,17 @@ class TestAgent(BaseExecutorDummyML):
     @patch('openai.OpenAI')
     def test_agent_retrieval(self, mock_openai):
 
-        self.run_sql(
-            '''
-                CREATE model emb_model
-                PREDICT output
-                using
-                  column='content',
-                  engine='dummy_ml',
-                  join_learn_process=true
-            '''
-        )
+        mock_openai().models.list().data = [Mock(id='text-embedding-ada-002')]
 
-        self.run_sql('create knowledge base kb_review using model=emb_model')
+        self.run_sql('''
+            create knowledge base kb_review
+            using
+                embedding_model = {
+                    "provider": "openai",
+                    "model_name": "text-embedding-ada-002",
+                    "api_key": "dummy_key"
+                }
+        ''')
 
         self.run_sql('''
           create skill retr_skill
@@ -339,27 +355,48 @@ class TestAgent(BaseExecutorDummyML):
 
 class TestKB(BaseExecutorDummyML):
 
-    def _create_embedding_model(self, name):
+    def _create_kb(self, name, reranking_model=None, embedding_model=None, content_columns=None,
+                   id_column=None, metadata_columns=None):
+        self.run_sql(f'drop knowledge base if exists {name}')
 
-        self.run_sql(
-            f'''
-                CREATE model {name}
-                PREDICT predicted
-                using
-                  column='content',
-                  engine='dummy_ml',
-                  output=[1,2],
-                  join_learn_process=true
-            '''
-        )
+        if embedding_model is None:
+            embedding_model = {
+                "provider": "openai",
+                "model_name": "text-embedding-ada-002",
+                "api_key": "dummy_key",
+            }
 
-    def test_kb(self):
+        kb_params = {
+            "embedding_model": embedding_model,
+            "reranking_model": reranking_model,
+        }
+        if content_columns is not None:
+            kb_params['content_columns'] = content_columns
+        if id_column is not None:
+            kb_params['id_column'] = id_column
+        if metadata_columns is not None:
+            kb_params['metadata_columns'] = metadata_columns
 
-        self._create_embedding_model('emb_model')
+        param_str = ''
+        if kb_params:
+            param_items = []
+            for k, v in kb_params.items():
+                param_items.append(f'{k}={json.dumps(v)}')
+            param_str = ','.join(param_items)
 
-        self.run_sql('create knowledge base kb_review using model=emb_model')
+        self.run_sql(f'''
+            create knowledge base {name}
+            using
+                {param_str}
+        ''')
+
+    @patch('openai.OpenAI')
+    def test_kb(self, mock_openai):
+        set_openai_models(mock_openai)
+
+        self._create_kb('kb_review')
         self.run_sql('drop knowledge base kb_review')  # drop chromadb left since the last failed test
-        self.run_sql('create knowledge base kb_review using model=emb_model')
+        self._create_kb('kb_review')
 
         self.run_sql("insert into kb_review (content) values ('review')")
 
@@ -375,8 +412,10 @@ class TestKB(BaseExecutorDummyML):
         # only one default collection there
         assert len(ret) == 1
 
-    def test_kb_metadata(self):
-        self._create_embedding_model('emb_model')
+    @patch('openai.OpenAI')
+    def test_kb_metadata(self, mock_openai):
+        set_openai_models(mock_openai)
+        set_openai_embedding(mock_openai, [[0.1] * 1536])
 
         record = {
             'review': "all is good, haven't used yet",
@@ -389,9 +428,9 @@ class TestKB(BaseExecutorDummyML):
         self.save_file('reviews', df)
 
         # ---  case 1: kb with default columns settings ---
-        self.run_sql('create knowledge base kb_review using model=emb_model')
+        self._create_kb('kb_review')
         self.run_sql('drop knowledge base kb_review')  # drop chromadb left since the last failed test
-        self.run_sql('create knowledge base kb_review using model=emb_model')
+        self._create_kb('kb_review')
 
         self.run_sql("""
             insert into kb_review
@@ -427,14 +466,10 @@ class TestKB(BaseExecutorDummyML):
 
         # ---  case 2: kb with defined columns ---
 
-        self.run_sql('''
-          create knowledge base kb_review
-            using model=emb_model,
-            content_columns=['review', 'product'],
-            id_column='url',
-            metadata_columns=['specs', 'id']
-        ''')
+        self._create_kb('kb_review', content_columns=['review', 'product'],
+                        id_column='url', metadata_columns=['specs', 'id'])
 
+        set_openai_embedding(mock_openai, [[0.1] * 1536, [0.2] * 1536])
         self.run_sql("""
             insert into kb_review
             select * from files.reviews
@@ -457,11 +492,7 @@ class TestKB(BaseExecutorDummyML):
         self.run_sql("drop knowledge base kb_review")
 
         # ---  case 3: content is defined, id is id, the rest goes to metadata ---
-        self.run_sql('''
-        create knowledge base kb_review
-         using model=emb_model,
-         content_columns=['review']
-        ''')
+        self._create_kb('kb_review', content_columns=['review'])
 
         self.run_sql("""
             insert into kb_review
@@ -489,22 +520,22 @@ class TestKB(BaseExecutorDummyML):
 
         return pd.DataFrame(data, columns=['ral', 'english', 'italian'])
 
-    def test_join_kb_table(self):
-        self._create_embedding_model('emb_model')
+    @patch('openai.OpenAI')
+    def test_join_kb_table(self, mock_openai):
+        set_openai_models(mock_openai)
 
         df = self._get_ral_table()
         self.save_file('ral', df)
 
-        self.run_sql('''
-          create knowledge base kb_ral
-            using model=emb_model
-        ''')
+        self._create_kb('kb_ral')
 
+        set_openai_embedding(mock_openai, [[0.1] * 1536, [0.2] * 1536, [0.3] * 1536, [0.4] * 1536])
         self.run_sql("""
             insert into kb_ral
             select ral id, english content from files.ral
         """)
 
+        set_openai_embedding(mock_openai, [[0.3] * 1536])
         ret = self.run_sql("""
             select t.italian, k.id, t.ral from kb_ral k
             join files.ral t on t.ral = k.id
@@ -546,9 +577,10 @@ class TestKB(BaseExecutorDummyML):
         assert len(ret) == 2
         assert set(ret['id']) == {'9016', '9023'}
 
+    @patch('openai.OpenAI')
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def test_kb_partitions(self, mock_handler):
-        self._create_embedding_model('emb_model')
+    def test_kb_partitions(self, mock_handler, mock_openai):
+        set_openai_models(mock_openai)
 
         df = self._get_ral_table()
         self.save_file('ral', df)
@@ -561,11 +593,9 @@ class TestKB(BaseExecutorDummyML):
 
         def check_partition(insert_sql):
             # create empty kb
-            if len(self.run_sql('describe KNOWLEDGE_BASE kb_part')) > 0:
-                self.run_sql('delete from kb_part where id in (select id from kb_part)')
-                self.run_sql('DROP KNOWLEDGE_BASE kb_part')
+            self._create_kb('kb_part', content_columns=["english"])
 
-            self.run_sql('create knowledge base kb_part using model=emb_model, content_columns=["english"]')
+            set_openai_embedding(mock_openai, [[0.1] * 1536] * len(df))
 
             # load kb
             ret = self.run_sql(insert_sql)
@@ -656,18 +686,3 @@ class TestKB(BaseExecutorDummyML):
                 insert into kb_part SELECT id, english FROM pg.ral
                 using batch_size=20, track_column=id, threads = 3
             ''')
-
-            # --- check select join using partitions ---
-            ret = self.run_sql('''
-                SELECT * FROM  pg.ral t
-                join emb_model
-                using batch_size=20, track_column=id
-            ''')
-            assert len(ret) == len(df)
-
-            ret = self.run_sql('''
-                SELECT * FROM  pg.ral t
-                join emb_model
-                using batch_size=20, track_column=id, threads = 3
-            ''')
-            assert len(ret) == len(df)

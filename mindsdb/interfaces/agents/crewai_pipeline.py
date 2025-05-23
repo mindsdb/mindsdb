@@ -68,6 +68,7 @@ class CrewAITextToSQLPipeline:
             if not self.api_key:
                 raise ValueError("OpenAI API key must be provided or set as OPENAI_API_KEY environment variable")
             llm_model = self.model
+
         elif self.provider == 'google':
             # Ensure the API key is available and exported for downstream libraries
             if api_key:
@@ -77,6 +78,7 @@ class CrewAITextToSQLPipeline:
             if not self.api_key:
                 raise ValueError("Google API key must be provided or set as GOOGLE_API_KEY / GEMINI_API_KEY environment variable")
             llm_model = self._prepare_gemini_model_name(self.model)
+
         # Initialize the CrewAI LLM which delegates calls to LiteLLM underneath
         self.llm = CrewAILLM(
             model=llm_model,

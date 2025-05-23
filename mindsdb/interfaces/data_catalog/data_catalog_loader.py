@@ -43,6 +43,8 @@ class DataCatalogLoader:
 
             self._load_column_statistics(tables, columns)
 
+            self._load_primary_keys(tables, columns)
+
     def _get_loaded_table_names(self) -> List[str]:
         """
         Retrieve the names of tables that are already present in the data catalog for the current integration. 
@@ -171,4 +173,37 @@ class DataCatalogLoader:
             column_statistics.append(record)
 
         db.session.add_all(column_statistics)
+        db.session.commit()
+
+    def _load_primary_keys(self, tables: db.MetaTables, columns: db.MetaColumns) -> None:
+        """
+        Load the primary keys metadata from the handler.
+        """
+        logger.info(f"Loading primary keys for {self.database_name}")
+        response = self.data_handler.get_primary_keys(self.table_names)
+        df = response.data_frame
+
+        return self._add_primary_keys(df, tables, columns)
+    
+    def _add_primary_keys(self, df: pd.DataFrame, tables: db.MetaTables, columns: db.MetaColumns) -> None:
+        """
+        Add the primary keys metadata to the database.
+        """
+        primary_keys = []
+        for row in df.to_dict(orient='records'):
+            table_id = next(
+                (table.id for table in tables if table.name == row.get('table_name'))
+            )
+            column_id = next(
+                (column.id for column in columns if column.name == row.get('column_name') and column.table_id == table_id)
+            )
+
+            record = db.MetaPrimaryKeys(
+                table_id=table_id,
+                column_id=column_id,
+                constraint_name=row.get('constraint_name')
+            )
+            primary_keys.append(record)
+
+        db.session.add_all(primary_keys)
         db.session.commit()

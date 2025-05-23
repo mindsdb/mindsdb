@@ -3,7 +3,7 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
 from sse_starlette.sse import EventSourceResponse
 from starlette.requests import Request
-from common.types import (
+from ...common.types import (
     A2ARequest,
     JSONRPCResponse,
     InvalidRequestError,
@@ -21,7 +21,7 @@ from common.types import (
 from pydantic import ValidationError
 import json
 from typing import AsyncIterable, Any
-from common.server.task_manager import TaskManager
+from ...common.server.task_manager import TaskManager
 
 import logging
 

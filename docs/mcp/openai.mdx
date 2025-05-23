@@ -33,7 +33,7 @@ response = client.responses.create(
             "type": "mcp",
             "server_label": "mdb",
             "server_url": "https://5a52-88-203-84-191.ngrok-free.app/sse",
-            "headers": { "Authorization": "Bearer 123456789XYZ" },
+            "headers": { "Authorization": "Bearer $MINDSDB_MCP_ACCESS_TOKEN" },
             "require_approval": "never",
         }
     ],

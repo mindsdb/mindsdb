@@ -11,7 +11,7 @@ except Exception as e:
 
 
 title = 'Atlassian Jira'
-name = 'jira_archive'
+name = 'jira'
 type = HANDLER_TYPE.DATA
 icon_path = 'icon.svg'
 

@@ -287,8 +287,8 @@ def initialize_app(config, no_studio):
                 return {
                     "status": "success",
                     "agent_name": html.escape(new_agent_name),
-                    "project_name": new_project_name
-                    or a2a_config.get("project_name", "mindsdb"),
+                    "project_name": html.escape(new_project_name)
+                    or html.escape(a2a_config.get("project_name", "mindsdb")),
                 }
 
             except Exception as e:

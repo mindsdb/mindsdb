@@ -639,11 +639,13 @@ class MetaTables(Base):
     description: str = Column(String, nullable=True)
     type: str = Column(String, nullable=True)
     row_count: int = Column(Integer, nullable=True)
-    
+
     meta_columns: Mapped[List["MetaColumns"]] = relationship("MetaColumns", back_populates="meta_tables")
     meta_primary_keys: Mapped[List["MetaPrimaryKeys"]] = relationship("MetaPrimaryKeys", back_populates="meta_tables")
+    meta_foreign_keys_parents: Mapped[List["MetaForeignKeys"]] = relationship("MetaForeignKeys", foreign_keys="MetaForeignKeys.parent_table_id", back_populates="parent_table") 
+    meta_foreign_keys_children: Mapped[List["MetaForeignKeys"]] = relationship("MetaForeignKeys", foreign_keys="MetaForeignKeys.child_table_id", back_populates="child_table")
     
-    
+
 class MetaColumns(Base):
     __tablename__ = "meta_columns"
     id: int = Column(Integer, primary_key=True)
@@ -659,6 +661,8 @@ class MetaColumns(Base):
     
     meta_column_statistics: Mapped[List["MetaColumnStatistics"]] = relationship("MetaColumnStatistics", back_populates="meta_columns")
     meta_primary_keys: Mapped[List["MetaPrimaryKeys"]] = relationship("MetaPrimaryKeys", back_populates="meta_columns")
+    meta_foreign_keys_parents: Mapped[List["MetaForeignKeys"]] = relationship("MetaForeignKeys", foreign_keys="MetaForeignKeys.parent_column_id", back_populates="parent_column")
+    meta_foreign_keys_children: Mapped[List["MetaForeignKeys"]] = relationship("MetaForeignKeys", foreign_keys="MetaForeignKeys.child_column_id", back_populates="child_column")
     
 
 class MetaColumnStatistics(Base):
@@ -682,4 +686,21 @@ class MetaPrimaryKeys(Base):
     column_id: int = Column(Integer, ForeignKey("meta_columns.id"))
     meta_columns = relationship("MetaColumns", back_populates="meta_primary_keys")
 
+    constraint_name: str = Column(String, primary_key=True)
+
+
+class MetaForeignKeys(Base):
+    __tablename__ = "meta_foreign_keys"
+    parent_table_id: int = Column(Integer, ForeignKey("meta_tables.id"))
+    parent_table = relationship("MetaTables", foreign_keys=[parent_table_id])
+
+    parent_column_id: int = Column(Integer, ForeignKey("meta_columns.id"))
+    parent_column = relationship("MetaColumns", foreign_keys=[parent_column_id])
+    
+    child_table_id: int = Column(Integer, ForeignKey("meta_tables.id"))
+    child_table = relationship("MetaTables", foreign_keys=[child_table_id])
+    
+    child_column_id: int = Column(Integer, ForeignKey("meta_columns.id"))
+    child_column = relationship("MetaColumns", foreign_keys=[child_column_id])
+    
     constraint_name: str = Column(String, primary_key=True)

@@ -128,8 +128,7 @@ class MindsDBSQL(SQLDatabase):
             return str(result)
 
         except Exception as e:
-            print(traceback.format_exc())
-            logger.error(f"Error executing SQL command: {str(e)}")
+            logger.error(f"Error executing SQL command: {str(e)}\n{traceback.format_exc()}")
             # If this is a knowledge base query, provide a more helpful error message
             if "knowledge_base" in command.lower() or any(kb in command for kb in self._sql_agent.get_usable_knowledge_base_names()):
                 return f"Error executing knowledge base query: {str(e)}. Please check that the knowledge base exists and your query syntax is correct."

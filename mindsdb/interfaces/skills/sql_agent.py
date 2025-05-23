@@ -573,7 +573,7 @@ class SQLAgent:
             logger.info(f'query_safe (fetch={fetch}): {command}')
             return self.query(command, fetch)
         except Exception as e:
-            print(traceback.format_exc())
+            logger.error(f"Error in query_safe: {str(e)}\n{traceback.format_exc()}")
             logger.info(f'query_safe error: {e}')
             msg = f"Error: {e}"
             if 'does not exist' in msg and ' relation ' in msg:

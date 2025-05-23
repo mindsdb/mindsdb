@@ -8,12 +8,20 @@ from flask import Flask, request
 from mindsdb.utilities.config import Config
 
 
+# Note: These tests are for reference only as the update_agent endpoint has been removed.
+# Agent names are now passed via metadata in requests instead of using a dedicated endpoint.
+# The actual agent name update functionality is now handled by the A2A task manager directly.
+
+
 def test_update_a2a_agent() -> None:
     """
-    Test the update_a2a_agent API endpoint with mocked dependencies.
+    Test for the A2A agent update mechanism (reference implementation).
+
+    Note: This test is kept for reference purposes only. The update_agent endpoint
+    has been removed from the HTTP API as agent names are now passed via metadata in requests.
 
     This test verifies that:
-    1. The API endpoint correctly updates the agent configuration
+    1. The agent configuration update logic works correctly
     2. It returns a success response with the updated configuration
     3. It handles error cases properly
     """
@@ -37,18 +45,24 @@ def test_update_a2a_agent() -> None:
 
         Expected JSON payload:
         {
-            "agent_name": "new_agent_name",
+            "metadata": {
+                "agent_name": "new_agent_name"
+            },
             "project_name": "optional_project_name"  # Optional
         }
         """
         try:
             data = request.json
-            if not data or "agent_name" not in data:
+            if (
+                not data
+                or not data.get("metadata")
+                or "agent_name" not in data.get("metadata", {})
+            ):
                 return {
-                    "error": "Missing required parameter: agent_name"
+                    "error": "Missing required parameter: metadata.agent_name"
                 }, HTTPStatus.BAD_REQUEST
 
-            new_agent_name = data["agent_name"]
+            new_agent_name = data["metadata"]["agent_name"]
             new_project_name = data.get("project_name")  # Optional
 
             # Update the configuration
@@ -60,11 +74,17 @@ def test_update_a2a_agent() -> None:
             # Update the global configuration
             mock_config.update({"a2a": a2a_config})
 
+            # Handle the project_name safely to avoid NoneType errors
+            project_name = (
+                new_project_name
+                if new_project_name is not None
+                else a2a_config.get("project_name", "mindsdb")
+            )
+
             return {
                 "status": "success",
                 "agent_name": html.escape(new_agent_name),
-                "project_name": html.escape(new_project_name)
-                or html.escape(a2a_config.get("project_name", "mindsdb")),
+                "project_name": html.escape(project_name),
             }
 
         except Exception as e:
@@ -84,7 +104,7 @@ def test_update_a2a_agent() -> None:
     # Test 1: Successful update with only agent_name
     with app.test_client() as client:
         response = client.post(
-            "/api/a2a/update_agent", json={"agent_name": "new_agent"}
+            "/api/a2a/update_agent", json={"metadata": {"agent_name": "new_agent"}}
         )
 
         # Verify the result
@@ -105,7 +125,10 @@ def test_update_a2a_agent() -> None:
         # Test 2: Update with both agent_name and project_name
         response = client.post(
             "/api/a2a/update_agent",
-            json={"agent_name": "new_agent2", "project_name": "new_project2"},
+            json={
+                "metadata": {"agent_name": "new_agent2"},
+                "project_name": "new_project2",
+            },
         )
 
         # Verify the result
@@ -129,7 +152,10 @@ def test_update_a2a_agent() -> None:
 
 def test_update_a2a_agent_with_exception() -> None:
     """
-    Test the update_a2a_agent API endpoint when an exception occurs.
+    Test for the A2A agent update mechanism with exception handling (reference implementation).
+
+    Note: This test is kept for reference purposes only. The update_agent endpoint
+    has been removed from the HTTP API as agent names are now passed via metadata in requests.
 
     This test verifies that:
     1. The function handles exceptions properly
@@ -152,18 +178,24 @@ def test_update_a2a_agent_with_exception() -> None:
 
         Expected JSON payload:
         {
-            "agent_name": "new_agent_name",
+            "metadata": {
+                "agent_name": "new_agent_name"
+            },
             "project_name": "optional_project_name"  # Optional
         }
         """
         try:
             data = request.json
-            if not data or "agent_name" not in data:
+            if (
+                not data
+                or not data.get("metadata")
+                or "agent_name" not in data.get("metadata", {})
+            ):
                 return {
-                    "error": "Missing required parameter: agent_name"
+                    "error": "Missing required parameter: metadata.agent_name"
                 }, HTTPStatus.BAD_REQUEST
 
-            new_agent_name = data["agent_name"]
+            new_agent_name = data["metadata"]["agent_name"]
             new_project_name = data.get("project_name")  # Optional
 
             # Update the configuration
@@ -175,16 +207,23 @@ def test_update_a2a_agent_with_exception() -> None:
             # Update the global configuration - this will raise an exception
             mock_config.update({"a2a": a2a_config})
 
+            # Handle the project_name safely to avoid NoneType errors
+            project_name = (
+                new_project_name
+                if new_project_name is not None
+                else a2a_config.get("project_name", "mindsdb")
+            )
+
             return {
                 "status": "success",
                 "agent_name": html.escape(new_agent_name),
-                "project_name": new_project_name
-                or a2a_config.get("project_name", "mindsdb"),
+                "project_name": html.escape(project_name),
             }
 
         except Exception as e:
+            app.logger.error(f"Exception occurred while updating A2A agent: {str(e)}")
             return {
-                "error": f"Error updating A2A agent: {str(e)}"
+                "error": "An internal error occurred. Please try again later."
             }, HTTPStatus.INTERNAL_SERVER_ERROR
 
     # Register the route directly with the app
@@ -198,11 +237,12 @@ def test_update_a2a_agent_with_exception() -> None:
     # Test: Exception during update
     with app.test_client() as client:
         response = client.post(
-            "/api/a2a/update_agent_exception", json={"agent_name": "new_agent"}
+            "/api/a2a/update_agent_exception",
+            json={"metadata": {"agent_name": "new_agent"}},
         )
 
         # Verify the response
         assert response.status_code == 500
         result = response.get_json()
         assert "error" in result
-        assert "Test exception" in result["error"]
+        assert "An internal error occurred" in result["error"]

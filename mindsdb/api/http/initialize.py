@@ -10,8 +10,7 @@ from http import HTTPStatus
 
 
 import requests
-from flask import Flask, url_for, make_response, request, send_from_directory, abort
-import html
+from flask import Flask, url_for, make_response, request, send_from_directory
 from flask.json import dumps
 from flask_compress import Compress
 from flask_restx import Api
@@ -242,58 +241,6 @@ def initialize_app(config, no_studio):
 
     app, api = initialize_flask(config, init_static_thread, no_studio)
     Compress(app)
-
-    a2a_config = config.get("a2a", {})
-    a2a_enabled = a2a_config.get("enabled", False)
-
-    if a2a_enabled:
-
-        @app.route("/api/a2a/update_agent", methods=["POST"])
-        def api_update_a2a_agent():
-            """
-            Update the A2A agent configuration.
-
-            Expected JSON payload:
-            {
-                "agent_name": "new_agent_name",
-                "project_name": "optional_project_name"  # Optional
-            }
-            """
-            try:
-                data = request.json
-                if not data or "agent_name" not in data:
-                    abort(
-                        HTTPStatus.BAD_REQUEST, "Missing required parameter: agent_name"
-                    )
-
-                new_agent_name = data["agent_name"]
-                new_project_name = data.get("project_name")  # Optional
-
-                # Update the configuration
-                a2a_config = config.get("a2a", {}).copy()
-                a2a_config["agent_name"] = new_agent_name
-                if new_project_name:
-                    a2a_config["project_name"] = new_project_name
-
-                # Update the global configuration
-                config.update({"a2a": a2a_config})
-
-                # Signal the main process to restart the A2A service
-                # We don't need to directly access the main process's trunk_processes_struct
-                # The main process will detect the configuration change and handle the restart
-
-                logger.info(f"Updated A2A configuration with agent name: {new_agent_name}")
-
-                return {
-                    "status": "success",
-                    "agent_name": html.escape(new_agent_name),
-                    "project_name": html.escape(new_project_name)
-                    or html.escape(a2a_config.get("project_name", "mindsdb")),
-                }
-
-            except Exception as e:
-                logger.error(f"Error updating A2A agent: {e}")
-                abort(HTTPStatus.INTERNAL_SERVER_ERROR, str(e))
 
     initialize_interfaces(app)
 

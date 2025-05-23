@@ -34,8 +34,13 @@ Follow the steps below to use MindsDB as an MCP server.
 4. Run MindsDB enabling its MCP API on port 47337 by default.
 
     ```bash
-    docker run --name mindsdb_container_name -e MINDSDB_APIS='mcp' -p 47337:47337 mindsdb/mindsdb
+    docker run --name mindsdb_container_name -e MINDSDB_APIS='mcp' -e MINDSDB_MCP_ACCESS_TOKEN=abc123 -p 47337:47337 mindsdb/mindsdb
     ```
+
+    The following environment variables are set in the Docker container:
+
+    - `MINDSDB_APIS` defines the MindsDB's APIs to be started.
+    - `MINDSDB_MCP_ACCESS_TOKEN` defines the MCP access token used to access MindsDB's MCP Server from MCP Clients.
 
     <Info>
     Alternatively, you can use the [`MINDSDB_APIS` environment variable](/setup/environment-vars#mindsdb-apis) to define the list of APIs to be started.

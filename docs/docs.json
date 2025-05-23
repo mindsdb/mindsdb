@@ -516,13 +516,6 @@
                 ]
               },
               {
-                "group": "Agents",
-                "pages": [
-                  "mindsdb_sql/agents/agent",
-                  "mindsdb_sql/agents/chatbot"
-                ]
-              },
-              {
                 "group": "MCP API",
                 "pages": [
                   "mcp/overview",
@@ -533,13 +526,6 @@
               {
                 "group": "Use Cases",
                 "pages": [
-                  {
-                    "group": "AI Agents",
-                    "pages": [
-                      "use-cases/ai_agents/overview",
-                      "use-cases/ai_agents/build_ai_agents"
-                    ]
-                  },
                   {
                     "group": "MCP API",
                     "pages": [

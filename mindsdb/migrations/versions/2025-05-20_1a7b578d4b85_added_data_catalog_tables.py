@@ -20,7 +20,6 @@ depends_on = None
 
 
 def upgrade():
-    # Create the meta_tables table
     op.create_table(
         'meta_tables',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -30,13 +29,12 @@ def upgrade():
         sa.Column('description', sa.String(), nullable=True),
         sa.Column('type', sa.String(), nullable=True),
         sa.Column('row_count', sa.Integer(), nullable=True),
+        sa.PrimaryKeyConstraint('id'),
         sa.ForeignKeyConstraint(
             ['integration_id'], ['integration.id'], name='fk_meta_tables_integration_id'
         ),
-        sa.PrimaryKeyConstraint('id'),
     )
 
-    # Create the meta_columns table
     op.create_table(
         'meta_columns',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -46,13 +44,12 @@ def upgrade():
         sa.Column('default_value', sa.String(), nullable=True),
         sa.Column('description', sa.String(), nullable=True),
         sa.Column('is_nullable', sa.Boolean(), nullable=True),
+        sa.PrimaryKeyConstraint('id'),
         sa.ForeignKeyConstraint(
             ['table_id'], ['meta_tables.id'], name='fk_meta_columns_table_id'
         ),
-        sa.PrimaryKeyConstraint('id'),
     )
 
-    # Create the meta_column_statistics table
     op.create_table(
         'meta_column_statistics',
         sa.Column('column_id', sa.Integer(), sa.ForeignKey('meta_columns.id'), primary_key=True),
@@ -62,15 +59,32 @@ def upgrade():
         sa.Column('distinct_values_count', sa.Integer(), nullable=True),
         sa.Column('minimum_value', sa.String(), nullable=True),
         sa.Column('maximum_value', sa.String(), nullable=True),
+        sa.PrimaryKeyConstraint('column_id'),
+        sa.ForeignKeyConstraint(
+            ['column_id'], ['meta_columns.id'], name='fk_meta_column_statistics_column_id'
+        ),
+    )
+    
+    op.create_table(
+        'meta_primary_keys',
+        sa.Column('table_id', sa.Integer(), nullable=True),
+        sa.Column('column_id', sa.Integer(), nullable=True),
+        sa.Column('constraint_name', sa.String(), nullable=True),
+        sa.PrimaryKeyConstraint('table_id', 'column_id'),
+        sa.ForeignKeyConstraint(
+            ['table_id'], ['meta_tables.id'], name='fk_meta_primary_keys_table_id'
+        ),
+        sa.ForeignKeyConstraint(
+            ['column_id'], ['meta_columns.id'], name='fk_meta_primary_keys_column_id'
+        ),
     )
 
 
 def downgrade():
-    # Drop the meta_columns table
     op.drop_table('meta_columns')
 
-    # Drop the meta_tables table
     op.drop_table('meta_tables')
-    
-    # Drop the meta_tables table
+
     op.drop_table('meta_tables')
+
+    op.drop_table('meta_column_statistics')

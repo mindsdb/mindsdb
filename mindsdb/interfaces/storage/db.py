@@ -641,6 +641,7 @@ class MetaTables(Base):
     row_count: int = Column(Integer, nullable=True)
     
     meta_columns: Mapped[List["MetaColumns"]] = relationship("MetaColumns", back_populates="meta_tables")
+    meta_primary_keys: Mapped[List["MetaPrimaryKeys"]] = relationship("MetaPrimaryKeys", back_populates="meta_tables")
     
     
 class MetaColumns(Base):
@@ -657,6 +658,7 @@ class MetaColumns(Base):
     is_nullable: bool = Column(Boolean, nullable=True)
     
     meta_column_statistics: Mapped[List["MetaColumnStatistics"]] = relationship("MetaColumnStatistics", back_populates="meta_columns")
+    meta_primary_keys: Mapped[List["MetaPrimaryKeys"]] = relationship("MetaPrimaryKeys", back_populates="meta_columns")
     
 
 class MetaColumnStatistics(Base):
@@ -670,3 +672,14 @@ class MetaColumnStatistics(Base):
     distinct_values_count: int = Column(Integer, nullable=True)
     minimum_value: str = Column(String, nullable=True)
     maximum_value: str = Column(String, nullable=True)
+
+
+class MetaPrimaryKeys(Base):
+    __tablename__ = "meta_primary_keys"
+    table_id: int = Column(Integer, ForeignKey("meta_tables.id"))
+    meta_tables = relationship("MetaTables", back_populates="meta_primary_keys")
+
+    column_id: int = Column(Integer, ForeignKey("meta_columns.id"))
+    meta_columns = relationship("MetaColumns", back_populates="meta_primary_keys")
+
+    constraint_name: str = Column(String, primary_key=True)

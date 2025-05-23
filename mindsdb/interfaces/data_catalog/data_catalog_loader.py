@@ -32,7 +32,7 @@ class DataCatalogLoader:
 
     def load_metadata(self) -> None:
         """
-        Load the metadata for the specified tables from the handler and store it in the database.
+        Load the metadata from the handler and store it in the database.
         """
         loaded_table_names = self._get_loaded_table_names()
 

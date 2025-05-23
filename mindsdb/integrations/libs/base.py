@@ -128,18 +128,6 @@ class CatalogDatabaseHandler(DatabaseHandler):
         """
         raise NotImplementedError()
     
-    def meta_get_primary_keys(self, table_names: Optional[List[str]]) -> HandlerResponse:
-        """ 
-        Returns metadata information about the primary keys in the tables to be stored in the data catalog.
-        """
-        raise NotImplementedError()
-    
-    def meta_get_foreign_keys(self, table_names: Optional[List[str]]) -> HandlerResponse:
-        """ 
-        Returns metadata information about the foreign keys in the tables to be stored in the data catalog.
-        """
-        raise NotImplementedError()
-    
     def meta_get_columns(self, table_names: Optional[List[str]]) -> HandlerResponse:
         """ 
         Returns metadata information about the columns in the tables to be stored in the data catalog.
@@ -149,6 +137,18 @@ class CatalogDatabaseHandler(DatabaseHandler):
     def meta_get_column_statistics(self, table_names: Optional[List[str]]) -> HandlerResponse:
         """ 
         Returns metadata statisical information about the columns in the tables to be stored in the data catalog.
+        """
+        raise NotImplementedError()
+    
+    def meta_get_primary_keys(self, table_names: Optional[List[str]]) -> HandlerResponse:
+        """ 
+        Returns metadata information about the primary keys in the tables to be stored in the data catalog.
+        """
+        raise NotImplementedError()
+    
+    def meta_get_foreign_keys(self, table_names: Optional[List[str]]) -> HandlerResponse:
+        """ 
+        Returns metadata information about the foreign keys in the tables to be stored in the data catalog.
         """
         raise NotImplementedError()
 

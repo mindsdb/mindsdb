@@ -1,19 +1,20 @@
-## MindsDB Agent
+## MindsDB Agent-to-Agent (A2A) API
 
-This sample uses the Agent Development Kit (ADK) to create a MindsDB agent that can query and analyze data across hundreds of federated data sources including databases, data lakes, and SaaS applications.
+The A2A API enables MindsDB agents to communicate with external systems and other agents using a standardized protocol. It allows for both synchronous and streaming responses, making it suitable for a wide range of applications including chatbots, data analysis, and automated workflows.
 
-The agent takes natural language queries from users and translates them into appropriate SQL queries for MindsDB, handling data federation across multiple sources. It can:
+## Overview
 
-- Query data from various sources including databases, data lakes, and SaaS applications
-- Perform analytics across federated data sources
-- Handle natural language questions about your data
-- Return structured results from multiple data sources
+The A2A API runs as an optional subprocess of MindsDB, allowing you to:
+
+- Query MindsDB agents using natural language
+- Stream responses in real-time for interactive applications
+- Connect MindsDB agents to external systems and other agents
+- Process complex queries across multiple data sources
 
 ## Prerequisites
 
+- MindsDB running
 - Python 3.10 or higher
-- [UV](https://docs.astral.sh/uv/)
-- Access to an LLM and API Key
 
 ## Optional Dependencies
 
@@ -25,17 +26,65 @@ pip install httpx>=0.27.0 httpx-sse>=0.4.0 starlette>=0.36.3 sse-starlette>=2.0.
 
 These dependencies are optional since the A2A functionality is not mandatory for using MindsDB.
 
-## Running the Sample
+## Running A2A API
 
-1. Ensure you are in the a2a directory:
-    ```bash
-    cd mindsdb/api/a2a
-    ```
+The A2A API can be enabled when starting MindsDB by including it in the API list:
 
-2. Run the agent:
-    ```bash
-    uv run .
-    ```
+```bash
+python -m mindsdb --api=mysql,mcp,http,a2a
+```
+
+## Configuration
+
+You can configure the A2A API using a config.json file. If not provided, default values will be used:
+
+```json
+{
+  "a2a": {
+    "host": "0.0.0.0",
+    "port": 10002,
+    "mindsdb_host": "localhost",
+    "mindsdb_port": 47334,
+    "project_name": "mindsdb",
+    "log_level": "info"
+  }
+}
+```
+
+## Example Request
+
+Here's an example of how to make a streaming request to the A2A API:
+
+```bash
+curl -X POST \
+  "http://localhost:10002/a2a" \
+  -H "Content-Type: application/json" \
+  -H "Accept: text/event-stream" \
+  -H "Cache-Control: no-cache" \
+  -H "Connection: keep-alive" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": "your-request-id",
+    "method": "tasks/sendSubscribe",
+    "params": {
+      "id": "your-task-id",
+      "sessionId": "your-session-id",
+      "message": {
+        "role": "user",
+        "parts": [
+          {"type": "text", "text": "What is the average rental price for a three bedroom?"}
+        ],
+        "metadata": {
+          "agentName": "my_agent_123"
+        }
+      },
+      "acceptedOutputModes": ["text/plain"]
+    }
+  }' \
+  --no-buffer
+```
+
+**Note:** You must pass the agent name in metadata using either `agentName` or `agent_name` parameter.
 
 ## Example Queries
 
@@ -45,4 +94,4 @@ You can ask questions like:
 - "What are the top performing products across all our e-commerce platforms?"
 - "Compare customer engagement metrics between our web analytics and email marketing platforms"
 
-The agent will handle the complexity of joining and analyzing data across different sources.
+The agent will handle the complexity of joining and analyzing data across different sources and stream the responses back to you in real-time.

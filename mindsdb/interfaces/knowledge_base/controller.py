@@ -677,8 +677,9 @@ class KnowledgeBaseTable:
         if model_id is None:
             # call litellm handler
             messages = list(df[TableField.CONTENT.value])
-            args = self._kb.params['embedding_model']
-            results = self.call_litellm_embedding(self.session, args, messages)
+            embedding_params = copy.deepcopy(config.get('default_embedding_model', {}))
+            embedding_params.update(self._kb.params['embedding_model'])
+            results = self.call_litellm_embedding(self.session, embedding_params, messages)
             results = [[val] for val in results]
             return pd.DataFrame(results, columns=[TableField.EMBEDDINGS.value])
 

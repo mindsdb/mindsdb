@@ -233,7 +233,8 @@ class Config:
             },
             "default_project": "mindsdb",
             "default_llm": {},
-            "default_embedding_model": {}
+            "default_embedding_model": {},
+            "default_reranking_model": {}
         }
         # endregion
 
@@ -379,6 +380,10 @@ class Config:
         if os.environ.get('MINDSDB_DEFAULT_EMBEDDING_MODEL_API_KEY', '') != '':
             self._env_config['default_embedding_model'] = {
                 'api_key': os.environ['MINDSDB_DEFAULT_EMBEDDING_MODEL_API_KEY']
+            }
+        if os.environ.get('MINDSDB_DEFAULT_RERANKING_MODEL_API_KEY', '') != '':
+            self._env_config['default_reranking_model'] = {
+                'api_key': os.environ['MINDSDB_DEFAULT_RERANKING_MODEL_API_KEY']
             }
 
     def parse_cmd_args(self) -> None:

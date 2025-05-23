@@ -636,3 +636,36 @@ class PostgresHandler(CatalogDatabaseHandler):
         result.data_frame = df.drop(columns=['histogram_bounds'])
 
         return result
+
+    def get_primary_keys(self, table_names: Optional[list] = None) -> Response:
+        """
+        Retrieves primary key information for the specified tables (or all tables if no list is provided).
+        
+        Args:
+            table_names (list): A list of table names for which to retrieve primary key information.
+        
+        Returns:
+            Response: A response object containing the primary key information.
+        """
+        query = f"""
+            SELECT
+                tc.table_name,
+                kcu.column_name,
+                tc.constraint_name
+            FROM
+                information_schema.table_constraints AS tc
+            JOIN
+                information_schema.key_column_usage AS kcu
+            ON
+                tc.constraint_name = kcu.constraint_name
+            WHERE
+                tc.constraint_type = 'PRIMARY KEY'
+                AND tc.table_schema = current_schema()
+        """
+
+        if table_names is not None and len(table_names) > 0:
+            table_names = [f"'{t}'" for t in table_names]
+            query += f" AND tc.table_name IN ({','.join(table_names)})"
+
+        result = self.native_query(query)
+        return result

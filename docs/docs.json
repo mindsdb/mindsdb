@@ -526,8 +526,15 @@
                 "group": "MCP API",
                 "pages": [
                   "mcp/overview",
-                  "mcp/tools",
-                  "mcp/cursor_usage"
+                  "mcp/usage",
+                  {
+                    "group": "MCP Clients",
+                    "pages": [
+                      "mcp/openai",
+                      "mcp/anthropic",
+                      "mcp/cursor_usage"
+                    ]
+                  }
                 ]
               },
               {

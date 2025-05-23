@@ -510,7 +510,7 @@ class PostgresHandler(CatalogDatabaseHandler):
 
             conn.close()
 
-    def get_table_metadata(self, table_names: Optional[list] = None) -> Response:
+    def meta_get_tables(self, table_names: Optional[list] = None) -> Response:
         """
         Retrieves metadata information about the tables in the PostgreSQL database to be stored in the data catalog.
 
@@ -545,7 +545,7 @@ class PostgresHandler(CatalogDatabaseHandler):
         result = self.native_query(query)
         return result
 
-    def get_column_metadata(self, table_names: Optional[list] = None) -> Response:
+    def meta_get_columns(self, table_names: Optional[list] = None) -> Response:
         """
         Retrieves column metadata for the specified tables (or all tables if no list is provided).
         
@@ -580,7 +580,7 @@ class PostgresHandler(CatalogDatabaseHandler):
         result = self.native_query(query)
         return result
 
-    def get_column_statistics(self, table_names: Optional[list] = None) -> dict:
+    def meta_get_column_statistics(self, table_names: Optional[list] = None) -> dict:
         """
         Retrieves column statistics (e.g., most common values, frequencies, null percentage, and distinct value count)
         for the specified tables or all tables if no list is provided.
@@ -637,7 +637,7 @@ class PostgresHandler(CatalogDatabaseHandler):
 
         return result
 
-    def get_primary_keys(self, table_names: Optional[list] = None) -> Response:
+    def meta_get_primary_keys(self, table_names: Optional[list] = None) -> Response:
         """
         Retrieves primary key information for the specified tables (or all tables if no list is provided).
         
@@ -670,41 +670,41 @@ class PostgresHandler(CatalogDatabaseHandler):
         result = self.native_query(query)
         return result
 
-def get_foreign_keys(self, table_names: Optional[list] = None) -> Response:
-    """
-    Retrieves foreign key information for the specified tables (or all tables if no list is provided).
-    
-    Args:
-        table_names (list): A list of table names for which to retrieve foreign key information.
-    
-    Returns:
-        Response: A response object containing the foreign key information.
-    """
-    query = f"""
-        SELECT
-            ccu.table_name AS parent_table_name,
-            ccu.column_name AS parent_column_name,
-            tc.table_name AS child_table_name,
-            kcu.column_name AS child_column_name,
-            tc.constraint_name
-        FROM
-            information_schema.table_constraints AS tc
-        JOIN
-            information_schema.key_column_usage AS kcu
-        ON
-            tc.constraint_name = kcu.constraint_name
-        JOIN
-            information_schema.constraint_column_usage AS ccu
-        ON
-            ccu.constraint_name = tc.constraint_name
-        WHERE
-            tc.constraint_type = 'FOREIGN KEY'
-            AND tc.table_schema = current_schema()
-    """
+    def meta_get_foreign_keys(self, table_names: Optional[list] = None) -> Response:
+        """
+        Retrieves foreign key information for the specified tables (or all tables if no list is provided).
+        
+        Args:
+            table_names (list): A list of table names for which to retrieve foreign key information.
+        
+        Returns:
+            Response: A response object containing the foreign key information.
+        """
+        query = f"""
+            SELECT
+                ccu.table_name AS parent_table_name,
+                ccu.column_name AS parent_column_name,
+                tc.table_name AS child_table_name,
+                kcu.column_name AS child_column_name,
+                tc.constraint_name
+            FROM
+                information_schema.table_constraints AS tc
+            JOIN
+                information_schema.key_column_usage AS kcu
+            ON
+                tc.constraint_name = kcu.constraint_name
+            JOIN
+                information_schema.constraint_column_usage AS ccu
+            ON
+                ccu.constraint_name = tc.constraint_name
+            WHERE
+                tc.constraint_type = 'FOREIGN KEY'
+                AND tc.table_schema = current_schema()
+        """
 
-    if table_names is not None and len(table_names) > 0:
-        table_names = [f"'{t}'" for t in table_names]
-        query += f" AND tc.table_name IN ({','.join(table_names)})"
+        if table_names is not None and len(table_names) > 0:
+            table_names = [f"'{t}'" for t in table_names]
+            query += f" AND tc.table_name IN ({','.join(table_names)})"
 
-    result = self.native_query(query)
-    return result
+        result = self.native_query(query)
+        return result

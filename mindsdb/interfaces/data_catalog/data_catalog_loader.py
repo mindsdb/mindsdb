@@ -2,6 +2,7 @@ from typing import List, Optional, Union
 
 import pandas as pd
 
+from mindsdb.integrations.libs.base import CatalogDatabaseHandler
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities import log
 
@@ -26,7 +27,7 @@ class DataCatalogLoader:
         session = SessionController()
 
         self.database_name = database_name
-        self.data_handler = session.integration_controller.get_data_handler(database_name)
+        self.data_handler: CatalogDatabaseHandler = session.integration_controller.get_data_handler(database_name)
         self.integration_id = session.integration_controller.get(database_name)['id']
         self.table_names = table_names
 
@@ -44,6 +45,8 @@ class DataCatalogLoader:
             self._load_column_statistics(tables, columns)
 
             self._load_primary_keys(tables, columns)
+
+            self._load_foreign_keys(tables, columns)
 
     def _get_loaded_table_names(self) -> List[str]:
         """
@@ -70,7 +73,7 @@ class DataCatalogLoader:
         Load the table metadata from the handler.
         """
         logger.info(f"Loading table metadata for {self.database_name}")
-        response = self.data_handler.get_table_metadata(self.table_names)
+        response = self.data_handler.meta_get_tables(self.table_names)
         df = response.data_frame
 
         # Filter out tables that are already loaded in the data catalog
@@ -108,7 +111,7 @@ class DataCatalogLoader:
         Load the column metadata from the handler.
         """
         logger.info(f"Loading column metadata for {self.database_name}")
-        response = self.data_handler.get_column_metadata(self.table_names)
+        response = self.data_handler.meta_get_columns(self.table_names)
         df = response.data_frame
 
         return self._add_column_metadata(df, tables)
@@ -140,7 +143,7 @@ class DataCatalogLoader:
         Load the column statistics metadata from the handler.
         """
         logger.info(f"Loading column statistics for {self.database_name}")
-        response = self.data_handler.get_column_statistics(self.table_names)
+        response = self.data_handler.meta_get_column_statistics(self.table_names)
         df = response.data_frame
 
         return self._add_column_statistics(df, tables, columns)
@@ -180,11 +183,11 @@ class DataCatalogLoader:
         Load the primary keys metadata from the handler.
         """
         logger.info(f"Loading primary keys for {self.database_name}")
-        response = self.data_handler.get_primary_keys(self.table_names)
+        response = self.data_handler.meta_get_primary_keys(self.table_names)
         df = response.data_frame
 
         return self._add_primary_keys(df, tables, columns)
-    
+
     def _add_primary_keys(self, df: pd.DataFrame, tables: db.MetaTables, columns: db.MetaColumns) -> None:
         """
         Add the primary keys metadata to the database.
@@ -213,11 +216,11 @@ class DataCatalogLoader:
         Load the foreign keys metadata from the handler.
         """
         logger.info(f"Loading foreign keys for {self.database_name}")
-        response = self.data_handler.get_foreign_keys(self.table_names)
+        response = self.data_handler.meta_get_foreign_keys(self.table_names)
         df = response.data_frame
 
         return self._add_foreign_keys(df, tables, columns)
-    
+
     def _add_foreign_keys(self, df: pd.DataFrame, tables: db.MetaTables, columns: db.MetaColumns) -> None:
         """
         Add the foreign keys metadata to the database.

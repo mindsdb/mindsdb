@@ -10,7 +10,7 @@ can be added as environment variables on the server where MindsDB is deployed.
 
 MindsDB does not require authentication by default. If you want to enable authentication, you can set the `MINDSDB_USERNAME` and `MINDSDB_PASSWORD` environment variables.
 
-#### Example
+### Example
 
 <CodeGroup>
     ```bash Docker
@@ -35,7 +35,7 @@ In the `MINDSDB_STORAGE_DIR` location, MindsDB stores users' data, models and up
 `sqlite.db` file. 
 You can change the default storage location using `MINDSDB_STORAGE_DIR` variable.
 
-#### Example
+### Example
 
 <CodeGroup>
     ```bash Docker
@@ -53,7 +53,7 @@ MindsDB uses `sqlite` database by default to store the required configuration as
 The full list of the above schemas can be found [here](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/interfaces/storage/db.py#L69). You can change the 
 default storage option and use different database by adding the new connection string using `MINDSDB_DB_CON` variable.
 
-#### Example
+### Example
 
 <CodeGroup>
     ```bash Docker
@@ -77,7 +77,7 @@ By default, MindsDB starts the http and mysql APIs. To define which APIs you wan
 
 To expose the ports for the APIs, you need to add the respective ports to the command with the `-p` flag.
 
-#### Example
+### Example
 
 <CodeGroup>
     ```bash Docker
@@ -94,7 +94,7 @@ To expose the ports for the APIs, you need to add the respective ports to the co
 By default for the HTTP API, MindsDB uses [Waitress](https://pypi.org/project/waitress/) which is a pure-Python WSGI server. There is an option to change that 
 and use [Flask](https://flask.palletsprojects.com/en/stable/) or [Gunicorn](https://gunicorn.org/)
 
-#### Example
+### Example
 
 <CodeGroup>
     ```bash Docker
@@ -145,3 +145,9 @@ If this environment variable is set or modified after MindsDB has started, the d
     export MINDSDB_DEFAULT_PROJECT='my_project'
     ```
 </CodeGroup>
+
+## MindsDB's MCP API Authentication
+
+Set the `MINDSDB_MCP_ACCESS_TOKEN` environment variable to enable user authentication for accessing MindsDB's MCP Server.
+
+Learn more [here](/mcp/usage).

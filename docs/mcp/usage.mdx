@@ -1,0 +1,71 @@
+---
+title: MindsDB's MCP Server Usage and Tools
+sidebarTitle: Usage
+---
+
+**MindsDB** is an MCP server that enables your MCP applications to answer questions over large-scale federated data spanning databases, data warehouses, and SaaS applications.
+
+## Start MindsDB as an MCP Server
+
+Follow the steps below to use MindsDB as an MCP server.
+
+1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
+
+2. Set the `MINDSDB_MCP_ACCESS_TOKEN` environment variable to enable user authentication for accessing MindsDB's MCP Server.
+
+3. [Connect your data source](/mindsdb_sql/sql/create/database) and/or [upload files](/mindsdb_sql/sql/create/file) to MindsDB in order to ask questions over your data.
+
+    <Accordion title="Sample Data">
+    You can use our sample dataset that stores the sales manager data.
+
+    ```sql
+    CREATE DATABASE sales_manager_data
+    WITH ENGINE = "postgres",
+    PARAMETERS = {
+        "user": "demo_user",
+        "password": "demo_password",
+        "host": "samples.mindsdb.com",
+        "port": "5432",
+        "database": "sales_manager_data"
+    };
+    ```
+    </Accordion>
+
+4. Run MindsDB enabling its MCP API on port 47337 by default.
+
+    ```bash
+    docker run --name mindsdb_container_name -e MINDSDB_APIS='mcp' -e MINDSDB_MCP_ACCESS_TOKEN=abc123 -p 47337:47337 mindsdb/mindsdb
+    ```
+
+    The following environment variables are set in the Docker container:
+
+    - `MINDSDB_APIS` defines the MindsDB's APIs to be started.
+    - `MINDSDB_MCP_ACCESS_TOKEN` defines the MCP access token used to access MindsDB's MCP Server from MCP Clients.
+
+    <Info>
+    Alternatively, you can use the [`MINDSDB_APIS` environment variable](/setup/environment-vars#mindsdb-apis) to define the list of APIs to be started.
+
+    ```bash
+    export MINDSDB_APIS='mcp'
+    ```
+    </Info>
+
+    <Info>
+    If you run [MindsDB via PyPI](/contribute/install), you can define APIs as below.
+
+    ```bash
+    python -m mindsdb --api=mcp
+    ```
+    </Info>
+
+## MCP Tools
+
+MindsDB MCP API exposes a set of tools that enable users to interact with their data and extract valuable insights.
+
+**1. List Databases**
+
+The `list_databases` tool lists all data sources connected to MindsDB.
+
+**2. Query**
+
+The `query` tool executes queries on the federated data to extract data relevant to answering a given question.

@@ -645,6 +645,21 @@ class MetaTables(Base):
     meta_foreign_keys_parents: Mapped[List["MetaForeignKeys"]] = relationship("MetaForeignKeys", foreign_keys="MetaForeignKeys.parent_table_id", back_populates="parent_table") 
     meta_foreign_keys_children: Mapped[List["MetaForeignKeys"]] = relationship("MetaForeignKeys", foreign_keys="MetaForeignKeys.child_table_id", back_populates="child_table")
     
+    def as_string(self) -> str:
+        table_info = f"{self.name} ({self.type})"
+
+        if self.description:
+            table_info += f" : {self.description}"
+
+        if self.row_count:
+            table_info += f"\n    - Row Count: {self.row_count}"
+
+        if self.meta_columns:
+            table_info += "\n\n   - Columns:"
+            for column in self.meta_columns:
+                table_info += f"\n    {column.as_string()}"
+
+        return table_info
 
 class MetaColumns(Base):
     __tablename__ = "meta_columns"
@@ -664,6 +679,23 @@ class MetaColumns(Base):
     meta_foreign_keys_parents: Mapped[List["MetaForeignKeys"]] = relationship("MetaForeignKeys", foreign_keys="MetaForeignKeys.parent_column_id", back_populates="parent_column")
     meta_foreign_keys_children: Mapped[List["MetaForeignKeys"]] = relationship("MetaForeignKeys", foreign_keys="MetaForeignKeys.child_column_id", back_populates="child_column")
     
+    def as_string(self) -> str:
+        column_info = f"{self.name} ({self.data_type}):"
+        if self.description:
+            column_info += f" : {self.description}"
+
+        if self.is_nullable:
+            column_info += f"\n        - Nullable: {self.is_nullable}"
+
+        if self.default_value:
+            column_info += f"\n        - Default Value: {self.default_value}"
+
+        if self.meta_column_statistics:
+            column_info += "\n\n       - Column Statistics:"
+            column_info += f"\n        {self.meta_column_statistics[0].as_string()}"
+
+        return column_info
+
 
 class MetaColumnStatistics(Base):
     __tablename__ = "meta_column_statistics"
@@ -676,6 +708,23 @@ class MetaColumnStatistics(Base):
     distinct_values_count: int = Column(Integer, nullable=True)
     minimum_value: str = Column(String, nullable=True)
     maximum_value: str = Column(String, nullable=True)
+
+    def as_string(self) -> str:
+        common_values = ""
+        for i in range(10):
+            if i < len(self.most_common_values):
+                common_values += f"{self.most_common_values[i]}: {self.most_common_frequencies[i]}\n"
+            else:
+                break
+
+        column_statistics = f"- Top 10 Most Common Values and Frequencies:\n"
+        column_statistics += f"\n    {common_values}"
+        column_statistics += f"- Null Percentage: {self.null_percentage}\n"
+        column_statistics += f"- Distinct Values Count: {self.distinct_values_count}\n"
+        column_statistics += f"- Minimum Value: {self.minimum_value}\n"
+        column_statistics += f"- Maximum Value: {self.maximum_value}"
+
+        return column_statistics
 
 
 class MetaPrimaryKeys(Base):

@@ -68,8 +68,9 @@ def test_update_a2a_agent() -> None:
             }
 
         except Exception as e:
+            app.logger.error(f"Exception occurred while updating A2A agent: {str(e)}")
             return {
-                "error": f"Error updating A2A agent: {str(e)}"
+                "error": "An internal error occurred. Please try again later."
             }, HTTPStatus.INTERNAL_SERVER_ERROR
 
     # Register the route directly with the app

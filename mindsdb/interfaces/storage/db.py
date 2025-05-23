@@ -680,27 +680,27 @@ class MetaColumnStatistics(Base):
 
 class MetaPrimaryKeys(Base):
     __tablename__ = "meta_primary_keys"
-    table_id: int = Column(Integer, ForeignKey("meta_tables.id"))
+    table_id: int = Column(Integer, ForeignKey("meta_tables.id"), primary_key=True)
     meta_tables = relationship("MetaTables", back_populates="meta_primary_keys")
 
-    column_id: int = Column(Integer, ForeignKey("meta_columns.id"))
+    column_id: int = Column(Integer, ForeignKey("meta_columns.id"), primary_key=True)
     meta_columns = relationship("MetaColumns", back_populates="meta_primary_keys")
 
-    constraint_name: str = Column(String, primary_key=True)
+    constraint_name: str = Column(String, nullable=True)
 
 
 class MetaForeignKeys(Base):
     __tablename__ = "meta_foreign_keys"
-    parent_table_id: int = Column(Integer, ForeignKey("meta_tables.id"))
-    parent_table = relationship("MetaTables", foreign_keys=[parent_table_id])
+    parent_table_id: int = Column(Integer, ForeignKey("meta_tables.id"), primary_key=True)
+    parent_table = relationship("MetaTables", back_populates="meta_foreign_keys_parents", foreign_keys=[parent_table_id])
 
-    parent_column_id: int = Column(Integer, ForeignKey("meta_columns.id"))
-    parent_column = relationship("MetaColumns", foreign_keys=[parent_column_id])
-    
-    child_table_id: int = Column(Integer, ForeignKey("meta_tables.id"))
-    child_table = relationship("MetaTables", foreign_keys=[child_table_id])
-    
-    child_column_id: int = Column(Integer, ForeignKey("meta_columns.id"))
-    child_column = relationship("MetaColumns", foreign_keys=[child_column_id])
-    
-    constraint_name: str = Column(String, primary_key=True)
+    parent_column_id: int = Column(Integer, ForeignKey("meta_columns.id"), primary_key=True)
+    parent_column = relationship("MetaColumns", back_populates="meta_foreign_keys_parents", foreign_keys=[parent_column_id])
+
+    child_table_id: int = Column(Integer, ForeignKey("meta_tables.id"), primary_key=True)
+    child_table = relationship("MetaTables", back_populates="meta_foreign_keys_children", foreign_keys=[child_table_id])
+
+    child_column_id: int = Column(Integer, ForeignKey("meta_columns.id"), primary_key=True)
+    child_column = relationship("MetaColumns", back_populates="meta_foreign_keys_children", foreign_keys=[child_column_id])
+
+    constraint_name: str = Column(String, nullable=True)

@@ -231,6 +231,9 @@ class Integration(Base):
     engine = Column(String, nullable=False)
     data = Column(Json)
     company_id = Column(Integer)
+    
+    meta_tables = relationship("MetaTables", back_populates="integration")
+    
     __table_args__ = (
         UniqueConstraint(
             "name", "company_id", name="unique_integration_name_company_id"
@@ -621,3 +624,132 @@ class LLMData(Base):
     model_id: int = Column(Integer, nullable=False)
     created_at: datetime = Column(DateTime, default=datetime.datetime.now)
     updated_at: datetime = Column(DateTime, onupdate=datetime.datetime.now)
+
+
+# Data Catalog
+class MetaTables(Base):
+    __tablename__ = "meta_tables"
+    id: int = Column(Integer, primary_key=True)
+
+    integration_id: int = Column(Integer, ForeignKey("integration.id"))
+    integration = relationship("Integration", back_populates="meta_tables")
+
+    name: str = Column(String, nullable=False)
+    schema: str = Column(String, nullable=True)
+    description: str = Column(String, nullable=True)
+    type: str = Column(String, nullable=True)
+    row_count: int = Column(Integer, nullable=True)
+
+    meta_columns: Mapped[List["MetaColumns"]] = relationship("MetaColumns", back_populates="meta_tables")
+    meta_primary_keys: Mapped[List["MetaPrimaryKeys"]] = relationship("MetaPrimaryKeys", back_populates="meta_tables")
+    meta_foreign_keys_parents: Mapped[List["MetaForeignKeys"]] = relationship("MetaForeignKeys", foreign_keys="MetaForeignKeys.parent_table_id", back_populates="parent_table") 
+    meta_foreign_keys_children: Mapped[List["MetaForeignKeys"]] = relationship("MetaForeignKeys", foreign_keys="MetaForeignKeys.child_table_id", back_populates="child_table")
+    
+    def as_string(self) -> str:
+        table_info = f"{self.name} ({self.type})"
+
+        if self.description:
+            table_info += f" : {self.description}"
+
+        if self.row_count:
+            table_info += f"\n    - Row Count: {self.row_count}"
+
+        if self.meta_columns:
+            table_info += "\n\n   - Columns:"
+            for column in self.meta_columns:
+                table_info += f"\n    {column.as_string()}"
+
+        return table_info
+
+class MetaColumns(Base):
+    __tablename__ = "meta_columns"
+    id: int = Column(Integer, primary_key=True)
+
+    table_id: int = Column(Integer, ForeignKey("meta_tables.id"))
+    meta_tables = relationship("MetaTables", back_populates="meta_columns")
+
+    name: str = Column(String, nullable=False)
+    data_type: str = Column(String, nullable=True)
+    description: str = Column(String, nullable=True)
+    default_value: str = Column(String, nullable=True)
+    is_nullable: bool = Column(Boolean, nullable=True)
+    
+    meta_column_statistics: Mapped[List["MetaColumnStatistics"]] = relationship("MetaColumnStatistics", back_populates="meta_columns")
+    meta_primary_keys: Mapped[List["MetaPrimaryKeys"]] = relationship("MetaPrimaryKeys", back_populates="meta_columns")
+    meta_foreign_keys_parents: Mapped[List["MetaForeignKeys"]] = relationship("MetaForeignKeys", foreign_keys="MetaForeignKeys.parent_column_id", back_populates="parent_column")
+    meta_foreign_keys_children: Mapped[List["MetaForeignKeys"]] = relationship("MetaForeignKeys", foreign_keys="MetaForeignKeys.child_column_id", back_populates="child_column")
+    
+    def as_string(self) -> str:
+        column_info = f"{self.name} ({self.data_type}):"
+        if self.description:
+            column_info += f" : {self.description}"
+
+        if self.is_nullable:
+            column_info += f"\n        - Nullable: {self.is_nullable}"
+
+        if self.default_value:
+            column_info += f"\n        - Default Value: {self.default_value}"
+
+        if self.meta_column_statistics:
+            column_info += "\n\n       - Column Statistics:"
+            column_info += f"\n        {self.meta_column_statistics[0].as_string()}"
+
+        return column_info
+
+
+class MetaColumnStatistics(Base):
+    __tablename__ = "meta_column_statistics"
+    column_id: int = Column(Integer, ForeignKey("meta_columns.id"), primary_key=True)
+    meta_columns = relationship("MetaColumns", back_populates="meta_column_statistics")
+    
+    most_common_values: str = Column(Array, nullable=True)
+    most_common_frequencies: str = Column(Array, nullable=True)
+    null_percentage: float = Column(Numeric(5, 2), nullable=True)
+    distinct_values_count: int = Column(Integer, nullable=True)
+    minimum_value: str = Column(String, nullable=True)
+    maximum_value: str = Column(String, nullable=True)
+
+    def as_string(self) -> str:
+        common_values = ""
+        for i in range(10):
+            if i < len(self.most_common_values):
+                common_values += f"{self.most_common_values[i]}: {self.most_common_frequencies[i]}\n"
+            else:
+                break
+
+        column_statistics = f"- Top 10 Most Common Values and Frequencies:\n"
+        column_statistics += f"\n    {common_values}"
+        column_statistics += f"- Null Percentage: {self.null_percentage}\n"
+        column_statistics += f"- Distinct Values Count: {self.distinct_values_count}\n"
+        column_statistics += f"- Minimum Value: {self.minimum_value}\n"
+        column_statistics += f"- Maximum Value: {self.maximum_value}"
+
+        return column_statistics
+
+
+class MetaPrimaryKeys(Base):
+    __tablename__ = "meta_primary_keys"
+    table_id: int = Column(Integer, ForeignKey("meta_tables.id"), primary_key=True)
+    meta_tables = relationship("MetaTables", back_populates="meta_primary_keys")
+
+    column_id: int = Column(Integer, ForeignKey("meta_columns.id"), primary_key=True)
+    meta_columns = relationship("MetaColumns", back_populates="meta_primary_keys")
+
+    constraint_name: str = Column(String, nullable=True)
+
+
+class MetaForeignKeys(Base):
+    __tablename__ = "meta_foreign_keys"
+    parent_table_id: int = Column(Integer, ForeignKey("meta_tables.id"), primary_key=True)
+    parent_table = relationship("MetaTables", back_populates="meta_foreign_keys_parents", foreign_keys=[parent_table_id])
+
+    parent_column_id: int = Column(Integer, ForeignKey("meta_columns.id"), primary_key=True)
+    parent_column = relationship("MetaColumns", back_populates="meta_foreign_keys_parents", foreign_keys=[parent_column_id])
+
+    child_table_id: int = Column(Integer, ForeignKey("meta_tables.id"), primary_key=True)
+    child_table = relationship("MetaTables", back_populates="meta_foreign_keys_children", foreign_keys=[child_table_id])
+
+    child_column_id: int = Column(Integer, ForeignKey("meta_columns.id"), primary_key=True)
+    child_column = relationship("MetaColumns", back_populates="meta_foreign_keys_children", foreign_keys=[child_column_id])
+
+    constraint_name: str = Column(String, nullable=True)

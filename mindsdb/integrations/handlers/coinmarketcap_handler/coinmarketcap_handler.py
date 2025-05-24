@@ -1,40 +1,54 @@
-import ast
-import inspect
-import textwrap
 import requests
-from datetime import datetime
-from _ast import AnnAssign, AugAssign
-from typing import Any, Dict, List, Optional
-
-import pandas as pd
-from mindsdb_sql_parser.ast.base import ASTNode
+from typing import Dict, List
+from mindsdb.integrations.libs.api_handler import APIHandler
+from mindsdb.integrations.libs.response import (
+    HandlerStatusResponse as StatusResponse,
+    HandlerResponse as Response,
+    RESPONSE_TYPE
+)
 from mindsdb.utilities import log
 
-from mindsdb.integrations.libs.response import HandlerResponse, HandlerStatusResponse
+from .coinmarketcap_tables import (
+    ListingTable,
+    QuotesTable,
+    InfoTable,
+    GlobalMetricsTable
+)
 
 logger = log.getLogger(__name__)
 
-
-class BaseHandler:
-    """ Base class for database handlers
-
-    Base class for handlers that associate a source of information with the
-    broader MindsDB ecosystem via SQL commands.
+class CoinMarketCapHandler(APIHandler): # Inherits from APIHandler
+    """ 
+    The CoinMarketCap Handler implementation
     """
 
-    def __init__(self, name: str):
-        """ constructor
-        Args:
-            name (str): the handler name
+    def __init__(self, name: str, **kwargs):
+        """ 
+        Initialize the CoinMarketCap Handler
         """
-        self.is_connected: bool = False
-        self.name = name
+        super().__init__(name)
+
+        # Get connection data (API key, etc.)
+        connection_data = kwargs.get('connection_data', {})
+        self.connection_data = connection_data
+
+        # API configuration
+        self.api_key = connection_data.get('api_key')
+        self.base_url = connection_data.get('base_url', 'https://pro-api.coinmarketcap.com')
+
+        # Initialize tables
+        self._register_table('listings', ListingTable(self))
+        self._register_table('quotes', QuotesTable(self))
+        self._register_table('info', InfoTable(self))
+        self._register_table('global_metrics', GlobalMetricsTable(self))
+
+        self.is_connected = False
 
     def connect(self):
-        """ Set up any connections required by the handler
+        """ 
+        Set up any connections required by the handler
 
         Should return connection
-
         """
         raise NotImplementedError()
 

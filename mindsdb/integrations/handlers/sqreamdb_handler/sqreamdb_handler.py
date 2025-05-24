@@ -35,7 +35,7 @@ class SQreamDBHandler(DatabaseHandler):
         
         
         self.connection_data = connection_data
-
+        self.database = self.connection_data.get("database")
         self.connection = None
         self.is_connected = False
           
@@ -79,7 +79,7 @@ class SQreamDBHandler(DatabaseHandler):
             with connection.cursor() as cur:
                 cur.execute('select 1;')
             response.success = True
-        except db.Error as e:
+        except Exception as e:
             logger.error(f'Error connecting to SQreamDB {self.database}, {e}!')
             response.error_message = e
 

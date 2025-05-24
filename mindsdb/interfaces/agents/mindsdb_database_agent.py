@@ -2,6 +2,7 @@
     Wrapper around MindsDB's executor and integration controller following the implementation of the original
     langchain.sql_database.SQLDatabase class to partly replicate its behavior.
 """
+import traceback
 from typing import Any, Iterable, List, Optional
 
 from mindsdb.utilities import log
@@ -57,8 +58,20 @@ class MindsDBSQL(SQLDatabase):
         """Information about all tables in the database."""
         return self._sql_agent.get_table_info()
 
+    @property
+    def kb_info(self) -> str:
+        """Information about all knowledge bases in the database."""
+        return self._sql_agent.get_knowledge_base_info()
+
     def get_usable_table_names(self) -> Iterable[str]:
-        return self._sql_agent.get_usable_table_names()
+        """Information about all tables in the database."""
+        try:
+            return self._sql_agent.get_usable_table_names()
+        except Exception as e:
+            # If there's an error accessing tables through the integration, handle it gracefully
+            logger.warning(f"Error getting usable table names: {str(e)}")
+            # Return an empty list instead of raising an exception
+            return []
 
     def get_table_info_no_throw(self, table_names: Optional[List[str]] = None) -> str:
         for i in range(len(table_names)):
@@ -66,5 +79,91 @@ class MindsDBSQL(SQLDatabase):
         return self._sql_agent.get_table_info_safe(table_names)
 
     def run_no_throw(self, command: str, fetch: str = "all") -> str:
+        """Execute a SQL command and return the result as a string.
+
+        This method catches any exceptions and returns an error message instead of raising an exception.
+
+        Args:
+            command: The SQL command to execute
+            fetch: Whether to fetch 'all' results or just 'one'
+
+        Returns:
+            A string representation of the result or an error message
+        """
         command = extract_essential(command)
-        return self._sql_agent.query_safe(command)
+
+        try:
+
+            # Log the query for debugging
+            logger.info(f"Executing SQL query: {command}")
+
+            # remove backticks
+            command = command.replace('`', '')
+
+            # Parse the SQL string to an AST object first
+            from mindsdb_sql_parser import parse_sql
+            ast_query = parse_sql(command)
+
+            # Now execute the parsed query
+            result = self._sql_agent.skill_tool.get_command_executor().execute_command(ast_query, database_name="mindsdb")
+
+            # Convert ExecuteAnswer to a DataFrame for easier manipulation
+            df = None
+            if hasattr(result, 'data') and hasattr(result.data, 'data_frame'):
+                df = result.data.data_frame
+            else:
+                # Fallback to to_df when data_frame attr not available
+                try:
+                    df = result.data.to_df()
+                except Exception:
+                    df = None
+
+            # Default behaviour (string)
+            if df is not None:
+                if not df.empty:
+                    return df.to_string(index=False)
+                else:
+                    return "Query executed successfully, but returned no data."
+
+            return str(result)
+
+        except Exception as e:
+            logger.error(f"Error executing SQL command: {str(e)}\n{traceback.format_exc()}")
+            # If this is a knowledge base query, provide a more helpful error message
+            if "knowledge_base" in command.lower() or any(kb in command for kb in self._sql_agent.get_usable_knowledge_base_names()):
+                return f"Error executing knowledge base query: {str(e)}. Please check that the knowledge base exists and your query syntax is correct."
+            return f"Error: {str(e)}"
+
+    # def run_no_throw(self, command: str, fetch: str = "all") -> str:
+    #     """Execute a SQL command and return the result as a string.
+    #
+    #     This method catches any exceptions and returns an error message instead of raising an exception.
+    #
+    #     Args:
+    #         command: The SQL command to execute
+    #         fetch: Whether to fetch 'all' results or just 'one'
+    #
+    #     Returns:
+    #         A string representation of the result or an error message
+    #     """
+    #     command = extract_essential(command)
+    #     try:
+    #         return self._sql_agent.query_safe(command)
+    #     except Exception as e:
+    #         logger.error(f"Error executing SQL command: {str(e)}")
+    #         # If this is a knowledge base query, provide a more helpful error message
+    #         if "knowledge_base" in command.lower() or any(kb in command for kb in self._sql_agent.get_usable_knowledge_base_names()):
+    #             return f"Error executing knowledge base query: {str(e)}. Please check that the knowledge base exists and your query syntax is correct."
+    #         return f"Error: {str(e)}"
+
+    def get_usable_knowledge_base_names(self) -> List[str]:
+        """Get a list of usable knowledge base names.
+
+        Returns:
+            A list of knowledge base names that can be used in queries
+        """
+        try:
+            return self._sql_agent.get_usable_knowledge_base_names()
+        except Exception as e:
+            logger.error(f"Error getting usable knowledge base names: {str(e)}")
+            return []

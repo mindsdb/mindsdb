@@ -38,7 +38,8 @@ HANDLER_REQS_PATHS = list(
 
 MAIN_EXCLUDE_PATHS = [
     "mindsdb/integrations/handlers/.*_handler",
-    "pryproject.toml"
+    "pryproject.toml",
+    "mindsdb/api/a2a/.*"  # Skip A2A API directory
 ]
 
 # Torch.multiprocessing is imported in a 'try'. Falls back to multiprocessing so we dont NEED it.
@@ -47,9 +48,15 @@ MAIN_EXCLUDE_PATHS = [
 # and not explicitly imported in mindsdb.
 # transformers is required for langchain_core and not explicitly imported by mindsdb.
 MAIN_RULE_IGNORES = {
-    "DEP003": ["torch", "pyarrow"],
-    "DEP001": ["torch", "pgvector", "pyarrow", "openai", "gunicorn", "dataprep_ml", "opentelemetry", "langfuse"],
-    "DEP002": ["psycopg2-binary", "lark", "transformers", "langchain-experimental", "lxml", "openpyxl", "onnxruntime"]
+    "DEP003": ["torch", "pyarrow", "typing_extensions", "click"],
+    "DEP001": [
+        "torch", "pgvector", "pyarrow", "openai", "gunicorn", "dataprep_ml", "opentelemetry", "langfuse",
+        # A2A API dependencies - these are optional since A2A is not mandatory
+        "httpx", "httpx_sse", "starlette", "sse_starlette", "jwt", "jwcrypto", "dotenv", "python-dotenv",
+        # A2A API internal imports
+        "common", "task_manager", "agent"
+    ],
+    "DEP002": ["psycopg2-binary", "lark", "transformers", "langchain-experimental", "lxml", "openpyxl", "onnxruntime", "pydantic_core"]
 }
 
 
@@ -90,9 +97,20 @@ OPENAI_DEP002_IGNORE_HANDLER_DEPS = ["tiktoken"]
 
 CHROMADB_EP002_IGNORE_HANDLER_DEPS = ["onnxruntime"]
 
+# The A2A API dependencies are optional since A2A is not mandatory
+A2A_DEP001_IGNORE_HANDLER_DEPS = ["starlette", "sse_starlette", "jwt", "jwcrypto"]
+
+A2A_DEP003_IGNORE_HANDLER_DEPS = [
+    "httpx", "httpx_sse", "dotenv", "typing_extensions", "click"
+]
+
 # The `pyarrow` package is used only if it is installed.
 # The handler can work without it.
 SNOWFLAKE_DEP003_IGNORE_HANDLER_DEPS = ["pyarrow"]
+
+DEP001_IGNORE_HANDLER_DEPS = list(set(
+    A2A_DEP001_IGNORE_HANDLER_DEPS
+))
 
 DEP002_IGNORE_HANDLER_DEPS = list(set(
     BYOM_DEP002_IGNORE_HANLDER_DEPS
@@ -108,8 +126,10 @@ DEP002_IGNORE_HANDLER_DEPS = list(set(
     + OPENAI_DEP002_IGNORE_HANDLER_DEPS
     + CHROMADB_EP002_IGNORE_HANDLER_DEPS
 ))
+
 DEP003_IGNORE_HANDLER_DEPS = list(set(
     SNOWFLAKE_DEP003_IGNORE_HANDLER_DEPS
+    + A2A_DEP003_IGNORE_HANDLER_DEPS
 ))
 
 # List of rules we can ignore for specific packages
@@ -119,7 +139,7 @@ MAIN_REQUIREMENTS_DEPS = get_requirements_from_file(MAIN_REQS_PATH) + get_requir
 
 HANDLER_RULE_IGNORES = {
     "DEP002": DEP002_IGNORE_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS,
-    "DEP001": ["tests", "pyarrow", "IfxPyDbi", "ingres_sa_dialect"],  # 'tests' is the mindsdb tests folder in the repo root, 'pyarrow' used in snowflake handler
+    "DEP001": ["tests", "pyarrow", "IfxPyDbi", "ingres_sa_dialect"] + DEP001_IGNORE_HANDLER_DEPS,  # 'tests' is the mindsdb tests folder in the repo root, 'pyarrow' used in snowflake handler
     "DEP003": DEP003_IGNORE_HANDLER_DEPS
 }
 

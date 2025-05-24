@@ -47,8 +47,8 @@ MAIN_EXCLUDE_PATHS = [
 # and not explicitly imported in mindsdb.
 # transformers is required for langchain_core and not explicitly imported by mindsdb.
 MAIN_RULE_IGNORES = {
-    "DEP003": ["torch", "pyarrow"],
-    "DEP001": ["torch", "pgvector", "pyarrow", "openai", "gunicorn", "dataprep_ml", "opentelemetry", "langfuse"],
+    "DEP003": ["torch", "pyarrow", "anyio"],
+    "DEP001": ["torch", "pgvector", "pyarrow", "openai", "gunicorn", "dataprep_ml", "opentelemetry", "langfuse", "starlette"],
     "DEP002": ["psycopg2-binary", "lark", "transformers", "langchain-experimental", "lxml", "openpyxl", "onnxruntime"]
 }
 

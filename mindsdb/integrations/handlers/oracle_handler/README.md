@@ -46,6 +46,7 @@ Optional connection parameters include the following:
 * `port`: The port number for connecting to the Oracle database. Default is 1521.
 * `disable_oob`: The boolean parameter to disable out-of-band breaks. Default is `false`.
 * `auth_mode`: The authorization mode to use.
+* `thick_mode`: Set to `true` to use thick mode for the connection. Thin mode is used by default. Oracle Client libraries required for thick mode.
 
 ## Usage
 

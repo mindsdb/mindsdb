@@ -83,4 +83,4 @@ class ProjectStepCall(BaseStepCall):
 
         res = query_df(df, query, session=self.session)
 
-        return ResultSet().from_df_cols(res, col_names, strict=False)
+        return ResultSet.from_df_cols(df=res, columns_dict=col_names, strict=False)

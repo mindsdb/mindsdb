@@ -1,6 +1,9 @@
 from collections import OrderedDict
 import unittest
+from decimal import Decimal
 from unittest.mock import patch, MagicMock
+from uuid import UUID
+import datetime
 
 from pymssql import OperationalError
 from pandas import DataFrame
@@ -12,6 +15,7 @@ from mindsdb.integrations.libs.response import (
     INF_SCHEMA_COLUMNS_NAMES_SET,
     RESPONSE_TYPE
 )
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 
 class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
@@ -305,6 +309,283 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         self.assertFalse(response.success)
         self.assertEqual(response.error_message, "Connection error")
+
+    def test_types_casting(self):
+        """Test that types are casted correctly
+        """
+        query_str = "SELECT * FROM test_table"
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=None)
+
+        self.handler.connect = MagicMock(return_value=mock_conn)
+        mock_conn.cursor = MagicMock(return_value=mock_cursor)
+
+        # region test numeric types (and bool, as bit is a synonym for boolean)
+        """Data obtained using:
+        CREATE TABLE test_numeric_types (
+            n_bit BIT,                          -- 0|1|NULL
+            n_tinyint TINYINT,                  -- 0:255
+            n_smallint SMALLINT,                -- -32,768:32,767
+            n_int INT,                          -- -2^31:2^31-1
+            n_bigint BIGINT,                    -- -2^63:2^63-1
+            n_decimal DECIMAL(18,2),
+            n_decimal_p DECIMAL(38),
+            n_numeric NUMERIC(18,4),
+            n_money MONEY,                      -- -922,337,203,685,477.5808:922,337,203,685,477.5807
+            n_smallmoney SMALLMONEY,            -- -214,748.3648:214,748.3647
+            n_float FLOAT(53),
+            n_real REAL                         -- FLOAT(24)
+        );
+
+        INSERT INTO test_numeric_types (
+            n_bit,
+            n_tinyint,
+            n_smallint,
+            n_int,
+            n_bigint,
+            n_decimal,
+            n_decimal_p,
+            n_numeric,
+            n_money,
+            n_smallmoney,
+            n_float,
+            n_real
+        ) VALUES (
+            1,                                  -- n_bit
+            255,                                -- n_tinyint
+            32767,                              -- n_smallint
+            2147483647,                         -- n_int
+            9223372036854775807,                -- n_bigint
+            1234.56,                            -- n_decimal
+            12345678901234567890123456789012345678, -- n_decimal_p
+            1234.5678,                          -- n_numeric
+            $123456.7890,                       -- n_money
+            $214748.3647,                       -- n_smallmoney
+            3.14159265358979,                   -- n_float
+            3.141592                            -- n_real
+        );
+        """
+        input_row = {
+            'n_bit': True, 'n_tinyint': 255, 'n_smallint': 32767, 'n_int': 2147483647,
+            'n_bigint': 9223372036854775807, 'n_decimal': Decimal('1234.56'),
+            'n_decimal_p': Decimal('12345678901234567890123456789012345678'),
+            'n_numeric': Decimal('1234.5678'), 'n_money': Decimal('123456.7890'),
+            'n_smallmoney': Decimal('214748.3647'), 'n_float': 3.14159265358979,
+            'n_real': 3.141592025756836
+        }
+        mock_cursor.fetchall.return_value = [input_row]
+
+        mock_cursor.description = [
+            ('n_bit', 3, None, None, None, None, None),
+            ('n_tinyint', 3, None, None, None, None, None),
+            ('n_smallint', 3, None, None, None, None, None),
+            ('n_int', 3, None, None, None, None, None),
+            ('n_bigint', 3, None, None, None, None, None),
+            ('n_decimal', 5, None, None, None, None, None),
+            ('n_decimal_p', 5, None, None, None, None, None),
+            ('n_numeric', 5, None, None, None, None, None),
+            ('n_money', 5, None, None, None, None, None),
+            ('n_smallmoney', 5, None, None, None, None, None),
+            ('n_float', 3, None, None, None, None, None),
+            ('n_real', 3, None, None, None, None, None)
+        ]
+
+        response: Response = self.handler.native_query(query_str)
+        excepted_mysql_types = [
+            MYSQL_DATA_TYPE.TINYINT,
+            MYSQL_DATA_TYPE.INT,
+            MYSQL_DATA_TYPE.INT,
+            MYSQL_DATA_TYPE.INT,
+            MYSQL_DATA_TYPE.INT,
+            MYSQL_DATA_TYPE.DECIMAL,
+            MYSQL_DATA_TYPE.DECIMAL,
+            MYSQL_DATA_TYPE.DECIMAL,
+            MYSQL_DATA_TYPE.DECIMAL,
+            MYSQL_DATA_TYPE.DECIMAL,
+            MYSQL_DATA_TYPE.FLOAT,
+            MYSQL_DATA_TYPE.FLOAT
+        ]
+        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        for columns_name, input_value in input_row.items():
+            result_value = response.data_frame[columns_name][0]
+            self.assertEqual(result_value, input_value)
+        # endregion
+
+        # region test string types
+        """Data obtained using:
+        CREATE TABLE test_text_blob_types (
+            t_char CHAR(10),
+            t_nchar NCHAR(10),                -- Unicode
+            t_varchar VARCHAR(100),
+            t_nvarchar NVARCHAR(100),         -- Unicode
+            t_text TEXT,
+            t_ntext NTEXT,                    -- Unicode
+            t_binary BINARY(10),
+            t_varbinary VARBINARY(100),
+            t_image IMAGE,
+            t_xml XML,
+            t_uniqueidentifier UNIQUEIDENTIFIER
+        );
+
+        INSERT INTO test_text_blob_types (
+            t_char,
+            t_nchar,
+            t_varchar,
+            t_nvarchar,
+            t_text,
+            t_ntext,
+            t_binary,
+            t_varbinary,
+            t_image,
+            t_xml,
+            t_uniqueidentifier
+        ) VALUES (
+            'Test',         -- t_char
+            N'Test',        -- t_nchar
+            'Test',         -- t_varchar
+            N'Test',        -- t_nvarchar
+            'Test',         -- t_text
+            N'Test',        -- t_ntext
+            0x48656C6C6F,   -- t_binary ('Hello' hex)
+            0x48656C6C6F,   -- t_varbinary ('Hello World' hex)
+            0x48656C6C6F,   -- t_image ('Hello Image' hex)
+            '<root><element>TestXML</element><nested><value>123</value></nested></root>', -- t_xml
+            NEWID()         -- t_uniqueidentifier
+        );
+        """
+        input_row = {
+            't_char': 'Test      ',
+            't_nchar': 'Test      ',
+            't_varchar': 'Test',
+            't_nvarchar': 'Test',
+            't_text': 'Test',
+            't_ntext': 'Test',
+            't_binary': b'Hello\x00\x00\x00\x00\x00',
+            't_varbinary': b'Hello',
+            't_image': b'Hello',
+            't_xml': '<root><element>TestXML</element><nested><value>123</value></nested></root>',
+            't_uniqueidentifier': UUID('497b4fec-4659-431d-a146-39e76740c8a9')
+        }
+        mock_cursor.fetchall.return_value = [input_row]
+
+        mock_cursor.description = [
+            ('t_char', 1, None, None, None, None, None),
+            ('t_nchar', 1, None, None, None, None, None),
+            ('t_varchar', 1, None, None, None, None, None),
+            ('t_nvarchar', 1, None, None, None, None, None),
+            ('t_text', 1, None, None, None, None, None),
+            ('t_ntext', 1, None, None, None, None, None),
+            ('t_binary', 2, None, None, None, None, None),
+            ('t_varbinary', 2, None, None, None, None, None),
+            ('t_image', 2, None, None, None, None, None),
+            ('t_xml', 1, None, None, None, None, None),
+            ('t_uniqueidentifier', 2, None, None, None, None, None)
+        ]
+
+        response: Response = self.handler.native_query(query_str)
+        excepted_mysql_types = [
+            MYSQL_DATA_TYPE.TEXT,
+            MYSQL_DATA_TYPE.TEXT,
+            MYSQL_DATA_TYPE.TEXT,
+            MYSQL_DATA_TYPE.TEXT,
+            MYSQL_DATA_TYPE.TEXT,
+            MYSQL_DATA_TYPE.TEXT,
+            MYSQL_DATA_TYPE.BINARY,
+            MYSQL_DATA_TYPE.BINARY,
+            MYSQL_DATA_TYPE.BINARY,
+            MYSQL_DATA_TYPE.TEXT,
+            MYSQL_DATA_TYPE.BINARY
+        ]
+        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        for columns_name, input_value in input_row.items():
+            result_value = response.data_frame[columns_name][0]
+            self.assertEqual(result_value, input_value)
+        # endregion
+
+        # region test date types
+        """Data obtained using:
+        CREATE TABLE test_datetime_types (
+            d_date DATE,                         -- (YYYY-MM-DD)
+            d_time TIME,
+            d_time_p TIME(7),
+            d_smalldatetime SMALLDATETIME,
+            d_datetime DATETIME,
+            d_datetime2 DATETIME2,
+            d_datetime2_p DATETIME2(7),
+            d_datetimeoffset DATETIMEOFFSET,
+            d_datetimeoffset_p DATETIMEOFFSET(7)
+        );
+
+        INSERT INTO test_datetime_types (
+            d_date,
+            d_time,
+            d_time_p,
+            d_smalldatetime,
+            d_datetime,
+            d_datetime2,
+            d_datetime2_p,
+            d_datetimeoffset,
+            d_datetimeoffset_p
+        ) VALUES (
+            GETDATE(),                                   -- d_date
+            CAST(GETDATE() AS TIME),                     -- d_time
+            CAST(GETDATE() AS TIME(7)),                  -- d_time_p
+            GETDATE(),                                   -- d_smalldatetime
+            GETDATE(),                                   -- d_datetime
+            SYSDATETIME(),                               -- d_datetime2
+            SYSDATETIME(),                               -- d_datetime2_p
+            SYSDATETIMEOFFSET(),                         -- d_datetimeoffset
+            SYSDATETIMEOFFSET()                          -- d_datetimeoffset_p
+        );
+        """
+        input_row = {
+            'd_date': datetime.date(2025, 4, 22),
+            'd_time': datetime.time(12, 30, 45, 123456),
+            'd_time_p': datetime.time(12, 30, 45, 123456),
+            'd_smalldatetime': datetime.datetime(2025, 4, 22, 12, 30),
+            'd_datetime': datetime.datetime(2025, 4, 22, 12, 30, 45, 123456),
+            'd_datetime2': datetime.datetime(2025, 4, 22, 12, 30, 45, 123456),
+            'd_datetime2_p': datetime.datetime(2025, 4, 22, 12, 30, 45, 123456),
+            'd_datetimeoffset': datetime.datetime(2025, 4, 22, 12, 30, 45, 123456, tzinfo=datetime.timezone.utc),
+            'd_datetimeoffset_p': datetime.datetime(2025, 4, 22, 12, 30, 45, 123456, tzinfo=datetime.timezone(datetime.timedelta(hours=-7)))
+        }
+        mock_cursor.fetchall.return_value = [input_row]
+
+        mock_cursor.description = [
+            ('d_date', 2, None, None, None, None, None),
+            ('d_time', 2, None, None, None, None, None),
+            ('d_time_p', 2, None, None, None, None, None),
+            ('d_smalldatetime', 4, None, None, None, None, None),
+            ('d_datetime', 4, None, None, None, None, None),
+            ('d_datetime2', 2, None, None, None, None, None),
+            ('d_datetime2_p', 2, None, None, None, None, None),
+            ('d_datetimeoffset', 2, None, None, None, None, None),
+            ('d_datetimeoffset_p', 2, None, None, None, None, None)
+        ]
+
+        response: Response = self.handler.native_query(query_str)
+        excepted_mysql_types = [
+            # DATE and TIME is not possible to infer, so they are BINARY
+            MYSQL_DATA_TYPE.BINARY,
+            MYSQL_DATA_TYPE.BINARY,
+            MYSQL_DATA_TYPE.BINARY,
+            MYSQL_DATA_TYPE.DATETIME,
+            MYSQL_DATA_TYPE.DATETIME,
+            MYSQL_DATA_TYPE.DATETIME,
+            MYSQL_DATA_TYPE.DATETIME,
+            MYSQL_DATA_TYPE.DATETIME,
+            MYSQL_DATA_TYPE.DATETIME
+        ]
+        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        for columns_name, input_value in input_row.items():
+            result_value = response.data_frame[columns_name][0]
+            if columns_name == 'd_datetimeoffset_p':
+                self.assertEqual(result_value.strftime("%Y-%m-%d %H:%M:%S"), '2025-04-22 19:30:45')
+                continue
+            self.assertEqual(result_value, input_value)
+        # endregion
 
 
 if __name__ == '__main__':

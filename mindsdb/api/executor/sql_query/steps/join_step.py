@@ -101,7 +101,7 @@ class JoinStepCall(BaseStepCall):
         resp_df.replace({np.nan: None}, inplace=True)
 
         names_a.update(names_b)
-        data = ResultSet().from_df_cols(resp_df, col_names=names_a)
+        data = ResultSet.from_df_cols(df=resp_df, columns_dict=names_a)
 
         for col in data.find_columns('__mindsdb_row_id'):
             data.del_column(col)

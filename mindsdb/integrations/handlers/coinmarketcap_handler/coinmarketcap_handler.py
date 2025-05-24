@@ -45,35 +45,32 @@ class CoinMarketCapHandler(APIHandler): # Inherits from APIHandler
         self.is_connected = False
 
     def connect(self) -> StatusResponse:
-        """ 
-        Set up the connection to CoinmarketCap API
-        """
+        """Set up the connection to CoinMarketCap API"""
         if self.is_connected:
-            return StatusResponse(
-                status=RESPONSE_TYPE.SUCCESS,
-                message='Already connected to CoinMarketCap API'
-            )
-        
+            return StatusResponse(True)
+            
+        # Test the connection
         try:
-            # make a simple test request
+            # Make a simple test request
             headers = {
                 'X-CMC_PRO_API_KEY': self.api_key,
-                'Accepts': 'application/json'
+                'Accept': 'application/json'
             }
-
+            
             response = requests.get(
-                f'{self.base_url}/v1/cryptocurrency/listings/latest',
-                headers=headers
+                f'{self.base_url}/v1/key/info',  # API key info endpoint
+                headers=headers,
                 timeout=10
             )
-
+            
             if response.status_code == 200:
                 self.is_connected = True
                 return StatusResponse(True)
             else:
-                return StatusResponse(False, error_message=str(e))
+                return StatusResponse(False, error_message=f"API returned status {response.status_code}")
+                
         except Exception as e:
-            return StatusResponse(False, error_message=f"API return status {response.status_code}")
+            return StatusResponse(False, error_message=str(e))
 
     def disconnect(self):
         """ Close any existing connections

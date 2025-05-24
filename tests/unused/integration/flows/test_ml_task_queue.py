@@ -7,8 +7,8 @@ from walrus import Database
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.utilities.ml_task_queue.const import TASKS_STREAM_NAME
 
-from tests.utils.http_test_helpers import HTTPHelperMixin
-from tests.utils.config import HTTP_API_ROOT
+from tests.integration.utils.http_test_helpers import HTTPHelperMixin
+from tests.integration.conftest import HTTP_API_ROOT
 
 REDIS_HOST = os.environ.get("INTERNAL_URL", "").replace("mindsdb", "redis-master")
 

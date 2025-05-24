@@ -5,8 +5,8 @@ import requests
 import pytest
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
-from tests.utils.config import HTTP_API_ROOT
-from tests.utils.http_test_helpers import HTTPHelperMixin
+from tests.integration.conftest import HTTP_API_ROOT
+from tests.integration.utils.http_test_helpers import HTTPHelperMixin
 
 
 class TestHTTP(HTTPHelperMixin):

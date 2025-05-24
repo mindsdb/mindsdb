@@ -63,7 +63,7 @@ pytest --cov=<code_dir> <test_dir> && coveralls
 For example, to run tests for the HTTP API, use the following command:
 
 ```
-pytest --cov=mindsdb/api/http tests/api/http && coveralls
+pytest --cov=mindsdb/api/http tests/unit/api/http && coveralls
 ```
 
 For the above command to be successful, you need to either have the `COVERALLS_REPO_TOKEN` environment variable set to your Coveralls token or have a `.coveralls.yml` file in the root directory of the repository with the token.

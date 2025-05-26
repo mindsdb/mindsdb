@@ -189,7 +189,8 @@ class JSONChunkingPreprocessor(DocumentPreprocessor):
                 total_chunks=total_fields,
                 start_char=0,
                 end_char=len(field_content),
-                provided_id=doc.id
+                provided_id=doc.id,
+                content_column=self.config.content_column
             )
 
             # Create and add the chunk
@@ -239,7 +240,8 @@ class JSONChunkingPreprocessor(DocumentPreprocessor):
             total_chunks=total_chunks,
             start_char=0,
             end_char=len(content),
-            provided_id=doc.id
+            provided_id=doc.id,
+            content_column=self.config.content_column
         )
 
         return ProcessedChunk(
@@ -297,7 +299,8 @@ class JSONChunkingPreprocessor(DocumentPreprocessor):
             total_chunks=total_chunks,
             start_char=0,
             end_char=len(content),
-            provided_id=doc.id
+            provided_id=doc.id,
+            content_column=self.config.content_column
         )
 
         return ProcessedChunk(

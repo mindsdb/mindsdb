@@ -99,6 +99,10 @@ class JSONChunkingConfig(BasePreprocessingConfig):
         default=".",
         description="Delimiter for flattened nested field names"
     )
+    content_column: str = Field(
+        default="content",
+        description="Name of the content column for chunk ID generation"
+    )
 
     class Config:
         arbitrary_types_allowed = True

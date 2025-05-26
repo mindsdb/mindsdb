@@ -1,5 +1,9 @@
 import unittest
 from unittest.mock import patch
+
+from mindsdb_sql_parser import ast
+from mindsdb_sql_parser.ast import BinaryOperation, Identifier, Constant
+from mindsdb_sql_parser.ast.select.star import Star
 from mindsdb.integrations.handlers.discord_handler.discord_handler import DiscordHandler
 
 
@@ -17,6 +21,13 @@ class DiscordHandlerTest(unittest.TestCase):
     def test_1_read_messages(self, mock_get):
         mock_get.return_value.status_code = 200
         mock_get.return_value.json.return_value = [{'content': 'Test message'}]
+        ast.Select(
+            targets=[Star()],
+            from_table="messages",
+            where=BinaryOperation(
+                op='=', args=[Identifier('channel_id'), Constant('1234567890')]
+            ),
+        )
 
         mock_get.assert_called_with(
             'https://discord.com/api/v10/channels/1234567890/messages',

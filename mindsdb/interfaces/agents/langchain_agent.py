@@ -199,8 +199,9 @@ def prepare_callbacks(self, args):
     return callbacks, context_callback
 
 
-def handle_agent_error(e):
-    error_message = f"An error occurred during agent execution: {str(e)}"
+def handle_agent_error(e, error_message=None):
+    if error_message is None:
+        error_message = f"An error occurred during agent execution: {str(e)}"
     logger.error(error_message, exc_info=True)
     return error_message
 
@@ -529,7 +530,13 @@ AI: {response}"""
                 output = result['output'] if isinstance(result, dict) and 'output' in result else str(result)
                 return {CONTEXT_COLUMN: captured_context, ASSISTANT_COLUMN: output}
             except Exception as e:
-                return {CONTEXT_COLUMN: [], ASSISTANT_COLUMN: handle_agent_error(e)}
+                error_message = str(e)
+                # Special handling for API key errors
+                if "API key" in error_message and ("not found" in error_message or "missing" in error_message):
+                    # Format API key error more clearly
+                    logger.error(f"API Key Error: {error_message}")
+                    error_message = f"API Key Error: {error_message}"
+                return {CONTEXT_COLUMN: [], ASSISTANT_COLUMN: handle_agent_error(e, error_message)}
 
         completions = []
         contexts = []

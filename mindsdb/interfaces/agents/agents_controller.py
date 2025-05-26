@@ -165,6 +165,7 @@ class AgentsController:
                 ignore_tables: List of tables to ignore for text2sql skills
                 include_knowledge_bases: List of knowledge bases to include for text2sql skills
                 ignore_knowledge_bases: List of knowledge bases to ignore for text2sql skills
+                <provider>_api_key: API key for the provider (e.g., openai_api_key)
 
         Returns:
             agent (db.Agents): The created agent
@@ -182,6 +183,13 @@ class AgentsController:
             raise ValueError(f'Agent with name already exists: {name}')
 
         _, provider = self.check_model_provider(model_name, provider)
+
+        # Extract API key if provided in the format <provider>_api_key
+        provider_api_key_param = f"{provider.lower()}_api_key"
+        if provider_api_key_param in params:
+            # Keep the API key in params for the agent to use
+            # It will be picked up by get_api_key() in handler_utils.py
+            pass
 
         # Extract table and knowledge base parameters from params
         database = params.pop('database', None)

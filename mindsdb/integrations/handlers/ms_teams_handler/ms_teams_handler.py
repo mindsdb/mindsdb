@@ -1,4 +1,4 @@
-from typing import Callable, Dict, Text, Callable, Union
+from typing import Dict, Text, Callable, Union
 
 from botbuilder.schema import Activity, ActivityTypes
 from botbuilder.schema import ChannelAccount
@@ -233,7 +233,7 @@ class MSTeamsHandler(APIChatHandler):
         callback(
             chat_id=request['conversation']['id'],
             message=chat_bot_message
-        )    
+        )
 
     @chatbot_only
     def respond(self, message: ChatBotMessage) -> None:

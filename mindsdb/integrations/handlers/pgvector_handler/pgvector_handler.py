@@ -1,6 +1,5 @@
 import os
 import json
-from enum import Enum
 from typing import Dict, List, Union
 from urllib.parse import urlparse
 
@@ -39,7 +38,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         self._is_vector_registered = False
         # we get these from the connection args on PostgresHandler parent
         self._is_sparse = self.connection_args.get('is_sparse', False)
-        self._vector_size = self.connection_args.get('vector_size', None) 
+        self._vector_size = self.connection_args.get('vector_size', None)
 
         if self._is_sparse:
             if not self._vector_size:
@@ -234,7 +233,6 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
 
         targets = ', '.join(modified_columns)
 
-
         if filter_conditions:
 
             if embedding_search:
@@ -255,7 +253,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
                 # Calculate distance as part of the query if needed
                 if has_distance:
                     targets = f"{targets}, (embeddings {self.distance_op} '{search_vector}') as distance"
-                
+
                 return f"SELECT {targets} FROM {table_name} {where_clause} ORDER BY embeddings {self.distance_op} '{search_vector}' ASC {limit_clause} {offset_clause} "
 
             else:
@@ -304,7 +302,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         embeddings: List[float],
         query: str = None,
         metadata: Dict[str, str] = None,
-        distance_function = DistanceFunction.COSINE_DISTANCE,
+        distance_function=DistanceFunction.COSINE_DISTANCE,
         **kwargs
     ) -> pd.DataFrame:
         '''
@@ -348,7 +346,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         # See https://docs.pgvecto.rs/use-case/hybrid-search.html#advanced-search-merge-the-results-of-full-text-search-and-vector-search.
         #
         # We can break down the below query as follows:
-        # 
+        #
         # Start with a CTE (Common Table Expression) called semantic_search (https://www.postgresql.org/docs/current/queries-with.html).
         # This expression calculates rank by the defined distance function, which measures the distance between the
         # embeddings column and the given embeddings vector. Results are ordered by this rank.
@@ -409,11 +407,11 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         with self.connection.cursor() as cur:
             # For sparse vectors, use sparsevec type
             vector_column_type = 'sparsevec' if self._is_sparse else 'vector'
-            
+
             # Vector size is required for sparse vectors, optional for dense
             if self._is_sparse and not self._vector_size:
                 raise ValueError("vector_size is required for sparse vectors")
-            
+
             # Add vector size specification only if provided
             size_spec = f"({self._vector_size})" if self._vector_size is not None else "()"
             if vector_column_type == 'vector':
@@ -438,7 +436,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         table_name = self._check_table(table_name)
 
         if 'metadata' in data.columns:
-             data['metadata'] = data['metadata'].apply(json.dumps)
+            data['metadata'] = data['metadata'].apply(json.dumps)
 
         resp = super().insert(table_name, data)
         if resp.resp_type == RESPONSE_TYPE.ERROR:

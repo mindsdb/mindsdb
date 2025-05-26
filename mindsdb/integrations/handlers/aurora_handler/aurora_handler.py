@@ -14,6 +14,7 @@ from mindsdb.integrations.handlers.postgres_handler.postgres_handler import Post
 
 logger = log.getLogger(__name__)
 
+
 class AuroraHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the Amazon Aurora statements.

@@ -177,8 +177,8 @@ class GoogleCalendarHandler(APIHandler):
             'recurrence': [
                 'RRULE:FREQ=DAILY;COUNT=1'
             ],
-            'attendees': [{'email': attendee['email']} for attendee in (params['attendees'] 
-                            if isinstance(params['attendees'], list) else [params['attendees']])],
+            'attendees': [{'email': attendee['email']} for attendee in (params['attendees']
+                                                                        if isinstance(params['attendees'], list) else [params['attendees']])],
             'reminders': {
                 'useDefault': False,
                 'overrides': [
@@ -188,7 +188,7 @@ class GoogleCalendarHandler(APIHandler):
             },
         }
 
-        event = service.events().insert(calendarId='primary', 
+        event = service.events().insert(calendarId='primary',
                                         body=event).execute()
         return pd.DataFrame([event], columns=self.events.get_columns())
 

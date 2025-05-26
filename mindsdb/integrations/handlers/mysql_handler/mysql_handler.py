@@ -10,7 +10,7 @@ from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 from mindsdb.integrations.handlers.mysql_handler.settings import ConnectionConfig
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
@@ -19,7 +19,7 @@ logger = log.getLogger(__name__)
 
 
 def _map_type(mysql_type_text: str) -> MYSQL_DATA_TYPE:
-    """ Map MySQL text types names to MySQL types as enum.
+    """Map MySQL text types names to MySQL types as enum.
 
     Args:
         mysql_type_text (str): The name of the MySQL type to map.
@@ -30,7 +30,9 @@ def _map_type(mysql_type_text: str) -> MYSQL_DATA_TYPE:
     try:
         return MYSQL_DATA_TYPE(mysql_type_text.upper())
     except Exception:
-        logger.warning(f'MySQL handler: unknown type: {mysql_type_text}, use TEXT as fallback.')
+        logger.warning(
+            f"MySQL handler: unknown type: {mysql_type_text}, use TEXT as fallback."
+        )
         return MYSQL_DATA_TYPE.TEXT
 
 
@@ -39,14 +41,14 @@ class MySQLHandler(DatabaseHandler):
     This handler handles connection and execution of the MySQL statements.
     """
 
-    name = 'mysql'
+    name = "mysql"
 
     def __init__(self, name, **kwargs):
         super().__init__(name)
         self.parser = parse_sql
-        self.dialect = 'mysql'
-        self.connection_data = kwargs.get('connection_data', {})
-        self.database = self.connection_data.get('database')
+        self.dialect = "mysql"
+        self.connection_data = kwargs.get("connection_data", {})
+        self.database = self.connection_data.get("database")
 
         self.connection = None
 
@@ -91,28 +93,28 @@ class MySQLHandler(DatabaseHandler):
         if self.is_connected and self.connection.is_connected():
             return self.connection
         config = self._unpack_config()
-        if 'conn_attrs' in self.connection_data:
-            config['conn_attrs'] = self.connection_data['conn_attrs']
+        if "conn_attrs" in self.connection_data:
+            config["conn_attrs"] = self.connection_data["conn_attrs"]
 
-        if 'connection_timeout' not in config:
-            config['connection_timeout'] = 10
+        if "connection_timeout" not in config:
+            config["connection_timeout"] = 10
 
-        ssl = self.connection_data.get('ssl')
+        ssl = self.connection_data.get("ssl")
         if ssl is True:
-            ssl_ca = self.connection_data.get('ssl_ca')
-            ssl_cert = self.connection_data.get('ssl_cert')
-            ssl_key = self.connection_data.get('ssl_key')
-            config['client_flags'] = [mysql.connector.constants.ClientFlag.SSL]
+            ssl_ca = self.connection_data.get("ssl_ca")
+            ssl_cert = self.connection_data.get("ssl_cert")
+            ssl_key = self.connection_data.get("ssl_key")
+            config["client_flags"] = [mysql.connector.constants.ClientFlag.SSL]
             if ssl_ca is not None:
                 config["ssl_ca"] = ssl_ca
             if ssl_cert is not None:
                 config["ssl_cert"] = ssl_cert
             if ssl_key is not None:
                 config["ssl_key"] = ssl_key
-        if 'collation' not in config:
-            config['collation'] = 'utf8mb4_general_ci'
-        if 'use_pure' not in config:
-            config['use_pure'] = True
+        if "collation" not in config:
+            config["collation"] = "utf8mb4_general_ci"
+        if "use_pure" not in config:
+            config["use_pure"] = True
         try:
             connection = mysql.connector.connect(**config)
             connection.autocommit = True
@@ -146,7 +148,9 @@ class MySQLHandler(DatabaseHandler):
             connection = self.connect()
             result.success = connection.is_connected()
         except mysql.connector.Error as e:
-            logger.error(f'Error connecting to MySQL {self.connection_data["database"]}, {e}!')
+            logger.error(
+                f'Error connecting to MySQL {self.connection_data["database"]}, {e}!'
+            )
             result.error_message = str(e)
 
         if result.success and need_to_close:
@@ -175,20 +179,16 @@ class MySQLHandler(DatabaseHandler):
                     result = cur.fetchall()
                     response = Response(
                         RESPONSE_TYPE.TABLE,
-                        pd.DataFrame(
-                            result,
-                            columns=[x[0] for x in cur.description]
-                        ),
-                        affected_rows=cur.rowcount
+                        pd.DataFrame(result, columns=[x[0] for x in cur.description]),
+                        affected_rows=cur.rowcount,
                     )
                 else:
                     response = Response(RESPONSE_TYPE.OK, affected_rows=cur.rowcount)
         except mysql.connector.Error as e:
-            logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
+            logger.error(
+                f'Error running query: {query} on {self.connection_data["database"]}!'
             )
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
             if connection is not None and connection.is_connected():
                 connection.rollback()
 
@@ -201,7 +201,7 @@ class MySQLHandler(DatabaseHandler):
         """
         Retrieve the data from the SQL statement.
         """
-        renderer = SqlalchemyRender('mysql')
+        renderer = SqlalchemyRender("mysql")
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 

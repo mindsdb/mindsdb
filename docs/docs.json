@@ -516,6 +516,12 @@
                 ]
               },
               {
+                "group": "Agents",
+                "pages": [
+                  "mindsdb_sql/agents/agent"
+                ]
+              },
+              {
                 "group": "MCP API",
                 "pages": [
                   "mcp/overview",

@@ -633,6 +633,11 @@ class PostgresHandler(CatalogDatabaseHandler):
             lambda x: parse_pg_array_string(x)[-1] if x else None
         )
 
+        # Handle cases where distinct_values_count is negative (indicating an approximation).
+        df['distinct_values_count'] = df['distinct_values_count'].apply(
+            lambda x: x if x >= 0 else None
+        )
+
         result.data_frame = df.drop(columns=['histogram_bounds'])
 
         return result

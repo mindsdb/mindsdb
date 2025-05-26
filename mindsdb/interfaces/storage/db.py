@@ -645,19 +645,32 @@ class MetaTables(Base):
     meta_foreign_keys_parents: Mapped[List["MetaForeignKeys"]] = relationship("MetaForeignKeys", foreign_keys="MetaForeignKeys.parent_table_id", back_populates="parent_table") 
     meta_foreign_keys_children: Mapped[List["MetaForeignKeys"]] = relationship("MetaForeignKeys", foreign_keys="MetaForeignKeys.child_table_id", back_populates="child_table")
     
-    def as_string(self) -> str:
+    def as_string(self, indent: int = 0) -> str:
+        pad = " " * indent
+
         table_info = f"{self.name} ({self.type})"
 
         if self.description:
             table_info += f" : {self.description}"
 
+        if self.schema:
+            table_info += f"\n{pad}Schema: {self.schema}"
+
         if self.row_count:
-            table_info += f"\n    - Row Count: {self.row_count}"
+            table_info += f"\n{pad}Row Count: {self.row_count}"
+
+        if self.meta_primary_keys:
+            table_info += f"\n{pad}Primary Key(s): {', '.join([pk.as_string() for pk in self.meta_primary_keys])}"
 
         if self.meta_columns:
-            table_info += "\n\n   - Columns:"
-            for column in self.meta_columns:
-                table_info += f"\n    {column.as_string()}"
+            table_info += f"\n\n{pad}Columns:"
+            for index, column in enumerate(self.meta_columns, start=1):
+                table_info += f"\n{index}. {column.as_string(indent + 4)}\n"
+                
+        if self.meta_foreign_keys_children:
+            table_info += f"\n\n{pad}Key Relationships:"
+            for fk in self.meta_foreign_keys_children:
+                table_info += f"\n{pad}  {fk.as_string()}" 
 
         return table_info
 
@@ -673,26 +686,28 @@ class MetaColumns(Base):
     description: str = Column(String, nullable=True)
     default_value: str = Column(String, nullable=True)
     is_nullable: bool = Column(Boolean, nullable=True)
-    
+
     meta_column_statistics: Mapped[List["MetaColumnStatistics"]] = relationship("MetaColumnStatistics", back_populates="meta_columns")
     meta_primary_keys: Mapped[List["MetaPrimaryKeys"]] = relationship("MetaPrimaryKeys", back_populates="meta_columns")
     meta_foreign_keys_parents: Mapped[List["MetaForeignKeys"]] = relationship("MetaForeignKeys", foreign_keys="MetaForeignKeys.parent_column_id", back_populates="parent_column")
     meta_foreign_keys_children: Mapped[List["MetaForeignKeys"]] = relationship("MetaForeignKeys", foreign_keys="MetaForeignKeys.child_column_id", back_populates="child_column")
-    
-    def as_string(self) -> str:
+
+    def as_string(self, indent: int = 0) -> str:
+        pad = " " * indent
+
         column_info = f"{self.name} ({self.data_type}):"
         if self.description:
-            column_info += f" : {self.description}"
+            column_info += f"\n{pad}Description: {self.description}"
 
         if self.is_nullable:
-            column_info += f"\n        - Nullable: {self.is_nullable}"
+            column_info += f"\n{pad}- Nullable: Yes"
 
         if self.default_value:
-            column_info += f"\n        - Default Value: {self.default_value}"
+            column_info += f"\n{pad}- Default Value: {self.default_value}"
 
         if self.meta_column_statistics:
-            column_info += "\n\n       - Column Statistics:"
-            column_info += f"\n        {self.meta_column_statistics[0].as_string()}"
+            column_info += f"\n\n{pad}- Column Statistics:"
+            column_info += f"\n{self.meta_column_statistics[0].as_string(indent + 4)}"
 
         return column_info
 
@@ -709,20 +724,36 @@ class MetaColumnStatistics(Base):
     minimum_value: str = Column(String, nullable=True)
     maximum_value: str = Column(String, nullable=True)
 
-    def as_string(self) -> str:
-        common_values = ""
-        for i in range(10):
-            if i < len(self.most_common_values):
-                common_values += f"{self.most_common_values[i]}: {self.most_common_frequencies[i]}\n"
-            else:
-                break
+    def as_string(self, indent: int = 0) -> str:
+        pad = " " * indent
+        inner_pad = " " * (indent + 4)
 
-        column_statistics = f"- Top 10 Most Common Values and Frequencies:\n"
-        column_statistics += f"\n    {common_values}"
-        column_statistics += f"- Null Percentage: {self.null_percentage}\n"
-        column_statistics += f"- Distinct Values Count: {self.distinct_values_count}\n"
-        column_statistics += f"- Minimum Value: {self.minimum_value}\n"
-        column_statistics += f"- Maximum Value: {self.maximum_value}"
+        column_statistics = ""
+
+        if any(self.most_common_values) and any(self.most_common_frequencies):
+            column_statistics += f"{pad}- Top 10 Most Common Values and Frequencies:"
+            for i in range(min(10, len(self.most_common_values))):
+                freq = self.most_common_frequencies[i]
+                try:
+                    percent = float(freq) * 100
+                    freq_str = f"{percent:.2f}%"
+                except (ValueError, TypeError):
+                    freq_str = str(freq)
+
+                column_statistics += f"\n{inner_pad}- {self.most_common_values[i]}: {freq_str}"
+            column_statistics += "\n"
+
+        if self.null_percentage:
+            column_statistics += f"{pad}- Null Percentage: {self.null_percentage}\n"
+
+        if self.distinct_values_count:
+            column_statistics += f"{pad}- No. of Distinct Values: {self.distinct_values_count}\n"
+
+        if self.minimum_value:
+            column_statistics += f"{pad}- Minimum Value: {self.minimum_value}\n"
+
+        if self.maximum_value:
+            column_statistics += f"{pad}- Maximum Value: {self.maximum_value}"
 
         return column_statistics
 
@@ -736,6 +767,9 @@ class MetaPrimaryKeys(Base):
     meta_columns = relationship("MetaColumns", back_populates="meta_primary_keys")
 
     constraint_name: str = Column(String, nullable=True)
+
+    def as_string(self) -> str:
+        return f"{self.meta_columns.name} ({self.meta_columns.data_type})"
 
 
 class MetaForeignKeys(Base):
@@ -753,3 +787,6 @@ class MetaForeignKeys(Base):
     child_column = relationship("MetaColumns", back_populates="meta_foreign_keys_children", foreign_keys=[child_column_id])
 
     constraint_name: str = Column(String, nullable=True)
+    
+    def as_string(self) -> str:
+        return f"{self.child_column.name} in {self.child_table.name} references {self.parent_column.name} in {self.parent_table.name}"

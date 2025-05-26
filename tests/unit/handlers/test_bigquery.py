@@ -19,7 +19,7 @@ class TestBigQueryHandler(unittest.TestCase):
     )
 
     def setUp(self):
-        self.patcher_get_oauth2_credentials = patch('mindsdb.integrations.utilities.handlers.auth_utilities.GoogleServiceAccountOAuth2Manager.get_oauth2_credentials')
+        self.patcher_get_oauth2_credentials = patch('mindsdb.integrations.utilities.handlers.auth_utilities.google.GoogleServiceAccountOAuth2Manager.get_oauth2_credentials')
         self.patcher_client = patch('mindsdb.integrations.handlers.bigquery_handler.bigquery_handler.Client')
         self.mock_get_oauth2_credentials = self.patcher_get_oauth2_credentials.start()
         self.mock_connect = self.patcher_client.start()

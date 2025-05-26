@@ -147,8 +147,6 @@ class AgentTaskManager(InMemoryTaskManager):
 
                 # Create a structured thought dictionary to encapsulate the agent's thought process
                 thought_dict = {}
-
-                # Extract parts and structure the thought process
                 parts = []
 
                 # Handle different chunk formats to extract text content
@@ -270,39 +268,44 @@ class AgentTaskManager(InMemoryTaskManager):
                 if not parts:
                     continue
 
-                # Generate a unique key for this chunk to avoid duplicates
-                chunk_key = str(parts)
-                if chunk_key in seen_chunks:
-                    continue
-                seen_chunks.add(chunk_key)
+                # Process each part individually to ensure true streaming
+                for part in parts:
+                    # Generate a unique key for this part to avoid duplicates
+                    part_key = str(part)
+                    if part_key in seen_chunks:
+                        continue
+                    seen_chunks.add(part_key)
 
-                # Ensure metadata exists
-                metadata = item.get("metadata", {})
+                    # Ensure metadata exists
+                    metadata = item.get("metadata", {})
 
-                # Add the thought dictionary to metadata for frontend parsing
-                if thought_dict:
-                    metadata["thought_process"] = thought_dict
+                    # Add the thought dictionary to metadata for frontend parsing
+                    if thought_dict:
+                        metadata["thought_process"] = thought_dict
 
-                # Handle error field if present
-                if "error" in item and not is_task_complete:
-                    logger.warning(f"Error in streaming response: {item['error']}")
-                    # Mark as complete if there's an error
-                    is_task_complete = True
+                    # Handle error field if present
+                    if "error" in item and not is_task_complete:
+                        logger.warning(f"Error in streaming response: {item['error']}")
+                        # Mark as complete if there's an error
+                        is_task_complete = True
 
-                if not is_task_complete:
-                    task_state = TaskState.WORKING
-                    message = Message(role="agent", parts=parts, metadata=metadata)
-                    task_status = TaskStatus(state=task_state, message=message)
-                    await self._update_store(task_send_params.id, task_status, [])
-                    task_update_event = TaskStatusUpdateEvent(
-                        id=task_send_params.id,
-                        status=task_status,
-                        final=False,
-                    )
-                    yield SendTaskStreamingResponse(
-                        id=request.id, result=task_update_event
-                    )
-                else:
+                    if not is_task_complete:
+                        # Create a message with just this part and send it immediately
+                        task_state = TaskState.WORKING
+                        message = Message(role="agent", parts=[part], metadata=metadata)
+                        task_status = TaskStatus(state=task_state, message=message)
+                        await self._update_store(task_send_params.id, task_status, [])
+                        task_update_event = TaskStatusUpdateEvent(
+                            id=task_send_params.id,
+                            status=task_status,
+                            final=False,
+                        )
+                        yield SendTaskStreamingResponse(
+                            id=request.id, result=task_update_event
+                        )
+
+                # If this is the final chunk, send a completion message
+                if is_task_complete:
                     task_state = TaskState.COMPLETED
                     artifact = Artifact(parts=parts, index=0, append=False)
                     task_status = TaskStatus(state=task_state)
@@ -350,7 +353,9 @@ class AgentTaskManager(InMemoryTaskManager):
                 id=request.id,
                 result=TaskStatusUpdateEvent(
                     id=task_send_params.id,
-                    status=task_status,
+                    status=TaskStatus(
+                        state=task_status.state,
+                    ),
                     final=True,
                 ),
             )

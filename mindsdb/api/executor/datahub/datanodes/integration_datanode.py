@@ -125,7 +125,7 @@ class IntegrationDataNode(DataNode):
         self.query(drop_ast)
 
     def create_table(self, table_name: Identifier, result_set: ResultSet = None, columns=None,
-                     is_replace=False, is_create=False, **kwargs) -> DataHubResponse:
+                     is_replace=False, is_create=False, raise_if_exists=True, **kwargs) -> DataHubResponse:
         # is_create - create table
         # is_replace - drop table if exists
         # is_create==False and is_replace==False: just insert
@@ -174,7 +174,11 @@ class IntegrationDataNode(DataNode):
                 columns=columns,
                 is_replace=is_replace
             )
-            self.query(create_table_ast)
+            try:
+                self.query(create_table_ast)
+            except Exception as e:
+                if raise_if_exists:
+                    raise e
 
         if result_set is None:
             # it is just a 'create table'

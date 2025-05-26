@@ -233,7 +233,10 @@ class Config:
             },
             "default_project": "mindsdb",
             "default_llm": {},
-            "default_embedding_model": {}
+            "default_embedding_model": {},
+            "data_catalog": {
+                "enabled": False,
+            }
         }
         # endregion
 
@@ -379,6 +382,11 @@ class Config:
         if os.environ.get('MINDSDB_DEFAULT_EMBEDDING_MODEL_API_KEY', '') != '':
             self._env_config['default_embedding_model'] = {
                 'api_key': os.environ['MINDSDB_DEFAULT_EMBEDDING_MODEL_API_KEY']
+            }
+
+        if os.environ.get('MINDSDB_DATA_CATALOG_ENABLED', '').lower() in ('1', 'true'):
+            self._env_config['data_catalog'] = {
+                'enabled': True
             }
 
     def parse_cmd_args(self) -> None:

@@ -100,3 +100,30 @@ class TestEmailHandler:
         assert 'to_field' in columns, "Column 'to_field' must be in the columns list."
         assert 'from_field' in columns, "Column 'from_field' must be in the columns list."
         assert 'datetime' in columns, "Column 'datetime' must be in the columns list."
+
+    def test_undetectable_encoding_handling(self):
+        """
+        Test that the email handler can process emails with undetectable encodings
+        without raising exceptions.
+        """
+
+        undetectable_content = b"\x80\x81\x82\x83\x84\x85\x86\x87"
+        mock_df = pd.DataFrame(
+            {
+                "date": ["Wed, 02 Feb 2022 15:30:00 +0000"],
+                "body_content_type": ["text"],
+                "body": [undetectable_content],
+                "from_field": ["test@example.com"],
+                "id": ["test1"],
+                "to_field": ["recipient@example.com"],
+                "subject": ["Test email with undetectable encoding"],
+            }
+        )
+
+        self.emails_table_instance.handler.connection.search_email = MagicMock(return_value=mock_df)
+        query = parse_sql('SELECT * FROM emails limit 1')
+        result = self.emails_table_instance.select(query)
+
+        assert result is not None, "The result must not be None."
+        assert "body" in result.columns, "The body should be in the result columns."
+        assert len(result) > 0, "The result should not be empty."

@@ -1,2 +1,4 @@
 /.github/workflows/ @mindsdb/devops
 /tests/scripts/ @mindsdb/devops
+/.flake8 @mindsdb/devops
+/docker/docker-bake.hcl @mindsdb/devops

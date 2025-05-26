@@ -1,6 +1,7 @@
 import re
 import csv
 import inspect
+import traceback
 from io import StringIO
 from typing import Iterable, List, Optional, Any
 
@@ -34,7 +35,7 @@ def list_to_csv_str(array: List[List[Any]]) -> str:
 
 
 def split_table_name(table_name: str) -> List[str]:
-    """Split table name from llm to parst
+    """Split table name from llm to parts
 
     Args:
         table_name (str): input table name
@@ -72,33 +73,68 @@ def split_table_name(table_name: str) -> List[str]:
     if current:
         result.append(current.strip('`'))
 
+    # ensure we split the table name
+    result = [r.split(".") for r in result][0]
+
     return result
 
 
 class SQLAgent:
+    """
+    SQLAgent is a class that handles SQL queries for agents.
+    """
+
     def __init__(
-            self,
-            command_executor,
-            databases: List[str],
-            databases_struct: dict,
-            include_tables: Optional[List[str]] = None,
-            ignore_tables: Optional[List[str]] = None,
-            sample_rows_in_table_info: int = 3,
-            cache: Optional[dict] = None
+        self,
+        command_executor,
+        databases: List[str],
+        databases_struct: dict,
+        knowledge_base_database: str = 'mindsdb',
+        include_tables: Optional[List[str]] = None,
+        ignore_tables: Optional[List[str]] = None,
+        include_knowledge_bases: Optional[List[str]] = None,
+        ignore_knowledge_bases: Optional[List[str]] = None,
+        sample_rows_in_table_info: int = 3,
+        cache: Optional[dict] = None
     ):
+        """
+        Initialize SQLAgent.
+
+        Args:
+            command_executor: Executor for SQL commands
+            databases (List[str]): List of databases to use
+            databases_struct (dict): Dictionary of database structures
+            knowledge_base_database (str): Project name where knowledge bases are stored (defaults to 'mindsdb')
+            include_tables (List[str]): Tables to include
+            ignore_tables (List[str]): Tables to ignore
+            include_knowledge_bases (List[str]): Knowledge bases to include
+            ignore_knowledge_bases (List[str]): Knowledge bases to ignore
+            sample_rows_in_table_info (int): Number of sample rows to include in table info
+            cache (Optional[dict]): Cache for query results
+        """
         self._command_executor = command_executor
         self._mindsdb_db_struct = databases_struct
-
+        self.knowledge_base_database = knowledge_base_database  # This is a project name, not a database connection
         self._sample_rows_in_table_info = int(sample_rows_in_table_info)
 
         self._tables_to_include = include_tables
         self._tables_to_ignore = []
+        self._knowledge_bases_to_include = include_knowledge_bases
+        self._knowledge_bases_to_ignore = []
         self._databases = databases
         if not self._tables_to_include:
             # ignore_tables and include_tables should not be used together.
             # include_tables takes priority if it's set.
             self._tables_to_ignore = ignore_tables or []
+        if not self._knowledge_bases_to_include:
+            # ignore_knowledge_bases and include_knowledge_bases should not be used together.
+            # include_knowledge_bases takes priority if it's set.
+            self._knowledge_bases_to_ignore = ignore_knowledge_bases or []
         self._cache = cache
+
+        from mindsdb.interfaces.skills.skill_tool import SkillToolController
+        # Initialize the skill tool controller from MindsDB
+        self.skill_tool = SkillToolController()
 
     def _call_engine(self, query: str, database=None):
         # switch database
@@ -107,7 +143,10 @@ class SQLAgent:
 
         if database is None:
             # if we use tables with prefixes it should work for any database
-            database = self._databases[0]
+            if self._databases is not None:
+                # if we have multiple databases, we need to check which one to use
+                # for now, we will just use the first one
+                database = self._databases[0] if self._databases else "mindsdb"
 
         ret = self._command_executor.execute_command(
             ast_query,
@@ -131,9 +170,28 @@ class SQLAgent:
 
             def _check_f(node, is_table=None, **kwargs):
                 if is_table and isinstance(node, Identifier):
-                    if node.parts not in tables_parts:
-                        raise ValueError(f"Table {'.'.join(node.parts)} not found. Available tables: {', '.join(self._tables_to_include)}")
+                    table_name = '.'.join(node.parts)
 
+                    # Get the list of available knowledge bases
+                    kb_names = self.get_usable_knowledge_base_names()
+
+                    # Check if this table is a knowledge base
+                    is_kb = table_name in kb_names
+
+                    # If it's a knowledge base and we have knowledge base restrictions
+                    if is_kb and self._knowledge_bases_to_include:
+                        kb_parts = [split_table_name(x) for x in self._knowledge_bases_to_include]
+                        if node.parts not in kb_parts:
+                            raise ValueError(f"Knowledge base {table_name} not found. Available knowledge bases: {', '.join(self._knowledge_bases_to_include)}")
+                    # Regular table check
+                    elif not is_kb and self._tables_to_include and node.parts not in tables_parts:
+                        raise ValueError(f"Table {table_name} not found. Available tables: {', '.join(self._tables_to_include)}")
+                    # Check if it's a restricted knowledge base
+                    elif is_kb and table_name in self._knowledge_bases_to_ignore:
+                        raise ValueError(f"Knowledge base {table_name} is not allowed.")
+                    # Check if it's a restricted table
+                    elif not is_kb and table_name in self._tables_to_ignore:
+                        raise ValueError(f"Table {table_name} is not allowed.")
             query_traversal(ast_query, _check_f)
 
     def get_usable_table_names(self) -> Iterable[str]:
@@ -200,6 +258,78 @@ class SQLAgent:
             self._cache.set(cache_key, set(result_tables))
         return result_tables
 
+    def get_usable_knowledge_base_names(self) -> Iterable[str]:
+        """Get a list of knowledge bases that the agent has access to.
+
+        Returns:
+            Iterable[str]: list with knowledge base names
+        """
+        cache_key = f'{ctx.company_id}_{self.knowledge_base_database}_knowledge_bases'
+
+        # todo we need to fix the cache, file cache can potentially store out of data information
+        # # first check cache and return if found
+        # if self._cache:
+        #     cached_kbs = self._cache.get(cache_key)
+        #     if cached_kbs:
+        #         return cached_kbs
+
+        if self._knowledge_bases_to_include:
+            return self._knowledge_bases_to_include
+
+        try:
+            # Query to get all knowledge bases
+            query = f"SHOW KNOWLEDGE_BASES FROM {self.knowledge_base_database};"
+            try:
+                result = self._call_engine(query, database=self.knowledge_base_database)
+            except Exception as e:
+                # If the direct query fails, try a different approach
+                # This handles the case where knowledge_base_database is not a valid integration
+                logger.warning(f"Error querying knowledge bases from {self.knowledge_base_database}: {str(e)}")
+                # Try to get knowledge bases directly from the project database
+                try:
+                    # Get knowledge bases from the project database
+                    kb_controller = self._command_executor.session.kb_controller
+                    kb_names = [kb['name'] for kb in kb_controller.list()]
+
+                    # Filter knowledge bases based on include list
+                    if self._knowledge_bases_to_include:
+                        kb_names = [kb_name for kb_name in kb_names if kb_name in self._knowledge_bases_to_include]
+                        if not kb_names:
+                            logger.warning(f"No knowledge bases found in the include list: {self._knowledge_bases_to_include}")
+                            return []
+
+                        return kb_names
+
+                    # Filter knowledge bases based on ignore list
+                    kb_names = [kb_name for kb_name in kb_names if kb_name not in self._knowledge_bases_to_ignore]
+
+                    if self._cache:
+                        self._cache.set(cache_key, set(kb_names))
+
+                    return kb_names
+                except Exception as inner_e:
+                    logger.error(f"Error getting knowledge bases from kb_controller: {str(inner_e)}")
+                    return []
+
+            if not result:
+                return []
+
+            # Filter knowledge bases based on ignore list
+            kb_names = []
+            for row in result:
+                kb_name = row['name']
+                if kb_name not in self._knowledge_bases_to_ignore:
+                    kb_names.append(kb_name)
+
+            if self._cache:
+                self._cache.set(cache_key, set(kb_names))
+
+            return kb_names
+        except Exception as e:
+            # If there's an error, log it and return an empty list
+            logger.error(f"Error in get_usable_knowledge_base_names: {str(e)}")
+            return []
+
     def _resolve_table_names(self, table_names: List[str], all_tables: List[Identifier]) -> List[Identifier]:
         """
         Tries to find table (which comes directly from an LLM) by its name
@@ -237,6 +367,26 @@ class SQLAgent:
 
         return tables
 
+    def get_knowledge_base_info(self, kb_names: Optional[List[str]] = None) -> str:
+        """ Get information about specified knowledge bases.
+        Follows best practices as specified in: Rajkumar et al, 2022 (https://arxiv.org/abs/2204.00498)
+        If `sample_rows_in_table_info`, the specified number of sample rows will be
+        appended to each table description. This can increase performance as demonstrated in the paper.
+        """
+
+        kbs_info = []
+        for kb in kb_names:
+            key = f"{ctx.company_id}_{kb}_info"
+            kb_info = self._cache.get(key) if self._cache else None
+            if True or kb_info is None:
+                kb_info = self.get_kb_sample_rows(kb)
+                if self._cache:
+                    self._cache.set(key, kb_info)
+
+            kbs_info.append(kb_info)
+
+        return "\n\n".join(kbs_info)
+
     def get_table_info(self, table_names: Optional[List[str]] = None) -> str:
         """ Get information about specified tables.
         Follows best practices as specified in: Rajkumar et al, 2022 (https://arxiv.org/abs/2204.00498)
@@ -244,10 +394,19 @@ class SQLAgent:
         appended to each table description. This can increase performance as demonstrated in the paper.
         """
 
-        all_tables = [Identifier(name) for name in self.get_usable_table_names()]
+        all_tables = []
+        for name in self.get_usable_table_names():
+            # remove backticks
+            name = name.replace("`", "")
 
-        if table_names is not None:
-            all_tables = self._resolve_table_names(table_names, all_tables)
+            split = name.split(".")
+            if len(split) > 1:
+                all_tables.append(Identifier(parts=[split[0], split[1]]))
+            else:
+                all_tables.append(Identifier(name))
+
+        # if table_names is not None:
+        #     all_tables = self._resolve_table_names(table_names, all_tables)
 
         tables_info = []
         for table in all_tables:
@@ -261,6 +420,34 @@ class SQLAgent:
             tables_info.append(table_info)
 
         return "\n\n".join(tables_info)
+
+    def get_kb_sample_rows(self, kb_name: str) -> str:
+        """Get sample rows from a knowledge base.
+
+        Args:
+            kb_name (str): The name of the knowledge base.
+
+        Returns:
+            str: A string containing the sample rows from the knowledge base.
+        """
+        logger.info(f'_get_sample_rows: knowledge base={kb_name}')
+        command = f"select * from {kb_name} limit 10;"
+        try:
+            ret = self._call_engine(command)
+            sample_rows = ret.data.to_lists()
+
+            def truncate_value(val):
+                str_val = str(val)
+                return str_val if len(str_val) < 100 else (str_val[:100] + '...')
+
+            sample_rows = list(
+                map(lambda row: [truncate_value(value) for value in row], sample_rows))
+            sample_rows_str = "\n" + f"{kb_name}:" + list_to_csv_str(sample_rows)
+        except Exception as e:
+            logger.info(f'_get_sample_rows error: {e}')
+            sample_rows_str = "\n" + "\t [error] Couldn't retrieve sample rows!"
+
+        return sample_rows_str
 
     def _get_single_table_info(self, table: Identifier) -> str:
         if len(table.parts) < 2:
@@ -386,6 +573,7 @@ class SQLAgent:
             logger.info(f'query_safe (fetch={fetch}): {command}')
             return self.query(command, fetch)
         except Exception as e:
+            logger.error(f"Error in query_safe: {str(e)}\n{traceback.format_exc()}")
             logger.info(f'query_safe error: {e}')
             msg = f"Error: {e}"
             if 'does not exist' in msg and ' relation ' in msg:

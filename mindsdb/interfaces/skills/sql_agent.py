@@ -362,7 +362,23 @@ class SQLAgent:
             table_identifier = tables_idx.get(tuple(table_parts))
 
             if table_identifier is None:
-                raise ValueError(f"Table {table} not found in the database")
+                # If the full table name (along with the database and schema) is enclosed in backticks
+                # raise an error for the agent to correct it
+                supported_file_formats = ['csv', 'tsv', 'json', 'parquet']
+                if (
+                    table_name.startswith('`')
+                    and table_name.endswith('`')
+                    and table_name.count('`') == 2
+                    and len(table_parts) == 1
+                    # Ensure the table name has at least one dot and it is not in relation to a file e.g. `file.csv`
+                    and '.' in table_name
+                    and table_name.split('.')[-1] not in supported_file_formats
+                ):
+                    raise ValueError(
+                        "Only the table name should be enclosed in backticks.\n"
+                        "Do not include the database or schema inside the backticks."
+                    )
+                raise ValueError(f"Table {table_name} not found in the database")
             tables.append(table_identifier)
 
         return tables
@@ -516,7 +532,7 @@ class SQLAgent:
             sample_rows_str = "\n" + list_to_csv_str([fields] + sample_rows)
         except Exception as e:
             logger.info(f'_get_sample_rows error: {e}')
-            sample_rows_str = "\n" + "\t [error] Couldn't retrieve sample rows!"
+            sample_rows_str = "\n" + "\t [error] Couldn't retrieve sample rows: " + str(e)
 
         return sample_rows_str
 

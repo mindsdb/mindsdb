@@ -21,8 +21,6 @@ from mindsdb.utilities.functions import cast_row_types
 
 from .functions import run_finetune, run_learn
 
-IS_PY36 = sys.version_info[1] <= 6
-
 
 class NumpyJSONEncoder(json.JSONEncoder):
     """

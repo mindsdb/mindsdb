@@ -22,7 +22,7 @@ from email.message import EmailMessage
 
 from base64 import urlsafe_b64encode, urlsafe_b64decode
 
-from mindsdb.integrations.utilities.handlers.auth_utilities import GoogleUserOAuth2Manager
+from mindsdb.integrations.utilities.handlers.auth_utilities.google import GoogleUserOAuth2Manager
 from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import AuthException
 
 DEFAULT_SCOPES = [

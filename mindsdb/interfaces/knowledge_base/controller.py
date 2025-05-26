@@ -32,6 +32,7 @@ from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embeddi
 from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS
 from mindsdb.interfaces.agents.langchain_agent import create_chat_model, get_llm_provider
 from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.interfaces.variables.variables_controller import variables_controller
 from mindsdb.interfaces.knowledge_base.preprocessing.models import PreprocessingConfig, Document
 from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor import PreprocessorFactory
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
@@ -41,13 +42,14 @@ from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
 
 from mindsdb.api.executor.command_executor import ExecuteCommands
+from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.utilities import log
 from mindsdb.integrations.utilities.rag.rerankers.base_reranker import BaseLLMReranker
 
 logger = log.getLogger(__name__)
 
 KB_TO_VECTORDB_COLUMNS = {
-    'id': 'original_row_id',
+    'id': 'original_doc_id',
     'chunk_id': 'id',
     'chunk_content': 'content'
 }
@@ -150,13 +152,8 @@ class KnowledgeBaseTable:
         query.from_table = Identifier(parts=[self._kb.vector_database_table])
         logger.debug(f"Set table name to: {self._kb.vector_database_table}")
 
-        requested_kb_columns = []
-        for target in query.targets:
-            if isinstance(target, Star):
-                requested_kb_columns = None
-                break
-            else:
-                requested_kb_columns.append(target.parts[-1].lower())
+        # Copy query for complex execution via DuckDB: DISTINCT, GROUP BY etc.
+        query_copy = copy.deepcopy(query)
 
         query.targets = [
             Identifier(TableField.ID.value),
@@ -220,9 +217,17 @@ class KnowledgeBaseTable:
 
         df = self.add_relevance(df, query_text, relevance_threshold)
 
-        # filter by targets
-        if requested_kb_columns is not None:
-            df = df[requested_kb_columns]
+        if (
+            query.group_by is not None
+            or query.order_by is not None
+            or query.having is not None
+            or query.distinct is True
+            or len(query.targets) != 1
+            or not isinstance(query.targets[0], Star)
+        ):
+            query_copy.where = None
+            df = query_df(df, query_copy, session=self.session)
+
         return df
 
     def add_relevance(self, df, query_text, relevance_threshold=None):
@@ -290,7 +295,7 @@ class KnowledgeBaseTable:
         columns = list(df.columns)
         # update id, get from metadata
         df[TableField.ID.value] = df[TableField.METADATA.value].apply(
-            lambda m: None if m is None else m.get('original_row_id')
+            lambda m: None if m is None else m.get('original_doc_id')
         )
 
         # id on first place
@@ -479,12 +484,9 @@ class KnowledgeBaseTable:
                     # Use provided_id directly if it exists, otherwise generate one
                     doc_id = self._generate_document_id(content_str, col, provided_id)
 
-                    # Need provided ID to link chunks back to original source (e.g. database row).
-                    row_id = provided_id if provided_id else idx
-
                     metadata = {
                         **base_metadata,
-                        'original_row_id': str(row_id),
+                        'original_row_index': str(idx),  # provide link to original row index
                         'content_column': col,
                     }
 
@@ -537,10 +539,16 @@ class KnowledgeBaseTable:
         # -- prepare id --
         id_column = params.get('id_column')
         if id_column is not None and id_column not in columns:
-            raise ValueError(f'The ID column {params.get("id_column")} not found in dataset: {columns}')
+            id_column = None
 
+        if id_column is None and TableField.ID.value in columns:
+            id_column = TableField.ID.value
+
+        # Also check for case-insensitive 'id' column
         if id_column is None:
-            raise ValueError('The id_column parameter is required')
+            column_map = {col.lower(): col for col in columns}
+            if 'id' in column_map:
+                id_column = column_map['id']
 
         if id_column is not None:
             columns.remove(id_column)
@@ -781,7 +789,7 @@ class KnowledgeBaseTable:
     def _generate_document_id(self, content: str, content_column: str, provided_id: str = None) -> str:
         """Generate a deterministic document ID using the utility function."""
         from mindsdb.interfaces.knowledge_base.utils import generate_document_id
-        return generate_document_id(content, content_column, provided_id)
+        return generate_document_id(content=content, provided_id=provided_id)
 
     def _convert_metadata_value(self, value):
         """
@@ -813,6 +821,15 @@ class KnowledgeBaseTable:
         # Convert everything else to string
         return str(value)
 
+    def create_index(self):
+        """
+        Create an index on the knowledge base table
+        :param index_name: name of the index
+        :param params: parameters for the index
+        """
+        db_handler = self.get_vector_db()
+        db_handler.create_index(self._kb.vector_database_table)
+
 
 class KnowledgeBaseController:
     """
@@ -839,6 +856,9 @@ class KnowledgeBaseController:
         :param is_sparse: Whether to use sparse vectors for embeddings
         :param vector_size: Optional size specification for vectors, required when is_sparse=True
         """
+        # fill variables
+        params = variables_controller.fill_parameters(params)
+
         # Validate preprocessing config first if provided
         if preprocessing_config is not None:
             PreprocessingConfig(**preprocessing_config)  # Validate before storing
@@ -850,10 +870,6 @@ class KnowledgeBaseController:
         vector_size = params.get('vector_size')
         if is_sparse and vector_size is None:
             raise ValueError("vector_size is required when is_sparse=True")
-
-        # Validate that id_column is provided
-        if params is not None and ('id_column' not in params):
-            raise ValueError("The id_column parameter is required")
 
         # get project id
         project = self.session.database_controller.get_project(project_name)
@@ -1002,6 +1018,8 @@ class KnowledgeBaseController:
         if 'provider' in params:
             engine = params.pop('provider').lower()
 
+        api_key = get_api_key(engine, params, strict=False) or params.pop('api_key')
+
         if engine == 'azure_openai':
             engine = 'openai'
             params['provider'] = 'azure'
@@ -1009,8 +1027,10 @@ class KnowledgeBaseController:
         if engine == 'openai':
             if 'question_column' not in params:
                 params['question_column'] = 'content'
-            if 'api_key' in params:
-                params[f"{engine}_api_key"] = params.pop('api_key')
+            if api_key:
+                params[f"{engine}_api_key"] = api_key
+                if 'api_key' in params:
+                    params.pop('api_key')
             if 'base_url' in params:
                 params['api_base'] = params.pop('base_url')
 
@@ -1147,6 +1167,11 @@ class KnowledgeBaseController:
             })
 
         return data
+
+    def create_index(self, table_name, project_name):
+        project_id = self.session.database_controller.get_project(project_name).id
+        kb_table = self.get_table(table_name, project_id)
+        kb_table.create_index()
 
     def update(self, name: str, project_id: int, **kwargs) -> db.KnowledgeBase:
         """

@@ -1,17 +1,18 @@
 from mindsdb_sql_parser.ast import (
     Identifier,
 )
+
 from mindsdb.api.executor.planner.steps import (
     SaveToTable,
     InsertToTable,
     CreateTableStep
 )
-
 from mindsdb.api.executor.sql_query.result_set import ResultSet, Column
 from mindsdb.api.executor.exceptions import (
     NotSupportedYet,
     LogicError
 )
+from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES
 
 from .base import BaseStepCall
 
@@ -30,12 +31,32 @@ class InsertToTableCall(BaseStepCall):
             if step.is_replace:
                 is_replace = True
 
+        if len(step.table.parts) > 1:
+            integration_name = step.table.parts[0]
+            table_name = Identifier(parts=step.table.parts[1:])
+        else:
+            integration_name = self.context['database']
+            table_name = step.table
+
+        dn = self.session.datahub.get(integration_name)
+
+        if hasattr(dn, 'create_table') is False:
+            raise NotSupportedYet(f"Creating table in '{integration_name}' is not supported")
+
         if step.dataframe is not None:
             data = self.steps_data[step.dataframe.result.step_num]
         elif step.query is not None:
             data = ResultSet()
-            for col in step.query.columns:
-                data.add_column(Column(col.name))
+            if step.query.columns is None:
+                # Is query like: INSERT INTO table VALUES (...)
+                table_columns_df = dn.get_table_columns_df(str(table_name))
+                columns_names = table_columns_df[INF_SCHEMA_COLUMNS_NAMES.COLUMN_NAME].to_list()
+                for column_name in columns_names:
+                    data.add_column(Column(column_name))
+            else:
+                # Is query like: INSERT INTO table (column_name, ...) VALUES (...)
+                for col in step.query.columns:
+                    data.add_column(Column(col.name))
 
             records = []
             for row in step.query.values:
@@ -52,18 +73,6 @@ class InsertToTableCall(BaseStepCall):
             data.add_raw_values(records)
         else:
             raise LogicError(f'Data not found for insert: {step}')
-
-        if len(step.table.parts) > 1:
-            integration_name = step.table.parts[0]
-            table_name = Identifier(parts=step.table.parts[1:])
-        else:
-            integration_name = self.context['database']
-            table_name = step.table
-
-        dn = self.session.datahub.get(integration_name)
-
-        if hasattr(dn, 'create_table') is False:
-            raise NotSupportedYet(f"Creating table in '{integration_name}' is not supported")
 
         #  del 'service' columns
         for col in data.find_columns('__mindsdb_row_id'):

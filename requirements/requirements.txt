@@ -49,7 +49,9 @@ pyaml==23.12.0
 mcp==1.6.0
 fastapi>=0.110.0, <1.0.0  # Required for LiteLLM server
 uvicorn>=0.30.0, <1.0.0   # Required for LiteLLM server
+pydantic_core==2.18.4 # Used in A2A server
 transformers >= 4.42.4 # Required for Langchain agent to calculate tokens
+
 # files reading
 pymupdf==1.25.2
 filetype

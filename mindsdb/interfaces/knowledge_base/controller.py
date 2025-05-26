@@ -126,6 +126,11 @@ class KnowledgeBaseTable:
         logger.debug(f"Configuring preprocessing with config: {config}")
         self.document_preprocessor = None  # Reset existing preprocessor
         if config is not None:
+            # Ensure content_column is set for JSON chunking if not already specified
+            if config.get('type') == 'json_chunking' and config.get('json_chunking_config'):
+                if 'content_column' not in config['json_chunking_config']:
+                    config['json_chunking_config']['content_column'] = 'content'
+
             preprocessing_config = PreprocessingConfig(**config)
             self.document_preprocessor = PreprocessorFactory.create_preprocessor(preprocessing_config)
             logger.debug(f"Created preprocessor of type: {type(self.document_preprocessor)}")

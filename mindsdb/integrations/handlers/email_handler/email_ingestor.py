@@ -40,6 +40,9 @@ class EmailIngestor:
         encoding = None
         if isinstance(body_str, bytes):
             encoding = chardet.detect(body_str)['encoding']
+            if encoding is None:
+                # Added a fallback to utf-8 since chardet failed to detect the encoding.
+                encoding = 'utf-8'
             if 'windows' in encoding.lower():
                 # Easier to treat this at utf-8 since str constructor doesn't support all encodings here:
                 # https://chardet.readthedocs.io/en/latest/supported-encodings.html.

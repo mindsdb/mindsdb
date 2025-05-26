@@ -1,5 +1,6 @@
 import enum
 import inspect
+
 from dataclasses import dataclass
 from collections import defaultdict
 from typing import List, Dict, Optional
@@ -14,7 +15,7 @@ from mindsdb.utilities.config import config
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.skills.sql_agent import SQLAgent
 from mindsdb.integrations.libs.vectordatabase_handler import TableField
-
+from mindsdb.interfaces.agents.constants import DEFAULT_TEXT2SQL_DATABASE
 
 _DEFAULT_TOP_K_SIMILARITY_SEARCH = 5
 _MAX_CACHE_SIZE = 1000
@@ -120,7 +121,6 @@ class SkillToolController:
         try:
             from mindsdb.interfaces.agents.mindsdb_database_agent import MindsDBSQL
             from mindsdb.interfaces.skills.custom.text2sql.mindsdb_sql_toolkit import MindsDBSQLToolkit
-            from langchain_community.tools.sql_database.tool import QuerySQLDataBaseTool
         except ImportError:
             raise ImportError(
                 'To use the text-to-SQL skill, please install langchain with `pip install mindsdb[langchain]`')
@@ -132,75 +132,220 @@ class SkillToolController:
             return f'`{name}`'
 
         tables_list = []
-        for skill in skills:
-            database = skill.params['database']
-            restriction_on_tables = skill.restriction_on_tables
-            if restriction_on_tables is None:
-                handler = command_executor.session.integration_controller.get_data_handler(database)
-                if 'all' in inspect.signature(handler.get_tables).parameters:
-                    response = handler.get_tables(all=True)
-                else:
-                    response = handler.get_tables()
-                # no restrictions
-                columns = [c.lower() for c in response.data_frame.columns]
-                name_idx = columns.index('table_name') if 'table_name' in columns else 0
+        knowledge_bases_list = []
+        ignore_knowledge_bases_list = []
 
-                if 'table_schema' in response.data_frame.columns:
-                    for _, row in response.data_frame.iterrows():
-                        tables_list.append(f"{database}.{row['table_schema']}.{escape_table_name(row[name_idx])}")
-                else:
-                    for table_name in response.data_frame.iloc[:, name_idx]:
-                        tables_list.append(f"{database}.{escape_table_name(table_name)}")
-                continue
-            for schema_name, tables in restriction_on_tables.items():
-                for table in tables:
-                    if schema_name is None:
-                        tables_list.append(f'{database}.{escape_table_name(table)}')
+        # Track databases extracted from dot notation
+        extracted_databases = set()
+
+        # Initialize knowledge_base_database with default value
+        knowledge_base_database = DEFAULT_TEXT2SQL_DATABASE  # Default to mindsdb project
+
+        # First pass: collect all database and knowledge base parameters
+        for skill in skills:
+            # Update knowledge_base_database if specified in any skill
+            if skill.params.get('knowledge_base_database'):
+                knowledge_base_database = skill.params.get('knowledge_base_database')
+
+            # Extract databases from include_tables with dot notation
+            if skill.params.get('include_tables'):
+                include_tables = skill.params.get('include_tables')
+                if isinstance(include_tables, str):
+                    include_tables = [t.strip() for t in include_tables.split(',')]
+
+                # Extract database names from dot notation
+                for table in include_tables:
+                    if '.' in table:
+                        db_name = table.split('.')[0]
+                        extracted_databases.add(db_name)
+
+            # Extract databases from include_knowledge_bases with dot notation
+            if skill.params.get('include_knowledge_bases'):
+                include_kbs = skill.params.get('include_knowledge_bases')
+                if isinstance(include_kbs, str):
+                    include_kbs = [kb.strip() for kb in include_kbs.split(',')]
+
+                # Extract database names from dot notation
+                for kb in include_kbs:
+                    if '.' in kb:
+                        db_name = kb.split('.')[0]
+                        if db_name != knowledge_base_database:
+                            # Only update if it's different from the default
+                            knowledge_base_database = db_name
+
+        # Second pass: collect all tables and knowledge base restrictions
+        for skill in skills:
+            # Get database for tables (this is an actual database connection)
+            database = skill.params.get('database', DEFAULT_TEXT2SQL_DATABASE)
+
+            # Add databases extracted from dot notation if no explicit database is provided
+            if not database and extracted_databases:
+                # Use the first extracted database if no explicit database is provided
+                database = next(iter(extracted_databases))
+                # Update the skill params with the extracted database
+                skill.params['database'] = database
+
+            # Extract knowledge base restrictions if they exist in the skill params
+            if skill.params.get('include_knowledge_bases'):
+                # Convert to list if it's a string
+                include_kbs = skill.params.get('include_knowledge_bases')
+                if isinstance(include_kbs, str):
+                    include_kbs = [kb.strip() for kb in include_kbs.split(',')]
+
+                # Process each knowledge base name
+                for kb in include_kbs:
+                    # If it doesn't have a dot, prefix it with the knowledge_base_database
+                    if '.' not in kb:
+                        knowledge_bases_list.append(f"{knowledge_base_database}.{kb}")
                     else:
-                        tables_list.append(f'{database}.{schema_name}.{escape_table_name(table)}')
+                        knowledge_bases_list.append(kb)
+
+            # Collect ignore_knowledge_bases
+            if skill.params.get('ignore_knowledge_bases'):
+                # Convert to list if it's a string
+                ignore_kbs = skill.params.get('ignore_knowledge_bases')
+                if isinstance(ignore_kbs, str):
+                    ignore_kbs = [kb.strip() for kb in ignore_kbs.split(',')]
+
+                # Process each knowledge base name to ignore
+                for kb in ignore_kbs:
+                    # If it doesn't have a dot, prefix it with the knowledge_base_database
+                    if '.' not in kb:
+                        ignore_knowledge_bases_list.append(f"{knowledge_base_database}.{kb}")
+                    else:
+                        ignore_knowledge_bases_list.append(kb)
+
+            # Skip if no database specified
+            if not database:
+                continue
+
+            # Process include_tables with dot notation
+            if skill.params.get('include_tables'):
+                include_tables = skill.params.get('include_tables')
+                if isinstance(include_tables, str):
+                    include_tables = [t.strip() for t in include_tables.split(',')]
+
+                for table in include_tables:
+                    # If table already has a database prefix, use it as is
+                    if '.' in table:
+                        # Check if the table already has backticks
+                        if '`' in table:
+                            tables_list.append(table)
+                        else:
+                            # Apply escape_table_name only to the table part
+                            parts = table.split('.')
+                            if len(parts) == 2:
+                                # Format: database.table
+                                tables_list.append(f"{parts[0]}.{escape_table_name(parts[1])}")
+                            elif len(parts) == 3:
+                                # Format: database.schema.table
+                                tables_list.append(f"{parts[0]}.{parts[1]}.{escape_table_name(parts[2])}")
+                            else:
+                                # Unusual format, escape the whole thing
+                                tables_list.append(escape_table_name(table))
+                    else:
+                        # Otherwise, prefix with the database
+                        tables_list.append(f"{database}.{escape_table_name(table)}")
+
+                # Skip further table processing if include_tables is specified
+                continue
+
+            restriction_on_tables = skill.restriction_on_tables
+
+            if restriction_on_tables is None and database:
+                try:
+                    handler = command_executor.session.integration_controller.get_data_handler(database)
+                    if 'all' in inspect.signature(handler.get_tables).parameters:
+                        response = handler.get_tables(all=True)
+                    else:
+                        response = handler.get_tables()
+                    # no restrictions
+                    columns = [c.lower() for c in response.data_frame.columns]
+                    name_idx = columns.index('table_name') if 'table_name' in columns else 0
+
+                    if 'table_schema' in response.data_frame.columns:
+                        for _, row in response.data_frame.iterrows():
+                            tables_list.append(f"{database}.{row['table_schema']}.{escape_table_name(row[name_idx])}")
+                    else:
+                        for table_name in response.data_frame.iloc[:, name_idx]:
+                            tables_list.append(f"{database}.{escape_table_name(table_name)}")
+                except Exception as e:
+                    logger.warning(f"Could not get tables from database {database}: {str(e)}")
+                continue
+
+            # Handle table restrictions
+            if restriction_on_tables and database:
+                for schema_name, tables in restriction_on_tables.items():
+                    for table in tables:
+                        # Check if the table already has dot notation (e.g., 'postgresql_conn.home_rentals')
+                        if '.' in table:
+                            # Table already has database prefix, add it directly
+                            tables_list.append(escape_table_name(table))
+                        else:
+                            # No dot notation, apply schema and database as needed
+                            if schema_name is None:
+                                tables_list.append(f'{database}.{escape_table_name(table)}')
+                            else:
+                                tables_list.append(f'{database}.{schema_name}.{escape_table_name(table)}')
+                continue
+
+        # Remove duplicates from lists
+        tables_list = list(set(tables_list))
+        knowledge_bases_list = list(set(knowledge_bases_list))
+        ignore_knowledge_bases_list = list(set(ignore_knowledge_bases_list))
+
+        # Determine knowledge base parameters to pass to SQLAgent
+        include_knowledge_bases = knowledge_bases_list if knowledge_bases_list else None
+        ignore_knowledge_bases = ignore_knowledge_bases_list if ignore_knowledge_bases_list else None
+
+        # If both include and ignore lists exist, include takes precedence
+        if include_knowledge_bases:
+            ignore_knowledge_bases = None
+
+        # # Get all databases from skills and extracted databases
+        # all_databases = list(set([s.params.get('database', DEFAULT_TEXT2SQL_DATABASE) for s in skills if s.params.get('database')] + list(extracted_databases)))
+        #
+        #
+        # # If no databases were specified or extracted, use 'mindsdb' as a default
+        # if not all_databases:
+        #     all_databases = [DEFAULT_TEXT2SQL_DATABASE]
+        #
+
+        all_databases = []
+        # Filter out None values
+        all_databases = [db for db in all_databases if db is not None]
+
+        # Create a databases_struct dictionary that includes all extracted databases
+        databases_struct = {}
+
+        # First, add databases from skills with explicit database parameters
+        for skill in skills:
+            if skill.params.get('database'):
+                databases_struct[skill.params['database']] = skill.restriction_on_tables
+
+        # Then, add all extracted databases with no restrictions
+        for db_name in extracted_databases:
+            if db_name not in databases_struct:
+                databases_struct[db_name] = None
 
         sql_agent = SQLAgent(
             command_executor=command_executor,
-            databases=list(set(s.params['database'] for s in skills)),
-            databases_struct={
-                skill.params['database']: skill.restriction_on_tables
-                for skill in skills
-            },
+            databases=all_databases,
+            databases_struct=databases_struct,
             include_tables=tables_list,
             ignore_tables=None,
+            include_knowledge_bases=include_knowledge_bases,
+            ignore_knowledge_bases=ignore_knowledge_bases,
+            knowledge_base_database=knowledge_base_database,
             sample_rows_in_table_info=3,
+
             cache=get_cache('agent', max_size=_MAX_CACHE_SIZE)
         )
         db = MindsDBSQL.custom_init(
             sql_agent=sql_agent
         )
-
-        # Users probably don't need to configure this for now.
-        sql_database_tools = MindsDBSQLToolkit(db=db, llm=llm).get_tools()
-        descriptions = []
-        for skill in skills:
-            description = skill.params.get('description', '')
-            if description:
-                descriptions.append(description)
-
-        for i, tool in enumerate(sql_database_tools):
-            if isinstance(tool, QuerySQLDataBaseTool):
-                # Add our own custom description so our agent knows when to query this table.
-                original_description = tool.description
-                tool.description = ''
-                if len(descriptions) > 0:
-                    tool.description += f'Use this tool if you need data about {" OR ".join(descriptions)}.\n'
-                tool.description += 'Use the conversation context to decide which table to query.\n'
-                if len(tables_list) > 0:
-                    f'These are the available tables: {",".join(tables_list)}.\n'
-                tool.description += (
-                    'ALWAYS consider these special cases:\n'
-                    ' - For TIMESTAMP type columns, make sure you include the time portion in your query (e.g. WHERE date_column = "2020-01-01 12:00:00")\n'
-                    'Here are the rest of the instructions:\n'
-                    f'{original_description}'
-                )
-                sql_database_tools[i] = tool
-        return sql_database_tools
+        toolkit = MindsDBSQLToolkit(db=db, llm=llm)
+        return toolkit.get_tools()
 
     def _make_retrieval_tools(self, skill: db.Skills, llm, embedding_model):
         """

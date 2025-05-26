@@ -18,6 +18,13 @@ from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
 from tests.unit.executor_test_base import BaseExecutorMockPredictor
 
 
+def to_str(query):
+    render = SqlalchemyRender('postgres')
+    s = render.get_string(query)
+    s = s.strip().replace('\n', ' ').replace('\t', '').replace('  ', ' ')
+    return s
+
+
 class Test(BaseExecutorMockPredictor):
     def setup_method(self, method):
         super().setup_method()
@@ -728,6 +735,30 @@ class TestComplexQueries(BaseExecutorMockPredictor):
         assert mock_handler().query.call_args_list[0][0][0].to_string() == "DELETE FROM table2 WHERE b1 = 'b'"
 
     @patch('mindsdb.integrations.handlers.mysql_handler.Handler')
+    def test_insert(self, mock_handler):
+        self.set_handler(mock_handler, name='pg', tables={'tasks': self.df}, engine='mysql')
+        del mock_handler().insert
+
+        sql = "insert into pg.tasks (a) values (3);"
+        resp = self.execute(sql)
+        calls = mock_handler().query.call_args_list
+        assert len(calls[0][0][0].columns) == 1
+        assert calls[0][0][0].values == [[3]]
+        assert resp.affected_rows == 1
+
+        sql = "insert into pg.tasks (a, b) values (3, 4)"
+        resp = self.execute(sql)
+        assert len(calls[1][0][0].columns) == 2
+        assert calls[1][0][0].values == [[3, 4]]
+        assert resp.affected_rows == 1
+
+        sql = "insert into pg.tasks values (1, 2, '2020-01-01 00:00:00')"
+        resp = self.execute(sql)
+        assert len(calls[2][0][0].columns) == 3
+        assert len(calls[2][0][0].values[0]) == 3
+        assert resp.affected_rows == 1
+
+    @patch('mindsdb.integrations.handlers.mysql_handler.Handler')
     def test_create_table(self, mock_handler):
         self.set_handler(mock_handler, name='pg', tables={'tasks': self.df}, engine='mysql')
 
@@ -748,13 +779,6 @@ class TestComplexQueries(BaseExecutorMockPredictor):
         self.execute(sql)
 
         calls = mock_handler().query.call_args_list
-
-        render = SqlalchemyRender('postgres')
-
-        def to_str(query):
-            s = render.get_string(query)
-            s = s.strip().replace('\n', ' ').replace('\t', '').replace('  ', ' ')
-            return s
 
         # select for predictor
         assert to_str(calls[0][0][0]) == 'SELECT * FROM tasks AS t WHERE a = 1'
@@ -788,13 +812,6 @@ class TestComplexQueries(BaseExecutorMockPredictor):
         self.execute(sql)
 
         calls = mock_handler().query.call_args_list
-
-        render = SqlalchemyRender('postgres')
-
-        def to_str(query):
-            s = render.get_string(query)
-            s = s.strip().replace('\n', ' ').replace('\t', '').replace('  ', ' ')
-            return s
 
         # select for predictor
         assert to_str(calls[0][0][0]) == 'SELECT * FROM tasks AS t WHERE a = 1'

@@ -7,6 +7,11 @@ from langchain_community.tools import ListSQLDatabaseTool, InfoSQLDatabaseTool, 
 from langchain_core.tools import BaseTool
 
 from mindsdb.interfaces.skills.custom.text2sql.mindsdb_sql_tool import MindsDBSQLParserTool
+from mindsdb.interfaces.skills.custom.text2sql.mindsdb_kb_tools import (
+    KnowledgeBaseListTool,
+    KnowledgeBaseInfoTool,
+    KnowledgeBaseQueryTool
+)
 
 
 class MindsDBSQLToolkit(SQLDatabaseToolkit):
@@ -107,9 +112,96 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
             description=mindsdb_sql_parser_tool_description
         )
 
+        # Knowledge base tools
+        kb_list_tool = KnowledgeBaseListTool(
+            name=f'kb_list_tool{prefix}',
+            db=self.db,
+            description=dedent("""\
+                Lists all available knowledge bases that can be queried.
+                Input: No input required, just call the tool directly.
+                Output: A table of all available knowledge bases with their names and creation dates.
+
+                Use this tool first when answering factual questions to see what knowledge bases are available.
+                Each knowledge base name is escaped using backticks.
+
+                Example usage: kb_list_tool()
+            """)
+        )
+
+        kb_info_tool = KnowledgeBaseInfoTool(
+            name=f'kb_info_tool{prefix}',
+            db=self.db,
+            description=dedent(f"""\
+                Gets detailed information about specific knowledge bases including their structure and metadata fields.
+
+                Input: A knowledge base name as a simple string.
+                Output: Schema, metadata columns, and sample rows for the specified knowledge base.
+
+                Use this after kb_list_tool to understand what information is contained in the knowledge base
+                and what metadata fields are available for filtering.
+
+                Example usage: kb_info_tool("kb_name")
+
+                Make sure the knowledge base exists by calling {kb_list_tool.name} first.
+            """)
+        )
+
+        kb_query_tool = KnowledgeBaseQueryTool(
+            name=f'kb_query_tool{prefix}',
+            db=self.db,
+            description=dedent(f"""\
+                Queries knowledge bases using SQL syntax to retrieve relevant information.
+
+                Input: A SQL query string that targets a knowledge base.
+                Output: Knowledge base search results or error message.
+
+                This tool is designed for semantic search and metadata filtering in MindsDB knowledge bases.
+
+                Query Types and Examples:
+                1. Basic semantic search:
+                   kb_query_tool("SELECT * FROM kb_name WHERE content = 'your search query';")
+
+                2. Metadata filtering:
+                   kb_query_tool("SELECT * FROM kb_name WHERE metadata_field = 'value';")
+
+                3. Combined search:
+                   kb_query_tool("SELECT * FROM kb_name WHERE content = 'query' AND metadata_field = 'value';")
+
+                4. Setting relevance threshold:
+                   kb_query_tool("SELECT * FROM kb_name WHERE content = 'query' AND relevance_threshold = 0.7;")
+
+                5. Limiting results:
+                   kb_query_tool("SELECT * FROM kb_name WHERE content = 'query' LIMIT 5;")
+
+                6. Getting sample data:
+                   kb_query_tool("SELECT * FROM kb_name LIMIT 3;")
+
+                7. Don't use LIKE operator on content filter ie semantic search:
+                SELECT * FROM `test_kb` WHERE content LIKE '%population of New York%' $STOP$
+
+                Like is not supported, use the following instead:
+                SELECT * FROM `test_kb` WHERE content = 'population of New York'
+
+                Result Format:
+                - Results include: id, chunk_id, chunk_content, metadata, distance, and relevance columns
+                - The metadata column contains a JSON object with all metadata fields
+
+                Best Practices:
+                - Always check available knowledge bases with {kb_list_tool.name} first
+                - Use {kb_info_tool.name} to understand the structure and metadata fields
+                - Always include a semicolon at the end of your SQL query
+
+                For factual questions, use this tool to retrieve information rather than relying on the model's knowledge.
+            """)
+        )
+
+        # Return standard SQL tools and knowledge base tools
         return [
             query_sql_database_tool,
             info_sql_database_tool,
             list_sql_database_tool,
             mindsdb_sql_parser_tool,
+            kb_list_tool,
+            kb_info_tool,
+            kb_query_tool,
         ]

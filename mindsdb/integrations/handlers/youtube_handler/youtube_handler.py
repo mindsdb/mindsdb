@@ -14,7 +14,7 @@ from mindsdb.utilities.config import Config
 
 from googleapiclient.discovery import build
 
-from mindsdb.integrations.utilities.handlers.auth_utilities import GoogleUserOAuth2Manager
+from mindsdb.integrations.utilities.handlers.auth_utilities.google import GoogleUserOAuth2Manager
 
 DEFAULT_SCOPES = [
 	'https://www.googleapis.com/auth/youtube',

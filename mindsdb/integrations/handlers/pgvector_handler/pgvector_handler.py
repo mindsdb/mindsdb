@@ -1,7 +1,7 @@
 import os
 import json
 from enum import Enum
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Literal
 from urllib.parse import urlparse
 
 import pandas as pd
@@ -66,6 +66,21 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
 
         self.distance_op = distance_op
         self.connect()
+
+    def get_metric_type(self) -> str:
+        """
+        Get the metric type from the distance ops
+
+        """
+        distance_ops_to_metric_type_map = {
+            '<->': 'vector_l2_ops',
+            '<#>': 'vector_ip_ops',
+            '<=>': 'vector_cosine_ops',
+            '<+>': 'vector_l1_ops',
+            '<~>': 'bit_hamming_ops',
+            '<%>': 'bit_jaccard_ops'
+        }
+        return distance_ops_to_metric_type_map.get(self.distance_op, 'vector_cosine_ops')
 
     def _make_connection_args(self):
         cloud_pgvector_url = os.environ.get('KB_PGVECTOR_URL')
@@ -521,3 +536,33 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         """
         table_name = self._check_table(table_name)
         self.raw_query(f"DROP TABLE IF EXISTS {table_name}")
+
+    def create_index(self, table_name: str, column_name: str = "embeddings", index_type: Literal['ivfflat', 'hnsw'] = "hnsw", metric_type: str = None):
+        """
+        Create an index on the pgvector table.
+        Args:
+            table_name (str): Name of the table to create the index on.
+            column_name (str): Name of the column to create the index on.
+            index_type (str): Type of the index to create. Supported types are 'ivfflat' and 'hnsw'.
+            metric_type (str): Metric type for the index. Supported types are 'vector_l2_ops', 'vector_ip_ops', and 'vector_cosine_ops'.
+        """
+        if metric_type is None:
+            metric_type = self.get_metric_type()
+        # Check if the index type is supported
+        if index_type not in ['ivfflat', 'hnsw']:
+            raise ValueError("Invalid index type. Supported types are 'ivfflat' and 'hnsw'.")
+        table_name = self._check_table(table_name)
+        # first we make sure embedding dimension is set
+        embedding_dim_size_df = self.raw_query(f"SELECT vector_dims({column_name}) FROM {table_name} LIMIT 1")
+        # check if answer is empty
+        if embedding_dim_size_df.empty:
+            raise ValueError("Could not determine embedding dimension size. Make sure that knowledge base isn't empty")
+        try:
+            embedding_dim = int(embedding_dim_size_df.iloc[0, 0])
+            # alter table to add dimension
+            self.raw_query(f"ALTER TABLE {table_name} ALTER COLUMN {column_name} TYPE vector({embedding_dim})")
+        except Exception as e:
+            raise ValueError("Could not determine embedding dimension size. Make sure that knowledge base isn't empty")
+
+        # Create the index
+        self.raw_query(f"CREATE INDEX ON {table_name} USING {index_type} ({column_name} {metric_type})")

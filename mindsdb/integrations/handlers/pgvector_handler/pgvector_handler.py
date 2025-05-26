@@ -552,5 +552,17 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         if index_type not in ['ivfflat', 'hnsw']:
             raise ValueError("Invalid index type. Supported types are 'ivfflat' and 'hnsw'.")
         table_name = self._check_table(table_name)
+        # first we make sure embedding dimension is set
+        embedding_dim_size_df = self.raw_query(f"SELECT vector_dims({column_name}) FROM {table_name} LIMIT 1")
+        # check if answer is empty
+        if embedding_dim_size_df.empty:
+            raise ValueError("Could not determine embedding dimension size. Make sure that knowledge base isn't empty")
+        try:
+            embedding_dim = int(embedding_dim_size_df.iloc[0, 0])
+            # alter table to add dimension
+            self.raw_query(f"ALTER TABLE {table_name} ALTER COLUMN {column_name} TYPE vector({embedding_dim})")
+        except Exception as e:
+            raise ValueError("Could not determine embedding dimension size. Make sure that knowledge base isn't empty")
+
         # Create the index
         self.raw_query(f"CREATE INDEX ON {table_name} USING {index_type} ({column_name} {metric_type})")

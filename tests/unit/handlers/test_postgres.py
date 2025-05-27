@@ -530,14 +530,14 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_cursor.fetchall.return_value = [input_row]
 
         description = [
-            ColumnDescription(name='t_char', type_code=1042),
-            ColumnDescription(name='t_varchar', type_code=1043),
-            ColumnDescription(name='t_text', type_code=25),
-            ColumnDescription(name='t_bytea', type_code=17),
-            ColumnDescription(name='t_json', type_code=114),
-            ColumnDescription(name='t_jsonb', type_code=3802),
-            ColumnDescription(name='t_xml', type_code=142),
-            ColumnDescription(name='t_uuid', type_code=2950)
+            ColumnDescription(name='t_char', type_code=type_name_to_oid['bpchar']),
+            ColumnDescription(name='t_varchar', type_code=type_name_to_oid['varchar']),
+            ColumnDescription(name='t_text', type_code=type_name_to_oid['text']),
+            ColumnDescription(name='t_bytea', type_code=type_name_to_oid['bytea']),
+            ColumnDescription(name='t_json', type_code=type_name_to_oid['json']),
+            ColumnDescription(name='t_jsonb', type_code=type_name_to_oid['jsonb']),
+            ColumnDescription(name='t_xml', type_code=type_name_to_oid['xml']),
+            ColumnDescription(name='t_uuid', type_code=type_name_to_oid['uuid'])
         ]
         mock_cursor.description = description
         excepted_mysql_types = [
@@ -545,8 +545,8 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.VARCHAR,
             MYSQL_DATA_TYPE.TEXT,
             MYSQL_DATA_TYPE.BINARY,
-            MYSQL_DATA_TYPE.VARCHAR,
-            MYSQL_DATA_TYPE.VARCHAR,
+            MYSQL_DATA_TYPE.JSON,
+            MYSQL_DATA_TYPE.JSON,
             MYSQL_DATA_TYPE.VARCHAR,
             MYSQL_DATA_TYPE.VARCHAR
         ]

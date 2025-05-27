@@ -9,7 +9,7 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.utilities.config import Config
 from mindsdb.utilities import log
-from mindsdb.integrations.utilities.handlers.auth_utilities import GoogleUserOAuth2Manager
+from mindsdb.integrations.utilities.handlers.auth_utilities.google import GoogleUserOAuth2Manager
 from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import AuthException
 
 from .google_calendar_tables import GoogleCalendarEventsTable

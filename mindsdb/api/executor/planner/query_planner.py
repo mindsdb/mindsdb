@@ -848,11 +848,12 @@ class QueryPlanner:
         """
 
         # handle fetchdataframe partitioning
+        steps_in = plan.steps
         steps_out = []
 
         step = None
         partition_step = None
-        for step in plan.steps:
+        for step in steps_in:
             if isinstance(step, FetchDataframeStep) and step.params is not None:
                 batch_size = step.params.get('batch_size')
                 if batch_size is not None:
@@ -905,6 +906,14 @@ class QueryPlanner:
 
         if plan.is_resumable and isinstance(step, InsertToTable):
             plan.is_async = True
+        else:
+            # special case: register insert from select (it is the same as mark resumable)
+            if (
+                len(steps_in) == 2
+                and isinstance(steps_in[0], FetchDataframeStep)
+                and isinstance(steps_in[1], InsertToTable)
+            ):
+                plan.is_resumable = True
 
         plan.steps = steps_out
         return plan

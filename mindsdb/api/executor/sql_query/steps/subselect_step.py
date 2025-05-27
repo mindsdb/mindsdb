@@ -55,7 +55,7 @@ class SubSelectStepCall(BaseStepCall):
 
             for col_name in query_cols:
                 if col_name not in result_cols:
-                    result.add_column(Column(col_name))
+                    result.add_column(Column(name=col_name))
 
         # inject previous step values
         if isinstance(query, Select):
@@ -69,12 +69,10 @@ class SubSelectStepCall(BaseStepCall):
         df = result.to_df()
         res = query_df(df, query, session=self.session)
 
-        result2 = ResultSet()
         # get database from first column
         database = result.columns[0].database
-        result2.from_df(res, database, table_name)
 
-        return result2
+        return ResultSet.from_df(res, database, table_name)
 
 
 class QueryStepCall(BaseStepCall):
@@ -86,7 +84,7 @@ class QueryStepCall(BaseStepCall):
 
         if step.from_table is not None:
             if isinstance(step.from_table, pd.DataFrame):
-                result_set = ResultSet().from_df(step.from_table)
+                result_set = ResultSet.from_df(step.from_table)
             else:
                 result_set = self.steps_data[step.from_table.step_num]
         else:
@@ -208,6 +206,4 @@ class QueryStepCall(BaseStepCall):
         query.from_table = Identifier('df_table')
         res = query_df(df, query, session=self.session)
 
-        data = ResultSet().from_df_cols(res, col_names, strict=False)
-
-        return data
+        return ResultSet.from_df_cols(df=res, columns_dict=col_names, strict=False)

@@ -20,8 +20,9 @@ from .constants import ASSISTANT_COLUMN, SUPPORTED_PROVIDERS, PROVIDER_TO_MODELS
 from .langchain_agent import get_llm_provider
 from .crewai_pipeline import CrewAITextToSQLPipeline
 
-
 default_project = config.get('default_project')
+
+DEFAULT_TEXT2SQL_DATABASE = 'mindsdb'
 
 
 class AgentsController:
@@ -159,6 +160,13 @@ class AgentsController:
                  with one of keys is "name", and other is additional parameters for relationship agent<>skill
             provider (str): The provider of the model
             params (Dict[str, str]): Parameters to use when running the agent
+                database: The database to use for text2sql skills (default is 'mindsdb')
+                knowledge_base_database: The database to use for knowledge base queries (default is 'mindsdb')
+                include_tables: List of tables to include for text2sql skills
+                ignore_tables: List of tables to ignore for text2sql skills
+                include_knowledge_bases: List of knowledge bases to include for text2sql skills
+                ignore_knowledge_bases: List of knowledge bases to ignore for text2sql skills
+                <provider>_api_key: API key for the provider (e.g., openai_api_key)
 
         Returns:
             agent (db.Agents): The created agent
@@ -177,6 +185,128 @@ class AgentsController:
 
         _, provider = self.check_model_provider(model_name, provider)
 
+        # Extract API key if provided in the format <provider>_api_key
+        provider_api_key_param = f"{provider.lower()}_api_key"
+        if provider_api_key_param in params:
+            # Keep the API key in params for the agent to use
+            # It will be picked up by get_api_key() in handler_utils.py
+            pass
+
+        # Extract table and knowledge base parameters from params
+        database = params.pop('database', None)
+        knowledge_base_database = params.pop('knowledge_base_database', DEFAULT_TEXT2SQL_DATABASE)
+        include_tables = params.pop('include_tables', None)
+        ignore_tables = params.pop('ignore_tables', None)
+        include_knowledge_bases = params.pop('include_knowledge_bases', None)
+        ignore_knowledge_bases = params.pop('ignore_knowledge_bases', None)
+
+        # Save the extracted parameters back to params for API responses only if they were explicitly provided
+        # or if they're needed for skills
+        need_params = include_tables or ignore_tables or include_knowledge_bases or ignore_knowledge_bases
+
+        if 'database' in params or need_params:
+            params['database'] = database
+
+        if 'knowledge_base_database' in params or include_knowledge_bases or ignore_knowledge_bases:
+            params['knowledge_base_database'] = knowledge_base_database
+
+        if include_tables is not None:
+            params['include_tables'] = include_tables
+        if ignore_tables is not None:
+            params['ignore_tables'] = ignore_tables
+        if include_knowledge_bases is not None:
+            params['include_knowledge_bases'] = include_knowledge_bases
+        if ignore_knowledge_bases is not None:
+            params['ignore_knowledge_bases'] = ignore_knowledge_bases
+
+        # Convert string parameters to lists if needed
+        if isinstance(include_tables, str):
+            include_tables = [t.strip() for t in include_tables.split(',')]
+        if isinstance(ignore_tables, str):
+            ignore_tables = [t.strip() for t in ignore_tables.split(',')]
+        if isinstance(include_knowledge_bases, str):
+            include_knowledge_bases = [kb.strip() for kb in include_knowledge_bases.split(',')]
+        if isinstance(ignore_knowledge_bases, str):
+            ignore_knowledge_bases = [kb.strip() for kb in ignore_knowledge_bases.split(',')]
+
+        # Auto-create SQL skill if no skills are provided but include_tables or include_knowledge_bases params are provided
+        if not skills and (include_tables or include_knowledge_bases):
+            # Determine database to use (default to 'mindsdb')
+            db_name = database
+            kb_db_name = knowledge_base_database
+
+            # If database is not explicitly provided but tables are, try to extract the database name from the first table
+            if not database and include_tables and len(include_tables) > 0:
+                parts = include_tables[0].split('.')
+                if len(parts) >= 2:
+                    db_name = parts[0]
+            elif not database and ignore_tables and len(ignore_tables) > 0:
+                parts = ignore_tables[0].split('.')
+                if len(parts) >= 2:
+                    db_name = parts[0]
+
+            # Create a default SQL skill
+            skill_name = f"{name}_sql_skill"
+            skill_params = {
+                'type': 'sql',
+                'database': db_name,
+                'description': f'Auto-generated SQL skill for agent {name}'
+            }
+
+            # Add knowledge base database if provided
+            if knowledge_base_database:
+                skill_params['knowledge_base_database'] = knowledge_base_database
+
+            # Add knowledge base parameters if provided
+            if include_knowledge_bases:
+                skill_params['include_knowledge_bases'] = include_knowledge_bases
+            if ignore_knowledge_bases:
+                skill_params['ignore_knowledge_bases'] = ignore_knowledge_bases
+
+            try:
+                # Check if skill already exists
+                existing_skill = self.skills_controller.get_skill(skill_name, project_name)
+                if existing_skill is None:
+                    # Create the skill
+                    skill_type = skill_params.pop('type')
+                    self.skills_controller.add_skill(
+                        name=skill_name,
+                        project_name=project_name,
+                        type=skill_type,
+                        params=skill_params
+                    )
+                else:
+                    # Update the skill if parameters have changed
+                    params_changed = False
+
+                    # Check if database has changed
+                    if existing_skill.params.get('database') != db_name:
+                        existing_skill.params['database'] = db_name
+                        params_changed = True
+
+                    # Check if knowledge base database has changed
+                    if knowledge_base_database and existing_skill.params.get('knowledge_base_database') != kb_db_name:
+                        existing_skill.params['knowledge_base_database'] = kb_db_name
+                        params_changed = True
+
+                    # Check if knowledge base parameters have changed
+                    if include_knowledge_bases and existing_skill.params.get('include_knowledge_bases') != include_knowledge_bases:
+                        existing_skill.params['include_knowledge_bases'] = include_knowledge_bases
+                        params_changed = True
+
+                    if ignore_knowledge_bases and existing_skill.params.get('ignore_knowledge_bases') != ignore_knowledge_bases:
+                        existing_skill.params['ignore_knowledge_bases'] = ignore_knowledge_bases
+                        params_changed = True
+
+                    # Update the skill if needed
+                    if params_changed:
+                        flag_modified(existing_skill, 'params')
+                        db.session.commit()
+
+                skills = [skill_name]
+            except Exception as e:
+                raise ValueError(f"Failed to auto-create or update SQL skill: {str(e)}")
+
         agent = db.Agents(
             name=name,
             project_id=project.id,
@@ -194,10 +324,43 @@ class AgentsController:
             else:
                 parameters = skill.copy()
                 skill_name = parameters.pop('name')
+
             existing_skill = self.skills_controller.get_skill(skill_name, project_name)
             if existing_skill is None:
                 db.session.rollback()
                 raise ValueError(f'Skill with name does not exist: {skill_name}')
+
+            # Add table restrictions if this is a text2sql skill
+            if existing_skill.type == 'sql' and (include_tables or ignore_tables):
+                parameters['tables'] = include_tables or ignore_tables
+
+            # Add knowledge base restrictions if this is a text2sql skill
+            if existing_skill.type == 'sql':
+                # Pass database parameter if provided
+                if database and 'database' not in parameters:
+                    parameters['database'] = database
+
+                # Pass knowledge base database parameter if provided
+                if knowledge_base_database and 'knowledge_base_database' not in parameters:
+                    parameters['knowledge_base_database'] = knowledge_base_database
+
+                # Add knowledge base parameters to both the skill and the association parameters
+                if include_knowledge_bases:
+                    parameters['include_knowledge_bases'] = include_knowledge_bases
+                    if 'include_knowledge_bases' not in existing_skill.params:
+                        existing_skill.params['include_knowledge_bases'] = include_knowledge_bases
+                        flag_modified(existing_skill, 'params')
+                elif ignore_knowledge_bases:
+                    parameters['ignore_knowledge_bases'] = ignore_knowledge_bases
+                    if 'ignore_knowledge_bases' not in existing_skill.params:
+                        existing_skill.params['ignore_knowledge_bases'] = ignore_knowledge_bases
+                        flag_modified(existing_skill, 'params')
+
+                # Ensure knowledge_base_database is set in the skill's params
+                if knowledge_base_database and 'knowledge_base_database' not in existing_skill.params:
+                    existing_skill.params['knowledge_base_database'] = knowledge_base_database
+                    flag_modified(existing_skill, 'params')
+
             association = db.AgentSkillsAssociation(
                 parameters=parameters,
                 agent=agent,

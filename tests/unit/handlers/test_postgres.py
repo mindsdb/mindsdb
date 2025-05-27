@@ -1,11 +1,17 @@
-from collections import OrderedDict
 import unittest
+import datetime
+from uuid import UUID
+from decimal import Decimal
+from zoneinfo import ZoneInfo
+from collections import OrderedDict
 from unittest.mock import patch, MagicMock
 
 import psycopg
 from psycopg.pq import ExecStatus
+from psycopg.postgres import types as pg_types
 import pandas as pd
 from pandas import DataFrame
+from pandas.api import types as pd_types
 
 from base_handler_test import BaseDatabaseHandlerTest, MockCursorContextManager
 from mindsdb.integrations.handlers.postgres_handler.postgres_handler import PostgresHandler
@@ -13,12 +19,18 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 
 class ColumnDescription:
     def __init__(self, **kwargs):
         self.name = kwargs.get('name')
         self.type_code = kwargs.get('type_code')
+
+
+# map between regtype name and type id
+regtype_to_oid = {t.regtype: t.oid for t in pg_types}
+type_name_to_oid = {t.name: t.oid for t in pg_types}
 
 
 class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
@@ -130,8 +142,8 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         # Create proper description objects with necessary type_code for _cast_dtypes
         mock_cursor.description = [
-            ColumnDescription(name='id', type_code=23),  # int4 type code
-            ColumnDescription(name='name', type_code=25)  # text type code
+            ColumnDescription(name='id', type_code=regtype_to_oid['integer']),  # int4 type code
+            ColumnDescription(name='name', type_code=regtype_to_oid['text'])  # text type code
         ]
 
         # Make sure pgresult doesn't have COMMAND_OK status
@@ -213,22 +225,11 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             'text_col': ['a', 'b']
         })
 
-        # Create type code mapping
-        type_codes = {
-            'int2': 21,    # Typical OID for int2
-            'int4': 23,    # Typical OID for int4
-            'int8': 20,    # Typical OID for int8
-            'numeric': 1700,  # Typical OID for numeric
-            'float4': 700,  # Typical OID for float4
-            'float8': 701,  # Typical OID for float8
-            'text': 25     # Typical OID for text
-        }
-
         original_get = psycopg.postgres.types.get
 
         try:
             type_mocks = {}
-            for pg_type, oid in type_codes.items():
+            for pg_type, oid in type_name_to_oid.items():
                 type_mock = MagicMock()
                 type_mock.name = pg_type
                 type_mocks[oid] = type_mock
@@ -247,13 +248,13 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             psycopg.postgres.types.get = mock_get
 
             description = [
-                ColumnDescription(name='int2_col', type_code=type_codes['int2']),
-                ColumnDescription(name='int4_col', type_code=type_codes['int4']),
-                ColumnDescription(name='int8_col', type_code=type_codes['int8']),
-                ColumnDescription(name='numeric_col', type_code=type_codes['numeric']),
-                ColumnDescription(name='float4_col', type_code=type_codes['float4']),
-                ColumnDescription(name='float8_col', type_code=type_codes['float8']),
-                ColumnDescription(name='text_col', type_code=type_codes['text'])
+                ColumnDescription(name='int2_col', type_code=type_name_to_oid['int2']),
+                ColumnDescription(name='int4_col', type_code=type_name_to_oid['int4']),
+                ColumnDescription(name='int8_col', type_code=type_name_to_oid['int8']),
+                ColumnDescription(name='numeric_col', type_code=type_name_to_oid['numeric']),
+                ColumnDescription(name='float4_col', type_code=type_name_to_oid['float4']),
+                ColumnDescription(name='float8_col', type_code=type_name_to_oid['float8']),
+                ColumnDescription(name='text_col', type_code=type_name_to_oid['text'])
             ]
 
             self.handler._cast_dtypes(df, description)
@@ -342,20 +343,21 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ['b', 'int', 2, None, 'YES', None, None, None, None, None, None, None],
             ['c', 'int', 3, None, 'YES', None, None, None, None, None, None, None]
         ])
-        mock_cursor.description = [
-            ColumnDescription(name='COLUMN_NAME', type_code=23),
-            ColumnDescription(name='DATA_TYPE', type_code=23),
-            ColumnDescription(name='ORDINAL_POSITION', type_code=23),
-            ColumnDescription(name='COLUMN_DEFAULT', type_code=23),
-            ColumnDescription(name='IS_NULLABLE', type_code=23),
-            ColumnDescription(name='CHARACTER_MAXIMUM_LENGTH', type_code=23),
-            ColumnDescription(name='CHARACTER_OCTET_LENGTH', type_code=23),
-            ColumnDescription(name='NUMERIC_PRECISION', type_code=23),
-            ColumnDescription(name='NUMERIC_SCALE', type_code=23),
-            ColumnDescription(name='DATETIME_PRECISION', type_code=23),
-            ColumnDescription(name='CHARACTER_SET_NAME', type_code=23),
-            ColumnDescription(name='COLLATION_NAME', type_code=23),
+        information_schema_description = [
+            ColumnDescription(name='COLUMN_NAME', type_code=regtype_to_oid['text']),
+            ColumnDescription(name='DATA_TYPE', type_code=regtype_to_oid['text']),
+            ColumnDescription(name='ORDINAL_POSITION', type_code=regtype_to_oid['integer']),
+            ColumnDescription(name='COLUMN_DEFAULT', type_code=regtype_to_oid['text']),
+            ColumnDescription(name='IS_NULLABLE', type_code=regtype_to_oid['text']),
+            ColumnDescription(name='CHARACTER_MAXIMUM_LENGTH', type_code=regtype_to_oid['integer']),
+            ColumnDescription(name='CHARACTER_OCTET_LENGTH', type_code=regtype_to_oid['integer']),
+            ColumnDescription(name='NUMERIC_PRECISION', type_code=regtype_to_oid['integer']),
+            ColumnDescription(name='NUMERIC_SCALE', type_code=regtype_to_oid['integer']),
+            ColumnDescription(name='DATETIME_PRECISION', type_code=regtype_to_oid['integer']),
+            ColumnDescription(name='CHARACTER_SET_NAME', type_code=regtype_to_oid['text']),
+            ColumnDescription(name='COLLATION_NAME', type_code=regtype_to_oid['text']),
         ]
+        mock_cursor.description = information_schema_description
 
         # Create mock for copy operation
         copy_obj = MagicMock()
@@ -372,20 +374,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ['id', 'int', 1, None, 'YES', None, None, None, None, None, None, None],
             ['name', 'text', 2, None, 'YES', None, None, None, None, None, None, None],
         ])
-        mock_cursor.description = [
-            ColumnDescription(name='COLUMN_NAME', type_code=23),
-            ColumnDescription(name='DATA_TYPE', type_code=23),
-            ColumnDescription(name='ORDINAL_POSITION', type_code=23),
-            ColumnDescription(name='COLUMN_DEFAULT', type_code=23),
-            ColumnDescription(name='IS_NULLABLE', type_code=23),
-            ColumnDescription(name='CHARACTER_MAXIMUM_LENGTH', type_code=23),
-            ColumnDescription(name='CHARACTER_OCTET_LENGTH', type_code=23),
-            ColumnDescription(name='NUMERIC_PRECISION', type_code=23),
-            ColumnDescription(name='NUMERIC_SCALE', type_code=23),
-            ColumnDescription(name='DATETIME_PRECISION', type_code=23),
-            ColumnDescription(name='CHARACTER_SET_NAME', type_code=23),
-            ColumnDescription(name='COLLATION_NAME', type_code=23),
-        ]
+        mock_cursor.description = information_schema_description
         # endregino
 
         df = pd.DataFrame({
@@ -481,6 +470,326 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         call_kwargs = self.mock_connect.call_args[1]
         expected_options = '-c search_path=custom_schema,public'
         self.assertEqual(call_kwargs['options'], expected_options)
+
+    def test_types_casting(self):
+        """Test that types are casted correctly
+        """
+        query_str = "SELECT * FROM test_table"
+
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=None)
+
+        self.handler.connect = MagicMock(return_value=mock_conn)
+        mock_conn.cursor = MagicMock(return_value=mock_cursor)
+
+        mock_pgresult = MagicMock()
+        mock_pgresult.status = ExecStatus.TUPLES_OK
+        mock_cursor.pgresult = mock_pgresult
+        # mock_conn.is_connected = MagicMock(return_value=True)
+
+        # region test TEXT/BLOB types and sub-types
+        """Test data obtained from:
+
+            CREATE TABLE test_text_blob_types (
+                id SERIAL PRIMARY KEY,
+                t_char CHAR(10),
+                t_varchar VARCHAR(100),
+                t_text TEXT,
+                t_bytea BYTEA,
+                t_json JSON,
+                t_jsonb JSONB,
+                t_xml XML,
+                t_uuid UUID
+            );
+
+            INSERT INTO test_text_blob_types (
+                t_char, t_varchar, t_text, t_bytea, t_json, t_jsonb, t_xml, t_uuid
+            ) VALUES (
+                'Test',
+                'Test',
+                'Test',
+                E'\\x44656D6F2062696E61727920646174612E',
+                '{"name": "test"}',
+                '{"name": "test"}',
+                '<root><element>test</element><nested><value>123</value></nested></root>',
+                'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
+            );
+        """
+        input_row = (
+            'Test      ',
+            'Test',
+            'Test',
+            b'Demo binary data.',
+            {'name': 'test'},
+            {'name': 'test'},
+            '<root><element>test</element><nested><value>123</value></nested></root>',
+            UUID('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11')
+        )
+        mock_cursor.fetchall.return_value = [input_row]
+
+        description = [
+            ColumnDescription(name='t_char', type_code=1042),
+            ColumnDescription(name='t_varchar', type_code=1043),
+            ColumnDescription(name='t_text', type_code=25),
+            ColumnDescription(name='t_bytea', type_code=17),
+            ColumnDescription(name='t_json', type_code=114),
+            ColumnDescription(name='t_jsonb', type_code=3802),
+            ColumnDescription(name='t_xml', type_code=142),
+            ColumnDescription(name='t_uuid', type_code=2950)
+        ]
+        mock_cursor.description = description
+        excepted_mysql_types = [
+            MYSQL_DATA_TYPE.TEXT,
+            MYSQL_DATA_TYPE.VARCHAR,
+            MYSQL_DATA_TYPE.TEXT,
+            MYSQL_DATA_TYPE.BINARY,
+            MYSQL_DATA_TYPE.VARCHAR,
+            MYSQL_DATA_TYPE.VARCHAR,
+            MYSQL_DATA_TYPE.VARCHAR,
+            MYSQL_DATA_TYPE.VARCHAR
+        ]
+        response: Response = self.handler.native_query(query_str)
+
+        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        for i, input_value in enumerate(input_row):
+            result_value = response.data_frame[description[i].name][0]
+            self.assertEqual(type(result_value), type(input_value), f'type mistmatch: {result_value} != {input_value}')
+            self.assertEqual(result_value, input_value, f'value mistmatch: {result_value} != {input_value}')
+        # endregion
+
+        # region test BOOLEAN type
+        input_rows = [(True,), (False,)]
+        mock_cursor.fetchall.return_value = input_rows
+        mock_cursor.description = [
+            ColumnDescription(name='t_boolean', type_code=16)
+        ]
+        excepted_mysql_types = [
+            MYSQL_DATA_TYPE.BOOL
+        ]
+        response: Response = self.handler.native_query(query_str)
+        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertTrue(pd_types.is_bool_dtype(response.data_frame['t_boolean'][0]))
+        self.assertTrue(bool(response.data_frame['t_boolean'][0]) is True)
+        self.assertTrue(bool(response.data_frame['t_boolean'][1]) is False)
+        # endregion
+
+        # region test numeric types
+        """Test data obtained from:
+
+        CREATE TABLE test_numeric_types (
+            n_smallint SMALLINT,
+            n_integer INTEGER,
+            n_bigint BIGINT,
+            n_decimal DECIMAL(10,2),
+            n_numeric NUMERIC(10,4),
+            n_real REAL,
+            n_double_precision DOUBLE PRECISION,
+            n_smallserial SMALLSERIAL,
+            n_serial SERIAL,
+            n_bigserial BIGSERIAL,
+            n_money MONEY,
+            n_int2 INT2,        -- alt for SMALLINT
+            n_int4 INT4,        -- alt for INTEGER
+            n_int8 INT8,        -- alt for BIGINT
+            n_float4 FLOAT4,    -- alt for REAL
+            n_float8 FLOAT8     -- alt for DOUBLE PRECISION
+        );
+
+        INSERT INTO test_numeric_types (
+            n_smallint,
+            n_integer,
+            n_bigint,
+            n_decimal,
+            n_numeric,
+            n_real,
+            n_double_precision,
+            n_money,
+            n_int2,
+            n_int4,
+            n_int8,
+            n_float4,
+            n_float8
+        ) VALUES (
+            32767,                  -- n_smallint (max value)
+            2147483647,             -- n_integer (max value)
+            9223372036854775807,    -- n_bigint (max value)
+            1234.56,                -- n_decimal
+            12345.6789,             -- n_numeric
+            3.14159,                -- n_real
+            2.7182818284590452,     -- n_double_precision
+            '$10,500.25',           -- n_money
+            -32768,                 -- n_int2 (min value)
+            42,                     -- n_int4
+            123456789,              -- n_int8
+            0.00123,                -- n_float4
+            9.8765432109876         -- n_float8
+        );
+        """
+        input_row = (
+            32767,                  # n_smallint (max value)
+            2147483647,             # n_integer (max value)
+            9223372036854775807,    # n_bigint (max value)
+            Decimal('1234.56'),     # n_decimal
+            Decimal('12345.6789'),  # n_numeric
+            3.14159,                # n_real
+            2.718281828459045,      # n_double_precision
+            1,                      # n_smallserial
+            1,                      # n_serial
+            1,                      # n_bigserial
+            '$10,500.25',           # n_money
+            -32768,                 # n_int2
+            42,                     # n_int4
+            123456789,              # n_int8
+            0.00123,                # n_float4
+            9.8765432109876         # n_float8
+        )
+        mock_cursor.fetchall.return_value = [input_row]
+
+        description = [
+            ColumnDescription(name='n_smallint', type_code=21),
+            ColumnDescription(name='n_integer', type_code=23),
+            ColumnDescription(name='n_bigint', type_code=20),
+            ColumnDescription(name='n_decimal', type_code=1700),
+            ColumnDescription(name='n_numeric', type_code=1700),
+            ColumnDescription(name='n_real', type_code=700),
+            ColumnDescription(name='n_double_precision', type_code=701),
+            ColumnDescription(name='n_smallserial', type_code=21),
+            ColumnDescription(name='n_serial', type_code=23),
+            ColumnDescription(name='n_bigserial', type_code=20),
+            ColumnDescription(name='n_money', type_code=790),
+            ColumnDescription(name='n_int2', type_code=21),
+            ColumnDescription(name='n_int4', type_code=23),
+            ColumnDescription(name='n_int8', type_code=20),
+            ColumnDescription(name='n_float4', type_code=700),
+            ColumnDescription(name='n_float8', type_code=701)
+        ]
+        mock_cursor.description = description
+
+        excepted_mysql_types = [
+            MYSQL_DATA_TYPE.SMALLINT,   # n_smallint
+            MYSQL_DATA_TYPE.INT,        # n_integer
+            MYSQL_DATA_TYPE.BIGINT,     # n_bigint
+            MYSQL_DATA_TYPE.DECIMAL,    # n_decimal
+            MYSQL_DATA_TYPE.DECIMAL,    # n_numeric
+            MYSQL_DATA_TYPE.FLOAT,      # n_real
+            MYSQL_DATA_TYPE.DOUBLE,     # n_double_precision
+            MYSQL_DATA_TYPE.SMALLINT,   # n_smallserial
+            MYSQL_DATA_TYPE.INT,        # n_serial
+            MYSQL_DATA_TYPE.BIGINT,     # n_bigserial
+            MYSQL_DATA_TYPE.TEXT,       # n_money
+            MYSQL_DATA_TYPE.SMALLINT,   # n_int2
+            MYSQL_DATA_TYPE.INT,        # n_int4
+            MYSQL_DATA_TYPE.BIGINT,     # n_int8
+            MYSQL_DATA_TYPE.FLOAT,      # n_float4
+            MYSQL_DATA_TYPE.DOUBLE      # n_float8
+        ]
+        response: Response = self.handler.native_query(query_str)
+        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        for i, input_value in enumerate(input_row):
+            result_value = response.data_frame[description[i].name][0]
+            # self.assertEqual(type(result_value), type(input_value), f'type mistmatch: {result_value} != {input_value}')
+            self.assertEqual(result_value, input_value, f'value mistmatch: {result_value} != {input_value}')
+        # endregion
+
+        # region test datetime types
+        """Test data obtained from:
+
+            CREATE TABLE test_time_types (
+                t_date DATE,
+                t_time TIME,
+                t_time_tz TIME WITH TIME ZONE,
+                t_timestamp TIMESTAMP,
+                t_timestamp_tz TIMESTAMP WITH TIME ZONE,
+                t_interval INTERVAL,
+                t_timestamptz TIMESTAMPTZ,
+                t_timetz TIMETZ
+            );
+
+            INSERT INTO test_time_types (
+                t_date,
+                t_time,
+                t_time_tz,
+                t_timestamp,
+                t_timestamp_tz,
+                t_interval,
+                t_timestamptz,
+                t_timetz
+            ) VALUES (
+                '2023-10-15',                                -- t_date
+                '14:30:45',                                  -- t_time
+                '14:30:45+03:00',                            -- t_time_tz
+                '2023-10-15 14:30:45',                       -- t_timestamp
+                '2023-10-15 14:30:45+03:00',                 -- t_timestamp_tz
+                '2 years 3 months 15 days 12 hours 30 minutes 15 seconds', -- t_interval
+                '2023-10-15 14:30:45+03:00',                 -- t_timestamptz
+                '14:30:45+03:00'                             -- t_timetz
+            );
+        """
+        input_row = (
+            datetime.date(2023, 10, 15),
+            datetime.time(14, 30, 45),
+            datetime.time(14, 30, 45, tzinfo=datetime.timezone(datetime.timedelta(seconds=10800))),
+            datetime.datetime(2023, 10, 15, 14, 30, 45),
+            datetime.datetime(2023, 10, 15, 11, 30, 45, tzinfo=ZoneInfo(key='Etc/UTC')),
+            datetime.timedelta(days=835, seconds=45015),
+            datetime.datetime(2023, 10, 15, 11, 30, 45, tzinfo=ZoneInfo(key='Etc/UTC')),
+            datetime.time(14, 30, 45, tzinfo=datetime.timezone(datetime.timedelta(seconds=10800)))
+        )
+        mock_cursor.fetchall.return_value = [input_row]
+
+        description = [
+            ColumnDescription(name='t_date', type_code=1082),
+            ColumnDescription(name='t_time', type_code=1083),
+            ColumnDescription(name='t_time_tz', type_code=1266),
+            ColumnDescription(name='t_timestamp', type_code=1114),
+            ColumnDescription(name='t_timestamp_tz', type_code=1184),
+            ColumnDescription(name='t_interval', type_code=1186),
+            ColumnDescription(name='t_timestamptz', type_code=1184),
+            ColumnDescription(name='t_timetz', type_code=1266)
+        ]
+        mock_cursor.description = description
+
+        excepted_mysql_types = [
+            MYSQL_DATA_TYPE.DATE,       # DATE
+            MYSQL_DATA_TYPE.TIME,       # TIME
+            MYSQL_DATA_TYPE.TIME,       # TIME WITH TIME ZONE
+            MYSQL_DATA_TYPE.DATETIME,   # TIMESTAMP
+            MYSQL_DATA_TYPE.DATETIME,   # TIMESTAMP WITH TIME ZONE
+            MYSQL_DATA_TYPE.VARCHAR,    # INTERVAL
+            MYSQL_DATA_TYPE.DATETIME,   # TIMESTAMPTZ
+            MYSQL_DATA_TYPE.TIME,       # TIMETZ
+        ]
+
+        response: Response = self.handler.native_query(query_str)
+        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        for i, input_value in enumerate(input_row):
+            result_value = response.data_frame[description[i].name][0]
+            # self.assertEqual(type(result_value), type(input_value), f'type mistmatch: {result_value} != {input_value}')
+            self.assertEqual(result_value, input_value, f'value mistmatch: {result_value} != {input_value}')
+        # endregion
+
+        # region test casting of nullable types
+        bigint_val = 9223372036854775807
+        input_rows = [
+            (bigint_val, True),
+            (None, None)
+        ]
+        mock_cursor.fetchall.return_value = input_rows
+        description = [
+            ColumnDescription(name='n_bigint', type_code=20),
+            ColumnDescription(name='t_boolean', type_code=16)
+        ]
+        mock_cursor.description = description
+        response: Response = self.handler.native_query(query_str)
+        self.assertEquals(response.data_frame.dtypes[0], 'Int64')
+        self.assertEquals(response.data_frame.dtypes[1], 'boolean')
+        self.assertEquals(response.data_frame.iloc[0, 0], bigint_val)
+        self.assertEquals(response.data_frame.iloc[0, 1], True)
+        self.assertTrue(response.data_frame.iloc[1, 0] is pd.NA)
+        self.assertTrue(response.data_frame.iloc[1, 1] is pd.NA)
+        # endregion
 
 
 if __name__ == '__main__':

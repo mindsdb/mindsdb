@@ -1,3 +1,12 @@
+import mindsdb.interfaces.storage.db as db
+from mindsdb.integrations.libs.response import RESPONSE_TYPE
+from mindsdb.interfaces.model.model_controller import ModelController
+from mindsdb.interfaces.storage.fs import FsStore
+from mindsdb.integrations.handlers.lightwood_handler.lightwood_handler.lightwood_handler import LightwoodHandler
+from mindsdb.interfaces.database.integrations import integration_controller
+from mindsdb.integrations.utilities.test_utils import PG_HANDLER_NAME, PG_CONNECTION_DATA
+from mindsdb.utilities.config import Config
+from mindsdb.migrations import migrate
 import os
 import time
 import unittest
@@ -7,18 +16,9 @@ temp_dir = tempfile.mkdtemp(dir='/tmp/', prefix='lightwood_handler_test_')
 os.environ['MINDSDB_STORAGE_DIR'] = os.environ.get('MINDSDB_STORAGE_DIR', temp_dir)
 os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + os.path.join(os.environ['MINDSDB_STORAGE_DIR'], 'mindsdb.sqlite3.db') + '?check_same_thread=False&timeout=30'
 
-from mindsdb.migrations import migrate
 migrate.migrate_to_head()
 
-from mindsdb.utilities.config import Config
-from mindsdb.integrations.utilities.test_utils import HandlerControllerMock, PG_HANDLER_NAME, PG_CONNECTION_DATA
-from mindsdb.interfaces.database.integrations import integration_controller
-from mindsdb.integrations.handlers.lightwood_handler.lightwood_handler.lightwood_handler import LightwoodHandler
 # from mindsdb.integrations.handlers.lightwood_handler.lightwood_handler.utils import load_predictor
-from mindsdb.interfaces.storage.fs import FsStore
-from mindsdb.interfaces.model.model_controller import ModelController
-from mindsdb.integrations.libs.response import RESPONSE_TYPE
-import mindsdb.interfaces.storage.db as db
 
 
 # TODO: drop all models and tables when closing tests
@@ -96,7 +96,7 @@ class LightwoodHandlerTest(unittest.TestCase):
         self.assertTrue(response.type == RESPONSE_TYPE.OK)
 
     def test_04_query_predictor_single_where_condition(self):
-        time.sleep(120) # TODO 
+        time.sleep(120)  # TODO
         query = f"""
             SELECT target
             from {self.test_model_1}

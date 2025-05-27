@@ -1,7 +1,6 @@
 import os
 import json
-from enum import Enum
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Literal
 from urllib.parse import urlparse
 
 import pandas as pd
@@ -39,7 +38,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         self._is_vector_registered = False
         # we get these from the connection args on PostgresHandler parent
         self._is_sparse = self.connection_args.get('is_sparse', False)
-        self._vector_size = self.connection_args.get('vector_size', None) 
+        self._vector_size = self.connection_args.get('vector_size', None)
 
         if self._is_sparse:
             if not self._vector_size:
@@ -66,6 +65,21 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
 
         self.distance_op = distance_op
         self.connect()
+
+    def get_metric_type(self) -> str:
+        """
+        Get the metric type from the distance ops
+
+        """
+        distance_ops_to_metric_type_map = {
+            '<->': 'vector_l2_ops',
+            '<#>': 'vector_ip_ops',
+            '<=>': 'vector_cosine_ops',
+            '<+>': 'vector_l1_ops',
+            '<~>': 'bit_hamming_ops',
+            '<%>': 'bit_jaccard_ops'
+        }
+        return distance_ops_to_metric_type_map.get(self.distance_op, 'vector_cosine_ops')
 
     def _make_connection_args(self):
         cloud_pgvector_url = os.environ.get('KB_PGVECTOR_URL')
@@ -234,7 +248,6 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
 
         targets = ', '.join(modified_columns)
 
-
         if filter_conditions:
 
             if embedding_search:
@@ -255,7 +268,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
                 # Calculate distance as part of the query if needed
                 if has_distance:
                     targets = f"{targets}, (embeddings {self.distance_op} '{search_vector}') as distance"
-                
+
                 return f"SELECT {targets} FROM {table_name} {where_clause} ORDER BY embeddings {self.distance_op} '{search_vector}' ASC {limit_clause} {offset_clause} "
 
             else:
@@ -304,7 +317,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         embeddings: List[float],
         query: str = None,
         metadata: Dict[str, str] = None,
-        distance_function = DistanceFunction.COSINE_DISTANCE,
+        distance_function=DistanceFunction.COSINE_DISTANCE,
         **kwargs
     ) -> pd.DataFrame:
         '''
@@ -348,7 +361,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         # See https://docs.pgvecto.rs/use-case/hybrid-search.html#advanced-search-merge-the-results-of-full-text-search-and-vector-search.
         #
         # We can break down the below query as follows:
-        # 
+        #
         # Start with a CTE (Common Table Expression) called semantic_search (https://www.postgresql.org/docs/current/queries-with.html).
         # This expression calculates rank by the defined distance function, which measures the distance between the
         # embeddings column and the given embeddings vector. Results are ordered by this rank.
@@ -409,11 +422,11 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         with self.connection.cursor() as cur:
             # For sparse vectors, use sparsevec type
             vector_column_type = 'sparsevec' if self._is_sparse else 'vector'
-            
+
             # Vector size is required for sparse vectors, optional for dense
             if self._is_sparse and not self._vector_size:
                 raise ValueError("vector_size is required for sparse vectors")
-            
+
             # Add vector size specification only if provided
             size_spec = f"({self._vector_size})" if self._vector_size is not None else "()"
             if vector_column_type == 'vector':
@@ -438,7 +451,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         table_name = self._check_table(table_name)
 
         if 'metadata' in data.columns:
-             data['metadata'] = data['metadata'].apply(json.dumps)
+            data['metadata'] = data['metadata'].apply(json.dumps)
 
         resp = super().insert(table_name, data)
         if resp.resp_type == RESPONSE_TYPE.ERROR:
@@ -521,3 +534,33 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         """
         table_name = self._check_table(table_name)
         self.raw_query(f"DROP TABLE IF EXISTS {table_name}")
+
+    def create_index(self, table_name: str, column_name: str = "embeddings", index_type: Literal['ivfflat', 'hnsw'] = "hnsw", metric_type: str = None):
+        """
+        Create an index on the pgvector table.
+        Args:
+            table_name (str): Name of the table to create the index on.
+            column_name (str): Name of the column to create the index on.
+            index_type (str): Type of the index to create. Supported types are 'ivfflat' and 'hnsw'.
+            metric_type (str): Metric type for the index. Supported types are 'vector_l2_ops', 'vector_ip_ops', and 'vector_cosine_ops'.
+        """
+        if metric_type is None:
+            metric_type = self.get_metric_type()
+        # Check if the index type is supported
+        if index_type not in ['ivfflat', 'hnsw']:
+            raise ValueError("Invalid index type. Supported types are 'ivfflat' and 'hnsw'.")
+        table_name = self._check_table(table_name)
+        # first we make sure embedding dimension is set
+        embedding_dim_size_df = self.raw_query(f"SELECT vector_dims({column_name}) FROM {table_name} LIMIT 1")
+        # check if answer is empty
+        if embedding_dim_size_df.empty:
+            raise ValueError("Could not determine embedding dimension size. Make sure that knowledge base isn't empty")
+        try:
+            embedding_dim = int(embedding_dim_size_df.iloc[0, 0])
+            # alter table to add dimension
+            self.raw_query(f"ALTER TABLE {table_name} ALTER COLUMN {column_name} TYPE vector({embedding_dim})")
+        except Exception:
+            raise ValueError("Could not determine embedding dimension size. Make sure that knowledge base isn't empty")
+
+        # Create the index
+        self.raw_query(f"CREATE INDEX ON {table_name} USING {index_type} ({column_name} {metric_type})")

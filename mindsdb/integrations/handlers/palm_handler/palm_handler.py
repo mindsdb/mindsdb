@@ -78,8 +78,6 @@ class PalmHandler(BaseMLEngine):
         else:
             args = args["using"]
 
-        args_model = PalmHandlerArgs(**args)
-
         if (
             len(set(args.keys()) & {"question_column", "prompt_template", "prompt"})
             == 0
@@ -331,7 +329,7 @@ class PalmHandler(BaseMLEngine):
         def _submit_embedding_completion(kwargs, prompts, api_args):
             def _tidy(comp):
                 tidy_comps = []
-                if not "embedding" in comp:
+                if "embedding" not in comp:
                     return [f"No completion found, err {comp}"]
                 for c in comp["embedding"]:
                     tidy_comps.append([c])

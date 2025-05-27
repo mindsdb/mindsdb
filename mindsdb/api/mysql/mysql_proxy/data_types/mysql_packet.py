@@ -77,7 +77,6 @@ class Packet:
                     f"Packet with less than 4 bytes in length: {packet_string}"
                 )
                 return False
-                break
             len_header = struct.unpack("i", packet_string[:3] + b"\x00")[0]
             count_header = int(packet_string[3])
             if len_header == 0:

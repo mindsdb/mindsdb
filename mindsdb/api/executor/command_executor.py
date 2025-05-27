@@ -50,6 +50,7 @@ from mindsdb_sql_parser.ast.mindsdb import (
     CreateSkill,
     CreateTrigger,
     CreateView,
+    CreateKnowledgeBaseIndex,
     DropAgent,
     DropChatBot,
     DropDatasource,
@@ -338,7 +339,7 @@ class ExecuteCommands:
                 df2 = query_df(df, new_statement)
 
                 return ExecuteAnswer(
-                    data=ResultSet().from_df(df2, table_name="session_variables")
+                    data=ResultSet.from_df(df2, table_name="session_variables")
                 )
             elif sql_category == "search_path":
                 return ExecuteAnswer(
@@ -653,6 +654,8 @@ class ExecuteCommands:
         elif statement_type is Evaluate:
             statement.data = parse_sql(statement.query_str)
             return self.answer_evaluate_metric(statement, database_name)
+        elif statement_type is CreateKnowledgeBaseIndex:
+            return self.answer_create_kb_index(statement, database_name)
         else:
             logger.warning(f"Unknown SQL statement: {sql}")
             raise NotSupportedYet(f"Unknown SQL statement: {sql}")
@@ -940,8 +943,18 @@ class ExecuteCommands:
         )
 
         return ExecuteAnswer(
-            data=ResultSet().from_df(df, table_name="")
+            data=ResultSet.from_df(df, table_name="")
         )
+
+    def answer_create_kb_index(self, statement, database_name):
+        table_name = statement.name.parts[-1]
+        project_name = (
+            statement.name.parts[0]
+            if len(statement.name.parts) > 1
+            else database_name
+        )
+        self.session.kb_controller.create_index(table_name=table_name, project_name=project_name)
+        return ExecuteAnswer()
 
     def _get_model_info(self, identifier, except_absent=True, database_name=None):
         if len(identifier.parts) == 1:
@@ -972,6 +985,9 @@ class ExecuteCommands:
         """Checks if there is already a predictor retraining or fine-tuning
         Do not allow to run retrain if there is another model in training process in less that 1h
         """
+        if ctx.company_id is None:
+            # bypass for tests
+            return
         is_cloud = self.session.config.get("cloud", False)
         if is_cloud and ctx.user_class == 0:
             models = get_model_records(active=None)
@@ -1036,7 +1052,7 @@ class ExecuteCommands:
         df = self.session.model_controller.retrain_model(statement, ml_handler)
 
         return ExecuteAnswer(
-            data=ResultSet().from_df(df)
+            data=ResultSet.from_df(df)
         )
 
     @profiler.profile()
@@ -1066,7 +1082,7 @@ class ExecuteCommands:
         df = self.session.model_controller.finetune_model(statement, ml_handler)
 
         return ExecuteAnswer(
-            data=ResultSet().from_df(df)
+            data=ResultSet.from_df(df)
         )
 
     def _create_integration(self, name: str, engine: str, connection_args: dict):
@@ -1473,38 +1489,18 @@ class ExecuteCommands:
 
         skills = statement.params.pop('skills', [])
         provider = statement.params.pop('provider', None)
-        # Check if this is a CrewAI agent
-        agent_type = statement.params.get('agent_type', '')
-        if agent_type == 'crewai':
-            tables = statement.params.pop('tables', [])
-            knowledge_bases = statement.params.pop('knowledge_base', [])
-            try:
-                _ = self.session.agents_controller.create_crewai_agents(
-                    name=name,
-                    project_name=project_name,
-                    model_name=statement.model,
-                    tables=tables,
-                    knowledge_bases=knowledge_bases,
-                    provider=provider or 'openai',
-                    params=statement.params
-                )
-            except ValueError as e:
-                # Project does not exist or agent already exists.
-                raise ExecutorException(str(e))
-        else:
-            # Regular agent
-            try:
-                _ = self.session.agents_controller.add_agent(
-                    name=name,
-                    project_name=project_name,
-                    model_name=statement.model,
-                    skills=skills,
-                    provider=provider,
-                    params=statement.params
-                )
-            except ValueError as e:
-                # Project does not exist or agent already exists.
-                raise ExecutorException(str(e))
+        try:
+            _ = self.session.agents_controller.add_agent(
+                name=name,
+                project_name=project_name,
+                model_name=statement.model,
+                skills=skills,
+                provider=provider,
+                params=statement.params
+            )
+        except ValueError as e:
+            # Project does not exist or agent already exists.
+            raise ExecutorException(str(e))
 
         return ExecuteAnswer()
 
@@ -1549,6 +1545,58 @@ class ExecuteCommands:
             raise ExecutorException(str(e))
 
         return ExecuteAnswer()
+
+    @mark_process("learn")
+    def answer_create_predictor(self, statement: CreatePredictor, database_name):
+        integration_name = database_name
+
+        # allow creation in non-active projects, e.g. 'create mode proj.model' works whether `proj` is active or not
+        if len(statement.name.parts) > 1:
+            integration_name = statement.name.parts[0]
+        model_name = statement.name.parts[-1]
+        statement.name.parts = [integration_name.lower(), model_name]
+
+        ml_integration_name = "lightwood"  # default
+        if statement.using is not None:
+            # repack using with lower names
+            statement.using = {k.lower(): v for k, v in statement.using.items()}
+
+            ml_integration_name = statement.using.pop("engine", ml_integration_name)
+
+        if statement.query_str is not None and statement.integration_name is None:
+            # set to current project
+            statement.integration_name = Identifier(database_name)
+
+        try:
+            ml_handler = self.session.integration_controller.get_ml_handler(
+                ml_integration_name
+            )
+        except EntityNotExistsError:
+            # not exist, try to create it with same name as handler
+            self.answer_create_ml_engine(ml_integration_name, handler=ml_integration_name)
+
+            ml_handler = self.session.integration_controller.get_ml_handler(
+                ml_integration_name
+            )
+
+        if getattr(statement, "is_replace", False) is True:
+            # try to delete
+            try:
+                self.session.model_controller.delete_model(
+                    model_name,
+                    project_name=integration_name
+                )
+            except EntityNotExistsError:
+                pass
+
+        try:
+            df = self.session.model_controller.create_model(statement, ml_handler)
+
+            return ExecuteAnswer(data=ResultSet.from_df(df))
+        except EntityExistsError:
+            if getattr(statement, "if_not_exists", False) is True:
+                return ExecuteAnswer()
+            raise
 
     def answer_show_columns(
         self,
@@ -2003,55 +2051,3 @@ class ExecuteCommands:
                 self.session.database = db_name
             else:
                 raise BadDbError(f"Database {db_name} does not exists")
-
-    @mark_process("learn")
-    def answer_create_predictor(self, statement: CreatePredictor, database_name):
-        integration_name = database_name
-
-        # allow creation in non-active projects, e.g. 'create mode proj.model' works whether `proj` is active or not
-        if len(statement.name.parts) > 1:
-            integration_name = statement.name.parts[0]
-        model_name = statement.name.parts[-1]
-        statement.name.parts = [integration_name.lower(), model_name]
-
-        ml_integration_name = "lightwood"  # default
-        if statement.using is not None:
-            # repack using with lower names
-            statement.using = {k.lower(): v for k, v in statement.using.items()}
-
-            ml_integration_name = statement.using.pop("engine", ml_integration_name)
-
-        if statement.query_str is not None and statement.integration_name is None:
-            # set to current project
-            statement.integration_name = Identifier(database_name)
-
-        try:
-            ml_handler = self.session.integration_controller.get_ml_handler(
-                ml_integration_name
-            )
-        except EntityNotExistsError:
-            # not exist, try to create it with same name as handler
-            self.answer_create_ml_engine(ml_integration_name, handler=ml_integration_name)
-
-            ml_handler = self.session.integration_controller.get_ml_handler(
-                ml_integration_name
-            )
-
-        if getattr(statement, "is_replace", False) is True:
-            # try to delete
-            try:
-                self.session.model_controller.delete_model(
-                    model_name,
-                    project_name=integration_name
-                )
-            except EntityNotExistsError:
-                pass
-
-        try:
-            df = self.session.model_controller.create_model(statement, ml_handler)
-
-            return ExecuteAnswer(data=ResultSet().from_df(df))
-        except EntityExistsError:
-            if getattr(statement, "if_not_exists", False) is True:
-                return ExecuteAnswer()
-            raise

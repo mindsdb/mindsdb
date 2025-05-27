@@ -58,6 +58,7 @@ def _map_type(internal_type_name: str | None) -> MYSQL_DATA_TYPE:
         ('time', 'time without time zone', 'time with time zone'): MYSQL_DATA_TYPE.TIME,
         ('boolean',): MYSQL_DATA_TYPE.BOOL,
         ('bytea',): MYSQL_DATA_TYPE.BINARY,
+        ('json', 'jsonb'): MYSQL_DATA_TYPE.JSON,
     }
 
     for db_types_list, mysql_data_type in types_map.items():

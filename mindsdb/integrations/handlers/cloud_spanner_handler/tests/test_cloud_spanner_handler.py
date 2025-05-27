@@ -13,7 +13,6 @@ class CloudSpannerHandlerTest(unittest.TestCase):
         cls.kwargs = {'connection_data': {'database_id': 'example-db', 'instance_id': 'test-instance', 'project': 'your-project-id'}}
         cls.handler = CloudSpannerHandler('test_cloud_spanner_handler', **cls.kwargs)
 
-
     def test_0_connect(self):
         self.handler.connect()
 
@@ -23,7 +22,6 @@ class CloudSpannerHandlerTest(unittest.TestCase):
     def test_2_create_table(self):
         res = self.handler.query('CREATE TABLE integers(i INT64) PRIMARY KEY (i)')
         assert res.type is not RESPONSE_TYPE.ERROR
-
 
     def test_3_insert_into_table(self):
         res = self.handler.query('INSERT INTO integers (i) VALUES (42)')

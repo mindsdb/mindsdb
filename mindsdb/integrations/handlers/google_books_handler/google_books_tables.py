@@ -3,9 +3,6 @@ from mindsdb_sql_parser import ast
 from pandas import DataFrame
 
 from mindsdb.integrations.libs.api_handler import APITable
-from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response,
-)
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 
 

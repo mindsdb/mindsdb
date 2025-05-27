@@ -41,7 +41,7 @@ unit_tests_handlers:
 	python -m unittest discover -s tests/unit/handlers  # Only the tests that work on windows and macOS
 
 unit_tests_core:
-	env PYTHONPATH=./ pytest -vx tests/unit/executor/ || true # We have to run executor tests separately because they do weird things that break everything else
+	env PYTHONPATH=./ pytest -vx tests/unit/executor/  # We have to run executor tests separately because they do weird things that break everything else
 	pytest -vx --ignore=tests/unit/handlers --ignore=tests/unit/executor --ignore=tests/unit/render tests/unit/  # Run everything else that only works on Linux
 
 unit_tests: unit_tests_handlers unit_tests_core

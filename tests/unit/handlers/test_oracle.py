@@ -1,8 +1,11 @@
-from collections import OrderedDict
 import unittest
+import datetime
+from collections import OrderedDict
 from unittest.mock import patch, MagicMock
 
+import oracledb
 from oracledb import DatabaseError
+import pandas as pd
 from pandas import DataFrame
 
 from base_handler_test import BaseDatabaseHandlerTest
@@ -12,6 +15,7 @@ from mindsdb.integrations.libs.response import (
     INF_SCHEMA_COLUMNS_NAMES_SET,
     RESPONSE_TYPE
 )
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 
 class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
@@ -340,6 +344,284 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertIsNotNone(response.data_frame.iloc[0]['MYSQL_DATA_TYPE'])
 
         del self.handler.native_query
+
+    def test_types_casting(self):
+        """Test that types are casted correctly
+        """
+        query_str = "SELECT * FROM test_table"
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=None)
+
+        self.handler.connect = MagicMock(return_value=mock_conn)
+        mock_conn.cursor = MagicMock(return_value=mock_cursor)
+
+        # region test numeric types
+        """Data obtained using:
+        CREATE TABLE test_numeric_types (
+            n_number NUMBER,
+            n_number_p NUMBER(38),
+            n_number_ps NUMBER(10,2),
+            n_integer INTEGER,
+            n_smallint SMALLINT,
+            n_decimal DECIMAL(10,2),
+            n_decimal_p DECIMAL(15),
+            n_numeric NUMERIC(10,2),
+            n_float FLOAT,
+            n_float_p FLOAT(126),
+            n_real REAL,                         -- is FLOAT(63)
+            n_double_precision DOUBLE PRECISION, -- is FLOAT(126)
+            n_binary_float BINARY_FLOAT,        -- 32-bit
+            n_binary_double BINARY_DOUBLE       -- 64-bit
+        );
+
+        INSERT INTO test_numeric_types (
+            n_number,
+            n_number_p,
+            n_number_ps,
+            n_integer,
+            n_smallint,
+            n_decimal,
+            n_decimal_p,
+            n_numeric,
+            n_float,
+            n_float_p,
+            n_real,
+            n_double_precision,
+            n_binary_float,
+            n_binary_double
+        ) VALUES (
+            123456.789,                       -- n_number
+            12345678901234567890123456789012345678, -- n_number_p (38 digits)
+            1234.56,                          -- n_number_ps
+            2147483647,                       -- n_int
+            32767,                            -- n_smallint
+            9876.54,                          -- n_decimal
+            123456789012345,                  -- n_decimal_p
+            1234.56,                          -- n_numeric
+            3.14159265358979,                 -- n_float
+            2.718281828459045235360287471352, -- n_float_p
+            3.14159,                          -- n_real
+            2.7182818284590452,               -- n_double_precision
+            3.14159265E0,                     -- n_binary_float
+            2.718281828459045235360287471352E0 -- n_binary_double
+        );
+        """
+        input_row = (
+            123456.789, 12345678901234567890123456789012345678, 1234.56, 2147483647,
+            32767, 9876.54, 123456789012345, 1234.56, 3.14159265358979, 2.718281828459045,
+            3.14159, 2.718281828459045, 3.1415927410125732, 2.718281828459045
+        )
+        mock_cursor.fetchall.return_value = [input_row]
+
+        mock_cursor.description = [
+            ('N_NUMBER', oracledb.DB_TYPE_NUMBER, 127, None, 0, -127, True),
+            ('N_NUMBER_P', oracledb.DB_TYPE_NUMBER, 39, None, 38, 0, True),
+            ('N_NUMBER_PS', oracledb.DB_TYPE_NUMBER, 14, None, 10, 2, True),
+            ('N_INTEGER', oracledb.DB_TYPE_NUMBER, 39, None, 38, 0, True),
+            ('N_SMALLINT', oracledb.DB_TYPE_NUMBER, 39, None, 38, 0, True),
+            ('N_DECIMAL', oracledb.DB_TYPE_NUMBER, 14, None, 10, 2, True),
+            ('N_DECIMAL_P', oracledb.DB_TYPE_NUMBER, 16, None, 15, 0, True),
+            ('N_NUMERIC', oracledb.DB_TYPE_NUMBER, 14, None, 10, 2, True),
+            ('N_FLOAT', oracledb.DB_TYPE_NUMBER, 127, None, 126, -127, True),
+            ('N_FLOAT_P', oracledb.DB_TYPE_NUMBER, 127, None, 126, -127, True),
+            ('N_REAL', oracledb.DB_TYPE_NUMBER, 64, None, 63, -127, True),
+            ('N_DOUBLE_PRECISION', oracledb.DB_TYPE_NUMBER, 127, None, 126, -127, True),
+            ('N_BINARY_FLOAT', oracledb.DB_TYPE_NUMBER, 127, None, None, None, True),
+            ('N_BINARY_DOUBLE', oracledb.DB_TYPE_NUMBER, 127, None, None, None, True)
+        ]
+
+        response: Response = self.handler.native_query(query_str)
+        excepted_mysql_types = [
+            MYSQL_DATA_TYPE.FLOAT,
+            MYSQL_DATA_TYPE.DECIMAL,
+            MYSQL_DATA_TYPE.FLOAT,
+            MYSQL_DATA_TYPE.DECIMAL,
+            MYSQL_DATA_TYPE.DECIMAL,
+            MYSQL_DATA_TYPE.FLOAT,
+            MYSQL_DATA_TYPE.INT,
+            MYSQL_DATA_TYPE.FLOAT,
+            MYSQL_DATA_TYPE.FLOAT,
+            MYSQL_DATA_TYPE.FLOAT,
+            MYSQL_DATA_TYPE.FLOAT,
+            MYSQL_DATA_TYPE.FLOAT,
+            MYSQL_DATA_TYPE.FLOAT,
+            MYSQL_DATA_TYPE.FLOAT
+        ]
+        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        for i, input_value in enumerate(input_row):
+            result_value = response.data_frame[response.data_frame.columns[i]][0]
+            self.assertEqual(result_value, input_value)
+        # endregion
+
+        # region rest boolean types
+        """Data obtained using:
+        CREATE TABLE test_boolean_test (
+            t_boolean boolean,
+            t_bool bool
+        );
+
+        INSERT INTO test_boolean_test (t_boolean, t_bool) VALUES (TRUE, false);
+        """
+
+        input_row = (True, False)
+        mock_cursor.fetchall.return_value = [input_row]
+        mock_cursor.description = [
+            ('T_BOOLEAN', oracledb.DB_TYPE_BOOLEAN, None, None, None, None, True),
+            ('T_BOOL', oracledb.DB_TYPE_BOOLEAN, None, None, None, None, True)
+        ]
+        response: Response = self.handler.native_query(query_str)
+        excepted_mysql_types = [
+            MYSQL_DATA_TYPE.BOOLEAN,
+            MYSQL_DATA_TYPE.BOOLEAN
+        ]
+        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        for i, input_value in enumerate(input_row):
+            result_value = response.data_frame[response.data_frame.columns[i]][0]
+            self.assertEqual(result_value, input_value)
+        # endregion
+
+        # region test text types
+        """Data obtained using:
+        CREATE TABLE test_text_types (
+            t_char CHAR(10),
+            t_nchar NCHAR(10),          -- unicode
+            t_varchar2 VARCHAR2(100),
+            t_nvarchar2 NVARCHAR2(100), -- unicode
+            t_long LONG,
+            t_clob CLOB,
+            t_nclob NCLOB,              -- unicode
+            t_raw RAW(100),
+            t_blob BLOB
+        );
+
+        INSERT INTO test_text_types (
+            t_char,
+            t_nchar,
+            t_varchar2,
+            t_nvarchar2,
+            t_long,
+            t_clob,
+            t_nclob,
+            t_raw,
+            t_blob
+        ) VALUES (
+            'Test',             -- t_char
+            N'Unicode',         -- t_nchar
+            'Test',             -- t_varchar2
+            N'Unicode',         -- t_nvarchar2
+            'Test',             -- t_long
+            TO_CLOB('Test'),    -- t_clob
+            TO_NCLOB('Test'),   -- t_nclob
+            HEXTORAW('54657374'),     -- t_raw
+            HEXTORAW('54657374')      -- t_blob
+        );
+        """
+        input_row = ('Test      ', 'Unicode   ', 'Test', 'Unicode', 'Test', 'Test', 'Test', b'Test', b'Test')
+        mock_cursor.fetchall.return_value = [input_row]
+
+        mock_cursor.description = [
+            ('T_CHAR', oracledb.DB_TYPE_CHAR, 10, 10, None, None, True),
+            ('T_NCHAR', oracledb.DB_TYPE_NCHAR, 10, 20, None, None, True),
+            ('T_VARCHAR2', oracledb.DB_TYPE_VARCHAR, 100, 100, None, None, True),
+            ('T_NVARCHAR2', oracledb.DB_TYPE_NVARCHAR, 100, 200, None, None, True),
+            ('T_LONG', oracledb.DB_TYPE_LONG, None, None, None, None, True),
+            ('T_CLOB', oracledb.DB_TYPE_LONG, None, None, None, None, True),
+            ('T_NCLOB', oracledb.DB_TYPE_LONG_NVARCHAR, None, None, None, None, True),
+            ('T_RAW', oracledb.DB_TYPE_RAW, 100, 100, None, None, True),
+            ('T_BLOB', oracledb.DB_TYPE_LONG_RAW, None, None, None, None, True)
+        ]
+        response: Response = self.handler.native_query(query_str)
+        excepted_mysql_types = [
+            MYSQL_DATA_TYPE.TEXT,
+            MYSQL_DATA_TYPE.TEXT,
+            MYSQL_DATA_TYPE.TEXT,
+            MYSQL_DATA_TYPE.TEXT,
+            MYSQL_DATA_TYPE.TEXT,
+            MYSQL_DATA_TYPE.TEXT,
+            MYSQL_DATA_TYPE.TEXT,
+            MYSQL_DATA_TYPE.BINARY,
+            MYSQL_DATA_TYPE.BINARY
+        ]
+        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        for i, input_value in enumerate(input_row):
+            result_value = response.data_frame[response.data_frame.columns[i]][0]
+            self.assertEqual(result_value, input_value)
+        # endregion
+
+        # region test date types
+        """Data obtained using:
+        CREATE TABLE test_datetime_types (
+            d_date DATE,
+            d_timestamp TIMESTAMP,
+            d_timestamp_p TIMESTAMP(9)
+            -- timezone is not supported in thin mode
+            -- d_timestamp_tz TIMESTAMP WITH TIME ZONE,
+            -- d_timestamp_tz_p TIMESTAMP(6) WITH TIME ZONE,
+            -- d_timestamp_ltz TIMESTAMP WITH LOCAL TIME ZONE
+        );
+
+        INSERT INTO test_datetime_types (
+            d_date,
+            d_timestamp,
+            d_timestamp_p
+            -- timezone is not supported in thin mode
+            -- d_timestamp_tz,
+            -- d_timestamp_tz_p,
+            -- d_timestamp_ltz
+        ) VALUES (
+            DATE '2023-10-15',                                                -- d_date
+            TIMESTAMP '2023-10-15 10:30:45.123456789',                        -- d_timestamp
+            TIMESTAMP '2023-10-15 10:30:45.123456789'                         -- d_timestamp_p
+            -- timezone is not supported in thin mode
+            -- TIMESTAMP '2023-10-15 10:30:45.123456' AT TIME ZONE 'America/Los_Angeles', -- d_timestamp_tz
+            -- TIMESTAMP '2023-10-15 10:30:45.123456' AT TIME ZONE '-07:00',     -- d_timestamp_tz_p
+            -- TIMESTAMP '2023-10-15 10:30:45.123456'                            -- d_timestamp_ltz
+        );
+        """
+        input_row = (
+            datetime.datetime(2023, 10, 15, 0, 0),
+            datetime.datetime(2023, 10, 15, 10, 30, 45, 123457),
+            datetime.datetime(2023, 10, 15, 10, 30, 45, 123456)
+        )
+        mock_cursor.fetchall.return_value = [input_row]
+        mock_cursor.description = [
+            ('D_DATE', oracledb.DB_TYPE_DATE, 23, None, None, None, True),
+            ('D_TIMESTAMP', oracledb.DB_TYPE_TIMESTAMP, 23, None, 0, 6, True),
+            ('D_TIMESTAMP_P', oracledb.DB_TYPE_TIMESTAMP, 23, None, 0, 9, True)
+        ]
+        response: Response = self.handler.native_query(query_str)
+        excepted_mysql_types = [
+            MYSQL_DATA_TYPE.DATE,
+            MYSQL_DATA_TYPE.TIMESTAMP,
+            MYSQL_DATA_TYPE.TIMESTAMP
+        ]
+        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        for i, input_value in enumerate(input_row):
+            result_value = response.data_frame[response.data_frame.columns[i]][0]
+            self.assertEqual(result_value, input_value)
+        # endregion
+
+        # region test nullable types
+        bigint_val = 9223372036854775807
+        input_rows = [
+            (bigint_val, True),
+            (None, None)
+        ]
+        mock_cursor.fetchall.return_value = input_rows
+        mock_cursor.description = [
+            ('N_BIGINT', oracledb.DB_TYPE_NUMBER, 39, None, 17, 0, True),   # set 17 jsut to force cast to Int64
+            ('T_BOOLEAN', oracledb.DB_TYPE_BOOLEAN, None, None, None, None, True)
+        ]
+        response: Response = self.handler.native_query(query_str)
+        self.assertEquals(response.data_frame.dtypes[0], 'Int64')
+        self.assertEquals(response.data_frame.dtypes[1], 'boolean')
+        self.assertEquals(response.data_frame.iloc[0, 0], bigint_val)
+        self.assertEquals(response.data_frame.iloc[0, 1], True)
+        self.assertTrue(response.data_frame.iloc[1, 0] is pd.NA)
+        self.assertTrue(response.data_frame.iloc[1, 1] is pd.NA)
+        # endregion
 
 
 if __name__ == '__main__':

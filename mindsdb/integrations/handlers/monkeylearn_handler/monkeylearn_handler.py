@@ -2,10 +2,7 @@ from typing import Optional, Dict
 import pandas as pd
 import requests
 
-from monkeylearn import MonkeyLearn
-
 from mindsdb.integrations.libs.base import BaseMLEngine
-
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 
 
@@ -13,7 +10,7 @@ class monkeylearnHandler(BaseMLEngine):
     name = "monkeylearn"
 
     @staticmethod
-    def create_validations(self,args=None,**kwargs):
+    def create_validations(self, args=None, **kwargs):
 
         if "using" in args:
             args = args["using"]

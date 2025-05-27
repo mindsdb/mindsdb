@@ -17,6 +17,7 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+
 class GoogleContentShoppingHandler(APIHandler):
     """
         A class for handling connections and interactions with the Google Content API for Shopping.
@@ -88,7 +89,7 @@ class GoogleContentShoppingHandler(APIHandler):
         response = StatusResponse(False)
 
         try:
-            service = self.connect()
+            self.connect()
             response.success = True
         except Exception as e:
             logger.error(f'Error connecting to Google Content API for Shopping: {e}!')
@@ -205,7 +206,7 @@ class GoogleContentShoppingHandler(APIHandler):
                                                                    'placedDateStart',
                                                                    'placedDateEnd',
                                                                    'orderBy']
-                                                           and value is not None
+            and value is not None
         }
         if params['order_id']:
             result = service.orders().get(merchantId=self.merchant_id, orderId=params['order_id'], **args).execute()

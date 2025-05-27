@@ -516,11 +516,24 @@
                 ]
               },
               {
+                "group": "Agents",
+                "pages": [
+                  "mindsdb_sql/agents/agent"
+                ]
+              },
+              {
                 "group": "MCP API",
                 "pages": [
                   "mcp/overview",
-                  "mcp/tools",
-                  "mcp/cursor_usage"
+                  "mcp/usage",
+                  {
+                    "group": "MCP Clients",
+                    "pages": [
+                      "mcp/openai",
+                      "mcp/anthropic",
+                      "mcp/cursor_usage"
+                    ]
+                  }
                 ]
               },
               {
@@ -551,6 +564,19 @@
                       "use-cases/in-database_ml/home-rentals"
                     ]
                   }
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "MCP API",
+            "groups": [
+              {
+                "group": "MCP API",
+                "pages": [
+                  "mcp/overview",
+                  "mcp/tools",
+                  "mcp/cursor_usage"
                 ]
               }
             ]

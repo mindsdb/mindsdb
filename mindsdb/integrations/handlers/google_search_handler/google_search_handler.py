@@ -16,6 +16,7 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+
 class GoogleSearchConsoleHandler(APIHandler):
     """
         A class for handling connections and interactions with the Google Search Console API.
@@ -86,7 +87,7 @@ class GoogleSearchConsoleHandler(APIHandler):
         response = StatusResponse(False)
 
         try:
-            service = self.connect()
+            self.connect()
             response.success = True
         except Exception as e:
             logger.error(f'Error connecting to Google Search Console API: {e}!')

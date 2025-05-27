@@ -85,7 +85,7 @@ jobs:
     runs-on: mdb-dev
     steps:
       - name: Notify of failing tests
-        if: needs.run_tests.result != 'success'
+        if: ${{ needs.run_tests.conclusion == 'failure' }}
         uses: slackapi/slack-github-action@v1.26.0
         with:
           channel-id: ${{ secrets.SLACK_ENG_CHANNEL_ID }}

@@ -1,0 +1,28 @@
+name: plz ignore
+
+on:
+  push:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  run_tests:
+    name: Run Integration Tests
+    steps:
+      - id: wait
+        run: |
+            sleep 30
+            exit 1
+  
+  slack_message:
+    if: always()
+    name: Notify Slack
+    needs: [run_tests]
+    runs-on: mdb-dev
+    steps:
+      - id: print
+        run: |
+            echo "Conclusion: ${{ needs.run_tests.conclusion }}"
+            echo "Result: ${{ needs.run_tests.result }}"

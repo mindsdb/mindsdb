@@ -78,7 +78,7 @@ class ElasticsearchHandler(DatabaseHandler):
             )
 
         # Optional/Additional connection parameters.
-        optional_parameters = ["hosts", "cloud_id", "api_key", "verify_certs", "ssl_show_warn", "ssl_assert_hostname"]
+        optional_parameters = ["hosts", "cloud_id", "api_key", "verify_certs", "ssl_show_warn", "ssl_assert_hostname", "ca_certs"]
         for parameter in optional_parameters:
             if parameter in self.connection_data:
                 if parameter == "hosts":

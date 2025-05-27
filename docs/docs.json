@@ -556,6 +556,19 @@
             ]
           },
           {
+            "tab": "MCP API",
+            "groups": [
+              {
+                "group": "MCP API",
+                "pages": [
+                  "mcp/overview",
+                  "mcp/tools",
+                  "mcp/cursor_usage"
+                ]
+              }
+            ]
+          },
+          {
             "tab": "SDKs & APIs",
             "groups": [
               {

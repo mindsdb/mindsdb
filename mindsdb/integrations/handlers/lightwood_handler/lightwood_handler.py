@@ -1,6 +1,5 @@
 import copy
 import json
-import sys
 from datetime import datetime
 from functools import lru_cache
 from typing import Dict, Optional

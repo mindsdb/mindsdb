@@ -9,7 +9,10 @@ from pandas.api import types as pd_types
 
 from mindsdb.api.executor.sql_query.result_set import ResultSet, get_mysql_data_type_from_series, Column
 from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype as lightwood_dtype
-from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE, DATA_C_TYPE_MAP, CTypeProperties
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
+    MYSQL_DATA_TYPE, DATA_C_TYPE_MAP,
+    CTypeProperties, CHARSET_NUMBERS
+)
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -55,6 +58,10 @@ def column_to_mysql_column_dict(column: Column, database_name: str | None = None
         logger.warning(f'Unexpected column type: {column.type}. Use TEXT as fallback.')
         column.type = MYSQL_DATA_TYPE.TEXT
 
+    charset = CHARSET_NUMBERS["utf8_unicode_ci"]
+    if column.type == MYSQL_DATA_TYPE.JSON:
+        charset = CHARSET_NUMBERS['binary']
+
     type_properties: CTypeProperties = DATA_C_TYPE_MAP[column.type]
 
     result = {
@@ -66,6 +73,7 @@ def column_to_mysql_column_dict(column: Column, database_name: str | None = None
         "size": type_properties.size,
         "flags": type_properties.flags,
         "type": type_properties.code,
+        "charset": charset
     }
     return result
 

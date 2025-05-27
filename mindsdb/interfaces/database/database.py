@@ -121,3 +121,37 @@ class DatabaseController:
             return session.datahub
         else:
             raise Exception(f"Database '{name}' does not exists")
+        
+    def update(self, name: str, data: dict):
+        """
+        Updates the database with the given name using the provided data.
+
+        Parameters:
+            name (str): The name of the database to update.
+            data (dict): The data to update the database with.
+
+        Raises:
+            EntityNotExistsError: If the database does not exist.
+        """
+        databases = self.get_dict()
+        name = name.lower()
+        if name not in databases:
+            raise EntityNotExistsError('Database does not exist.', name)
+
+        db_type = databases[name]['type']
+        if db_type == 'project':
+            # Only the name of the project can be updated.
+            if 'name' not in data:
+                raise ValueError("Only the 'name' field can be updated for projects.")
+            self.project_controller.update(name=name, new_name=data['name'])
+            return
+
+        elif db_type == 'data':
+            # Only the parameters (connection data) of the integration can be updated.
+            if 'parameters' not in data:
+                raise ValueError("Only the 'parameters' field can be updated for integrations.")
+            self.integration_controller.modify(name, data['parameters'])
+            return
+
+        else:
+            raise Exception(f"Database with type '{db_type}' cannot be updated")

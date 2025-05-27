@@ -2,7 +2,7 @@ from mindsdb.integrations.utilities.rag.loaders.file_loader import FileLoader
 
 
 def test_load_pdf():
-    loader = FileLoader('./tests/integrations/utilities/rag/data/test.pdf')
+    loader = FileLoader('./tests/data/test.pdf')
     docs = loader.load()
     # Each page is a doc.
     assert len(docs) == 3
@@ -12,7 +12,7 @@ def test_load_pdf():
 
 
 def test_load_csv():
-    loader = FileLoader('./tests/integrations/utilities/rag/data/movies.csv')
+    loader = FileLoader('./tests/data/movies.csv')
     docs = loader.load()
     # Each row is a doc.
     assert len(docs) == 10
@@ -21,7 +21,7 @@ def test_load_csv():
 
 
 def test_load_html():
-    loader = FileLoader('./tests/integrations/utilities/rag/data/test.html')
+    loader = FileLoader('./tests/data/test.html')
     docs = loader.load()
     assert len(docs) == 1
     assert 'Some intro text about Foo' in docs[0].page_content
@@ -35,7 +35,7 @@ def test_load_md():
 
 
 def test_load_text():
-    loader = FileLoader('./tests/integrations/utilities/rag/data/test.txt')
+    loader = FileLoader('./tests/data/test.txt')
     docs = loader.load()
     assert len(docs) == 1
     assert 'This is a test plaintext file' in docs[0].page_content

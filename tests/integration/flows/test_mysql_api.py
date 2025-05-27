@@ -6,7 +6,7 @@ import requests
 import pytest
 import mysql.connector
 
-from tests.utils.config import MYSQL_API_ROOT, HTTP_API_ROOT
+from tests.integration.conftest import MYSQL_API_ROOT, HTTP_API_ROOT
 
 # pymysql.connections.DEBUG = True
 

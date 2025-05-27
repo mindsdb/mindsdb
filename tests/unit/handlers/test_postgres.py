@@ -193,7 +193,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertEqual(data.type, RESPONSE_TYPE.ERROR)
 
         # The handler implementation sets error_code to 0, check error_message instead
-        self.assertEqual(data.error_code, 0)
+        self.assertEqual(data.error_code, 'UNKNOWN_ERROR')
         self.assertEqual(data.error_message, str(error))
 
         # Ensure rollback was called

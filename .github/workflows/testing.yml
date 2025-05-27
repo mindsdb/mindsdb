@@ -8,9 +8,18 @@ defaults:
     shell: bash
 
 jobs:
+  first:
+    name: Some step
+    runs-on: mdb-dev
+    steps:
+      - id: wait
+        run: |
+            sleep 30
+            exit 1
   run_tests:
     name: Run Integration Tests
     runs-on: mdb-dev
+    needs: [first]
     steps:
       - id: wait
         run: |

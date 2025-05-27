@@ -63,22 +63,27 @@ def _make_table_response(result: list[dict], cursor: mysql.connector.cursor.MySQ
             mysql_types.append(reverse_c_type_map[type_int])
             continue
 
-        if type_int != C_TYPES.MYSQL_TYPE_BLOB:
-            raise ValueError(f'Unknown MySQL type id={type_int} in column {col[0]}')
+        if type_int == C_TYPES.MYSQL_TYPE_JSON:
+            mysql_types.append(reverse_c_type_map[type_int])
+            continue
 
-        # region determine text/blob type by flags
-        # Unfortunately, there is no way to determine particular type of text/blob column by flags.
-        # Subtype have to be determined by 8-s element of description tuple, but mysql.conector
-        # return the same value for all text types (TINYTEXT, TEXT, MEDIUMTEXT, LONGTEXT), and for
-        # all blob types (TINYBLOB, BLOB, MEDIUMBLOB, LONGBLOB).
-        if col[7] == 16:  # and col[8] == 45
-            mysql_types.append(MYSQL_DATA_TYPE.TEXT)
-        elif col[7] == 144:  # and col[8] == 63
-            mysql_types.append(MYSQL_DATA_TYPE.BLOB)
+        if type_int == C_TYPES.MYSQL_TYPE_BLOB:
+            # region determine text/blob type by flags
+            # Unfortunately, there is no way to determine particular type of text/blob column by flags.
+            # Subtype have to be determined by 8-s element of description tuple, but mysql.conector
+            # return the same value for all text types (TINYTEXT, TEXT, MEDIUMTEXT, LONGTEXT), and for
+            # all blob types (TINYBLOB, BLOB, MEDIUMBLOB, LONGBLOB).
+            if col[7] == 16:  # and col[8] == 45
+                mysql_types.append(MYSQL_DATA_TYPE.TEXT)
+            elif col[7] == 144:  # and col[8] == 63
+                mysql_types.append(MYSQL_DATA_TYPE.BLOB)
+            else:
+                logger.debug(f'MySQL handler: unknown type code {col[7]}, use TEXT as fallback.')
+                mysql_types.append(MYSQL_DATA_TYPE.TEXT)
+            # endregion
         else:
-            logger.debug(f'MySQL handler: unknown type code {col[7]}, use TEXT as fallback.')
+            logger.warning(f'MySQL handler: unknown type id={type_int} in column {col[0]}, use TEXT as fallback.')
             mysql_types.append(MYSQL_DATA_TYPE.TEXT)
-        # endregion
 
     # region cast int and bool to nullable types
     serieses = []

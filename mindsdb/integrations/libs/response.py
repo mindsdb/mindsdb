@@ -44,7 +44,7 @@ class HandlerResponse:
             self, resp_type: RESPONSE_TYPE, data_frame: pandas.DataFrame = None, query: ASTNode = 0,
             error_code: int = 0, error_message: str | None = None, affected_rows: int | None = None,
             mysql_types: list[MYSQL_DATA_TYPE] | None = None
-        ) -> None:
+    ) -> None:
         self.resp_type = resp_type
         self.query = query
         self.data_frame = data_frame

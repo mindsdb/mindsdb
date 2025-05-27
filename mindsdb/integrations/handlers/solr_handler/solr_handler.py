@@ -17,6 +17,7 @@ from mindsdb.integrations.libs.response import (
 
 logger = log.getLogger(__name__)
 
+
 class SolrHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the Solr SQL statements.
@@ -131,7 +132,7 @@ class SolrHandler(DatabaseHandler):
                     RESPONSE_TYPE.TABLE,
                     pd.DataFrame(
                         result,
-                        columns = columns
+                        columns=columns
                     )
                 )
             else:

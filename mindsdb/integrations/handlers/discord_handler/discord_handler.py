@@ -1,5 +1,4 @@
 import requests
-import asyncio
 import pandas as pd
 
 from mindsdb.integrations.handlers.discord_handler.discord_tables import MessagesTable
@@ -17,6 +16,7 @@ from mindsdb.integrations.libs.response import (
 
 discord_bot = None
 logger = log.getLogger(__name__)
+
 
 class DiscordHandler(APIHandler):
     """
@@ -55,7 +55,7 @@ class DiscordHandler(APIHandler):
         if self.is_connected:
             return StatusResponse(True)
 
-        url = f'https://discord.com/api/v10/applications/@me'
+        url = 'https://discord.com/api/v10/applications/@me'
         result = requests.get(
             url,
             headers={
@@ -105,7 +105,7 @@ class DiscordHandler(APIHandler):
         df = self.call_discord_api(operation, params)
 
         return Response(RESPONSE_TYPE.TABLE, data_frame=df)
-    
+
     def utc_to_snowflake(self, utc_date: str) -> int:
         """
         Convert a UTC date to a Snowflake date.
@@ -120,8 +120,8 @@ class DiscordHandler(APIHandler):
         )
 
     def call_discord_api(
-            self, operation: str, params: dict = None, filters: list = None
-        ):
+        self, operation: str, params: dict = None, filters: list = None
+    ):
         """
         Call a Discord API method.
         Args:

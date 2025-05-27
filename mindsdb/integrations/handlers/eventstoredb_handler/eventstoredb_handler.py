@@ -8,9 +8,10 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 
-from .utils.helpers import *
+from .utils.helpers import get_auth_string, build_basic_url, build_health_url, build_stream_url, build_streams_url, build_next_url, entry_to_df, build_stream_url_last_event
 import requests
 import pandas as pd
+import re
 
 logger = log.getLogger(__name__)
 

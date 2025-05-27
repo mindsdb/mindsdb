@@ -1,6 +1,6 @@
 import pytest
 from http import HTTPStatus
-from tests.api.http.conftest import create_demo_db, create_dummy_ml
+from tests.unit.api.http.conftest import create_demo_db, create_dummy_ml
 
 
 def test_prepare(client):

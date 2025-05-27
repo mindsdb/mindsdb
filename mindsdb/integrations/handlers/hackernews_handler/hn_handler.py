@@ -1,13 +1,12 @@
 import requests
 import pandas as pd
 from mindsdb.utilities import log
-from mindsdb.utilities.config import Config
-from mindsdb_sql_parser import ast
-from mindsdb.integrations.libs.api_handler import APIHandler, APITable
+from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse, HandlerResponse as Response, RESPONSE_TYPE
-from .hn_table import StoriesTable, CommentsTable , HNStoriesTable ,JobStoriesTable, ShowStoriesTable
+from .hn_table import StoriesTable, CommentsTable, HNStoriesTable, JobStoriesTable, ShowStoriesTable
 
 logger = log.getLogger(__name__)
+
 
 class HackerNewsHandler(APIHandler):
     """
@@ -23,10 +22,10 @@ class HackerNewsHandler(APIHandler):
         self._register_table('stories', stories)
 
         hnstories = HNStoriesTable(self)
-        self._register_table('hnstories',hnstories)
+        self._register_table('hnstories', hnstories)
 
         jobstories = JobStoriesTable(self)
-        self._register_table('jobstories',jobstories)
+        self._register_table('jobstories', jobstories)
 
         showstories = ShowStoriesTable(self)
         self._register_table('showstories', showstories)
@@ -99,4 +98,3 @@ class HackerNewsHandler(APIHandler):
             raise ValueError(f'Unknown method_name: {method_name}')
 
         return df
-

@@ -1,11 +1,12 @@
-from collections import OrderedDict
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
+from collections import OrderedDict
 
 from mysql.connector import Error as MySQLError
 
-from base_handler_test import BaseDatabaseHandlerTest
+from base_handler_test import BaseDatabaseHandlerTest, MockCursorContextManager
 from mindsdb.integrations.handlers.mariadb_handler.mariadb_handler import MariaDBHandler
+from mindsdb.integrations.libs.response import HandlerResponse as Response
 
 
 class TestMariaDBHandler(BaseDatabaseHandlerTest, unittest.TestCase):
@@ -67,6 +68,24 @@ class TestMariaDBHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
     def create_patcher(self):
         return patch('mysql.connector.connect')
+
+    def test_native_query(self):
+        """Test that native_query returns a Response object with no error
+        """
+        mock_conn = MagicMock()
+        mock_cursor = MockCursorContextManager(
+            data=[{'id': 1}],
+            description=[('id', 3, None, None, None, None, 1, 0, 45)]
+        )
+
+        self.handler.connect = MagicMock(return_value=mock_conn)
+        mock_conn.cursor = MagicMock(return_value=mock_cursor)
+
+        query_str = f"SELECT * FROM {self.mock_table}"
+        data = self.handler.native_query(query_str)
+
+        self.assertIsInstance(data, Response)
+        self.assertFalse(data.error_code)
 
 
 if __name__ == '__main__':

@@ -453,7 +453,9 @@ class CrewAIAgentManager:
         prompt_template: str = None,
         verbose: bool = True,
         max_tokens: int = 4000,
-        api_key: str = None
+        api_key: str = None,
+        openai_api_key: str = None,
+        google_api_key: str = None
     ) -> CrewAITextToSQLPipeline:
         """Create a CrewAI pipeline with the specified configuration.
 
@@ -463,18 +465,28 @@ class CrewAIAgentManager:
             name: Name for the CrewAI agent group
             tables: List of tables to query (format: 'database.table')
             knowledge_bases: List of knowledge bases to query
-            provider: LLM provider (only 'openai' supported currently)
+            provider: LLM provider ('openai' or 'google')
             model: Model name to use
             prompt_template: Custom prompt template
             verbose: Whether to output detailed logs
             max_tokens: Maximum tokens for completion
-            api_key: API key for the provider
+            api_key: (deprecated) generic api key parameter – use provider-specific keys below
+            openai_api_key: API key to use when provider='openai'
+            google_api_key: API key to use when provider='google'
 
         Returns:
             Configured CrewAITextToSQLPipeline instance
         """
-        if provider.lower() != 'openai':
-            raise ValueError("Only 'openai' provider is currently supported")
+        provider_lc = provider.lower()
+
+        # Select the correct api key parameter
+        selected_key: Optional[str] = api_key  # fallback if user still uses api_key
+        if provider_lc == 'openai':
+            if openai_api_key:
+                selected_key = openai_api_key
+        elif provider_lc == 'google':
+            if google_api_key:
+                selected_key = google_api_key
 
         return CrewAITextToSQLPipeline(
             tables=tables,
@@ -482,7 +494,7 @@ class CrewAIAgentManager:
             provider=provider,
             model=model,
             temperature=0.2,  # Default temperature
-            api_key=api_key,
+            api_key=selected_key,
             prompt_template=prompt_template,
             verbose=verbose,
             max_tokens=max_tokens

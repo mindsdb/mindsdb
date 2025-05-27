@@ -1267,7 +1267,7 @@ class ExecuteCommands:
         data = statement.data
         try:
             self.session.database_controller.update(db_name, data=data)
-        except (EntityNotExistsError, ValueError) as e:
+        except (EntityNotExistsError, ValueError):
             raise
         return ExecuteAnswer()
 

@@ -11,6 +11,7 @@ locust
 ollama >= 0.1.7 # Langchain tests
 anthropic >= 0.21.3 # Langchain tests
 langchain-google-genai>=2.0.0 # Langchain tests
+langchain-openai==0.3.6
 mindsdb-sdk
 filelock==3.18.0
 mysql-connector-python==9.1.0

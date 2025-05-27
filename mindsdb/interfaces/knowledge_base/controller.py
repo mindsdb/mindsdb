@@ -35,6 +35,7 @@ from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.variables.variables_controller import variables_controller
 from mindsdb.interfaces.knowledge_base.preprocessing.models import PreprocessingConfig, Document
 from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor import PreprocessorFactory
+from mindsdb.interfaces.knowledge_base.evaluate import EvaluateBase
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
@@ -234,6 +235,10 @@ class KnowledgeBaseTable:
             df = query_df(df, query_copy, session=self.session)
 
         return df
+
+    def score_documents(self, query_text, documents, reranking_model_params):
+        reranker = get_reranking_model_from_params(reranking_model_params)
+        return reranker.get_scores(query_text, documents)
 
     def add_relevance(self, df, query_text, relevance_threshold=None):
         relevance_column = TableField.RELEVANCE.value
@@ -1215,3 +1220,13 @@ class KnowledgeBaseController:
         Update a knowledge base record
         """
         raise NotImplementedError()
+
+    def evaluate(self, table_name, project_name: str, params: dict = None) -> pd.DataFrame:
+        project_id = self.session.database_controller.get_project(project_name).id
+        kb_table = self.get_table(table_name, project_id)
+
+        scores = EvaluateBase.run(
+            self.session, kb_table, params
+        )
+
+        return scores

@@ -3,30 +3,45 @@ import math
 import time
 
 import pandas as pd
+import datetime as dt
+
 from mindsdb.api.executor.sql_query.result_set import ResultSet
 from mindsdb_sql_parser import Identifier, Select, Constant, Star, parse_sql
 from mindsdb.utilities import log
+
+from mindsdb.interfaces.knowledge_base.llm_client import LLMClient
 
 logger = log.getLogger(__name__)
 
 
 def calc_entropy(values):
-    # normalize
+    # normalize & filter
     total = sum(values)
-    values = [i/total for i in values]
+    values = [i / total for i in values if i > 0]
     # calc
     return -sum([pk * math.log(pk) for pk in values])
 
 
-class EvaluateKnowledgeBase:
+class EvaluateBase:
+    DEFAULT_QUESTION_COUNT = 20
+    DEFAULT_SAMPLE_SIZE = 10000
+
     def __init__(self, session, knowledge_base):
         self.kb = knowledge_base
         self.name = knowledge_base._kb.name
         self.session = session
 
-        self._llm_params = None
+        self._llm_client = None
 
-    def set_llm_settings(self, params: dict):
+    def generate(self, sampled_df: pd.DataFrame) -> pd.DataFrame:
+        # generate test data from sample
+        raise NotImplementedError
+
+    def evaluate(self, test_data: pd.DataFrame) -> pd.DataFrame:
+        # create evaluate metric from test data
+        raise NotImplementedError
+
+    def _set_llm_client(self, params: dict):
         """
         Logic to get LLM setting:
         - `llm` setting of ‘evaluate’ command
@@ -35,36 +50,16 @@ class EvaluateKnowledgeBase:
 
         """
         if 'llm' in params:
-            self._llm_params = params['llm']
+            llm_params = params['llm']
         else:
-            self._llm_params = self.kb._kb.params.get("reranking_model")
+            llm_params = self.kb._kb.params.get("reranking_model")
 
-    def _call_llm(self, messages):
-        self.kb.call_llm(messages, self._llm_params)
+        self.llm_client = LLMClient(llm_params)
 
-    def generate_question_answer(self, text: str) -> (str, str):
-        messages = [
-            {'role': "system", "content": (
-                "Given the following text, generate a factual question that could be answered using only the information provided in it. "
-                """Example output 1: {\"question\": \"What processor does the HP 2023 14\" FHD IPS Laptop use?\", \"answer\": \"Ryzen 3 5300U\"} """
-                """Example output 2: {\"question\": \"What is the name of the river in Paris?\", \"answer\": \"Seine\"}"""
-            )},
-            {'role': "user", "content": f"\n\nText:\n{text}\n\n"}
-        ]
-        response = self._call_llm(messages)
-        try:
-            output = json.loads(response)
-        except json.JSONDecodeError:
-            raise ValueError(f'Could not parse response from LLM: {response}')
-
-        if 'question' not in output or 'answer' not in output:
-            raise ValueError(f'Can''t find question/answer in LLM response')
-
-        return output.get('question'), output.get('answer')
+    # def call_llm(self, messages):
+    #     self.kb.call_llm(messages, self._llm_params)
 
     def generate_test_data(self, gen_params) -> pd.DataFrame:
-        DEFAULT_QUESTION_COUNT = 20
-        DEFAULT_SAMPLE_SIZE = 10000
 
         if 'from_sql' in gen_params:
             # get data from sql
@@ -74,7 +69,7 @@ class EvaluateKnowledgeBase:
 
             dn, table_name = self._get_dn_table(query.from_table)
             query.from_table = table_name
-            query.limit = Constant(DEFAULT_SAMPLE_SIZE)
+            query.limit = Constant(self.DEFAULT_SAMPLE_SIZE)
 
             response = dn.query(
                 query=query,
@@ -90,44 +85,25 @@ class EvaluateKnowledgeBase:
             # get data from knowledge base
             df = self.kb.select_query(Select(
                 targets=[Identifier('chunk_content')],
-                limit=Constant(DEFAULT_SAMPLE_SIZE)
+                limit=Constant(self.DEFAULT_SAMPLE_SIZE)
             ))
 
         if 'count' in gen_params:
             number_of_questions = gen_params['count']
         else:
-            number_of_questions = DEFAULT_QUESTION_COUNT
+            number_of_questions = self.DEFAULT_QUESTION_COUNT
 
+        number_of_questions = min(number_of_questions, len(df))
         sampled_df = df.sample(n=number_of_questions)
-        # iterate over rows
 
-        qa_data = []
-        count_errors = 0
-        for row in sampled_df.iter_rows():
-            id_doc, chunk_id, chunk_content, metadata, relevance, distance = row
-            try:
-                question, answer = self.generate_question_answer(chunk_content)
-            except ValueError as e:
-                # allow some numbers of error
-                count_errors += 1
-                if count_errors > 5:
-                    raise e
-                continue
-
-            qa_data.append({
-                "text": chunk_content,
-                "question": question,
-                "answer": answer
-            })
-
-        return pd.DataFrame(qa_data)
+        return self.generate(sampled_df)
 
     def get_test_data(self, test_table: Identifier) -> pd.DataFrame:
         dn, table_name = self._get_dn_table(test_table)
 
         query = Select(
             targets=[Star()],
-            from_table=test_table,
+            from_table=table_name,
         )
         response = dn.query(
             query=query,
@@ -144,7 +120,7 @@ class EvaluateKnowledgeBase:
         dn = self.session.datahub.get(integration_name)
         return dn, table_name
 
-    def save_to_table(self, table_name: Identifier, df: pd.DataFrame):
+    def save_to_table(self, table_name: Identifier, df: pd.DataFrame, is_replace=False):
         dn, table_name = self._get_dn_table(table_name)
 
         data = ResultSet().from_df(df)
@@ -152,12 +128,110 @@ class EvaluateKnowledgeBase:
         dn.create_table(
             table_name=table_name,
             result_set=data,
-            is_replace=False,
+            is_replace=is_replace,
             is_create=True,
             raise_if_exists=False,
         )
 
-    def evaluate_kb(self, test_data: pd.DataFrame) -> pd.DataFrame:
+    def run_evaluate(self, params) -> pd.DataFrame:
+        self._set_llm_client(params)
+
+        if 'test_table' not in params:
+            raise ValueError('The table with  has to be defined in "test_table" parameter')
+
+        test_table = params['test_table']
+
+        if isinstance(test_table, str):
+            test_table = Identifier(test_table)
+
+        if 'generate_data' in params:
+            # generate question / answers using llm
+            gen_params = params['generate_data']
+            if not isinstance(gen_params, dict):
+                gen_params = {}
+            test_data = self.generate_test_data(gen_params)
+
+            self.save_to_table(test_table, test_data, is_replace=True)
+        else:
+            test_data = self.get_test_data(test_table)
+
+        scores = self.evaluate(test_data)
+        scores['name'] = self.name
+        scores['created_at'] = dt.datetime.now()
+
+        # save scores
+        if 'save_to' in params:
+            to_table = params['save_to']
+            if isinstance(to_table, str):
+                to_table = Identifier(to_table)
+            self.save_to_table(to_table, scores)
+
+        return scores
+
+    @staticmethod
+    def run(session, kb_table, params) -> pd.DataFrame:
+
+        evaluate_method = params.get('method', 'rerank')
+
+        if evaluate_method == 'rerank':
+            cls = EvaluateRerank
+        else:
+            raise NotImplementedError(f"Method {evaluate_method} not implemented")
+
+        return cls(session, kb_table).run_evaluate(params)
+
+
+class EvaluateRerank(EvaluateBase):
+
+    TOP_K = 10
+
+    def generate(self, sampled_df: pd.DataFrame) -> pd.DataFrame:
+
+        qa_data = []
+        count_errors = 0
+        for chunk_content in sampled_df['chunk_content']:
+            try:
+                question, answer = self.generate_question_answer(chunk_content)
+            except ValueError as e:
+                # allow some numbers of error
+                count_errors += 1
+                if count_errors > 5:
+                    raise e
+                continue
+
+            qa_data.append({
+                "text": chunk_content,
+                "question": question,
+                "answer": answer
+            })
+
+        df = pd.DataFrame(qa_data)
+        df['id'] = df.index
+        return df
+
+    def generate_question_answer(self, text: str) -> (str, str):
+        messages = [
+            {'role': "system", "content": (
+                "Given the following text, generate a factual question that could be answered using only the information provided in it. "
+                "Example output 1: {\"question\": \"What processor does the HP 2023 14\" FHD IPS Laptop use?\", \"answer\": \"Ryzen 3 5300U\"} "
+                "Example output 2: {\"question\": \"What is the name of the river in Paris?\", \"answer\": \"Seine\"}"
+                "Return ONLY a json response. No other text."
+            )},
+            {'role': "user", "content": f"\n\nText:\n{text}\n\n"}
+        ]
+        response = self.llm_client.completion(messages)
+        answer = response.choices[0].message.content
+        try:
+            output = json.loads(answer)
+        except json.JSONDecodeError:
+            raise ValueError(f'Could not parse response from LLM: {answer}')
+
+        if 'question' not in output or 'answer' not in output:
+            raise ValueError('Can''t find question/answer in LLM response')
+
+        return output.get('question'), output.get('answer')
+
+    def evaluate(self, test_data: pd.DataFrame) -> pd.DataFrame:
 
         json_to_log_list = []
         questions = test_data.to_dict('records')
@@ -170,28 +244,27 @@ class EvaluateKnowledgeBase:
             logger.debug(f"Querying [{i+1}/{len(questions)}]: {question}")
             df_answers = self.kb.select_query(Select(
                 targets=[Identifier('chunk_content')],
-                limit=Constant(10)
+                limit=Constant(self.TOP_K)
             ))
             query_time = time.time() - start_time
 
             proposed_responses = list(df_answers['chunk_content'])
-            # context = [r["chunk_content"] for _, r in res.iterrows() if "chunk_content" in r]
+
             # generate answer using llm
-            relevance_score_list = self.kb.score_documents(question, proposed_responses, self._llm_params)
+            relevance_score_list = self.kb.score_documents(
+                question,
+                proposed_responses,
+                self.llm_client.params
+            )
 
             # set binary relevancy
-            binary_relevancy_list=[
+            binary_relevancy_list = [
                 1 if score >= 0.5 else 0
                 for score in relevance_score_list
             ]
 
-            # calculate relevancy at top k for each k
-            # relevancy_at_k = []
-            # for k in range(1, len(relevance_score_list) + 1):
-            #     relevancy_at_k.append(sum(relevance_score_list[:k]) / k)
-
             # calculate first relevant position
-            first_relevant_position = next((i for i, x in enumerate(df_answers['binary_relevancy']) if x == 1), None)
+            first_relevant_position = next((i for i, x in enumerate(binary_relevancy_list) if x == 1), None)
             json_to_log = {
                 "question": question,
                 "ground_truth": ground_truth,
@@ -323,31 +396,3 @@ class EvaluateKnowledgeBase:
             "avg_ndcg": avg_ndcg,
             "avg_query_time": avg_query_time
         }
-
-    def call_evaluate(self, params):
-
-        self.set_llm_settings(params)
-
-        if 'test_table' not in params:
-            raise ValueError('The table with  has to be defined in "test_table" parameter')
-
-        test_table = params['test_table']
-
-        if isinstance(test_table, str):
-            test_table = Identifier(test_table)
-
-        if 'generate_data' in params:
-            # generate question / answers using llm
-            test_data = self.generate_test_data(params['generate_data'])
-            self.save_to_table(test_table, test_data)
-        else:
-            test_data = self.get_test_data(test_table)
-
-        scores = self.evaluate_kb(test_data)
-        scores['name'] = self.name
-
-        # save scores
-        if 'save_to' in params:
-            self.save_to_table(test_table, scores)
-
-        return scores

@@ -420,7 +420,7 @@ class YoutubeVideosTable(APITable):
 
     def parse_duration(self, video_id, duration):
         try:
-            parsed_duration = re.search("PT(\\d+H)?(\\d+M)?(\\d+S)", duration).groups()
+            parsed_duration = re.search(r"PT(\d+H)?(\d+M)?(\d+S)", duration).groups()
             duration_str = ""
             for d in parsed_duration:
                 if d:

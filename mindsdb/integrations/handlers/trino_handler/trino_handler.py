@@ -159,7 +159,7 @@ class TrinoHandler(DatabaseHandler):
         renderer = SqlalchemyRender(sqlalchemy_trino.TrinoDialect)
         query_str = renderer.get_string(query, with_failback=True)
         modified_query_str = re.sub(
-            "(?is)(CREATE.+TABLE.+\\(.*\\))",
+            r"(?is)(CREATE.+TABLE.+\(.*\))",
             f"\\1 {self.with_clause}",
             query_str
         )

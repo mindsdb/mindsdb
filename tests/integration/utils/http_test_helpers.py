@@ -2,7 +2,7 @@ import requests
 import time
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
-from tests.utils.config import HTTP_API_ROOT
+from tests.integration.conftest import HTTP_API_ROOT
 
 
 class HTTPHelperMixin:

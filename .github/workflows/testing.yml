@@ -10,6 +10,7 @@ defaults:
 jobs:
   run_tests:
     name: Run Integration Tests
+    runs-on: mdb-dev
     steps:
       - id: wait
         run: |

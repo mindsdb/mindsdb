@@ -171,7 +171,6 @@ jobs:
             .[mysql] \
             .[chromadb]
           uv pip freeze
-          git clone https://github.com/mindsdb/mindsdb_sql_parser.git parser_tests
       - name: Install mssql dependencies
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
@@ -192,11 +191,10 @@ jobs:
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
-            # We have to run executor tests separately because they do weird things that break everything else
-            env PYTHONPATH=./ pytest -xs tests/unit/executor
-
+            git clone https://github.com/mindsdb/mindsdb_sql_parser.git parser_tests
             env PYTHONPATH=./:parser_tests/tests pytest -xs tests/unit/render/
-            env PYTHONPATH=./ pytest -xs --ignore=tests/unit/handlers --ignore=tests/unit/executor --ignore=tests/unit/render tests/unit/
+
+            make unit_tests_core
           fi
-          
-          python -m unittest discover -s tests/unit/handlers
+          # Run these tests on all OSes
+          make unit_tests_handlers

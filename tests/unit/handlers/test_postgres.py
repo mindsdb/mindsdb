@@ -31,6 +31,7 @@ class ColumnDescription:
 # map between regtype name and type id
 regtype_to_oid = {t.regtype: t.oid for t in pg_types}
 type_name_to_oid = {t.name: t.oid for t in pg_types}
+type_name_to_array_oid = {t.name: t.array_oid for t in pg_types}
 
 
 class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
@@ -789,6 +790,54 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertEquals(response.data_frame.iloc[0, 1], True)
         self.assertTrue(response.data_frame.iloc[1, 0] is pd.NA)
         self.assertTrue(response.data_frame.iloc[1, 1] is pd.NA)
+        # endregion
+
+        # region test arrays
+        """Test data obtained from:
+
+            CREATE TABLE test_array_types (
+                int_arr1 integer[],
+                int_arr2 integer[][],
+                text_arr1 text[]
+            );
+
+            INSERT INTO test_array_types (
+                int_arr1,
+                int_arr2,
+                text_arr1
+            ) VALUES (
+                '{1,null,3}',
+                '{{1,2,3},{4,null,6}}',
+                '{"test1", null, "test3"}'
+            );
+        """
+        input_row = (
+            [1, None, 3],               # int_arr1
+            [[1, 2, 3], [4, None, 6]],  # int_arr2
+            ['test1', None, 'test3']    # text_arr1
+        )
+        mock_cursor.fetchall.return_value = [input_row]
+
+        description = [
+            ColumnDescription(name='int_arr1', type_code=type_name_to_array_oid['int4']),
+            ColumnDescription(name='int_arr2', type_code=type_name_to_array_oid['int4']),
+            ColumnDescription(name='text_arr1', type_code=type_name_to_array_oid['varchar'])
+        ]
+        mock_cursor.description = description
+
+        excepted_mysql_types = [
+            MYSQL_DATA_TYPE.JSON,
+            MYSQL_DATA_TYPE.JSON,
+            MYSQL_DATA_TYPE.JSON,
+        ]
+
+        response: Response = self.handler.native_query(query_str)
+        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        for i, input_value in enumerate(input_row):
+            result_value = response.data_frame[description[i].name][0]
+            self.assertEqual(type(result_value), type(input_value), f'type mistmatch: {result_value} != {input_value}')
+            self.assertEqual(result_value, input_value, f'value mistmatch: {result_value} != {input_value}')
+
         # endregion
 
 

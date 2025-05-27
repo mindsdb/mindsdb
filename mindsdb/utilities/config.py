@@ -504,7 +504,12 @@ class Config:
             cmd_args_config["a2a"]["project_name"] = self.cmd_args.project_name
 
         # Merge command-line args config with highest priority
-        _merge_configs(new_config, cmd_args_config)
+        if cmd_args_config:
+            _merge_configs(new_config, cmd_args_config)
+
+        # Ensure A2A port is never 0, which would prevent the A2A API from starting
+        if "a2a" in new_config and "port" in new_config["a2a"] and new_config["a2a"]["port"] == 0:
+            new_config["a2a"]["port"] = 10002  # Use the default port value
 
         # region create dirs
         for key, value in new_config["paths"].items():

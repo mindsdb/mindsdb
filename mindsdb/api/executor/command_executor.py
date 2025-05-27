@@ -39,6 +39,7 @@ from mindsdb_sql_parser.ast import (
 
 # typed models
 from mindsdb_sql_parser.ast.mindsdb import (
+    AlterView,
     CreateAgent,
     CreateAnomalyDetectionModel,
     CreateChatBot,
@@ -580,6 +581,8 @@ class ExecuteCommands:
             return self.answer_create_predictor(statement, database_name)
         elif statement_type is CreateView:
             return self.answer_create_view(statement, database_name)
+        elif statement_type is AlterView:
+            return self.answer_alter_view(statement, database_name)
         elif statement_type is DropView:
             return self.answer_drop_view(statement, database_name)
         elif statement_type is Delete:
@@ -1345,6 +1348,53 @@ class ExecuteCommands:
         except EntityExistsError:
             if getattr(statement, "if_not_exists", False) is False:
                 raise
+        return ExecuteAnswer()
+    
+    def answer_alter_view(self, statement, database_name):
+        project_name = database_name
+        # TEMP
+        if isinstance(statement.name, Identifier):
+            parts = statement.name.parts
+        else:
+            parts = statement.name.split(".")
+
+        view_name = parts[-1]
+        if len(parts) == 2:
+            project_name = parts[0]
+
+        query_str = statement.query_str
+
+        if isinstance(statement.from_table, Identifier):
+            query = Select(
+                targets=[Star()],
+                from_table=NativeQuery(
+                    integration=statement.from_table, query=statement.query_str
+                ),
+            )
+            query_str = str(query)
+        else:
+            query = parse_sql(query_str)
+
+        if isinstance(query, Select):
+            # check create view sql
+            query.limit = Constant(1)
+
+            query_context_controller.set_context(
+                query_context_controller.IGNORE_CONTEXT
+            )
+            try:
+                SQLQuery(query, session=self.session, database=database_name)
+            finally:
+                query_context_controller.release_context(
+                    query_context_controller.IGNORE_CONTEXT
+                )
+
+        project = self.session.database_controller.get_project(project_name)
+        try:
+            project.update_view(view_name, query=query_str)
+        except EntityNotExistsError:
+            raise ExecutorException(f"View {view_name} does not exist in {project_name}")
+        
         return ExecuteAnswer()
 
     def answer_drop_view(self, statement, database_name):

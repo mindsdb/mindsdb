@@ -15,6 +15,7 @@ from langchain_community.chat_models import (
     ChatAnyscale,
     ChatLiteLLM,
     ChatOllama)
+from langchain_writer import ChatWriter
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.agents import AgentAction, AgentStep
 from langchain_core.callbacks.base import BaseCallbackHandler
@@ -55,7 +56,8 @@ from mindsdb.interfaces.agents.constants import (
     USER_COLUMN,
     ASSISTANT_COLUMN,
     CONTEXT_COLUMN, TRACE_ID_COLUMN,
-    DEFAULT_AGENT_SYSTEM_PROMPT
+    DEFAULT_AGENT_SYSTEM_PROMPT,
+    WRITER_CHAT_MODELS
 )
 from mindsdb.interfaces.skills.skill_tool import skill_tool, SkillData
 from langchain_anthropic import ChatAnthropic
@@ -88,6 +90,9 @@ def get_llm_provider(args: Dict) -> str:
         return "nvidia_nim"
     if args["model_name"] in GOOGLE_GEMINI_CHAT_MODELS:
         return "google"
+    # Check for writer models
+    if args["model_name"] in WRITER_CHAT_MODELS:
+        return "writer"
 
     # For vLLM, require explicit provider specification
     raise ValueError("Invalid model name. Please define a supported llm provider")
@@ -138,8 +143,13 @@ def get_chat_model_params(args: Dict) -> Dict:
     llm_config = get_llm_config(
         args.get("provider", get_llm_provider(args)), model_config
     )
-    config_dict = llm_config.model_dump()
+    config_dict = llm_config.model_dump(by_alias=True)
     config_dict = {k: v for k, v in config_dict.items() if v is not None}
+
+    # If provider is writer, ensure the API key is passed as 'api_key'
+    if args.get("provider") == "writer" and "writer_api_key" in config_dict:
+        config_dict["api_key"] = config_dict.pop("writer_api_key")
+
     return config_dict
 
 
@@ -167,6 +177,8 @@ def create_chat_model(args: Dict):
         return ChatNVIDIA(**model_kwargs)
     if args["provider"] == "google":
         return ChatGoogleGenerativeAI(**model_kwargs)
+    if args["provider"] == "writer":
+        return ChatWriter(**model_kwargs)
     if args["provider"] == "mindsdb":
         return ChatMindsdb(**model_kwargs)
     raise ValueError(f'Unknown provider: {args["provider"]}')
@@ -398,7 +410,7 @@ class LangchainAgent:
             agent=agent_type,
             # Use custom output parser to handle flaky LLMs that don't ALWAYS conform to output format.
             agent_kwargs={"output_parser": SafeOutputParser()},
-            # Calls the agent’s LLM Chain one final time to generate a final answer based on the previous steps
+            # Calls the agent's LLM Chain one final time to generate a final answer based on the previous steps
             early_stopping_method="generate",
             handle_parsing_errors=self._handle_parsing_errors,
             # Timeout per agent invocation.

@@ -28,7 +28,8 @@ SUPPORTED_PROVIDERS = {
     "ollama",
     "nvidia_nim",
     "vllm",
-    "google"
+    "google",
+    "writer"
 }
 # Chat models
 ANTHROPIC_CHAT_MODELS = (
@@ -175,6 +176,11 @@ GOOGLE_GEMINI_CHAT_MODELS = (
     "gemini-1.5-pro",
 )
 
+WRITER_CHAT_MODELS = (
+    "palmyra-x5",
+    "palmyra-x4"
+)
+
 # Define a read-only dictionary mapping providers to their models
 PROVIDER_TO_MODELS = MappingProxyType(
     {
@@ -183,6 +189,7 @@ PROVIDER_TO_MODELS = MappingProxyType(
         "openai": OPEN_AI_CHAT_MODELS,
         "nvidia_nim": NVIDIA_NIM_CHAT_MODELS,
         "google": GOOGLE_GEMINI_CHAT_MODELS,
+        "writer": WRITER_CHAT_MODELS,
     }
 )
 

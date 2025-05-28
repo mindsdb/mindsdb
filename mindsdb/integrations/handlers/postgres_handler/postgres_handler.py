@@ -15,7 +15,7 @@ from mindsdb_sql_parser import parse_sql
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql_parser.ast.base import ASTNode
 
-from mindsdb.integrations.libs.base import CatalogDatabaseHandler
+from mindsdb.integrations.libs.base import MetaDatabaseHandler
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -62,7 +62,7 @@ def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
     return MYSQL_DATA_TYPE.VARCHAR
 
 
-class PostgresHandler(CatalogDatabaseHandler):
+class PostgresHandler(MetaDatabaseHandler):
     """
     This handler handles connection and execution of the PostgreSQL statements.
     """

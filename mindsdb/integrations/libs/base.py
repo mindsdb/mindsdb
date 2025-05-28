@@ -111,44 +111,88 @@ class DatabaseHandler(BaseHandler):
 
     def __init__(self, name: str):
         super().__init__(name)
-        
-        
-class CatalogDatabaseHandler(DatabaseHandler):
+
+
+class MetaDatabaseHandler(DatabaseHandler):
     """
     Base class for handlers associated to data storage systems (e.g. databases, data warehouses, streaming services, etc.)
-    This class is used when the handler is also used to store information in the data catalog.
+
+    This class is used when the handler is also needed to store information in the data catalog.
+    This information is typically avaiable in the information schema or system tables of the database.
     """
 
     def __init__(self, name: str):
         super().__init__(name)
-        
+
     def meta_get_tables(self, table_names: Optional[List[str]]) -> HandlerResponse:
         """ 
         Returns metadata information about the tables to be stored in the data catalog.
+
+        Returns:
+            HandlerResponse: The response should consist of the following columns:
+            - TABLE_NAME (str): Name of the table.
+            - TABLE_TYPE (str): Type of the table, e.g. 'BASE TABLE', 'VIEW', etc. (optional).
+            - TABLE_SCHEMA (str): Schema of the table (optional).
+            - TABLE_DESCRIPTION (str): Description of the table (optional).
+            - ROW_COUNT (int): Estimated number of rows in the table (optional).
         """
         raise NotImplementedError()
-    
+
     def meta_get_columns(self, table_names: Optional[List[str]]) -> HandlerResponse:
         """ 
         Returns metadata information about the columns in the tables to be stored in the data catalog.
+
+        Returns:
+            HandlerResponse: The response should consist of the following columns:
+            - TABLE_NAME (str): Name of the table.
+            - COLUMN_NAME (str): Name of the column.
+            - DATA_TYPE (str): Data type of the column, e.g. 'VARCHAR', 'INT', etc.
+            - COLUMN_DESCRIPTION (str): Description of the column (optional).
+            - IS_NULLABLE (bool): Whether the column can contain NULL values (optional).
+            - COLUMN_DEFAULT (str): Default value of the column (optional).
         """
         raise NotImplementedError()
-    
+
     def meta_get_column_statistics(self, table_names: Optional[List[str]]) -> HandlerResponse:
         """ 
-        Returns metadata statisical information about the columns in the tables to be stored in the data catalog.
+        Returns metadata statisical information about the columns in the tables to be stored in the data catalog.        
+
+        Returns:
+            HandlerResponse: The response should consist of the following columns:
+            - TABLE_NAME (str): Name of the table.
+            - COLUMN_NAME (str): Name of the column.
+            - MOST_COMMON_VALUES (List[str]): Most common values in the column (optional).
+            - MOST_COMMON_FREQUENCIES (List[str]): Frequencies of the most common values in the column (optional).
+            - NULL_PERCENTAGE: Percentage of NULL values in the column (optional).
+            - MINIMUM_VALUE (str): Minimum value in the column (optional).
+            - MAXIMUM_VALUE (str): Maximum value in the column (optional).
+            - DISTINCT_VALUES_COUNT (int): Count of distinct values in the column (optional).
         """
         raise NotImplementedError()
-    
+
     def meta_get_primary_keys(self, table_names: Optional[List[str]]) -> HandlerResponse:
         """ 
         Returns metadata information about the primary keys in the tables to be stored in the data catalog.
+
+        Returns:
+            HandlerResponse: The response should consist of the following columns:
+            - TABLE_NAME (str): Name of the table.
+            - COLUMN_NAME (str): Name of the column that is part of the primary key.
+            - CONSTRAINT_NAME (str): Name of the primary key constraint (optional).
         """
         raise NotImplementedError()
-    
+
     def meta_get_foreign_keys(self, table_names: Optional[List[str]]) -> HandlerResponse:
         """ 
         Returns metadata information about the foreign keys in the tables to be stored in the data catalog.
+
+        Returns:
+            HandlerResponse: The response should consist of the following columns:
+            - PARENT_TABLE_NAME (str): Name of the parent table.
+            - PARENT_COLUMN_NAME (str): Name of the parent column that is part of the foreign key.
+            - CHILD_TABLE_NAME (str): Name of the child table.
+            - CHILD_COLUMN_NAME (str): Name of the child column that is part of the foreign key.
+            - CONSTRAINT_NAME (str): Name of the foreign key constraint (optional).
         """
         raise NotImplementedError()
 

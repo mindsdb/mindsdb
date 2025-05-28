@@ -2,7 +2,7 @@ from typing import List, Optional, Union
 
 import pandas as pd
 
-from mindsdb.integrations.libs.base import CatalogDatabaseHandler
+from mindsdb.integrations.libs.base import MetaDatabaseHandler
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities import log
 
@@ -27,7 +27,7 @@ class DataCatalogLoader:
         session = SessionController()
 
         self.database_name = database_name
-        self.data_handler: CatalogDatabaseHandler = session.integration_controller.get_data_handler(database_name)
+        self.data_handler: MetaDatabaseHandler = session.integration_controller.get_data_handler(database_name)
         self.integration_id = session.integration_controller.get(database_name)['id']
         self.table_names = table_names
 

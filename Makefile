@@ -51,4 +51,4 @@ unit_tests: unit_tests_handlers unit_tests_core
 
 
 
-.PHONY: install_mindsdb install_handler precommit run_mindsdb check build_docker run_docker integration_tests integration_tests_debug unit_tests_handlers unit_tests_core unit_tests
+.PHONY: install_mindsdb install_handler precommit format run_mindsdb check build_docker run_docker integration_tests integration_tests_debug unit_tests_handlers unit_tests_core unit_tests

@@ -88,10 +88,10 @@ class EvaluateBase:
             response = dn.query(query=query, session=self.session)
             df = response.data_frame
 
-            # leave first column and set name as chunk_content
-            # df = df.iloc[:, [0]]
-            # df = df.columns["chunk_content"]
+            if 'content' not in df.columns:
+                raise ValueError(f"`content` column isn't found in source data")
 
+            df = df.rename(columns={'content': 'chunk_content'})
         else:
             # get data from knowledge base
             df = self.kb.select_query(
@@ -130,7 +130,7 @@ class EvaluateBase:
     def save_to_table(self, table_name: Identifier, df: pd.DataFrame, is_replace=False):
         dn, table_name = self._get_dn_table(table_name)
 
-        data = ResultSet().from_df(df)
+        data = ResultSet.from_df(df)
 
         dn.create_table(
             table_name=table_name,

@@ -915,7 +915,7 @@ class ExecuteCommands:
         scores = self.session.kb_controller.evaluate(
             table_name=table_name, project_name=project_name, params=statement.params
         )
-        return ExecuteAnswer(data=ResultSet().from_df(scores))
+        return ExecuteAnswer(data=ResultSet.from_df(scores))
 
     def _get_model_info(self, identifier, except_absent=True, database_name=None):
         if len(identifier.parts) == 1:

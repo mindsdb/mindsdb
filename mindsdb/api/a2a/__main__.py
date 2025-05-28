@@ -123,7 +123,7 @@ def main_with_config(config=None, *args, **kwargs):
 
     # Extract configuration values with fallbacks to default values
     host = config.get("host", "localhost")
-    port = config.get("port", 10002)
+    port = config.get("port", 47338)
     mindsdb_host = config.get("mindsdb_host", "localhost")
     mindsdb_port = config.get("mindsdb_port", 47334)
     project_name = config.get("project_name", "mindsdb")

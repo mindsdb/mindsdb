@@ -1,7 +1,7 @@
 import time
 import inspect
 from dataclasses import astuple
-from typing import Iterable
+from typing import Iterable, List
 
 import numpy as np
 import pandas as pd
@@ -120,22 +120,20 @@ class IntegrationDataNode(DataNode):
         self,
         table_name: Identifier,
         result_set: ResultSet = None,
-        columns=None,
-        is_replace=False,
-        is_create=False,
-        raise_if_exists=True,
+        columns: List[TableColumn] = None,
+        is_replace: bool = False,
+        is_create: bool = False,
+        raise_if_exists: bool = True,
         **kwargs,
     ) -> DataHubResponse:
         # is_create - create table
+        #   if !raise_if_exists: error will be skipped
         # is_replace - drop table if exists
         # is_create==False and is_replace==False: just insert
 
         table_columns_meta = {}
 
         if columns is None:
-            columns = []
-
-            df = result_set.get_raw_df()
 
             columns: list[TableColumn] = result_set.get_ast_columns()
             table_columns_meta = {column.name: column.type for column in columns}

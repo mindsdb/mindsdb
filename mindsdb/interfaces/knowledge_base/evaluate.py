@@ -89,7 +89,7 @@ class EvaluateBase:
             df = response.data_frame
 
             if 'content' not in df.columns:
-                raise ValueError(f"`content` column isn't found in source data")
+                raise ValueError("`content` column isn't found in source data")
 
             df = df.rename(columns={'content': 'chunk_content'})
         else:

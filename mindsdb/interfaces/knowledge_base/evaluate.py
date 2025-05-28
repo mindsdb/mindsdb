@@ -22,6 +22,19 @@ def calc_entropy(values):
     return -sum([pk * math.log(pk) for pk in values])
 
 
+GENERATE_QA_SYSTEM_PROMPT = """
+Your task is to generate question and answer pairs for a search engine. 
+The search engine will take your query and return a list of documents.
+You will be given a text and you need to generate a question that can be answered using the information in the text.
+Your questions will be used to evaluate the search engine.
+Question should always have enough clues to identify the specific text that this question is generated from. 
+Never ask questions like "What license number is associated with Amend 6" because Amend 6 could be found in many documents and the question is not specific enough.
+Example output 1:  {\"query\": \"What processor does the HP 2023 14\" FHD IPS Laptop use?\", \"reference_answer\": \"Ryzen 3 5300U\"} 
+Example output 2: {\"query\": \"What is the name of the river in Paris?\", \"reference_answer\": \"Seine\"}
+Don't generate questions like "What is being amended in the application?" because these questions cannot be answered using the text and without knowing which document it refers to. 
+The question should be answerable without the text, but the answer should be present in the text.
+"""
+
 class EvaluateBase:
     DEFAULT_QUESTION_COUNT = 20
     DEFAULT_SAMPLE_SIZE = 10000
@@ -211,12 +224,7 @@ class EvaluateRerank(EvaluateBase):
 
     def generate_question_answer(self, text: str) -> (str, str):
         messages = [
-            {'role': "system", "content": (
-                "Given the following text, generate a factual question that could be answered using only the information provided in it. "
-                "Example output 1: {\"question\": \"What processor does the HP 2023 14\" FHD IPS Laptop use?\", \"answer\": \"Ryzen 3 5300U\"} "
-                "Example output 2: {\"question\": \"What is the name of the river in Paris?\", \"answer\": \"Seine\"}"
-                "Return ONLY a json response. No other text."
-            )},
+            {'role': "system", "content": GENERATE_QA_SYSTEM_PROMPT},
             {'role': "user", "content": f"\n\nText:\n{text}\n\n"}
         ]
         response = self.llm_client.completion(messages)

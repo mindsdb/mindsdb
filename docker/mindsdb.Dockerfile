@@ -118,7 +118,7 @@ RUN --mount=type=cache,target=/root/.cache uv pip install -r requirements/requir
 
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
-ENTRYPOINT [ "bash", "-c", "watchfiles --filter python 'python -Im mindsdb --config=/root/mindsdb_config.json --api=http' mindsdb" ]
+ENTRYPOINT [ "bash", "-c", "watchfiles --filter python 'python -Im mindsdb --config=/root/mindsdb_config.json --api=http,a2a,mcp' mindsdb" ]
 
 
 

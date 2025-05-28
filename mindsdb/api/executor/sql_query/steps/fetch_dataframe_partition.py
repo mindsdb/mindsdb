@@ -8,7 +8,7 @@ from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.interfaces.query_context.context_controller import RunningQuery
 from mindsdb.api.executor.sql_query.result_set import ResultSet
 from mindsdb.utilities import log
-from mindsdb.utilities.config import Config
+from mindsdb.utilities.config import config
 from mindsdb.utilities.partitioning import get_max_thread_count, split_data_frame
 from mindsdb.api.executor.sql_query.steps.fetch_dataframe import get_table_alias, get_fill_param_fnc
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
@@ -64,8 +64,6 @@ class FetchDataframePartitionCall(BaseStepCall):
         self.current_step_num = step.step_num
         self.substeps = step.steps
 
-        config = Config()
-
         # ml task queue enabled?
         use_threads, thread_count = False, None
         if config['ml_task_queue']['type'] == 'redis':
@@ -95,21 +93,8 @@ class FetchDataframePartitionCall(BaseStepCall):
         """
 
         results = []
-        while True:
 
-            # fetch batch
-            query2 = run_query.get_partition_query(self.current_step_num, query)
-            response = self.dn.query(
-                query=query2,
-                session=self.session
-            )
-            df = response.data_frame
-
-            if df is None or len(df) == 0:
-                break
-
-            # executing of sub steps can modify dataframe columns, lets memorise max tracking value
-            max_track_value = run_query.get_max_track_value(df)
+        for df in run_query.get_partitions(self.dn, self, query):
             try:
                 sub_data = self.exec_sub_steps(df)
                 results.append(sub_data)
@@ -118,8 +103,6 @@ class FetchDataframePartitionCall(BaseStepCall):
                     logger.error(e)
                 else:
                     raise e
-
-            run_query.set_progress(df, max_track_value)
 
         return self.concat_results(results)
 
@@ -135,7 +118,7 @@ class FetchDataframePartitionCall(BaseStepCall):
 
         data = ResultSet()
         if len(df_list) > 0:
-            data.from_df_cols(pd.concat(df_list), col_names)
+            data = ResultSet.from_df_cols(pd.concat(df_list), col_names)
 
         return data
 
@@ -147,10 +130,7 @@ class FetchDataframePartitionCall(BaseStepCall):
         - substep are executed using result of previos step (like it is all fetched data is available)
         - the final result is returned and used outside to concatenate with results of other's batches
         """
-
-        input_data = ResultSet()
-
-        input_data.from_df(
+        input_data = ResultSet.from_df(
             df,
             table_name=self.table_alias[1],
             table_alias=self.table_alias[2],
@@ -191,22 +171,7 @@ class FetchDataframePartitionCall(BaseStepCall):
 
         with ContextThreadPoolExecutor(max_workers=thread_count) as executor:
 
-            while True:
-                # fetch batch
-                query2 = run_query.get_partition_query(self.current_step_num, query)
-                response = self.dn.query(
-                    query=query2,
-                    session=self.session
-                )
-                df = response.data_frame
-
-                if df is None or len(df) == 0:
-                    # TODO detect circles: data handler ignores condition and output is repeated
-
-                    # exit & stop workers
-                    break
-
-                max_track_value = run_query.get_max_track_value(df)
+            for df in run_query.get_partitions(self.dn, self, query):
 
                 # split into chunks and send to workers
                 futures = []
@@ -225,9 +190,5 @@ class FetchDataframePartitionCall(BaseStepCall):
                 if self.sql_query.stop_event is not None and self.sql_query.stop_event.is_set():
                     executor.shutdown()
                     raise RuntimeError('Query is interrupted')
-                # TODO
-                #  1. get next batch without updating track_value:
-                #    it allows to keep queue_in filled with data between fetching batches
-                run_query.set_progress(df, max_track_value)
 
         return self.concat_results(results)

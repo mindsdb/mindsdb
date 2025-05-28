@@ -1,4 +1,4 @@
-from typing import Callable, Dict, Text, Callable, Union
+from typing import Dict, Text, Callable, Union
 
 from botbuilder.schema import Activity, ActivityTypes
 from botbuilder.schema import ChannelAccount
@@ -19,7 +19,7 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
 from mindsdb.integrations.libs.api_handler import APIChatHandler
-from mindsdb.integrations.utilities.handlers.auth_utilities import (
+from mindsdb.integrations.utilities.handlers.auth_utilities.microsoft import (
     MSGraphAPIApplicationPermissionsManager,
     MSGraphAPIDelegatedPermissionsManager
 )
@@ -233,7 +233,7 @@ class MSTeamsHandler(APIChatHandler):
         callback(
             chat_id=request['conversation']['id'],
             message=chat_bot_message
-        )    
+        )
 
     @chatbot_only
     def respond(self, message: ChatBotMessage) -> None:

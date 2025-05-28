@@ -1,0 +1,106 @@
+---
+title: Get Mind
+sidebarTitle: Get Mind
+---
+
+This API endpoint retrieves details about a specific Mind using the `GET` method.
+
+### Body
+
+None.
+
+### Response
+
+<ResponseField name="created_at" type="string" required>  
+
+Timestamp of when the Mind was created.
+
+</ResponseField>
+
+<ResponseField name="datasources" type="array" required>  
+
+List of data sources connected to the Mind.
+
+</ResponseField>
+
+<ResponseField name="model_name" type="string">  
+
+The name of the model associated with the Mind.
+
+</ResponseField>
+
+<ResponseField name="name" type="string" required>  
+
+The unique name of the Mind.
+
+</ResponseField>
+
+<ResponseField name="parameters" type="object">  
+
+Optional parameters used when configuring the Mind.
+
+</ResponseField>
+
+<ResponseField name="provider" type="string">  
+
+The provider used for the Mind (e.g., openai).
+
+</ResponseField>
+
+<ResponseField name="updated_at" type="string">  
+
+Timestamp of the last update to the Mind.
+
+</ResponseField>
+
+### Authorization
+
+A valid API key must be passed in the `Authorization` header:
+
+```
+Authorization: Bearer MINDS_API_KEY
+```
+
+Generate your [API key here](https://mdb.ai/apiKeys).
+
+### Path Parameters
+
+<ParamField body='mind_name' type='string' required>
+
+The name of the Mind you want to retrieve details for.
+
+</ParamField>
+
+<RequestExample>
+
+```shell Shell
+curl --request GET \
+     --url 'https://mdb.ai/api/projects/mindsdb/minds/mind_name' \
+     --header 'Authorization: Bearer MINDS_API_KEY'
+```
+
+```python Python
+from minds.client import Client
+
+client = Client("MINDS_API_KEY", "https://mdb.ai/")
+
+mind = client.minds.get('mind_name')
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Response
+{
+    "created_at": "Thu, 12 Sep 2024 12:37:16 GMT",
+    "datasources": [],
+    "model_name": "gpt-4o",
+    "name": "mind_name",
+    "parameters": null,
+    "provider": "openai",
+    "updated_at": "Thu, 12 Sep 2024 12:37:16 GMT"
+}
+```
+
+</ResponseExample>

@@ -1,0 +1,4 @@
+/.github/workflows/ @mindsdb/devops
+/tests/scripts/ @mindsdb/devops
+/docker/docker-bake.hcl @mindsdb/devops
+/pyproject.toml @mindsdb/devops

@@ -14,6 +14,7 @@ from .adapters import BaseMerlionForecastAdapter, DefaultForecasterAdapter, Merl
 
 logger = log.getLogger(__name__)
 
+
 class DetectorModelType(Enum):
     default = DefaultDetectorAdapter
     isolation = IsolationForestDetectorAdapter
@@ -36,7 +37,7 @@ class TaskType(Enum):
 def is_invalid_type(name: str, type_class: Enum) -> bool:
     if name is None:
         return True
-    return not name in type_class._member_names_
+    return name not in type_class._member_names_
 
 
 def enum_to_str(type_class: Enum) -> str:
@@ -194,12 +195,12 @@ class MerlionHandler(BaseMLEngine):
         # check task_type
         try:
             task_enum = TaskType[task]
-        except Exception as e:
+        except Exception:
             raise Exception("wrong using.task: " + task + ", valid options: " + enum_to_str(TaskType))
         # check and get model class
         try:
             adapter_class = task_enum.value[model_type].value
         except Exception as e:
-            raise Exception("Wrong using.model_type: " + model_type + ", valid options: " +
-                            enum_to_str(task_enum.value) + ", " + str(e))
+            raise Exception("Wrong using.model_type: " + model_type + ", valid options: "
+                            + enum_to_str(task_enum.value) + ", " + str(e))
         return adapter_class

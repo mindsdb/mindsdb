@@ -33,7 +33,7 @@ class ReplicateHandler(BaseMLEngine):
                 raise Exception("Provided api_key is Incorrect. Get your api_key here: https://replicate.com/account/api-tokens")
 
             else:
-                raise Exception(f"Error occured.", e)
+                raise Exception("Error occured.", e)
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         """Saves model details in storage to access it later
@@ -44,11 +44,11 @@ class ReplicateHandler(BaseMLEngine):
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         """Using replicate makes the prediction according to your parameters
-        
+
         Args:
             df (pd.DataFrame): The input DataFrame containing data to predict.
             args (Optional[Dict]): Additional arguments for prediction parameters.
-        
+
         Returns:
             pd.DataFrame: The DataFrame containing the predicted results.
         """
@@ -67,7 +67,7 @@ class ReplicateHandler(BaseMLEngine):
             output = replicate.run(
                 f"{args['model_name']}:{args['version']}",
                 input={**conditions.to_dict(), **pred_args}         # Unpacking parameters inputted
-            ) 
+            )
             # Process output based on the model type
             if isinstance(output, types.GeneratorType) and args.get('model_type') == 'LLM':
                 output = ''.join(list(output))  # If model_type is LLM, make the stream a string
@@ -87,7 +87,7 @@ class ReplicateHandler(BaseMLEngine):
 
         if wrong_params:
             raise Exception(f"""'{wrong_params}' is/are not supported parameter for this model.
-Use DESCRIBE PREDICTOR mindsdb.<model_name>.features; to know about available parameters. OR 
+Use DESCRIBE PREDICTOR mindsdb.<model_name>.features; to know about available parameters. OR
 Visit https://replicate.com/{model_name}/versions/{version} to check parameters.""")
 
         # Set the Replicate API token for communication with the server
@@ -134,7 +134,7 @@ Visit https://replicate.com/{model_name}/versions/{version} to check parameters.
             return replicate_cfg['api_key']
 
         if strict:
-            raise Exception(f'Missing API key "api_key". Either re-create this ML_ENGINE specifying the `api_key` parameter,\
+            raise Exception('Missing API key "api_key". Either re-create this ML_ENGINE specifying the `api_key` parameter,\
                  or re-create this model and pass the API key with `USING` syntax.')
 
     def _get_schema(self, only_keys=False):

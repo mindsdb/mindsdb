@@ -1,9 +1,9 @@
 ---
-title: MindsDB MCP API with Cursor
-sidebarTitle: Usage with Cursor
+title: MindsDB's MCP Server with Cursor's MCP Client
+sidebarTitle: Cursor
 ---
 
-This tutorial walks you through the usage of MindsDB MCP API with [Cursor](https://www.cursor.com/).
+This tutorial walks you through the usage of MindsDB's MCP Server with [Cursor](https://www.cursor.com/) as an MCP Client.
 
 <iframe
   className="w-full h-96"
@@ -16,55 +16,37 @@ This tutorial walks you through the usage of MindsDB MCP API with [Cursor](https
   allowFullScreen
 ></iframe>
 
-## Enable MindsDB as an MCP Server
+## Setup
 
-1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
+Follow the steps below to connect MindsDB's MCP Server to Cursor.
 
-2. When starting MindsDB, enable its MCP API as [explained here](/mcp/overview#getting-started).
+1. Start MindsDB's MCP Server following [this guide](/mcp/usage).
 
-3. If this is your first time using MindsDB, make sure to [connect your data source](/mindsdb_sql/sql/create/database) and/or [upload files](/mindsdb_sql/sql/create/file), so that you can ask questions over your data as shown in the following steps.
+2. Open Cursor, go to the Cursor Settings, open the MCP tab, and click on *Add new global MCP server*. Alternatively, go to the Cursor settings -> Features -> MCP Servers.
 
-<Tip>
-To get you started quickly, use our sample dataset that stores the sales manager data.
+  <p align="center">
+    <img src="/assets/mcp_cursor_settings.png" />
+  </p>
 
-```sql
-CREATE DATABASE sales_manager_data
-WITH ENGINE = "postgres",
-PARAMETERS = {
-    "user": "demo_user",
-    "password": "demo_password",
-    "host": "samples.mindsdb.com",
-    "port": "5432",
-    "database": "sales_manager_data"
-};
-```
-</Tip>
+3. Add the below content to the `mcp.json` file.
 
-4. Open Cursor, go to the Cursor Settings, open the MCP tab, and click on *Add new global MCP server*. Alternatively, go to the Cursor settings -> Features -> MCP Servers.
-
-<p align="center">
-  <img src="/assets/mcp_cursor_settings.png" />
-</p>
-
-5. Add the below content to the `mcp.json` file.
-
-```yml
-{
-    "mcpServers": {
-      "mindsdb": {
-        "url": "http://127.0.0.1:47337/sse"
+  ```yml
+  {
+      "mcpServers": {
+        "mindsdb": {
+          "url": "http://127.0.0.1:47337/sse"
+        }
       }
-    }
-}
-```
+  }
+  ```
 
-6. Ensure that MindsDB is listed as an MCP server.
+4. Ensure that MindsDB is listed as an MCP server.
 
-<p align="center">
-  <img src="/assets/mcp_cursor_mcp_server.png" />
-</p>
+  <p align="center">
+    <img src="/assets/mcp_cursor_mcp_server.png" />
+  </p>
 
-## Chat with Your Data
+## Chat with Data
 
 1. Open the Cursor chat window and select the Agent mode from the dropdown.
 

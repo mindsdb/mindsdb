@@ -648,7 +648,7 @@ class MetaTables(Base):
     def as_string(self, indent: int = 0) -> str:
         pad = " " * indent
 
-        table_info = f"{self.name} ({self.type})"
+        table_info = f"`{self.integration.name}`.`{self.name}` ({self.type})"
 
         if self.description:
             table_info += f" : {self.description}"

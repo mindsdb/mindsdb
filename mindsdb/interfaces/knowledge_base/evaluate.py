@@ -33,6 +33,7 @@ Example output 1:  {\"query\": \"What processor does the HP 2023 14\" FHD IPS La
 Example output 2: {\"query\": \"What is the name of the river in Paris?\", \"reference_answer\": \"Seine\"}
 Don't generate questions like "What is being amended in the application?" because these questions cannot be answered using the text and without knowing which document it refers to. 
 The question should be answerable without the text, but the answer should be present in the text.
+Return ONLY a json response. No other text.
 """
 
 
@@ -88,13 +89,13 @@ class EvaluateBase:
             df = response.data_frame
 
             # leave first column and set name as chunk_content
-            df = df.iloc[:, [0]]
-            df = df.columns["chunk_content"]
+            # df = df.iloc[:, [0]]
+            # df = df.columns["chunk_content"]
 
         else:
             # get data from knowledge base
             df = self.kb.select_query(
-                Select(targets=[Identifier("chunk_content")], limit=Constant(self.DEFAULT_SAMPLE_SIZE))
+                Select(targets=[Identifier("chunk_content"), Identifier('id')], limit=Constant(self.DEFAULT_SAMPLE_SIZE))
             )
 
         if "count" in gen_params:
@@ -161,6 +162,10 @@ class EvaluateBase:
         else:
             test_data = self.get_test_data(test_table)
 
+        if params.get("evaluate", True) is False:
+            # no evaluate is required
+            return pd.DataFrame()
+
         scores = self.evaluate(test_data)
         scores["name"] = self.name
         scores["created_at"] = dt.datetime.now()
@@ -176,10 +181,12 @@ class EvaluateBase:
 
     @staticmethod
     def run(session, kb_table, params) -> pd.DataFrame:
-        evaluate_method = params.get("method", "rerank")
+        evaluate_method = params.get("method", "doc_id")
 
         if evaluate_method == "rerank":
             cls = EvaluateRerank
+        elif evaluate_method == "doc_id":
+            cls = EvaluateDocID
         else:
             raise NotImplementedError(f"Method {evaluate_method} not implemented")
 
@@ -220,10 +227,10 @@ class EvaluateRerank(EvaluateBase):
         except json.JSONDecodeError:
             raise ValueError(f"Could not parse response from LLM: {answer}")
 
-        if "question" not in output or "answer" not in output:
+        if "query" not in output or "reference_answer" not in output:
             raise ValueError("Cant find question/answer in LLM response")
 
-        return output.get("question"), output.get("answer")
+        return output.get("query"), output.get("reference_answer")
 
     def evaluate(self, test_data: pd.DataFrame) -> pd.DataFrame:
         json_to_log_list = []
@@ -380,5 +387,109 @@ class EvaluateRerank(EvaluateBase):
             "bin_precision_at_k": binary_precision_at_k_avg,
             "avg_entropy": avg_entropy,
             "avg_ndcg": avg_ndcg,
+            "avg_query_time": avg_query_time,
+        }
+
+
+class EvaluateDocID(EvaluateBase):
+    TOP_K = 100
+
+    def generate(self, sampled_df: pd.DataFrame) -> pd.DataFrame:
+        if "id" not in sampled_df.columns:
+            raise ValueError("'id' column is required for generating test dataset")
+
+        qa_data = []
+        count_errors = 0
+        for _, item in sampled_df.iterrows():
+            chunk_content = item["chunk_content"]
+            try:
+                question, answer = self.generate_question_answer(chunk_content)
+            except ValueError as e:
+                # allow some numbers of error
+                count_errors += 1
+                if count_errors > 5:
+                    raise e
+                continue
+
+            qa_data.append({"text": chunk_content, "question": question, "answer": answer, "doc_id": item["id"]})
+        if len(qa_data) == 0:
+            raise ValueError("No data in generated test dataset")
+        df = pd.DataFrame(qa_data)
+        return df
+
+    def generate_question_answer(self, text: str) -> (str, str):
+        messages = [
+            {"role": "system", "content": GENERATE_QA_SYSTEM_PROMPT},
+            {"role": "user", "content": f"\n\nText:\n{text}\n\n"},
+        ]
+        response = self.llm_client.completion(messages)
+        answer = response.choices[0].message.content
+        try:
+            output = json.loads(answer)
+        except json.JSONDecodeError:
+            raise ValueError(f"Could not parse response from LLM: {answer}")
+
+        if "query" not in output or "reference_answer" not in output:
+            raise ValueError("Cant find question/answer in LLM response")
+
+        return output.get("query"), output.get("reference_answer")
+
+    def evaluate(self, test_data: pd.DataFrame) -> pd.DataFrame:
+        stats = []
+        questions = test_data.to_dict("records")
+
+        for i, item in enumerate(questions):
+            question = item["question"]
+            doc_id = item["doc_id"]
+
+            start_time = time.time()
+            logger.debug(f"Querying [{i + 1}/{len(questions)}]: {question}")
+            df_answers = self.kb.select_query(
+                Select(targets=[Identifier("chunk_content"), Identifier("id")], limit=Constant(self.TOP_K))
+            )
+            query_time = time.time() - start_time
+
+            retrieved_doc_ids = list(df_answers["id"])
+
+            if doc_id in retrieved_doc_ids:
+                doc_found = True
+                doc_position = retrieved_doc_ids.index(doc_id)
+            else:
+                doc_found = False
+                doc_position = -1
+
+            stats.append({"question": question, "doc_id": doc_id, "doc_found": doc_found,
+                          "doc_position": doc_position, "query_time": query_time})
+
+        evaluation_results = self.summarize_results(stats)
+        return pd.DataFrame([evaluation_results])
+
+    def summarize_results(self, stats):
+        total_questions = len(stats)
+        total_found = sum([1 for stat in stats if stat["doc_found"]])
+
+        total_accurately_retrieved = sum([1 for stat in stats if stat["doc_found"]])
+
+        accurate_in_top_10 = sum([1 for stat in stats if stat["doc_found"] and stat["doc_position"] < 10])
+
+        # calculate recall curve by position
+        recall_curve = {}
+        for i in range(self.TOP_K):
+            recall_curve[i] = sum([1 for stat in stats if stat["doc_found"] and stat["doc_position"] == i])
+        # convert to proportion of total questions
+        for i in range(self.TOP_K):
+            recall_curve[i] = recall_curve[i] / total_questions
+        # calculate cumulative recall
+        cumulative_recall = {}
+        for i in range(self.TOP_K):
+            cumulative_recall[i] = sum([recall_curve[j] for j in range(i + 1)])
+
+        avg_query_time = sum(item["query_time"] for item in stats) / total_questions
+        return {
+            "total": total_questions,
+            "total_found": total_found,
+            "retrieved_in_top_k": total_accurately_retrieved,
+            "retrieved_in_top_10": accurate_in_top_10,
+            "cumulative_recall": cumulative_recall,
             "avg_query_time": avg_query_time,
         }

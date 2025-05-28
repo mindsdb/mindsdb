@@ -915,14 +915,14 @@ class KnowledgeBaseController:
             params=embedding_params,
             kb_name=name,
         )
-        # if model_name is not None:  # Legacy
-        params["created_embedding_model"] = model_name
+        if model_name is not None:
+            params["created_embedding_model"] = model_name
 
         embedding_model_id = None
-        # if model_name is not None:  # Legacy
-        model = self.session.model_controller.get_model(name=model_name, project_name=project.name)
-        model_record = db.Predictor.query.get(model["id"])
-        embedding_model_id = model_record.id
+        if model_name is not None:
+            model = self.session.model_controller.get_model(name=model_name, project_name=project.name)
+            model_record = db.Predictor.query.get(model["id"])
+            embedding_model_id = model_record.id
 
         reranking_model_params = get_model_params(params.get("reranking_model", {}), "default_reranking_model")
         if reranking_model_params:

@@ -682,7 +682,7 @@ class MetaColumns(Base):
     meta_tables = relationship("MetaTables", back_populates="meta_columns")
 
     name: str = Column(String, nullable=False)
-    data_type: str = Column(String, nullable=True)
+    data_type: str = Column(String, nullable=False)
     description: str = Column(String, nullable=True)
     default_value: str = Column(String, nullable=True)
     is_nullable: bool = Column(Boolean, nullable=True)

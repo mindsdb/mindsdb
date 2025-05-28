@@ -36,7 +36,7 @@ def upgrade():
         sa.Column('id', sa.Integer(), primary_key=True),
         sa.Column('table_id', sa.Integer(), sa.ForeignKey('meta_tables.id'), nullable=False),
         sa.Column('name', sa.String(), nullable=False),
-        sa.Column('data_type', sa.String(), nullable=True),
+        sa.Column('data_type', sa.String(), nullable=False),
         sa.Column('default_value', sa.String(), nullable=True),
         sa.Column('description', sa.String(), nullable=True),
         sa.Column('is_nullable', sa.Boolean(), nullable=True),

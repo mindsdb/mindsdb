@@ -369,7 +369,7 @@ class ResultSet:
             MYSQL_DATA_TYPE.DOUBLE: sqlalchemy_types.FLOAT,
             MYSQL_DATA_TYPE.TIME: sqlalchemy_types.TIME,
             MYSQL_DATA_TYPE.DATE: sqlalchemy_types.DATE,
-            MYSQL_DATA_TYPE.DATETIME: sqlalchemy_types.DATETIME,
+            MYSQL_DATA_TYPE.DATETIME: sqlalchemy_types.DateTime,
             MYSQL_DATA_TYPE.TIMESTAMP: sqlalchemy_types.TIMESTAMP,
         }
 

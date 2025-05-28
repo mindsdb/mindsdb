@@ -41,7 +41,7 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 # gunicorn and dataprep_ml are for optional features that aren't required.
 # opentelemetry and langfuse are metrics/tracing libraries that are only used in the cloud images (they're installed there as extras)
 MAIN_RULE_IGNORES = {
-    "DEP003": ["torch", "pyarrow", "langfuse"],
+    "DEP003": ["torch", "pyarrow", "langfuse", "dataprep_ml"],
     "DEP001": [
         "torch",
         "pgvector",

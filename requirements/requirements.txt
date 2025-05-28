@@ -66,8 +66,6 @@ httpx==0.28.1
 httpx-sse==0.4.0
 sse-starlette==2.3.3
 typing-extensions==4.13.2
-gunicorn==23.0.0
-dataprep-ml==0.0.24
 python-dotenv==1.1.0
 jwcrypto==1.5.6
 pyjwt==2.10.1

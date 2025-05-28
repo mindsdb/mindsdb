@@ -903,13 +903,11 @@ class KnowledgeBaseController:
         #     else:
         #         # it is params for model
         #         embedding_params.update(params["embedding_model"])
-        
-        if 'embedding_model' in params:
-            if not isinstance(params['embedding_model'], dict):
-                raise ValueError(
-                    "embedding_model should be JSON object with model parameters."
-                )
-            embedding_params.update(params['embedding_model'])
+
+        if "embedding_model" in params:
+            if not isinstance(params["embedding_model"], dict):
+                raise ValueError("embedding_model should be JSON object with model parameters.")
+            embedding_params.update(params["embedding_model"])
 
         # if model_name is None:  # Legacy
         model_name = self._create_embedding_model(
@@ -917,7 +915,7 @@ class KnowledgeBaseController:
             params=embedding_params,
             kb_name=name,
         )
-            # if model_name is not None:  # Legacy
+        # if model_name is not None:  # Legacy
         params["created_embedding_model"] = model_name
 
         embedding_model_id = None

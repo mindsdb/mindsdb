@@ -209,6 +209,8 @@ PACKAGE_NAME_MAP = {
     "sqlalchemy-ingres": ["ingres_sa_dialect"],
     "pyaml": ["yaml"],
     "pydantic_core": ["pydantic"],
+    "python-dotenv": ["dotenv"],
+    "pyjwt": ["jwt"],
 }
 
 # We use this to exit with a non-zero status code if any check fails

@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 from mindsdb.interfaces.data_catalog.base_data_catalog import BaseDataCatalog
 from mindsdb.interfaces.storage import db
 

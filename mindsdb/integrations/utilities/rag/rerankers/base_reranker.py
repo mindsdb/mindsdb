@@ -20,9 +20,8 @@ log = logging.getLogger(__name__)
 
 
 class BaseLLMReranker(BaseModel, ABC):
-
     filtering_threshold: float = 0.0  # Default threshold for filtering
-    provider: str = 'openai'
+    provider: str = "openai"
     model: str = DEFAULT_RERANKING_MODEL  # Model to use for reranking
     temperature: float = 0.0  # Temperature for the model
     api_key: Optional[str] = None
@@ -42,7 +41,7 @@ class BaseLLMReranker(BaseModel, ABC):
 
     class Config:
         arbitrary_types_allowed = True
-        extra = 'allow'
+        extra = "allow"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -51,17 +50,17 @@ class BaseLLMReranker(BaseModel, ABC):
 
     def _init_client(self):
         if self.client is None:
-
             if self.provider == "azure_openai":
-
                 azure_api_key = self.api_key or os.getenv("AZURE_OPENAI_API_KEY")
                 azure_api_endpoint = self.base_url or os.environ.get("AZURE_OPENAI_ENDPOINT")
                 azure_api_version = self.api_version or os.environ.get("AZURE_OPENAI_API_VERSION")
-                self.client = AsyncAzureOpenAI(api_key=azure_api_key,
-                                               azure_endpoint=azure_api_endpoint,
-                                               api_version=azure_api_version,
-                                               timeout=self.request_timeout,
-                                               max_retries=2)
+                self.client = AsyncAzureOpenAI(
+                    api_key=azure_api_key,
+                    azure_endpoint=azure_api_endpoint,
+                    api_version=azure_api_version,
+                    timeout=self.request_timeout,
+                    max_retries=2,
+                )
             elif self.provider == "openai":
                 api_key_var: str = "OPENAI_API_KEY"
                 openai_api_key = self.api_key or os.getenv(api_key_var)
@@ -69,13 +68,16 @@ class BaseLLMReranker(BaseModel, ABC):
                     raise ValueError(f"OpenAI API key not found in environment variable {api_key_var}")
 
                 base_url = self.base_url or DEFAULT_LLM_ENDPOINT
-                self.client = AsyncOpenAI(api_key=openai_api_key, base_url=base_url, timeout=self.request_timeout, max_retries=2)
+                self.client = AsyncOpenAI(
+                    api_key=openai_api_key, base_url=base_url, timeout=self.request_timeout, max_retries=2
+                )
 
             else:
                 # try to use litellm
                 from mindsdb.api.executor.controllers.session_controller import SessionController
+
                 session = SessionController()
-                module = session.integration_controller.get_handler_module('litellm')
+                module = session.integration_controller.get_handler_module("litellm")
 
                 if module is None or module.Handler is None:
                     raise ValueError(f'Unable to use "{self.provider}" provider. Litellm handler is not installed')
@@ -93,16 +95,12 @@ class BaseLLMReranker(BaseModel, ABC):
             kwargs = self.model_extra.copy()
 
             if self.base_url is not None:
-                kwargs['api_base'] = self.base_url
+                kwargs["api_base"] = self.base_url
 
             if self.api_key is not None:
-                kwargs['api_key'] = self.api_key
+                kwargs["api_key"] = self.api_key
 
-            return await self.client.acompletion(
-                model=f'{self.provider}/{self.model}',
-                messages=messages,
-                args=kwargs
-            )
+            return await self.client.acompletion(model=f"{self.provider}/{self.model}", messages=messages, args=kwargs)
 
     async def _rank(self, query_document_pairs: List[Tuple[str, str]], rerank_callback=None) -> List[Tuple[str, float]]:
         ranked_results = []
@@ -110,11 +108,14 @@ class BaseLLMReranker(BaseModel, ABC):
         # Process in larger batches for better throughput
         batch_size = min(self.max_concurrent_requests * 2, len(query_document_pairs))
         for i in range(0, len(query_document_pairs), batch_size):
-            batch = query_document_pairs[i:i + batch_size]
+            batch = query_document_pairs[i : i + batch_size]
             try:
                 results = await asyncio.gather(
-                    *[self._backoff_wrapper(query=query, document=document, rerank_callback=rerank_callback) for (query, document) in batch],
-                    return_exceptions=True
+                    *[
+                        self._backoff_wrapper(query=query, document=document, rerank_callback=rerank_callback)
+                        for (query, document) in batch
+                    ],
+                    return_exceptions=True,
                 )
 
                 for idx, result in enumerate(results):
@@ -138,7 +139,9 @@ class BaseLLMReranker(BaseModel, ABC):
                         )
 
                         if can_stop_early:
-                            log.info(f"Early stopping after finding {self.num_docs_to_keep} documents with high confidence")
+                            log.info(
+                                f"Early stopping after finding {self.num_docs_to_keep} documents with high confidence"
+                            )
                             return ranked_results
                     except Exception as e:
                         # Don't let early stopping errors stop the whole process
@@ -150,7 +153,6 @@ class BaseLLMReranker(BaseModel, ABC):
         return ranked_results
 
     async def _backoff_wrapper(self, query: str, document: str, rerank_callback=None) -> Any:
-
         async with self._semaphore:
             for attempt in range(self.max_retries):
                 try:
@@ -169,21 +171,23 @@ class BaseLLMReranker(BaseModel, ABC):
                         log.error(f"Failed after {self.max_retries} attempts: {str(e)}")
                         raise
                     # Exponential backoff with jitter
-                    retry_delay = self.retry_delay * (2 ** attempt) + random.uniform(0, 0.1)
+                    retry_delay = self.retry_delay * (2**attempt) + random.uniform(0, 0.1)
                     await asyncio.sleep(retry_delay)
 
     async def search_relevancy(self, query: str, document: str) -> Any:
-
         response = await self.client.chat.completions.create(
             model=self.model,
             messages=[
-                {"role": "system", "content": "Rate the relevance of the document to the query. Respond with 'yes' or 'no'."},
-                {"role": "user", "content": f"Query: {query}\nDocument: {document}\nIs this document relevant?"}
+                {
+                    "role": "system",
+                    "content": "Rate the relevance of the document to the query. Respond with 'yes' or 'no'.",
+                },
+                {"role": "user", "content": f"Query: {query}\nDocument: {document}\nIs this document relevant?"},
             ],
             temperature=self.temperature,
             n=1,
             logprobs=True,
-            max_tokens=1
+            max_tokens=1,
         )
 
         # Extract response and logprobs
@@ -206,29 +210,27 @@ class BaseLLMReranker(BaseModel, ABC):
         return rerank_data
 
     async def search_relevancy_no_logprob(self, query: str, document: str) -> Any:
-
-        prompt = dedent(f"""
+        prompt = dedent(
+            f"""
             Score the relevance between search query and user message on scale between 0 and 100 per cents.
             Consider semantic meaning, key concepts, and contextual relevance.
             Return ONLY a numerical score between 0 and 100 per cents. No other text. Stop after sending a number
             Search query: {query}
-        """)
+        """
+        )
 
         response = await self._call_llm(
-            messages=[
-                {"role": "system", "content": prompt},
-                {"role": "user", "content": document}
-            ],
+            messages=[{"role": "system", "content": prompt}, {"role": "user", "content": document}],
         )
 
         answer = response.choices[0].message.content
 
         try:
-            value = re.findall(r'[\d]+', answer)[0]
+            value = re.findall(r"[\d]+", answer)[0]
             score = float(value) / 100
-            score = max(0., min(score, 1.))
+            score = max(0.0, min(score, 1.0))
         except (ValueError, IndexError):
-            score = 0.
+            score = 0.0
 
         rerank_data = {
             "document": document,
@@ -238,11 +240,12 @@ class BaseLLMReranker(BaseModel, ABC):
         return rerank_data
 
     async def search_relevancy_score(self, query: str, document: str) -> Any:
-
         response = await self.client.chat.completions.create(
             model=self.model,
             messages=[
-                {"role": "system", "content": """
+                {
+                    "role": "system",
+                    "content": """
                     You are an intelligent assistant that evaluates how relevant a given document chunk is to a user's search query.
                     Your task is to analyze the similarity between the search query and the document chunk, and return **only the class label** that best represents the relevance:
 
@@ -294,22 +297,25 @@ class BaseLLMReranker(BaseModel, ABC):
                     Search query: "Time zones in the United States"
                     Document chunk: "The U.S. is divided into six primary time zones: Eastern, Central, Mountain, Pacific, Alaska, and Hawaii-Aleutian."
                     Score: class_4
-                 """},
-
-                {"role": "user", "content": f"""
+                 """,
+                },
+                {
+                    "role": "user",
+                    "content": f"""
                     Now evaluate the following pair:
 
                     Search query: {query}
                     Document chunk: {document}
 
                     Which class best represents the relevance?
-                """}
+                """,
+                },
             ],
             temperature=self.temperature,
             n=1,
             logprobs=True,
             top_logprobs=4,
-            max_tokens=3
+            max_tokens=3,
         )
 
         # Extract response and logprobs
@@ -327,12 +333,7 @@ class BaseLLMReranker(BaseModel, ABC):
         total_prob = sum(class_probs.values())
         class_probs = {k: v / total_prob for k, v in class_probs.items()}
         # Assign weights to classes
-        class_weights = {
-            "class_1": 0.25,
-            "class_2": 0.5,
-            "class_3": 0.75,
-            "class_4": 1.0
-        }
+        class_weights = {"class_1": 0.25, "class_2": 0.5, "class_3": 0.75, "class_4": 1.0}
         # Compute the final smooth score
         score = sum(class_weights.get(class_label, 0) * prob for class_label, prob in class_probs.items())
         if score is not None:
@@ -341,16 +342,14 @@ class BaseLLMReranker(BaseModel, ABC):
             elif score < 0.0:
                 score = 0.0
 
-        rerank_data = {
-            "document": document,
-            "relevance_score": score
-        }
+        rerank_data = {"document": document, "relevance_score": score}
         return rerank_data
 
     def get_scores(self, query: str, documents: list[str]):
         query_document_pairs = [(query, doc) for doc in documents]
         # Create event loop and run async code
         import asyncio
+
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:

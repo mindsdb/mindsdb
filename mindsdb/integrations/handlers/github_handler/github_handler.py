@@ -4,13 +4,7 @@ from mindsdb_sql_parser import parse_sql
 
 from mindsdb.integrations.handlers.github_handler.github_tables import (
     GithubIssuesTable,
-    GithubPullRequestsTable,
-    GithubCommitsTable,
-    GithubReleasesTable,
-    GithubBranchesTable,
-    GithubContributorsTable,
-    GithubMilestonesTable,
-    GithubProjectsTable, GithubFilesTable
+    GithubFilesTable
 )
 from mindsdb.integrations.handlers.github_handler.generate_api import get_github_types, get_github_methods, GHTable
 from mindsdb.integrations.libs.api_handler import APIHandler
@@ -58,7 +52,6 @@ class GithubHandler(APIHandler):
 
             table = GHTable(self, github_types=github_types, method=method)
             self._register_table(method.table_name, table)
-
 
     def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.

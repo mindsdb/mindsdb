@@ -16,6 +16,7 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+
 class GoogleBooksHandler(APIHandler):
     """
         A class for handling connections and interactions with the Google Books API.
@@ -81,7 +82,7 @@ class GoogleBooksHandler(APIHandler):
         response = StatusResponse(False)
 
         try:
-            service = self.connect()
+            self.connect()
             response.success = True
         except Exception as e:
             logger.error(f'Error connecting to Google Books API: {e}!')

@@ -1185,8 +1185,6 @@ class KnowledgeBaseController:
         project_id = self.session.database_controller.get_project(project_name).id
         kb_table = self.get_table(table_name, project_id)
 
-        scores = EvaluateBase.run(
-            self.session, kb_table, params
-        )
+        scores = EvaluateBase.run(self.session, kb_table, params)
 
         return scores

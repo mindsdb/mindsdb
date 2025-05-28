@@ -35,6 +35,7 @@ Don't generate questions like "What is being amended in the application?" becaus
 The question should be answerable without the text, but the answer should be present in the text.
 """
 
+
 class EvaluateBase:
     DEFAULT_QUESTION_COUNT = 20
     DEFAULT_SAMPLE_SIZE = 10000
@@ -62,8 +63,8 @@ class EvaluateBase:
         - TODO if not defined, get default llm setting for knowledge base
 
         """
-        if 'llm' in params:
-            llm_params = params['llm']
+        if "llm" in params:
+            llm_params = params["llm"]
         else:
             llm_params = self.kb._kb.params.get("reranking_model")
 
@@ -73,36 +74,31 @@ class EvaluateBase:
     #     self.kb.call_llm(messages, self._llm_params)
 
     def generate_test_data(self, gen_params) -> pd.DataFrame:
-
-        if 'from_sql' in gen_params:
+        if "from_sql" in gen_params:
             # get data from sql
-            query = parse_sql(gen_params['from_sql'])
+            query = parse_sql(gen_params["from_sql"])
             if not isinstance(query, Select) or query.from_table is None:
-                raise ValueError(f'Query not supported {gen_params["from_sql"]}')
+                raise ValueError(f"Query not supported {gen_params['from_sql']}")
 
             dn, table_name = self._get_dn_table(query.from_table)
             query.from_table = table_name
             query.limit = Constant(self.DEFAULT_SAMPLE_SIZE)
 
-            response = dn.query(
-                query=query,
-                session=self.session
-            )
+            response = dn.query(query=query, session=self.session)
             df = response.data_frame
 
             # leave first column and set name as chunk_content
             df = df.iloc[:, [0]]
-            df = df.columns['chunk_content']
+            df = df.columns["chunk_content"]
 
         else:
             # get data from knowledge base
-            df = self.kb.select_query(Select(
-                targets=[Identifier('chunk_content')],
-                limit=Constant(self.DEFAULT_SAMPLE_SIZE)
-            ))
+            df = self.kb.select_query(
+                Select(targets=[Identifier("chunk_content")], limit=Constant(self.DEFAULT_SAMPLE_SIZE))
+            )
 
-        if 'count' in gen_params:
-            number_of_questions = gen_params['count']
+        if "count" in gen_params:
+            number_of_questions = gen_params["count"]
         else:
             number_of_questions = self.DEFAULT_QUESTION_COUNT
 
@@ -118,10 +114,7 @@ class EvaluateBase:
             targets=[Star()],
             from_table=table_name,
         )
-        response = dn.query(
-            query=query,
-            session=self.session
-        )
+        response = dn.query(query=query, session=self.session)
         return response.data_frame
 
     def _get_dn_table(self, table_name):
@@ -149,17 +142,17 @@ class EvaluateBase:
     def run_evaluate(self, params) -> pd.DataFrame:
         self._set_llm_client(params)
 
-        if 'test_table' not in params:
+        if "test_table" not in params:
             raise ValueError('The table with  has to be defined in "test_table" parameter')
 
-        test_table = params['test_table']
+        test_table = params["test_table"]
 
         if isinstance(test_table, str):
             test_table = Identifier(test_table)
 
-        if 'generate_data' in params:
+        if "generate_data" in params:
             # generate question / answers using llm
-            gen_params = params['generate_data']
+            gen_params = params["generate_data"]
             if not isinstance(gen_params, dict):
                 gen_params = {}
             test_data = self.generate_test_data(gen_params)
@@ -169,12 +162,12 @@ class EvaluateBase:
             test_data = self.get_test_data(test_table)
 
         scores = self.evaluate(test_data)
-        scores['name'] = self.name
-        scores['created_at'] = dt.datetime.now()
+        scores["name"] = self.name
+        scores["created_at"] = dt.datetime.now()
 
         # save scores
-        if 'save_to' in params:
-            to_table = params['save_to']
+        if "save_to" in params:
+            to_table = params["save_to"]
             if isinstance(to_table, str):
                 to_table = Identifier(to_table)
             self.save_to_table(to_table, scores)
@@ -183,10 +176,9 @@ class EvaluateBase:
 
     @staticmethod
     def run(session, kb_table, params) -> pd.DataFrame:
+        evaluate_method = params.get("method", "rerank")
 
-        evaluate_method = params.get('method', 'rerank')
-
-        if evaluate_method == 'rerank':
+        if evaluate_method == "rerank":
             cls = EvaluateRerank
         else:
             raise NotImplementedError(f"Method {evaluate_method} not implemented")
@@ -195,14 +187,12 @@ class EvaluateBase:
 
 
 class EvaluateRerank(EvaluateBase):
-
     TOP_K = 10
 
     def generate(self, sampled_df: pd.DataFrame) -> pd.DataFrame:
-
         qa_data = []
         count_errors = 0
-        for chunk_content in sampled_df['chunk_content']:
+        for chunk_content in sampled_df["chunk_content"]:
             try:
                 question, answer = self.generate_question_answer(chunk_content)
             except ValueError as e:
@@ -212,64 +202,49 @@ class EvaluateRerank(EvaluateBase):
                     raise e
                 continue
 
-            qa_data.append({
-                "text": chunk_content,
-                "question": question,
-                "answer": answer
-            })
+            qa_data.append({"text": chunk_content, "question": question, "answer": answer})
 
         df = pd.DataFrame(qa_data)
-        df['id'] = df.index
+        df["id"] = df.index
         return df
 
     def generate_question_answer(self, text: str) -> (str, str):
         messages = [
-            {'role': "system", "content": GENERATE_QA_SYSTEM_PROMPT},
-            {'role': "user", "content": f"\n\nText:\n{text}\n\n"}
+            {"role": "system", "content": GENERATE_QA_SYSTEM_PROMPT},
+            {"role": "user", "content": f"\n\nText:\n{text}\n\n"},
         ]
         response = self.llm_client.completion(messages)
         answer = response.choices[0].message.content
         try:
             output = json.loads(answer)
         except json.JSONDecodeError:
-            raise ValueError(f'Could not parse response from LLM: {answer}')
+            raise ValueError(f"Could not parse response from LLM: {answer}")
 
-        if 'question' not in output or 'answer' not in output:
-            raise ValueError('Can''t find question/answer in LLM response')
+        if "question" not in output or "answer" not in output:
+            raise ValueError("Cant find question/answer in LLM response")
 
-        return output.get('question'), output.get('answer')
+        return output.get("question"), output.get("answer")
 
     def evaluate(self, test_data: pd.DataFrame) -> pd.DataFrame:
-
         json_to_log_list = []
-        questions = test_data.to_dict('records')
+        questions = test_data.to_dict("records")
 
         for i, item in enumerate(questions):
-            question = item['question']
-            ground_truth = item['answer']
+            question = item["question"]
+            ground_truth = item["answer"]
 
             start_time = time.time()
-            logger.debug(f"Querying [{i+1}/{len(questions)}]: {question}")
-            df_answers = self.kb.select_query(Select(
-                targets=[Identifier('chunk_content')],
-                limit=Constant(self.TOP_K)
-            ))
+            logger.debug(f"Querying [{i + 1}/{len(questions)}]: {question}")
+            df_answers = self.kb.select_query(Select(targets=[Identifier("chunk_content")], limit=Constant(self.TOP_K)))
             query_time = time.time() - start_time
 
-            proposed_responses = list(df_answers['chunk_content'])
+            proposed_responses = list(df_answers["chunk_content"])
 
             # generate answer using llm
-            relevance_score_list = self.kb.score_documents(
-                question,
-                proposed_responses,
-                self.llm_client.params
-            )
+            relevance_score_list = self.kb.score_documents(question, proposed_responses, self.llm_client.params)
 
             # set binary relevancy
-            binary_relevancy_list = [
-                1 if score >= 0.5 else 0
-                for score in relevance_score_list
-            ]
+            binary_relevancy_list = [1 if score >= 0.5 else 0 for score in relevance_score_list]
 
             # calculate first relevant position
             first_relevant_position = next((i for i, x in enumerate(binary_relevancy_list) if x == 1), None)
@@ -280,7 +255,7 @@ class EvaluateRerank(EvaluateBase):
                 "binary_relevancy_list": binary_relevancy_list,
                 "relevance_score_list": relevance_score_list,
                 "first_relevant_position": first_relevant_position,
-                "query_time": query_time
+                "query_time": query_time,
             }
             json_to_log_list.append(json_to_log)
 
@@ -381,17 +356,20 @@ class EvaluateRerank(EvaluateBase):
                 average_relevance_score_by_k.append(round(avg_k, 2))
 
         average_first_relevant_position = (
-            sum(first_relevant_positions) / len(first_relevant_positions)
-            if first_relevant_positions else None
+            sum(first_relevant_positions) / len(first_relevant_positions) if first_relevant_positions else None
         )
 
         mean_mrr = sum(mrr_list) / len(mrr_list) if mrr_list else 0
         hit_at_k_avg = [round(sum(col) / len(col), 2) for col in zip(*hit_at_k_matrix)] if hit_at_k_matrix else []
-        binary_precision_at_k_avg = [round(sum(col) / len(col), 2) for col in zip(*binary_precision_at_k_matrix)] if binary_precision_at_k_matrix else []
+        binary_precision_at_k_avg = (
+            [round(sum(col) / len(col), 2) for col in zip(*binary_precision_at_k_matrix)]
+            if binary_precision_at_k_matrix
+            else []
+        )
         avg_entropy = sum(entropy_list) / len(entropy_list) if entropy_list else 0
         avg_ndcg = sum(ndcg_list) / len(ndcg_list) if ndcg_list else 0
 
-        avg_query_time = sum(item['query_time'] for item in json_to_log_list) / num_queries
+        avg_query_time = sum(item["query_time"] for item in json_to_log_list) / num_queries
 
         return {
             "avg_relevancy": average_relevancy,
@@ -402,5 +380,5 @@ class EvaluateRerank(EvaluateBase):
             "bin_precision_at_k": binary_precision_at_k_avg,
             "avg_entropy": avg_entropy,
             "avg_ndcg": avg_ndcg,
-            "avg_query_time": avg_query_time
+            "avg_query_time": avg_query_time,
         }

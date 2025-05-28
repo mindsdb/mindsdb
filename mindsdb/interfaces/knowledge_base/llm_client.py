@@ -9,38 +9,36 @@ from mindsdb.utilities.config import config
 
 class LLMClient:
     def __init__(self, llm_params=None):
-        params = copy.deepcopy(config.get('default_llm', {}))
+        params = copy.deepcopy(config.get("default_llm", {}))
 
         if llm_params:
             params.update(llm_params)
 
         self.params = params
 
-        self.provider = params.get('provider', 'openai')
+        self.provider = params.get("provider", "openai")
 
         if "api_key" not in params:
             params["api_key"] = get_api_key(self.provider, params, strict=False)
 
         if self.provider == "azure_openai":
-            azure_api_key = params.get('api_key') or os.getenv("AZURE_OPENAI_API_KEY")
-            azure_api_endpoint = params.get('base_url') or os.environ.get("AZURE_OPENAI_ENDPOINT")
-            azure_api_version = params.get('api_version') or os.environ.get("AZURE_OPENAI_API_VERSION")
+            azure_api_key = params.get("api_key") or os.getenv("AZURE_OPENAI_API_KEY")
+            azure_api_endpoint = params.get("base_url") or os.environ.get("AZURE_OPENAI_ENDPOINT")
+            azure_api_version = params.get("api_version") or os.environ.get("AZURE_OPENAI_API_VERSION")
             self._llm_client = AzureOpenAI(
-                api_key=azure_api_key,
-                azure_endpoint=azure_api_endpoint,
-                api_version=azure_api_version,
-                max_retries=2
+                api_key=azure_api_key, azure_endpoint=azure_api_endpoint, api_version=azure_api_version, max_retries=2
             )
         elif self.provider == "openai":
-            openai_api_key = params.get('api_key') or os.getenv("OPENAI_API_KEY")
-            base_url = params.get('base_url')
+            openai_api_key = params.get("api_key") or os.getenv("OPENAI_API_KEY")
+            base_url = params.get("base_url")
             self.client = OpenAI(api_key=openai_api_key, base_url=base_url, max_retries=2)
 
         else:
             # try to use litellm
             from mindsdb.api.executor.controllers.session_controller import SessionController
+
             session = SessionController()
-            module = session.integration_controller.get_handler_module('litellm')
+            module = session.integration_controller.get_handler_module("litellm")
 
             if module is None or module.Handler is None:
                 raise ValueError(f'Unable to use "{self.provider}" provider. Litellm handler is not installed')
@@ -52,19 +50,15 @@ class LLMClient:
 
         if self.provider in ("azure_openai", "openai"):
             return self.client.chat.completions.create(
-                model=params['model_name'],
+                model=params["model_name"],
                 messages=messages,
             )
         else:
             kwargs = params.copy()
-            model = kwargs.pop('model_name')
+            model = kwargs.pop("model_name")
 
-            base_url = params.pop('base_url', None)
+            base_url = params.pop("base_url", None)
             if base_url is not None:
-                kwargs['api_base'] = base_url
+                kwargs["api_base"] = base_url
 
-            return self.client.completion(
-                model=f'{self.provider}/{model}',
-                messages=messages,
-                args=kwargs
-            )
+            return self.client.completion(model=f"{self.provider}/{model}", messages=messages, args=kwargs)

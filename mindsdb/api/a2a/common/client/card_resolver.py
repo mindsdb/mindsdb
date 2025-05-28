@@ -1,5 +1,5 @@
 import httpx
-from common.types import (
+from mindsdb.api.a2a.common.types import (
     AgentCard,
     A2AClientJSONError,
 )

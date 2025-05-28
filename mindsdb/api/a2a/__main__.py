@@ -4,15 +4,15 @@ import click
 from dotenv import load_dotenv
 
 # A2A specific imports
-from .common.types import (
+from mindsdb.api.a2a.common.types import (
     AgentCard,
     AgentCapabilities,
     AgentSkill,
     MissingAPIKeyError,
 )
-from .common.server.server import A2AServer
-from .task_manager import AgentTaskManager
-from .agent import MindsDBAgent
+from mindsdb.api.a2a.common.server.server import A2AServer
+from mindsdb.api.a2a.task_manager import AgentTaskManager
+from mindsdb.api.a2a.agent import MindsDBAgent
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(

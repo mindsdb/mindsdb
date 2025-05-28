@@ -4,10 +4,6 @@ import pandas as pd
 
 from mindsdb.interfaces.data_catalog.base_data_catalog import BaseDataCatalog
 from mindsdb.interfaces.storage import db
-from mindsdb.utilities import log
-
-
-logger = log.getLogger("mindsdb")
 
 
 class DataCatalogLoader(BaseDataCatalog):
@@ -19,6 +15,9 @@ class DataCatalogLoader(BaseDataCatalog):
         """
         Load the metadata from the handler and store it in the database.
         """
+        if not self.is_data_catalog_supported():
+            return
+
         loaded_table_names = self._get_loaded_table_names()
 
         tables = self._load_table_metadata(loaded_table_names)
@@ -48,7 +47,7 @@ class DataCatalogLoader(BaseDataCatalog):
         table_names = [table.name for table in tables]
 
         if table_names:
-            logger.info(f"Tables already loaded in the data catalog: {', '.join(table_names)}.")
+            self.logger.info(f"Tables already loaded in the data catalog: {', '.join(table_names)}.")
 
         return table_names
 
@@ -56,7 +55,7 @@ class DataCatalogLoader(BaseDataCatalog):
         """
         Load the table metadata from the handler.
         """
-        logger.info(f"Loading table metadata for {self.database_name}")
+        self.logger.info(f"Loading table metadata for {self.database_name}")
         response = self.data_handler.meta_get_tables(self.table_names)
         df = response.data_frame
 
@@ -65,7 +64,7 @@ class DataCatalogLoader(BaseDataCatalog):
             df = df[~df["table_name"].isin(loaded_table_names)]
 
         if df.empty:
-            logger.info(f"No new tables to load for {self.database_name}.")
+            self.logger.info(f"No new tables to load for {self.database_name}.")
             return []
 
         return self._add_table_metadata(df)
@@ -94,7 +93,7 @@ class DataCatalogLoader(BaseDataCatalog):
         """
         Load the column metadata from the handler.
         """
-        logger.info(f"Loading column metadata for {self.database_name}")
+        self.logger.info(f"Loading column metadata for {self.database_name}")
         response = self.data_handler.meta_get_columns(self.table_names)
         df = response.data_frame
 
@@ -124,7 +123,7 @@ class DataCatalogLoader(BaseDataCatalog):
         """
         Load the column statistics metadata from the handler.
         """
-        logger.info(f"Loading column statistics for {self.database_name}")
+        self.logger.info(f"Loading column statistics for {self.database_name}")
         response = self.data_handler.meta_get_column_statistics(self.table_names)
         df = response.data_frame
 
@@ -166,7 +165,7 @@ class DataCatalogLoader(BaseDataCatalog):
         """
         Load the primary keys metadata from the handler.
         """
-        logger.info(f"Loading primary keys for {self.database_name}")
+        self.logger.info(f"Loading primary keys for {self.database_name}")
         response = self.data_handler.meta_get_primary_keys(self.table_names)
         df = response.data_frame
 
@@ -201,7 +200,7 @@ class DataCatalogLoader(BaseDataCatalog):
         """
         Load the foreign keys metadata from the handler.
         """
-        logger.info(f"Loading foreign keys for {self.database_name}")
+        self.logger.info(f"Loading foreign keys for {self.database_name}")
         response = self.data_handler.meta_get_foreign_keys(self.table_names)
         df = response.data_frame
 
@@ -246,10 +245,13 @@ class DataCatalogLoader(BaseDataCatalog):
         """
         Remove the metadata for the specified database from the data catalog.
         """
+        if not self.is_data_catalog_supported():
+            return
+
         meta_tables = db.session.query(db.MetaTables).filter_by(integration_id=self.integration_id).all()
 
         if not meta_tables:
-            logger.info(f"No metadata found for {self.database_name}. Nothing to remove.")
+            self.logger.info(f"No metadata found for {self.database_name}. Nothing to remove.")
             return
 
         for table in meta_tables:
@@ -264,4 +266,4 @@ class DataCatalogLoader(BaseDataCatalog):
 
             db.session.delete(table)
         db.session.commit()
-        logger.info(f"Metadata for {self.database_name} removed successfully.")
+        self.logger.info(f"Metadata for {self.database_name} removed successfully.")

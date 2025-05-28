@@ -2,6 +2,10 @@ from typing import List, Optional, Union
 
 from mindsdb.integrations.libs.api_handler import MetaAPIHandler
 from mindsdb.integrations.libs.base import MetaDatabaseHandler
+from mindsdb.utilities import log
+
+
+logger = log.getLogger("mindsdb")
 
 
 class BaseDataCatalog:
@@ -28,4 +32,20 @@ class BaseDataCatalog:
             database_name
         )
         self.integration_id = session.integration_controller.get(database_name)["id"]
+        self.integration_engine = session.integration_controller.get(database_name)["engine"]
         self.table_names = table_names
+
+        self.logger = logger
+
+    def is_data_catalog_supported(self) -> bool:
+        """
+        Check if the data catalog is supported for the given database.
+
+        Returns:
+            bool: True if the data catalog is supported, False otherwise.
+        """
+        if not isinstance(self.data_handler, (MetaDatabaseHandler, MetaAPIHandler)):
+            self.logger.warning(f"Data catalog is not supported for the '{self.integration_engine}' integration'. ")
+            return False
+
+        return True

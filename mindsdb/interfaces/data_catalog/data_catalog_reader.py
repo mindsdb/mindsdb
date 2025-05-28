@@ -2,10 +2,6 @@ from typing import List, Optional
 
 from mindsdb.interfaces.data_catalog.base_data_catalog import BaseDataCatalog
 from mindsdb.interfaces.storage import db
-from mindsdb.utilities import log
-
-
-logger = log.getLogger("mindsdb")
 
 
 class DataCatalogReader(BaseDataCatalog):
@@ -17,10 +13,13 @@ class DataCatalogReader(BaseDataCatalog):
         """
         Read the metadata from the data catalog and return it as a string.
         """
+        if not self.is_data_catalog_supported():
+            return f"Data catalog is not supported for database '{self.database_name}'."
+
         tables = self._read_metadata()
 
         if not tables:
-            logger.warning(f"No metadata found for database '{self.database_name}'")
+            self.logger.warning(f"No metadata found for database '{self.database_name}'")
             return f"No metadata found for database '{self.database_name}'"
 
         metadata_str = "Data Catalog: \n"

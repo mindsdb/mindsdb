@@ -425,6 +425,11 @@ class APIHandler(BaseHandler):
         return Response(RESPONSE_TYPE.TABLE, df)
 
 
+# TODO: Determine how MetaAPIHandler will interact with the data catalog.
+class MetaAPIHandler(APIHandler):
+    ...
+
+
 class APIChatHandler(APIHandler):
 
     def get_chat_config(self):

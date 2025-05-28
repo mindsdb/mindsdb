@@ -9,13 +9,12 @@ from pathlib import Path
 import lightwood
 import pandas as pd
 import requests
-from lightwood.api.types import JsonAI, ProblemDefinition
+from lightwood.api.types import JsonAI
 from pandas.core.frame import DataFrame
 
 import mindsdb.utilities.profiler as profiler
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.integrations.utilities.utils import format_exception_error
-from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.storage.fs import RESOURCE_GROUP, FileStorage
 from mindsdb.interfaces.storage.json import get_json_storage
@@ -25,6 +24,7 @@ from mindsdb.utilities.functions import mark_process
 from .utils import brack_to_mod, rep_recur, unpack_jsonai_old_args
 
 logger = log.getLogger(__name__)
+
 
 def create_learn_mark():
     if os.name == 'posix':

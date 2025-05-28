@@ -1,6 +1,5 @@
 import pandas as pd
 from mindsdb.utilities import log
-from mindsdb_sql_parser import parse_sql
 from mindsdb.integrations.libs.api_handler import APIHandler, FuncParser
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -27,12 +26,13 @@ PLAID_ENV = {
 
 logger = log.getLogger(__name__)
 
+
 class PlaidHandler(APIHandler):
     '''A class for handling connections and interactions with the Plaid API.
 
     Attributes:
         plaid_env (str): Enviroment used by user [ 'sandbox'(default) OR 'development' OR 'production' ].
-        client_id (str): Your Plaid API client_id. 
+        client_id (str): Your Plaid API client_id.
         secret (str): Your Plaid API secret
         access_token (str): The access token for the Plaid account.
     '''
@@ -119,7 +119,7 @@ class PlaidHandler(APIHandler):
             DataFrame
         '''
 
-        result=pd.DataFrame()
+        result = pd.DataFrame()
         if method_name == 'get_balance':
             result = self.get_balance(params=params)
             result = BalanceTable(self).filter_columns(result=result)
@@ -143,9 +143,9 @@ class PlaidHandler(APIHandler):
         self.connect()
         if params.get('last_updated_datetime') is not None:
             options = AccountsBalanceGetRequestOptions(
-                min_last_updated_datetime=datetime.strptime( 
+                min_last_updated_datetime=datetime.strptime(
                     params.get('last_updated_datetime')
-                    )
+                )
             )
 
             response = self.api.accounts_balance_get(
@@ -192,7 +192,7 @@ class PlaidHandler(APIHandler):
             end_date = datetime.strptime(params.get('end_date'), '%Y-%m-%d').date()
         else:
             raise Exception('start_date and end_date is required in format YYYY-MM-DD ')
-      
+
         request = TransactionsGetRequest(
             access_token=self.access_token,
             start_date=start_date,
@@ -207,17 +207,17 @@ class PlaidHandler(APIHandler):
         # transactions and retrieve all available data
         while len(transactions) < response['total_transactions']:
             request = TransactionsGetRequest(
-                    access_token=self.access_token,
-                    start_date=start_date,
-                    end_date=end_date,
-                    options=TransactionsGetRequestOptions(
-                        offset=len(transactions)
-                    )
+                access_token=self.access_token,
+                start_date=start_date,
+                end_date=end_date,
+                options=TransactionsGetRequestOptions(
+                    offset=len(transactions)
+                )
             )
             response = self.api.transactions_get(request)
             transactions.extend(parse_transaction(response['transactions']))
 
-        # Converting date column from str 
+        # Converting date column from str
         df = pd.DataFrame(transactions)
         for i in ['date', 'authorized_date']:
             df[i] = pd.to_datetime(df[i]).dt.date

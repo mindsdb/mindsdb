@@ -251,3 +251,27 @@ class DataCatalogLoader:
 
         db.session.add_all(foreign_keys)
         db.session.commit()
+
+    def unload_metadata(self) -> None:
+        """
+        Remove the metadata for the specified database from the data catalog.
+        """
+        meta_tables = db.session.query(db.MetaTables).filter_by(integration_id=self.integration_id).all()
+
+        if not meta_tables:
+            logger.info(f"No metadata found for {self.database_name}. Nothing to remove.")
+            return
+
+        for table in meta_tables:
+            db.session.query(db.MetaPrimaryKeys).filter_by(table_id=table.id).delete()
+            db.session.query(db.MetaForeignKeys).filter(
+                (db.MetaForeignKeys.parent_table_id == table.id) | (db.MetaForeignKeys.child_table_id == table.id)
+            ).delete()
+            meta_columns = db.session.query(db.MetaColumns).filter_by(table_id=table.id).all()
+            for col in meta_columns:
+                db.session.query(db.MetaColumnStatistics).filter_by(column_id=col.id).delete()
+                db.session.delete(col)
+
+            db.session.delete(table)
+        db.session.commit()
+        logger.info(f"Metadata for {self.database_name} removed successfully.")

@@ -20,7 +20,7 @@ connection_args = OrderedDict(
     port={
         'type': ARG_TYPE.INT,
         'description': 'Specify port to connect SQreamDB server'
-    }, 
+    },
     database={
         'type': ARG_TYPE.STR,
         'description': 'Specify database name  to connect SQreamDB server'

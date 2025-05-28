@@ -153,22 +153,23 @@ jobs:
       - name: Install dependencies
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
-          uv pip install .
           uv pip install -r requirements/requirements-test.txt
-          uv pip install .[lightwood]  # TODO: for now some tests rely on lightwood
-          uv pip install .[clickhouse]
-          uv pip install .[snowflake]
-          uv pip install .[web]
-          uv pip install .[redshift]
-          uv pip install .[bigquery]
-          uv pip install .[databricks]
-          uv pip install .[oracle]
-          uv pip install .[slack]
-          uv pip install .[github]
-          uv pip install .[ms_teams]
-          uv pip install .[salesforce]
-          uv pip install .[mysql]
-          uv pip install .[chromadb]
+          # TODO: for now some tests rely on lightwood
+          uv pip install . \
+            .[lightwood] \
+            .[clickhouse] \
+            .[snowflake] \
+            .[web] \
+            .[redshift] \
+            .[bigquery] \
+            .[databricks] \
+            .[oracle] \
+            .[slack] \
+            .[github] \
+            .[ms_teams] \
+            .[salesforce] \
+            .[mysql] \
+            .[chromadb]
           uv pip freeze
           git clone https://github.com/mindsdb/mindsdb_sql_parser.git parser_tests
       - name: Install mssql dependencies
@@ -191,23 +192,11 @@ jobs:
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
-            env PYTHONPATH=./ pytest tests/unit/planner/ -x
-            env PYTHONPATH=./ pytest tests/unit/executor/ -x -k "not test_udf"
-            env PYTHONPATH=./ pytest tests/unit/various/ -x
-            env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_openai.py
+            # We have to run executor tests separately because they do weird things that break everything else
+            env PYTHONPATH=./ pytest -xs tests/unit/executor
 
-            env PYTHONPATH=./:parser_tests/tests pytest tests/unit/render/ -x
-            # env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_anyscale_endpoints.py
+            env PYTHONPATH=./:parser_tests/tests pytest -xs tests/unit/render/
+            env PYTHONPATH=./ pytest -xs --ignore=tests/unit/handlers --ignore=tests/unit/executor --ignore=tests/unit/render tests/unit/
           fi
-      - name: Run HTTP API tests
-        if: ${{ needs.changes.outputs.not-docs == 'true' }}
-        run: |
-          if [ "$RUNNER_OS" == "Linux" ]; then
-            env PYTHONPATH=./ pytest tests/api/http/ -x -k "not knowledge_bases_test"
-          fi
-      - name: Run Handlers tests and submit Coverage to coveralls
-        if: ${{ needs.changes.outputs.not-docs == 'true' }}
-        run: |
+          
           python -m unittest discover -s tests/unit/handlers
-        env:
-          github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}

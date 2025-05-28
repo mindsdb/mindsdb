@@ -194,7 +194,7 @@ class NewsAPIHandler(APIHandler):
             try:
                 result = self.api.get_everything(**params)
             except Exception as e:
-                raise RuntimeError(f"API call failed: {e}") 
+                raise RuntimeError(f"API call failed: {e}")
             articles = result["articles"]
             for article in articles:
                 article["source_id"] = article["source"]["id"]

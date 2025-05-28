@@ -50,7 +50,7 @@ class LlamaIndexHandler(BaseMLEngine):
         # workaround to create llama model without input data
         if df is None or df.empty:
             df = pd.DataFrame([{"text": ""}])
-        
+
         args_reader = args.get("using", {}).get("reader", self.default_reader)
 
         if args_reader == "DFReader":
@@ -138,7 +138,7 @@ class LlamaIndexHandler(BaseMLEngine):
 
             if input_column is None:
                 raise Exception(
-                    f"`input_column` must be provided at model creation time or through USING clause when predicting. Please try again."
+                    "`input_column` must be provided at model creation time or through USING clause when predicting. Please try again."
                 )  # noqa
 
             if input_column not in df.columns:
@@ -151,7 +151,7 @@ class LlamaIndexHandler(BaseMLEngine):
         index_path = self.model_storage.folder_get("context")
         storage_context = StorageContext.from_defaults(persist_dir=index_path)
         self._get_service_context()
-       
+
         index = load_index_from_storage(
             storage_context
         )
@@ -182,7 +182,7 @@ class LlamaIndexHandler(BaseMLEngine):
             llm_kwargs["model_name"] = args["using"]["model_name"]
         if "max_tokens" in args["using"]:
             llm_kwargs["max_tokens"] = args["using"]["max_tokens"]
-        #only way this works is by sending the key through openai
+        # only way this works is by sending the key through openai
 
         openai.api_key = openai_api_key
         if Settings.llm is None:

@@ -1,8 +1,8 @@
 """added data catalog tables
 
-Revision ID: 1a7b578d4b85
-Revises: 53502b6d63bf
-Create Date: 2025-05-20 13:51:28.562649
+Revision ID: a44643042fe8
+Revises: 9f150e4f9a05
+Create Date: 2025-05-28 17:20:57.300313
 
 """
 
@@ -13,8 +13,8 @@ from mindsdb.interfaces.storage.db import Array
 
 
 # revision identifiers, used by Alembic.
-revision = "1a7b578d4b85"
-down_revision = "53502b6d63bf"
+revision = "a44643042fe8"
+down_revision = "9f150e4f9a05"
 branch_labels = None
 depends_on = None
 
@@ -39,9 +39,7 @@ def upgrade():
     op.create_table(
         "meta_columns",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column(
-            "table_id", sa.Integer(), sa.ForeignKey("meta_tables.id"), nullable=False
-        ),
+        sa.Column("table_id", sa.Integer(), sa.ForeignKey("meta_tables.id"), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("data_type", sa.String(), nullable=False),
         sa.Column("default_value", sa.String(), nullable=True),
@@ -67,9 +65,7 @@ def upgrade():
 
     op.create_table(
         "meta_primary_keys",
-        sa.Column(
-            "table_id", sa.Integer(), sa.ForeignKey("meta_tables.id"), primary_key=True
-        ),
+        sa.Column("table_id", sa.Integer(), sa.ForeignKey("meta_tables.id"), primary_key=True),
         sa.Column(
             "column_id",
             sa.Integer(),

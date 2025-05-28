@@ -1,4 +1,3 @@
-import ast
 import csv
 import io
 import time
@@ -563,7 +562,7 @@ class PostgresHandler(MetaDatabaseHandler):
         Returns:
             Response: A response object containing the metadata information, formatted as per the `Response` class.
         """
-        query = f"""
+        query = """
             SELECT
                 t.table_name,
                 t.table_schema,
@@ -598,7 +597,7 @@ class PostgresHandler(MetaDatabaseHandler):
         Returns:
             Response: A response object containing the column metadata.
         """
-        query = f"""
+        query = """
             SELECT
                 c.table_name,
                 c.column_name,
@@ -634,7 +633,7 @@ class PostgresHandler(MetaDatabaseHandler):
         Returns:
             dict: A dictionary containing the column statistics.
         """
-        query = f"""
+        query = """
             SELECT
                 ps.attname AS column_name,
                 ps.tablename AS table_name,
@@ -698,7 +697,7 @@ class PostgresHandler(MetaDatabaseHandler):
         Returns:
             Response: A response object containing the primary key information.
         """
-        query = f"""
+        query = """
             SELECT
                 tc.table_name,
                 kcu.column_name,
@@ -731,7 +730,7 @@ class PostgresHandler(MetaDatabaseHandler):
         Returns:
             Response: A response object containing the foreign key information.
         """
-        query = f"""
+        query = """
             SELECT
                 ccu.table_name AS parent_table_name,
                 ccu.column_name AS parent_column_name,

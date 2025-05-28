@@ -596,7 +596,7 @@ class PostgresHandler(CatalogDatabaseHandler):
                 ps.attname AS column_name,
                 ps.tablename AS table_name,
                 ps.most_common_vals AS most_common_values,
-                ps.most_common_freqs AS most_common_frequencies,
+                ps.most_common_freqs::text AS most_common_frequencies,
                 ps.null_frac * 100 AS null_percentage,
                 ps.n_distinct AS distinct_values_count,
                 ps.histogram_bounds AS histogram_bounds
@@ -620,11 +620,14 @@ class PostgresHandler(CatalogDatabaseHandler):
                 for item in row if item.strip()
             ] if x else []
 
-        # Convert most_common_values to a list.
+        # Convert most_common_values and most_common_frequencies from string representation to lists.
         df['most_common_values'] = df['most_common_values'].apply(
             lambda x: parse_pg_array_string(x)
         )
-        
+        df['most_common_frequencies'] = df['most_common_frequencies'].apply(
+            lambda x: parse_pg_array_string(x)
+        )
+
         # Get the minimum and maximum values from the histogram bounds.
         df['minimum_value'] = df['histogram_bounds'].apply(
             lambda x: parse_pg_array_string(x)[0] if x else None

@@ -56,7 +56,7 @@ MAIN_RULE_IGNORES = {
         # A2A API internal imports
         "common", "task_manager", "agent"
     ],
-    "DEP002": ["psycopg2-binary", "lark", "transformers", "langchain-experimental", "lxml", "openpyxl", "onnxruntime", "pydantic_core", "writer-sdk"]
+    "DEP002": ["psycopg2-binary", "lark", "transformers", "langchain-experimental", "lxml", "openpyxl", "onnxruntime", "pydantic_core"]
 }
 
 

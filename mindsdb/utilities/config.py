@@ -214,6 +214,7 @@ class Config:
                 "mindsdb_port": 47334,
                 "agent_name": "my_agent",
                 "project_name": "mindsdb",
+                "enabled": False,
             },
         }
         # endregion

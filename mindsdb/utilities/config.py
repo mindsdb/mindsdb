@@ -370,6 +370,13 @@ class Config:
             a2a_config["agent_name"] = os.environ.get("MINDSDB_AGENT_NAME")
         if os.environ.get("MINDSDB_PROJECT_NAME"):
             a2a_config["project_name"] = os.environ.get("MINDSDB_PROJECT_NAME")
+        if os.environ.get("MINDSDB_A2A_ENABLED") is not None:
+            a2a_config["enabled"] = os.environ.get("MINDSDB_A2A_ENABLED").lower() in (
+                "true",
+                "1",
+                "yes",
+                "y",
+            )
 
         if a2a_config:
             self._env_config["a2a"] = a2a_config

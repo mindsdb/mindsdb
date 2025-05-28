@@ -120,7 +120,7 @@ class BaseLLMReranker(BaseModel, ABC):
 
                 for idx, result in enumerate(results):
                     if isinstance(result, Exception):
-                        log.error(f"Error processing document {i+idx}: {str(result)}")
+                        log.error(f"Error processing document {i + idx}: {str(result)}")
                         ranked_results.append((batch[idx][1], 0.0))
                         continue
 

@@ -38,9 +38,9 @@ class LiteLLMHandler(BaseMLEngine):
     @staticmethod
     async def acompletion(model: str, messages: List[dict], args: dict):
         if model.startswith("snowflake/") and "snowflake_account_id" in args:
-            args[
-                "api_base"
-            ] = f"https://{args['snowflake_account_id']}.snowflakecomputing.com/api/v2/cortex/inference:complete"
+            args["api_base"] = (
+                f"https://{args['snowflake_account_id']}.snowflakecomputing.com/api/v2/cortex/inference:complete"
+            )
 
         from litellm import acompletion
 

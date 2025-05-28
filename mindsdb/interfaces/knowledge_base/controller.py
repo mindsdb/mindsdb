@@ -571,7 +571,7 @@ class KnowledgeBaseTable:
         if content_columns is not None:
             content_columns = list(set(content_columns).intersection(columns))
             if len(content_columns) == 0:
-                raise ValueError(f'Content columns {params.get("content_columns")} not found in dataset: {columns}')
+                raise ValueError(f"Content columns {params.get('content_columns')} not found in dataset: {columns}")
 
             if metadata_columns is not None:
                 metadata_columns = list(set(metadata_columns).intersection(columns))

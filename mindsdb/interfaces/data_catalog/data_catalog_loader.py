@@ -1,8 +1,8 @@
-from typing import List, Optional, Union
+from typing import List, Union
 
 import pandas as pd
 
-from mindsdb.integrations.libs.base import MetaDatabaseHandler
+from mindsdb.interfaces.data_catalog.base_data_catalog import BaseDataCatalog
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities import log
 
@@ -10,33 +10,10 @@ from mindsdb.utilities import log
 logger = log.getLogger("mindsdb")
 
 
-class DataCatalogLoader:
+class DataCatalogLoader(BaseDataCatalog):
     """
     This class is responsible for loading the metadata from a data source (via the handler) and storing it in the data catalog.
     """
-
-    def __init__(
-        self, database_name: str, table_names: Optional[List[str]] = None
-    ) -> None:
-        """
-        Initialize the DataCatalogLoader.
-
-        Args:
-            database_name (str): The data source to load metadata from.
-            table_names (Optional[List[str]]): The list of table names to load metadata for. If None, all tables will be loaded.
-        """
-        from mindsdb.api.executor.controllers.session_controller import (
-            SessionController,
-        )
-
-        session = SessionController()
-
-        self.database_name = database_name
-        self.data_handler: MetaDatabaseHandler = (
-            session.integration_controller.get_data_handler(database_name)
-        )
-        self.integration_id = session.integration_controller.get(database_name)["id"]
-        self.table_names = table_names
 
     def load_metadata(self) -> None:
         """
@@ -63,9 +40,7 @@ class DataCatalogLoader:
         Returns:
             List[str]: Names of tables already loaded in the data catalog.
         """
-        query = db.session.query(db.MetaTables).filter_by(
-            integration_id=self.integration_id
-        )
+        query = db.session.query(db.MetaTables).filter_by(integration_id=self.integration_id)
         if self.table_names:
             query = query.filter(db.MetaTables.name.in_(self.table_names))
 
@@ -73,15 +48,11 @@ class DataCatalogLoader:
         table_names = [table.name for table in tables]
 
         if table_names:
-            logger.info(
-                f"Tables already loaded in the data catalog: {', '.join(table_names)}."
-            )
+            logger.info(f"Tables already loaded in the data catalog: {', '.join(table_names)}.")
 
         return table_names
 
-    def _load_table_metadata(
-        self, loaded_table_names: List[str] = None
-    ) -> List[Union[db.MetaTables, None]]:
+    def _load_table_metadata(self, loaded_table_names: List[str] = None) -> List[Union[db.MetaTables, None]]:
         """
         Load the table metadata from the handler.
         """
@@ -129,22 +100,14 @@ class DataCatalogLoader:
 
         return self._add_column_metadata(df, tables)
 
-    def _add_column_metadata(
-        self, df: pd.DataFrame, tables: db.MetaTables
-    ) -> List[db.MetaColumns]:
+    def _add_column_metadata(self, df: pd.DataFrame, tables: db.MetaTables) -> List[db.MetaColumns]:
         """
         Add the column metadata to the database.
         """
         columns = []
         for row in df.to_dict(orient="records"):
             record = db.MetaColumns(
-                table_id=next(
-                    (
-                        table.id
-                        for table in tables
-                        if table.name == row.get("table_name")
-                    )
-                ),
+                table_id=next((table.id for table in tables if table.name == row.get("table_name"))),
                 name=row.get("column_name"),
                 data_type=row.get("data_type"),
                 default_value=row.get("column_default"),
@@ -157,9 +120,7 @@ class DataCatalogLoader:
         db.session.commit()
         return columns
 
-    def _load_column_statistics(
-        self, tables: db.MetaTables, columns: db.MetaColumns
-    ) -> None:
+    def _load_column_statistics(self, tables: db.MetaTables, columns: db.MetaColumns) -> None:
         """
         Load the column statistics metadata from the handler.
         """
@@ -169,30 +130,23 @@ class DataCatalogLoader:
 
         return self._add_column_statistics(df, tables, columns)
 
-    def _add_column_statistics(
-        self, df: pd.DataFrame, tables: db.MetaTables, columns: db.MetaColumns
-    ) -> None:
+    def _add_column_statistics(self, df: pd.DataFrame, tables: db.MetaTables, columns: db.MetaColumns) -> None:
         """
         Add the column statistics metadata to the database.
         """
         column_statistics = []
         for row in df.to_dict(orient="records"):
-            table_id = next(
-                (table.id for table in tables if table.name == row.get("table_name"))
-            )
+            table_id = next((table.id for table in tables if table.name == row.get("table_name")))
             column_id = next(
                 (
                     column.id
                     for column in columns
-                    if column.name == row.get("column_name")
-                    and column.table_id == table_id
+                    if column.name == row.get("column_name") and column.table_id == table_id
                 )
             )
 
             # Convert the most_common_frequencies to a list of strings.
-            most_common_frequencies = [
-                str(val) for val in row.get("most_common_frequencies") or []
-            ]
+            most_common_frequencies = [str(val) for val in row.get("most_common_frequencies") or []]
 
             record = db.MetaColumnStatistics(
                 column_id=column_id,
@@ -208,9 +162,7 @@ class DataCatalogLoader:
         db.session.add_all(column_statistics)
         db.session.commit()
 
-    def _load_primary_keys(
-        self, tables: db.MetaTables, columns: db.MetaColumns
-    ) -> None:
+    def _load_primary_keys(self, tables: db.MetaTables, columns: db.MetaColumns) -> None:
         """
         Load the primary keys metadata from the handler.
         """
@@ -220,23 +172,18 @@ class DataCatalogLoader:
 
         return self._add_primary_keys(df, tables, columns)
 
-    def _add_primary_keys(
-        self, df: pd.DataFrame, tables: db.MetaTables, columns: db.MetaColumns
-    ) -> None:
+    def _add_primary_keys(self, df: pd.DataFrame, tables: db.MetaTables, columns: db.MetaColumns) -> None:
         """
         Add the primary keys metadata to the database.
         """
         primary_keys = []
         for row in df.to_dict(orient="records"):
-            table_id = next(
-                (table.id for table in tables if table.name == row.get("table_name"))
-            )
+            table_id = next((table.id for table in tables if table.name == row.get("table_name")))
             column_id = next(
                 (
                     column.id
                     for column in columns
-                    if column.name == row.get("column_name")
-                    and column.table_id == table_id
+                    if column.name == row.get("column_name") and column.table_id == table_id
                 )
             )
 
@@ -250,9 +197,7 @@ class DataCatalogLoader:
         db.session.add_all(primary_keys)
         db.session.commit()
 
-    def _load_foreign_keys(
-        self, tables: db.MetaTables, columns: db.MetaColumns
-    ) -> None:
+    def _load_foreign_keys(self, tables: db.MetaTables, columns: db.MetaColumns) -> None:
         """
         Load the foreign keys metadata from the handler.
         """
@@ -262,42 +207,26 @@ class DataCatalogLoader:
 
         return self._add_foreign_keys(df, tables, columns)
 
-    def _add_foreign_keys(
-        self, df: pd.DataFrame, tables: db.MetaTables, columns: db.MetaColumns
-    ) -> None:
+    def _add_foreign_keys(self, df: pd.DataFrame, tables: db.MetaTables, columns: db.MetaColumns) -> None:
         """
         Add the foreign keys metadata to the database.
         """
         foreign_keys = []
         for row in df.to_dict(orient="records"):
-            parent_table_id = next(
-                (
-                    table.id
-                    for table in tables
-                    if table.name == row.get("parent_table_name")
-                )
-            )
+            parent_table_id = next((table.id for table in tables if table.name == row.get("parent_table_name")))
             parent_column_id = next(
                 (
                     column.id
                     for column in columns
-                    if column.name == row.get("parent_column_name")
-                    and column.table_id == parent_table_id
+                    if column.name == row.get("parent_column_name") and column.table_id == parent_table_id
                 )
             )
-            child_table_id = next(
-                (
-                    table.id
-                    for table in tables
-                    if table.name == row.get("child_table_name")
-                )
-            )
+            child_table_id = next((table.id for table in tables if table.name == row.get("child_table_name")))
             child_column_id = next(
                 (
                     column.id
                     for column in columns
-                    if column.name == row.get("child_column_name")
-                    and column.table_id == child_table_id
+                    if column.name == row.get("child_column_name") and column.table_id == child_table_id
                 )
             )
 
@@ -317,31 +246,20 @@ class DataCatalogLoader:
         """
         Remove the metadata for the specified database from the data catalog.
         """
-        meta_tables = (
-            db.session.query(db.MetaTables)
-            .filter_by(integration_id=self.integration_id)
-            .all()
-        )
+        meta_tables = db.session.query(db.MetaTables).filter_by(integration_id=self.integration_id).all()
 
         if not meta_tables:
-            logger.info(
-                f"No metadata found for {self.database_name}. Nothing to remove."
-            )
+            logger.info(f"No metadata found for {self.database_name}. Nothing to remove.")
             return
 
         for table in meta_tables:
             db.session.query(db.MetaPrimaryKeys).filter_by(table_id=table.id).delete()
             db.session.query(db.MetaForeignKeys).filter(
-                (db.MetaForeignKeys.parent_table_id == table.id)
-                | (db.MetaForeignKeys.child_table_id == table.id)
+                (db.MetaForeignKeys.parent_table_id == table.id) | (db.MetaForeignKeys.child_table_id == table.id)
             ).delete()
-            meta_columns = (
-                db.session.query(db.MetaColumns).filter_by(table_id=table.id).all()
-            )
+            meta_columns = db.session.query(db.MetaColumns).filter_by(table_id=table.id).all()
             for col in meta_columns:
-                db.session.query(db.MetaColumnStatistics).filter_by(
-                    column_id=col.id
-                ).delete()
+                db.session.query(db.MetaColumnStatistics).filter_by(column_id=col.id).delete()
                 db.session.delete(col)
 
             db.session.delete(table)

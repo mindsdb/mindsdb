@@ -60,3 +60,4 @@ filetype
 charset-normalizer
 openpyxl # used by pandas to read txt and xlsx files
 aipdf==0.0.5
+pyarrow==20.0.0 # used by pandas to read feather files in Files handler

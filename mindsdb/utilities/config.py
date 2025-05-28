@@ -15,9 +15,7 @@ from appdirs import user_data_dir
 def _merge_key_recursive(target_dict, source_dict, key):
     if key not in target_dict:
         target_dict[key] = source_dict[key]
-    elif not isinstance(target_dict[key], dict) or not isinstance(
-        source_dict[key], dict
-    ):
+    elif not isinstance(target_dict[key], dict) or not isinstance(source_dict[key], dict):
         target_dict[key] = source_dict[key]
     else:
         for k in list(source_dict[key].keys()):
@@ -109,9 +107,7 @@ class Config:
             elif "root" in self._user_config.get("paths", {}):
                 self.storage_root_path = self.user_config["paths"]["root"]
             else:
-                self.storage_root_path = os.path.join(
-                    user_data_dir("mindsdb", "mindsdb"), "var/"
-                )
+                self.storage_root_path = os.path.join(user_data_dir("mindsdb", "mindsdb"), "var/")
             self.storage_root_path = Path(self.storage_root_path)
             create_data_dir(self.storage_root_path)
         # endregion
@@ -252,9 +248,7 @@ class Config:
 
         # region storage root path
         if os.environ.get("MINDSDB_STORAGE_DIR", "") != "":
-            self._env_config["paths"] = {
-                "root": Path(os.environ["MINDSDB_STORAGE_DIR"])
-            }
+            self._env_config["paths"] = {"root": Path(os.environ["MINDSDB_STORAGE_DIR"])}
         # endregion
 
         # region vars: permanent storage disabled?
@@ -303,30 +297,20 @@ class Config:
                 try:
                     permanent_session_lifetime = int(env_value)
                 except Exception:
-                    raise ValueError(
-                        f"Warning: Can't cast env var {env_name} value to int: {env_value}"
-                    )
-                self._env_config["auth"][
-                    "http_permanent_session_lifetime"
-                ] = permanent_session_lifetime
+                    raise ValueError(f"Warning: Can't cast env var {env_name} value to int: {env_value}")
+                self._env_config["auth"]["http_permanent_session_lifetime"] = permanent_session_lifetime
                 break
         # endregion
 
         # region logging
         if os.environ.get("MINDSDB_LOG_LEVEL", "") != "":
-            self._env_config["logging"]["handlers"]["console"]["level"] = os.environ[
-                "MINDSDB_LOG_LEVEL"
-            ]
+            self._env_config["logging"]["handlers"]["console"]["level"] = os.environ["MINDSDB_LOG_LEVEL"]
             self._env_config["logging"]["handlers"]["console"]["enabled"] = True
         if os.environ.get("MINDSDB_CONSOLE_LOG_LEVEL", "") != "":
-            self._env_config["logging"]["handlers"]["console"]["level"] = os.environ[
-                "MINDSDB_LOG_LEVEL"
-            ]
+            self._env_config["logging"]["handlers"]["console"]["level"] = os.environ["MINDSDB_LOG_LEVEL"]
             self._env_config["logging"]["handlers"]["console"]["enabled"] = True
         if os.environ.get("MINDSDB_FILE_LOG_LEVEL", "") != "":
-            self._env_config["logging"]["handlers"]["file"]["level"] = os.environ[
-                "MINDSDB_FILE_LOG_LEVEL"
-            ]
+            self._env_config["logging"]["handlers"]["file"]["level"] = os.environ["MINDSDB_FILE_LOG_LEVEL"]
             self._env_config["logging"]["handlers"]["file"]["enabled"] = True
         # endregion
 
@@ -363,21 +347,17 @@ class Config:
             self._env_config["storage_db"] = os.environ["MINDSDB_DB_CON"]
 
         if os.environ.get("MINDSDB_DEFAULT_PROJECT", "") != "":
-            self._env_config["default_project"] = os.environ[
-                "MINDSDB_DEFAULT_PROJECT"
-            ].lower()
+            self._env_config["default_project"] = os.environ["MINDSDB_DEFAULT_PROJECT"].lower()
 
         if os.environ.get("MINDSDB_DEFAULT_LLM_API_KEY", "") != "":
-            self._env_config["default_llm"] = {
-                "api_key": os.environ["MINDSDB_DEFAULT_LLM_API_KEY"]
-            }
+            self._env_config["default_llm"] = {"api_key": os.environ["MINDSDB_DEFAULT_LLM_API_KEY"]}
         if os.environ.get("MINDSDB_DEFAULT_EMBEDDING_MODEL_API_KEY", "") != "":
             self._env_config["default_embedding_model"] = {
                 "api_key": os.environ["MINDSDB_DEFAULT_EMBEDDING_MODEL_API_KEY"]
             }
-        if os.environ.get('MINDSDB_DEFAULT_RERANKING_MODEL_API_KEY', '') != '':
-            self._env_config['default_reranking_model'] = {
-                'api_key': os.environ['MINDSDB_DEFAULT_RERANKING_MODEL_API_KEY']
+        if os.environ.get("MINDSDB_DEFAULT_RERANKING_MODEL_API_KEY", "") != "":
+            self._env_config["default_reranking_model"] = {
+                "api_key": os.environ["MINDSDB_DEFAULT_RERANKING_MODEL_API_KEY"]
             }
 
         # region vars: a2a configuration
@@ -411,9 +391,7 @@ class Config:
             try:
                 self._auto_config = json.loads(self.auto_config_path.read_text())
             except json.JSONDecodeError as e:
-                raise ValueError(
-                    f"The 'auto' configuration file ({self.auto_config_path}) contains invalid JSON: {e}"
-                )
+                raise ValueError(f"The 'auto' configuration file ({self.auto_config_path}) contains invalid JSON: {e}")
             self.auto_config_mtime = self.auto_config_path.stat().st_mtime
             return True
         return False
@@ -435,15 +413,11 @@ class Config:
             if isinstance(self.config_path, str):
                 self.config_path = Path(self.config_path)
                 if not self.config_path.is_file():
-                    raise FileNotFoundError(
-                        f"The configuration file was not found at the path: {self.config_path}"
-                    )
+                    raise FileNotFoundError(f"The configuration file was not found at the path: {self.config_path}")
                 try:
                     self._user_config = json.loads(self.config_path.read_text())
                 except json.JSONDecodeError as e:
-                    raise ValueError(
-                        f"The configuration file ({self.config_path}) contains invalid JSON: {e}"
-                    )
+                    raise ValueError(f"The configuration file ({self.config_path}) contains invalid JSON: {e}")
             else:
                 self._user_config = {}
             return True
@@ -476,34 +450,22 @@ class Config:
                 cmd_args_config["a2a"] = {}
             cmd_args_config["a2a"]["port"] = self.cmd_args.a2a_port
 
-        if (
-            hasattr(self.cmd_args, "mindsdb_host")
-            and self.cmd_args.mindsdb_host is not None
-        ):
+        if hasattr(self.cmd_args, "mindsdb_host") and self.cmd_args.mindsdb_host is not None:
             if "a2a" not in cmd_args_config:
                 cmd_args_config["a2a"] = {}
             cmd_args_config["a2a"]["mindsdb_host"] = self.cmd_args.mindsdb_host
 
-        if (
-            hasattr(self.cmd_args, "mindsdb_port")
-            and self.cmd_args.mindsdb_port is not None
-        ):
+        if hasattr(self.cmd_args, "mindsdb_port") and self.cmd_args.mindsdb_port is not None:
             if "a2a" not in cmd_args_config:
                 cmd_args_config["a2a"] = {}
             cmd_args_config["a2a"]["mindsdb_port"] = self.cmd_args.mindsdb_port
 
-        if (
-            hasattr(self.cmd_args, "agent_name")
-            and self.cmd_args.agent_name is not None
-        ):
+        if hasattr(self.cmd_args, "agent_name") and self.cmd_args.agent_name is not None:
             if "a2a" not in cmd_args_config:
                 cmd_args_config["a2a"] = {}
             cmd_args_config["a2a"]["agent_name"] = self.cmd_args.agent_name
 
-        if (
-            hasattr(self.cmd_args, "project_name")
-            and self.cmd_args.project_name is not None
-        ):
+        if hasattr(self.cmd_args, "project_name") and self.cmd_args.project_name is not None:
             if "a2a" not in cmd_args_config:
                 cmd_args_config["a2a"] = {}
             cmd_args_config["a2a"]["project_name"] = self.cmd_args.project_name
@@ -556,14 +518,10 @@ class Config:
         """Show warnings about config options"""
 
         if "storage_dir" in self._config:
-            logger.warning(
-                "The 'storage_dir' config option is no longer supported. Use 'paths.root' instead."
-            )
+            logger.warning("The 'storage_dir' config option is no longer supported. Use 'paths.root' instead.")
 
         if "log" in self._config:
-            logger.warning(
-                "The 'log' config option is no longer supported. Use 'logging' instead."
-            )
+            logger.warning("The 'log' config option is no longer supported. Use 'logging' instead.")
 
         if os.environ.get("MINDSDB_DEFAULT_SERVER", "") != "":
             logger.warning(
@@ -591,9 +549,9 @@ class Config:
             return
 
         # if it is not mindsdb run, then set args to empty
-        if (
-            sys.modules["__main__"].__package__ or ""
-        ).lower() != "mindsdb" and os.environ.get("MINDSDB_RUNTIME") != "1":
+        if (sys.modules["__main__"].__package__ or "").lower() != "mindsdb" and os.environ.get(
+            "MINDSDB_RUNTIME"
+        ) != "1":
             self._cmd_args = argparse.Namespace(
                 api=None,
                 config=None,
@@ -614,9 +572,7 @@ class Config:
         parser.add_argument("--verbose", action="store_true")
         parser.add_argument("--no_studio", action="store_true")
         parser.add_argument("-v", "--version", action="store_true")
-        parser.add_argument(
-            "--ml_task_queue_consumer", action="store_true", default=None
-        )
+        parser.add_argument("--ml_task_queue_consumer", action="store_true", default=None)
         parser.add_argument(
             "--agent",
             type=str,
@@ -631,27 +587,17 @@ class Config:
         )
 
         # A2A specific arguments
-        parser.add_argument(
-            "--a2a-host", type=str, default=None, help="A2A server host"
-        )
-        parser.add_argument(
-            "--a2a-port", type=int, default=None, help="A2A server port"
-        )
-        parser.add_argument(
-            "--mindsdb-host", type=str, default=None, help="MindsDB server host"
-        )
-        parser.add_argument(
-            "--mindsdb-port", type=int, default=None, help="MindsDB server port"
-        )
+        parser.add_argument("--a2a-host", type=str, default=None, help="A2A server host")
+        parser.add_argument("--a2a-port", type=int, default=None, help="A2A server port")
+        parser.add_argument("--mindsdb-host", type=str, default=None, help="MindsDB server host")
+        parser.add_argument("--mindsdb-port", type=int, default=None, help="MindsDB server port")
         parser.add_argument(
             "--agent-name",
             type=str,
             default=None,
             help="MindsDB agent name to connect to",
         )
-        parser.add_argument(
-            "--project-name", type=str, default=None, help="MindsDB project name"
-        )
+        parser.add_argument("--project-name", type=str, default=None, help="MindsDB project name")
 
         self._cmd_args = parser.parse_args()
 

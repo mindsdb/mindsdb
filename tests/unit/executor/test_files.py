@@ -1,8 +1,6 @@
 import tempfile
 import shutil
 from pathlib import Path
-import sys
-import time
 
 import pandas as pd
 
@@ -55,8 +53,6 @@ class TestFiles(BaseExecutorDummyML):
         _, file_path = tempfile.mkstemp()
         shutil.copy(source_path, file_path)
 
-        if sys.platform == "win32":
-            time.sleep(2)  # Wait for Windows to catch up. Naww.
         self.file_controller.save_file("test", file_path, source_path.name)
 
         ret = self.run_sql("select * from files.test")

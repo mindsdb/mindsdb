@@ -3,8 +3,6 @@ import datetime as dt
 import tempfile
 import pytest
 import json
-import time
-import sys
 
 import pandas as pd
 import numpy as np
@@ -500,9 +498,6 @@ class Test(BaseExecutorMockPredictor):
         file_path = tempfile.mkstemp(prefix="file_")[1]
 
         df.to_csv(file_path)
-
-        if sys.platform == "win32":
-            time.sleep(2)  # Wait for windows to remember it closed this.
 
         self.file_controller.save_file("tasks", file_path, "tasks")
 

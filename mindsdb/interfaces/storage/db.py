@@ -656,8 +656,8 @@ class MetaTables(Base):
         if self.schema:
             table_info += f"\n{pad}Schema: {self.schema}"
 
-        if self.row_count:
-            table_info += f"\n{pad}Row Count: {self.row_count}"
+        if self.row_count and self.row_count > 0:
+            table_info += f"\n{pad}Estimated Row Count: {self.row_count}"
 
         if self.meta_primary_keys:
             table_info += f"\n{pad}Primary Key(s): {', '.join([pk.as_string() for pk in self.meta_primary_keys])}"

@@ -1,12 +1,13 @@
 import time
 import json
-from typing import Optional
+from typing import Optional, Any
 
 import pandas as pd
-import psycopg
-from psycopg.postgres import types
-from psycopg.pq import ExecStatus
 from pandas import DataFrame
+import psycopg
+from psycopg import Column as PGColumn, Cursor
+from psycopg.postgres import TypeInfo, types as pg_types
+from psycopg.pq import ExecStatus
 
 from mindsdb_sql_parser import parse_sql
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
@@ -27,7 +28,7 @@ logger = log.getLogger(__name__)
 SUBSCRIBE_SLEEP_INTERVAL = 1
 
 
-def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
+def _map_type(internal_type_name: str | None) -> MYSQL_DATA_TYPE:
     """Map Postgres types to MySQL types.
 
     Args:
@@ -36,14 +37,22 @@ def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
     Returns:
         MYSQL_DATA_TYPE: The MySQL type that corresponds to the Postgres type.
     """
+    fallback_type = MYSQL_DATA_TYPE.VARCHAR
+
+    if internal_type_name is None:
+        return fallback_type
+
     internal_type_name = internal_type_name.lower()
     types_map = {
-        ('smallint', 'integer', 'bigint', 'int', 'smallserial', 'serial', 'bigserial'): MYSQL_DATA_TYPE.INT,
-        ('real', 'money', 'float'): MYSQL_DATA_TYPE.FLOAT,
+        ('smallint', 'smallserial'): MYSQL_DATA_TYPE.SMALLINT,
+        ('integer', 'int', 'serial'): MYSQL_DATA_TYPE.INT,
+        ('bigint', 'bigserial'): MYSQL_DATA_TYPE.BIGINT,
+        ('real', 'float'): MYSQL_DATA_TYPE.FLOAT,
         ('numeric', 'decimal'): MYSQL_DATA_TYPE.DECIMAL,
         ('double precision',): MYSQL_DATA_TYPE.DOUBLE,
         ('character varying', 'varchar'): MYSQL_DATA_TYPE.VARCHAR,
-        ('character', 'char', 'bpchar', 'bpchar', 'text'): MYSQL_DATA_TYPE.TEXT,
+        # NOTE: if return chars-types as mysql's CHAR, then response will be padded with spaces, so return as TEXT
+        ('money', 'character', 'char', 'bpchar', 'bpchar', 'text'): MYSQL_DATA_TYPE.TEXT,
         ('timestamp', 'timestamp without time zone', 'timestamp with time zone'): MYSQL_DATA_TYPE.DATETIME,
         ('date', ): MYSQL_DATA_TYPE.DATE,
         ('time', 'time without time zone', 'time with time zone'): MYSQL_DATA_TYPE.TIME,
@@ -55,8 +64,51 @@ def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
         if internal_type_name in db_types_list:
             return mysql_data_type
 
-    logger.warning(f"Postgres handler type mapping: unknown type: {internal_type_name}, use VARCHAR as fallback.")
-    return MYSQL_DATA_TYPE.VARCHAR
+    logger.debug(f"Postgres handler type mapping: unknown type: {internal_type_name}, use VARCHAR as fallback.")
+    return fallback_type
+
+
+def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
+    """Build response from result and cursor.
+
+    Args:
+        result (list[tuple[Any]]): result of the query.
+        cursor (psycopg.Cursor): cursor object.
+
+    Returns:
+        Response: response object.
+    """
+    description: list[PGColumn] = cursor.description
+    mysql_types: list[MYSQL_DATA_TYPE] = []
+    for column in description:
+        pg_type_info: TypeInfo = pg_types.get(column.type_code)
+        if pg_type_info is None:
+            logger.warning(f'Postgres handler: unknown type: {column.type_code}')
+        regtype: str = pg_type_info.regtype if pg_type_info is not None else None
+        mysql_type = _map_type(regtype)
+        mysql_types.append(mysql_type)
+
+    # region cast int and bool to nullable types
+    serieses = []
+    for i, mysql_type in enumerate(mysql_types):
+        expected_dtype = None
+        if mysql_type in (
+            MYSQL_DATA_TYPE.SMALLINT, MYSQL_DATA_TYPE.INT, MYSQL_DATA_TYPE.MEDIUMINT,
+            MYSQL_DATA_TYPE.BIGINT, MYSQL_DATA_TYPE.TINYINT
+        ):
+            expected_dtype = 'Int64'
+        elif mysql_type in (MYSQL_DATA_TYPE.BOOL, MYSQL_DATA_TYPE.BOOLEAN):
+            expected_dtype = 'boolean'
+        serieses.append(pd.Series([row[i] for row in result], dtype=expected_dtype, name=description[i].name))
+    df = pd.concat(serieses, axis=1, copy=False)
+    # endregion
+
+    return Response(
+        RESPONSE_TYPE.TABLE,
+        data_frame=df,
+        affected_rows=cursor.rowcount,
+        mysql_types=mysql_types
+    )
 
 
 class PostgresHandler(DatabaseHandler):
@@ -199,13 +251,13 @@ class PostgresHandler(DatabaseHandler):
         for column_index, column_name in enumerate(df.columns):
             col = df[column_name]
             if str(col.dtype) == 'object':
-                pg_type = types.get(description[column_index].type_code)
-                if pg_type is not None and pg_type.name in types_map:
-                    col = col.fillna(0)
+                pg_type_info: TypeInfo = pg_types.get(description[column_index].type_code)        # type_code is int!?
+                if pg_type_info is not None and pg_type_info.name in types_map:
+                    col = col.fillna(0)   # TODO rework
                     try:
-                        df[column_name] = col.astype(types_map[pg_type.name])
+                        df[column_name] = col.astype(types_map[pg_type_info.name])
                     except ValueError as e:
-                        logger.error(f'Error casting column {col.name} to {types_map[pg_type.name]}: {e}')
+                        logger.error(f'Error casting column {col.name} to {types_map[pg_type_info.name]}: {e}')
         df.columns = columns
 
     @profiler.profile()
@@ -232,16 +284,7 @@ class PostgresHandler(DatabaseHandler):
                     response = Response(RESPONSE_TYPE.OK, affected_rows=cur.rowcount)
                 else:
                     result = cur.fetchall()
-                    df = DataFrame(
-                        result,
-                        columns=[x.name for x in cur.description]
-                    )
-                    self._cast_dtypes(df, cur.description)
-                    response = Response(
-                        RESPONSE_TYPE.TABLE,
-                        data_frame=df,
-                        affected_rows=cur.rowcount
-                    )
+                    response = _make_table_response(result, cur)
                 connection.commit()
             except Exception as e:
                 logger.error(f'Error running query: {query} on {self.database}, {e}!')
@@ -256,6 +299,44 @@ class PostgresHandler(DatabaseHandler):
             self.disconnect()
 
         return response
+
+    def query_stream(self, query: ASTNode, fetch_size: int = 1000):
+        """
+        Executes a SQL query and stream results outside by batches
+
+        :param query: An ASTNode representing the SQL query to be executed.
+        :param fetch_size: size of the batch
+        :return: generator with query results
+        """
+        query_str, params = self.renderer.get_exec_params(query, with_failback=True)
+
+        need_to_close = not self.is_connected
+
+        connection = self.connect()
+        with connection.cursor() as cur:
+            try:
+                if params is not None:
+                    cur.executemany(query_str, params)
+                else:
+                    cur.execute(query_str)
+
+                if cur.pgresult is not None and ExecStatus(cur.pgresult.status) != ExecStatus.COMMAND_OK:
+                    while True:
+                        result = cur.fetchmany(fetch_size)
+                        if not result:
+                            break
+                        df = DataFrame(
+                            result,
+                            columns=[x.name for x in cur.description]
+                        )
+                        self._cast_dtypes(df, cur.description)
+                        yield df
+                connection.commit()
+            finally:
+                connection.rollback()
+
+        if need_to_close:
+            self.disconnect()
 
     def insert(self, table_name: str, df: pd.DataFrame) -> Response:
         need_to_close = not self.is_connected

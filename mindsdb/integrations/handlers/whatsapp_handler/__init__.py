@@ -10,7 +10,7 @@ try:
 except Exception as e:
     Handler = None
     import_error = e
-    
+
 title = 'WhatsApp'
 name = 'whatsapp'
 type = HANDLER_TYPE.DATA
@@ -21,7 +21,7 @@ __all__ = [
     'version',
     'name',
     'type',
-    'title', 
+    'title',
     'description',
     'import_error',
     'icon_path'

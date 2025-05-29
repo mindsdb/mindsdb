@@ -5,8 +5,8 @@ import requests
 import pytest
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
-from tests.utils.config import HTTP_API_ROOT
-from tests.utils.http_test_helpers import HTTPHelperMixin
+from tests.integration.conftest import HTTP_API_ROOT
+from tests.integration.utils.http_test_helpers import HTTPHelperMixin
 
 
 class TestHTTP(HTTPHelperMixin):
@@ -136,7 +136,7 @@ class TestHTTP(HTTPHelperMixin):
             }
 
             response = requests.request('PUT', f'{HTTP_API_ROOT}/files/movies', files=files)
-            assert response.status_code == 200
+            assert response.status_code == 200, f"Error uploading file. Response content: {response.content}"
 
         assert "movies" in [file["name"] for file in self.get_files_list()]
 
@@ -295,7 +295,6 @@ class TestHTTP(HTTPHelperMixin):
         db_details = {
             "type": "postgres",
             "connection_data": {
-                "type": "postgres",
                 "host": "samples.mindsdb.com",
                 "port": "5432",
                 "user": "demo_user",

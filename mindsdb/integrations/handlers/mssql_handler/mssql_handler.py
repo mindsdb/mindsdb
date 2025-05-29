@@ -1,6 +1,10 @@
+from typing import Any
+import datetime
+
 import pymssql
 from pymssql import OperationalError
 import pandas as pd
+from pandas.api import types as pd_types
 
 from mindsdb_sql_parser import parse_sql
 from mindsdb_sql_parser.ast.base import ASTNode
@@ -46,8 +50,75 @@ def _map_type(mssql_type_text: str) -> MYSQL_DATA_TYPE:
         if internal_type_name in db_types_list:
             return mysql_data_type
 
-    logger.warning(f"MSSQL handler type mapping: unknown type: {internal_type_name}, use VARCHAR as fallback.")
+    logger.debug(f"MSSQL handler type mapping: unknown type: {internal_type_name}, use VARCHAR as fallback.")
     return MYSQL_DATA_TYPE.VARCHAR
+
+
+def _make_table_response(result: list[dict[str, Any]], cursor: pymssql.Cursor) -> Response:
+    """Build response from result and cursor.
+
+    Args:
+        result (list[dict[str, Any]]): result of the query.
+        cursor (pymssql.Cursor): cursor object.
+
+    Returns:
+        Response: response object.
+    """
+    description: list[tuple[Any]] = cursor.description
+    mysql_types: list[MYSQL_DATA_TYPE] = []
+
+    data_frame = pd.DataFrame(
+        result,
+        columns=[x[0] for x in cursor.description]
+    )
+
+    for column in description:
+        column_name = column[0]
+        column_type = column[1]
+        column_dtype = data_frame[column_name].dtype
+        match column_type:
+            case pymssql.NUMBER:
+                if pd_types.is_integer_dtype(column_dtype):
+                    mysql_types.append(MYSQL_DATA_TYPE.INT)
+                elif pd_types.is_float_dtype(column_dtype):
+                    mysql_types.append(MYSQL_DATA_TYPE.FLOAT)
+                elif pd_types.is_bool_dtype(column_dtype):
+                    # it is 'bit' type
+                    mysql_types.append(MYSQL_DATA_TYPE.TINYINT)
+                else:
+                    mysql_types.append(MYSQL_DATA_TYPE.DOUBLE)
+            case pymssql.DECIMAL:
+                mysql_types.append(MYSQL_DATA_TYPE.DECIMAL)
+            case pymssql.STRING:
+                mysql_types.append(MYSQL_DATA_TYPE.TEXT)
+            case pymssql.DATETIME:
+                mysql_types.append(MYSQL_DATA_TYPE.DATETIME)
+            case pymssql.BINARY:
+                # DATE and TIME types returned as 'BINARY' type, and dataframe type is 'object', so it is not possible
+                # to infer correct mysql type for them
+                if pd_types.is_datetime64_any_dtype(column_dtype):
+                    # pymssql return datetimes as 'binary' type
+                    # if timezone is present, then it is datetime.timezone
+                    series = data_frame[column_name]
+                    if (
+                        series.dt.tz is not None
+                        and isinstance(series.dt.tz, datetime.timezone)
+                        and series.dt.tz != datetime.timezone.utc
+                    ):
+                        series = series.dt.tz_convert('UTC')
+                        data_frame[column_name] = series.dt.tz_localize(None)
+                    mysql_types.append(MYSQL_DATA_TYPE.DATETIME)
+                else:
+                    mysql_types.append(MYSQL_DATA_TYPE.BINARY)
+            case _:
+                logger.warning(f"Unknown type: {column_type}, use TEXT as fallback.")
+                mysql_types.append(MYSQL_DATA_TYPE.TEXT)
+
+    return Response(
+        RESPONSE_TYPE.TABLE,
+        data_frame=data_frame,
+        mysql_types=mysql_types
+    )
 
 
 class SqlServerHandler(DatabaseHandler):
@@ -169,13 +240,7 @@ class SqlServerHandler(DatabaseHandler):
                 cur.execute(query)
                 if cur.description:
                     result = cur.fetchall()
-                    response = Response(
-                        RESPONSE_TYPE.TABLE,
-                        data_frame=pd.DataFrame(
-                            result,
-                            columns=[x[0] for x in cur.description]
-                        )
-                    )
+                    response = _make_table_response(result, cur)
                 else:
                     response = Response(RESPONSE_TYPE.OK, affected_rows=cur.rowcount)
                 connection.commit()

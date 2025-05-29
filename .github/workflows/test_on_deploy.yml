@@ -38,20 +38,36 @@ env:
   UV_LINK_MODE: "symlink"
 
 jobs:
-
+  changes:
+    name: Filter changed files
+    runs-on: mdb-dev
+    outputs:
+      not-docs: ${{ steps.filter.outputs.not-docs }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          predicate-quantifier: "every"
+          filters: |
+            not-docs:
+              - '!docs/**'  
+              - '!**/*.md'
+              - '!.github/workflows/build_deploy_dev.yml'
+              - '!.github/workflows/test_on_deploy.yml'
   # Run our integration tests
   test:
+    needs: changes
     environment:
       name: ${{ inputs.deploy-env }}
       url: ${{ vars.ENV_URL }}
     name: Run integration tests on deploy
     runs-on: mdb-dev
-    if: github.ref_type == 'branch'
+    if: ${{ github.ref_type == 'branch' && needs.changes.outputs.not-docs == 'true' }}
     steps:
     - uses: actions/checkout@v4
       with:
         ref: ${{ inputs.git-sha }}
-    # We have to install UV because (for now) these run in GH's runners
     - name: Setup uv
       uses: astral-sh/setup-uv@v5
       with:
@@ -63,32 +79,12 @@ jobs:
       run: |
         uv pip install -r requirements/requirements-test.txt
 
-    # These are commented out but left here because they still need updating to use the new test system
-    # - name: Run integration api and flow tests
-    #   run: |
-
-          # echo -e "\n===============MySQL Handler===============\n"
-          # pytest -svx mindsdb/integrations/handlers/mysql_handler/
-
-          # Currently requires a DB to be running. New testing system is being set up
-          # echo -e "\n===============PostgreSQL Handler===============\n"
-          # pytest -svx mindsdb/integrations/handlers/postgres_handler/
-
-          # echo -e "\n===============MariaDB Handler===============\n"
-          # pytest -svx tests/handler_tests/test_mariadb_handler.py
-
-          # echo -e "\n===============File Handler===============\n"
-          # pytest -svx mindsdb/integrations/handlers/file_handler/
-    #   env:
-    #     PROMETHEUS_MULTIPROC_DIR: ./prometheus_metrics
-    #     OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-
     - name: Run Integration Tests on Deploy
       run: |
           # Run tests in parallel and distribute a whole file to each worker
-          pytest -n 8 --dist loadfile -vx tests/integration/tutorials tests/integration/flows -k "not test_auth"
+          pytest -n 8 --dist loadfile -vx tests/integration/ -k "not test_auth"
           # Run this test separately because it alters the auth requirements, which breaks other tests
-          pytest -vx tests/integration/flows/test_http.py -k test_auth
+          pytest -vx tests/integration/ -k test_auth
       env:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         INTERNAL_URL: ${{ vars.INTERNAL_URL }}

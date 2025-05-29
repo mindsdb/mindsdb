@@ -104,7 +104,7 @@ class SubscriptionsTable(APITable):
         return subscriptions_df
 
     def get_columns(self) -> List[Text]:
-        return pd.json_normalize(self.get_subscriptions(count = 1)).columns.tolist()
+        return pd.json_normalize(self.get_subscriptions(count=1)).columns.tolist()
 
     def get_subscriptions(self, **kwargs) -> List[Dict]:
         connection = self.handler.connect()
@@ -114,6 +114,7 @@ class SubscriptionsTable(APITable):
 
 class OrdersTable(APITable):
     """The PayPal Orders Table implementation"""
+
     def select(self, query: ast.Select) -> pd.DataFrame:
         """
         Pulls PayPal Orders data.
@@ -137,18 +138,18 @@ class OrdersTable(APITable):
         )
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
-        id=None
+        id = None
         subset_where_conditions = []
         for op, arg1, arg2 in where_conditions:
             if arg1 == 'id':
                 if op == '=':
-                    id=arg2
+                    id = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for 'ids' column")
             elif arg1 in ['state', 'amount', 'create_time', 'update_time', 'links', 'pending_reason', 'parent_payment']:
                 subset_where_conditions.append([op, arg1, arg2])
 
-        if not id :
+        if not id:
             raise NotImplementedError("id column is required for this table")
 
         orders_df = pd.json_normalize(self.get_orders(id))
@@ -160,16 +161,17 @@ class OrdersTable(APITable):
         )
         orders_df = select_statement_executor.execute_query()
         return orders_df
+
     def get_columns(self) -> List[Text]:
-         return ["id",
-                 "status",
-                 "intent",
-                 "purchase_units",
-                 "links",
-                 "create_time"]
+        return ["id",
+                "status",
+                "intent",
+                "purchase_units",
+                "links",
+                "create_time"]
 
     # restore this or similar header list for API 2.0 refactor
-    #restore this list when restore paypalsdk api, and retired the request call
+    # restore this list when restore paypalsdk api, and retired the request call
         # return ["id",
         #         "status",
         #         "intent",
@@ -183,7 +185,7 @@ class OrdersTable(APITable):
         #         "create_time"]
 
     def get_orders(self, id) -> List[Dict]:
-        #we can use the paypalrestsdk api to get the order if they refactor their code
+        # we can use the paypalrestsdk api to get the order if they refactor their code
         connection = self.handler.connect()
         endpoint = f"v2/checkout/orders/{id}"
         order = connection.get(endpoint)
@@ -259,7 +261,7 @@ class PayoutsTable(APITable):
             "fees_value",
         ]
 
-    def get_payout(self, payout_batch_id:str) -> List[Dict]:
+    def get_payout(self, payout_batch_id: str) -> List[Dict]:
         connection = self.handler.connect()
         endpoint = f"v1/payments/payouts/{payout_batch_id}"
         payout = connection.get(endpoint)
@@ -280,4 +282,3 @@ class PayoutsTable(APITable):
         }
 
         return [payout_data]
-

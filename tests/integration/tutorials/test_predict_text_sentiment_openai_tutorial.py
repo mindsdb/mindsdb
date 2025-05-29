@@ -1,7 +1,7 @@
 import os
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
-from tests.utils.http_test_helpers import HTTPHelperMixin
+from tests.integration.utils.http_test_helpers import HTTPHelperMixin
 
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
@@ -10,13 +10,14 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 class QueryStorage:
     create_db = """
 CREATE DATABASE example_sentiment_openai_db
-WITH ENGINE = "mysql",
+WITH ENGINE = "postgres",
 PARAMETERS = {
-    "user": "user",
-    "password": "MindsDBUser123!",
+    "user": "demo_user",
+    "password": "demo_password",
     "host": "samples.mindsdb.com",
-    "port": "3306",
-    "database": "public"
+    "port": "5432",
+    "database": "demo",
+    "schema": "demo_data"
     };
 """
     check_db_created = """

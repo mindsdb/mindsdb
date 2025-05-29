@@ -31,15 +31,15 @@ class SQreamDBHandlerTest(unittest.TestCase):
     def test_3_get_tables(self):
         tables = self.handler.get_tables()
         assert tables.type is not RESPONSE_TYPE.ERROR
- 
+
     def test_4_select_query(self):
         query = "SELECT * FROM AUTHORS"
         result = self.handler.native_query(query)
         assert result.type is RESPONSE_TYPE.TABLE
 
     def test_5_check_connection(self):
-         self.handler.check_connection()
+        self.handler.check_connection()
 
-        
+
 if __name__ == '__main__':
     unittest.main()

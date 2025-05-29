@@ -4,8 +4,20 @@ from langchain.agents import AgentType
 from langchain_openai import OpenAIEmbeddings
 
 from types import MappingProxyType
-from mindsdb.integrations.handlers.openai_handler.constants import (
-    CHAT_MODELS as OPEN_AI_CHAT_MODELS,
+
+# the same as
+# from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS
+OPEN_AI_CHAT_MODELS = (
+    "gpt-3.5-turbo",
+    "gpt-3.5-turbo-16k",
+    "gpt-3.5-turbo-instruct",
+    "gpt-4",
+    "gpt-4-32k",
+    "gpt-4-1106-preview",
+    "gpt-4-0125-preview",
+    "gpt-4o",
+    "o3-mini",
+    "o1-mini",
 )
 
 SUPPORTED_PROVIDERS = {
@@ -16,7 +28,8 @@ SUPPORTED_PROVIDERS = {
     "ollama",
     "nvidia_nim",
     "vllm",
-    "google"
+    "google",
+    "writer",
 }
 # Chat models
 ANTHROPIC_CHAT_MODELS = (
@@ -163,6 +176,8 @@ GOOGLE_GEMINI_CHAT_MODELS = (
     "gemini-1.5-pro",
 )
 
+WRITER_CHAT_MODELS = ("palmyra-x5", "palmyra-x4")
+
 # Define a read-only dictionary mapping providers to their models
 PROVIDER_TO_MODELS = MappingProxyType(
     {
@@ -171,6 +186,7 @@ PROVIDER_TO_MODELS = MappingProxyType(
         "openai": OPEN_AI_CHAT_MODELS,
         "nvidia_nim": NVIDIA_NIM_CHAT_MODELS,
         "google": GOOGLE_GEMINI_CHAT_MODELS,
+        "writer": WRITER_CHAT_MODELS,
     }
 )
 
@@ -188,5 +204,20 @@ DEFAULT_TEMPERATURE = 0.0
 USER_COLUMN = "question"
 DEFAULT_EMBEDDINGS_MODEL_PROVIDER = "openai"
 DEFAULT_EMBEDDINGS_MODEL_CLASS = OpenAIEmbeddings
-DEFAULT_TIKTOKEN_MODEL_NAME = os.getenv('DEFAULT_TIKTOKEN_MODEL_NAME', 'gpt-4')
-AGENT_CHUNK_POLLING_INTERVAL_SECONDS = os.getenv('AGENT_CHUNK_POLLING_INTERVAL_SECONDS', 1.0)
+DEFAULT_TIKTOKEN_MODEL_NAME = os.getenv("DEFAULT_TIKTOKEN_MODEL_NAME", "gpt-4")
+AGENT_CHUNK_POLLING_INTERVAL_SECONDS = os.getenv("AGENT_CHUNK_POLLING_INTERVAL_SECONDS", 1.0)
+DEFAULT_TEXT2SQL_DATABASE = "mindsdb"
+DEFAULT_AGENT_SYSTEM_PROMPT = """
+You are an AI assistant powered by MindsDB. When answering questions, follow these guidelines:
+
+1. For factual questions about specific topics, use the knowledge base tools in this sequence:
+   - First use kb_list_tool to see available knowledge bases
+   - Then use kb_info_tool to understand the structure of relevant knowledge bases
+   - Finally use kb_query_tool to query the knowledge base for specific information
+
+2. For questions about database tables and their contents:
+   - Use the sql_tool to query the tables directly
+   - You can join tables if needed to get comprehensive information
+
+For factual questions, ALWAYS use the available tools to look up information rather than relying on your internal knowledge.
+"""

@@ -43,30 +43,23 @@ mcp = FastMCP(
     lifespan=app_lifespan,
     dependencies=["mindsdb"]  # Add any additional dependencies
 )
-# MCP Queries
-LISTING_QUERY = "SHOW DATABASES"
 
 
 @mcp.tool()
-def query(query: str, context: Optional[Dict] = None) -> Dict[str, Any]:
+def query(query: str) -> Dict[str, Any]:
     """
     Execute a SQL query against MindsDB
 
     Args:
         query: The SQL query to execute
-        context: Optional context parameters for the query
-
+       
     Returns:
         Dict containing the query results or error information
     """
 
-    if context is None:
-        context = {}
-
     logger.debug(f'Incoming MCP query: {query}')
 
     mysql_proxy = FakeMysqlProxy()
-    mysql_proxy.set_context(context)
 
     try:
         result = mysql_proxy.process_query(query)
@@ -99,39 +92,6 @@ def query(query: str, context: Optional[Dict] = None) -> Dict[str, Any]:
         }
 
 
-@mcp.tool()
-def list_databases() -> Dict[str, Any]:
-    """
-    List all databases in MindsDB along with their tables
-
-    Returns:
-        Dict containing the list of databases and their tables
-    """
-
-    mysql_proxy = FakeMysqlProxy()
-
-    try:
-        result = mysql_proxy.process_query(LISTING_QUERY)
-        if result.type == SQL_RESPONSE_TYPE.ERROR:
-            return {
-                "type": "error",
-                "error_code": result.error_code,
-                "error_message": result.error_message,
-            }
-
-        elif result.type == SQL_RESPONSE_TYPE.OK:
-            return {"type": "ok"}
-
-        elif result.type == SQL_RESPONSE_TYPE.TABLE:
-            data = result.result_set.to_lists(json_types=True)
-            return data
-
-    except Exception as e:
-        return {
-            "type": "error",
-            "error_code": 0,
-            "error_message": str(e),
-        }
 
 
 class CustomAuthMiddleware(BaseHTTPMiddleware):

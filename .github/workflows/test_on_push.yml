@@ -108,6 +108,7 @@ jobs:
     strategy:
       matrix: ${{fromJson(needs.matrix_prep.outputs.matrix)}}
     runs-on: ${{ matrix.runs_on }}
+    fast-fail: false
     steps:
       - name: Checkout
         if: ${{ needs.changes.outputs.not-docs == 'true' }}

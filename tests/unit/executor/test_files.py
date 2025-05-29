@@ -2,6 +2,7 @@ import tempfile
 import shutil
 from pathlib import Path
 import os
+import time
 
 import pandas as pd
 
@@ -55,6 +56,7 @@ class TestFiles(BaseExecutorDummyML):
         os.close(fd)
         shutil.copy(source_path, file_path)
 
+        time.sleep(1)
         self.file_controller.save_file("test", file_path, source_path.name)
 
         ret = self.run_sql("select * from files.test")

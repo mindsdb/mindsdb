@@ -134,7 +134,6 @@ class IntegrationDataNode(DataNode):
         table_columns_meta = {}
 
         if columns is None:
-
             columns: list[TableColumn] = result_set.get_ast_columns()
             table_columns_meta = {column.name: column.type for column in columns}
 

@@ -70,7 +70,7 @@ class Column:
         table_name = self.table_name if self.table_alias is None else self.table_alias
         name = self.name if self.alias is None else self.alias
 
-        name = f'{prefix}_{table_name}_{name}'
+        name = f"{prefix}_{table_name}_{name}"
         return name
 
 
@@ -95,7 +95,7 @@ class ResultSet:
         df: pd.DataFrame | None = None,
         affected_rows: int | None = None,
         is_prediction: bool = False,
-        mysql_types: list[MYSQL_DATA_TYPE] | None = None
+        mysql_types: list[MYSQL_DATA_TYPE] | None = None,
     ):
         """
         Args:
@@ -122,9 +122,9 @@ class ResultSet:
         self.mysql_types = mysql_types
 
     def __repr__(self):
-        col_names = ', '.join([col.name for col in self._columns])
+        col_names = ", ".join([col.name for col in self._columns])
 
-        return f'{self.__class__.__name__}({self.length()} rows, cols: {col_names})'
+        return f"{self.__class__.__name__}({self.length()} rows, cols: {col_names})"
 
     def __len__(self) -> int:
         if self._df is None:
@@ -140,38 +140,30 @@ class ResultSet:
 
     @classmethod
     def from_df(
-        cls, df: pd.DataFrame, database=None, table_name=None, table_alias=None,
-        is_prediction: bool = False, mysql_types: list[MYSQL_DATA_TYPE] | None = None
+        cls,
+        df: pd.DataFrame,
+        database=None,
+        table_name=None,
+        table_alias=None,
+        is_prediction: bool = False,
+        mysql_types: list[MYSQL_DATA_TYPE] | None = None,
     ):
         match mysql_types:
             case None:
                 mysql_types = [None] * len(df.columns)
             case list() if len(mysql_types) != len(df.columns):
-                raise WrongArgumentError(
-                    f'Mysql types length mismatch: {len(mysql_types)} != {len(df.columns)}'
-                )
+                raise WrongArgumentError(f"Mysql types length mismatch: {len(mysql_types)} != {len(df.columns)}")
 
         columns = [
-            Column(
-                name=column_name,
-                table_name=table_name,
-                table_alias=table_alias,
-                database=database,
-                type=mysql_type
-            ) for column_name, mysql_type
-            in zip(df.columns, mysql_types)
+            Column(name=column_name, table_name=table_name, table_alias=table_alias, database=database, type=mysql_type)
+            for column_name, mysql_type in zip(df.columns, mysql_types)
         ]
 
         rename_df_columns(df)
-        return cls(
-            df=df,
-            columns=columns,
-            is_prediction=is_prediction,
-            mysql_types=mysql_types
-        )
+        return cls(df=df, columns=columns, is_prediction=is_prediction, mysql_types=mysql_types)
 
     @classmethod
-    def from_df_cols(cls, df: pd.DataFrame, columns_dict: dict[str, Column], strict: bool = True) -> 'ResultSet':
+    def from_df_cols(cls, df: pd.DataFrame, columns_dict: dict[str, Column], strict: bool = True) -> "ResultSet":
         """Create ResultSet from dataframe and dictionary of columns
 
         Args:
@@ -185,29 +177,18 @@ class ResultSet:
         Raises:
             ValueError: if a column is not found in columns_dict and strict is True
         """
-        alias_idx = {
-            column.alias: column
-            for column in columns_dict.values()
-            if column.alias is not None
-        }
+        alias_idx = {column.alias: column for column in columns_dict.values() if column.alias is not None}
 
         columns = []
         for column_name in df.columns:
             if strict and column_name not in columns_dict:
-                raise ValueError(f'Column {column_name} not found in columns_dict')
-            column = (
-                columns_dict.get(column_name)
-                or alias_idx.get(column_name)
-                or Column(name=column_name)
-            )
+                raise ValueError(f"Column {column_name} not found in columns_dict")
+            column = columns_dict.get(column_name) or alias_idx.get(column_name) or Column(name=column_name)
             columns.append(column)
 
         rename_df_columns(df)
 
-        return cls(
-            columns=columns,
-            df=df
-        )
+        return cls(columns=columns, df=df)
 
     def to_df(self):
         columns_names = self.get_column_names()
@@ -215,7 +196,7 @@ class ResultSet:
         rename_df_columns(df, columns_names)
         return df
 
-    def to_df_cols(self, prefix: str = '') -> tuple[pd.DataFrame, dict[str, Column]]:
+    def to_df_cols(self, prefix: str = "") -> tuple[pd.DataFrame, dict[str, Column]]:
         # returns dataframe and dict of columns
         #   can be restored to ResultSet by from_df_cols method
 
@@ -235,7 +216,7 @@ class ResultSet:
     def get_tables(self):
         tables_idx = []
         tables = []
-        cols = ['database', 'table_name', 'table_alias']
+        cols = ["database", "table_name", "table_alias"]
         for col in self._columns:
             table = (col.database, col.table_name, col.table_alias)
             if table not in tables_idx:
@@ -258,7 +239,7 @@ class ResultSet:
                 col_idx = i
                 break
         if col_idx is None:
-            raise WrongArgumentError(f'Column is not found: {col}')
+            raise WrongArgumentError(f"Column is not found: {col}")
         return col_idx
 
     def add_column(self, col, values=None):
@@ -281,10 +262,7 @@ class ResultSet:
         return self._columns
 
     def get_column_names(self):
-        columns = [
-            col.name if col.alias is None else col.alias
-            for col in self._columns
-        ]
+        columns = [col.name if col.alias is None else col.alias for col in self._columns]
         return columns
 
     def find_columns(self, alias=None, table_alias=None):
@@ -324,7 +302,7 @@ class ResultSet:
 
     def add_raw_df(self, df):
         if len(df.columns) != len(self._columns):
-            raise WrongArgumentError(f'Record length mismatch columns length: {len(df.columns)} != {len(self.columns)}')
+            raise WrongArgumentError(f"Record length mismatch columns length: {len(df.columns)} != {len(self.columns)}")
 
         rename_df_columns(df)
 
@@ -340,7 +318,7 @@ class ResultSet:
             convert_floating=True,
             infer_objects=False,
             convert_string=False,
-            convert_boolean=False
+            convert_boolean=False,
         )
         self.add_raw_df(df)
 
@@ -379,7 +357,7 @@ class ResultSet:
             # infer MYSQL_DATA_TYPE if not set
             if isinstance(column_type, MYSQL_DATA_TYPE) is False:
                 if column_type is not None:
-                    logger.warning(f'Unexpected column type: {column_type}')
+                    logger.warning(f"Unexpected column type: {column_type}")
                 if self._df is None:
                     column_type = MYSQL_DATA_TYPE.TEXT
                 else:
@@ -387,12 +365,7 @@ class ResultSet:
 
             sqlalchemy_type = type_mapping.get(column_type, sqlalchemy_types.TEXT)
 
-            columns.append(
-                TableColumn(
-                    name=column.alias,
-                    type=sqlalchemy_type
-                )
-            )
+            columns.append(TableColumn(name=column.alias, type=sqlalchemy_type))
         return columns
 
     def to_lists(self, json_types=False):
@@ -415,7 +388,7 @@ class ResultSet:
 
         # slower but keep timestamp type
         df = self._df.replace({np.nan: None})  # TODO rework
-        return df.to_dict('split')['data']
+        return df.to_dict("split")["data"]
 
     def get_column_values(self, col_idx):
         # get by column index
@@ -434,14 +407,11 @@ class ResultSet:
             self._df[col_idx] = values
 
     def add_from_result_set(self, rs):
-
         source_names = rs.get_column_names()
 
         col_sequence = []
         for name in self.get_column_names():
-            col_sequence.append(
-                source_names.index(name)
-            )
+            col_sequence.append(source_names.index(name))
 
         raw_df = rs.get_raw_df()[col_sequence]
 

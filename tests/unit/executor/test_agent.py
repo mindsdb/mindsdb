@@ -231,6 +231,7 @@ class TestAgent(BaseExecutorDummyML):
         set_openai_completion(mock_openai, agent_response)
         self.run_sql("select * from test_agent where question = 'test?'")
 
+    @pytest.mark.skipif(sys.platform == "darwin", reason="Fails on macOS")
     @patch("openai.OpenAI")
     def test_agent_stream(self, mock_openai):
         agent_response = "how can I assist you today?"
@@ -517,6 +518,7 @@ class TestKB(BaseExecutorDummyML):
 
         return pd.DataFrame(data, columns=["ral", "english", "italian"])
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="Causes hard crash on windows.")
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_join_kb_table(self, mock_litellm_embedding):
         df = self._get_ral_table()

@@ -110,6 +110,15 @@ def safe_pandas_is_datetime(value: str) -> bool:
         return False
 
 
+def to_json(obj):
+    if obj is None:
+        return None
+    try:
+        return json.dumps(obj)
+    except TypeError:
+        return obj
+
+
 class KnowledgeBaseTable:
     """
     Knowledge base table interface
@@ -236,6 +245,9 @@ class KnowledgeBaseTable:
             or not isinstance(query.targets[0], Star)
         ):
             query_copy.where = None
+            if 'metadata' in df.columns:
+                df['metadata'] = df['metadata'].apply(to_json)
+
             df = query_df(df, query_copy, session=self.session)
 
         return df

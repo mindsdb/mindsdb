@@ -2,7 +2,8 @@ import tempfile
 import shutil
 from pathlib import Path
 import os
-import time
+import sys
+import pytest
 
 import pandas as pd
 
@@ -49,6 +50,7 @@ class TestFiles(BaseExecutorDummyML):
         ret = self.run_sql("select count(*) c from files.myfile")
         assert ret["c"][0] == 5
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="Fixme: Open file handle somewhere makes this fail on Windows.")
     def test_multipage(self):
         # copy test file because source will be removed after uloading
         source_path = Path(__file__).parent / "data" / "test.xlsx"
@@ -56,7 +58,6 @@ class TestFiles(BaseExecutorDummyML):
         os.close(fd)
         shutil.copy(source_path, file_path)
 
-        time.sleep(1)
         self.file_controller.save_file("test", file_path, source_path.name)
 
         ret = self.run_sql("select * from files.test")

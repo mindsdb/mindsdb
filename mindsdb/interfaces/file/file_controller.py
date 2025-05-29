@@ -122,8 +122,9 @@ class FileController:
           - page_files: dict with content, {page_num: dataframe}
           - pages_index: dict, link between page name and num: {page_name: page_num}
         """
-        with FileReader(path=source_path) as file_reader:
-            tables = file_reader.get_contents()
+        file_reader = FileReader(path=source_path)
+        tables = file_reader.get_contents()
+        file_reader.close()
 
         pages_files = {}
         pages_index = {}

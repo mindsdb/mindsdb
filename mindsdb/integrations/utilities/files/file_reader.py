@@ -18,8 +18,7 @@ DEFAULT_CHUNK_SIZE = 500
 DEFAULT_CHUNK_OVERLAP = 250
 
 
-class FileDetectError(Exception):
-    ...
+class FileDetectError(Exception): ...
 
 
 def decode(file_obj: IOBase) -> StringIO:
@@ -62,16 +61,10 @@ def decode(file_obj: IOBase) -> StringIO:
 
 
 class FormatDetector:
+    supported_formats = ["parquet", "csv", "xlsx", "pdf", "json", "txt"]
+    multipage_formats = ["xlsx"]
 
-    supported_formats = ['parquet', 'csv', 'xlsx', 'pdf', 'json', 'txt']
-    multipage_formats = ['xlsx']
-
-    def __init__(
-        self,
-        path: str = None,
-        name: str = None,
-        file: IOBase = None
-    ):
+    def __init__(self, path: str = None, name: str = None, file: IOBase = None):
         """
         File format detector
         One of these arguments has to be passed: `path` or `file`
@@ -81,16 +74,16 @@ class FormatDetector:
         :param file: file descriptor (via open(...), of BytesIO(...))
         """
         if path is not None:
-            file = open(path, 'rb')
+            file = open(path, "rb")
 
         elif file is not None:
             if name is None:
-                if hasattr(file, 'name'):
+                if hasattr(file, "name"):
                     path = file.name
                 else:
-                    path = 'file'
+                    path = "file"
         else:
-            raise FileDetectError('Wrong arguments: path or file is required')
+            raise FileDetectError("Wrong arguments: path or file is required")
 
         if name is None:
             name = Path(path).name
@@ -101,6 +94,16 @@ class FormatDetector:
 
         self.parameters = {}
 
+    def close(self):
+        """
+        Close file object if it was opened by this class
+        """
+        if self.file_obj is not None and hasattr(self.file_obj, "close"):
+            try:
+                self.file_obj.close()
+            except Exception as e:
+                logger.error(f"Error closing file {self.name}: {e}")
+
     def get_format(self) -> str:
         if self.format is not None:
             return self.format
@@ -108,14 +111,14 @@ class FormatDetector:
         format = self.get_format_by_name()
         if format is not None:
             if format not in self.supported_formats:
-                raise FileDetectError(f'Not supported format: {format}')
+                raise FileDetectError(f"Not supported format: {format}")
 
         if format is None and self.file_obj is not None:
             format = self.get_format_by_content()
             self.file_obj.seek(0)
 
         if format is None:
-            raise FileDetectError(f'Unable to detect format: {self.name}')
+            raise FileDetectError(f"Unable to detect format: {self.name}")
 
         self.format = format
         return format
@@ -124,7 +127,7 @@ class FormatDetector:
         extension = Path(self.name).suffix.strip(".").lower()
         if extension == "tsv":
             extension = "csv"
-            self.parameters['delimiter'] = '\t'
+            self.parameters["delimiter"] = "\t"
 
         return extension or None
 
@@ -134,14 +137,13 @@ class FormatDetector:
 
         file_type = filetype.guess(self.file_obj)
         if file_type is not None:
-
             if file_type.mime in {
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 "application/vnd.ms-excel",
             }:
-                return 'xlsx'
+                return "xlsx"
 
-            if file_type.mime == 'application/pdf':
+            if file_type.mime == "application/pdf":
                 return "pdf"
 
         file_obj = decode(self.file_obj)
@@ -199,34 +201,30 @@ class FormatDetector:
 
 
 class FileReader(FormatDetector):
-
     def _get_fnc(self):
         format = self.get_format()
-        func = getattr(self, f'read_{format}', None)
+        func = getattr(self, f"read_{format}", None)
         if func is None:
-            raise FileDetectError(f'Unsupported format: {format}')
+            raise FileDetectError(f"Unsupported format: {format}")
         return func
 
     def get_pages(self, **kwargs) -> List[str]:
         """
-            Get list of tables in file
+        Get list of tables in file
         """
         format = self.get_format()
         if format not in self.multipage_formats:
             # only one table
-            return ['main']
+            return ["main"]
 
         func = self._get_fnc()
         self.file_obj.seek(0)
 
-        return [
-            name for name, _ in
-            func(self.file_obj, only_names=True, **kwargs)
-        ]
+        return [name for name, _ in func(self.file_obj, only_names=True, **kwargs)]
 
     def get_contents(self, **kwargs):
         """
-            Get all info(pages with content) from file as dict: {tablename, content}
+        Get all info(pages with content) from file as dict: {tablename, content}
         """
         func = self._get_fnc()
         self.file_obj.seek(0)
@@ -234,17 +232,13 @@ class FileReader(FormatDetector):
         format = self.get_format()
         if format not in self.multipage_formats:
             # only one table
-            return {'main': func(self.file_obj, name=self.name, **kwargs)}
+            return {"main": func(self.file_obj, name=self.name, **kwargs)}
 
-        return {
-            name: df
-            for name, df in
-            func(self.file_obj, **kwargs)
-        }
+        return {name: df for name, df in func(self.file_obj, **kwargs)}
 
     def get_page_content(self, page_name: str = None, **kwargs) -> pd.DataFrame:
         """
-            Get content of a single table
+        Get content of a single table
         """
         func = self._get_fnc()
         self.file_obj.seek(0)
@@ -270,18 +264,12 @@ class FileReader(FormatDetector):
             else:
                 accepted_csv_delimiters = [",", "\t", ";"]
             try:
-                dialect = csv.Sniffer().sniff(
-                    sample, delimiters=accepted_csv_delimiters
-                )
-                dialect.doublequote = (
-                    True  # assume that all csvs have " as string escape
-                )
+                dialect = csv.Sniffer().sniff(sample, delimiters=accepted_csv_delimiters)
+                dialect.doublequote = True  # assume that all csvs have " as string escape
             except Exception:
                 dialect = csv.reader(sample).dialect
                 if dialect.delimiter not in accepted_csv_delimiters:
-                    raise Exception(
-                        f"CSV delimeter '{dialect.delimiter}' is not supported"
-                    )
+                    raise Exception(f"CSV delimeter '{dialect.delimiter}' is not supported")
 
         except csv.Error:
             dialect = None
@@ -298,14 +286,14 @@ class FileReader(FormatDetector):
     def read_txt(file_obj: BytesIO, name=None, **kwargs):
         # the lib is heavy, so import it only when needed
         from langchain_text_splitters import RecursiveCharacterTextSplitter
+
         file_obj = decode(file_obj)
 
         try:
             from langchain_core.documents import Document
         except ImportError:
             raise ImportError(
-                "To import TXT document please install 'langchain-community':\n"
-                "    pip install langchain-community"
+                "To import TXT document please install 'langchain-community':\n    pip install langchain-community"
             )
         text = file_obj.read()
 
@@ -317,12 +305,7 @@ class FileReader(FormatDetector):
         )
 
         docs = text_splitter.split_documents(documents)
-        return pd.DataFrame(
-            [
-                {"content": doc.page_content, "metadata": doc.metadata}
-                for doc in docs
-            ]
-        )
+        return pd.DataFrame([{"content": doc.page_content, "metadata": doc.metadata} for doc in docs])
 
     @staticmethod
     def read_pdf(file_obj: BytesIO, name=None, **kwargs):
@@ -357,13 +340,11 @@ class FileReader(FormatDetector):
     @staticmethod
     def read_xlsx(file_obj: BytesIO, page_name=None, only_names=False, **kwargs):
         with pd.ExcelFile(file_obj) as xls:
-
             if page_name is not None:
                 # return specific page
                 yield page_name, pd.read_excel(xls, sheet_name=page_name)
 
             for page_name in xls.sheet_names:
-
                 if only_names:
                     # extract only pages names
                     df = None

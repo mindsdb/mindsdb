@@ -2,7 +2,7 @@ import ast
 from typing import Dict, Optional, List
 
 
-from litellm import completion, batch_completion, embedding
+from litellm import completion, batch_completion, embedding, acompletion
 import pandas as pd
 
 from mindsdb.integrations.libs.base import BaseMLEngine
@@ -42,9 +42,16 @@ class LiteLLMHandler(BaseMLEngine):
                 f"https://{args['snowflake_account_id']}.snowflakecomputing.com/api/v2/cortex/inference:complete"
             )
 
-        from litellm import acompletion
-
         return await acompletion(model=model, messages=messages, stream=False, **args)
+
+    @staticmethod
+    def completion(model: str, messages: List[dict], args: dict):
+        if model.startswith("snowflake/") and "snowflake_account_id" in args:
+            args["api_base"] = (
+                f"https://{args['snowflake_account_id']}.snowflakecomputing.com/api/v2/cortex/inference:complete"
+            )
+
+        return completion(model=model, messages=messages, stream=False, **args)
 
     def create(
         self,

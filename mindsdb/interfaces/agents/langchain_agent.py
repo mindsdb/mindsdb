@@ -11,10 +11,7 @@ import pandas as pd
 from langchain.agents import AgentExecutor
 from langchain.agents.initialize import initialize_agent
 from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
-from langchain_community.chat_models import (
-    ChatAnyscale,
-    ChatLiteLLM,
-    ChatOllama)
+from langchain_community.chat_models import ChatAnyscale, ChatLiteLLM, ChatOllama
 from langchain_writer import ChatWriter
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.agents import AgentAction, AgentStep
@@ -28,7 +25,9 @@ from langchain_core.tools import Tool
 from mindsdb.integrations.libs.llm.utils import get_llm_config
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
-from mindsdb.interfaces.agents.event_dispatch_callback_handler import EventDispatchCallbackHandler
+from mindsdb.interfaces.agents.event_dispatch_callback_handler import (
+    EventDispatchCallbackHandler,
+)
 from mindsdb.interfaces.agents.constants import AGENT_CHUNK_POLLING_INTERVAL_SECONDS
 from mindsdb.utilities import log
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
@@ -55,9 +54,10 @@ from mindsdb.interfaces.agents.constants import (
     NVIDIA_NIM_CHAT_MODELS,
     USER_COLUMN,
     ASSISTANT_COLUMN,
-    CONTEXT_COLUMN, TRACE_ID_COLUMN,
+    CONTEXT_COLUMN,
+    TRACE_ID_COLUMN,
     DEFAULT_AGENT_SYSTEM_PROMPT,
-    WRITER_CHAT_MODELS
+    WRITER_CHAT_MODELS,
 )
 from mindsdb.interfaces.skills.skill_tool import skill_tool, SkillData
 from langchain_anthropic import ChatAnthropic
@@ -106,21 +106,21 @@ def get_embedding_model_provider(args: Dict) -> str:
     # Check for explicit embedding model provider
     if "embedding_model_provider" in args:
         provider = args["embedding_model_provider"]
-        if provider == 'vllm':
-            if not (args.get('openai_api_base') and args.get('model')):
+        if provider == "vllm":
+            if not (args.get("openai_api_base") and args.get("model")):
                 raise ValueError(
                     "VLLM embeddings configuration error:\n"
                     "- Missing required parameters: 'openai_api_base' and/or 'model'\n"
                     "- Example: openai_api_base='http://localhost:8003/v1', model='your-model-name'"
                 )
             logger.info("Using custom VLLMEmbeddings class")
-            return 'vllm'
+            return "vllm"
         return provider
 
     # Check if LLM provider is vLLM
-    llm_provider = args.get('provider', DEFAULT_EMBEDDINGS_MODEL_PROVIDER)
-    if llm_provider == 'vllm':
-        if not (args.get('openai_api_base') and args.get('model')):
+    llm_provider = args.get("provider", DEFAULT_EMBEDDINGS_MODEL_PROVIDER)
+    if llm_provider == "vllm":
+        if not (args.get("openai_api_base") and args.get("model")):
             raise ValueError(
                 "VLLM embeddings configuration error:\n"
                 "- Missing required parameters: 'openai_api_base' and/or 'model'\n"
@@ -128,7 +128,7 @@ def get_embedding_model_provider(args: Dict) -> str:
                 "- Example: openai_api_base='http://localhost:8003/v1', model='your-model-name'"
             )
         logger.info("Using custom VLLMEmbeddings class")
-        return 'vllm'
+        return "vllm"
 
     # Default to LLM provider
     return llm_provider
@@ -181,7 +181,7 @@ def create_chat_model(args: Dict):
         return ChatWriter(**model_kwargs)
     if args["provider"] == "mindsdb":
         return ChatMindsdb(**model_kwargs)
-    raise ValueError(f'Unknown provider: {args["provider"]}')
+    raise ValueError(f"Unknown provider: {args['provider']}")
 
 
 def prepare_prompts(df, base_template, input_variables, user_column=USER_COLUMN):
@@ -190,13 +190,17 @@ def prepare_prompts(df, base_template, input_variables, user_column=USER_COLUMN)
     # Combine system prompt with user-provided template
     base_template = f"{DEFAULT_AGENT_SYSTEM_PROMPT}\n\n{base_template}"
 
-    base_template = base_template.replace('{{', '{').replace('}}', '}')
+    base_template = base_template.replace("{{", "{").replace("}}", "}")
     prompts = []
 
     for i, row in df.iterrows():
         if i not in empty_prompt_ids:
-            prompt = PromptTemplate(input_variables=input_variables, template=base_template)
-            kwargs = {col: row[col] if row[col] is not None else '' for col in input_variables}
+            prompt = PromptTemplate(
+                input_variables=input_variables, template=base_template
+            )
+            kwargs = {
+                col: row[col] if row[col] is not None else "" for col in input_variables
+            }
             prompts.append(prompt.format(**kwargs))
         elif row.get(user_column):
             prompts.append(row[user_column])
@@ -230,9 +234,7 @@ def process_chunk(chunk):
 
 
 class LangchainAgent:
-
     def __init__(self, agent: db.Agents, model: dict = None):
-
         self.agent = agent
         self.model = model
 
@@ -241,8 +243,12 @@ class LangchainAgent:
         self.embedding_model: Optional[object] = None
 
         self.log_callback_handler: Optional[object] = None
-        self.langfuse_callback_handler: Optional[object] = None  # native langfuse callback handler
-        self.mdb_langfuse_callback_handler: Optional[object] = None  # custom (see langfuse_callback_handler.py)
+        self.langfuse_callback_handler: Optional[object] = (
+            None  # native langfuse callback handler
+        )
+        self.mdb_langfuse_callback_handler: Optional[object] = (
+            None  # custom (see langfuse_callback_handler.py)
+        )
 
         self.langfuse_client_wrapper = LangfuseClientWrapper()
         self.args = self._initialize_args()
@@ -283,16 +289,17 @@ class LangchainAgent:
 
     def get_metadata(self) -> Dict:
         return {
-            'provider': self.provider,
-            'model_name': self.args["model_name"],
-            'embedding_model_provider': self.args.get('embedding_model_provider',
-                                                      get_embedding_model_provider(self.args)),
-            'skills': get_skills(self.agent),
-            'user_id': ctx.user_id,
-            'session_id': ctx.session_id,
-            'company_id': ctx.company_id,
-            'user_class': ctx.user_class,
-            'email_confirmed': ctx.email_confirmed
+            "provider": self.provider,
+            "model_name": self.args["model_name"],
+            "embedding_model_provider": self.args.get(
+                "embedding_model_provider", get_embedding_model_provider(self.args)
+            ),
+            "skills": get_skills(self.agent),
+            "user_id": ctx.user_id,
+            "session_id": ctx.session_id,
+            "company_id": ctx.company_id,
+            "user_class": ctx.user_class,
+            "email_confirmed": ctx.email_confirmed,
         }
 
     def get_tags(self) -> List:
@@ -301,14 +308,13 @@ class LangchainAgent:
         ]
 
     def get_completion(self, messages, stream: bool = False):
-
         # Get metadata and tags to be used in the trace
         metadata = self.get_metadata()
         tags = self.get_tags()
 
         # Set up trace for the API completion in Langfuse
         self.langfuse_client_wrapper.setup_trace(
-            name='api-completion',
+            name="api-completion",
             input=messages,
             tags=tags,
             metadata=metadata,
@@ -318,8 +324,8 @@ class LangchainAgent:
 
         # Set up trace for the run completion in Langfuse
         self.run_completion_span = self.langfuse_client_wrapper.start_span(
-            name='run-completion',
-            input=messages)
+            name="run-completion", input=messages
+        )
 
         if stream:
             return self._get_completion_stream(messages)
@@ -339,7 +345,9 @@ class LangchainAgent:
         response = self.run_agent(df, agent, args)
 
         # End the run completion span and update the metadata with tool usage
-        self.langfuse_client_wrapper.end_span(span=self.run_completion_span, output=response)
+        self.langfuse_client_wrapper.end_span(
+            span=self.run_completion_span, output=response
+        )
 
         return response
 
@@ -357,7 +365,9 @@ class LangchainAgent:
 
         df = pd.DataFrame(messages)
 
-        self.embedding_model_provider = args.get('embedding_model_provider', get_embedding_model_provider(args))
+        self.embedding_model_provider = args.get(
+            "embedding_model_provider", get_embedding_model_provider(args)
+        )
         # Back compatibility for old models
         self.provider = args.get("provider", get_llm_provider(args))
 
@@ -422,7 +432,7 @@ class LangchainAgent:
                 "max_iterations", args.get("max_iterations", DEFAULT_MAX_ITERATIONS)
             ),
             memory=memory,
-            verbose=args.get("verbose", args.get("verbose", False))
+            verbose=args.get("verbose", args.get("verbose", False)),
         )
         return agent_executor
 
@@ -434,12 +444,14 @@ class LangchainAgent:
                 type=rel.skill.type,
                 params=rel.skill.params,
                 project_id=rel.skill.project_id,
-                agent_tables_list=(rel.parameters or {}).get('tables')
+                agent_tables_list=(rel.parameters or {}).get("tables"),
             )
             for rel in self.agent.skills_relationships
         ]
 
-        tools_groups = skill_tool.get_tools_from_skills(skills_data, llm, self.embedding_model)
+        tools_groups = skill_tool.get_tools_from_skills(
+            skills_data, llm, self.embedding_model
+        )
 
         all_tools = []
         for skill_type, tools in tools_groups.items():
@@ -457,7 +469,9 @@ class LangchainAgent:
         all_callbacks = []
 
         if self.log_callback_handler is None:
-            self.log_callback_handler = LogCallbackHandler(logger, verbose=args.get("verbose", True))
+            self.log_callback_handler = LogCallbackHandler(
+                logger, verbose=args.get("verbose", True)
+            )
 
         all_callbacks.append(self.log_callback_handler)
 
@@ -478,7 +492,9 @@ class LangchainAgent:
             )
 
         if self.langfuse_callback_handler is None:
-            self.langfuse_callback_handler = self.langfuse_client_wrapper.get_langchain_handler()
+            self.langfuse_callback_handler = (
+                self.langfuse_client_wrapper.get_langchain_handler()
+            )
 
         # custom tracer
         if self.mdb_langfuse_callback_handler is None:
@@ -524,31 +540,43 @@ AI: {response}"""
                 return langchain_react_formatted_response
         return f"Agent failed with error:\n{str(error)}..."
 
-    def run_agent(self, df: pd.DataFrame, agent: AgentExecutor, args: Dict) -> pd.DataFrame:
-        base_template = args.get('prompt_template', args['prompt_template'])
-        return_context = args.get('return_context', True)
+    def run_agent(
+        self, df: pd.DataFrame, agent: AgentExecutor, args: Dict
+    ) -> pd.DataFrame:
+        base_template = args.get("prompt_template", args["prompt_template"])
+        return_context = args.get("return_context", True)
         input_variables = re.findall(r"{{(.*?)}}", base_template)
 
-        prompts, empty_prompt_ids = prepare_prompts(df, base_template, input_variables,
-                                                    args.get('user_column', USER_COLUMN))
+        prompts, empty_prompt_ids = prepare_prompts(
+            df, base_template, input_variables, args.get("user_column", USER_COLUMN)
+        )
 
         def _invoke_agent_executor_with_prompt(agent_executor, prompt):
             if not prompt:
                 return {CONTEXT_COLUMN: [], ASSISTANT_COLUMN: ""}
             try:
                 callbacks, context_callback = prepare_callbacks(self, args)
-                result = agent_executor.invoke(prompt, config={'callbacks': callbacks})
+                result = agent_executor.invoke(prompt, config={"callbacks": callbacks})
                 captured_context = context_callback.get_contexts()
-                output = result['output'] if isinstance(result, dict) and 'output' in result else str(result)
+                output = (
+                    result["output"]
+                    if isinstance(result, dict) and "output" in result
+                    else str(result)
+                )
                 return {CONTEXT_COLUMN: captured_context, ASSISTANT_COLUMN: output}
             except Exception as e:
                 error_message = str(e)
                 # Special handling for API key errors
-                if "API key" in error_message and ("not found" in error_message or "missing" in error_message):
+                if "API key" in error_message and (
+                    "not found" in error_message or "missing" in error_message
+                ):
                     # Format API key error more clearly
                     logger.error(f"API Key Error: {error_message}")
                     error_message = f"API Key Error: {error_message}"
-                return {CONTEXT_COLUMN: [], ASSISTANT_COLUMN: handle_agent_error(e, error_message)}
+                return {
+                    CONTEXT_COLUMN: [],
+                    ASSISTANT_COLUMN: handle_agent_error(e, error_message),
+                }
 
         completions = []
         contexts = []
@@ -593,7 +621,7 @@ AI: {response}"""
                 CONTEXT_COLUMN: [
                     json.dumps(ctx) for ctx in contexts
                 ],  # Serialize context to JSON string
-                TRACE_ID_COLUMN: self.langfuse_client_wrapper.get_trace_id()
+                TRACE_ID_COLUMN: self.langfuse_client_wrapper.get_trace_id(),
             }
         )
 
@@ -603,17 +631,22 @@ AI: {response}"""
         return pred_df
 
     def add_chunk_metadata(self, chunk: Dict) -> Dict:
-        logger.debug(f'Adding metadata to chunk: {chunk}')
-        logger.debug(f'Trace ID: {self.langfuse_client_wrapper.get_trace_id()}')
+        logger.debug(f"Adding metadata to chunk: {chunk}")
+        logger.debug(f"Trace ID: {self.langfuse_client_wrapper.get_trace_id()}")
         chunk["trace_id"] = self.langfuse_client_wrapper.get_trace_id()
         return chunk
 
-    def _stream_agent_executor(self, agent_executor: AgentExecutor, prompt: str, callbacks: List[BaseCallbackHandler]):
+    def _stream_agent_executor(
+        self,
+        agent_executor: AgentExecutor,
+        prompt: str,
+        callbacks: List[BaseCallbackHandler],
+    ):
         chunk_queue = queue.Queue()
         # Add event dispatch callback handler only to streaming completions.
         event_dispatch_callback_handler = EventDispatchCallbackHandler(chunk_queue)
         callbacks.append(event_dispatch_callback_handler)
-        stream_iterator = agent_executor.stream(prompt, config={'callbacks': callbacks})
+        stream_iterator = agent_executor.stream(prompt, config={"callbacks": callbacks})
 
         agent_executor_finished_event = threading.Event()
 
@@ -628,36 +661,47 @@ AI: {response}"""
 
         # Enqueue Langchain agent streaming chunks in a separate thread to not block event chunks.
         executor_stream_thread = threading.Thread(
-            target=stream_worker, daemon=True, args=(ctx.dump(),), name='LangchainAgent.stream_worker'
+            target=stream_worker,
+            daemon=True,
+            args=(ctx.dump(),),
+            name="LangchainAgent.stream_worker",
         )
         executor_stream_thread.start()
 
         while not agent_executor_finished_event.is_set():
             try:
-                chunk = chunk_queue.get(block=True, timeout=AGENT_CHUNK_POLLING_INTERVAL_SECONDS)
+                chunk = chunk_queue.get(
+                    block=True, timeout=AGENT_CHUNK_POLLING_INTERVAL_SECONDS
+                )
             except queue.Empty:
                 continue
-            logger.debug(f'Processing streaming chunk {chunk}')
+            logger.debug(f"Processing streaming chunk {chunk}")
             processed_chunk = self.process_chunk(chunk)
-            logger.info(f'Processed chunk: {processed_chunk}')
+            logger.info(f"Processed chunk: {processed_chunk}")
             yield self.add_chunk_metadata(processed_chunk)
             chunk_queue.task_done()
 
-    def stream_agent(self, df: pd.DataFrame, agent_executor: AgentExecutor, args: Dict) -> Iterable[Dict]:
-        base_template = args.get('prompt_template', args['prompt_template'])
+    def stream_agent(
+        self, df: pd.DataFrame, agent_executor: AgentExecutor, args: Dict
+    ) -> Iterable[Dict]:
+        base_template = args.get("prompt_template", args["prompt_template"])
         input_variables = re.findall(r"{{(.*?)}}", base_template)
-        return_context = args.get('return_context', True)
+        return_context = args.get("return_context", True)
 
-        prompts, _ = prepare_prompts(df, base_template, input_variables, args.get('user_column', USER_COLUMN))
+        prompts, _ = prepare_prompts(
+            df, base_template, input_variables, args.get("user_column", USER_COLUMN)
+        )
 
         callbacks, context_callback = prepare_callbacks(self, args)
 
         yield self.add_chunk_metadata({"type": "start", "prompt": prompts[0]})
 
-        if not hasattr(agent_executor, 'stream') or not callable(agent_executor.stream):
+        if not hasattr(agent_executor, "stream") or not callable(agent_executor.stream):
             raise AttributeError("The agent_executor does not have a 'stream' method")
 
-        stream_iterator = self._stream_agent_executor(agent_executor, prompts[0], callbacks)
+        stream_iterator = self._stream_agent_executor(
+            agent_executor, prompts[0], callbacks
+        )
         for chunk in stream_iterator:
             yield chunk
 
@@ -669,7 +713,9 @@ AI: {response}"""
 
         if self.log_callback_handler.generated_sql:
             # Yield generated SQL if available
-            yield self.add_chunk_metadata({"type": "sql", "content": self.log_callback_handler.generated_sql})
+            yield self.add_chunk_metadata(
+                {"type": "sql", "content": self.log_callback_handler.generated_sql}
+            )
 
         # End the run completion span and update the metadata with tool usage
         self.langfuse_client_wrapper.end_span_stream(span=self.run_completion_span)
@@ -683,21 +729,21 @@ AI: {response}"""
         if isinstance(chunk, AgentAction):
             # Format agent actions properly for streaming.
             return {
-                'tool': LangchainAgent.process_chunk(chunk.tool),
-                'tool_input': LangchainAgent.process_chunk(chunk.tool_input),
-                'log': LangchainAgent.process_chunk(chunk.log)
+                "tool": LangchainAgent.process_chunk(chunk.tool),
+                "tool_input": LangchainAgent.process_chunk(chunk.tool_input),
+                "log": LangchainAgent.process_chunk(chunk.log),
             }
         if isinstance(chunk, AgentStep):
             # Format agent steps properly for streaming.
             return {
-                'action': LangchainAgent.process_chunk(chunk.action),
-                'observation': LangchainAgent.process_chunk(chunk.observation) if chunk.observation else ''
+                "action": LangchainAgent.process_chunk(chunk.action),
+                "observation": LangchainAgent.process_chunk(chunk.observation)
+                if chunk.observation
+                else "",
             }
         if issubclass(chunk.__class__, BaseMessage):
             # Extract content from message subclasses properly for streaming.
-            return {
-                'content': chunk.content
-            }
+            return {"content": chunk.content}
         if isinstance(chunk, (str, int, float, bool, type(None))):
             return chunk
         return str(chunk)

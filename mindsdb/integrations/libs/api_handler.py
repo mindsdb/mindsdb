@@ -336,6 +336,99 @@ class APIResource(APITable):
             FilterCondition(i[1], FilterOperator(i[0].upper()), i[2])
             for i in extract_comparison_conditions(where)
         ]
+        
+        
+class MetaAPIResource(APIResource):
+    
+    # TODO: Add a meta_table_info() method in case metadata cannot be retrieved as expected below?
+
+    def meta_get_tables(self, table_name: str) -> Dict:
+        """
+        Retrieves table metadata for the API resource.
+        
+        Args:
+            table_name (str): The name given to the table that represents the API resource. This is required because the name for the APIResource is given by the handler.
+
+        Returns:
+            Dict: The dictionary should contain the following fields:
+            - TABLE_NAME (str): Name of the table.
+            - TABLE_TYPE (str): Type of the table, e.g. 'BASE TABLE', 'VIEW', etc. (optional).
+            - TABLE_SCHEMA (str): Schema of the table (optional).
+            - TABLE_DESCRIPTION (str): Description of the table (optional).
+            - ROW_COUNT (int): Estimated number of rows in the table (optional).
+        """
+        pass
+
+    def meta_get_columns(self, table_name: str) -> List[Dict]:
+        """
+        Retrieves column metadata for the API resource.
+
+        Args:
+            table_name (str): The name given to the table that represents the API resource. This is required because the name for the APIResource is given by the handler.
+
+        Returns:
+            List[Dict]: The list should contain dictionaries with the following fields:
+            - TABLE_NAME (str): Name of the table.
+            - COLUMN_NAME (str): Name of the column.
+            - DATA_TYPE (str): Data type of the column, e.g. 'VARCHAR', 'INT', etc.
+            - COLUMN_DESCRIPTION (str): Description of the column (optional).
+            - IS_NULLABLE (bool): Whether the column can contain NULL values (optional).
+            - COLUMN_DEFAULT (str): Default value of the column (optional).
+        """
+        pass
+
+    def meta_get_column_statistics(self, table_name: str) -> List[Dict]:
+        """
+        Retrieves column statistics for the API resource.
+
+        Args:
+            table_name (str): The name given to the table that represents the API resource. This is required because the name for the APIResource is given by the handler.
+
+        Returns:
+            List[Dict]: The list should contain dictionaries with the following fields:
+            - TABLE_NAME (str): Name of the table.
+            - COLUMN_NAME (str): Name of the column.
+            - MOST_COMMON_VALUES (List[str]): Most common values in the column (optional).
+            - MOST_COMMON_FREQUENCIES (List[str]): Frequencies of the most common values in the column (optional).
+            - NULL_PERCENTAGE: Percentage of NULL values in the column (optional).
+            - MINIMUM_VALUE (str): Minimum value in the column (optional).
+            - MAXIMUM_VALUE (str): Maximum value in the column (optional).
+            - DISTINCT_VALUES_COUNT (int): Count of distinct values in the column (optional).
+        """
+        pass
+
+    def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
+        """
+        Retrieves primary key metadata for the API resource.
+
+        Args:
+            table_name (str): The name given to the table that represents the API resource. This is required because the name for the APIResource is given by the handler.
+
+        Returns:
+            List[Dict]: The list should contain dictionaries with the following fields:
+            - TABLE_NAME (str): Name of the table.
+            - COLUMN_NAME (str): Name of the column that is part of the primary key.
+            - ORDINAL_POSITION (int): Position of the column in the primary key (optional).
+            - CONSTRAINT_NAME (str): Name of the primary key constraint (optional).
+        """
+        pass
+    
+    def meta_get_foreign_keys(self, table_name: str) -> List[Dict]:
+        """
+        Retrieves foreign key metadata for the API resource.
+
+        Args:
+            table_name (str): The name given to the table that represents the API resource. This is required because the name for the APIResource is given by the handler.
+
+        Returns:
+            List[Dict]: The list should contain dictionaries with the following fields:
+            - PARENT_TABLE_NAME (str): Name of the parent table.
+            - PARENT_COLUMN_NAME (str): Name of the parent column that is part of the foreign key.
+            - CHILD_TABLE_NAME (str): Name of the child table.
+            - CHILD_COLUMN_NAME (str): Name of the child column that is part of the foreign key.
+            - CONSTRAINT_NAME (str): Name of the foreign key constraint (optional).
+        """
+        pass
 
 
 class APIHandler(BaseHandler):

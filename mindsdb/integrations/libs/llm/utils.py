@@ -42,16 +42,12 @@ DEFAULT_LITELLM_BASE_URL = "https://ai.dev.mindsdb.com"
 DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434"
 DEFAULT_OLLAMA_MODEL = "llama2"
 
-DEFAULT_NVIDIA_NIM_BASE_URL = (
-    "http://localhost:8000/v1"  # Assumes local port forwarding through ssh
-)
+DEFAULT_NVIDIA_NIM_BASE_URL = "http://localhost:8000/v1"  # Assumes local port forwarding through ssh
 DEFAULT_NVIDIA_NIM_MODEL = "meta/llama-3_1-8b-instruct"
 DEFAULT_VLLM_SERVER_URL = "http://localhost:8000/v1"
 
 
-def get_completed_prompts(
-    base_template: str, df: pd.DataFrame, strict=True
-) -> Tuple[List[str], np.ndarray]:
+def get_completed_prompts(base_template: str, df: pd.DataFrame, strict=True) -> Tuple[List[str], np.ndarray]:
     """
     Helper method that produces formatted prompts given a template and data in a Pandas DataFrame.
     It also returns the ID of any empty templates that failed to be filled due to missing data.
@@ -70,9 +66,7 @@ def get_completed_prompts(
     if len(matches) == 0:
         # no placeholders
         if strict:
-            raise AssertionError(
-                "No placeholders found in the prompt, please provide a valid prompt template."
-            )
+            raise AssertionError("No placeholders found in the prompt, please provide a valid prompt template.")
         prompts = [base_template] * len(df)
         return prompts, np.ndarray(0)
 
@@ -96,12 +90,8 @@ def get_completed_prompts(
     for i in range(len(template)):
         atom = template[i]
         if i < len(columns):
-            col = df[columns[i]].replace(
-                to_replace=[None], value=""
-            )  # add empty quote if data is missing
-            df["__mdb_prompt"] = df["__mdb_prompt"].apply(
-                lambda x: x + atom
-            ) + col.astype("string")
+            col = df[columns[i]].replace(to_replace=[None], value="")  # add empty quote if data is missing
+            df["__mdb_prompt"] = df["__mdb_prompt"].apply(lambda x: x + atom) + col.astype("string")
         else:
             df["__mdb_prompt"] = df["__mdb_prompt"].apply(lambda x: x + atom)
     prompts = list(df["__mdb_prompt"])
@@ -173,9 +163,7 @@ def get_llm_config(provider: str, args: Dict) -> BaseLLMConfig:
             max_tokens=args.get("max_tokens", DEFAULT_OPENAI_MAX_TOKENS),
             top_p=args.get("top_p", None),
             top_k=args.get("top_k", None),
-            custom_llm_provider=args.get(
-                "custom_llm_provider", DEFAULT_LITELLM_PROVIDER
-            ),
+            custom_llm_provider=args.get("custom_llm_provider", DEFAULT_LITELLM_PROVIDER),
             model_kwargs=model_kwargs,
         )
     if provider == "ollama":
@@ -302,9 +290,7 @@ def ft_jsonl_validation(
                 )  # noqa
 
             if messages_col not in batch:
-                raise Exception(
-                    f"{prefix}Each line in the provided data should have a '{messages_col}' key"
-                )
+                raise Exception(f"{prefix}Each line in the provided data should have a '{messages_col}' key")
 
             messages = batch[messages_col]
             try:
@@ -362,30 +348,22 @@ def ft_chat_format_validation(
 
     for c in chat:
         if any(k not in valid_keys for k in c.keys()):
-            raise Exception(
-                f"Each message should only have these keys: `{valid_keys}`. Found: `{c.keys()}`"
-            )
+            raise Exception(f"Each message should only have these keys: `{valid_keys}`. Found: `{c.keys()}`")
 
     roles = [m[role_key] for m in chat]
     contents = [m[content_key] for m in chat]
 
     if len(roles) != len(contents):
-        raise Exception(
-            f"Each message should contain both `{role_key}` and `{content_key}` fields"
-        )
+        raise Exception(f"Each message should contain both `{role_key}` and `{content_key}` fields")
 
     if len(roles) == 0:
         raise Exception("Chat should have at least one message")
 
     if assistant_key not in roles:
-        raise Exception(
-            "Chat should have at least one assistant message"
-        )  # otherwise it is useless for FT
+        raise Exception("Chat should have at least one assistant message")  # otherwise it is useless for FT
 
     if user_key not in roles:
-        raise Exception(
-            "Chat should have at least one user message"
-        )  # perhaps remove in the future
+        raise Exception("Chat should have at least one user message")  # perhaps remove in the future
 
     # set default transitions for finite state machine if undefined
     if transitions is None:
@@ -403,15 +381,11 @@ def ft_chat_format_validation(
 
         # check invalid roles
         if role not in valid_roles:
-            raise Exception(
-                f"{prefix}Invalid role (found `{role}`, expected one of `{valid_roles}`)"
-            )
+            raise Exception(f"{prefix}Invalid role (found `{role}`, expected one of `{valid_roles}`)")
 
         # check content
         if not isinstance(content, str):
-            raise Exception(
-                f"{prefix}Content should be a string, got type `{type(content)}`"
-            )
+            raise Exception(f"{prefix}Content should be a string, got type `{type(content)}`")
 
         # check transition
         if role not in transitions[state]:
@@ -475,9 +449,7 @@ def ft_chat_formatter(df: pd.DataFrame) -> List[Dict]:
             df = df.sort_values(["chat_id"], kind="stable")
     elif "message_id" in df.columns:
         if df["message_id"].duplicated().any():
-            raise Exception(
-                "If `message_id` is provided, it must not contain duplicate IDs."
-            )
+            raise Exception("If `message_id` is provided, it must not contain duplicate IDs.")
         df = df.sort_values(["message_id"])
 
     # 2. build chats
@@ -488,12 +460,8 @@ def ft_chat_formatter(df: pd.DataFrame) -> List[Dict]:
         for _, row in df.iterrows():
             try:
                 chat = json.loads(row["chat_json"])
-                assert list(chat.keys()) == ["messages"], (
-                    "Each chat should have a 'messages' key, and nothing else."
-                )
-                ft_chat_format_validation(
-                    chat["messages"]
-                )  # will raise Exception if chat is invalid
+                assert list(chat.keys()) == ["messages"], "Each chat should have a 'messages' key, and nothing else."
+                ft_chat_format_validation(chat["messages"])  # will raise Exception if chat is invalid
                 chats.append(chat)
             except json.JSONDecodeError:
                 pass  # TODO: add logger info here, prompt user to clean dataset carefully
@@ -503,9 +471,7 @@ def ft_chat_formatter(df: pd.DataFrame) -> List[Dict]:
         chat = []
         for i, row in df.iterrows():
             if row["role"] == "system" and len(chat) > 0:
-                ft_chat_format_validation(
-                    chat
-                )  # will raise Exception if chat is invalid
+                ft_chat_format_validation(chat)  # will raise Exception if chat is invalid
                 chats.append({"messages": chat})
                 chat = []
             event = {"role": row["role"], "content": row["content"]}
@@ -540,15 +506,11 @@ def ft_code_formatter(
     # input and setup validation
     assert len(df) > 0, "Input dataframe should not be empty"
     assert "code" in df.columns, "Input dataframe should have a 'code' column"
-    assert chunk_size > 0 and isinstance(chunk_size, int), (
-        "`chunk_size` should be a positive integer"
-    )
+    assert chunk_size > 0 and isinstance(chunk_size, int), "`chunk_size` should be a positive integer"
 
     supported_formats = ["chat", "fim"]
     supported_langs = [e.value for e in Language]
-    assert language.lower() in supported_langs, (
-        f"Invalid language. Valid choices are: {supported_langs}"
-    )
+    assert language.lower() in supported_langs, f"Invalid language. Valid choices are: {supported_langs}"
 
     # ensure correct encoding
     df["code"] = df["code"].map(lambda x: x.encode("utf8").decode("unicode_escape"))
@@ -585,7 +547,7 @@ def ft_code_formatter(
     roles = []
     contents = []
     for idx in range(0, len(chunks), 3):
-        pre, mid, suf = chunks[idx: idx + 3]
+        pre, mid, suf = chunks[idx : idx + 3]
         interleaved = list(itertools.chain(*zip(templates, (pre, suf, mid))))
         user = "\n".join(interleaved[:-1])
         assistant = "\n".join(interleaved[-1:])

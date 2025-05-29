@@ -114,3 +114,16 @@ class GoogleConfig(BaseLLMConfig):
     top_k: Optional[int] = Field(default=None, description="Number of highest probability tokens to consider")
     max_output_tokens: Optional[int] = Field(default=None, description="Maximum number of tokens to generate")
     google_api_key: Optional[str] = Field(default=None, description="API key for Google Generative AI")
+
+
+# See https://api.python.langchain.com/en/latest/llms/langchain_community.llms.writer.Writer.html
+class WriterConfig(BaseLLMConfig):
+    model_name: str = Field(default="palmyra-x5", alias="model_id")
+    temperature: Optional[float] = Field(default=0.7)
+    max_tokens: Optional[int] = Field(default=None)
+    top_p: Optional[float] = Field(default=None)
+    stop: Optional[List[str]] = Field(default=None)
+    best_of: Optional[int] = Field(default=None)
+    writer_api_key: Optional[str] = Field(default=None)
+    writer_org_id: Optional[str] = Field(default=None)
+    base_url: Optional[str] = Field(default=None)

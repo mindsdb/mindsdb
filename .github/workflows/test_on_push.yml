@@ -107,7 +107,6 @@ jobs:
     needs: [changes, matrix_prep, code_checking]
     strategy:
       matrix: ${{fromJson(needs.matrix_prep.outputs.matrix)}}
-      fail-fast: false
     runs-on: ${{ matrix.runs_on }}
     steps:
       - name: Checkout
@@ -125,7 +124,6 @@ jobs:
         run: |
           # Install dev requirements and build our pip package
           uv pip install -r requirements/requirements-dev.txt
-          uv pip install setuptools==75.8.2
           python setup.py sdist
 
           # Install from the pip package
@@ -138,6 +136,7 @@ jobs:
     needs: [changes, matrix_prep, code_checking]
     strategy:
       matrix: ${{fromJson(needs.matrix_prep.outputs.matrix)}}
+      fail-fast: false
     runs-on: ${{ matrix.runs_on }}
     if: github.ref_type == 'branch'
     steps:

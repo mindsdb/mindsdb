@@ -1,7 +1,5 @@
 from http import HTTPStatus
 from unittest.mock import patch
-import pytest
-import sys
 
 import pandas as pd
 
@@ -386,7 +384,6 @@ def test_agent_completions_bad_request(client):
     assert completions_response.status_code == HTTPStatus.BAD_REQUEST
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="Fixme: Fails on Windoows - mdb DB file left open before delete.")
 def test_agent_completions_agent_not_found(client):
     completions_request = {"messages": [{"role": "user", "content": "Test message!"}]}
     completions_response = client.post(

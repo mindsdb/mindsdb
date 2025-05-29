@@ -1,11 +1,8 @@
 from http import HTTPStatus
-import pytest
-import sys
 
 import datetime as dt
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="Fixme: Fails on Windoows - mdb DB file left open before delete.")
 def test_jobs_flow(client):
     # --- create ---
 

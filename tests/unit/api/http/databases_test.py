@@ -1,6 +1,4 @@
 from http import HTTPStatus
-import sys
-import pytest
 
 
 def test_get_databases(client):
@@ -153,7 +151,6 @@ def test_delete_database_does_not_exist(client):
     assert response.status_code == HTTPStatus.NOT_FOUND
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="Fixme: Fails on Windoows - mdb DB file left open before delete.")
 def test_delete_system_database(client):
     response = client.delete("/api/databases/information_schema", follow_redirects=True)
     assert response.status_code == HTTPStatus.BAD_REQUEST

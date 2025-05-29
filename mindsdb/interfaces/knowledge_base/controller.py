@@ -42,7 +42,7 @@ from mindsdb.integrations.utilities.rag.rerankers.base_reranker import BaseLLMRe
 
 logger = log.getLogger(__name__)
 
-KB_TO_VECTORDB_COLUMNS = {"id": "original_doc_id", "chunk_id": "id", "chunk_content": "content"}
+KB_TO_VECTORDB_COLUMNS = {"id": "_original_doc_id", "chunk_id": "id", "chunk_content": "content"}
 
 
 def get_model_params(model_params: dict, default_config_key: str):
@@ -303,7 +303,7 @@ class KnowledgeBaseTable:
         columns = list(df.columns)
         # update id, get from metadata
         df[TableField.ID.value] = df[TableField.METADATA.value].apply(
-            lambda m: None if m is None else m.get("original_doc_id")
+            lambda m: None if m is None else m.get("_original_doc_id")
         )
 
         # id on first place
@@ -483,8 +483,8 @@ class KnowledgeBaseTable:
 
                     metadata = {
                         **base_metadata,
-                        "original_row_index": str(idx),  # provide link to original row index
-                        "content_column": col,
+                        "_original_row_index": str(idx),  # provide link to original row index
+                        "_content_column": col,
                     }
 
                     raw_documents.append(Document(content=content_str, id=doc_id, metadata=metadata))

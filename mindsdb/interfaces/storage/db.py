@@ -660,7 +660,7 @@ class MetaTables(Base):
             table_info += f"\n{pad}Estimated Row Count: {self.row_count}"
 
         if self.meta_primary_keys:
-            table_info += f"\n{pad}Primary Key(s): {', '.join([pk.as_string() for pk in self.meta_primary_keys])}"
+            table_info += f"\n{pad}Primary Keys (in defined order): {', '.join([pk.as_string() for pk in self.meta_primary_keys])}"
 
         if self.meta_columns:
             table_info += f"\n\n{pad}Columns:"
@@ -766,10 +766,19 @@ class MetaPrimaryKeys(Base):
     column_id: int = Column(Integer, ForeignKey("meta_columns.id"), primary_key=True)
     meta_columns = relationship("MetaColumns", back_populates="meta_primary_keys")
 
+    ordinal_position: int = Column(Integer, nullable=True)
     constraint_name: str = Column(String, nullable=True)
 
     def as_string(self) -> str:
-        return f"{self.meta_columns.name} ({self.meta_columns.data_type})"
+        pk_list = sorted(
+            self.meta_tables.meta_primary_keys,
+            key=lambda pk: pk.ordinal_position if pk.ordinal_position is not None else 0
+        )
+
+        return ", ".join(
+            f"{pk.meta_columns.name} ({pk.meta_columns.data_type})"
+            for pk in pk_list
+        )
 
 
 class MetaForeignKeys(Base):

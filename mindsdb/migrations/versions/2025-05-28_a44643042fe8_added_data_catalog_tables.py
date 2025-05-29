@@ -72,6 +72,7 @@ def upgrade():
             sa.ForeignKey("meta_columns.id"),
             primary_key=True,
         ),
+        sa.Column("ordinal_position", sa.Integer(), nullable=True),
         sa.Column("constraint_name", sa.String(), nullable=True),
     )
 

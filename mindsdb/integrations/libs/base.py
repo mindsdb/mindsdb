@@ -178,6 +178,7 @@ class MetaDatabaseHandler(DatabaseHandler):
             HandlerResponse: The response should consist of the following columns:
             - TABLE_NAME (str): Name of the table.
             - COLUMN_NAME (str): Name of the column that is part of the primary key.
+            - ORDINAL_POSITION (int): Position of the column in the primary key (optional).
             - CONSTRAINT_NAME (str): Name of the primary key constraint (optional).
         """
         raise NotImplementedError()

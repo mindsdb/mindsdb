@@ -1,6 +1,7 @@
 import json
 import math
 import time
+from typing import List
 
 import pandas as pd
 import datetime as dt
@@ -12,14 +13,6 @@ from mindsdb.utilities import log
 from mindsdb.interfaces.knowledge_base.llm_client import LLMClient
 
 logger = log.getLogger(__name__)
-
-
-def calc_entropy(values):
-    # normalize & filter
-    total = sum(values)
-    values = [i / total for i in values if i > 0]
-    # calc
-    return -sum([pk * math.log(pk) for pk in values])
 
 
 GENERATE_QA_SYSTEM_PROMPT = """
@@ -35,6 +28,19 @@ Don't generate questions like "What is being amended in the application?" becaus
 The question should be answerable without the text, but the answer should be present in the text.
 Return ONLY a json response. No other text.
 """
+
+
+def calc_entropy(values: List[float]) -> float:
+    """
+    Alternative of scipy.stats.entropy, to not add `scipy` dependency
+    :param values: Input distribution
+    :return: The calculated entropy.
+    """
+    # normalize & filter
+    total = sum(values)
+    values = [i / total for i in values if i > 0]
+    # calc
+    return -sum([pk * math.log(pk) for pk in values])
 
 
 class EvaluateBase:
@@ -61,8 +67,6 @@ class EvaluateBase:
         Logic to get LLM setting:
         - `llm` setting of ‘evaluate’ command
         - if not defined, look at the knowledge base reranker config
-        - TODO if not defined, get default llm setting for knowledge base
-
         """
         if "llm" in params:
             llm_params = params["llm"]
@@ -71,10 +75,9 @@ class EvaluateBase:
 
         self.llm_client = LLMClient(llm_params)
 
-    # def call_llm(self, messages):
-    #     self.kb.call_llm(messages, self._llm_params)
+    def generate_test_data(self, gen_params: dict) -> pd.DataFrame:
+        # Extract source data (from users query or from KB itself) and call `generate` to get test data
 
-    def generate_test_data(self, gen_params) -> pd.DataFrame:
         if "from_sql" in gen_params:
             # get data from sql
             query = parse_sql(gen_params["from_sql"])
@@ -88,14 +91,16 @@ class EvaluateBase:
             response = dn.query(query=query, session=self.session)
             df = response.data_frame
 
-            if 'content' not in df.columns:
+            if "content" not in df.columns:
                 raise ValueError("`content` column isn't found in source data")
 
-            df = df.rename(columns={'content': 'chunk_content'})
+            df = df.rename(columns={"content": "chunk_content"})
         else:
             # get data from knowledge base
             df = self.kb.select_query(
-                Select(targets=[Identifier("chunk_content"), Identifier('id')], limit=Constant(self.DEFAULT_SAMPLE_SIZE))
+                Select(
+                    targets=[Identifier("chunk_content"), Identifier("id")], limit=Constant(self.DEFAULT_SAMPLE_SIZE)
+                )
             )
 
         if "count" in gen_params:
@@ -108,7 +113,9 @@ class EvaluateBase:
 
         return self.generate(sampled_df)
 
-    def get_test_data(self, test_table: Identifier) -> pd.DataFrame:
+    def read_from_table(self, test_table: Identifier) -> pd.DataFrame:
+        # read data from table
+
         dn, table_name = self._get_dn_table(test_table)
 
         query = Select(
@@ -118,7 +125,7 @@ class EvaluateBase:
         response = dn.query(query=query, session=self.session)
         return response.data_frame
 
-    def _get_dn_table(self, table_name):
+    def _get_dn_table(self, table_name: Identifier):
         if len(table_name.parts) < 2:
             raise ValueError(f"Can't find database, table name must have at least 2 parts: {table_name}")
 
@@ -128,6 +135,8 @@ class EvaluateBase:
         return dn, table_name
 
     def save_to_table(self, table_name: Identifier, df: pd.DataFrame, is_replace=False):
+        # save data to table
+
         dn, table_name = self._get_dn_table(table_name)
 
         data = ResultSet.from_df(df)
@@ -140,7 +149,9 @@ class EvaluateBase:
             raise_if_exists=False,
         )
 
-    def run_evaluate(self, params) -> pd.DataFrame:
+    def run_evaluate(self, params: dict) -> pd.DataFrame:
+        # evaluate function entry point
+
         self._set_llm_client(params)
 
         if "test_table" not in params:
@@ -160,7 +171,7 @@ class EvaluateBase:
 
             self.save_to_table(test_table, test_data, is_replace=True)
         else:
-            test_data = self.get_test_data(test_table)
+            test_data = self.read_from_table(test_table)
 
         if params.get("evaluate", True) is False:
             # no evaluate is required
@@ -181,6 +192,8 @@ class EvaluateBase:
 
     @staticmethod
     def run(session, kb_table, params) -> pd.DataFrame:
+        # choose the evaluator version according to the 'version' parameter in config
+
         evaluate_method = params.get("method", "doc_id")
 
         if evaluate_method == "rerank":
@@ -194,6 +207,10 @@ class EvaluateBase:
 
 
 class EvaluateRerank(EvaluateBase):
+    """
+    Rank responses from KB using LLM (by calling KB reranker function)
+    """
+
     TOP_K = 10
 
     def generate(self, sampled_df: pd.DataFrame) -> pd.DataFrame:
@@ -392,6 +409,10 @@ class EvaluateRerank(EvaluateBase):
 
 
 class EvaluateDocID(EvaluateBase):
+    """
+    Checks if ID in response from KB is matched with doc ID in test dataset
+    """
+
     TOP_K = 100
 
     def generate(self, sampled_df: pd.DataFrame) -> pd.DataFrame:
@@ -458,8 +479,15 @@ class EvaluateDocID(EvaluateBase):
                 doc_found = False
                 doc_position = -1
 
-            stats.append({"question": question, "doc_id": doc_id, "doc_found": doc_found,
-                          "doc_position": doc_position, "query_time": query_time})
+            stats.append(
+                {
+                    "question": question,
+                    "doc_id": doc_id,
+                    "doc_found": doc_found,
+                    "doc_position": doc_position,
+                    "query_time": query_time,
+                }
+            )
 
         evaluation_results = self.summarize_results(stats)
         return pd.DataFrame([evaluation_results])

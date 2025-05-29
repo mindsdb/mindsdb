@@ -8,6 +8,11 @@ from mindsdb.utilities.config import config
 
 
 class LLMClient:
+    """
+    Class for accession to LLM.
+    It chooses openai client or litellm handler depending on the config
+    """
+
     def __init__(self, llm_params=None):
         params = copy.deepcopy(config.get("default_llm", {}))
 

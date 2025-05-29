@@ -1181,7 +1181,14 @@ class KnowledgeBaseController:
         """
         raise NotImplementedError()
 
-    def evaluate(self, table_name, project_name: str, params: dict = None) -> pd.DataFrame:
+    def evaluate(self, table_name: str, project_name: str, params: dict = None) -> pd.DataFrame:
+        """
+        Run evaluate and/or create test data for evaluation
+        :param table_name: name of KB
+        :param project_name: project of KB
+        :param params: evaluation parameters
+        :return: evaluation results
+        """
         project_id = self.session.database_controller.get_project(project_name).id
         kb_table = self.get_table(table_name, project_id)
 

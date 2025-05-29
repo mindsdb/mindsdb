@@ -129,7 +129,7 @@ jobs:
           # Install from the pip package
           # If we install from source, we don't know if the pip package is installable.
           cd dist
-          uv pip install *.tar.gz
+          uv pip install *.tar.gz --prerelease=allow
 
   unit_tests:
     name: Run Unit Tests
@@ -155,7 +155,7 @@ jobs:
         run: |
           uv pip install -r requirements/requirements-test.txt
           # TODO: for now some tests rely on lightwood
-          uv pip install . \
+          uv pip install . --prerelease=allow \
             .[lightwood] \
             .[clickhouse] \
             .[snowflake] \

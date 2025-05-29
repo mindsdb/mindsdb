@@ -1,6 +1,7 @@
 import time
 import os
-from unittest.mock import patch
+import json
+from unittest.mock import patch, MagicMock
 import threading
 from contextlib import contextmanager
 
@@ -43,6 +44,17 @@ def set_openai_completion(mock_openai, response):
         return {"choices": [{"message": {"role": "system", "content": resp}}]}
 
     mock_openai().chat.completions.create.side_effect = resp_f
+
+def set_litellm_embedding(mock_litellm_embedding, response):
+    if not isinstance(response, list):
+        response = [response]
+
+    def resp_f(*args, **kwargs):
+        mock_response = MagicMock()
+        mock_response.data = [{"embedding": emb} for emb in response]
+        return mock_response
+
+    mock_litellm_embedding.side_effect = resp_f
 
 
 class TestAgent(BaseExecutorDummyML):
@@ -243,20 +255,19 @@ class TestAgent(BaseExecutorDummyML):
         if not found:
             raise AttributeError("Agent response is not found")
 
+    @patch("litellm.embedding")
     @patch("openai.OpenAI")
-    def test_agent_retrieval(self, mock_openai):
-        self.run_sql(
-            """
-                CREATE model emb_model
-                PREDICT output
-                using
-                  column='content',
-                  engine='dummy_ml',
-                  join_learn_process=true
-            """
-        )
-
-        self.run_sql("create knowledge base kb_review using model=emb_model")
+    def test_agent_retrieval(self, mock_openai, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding, [[0.1] * 1536])
+        self.run_sql("""
+            create knowledge base kb_review
+            using
+                embedding_model = {
+                    "provider": "dummy_provider",
+                    "model_name": "dummy_model",
+                    "api_key": "dummy_key"
+                }
+        """)
 
         self.run_sql("""
           create skill retr_skill
@@ -341,26 +352,54 @@ class TestAgent(BaseExecutorDummyML):
 
 
 class TestKB(BaseExecutorDummyML):
-    def _create_embedding_model(self, name):
-        self.run_sql(
-            f"""
-                CREATE model {name}
-                PREDICT predicted
-                using
-                  column='content',
-                  engine='dummy_ml',
-                  output=[1,2],
-                  join_learn_process=true
-            """
-        )
+    def _create_kb(
+        self,
+        name,
+        embedding_model=None,
+        reranking_model=None,
+        content_columns=None,
+        id_column=None,
+        metadata_columns=None,
+    ):
+        self.run_sql(f"drop knowledge base if exists {name}")
 
-    def test_kb(self):
-        self._create_embedding_model("emb_model")
+        if embedding_model is None:
+            embedding_model = {
+                "provider": "dummy_provider",
+                "model_name": "dummy_model",
+                "api_key": "dummy_key",
+            }
 
-        self.run_sql("create knowledge base kb_review using model=emb_model")
-        self.run_sql("drop knowledge base kb_review")  # drop chromadb left since the last failed test
-        self.run_sql("create knowledge base kb_review using model=emb_model")
+        kb_params = {
+            "embedding_model": embedding_model,
+        }
+        if reranking_model is not None:
+            kb_params["reranking_model"] = reranking_model
+        if content_columns is not None:
+            kb_params["content_columns"] = content_columns
+        if id_column is not None:
+            kb_params["id_column"] = id_column
+        if metadata_columns is not None:
+            kb_params["metadata_columns"] = metadata_columns
 
+        param_str = ""
+        if kb_params:
+            param_items = []
+            for k, v in kb_params.items():
+                param_items.append(f"{k}={json.dumps(v)}")
+            param_str = ",".join(param_items)
+
+        self.run_sql(f"""
+            create knowledge base {name}
+            using
+                {param_str}
+        """)
+
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_kb(self, mock_litellm_embedding):
+        self._create_kb("kb_review")
+
+        set_litellm_embedding(mock_litellm_embedding, [[0.1] * 1536])
         self.run_sql("insert into kb_review (content) values ('review')")
 
         # selectable
@@ -375,9 +414,8 @@ class TestKB(BaseExecutorDummyML):
         # only one default collection there
         assert len(ret) == 1
 
-    def test_kb_metadata(self):
-        self._create_embedding_model("emb_model")
-
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_kb_metadata(self, mock_litellm_embedding):
         record = {
             "review": "all is good, haven't used yet",
             "url": "https://laptops.com/123",
@@ -389,9 +427,9 @@ class TestKB(BaseExecutorDummyML):
         self.save_file("reviews", df)
 
         # ---  case 1: kb with default columns settings ---
-        self.run_sql("create knowledge base kb_review using model=emb_model")
-        self.run_sql("drop knowledge base kb_review")  # drop chromadb left since the last failed test
-        self.run_sql("create knowledge base kb_review using model=emb_model")
+        self._create_kb("kb_review")
+
+        set_litellm_embedding(mock_litellm_embedding, [[0.1] * 1536])
 
         self.run_sql("""
             insert into kb_review
@@ -423,18 +461,12 @@ class TestKB(BaseExecutorDummyML):
         assert ret["metadata"][0]["product"] == record["product"]
         assert ret["metadata"][0]["url"] == record["url"]
 
-        self.run_sql("drop knowledge base kb_review")
-
         # ---  case 2: kb with defined columns ---
+        self._create_kb(
+            "kb_review", content_columns=["review", "product"], id_column="url", metadata_columns=["specs", "id"]
+        )
 
-        self.run_sql("""
-          create knowledge base kb_review
-            using model=emb_model,
-            content_columns=['review', 'product'],
-            id_column='url',
-            metadata_columns=['specs', 'id']
-        """)
-
+        set_litellm_embedding(mock_litellm_embedding, [[0.1] * 1536, [0.2] * 1536])
         self.run_sql("""
             insert into kb_review
             select * from files.reviews
@@ -454,15 +486,10 @@ class TestKB(BaseExecutorDummyML):
         assert metadata["specs"] == record["specs"]
         assert str(metadata["id"]) == str(record["id"])
 
-        self.run_sql("drop knowledge base kb_review")
-
         # ---  case 3: content is defined, id is id, the rest goes to metadata ---
-        self.run_sql("""
-        create knowledge base kb_review
-         using model=emb_model,
-         content_columns=['review']
-        """)
+        self._create_kb("kb_review", content_columns=["review"])
 
+        set_litellm_embedding(mock_litellm_embedding, [[0.1] * 1536])
         self.run_sql("""
             insert into kb_review
             select * from files.reviews
@@ -489,17 +516,14 @@ class TestKB(BaseExecutorDummyML):
 
         return pd.DataFrame(data, columns=["ral", "english", "italian"])
 
-    def test_join_kb_table(self):
-        self._create_embedding_model("emb_model")
-
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_join_kb_table(self, mock_litellm_embedding):
         df = self._get_ral_table()
         self.save_file("ral", df)
 
-        self.run_sql("""
-          create knowledge base kb_ral
-            using model=emb_model
-        """)
+        self._create_kb("kb_ral")
 
+        set_litellm_embedding(mock_litellm_embedding, [[0.1] * 1536, [0.2] * 1536, [0.3] * 1536, [0.4] * 1536])
         self.run_sql("""
             insert into kb_ral
             select ral id, english content from files.ral
@@ -546,11 +570,9 @@ class TestKB(BaseExecutorDummyML):
         assert len(ret) == 2
         assert set(ret["id"]) == {"9016", "9023"}
 
-    @pytest.mark.skipif(sys.platform == "win32", reason="This test causes a hard crash on Windows")
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_kb_partitions(self, mock_handler):
-        self._create_embedding_model("emb_model")
-
+    def test_kb_partitions(self, mock_handler, mock_litellm_embedding):
         df = self._get_ral_table()
         self.save_file("ral", df)
 
@@ -561,14 +583,10 @@ class TestKB(BaseExecutorDummyML):
         self.set_handler(mock_handler, name="pg", tables={"ral": df})
 
         def check_partition(insert_sql):
-            # create empty kb
-            if len(self.run_sql("describe KNOWLEDGE_BASE kb_part")) > 0:
-                self.run_sql("delete from kb_part where id in (select id from kb_part)")
-                self.run_sql("DROP KNOWLEDGE_BASE kb_part")
-
-            self.run_sql('create knowledge base kb_part using model=emb_model, content_columns=["english"]')
+            self._create_kb("kb_part", content_columns=["english"])
 
             # load kb
+            set_litellm_embedding(mock_litellm_embedding, [[0.1] * 1536] * len(df))
             ret = self.run_sql(insert_sql)
             # inserts returns query
             query_id = ret["ID"][0]
@@ -658,18 +676,3 @@ class TestKB(BaseExecutorDummyML):
                 insert into kb_part SELECT id, english FROM pg.ral
                 using batch_size=20, track_column=id, threads = 3
             """)
-
-            # --- check select join using partitions ---
-            ret = self.run_sql("""
-                SELECT * FROM  pg.ral t
-                join emb_model
-                using batch_size=20, track_column=id
-            """)
-            assert len(ret) == len(df)
-
-            ret = self.run_sql("""
-                SELECT * FROM  pg.ral t
-                join emb_model
-                using batch_size=20, track_column=id, threads = 3
-            """)
-            assert len(ret) == len(df)

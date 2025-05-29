@@ -518,7 +518,6 @@ class TestKB(BaseExecutorDummyML):
 
         return pd.DataFrame(data, columns=["ral", "english", "italian"])
 
-    @pytest.mark.skipif(sys.platform == "win32", reason="Causes hard crash on windows.")
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_join_kb_table(self, mock_litellm_embedding):
         df = self._get_ral_table()
@@ -573,6 +572,7 @@ class TestKB(BaseExecutorDummyML):
         assert len(ret) == 2
         assert set(ret["id"]) == {"9016", "9023"}
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="Causes hard crash on windows.")
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_kb_partitions(self, mock_handler, mock_litellm_embedding):

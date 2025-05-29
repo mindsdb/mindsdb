@@ -97,6 +97,17 @@ def get_reranking_model_from_params(reranking_model_params: dict):
     return BaseLLMReranker(**params_copy)
 
 
+def safe_pandas_is_datetime(value: str) -> bool:
+    """
+    Check if the value can be parsed as a datetime.
+    """
+    try:
+        result = pd.api.types.is_datetime64_any_dtype(value)
+        return result
+    except ValueError:
+        return False
+
+
 class KnowledgeBaseTable:
     """
     Knowledge base table interface
@@ -591,7 +602,7 @@ class KnowledgeBaseTable:
                 for col in metadata_columns:
                     value = row[col]
                     # Convert numpy/pandas types to Python native types
-                    if pd.api.types.is_datetime64_any_dtype(value) or isinstance(value, pd.Timestamp):
+                    if safe_pandas_is_datetime(value) or isinstance(value, pd.Timestamp):
                         value = str(value)
                     elif pd.api.types.is_integer_dtype(value):
                         value = int(value)

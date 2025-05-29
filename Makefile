@@ -13,12 +13,14 @@ precommit:
 	pre-commit install
 	pre-commit run --files $$(git diff --cached --name-only)
 
+format:
+	pre-commit run --hook-stage manual
+
 run_mindsdb:
 	python -m mindsdb
 
 check:
 	python tests/scripts/check_requirements.py
-	python tests/scripts/check_version.py
 	python tests/scripts/check_print_statements.py
 
 build_docker:

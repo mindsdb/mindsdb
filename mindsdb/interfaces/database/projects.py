@@ -11,15 +11,18 @@ from mindsdb_sql_parser.ast import Select, Star, Constant, Identifier
 from mindsdb_sql_parser import parse_sql
 
 from mindsdb.interfaces.storage import db
-from mindsdb.utilities.config import Config
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.views import ViewController
+from mindsdb.utilities import log
+from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 import mindsdb.utilities.profiler as profiler
 from mindsdb.api.executor.sql_query import SQLQuery
 from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
+
+logger = log.getLogger(__name__)
 
 
 class Project:
@@ -371,42 +374,55 @@ class Project:
 
         return data
 
-    def get_columns(self, table_name: str):
-        # at the moment it works only for models
-        predictor_record = db.Predictor.query.filter_by(
-            company_id=ctx.company_id,
-            project_id=self.id,
-            name=table_name
-        ).first()
+    def get_columns(self, table_name: str) -> list[str] | None:
         columns = []
-        if predictor_record is not None:
-            if isinstance(predictor_record.dtype_dict, dict):
-                columns = list(predictor_record.dtype_dict.keys())
-            elif predictor_record.to_predict is not None:
-                # no dtype_dict, use target
-                columns = predictor_record.to_predict
-                if not isinstance(columns, list):
-                    columns = [columns]
+        tables = self.get_tables()
+        table = tables.get(table_name)
+        if table is None:
             return columns
-        if self.get_view(table_name):
-            query = Select(targets=[Star()], from_table=Identifier(table_name), limit=Constant(1))
+        
+        match str(table['type']).upper():
+            case 'MODEL':
+                predictor_record = db.Predictor.query.filter_by(
+                    company_id=ctx.company_id,
+                    project_id=self.id,
+                    name=table_name
+                ).first()
+                columns = []
+                if predictor_record is not None:
+                    if isinstance(predictor_record.dtype_dict, dict):
+                        columns = list(predictor_record.dtype_dict.keys())
+                    elif predictor_record.to_predict is not None:
+                        # no dtype_dict, use target
+                        columns = predictor_record.to_predict
+                        if not isinstance(columns, list):
+                            columns = [columns]
+            case 'VIEW':
+                query = Select(targets=[Star()], from_table=Identifier(table_name), limit=Constant(1))
 
-            from mindsdb.api.executor.controllers.session_controller import SessionController
-            session = SessionController()
-            session.database = self.name
-            df = self.query_view(query, session)
-            return df.columns
-        else:
-            # is it agent?
-            agent = db.Agents.query.filter_by(
-                company_id=ctx.company_id,
-                project_id=self.id,
-                name=table_name
-            ).first()
-            if agent is not None:
-                from mindsdb.interfaces.agents.constants import ASSISTANT_COLUMN, USER_COLUMN
-                columns = [ASSISTANT_COLUMN, USER_COLUMN]
-
+                from mindsdb.api.executor.controllers.session_controller import SessionController
+                session = SessionController()
+                session.database = self.name
+                df = self.query_view(query, session)
+                columns = df.columns
+            case 'AGENT':
+                agent = db.Agents.query.filter_by(
+                    company_id=ctx.company_id,
+                    project_id=self.id,
+                    name=table_name
+                ).first()
+                if agent is not None:
+                    from mindsdb.interfaces.agents.constants import ASSISTANT_COLUMN, USER_COLUMN
+                    columns = [ASSISTANT_COLUMN, USER_COLUMN]
+            case 'KNOWLEDGE_BASE':
+                from mindsdb.interfaces.knowledge_base.controller import KB_TO_VECTORDB_COLUMNS
+                columns = list(KB_TO_VECTORDB_COLUMNS.keys()) + ['metadata', 'relevance', 'distance']
+            case 'TABLE':
+                # like 'mindsdb.models'
+                pass
+            case _:
+                logger.warning(f"Unknown table type: {table['type']}")
+        
         return columns
 
 

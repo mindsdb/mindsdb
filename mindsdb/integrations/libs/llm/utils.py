@@ -120,8 +120,7 @@ def get_llm_config(provider: str, args: Dict) -> BaseLLMConfig:
     """
     temperature = min(1.0, max(0.0, args.get("temperature", 0.0)))
     if provider == "openai":
-
-        if any(x in args.get("model_name", "") for x in ['o1', 'o3']):
+        if any(x in args.get("model_name", "") for x in ["o1", "o3"]):
             # for o1 and 03, 'temperature' does not support 0.0 with this model. Only the default (1) value is supported
             temperature = 1
 
@@ -400,7 +399,6 @@ def ft_chat_format_validation(
     # check order is valid via finite state machine
     state = None
     for i, (role, content) in enumerate(zip(roles, contents)):
-
         prefix = f"message #{i + 1}: "
 
         # check invalid roles
@@ -490,9 +488,9 @@ def ft_chat_formatter(df: pd.DataFrame) -> List[Dict]:
         for _, row in df.iterrows():
             try:
                 chat = json.loads(row["chat_json"])
-                assert list(chat.keys()) == [
-                    "messages"
-                ], "Each chat should have a 'messages' key, and nothing else."
+                assert list(chat.keys()) == ["messages"], (
+                    "Each chat should have a 'messages' key, and nothing else."
+                )
                 ft_chat_format_validation(
                     chat["messages"]
                 )  # will raise Exception if chat is invalid
@@ -542,15 +540,15 @@ def ft_code_formatter(
     # input and setup validation
     assert len(df) > 0, "Input dataframe should not be empty"
     assert "code" in df.columns, "Input dataframe should have a 'code' column"
-    assert chunk_size > 0 and isinstance(
-        chunk_size, int
-    ), "`chunk_size` should be a positive integer"
+    assert chunk_size > 0 and isinstance(chunk_size, int), (
+        "`chunk_size` should be a positive integer"
+    )
 
     supported_formats = ["chat", "fim"]
     supported_langs = [e.value for e in Language]
-    assert (
-        language.lower() in supported_langs
-    ), f"Invalid language. Valid choices are: {supported_langs}"
+    assert language.lower() in supported_langs, (
+        f"Invalid language. Valid choices are: {supported_langs}"
+    )
 
     # ensure correct encoding
     df["code"] = df["code"].map(lambda x: x.encode("utf8").decode("unicode_escape"))
@@ -608,12 +606,11 @@ def ft_cqa_formatter(
     default_instruction="You are a helpful assistant.",
     default_context="",
 ) -> pd.DataFrame:
-
     # input and setup validation
     assert len(df) > 0, "Input dataframe should not be empty"
-    assert {question_col, answer_col}.issubset(
-        set(df.columns)
-    ), f"Input dataframe must have columns `{question_col}`, and `{answer_col}`"  # noqa
+    assert {question_col, answer_col}.issubset(set(df.columns)), (
+        f"Input dataframe must have columns `{question_col}`, and `{answer_col}`"
+    )  # noqa
 
     if instruction_col not in df.columns:
         df[instruction_col] = default_instruction

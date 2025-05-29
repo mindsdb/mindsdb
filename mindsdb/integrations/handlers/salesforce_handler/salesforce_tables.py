@@ -3,7 +3,7 @@ from typing import Dict, List, Text
 from mindsdb_sql_parser.ast import Select, Star, Identifier
 import pandas as pd
 
-from mindsdb.integrations.libs.api_handler import APIResource
+from mindsdb.integrations.libs.api_handler import MetaAPIResource
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
 from mindsdb.utilities import log
 
@@ -11,12 +11,12 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 
-def create_table_class(resource_name: Text) -> APIResource:
+def create_table_class(resource_name: Text) -> MetaAPIResource:
     """
     Creates a table class for the given Salesforce resource.
     """
 
-    class AnyTable(APIResource):
+    class AnyTable(MetaAPIResource):
         """
         This is the table abstraction for any resource of the Salesforce API.
         """
@@ -115,6 +115,16 @@ def create_table_class(resource_name: Text) -> APIResource:
                 raise ValueError("Only the 'equals' and 'in' operators can be used on the 'Id' column.")
 
             return conditions[0].value if isinstance(conditions[0].value, list) else [conditions[0].value]
+        
+        def _get_metadata(self) -> Dict:
+            """
+            Retrieves metadata about the Salesforce resource.
+
+            Returns:
+                Dict: A dictionary containing metadata about the Salesforce resource.
+            """
+            client = self.handler.connect()
+            return getattr(client.sobjects, resource_name).describe()
 
         def get_columns(self) -> List[Text]:
             """
@@ -124,6 +134,85 @@ def create_table_class(resource_name: Text) -> APIResource:
                 List[Text]: A list of Attributes (columns) of the Salesforce resource.
             """
             client = self.handler.connect()
-            return [field['name'] for field in getattr(client.sobjects, resource_name).describe()['fields']]
+            return [field['name'] for field in self._get_metadata()['fields']]
+
+        def meta_get_tables(self, table_name: str) -> Dict:
+            """
+            Retrieves table metadata for the Salesforce resource.
+            
+            Args:
+                table_name (str): The name given to the table that represents the Salesforce resource.
+
+            Returns:
+                Dict: A dictionary containing table metadata for the Salesforce resource.
+            """
+            return {
+                'table_name': table_name,
+                'table_type': 'BASE TABLE',
+                'row_count': self.handler.connect().sobjects.query(f"SELECT COUNT() FROM {resource_name}").get('totalSize', 0),
+            }
+
+        def meta_get_columns(self, table_name: str) -> List[Dict]:
+            """
+            Retrieves column metadata for the Salesforce resource.
+
+            Args:
+                table_name (str): The name given to the table that represents the Salesforce resource.
+
+            Returns:
+                List[Dict]: A list of dictionaries containing column metadata for the Salesforce resource.
+            """
+            client = self.handler.connect()
+            metadata = self._get_metadata()
+
+            column_metadata = []
+            for field in metadata['fields']:
+                column_metadata.append({
+                    'table_name': table_name,
+                    'column_name': field['name'],
+                    'data_type': field['type'],
+                    'is_nullable': field.get('nillable', False),
+                })
+
+            return column_metadata
+
+        def meta_get_primary_keys(self, table_name: str) -> List[Dict]:
+            """
+            Retrieves the primary keys for the Salesforce resource.
+
+            Args:
+                table_name (str): The name given to the table that represents the Salesforce resource.
+
+            Returns:
+                List[Dict]: A list of dictionaries containing primary key metadata for the Salesforce resource.
+            """
+            return [
+                {
+                    'table_name': table_name,
+                    'column_name': 'Id',
+                }
+            ]
+
+        def meta_get_foreign_keys(self, table_name: str) -> List[Dict]:
+            """
+            Retrieves the foreign keys for the Salesforce resource.
+
+            Args:
+                table_name (str): The name given to the table that represents the Salesforce resource.
+
+            Returns:
+                List[Dict]: A list of dictionaries containing foreign key metadata for the Salesforce resource.
+            """
+            client = self.handler.connect()
+            metadata = self._get_metadata()
+
+            foreign_keys = []
+            for child_relationship in metadata.get('childRelationships', []):
+                foreign_keys.append({
+                    'parent_table_name': table_name,
+                    'parent_column_name': 'Id',
+                    'child_table_name': child_relationship['childSObject'],
+                    'child_column_name': child_relationship['field'],
+                })
 
     return AnyTable

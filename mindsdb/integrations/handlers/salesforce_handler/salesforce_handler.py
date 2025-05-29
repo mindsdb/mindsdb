@@ -4,7 +4,7 @@ import pandas as pd
 import salesforce_api
 from salesforce_api.exceptions import AuthenticationError, RestRequestCouldNotBeUnderstoodError
 
-from mindsdb.integrations.libs.api_handler import APIHandler
+from mindsdb.integrations.libs.api_handler import MetaAPIHandler
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
@@ -17,7 +17,7 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 
-class SalesforceHandler(APIHandler):
+class SalesforceHandler(MetaAPIHandler):
     """
     This handler handles the connection and execution of SQL statements on Salesforce.
     """

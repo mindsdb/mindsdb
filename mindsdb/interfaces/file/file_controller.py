@@ -2,8 +2,6 @@ import json
 import os
 import shutil
 from pathlib import Path
-import sys
-import time
 
 import pandas as pd
 
@@ -104,8 +102,6 @@ class FileController:
 
             self.store_pages_as_feather(file_dir, pages_files)
             # store original file
-            if sys.platform == "win32":
-                time.sleep(1)  # Wait for Windows to catch up. Naww.
             shutil.move(file_path, str(file_dir.joinpath(file_name)))
 
             self.fs_store.put(store_file_path, base_dir=self.dir)
@@ -126,8 +122,8 @@ class FileController:
           - page_files: dict with content, {page_num: dataframe}
           - pages_index: dict, link between page name and num: {page_name: page_num}
         """
-        file_reader = FileReader(path=source_path)
-        tables = file_reader.get_contents()
+        with FileReader(path=source_path) as file_reader:
+            tables = file_reader.get_contents()
 
         pages_files = {}
         pages_index = {}

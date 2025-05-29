@@ -32,9 +32,9 @@ run_docker: build_docker
 
 integration_tests:
 	# Run tests in parallel and distribute a whole file to each worker
-	pytest -n 8 --dist loadfile -vx tests/integration/ -k "not test_auth"
+	pytest -n 8 -rs -v --dist loadfile tests/integration/ -k "not test_auth"
 	# Run this test separately because it alters the auth requirements, which breaks other tests
-	pytest -vx tests/integration/ -k test_auth
+	pytest -v tests/integration/ -k test_auth
 
 integration_tests_debug:
 	pytest -vxs tests/integration/ -k "not test_auth"
@@ -44,8 +44,8 @@ unit_tests_handlers:
 	python -m unittest discover -s tests/unit/handlers  # Only the tests that work on windows and macOS
 
 unit_tests_core:
-	env PYTHONPATH=./ pytest -vx tests/unit/executor/  # We have to run executor tests separately because they do weird things that break everything else
-	pytest -vx --ignore=tests/unit/handlers --ignore=tests/unit/executor --ignore=tests/unit/render tests/unit/  # Run everything else that only works on Linux
+	env PYTHONPATH=./ pytest -v tests/unit/executor/  # We have to run executor tests separately because they do weird things that break everything else
+	pytest -v --ignore=tests/unit/handlers --ignore=tests/unit/executor --ignore=tests/unit/render tests/unit/  # Run everything else that only works on Linux
 
 unit_tests: unit_tests_handlers unit_tests_core
 

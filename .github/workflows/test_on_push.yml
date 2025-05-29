@@ -171,6 +171,7 @@ jobs:
             .[mysql] \
             .[chromadb]
           uv pip freeze
+          git clone https://github.com/mindsdb/mindsdb_sql_parser.git parser_tests
       - name: Install mssql dependencies
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
@@ -190,11 +191,9 @@ jobs:
       - name: Run unit tests
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
-          if [ "$RUNNER_OS" == "Linux" ]; then
-            git clone https://github.com/mindsdb/mindsdb_sql_parser.git parser_tests
-            env PYTHONPATH=./:parser_tests/tests pytest -xs tests/unit/render/
-
-            make unit_tests_core
-          fi
+          # if [ "$RUNNER_OS" == "Linux" ]; then
+          env PYTHONPATH=./:parser_tests/tests pytest -xs tests/unit/render/
+          make unit_tests_core
+          # fi
           # Run these tests on all OSes
           make unit_tests_handlers

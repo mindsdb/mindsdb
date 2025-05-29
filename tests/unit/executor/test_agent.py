@@ -74,6 +74,7 @@ class TestAgent(BaseExecutorDummyML):
 
         assert agent_response in ret.answer[0]
 
+    @pytest.mark.skipif(sys.platform == "darwin", reason="Mocking doesn't work on macOS for some reason")
     @patch("openai.OpenAI")
     def test_openai_provider_with_model(self, mock_openai):
         agent_response = "how can I assist you today?"

@@ -36,15 +36,14 @@ class ProjectDataNode(DataNode):
         table_types = {
             'table': 'BASE TABLE',
             'model': 'MODEL',
-            'view': 'VIEW'
+            'view': 'VIEW',
+            'agent': 'AGENT',
+            'knowledge_base': 'KNOWLEDGE BASE'
         }
-        tables = [
-            {
-                'TABLE_NAME': key,
-                'TABLE_TYPE': table_types.get(val['type'])
-            }
-            for key, val in tables.items()
-        ]
+        tables = [{
+            'TABLE_NAME': key,
+            'TABLE_TYPE': table_types.get(val['type'])
+        } for key, val in tables.items()]
         result = [TablesRow.from_dict(row) for row in tables]
         return result
 

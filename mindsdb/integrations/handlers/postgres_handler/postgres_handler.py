@@ -568,8 +568,7 @@ class PostgresHandler(MetaDatabaseHandler):
                 t.table_schema,
                 t.table_type,
                 obj_description(pgc.oid, 'pg_class') AS table_description,
-                (SELECT COUNT(*) FROM information_schema.columns c 
-                WHERE c.table_name = t.table_name AND c.table_schema = t.table_schema) AS row_count
+                pgc.reltuples AS row_count
             FROM information_schema.tables t
             JOIN pg_catalog.pg_class pgc ON pgc.relname = t.table_name
             JOIN pg_catalog.pg_namespace pgn ON pgn.oid = pgc.relnamespace
@@ -577,7 +576,6 @@ class PostgresHandler(MetaDatabaseHandler):
             AND t.table_type in ('BASE TABLE', 'VIEW')
             AND t.table_name NOT LIKE 'pg_%'
             AND t.table_name NOT LIKE 'sql_%'
-            AND pgn.nspname = t.table_schema
         """
 
         if table_names is not None and len(table_names) > 0:
@@ -701,6 +699,7 @@ class PostgresHandler(MetaDatabaseHandler):
             SELECT
                 tc.table_name,
                 kcu.column_name,
+                kcu.ordinal_position,
                 tc.constraint_name
             FROM
                 information_schema.table_constraints AS tc
@@ -711,6 +710,8 @@ class PostgresHandler(MetaDatabaseHandler):
             WHERE
                 tc.constraint_type = 'PRIMARY KEY'
                 AND tc.table_schema = current_schema()
+            ORDER BY
+                tc.table_name, kcu.ordinal_position;
         """
 
         if table_names is not None and len(table_names) > 0:

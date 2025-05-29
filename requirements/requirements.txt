@@ -63,7 +63,6 @@ aipdf==0.0.5
 # A2A server
 click==8.1.8
 httpx==0.28.1
-httpx-sse==0.4.0
 sse-starlette==2.3.3
 typing-extensions==4.13.2
 python-dotenv==1.1.0

@@ -3,6 +3,7 @@ import datetime as dt
 import tempfile
 import pytest
 import json
+import os
 
 import pandas as pd
 import numpy as np
@@ -496,7 +497,7 @@ class Test(BaseExecutorMockPredictor):
         )
 
         fd, file_path = tempfile.mkstemp(prefix="file_")[1]
-        fd.close()
+        os.close(fd)
 
         df.to_csv(file_path)
 

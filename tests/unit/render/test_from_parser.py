@@ -1,11 +1,15 @@
 import copy
 import inspect
+import pytest
+import os
 
 from mindsdb_sql_parser import parse_sql
 from mindsdb_sql_parser.ast import Select, Constant, WindowFunction, Function
 
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.utilities.query_traversal import query_traversal
+
+pytestmark = pytest.mark.skipif(not os.path.isdir("parser_tests"), reason="Parser repo not found")
 
 
 def parse_sql2(sql, dialect="mindsdb"):

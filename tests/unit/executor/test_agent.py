@@ -45,6 +45,7 @@ def set_openai_completion(mock_openai, response):
 
     mock_openai().chat.completions.create.side_effect = resp_f
 
+
 def set_litellm_embedding(mock_litellm_embedding, response):
     if not isinstance(response, list):
         response = [response]

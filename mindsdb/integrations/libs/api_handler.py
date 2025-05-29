@@ -6,26 +6,25 @@ from mindsdb_sql_parser.ast import ASTNode, Select, Insert, Update, Delete, Star
 from mindsdb_sql_parser.ast.select.identifier import Identifier
 
 from mindsdb.integrations.utilities.sql_utils import (
-    extract_comparison_conditions, filter_dataframe, sort_dataframe,
-    FilterCondition, FilterOperator, SortColumn
+    extract_comparison_conditions,
+    filter_dataframe,
+    sort_dataframe,
+    FilterCondition,
+    FilterOperator,
+    SortColumn,
 )
 from mindsdb.integrations.libs.base import BaseHandler
 from mindsdb.integrations.libs.api_handler_exceptions import TableAlreadyExists, TableNotFound
 
-from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response,
-    RESPONSE_TYPE
-)
+from mindsdb.integrations.libs.response import HandlerResponse as Response, RESPONSE_TYPE
 
 
 class FuncParser:
-
     def from_string(self, query_string):
-
-        body = py_ast.parse(query_string.strip(), mode='eval').body
+        body = py_ast.parse(query_string.strip(), mode="eval").body
 
         if not isinstance(body, py_ast.Call):
-            raise RuntimeError(f'Api function not found {query_string}')
+            raise RuntimeError(f"Api function not found {query_string}")
 
         fnc_name = body.func.id
 
@@ -39,7 +38,6 @@ class FuncParser:
         return fnc_name, params
 
     def process(self, node):
-
         if isinstance(node, py_ast.List):
             elements = []
             for node2 in node.elts:
@@ -47,7 +45,6 @@ class FuncParser:
             return elements
 
         if isinstance(node, py_ast.Dict):
-
             keys = []
             for node2 in node.keys:
                 if isinstance(node2, py_ast.Constant):
@@ -55,7 +52,7 @@ class FuncParser:
                 elif isinstance(node2, py_ast.Str):  # py37
                     value = node2.s
                 else:
-                    raise NotImplementedError(f'Unknown dict key {node2}')
+                    raise NotImplementedError(f"Unknown dict key {node2}")
 
                 keys.append(value)
 
@@ -68,11 +65,11 @@ class FuncParser:
         if isinstance(node, py_ast.Name):
             # special attributes
             name = node.id
-            if name == 'true':
+            if name == "true":
                 return True
-            elif name == 'false':
+            elif name == "false":
                 return False
-            elif name == 'null':
+            elif name == "null":
                 return None
 
         if isinstance(node, py_ast.Constant):
@@ -92,11 +89,10 @@ class FuncParser:
                 value = self.process(node.operand)
                 return -value
 
-        raise NotImplementedError(f'Unknown node {node}')
+        raise NotImplementedError(f"Unknown node {node}")
 
 
 class APITable:
-
     def __init__(self, handler):
         self.handler = handler
 
@@ -154,7 +150,6 @@ class APITable:
 
 
 class APIResource(APITable):
-
     def __init__(self, *args, table_name=None, **kwargs):
         self.table_name = table_name
         super().__init__(*args, **kwargs)
@@ -179,26 +174,18 @@ class APIResource(APITable):
         if query.order_by and len(query.order_by) > 0:
             sort = []
             for an_order in query.order_by:
-                sort.append(SortColumn(an_order.field.parts[-1],
-                                       an_order.direction.upper() != 'DESC'))
+                sort.append(SortColumn(an_order.field.parts[-1], an_order.direction.upper() != "DESC"))
 
         targets = []
         for col in query.targets:
             if isinstance(col, Identifier):
                 targets.append(col.parts[-1])
 
-        kwargs = {
-            'conditions': conditions,
-            'limit': limit,
-            'sort': sort,
-            'targets': targets
-        }
+        kwargs = {"conditions": conditions, "limit": limit, "sort": sort, "targets": targets}
         if self.table_name is not None:
-            kwargs['table_name'] = self.table_name
+            kwargs["table_name"] = self.table_name
 
-        result = self.list(
-            **kwargs
-        )
+        result = self.list(**kwargs)
 
         filters = []
         for cond in conditions:
@@ -216,17 +203,18 @@ class APIResource(APITable):
             result = sort_dataframe(result, sort_columns)
 
         if limit is not None and len(result) > limit:
-            result = result[:int(limit)]
+            result = result[: int(limit)]
 
         return result
 
-    def list(self,
-             conditions: List[FilterCondition] = None,
-             limit: int = None,
-             sort: List[SortColumn] = None,
-             targets: List[str] = None,
-             **kwargs
-             ):
+    def list(
+        self,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        sort: List[SortColumn] = None,
+        targets: List[str] = None,
+        **kwargs,
+    ):
         """
         List items based on specified conditions, limits, sorting, and targets.
 
@@ -254,13 +242,10 @@ class APIResource(APITable):
 
         columns = [col.name for col in query.columns]
 
-        data = [
-            dict(zip(columns, a_row))
-            for a_row in query.values
-        ]
+        data = [dict(zip(columns, a_row)) for a_row in query.values]
         kwargs = {}
         if self.table_name is not None:
-            kwargs['table_name'] = self.table_name
+            kwargs["table_name"] = self.table_name
 
         self.add(data, **kwargs)
 
@@ -461,14 +446,13 @@ class APIHandler(BaseHandler):
         """
         name = name.parts[-1]
         if name not in self._tables:
-            raise TableNotFound(f'Table not found: {name}')
+            raise TableNotFound(f"Table not found: {name}")
         return self._tables[name]
 
     def query(self, query: ASTNode):
-
         if isinstance(query, Select):
             table = self._get_table(query.from_table)
-            if not hasattr(table, 'list'):
+            if not hasattr(table, "list"):
                 # for back compatibility, targets wasn't passed in previous version
                 query.targets = [Star()]
             result = self._get_table(query.from_table).select(query)
@@ -499,8 +483,8 @@ class APIHandler(BaseHandler):
 
         result = self._get_table(Identifier(table_name)).get_columns()
 
-        df = pd.DataFrame(result, columns=['Field'])
-        df['Type'] = 'str'
+        df = pd.DataFrame(result, columns=["Field"])
+        df["Type"] = "str"
 
         return Response(RESPONSE_TYPE.TABLE, df)
 
@@ -512,8 +496,8 @@ class APIHandler(BaseHandler):
         """
         result = list(self._tables.keys())
 
-        df = pd.DataFrame(result, columns=['table_name'])
-        df['table_type'] = 'BASE TABLE'
+        df = pd.DataFrame(result, columns=["table_name"])
+        df["table_type"] = "BASE TABLE"
 
         return Response(RESPONSE_TYPE.TABLE, df)
 
@@ -637,7 +621,6 @@ class MetaAPIHandler(APIHandler):
 
 
 class APIChatHandler(APIHandler):
-
     def get_chat_config(self):
         """Return configuration to connect to chatbot
 

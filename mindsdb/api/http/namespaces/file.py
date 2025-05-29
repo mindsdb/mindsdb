@@ -18,6 +18,7 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
 from mindsdb.utilities.security import is_private_url, clear_filename, validate_urls
 from mindsdb.utilities.fs import safe_extract
+from mindsdb.integrations.utilities.files.file_reader import FileProcessingError
 
 logger = log.getLogger(__name__)
 MAX_FILE_SIZE = 1024 * 1024 * 100  # 100Mb
@@ -173,6 +174,8 @@ class File(Resource):
             ca.file_controller.save_file(
                 mindsdb_file_name, file_path, file_name=original_file_name
             )
+        except FileProcessingError as e:
+            return http_error(400, 'Error', str(e))
         except Exception as e:
             return http_error(500, 'Error', str(e))
         finally:

@@ -18,7 +18,7 @@ DEFAULT_CHUNK_SIZE = 500
 DEFAULT_CHUNK_OVERLAP = 250
 
 
-class FileDetectError(Exception):
+class FileProcessingError(Exception):
     ...
 
 
@@ -56,7 +56,7 @@ def decode(file_obj: IOBase) -> StringIO:
                 data_str = StringIO(byte_str.decode(encoding, errors))
     except Exception as e:
         logger.error(traceback.format_exc())
-        raise FileDetectError("Could not load into string") from e
+        raise FileProcessingError("Could not load into string") from e
 
     return data_str
 
@@ -90,7 +90,7 @@ class FormatDetector:
                 else:
                     path = 'file'
         else:
-            raise FileDetectError('Wrong arguments: path or file is required')
+            raise FileProcessingError('Wrong arguments: path or file is required')
 
         if name is None:
             name = Path(path).name
@@ -108,14 +108,14 @@ class FormatDetector:
         format = self.get_format_by_name()
         if format is not None:
             if format not in self.supported_formats:
-                raise FileDetectError(f'Not supported format: {format}')
+                raise FileProcessingError(f'Not supported format: {format}')
 
         if format is None and self.file_obj is not None:
             format = self.get_format_by_content()
             self.file_obj.seek(0)
 
         if format is None:
-            raise FileDetectError(f'Unable to detect format: {self.name}')
+            raise FileProcessingError(f'Unable to detect format: {self.name}')
 
         self.format = format
         return format
@@ -204,8 +204,21 @@ class FileReader(FormatDetector):
         format = self.get_format()
         func = getattr(self, f'read_{format}', None)
         if func is None:
-            raise FileDetectError(f'Unsupported format: {format}')
-        return func
+            raise FileProcessingError(f'Unsupported format: {format}')
+
+        def format_columns(*args, **kwargs) -> pd.DataFrame:
+            """Check that the columns have unique not-empty names
+            """
+            df = func(*args, **kwargs)
+            df.columns = [column.strip(' \t') for column in df.columns]
+            if (
+                len(df.columns) != len(set(df.columns))
+                or any(len(column_name) == 0 for column_name in df.columns)
+            ):
+                raise FileProcessingError('Each column should have a unique and non-empty name.')
+            return df
+
+        return format_columns
 
     def get_pages(self, **kwargs) -> List[str]:
         """
@@ -279,7 +292,7 @@ class FileReader(FormatDetector):
             except Exception:
                 dialect = csv.reader(sample).dialect
                 if dialect.delimiter not in accepted_csv_delimiters:
-                    raise Exception(
+                    raise FileProcessingError(
                         f"CSV delimeter '{dialect.delimiter}' is not supported"
                     )
 
@@ -291,7 +304,6 @@ class FileReader(FormatDetector):
     def read_csv(cls, file_obj: BytesIO, delimiter=None, **kwargs):
         file_obj = decode(file_obj)
         dialect = cls._get_csv_dialect(file_obj, delimiter=delimiter)
-
         return pd.read_csv(file_obj, sep=dialect.delimiter, index_col=False)
 
     @staticmethod
@@ -303,7 +315,7 @@ class FileReader(FormatDetector):
         try:
             from langchain_core.documents import Document
         except ImportError:
-            raise ImportError(
+            raise FileProcessingError(
                 "To import TXT document please install 'langchain-community':\n"
                 "    pip install langchain-community"
             )

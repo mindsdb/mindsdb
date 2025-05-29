@@ -8,16 +8,16 @@ from types import MappingProxyType
 # the same as
 # from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS
 OPEN_AI_CHAT_MODELS = (
-    'gpt-3.5-turbo',
-    'gpt-3.5-turbo-16k',
-    'gpt-3.5-turbo-instruct',
-    'gpt-4',
-    'gpt-4-32k',
-    'gpt-4-1106-preview',
-    'gpt-4-0125-preview',
-    'gpt-4o',
-    'o3-mini',
-    'o1-mini'
+    "gpt-3.5-turbo",
+    "gpt-3.5-turbo-16k",
+    "gpt-3.5-turbo-instruct",
+    "gpt-4",
+    "gpt-4-32k",
+    "gpt-4-1106-preview",
+    "gpt-4-0125-preview",
+    "gpt-4o",
+    "o3-mini",
+    "o1-mini",
 )
 
 SUPPORTED_PROVIDERS = {
@@ -29,7 +29,7 @@ SUPPORTED_PROVIDERS = {
     "nvidia_nim",
     "vllm",
     "google",
-    "writer"
+    "writer",
 }
 # Chat models
 ANTHROPIC_CHAT_MODELS = (
@@ -176,10 +176,7 @@ GOOGLE_GEMINI_CHAT_MODELS = (
     "gemini-1.5-pro",
 )
 
-WRITER_CHAT_MODELS = (
-    "palmyra-x5",
-    "palmyra-x4"
-)
+WRITER_CHAT_MODELS = ("palmyra-x5", "palmyra-x4")
 
 # Define a read-only dictionary mapping providers to their models
 PROVIDER_TO_MODELS = MappingProxyType(
@@ -207,8 +204,10 @@ DEFAULT_TEMPERATURE = 0.0
 USER_COLUMN = "question"
 DEFAULT_EMBEDDINGS_MODEL_PROVIDER = "openai"
 DEFAULT_EMBEDDINGS_MODEL_CLASS = OpenAIEmbeddings
-DEFAULT_TIKTOKEN_MODEL_NAME = os.getenv('DEFAULT_TIKTOKEN_MODEL_NAME', 'gpt-4')
-AGENT_CHUNK_POLLING_INTERVAL_SECONDS = os.getenv('AGENT_CHUNK_POLLING_INTERVAL_SECONDS', 1.0)
+DEFAULT_TIKTOKEN_MODEL_NAME = os.getenv("DEFAULT_TIKTOKEN_MODEL_NAME", "gpt-4")
+AGENT_CHUNK_POLLING_INTERVAL_SECONDS = os.getenv(
+    "AGENT_CHUNK_POLLING_INTERVAL_SECONDS", 1.0
+)
 DEFAULT_TEXT2SQL_DATABASE = "mindsdb"
 DEFAULT_AGENT_SYSTEM_PROMPT = """
 You are an AI assistant powered by MindsDB. When answering questions, follow these guidelines:

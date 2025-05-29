@@ -191,5 +191,4 @@ jobs:
       - name: Run unit tests
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
-          make unit_tests_core
-          make unit_tests_handlers
+          make unit_tests

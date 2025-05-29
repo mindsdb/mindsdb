@@ -39,15 +39,13 @@ integration_tests_debug:
 	pytest -vxs tests/integration/ -k "not test_auth"
 	pytest -vxs tests/integration/ -k test_auth
 
-unit_tests_handlers:
-	python -m unittest discover -s tests/unit/handlers  # Only the tests that work on windows and macOS
-
-unit_tests_core:
+unit_tests:
 	env PYTHONPATH=./ pytest -v tests/unit/executor/  # We have to run executor tests separately because they do weird things that break everything else
 	pytest -v --ignore=tests/unit/handlers --ignore=tests/unit/executor tests/unit/
-
-unit_tests: unit_tests_handlers unit_tests_core
-
+	python -m unittest discover -s tests/unit/handlers
 
 
-.PHONY: install_mindsdb install_handler precommit format run_mindsdb check build_docker run_docker integration_tests integration_tests_debug unit_tests_handlers unit_tests_core unit_tests
+
+
+
+.PHONY: install_mindsdb install_handler precommit format run_mindsdb check build_docker run_docker integration_tests integration_tests_debug unit_tests

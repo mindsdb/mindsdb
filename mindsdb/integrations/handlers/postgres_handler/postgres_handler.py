@@ -84,8 +84,17 @@ def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
     for column in description:
         pg_type_info: TypeInfo = pg_types.get(column.type_code)
         if pg_type_info is None:
-            logger.warning(f'Postgres handler: unknown type: {column.type_code}')
-        if pg_type_info.array_oid == column.type_code:
+            # postgres may return 'polymorphic type', which are not present in the pg_types
+            # list of 'polymorphic type' can be obtained:
+            # SELECT oid, typname, typcategory FROM pg_type WHERE typcategory = 'P' ORDER BY oid;
+            if column.type_code in (2277, 5078):
+                # anyarray, anycompatiblearray
+                regtype = 'json'
+            else:
+                logger.warning(f'Postgres handler: unknown type: {column.type_code}')
+                mysql_types.append(MYSQL_DATA_TYPE.TEXT)
+                continue
+        elif pg_type_info.array_oid == column.type_code:
             # it is any array, handle is as json
             regtype: str = 'json'
         else:

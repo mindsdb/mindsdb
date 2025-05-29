@@ -425,9 +425,122 @@ class APIHandler(BaseHandler):
         return Response(RESPONSE_TYPE.TABLE, df)
 
 
-# TODO: Determine how MetaAPIHandler will interact with the data catalog.
 class MetaAPIHandler(APIHandler):
-    ...
+    """
+    Base class for handlers associated to the applications APIs (e.g. twitter, slack, discord  etc.)
+    
+    This class is used when the handler is also needed to store information in the data catalog.
+    """
+    
+    def meta_get_tables(self, table_names: Optional[List[str]] = None) -> Response:
+        """
+        Retrieves metadata for the specified tables (or all tables if no list is provided).
+
+        Args:
+            table_names (List): A list of table names for which to retrieve metadata.
+
+        Returns:
+            Response: A response object containing the table metadata.
+        """
+        df = pd.DataFrame()
+        for table_name, table_class in self.table.items():
+            if table_names is None or table_name in table_names:
+                try:
+                    if hasattr(table_class, 'get_meta_tables'):
+                        table_metadata = table_class.get_meta_tables(table_name)
+                        df = pd.concat([df, pd.DataFrame([table_metadata])], ignore_index=True)
+                except Exception as e:
+                    logger.error(f"Error retrieving metadata for table {table_name}: {e}")
+
+        return Response(RESPONSE_TYPE.TABLE, df)
+
+    def meta_get_columns(self, table_names: Optional[List[str]] = None) -> Response:
+        """
+        Retrieves column metadata for the specified tables (or all tables if no list is provided).
+
+        Args:
+            table_names (List): A list of table names for which to retrieve column metadata.
+
+        Returns:
+            Response: A response object containing the column metadata.
+        """
+        df = pd.DataFrame()
+        for table_name, table_class in self.table.items():
+            if table_names is None or table_name in table_names:
+                try:
+                    if hasattr(table_class, 'get_meta_columns'):
+                        column_metadata = table_class.get_meta_columns(table_name)
+                        df = pd.concat([df, pd.DataFrame(column_metadata)], ignore_index=True)
+                except Exception as e:
+                    logger.error(f"Error retrieving column metadata for table {table_name}: {e}")
+
+        return Response(RESPONSE_TYPE.TABLE, df)
+    
+    def meta_get_column_statistics(self, table_names: Optional[List[str]] = None) -> Response:
+        """
+        Retrieves column statistics for the specified tables (or all tables if no list is provided).
+
+        Args:
+            table_names (List): A list of table names for which to retrieve column statistics.
+
+        Returns:
+            Response: A response object containing the column statistics.
+        """
+        df = pd.DataFrame()
+        for table_name, table_class in self.table.items():
+            if table_names is None or table_name in table_names:
+                try:
+                    if hasattr(table_class, 'get_meta_column_statistics'):
+                        column_statistics = table_class.get_meta_column_statistics(table_name)
+                        df = pd.concat([df, pd.DataFrame(column_statistics)], ignore_index=True)
+                except Exception as e:
+                    logger.error(f"Error retrieving column statistics for table {table_name}: {e}")
+
+        return Response(RESPONSE_TYPE.TABLE, df)
+
+    def meta_get_primary_keys(self, table_names: Optional[List[str]] = None) -> Response:
+        """
+        Retrieves primary key metadata for the specified tables (or all tables if no list is provided).
+
+        Args:
+            table_names (List): A list of table names for which to retrieve primary key metadata.
+
+        Returns:
+            Response: A response object containing the primary key metadata.
+        """
+        df = pd.DataFrame()
+        for table_name, table_class in self.table.items():
+            if table_names is None or table_name in table_names:
+                try:
+                    if hasattr(table_class, 'get_meta_primary_keys'):
+                        primary_key_metadata = table_class.get_meta_primary_keys(table_name)
+                        df = pd.concat([df, pd.DataFrame(primary_key_metadata)], ignore_index=True)
+                except Exception as e:
+                    logger.error(f"Error retrieving primary keys for table {table_name}: {e}")
+
+        return Response(RESPONSE_TYPE.TABLE, df)
+
+    def meta_get_foreign_keys(self, table_names: Optional[List[str]] = None) -> Response:
+        """
+        Retrieves foreign key metadata for the specified tables (or all tables if no list is provided).
+
+        Args:
+            table_names (List): A list of table names for which to retrieve foreign key metadata.
+
+        Returns:
+            Response: A response object containing the foreign key metadata.
+        """
+        df = pd.DataFrame()
+        for table_name, table_class in self.table.items():
+            if table_names is None or table_name in table_names:
+                try:
+                    if hasattr(table_class, 'get_meta_foreign_keys'):
+                        foreign_key_metadata = table_class.get_meta_foreign_keys(table_name)
+                        df = pd.concat([df, pd.DataFrame(foreign_key_metadata)], ignore_index=True)
+                except Exception as e:
+                    logger.error(f"Error retrieving foreign keys for table {table_name}: {e}")
+
+        return Response(RESPONSE_TYPE.TABLE, df)
 
 
 class APIChatHandler(APIHandler):

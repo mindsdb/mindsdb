@@ -5,3 +5,4 @@ wheel
 deptry==0.20.0
 twine
 importlib_metadata==7.2.1 #fix twine bug
+ruff==0.11.11

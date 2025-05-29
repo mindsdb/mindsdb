@@ -44,7 +44,7 @@ unit_tests_handlers:
 
 unit_tests_core:
 	env PYTHONPATH=./ pytest -v tests/unit/executor/  # We have to run executor tests separately because they do weird things that break everything else
-	pytest -v --ignore=tests/unit/handlers --ignore=tests/unit/executor --ignore=tests/unit/render tests/unit/  # Run everything else that only works on Linux
+	pytest -v --ignore=tests/unit/handlers --ignore=tests/unit/executor tests/unit/
 
 unit_tests: unit_tests_handlers unit_tests_core
 

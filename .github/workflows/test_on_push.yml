@@ -191,9 +191,5 @@ jobs:
       - name: Run unit tests
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
-          # if [ "$RUNNER_OS" == "Linux" ]; then
-          env PYTHONPATH=./:parser_tests/tests pytest tests/unit/render/
           make unit_tests_core
-          # fi
-          # Run these tests on all OSes
           make unit_tests_handlers

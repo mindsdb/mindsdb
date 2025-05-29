@@ -1,15 +1,12 @@
 import copy
 import inspect
 import pytest
-import os
 
 from mindsdb_sql_parser import parse_sql
 from mindsdb_sql_parser.ast import Select, Constant, WindowFunction, Function
 
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.utilities.query_traversal import query_traversal
-
-pytestmark = pytest.mark.skipif(not os.path.isdir("parser_tests"), reason="Parser repo not found")
 
 
 def parse_sql2(sql, dialect="mindsdb"):
@@ -120,9 +117,8 @@ def parse_sql2(sql, dialect="mindsdb"):
 
 class TestFromParser:
     def test_from_parser(self):
-        # parser tests have to be in PYTHONPATH
         try:
-            from test_base_sql import (
+            from parser_tests.tests.test_base_sql import (
                 test_select_operations,
                 test_delete,
                 test_insert,
@@ -133,11 +129,12 @@ class TestFromParser:
             )
 
         except ImportError as e:
-            raise RuntimeError(
+            print(
                 "Unable to import render's tests. Make sure they are in PYTHONPATH. It can be done by:"
                 "- git clone https://github.com/mindsdb/mindsdb_sql_parser.git parser_tests"
                 f"- env PYTHONPATH=./:parser_tests/tests pytest\n\nError: {e}"
             )
+            pytest.skip("Parser tests not found")
 
         modules = (
             test_select_operations,

@@ -654,11 +654,15 @@ class PostgresHandler(MetaDatabaseHandler):
         df = result.data_frame
         
         def parse_pg_array_string(x):
-            return [
-                item.strip(' ,')
-                for row in csv.reader(io.StringIO(x.strip('{}')))
-                for item in row if item.strip()
-            ] if x else []
+            try:
+                return [
+                    item.strip(' ,')
+                    for row in csv.reader(io.StringIO(x.strip('{}')))
+                    for item in row if item.strip()
+                ] if x else []
+            except IndexError:
+                logger.error(f"Error parsing PostgreSQL array string: {x}")
+                return []
 
         # Convert most_common_values and most_common_frequencies from string representation to lists.
         df['most_common_values'] = df['most_common_values'].apply(

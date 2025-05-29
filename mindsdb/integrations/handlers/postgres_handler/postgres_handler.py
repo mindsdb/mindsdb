@@ -20,7 +20,7 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 import mindsdb.utilities.profiler as profiler
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
@@ -46,20 +46,20 @@ def _map_type(internal_type_name: str | None) -> MYSQL_DATA_TYPE:
 
     internal_type_name = internal_type_name.lower()
     types_map = {
-        ('smallint', 'smallserial'): MYSQL_DATA_TYPE.SMALLINT,
-        ('integer', 'int', 'serial'): MYSQL_DATA_TYPE.INT,
-        ('bigint', 'bigserial'): MYSQL_DATA_TYPE.BIGINT,
-        ('real', 'float'): MYSQL_DATA_TYPE.FLOAT,
-        ('numeric', 'decimal'): MYSQL_DATA_TYPE.DECIMAL,
-        ('double precision',): MYSQL_DATA_TYPE.DOUBLE,
-        ('character varying', 'varchar'): MYSQL_DATA_TYPE.VARCHAR,
+        ("smallint", "smallserial"): MYSQL_DATA_TYPE.SMALLINT,
+        ("integer", "int", "serial"): MYSQL_DATA_TYPE.INT,
+        ("bigint", "bigserial"): MYSQL_DATA_TYPE.BIGINT,
+        ("real", "float"): MYSQL_DATA_TYPE.FLOAT,
+        ("numeric", "decimal"): MYSQL_DATA_TYPE.DECIMAL,
+        ("double precision",): MYSQL_DATA_TYPE.DOUBLE,
+        ("character varying", "varchar"): MYSQL_DATA_TYPE.VARCHAR,
         # NOTE: if return chars-types as mysql's CHAR, then response will be padded with spaces, so return as TEXT
-        ('money', 'character', 'char', 'bpchar', 'bpchar', 'text'): MYSQL_DATA_TYPE.TEXT,
-        ('timestamp', 'timestamp without time zone', 'timestamp with time zone'): MYSQL_DATA_TYPE.DATETIME,
-        ('date', ): MYSQL_DATA_TYPE.DATE,
-        ('time', 'time without time zone', 'time with time zone'): MYSQL_DATA_TYPE.TIME,
-        ('boolean',): MYSQL_DATA_TYPE.BOOL,
-        ('bytea',): MYSQL_DATA_TYPE.BINARY,
+        ("money", "character", "char", "bpchar", "bpchar", "text"): MYSQL_DATA_TYPE.TEXT,
+        ("timestamp", "timestamp without time zone", "timestamp with time zone"): MYSQL_DATA_TYPE.DATETIME,
+        ("date",): MYSQL_DATA_TYPE.DATE,
+        ("time", "time without time zone", "time with time zone"): MYSQL_DATA_TYPE.TIME,
+        ("boolean",): MYSQL_DATA_TYPE.BOOL,
+        ("bytea",): MYSQL_DATA_TYPE.BINARY,
     }
 
     for db_types_list, mysql_data_type in types_map.items():
@@ -85,7 +85,7 @@ def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
     for column in description:
         pg_type_info: TypeInfo = pg_types.get(column.type_code)
         if pg_type_info is None:
-            logger.warning(f'Postgres handler: unknown type: {column.type_code}')
+            logger.warning(f"Postgres handler: unknown type: {column.type_code}")
         regtype: str = pg_type_info.regtype if pg_type_info is not None else None
         mysql_type = _map_type(regtype)
         mysql_types.append(mysql_type)
@@ -95,38 +95,37 @@ def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
     for i, mysql_type in enumerate(mysql_types):
         expected_dtype = None
         if mysql_type in (
-            MYSQL_DATA_TYPE.SMALLINT, MYSQL_DATA_TYPE.INT, MYSQL_DATA_TYPE.MEDIUMINT,
-            MYSQL_DATA_TYPE.BIGINT, MYSQL_DATA_TYPE.TINYINT
+            MYSQL_DATA_TYPE.SMALLINT,
+            MYSQL_DATA_TYPE.INT,
+            MYSQL_DATA_TYPE.MEDIUMINT,
+            MYSQL_DATA_TYPE.BIGINT,
+            MYSQL_DATA_TYPE.TINYINT,
         ):
-            expected_dtype = 'Int64'
+            expected_dtype = "Int64"
         elif mysql_type in (MYSQL_DATA_TYPE.BOOL, MYSQL_DATA_TYPE.BOOLEAN):
-            expected_dtype = 'boolean'
+            expected_dtype = "boolean"
         serieses.append(pd.Series([row[i] for row in result], dtype=expected_dtype, name=description[i].name))
     df = pd.concat(serieses, axis=1, copy=False)
     # endregion
 
-    return Response(
-        RESPONSE_TYPE.TABLE,
-        data_frame=df,
-        affected_rows=cursor.rowcount,
-        mysql_types=mysql_types
-    )
+    return Response(RESPONSE_TYPE.TABLE, data_frame=df, affected_rows=cursor.rowcount, mysql_types=mysql_types)
 
 
 class PostgresHandler(MetaDatabaseHandler):
     """
     This handler handles connection and execution of the PostgreSQL statements.
     """
-    name = 'postgres'
 
-    @profiler.profile('init_pg_handler')
+    name = "postgres"
+
+    @profiler.profile("init_pg_handler")
     def __init__(self, name=None, **kwargs):
         super().__init__(name)
         self.parser = parse_sql
-        self.connection_args = kwargs.get('connection_data')
-        self.dialect = 'postgresql'
-        self.database = self.connection_args.get('database')
-        self.renderer = SqlalchemyRender('postgres')
+        self.connection_args = kwargs.get("connection_data")
+        self.dialect = "postgresql"
+        self.database = self.connection_args.get("database")
+        self.renderer = SqlalchemyRender("postgres")
 
         self.connection = None
         self.is_connected = False
@@ -138,30 +137,30 @@ class PostgresHandler(MetaDatabaseHandler):
 
     def _make_connection_args(self):
         config = {
-            'host': self.connection_args.get('host'),
-            'port': self.connection_args.get('port'),
-            'user': self.connection_args.get('user'),
-            'password': self.connection_args.get('password'),
-            'dbname': self.connection_args.get('database')
+            "host": self.connection_args.get("host"),
+            "port": self.connection_args.get("port"),
+            "user": self.connection_args.get("user"),
+            "password": self.connection_args.get("password"),
+            "dbname": self.connection_args.get("database"),
         }
 
         # https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-PARAMKEYWORDS
-        connection_parameters = self.connection_args.get('connection_parameters')
+        connection_parameters = self.connection_args.get("connection_parameters")
         if isinstance(connection_parameters, dict) is False:
             connection_parameters = {}
-        if 'connect_timeout' not in connection_parameters:
-            connection_parameters['connect_timeout'] = 10
+        if "connect_timeout" not in connection_parameters:
+            connection_parameters["connect_timeout"] = 10
         config.update(connection_parameters)
 
-        if self.connection_args.get('sslmode'):
-            config['sslmode'] = self.connection_args.get('sslmode')
+        if self.connection_args.get("sslmode"):
+            config["sslmode"] = self.connection_args.get("sslmode")
 
-        if self.connection_args.get('autocommit'):
-            config['autocommit'] = self.connection_args.get('autocommit')
+        if self.connection_args.get("autocommit"):
+            config["autocommit"] = self.connection_args.get("autocommit")
 
         # If schema is not provided set public as default one
-        if self.connection_args.get('schema'):
-            config['options'] = f'-c search_path={self.connection_args.get("schema")},public'
+        if self.connection_args.get("schema"):
+            config["options"] = f"-c search_path={self.connection_args.get('schema')},public"
         return config
 
     @profiler.profile()
@@ -184,7 +183,7 @@ class PostgresHandler(MetaDatabaseHandler):
             self.is_connected = True
             return self.connection
         except psycopg.Error as e:
-            logger.error(f'Error connecting to PostgreSQL {self.database}, {e}!')
+            logger.error(f"Error connecting to PostgreSQL {self.database}, {e}!")
             self.is_connected = False
             raise
 
@@ -211,10 +210,10 @@ class PostgresHandler(MetaDatabaseHandler):
             connection = self.connect()
             with connection.cursor() as cur:
                 # Execute a simple query to test the connection
-                cur.execute('select 1;')
+                cur.execute("select 1;")
             response.success = True
         except psycopg.Error as e:
-            logger.error(f'Error connecting to PostgreSQL {self.database}, {e}!')
+            logger.error(f"Error connecting to PostgreSQL {self.database}, {e}!")
             response.error_message = str(e)
 
         if response.success and need_to_close:
@@ -241,25 +240,25 @@ class PostgresHandler(MetaDatabaseHandler):
                 description (list): psycopg cursor description
         """
         types_map = {
-            'int2': 'int16',
-            'int4': 'int32',
-            'int8': 'int64',
-            'numeric': 'float64',
-            'float4': 'float32',
-            'float8': 'float64'
+            "int2": "int16",
+            "int4": "int32",
+            "int8": "int64",
+            "numeric": "float64",
+            "float4": "float32",
+            "float8": "float64",
         }
         columns = df.columns
         df.columns = list(range(len(columns)))
         for column_index, column_name in enumerate(df.columns):
             col = df[column_name]
-            if str(col.dtype) == 'object':
-                pg_type_info: TypeInfo = pg_types.get(description[column_index].type_code)        # type_code is int!?
+            if str(col.dtype) == "object":
+                pg_type_info: TypeInfo = pg_types.get(description[column_index].type_code)  # type_code is int!?
                 if pg_type_info is not None and pg_type_info.name in types_map:
-                    col = col.fillna(0)   # TODO rework
+                    col = col.fillna(0)  # TODO rework
                     try:
                         df[column_name] = col.astype(types_map[pg_type_info.name])
                     except ValueError as e:
-                        logger.error(f'Error casting column {col.name} to {types_map[pg_type_info.name]}: {e}')
+                        logger.error(f"Error casting column {col.name} to {types_map[pg_type_info.name]}: {e}")
         df.columns = columns
 
     @profiler.profile()
@@ -289,12 +288,8 @@ class PostgresHandler(MetaDatabaseHandler):
                     response = _make_table_response(result, cur)
                 connection.commit()
             except Exception as e:
-                logger.error(f'Error running query: {query} on {self.database}, {e}!')
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_code=0,
-                    error_message=str(e)
-                )
+                logger.error(f"Error running query: {query} on {self.database}, {e}!")
+                response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(e))
                 connection.rollback()
 
         if need_to_close:
@@ -327,10 +322,7 @@ class PostgresHandler(MetaDatabaseHandler):
                         result = cur.fetchmany(fetch_size)
                         if not result:
                             break
-                        df = DataFrame(
-                            result,
-                            columns=[x.name for x in cur.description]
-                        )
+                        df = DataFrame(result, columns=[x.name for x in cur.description])
                         self._cast_dtypes(df, cur.description)
                         yield df
                 connection.commit()
@@ -351,16 +343,10 @@ class PostgresHandler(MetaDatabaseHandler):
 
         # copy requires precise cases of names: get current column names from table and adapt input dataframe columns
         if resp.data_frame is not None and not resp.data_frame.empty:
-            db_columns = {
-                c.lower(): c
-                for c in resp.data_frame['COLUMN_NAME']
-            }
+            db_columns = {c.lower(): c for c in resp.data_frame["COLUMN_NAME"]}
 
             # try to get case of existing column
-            columns = [
-                db_columns.get(c.lower(), c)
-                for c in columns
-            ]
+            columns = [db_columns.get(c.lower(), c) for c in columns]
 
         columns = [f'"{c}"' for c in columns]
         rowcount = None
@@ -372,7 +358,7 @@ class PostgresHandler(MetaDatabaseHandler):
 
                 connection.commit()
             except Exception as e:
-                logger.error(f'Error running insert to {table_name} on {self.database}, {e}!')
+                logger.error(f"Error running insert to {table_name} on {self.database}, {e}!")
                 connection.rollback()
                 raise e
             rowcount = cur.rowcount
@@ -404,9 +390,9 @@ class PostgresHandler(MetaDatabaseHandler):
         Returns:
             Response: A response object containing the list of tables and views, formatted as per the `Response` class.
         """
-        all_filter = 'and table_schema = current_schema()'
+        all_filter = "and table_schema = current_schema()"
         if all is True:
-            all_filter = ''
+            all_filter = ""
         query = f"""
             SELECT
                 table_schema,
@@ -441,7 +427,7 @@ class PostgresHandler(MetaDatabaseHandler):
         if isinstance(schema_name, str):
             schema_name = f"'{schema_name}'"
         else:
-            schema_name = 'current_schema()'
+            schema_name = "current_schema()"
         query = f"""
             SELECT
                 COLUMN_NAME,
@@ -469,33 +455,33 @@ class PostgresHandler(MetaDatabaseHandler):
 
     def subscribe(self, stop_event, callback, table_name, columns=None, **kwargs):
         config = self._make_connection_args()
-        config['autocommit'] = True
+        config["autocommit"] = True
 
         conn = psycopg.connect(connect_timeout=10, **config)
 
         # create db trigger
-        trigger_name = f'mdb_notify_{table_name}'
+        trigger_name = f"mdb_notify_{table_name}"
 
-        before, after = '', ''
+        before, after = "", ""
 
         if columns:
             # check column exist
-            conn.execute(f'select {",".join(columns)} from {table_name} limit 0')
+            conn.execute(f"select {','.join(columns)} from {table_name} limit 0")
 
             columns = set(columns)
-            trigger_name += '_' + '_'.join(columns)
+            trigger_name += "_" + "_".join(columns)
 
             news, olds = [], []
             for column in columns:
-                news.append(f'NEW.{column}')
-                olds.append(f'OLD.{column}')
+                news.append(f"NEW.{column}")
+                olds.append(f"OLD.{column}")
 
-            before = f'IF ({", ".join(news)}) IS DISTINCT FROM ({", ".join(olds)}) then\n'
-            after = '\nEND IF;'
+            before = f"IF ({', '.join(news)}) IS DISTINCT FROM ({', '.join(olds)}) then\n"
+            after = "\nEND IF;"
         else:
             columns = set()
 
-        func_code = f'''
+        func_code = f"""
              CREATE OR REPLACE FUNCTION {trigger_name}()
                RETURNS trigger AS $$
              DECLARE
@@ -506,16 +492,16 @@ class PostgresHandler(MetaDatabaseHandler):
                RETURN NEW;
              END;
              $$ LANGUAGE plpgsql;
-         '''
+         """
         conn.execute(func_code)
 
         # for after update - new and old have the same values
-        conn.execute(f'''
+        conn.execute(f"""
              CREATE OR REPLACE TRIGGER {trigger_name}
                BEFORE INSERT OR UPDATE ON {table_name}
                FOR EACH ROW
                EXECUTE PROCEDURE {trigger_name}();
-        ''')
+        """)
         conn.commit()
 
         # start listen
@@ -546,8 +532,8 @@ class PostgresHandler(MetaDatabaseHandler):
                 time.sleep(SUBSCRIBE_SLEEP_INTERVAL)
 
         finally:
-            conn.execute(f'drop TRIGGER {trigger_name} on {table_name}')
-            conn.execute(f'drop FUNCTION {trigger_name}')
+            conn.execute(f"drop TRIGGER {trigger_name} on {table_name}")
+            conn.execute(f"drop FUNCTION {trigger_name}")
             conn.commit()
 
             conn.close()
@@ -581,17 +567,17 @@ class PostgresHandler(MetaDatabaseHandler):
         if table_names is not None and len(table_names) > 0:
             table_names = [f"'{t}'" for t in table_names]
             query += f" AND t.table_name IN ({','.join(table_names)})"
-    
+
         result = self.native_query(query)
         return result
 
     def meta_get_columns(self, table_names: Optional[list] = None) -> Response:
         """
         Retrieves column metadata for the specified tables (or all tables if no list is provided).
-        
+
         Args:
             table_names (list): A list of table names for which to retrieve column metadata.
-        
+
         Returns:
             Response: A response object containing the column metadata.
         """
@@ -652,50 +638,40 @@ class PostgresHandler(MetaDatabaseHandler):
 
         result = self.native_query(query)
         df = result.data_frame
-        
+
         def parse_pg_array_string(x):
             try:
-                return [
-                    item.strip(' ,')
-                    for row in csv.reader(io.StringIO(x.strip('{}')))
-                    for item in row if item.strip()
-                ] if x else []
+                return (
+                    [item.strip(" ,") for row in csv.reader(io.StringIO(x.strip("{}"))) for item in row if item.strip()]
+                    if x
+                    else []
+                )
             except IndexError:
                 logger.error(f"Error parsing PostgreSQL array string: {x}")
                 return []
 
         # Convert most_common_values and most_common_frequencies from string representation to lists.
-        df['most_common_values'] = df['most_common_values'].apply(
-            lambda x: parse_pg_array_string(x)
-        )
-        df['most_common_frequencies'] = df['most_common_frequencies'].apply(
-            lambda x: parse_pg_array_string(x)
-        )
+        df["most_common_values"] = df["most_common_values"].apply(lambda x: parse_pg_array_string(x))
+        df["most_common_frequencies"] = df["most_common_frequencies"].apply(lambda x: parse_pg_array_string(x))
 
         # Get the minimum and maximum values from the histogram bounds.
-        df['minimum_value'] = df['histogram_bounds'].apply(
-            lambda x: parse_pg_array_string(x)[0] if x else None
-        )
-        df['maximum_value'] = df['histogram_bounds'].apply(
-            lambda x: parse_pg_array_string(x)[-1] if x else None
-        )
+        df["minimum_value"] = df["histogram_bounds"].apply(lambda x: parse_pg_array_string(x)[0] if x else None)
+        df["maximum_value"] = df["histogram_bounds"].apply(lambda x: parse_pg_array_string(x)[-1] if x else None)
 
         # Handle cases where distinct_values_count is negative (indicating an approximation).
-        df['distinct_values_count'] = df['distinct_values_count'].apply(
-            lambda x: x if x >= 0 else None
-        )
+        df["distinct_values_count"] = df["distinct_values_count"].apply(lambda x: x if x >= 0 else None)
 
-        result.data_frame = df.drop(columns=['histogram_bounds'])
+        result.data_frame = df.drop(columns=["histogram_bounds"])
 
         return result
 
     def meta_get_primary_keys(self, table_names: Optional[list] = None) -> Response:
         """
         Retrieves primary key information for the specified tables (or all tables if no list is provided).
-        
+
         Args:
             table_names (list): A list of table names for which to retrieve primary key information.
-        
+
         Returns:
             Response: A response object containing the primary key information.
         """
@@ -728,10 +704,10 @@ class PostgresHandler(MetaDatabaseHandler):
     def meta_get_foreign_keys(self, table_names: Optional[list] = None) -> Response:
         """
         Retrieves foreign key information for the specified tables (or all tables if no list is provided).
-        
+
         Args:
             table_names (list): A list of table names for which to retrieve foreign key information.
-        
+
         Returns:
             Response: A response object containing the foreign key information.
         """

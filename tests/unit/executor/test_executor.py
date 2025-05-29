@@ -495,7 +495,8 @@ class Test(BaseExecutorMockPredictor):
             ]
         )
 
-        file_path = tempfile.mkstemp(prefix="file_")[1]
+        fd, file_path = tempfile.mkstemp(prefix="file_")[1]
+        fd.close()
 
         df.to_csv(file_path)
 

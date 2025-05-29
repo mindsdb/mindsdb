@@ -50,7 +50,8 @@ class TestFiles(BaseExecutorDummyML):
     def test_multipage(self):
         # copy test file because source will be removed after uloading
         source_path = Path(__file__).parent / "data" / "test.xlsx"
-        _, file_path = tempfile.mkstemp()
+        fd, file_path = tempfile.mkstemp()
+        fd.close()
         shutil.copy(source_path, file_path)
 
         self.file_controller.save_file("test", file_path, source_path.name)

@@ -94,16 +94,6 @@ class FormatDetector:
 
         self.parameters = {}
 
-    def close(self):
-        """
-        Close file object if it was opened by this class
-        """
-        if self.file_obj is not None and hasattr(self.file_obj, "close"):
-            try:
-                self.file_obj.close()
-            except Exception as e:
-                logger.error(f"Error closing file {self.name}: {e}")
-
     def get_format(self) -> str:
         if self.format is not None:
             return self.format

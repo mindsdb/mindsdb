@@ -2,6 +2,7 @@ import unittest
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.integrations.handlers.rockset_handler.rockset_handler import RocksetHandler
 
+
 class RocksetHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

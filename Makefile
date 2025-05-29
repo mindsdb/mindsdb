@@ -13,6 +13,9 @@ precommit:
 	pre-commit install
 	pre-commit run --files $$(git diff --cached --name-only)
 
+format:
+	pre-commit run --hook-stage manual
+
 run_mindsdb:
 	python -m mindsdb
 

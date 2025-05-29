@@ -1,7 +1,7 @@
 import os
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
-from tests.utils.http_test_helpers import HTTPHelperMixin
+from tests.integration.utils.http_test_helpers import HTTPHelperMixin
 
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")

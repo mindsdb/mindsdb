@@ -15,7 +15,7 @@ from mindsdb_sql_parser import parse_sql
 
 from mindsdb.utilities import log
 from mindsdb.integrations.handlers.google_fit_handler.google_fit_tables import GoogleFitTable
-from mindsdb.integrations.libs.api_handler import APIHandler,FuncParser
+from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -46,7 +46,6 @@ class GoogleFitHandler(APIHandler):
             self.credentials_path = 'mindsdb/integrations/handlers/google_fit_handler/credentials.json'
         else:
             raise Exception('Connection args have to content ether service_account_file or service_account_json')
-        
 
         self.api = None
         self.is_connected = False
@@ -58,11 +57,11 @@ class GoogleFitHandler(APIHandler):
         if self.is_connected is True and self.api:
             return self.api
         if self.connection_args:
-            credentialDict = {"installed":self.connection_args}
+            credentialDict = {"installed": self.connection_args}
             f = open(self.credentials_path, "w")
             f.write(json.dumps(credentialDict).replace(" ", ""))
             f.close()
-            
+
         creds = None
 
         if os.path.isfile('mindsdb/integrations/handlers/google_fit_handler/token.json'):
@@ -77,7 +76,7 @@ class GoogleFitHandler(APIHandler):
             with open('mindsdb/integrations/handlers/google_fit_handler/token.json', 'w') as token:
                 token.write(creds.to_json())
         self.api = build('fitness', 'v1', credentials=creds)
-        
+
         self.is_connected = True
         return self.api
 
@@ -85,7 +84,7 @@ class GoogleFitHandler(APIHandler):
         response = StatusResponse(False)
 
         try:
-            api = self.connect()
+            self.connect()
             response.success = True
 
         except Exception as e:
@@ -109,7 +108,6 @@ class GoogleFitHandler(APIHandler):
         except HttpError:
             raise HttpError
 
-
     def native_query(self, query: str = None) -> Response:
         """Receive raw query and act upon it somehow.
         Args:
@@ -120,13 +118,13 @@ class GoogleFitHandler(APIHandler):
         """
         ast = parse_sql(query)
         return self.query(ast)
-    
+
     def get_steps(self, start_time_millis, end_time_millis) -> pd.DataFrame:
         steps = {}
         steps_data = self.retrieve_data(self.api, start_time_millis, end_time_millis, "derived:com.google.step_count.delta:com.google.android.gms:estimated_steps")
         for daily_step_data in steps_data['bucket']:
             local_date = datetime.fromtimestamp(int(daily_step_data['startTimeMillis']) / 1000,
-                                            tz=pytz.timezone(str(get_localzone())))
+                                                tz=pytz.timezone(str(get_localzone())))
             local_date_str = local_date.strftime(DATE_FORMAT)
 
             data_point = daily_step_data['dataset'][0]['point']
@@ -139,8 +137,8 @@ class GoogleFitHandler(APIHandler):
         ret = ret.drop('originDataSourceId', axis=1)
         ret = ret.reset_index(drop=False)
         return ret
-    
-    def call_google_fit_api(self, method_name:str = None, params:dict = None) -> pd.DataFrame:
+
+    def call_google_fit_api(self, method_name: str = None, params: dict = None) -> pd.DataFrame:
         """Receive query as AST (abstract syntax tree) and act upon it somehow.
         Args:
             query (ASTNode): sql query represented as AST. May be any kind

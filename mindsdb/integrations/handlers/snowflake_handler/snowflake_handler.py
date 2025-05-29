@@ -1,14 +1,16 @@
 import psutil
 import pandas
 from pandas import DataFrame
+from pandas.api import types as pd_types
 from snowflake.sqlalchemy import snowdialect
 from snowflake import connector
 from snowflake.connector.errors import NotSupportedError
+from snowflake.connector.cursor import SnowflakeCursor, ResultMetadata
 
-from mindsdb.utilities import log
 from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb_sql_parser.ast import Select, Identifier
 
+from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.response import (
@@ -61,8 +63,103 @@ def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
         if internal_type_name in db_types_list:
             return mysql_data_type
 
-    logger.warning(f"Snowflake handler type mapping: unknown type: {internal_type_name}, use VARCHAR as fallback.")
+    logger.debug(f"Snowflake handler type mapping: unknown type: {internal_type_name}, use VARCHAR as fallback.")
     return MYSQL_DATA_TYPE.VARCHAR
+
+
+def _make_table_response(result: DataFrame, cursor: SnowflakeCursor) -> Response:
+    """Build response from result and cursor.
+    NOTE: Snowflake return only 'general' type in description, so look on result's
+          DF types and use types from description only if DF type is 'object'
+
+    Args:
+        result (DataFrame): result of the query.
+        cursor (SnowflakeCursor): cursor object.
+
+    Returns:
+        Response: response object.
+    """
+    description: list[ResultMetadata] = cursor.description
+    mysql_types: list[MYSQL_DATA_TYPE] = []
+    for column in description:
+        column_dtype = result[column.name].dtype
+        description_column_type = connector.constants.FIELD_ID_TO_NAME.get(column.type_code)
+        if pd_types.is_integer_dtype(column_dtype):
+            column_dtype_name = column_dtype.name
+            if column_dtype_name in ('int8', 'Int8'):
+                mysql_types.append(MYSQL_DATA_TYPE.TINYINT)
+            elif column_dtype in ('int16', 'Int16'):
+                mysql_types.append(MYSQL_DATA_TYPE.SMALLINT)
+            elif column_dtype in ('int32', 'Int32'):
+                mysql_types.append(MYSQL_DATA_TYPE.MEDIUMINT)
+            elif column_dtype in ('int64', 'Int64'):
+                mysql_types.append(MYSQL_DATA_TYPE.BIGINT)
+            else:
+                mysql_types.append(MYSQL_DATA_TYPE.INT)
+            continue
+        if pd_types.is_float_dtype(column_dtype):
+            column_dtype_name = column_dtype.name
+            if column_dtype_name in ('float16', 'Float16'):  # Float16 does not exists so far
+                mysql_types.append(MYSQL_DATA_TYPE.FLOAT)
+            elif column_dtype_name in ('float32', 'Float32'):
+                mysql_types.append(MYSQL_DATA_TYPE.FLOAT)
+            elif column_dtype_name in ('float64', 'Float64'):
+                mysql_types.append(MYSQL_DATA_TYPE.DOUBLE)
+            else:
+                mysql_types.append(MYSQL_DATA_TYPE.FLOAT)
+            continue
+        if pd_types.is_bool_dtype(column_dtype):
+            mysql_types.append(MYSQL_DATA_TYPE.BOOLEAN)
+            continue
+        if pd_types.is_datetime64_any_dtype(column_dtype):
+            mysql_types.append(MYSQL_DATA_TYPE.DATETIME)
+            series = result[column.name]
+            # snowflake use pytz.timezone
+            if series.dt.tz is not None and getattr(series.dt.tz, 'zone', 'UTC') != 'UTC':
+                series = series.dt.tz_convert('UTC')
+                result[column.name] = series.dt.tz_localize(None)
+            continue
+
+        if pd_types.is_object_dtype(column_dtype):
+            if description_column_type == 'TEXT':
+                # we can also check column.internal_size, if == 16777216 then it is TEXT, else VARCHAR(internal_size)
+                mysql_types.append(MYSQL_DATA_TYPE.TEXT)
+                continue
+            elif description_column_type == 'BINARY':
+                # if column.internal_size == 8388608 then BINARY, else VARBINARY(internal_size)
+                mysql_types.append(MYSQL_DATA_TYPE.BINARY)
+                continue
+            elif description_column_type == 'DATE':
+                mysql_types.append(MYSQL_DATA_TYPE.DATE)
+                continue
+            elif description_column_type == 'TIME':
+                mysql_types.append(MYSQL_DATA_TYPE.TIME)
+                continue
+
+        if description_column_type == 'FIXED':
+            if column.scale == 0:
+                mysql_types.append(MYSQL_DATA_TYPE.INT)
+            else:
+                # It is NUMBER, DECIMAL or NUMERIC with scale > 0
+                mysql_types.append(MYSQL_DATA_TYPE.FLOAT)
+            continue
+        elif description_column_type == 'REAL':
+            mysql_types.append(MYSQL_DATA_TYPE.FLOAT)
+            continue
+
+        mysql_types.append(MYSQL_DATA_TYPE.TEXT)
+
+    df = DataFrame(
+        result,
+        columns=[column.name for column in description],
+    )
+
+    return Response(
+        RESPONSE_TYPE.TABLE,
+        data_frame=df,
+        affected_rows=None,
+        mysql_types=mysql_types
+    )
 
 
 class SnowflakeHandler(DatabaseHandler):
@@ -214,10 +311,7 @@ class SnowflakeHandler(DatabaseHandler):
                                 raise MemoryError('Not enought memory')
                         # endregion
                     if len(batches) > 0:
-                        response = Response(
-                            RESPONSE_TYPE.TABLE,
-                            pandas.concat(batches, ignore_index=True)
-                        )
+                        response = _make_table_response(result=pandas.concat(batches, ignore_index=True), cursor=cur)
                     else:
                         response = Response(
                             RESPONSE_TYPE.TABLE,

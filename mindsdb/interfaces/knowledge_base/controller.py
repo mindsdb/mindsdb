@@ -1,6 +1,8 @@
 import os
 import copy
 from typing import Dict, List, Optional
+import json
+import decimal
 
 import pandas as pd
 import numpy as np
@@ -601,14 +603,15 @@ class KnowledgeBaseTable:
                 metadata = {}
                 for col in metadata_columns:
                     value = row[col]
+                    value_type = type(value)
                     # Convert numpy/pandas types to Python native types
-                    if safe_pandas_is_datetime(value) or isinstance(value, pd.Timestamp):
+                    if pd.api.types.is_datetime64_any_dtype(value_type) or isinstance(value, pd.Timestamp):
                         value = str(value)
-                    elif pd.api.types.is_integer_dtype(value):
+                    elif pd.api.types.is_integer_dtype(value_type):
                         value = int(value)
-                    elif pd.api.types.is_float_dtype(value):
+                    elif pd.api.types.is_float_dtype(value_type) or isinstance(value, decimal.Decimal):
                         value = float(value)
-                    elif pd.api.types.is_bool_dtype(value):
+                    elif pd.api.types.is_bool_dtype(value_type):
                         value = bool(value)
                     elif isinstance(value, dict):
                         metadata.update(value)

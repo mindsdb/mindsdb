@@ -617,7 +617,7 @@ class KnowledgeBaseTable:
                     value = row[col]
                     value_type = type(value)
                     # Convert numpy/pandas types to Python native types
-                    if pd.api.types.is_datetime64_any_dtype(value_type) or isinstance(value, pd.Timestamp):
+                    if safe_pandas_is_datetime(value) or isinstance(value, pd.Timestamp):
                         value = str(value)
                     elif pd.api.types.is_integer_dtype(value_type):
                         value = int(value)

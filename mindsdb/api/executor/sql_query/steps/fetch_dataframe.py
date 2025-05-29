@@ -115,6 +115,9 @@ class FetchDataframeStepCall(BaseStepCall):
             if context_callback:
                 context_callback(df, response.columns)
 
+        # if query registered, set progress
+        if self.sql_query.run_query is not None:
+            self.sql_query.run_query.set_progress(df, None)
         return ResultSet.from_df(
             df,
             table_name=table_alias[1],

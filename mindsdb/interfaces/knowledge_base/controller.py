@@ -151,10 +151,11 @@ class KnowledgeBaseTable:
         query_copy = copy.deepcopy(query)
 
         query.targets = [
-            Identifier(TableField.ID.value),
-            Identifier(TableField.CONTENT.value),
-            Identifier(TableField.METADATA.value),
-            Identifier(TableField.DISTANCE.value),
+            # Identifier(TableField.ID.value),
+            # Identifier(TableField.CONTENT.value),
+            # Identifier(TableField.METADATA.value),
+            # Identifier(TableField.DISTANCE.value),
+            Star()
         ]
 
         # Get response from vector db
@@ -1011,12 +1012,12 @@ class KnowledgeBaseController:
         except PredictorRecordNotFound:
             pass
 
-        if params.get("provider", None) not in ("openai", "azure"):
-            # try use litellm
-            KnowledgeBaseTable.call_litellm_embedding(self.session, params, ["test"])
-            return
-
         if "provider" in params:
+            if params.get("provider", None) not in ("openai", "azure"):
+                # try use litellm
+                KnowledgeBaseTable.call_litellm_embedding(self.session, params, ["test"])
+                return
+
             engine = params.pop("provider").lower()
 
         api_key = get_api_key(engine, params, strict=False) or params.pop("api_key")

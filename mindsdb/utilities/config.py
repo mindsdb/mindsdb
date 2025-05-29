@@ -210,11 +210,12 @@ class Config:
             "default_reranking_model": {},
             "a2a": {
                 "host": "localhost",
-                "port": 10002,
+                "port": 47338,
                 "mindsdb_host": "localhost",
                 "mindsdb_port": 47334,
                 "agent_name": "my_agent",
                 "project_name": "mindsdb",
+                "enabled": False,
             },
         }
         # endregion
@@ -374,6 +375,13 @@ class Config:
             a2a_config["agent_name"] = os.environ.get("MINDSDB_AGENT_NAME")
         if os.environ.get("MINDSDB_PROJECT_NAME"):
             a2a_config["project_name"] = os.environ.get("MINDSDB_PROJECT_NAME")
+        if os.environ.get("MINDSDB_A2A_ENABLED") is not None:
+            a2a_config["enabled"] = os.environ.get("MINDSDB_A2A_ENABLED").lower() in (
+                "true",
+                "1",
+                "yes",
+                "y",
+            )
 
         if a2a_config:
             self._env_config["a2a"] = a2a_config
@@ -477,7 +485,7 @@ class Config:
         # Ensure A2A port is never 0, which would prevent the A2A API from starting
         if "a2a" in new_config and isinstance(new_config["a2a"], dict):
             if "port" in new_config["a2a"] and (new_config["a2a"]["port"] == 0 or new_config["a2a"]["port"] is None):
-                new_config["a2a"]["port"] = 10002  # Use the default port value
+                new_config["a2a"]["port"] = 47338  # Use the default port value
 
         # region create dirs
         for key, value in new_config["paths"].items():

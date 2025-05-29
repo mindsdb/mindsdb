@@ -18,6 +18,6 @@ connection_args = OrderedDict(
 )
 
 connection_args_example = OrderedDict(
-    api_key = '9d88d55d-42a9-4cef-85a8-5b9eab8335b6',
+    api_key = 'your_api_key_here',
     base_url = 'https://pro-api.coinmarketcap.com/v1/'
 )

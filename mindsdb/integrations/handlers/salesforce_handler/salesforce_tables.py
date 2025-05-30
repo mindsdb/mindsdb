@@ -21,6 +21,18 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
         """
         This is the table abstraction for any resource of the Salesforce API.
         """
+        
+        def __init__(self, *args, table_name=None, **kwargs):
+            """
+            Initializes the AnyTable class.
+
+            Args:
+                *args: Variable length argument list.
+                table_name (str): The name of the table that represents the Salesforce resource.
+                **kwargs: Arbitrary keyword arguments.
+            """
+            super().__init__(*args, table_name=table_name, **kwargs)
+            self.metadata = None
 
         def select(self, query: Select) -> pd.DataFrame:
             """
@@ -124,6 +136,9 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
             Returns:
                 Dict: A dictionary containing metadata about the Salesforce resource.
             """
+            if self.metadata:
+                return self.metadata
+
             client = self.handler.connect()
             return getattr(client.sobjects, resource_name).describe()
 

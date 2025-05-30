@@ -628,11 +628,12 @@ class MetaAPIHandler(APIHandler):
             Response: A response object containing the foreign key metadata.
         """
         df = pd.DataFrame()
+        all_tables = list(self._tables.keys())
         for table_name, table_class in self._tables.items():
             if table_names is None or table_name in table_names:
                 try:
                     if hasattr(table_class, 'meta_get_foreign_keys'):
-                        foreign_key_metadata = table_class.meta_get_foreign_keys(table_name)
+                        foreign_key_metadata = table_class.meta_get_foreign_keys(table_name, all_tables)
                         df = pd.concat([df, pd.DataFrame(foreign_key_metadata)], ignore_index=True)
                 except Exception as e:
                     logger.error(f"Error retrieving foreign keys for table {table_name}: {e}")

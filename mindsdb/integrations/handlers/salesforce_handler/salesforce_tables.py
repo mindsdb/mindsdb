@@ -219,12 +219,13 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
                 }
             ]
 
-        def meta_get_foreign_keys(self, table_name: str) -> List[Dict]:
+        def meta_get_foreign_keys(self, table_name: str, all_tables: List[str]) -> List[Dict]:
             """
             Retrieves the foreign keys for the Salesforce resource.
 
             Args:
                 table_name (str): The name given to the table that represents the Salesforce resource.
+                all_tables (List[str]): A list of all table names in the Salesforce database.
 
             Returns:
                 List[Dict]: A list of dictionaries containing foreign key metadata for the Salesforce resource.
@@ -234,10 +235,15 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
 
             foreign_key_metadata = []
             for child_relationship in metadata.get('childRelationships', []):
+                # Skip if the child relationship is not one of the supported tables.
+                child_table_name = child_relationship['childSObject']
+                if child_table_name not in all_tables:
+                    continue
+
                 foreign_key_metadata.append({
                     'parent_table_name': table_name,
                     'parent_column_name': 'Id',
-                    'child_table_name': child_relationship['childSObject'],
+                    'child_table_name': child_table_name,
                     'child_column_name': child_relationship['field'],
                 })
 

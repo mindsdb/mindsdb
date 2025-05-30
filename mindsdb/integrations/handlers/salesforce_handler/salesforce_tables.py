@@ -234,13 +234,15 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
             client = self.handler.connect()
             metadata = self._get_metadata()
 
-            foreign_keys = []
+            foreign_key_metadata = []
             for child_relationship in metadata.get('childRelationships', []):
-                foreign_keys.append({
+                foreign_key_metadata.append({
                     'parent_table_name': table_name,
                     'parent_column_name': 'Id',
                     'child_table_name': child_relationship['childSObject'],
                     'child_column_name': child_relationship['field'],
                 })
+                
+            return foreign_key_metadata
 
     return AnyTable

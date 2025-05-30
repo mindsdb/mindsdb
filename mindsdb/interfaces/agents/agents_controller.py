@@ -5,6 +5,7 @@ from langchain_core.tools import BaseTool
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import null
 import pandas as pd
+import json
 
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.storage.db import Predictor
@@ -633,7 +634,6 @@ class AgentsController:
             api_key = config.get('openai', {}).get('api_key')
 
         # Convert the user_query to a proper format if it's in JSON format
-        import json
         try:
             # Try to parse as JSON in case the query comes in the format:
             # '{"role": "user", "content": "What are the available databases"}'
@@ -665,9 +665,9 @@ class AgentsController:
         import pandas as pd
 
         # Format the result data as a DataFrame
-        # Use the column names expected by MindsDB - typically 'output' for the result
+        # Use the column names expected by MindsDB - use the ASSISTANT_COLUMN constant
         df = pd.DataFrame({
-            'output': [result['result']],
+            self.assistant_column: [result],
         })
 
         return df
@@ -733,8 +733,13 @@ class AgentsController:
                 # Just use the string representation as a last resort
                 user_query = str(messages)
 
-            # Process the query with CrewAI
-            return self.get_completion_crewai(agent, user_query, project_name)
+            # If streaming is requested, use the streaming method
+            if stream:
+                return self._get_crewai_completion_stream(agent, user_query, project_name)
+            else:
+                # Process the query with CrewAI (non-streaming)
+                result_df = self.get_completion_crewai(agent, user_query, project_name)
+                return result_df
 
         # Handle regular LangChain agents
         if stream:
@@ -790,3 +795,70 @@ class AgentsController:
 
         lang_agent = LangchainAgent(agent, model=model)
         return lang_agent.get_completion(messages, stream=True)
+
+    def _get_crewai_completion_stream(
+            self,
+            agent: db.Agents,
+            user_query: str,
+            project_name: str = default_project) -> Iterator[object]:
+        '''
+        Queries an agent to get a stream of completion chunks.
+
+        Parameters:
+            agent (db.Agents): Existing agent to get completion from
+            user_query (str): The natural language query from the user
+            project_name (str): Project the agent belongs to (default mindsdb)
+
+        Returns:
+            chunks (Iterator[object]): Completion chunks as an iterator
+
+        Raises:
+            ValueError: Agent's model does not exist.
+        '''
+        # For circular dependency.
+        from .crewai_pipeline import CrewAITextToSQLPipeline
+
+        # Create the CrewAI pipeline
+        pipeline = CrewAITextToSQLPipeline(
+            tables=agent.params.get('tables', []),
+            knowledge_bases=agent.params.get('knowledge_bases', []),
+            model=agent.model_name,
+            provider=agent.params.get('provider') or agent.provider or 'openai',
+            api_key=agent.params.get('api_key'),
+            prompt_template=agent.params.get('prompt_template'),
+            verbose=agent.params.get('verbose', True),
+            max_tokens=agent.params.get('max_tokens', 2000)
+        )
+
+        # Process the query with streaming
+        for chunk in pipeline.process_query_stream(user_query):
+            # Add metadata and format chunk similar to LangChain agents
+            processed_chunk = self._process_crewai_chunk(chunk)
+            yield processed_chunk
+
+    def _process_crewai_chunk(self, chunk: Dict) -> Dict:
+        """Process a CrewAI streaming chunk to match LangChain format.
+
+        Args:
+            chunk: Raw chunk from CrewAI streaming
+
+        Returns:
+            Processed chunk with proper metadata
+        """
+        # Add trace_id if available (similar to LangChain)
+        if hasattr(self, 'langfuse_client_wrapper'):
+            chunk["trace_id"] = self.langfuse_client_wrapper.get_trace_id()
+        else:
+            chunk["trace_id"] = "crewai-stream"
+
+        # Set is_task_complete flag
+        if "output" in chunk and chunk.get("type") == "answer":
+            chunk["is_task_complete"] = True
+        else:
+            chunk["is_task_complete"] = False
+
+        # Ensure metadata exists
+        if "metadata" not in chunk:
+            chunk["metadata"] = {}
+
+        return chunk

@@ -1,6 +1,4 @@
 import os
-import json
-import ast
 from typing import List, Dict, Any, Optional, Union
 from crewai import Agent, Task, Crew, Process
 from crewai.tools import tool
@@ -274,7 +272,332 @@ class CrewAITextToSQLPipeline:
             llm=self.llm
         )
 
-    def process_query(self, user_query: str) -> Dict[str, Any]:
+    def _get_task_description(self, user_query: str) -> str:
+        """Get the standard task description for CrewAI agents.
+
+        Args:
+            user_query: The user's natural language query
+
+        Returns:
+            The formatted task description string
+        """
+        return f"""
+        Interpret user query: "{user_query}"
+        Based on the query understanding, generate the appropriate SQL query from the user input.
+        You need to generate a SQL query that result of its execution can directly answer user's request, later
+        SQL Validation Agent can use this result to answer the users question.
+
+        And here is more information about the database and tables (e.g. columns names and how they are related together) provided by the user: "{self.prompt_template}"
+
+        CRITICAL: NEVER truncate, abbreviate, or modify string literals in any way.
+        Always keep quoted values EXACTLY as they appear in the original query, including
+        full names, long text strings, and search terms. Even very long strings
+        must be preserved completely.
+
+        - If user input pertains to structured data (e.g., databases, tables), then convert the natural
+        language question into an SQL query, based on the provided information in the user question.
+
+        For standard database queries:
+            - Include all necessary joins, filters, and aggregations
+            - Ensure proper syntax and column references
+            - Preserve the EXACT text of string literals in WHERE clauses
+
+        -If the user input relates to unstructured data or requires information from documents, articles,
+        or general knowledge, then it has to do semantic similarity search in the knowledge base.
+        For knowledge base queries for semantic similarity search, generate a query on knowledge base and
+        put WHERE condition on "content" column.
+        "content" column is the only column that is used for semantic search.
+            - This is an example query for knowledge base search:
+            SELECT *
+            FROM knowledge_base_name
+            WHERE content = 'search_term' AND relevance_threshold=0.6 LIMIT 50;
+
+        Note: In this example 'search_term' is the term that is extracted from the user input, and
+        "knowledge_base_name" is the name of the knowledge base, and "relevance_threshold" is the
+        relevance threshold for the semantic search and it should be between 0 and 1, and always you should use "=" operator for it. You can choose default value for relevance_threshold of 0.6 if not provided in the user query.
+
+        - If the user is asking about available databases, tables, use the list_tables tool to get this information directly.
+
+        Validate your SQL with the check_sql tool before finalizing.
+
+        Note:
+        - If the previous output indicates a general conversation or greeting, acknowledge that no SQL query is needed, and answer it based on your general knowledge.
+        - Otherwise, generate the appropriate SQL query as per the user's intent.
+
+        Execute the EXACT SQL query using the execute_sql tool WITHOUT modifying it.
+
+        IMPORTANT:
+        - Never modify, truncate, or change the SQL query in any way
+        - Execute the exact query as provided, even if it contains very long string literals
+        - Preserve the complete structure and values of the original query
+        - If no SQL query is provided (due to the nature of the user input), acknowledge that execution is skipped.
+
+        - The output MUST be a string with markdown format.
+        - If you need to return any table or dataframe in the answer it should be a string in the markdown format.
+
+        - And then as the final answer to the user question, retrun the final dictionary like this:
+        Short explanation about the process or explaining the executed query and resulted data or extract information from the result to answer the user's question or any error message.
+        And the result received from the SQL Execution as a string in markdown format.
+
+        - NEVER manipulate or transform the contents of the query execution result other than passing it verbatim.
+
+        - If there was an error, replicate the error information in the answer.
+
+        - If the original query was a general greeting or conversational input, respond directly to
+        the user to answer the general question based on your general knowledge.
+
+        IMPORTANT:
+        - If there was an error from execution of the generated query, collect insight and regernarete the query to address the
+          issue, and execute it again to get a correct meaningful answer.
+
+        """
+
+    def _create_crew(self, single_task: Task) -> Crew:
+        """Create a Crew with the standard configuration.
+
+        Args:
+            single_task: The task to be executed by the crew
+
+        Returns:
+            Configured Crew instance
+        """
+        return Crew(
+            agents=[self.single_agent],
+            tasks=[single_task],
+            verbose=self.verbose,
+            process=Process.sequential,
+        )
+
+    def process_query_stream(self, user_query: str):
+        """Process a natural language query through the CrewAI pipeline with streaming.
+
+        Args:
+            user_query: The natural language query from the user
+
+        Yields:
+            Dict containing streaming chunks with real thoughts, actions, and results from CrewAI
+        """
+        import sys
+
+        # Yield initial start message
+        yield {
+            'type': 'start',
+            'prompt': user_query
+        }
+
+        # Create the task
+        single_task = Task(
+            description=self._get_task_description(user_query),
+            agent=self.single_agent,
+            expected_output="String with markdown format."
+        )
+
+        # Create and run the crew with custom logging capture
+        crew = self._create_crew(single_task)
+
+        # Create a custom stdout/stderr capturer that parses in real-time
+        class StreamingCapture:
+            def __init__(self, stream_callback, original_stream):
+                self.stream_callback = stream_callback
+                self.original_stream = original_stream
+                self.buffer = ""
+                self.current_tool = ""
+                self.current_tool_input = ""
+                self.in_tool_input = False
+                self.in_tool_output = False
+                self.tool_input_lines = []
+                self.tool_output_lines = []
+
+            def write(self, text):
+                # Write to original stream so logs still appear in terminal
+                self.original_stream.write(text)
+                self.original_stream.flush()
+
+                # Parse the text for streaming
+                self.buffer += text
+                self.parse_buffer()
+
+            def flush(self):
+                self.original_stream.flush()
+
+            def _strip_ansi_codes(self, text):
+                """Remove ANSI escape codes from text"""
+                import re
+                # Pattern to match ANSI escape codes
+                ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+                return ansi_escape.sub('', text)
+
+            def parse_buffer(self):
+                lines = self.buffer.split('\n')
+                # Keep the last incomplete line in buffer
+                self.buffer = lines[-1]
+
+                # Process complete lines
+                for line in lines[:-1]:
+                    self.parse_line(line.strip())
+
+            def parse_line(self, line):
+                """Parse individual lines for CrewAI patterns"""
+                if not line:
+                    return
+
+                # Strip ANSI escape codes from the line
+                clean_line = self._strip_ansi_codes(line)
+                if not clean_line.strip():
+                    return
+
+                # Check for thought patterns
+                if "## Thought:" in clean_line:
+                    # End any previous tool input/output collection
+                    self._finalize_tool_collection()
+
+                    thought_text = clean_line.split("## Thought:")[-1].strip()
+                    if thought_text and thought_text.startswith("Thought:"):
+                        thought_text = thought_text[8:].strip()  # Remove "Thought:" prefix
+                    if thought_text and thought_text != "Thought:":
+                        self.stream_callback({
+                            'actions': [{
+                                'tool': 'thinking',
+                                'tool_input': thought_text,
+                                'log': thought_text
+                            }],
+                            'is_task_complete': False
+                        })
+
+                # Check for tool usage patterns
+                elif "## Using tool:" in clean_line:
+                    # End any previous tool input/output collection
+                    self._finalize_tool_collection()
+
+                    tool_name = clean_line.split("## Using tool:")[-1].strip()
+                    self.current_tool = tool_name
+
+                # Check for tool input start
+                elif "## Tool Input:" in clean_line:
+                    self.in_tool_input = True
+                    self.in_tool_output = False
+                    self.tool_input_lines = []
+                    # Check if there's content on the same line
+                    tool_input_start = clean_line.split("## Tool Input:")[-1].strip()
+                    if tool_input_start:
+                        self.tool_input_lines.append(tool_input_start)
+
+                # Check for tool output start
+                elif "## Tool Output:" in clean_line:
+                    # Finalize tool input if we were collecting it
+                    if self.in_tool_input:
+                        self.current_tool_input = '\n'.join(self.tool_input_lines).strip()
+                        self.in_tool_input = False
+
+                    self.in_tool_output = True
+                    self.tool_output_lines = []
+                    # Check if there's content on the same line
+                    tool_output_start = clean_line.split("## Tool Output:")[-1].strip()
+                    if tool_output_start:
+                        self.tool_output_lines.append(tool_output_start)
+
+                # Check for final answer patterns
+                elif "## Final Answer:" in clean_line:
+                    # End any previous tool input/output collection
+                    self._finalize_tool_collection()
+
+                    final_answer = clean_line.split("## Final Answer:")[-1].strip()
+                    if final_answer:
+                        # Send the final answer as a regular chunk to get thought_process metadata
+                        self.stream_callback({
+                            'output': final_answer,
+                            'type': 'answer',
+                            'is_task_complete': False
+                        })
+
+                # Check if we're in tool input or output collection mode
+                elif self.in_tool_input:
+                    # Continue collecting tool input lines (strip ANSI codes)
+                    self.tool_input_lines.append(clean_line)
+
+                elif self.in_tool_output:
+                    # Continue collecting tool output lines (strip ANSI codes)
+                    self.tool_output_lines.append(clean_line)
+
+                    # Check if this might be the end of tool output (next section starts)
+                    if clean_line.startswith("## ") or clean_line.startswith("# "):
+                        self._finalize_tool_collection()
+                        # Re-process this line since it's a new section
+                        self.parse_line(line)
+
+            def _finalize_tool_collection(self):
+                """Finalize and stream any collected tool input/output"""
+                if self.in_tool_output and self.tool_output_lines:
+                    tool_output = '\n'.join(self.tool_output_lines).strip()
+                    if self.current_tool and self.current_tool_input:
+                        # Stream the observation as a steps chunk (includes both action and observation)
+                        self.stream_callback({
+                            'steps': [{
+                                'action': {
+                                    'tool': self.current_tool,
+                                    'tool_input': self.current_tool_input,
+                                    'log': f'Action: {self.current_tool}\nAction Input: {self.current_tool_input}'
+                                },
+                                'observation': tool_output
+                            }],
+                            'is_task_complete': False
+                        })
+
+                    # Reset state
+                    self.current_tool = ""
+                    self.current_tool_input = ""
+                    self.tool_output_lines = []
+                    self.in_tool_output = False
+
+                elif self.in_tool_input and self.tool_input_lines:
+                    self.current_tool_input = '\n'.join(self.tool_input_lines).strip()
+                    self.tool_input_lines = []
+                    self.in_tool_input = False
+
+        # Create a callback to stream chunks
+        streamed_chunks = []
+
+        def stream_chunk(chunk):
+            streamed_chunks.append(chunk)
+
+        # Create custom capture streams
+        stdout_capture = StreamingCapture(stream_chunk, sys.stdout)
+        stderr_capture = StreamingCapture(stream_chunk, sys.stderr)
+
+        try:
+            # Replace stdout/stderr to capture CrewAI output in real-time
+            original_stdout = sys.stdout
+            original_stderr = sys.stderr
+            sys.stdout = stdout_capture
+            sys.stderr = stderr_capture
+
+            # Run the crew
+            result = crew.kickoff()
+
+            # Convert result to string
+            final_result = str(result)
+
+            # Finalize any remaining tool collection in the capture streams
+            stdout_capture._finalize_tool_collection()
+            stderr_capture._finalize_tool_collection()
+
+            # Yield all captured chunks
+            for chunk in streamed_chunks:
+                yield chunk
+
+            # If no chunks were captured, or ensure we have a final result
+            if not streamed_chunks or not any(chunk.get('type') == 'answer' or 'output' in chunk for chunk in streamed_chunks):
+                yield {
+                    'output': final_result,
+                    'type': 'answer'
+                }
+
+        finally:
+            # Restore original stdout/stderr
+            sys.stdout = original_stdout
+            sys.stderr = original_stderr
+
+    def process_query(self, user_query: str) -> str:
         """Process a natural language query through the CrewAI pipeline.
 
         Args:
@@ -285,141 +608,16 @@ class CrewAITextToSQLPipeline:
         """
 
         single_task = Task(
-            description=f"""
-            Interpret user query: "{user_query}"
-            Based on the query understanding, generate the appropriate SQL query from the user input.
-            You need to generate a SQL query that result of its execution can directly answer user's request, later
-            SQL Validation Agent can use this result to answer the users question.
-
-            And here is more information about the database and tables (e.g. columns names and how they are related together) provided by the user: "{self.prompt_template}"
-
-            CRITICAL: NEVER truncate, abbreviate, or modify string literals in any way.
-            Always keep quoted values EXACTLY as they appear in the original query, including
-            full names, long text strings, and search terms. Even very long strings
-            must be preserved completely.
-
-            - If user input pertains to structured data (e.g., databases, tables), then convert the natural
-            language question into an SQL query, based on the provided information in the user question.
-
-            For standard database queries:
-                - Include all necessary joins, filters, and aggregations
-                - Ensure proper syntax and column references
-                - Preserve the EXACT text of string literals in WHERE clauses
-
-            -If the user input relates to unstructured data or requires information from documents, articles,
-            or general knowledge, then it has to do semantic similarity search in the knowledge base.
-            For knowledge base queries for semantic similarity search, generate a query on knowledge base and
-            put WHERE condition on "content" column.
-            "content" column is the only column that is used for semantic search.
-                - This is an example query for knowledge base search:
-                SELECT *
-                FROM knowledge_base_name
-                WHERE content = 'search_term' AND relevance_threshold=0.6 LIMIT 50;
-
-            Note: In this example 'search_term' is the term that is extracted from the user input, and
-            "knowledge_base_name" is the name of the knowledge base, and "relevance_threshold" is the
-            relevance threshold for the semantic search and it should be between 0 and 1, and always you should use "=" operator for it. You can choose default value for relevance_threshold of 0.6 if not provided in the user query.
-
-            - If the user is asking about available databases, tables, use the list_tables tool to get this information directly.
-
-            Validate your SQL with the check_sql tool before finalizing.
-
-            Note:
-            - If the previous output indicates a general conversation or greeting, acknowledge that no SQL query is needed, and answer it based on your general knowledge.
-            - Otherwise, generate the appropriate SQL query as per the user's intent.
-
-            Execute the EXACT SQL query using the execute_sql tool WITHOUT modifying it.
-
-            IMPORTANT:
-            - Never modify, truncate, or change the SQL query in any way
-            - Execute the exact query as provided, even if it contains very long string literals
-            - Preserve the complete structure and values of the original query
-            - If no SQL query is provided (due to the nature of the user input), acknowledge that execution is skipped.
-
-            - The output MUST be a JSON/dictionary object containing the raw query results.
-            Example output format:
-            {{
-                "columns": ["col1", "col2"],
-                "rows": [
-                    {{"col1": "value1", "col2": "value2"}},
-                    {{"col1": "value3", "col2": "value4"}}
-                ]
-            }}
-
-            - And then as the final answer to the user question, retrun the final dictionary like this:
-            {{
-                "text": "<Short explanation about the process or explaining the executed query and resulted data or extract information from the result to answer the user's question or any error message>",
-                "data": "<The dictionary received from the SQL Execution>"
-            }}
-            - NEVER manipulate or transform the contents of the 'data' key other than passing it verbatim.
-
-            - If there was an error, replicate the error information in the 'text' field and keep 'data' as an empty dictionary
-              or as provided.
-
-            - If the original query was a general greeting or conversational input, respond directly to
-            the user to answer the general question based on your general knowledge.
-
-            IMPORTANT:
-            - If there was an error from execution of the generated query, collect insight and regernarete the query to address the
-              issue, and execute it again to get a correct meaningful answer.
-
-            """,
+            description=self._get_task_description(user_query),
             agent=self.single_agent,
-            expected_output="Dictionary object with either query results or an error message with 'text' and 'data' keys.",
-            # context=[understand_task]
+            expected_output="String with markdown format."
         )
 
         # Create and run the crew
-        crew = Crew(
-            agents=[
-                self.single_agent
-            ],
-            tasks=[
-                single_task
-            ],
-            verbose=self.verbose,
-            process=Process.sequential,
-            # planning=True
-        )
-
+        crew = self._create_crew(single_task)
         result = crew.kickoff()
 
-        # Convert the crew output into the expected dictionary shape.
-        final_result: Dict[str, Any]
-
-        if isinstance(result.raw, dict):
-            # Crew already returned a proper dictionary.
-            final_result = result.raw
-        else:
-            # `result` is presumably a string – try several safe parsing methods.
-            parsed: Any = None
-            if isinstance(result.raw, str):
-                # 1) direct JSON   (double-quoted keys/values)
-                try:
-                    parsed = json.loads(result.raw)
-                except json.JSONDecodeError:
-                    # 2) python-literal style (single quotes)
-                    try:
-                        parsed = ast.literal_eval(result.raw)
-                    except Exception:
-                        parsed = None
-
-            # If parsing succeeded and produced a dict, use it.
-            if isinstance(parsed, dict):
-                final_result = parsed
-            else:
-                # Last-ditch fallback – wrap raw text.
-                final_result = {
-                    "text": str(result),
-                    "data": {},
-                }
-
-        # Optionally include the original user query for traceability
-        final_output = {
-            "result": final_result
-        }
-
-        return final_output
+        return str(result)
 
     def _prepare_gemini_model_name(self, raw_name: str) -> str:
         """Return a model name with the required `gemini/` prefix for LiteLLM.

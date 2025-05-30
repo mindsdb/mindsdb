@@ -96,7 +96,7 @@ class SkillsController:
             raise ValueError(f"Skill with name already exists: {name}")
 
         # Load metadata to data catalog (if enabled) if the skill is Text-to-SQL.
-        if config.get("data_catalog", {}).get("enabled", False) and type == "text2sql":
+        if config.get("data_catalog", {}).get("enabled", False) and type == "sql":
             data_catalog_loader = DataCatalogLoader(
                 database_name=params["database"], table_names=params["tables"] if "tables" in params else None
             )

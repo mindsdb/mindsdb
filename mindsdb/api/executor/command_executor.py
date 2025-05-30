@@ -1260,7 +1260,7 @@ class ExecuteCommands:
                 raise
         return ExecuteAnswer()
 
-    def answer_drop_database(self, statement):
+    def answer_update_database(self, statement):
         if len(statement.name.parts) != 1:
             raise Exception("Database name should contain only 1 part.")
         db_name = statement.name.parts[0]

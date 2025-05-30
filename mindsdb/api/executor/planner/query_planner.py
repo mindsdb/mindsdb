@@ -652,7 +652,7 @@ class QueryPlanner:
         # create table step
         self.plan.add_step(SaveToTable(
             table=query.name,
-            dataframe=last_step,
+            dataframe=last_step.result,
             is_replace=query.is_replace,
         ))
 
@@ -674,7 +674,7 @@ class QueryPlanner:
 
             self.plan.add_step(InsertToTable(
                 table=table,
-                dataframe=last_step,
+                dataframe=last_step.result,
                 params=params,
             ))
         else:

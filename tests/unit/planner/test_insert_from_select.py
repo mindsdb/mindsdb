@@ -1,3 +1,4 @@
+from mindsdb_sql_parser import parse_sql, Join
 from mindsdb_sql_parser.ast import (
     Identifier, Insert, Select, Constant,
     Star, BinaryOperation, Function,
@@ -6,11 +7,16 @@ import pandas as pd
 
 from mindsdb.api.executor.planner import plan_query
 from mindsdb.api.executor.planner.query_plan import QueryPlan
+from mindsdb.api.executor.planner.step_result import Result
 from mindsdb.api.executor.planner.steps import (
     FetchDataframeStep,
     InsertToTable,
-    QueryStep
+    QueryStep,
+    FetchDataframeStepPartition,
+    JoinStep,
+    ApplyPredictorStep,
 )
+from mindsdb_sql_parser.utils import JoinType
 
 
 class TestPlanInsertFromSelect:
@@ -41,7 +47,7 @@ class TestPlanInsertFromSelect:
                 InsertToTable(
                     table=Identifier('INT_1.table_1'),
                     step_num=1,
-                    dataframe=step_1
+                    dataframe=Result(0)
                 )
             ]
         )
@@ -75,7 +81,7 @@ class TestPlanInsertFromSelect:
                 InsertToTable(
                     table=Identifier('INT_1.table_1'),
                     step_num=1,
-                    dataframe=step_1,
+                    dataframe=Result(0),
                 )
             ]
         )
@@ -121,7 +127,7 @@ class TestPlanInsertFromSelect:
                 InsertToTable(
                     table=Identifier('INT_1.table_1'),
                     step_num=1,
-                    dataframe=step_1,
+                    dataframe=Result(0),
                 )
             ]
         )
@@ -153,7 +159,7 @@ class TestPlanInsertFromSelect:
                 InsertToTable(
                     table=Identifier('INT_1.table_1'),
                     step_num=1,
-                    dataframe=step_1
+                    dataframe=Result(0)
                 )
             ]
         )
@@ -163,7 +169,5 @@ class TestPlanInsertFromSelect:
 
             if hasattr(step, 'from_table') and isinstance(step.from_table, pd.DataFrame) and isinstance(expected_step.from_table, pd.DataFrame):
                 assert step.from_table.equals(expected_step.from_table)
-            elif hasattr(step, 'dataframe') and isinstance(step.dataframe.from_table, pd.DataFrame) and isinstance(expected_step.dataframe.from_table, pd.DataFrame):
-                assert step.dataframe.from_table.equals(expected_step.dataframe.from_table)
             else:
                 assert step == expected_step

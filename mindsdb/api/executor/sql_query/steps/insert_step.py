@@ -44,7 +44,7 @@ class InsertToTableCall(BaseStepCall):
             raise NotSupportedYet(f"Creating table in '{integration_name}' is not supported")
 
         if step.dataframe is not None:
-            data = self.steps_data[step.dataframe.result.step_num]
+            data = self.steps_data[step.dataframe.step_num]
         elif step.query is not None:
             data = ResultSet()
             if step.query.columns is None:

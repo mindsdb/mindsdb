@@ -48,7 +48,7 @@ We start by creating a knowledge base and inserting data. Next we can run semant
     +----------+-----------------------+------------------------+
     ```
 
-    Use the `INSERT INTO` command to injest data into the knowledge base.
+    Use the `INSERT INTO` command to ingest data into the knowledge base.
 
     ```sql
     INSERT INTO my_kb
@@ -149,7 +149,7 @@ USING
 Upon execution, it registers `my_kb` and associates the specified models and storage. `my_kb` is a unique identifier of the knowledge base within MindsDB.
 
 <Tip>
-Users can use the variables and the [`from_env()` function](/mindsdb_sql/functions/from_env) to pass paramaters when creating knowledge bases.
+Users can use the variables and the [`from_env()` function](/mindsdb_sql/functions/from_env) to pass parameters when creating knowledge bases.
 </Tip>
 
 <Note>
@@ -458,7 +458,7 @@ Note that if the source data row is chunked into multiple chunks by the knowledg
 When users defined the `id_column` parameter, the values from the provided source data column are used to identify source data rows within the knowledge base.
 
 * User-Generated ID Column: <br></br>
-When users do not have a column that uniquely idetifies each row in their source data, they can generate the ID column values when inserting data into the knowledge base using functions like `HASH()` or `ROW_NUMBER()`.
+When users do not have a column that uniquely identifies each row in their source data, they can generate the ID column values when inserting data into the knowledge base using functions like `HASH()` or `ROW_NUMBER()`.
 
 ```sql
 INSERT INTO my_kb (
@@ -656,7 +656,7 @@ USING
             "chunk_size": 2000,
             "chunk_overlap": 200
         }
-    }
+    },
     ...;
 ```
 
@@ -675,7 +675,7 @@ USING
         "json_chunking_config" : {
             ...
         }
-    }
+    },
     ...;
 ```
 

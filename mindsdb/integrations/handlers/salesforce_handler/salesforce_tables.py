@@ -149,7 +149,6 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
             Returns:
                 List[Text]: A list of Attributes (columns) of the Salesforce resource.
             """
-            client = self.handler.connect()
             return [field['name'] for field in self._get_metadata()['fields']]
 
         def meta_get_tables(self, table_name: str) -> Dict:
@@ -190,7 +189,6 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
             Returns:
                 List[Dict]: A list of dictionaries containing column metadata for the Salesforce resource.
             """
-            client = self.handler.connect()
             metadata = self._get_metadata()
 
             column_metadata = []
@@ -242,7 +240,7 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
                     'child_table_name': child_relationship['childSObject'],
                     'child_column_name': child_relationship['field'],
                 })
-                
+
             return foreign_key_metadata
 
     return AnyTable

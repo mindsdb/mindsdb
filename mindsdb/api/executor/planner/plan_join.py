@@ -77,7 +77,8 @@ class PlanJoin:
         if integration_to_send:
             self.planner.prepare_integration_select(integration_to_send, query)
 
-            last_step = self.planner.plan.add_step(FetchDataframeStep(integration=integration_to_send, query=query))
+            fetch_params = self.planner.get_fetch_params(query.using)
+            last_step = self.planner.plan.add_step(FetchDataframeStep(integration=integration_to_send, query=query, params=fetch_params))
             return last_step
         elif self.is_timeseries(query):
             return PlanJoinTSPredictorQuery(self.planner).plan(query, integration)

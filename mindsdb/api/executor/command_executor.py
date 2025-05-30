@@ -1315,7 +1315,14 @@ class ExecuteCommands:
         """
         project_name = database_name
 
-        match statement.name.parts:
+        if isinstance(statement.name, str):
+            parts = statement.name.split('.')
+        elif isinstance(statement.name, Identifier):
+            parts = statement.name.parts
+        else:
+            raise ValueError(f'Unknown type of view name: {statement.name}')
+
+        match parts:
             case [project_name, view_name]:
                 pass
             case [view_name]:

@@ -31,7 +31,7 @@ class CrewAITextToSQLPipeline:
         api_key: Optional[str] = None,
         prompt_template: str = None,
         verbose: bool = True,
-        max_tokens: int = 4000
+        max_tokens: int = 4000,
     ):
         """Initialize the CrewAI Text-to-SQL Pipeline.
 
@@ -54,11 +54,11 @@ class CrewAITextToSQLPipeline:
         self.max_tokens = max_tokens
 
         # Validate provider
-        if self.provider not in ['openai', 'google']:
+        if self.provider not in ["openai", "google"]:
             raise ValueError("Provider must be either 'openai' or 'google'")
 
         # Set up API key and environment variables based on provider
-        if self.provider == 'openai':
+        if self.provider == "openai":
             if api_key:
                 self.api_key = api_key
             else:
@@ -67,22 +67,21 @@ class CrewAITextToSQLPipeline:
                 raise ValueError("OpenAI API key must be provided or set as OPENAI_API_KEY environment variable")
             llm_model = self.model
 
-        elif self.provider == 'google':
+        elif self.provider == "google":
             # Ensure the API key is available and exported for downstream libraries
             if api_key:
                 self.api_key = api_key
             else:
                 self.api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
             if not self.api_key:
-                raise ValueError("Google API key must be provided or set as GOOGLE_API_KEY / GEMINI_API_KEY environment variable")
+                raise ValueError(
+                    "Google API key must be provided or set as GOOGLE_API_KEY / GEMINI_API_KEY environment variable"
+                )
             llm_model = self._prepare_gemini_model_name(self.model)
 
         # Initialize the CrewAI LLM which delegates calls to LiteLLM underneath
         self.llm = CrewAILLM(
-            model=llm_model,
-            api_key=self.api_key,
-            temperature=self.temperature,
-            max_tokens=self.max_tokens
+            model=llm_model, api_key=self.api_key, temperature=self.temperature, max_tokens=self.max_tokens
         )
 
         # Initialize the skill tool controller from MindsDB
@@ -113,6 +112,7 @@ class CrewAITextToSQLPipeline:
 
             # Parse the SQL string to an AST object first
             from mindsdb_sql_parser import parse_sql
+
             ast_query = parse_sql(sql_query)
 
             # Now execute the parsed query
@@ -120,7 +120,7 @@ class CrewAITextToSQLPipeline:
 
             # Convert ExecuteAnswer to a DataFrame for easier manipulation
             df = None
-            if hasattr(result, 'data') and hasattr(result.data, 'data_frame'):
+            if hasattr(result, "data") and hasattr(result.data, "data_frame"):
                 df = result.data.data_frame
             else:
                 # Fallback to to_df when data_frame attr not available
@@ -133,10 +133,7 @@ class CrewAITextToSQLPipeline:
             if return_dict:
                 if df is not None:
                     # Build a serialisable structure
-                    data_dict = {
-                        "columns": df.columns.tolist(),
-                        "rows": df.to_dict(orient="records")
-                    }
+                    data_dict = {"columns": df.columns.tolist(), "rows": df.to_dict(orient="records")}
                     return data_dict
                 else:
                     # No dataframe – return whatever string representation is available
@@ -152,6 +149,7 @@ class CrewAITextToSQLPipeline:
             return str(result)
         except Exception as e:
             import traceback
+
             error_trace = traceback.format_exc()
             logger.error(f"Error executing SQL query: {sql_query}\nError: {str(e)}\nTrace: {error_trace}")
 
@@ -161,9 +159,11 @@ class CrewAITextToSQLPipeline:
 
             # Try to provide more helpful error messages for common issues
             if "Model not found" in error_msg and "knowledge_base" in sql_query.lower():
-                return (f"Error: The knowledge base may not exist or the query syntax is incorrect. "
-                        f"For knowledge base queries, use simple syntax: SELECT * FROM knowledge_base_name "
-                        f"WHERE content = 'search term'; - Original error: {error_msg}")
+                return (
+                    f"Error: The knowledge base may not exist or the query syntax is incorrect. "
+                    f"For knowledge base queries, use simple syntax: SELECT * FROM knowledge_base_name "
+                    f"WHERE content = 'search term'; - Original error: {error_msg}"
+                )
             elif "table" in error_msg.lower() and "not found" in error_msg.lower():
                 return f"Error: The table referenced in the query doesn't exist. Please check available tables using the list_tables tool. - Original error: {error_msg}"
 
@@ -184,12 +184,7 @@ class CrewAITextToSQLPipeline:
                 List of available tables and databases
             """
             # Check if this is a direct SQL command that should be executed
-            direct_sql_commands = [
-                "SHOW DATABASES",
-                "SHOW TABLES",
-                "SHOW AGENTS",
-                "SHOW KNOWLEDGE_BASES"
-            ]
+            direct_sql_commands = ["SHOW DATABASES", "SHOW TABLES", "SHOW AGENTS", "SHOW KNOWLEDGE_BASES"]
 
             # Clean up the query
             cleaned_query = query.strip()
@@ -241,16 +236,13 @@ class CrewAITextToSQLPipeline:
             try:
                 # Just parse the SQL to check syntax, don't execute
                 from mindsdb_sql_parser import parse_sql
+
                 _ = parse_sql(sql_query)
                 return "SQL syntax is valid."
             except Exception as e:
                 return f"SQL syntax error: {str(e)}"
 
-        self.tools = {
-            "list_tables": list_tables,
-            "execute_sql": execute_sql,
-            "check_sql": check_sql
-        }
+        self.tools = {"list_tables": list_tables, "execute_sql": execute_sql, "check_sql": check_sql}
 
     def _setup_agents(self):
         """Set up the four agents in the pipeline."""
@@ -269,7 +261,7 @@ class CrewAITextToSQLPipeline:
             verbose=self.verbose,
             allow_delegation=False,
             tools=[self.tools["list_tables"], self.tools["check_sql"], self.tools["execute_sql"]],
-            llm=self.llm
+            llm=self.llm,
         )
 
     def _get_task_description(self, user_query: str) -> str:
@@ -380,16 +372,13 @@ class CrewAITextToSQLPipeline:
         import sys
 
         # Yield initial start message
-        yield {
-            'type': 'start',
-            'prompt': user_query
-        }
+        yield {"type": "start", "prompt": user_query}
 
         # Create the task
         single_task = Task(
             description=self._get_task_description(user_query),
             agent=self.single_agent,
-            expected_output="String with markdown format."
+            expected_output="String with markdown format.",
         )
 
         # Create and run the crew with custom logging capture
@@ -423,12 +412,13 @@ class CrewAITextToSQLPipeline:
             def _strip_ansi_codes(self, text):
                 """Remove ANSI escape codes from text"""
                 import re
+
                 # Pattern to match ANSI escape codes
-                ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
-                return ansi_escape.sub('', text)
+                ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+                return ansi_escape.sub("", text)
 
             def parse_buffer(self):
-                lines = self.buffer.split('\n')
+                lines = self.buffer.split("\n")
                 # Keep the last incomplete line in buffer
                 self.buffer = lines[-1]
 
@@ -455,14 +445,12 @@ class CrewAITextToSQLPipeline:
                     if thought_text and thought_text.startswith("Thought:"):
                         thought_text = thought_text[8:].strip()  # Remove "Thought:" prefix
                     if thought_text and thought_text != "Thought:":
-                        self.stream_callback({
-                            'actions': [{
-                                'tool': 'thinking',
-                                'tool_input': thought_text,
-                                'log': thought_text
-                            }],
-                            'is_task_complete': False
-                        })
+                        self.stream_callback(
+                            {
+                                "actions": [{"tool": "thinking", "tool_input": thought_text, "log": thought_text}],
+                                "is_task_complete": False,
+                            }
+                        )
 
                 # Check for tool usage patterns
                 elif "## Using tool:" in clean_line:
@@ -486,7 +474,7 @@ class CrewAITextToSQLPipeline:
                 elif "## Tool Output:" in clean_line:
                     # Finalize tool input if we were collecting it
                     if self.in_tool_input:
-                        self.current_tool_input = '\n'.join(self.tool_input_lines).strip()
+                        self.current_tool_input = "\n".join(self.tool_input_lines).strip()
                         self.in_tool_input = False
 
                     self.in_tool_output = True
@@ -504,11 +492,7 @@ class CrewAITextToSQLPipeline:
                     final_answer = clean_line.split("## Final Answer:")[-1].strip()
                     if final_answer:
                         # Send the final answer as a regular chunk to get thought_process metadata
-                        self.stream_callback({
-                            'output': final_answer,
-                            'type': 'answer',
-                            'is_task_complete': False
-                        })
+                        self.stream_callback({"output": final_answer, "type": "answer", "is_task_complete": False})
 
                 # Check if we're in tool input or output collection mode
                 elif self.in_tool_input:
@@ -528,20 +512,24 @@ class CrewAITextToSQLPipeline:
             def _finalize_tool_collection(self):
                 """Finalize and stream any collected tool input/output"""
                 if self.in_tool_output and self.tool_output_lines:
-                    tool_output = '\n'.join(self.tool_output_lines).strip()
+                    tool_output = "\n".join(self.tool_output_lines).strip()
                     if self.current_tool and self.current_tool_input:
                         # Stream the observation as a steps chunk (includes both action and observation)
-                        self.stream_callback({
-                            'steps': [{
-                                'action': {
-                                    'tool': self.current_tool,
-                                    'tool_input': self.current_tool_input,
-                                    'log': f'Action: {self.current_tool}\nAction Input: {self.current_tool_input}'
-                                },
-                                'observation': tool_output
-                            }],
-                            'is_task_complete': False
-                        })
+                        self.stream_callback(
+                            {
+                                "steps": [
+                                    {
+                                        "action": {
+                                            "tool": self.current_tool,
+                                            "tool_input": self.current_tool_input,
+                                            "log": f"Action: {self.current_tool}\nAction Input: {self.current_tool_input}",
+                                        },
+                                        "observation": tool_output,
+                                    }
+                                ],
+                                "is_task_complete": False,
+                            }
+                        )
 
                     # Reset state
                     self.current_tool = ""
@@ -550,7 +538,7 @@ class CrewAITextToSQLPipeline:
                     self.in_tool_output = False
 
                 elif self.in_tool_input and self.tool_input_lines:
-                    self.current_tool_input = '\n'.join(self.tool_input_lines).strip()
+                    self.current_tool_input = "\n".join(self.tool_input_lines).strip()
                     self.tool_input_lines = []
                     self.in_tool_input = False
 
@@ -586,11 +574,10 @@ class CrewAITextToSQLPipeline:
                 yield chunk
 
             # If no chunks were captured, or ensure we have a final result
-            if not streamed_chunks or not any(chunk.get('type') == 'answer' or 'output' in chunk for chunk in streamed_chunks):
-                yield {
-                    'output': final_result,
-                    'type': 'answer'
-                }
+            if not streamed_chunks or not any(
+                chunk.get("type") == "answer" or "output" in chunk for chunk in streamed_chunks
+            ):
+                yield {"output": final_result, "type": "answer"}
 
         finally:
             # Restore original stdout/stderr
@@ -610,7 +597,7 @@ class CrewAITextToSQLPipeline:
         single_task = Task(
             description=self._get_task_description(user_query),
             agent=self.single_agent,
-            expected_output="String with markdown format."
+            expected_output="String with markdown format.",
         )
 
         # Create and run the crew
@@ -631,7 +618,7 @@ class CrewAITextToSQLPipeline:
         name = raw_name.strip()
         # Strip optional leading "models/"
         if name.startswith("models/"):
-            name = name[len("models/"):]  # remove the prefix
+            name = name[len("models/") :]  # remove the prefix
         # Add gemini/ if missing
         if not name.startswith("gemini/"):
             name = f"gemini/{name}"
@@ -646,14 +633,14 @@ class CrewAIAgentManager:
         name: str,
         tables: List[str] = None,
         knowledge_bases: List[str] = None,
-        provider: str = 'openai',
-        model: str = 'gpt-4o',
+        provider: str = "openai",
+        model: str = "gpt-4o",
         prompt_template: str = None,
         verbose: bool = True,
         max_tokens: int = 4000,
         api_key: str = None,
         openai_api_key: str = None,
-        google_api_key: str = None
+        google_api_key: str = None,
     ) -> CrewAITextToSQLPipeline:
         """Create a CrewAI pipeline with the specified configuration.
 
@@ -679,10 +666,10 @@ class CrewAIAgentManager:
 
         # Select the correct api key parameter
         selected_key: Optional[str] = api_key  # fallback if user still uses api_key
-        if provider_lc == 'openai':
+        if provider_lc == "openai":
             if openai_api_key:
                 selected_key = openai_api_key
-        elif provider_lc == 'google':
+        elif provider_lc == "google":
             if google_api_key:
                 selected_key = google_api_key
 
@@ -695,5 +682,5 @@ class CrewAIAgentManager:
             api_key=selected_key,
             prompt_template=prompt_template,
             verbose=verbose,
-            max_tokens=max_tokens
+            max_tokens=max_tokens,
         )

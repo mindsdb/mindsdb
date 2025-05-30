@@ -259,14 +259,12 @@ class AgentsController:
                 skill_params["include_knowledge_bases"] = include_knowledge_bases
             if ignore_knowledge_bases:
                 skill_params["ignore_knowledge_bases"] = ignore_knowledge_bases
-            print(f"Pred da vlezammm: {skill_params}")
             try:
                 # Check if skill already exists
                 existing_skill = self.skills_controller.get_skill(skill_name, project_name)
                 if existing_skill is None:
                     # Create the skill
                     skill_type = skill_params.pop("type")
-                    print(f"Creating skill: {skill_name} with type: {skill_type} and params: {skill_params}")
                     self.skills_controller.add_skill(
                         name=skill_name, project_name=project_name, type=skill_type, params=skill_params
                     )

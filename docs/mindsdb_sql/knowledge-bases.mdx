@@ -521,6 +521,15 @@ FROM sample_data.orders;
 
 Upon execution, it inserts data into a knowledge base, using the embedding model to embed it into vectors before inserting into an underlying vector database.
 
+<Tip>
+The status of the `INSERT INTO` is logged in the `information_schema.queries` table with the timestamp when it was ran, and can be queried as follows:
+
+```sql
+SELECT *
+FROM information_schema.queries;
+```
+</Tip>
+
 <Note>
 Note that when inserting the same data into the knowledge base again, then no new rows are inserted, as the content already exists in the knowledge base.
 </Note>

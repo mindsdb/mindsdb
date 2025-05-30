@@ -12,7 +12,7 @@ from mindsdb_sql_parser.ast import CreateTable, DropTables, Identifier, Insert, 
 from mindsdb.integrations.handlers.file_handler.file_handler import FileHandler
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 
-from mindsdb.integrations.utilities.files.file_reader import FileReader
+from mindsdb.integrations.utilities.files.file_reader import FileReader, FileProcessingError
 
 
 # Define a table to use as content for all of the file types
@@ -316,6 +316,23 @@ def test_tsv():
 
     df = reader.get_page_content()
     assert len(df.columns) == 2
+
+
+def test_bad_csv_header():
+    file = BytesIO(b" a,b  ,c\n1,2,3\n")
+    reader = FileReader(file=file, name='test.tsv')
+    df = reader.get_page_content()
+    assert set(df.columns) == set(['a', 'b', 'c'])
+
+    wrong_data = [
+        b"a, ,c\n1,2,3\n",
+        b"a,  \t,c\n1,2,3\n",
+        b"   ,b,c\n1,2,3\n",
+    ]
+    for data in wrong_data:
+        reader = FileReader(file=BytesIO(data), name='test.tsv')
+        with pytest.raises(FileProcessingError):
+            df = reader.get_page_content()
 
 
 def test_check_invalid_dialects():

@@ -2,6 +2,7 @@ from typing import Dict, List, Text
 
 from mindsdb_sql_parser.ast import Select, Star, Identifier
 import pandas as pd
+from salesforce_api.exceptions import RestRequestCouldNotBeUnderstoodError
 
 from mindsdb.integrations.libs.api_handler import MetaAPIResource
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
@@ -146,10 +147,22 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
             Returns:
                 Dict: A dictionary containing table metadata for the Salesforce resource.
             """
+            client = self.handler.connect()
+            metadata = self._get_metadata()
+            
+            # Get row count if Id column is aggregatable.
+            row_count = None
+            if next(field for field in metadata['fields'] if field['name'] == 'Id').get('aggregatable', False):
+                try:
+                    row_count = client.sobjects.query(f"SELECT COUNT(Id) FROM {resource_name}")[0]['expr0']
+                except RestRequestCouldNotBeUnderstoodError as request_error:
+                    logger.warning(f"Failed to get row count for {resource_name}: {request_error}")
+
             return {
                 'table_name': table_name,
                 'table_type': 'BASE TABLE',
-                'row_count': self.handler.connect().sobjects.query(f"SELECT COUNT() FROM {resource_name}").get('totalSize', 0),
+                'table_description': metadata.get('label', ''),
+                'row_count': row_count,
             }
 
         def meta_get_columns(self, table_name: str) -> List[Dict]:

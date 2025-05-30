@@ -643,6 +643,80 @@ Upon inserting data into the knowledge base, the data chunking is performed in o
 
 Each chunk is identified by its chunk ID of the following format: `<id>:<chunk_number>of<total_chunks>:<start_char_number>to<end_char_number>`.
 
+#### Text
+
+Users can opt for defining the chunking parameters when creating a knowledge base.
+
+```sql
+CREATE KNOWLEDGE_BASE my_kb
+USING
+    ...
+    preprocessing = {
+        "text_chunking_config" : {
+            "chunk_size": 2000,
+            "chunk_overlap": 200
+        }
+    }
+    ...;
+```
+
+The `chunk_size` parameter defines the size of the chunk in tokens. And the `chunk_overlap` parameter defines the number of tokens that should overlap between subsequent chunks.
+
+#### JSON
+
+Users can opt for defining the chunking parameters specifically for JSON data.
+
+```sql
+CREATE KNOWLEDGE_BASE my_kb
+USING
+    ...
+    preprocessing = {
+        "type": "json_chunking",
+        "json_chunking_config" : {
+            ...
+        }
+    }
+    ...;
+```
+
+When the `type` of chunking is set to `json_chunking`, users can configure it by setting the following parameter values in the `json_chunking_config` parameter:
+
+* `flatten_nested`  
+It is of the `bool` data type with the default value of `True`.  
+It defines whether to flatten nested JSON structures.
+
+* `include_metadata`  
+It is of the `bool` data type with the default value of `True`.  
+It defines whether to include original metadata in chunks.
+
+* `chunk_by_object`  
+It is of the `bool` data type with the default value of `True`.  
+It defines whether to chunk by top-level objects (`True`) or create a single document (`False`).
+
+* `exclude_fields`  
+It is of the `List[str]` data type with the default value of an empty list.  
+It defines the list of fields to exclude from chunking.
+
+* `include_fields`  
+It is of the `List[str]` data type with the default value of an empty list.  
+It defines the list of fields to include in chunking (if empty, all fields except excluded ones are included).
+
+* `metadata_fields`  
+It is of the `List[str]` data type with the default value of an empty list.  
+It defines the list of fields to extract into metadata for filtering (can include nested fields using dot notation). If empty, all primitive fields will be extracted (top-level fields if available, otherwise all primitive fields in the flattened structure).
+
+* `extract_all_primitives`  
+It is of the `bool` data type with the default value of `False`.  
+It defines whether to extract all primitive values (strings, numbers, booleans) into metadata.
+
+* `nested_delimiter`  
+It is of the `str` data type with the default value of `"."`.  
+It defines the delimiter for flattened nested field names.
+
+* `content_column`  
+It is of the `str` data type with the default value of `"content"`.  
+It defines the name of the content column for chunk ID generation.
+
 ### Underlying Vector Store
 
 Each knowledge base has its underlying vector store that stores data inserted into the knowledge base in the form of embeddings.

@@ -425,7 +425,8 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             't_tinyblon': 'v_tinyblon',
             't_blob': 'v_blob',
             't_mediumblob': 'v_mediumblob',
-            't_longblob': 'v_longblob'
+            't_longblob': 'v_longblob',
+            't_json': '{"key": "value"}'
         }
         mock_cursor.fetchall.return_value = [input_row]
 
@@ -438,7 +439,8 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ('t_tinyblon', 252, None, None, None, None, 1, 144, 63),
             ('t_blob', 252, None, None, None, None, 1, 144, 63),
             ('t_mediumblob', 252, None, None, None, None, 1, 144, 63),
-            ('t_longblob', 252, None, None, None, None, 1, 144, 63)
+            ('t_longblob', 252, None, None, None, None, 1, 144, 63),
+            ('t_json', 245, None, None, None, None, 1, 144, 63),
         ]
 
         response: Response = self.handler.native_query(query_str)
@@ -451,7 +453,8 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.BLOB,
             MYSQL_DATA_TYPE.BLOB,
             MYSQL_DATA_TYPE.BLOB,
-            MYSQL_DATA_TYPE.BLOB
+            MYSQL_DATA_TYPE.BLOB,
+            MYSQL_DATA_TYPE.JSON
         ]
         self.assertEquals(response.mysql_types, excepted_mysql_types)
         for key, input_value in input_row.items():

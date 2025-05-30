@@ -1265,10 +1265,7 @@ class ExecuteCommands:
             raise Exception("Database name should contain only 1 part.")
         db_name = statement.name.parts[0]
         data = statement.data
-        try:
-            self.session.database_controller.update(db_name, data=data)
-        except (EntityNotExistsError, ValueError):
-            raise
+        self.session.database_controller.update(db_name, data=data)
         return ExecuteAnswer()
 
     def answer_drop_tables(self, statement, database_name):

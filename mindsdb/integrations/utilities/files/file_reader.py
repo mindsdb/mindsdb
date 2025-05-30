@@ -1,10 +1,11 @@
+from dataclasses import dataclass, astuple
 import traceback
 import json
 import csv
 from io import BytesIO, StringIO, IOBase
 from pathlib import Path
 import codecs
-from typing import List
+from typing import List, Generator
 
 import filetype
 import pandas as pd
@@ -20,6 +21,23 @@ DEFAULT_CHUNK_OVERLAP = 250
 
 class FileProcessingError(Exception):
     ...
+
+@dataclass(frozen=True, slots=True)
+class _SINGLE_PAGE_FORMAT:
+    CSV: str = 'csv'
+    JSON: str = 'json'
+    TXT: str = 'txt'
+    PDF: str = 'pdf'
+    PARQUET: str = 'parquet'
+
+SINGLE_PAGE_FORMAT = _SINGLE_PAGE_FORMAT()
+
+@dataclass(frozen=True, slots=True)
+class _MULTI_PAGE_FORMAT:
+    XLSX: str = 'xlsx'
+
+MULTI_PAGE_FORMAT = _MULTI_PAGE_FORMAT()
+
 
 
 def decode(file_obj: IOBase) -> StringIO:
@@ -63,14 +81,14 @@ def decode(file_obj: IOBase) -> StringIO:
 
 class FormatDetector:
 
-    supported_formats = ['parquet', 'csv', 'xlsx', 'pdf', 'json', 'txt']
-    multipage_formats = ['xlsx']
+    supported_formats = astuple(SINGLE_PAGE_FORMAT) + astuple(MULTI_PAGE_FORMAT)
+    multipage_formats = astuple(MULTI_PAGE_FORMAT)
 
     def __init__(
         self,
-        path: str = None,
-        name: str = None,
-        file: IOBase = None
+        path: str | None = None,
+        name: str | None = None,
+        file: IOBase | None = None
     ):
         """
         File format detector
@@ -130,7 +148,7 @@ class FormatDetector:
 
     def get_format_by_content(self):
         if self.is_parquet(self.file_obj):
-            return "parquet"
+            return SINGLE_PAGE_FORMAT.PARQUET
 
         file_type = filetype.guess(self.file_obj)
         if file_type is not None:
@@ -139,18 +157,18 @@ class FormatDetector:
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 "application/vnd.ms-excel",
             }:
-                return 'xlsx'
+                return SINGLE_PAGE_FORMAT.XLSX
 
             if file_type.mime == 'application/pdf':
-                return "pdf"
+                return SINGLE_PAGE_FORMAT.PDF
 
         file_obj = decode(self.file_obj)
 
         if self.is_json(file_obj):
-            return "json"
+            return SINGLE_PAGE_FORMAT.JSON
 
         if self.is_csv(file_obj):
-            return "csv"
+            return SINGLE_PAGE_FORMAT.CSV
 
     @staticmethod
     def is_json(data_obj: StringIO) -> bool:
@@ -198,6 +216,15 @@ class FormatDetector:
         return False
 
 
+def format_column_names(df: pd.DataFrame):
+    df.columns = [column.strip(' \t') for column in df.columns]
+    if (
+        len(df.columns) != len(set(df.columns))
+        or any(len(column_name) == 0 for column_name in df.columns)
+    ):
+        raise FileProcessingError('Each column should have a unique and non-empty name.')
+
+
 class FileReader(FormatDetector):
 
     def _get_fnc(self):
@@ -205,20 +232,21 @@ class FileReader(FormatDetector):
         func = getattr(self, f'read_{format}', None)
         if func is None:
             raise FileProcessingError(f'Unsupported format: {format}')
+        
+        if format in astuple(MULTI_PAGE_FORMAT):
+            def format_multipage(*args, **kwargs):
+                for page_number, df in func(*args, **kwargs):
+                    format_column_names(df)
+                    yield page_number, df
+            return format_multipage
 
-        def format_columns(*args, **kwargs) -> pd.DataFrame:
+        def format_singlepage(*args, **kwargs) -> pd.DataFrame:
             """Check that the columns have unique not-empty names
             """
             df = func(*args, **kwargs)
-            df.columns = [column.strip(' \t') for column in df.columns]
-            if (
-                len(df.columns) != len(set(df.columns))
-                or any(len(column_name) == 0 for column_name in df.columns)
-            ):
-                raise FileProcessingError('Each column should have a unique and non-empty name.')
+            format_column_names(df)
             return df
-
-        return format_columns
+        return format_singlepage
 
     def get_pages(self, **kwargs) -> List[str]:
         """
@@ -237,7 +265,7 @@ class FileReader(FormatDetector):
             func(self.file_obj, only_names=True, **kwargs)
         ]
 
-    def get_contents(self, **kwargs):
+    def get_contents(self, **kwargs) -> dict[str, pd.DataFrame]:
         """
             Get all info(pages with content) from file as dict: {tablename, content}
         """
@@ -255,7 +283,7 @@ class FileReader(FormatDetector):
             func(self.file_obj, **kwargs)
         }
 
-    def get_page_content(self, page_name: str = None, **kwargs) -> pd.DataFrame:
+    def get_page_content(self, page_name: str | None = None, **kwargs) -> pd.DataFrame:
         """
             Get content of a single table
         """
@@ -271,7 +299,7 @@ class FileReader(FormatDetector):
             return df
 
     @staticmethod
-    def _get_csv_dialect(buffer, delimiter=None) -> csv.Dialect:
+    def _get_csv_dialect(buffer, delimiter: str | None = None) -> csv.Dialect | None:
         sample = buffer.readline()  # trying to get dialect from header
         buffer.seek(0)
         try:
@@ -301,13 +329,13 @@ class FileReader(FormatDetector):
         return dialect
 
     @classmethod
-    def read_csv(cls, file_obj: BytesIO, delimiter=None, **kwargs):
+    def read_csv(cls, file_obj: BytesIO, delimiter: str | None = None, **kwargs) -> pd.DataFrame:
         file_obj = decode(file_obj)
         dialect = cls._get_csv_dialect(file_obj, delimiter=delimiter)
         return pd.read_csv(file_obj, sep=dialect.delimiter, index_col=False)
 
     @staticmethod
-    def read_txt(file_obj: BytesIO, name=None, **kwargs):
+    def read_txt(file_obj: BytesIO, name: str | None = None, **kwargs) -> pd.DataFrame:
         # the lib is heavy, so import it only when needed
         from langchain_text_splitters import RecursiveCharacterTextSplitter
         file_obj = decode(file_obj)
@@ -337,7 +365,7 @@ class FileReader(FormatDetector):
         )
 
     @staticmethod
-    def read_pdf(file_obj: BytesIO, name=None, **kwargs):
+    def read_pdf(file_obj: BytesIO, name: str | None = None, **kwargs) -> pd.DataFrame:
         # the libs are heavy, so import it only when needed
         import fitz  # pymupdf
         from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -356,26 +384,29 @@ class FileReader(FormatDetector):
         )
 
     @staticmethod
-    def read_json(file_obj: BytesIO, **kwargs):
+    def read_json(file_obj: BytesIO, **kwargs) -> pd.DataFrame:
         file_obj = decode(file_obj)
         file_obj.seek(0)
         json_doc = json.loads(file_obj.read())
         return pd.json_normalize(json_doc, max_level=0)
 
     @staticmethod
-    def read_parquet(file_obj: BytesIO, **kwargs):
+    def read_parquet(file_obj: BytesIO, **kwargs) -> pd.DataFrame:
         return pd.read_parquet(file_obj)
 
     @staticmethod
-    def read_xlsx(file_obj: BytesIO, page_name=None, only_names=False, **kwargs):
+    def read_xlsx(
+        file_obj: BytesIO,
+        page_name: str | None = None,
+        only_names: bool = False,
+        **kwargs
+    ) -> Generator[tuple[str, pd.DataFrame | None], None, None]:
         with pd.ExcelFile(file_obj) as xls:
-
             if page_name is not None:
                 # return specific page
                 yield page_name, pd.read_excel(xls, sheet_name=page_name)
 
             for page_name in xls.sheet_names:
-
                 if only_names:
                     # extract only pages names
                     df = None

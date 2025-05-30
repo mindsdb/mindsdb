@@ -137,6 +137,9 @@ class FetchDataframePartitionCall(BaseStepCall):
             database=self.table_alias[0]
         )
 
+        if len(self.substeps) == 0:
+            return input_data
+
         # execute with modified previous results
         steps_data2 = self.steps_data.copy()
         steps_data2[self.current_step_num] = input_data

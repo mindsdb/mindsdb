@@ -171,6 +171,7 @@ class SalesforceHandler(MetaAPIHandler):
             None
         """
         if not self.resource_names:
-            self.resource_names = [resource['name'] for resource in self.connection.sobjects.describe()['sobjects']]
+            # Fetch the queryable list of Salesforce resources (sobjects).
+            self.resource_names = [resource['name'] for resource in self.connection.sobjects.describe()['sobjects'] if resource['queryable']]
 
         return self.resource_names

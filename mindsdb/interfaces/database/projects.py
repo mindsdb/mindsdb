@@ -322,7 +322,11 @@ class Project:
     def get_columns(self, table_name: str) -> list[str] | None:
         columns = []
         tables = self.get_tables()
-        table = tables.get(table_name)
+        table = None
+        for key, value in tables.items():
+            if key.lower() == table_name.lower():
+                table_name = key
+                table = value
         if table is None:
             return columns
 

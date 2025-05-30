@@ -40,6 +40,8 @@ class TableField(Enum):
     SEARCH_VECTOR = "search_vector"
     DISTANCE = "distance"
     RELEVANCE = "relevance"
+    CREATED_AT = "created_at"
+    UPDATED_AT = "updated_at"
 
 
 class DistanceFunction(Enum):
@@ -73,6 +75,14 @@ class VectorStoreHandler(BaseHandler):
         {
             "name": TableField.DISTANCE.value,
             "data_type": "float",
+        },
+        {
+            "name": TableField.CREATED_AT.value,
+            "data_type": "datetime",
+        },
+        {
+            "name": TableField.UPDATED_AT.value,
+            "data_type": "datetime",
         },
     ]
 

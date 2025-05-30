@@ -2,6 +2,7 @@ import os
 import json
 from typing import Dict, List, Union, Literal
 from urllib.parse import urlparse
+import datetime as dt
 
 import pandas as pd
 import psycopg
@@ -236,11 +237,15 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         # Handle distance column specially since it's calculated, not stored
         modified_columns = []
         has_distance = False
+        col_names = self.get_columns(table_name).data_frame['COLUMN_NAME']
+
         if columns is not None:
             for col in columns:
                 if col == TableField.DISTANCE.value:
                     has_distance = True
                 else:
+                    if col in ('created_at', 'updated_at') and 'updated_at' not in col_names:
+                        continue
                     modified_columns.append(col)
         else:
             modified_columns = ['id', 'content', 'embeddings', 'metadata']
@@ -437,7 +442,9 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
                     id TEXT PRIMARY KEY,
                     embeddings {vector_column_type}{size_spec},
                     content TEXT,
-                    metadata JSONB
+                    metadata JSONB,
+                    created_at TIMESTAMP default CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP default CURRENT_TIMESTAMP,
                 )
             """)
             self.connection.commit()
@@ -463,9 +470,13 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         self, table_name: str, data: pd.DataFrame, key_columns: List[str] = None
     ):
         """
-        Udate data into the pgvector table database.
+        Update data into the pgvector table database.
         """
         table_name = self._check_table(table_name)
+
+        col_names = self.get_columns(table_name).data_frame['COLUMN_NAME']
+        if 'updated_at' in col_names:
+            data['updated_at'] = dt.datetime.now()
 
         where = None
         update_columns = {}

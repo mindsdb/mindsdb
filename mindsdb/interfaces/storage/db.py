@@ -16,7 +16,7 @@ from sqlalchemy import (
     UniqueConstraint,
     create_engine,
     text,
-    types
+    types,
 )
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import (
@@ -45,7 +45,7 @@ session, engine = None, None
 def init(connection_str: str = None):
     global Base, session, engine
     if connection_str is None:
-        connection_str = config['storage_db']
+        connection_str = config["storage_db"]
     base_args = {
         "pool_size": 30,
         "max_overflow": 200,
@@ -144,15 +144,11 @@ class Predictor(Base):
     __tablename__ = "predictor"
 
     id = Column(Integer, primary_key=True)
-    updated_at = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
-    )
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
     deleted_at = Column(DateTime)
     name = Column(String)
-    data = Column(
-        Json
-    )  # A JSON -- should be everything returned by `get_model_data`, I think
+    data = Column(Json)  # A JSON -- should be everything returned by `get_model_data`, I think
     to_predict = Column(Array)
     company_id = Column(Integer)
     mindsdb_version = Column(String)
@@ -173,9 +169,7 @@ class Predictor(Base):
     code = Column(String, nullable=True)
     lightwood_version = Column(String, nullable=True)
     dtype_dict = Column(Json, nullable=True)
-    project_id = Column(
-        Integer, ForeignKey("project.id", name="fk_project_id"), nullable=False
-    )
+    project_id = Column(Integer, ForeignKey("project.id", name="fk_project_id"), nullable=False)
     training_phase_current = Column(Integer)
     training_phase_total = Column(Integer)
     training_phase_name = Column(String)
@@ -199,7 +193,7 @@ Index(
     Predictor.version,
     Predictor.active,
     Predictor.deleted_at,  # would be good to have here nullsfirst(Predictor.deleted_at)
-    unique=True
+    unique=True,
 )
 
 
@@ -208,37 +202,27 @@ class Project(Base):
 
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime, default=datetime.datetime.now)
-    updated_at = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
-    )
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     deleted_at = Column(DateTime)
     name = Column(String, nullable=False)
     company_id = Column(Integer, default=0)
     metadata_: dict = Column("metadata", JSON, nullable=True)
-    __table_args__ = (
-        UniqueConstraint("name", "company_id", name="unique_project_name_company_id"),
-    )
+    __table_args__ = (UniqueConstraint("name", "company_id", name="unique_project_name_company_id"),)
 
 
 class Integration(Base):
     __tablename__ = "integration"
     id = Column(Integer, primary_key=True)
-    updated_at = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
-    )
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
     name = Column(String, nullable=False)
     engine = Column(String, nullable=False)
     data = Column(Json)
     company_id = Column(Integer)
-    
+
     meta_tables = relationship("MetaTables", back_populates="integration")
-    
-    __table_args__ = (
-        UniqueConstraint(
-            "name", "company_id", name="unique_integration_name_company_id"
-        ),
-    )
+
+    __table_args__ = (UniqueConstraint("name", "company_id", name="unique_integration_name_company_id"),)
 
 
 class File(Base):
@@ -252,12 +236,8 @@ class File(Base):
     columns = Column(Json, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.now)
     metadata_: dict = Column("metadata", JSON, nullable=True)
-    updated_at = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
-    )
-    __table_args__ = (
-        UniqueConstraint("name", "company_id", name="unique_file_name_company_id"),
-    )
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    __table_args__ = (UniqueConstraint("name", "company_id", name="unique_file_name_company_id"),)
 
 
 class View(Base):
@@ -266,12 +246,8 @@ class View(Base):
     name = Column(String, nullable=False)
     company_id = Column(Integer)
     query = Column(String, nullable=False)
-    project_id = Column(
-        Integer, ForeignKey("project.id", name="fk_project_id"), nullable=False
-    )
-    __table_args__ = (
-        UniqueConstraint("name", "company_id", name="unique_view_name_company_id"),
-    )
+    project_id = Column(Integer, ForeignKey("project.id", name="fk_project_id"), nullable=False)
+    __table_args__ = (UniqueConstraint("name", "company_id", name="unique_view_name_company_id"),)
 
 
 class JsonStorage(Base):
@@ -313,9 +289,7 @@ class Jobs(Base):
     schedule_str = Column(String)
 
     deleted_at = Column(DateTime)
-    updated_at = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
-    )
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
 
 
@@ -334,9 +308,7 @@ class JobsHistory(Base):
     created_at = Column(DateTime, default=datetime.datetime.now)
     updated_at = Column(DateTime, default=datetime.datetime.now)
 
-    __table_args__ = (
-        UniqueConstraint("job_id", "start_at", name="uniq_job_history_job_id_start"),
-    )
+    __table_args__ = (UniqueConstraint("job_id", "start_at", name="uniq_job_history_job_id_start"),)
 
 
 class ChatBots(Base):
@@ -352,9 +324,7 @@ class ChatBots(Base):
     database_id = Column(Integer)
     params = Column(JSON)
 
-    updated_at = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
-    )
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
     webhook_token = Column(String)
 
@@ -396,9 +366,7 @@ class Triggers(Base):
     query_str = Column(String, nullable=False)
     columns = Column(String)  # list of columns separated by delimiter
 
-    updated_at = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
-    )
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
 
 
@@ -420,9 +388,7 @@ class Tasks(Base):
     run_by = Column(String)
     alive_time = Column(DateTime(timezone=True))
 
-    updated_at = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
-    )
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
 
 
@@ -447,9 +413,7 @@ class Skills(Base):
     params = Column(JSON)
 
     created_at = Column(DateTime, default=datetime.datetime.now)
-    updated_at = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
-    )
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     deleted_at = Column(DateTime)
 
     def as_dict(self) -> Dict:
@@ -478,9 +442,7 @@ class Agents(Base):
     provider = Column(String, nullable=True)
     params = Column(JSON)
 
-    updated_at = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
-    )
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
     deleted_at = Column(DateTime)
 
@@ -523,21 +485,13 @@ class KnowledgeBase(Base):
         doc="fk to the embedding model",
     )
 
-    embedding_model = relationship(
-        "Predictor", foreign_keys=[embedding_model_id], doc="embedding model"
-    )
+    embedding_model = relationship("Predictor", foreign_keys=[embedding_model_id], doc="embedding model")
     query_id = Column(Integer, nullable=True)
 
     created_at = Column(DateTime, default=datetime.datetime.now)
-    updated_at = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
-    )
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
 
-    __table_args__ = (
-        UniqueConstraint(
-            "name", "project_id", name="unique_knowledge_base_name_project_id"
-        ),
-    )
+    __table_args__ = (UniqueConstraint("name", "project_id", name="unique_knowledge_base_name_project_id"),)
 
     def as_dict(self) -> Dict:
         return {
@@ -549,7 +503,7 @@ class KnowledgeBase(Base):
             "vector_database_table": self.vector_database_table,
             "updated_at": self.updated_at,
             "created_at": self.created_at,
-            "params": self.params
+            "params": self.params,
         }
 
 
@@ -562,9 +516,7 @@ class QueryContext(Base):
     context_name: str = Column(String, nullable=False)
     values: dict = Column(JSON)
 
-    updated_at: datetime.datetime = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
-    )
+    updated_at: datetime.datetime = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at: datetime.datetime = Column(DateTime, default=datetime.datetime.now)
 
 
@@ -584,9 +536,7 @@ class Queries(Base):
     processed_rows = Column(Integer, default=0)
     error: str = Column(String, nullable=True)
 
-    updated_at: datetime.datetime = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
-    )
+    updated_at: datetime.datetime = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at: datetime.datetime = Column(DateTime, default=datetime.datetime.now)
 
 
@@ -613,10 +563,11 @@ class LLMLog(Base):
 
 
 class LLMData(Base):
-    '''
+    """
     Stores the question/answer pairs of an LLM call so examples can be used
     for self improvement with DSPy
-    '''
+    """
+
     __tablename__ = "llm_data"
     id: int = Column(Integer, primary_key=True)
     input: str = Column(String, nullable=False)
@@ -642,9 +593,13 @@ class MetaTables(Base):
 
     meta_columns: Mapped[List["MetaColumns"]] = relationship("MetaColumns", back_populates="meta_tables")
     meta_primary_keys: Mapped[List["MetaPrimaryKeys"]] = relationship("MetaPrimaryKeys", back_populates="meta_tables")
-    meta_foreign_keys_parents: Mapped[List["MetaForeignKeys"]] = relationship("MetaForeignKeys", foreign_keys="MetaForeignKeys.parent_table_id", back_populates="parent_table") 
-    meta_foreign_keys_children: Mapped[List["MetaForeignKeys"]] = relationship("MetaForeignKeys", foreign_keys="MetaForeignKeys.child_table_id", back_populates="child_table")
-    
+    meta_foreign_keys_parents: Mapped[List["MetaForeignKeys"]] = relationship(
+        "MetaForeignKeys", foreign_keys="MetaForeignKeys.parent_table_id", back_populates="parent_table"
+    )
+    meta_foreign_keys_children: Mapped[List["MetaForeignKeys"]] = relationship(
+        "MetaForeignKeys", foreign_keys="MetaForeignKeys.child_table_id", back_populates="child_table"
+    )
+
     def as_string(self, indent: int = 0) -> str:
         pad = " " * indent
 
@@ -666,13 +621,14 @@ class MetaTables(Base):
             table_info += f"\n\n{pad}Columns:"
             for index, column in enumerate(self.meta_columns, start=1):
                 table_info += f"\n{index}. {column.as_string(indent + 4)}\n"
-                
+
         if self.meta_foreign_keys_children:
             table_info += f"\n\n{pad}Key Relationships:"
             for fk in self.meta_foreign_keys_children:
-                table_info += f"\n{pad}  {fk.as_string()}" 
+                table_info += f"\n{pad}  {fk.as_string()}"
 
         return table_info
+
 
 class MetaColumns(Base):
     __tablename__ = "meta_columns"
@@ -687,10 +643,16 @@ class MetaColumns(Base):
     default_value: str = Column(String, nullable=True)
     is_nullable: bool = Column(Boolean, nullable=True)
 
-    meta_column_statistics: Mapped[List["MetaColumnStatistics"]] = relationship("MetaColumnStatistics", back_populates="meta_columns")
+    meta_column_statistics: Mapped[List["MetaColumnStatistics"]] = relationship(
+        "MetaColumnStatistics", back_populates="meta_columns"
+    )
     meta_primary_keys: Mapped[List["MetaPrimaryKeys"]] = relationship("MetaPrimaryKeys", back_populates="meta_columns")
-    meta_foreign_keys_parents: Mapped[List["MetaForeignKeys"]] = relationship("MetaForeignKeys", foreign_keys="MetaForeignKeys.parent_column_id", back_populates="parent_column")
-    meta_foreign_keys_children: Mapped[List["MetaForeignKeys"]] = relationship("MetaForeignKeys", foreign_keys="MetaForeignKeys.child_column_id", back_populates="child_column")
+    meta_foreign_keys_parents: Mapped[List["MetaForeignKeys"]] = relationship(
+        "MetaForeignKeys", foreign_keys="MetaForeignKeys.parent_column_id", back_populates="parent_column"
+    )
+    meta_foreign_keys_children: Mapped[List["MetaForeignKeys"]] = relationship(
+        "MetaForeignKeys", foreign_keys="MetaForeignKeys.child_column_id", back_populates="child_column"
+    )
 
     def as_string(self, indent: int = 0) -> str:
         pad = " " * indent
@@ -716,7 +678,7 @@ class MetaColumnStatistics(Base):
     __tablename__ = "meta_column_statistics"
     column_id: int = Column(Integer, ForeignKey("meta_columns.id"), primary_key=True)
     meta_columns = relationship("MetaColumns", back_populates="meta_column_statistics")
-    
+
     most_common_values: str = Column(Array, nullable=True)
     most_common_frequencies: str = Column(Array, nullable=True)
     null_percentage: float = Column(Numeric(5, 2), nullable=True)
@@ -772,30 +734,33 @@ class MetaPrimaryKeys(Base):
     def as_string(self) -> str:
         pk_list = sorted(
             self.meta_tables.meta_primary_keys,
-            key=lambda pk: pk.ordinal_position if pk.ordinal_position is not None else 0
+            key=lambda pk: pk.ordinal_position if pk.ordinal_position is not None else 0,
         )
 
-        return ", ".join(
-            f"{pk.meta_columns.name} ({pk.meta_columns.data_type})"
-            for pk in pk_list
-        )
+        return ", ".join(f"{pk.meta_columns.name} ({pk.meta_columns.data_type})" for pk in pk_list)
 
 
 class MetaForeignKeys(Base):
     __tablename__ = "meta_foreign_keys"
     parent_table_id: int = Column(Integer, ForeignKey("meta_tables.id"), primary_key=True)
-    parent_table = relationship("MetaTables", back_populates="meta_foreign_keys_parents", foreign_keys=[parent_table_id])
+    parent_table = relationship(
+        "MetaTables", back_populates="meta_foreign_keys_parents", foreign_keys=[parent_table_id]
+    )
 
     parent_column_id: int = Column(Integer, ForeignKey("meta_columns.id"), primary_key=True)
-    parent_column = relationship("MetaColumns", back_populates="meta_foreign_keys_parents", foreign_keys=[parent_column_id])
+    parent_column = relationship(
+        "MetaColumns", back_populates="meta_foreign_keys_parents", foreign_keys=[parent_column_id]
+    )
 
     child_table_id: int = Column(Integer, ForeignKey("meta_tables.id"), primary_key=True)
     child_table = relationship("MetaTables", back_populates="meta_foreign_keys_children", foreign_keys=[child_table_id])
 
     child_column_id: int = Column(Integer, ForeignKey("meta_columns.id"), primary_key=True)
-    child_column = relationship("MetaColumns", back_populates="meta_foreign_keys_children", foreign_keys=[child_column_id])
+    child_column = relationship(
+        "MetaColumns", back_populates="meta_foreign_keys_children", foreign_keys=[child_column_id]
+    )
 
     constraint_name: str = Column(String, nullable=True)
-    
+
     def as_string(self) -> str:
         return f"{self.child_column.name} in {self.child_table.name} references {self.parent_column.name} in {self.parent_table.name}"

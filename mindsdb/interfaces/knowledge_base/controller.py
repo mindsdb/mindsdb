@@ -97,6 +97,17 @@ def get_reranking_model_from_params(reranking_model_params: dict):
     return BaseLLMReranker(**params_copy)
 
 
+def safe_pandas_is_datetime(value: str) -> bool:
+    """
+    Check if the value can be parsed as a datetime.
+    """
+    try:
+        result = pd.api.types.is_datetime64_any_dtype(value)
+        return result
+    except ValueError:
+        return False
+
+
 class KnowledgeBaseTable:
     """
     Knowledge base table interface
@@ -591,7 +602,7 @@ class KnowledgeBaseTable:
                 for col in metadata_columns:
                     value = row[col]
                     # Convert numpy/pandas types to Python native types
-                    if pd.api.types.is_datetime64_any_dtype(value) or isinstance(value, pd.Timestamp):
+                    if safe_pandas_is_datetime(value) or isinstance(value, pd.Timestamp):
                         value = str(value)
                     elif pd.api.types.is_integer_dtype(value):
                         value = int(value)
@@ -846,11 +857,11 @@ class KnowledgeBaseController:
         self,
         name: str,
         project_name: str,
-        embedding_model: Identifier,
         storage: Identifier,
         params: dict,
         preprocessing_config: Optional[dict] = None,
         if_not_exists: bool = False,
+        # embedding_model: Identifier = None, # Legacy: Allow MindsDB models to be passed as embedding_model.
     ) -> db.KnowledgeBase:
         """
         Add a new knowledge base to the database
@@ -888,33 +899,39 @@ class KnowledgeBaseController:
 
         embedding_params = copy.deepcopy(config.get("default_embedding_model", {}))
 
-        model_name = None
-        model_project = project
-        if embedding_model:
-            model_name = embedding_model.parts[-1]
-            if len(embedding_model.parts) > 1:
-                model_project = self.session.database_controller.get_project(embedding_model.parts[-2])
+        # Legacy
+        # model_name = None
+        # model_project = project
+        # if embedding_model:
+        #     model_name = embedding_model.parts[-1]
+        #     if len(embedding_model.parts) > 1:
+        #         model_project = self.session.database_controller.get_project(embedding_model.parts[-2])
 
-        elif "embedding_model" in params:
-            if isinstance(params["embedding_model"], str):
-                # it is model name
-                model_name = params["embedding_model"]
-            else:
-                # it is params for model
-                embedding_params.update(params["embedding_model"])
+        # elif "embedding_model" in params:
+        #     if isinstance(params["embedding_model"], str):
+        #         # it is model name
+        #         model_name = params["embedding_model"]
+        #     else:
+        #         # it is params for model
+        #         embedding_params.update(params["embedding_model"])
 
-        if model_name is None:
-            model_name = self._create_embedding_model(
-                project.name,
-                params=embedding_params,
-                kb_name=name,
-            )
-            if model_name is not None:
-                params["created_embedding_model"] = model_name
+        if "embedding_model" in params:
+            if not isinstance(params["embedding_model"], dict):
+                raise ValueError("embedding_model should be JSON object with model parameters.")
+            embedding_params.update(params["embedding_model"])
+
+        # if model_name is None:  # Legacy
+        model_name = self._create_embedding_model(
+            project.name,
+            params=embedding_params,
+            kb_name=name,
+        )
+        if model_name is not None:
+            params["created_embedding_model"] = model_name
 
         embedding_model_id = None
         if model_name is not None:
-            model = self.session.model_controller.get_model(name=model_name, project_name=model_project.name)
+            model = self.session.model_controller.get_model(name=model_name, project_name=project.name)
             model_record = db.Predictor.query.get(model["id"])
             embedding_model_id = model_record.id
 

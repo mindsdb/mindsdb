@@ -31,8 +31,9 @@ class BaseDataCatalog:
         self.data_handler: Union[MetaDatabaseHandler, MetaAPIHandler] = session.integration_controller.get_data_handler(
             database_name
         )
-        self.integration_id = session.integration_controller.get(database_name)["id"]
-        self.integration_engine = session.integration_controller.get(database_name)["engine"]
+        integration = session.integration_controller.get(database_name)
+        self.integration_id = integration["id"]
+        self.integration_engine = integration["engine"]
         self.table_names = table_names
 
         self.logger = logger

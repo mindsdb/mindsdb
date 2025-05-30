@@ -19,53 +19,7 @@ class KnowledgeBaseListTool(BaseTool):
 
     def _run(self, tool_input: str) -> str:
         """List all knowledge bases."""
-        try:
-            # First try using get_usable_knowledge_base_names method
-            try:
-                kb_names = self.db.get_usable_knowledge_base_names()
-
-                # Handle the case where the result is not iterable (ExecuteAnswer object)
-                if not hasattr(kb_names, "__iter__") or isinstance(kb_names, str):
-                    # Try to extract data from ExecuteAnswer object if possible
-                    if hasattr(kb_names, "data"):
-                        kb_names = kb_names.data
-                    else:
-                        # If we can't extract data, try direct SQL query instead
-                        raise ValueError("Non-iterable result from get_usable_knowledge_base_names")
-            except Exception as e:
-                # If the first method fails, try direct SQL query
-                try:
-                    # Try to query knowledge bases directly from the database
-                    result = self.db.run_no_throw("SHOW KNOWLEDGE_BASES FROM mindsdb;")
-                    if result and hasattr(result, "__iter__"):
-                        if isinstance(result[0], dict) and "name" in result[0]:
-                            kb_names = [kb["name"] for kb in result]
-                        else:
-                            kb_names = result
-                    else:
-                        # If that fails too, return a helpful message
-                        return "No knowledge bases found or unable to retrieve knowledge base list."
-                except Exception as inner_e:
-                    # Log both errors for debugging
-                    return f"Error listing knowledge bases: {str(e)}. Direct query error: {str(inner_e)}"
-
-            # Format the result as a markdown table
-            if kb_names and len(kb_names) > 0:
-                if isinstance(kb_names[0], dict) and "name" in kb_names[0]:
-                    # If we have a list of dictionaries with 'name' key
-                    kb_names = [kb["name"] for kb in kb_names]
-
-                # Create a markdown table
-                table = "| Knowledge Base Name |\n"
-                table += "| ----------------- |\n"
-                for name in kb_names:
-                    table += f"| `{name}` |\n"
-
-                return table
-            else:
-                return "No knowledge bases found."
-        except Exception as e:
-            return f"Error listing knowledge bases: {str(e)}"
+        return self.db.get_usable_knowledge_base_names()
 
 
 class KnowledgeBaseInfoToolInput(BaseModel):

@@ -73,7 +73,7 @@ class SalesforceHandler(MetaAPIHandler):
             # Register Salesforce tables.
             for resource_name in self._get_resource_names():
                 table_class = create_table_class(resource_name)
-                self._register_table(resource_name.lower(), table_class(self))
+                self._register_table(resource_name, table_class(self))
 
             return self.connection
         except AuthenticationError as auth_error:

@@ -421,3 +421,248 @@ class KnowledgeBaseCompletions(Resource):
             'Invalid parameter',
             f'Completion type must be one of: "context", "chat". Received {completion_type}'
         )
+
+
+@ns_conf.route('/<project_name>/knowledge_bases/<knowledge_base_name>/evaluate')
+class KnowledgeBaseEvaluate(Resource):
+    @ns_conf.doc('evaluate_knowledge_base')
+    @api_endpoint_metrics('POST', '/knowledge_bases/evaluate')
+    def post(self, project_name, knowledge_base_name):
+        """
+        Evaluate a knowledge base against a set of test queries
+
+        Expected JSON body:
+        {
+            "test_queries": [
+                {"query": "query text", "expected_ids": ["id1", "id2"]},
+                ...
+            ],
+            "metrics": ["precision", "recall", "mrr"],  # Optional
+            "top_k": 5,  # Optional
+            "test_set_name": "test_set_name",  # Optional
+            "user_notes": "notes about the evaluation"  # Optional
+        }
+
+        Or with a reference to a test data table:
+        {
+            "test_data": "project_name.table_name",
+            "query_column": "question",
+            "expected_column": "relevant_doc_ids",
+            "metrics": ["precision", "recall", "mrr"],  # Optional
+            "top_k": 5,  # Optional
+            "test_set_name": "test_set_name",  # Optional
+            "user_notes": "notes about the evaluation"  # Optional
+        }
+        """
+        session = SessionController()
+        project_controller = ProjectController()
+
+        try:
+            project = project_controller.get(name=project_name)
+        except EntityNotExistsError:
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Project not found',
+                f'Project with name {project_name} does not exist'
+            )
+
+        try:
+            kb_controller = session.knowledge_base_controller
+            # Check if knowledge base exists
+            kb_controller.get(knowledge_base_name, project.id)
+        except EntityNotExistsError:
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Knowledge base not found',
+                f'Knowledge base with name {knowledge_base_name} does not exist'
+            )
+
+        data = request.json
+        if not data:
+            return http_error(
+                HTTPStatus.BAD_REQUEST,
+                'Missing request body',
+                'Request body must contain test queries or test data reference'
+            )
+
+        # Process test queries from request or from a reference table
+        test_queries = data.get('test_queries')
+        test_data_ref = data.get('test_data')
+
+        if test_queries is None and test_data_ref is None:
+            return http_error(
+                HTTPStatus.BAD_REQUEST,
+                'Missing test data',
+                'Request must contain either "test_queries" or "test_data" field'
+            )
+
+        # If test_data is provided, load test queries from the referenced table
+        if test_data_ref:
+            query_column = data.get('query_column')
+            expected_column = data.get('expected_column')
+
+            if not query_column or not expected_column:
+                return http_error(
+                    HTTPStatus.BAD_REQUEST,
+                    'Missing column specifications',
+                    'When using test_data, both query_column and expected_column must be specified'
+                )
+
+            # Parse test_data_ref (format: "project_name.table_name")
+            parts = test_data_ref.split('.')
+            if len(parts) != 2:
+                return http_error(
+                    HTTPStatus.BAD_REQUEST,
+                    'Invalid test_data format',
+                    'test_data must be in format "project_name.table_name"'
+                )
+
+            test_project_name, test_table_name = parts
+
+            try:
+                # Create SQL query to fetch test data
+                sql = f"SELECT {query_column}, {expected_column} FROM {test_project_name}.{test_table_name}"
+
+                # Execute query using FakeMysqlProxy to get the data
+                mysql_proxy = FakeMysqlProxy(session)
+                result = mysql_proxy.process_query(sql)
+
+                if not result or not result.data:
+                    return http_error(
+                        HTTPStatus.BAD_REQUEST,
+                        'Empty test data',
+                        f'No data found in {test_data_ref}'
+                    )
+
+                # Convert result to test_queries format
+                test_queries = []
+                for row in result.data:
+                    # Parse expected_ids from string if needed
+                    expected_ids = row[expected_column]
+                    if isinstance(expected_ids, str):
+                        try:
+                            # Try to parse as JSON
+                            import json
+                            expected_ids = json.loads(expected_ids)
+                        except json.JSONDecodeError:
+                            # If not JSON, split by comma
+                            expected_ids = [id.strip() for id in expected_ids.split(',')]
+
+                    test_queries.append({
+                        "query": row[query_column],
+                        "expected_ids": expected_ids
+                    })
+            except Exception as e:
+                return http_error(
+                    HTTPStatus.BAD_REQUEST,
+                    'Error loading test data',
+                    str(e)
+                )
+
+        # Extract optional parameters
+        metrics = data.get('metrics', ["precision", "recall", "mrr"])
+        top_k = data.get('top_k', 5)
+        test_set_name = data.get('test_set_name')
+        user_notes = data.get('user_notes')
+
+        try:
+            # Run evaluation
+            result = kb_controller.evaluate(
+                name=knowledge_base_name,
+                project_id=project.id,
+                test_queries=test_queries,
+                metrics=metrics,
+                top_k=top_k,
+                test_set_name=test_set_name,
+                user_notes=user_notes
+            )
+            return result, HTTPStatus.OK
+        except Exception as e:
+            logger.error(f"Error during knowledge base evaluation: {e}", exc_info=True)
+            return http_error(
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+                'Evaluation error',
+                str(e)
+            )
+
+
+@ns_conf.route('/<project_name>/knowledge_bases/<knowledge_base_name>/evaluations')
+class KnowledgeBaseEvaluations(Resource):
+    @ns_conf.doc('get_knowledge_base_evaluations')
+    @api_endpoint_metrics('GET', '/knowledge_bases/evaluations')
+    def get(self, project_name, knowledge_base_name):
+        """List evaluation history for a knowledge base"""
+        session = SessionController()
+        project_controller = ProjectController()
+
+        try:
+            project = project_controller.get(name=project_name)
+        except EntityNotExistsError:
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Project not found',
+                f'Project with name {project_name} does not exist'
+            )
+
+        try:
+            kb_controller = session.knowledge_base_controller
+            # Get evaluation history
+            limit = request.args.get('limit', type=int)
+            evaluations = kb_controller.get_evaluations(
+                name=knowledge_base_name,
+                project_id=project.id,
+                limit=limit
+            )
+            return evaluations, HTTPStatus.OK
+        except EntityNotExistsError:
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Knowledge base not found',
+                f'Knowledge base with name {knowledge_base_name} does not exist'
+            )
+        except Exception as e:
+            logger.error(f"Error retrieving knowledge base evaluations: {e}", exc_info=True)
+            return http_error(
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+                'Error retrieving evaluations',
+                str(e)
+            )
+
+
+@ns_conf.route('/<project_name>/knowledge_bases/evaluations/<int:evaluation_id>')
+class KnowledgeBaseEvaluationResource(Resource):
+    @ns_conf.doc('get_knowledge_base_evaluation')
+    @api_endpoint_metrics('GET', '/knowledge_bases/evaluations/id')
+    def get(self, project_name, evaluation_id):
+        """Get a specific evaluation by ID"""
+        session = SessionController()
+
+        try:
+            kb_controller = session.knowledge_base_controller
+            evaluation = kb_controller.get_evaluation(evaluation_id)
+
+            # Check if evaluation belongs to the specified project
+            project_controller = ProjectController()
+            project = project_controller.get(name=project_name)
+
+            if evaluation.get('project_id') != project.id:
+                return http_error(
+                    HTTPStatus.NOT_FOUND,
+                    'Evaluation not found',
+                    f'Evaluation with ID {evaluation_id} does not exist in project {project_name}'
+                )
+
+            return evaluation, HTTPStatus.OK
+        except EntityNotExistsError as e:
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Evaluation not found',
+                str(e)
+            )
+        except Exception as e:
+            logger.error(f"Error retrieving knowledge base evaluation: {e}", exc_info=True)
+            return http_error(
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+                'Error retrieving evaluation',
+                str(e)
+            )

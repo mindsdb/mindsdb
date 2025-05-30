@@ -532,6 +532,17 @@ FROM information_schema.queries;
 ```
 </Tip>
 
+<Info>
+To speed up the initial loading of a knowledge base with data, run the `INSERT INTO` command with the `kb_no_upsert` flag. It is recommended to use this flag only when the knowledge base is empty, that is, only for the initial data insertion.
+
+```sql
+INSERT INTO my_kb
+SELECT *
+FROM table_name
+USING kb_no_upsert = true;
+```
+</Info>
+
 <Note>
 Note that when inserting the same data into the knowledge base again, then no new rows are inserted, as the content already exists in the knowledge base.
 </Note>

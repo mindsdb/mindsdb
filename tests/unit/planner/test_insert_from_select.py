@@ -171,3 +171,118 @@ class TestPlanInsertFromSelect:
                 assert step.from_table.equals(expected_step.from_table)
             else:
                 assert step == expected_step
+
+
+class TestPartitions:
+    def test_insert_from_select(self):
+        query = parse_sql("""
+            insert into int2.table2
+            select id from int1.table1
+            using track_column = id, batch_size=100
+        """)
+
+        plan = plan_query(query, integrations=['int1', 'int2'])
+
+        expected_plan = QueryPlan(
+            integrations=['int'],
+            steps=[
+                FetchDataframeStepPartition(
+                    step_num=0,
+                    integration='int1',
+                    query=parse_sql('select id as id from table1'),
+                    params={'batch_size': 100, 'track_column': 'id'},
+                    steps=[
+                        InsertToTable(
+                            table=Identifier('int2.table2'),
+                            step_num=1,
+                            dataframe=Result(0)
+                        )
+                    ]
+                )
+            ],
+        )
+
+        assert plan.steps == expected_plan.steps
+
+    def test_insert_from_join(self):
+        query = parse_sql("""
+            insert into int2.table2
+            ( select a, b from int1.table1
+              join int1.table3 )
+            using track_column = id, batch_size=100
+        """)
+
+        plan = plan_query(query, integrations=['int1', 'int2'])
+
+        expected_plan = QueryPlan(
+            integrations=['int'],
+            steps=[
+                FetchDataframeStepPartition(
+                    step_num=0,
+                    integration='int1',
+                    query=parse_sql('select a, b from table1 join table3'),
+                    params={'batch_size': 100, 'track_column': 'id'},
+                    steps=[
+                        InsertToTable(
+                            table=Identifier('int2.table2'),
+                            step_num=1,
+                            dataframe=Result(0)
+                        )
+                    ]
+                )
+            ],
+        )
+
+        assert plan.steps == expected_plan.steps
+
+    def test_select_join_model(self):
+        query = parse_sql("""
+            select id from int1.table1
+            join pred
+            using track_column = id, batch_size=100
+        """)
+
+        plan = plan_query(
+            query,
+            integrations=['int1', 'int2'],
+            default_namespace='mindsdb',
+            predictor_metadata=[
+                {'name': 'pred', 'integration_name': 'mindsdb', 'to_predict': ['ttt']},
+            ]
+        )
+
+        expected_plan = QueryPlan(
+            integrations=['int'],
+            steps=[
+                FetchDataframeStepPartition(
+                    step_num=0,
+                    integration='int1',
+                    query=parse_sql('select * from table1'),
+                    params={'batch_size': 100, 'track_column': 'id'},
+                    steps=[
+                        ApplyPredictorStep(
+                            step_num=1,
+                            namespace='mindsdb', dataframe=Result(0), params={},
+                            predictor=Identifier('pred'),
+                        ),
+                        JoinStep(
+                            step_num=2,
+                            left=Result(0),
+                            right=Result(1),
+                            query=Join(
+                                left=Identifier('tab1'),
+                                right=Identifier('tab2'),
+                                join_type=JoinType.JOIN
+                            )
+                        ),
+                        QueryStep(
+                            step_num=3,
+                            query=parse_sql("select id"),
+                            from_table=Result(2), strict_where=False
+                        ),
+                    ]
+                )
+            ],
+        )
+
+        assert plan.steps == expected_plan.steps

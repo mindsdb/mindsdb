@@ -220,9 +220,6 @@ class Config:
             "data_catalog": {
                 "enabled": False,
             },
-            "data_catalog": {
-                "enabled": False,
-            },
         }
         # endregion
 

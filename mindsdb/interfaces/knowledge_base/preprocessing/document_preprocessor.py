@@ -118,14 +118,14 @@ class DocumentPreprocessor:
 
         # Always preserve original document ID
         if doc_id is not None:
-            metadata["original_doc_id"] = doc_id
+            metadata["_original_doc_id"] = doc_id
 
         # Add chunk index only for multi-chunk cases
         if chunk_index is not None:
-            metadata["chunk_index"] = chunk_index
+            metadata["_chunk_index"] = chunk_index
 
         # Always set source
-        metadata["source"] = self._get_source()
+        metadata["_source"] = self._get_source()
 
         return metadata
 
@@ -261,7 +261,7 @@ Please give a short succinct context to situate this chunk within the overall do
                 metadata.update(doc.metadata)
 
             # Get content_column from metadata or use default
-            content_column = metadata.get('content_column')
+            content_column = metadata.get('_content_column')
             if content_column is None:
                 # If content_column is not in metadata, use the default column name
                 content_column = _DEFAULT_CONTENT_COLUMN_NAME
@@ -334,13 +334,13 @@ class TextChunkingPreprocessor(DocumentPreprocessor):
                     metadata.update(doc.metadata)
 
                 # Add position metadata
-                metadata["start_char"] = start_char
-                metadata["end_char"] = end_char
+                metadata["_start_char"] = start_char
+                metadata["_end_char"] = end_char
 
                 # Get content_column from metadata or use default
                 content_column = None
                 if doc.metadata:
-                    content_column = doc.metadata.get('content_column')
+                    content_column = doc.metadata.get('_content_column')
 
                 if content_column is None:
                     # If content_column is not in metadata, use the default column name

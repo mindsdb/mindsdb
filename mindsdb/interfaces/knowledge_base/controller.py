@@ -941,7 +941,16 @@ class KnowledgeBaseController:
             model_record = db.Predictor.query.get(model["id"])
             embedding_model_id = model_record.id
 
-        reranking_model_params = get_model_params(params.get("reranking_model", {}), "default_reranking_model")
+        # if params.get("reranking_model", {}) is bool and False we evaluate it to empty dictionary
+        reranking_model_params = params.get("reranking_model", {})
+
+        if isinstance(reranking_model_params, bool) and not reranking_model_params:
+            params["reranking_model"] = {}
+        # if params.get("reranking_model", {}) is string and false in any case we evaluate it to empty dictionary
+        if isinstance(reranking_model_params, str) and reranking_model_params.lower() == "false":
+            params["reranking_model"] = {}
+
+        reranking_model_params = get_model_params(reranking_model_params, "default_reranking_model")
         if reranking_model_params:
             # Get reranking model from params.
             # This is called here to check validaity of the parameters.

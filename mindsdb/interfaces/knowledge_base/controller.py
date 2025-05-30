@@ -178,7 +178,7 @@ class KnowledgeBaseTable:
         query_conditions = db_handler.extract_conditions(query.where)
         if query_conditions is not None:
             for item in query_conditions:
-                if item.column == "relevance_threshold" and item.op.value == "=":
+                if item.column == "relevance" and item.op.value == FilterOperator.GREATER_THAN_OR_EQUAL.value:
                     try:
                         relevance_threshold = float(item.value)
                         # Validate range: must be between 0 and 1
@@ -189,6 +189,10 @@ class KnowledgeBaseTable:
                         error_msg = f"Invalid relevance_threshold value: {item.value}. {str(e)}"
                         logger.error(error_msg)
                         raise ValueError(error_msg)
+                elif item.column == "relevance" and item.op.value != FilterOperator.GREATER_THAN_OR_EQUAL.value:
+                    raise ValueError(
+                        f"Invalid operator for relevance: {item.op.value}. Only GREATER_THAN_OR_EQUAL is allowed."
+                    )
                 elif item.column == TableField.CONTENT.value:
                     query_text = item.value
 

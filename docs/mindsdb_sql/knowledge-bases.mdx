@@ -84,7 +84,7 @@ We start by creating a knowledge base and inserting data. Next we can run semant
     SELECT *
     FROM my_kb
     WHERE content = 'color'
-    AND relevance_threshold = 0.2502;
+    AND relevance >= 0.2502;
     ```
 
     This query returns:
@@ -106,7 +106,7 @@ We start by creating a knowledge base and inserting data. Next we can run semant
     FROM my_kb
     WHERE product = 'Wireless Mouse'
     AND content = 'color'
-    AND relevance_threshold = 0.2502;
+    AND relevance >= 0.2502;
     ```
     
     This query returns:

@@ -265,7 +265,9 @@ class LangchainAgent:
             if args.get("mode") == "retrieval":
                 args["prompt_template"] = DEFAULT_RAG_PROMPT_TEMPLATE
             else:
-                raise ValueError("Please provide a `prompt_template` or set `mode=retrieval`")
+                args["prompt_template"] = "you are an assistant, answer using the tables connected"
+
+        logger.info("using the following prompt template: " + args["prompt_template"])
 
         return args
 

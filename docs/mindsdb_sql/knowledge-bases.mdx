@@ -146,9 +146,11 @@ USING
     id_column = 'id';
 ```
 
-Upon execution, it registers `my_kb` and associates the specified models and storage.
+Upon execution, it registers `my_kb` and associates the specified models and storage. `my_kb` is a unique identifier of the knowledge base within MindsDB.
 
-`my_kb` is a unique identifier of the knowledge base within MindsDB.
+<Tip>
+Users can use the variables and the [`from_env()` function](/mindsdb_sql/functions/from_env) to pass paramaters when creating knowledge bases.
+</Tip>
 
 <Note>
 As MindsDB stores objects, such as models or knowledge bases, inside [projects](/mindsdb_sql/sql/create/project), you can create a knowledge base inside a custom project.

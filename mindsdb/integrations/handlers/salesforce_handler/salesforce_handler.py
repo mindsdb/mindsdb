@@ -4,7 +4,7 @@ import pandas as pd
 import salesforce_api
 from salesforce_api.exceptions import AuthenticationError, RestRequestCouldNotBeUnderstoodError
 
-from mindsdb.integrations.libs.api_handler import APIHandler
+from mindsdb.integrations.libs.api_handler import MetaAPIHandler
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
@@ -17,7 +17,7 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 
-class SalesforceHandler(APIHandler):
+class SalesforceHandler(MetaAPIHandler):
     """
     This handler handles the connection and execution of SQL statements on Salesforce.
     """
@@ -73,7 +73,7 @@ class SalesforceHandler(APIHandler):
             # Register Salesforce tables.
             for resource_name in self._get_resource_names():
                 table_class = create_table_class(resource_name)
-                self._register_table(resource_name.lower(), table_class(self))
+                self._register_table(resource_name, table_class(self))
 
             return self.connection
         except AuthenticationError as auth_error:
@@ -171,6 +171,7 @@ class SalesforceHandler(APIHandler):
             None
         """
         if not self.resource_names:
-            self.resource_names = [resource['name'] for resource in self.connection.sobjects.describe()['sobjects']]
+            # Fetch the queryable list of Salesforce resources (sobjects).
+            self.resource_names = [resource['name'] for resource in self.connection.sobjects.describe()['sobjects'] if resource['queryable']]
 
         return self.resource_names

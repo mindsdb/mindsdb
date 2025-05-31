@@ -15,6 +15,7 @@ from mindsdb_sql_parser.ast import (
     CreateTable,
     Delete,
     Describe,
+    UpdateDatabase,
     DropDatabase,
     DropTables,
     DropView,
@@ -189,6 +190,8 @@ class ExecuteCommands:
             return self.answer_drop_tables(statement, database_name)
         elif statement_type is DropDatasource or statement_type is DropDatabase:
             return self.answer_drop_database(statement)
+        elif statement_type is UpdateDatabase:
+            return self.answer_update_database(statement)
         elif statement_type is Describe:
             # NOTE in sql 'describe table' is same as 'show columns'
             obj_type = statement.type
@@ -1179,6 +1182,14 @@ class ExecuteCommands:
         except EntityNotExistsError:
             if statement.if_exists is not True:
                 raise
+        return ExecuteAnswer()
+
+    def answer_update_database(self, statement):
+        if len(statement.name.parts) != 1:
+            raise Exception("Database name should contain only 1 part.")
+        db_name = statement.name.parts[0]
+        data = statement.data
+        self.session.database_controller.update(db_name, data=data)
         return ExecuteAnswer()
 
     def answer_drop_tables(self, statement, database_name):

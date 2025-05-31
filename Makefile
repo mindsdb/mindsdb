@@ -30,9 +30,19 @@ run_docker: build_docker
 	docker run -it -p 47334:47334 mdb
 
 integration_tests:
-	pytest -n 8 --dist loadfile -vsx tests/integration/tutorials/ tests/integration/flows/
+	# Run tests in parallel and distribute a whole file to each worker
+	pytest -n 8 -rs -v --dist loadfile tests/integration/ -k "not test_auth"
+	# Run this test separately because it alters the auth requirements, which breaks other tests
+	pytest -v tests/integration/ -k test_auth
 
 integration_tests_debug:
-	pytest -vsx tests/integration/tutorials/ tests/integration/flows/
+	pytest -vxs tests/integration/ -k "not test_auth"
+	pytest -vxs tests/integration/ -k test_auth
 
-.PHONY: install_mindsdb install_handler precommit run_mindsdb check build_docker run_docker integration_tests integration_tests_debug
+unit_tests:
+	env PYTHONPATH=./ pytest -v tests/unit/executor/  # We have to run executor tests separately because they do weird things that break everything else
+	pytest -v --ignore=tests/unit/handlers --ignore=tests/unit/executor tests/unit/
+	python -m unittest discover -s tests/unit/handlers
+
+
+.PHONY: install_mindsdb install_handler precommit format run_mindsdb check build_docker run_docker integration_tests integration_tests_debug unit_tests

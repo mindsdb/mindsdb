@@ -1,32 +1,28 @@
 import unittest
+import pytest
 import datetime
 from collections import OrderedDict
 from unittest.mock import patch, MagicMock
 
-import oracledb
-from oracledb import DatabaseError
+try:
+    import oracledb
+    from oracledb import DatabaseError
+    from mindsdb.integrations.handlers.oracle_handler.oracle_handler import OracleHandler
+except ImportError:
+    pytestmark = pytest.mark.skip("Oracle handler not installed")
+
 import pandas as pd
 from pandas import DataFrame
 
 from base_handler_test import BaseDatabaseHandlerTest
-from mindsdb.integrations.handlers.oracle_handler.oracle_handler import OracleHandler
-from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response,
-    INF_SCHEMA_COLUMNS_NAMES_SET,
-    RESPONSE_TYPE
-)
+from mindsdb.integrations.libs.response import HandlerResponse as Response, INF_SCHEMA_COLUMNS_NAMES_SET, RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 
 class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
-
     @property
     def dummy_connection_data(self):
-        return OrderedDict(
-            user='example_user',
-            password='example_pass',
-            dsn='example_dsn'
-        )
+        return OrderedDict(user="example_user", password="example_pass", dsn="example_dsn")
 
     @property
     def err_to_raise_on_connect_failure(self):
@@ -62,10 +58,10 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         """
 
     def create_handler(self):
-        return OracleHandler('oracle', connection_data=self.dummy_connection_data)
+        return OracleHandler("oracle", connection_data=self.dummy_connection_data)
 
     def create_patcher(self):
-        return patch('mindsdb.integrations.handlers.oracle_handler.oracle_handler.connect')
+        return patch("mindsdb.integrations.handlers.oracle_handler.oracle_handler.connect")
 
     def test_connect_validation(self):
         """
@@ -73,23 +69,23 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         """
         # Test missing 'user'
         invalid_connection_args = self.dummy_connection_data.copy()
-        del invalid_connection_args['user']
-        handler = OracleHandler('oracle', connection_data=invalid_connection_args)
+        del invalid_connection_args["user"]
+        handler = OracleHandler("oracle", connection_data=invalid_connection_args)
         with self.assertRaises(ValueError):
             handler.connect()
 
         # Test missing 'password'
         invalid_connection_args = self.dummy_connection_data.copy()
-        del invalid_connection_args['password']
-        handler = OracleHandler('oracle', connection_data=invalid_connection_args)
+        del invalid_connection_args["password"]
+        handler = OracleHandler("oracle", connection_data=invalid_connection_args)
         with self.assertRaises(ValueError):
             handler.connect()
 
         # Test missing 'dsn' AND missing 'host'
         invalid_connection_args = self.dummy_connection_data.copy()
-        del invalid_connection_args['dsn']
-        invalid_connection_args.pop('host', None)
-        handler = OracleHandler('oracle', connection_data=invalid_connection_args)
+        del invalid_connection_args["dsn"]
+        invalid_connection_args.pop("host", None)
+        handler = OracleHandler("oracle", connection_data=invalid_connection_args)
         with self.assertRaises(ValueError):
             handler.connect()
 
@@ -151,13 +147,10 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.handler.connect = MagicMock(return_value=mock_conn)
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
 
-        mock_cursor.fetchall.return_value = [
-            (1, 'test1'),
-            (2, 'test2')
-        ]
+        mock_cursor.fetchall.return_value = [(1, "test1"), (2, "test2")]
         mock_cursor.description = [
-            ('ID', None, None, None, None, None, None),
-            ('NAME', None, None, None, None, None, None)
+            ("ID", None, None, None, None, None, None),
+            ("NAME", None, None, None, None, None, None),
         ]
 
         query_str = "SELECT ID, NAME FROM test_table"
@@ -172,7 +165,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertFalse(data.error_code)
         self.assertEqual(data.type, RESPONSE_TYPE.TABLE)
         self.assertIsInstance(data.data_frame, DataFrame)
-        expected_columns = ['ID', 'NAME']
+        expected_columns = ["ID", "NAME"]
         self.assertListEqual(list(data.data_frame.columns), expected_columns)
         self.assertEqual(len(data.data_frame), 2)
 
@@ -237,7 +230,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         """
         Tests the query method to ensure it correctly converts ASTNode to SQL and calls native_query.
         """
-        orig_renderer_attr = hasattr(self.handler, 'renderer')
+        orig_renderer_attr = hasattr(self.handler, "renderer")
         if orig_renderer_attr:
             orig_renderer = self.handler.renderer
 
@@ -248,7 +241,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         expected_sql = "SELECT * FROM rendered_table"
 
-        with patch('mindsdb.integrations.handlers.oracle_handler.oracle_handler.SqlalchemyRender') as MockRenderer:
+        with patch("mindsdb.integrations.handlers.oracle_handler.oracle_handler.SqlalchemyRender") as MockRenderer:
             mock_renderer_instance = MockRenderer.return_value
             mock_renderer_instance.get_string.return_value = expected_sql
 
@@ -268,7 +261,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         Tests that get_tables calls native_query with the correct SQL for Oracle
         and returns the expected DataFrame structure.
         """
-        expected_df = DataFrame([('TABLE1',), ('TABLE2',)], columns=['TABLE_NAME'])
+        expected_df = DataFrame([("TABLE1",), ("TABLE2",)], columns=["TABLE_NAME"])
         expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=expected_df)
 
         self.handler.native_query = MagicMock(return_value=expected_response)
@@ -278,11 +271,11 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.handler.native_query.assert_called_once()
         call_args = self.handler.native_query.call_args[0][0]
 
-        self.assertIn('FROM user_tables', call_args)
-        self.assertIn('SELECT table_name', call_args)
+        self.assertIn("FROM user_tables", call_args)
+        self.assertIn("SELECT table_name", call_args)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
         self.assertIsInstance(response.data_frame, DataFrame)
-        self.assertListEqual(list(response.data_frame.columns), ['TABLE_NAME'])
+        self.assertListEqual(list(response.data_frame.columns), ["TABLE_NAME"])
         self.assertEqual(len(response.data_frame), 2)
 
         del self.handler.native_query
@@ -293,31 +286,53 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         and returns the expected DataFrame structure.
         """
         query_columns = [
-            'COLUMN_NAME', 'DATA_TYPE', 'ORDINAL_POSITION', 'COLUMN_DEFAULT', 'IS_NULLABLE',
-            'CHARACTER_MAXIMUM_LENGTH', 'CHARACTER_OCTET_LENGTH', 'NUMERIC_PRECISION',
-            'NUMERIC_SCALE', 'DATETIME_PRECISION', 'CHARACTER_SET_NAME', 'COLLATION_NAME'
+            "COLUMN_NAME",
+            "DATA_TYPE",
+            "ORDINAL_POSITION",
+            "COLUMN_DEFAULT",
+            "IS_NULLABLE",
+            "CHARACTER_MAXIMUM_LENGTH",
+            "CHARACTER_OCTET_LENGTH",
+            "NUMERIC_PRECISION",
+            "NUMERIC_SCALE",
+            "DATETIME_PRECISION",
+            "CHARACTER_SET_NAME",
+            "COLLATION_NAME",
         ]
 
         expected_df_data = [
             {
-                'COLUMN_NAME': 'COL1', 'DATA_TYPE': 'VARCHAR2', 'ORDINAL_POSITION': 1, 'COLUMN_DEFAULT': None,
-                'IS_NULLABLE': 'YES', 'CHARACTER_MAXIMUM_LENGTH': 255, 'CHARACTER_OCTET_LENGTH': None,
-                'NUMERIC_PRECISION': None, 'NUMERIC_SCALE': None, 'DATETIME_PRECISION': None,
-                'CHARACTER_SET_NAME': 'AL32UTF8', 'COLLATION_NAME': None
+                "COLUMN_NAME": "COL1",
+                "DATA_TYPE": "VARCHAR2",
+                "ORDINAL_POSITION": 1,
+                "COLUMN_DEFAULT": None,
+                "IS_NULLABLE": "YES",
+                "CHARACTER_MAXIMUM_LENGTH": 255,
+                "CHARACTER_OCTET_LENGTH": None,
+                "NUMERIC_PRECISION": None,
+                "NUMERIC_SCALE": None,
+                "DATETIME_PRECISION": None,
+                "CHARACTER_SET_NAME": "AL32UTF8",
+                "COLLATION_NAME": None,
             },
             {
-                'COLUMN_NAME': 'COL2', 'DATA_TYPE': 'NUMBER', 'ORDINAL_POSITION': 2, 'COLUMN_DEFAULT': '0',
-                'IS_NULLABLE': 'NO', 'CHARACTER_MAXIMUM_LENGTH': None, 'CHARACTER_OCTET_LENGTH': None,
-                'NUMERIC_PRECISION': 38, 'NUMERIC_SCALE': 0, 'DATETIME_PRECISION': None,
-                'CHARACTER_SET_NAME': None, 'COLLATION_NAME': None
-            }
+                "COLUMN_NAME": "COL2",
+                "DATA_TYPE": "NUMBER",
+                "ORDINAL_POSITION": 2,
+                "COLUMN_DEFAULT": "0",
+                "IS_NULLABLE": "NO",
+                "CHARACTER_MAXIMUM_LENGTH": None,
+                "CHARACTER_OCTET_LENGTH": None,
+                "NUMERIC_PRECISION": 38,
+                "NUMERIC_SCALE": 0,
+                "DATETIME_PRECISION": None,
+                "CHARACTER_SET_NAME": None,
+                "COLLATION_NAME": None,
+            },
         ]
         expected_df = DataFrame(expected_df_data, columns=query_columns)
 
-        expected_response = Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=expected_df
-        )
+        expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=expected_df)
         self.handler.native_query = MagicMock(return_value=expected_response)
 
         table_name = "test_table"
@@ -325,12 +340,12 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         self.handler.native_query.assert_called_once()
         call_args = self.handler.native_query.call_args[0][0]
-        self.assertIn('FROM USER_TAB_COLUMNS', call_args)
+        self.assertIn("FROM USER_TAB_COLUMNS", call_args)
         self.assertIn(f"WHERE table_name = '{table_name}'", call_args)
-        self.assertIn('COLUMN_NAME', call_args)
-        self.assertIn('DATA_TYPE', call_args)
-        self.assertIn('COLUMN_ID AS ORDINAL_POSITION', call_args)
-        self.assertNotIn('MYSQL_DATA_TYPE', call_args)
+        self.assertIn("COLUMN_NAME", call_args)
+        self.assertIn("DATA_TYPE", call_args)
+        self.assertIn("COLUMN_ID AS ORDINAL_POSITION", call_args)
+        self.assertNotIn("MYSQL_DATA_TYPE", call_args)
 
         self.assertEqual(response.type, RESPONSE_TYPE.COLUMNS_TABLE)
         self.assertIsInstance(response.data_frame, DataFrame)
@@ -338,16 +353,15 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         expected_final_columns = INF_SCHEMA_COLUMNS_NAMES_SET
         self.assertSetEqual(set(response.data_frame.columns), expected_final_columns)
 
-        self.assertEqual(response.data_frame.iloc[0]['COLUMN_NAME'], 'COL1')
-        self.assertEqual(response.data_frame.iloc[0]['DATA_TYPE'], 'VARCHAR2')
-        self.assertIn('MYSQL_DATA_TYPE', response.data_frame.columns)
-        self.assertIsNotNone(response.data_frame.iloc[0]['MYSQL_DATA_TYPE'])
+        self.assertEqual(response.data_frame.iloc[0]["COLUMN_NAME"], "COL1")
+        self.assertEqual(response.data_frame.iloc[0]["DATA_TYPE"], "VARCHAR2")
+        self.assertIn("MYSQL_DATA_TYPE", response.data_frame.columns)
+        self.assertIsNotNone(response.data_frame.iloc[0]["MYSQL_DATA_TYPE"])
 
         del self.handler.native_query
 
     def test_types_casting(self):
-        """Test that types are casted correctly
-        """
+        """Test that types are casted correctly"""
         query_str = "SELECT * FROM test_table"
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
@@ -409,27 +423,38 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         );
         """
         input_row = (
-            123456.789, 12345678901234567890123456789012345678, 1234.56, 2147483647,
-            32767, 9876.54, 123456789012345, 1234.56, 3.14159265358979, 2.718281828459045,
-            3.14159, 2.718281828459045, 3.1415927410125732, 2.718281828459045
+            123456.789,
+            12345678901234567890123456789012345678,
+            1234.56,
+            2147483647,
+            32767,
+            9876.54,
+            123456789012345,
+            1234.56,
+            3.14159265358979,
+            2.718281828459045,
+            3.14159,
+            2.718281828459045,
+            3.1415927410125732,
+            2.718281828459045,
         )
         mock_cursor.fetchall.return_value = [input_row]
 
         mock_cursor.description = [
-            ('N_NUMBER', oracledb.DB_TYPE_NUMBER, 127, None, 0, -127, True),
-            ('N_NUMBER_P', oracledb.DB_TYPE_NUMBER, 39, None, 38, 0, True),
-            ('N_NUMBER_PS', oracledb.DB_TYPE_NUMBER, 14, None, 10, 2, True),
-            ('N_INTEGER', oracledb.DB_TYPE_NUMBER, 39, None, 38, 0, True),
-            ('N_SMALLINT', oracledb.DB_TYPE_NUMBER, 39, None, 38, 0, True),
-            ('N_DECIMAL', oracledb.DB_TYPE_NUMBER, 14, None, 10, 2, True),
-            ('N_DECIMAL_P', oracledb.DB_TYPE_NUMBER, 16, None, 15, 0, True),
-            ('N_NUMERIC', oracledb.DB_TYPE_NUMBER, 14, None, 10, 2, True),
-            ('N_FLOAT', oracledb.DB_TYPE_NUMBER, 127, None, 126, -127, True),
-            ('N_FLOAT_P', oracledb.DB_TYPE_NUMBER, 127, None, 126, -127, True),
-            ('N_REAL', oracledb.DB_TYPE_NUMBER, 64, None, 63, -127, True),
-            ('N_DOUBLE_PRECISION', oracledb.DB_TYPE_NUMBER, 127, None, 126, -127, True),
-            ('N_BINARY_FLOAT', oracledb.DB_TYPE_NUMBER, 127, None, None, None, True),
-            ('N_BINARY_DOUBLE', oracledb.DB_TYPE_NUMBER, 127, None, None, None, True)
+            ("N_NUMBER", oracledb.DB_TYPE_NUMBER, 127, None, 0, -127, True),
+            ("N_NUMBER_P", oracledb.DB_TYPE_NUMBER, 39, None, 38, 0, True),
+            ("N_NUMBER_PS", oracledb.DB_TYPE_NUMBER, 14, None, 10, 2, True),
+            ("N_INTEGER", oracledb.DB_TYPE_NUMBER, 39, None, 38, 0, True),
+            ("N_SMALLINT", oracledb.DB_TYPE_NUMBER, 39, None, 38, 0, True),
+            ("N_DECIMAL", oracledb.DB_TYPE_NUMBER, 14, None, 10, 2, True),
+            ("N_DECIMAL_P", oracledb.DB_TYPE_NUMBER, 16, None, 15, 0, True),
+            ("N_NUMERIC", oracledb.DB_TYPE_NUMBER, 14, None, 10, 2, True),
+            ("N_FLOAT", oracledb.DB_TYPE_NUMBER, 127, None, 126, -127, True),
+            ("N_FLOAT_P", oracledb.DB_TYPE_NUMBER, 127, None, 126, -127, True),
+            ("N_REAL", oracledb.DB_TYPE_NUMBER, 64, None, 63, -127, True),
+            ("N_DOUBLE_PRECISION", oracledb.DB_TYPE_NUMBER, 127, None, 126, -127, True),
+            ("N_BINARY_FLOAT", oracledb.DB_TYPE_NUMBER, 127, None, None, None, True),
+            ("N_BINARY_DOUBLE", oracledb.DB_TYPE_NUMBER, 127, None, None, None, True),
         ]
 
         response: Response = self.handler.native_query(query_str)
@@ -447,7 +472,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.FLOAT,
             MYSQL_DATA_TYPE.FLOAT,
             MYSQL_DATA_TYPE.FLOAT,
-            MYSQL_DATA_TYPE.FLOAT
+            MYSQL_DATA_TYPE.FLOAT,
         ]
         self.assertEquals(response.mysql_types, excepted_mysql_types)
         for i, input_value in enumerate(input_row):
@@ -468,14 +493,11 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         input_row = (True, False)
         mock_cursor.fetchall.return_value = [input_row]
         mock_cursor.description = [
-            ('T_BOOLEAN', oracledb.DB_TYPE_BOOLEAN, None, None, None, None, True),
-            ('T_BOOL', oracledb.DB_TYPE_BOOLEAN, None, None, None, None, True)
+            ("T_BOOLEAN", oracledb.DB_TYPE_BOOLEAN, None, None, None, None, True),
+            ("T_BOOL", oracledb.DB_TYPE_BOOLEAN, None, None, None, None, True),
         ]
         response: Response = self.handler.native_query(query_str)
-        excepted_mysql_types = [
-            MYSQL_DATA_TYPE.BOOLEAN,
-            MYSQL_DATA_TYPE.BOOLEAN
-        ]
+        excepted_mysql_types = [MYSQL_DATA_TYPE.BOOLEAN, MYSQL_DATA_TYPE.BOOLEAN]
         self.assertEquals(response.mysql_types, excepted_mysql_types)
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[response.data_frame.columns[i]][0]
@@ -518,19 +540,19 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             HEXTORAW('54657374')      -- t_blob
         );
         """
-        input_row = ('Test      ', 'Unicode   ', 'Test', 'Unicode', 'Test', 'Test', 'Test', b'Test', b'Test')
+        input_row = ("Test      ", "Unicode   ", "Test", "Unicode", "Test", "Test", "Test", b"Test", b"Test")
         mock_cursor.fetchall.return_value = [input_row]
 
         mock_cursor.description = [
-            ('T_CHAR', oracledb.DB_TYPE_CHAR, 10, 10, None, None, True),
-            ('T_NCHAR', oracledb.DB_TYPE_NCHAR, 10, 20, None, None, True),
-            ('T_VARCHAR2', oracledb.DB_TYPE_VARCHAR, 100, 100, None, None, True),
-            ('T_NVARCHAR2', oracledb.DB_TYPE_NVARCHAR, 100, 200, None, None, True),
-            ('T_LONG', oracledb.DB_TYPE_LONG, None, None, None, None, True),
-            ('T_CLOB', oracledb.DB_TYPE_LONG, None, None, None, None, True),
-            ('T_NCLOB', oracledb.DB_TYPE_LONG_NVARCHAR, None, None, None, None, True),
-            ('T_RAW', oracledb.DB_TYPE_RAW, 100, 100, None, None, True),
-            ('T_BLOB', oracledb.DB_TYPE_LONG_RAW, None, None, None, None, True)
+            ("T_CHAR", oracledb.DB_TYPE_CHAR, 10, 10, None, None, True),
+            ("T_NCHAR", oracledb.DB_TYPE_NCHAR, 10, 20, None, None, True),
+            ("T_VARCHAR2", oracledb.DB_TYPE_VARCHAR, 100, 100, None, None, True),
+            ("T_NVARCHAR2", oracledb.DB_TYPE_NVARCHAR, 100, 200, None, None, True),
+            ("T_LONG", oracledb.DB_TYPE_LONG, None, None, None, None, True),
+            ("T_CLOB", oracledb.DB_TYPE_LONG, None, None, None, None, True),
+            ("T_NCLOB", oracledb.DB_TYPE_LONG_NVARCHAR, None, None, None, None, True),
+            ("T_RAW", oracledb.DB_TYPE_RAW, 100, 100, None, None, True),
+            ("T_BLOB", oracledb.DB_TYPE_LONG_RAW, None, None, None, None, True),
         ]
         response: Response = self.handler.native_query(query_str)
         excepted_mysql_types = [
@@ -542,7 +564,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.TEXT,
             MYSQL_DATA_TYPE.TEXT,
             MYSQL_DATA_TYPE.BINARY,
-            MYSQL_DATA_TYPE.BINARY
+            MYSQL_DATA_TYPE.BINARY,
         ]
         self.assertEquals(response.mysql_types, excepted_mysql_types)
         for i, input_value in enumerate(input_row):
@@ -583,20 +605,16 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         input_row = (
             datetime.datetime(2023, 10, 15, 0, 0),
             datetime.datetime(2023, 10, 15, 10, 30, 45, 123457),
-            datetime.datetime(2023, 10, 15, 10, 30, 45, 123456)
+            datetime.datetime(2023, 10, 15, 10, 30, 45, 123456),
         )
         mock_cursor.fetchall.return_value = [input_row]
         mock_cursor.description = [
-            ('D_DATE', oracledb.DB_TYPE_DATE, 23, None, None, None, True),
-            ('D_TIMESTAMP', oracledb.DB_TYPE_TIMESTAMP, 23, None, 0, 6, True),
-            ('D_TIMESTAMP_P', oracledb.DB_TYPE_TIMESTAMP, 23, None, 0, 9, True)
+            ("D_DATE", oracledb.DB_TYPE_DATE, 23, None, None, None, True),
+            ("D_TIMESTAMP", oracledb.DB_TYPE_TIMESTAMP, 23, None, 0, 6, True),
+            ("D_TIMESTAMP_P", oracledb.DB_TYPE_TIMESTAMP, 23, None, 0, 9, True),
         ]
         response: Response = self.handler.native_query(query_str)
-        excepted_mysql_types = [
-            MYSQL_DATA_TYPE.DATE,
-            MYSQL_DATA_TYPE.TIMESTAMP,
-            MYSQL_DATA_TYPE.TIMESTAMP
-        ]
+        excepted_mysql_types = [MYSQL_DATA_TYPE.DATE, MYSQL_DATA_TYPE.TIMESTAMP, MYSQL_DATA_TYPE.TIMESTAMP]
         self.assertEquals(response.mysql_types, excepted_mysql_types)
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[response.data_frame.columns[i]][0]
@@ -605,18 +623,15 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         # region test nullable types
         bigint_val = 9223372036854775807
-        input_rows = [
-            (bigint_val, True),
-            (None, None)
-        ]
+        input_rows = [(bigint_val, True), (None, None)]
         mock_cursor.fetchall.return_value = input_rows
         mock_cursor.description = [
-            ('N_BIGINT', oracledb.DB_TYPE_NUMBER, 39, None, 17, 0, True),   # set 17 jsut to force cast to Int64
-            ('T_BOOLEAN', oracledb.DB_TYPE_BOOLEAN, None, None, None, None, True)
+            ("N_BIGINT", oracledb.DB_TYPE_NUMBER, 39, None, 17, 0, True),  # set 17 jsut to force cast to Int64
+            ("T_BOOLEAN", oracledb.DB_TYPE_BOOLEAN, None, None, None, None, True),
         ]
         response: Response = self.handler.native_query(query_str)
-        self.assertEquals(response.data_frame.dtypes[0], 'Int64')
-        self.assertEquals(response.data_frame.dtypes[1], 'boolean')
+        self.assertEquals(response.data_frame.dtypes[0], "Int64")
+        self.assertEquals(response.data_frame.dtypes[1], "boolean")
         self.assertEquals(response.data_frame.iloc[0, 0], bigint_val)
         self.assertEquals(response.data_frame.iloc[0, 1], True)
         self.assertTrue(response.data_frame.iloc[1, 0] is pd.NA)
@@ -624,5 +639,5 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         # endregion
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -124,7 +124,6 @@ jobs:
         run: |
           # Install dev requirements and build our pip package
           uv pip install -r requirements/requirements-dev.txt
-          uv pip install setuptools==75.8.2
           python setup.py sdist
 
           # Install from the pip package
@@ -137,6 +136,7 @@ jobs:
     needs: [changes, matrix_prep, code_checking]
     strategy:
       matrix: ${{fromJson(needs.matrix_prep.outputs.matrix)}}
+      fail-fast: false
     runs-on: ${{ matrix.runs_on }}
     if: github.ref_type == 'branch'
     steps:
@@ -191,12 +191,4 @@ jobs:
       - name: Run unit tests
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
-          if [ "$RUNNER_OS" == "Linux" ]; then
-            # We have to run executor tests separately because they do weird things that break everything else
-            env PYTHONPATH=./ pytest -xs tests/unit/executor
-
-            env PYTHONPATH=./:parser_tests/tests pytest -xs tests/unit/render/
-            env PYTHONPATH=./ pytest -xs --ignore=tests/unit/handlers --ignore=tests/unit/executor --ignore=tests/unit/render tests/unit/
-          fi
-          
-          python -m unittest discover -s tests/unit/handlers
+          make unit_tests

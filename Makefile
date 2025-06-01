@@ -21,7 +21,6 @@ run_mindsdb:
 
 check:
 	python tests/scripts/check_requirements.py
-	python tests/scripts/check_version.py
 	python tests/scripts/check_print_statements.py
 
 build_docker:

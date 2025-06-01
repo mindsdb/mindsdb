@@ -4,7 +4,7 @@ from typing import Dict, List
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
-    HandlerResponse as Response,
+    HandlerResponse,
     RESPONSE_TYPE
 )
 from mindsdb.utilities import log
@@ -86,11 +86,11 @@ class CoinMarketCapHandler(APIHandler):
         """
         return self.connect()
 
-    def native_query(self, query: str) -> Response:
+    def native_query(self, query: str) -> HandlerResponse:
         """Execute a native query (not implemented for API handlers usually)"""
         raise NotImplementedError("Native queries not supported for CoinMarketCap API")
 
-    def get_tables(self) -> Response:
+    def get_tables(self) -> HandlerResponse:
         """Return list of entities that can be used as tables
         
         Returns:
@@ -111,12 +111,12 @@ class CoinMarketCapHandler(APIHandler):
         # Convert to DataFrame for proper response format
         result_df = pd.DataFrame(tables)
         
-        return Response(
+        return HandlerResponse(
             RESPONSE_TYPE.TABLE,
             result_df
         )
 
-    def get_columns(self, table_name: str) -> Response:
+    def get_columns(self, table_name: str) -> HandlerResponse:
         """Returns a list of entity columns
         
         Args:
@@ -128,7 +128,7 @@ class CoinMarketCapHandler(APIHandler):
         """
         # Check if table exists
         if not self._table_exists(table_name):
-            return Response(
+            return HandlerResponse(
                 RESPONSE_TYPE.ERROR,
                 error_message=f"Table '{table_name}' not found"
             )
@@ -159,7 +159,7 @@ class CoinMarketCapHandler(APIHandler):
             
             result_df = pd.DataFrame(result_columns)
             
-            return Response(
+            return HandlerResponse(
                 RESPONSE_TYPE.TABLE,
                 result_df
             )
@@ -167,7 +167,7 @@ class CoinMarketCapHandler(APIHandler):
         except Exception as e:
             error_msg = f"Error getting columns for table '{table_name}': {str(e)}"
             logger.error(error_msg)
-            return Response(
+            return HandlerResponse(
                 RESPONSE_TYPE.ERROR,
                 error_message=error_msg
             )

@@ -1,15 +1,12 @@
-# CoinMarketCap Table Classes - Required Structure
-# Each table class MUST implement these methods
-
 import pandas as pd
 from mindsdb.integrations.libs.api_handler import APITable
-from mindsdb.integrations.libs.response import Response, RESPONSE_TYPE
+from mindsdb.integrations.libs.response import HandlerResponse, RESPONSE_TYPE
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 
 class ListingTable(APITable):  # Note: Should be "ListingTable" not "ListingsTable"
     """Table for cryptocurrency listings (/v1/cryptocurrency/listings/latest)"""
     
-    def select(self, query) -> Response:
+    def select(self, query) -> HandlerResponse:
         """Handle SELECT queries - REQUIRED METHOD"""
         try:
             # Extract WHERE conditions
@@ -44,12 +41,12 @@ class ListingTable(APITable):  # Note: Should be "ListingTable" not "ListingsTab
             # Parse response into DataFrame
             df = self._parse_listings_data(data)
             
-            return Response(RESPONSE_TYPE.TABLE, df)
+            return HandlerResponse(RESPONSE_TYPE.TABLE, df)
             
         except Exception as e:
-            return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
+            return HandlerResponse(RESPONSE_TYPE.ERROR, error_message=str(e))
     
-    def get_columns(self) -> Response:
+    def get_columns(self) -> HandlerResponse:
         """Return column definitions - REQUIRED METHOD"""
         columns = [
             {'name': 'id', 'type': 'integer', 'description': 'CoinMarketCap cryptocurrency ID'},
@@ -69,7 +66,7 @@ class ListingTable(APITable):  # Note: Should be "ListingTable" not "ListingsTab
             {'name': 'last_updated', 'type': 'datetime', 'description': 'Last update timestamp'}
         ]
         
-        return Response(RESPONSE_TYPE.TABLE, pd.DataFrame(columns))
+        return HandlerResponse(RESPONSE_TYPE.TABLE, pd.DataFrame(columns))
     
     def _parse_listings_data(self, data: dict) -> pd.DataFrame:
         """Convert CoinMarketCap API response to DataFrame"""
@@ -102,7 +99,7 @@ class ListingTable(APITable):  # Note: Should be "ListingTable" not "ListingsTab
 class QuotesTable(APITable):
     """Table for specific cryptocurrency quotes (/v1/cryptocurrency/quotes/latest)"""
     
-    def select(self, query) -> Response:
+    def select(self, query) -> HandlerResponse:
         """Handle SELECT queries for specific crypto quotes"""
         try:
             conditions = extract_comparison_conditions(query.where)
@@ -139,12 +136,12 @@ class QuotesTable(APITable):
             # Parse response
             df = self._parse_quotes_data(data)
             
-            return Response(RESPONSE_TYPE.TABLE, df)
+            return HandlerResponse(RESPONSE_TYPE.TABLE, df)
             
         except Exception as e:
-            return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
+            return HandlerResponse(RESPONSE_TYPE.ERROR, error_message=str(e))
     
-    def get_columns(self) -> Response:
+    def get_columns(self) -> HandlerResponse:
         """Return column definitions for quotes table"""
         columns = [
             {'name': 'id', 'type': 'integer', 'description': 'Cryptocurrency ID'},
@@ -159,7 +156,7 @@ class QuotesTable(APITable):
             {'name': 'last_updated', 'type': 'datetime', 'description': 'Last updated'}
         ]
         
-        return Response(RESPONSE_TYPE.TABLE, pd.DataFrame(columns))
+        return HandlerResponse(RESPONSE_TYPE.TABLE, pd.DataFrame(columns))
     
     def _parse_quotes_data(self, data: dict) -> pd.DataFrame:
         """Convert quotes API response to DataFrame"""
@@ -194,7 +191,7 @@ class QuotesTable(APITable):
 class InfoTable(APITable):
     """Table for cryptocurrency metadata (/v1/cryptocurrency/info)"""
     
-    def select(self, query) -> Response:
+    def select(self, query) -> HandlerResponse:
         """Handle SELECT queries for crypto info"""
         try:
             conditions = extract_comparison_conditions(query.where)
@@ -223,12 +220,12 @@ class InfoTable(APITable):
             
             df = self._parse_info_data(data)
             
-            return Response(RESPONSE_TYPE.TABLE, df)
+            return HandlerResponse(RESPONSE_TYPE.TABLE, df)
             
         except Exception as e:
-            return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
+            return HandlerResponse(RESPONSE_TYPE.ERROR, error_message=str(e))
     
-    def get_columns(self) -> Response:
+    def get_columns(self) -> HandlerResponse:
         """Return column definitions for info table"""
         columns = [
             {'name': 'id', 'type': 'integer', 'description': 'Cryptocurrency ID'},
@@ -243,7 +240,7 @@ class InfoTable(APITable):
             {'name': 'date_added', 'type': 'datetime', 'description': 'Date added to CMC'}
         ]
         
-        return Response(RESPONSE_TYPE.TABLE, pd.DataFrame(columns))
+        return HandlerResponse(RESPONSE_TYPE.TABLE, pd.DataFrame(columns))
     
     def _parse_info_data(self, data: dict) -> pd.DataFrame:
         """Convert info API response to DataFrame"""
@@ -273,7 +270,7 @@ class InfoTable(APITable):
 class GlobalMetricsTable(APITable):
     """Table for global market metrics (/v1/global-metrics/quotes/latest)"""
     
-    def select(self, query) -> Response:
+    def select(self, query) -> HandlerResponse:
         """Handle SELECT queries for global metrics"""
         try:
             # Global metrics doesn't usually need parameters
@@ -283,12 +280,12 @@ class GlobalMetricsTable(APITable):
             
             df = self._parse_global_data(data)
             
-            return Response(RESPONSE_TYPE.TABLE, df)
+            return HandlerResponse(RESPONSE_TYPE.TABLE, df)
             
         except Exception as e:
-            return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
+            return HandlerResponse(RESPONSE_TYPE.ERROR, error_message=str(e))
     
-    def get_columns(self) -> Response:
+    def get_columns(self) -> HandlerResponse:
         """Return column definitions for global metrics table"""
         columns = [
             {'name': 'active_cryptocurrencies', 'type': 'integer', 'description': 'Number of active cryptocurrencies'},
@@ -303,7 +300,7 @@ class GlobalMetricsTable(APITable):
             {'name': 'last_updated', 'type': 'datetime', 'description': 'Last updated'}
         ]
         
-        return Response(RESPONSE_TYPE.TABLE, pd.DataFrame(columns))
+        return HandlerResponse(RESPONSE_TYPE.TABLE, pd.DataFrame(columns))
     
     def _parse_global_data(self, data: dict) -> pd.DataFrame:
         """Convert global metrics API response to DataFrame"""

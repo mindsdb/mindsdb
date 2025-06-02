@@ -85,10 +85,64 @@ class CoinMarketCapHandler(APIHandler):
             StatusResponse
         """
         return self.connect()
+    
+    def query(self, query) -> HandlerResponse:
+        """
+        Execute a SQL query against the CoinMarketCap API
+        
+        Args:
+            query: SQL query object (parsed by MindsDB)
+            
+        Returns:
+            HandlerResponse: Query result
+        """
+        try:
+            # Ensure we're connected
+            if not self.is_connected:
+                connection_result = self.connect()
+                if not connection_result.success:
+                    return HandlerResponse(
+                        RESPONSE_TYPE.ERROR,
+                        error_message=f"Failed to connect: {connection_result.error_message}"
+                    )
+            
+            # Get the table name from the query
+            table_name = self._normalize_table_name(query.from_table)
+            
+            # Check if table exists
+            if not self._table_exists(table_name):
+                return HandlerResponse(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=f"Table '{table_name}' not found. Available tables: {', '.join(self._get_table_names())}"
+                )
+            
+            # Get the table instance
+            table = self._get_table(table_name)
+            if table is None:
+                return HandlerResponse(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=f"Failed to get table instance for '{table_name}'"
+                )
+            
+            # Execute the query on the table
+            return table.select(query)
+            
+        except Exception as e:
+            logger.error(f"Query execution failed: {str(e)}")
+            return HandlerResponse(
+                RESPONSE_TYPE.ERROR,
+                error_message=f"Query execution failed: {str(e)}"
+            )
 
     def native_query(self, query: str) -> HandlerResponse:
         """Execute a native query (not implemented for API handlers usually)"""
         raise NotImplementedError("Native queries not supported for CoinMarketCap API")
+
+    def _normalize_table_name(self, table_name) -> str:
+        """Convert table name (string or Identifier) to string"""
+        if hasattr(table_name, 'parts'):
+            return table_name.parts[-1]
+        return str(table_name)
 
     def get_tables(self) -> HandlerResponse:
         """Return list of entities that can be used as tables
@@ -178,21 +232,24 @@ class CoinMarketCapHandler(APIHandler):
 
     def _table_exists(self, table_name: str) -> bool:
         """Check if table exists"""
-        return table_name in self._tables
+        table_name_str = self._normalize_table_name(table_name)
+        return table_name_str in self._tables
 
-    def _get_table(self, table_name: str):
+    def _get_table(self, table_name):
         """Get table instance by name"""
-        return self._tables.get(table_name)
+        table_name_str = self._normalize_table_name(table_name)
+        return self._tables.get(table_name_str)
 
     def _get_table_description(self, table_name: str) -> str:
         """Get description for a table"""
+        table_name_str = self._normalize_table_name(table_name)  # Add this line for consistency
         descriptions = {
             'listings': 'Latest cryptocurrency listings with market data',
             'quotes': 'Latest price quotes for specific cryptocurrencies',
             'info': 'Metadata information about cryptocurrencies',
             'global_metrics': 'Global cryptocurrency market metrics'
         }
-        return descriptions.get(table_name, f'CoinMarketCap {table_name} data')
+        return descriptions.get(table_name_str, f'CoinMarketCap {table_name_str} data')
 
     def call_coinmarketcap_api(self, endpoint: str, params: dict = None) -> dict:
         """

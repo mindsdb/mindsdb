@@ -1,5 +1,6 @@
 import copy
 import os
+from typing import List
 
 from openai import OpenAI, AzureOpenAI
 
@@ -13,7 +14,7 @@ class LLMClient:
     It chooses openai client or litellm handler depending on the config
     """
 
-    def __init__(self, llm_params=None):
+    def __init__(self, llm_params: dict = None):
         params = copy.deepcopy(config.get("default_llm", {}))
 
         if llm_params:
@@ -50,14 +51,18 @@ class LLMClient:
 
             self.client = module.Handler
 
-    def completion(self, messages):
+    def completion(self, messages: List[dict]) -> str:
+        """
+        Call LLM completion and get response
+        """
         params = self.params
 
         if self.provider in ("azure_openai", "openai"):
-            return self.client.chat.completions.create(
+            response = self.client.chat.completions.create(
                 model=params["model_name"],
                 messages=messages,
             )
+            return response.choices[0].message.content
         else:
             kwargs = params.copy()
             model = kwargs.pop("model_name")
@@ -66,4 +71,5 @@ class LLMClient:
             if base_url is not None:
                 kwargs["api_base"] = base_url
 
-            return self.client.completion(model=f"{self.provider}/{model}", messages=messages, args=kwargs)
+            response = self.client.completion(model=f"{self.provider}/{model}", messages=messages, args=kwargs)
+            return response.choices[0].message.content

@@ -59,6 +59,7 @@ def set_litellm_embedding(mock_litellm_embedding, response):
 
 
 class TestAgent(BaseExecutorDummyML):
+    @pytest.mark.slow
     def test_mindsdb_provider(self):
         agent_response = "how can I help you"
         # model
@@ -572,6 +573,7 @@ class TestKB(BaseExecutorDummyML):
         assert len(ret) == 2
         assert set(ret["id"]) == {"9016", "9023"}
 
+    @pytest.mark.slow
     @pytest.mark.skipif(sys.platform == "win32", reason="Causes hard crash on windows.")
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")

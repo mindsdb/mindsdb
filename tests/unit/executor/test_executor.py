@@ -31,6 +31,7 @@ class Test(BaseExecutorMockPredictor):
         super().setup_method()
         self.set_executor(mock_lightwood=True, mock_model_controller=True, import_dummy_ml=True)
 
+    @pytest.mark.slow
     def test_describe(self):
         self.execute("CREATE PROJECT proj;")
 
@@ -974,6 +975,7 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
         assert mock_handler().native_query.call_args[0][0] == "select * from tasks"
         assert ret.data.to_lists()[0][0] == 3
 
+    @pytest.mark.slow
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_view_native_query(self, mock_handler):
         data = [[3, "y"], [1, "y"]]

@@ -669,6 +669,22 @@ FROM sample_data.orders;
 ```
 </Note>
 
+## `CREATE INDEX ON KNOWLEDGE_BASE` Syntax
+
+Users can create index on the knowledge base to speed up the search operations.
+
+```sql
+CREATE INDEX ON KNOWLEDGE_BASE my_kb;
+```
+
+<Warning>
+Note that this feature works only when PGVector is used as the [storage of the knowledge base](/mindsdb_sql/knowledge-bases#storage).
+</Warning>
+
+Upon executing this statement, an index is created on the knowledge base's underlying vector store. This is essentially a database index created on the vector database.
+
+Note that having an index on the knowledge base may reduce the speed of the insert operations. Therefore, it is recommended to insert bulk data into the knowledge base before creating an index. The index improves performance of querying the knowledge base, while it may slow down subsequent data inserts.
+
 ## `SELECT FROM KB` Syntax
 
 Knowledge bases provide an abstraction that enables users to see the stored data.

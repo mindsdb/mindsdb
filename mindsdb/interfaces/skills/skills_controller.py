@@ -6,14 +6,15 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.interfaces.data_catalog.data_catalog_loader import DataCatalogLoader
 from mindsdb.utilities.config import config
 
 
-default_project = config.get('default_project')
+default_project = config.get("default_project")
 
 
 class SkillsController:
-    '''Handles CRUD operations at the database level for Skills'''
+    """Handles CRUD operations at the database level for Skills"""
 
     def __init__(self, project_controller: ProjectController = None):
         if project_controller is None:
@@ -21,7 +22,7 @@ class SkillsController:
         self.project_controller = project_controller
 
     def get_skill(self, skill_name: str, project_name: str = default_project) -> Optional[db.Skills]:
-        '''
+        """
         Gets a skill by name. Skills are expected to have unique names.
 
         Parameters:
@@ -33,17 +34,17 @@ class SkillsController:
 
         Raises:
             ValueError: If `project_name` does not exist
-        '''
+        """
 
         project = self.project_controller.get(name=project_name)
         return db.Skills.query.filter(
             func.lower(db.Skills.name) == func.lower(skill_name),
             db.Skills.project_id == project.id,
-            db.Skills.deleted_at == null()
+            db.Skills.deleted_at == null(),
         ).first()
 
     def get_skills(self, project_name: Optional[str]) -> List[dict]:
-        '''
+        """
         Gets all skills in a project.
 
         Parameters:
@@ -54,7 +55,7 @@ class SkillsController:
 
         Raises:
             ValueError: If `project_name` does not exist
-        '''
+        """
 
         if project_name is None:
             projects = self.project_controller.get_list()
@@ -63,23 +64,14 @@ class SkillsController:
             project = self.project_controller.get(name=project_name)
             project_ids = [project.id]
 
-        query = (
-            db.session.query(db.Skills)
-            .filter(
-                db.Skills.project_id.in_(project_ids),
-                db.Skills.deleted_at == null()
-            )
+        query = db.session.query(db.Skills).filter(
+            db.Skills.project_id.in_(project_ids), db.Skills.deleted_at == null()
         )
 
         return query.all()
 
-    def add_skill(
-            self,
-            name: str,
-            project_name: str,
-            type: str,
-            params: Dict[str, str] = {}) -> db.Skills:
-        '''
+    def add_skill(self, name: str, project_name: str, type: str, params: Dict[str, str] = {}) -> db.Skills:
+        """
         Adds a skill to the database.
 
         Parameters:
@@ -93,7 +85,7 @@ class SkillsController:
 
         Raises:
             ValueError: If `project_name` does not exist or skill already exists
-        '''
+        """
         if project_name is None:
             project_name = default_project
         project = self.project_controller.get(name=project_name)
@@ -101,7 +93,14 @@ class SkillsController:
         skill = self.get_skill(name, project_name)
 
         if skill is not None:
-            raise ValueError(f'Skill with name already exists: {name}')
+            raise ValueError(f"Skill with name already exists: {name}")
+
+        # Load metadata to data catalog (if enabled) if the skill is Text-to-SQL.
+        if config.get("data_catalog", {}).get("enabled", False) and type == "sql":
+            data_catalog_loader = DataCatalogLoader(
+                database_name=params["database"], table_names=params["tables"] if "tables" in params else None
+            )
+            data_catalog_loader.load_metadata()
 
         new_skill = db.Skills(
             name=name,
@@ -115,13 +114,14 @@ class SkillsController:
         return new_skill
 
     def update_skill(
-            self,
-            skill_name: str,
-            new_name: str = None,
-            project_name: str = default_project,
-            type: str = None,
-            params: Dict[str, str] = None):
-        '''
+        self,
+        skill_name: str,
+        new_name: str = None,
+        project_name: str = default_project,
+        type: str = None,
+        params: Dict[str, str] = None,
+    ):
+        """
         Updates an existing skill in the database.
 
         Parameters:
@@ -136,12 +136,12 @@ class SkillsController:
 
         Raises:
             ValueError: If `project_name` does not exist or skill doesn't exist
-        '''
+        """
 
         existing_skill = self.get_skill(skill_name, project_name)
         if existing_skill is None:
-            raise ValueError(f'Skill with name not found: {skill_name}')
-        if isinstance(existing_skill.params, dict) and existing_skill.params.get('is_demo') is True:
+            raise ValueError(f"Skill with name not found: {skill_name}")
+        if isinstance(existing_skill.params, dict) and existing_skill.params.get("is_demo") is True:
             raise ValueError("It is forbidden to change properties of the demo object")
 
         if new_name is not None:
@@ -157,14 +157,14 @@ class SkillsController:
             existing_skill.params = params
             # Some versions of SQL Alchemy won't handle JSON updates correctly without this.
             # See: https://docs.sqlalchemy.org/en/20/orm/session_api.html#sqlalchemy.orm.attributes.flag_modified
-            flag_modified(existing_skill, 'params')
+            flag_modified(existing_skill, "params")
 
         db.session.commit()
 
         return existing_skill
 
     def delete_skill(self, skill_name: str, project_name: str = default_project):
-        '''
+        """
         Deletes a skill by name.
 
         Parameters:
@@ -173,12 +173,12 @@ class SkillsController:
 
         Raises:
             ValueError: If `project_name` does not exist or skill doesn't exist
-        '''
+        """
 
         skill = self.get_skill(skill_name, project_name)
         if skill is None:
             raise ValueError(f"Skill with name doesn't exist: {skill_name}")
-        if isinstance(skill.params, dict) and skill.params.get('is_demo') is True:
+        if isinstance(skill.params, dict) and skill.params.get("is_demo") is True:
             raise ValueError("Unable to delete demo object")
         skill.deleted_at = datetime.datetime.now()
         db.session.commit()

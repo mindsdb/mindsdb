@@ -1286,6 +1286,12 @@ class ExecuteCommands:
         return ExecuteAnswer()
 
     def answer_create_kb(self, statement: CreateKnowledgeBase, database_name: str):
+        if statement.model:
+            raise ExecutorException(
+                "Creating a knowledge base using pre-existing models is no longer supported.\n"
+                "Please pass the model parameters as a JSON object in the embedding_model field."
+            )
+
         project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
 
         if statement.storage is not None:
@@ -1304,7 +1310,7 @@ class ExecuteCommands:
         _ = self.session.kb_controller.add(
             name=kb_name,
             project_name=project_name,
-            embedding_model=statement.model,
+            # embedding_model=statement.model,
             storage=statement.storage,
             params=statement.params,
             if_not_exists=statement.if_not_exists,

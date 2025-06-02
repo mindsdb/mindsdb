@@ -171,47 +171,75 @@ class CoinMarketCapHandler(APIHandler):
         )
 
     def get_columns(self, table_name: str) -> HandlerResponse:
-        """Returns a list of entity columns
-        
-        Args:
-            table_name (str): name of one of tables returned by self.get_tables()
-            
-        Returns:
-            Response: Should have same columns as information_schema.columns
-                     Column 'COLUMN_NAME' is mandatory, other is optional.
-        """
-        # Check if table exists
-        if not self._table_exists(table_name):
-            return HandlerResponse(
-                RESPONSE_TYPE.ERROR,
-                error_message=f"Table '{table_name}' not found"
-            )
-        
-        # Get table instance and its columns
-        table = self._get_table(table_name)
-        
+        """Returns a list of entity columns"""
         try:
+            # Normalize the table name in case it's an Identifier
+            table_name_str = self._normalize_table_name(table_name)
+            logger.info(f"Getting columns for table: '{table_name_str}'")
+            
+            # Check if table exists
+            if not self._table_exists(table_name_str):
+                return HandlerResponse(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=f"Table '{table_name_str}' not found"
+                )
+            
+            # Get table instance and its columns
+            table = self._get_table(table_name_str)
+            if table is None:
+                return HandlerResponse(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=f"Failed to get table instance for '{table_name_str}'"
+                )
+            
             # Get column definitions from the table
+            logger.info(f"Calling get_columns on table: {type(table).__name__}")
             columns_response = table.get_columns()
             
             if columns_response.type == RESPONSE_TYPE.ERROR:
                 return columns_response
                 
             columns_df = columns_response.data_frame
+            logger.info(f"Table returned DataFrame with shape: {columns_df.shape}")
+            logger.info(f"DataFrame columns: {list(columns_df.columns)}")
+            logger.info(f"DataFrame head:\n{columns_df.head()}")
+            
+            # Check if the DataFrame has the expected columns
+            expected_cols = ['name', 'type', 'description']
+            missing_cols = [col for col in expected_cols if col not in columns_df.columns]
+            if missing_cols:
+                logger.error(f"Missing columns in table response: {missing_cols}")
+                return HandlerResponse(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=f"Table response missing columns: {missing_cols}"
+                )
             
             # Transform to information_schema.columns format
             result_columns = []
-            for _, row in columns_df.iterrows():
+            for idx, row in columns_df.iterrows():
                 result_columns.append({
-                    'COLUMN_NAME': row['name'],
-                    'DATA_TYPE': row['type'],
+                    'COLUMN_NAME': str(row['name']),
+                    'DATA_TYPE': str(row['type']), 
                     'IS_NULLABLE': 'YES',
                     'COLUMN_DEFAULT': None,
-                    'COLUMN_COMMENT': row.get('description', ''),
-                    'ORDINAL_POSITION': len(result_columns) + 1
+                    'COLUMN_COMMENT': str(row.get('description', '')),
+                    'ORDINAL_POSITION': idx + 1
                 })
             
+            logger.info(f"Created {len(result_columns)} result columns")
+            
+            # Create DataFrame with explicit column order and ensure proper structure
             result_df = pd.DataFrame(result_columns)
+            
+            # Ensure we have all required columns in the right order
+            required_columns = ['COLUMN_NAME', 'DATA_TYPE', 'IS_NULLABLE', 'COLUMN_DEFAULT', 'COLUMN_COMMENT', 'ORDINAL_POSITION']
+            
+            # Reorder columns to match expected format
+            result_df = result_df[required_columns]
+            
+            logger.info(f"Final DataFrame shape: {result_df.shape}")
+            logger.info(f"Final DataFrame columns: {list(result_df.columns)}")
+            logger.info(f"Sample data:\n{result_df.head()}")
             
             return HandlerResponse(
                 RESPONSE_TYPE.TABLE,
@@ -220,7 +248,7 @@ class CoinMarketCapHandler(APIHandler):
             
         except Exception as e:
             error_msg = f"Error getting columns for table '{table_name}': {str(e)}"
-            logger.error(error_msg)
+            logger.error(error_msg, exc_info=True)
             return HandlerResponse(
                 RESPONSE_TYPE.ERROR,
                 error_message=error_msg

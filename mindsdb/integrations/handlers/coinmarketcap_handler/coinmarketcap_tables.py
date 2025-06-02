@@ -1,7 +1,10 @@
 import pandas as pd
+from mindsdb.utilities import log
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.libs.response import HandlerResponse, RESPONSE_TYPE
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
+
+logger = log.getLogger(__name__)
 
 class ListingTable(APITable):  # Note: Should be "ListingTable" not "ListingsTable"
     """Table for cryptocurrency listings (/v1/cryptocurrency/listings/latest)"""
@@ -48,25 +51,36 @@ class ListingTable(APITable):  # Note: Should be "ListingTable" not "ListingsTab
     
     def get_columns(self) -> HandlerResponse:
         """Return column definitions - REQUIRED METHOD"""
-        columns = [
-            {'name': 'id', 'type': 'integer', 'description': 'CoinMarketCap cryptocurrency ID'},
-            {'name': 'name', 'type': 'string', 'description': 'Cryptocurrency name'},
-            {'name': 'symbol', 'type': 'string', 'description': 'Cryptocurrency symbol'},
-            {'name': 'slug', 'type': 'string', 'description': 'URL-friendly name'},
-            {'name': 'cmc_rank', 'type': 'integer', 'description': 'CoinMarketCap ranking'},
-            {'name': 'price', 'type': 'float', 'description': 'Current price in USD'},
-            {'name': 'volume_24h', 'type': 'float', 'description': '24-hour trading volume'},
-            {'name': 'market_cap', 'type': 'float', 'description': 'Market capitalization'},
-            {'name': 'percent_change_1h', 'type': 'float', 'description': '1-hour price change %'},
-            {'name': 'percent_change_24h', 'type': 'float', 'description': '24-hour price change %'},
-            {'name': 'percent_change_7d', 'type': 'float', 'description': '7-day price change %'},
-            {'name': 'circulating_supply', 'type': 'float', 'description': 'Circulating supply'},
-            {'name': 'total_supply', 'type': 'float', 'description': 'Total supply'},
-            {'name': 'max_supply', 'type': 'float', 'description': 'Maximum supply'},
-            {'name': 'last_updated', 'type': 'datetime', 'description': 'Last update timestamp'}
-        ]
-        
-        return HandlerResponse(RESPONSE_TYPE.TABLE, pd.DataFrame(columns))
+        try:
+            columns_data = [
+                {'name': 'id', 'type': 'integer', 'description': 'CoinMarketCap cryptocurrency ID'},
+                {'name': 'name', 'type': 'string', 'description': 'Cryptocurrency name'},
+                {'name': 'symbol', 'type': 'string', 'description': 'Cryptocurrency symbol'},
+                {'name': 'slug', 'type': 'string', 'description': 'URL-friendly name'},
+                {'name': 'cmc_rank', 'type': 'integer', 'description': 'CoinMarketCap ranking'},
+                {'name': 'price', 'type': 'float', 'description': 'Current price in USD'},
+                {'name': 'volume_24h', 'type': 'float', 'description': '24-hour trading volume'},
+                {'name': 'market_cap', 'type': 'float', 'description': 'Market capitalization'},
+                {'name': 'percent_change_1h', 'type': 'float', 'description': '1-hour price change %'},
+                {'name': 'percent_change_24h', 'type': 'float', 'description': '24-hour price change %'},
+                {'name': 'percent_change_7d', 'type': 'float', 'description': '7-day price change %'},
+                {'name': 'circulating_supply', 'type': 'float', 'description': 'Circulating supply'},
+                {'name': 'total_supply', 'type': 'float', 'description': 'Total supply'},
+                {'name': 'max_supply', 'type': 'float', 'description': 'Maximum supply'},
+                {'name': 'last_updated', 'type': 'datetime', 'description': 'Last update timestamp'}
+            ]
+            
+            # FIXED: Explicitly specify column names
+            df = pd.DataFrame(columns_data, columns=['name', 'type', 'description'])
+            
+            logger.info(f"ListingTable.get_columns returning DataFrame with shape: {df.shape}")
+            logger.info(f"DataFrame columns: {list(df.columns)}")
+            
+            return HandlerResponse(RESPONSE_TYPE.TABLE, df)
+            
+        except Exception as e:
+            logger.error(f"Error in ListingTable.get_columns: {str(e)}")
+            return HandlerResponse(RESPONSE_TYPE.ERROR, error_message=str(e))
     
     def _parse_listings_data(self, data: dict) -> pd.DataFrame:
         """Convert CoinMarketCap API response to DataFrame"""
@@ -143,21 +157,31 @@ class QuotesTable(APITable):
     
     def get_columns(self) -> HandlerResponse:
         """Return column definitions for quotes table"""
-        columns = [
-            {'name': 'id', 'type': 'integer', 'description': 'Cryptocurrency ID'},
-            {'name': 'name', 'type': 'string', 'description': 'Cryptocurrency name'},
-            {'name': 'symbol', 'type': 'string', 'description': 'Cryptocurrency symbol'},
-            {'name': 'price', 'type': 'float', 'description': 'Current price'},
-            {'name': 'volume_24h', 'type': 'float', 'description': '24-hour volume'},
-            {'name': 'market_cap', 'type': 'float', 'description': 'Market cap'},
-            {'name': 'percent_change_1h', 'type': 'float', 'description': '1h change %'},
-            {'name': 'percent_change_24h', 'type': 'float', 'description': '24h change %'},
-            {'name': 'percent_change_7d', 'type': 'float', 'description': '7d change %'},
-            {'name': 'last_updated', 'type': 'datetime', 'description': 'Last updated'}
-        ]
+        try:
+            columns_data = [
+                {'name': 'id', 'type': 'integer', 'description': 'Cryptocurrency ID'},
+                {'name': 'name', 'type': 'string', 'description': 'Cryptocurrency name'},
+                {'name': 'symbol', 'type': 'string', 'description': 'Cryptocurrency symbol'},
+                {'name': 'price', 'type': 'float', 'description': 'Current price'},
+                {'name': 'volume_24h', 'type': 'float', 'description': '24-hour volume'},
+                {'name': 'market_cap', 'type': 'float', 'description': 'Market cap'},
+                {'name': 'percent_change_1h', 'type': 'float', 'description': '1h change %'},
+                {'name': 'percent_change_24h', 'type': 'float', 'description': '24h change %'},
+                {'name': 'percent_change_7d', 'type': 'float', 'description': '7d change %'},
+                {'name': 'last_updated', 'type': 'datetime', 'description': 'Last updated'}
+            ]
+            
+            df = pd.DataFrame(columns_data, columns=['name', 'type', 'description'])
+            
+            logger.info(f"QuotesTable.get_columns returning DataFrame with shape: {df.shape}")
+            logger.info(f"DataFrame columns: {list(df.columns)}")
+            
+            return HandlerResponse(RESPONSE_TYPE.TABLE, df)
+            
+        except Exception as e:
+            logger.error(f"Error in QuotesTable.get_columns: {str(e)}")
+            return HandlerResponse(RESPONSE_TYPE.ERROR, error_message=str(e))
         
-        return HandlerResponse(RESPONSE_TYPE.TABLE, pd.DataFrame(columns))
-    
     def _parse_quotes_data(self, data: dict) -> pd.DataFrame:
         """Convert quotes API response to DataFrame"""
         rows = []
@@ -227,20 +251,31 @@ class InfoTable(APITable):
     
     def get_columns(self) -> HandlerResponse:
         """Return column definitions for info table"""
-        columns = [
-            {'name': 'id', 'type': 'integer', 'description': 'Cryptocurrency ID'},
-            {'name': 'name', 'type': 'string', 'description': 'Cryptocurrency name'},
-            {'name': 'symbol', 'type': 'string', 'description': 'Cryptocurrency symbol'},
-            {'name': 'category', 'type': 'string', 'description': 'Category'},
-            {'name': 'description', 'type': 'string', 'description': 'Description'},
-            {'name': 'website', 'type': 'string', 'description': 'Official website'},
-            {'name': 'technical_doc', 'type': 'string', 'description': 'Technical documentation'},
-            {'name': 'twitter', 'type': 'string', 'description': 'Twitter username'},
-            {'name': 'reddit', 'type': 'string', 'description': 'Reddit community'},
-            {'name': 'date_added', 'type': 'datetime', 'description': 'Date added to CMC'}
-        ]
-        
-        return HandlerResponse(RESPONSE_TYPE.TABLE, pd.DataFrame(columns))
+        try:
+            columns_data = [
+                {'name': 'id', 'type': 'integer', 'description': 'Cryptocurrency ID'},
+                {'name': 'name', 'type': 'string', 'description': 'Cryptocurrency name'},
+                {'name': 'symbol', 'type': 'string', 'description': 'Cryptocurrency symbol'},
+                {'name': 'category', 'type': 'string', 'description': 'Category'},
+                {'name': 'description', 'type': 'string', 'description': 'Description'},
+                {'name': 'website', 'type': 'string', 'description': 'Official website'},
+                {'name': 'technical_doc', 'type': 'string', 'description': 'Technical documentation'},
+                {'name': 'twitter', 'type': 'string', 'description': 'Twitter username'},
+                {'name': 'reddit', 'type': 'string', 'description': 'Reddit community'},
+                {'name': 'date_added', 'type': 'datetime', 'description': 'Date added to CMC'}
+            ]
+            
+            # FIXED: Explicitly specify column names
+            df = pd.DataFrame(columns_data, columns=['name', 'type', 'description'])
+            
+            logger.info(f"InfoTable.get_columns returning DataFrame with shape: {df.shape}")
+            logger.info(f"DataFrame columns: {list(df.columns)}")
+            
+            return HandlerResponse(RESPONSE_TYPE.TABLE, df)
+            
+        except Exception as e:
+            logger.error(f"Error in InfoTable.get_columns: {str(e)}")
+            return HandlerResponse(RESPONSE_TYPE.ERROR, error_message=str(e))
     
     def _parse_info_data(self, data: dict) -> pd.DataFrame:
         """Convert info API response to DataFrame"""
@@ -287,20 +322,31 @@ class GlobalMetricsTable(APITable):
     
     def get_columns(self) -> HandlerResponse:
         """Return column definitions for global metrics table"""
-        columns = [
-            {'name': 'active_cryptocurrencies', 'type': 'integer', 'description': 'Number of active cryptocurrencies'},
-            {'name': 'total_cryptocurrencies', 'type': 'integer', 'description': 'Total cryptocurrencies'},
-            {'name': 'active_market_pairs', 'type': 'integer', 'description': 'Active market pairs'},
-            {'name': 'active_exchanges', 'type': 'integer', 'description': 'Number of active exchanges'},
-            {'name': 'total_market_cap_usd', 'type': 'float', 'description': 'Total market cap in USD'},
-            {'name': 'total_volume_24h_usd', 'type': 'float', 'description': 'Total 24h volume in USD'},
-            {'name': 'bitcoin_percentage_of_market_cap', 'type': 'float', 'description': 'Bitcoin dominance %'},
-            {'name': 'altcoin_percentage_of_market_cap', 'type': 'float', 'description': 'Altcoin dominance %'},
-            {'name': 'altcoin_market_cap_usd', 'type': 'float', 'description': 'Altcoin market cap USD'},
-            {'name': 'last_updated', 'type': 'datetime', 'description': 'Last updated'}
-        ]
-        
-        return HandlerResponse(RESPONSE_TYPE.TABLE, pd.DataFrame(columns))
+        try:
+            columns_data = [
+                {'name': 'active_cryptocurrencies', 'type': 'integer', 'description': 'Number of active cryptocurrencies'},
+                {'name': 'total_cryptocurrencies', 'type': 'integer', 'description': 'Total cryptocurrencies'},
+                {'name': 'active_market_pairs', 'type': 'integer', 'description': 'Active market pairs'},
+                {'name': 'active_exchanges', 'type': 'integer', 'description': 'Number of active exchanges'},
+                {'name': 'total_market_cap_usd', 'type': 'float', 'description': 'Total market cap in USD'},
+                {'name': 'total_volume_24h_usd', 'type': 'float', 'description': 'Total 24h volume in USD'},
+                {'name': 'bitcoin_percentage_of_market_cap', 'type': 'float', 'description': 'Bitcoin dominance %'},
+                {'name': 'altcoin_percentage_of_market_cap', 'type': 'float', 'description': 'Altcoin dominance %'},
+                {'name': 'altcoin_market_cap_usd', 'type': 'float', 'description': 'Altcoin market cap USD'},
+                {'name': 'last_updated', 'type': 'datetime', 'description': 'Last updated'}
+            ]
+            
+            # FIXED: Explicitly specify column names
+            df = pd.DataFrame(columns_data, columns=['name', 'type', 'description'])
+            
+            logger.info(f"GlobalMetricsTable.get_columns returning DataFrame with shape: {df.shape}")
+            logger.info(f"DataFrame columns: {list(df.columns)}")
+            
+            return HandlerResponse(RESPONSE_TYPE.TABLE, df)
+            
+        except Exception as e:
+            logger.error(f"Error in GlobalMetricsTable.get_columns: {str(e)}")
+            return HandlerResponse(RESPONSE_TYPE.ERROR, error_message=str(e))
     
     def _parse_global_data(self, data: dict) -> pd.DataFrame:
         """Convert global metrics API response to DataFrame"""

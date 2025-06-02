@@ -62,15 +62,13 @@ class EvaluateBase:
         # create evaluate metric from test data
         raise NotImplementedError
 
-    def _set_llm_client(self, params: dict):
+    def _set_llm_client(self, llm_params: dict):
         """
         Logic to get LLM setting:
-        - `llm` setting of ‘evaluate’ command
+        - first get `llm` setting of ‘evaluate’ command
         - if not defined, look at the knowledge base reranker config
         """
-        if "llm" in params:
-            llm_params = params["llm"]
-        else:
+        if llm_params is None:
             llm_params = self.kb._kb.params.get("reranking_model")
 
         self.llm_client = LLMClient(llm_params)
@@ -94,7 +92,7 @@ class EvaluateBase:
             if "content" not in df.columns:
                 raise ValueError("`content` column isn't found in source data")
 
-            df = df.rename(columns={"content": "chunk_content"})
+            df.rename(columns={"content": "chunk_content"}, inplace=True)
         else:
             # get data from knowledge base
             df = self.kb.select_query(
@@ -152,7 +150,7 @@ class EvaluateBase:
     def run_evaluate(self, params: dict) -> pd.DataFrame:
         # evaluate function entry point
 
-        self._set_llm_client(params)
+        self._set_llm_client(params.get("llm"))
 
         if "test_table" not in params:
             raise ValueError('The table with  has to be defined in "test_table" parameter')
@@ -201,7 +199,7 @@ class EvaluateBase:
         elif evaluate_version == "doc_id":
             cls = EvaluateDocID
         else:
-            raise NotImplementedError(f"Version {evaluate_version} not implemented")
+            raise NotImplementedError(f"Version of evaluator is not implemented: {evaluate_version}")
 
         return cls(session, kb_table).run_evaluate(params)
 

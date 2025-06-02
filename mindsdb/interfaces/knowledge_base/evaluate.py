@@ -194,14 +194,14 @@ class EvaluateBase:
     def run(session, kb_table, params) -> pd.DataFrame:
         # choose the evaluator version according to the 'version' parameter in config
 
-        evaluate_method = params.get("method", "doc_id")
+        evaluate_version = params.get("version", "doc_id")
 
-        if evaluate_method == "rerank":
+        if evaluate_version == "llm_relevancy":
             cls = EvaluateRerank
-        elif evaluate_method == "doc_id":
+        elif evaluate_version == "doc_id":
             cls = EvaluateDocID
         else:
-            raise NotImplementedError(f"Method {evaluate_method} not implemented")
+            raise NotImplementedError(f"Version {evaluate_version} not implemented")
 
         return cls(session, kb_table).run_evaluate(params)
 

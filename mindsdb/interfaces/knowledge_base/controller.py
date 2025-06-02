@@ -178,7 +178,7 @@ class KnowledgeBaseTable:
         query_conditions = db_handler.extract_conditions(query.where)
         if query_conditions is not None:
             for item in query_conditions:
-                if item.column == "relevance_threshold" and item.op.value == "=":
+                if item.column == "relevance" and item.op.value == FilterOperator.GREATER_THAN_OR_EQUAL.value:
                     try:
                         relevance_threshold = float(item.value)
                         # Validate range: must be between 0 and 1
@@ -189,6 +189,10 @@ class KnowledgeBaseTable:
                         error_msg = f"Invalid relevance_threshold value: {item.value}. {str(e)}"
                         logger.error(error_msg)
                         raise ValueError(error_msg)
+                elif item.column == "relevance" and item.op.value != FilterOperator.GREATER_THAN_OR_EQUAL.value:
+                    raise ValueError(
+                        f"Invalid operator for relevance: {item.op.value}. Only GREATER_THAN_OR_EQUAL is allowed."
+                    )
                 elif item.column == TableField.CONTENT.value:
                     query_text = item.value
 
@@ -935,7 +939,16 @@ class KnowledgeBaseController:
             model_record = db.Predictor.query.get(model["id"])
             embedding_model_id = model_record.id
 
-        reranking_model_params = get_model_params(params.get("reranking_model", {}), "default_reranking_model")
+        # if params.get("reranking_model", {}) is bool and False we evaluate it to empty dictionary
+        reranking_model_params = params.get("reranking_model", {})
+
+        if isinstance(reranking_model_params, bool) and not reranking_model_params:
+            params["reranking_model"] = {}
+        # if params.get("reranking_model", {}) is string and false in any case we evaluate it to empty dictionary
+        if isinstance(reranking_model_params, str) and reranking_model_params.lower() == "false":
+            params["reranking_model"] = {}
+
+        reranking_model_params = get_model_params(reranking_model_params, "default_reranking_model")
         if reranking_model_params:
             # Get reranking model from params.
             # This is called here to check validaity of the parameters.

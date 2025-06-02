@@ -1,2 +1,1 @@
 elasticsearch>=8.0.0,<9.0.0
-elasticsearch-dbapi==0.2.11

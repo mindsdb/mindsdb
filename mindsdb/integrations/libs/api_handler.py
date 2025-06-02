@@ -334,12 +334,13 @@ class MetaAPIResource(APIResource):
     
     # TODO: Add a meta_table_info() method in case metadata cannot be retrieved as expected below?
 
-    def meta_get_tables(self, table_name: str) -> dict:
+    def meta_get_tables(self, table_name: str, **kwargs) -> dict:
         """
         Retrieves table metadata for the API resource.
         
         Args:
             table_name (str): The name given to the table that represents the API resource. This is required because the name for the APIResource is given by the handler.
+            kwargs: Additional keyword arguments that may be used by the specific API resource implementation.
 
         Returns:
             Dict: The dictionary should contain the following fields:
@@ -351,12 +352,13 @@ class MetaAPIResource(APIResource):
         """
         pass
 
-    def meta_get_columns(self, table_name: str) -> List[dict]:
+    def meta_get_columns(self, table_name: str, **kwargs) -> List[dict]:
         """
         Retrieves column metadata for the API resource.
 
         Args:
             table_name (str): The name given to the table that represents the API resource. This is required because the name for the APIResource is given by the handler.
+            kwargs: Additional keyword arguments that may be used by the specific API resource implementation.
 
         Returns:
             List[dict]: The list should contain dictionaries with the following fields:
@@ -369,12 +371,13 @@ class MetaAPIResource(APIResource):
         """
         pass
 
-    def meta_get_column_statistics(self, table_name: str) -> List[dict]:
+    def meta_get_column_statistics(self, table_name: str, **kwargs) -> List[dict]:
         """
         Retrieves column statistics for the API resource.
 
         Args:
             table_name (str): The name given to the table that represents the API resource. This is required because the name for the APIResource is given by the handler.
+            kwargs: Additional keyword arguments that may be used by the specific API resource implementation.
 
         Returns:
             List[dict]: The list should contain dictionaries with the following fields:
@@ -389,12 +392,13 @@ class MetaAPIResource(APIResource):
         """
         pass
 
-    def meta_get_primary_keys(self, table_name: str) -> List[dict]:
+    def meta_get_primary_keys(self, table_name: str, **kwargs) -> List[dict]:
         """
         Retrieves primary key metadata for the API resource.
 
         Args:
             table_name (str): The name given to the table that represents the API resource. This is required because the name for the APIResource is given by the handler.
+            kwargs: Additional keyword arguments that may be used by the specific API resource implementation.
 
         Returns:
             List[dict]: The list should contain dictionaries with the following fields:
@@ -405,12 +409,14 @@ class MetaAPIResource(APIResource):
         """
         pass
     
-    def meta_get_foreign_keys(self, table_name: str) -> List[dict]:
+    def meta_get_foreign_keys(self, table_name: str, all_tables: List[str], **kwargs) -> List[dict]:
         """
         Retrieves foreign key metadata for the API resource.
 
         Args:
             table_name (str): The name given to the table that represents the API resource. This is required because the name for the APIResource is given by the handler.
+            all_tables (List[str]): A list of all table names in the API resource. This is used to identify relationships between tables.
+            kwargs: Additional keyword arguments that may be used by the specific API resource implementation.
 
         Returns:
             List[dict]: The list should contain dictionaries with the following fields:
@@ -516,12 +522,13 @@ class MetaAPIHandler(APIHandler):
     This class is used when the handler is also needed to store information in the data catalog.
     """
     
-    def meta_get_tables(self, table_names: Optional[List[str]] = None) -> Response:
+    def meta_get_tables(self, table_names: Optional[List[str]] = None, **kwargs) -> Response:
         """
         Retrieves metadata for the specified tables (or all tables if no list is provided).
 
         Args:
             table_names (List): A list of table names for which to retrieve metadata.
+            kwargs: Additional keyword arguments that may be used by the specific API resource implementation.
 
         Returns:
             Response: A response object containing the table metadata.
@@ -531,14 +538,14 @@ class MetaAPIHandler(APIHandler):
             if table_names is None or table_name in table_names:
                 try:
                     if hasattr(table_class, 'meta_get_tables'):
-                        table_metadata = table_class.meta_get_tables(table_name)
+                        table_metadata = table_class.meta_get_tables(table_name, **kwargs)
                         df = pd.concat([df, pd.DataFrame([table_metadata])], ignore_index=True)
                 except Exception as e:
                     logger.error(f"Error retrieving metadata for table {table_name}: {e}")
 
         return Response(RESPONSE_TYPE.TABLE, df)
 
-    def meta_get_columns(self, table_names: Optional[List[str]] = None) -> Response:
+    def meta_get_columns(self, table_names: Optional[List[str]] = None, **kwargs) -> Response:
         """
         Retrieves column metadata for the specified tables (or all tables if no list is provided).
 
@@ -553,14 +560,14 @@ class MetaAPIHandler(APIHandler):
             if table_names is None or table_name in table_names:
                 try:
                     if hasattr(table_class, 'meta_get_columns'):
-                        column_metadata = table_class.meta_get_columns(table_name)
+                        column_metadata = table_class.meta_get_columns(table_name, **kwargs)
                         df = pd.concat([df, pd.DataFrame(column_metadata)], ignore_index=True)
                 except Exception as e:
                     logger.error(f"Error retrieving column metadata for table {table_name}: {e}")
 
         return Response(RESPONSE_TYPE.TABLE, df)
     
-    def meta_get_column_statistics(self, table_names: Optional[List[str]] = None) -> Response:
+    def meta_get_column_statistics(self, table_names: Optional[List[str]] = None, **kwargs) -> Response:
         """
         Retrieves column statistics for the specified tables (or all tables if no list is provided).
 
@@ -575,14 +582,14 @@ class MetaAPIHandler(APIHandler):
             if table_names is None or table_name in table_names:
                 try:
                     if hasattr(table_class, 'meta_get_column_statistics'):
-                        column_statistics = table_class.meta_get_column_statistics(table_name)
+                        column_statistics = table_class.meta_get_column_statistics(table_name, **kwargs)
                         df = pd.concat([df, pd.DataFrame(column_statistics)], ignore_index=True)
                 except Exception as e:
                     logger.error(f"Error retrieving column statistics for table {table_name}: {e}")
 
         return Response(RESPONSE_TYPE.TABLE, df)
 
-    def meta_get_primary_keys(self, table_names: Optional[List[str]] = None) -> Response:
+    def meta_get_primary_keys(self, table_names: Optional[List[str]] = None, **kwargs) -> Response:
         """
         Retrieves primary key metadata for the specified tables (or all tables if no list is provided).
 
@@ -597,14 +604,14 @@ class MetaAPIHandler(APIHandler):
             if table_names is None or table_name in table_names:
                 try:
                     if hasattr(table_class, 'meta_get_primary_keys'):
-                        primary_key_metadata = table_class.meta_get_primary_keys(table_name)
+                        primary_key_metadata = table_class.meta_get_primary_keys(table_name, **kwargs)
                         df = pd.concat([df, pd.DataFrame(primary_key_metadata)], ignore_index=True)
                 except Exception as e:
                     logger.error(f"Error retrieving primary keys for table {table_name}: {e}")
 
         return Response(RESPONSE_TYPE.TABLE, df)
 
-    def meta_get_foreign_keys(self, table_names: Optional[List[str]] = None) -> Response:
+    def meta_get_foreign_keys(self, table_names: Optional[List[str]] = None, **kwargs) -> Response:
         """
         Retrieves foreign key metadata for the specified tables (or all tables if no list is provided).
 
@@ -620,7 +627,10 @@ class MetaAPIHandler(APIHandler):
             if table_names is None or table_name in table_names:
                 try:
                     if hasattr(table_class, 'meta_get_foreign_keys'):
-                        foreign_key_metadata = table_class.meta_get_foreign_keys(table_name, all_tables)
+                        foreign_key_metadata = table_class.meta_get_foreign_keys(
+                            table_name, 
+                            all_tables=table_names if table_names else all_tables,
+                            **kwargs)
                         df = pd.concat([df, pd.DataFrame(foreign_key_metadata)], ignore_index=True)
                 except Exception as e:
                     logger.error(f"Error retrieving foreign keys for table {table_name}: {e}")

@@ -7,12 +7,22 @@ from pathlib import Path
 import pandas
 import pytest
 from mindsdb_sql_parser.exceptions import ParsingException
-from mindsdb_sql_parser.ast import CreateTable, DropTables, Identifier, Insert, TableColumn, Update
+from mindsdb_sql_parser.ast import (
+    CreateTable,
+    DropTables,
+    Identifier,
+    Insert,
+    TableColumn,
+    Update,
+)
 
 from mindsdb.integrations.handlers.file_handler.file_handler import FileHandler
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 
-from mindsdb.integrations.utilities.files.file_reader import FileReader, FileProcessingError
+from mindsdb.integrations.utilities.files.file_reader import (
+    FileReader,
+    FileProcessingError,
+)
 
 
 # Define a table to use as content for all of the file types
@@ -103,21 +113,18 @@ class TestIsItX:
 
     def test_is_it_csv(self):
         # We can't test xlsx or parquet here because they're binary files
-        for file_path, result in (
-            (csv_file(), True),
-            (json_file(), False)
-        ):
+        for file_path, result in ((csv_file(), True), (json_file(), False)):
             with open(file_path, "r") as fh:
                 assert FileReader.is_csv(StringIO(fh.read())) is result
 
     def test_format(self):
         for file_path, result in (
-            (csv_file(), 'csv'),
-            (xlsx_file(), 'xlsx'),
-            (json_file(), 'json'),
-            (parquet_file(), 'parquet'),
-            (txt_file(), 'txt'),
-            (pdf_file(), 'pdf'),
+            (csv_file(), "csv"),
+            (xlsx_file(), "xlsx"),
+            (json_file(), "json"),
+            (parquet_file(), "parquet"),
+            (txt_file(), "txt"),
+            (pdf_file(), "pdf"),
         ):
             assert FileReader(path=file_path).get_format() == result
 
@@ -182,6 +189,7 @@ class TestQuery:
 
         def mock_get_file_path(self, name):
             return csv_tmp
+
         monkeypatch.setattr(MockFileController, "get_file_path", mock_get_file_path)
 
         file_handler = FileHandler(file_controller=MockFileController())
@@ -255,14 +263,13 @@ class TestQuery:
 
 
 def test_handle_source():
-
     def get_reader(file_path):
         # using path
         reader = FileReader(path=file_path)
         yield reader
 
         # using file descriptor
-        with open(file_path, 'rb') as fd:
+        with open(file_path, "rb") as fd:
             reader = FileReader(file=fd)
             yield reader
             fd.seek(0)
@@ -310,9 +317,9 @@ def test_check_valid_dialects(csv_string, delimiter):
 def test_tsv():
     file = BytesIO(b"example;csv;file\tname")
 
-    reader = FileReader(file=file, name='test.tsv')
-    assert reader.get_format() == 'csv'
-    assert reader.parameters['delimiter'] == '\t'
+    reader = FileReader(file=file, name="test.tsv")
+    assert reader.get_format() == "csv"
+    assert reader.parameters["delimiter"] == "\t"
 
     df = reader.get_page_content()
     assert len(df.columns) == 2
@@ -320,9 +327,9 @@ def test_tsv():
 
 def test_bad_csv_header():
     file = BytesIO(b" a,b  ,c\n1,2,3\n")
-    reader = FileReader(file=file, name='test.tsv')
+    reader = FileReader(file=file, name="test.tsv")
     df = reader.get_page_content()
-    assert set(df.columns) == set(['a', 'b', 'c'])
+    assert set(df.columns) == set(["a", "b", "c"])
 
     wrong_data = [
         b"a, ,c\n1,2,3\n",
@@ -330,7 +337,7 @@ def test_bad_csv_header():
         b"   ,b,c\n1,2,3\n",
     ]
     for data in wrong_data:
-        reader = FileReader(file=BytesIO(data), name='test.tsv')
+        reader = FileReader(file=BytesIO(data), name="test.tsv")
         with pytest.raises(FileProcessingError):
             df = reader.get_page_content()
 

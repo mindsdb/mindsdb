@@ -19,25 +19,27 @@ DEFAULT_CHUNK_SIZE = 500
 DEFAULT_CHUNK_OVERLAP = 250
 
 
-class FileProcessingError(Exception):
-    ...
+class FileProcessingError(Exception): ...
+
 
 @dataclass(frozen=True, slots=True)
 class _SINGLE_PAGE_FORMAT:
-    CSV: str = 'csv'
-    JSON: str = 'json'
-    TXT: str = 'txt'
-    PDF: str = 'pdf'
-    PARQUET: str = 'parquet'
+    CSV: str = "csv"
+    JSON: str = "json"
+    TXT: str = "txt"
+    PDF: str = "pdf"
+    PARQUET: str = "parquet"
+
 
 SINGLE_PAGE_FORMAT = _SINGLE_PAGE_FORMAT()
 
+
 @dataclass(frozen=True, slots=True)
 class _MULTI_PAGE_FORMAT:
-    XLSX: str = 'xlsx'
+    XLSX: str = "xlsx"
+
 
 MULTI_PAGE_FORMAT = _MULTI_PAGE_FORMAT()
-
 
 
 def decode(file_obj: IOBase) -> StringIO:
@@ -80,7 +82,6 @@ def decode(file_obj: IOBase) -> StringIO:
 
 
 class FormatDetector:
-
     supported_formats = astuple(SINGLE_PAGE_FORMAT) + astuple(MULTI_PAGE_FORMAT)
     multipage_formats = astuple(MULTI_PAGE_FORMAT)
 
@@ -88,7 +89,7 @@ class FormatDetector:
         self,
         path: str | None = None,
         name: str | None = None,
-        file: IOBase | None = None
+        file: IOBase | None = None,
     ):
         """
         File format detector
@@ -99,16 +100,16 @@ class FormatDetector:
         :param file: file descriptor (via open(...), of BytesIO(...))
         """
         if path is not None:
-            file = open(path, 'rb')
+            file = open(path, "rb")
 
         elif file is not None:
             if name is None:
-                if hasattr(file, 'name'):
+                if hasattr(file, "name"):
                     path = file.name
                 else:
-                    path = 'file'
+                    path = "file"
         else:
-            raise FileProcessingError('Wrong arguments: path or file is required')
+            raise FileProcessingError("Wrong arguments: path or file is required")
 
         if name is None:
             name = Path(path).name
@@ -126,14 +127,14 @@ class FormatDetector:
         format = self.get_format_by_name()
         if format is not None:
             if format not in self.supported_formats:
-                raise FileProcessingError(f'Not supported format: {format}')
+                raise FileProcessingError(f"Not supported format: {format}")
 
         if format is None and self.file_obj is not None:
             format = self.get_format_by_content()
             self.file_obj.seek(0)
 
         if format is None:
-            raise FileProcessingError(f'Unable to detect format: {self.name}')
+            raise FileProcessingError(f"Unable to detect format: {self.name}")
 
         self.format = format
         return format
@@ -142,7 +143,7 @@ class FormatDetector:
         extension = Path(self.name).suffix.strip(".").lower()
         if extension == "tsv":
             extension = "csv"
-            self.parameters['delimiter'] = '\t'
+            self.parameters["delimiter"] = "\t"
 
         return extension or None
 
@@ -152,14 +153,13 @@ class FormatDetector:
 
         file_type = filetype.guess(self.file_obj)
         if file_type is not None:
-
             if file_type.mime in {
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 "application/vnd.ms-excel",
             }:
                 return SINGLE_PAGE_FORMAT.XLSX
 
-            if file_type.mime == 'application/pdf':
+            if file_type.mime == "application/pdf":
                 return SINGLE_PAGE_FORMAT.PDF
 
         file_obj = decode(self.file_obj)
@@ -217,57 +217,56 @@ class FormatDetector:
 
 
 def format_column_names(df: pd.DataFrame):
-    df.columns = [column.strip(' \t') for column in df.columns]
-    if (
-        len(df.columns) != len(set(df.columns))
-        or any(len(column_name) == 0 for column_name in df.columns)
+    df.columns = [column.strip(" \t") for column in df.columns]
+    if len(df.columns) != len(set(df.columns)) or any(
+        len(column_name) == 0 for column_name in df.columns
     ):
-        raise FileProcessingError('Each column should have a unique and non-empty name.')
+        raise FileProcessingError(
+            "Each column should have a unique and non-empty name."
+        )
 
 
 class FileReader(FormatDetector):
-
     def _get_fnc(self):
         format = self.get_format()
-        func = getattr(self, f'read_{format}', None)
+        func = getattr(self, f"read_{format}", None)
         if func is None:
-            raise FileProcessingError(f'Unsupported format: {format}')
-        
+            raise FileProcessingError(f"Unsupported format: {format}")
+
         if format in astuple(MULTI_PAGE_FORMAT):
+
             def format_multipage(*args, **kwargs):
                 for page_number, df in func(*args, **kwargs):
                     format_column_names(df)
                     yield page_number, df
+
             return format_multipage
 
         def format_singlepage(*args, **kwargs) -> pd.DataFrame:
-            """Check that the columns have unique not-empty names
-            """
+            """Check that the columns have unique not-empty names"""
             df = func(*args, **kwargs)
             format_column_names(df)
             return df
+
         return format_singlepage
 
     def get_pages(self, **kwargs) -> List[str]:
         """
-            Get list of tables in file
+        Get list of tables in file
         """
         format = self.get_format()
         if format not in self.multipage_formats:
             # only one table
-            return ['main']
+            return ["main"]
 
         func = self._get_fnc()
         self.file_obj.seek(0)
 
-        return [
-            name for name, _ in
-            func(self.file_obj, only_names=True, **kwargs)
-        ]
+        return [name for name, _ in func(self.file_obj, only_names=True, **kwargs)]
 
     def get_contents(self, **kwargs) -> dict[str, pd.DataFrame]:
         """
-            Get all info(pages with content) from file as dict: {tablename, content}
+        Get all info(pages with content) from file as dict: {tablename, content}
         """
         func = self._get_fnc()
         self.file_obj.seek(0)
@@ -275,17 +274,13 @@ class FileReader(FormatDetector):
         format = self.get_format()
         if format not in self.multipage_formats:
             # only one table
-            return {'main': func(self.file_obj, name=self.name, **kwargs)}
+            return {"main": func(self.file_obj, name=self.name, **kwargs)}
 
-        return {
-            name: df
-            for name, df in
-            func(self.file_obj, **kwargs)
-        }
+        return {name: df for name, df in func(self.file_obj, **kwargs)}
 
     def get_page_content(self, page_name: str | None = None, **kwargs) -> pd.DataFrame:
         """
-            Get content of a single table
+        Get content of a single table
         """
         func = self._get_fnc()
         self.file_obj.seek(0)
@@ -329,7 +324,9 @@ class FileReader(FormatDetector):
         return dialect
 
     @classmethod
-    def read_csv(cls, file_obj: BytesIO, delimiter: str | None = None, **kwargs) -> pd.DataFrame:
+    def read_csv(
+        cls, file_obj: BytesIO, delimiter: str | None = None, **kwargs
+    ) -> pd.DataFrame:
         file_obj = decode(file_obj)
         dialect = cls._get_csv_dialect(file_obj, delimiter=delimiter)
         return pd.read_csv(file_obj, sep=dialect.delimiter, index_col=False)
@@ -338,6 +335,7 @@ class FileReader(FormatDetector):
     def read_txt(file_obj: BytesIO, name: str | None = None, **kwargs) -> pd.DataFrame:
         # the lib is heavy, so import it only when needed
         from langchain_text_splitters import RecursiveCharacterTextSplitter
+
         file_obj = decode(file_obj)
 
         try:
@@ -358,10 +356,7 @@ class FileReader(FormatDetector):
 
         docs = text_splitter.split_documents(documents)
         return pd.DataFrame(
-            [
-                {"content": doc.page_content, "metadata": doc.metadata}
-                for doc in docs
-            ]
+            [{"content": doc.page_content, "metadata": doc.metadata} for doc in docs]
         )
 
     @staticmethod
@@ -380,7 +375,11 @@ class FileReader(FormatDetector):
         split_text = text_splitter.split_text(text)
 
         return pd.DataFrame(
-            {"content": split_text, "metadata": [{"file_format": "pdf", "source_file": name}] * len(split_text)}
+            {
+                "content": split_text,
+                "metadata": [{"file_format": "pdf", "source_file": name}]
+                * len(split_text),
+            }
         )
 
     @staticmethod
@@ -399,7 +398,7 @@ class FileReader(FormatDetector):
         file_obj: BytesIO,
         page_name: str | None = None,
         only_names: bool = False,
-        **kwargs
+        **kwargs,
     ) -> Generator[tuple[str, pd.DataFrame | None], None, None]:
         with pd.ExcelFile(file_obj) as xls:
             if page_name is not None:

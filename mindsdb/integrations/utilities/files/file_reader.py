@@ -157,7 +157,7 @@ class FormatDetector:
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 "application/vnd.ms-excel",
             }:
-                return SINGLE_PAGE_FORMAT.XLSX
+                return MULTI_PAGE_FORMAT.XLSX
 
             if file_type.mime == "application/pdf":
                 return SINGLE_PAGE_FORMAT.PDF

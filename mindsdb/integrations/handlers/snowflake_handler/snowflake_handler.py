@@ -489,7 +489,7 @@ class SnowflakeHandler(DatabaseHandler):
                 DATA_TYPE,
                 COMMENT AS COLUMN_DESCRIPTION,
                 COLUMN_DEFAULT,
-                (IS_NULLABLE = 'YES') AS IS_NULLABLE
+                (IS_NULLABLE = 'YES') AS IS_NULLABLE,
                 CHARACTER_MAXIMUM_LENGTH,
                 CHARACTER_OCTET_LENGTH,
                 NUMERIC_PRECISION,

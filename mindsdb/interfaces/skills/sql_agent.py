@@ -401,8 +401,10 @@ class SQLAgent:
         appended to each table description. This can increase performance as demonstrated in the paper.
         """
         if config.get("data_catalog", {}).get("enabled", False):
+            datasource = next(iter(self._mindsdb_db_struct), None)
+            print(datasource)
             data_catalog_reader_instance = DataCatalogReader(
-                database_name="demo_db4", table_names=self._tables_to_include
+                database_name=datasource, table_names=self._tables_to_include
             )
             return data_catalog_reader_instance.read_metadata_as_string()
         else:

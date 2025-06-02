@@ -1,4 +1,4 @@
-from typing import Any, Dict, Text
+from typing import Any, Dict, List, Optional, Text
 
 import pandas as pd
 import salesforce_api
@@ -175,3 +175,26 @@ class SalesforceHandler(MetaAPIHandler):
             self.resource_names = [resource['name'] for resource in self.connection.sobjects.describe()['sobjects'] if resource['queryable']]
 
         return self.resource_names
+
+    def meta_get_tables(self, table_names: Optional[List[str]] = None) -> Response:
+        """
+        Retrieves metadata for the specified tables (or all tables if no list is provided).
+
+        Args:
+            table_names (List): A list of table names for which to retrieve metadata.
+
+        Returns:
+            Response: A response object containing the table metadata.
+        """
+        connection = self.connect()
+
+        # Retrieve the metadata for all Salesforce resources.
+        main_metadata = connection.sobjects.describe()
+
+        if table_names:
+            # Filter the metadata for the specified tables.
+            main_metadata = [resource for resource in main_metadata['sobjects'] if resource['name'] in table_names]
+        else:
+            main_metadata = main_metadata['sobjects']
+
+        return super().meta_get_tables(table_names=table_names, main_metadata=main_metadata)

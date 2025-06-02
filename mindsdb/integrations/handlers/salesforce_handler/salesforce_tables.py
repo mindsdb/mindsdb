@@ -32,7 +32,7 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
                 **kwargs: Arbitrary keyword arguments.
             """
             super().__init__(*args, table_name=table_name, **kwargs)
-            self.metadata = None
+            self.resource_metadata = None
 
         def select(self, query: Select) -> pd.DataFrame:
             """
@@ -129,15 +129,15 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
 
             return conditions[0].value if isinstance(conditions[0].value, list) else [conditions[0].value]
         
-        def _get_metadata(self) -> Dict:
+        def _get_resource_metadata(self) -> Dict:
             """
             Retrieves metadata about the Salesforce resource.
 
             Returns:
                 Dict: A dictionary containing metadata about the Salesforce resource.
             """
-            if self.metadata:
-                return self.metadata
+            if self.resource_metadata:
+                return self.resource_metadata
 
             client = self.handler.connect()
             return getattr(client.sobjects, resource_name).describe()
@@ -149,33 +149,37 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
             Returns:
                 List[Text]: A list of Attributes (columns) of the Salesforce resource.
             """
-            return [field['name'] for field in self._get_metadata()['fields']]
+            return [field['name'] for field in self._get_resource_metadata()['fields']]
 
-        def meta_get_tables(self, table_name: str) -> Dict:
+        def meta_get_tables(self, table_name: str, main_metadata: Dict) -> Dict:
             """
             Retrieves table metadata for the Salesforce resource.
             
             Args:
                 table_name (str): The name given to the table that represents the Salesforce resource.
+                main_metadata (Dict): The main metadata dictionary containing information about all Salesforce resources.
 
             Returns:
                 Dict: A dictionary containing table metadata for the Salesforce resource.
             """
             client = self.handler.connect()
-            metadata = self._get_metadata()
-            
+
+            resource_metadata = next(
+                (resource for resource in main_metadata if resource['name'] == resource_name),
+            )
+
             # Get row count if Id column is aggregatable.
             row_count = None
-            if next(field for field in metadata['fields'] if field['name'] == 'Id').get('aggregatable', False):
-                try:
-                    row_count = client.sobjects.query(f"SELECT COUNT(Id) FROM {resource_name}")[0]['expr0']
-                except RestRequestCouldNotBeUnderstoodError as request_error:
-                    logger.warning(f"Failed to get row count for {resource_name}: {request_error}")
+            # if next(field for field in resource_metadata['fields'] if field['name'] == 'Id').get('aggregatable', False):
+            try:
+                row_count = client.sobjects.query(f"SELECT COUNT(Id) FROM {resource_name}")[0]['expr0']
+            except RestRequestCouldNotBeUnderstoodError as request_error:
+                logger.warning(f"Failed to get row count for {resource_name}: {request_error}")
 
             return {
                 'table_name': table_name,
                 'table_type': 'BASE TABLE',
-                'table_description': metadata.get('label', ''),
+                'table_description': resource_metadata.get('label', ''),
                 'row_count': row_count,
             }
 
@@ -189,10 +193,10 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
             Returns:
                 List[Dict]: A list of dictionaries containing column metadata for the Salesforce resource.
             """
-            metadata = self._get_metadata()
+            resource_metadata = self._get_resource_metadata()
 
             column_metadata = []
-            for field in metadata['fields']:
+            for field in resource_metadata['fields']:
                 column_metadata.append({
                     'table_name': table_name,
                     'column_name': field['name'],
@@ -230,11 +234,10 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
             Returns:
                 List[Dict]: A list of dictionaries containing foreign key metadata for the Salesforce resource.
             """
-            client = self.handler.connect()
-            metadata = self._get_metadata()
+            resource_metadata = self._get_resource_metadata()
 
             foreign_key_metadata = []
-            for child_relationship in metadata.get('childRelationships', []):
+            for child_relationship in resource_metadata.get('childRelationships', []):
                 # Skip if the child relationship is not one of the supported tables.
                 child_table_name = child_relationship['childSObject']
                 if child_table_name not in all_tables:

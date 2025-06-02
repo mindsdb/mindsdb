@@ -8,7 +8,7 @@ from mindsdb.integrations.libs.api_handler import MetaAPIHandler
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 from mindsdb.integrations.handlers.salesforce_handler.salesforce_tables import create_table_class
 from mindsdb.utilities import log
@@ -22,7 +22,7 @@ class SalesforceHandler(MetaAPIHandler):
     This handler handles the connection and execution of SQL statements on Salesforce.
     """
 
-    name = 'salesforce'
+    name = "salesforce"
 
     def __init__(self, name: Text, connection_data: Dict, **kwargs: Any) -> None:
         """
@@ -57,16 +57,16 @@ class SalesforceHandler(MetaAPIHandler):
             return self.connection
 
         # Mandatory connection parameters.
-        if not all(key in self.connection_data for key in ['username', 'password', 'client_id', 'client_secret']):
+        if not all(key in self.connection_data for key in ["username", "password", "client_id", "client_secret"]):
             raise ValueError("Required parameters (username, password, client_id, client_secret) must be provided.")
 
         try:
             self.connection = salesforce_api.Salesforce(
-                username=self.connection_data['username'],
-                password=self.connection_data['password'],
-                client_id=self.connection_data['client_id'],
-                client_secret=self.connection_data['client_secret'],
-                is_sandbox=self.connection_data.get('is_sandbox', False)
+                username=self.connection_data["username"],
+                password=self.connection_data["password"],
+                client_id=self.connection_data["client_id"],
+                client_secret=self.connection_data["client_secret"],
+                is_sandbox=self.connection_data.get("is_sandbox", False),
             )
             self.is_connected = True
 
@@ -96,10 +96,10 @@ class SalesforceHandler(MetaAPIHandler):
             self.connect()
             response.success = True
         except (AuthenticationError, ValueError) as known_error:
-            logger.error(f'Connection check to Salesforce failed, {known_error}!')
+            logger.error(f"Connection check to Salesforce failed, {known_error}!")
             response.error_message = str(known_error)
         except Exception as unknown_error:
-            logger.error(f'Connection check to Salesforce failed due to an unknown error, {unknown_error}!')
+            logger.error(f"Connection check to Salesforce failed due to an unknown error, {unknown_error}!")
             response.error_message = str(unknown_error)
 
         self.is_connected = response.success
@@ -123,7 +123,7 @@ class SalesforceHandler(MetaAPIHandler):
 
             parsed_results = []
             for result in results:
-                del result['attributes']
+                del result["attributes"]
 
                 # Check if the result contains any of the other Salesforce resources.
                 if any(key in self.resource_names for key in result.keys()):
@@ -131,8 +131,10 @@ class SalesforceHandler(MetaAPIHandler):
                     parsed_result = {}
                     for key, value in result.items():
                         if key in self.resource_names:
-                            del value['attributes']
-                            parsed_result.update({f'{key}_{sub_key}': sub_value for sub_key, sub_value in value.items()})
+                            del value["attributes"]
+                            parsed_result.update(
+                                {f"{key}_{sub_key}": sub_value for sub_key, sub_value in value.items()}
+                            )
 
                         else:
                             parsed_result[key] = value
@@ -142,24 +144,13 @@ class SalesforceHandler(MetaAPIHandler):
                 else:
                     parsed_results.append(result)
 
-            response = Response(
-                RESPONSE_TYPE.TABLE,
-                pd.DataFrame(parsed_results)
-            )
+            response = Response(RESPONSE_TYPE.TABLE, pd.DataFrame(parsed_results))
         except RestRequestCouldNotBeUnderstoodError as rest_error:
-            logger.error(f'Error running query: {query} on Salesforce, {rest_error}!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_code=0,
-                error_message=str(rest_error)
-            )
+            logger.error(f"Error running query: {query} on Salesforce, {rest_error}!")
+            response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(rest_error))
         except Exception as unknown_error:
-            logger.error(f'Error running query: {query} on Salesforce, {unknown_error}!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_code=0,
-                error_message=str(unknown_error)
-            )
+            logger.error(f"Error running query: {query} on Salesforce, {unknown_error}!")
+            response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(unknown_error))
 
         return response
 
@@ -172,7 +163,11 @@ class SalesforceHandler(MetaAPIHandler):
         """
         if not self.resource_names:
             # Fetch the queryable list of Salesforce resources (sobjects).
-            self.resource_names = [resource['name'] for resource in self.connection.sobjects.describe()['sobjects'] if resource['queryable']]
+            self.resource_names = [
+                resource["name"]
+                for resource in self.connection.sobjects.describe()["sobjects"]
+                if resource["queryable"]
+            ]
 
         return self.resource_names
 
@@ -193,8 +188,8 @@ class SalesforceHandler(MetaAPIHandler):
 
         if table_names:
             # Filter the metadata for the specified tables.
-            main_metadata = [resource for resource in main_metadata['sobjects'] if resource['name'] in table_names]
+            main_metadata = [resource for resource in main_metadata["sobjects"] if resource["name"] in table_names]
         else:
-            main_metadata = main_metadata['sobjects']
+            main_metadata = main_metadata["sobjects"]
 
         return super().meta_get_tables(table_names=table_names, main_metadata=main_metadata)

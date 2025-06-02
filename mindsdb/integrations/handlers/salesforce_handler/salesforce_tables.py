@@ -21,7 +21,7 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
         """
         This is the table abstraction for any resource of the Salesforce API.
         """
-        
+
         def __init__(self, *args, table_name=None, **kwargs):
             """
             Initializes the AnyTable class.
@@ -66,7 +66,7 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
             results = client.sobjects.query(query_str)
 
             for result in results:
-                del result['attributes']
+                del result["attributes"]
 
             df = pd.DataFrame(results)
             df.rename(columns=column_aliases, inplace=True)
@@ -120,7 +120,7 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
                 conditions (List[FilterCondition]): The conditions to be validated.
             """
             # Salesforce API does not support filtering items based on attributes other than 'Id'. Raise an error if any other column is used.
-            if len(conditions) != 1 or conditions[0].column != 'Id':
+            if len(conditions) != 1 or conditions[0].column != "Id":
                 raise ValueError("Only the 'Id' column can be used to filter items.")
 
             # Only the 'equals' and 'in' operators can be used on the 'Id' column for deletion. Raise an error if any other operator is used.
@@ -128,7 +128,7 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
                 raise ValueError("Only the 'equals' and 'in' operators can be used on the 'Id' column.")
 
             return conditions[0].value if isinstance(conditions[0].value, list) else [conditions[0].value]
-        
+
         def _get_resource_metadata(self) -> Dict:
             """
             Retrieves metadata about the Salesforce resource.
@@ -149,12 +149,12 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
             Returns:
                 List[Text]: A list of Attributes (columns) of the Salesforce resource.
             """
-            return [field['name'] for field in self._get_resource_metadata()['fields']]
+            return [field["name"] for field in self._get_resource_metadata()["fields"]]
 
         def meta_get_tables(self, table_name: str, main_metadata: Dict) -> Dict:
             """
             Retrieves table metadata for the Salesforce resource.
-            
+
             Args:
                 table_name (str): The name given to the table that represents the Salesforce resource.
                 main_metadata (Dict): The main metadata dictionary containing information about all Salesforce resources.
@@ -165,22 +165,22 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
             client = self.handler.connect()
 
             resource_metadata = next(
-                (resource for resource in main_metadata if resource['name'] == resource_name),
+                (resource for resource in main_metadata if resource["name"] == resource_name),
             )
 
             # Get row count if Id column is aggregatable.
             row_count = None
             # if next(field for field in resource_metadata['fields'] if field['name'] == 'Id').get('aggregatable', False):
             try:
-                row_count = client.sobjects.query(f"SELECT COUNT(Id) FROM {resource_name}")[0]['expr0']
+                row_count = client.sobjects.query(f"SELECT COUNT(Id) FROM {resource_name}")[0]["expr0"]
             except RestRequestCouldNotBeUnderstoodError as request_error:
                 logger.warning(f"Failed to get row count for {resource_name}: {request_error}")
 
             return {
-                'table_name': table_name,
-                'table_type': 'BASE TABLE',
-                'table_description': resource_metadata.get('label', ''),
-                'row_count': row_count,
+                "table_name": table_name,
+                "table_type": "BASE TABLE",
+                "table_description": resource_metadata.get("label", ""),
+                "row_count": row_count,
             }
 
         def meta_get_columns(self, table_name: str) -> List[Dict]:
@@ -196,13 +196,15 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
             resource_metadata = self._get_resource_metadata()
 
             column_metadata = []
-            for field in resource_metadata['fields']:
-                column_metadata.append({
-                    'table_name': table_name,
-                    'column_name': field['name'],
-                    'data_type': field['type'],
-                    'is_nullable': field.get('nillable', False),
-                })
+            for field in resource_metadata["fields"]:
+                column_metadata.append(
+                    {
+                        "table_name": table_name,
+                        "column_name": field["name"],
+                        "data_type": field["type"],
+                        "is_nullable": field.get("nillable", False),
+                    }
+                )
 
             return column_metadata
 
@@ -218,8 +220,8 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
             """
             return [
                 {
-                    'table_name': table_name,
-                    'column_name': 'Id',
+                    "table_name": table_name,
+                    "column_name": "Id",
                 }
             ]
 
@@ -237,18 +239,20 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
             resource_metadata = self._get_resource_metadata()
 
             foreign_key_metadata = []
-            for child_relationship in resource_metadata.get('childRelationships', []):
+            for child_relationship in resource_metadata.get("childRelationships", []):
                 # Skip if the child relationship is not one of the supported tables.
-                child_table_name = child_relationship['childSObject']
+                child_table_name = child_relationship["childSObject"]
                 if child_table_name not in all_tables:
                     continue
 
-                foreign_key_metadata.append({
-                    'parent_table_name': table_name,
-                    'parent_column_name': 'Id',
-                    'child_table_name': child_table_name,
-                    'child_column_name': child_relationship['field'],
-                })
+                foreign_key_metadata.append(
+                    {
+                        "parent_table_name": table_name,
+                        "parent_column_name": "Id",
+                        "child_table_name": child_table_name,
+                        "child_column_name": child_relationship["field"],
+                    }
+                )
 
             return foreign_key_metadata
 

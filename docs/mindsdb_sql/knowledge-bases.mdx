@@ -522,7 +522,46 @@ FROM sample_data.orders;
 Upon execution, it inserts data into a knowledge base, using the embedding model to embed it into vectors before inserting into an underlying vector database.
 
 <Note>
-Note that when inserting the same data into the knowledge base again, then no new rows are inserted, as the content already exists in the knowledge base.
+**Handling duplicate data while inserting into the knowledge base**
+
+Knowledge bases uniquely identify data rows using an ID column, which prevents from inserting duplicate data, as follows.
+
+* **Case 1: Inserting data into the knowledge base without the `id_column` defined.**
+
+    When users do not define the `id_column` during the creation of a knowledge base, MindsDB generates the ID for each row using a hash of the content columns, as [explained here](/mindsdb_sql/knowledge-bases#id-column).
+
+    **Example:**
+
+    If two rows have exactly the same content in the content columns, their hash (and thus their generated ID) will be the same.
+
+    Note that duplicate rows are skipped and not inserted.
+
+    Since both rows in the below table have the same content, only one row will be inserted.
+
+    | name  | age |
+    |-------|-----|
+    | Alice | 25  |
+    | Alice | 25  |
+
+* **Case 2: Inserting data into the knowledge base with the `id_column` defined.**
+
+    When users define the `id_column` during the creation of a knowledge base, then the knowledge base uses that column's values as the row ID.
+
+    **Example:**
+
+    If the `id_column` has duplicate values, the knowledge base skips the duplicate row(s) during the insert.
+
+    The second row in the below table has the same `id` as the first row, so only one of these rows is inserted.
+
+    | id  | name  | age |
+    |-----|-------|-----|
+    | 1   | Alice | 25  |
+    | 1   | Bob   | 30  |
+
+**Best practice**
+
+Ensure the `id_column` uniquely identifies each row to avoid unintentional data loss due to duplicate ID skipping.
+
 </Note>
 
 ### Update Existing Data

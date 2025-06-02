@@ -349,7 +349,7 @@ The data inserted into the knowledge base can be classified as metadata, which e
 Note that source data column(s) included in `metadata_columns` cannot be used in `content_columns`, and vice versa.
 </Note>
 
-This parameter is an array of strings that lists column names from the source data to be used as metadata. If not provided, the metadata is not used.
+This parameter is an array of strings that lists column names from the source data to be used as metadata. If not provided, then all inserted columns (except for columns defined as `id_column` and `content_columns`) are considered metadata columns.
 
 Here is an example of usage. A user wants to store the following data in a knowledge base.
 

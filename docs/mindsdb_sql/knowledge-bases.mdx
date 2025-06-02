@@ -678,7 +678,7 @@ CREATE INDEX ON KNOWLEDGE_BASE my_kb;
 ```
 
 <Warning>
-Note that this feature works only when PGVector is used as the [storage of the knowledge base](/mindsdb_sql/knowledge-bases#storage).
+Note that this feature works only when PGVector is used as the [storage of the knowledge base](/mindsdb_sql/knowledge-bases#storage), as ChromaDB provides the index features by default.
 </Warning>
 
 Upon executing this statement, an index is created on the knowledge base's underlying vector store. This is essentially a database index created on the vector database.

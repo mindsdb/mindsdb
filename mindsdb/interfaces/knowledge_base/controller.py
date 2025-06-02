@@ -175,7 +175,7 @@ class KnowledgeBaseTable:
         conditions = []
         query_text = None
         relevance_threshold = None
-        reranking_flag = True
+        reranking_enabled_flag = True
         query_conditions = db_handler.extract_conditions(query.where)
         if query_conditions is not None:
             for item in query_conditions:
@@ -191,10 +191,10 @@ class KnowledgeBaseTable:
                         logger.error(error_msg)
                         raise ValueError(error_msg)
                 elif item.column == "reranking":
-                    reranking_flag = item.value
+                    reranking_enabled_flag = item.value
                     # cast to boolean
-                    if isinstance(reranking_flag, str):
-                        reranking_flag = reranking_flag.lower() not in ("false")
+                    if isinstance(reranking_enabled_flag, str):
+                        reranking_enabled_flag = reranking_enabled_flag.lower() not in ("false")
 
                 elif item.column == TableField.CONTENT.value:
                     query_text = item.value
@@ -229,7 +229,7 @@ class KnowledgeBaseTable:
         logger.debug(f"Query returned {len(df)} rows")
         logger.debug(f"Columns in response: {df.columns.tolist()}")
         # Check if we have a rerank_model configured in KB params
-        df = self.add_relevance(df, query_text, relevance_threshold, reranking_flag)
+        df = self.add_relevance(df, query_text, relevance_threshold, reranking_enabled_flag)
 
         if (
             query.group_by is not None

@@ -41,8 +41,7 @@ integration_tests_debug:
 
 unit_tests:
 	env PYTHONPATH=./ pytest tests/unit/executor/  # We have to run executor tests separately because they do weird things that break everything else
-	pytest --ignore=tests/unit/handlers --ignore=tests/unit/executor tests/unit/
-	python -m unittest discover -s tests/unit/handlers
+	pytest --ignore=tests/unit/executor tests/unit/
 
 
 .PHONY: install_mindsdb install_handler precommit format run_mindsdb check build_docker run_docker integration_tests integration_tests_debug unit_tests

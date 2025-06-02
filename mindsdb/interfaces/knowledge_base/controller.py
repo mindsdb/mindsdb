@@ -178,7 +178,7 @@ class KnowledgeBaseTable:
         query_conditions = db_handler.extract_conditions(query.where)
         if query_conditions is not None:
             for item in query_conditions:
-                if item.column == "relevance_threshold" and item.op.value == "=":
+                if item.column == "relevance" and item.op.value == FilterOperator.GREATER_THAN_OR_EQUAL.value:
                     try:
                         relevance_threshold = float(item.value)
                         # Validate range: must be between 0 and 1
@@ -189,6 +189,10 @@ class KnowledgeBaseTable:
                         error_msg = f"Invalid relevance_threshold value: {item.value}. {str(e)}"
                         logger.error(error_msg)
                         raise ValueError(error_msg)
+                elif item.column == "relevance" and item.op.value != FilterOperator.GREATER_THAN_OR_EQUAL.value:
+                    raise ValueError(
+                        f"Invalid operator for relevance: {item.op.value}. Only GREATER_THAN_OR_EQUAL is allowed."
+                    )
                 elif item.column == TableField.CONTENT.value:
                     query_text = item.value
 
@@ -857,11 +861,11 @@ class KnowledgeBaseController:
         self,
         name: str,
         project_name: str,
-        embedding_model: Identifier,
         storage: Identifier,
         params: dict,
         preprocessing_config: Optional[dict] = None,
         if_not_exists: bool = False,
+        # embedding_model: Identifier = None, # Legacy: Allow MindsDB models to be passed as embedding_model.
     ) -> db.KnowledgeBase:
         """
         Add a new knowledge base to the database
@@ -899,37 +903,52 @@ class KnowledgeBaseController:
 
         embedding_params = copy.deepcopy(config.get("default_embedding_model", {}))
 
-        model_name = None
-        model_project = project
-        if embedding_model:
-            model_name = embedding_model.parts[-1]
-            if len(embedding_model.parts) > 1:
-                model_project = self.session.database_controller.get_project(embedding_model.parts[-2])
+        # Legacy
+        # model_name = None
+        # model_project = project
+        # if embedding_model:
+        #     model_name = embedding_model.parts[-1]
+        #     if len(embedding_model.parts) > 1:
+        #         model_project = self.session.database_controller.get_project(embedding_model.parts[-2])
 
-        elif "embedding_model" in params:
-            if isinstance(params["embedding_model"], str):
-                # it is model name
-                model_name = params["embedding_model"]
-            else:
-                # it is params for model
-                embedding_params.update(params["embedding_model"])
+        # elif "embedding_model" in params:
+        #     if isinstance(params["embedding_model"], str):
+        #         # it is model name
+        #         model_name = params["embedding_model"]
+        #     else:
+        #         # it is params for model
+        #         embedding_params.update(params["embedding_model"])
 
-        if model_name is None:
-            model_name = self._create_embedding_model(
-                project.name,
-                params=embedding_params,
-                kb_name=name,
-            )
-            if model_name is not None:
-                params["created_embedding_model"] = model_name
+        if "embedding_model" in params:
+            if not isinstance(params["embedding_model"], dict):
+                raise ValueError("embedding_model should be JSON object with model parameters.")
+            embedding_params.update(params["embedding_model"])
+
+        # if model_name is None:  # Legacy
+        model_name = self._create_embedding_model(
+            project.name,
+            params=embedding_params,
+            kb_name=name,
+        )
+        if model_name is not None:
+            params["created_embedding_model"] = model_name
 
         embedding_model_id = None
         if model_name is not None:
-            model = self.session.model_controller.get_model(name=model_name, project_name=model_project.name)
+            model = self.session.model_controller.get_model(name=model_name, project_name=project.name)
             model_record = db.Predictor.query.get(model["id"])
             embedding_model_id = model_record.id
 
-        reranking_model_params = get_model_params(params.get("reranking_model", {}), "default_reranking_model")
+        # if params.get("reranking_model", {}) is bool and False we evaluate it to empty dictionary
+        reranking_model_params = params.get("reranking_model", {})
+
+        if isinstance(reranking_model_params, bool) and not reranking_model_params:
+            params["reranking_model"] = {}
+        # if params.get("reranking_model", {}) is string and false in any case we evaluate it to empty dictionary
+        if isinstance(reranking_model_params, str) and reranking_model_params.lower() == "false":
+            params["reranking_model"] = {}
+
+        reranking_model_params = get_model_params(reranking_model_params, "default_reranking_model")
         if reranking_model_params:
             # Get reranking model from params.
             # This is called here to check validaity of the parameters.

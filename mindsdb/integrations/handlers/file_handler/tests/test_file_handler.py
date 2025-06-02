@@ -358,10 +358,7 @@ def test_get_tables():
     assert response.type == RESPONSE_TYPE.TABLE
 
     expected_df = pandas.DataFrame(
-        [
-            {"TABLE_NAME": x[0], "TABLE_ROWS": x[1], "TABLE_TYPE": "BASE TABLE"}
-            for x in file_records
-        ]
+        [{"TABLE_NAME": x[0], "TABLE_ROWS": x[1], "TABLE_TYPE": "BASE TABLE"} for x in file_records]
     )
 
     assert response.data_frame.equals(expected_df)
@@ -373,8 +370,6 @@ def test_get_columns():
 
     assert response.type == RESPONSE_TYPE.TABLE
 
-    expected_df = pandas.DataFrame(
-        [{"Field": x, "Type": "str"} for x in file_records[0][2]]
-    )
+    expected_df = pandas.DataFrame([{"Field": x, "Type": "str"} for x in file_records[0][2]])
 
     assert response.data_frame.equals(expected_df)

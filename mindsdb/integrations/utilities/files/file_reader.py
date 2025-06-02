@@ -218,12 +218,8 @@ class FormatDetector:
 
 def format_column_names(df: pd.DataFrame):
     df.columns = [column.strip(" \t") for column in df.columns]
-    if len(df.columns) != len(set(df.columns)) or any(
-        len(column_name) == 0 for column_name in df.columns
-    ):
-        raise FileProcessingError(
-            "Each column should have a unique and non-empty name."
-        )
+    if len(df.columns) != len(set(df.columns)) or any(len(column_name) == 0 for column_name in df.columns):
+        raise FileProcessingError("Each column should have a unique and non-empty name.")
 
 
 class FileReader(FormatDetector):
@@ -306,27 +302,19 @@ class FileReader(FormatDetector):
             else:
                 accepted_csv_delimiters = [",", "\t", ";"]
             try:
-                dialect = csv.Sniffer().sniff(
-                    sample, delimiters=accepted_csv_delimiters
-                )
-                dialect.doublequote = (
-                    True  # assume that all csvs have " as string escape
-                )
+                dialect = csv.Sniffer().sniff(sample, delimiters=accepted_csv_delimiters)
+                dialect.doublequote = True  # assume that all csvs have " as string escape
             except Exception:
                 dialect = csv.reader(sample).dialect
                 if dialect.delimiter not in accepted_csv_delimiters:
-                    raise FileProcessingError(
-                        f"CSV delimeter '{dialect.delimiter}' is not supported"
-                    )
+                    raise FileProcessingError(f"CSV delimeter '{dialect.delimiter}' is not supported")
 
         except csv.Error:
             dialect = None
         return dialect
 
     @classmethod
-    def read_csv(
-        cls, file_obj: BytesIO, delimiter: str | None = None, **kwargs
-    ) -> pd.DataFrame:
+    def read_csv(cls, file_obj: BytesIO, delimiter: str | None = None, **kwargs) -> pd.DataFrame:
         file_obj = decode(file_obj)
         dialect = cls._get_csv_dialect(file_obj, delimiter=delimiter)
         return pd.read_csv(file_obj, sep=dialect.delimiter, index_col=False)
@@ -342,8 +330,7 @@ class FileReader(FormatDetector):
             from langchain_core.documents import Document
         except ImportError:
             raise FileProcessingError(
-                "To import TXT document please install 'langchain-community':\n"
-                "    pip install langchain-community"
+                "To import TXT document please install 'langchain-community':\n    pip install langchain-community"
             )
         text = file_obj.read()
 
@@ -355,9 +342,7 @@ class FileReader(FormatDetector):
         )
 
         docs = text_splitter.split_documents(documents)
-        return pd.DataFrame(
-            [{"content": doc.page_content, "metadata": doc.metadata} for doc in docs]
-        )
+        return pd.DataFrame([{"content": doc.page_content, "metadata": doc.metadata} for doc in docs])
 
     @staticmethod
     def read_pdf(file_obj: BytesIO, name: str | None = None, **kwargs) -> pd.DataFrame:
@@ -377,8 +362,7 @@ class FileReader(FormatDetector):
         return pd.DataFrame(
             {
                 "content": split_text,
-                "metadata": [{"file_format": "pdf", "source_file": name}]
-                * len(split_text),
+                "metadata": [{"file_format": "pdf", "source_file": name}] * len(split_text),
             }
         )
 

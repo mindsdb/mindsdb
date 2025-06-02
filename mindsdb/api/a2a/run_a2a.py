@@ -57,7 +57,7 @@ def main(config_override: Optional[Dict[str, Any]] = None, *args, **kwargs):
         logger.info("Successfully imported a2a module")
 
         # Get configuration from config system or use provided override
-        a2a_config = config_override if config_override is not None else config.get("a2a", {})
+        a2a_config = config_override if config_override is not None else config.get("api", {}).get("a2a", {})
 
         # Set log level if specified
         if a2a_config.get("log_level"):

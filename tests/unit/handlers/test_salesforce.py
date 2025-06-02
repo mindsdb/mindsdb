@@ -75,7 +75,9 @@ class TestSalesforceHandler(BaseHandlerTestSetup, unittest.TestCase):
         """
         mock_tables = ["Account", "Contact"]
         self.mock_connect.return_value = MagicMock(
-            sobjects=MagicMock(describe=lambda: {"sobjects": [{"name": table} for table in mock_tables]})
+            sobjects=MagicMock(
+                describe=lambda: {"sobjects": [{"name": table, "queryable": True} for table in mock_tables]}
+            )
         )
         self.handler.connect()
         response = self.handler.get_tables()
@@ -85,7 +87,7 @@ class TestSalesforceHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         df = response.data_frame
         self.assertEqual(len(df), len(mock_tables))
-        self.assertEqual(list(df["table_name"]), [table.lower() for table in mock_tables])
+        self.assertEqual(list(df["table_name"]), mock_tables)
 
     def test_get_columns(self):
         """
@@ -95,12 +97,12 @@ class TestSalesforceHandler(BaseHandlerTestSetup, unittest.TestCase):
         mock_table = "Contact"
         self.mock_connect.return_value = MagicMock(
             sobjects=MagicMock(
-                describe=lambda: {"sobjects": [{"name": mock_table}]},
+                describe=lambda: {"sobjects": [{"name": mock_table, "queryable": True}]},
                 Contact=MagicMock(describe=lambda: {"fields": [{"name": column} for column in mock_columns]}),
             )
         )
         self.handler.connect()
-        response = self.handler.get_columns(mock_table.lower())
+        response = self.handler.get_columns(mock_table)
 
         assert isinstance(response, Response)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)

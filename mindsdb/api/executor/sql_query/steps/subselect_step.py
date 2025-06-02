@@ -7,17 +7,13 @@ from mindsdb_sql_parser.ast import (
 )
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import SERVER_VARIABLES
-
 from mindsdb.api.executor.planner.step_result import Result
 from mindsdb.api.executor.planner.steps import SubSelectStep, QueryStep
-from mindsdb.integrations.utilities.query_traversal import query_traversal
-
 from mindsdb.api.executor.sql_query.result_set import ResultSet, Column
 from mindsdb.api.executor.utilities.sql import query_df
-
-from mindsdb.interfaces.query_context.context_controller import query_context_controller
-
 from mindsdb.api.executor.exceptions import KeyColumnDoesNotExist
+from mindsdb.integrations.utilities.query_traversal import query_traversal
+from mindsdb.interfaces.query_context.context_controller import query_context_controller
 
 from .base import BaseStepCall
 from .fetch_dataframe import get_fill_param_fnc
@@ -103,6 +99,13 @@ class QueryStepCall(BaseStepCall):
             if col.table_name != col.table_alias:
                 tbl_idx[col.table_alias].append(name)
 
+        lower_col_idx = {}
+        for key, value in col_idx.items():
+            if isinstance(key, str):
+                lower_col_idx[key.lower()] = value
+                continue
+            lower_col_idx[tuple(x.lower() for x in key)] = value
+
         # get aliases of first level
         aliases = []
         for col in query.targets:
@@ -159,23 +162,31 @@ class QueryStepCall(BaseStepCall):
                         "version for the right syntax to use near '$$' at line 1"
                     )
 
-                if len(node.parts) == 1:
-                    key = col_name
-                    if key in aliases:
-                        # key is defined as alias
-                        return
-                else:
-                    table_name = node.parts[-2]
-                    key = (table_name, col_name)
+                match node.parts, node.is_quoted:
+                    case [column_name], [column_quoted]:
+                        if column_name in aliases:
+                            # key is defined as alias
+                            return
 
-                if key not in col_idx:
-                    if len(node.parts) == 1:
-                        # it can be local alias of a query
-                        return
+                        key = column_name if column_quoted else column_name.lower()
 
+                        if key not in col_idx and key not in lower_col_idx:
+                            # it can be local alias of a query, like:
+                            # SELECT t1.a + t2.a col1, min(t1.a) c
+                            # FROM dummy_data.tbl1 as t1
+                            # JOIN pg.tbl2 as t2 on t1.c=t2.c
+                            # group by col1
+                            # order by c -- <--- "с" is alias
+                            return
+                    case [*rest_parts, table_name, column_name], [*rest_quoted, column_quoted]:
+                        key = (table_name, column_name) if column_quoted else (table_name.lower(), column_name.lower())
+
+                search_idx = col_idx if column_quoted else lower_col_idx
+
+                if key not in search_idx:
                     raise KeyColumnDoesNotExist(f'Table not found for column: {key}')
 
-                new_name = col_idx[key]
+                new_name = search_idx[key]
                 return Identifier(parts=[new_name], alias=node.alias)
 
         # fill params

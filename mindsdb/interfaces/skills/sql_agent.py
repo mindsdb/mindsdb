@@ -402,7 +402,6 @@ class SQLAgent:
         """
         if config.get("data_catalog", {}).get("enabled", False):
             datasource = next(iter(self._mindsdb_db_struct), None)
-            print(datasource)
             data_catalog_reader_instance = DataCatalogReader(
                 database_name=datasource, table_names=self._tables_to_include
             )

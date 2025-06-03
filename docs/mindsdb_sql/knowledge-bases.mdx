@@ -223,7 +223,7 @@ USING
     ...
     embedding_model = {
 
-        "provider": "openai_azure",
+        "provider": "azure_openai",
         "model_name" : "text-embedding-3-large",
         "api_key": "sk-abc123",
         "base_url": "https://ai-6689.openai.azure.com/",
@@ -242,7 +242,7 @@ Note that if you define `default_embedding_model` in the configuration file, you
 ```bash
 "default_embedding_model": {
 
-   "provider": "openai_azure",
+   "provider": "azure_openai",
    "model_name" : "text-embedding-3-large",
    "api_key": "sk-abc123",
    "base_url": "https://ai-6689.openai.azure.com/",
@@ -282,7 +282,7 @@ USING
     ...
     reranking_model = {
 
-        "provider": "openai_azure",
+        "provider": "azure_openai",
         "model_name" : "gpt-4o",
         "api_key": "sk-abc123",
         "base_url": "https://ai-6689.openai.azure.com/",
@@ -302,7 +302,7 @@ Note that if you define `default_llm` in the configuration file, you do not need
 ```bash
 "default_llm": {
 
-  "provider": "openai_azure",
+  "provider": "azure_openai",
   "model_name" : "gpt-4o",
   "api_key": "sk-abc123",
   "base_url": "https://ai-6689.openai.azure.com/",

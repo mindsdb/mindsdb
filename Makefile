@@ -33,18 +33,15 @@ run_docker: build_docker
 	docker run -it -p 47334:47334 mdb
 
 integration_tests:
-	# Run tests in parallel and distribute a whole file to each worker
 	pytest $(PYTEST_ARGS) tests/integration/ -k "not test_auth"
-	# Run this test separately because it alters the auth requirements, which breaks other tests
-	pytest $(PYTEST_ARGS) tests/integration/ -k test_auth
+	pytest $(PYTEST_ARGS) tests/integration/ -k test_auth  # Run this test separately because it alters the auth requirements, which breaks other tests
 
 integration_tests_slow:
 	pytest --runslow $(PYTEST_ARGS) tests/integration/ -k "not test_auth"
 	pytest --runslow $(PYTEST_ARGS) tests/integration/ -k test_auth
 
 integration_tests_debug:
-	pytest $(PYTEST_ARGS_DEBUG) tests/integration/ -k "not test_auth"
-	pytest $(PYTEST_ARGS_DEBUG) tests/integration/ -k test_auth
+	pytest $(PYTEST_ARGS_DEBUG) tests/integration/
 
 unit_tests:
 	# We have to run executor tests separately because they do weird things that break everything else

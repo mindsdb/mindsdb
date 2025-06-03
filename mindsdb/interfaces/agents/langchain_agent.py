@@ -264,10 +264,15 @@ class LangchainAgent:
         if args.get("prompt_template") is None:
             if args.get("mode") == "retrieval":
                 args["prompt_template"] = DEFAULT_RAG_PROMPT_TEMPLATE
+                logger.info(f"Using default retrieval prompt template: {DEFAULT_RAG_PROMPT_TEMPLATE[:50]}...")
             else:
-                args["prompt_template"] = "you are an assistant, answer using the tables connected"
+                # Set a default prompt template for non-retrieval mode
+                default_prompt = "you are an assistant, answer using the tables connected"
+                args["prompt_template"] = default_prompt
+                logger.info(f"Using default prompt template: {default_prompt}")
 
-        logger.info("using the following prompt template: " + args["prompt_template"])
+        if "prompt_template" in args:
+            logger.info(f"Using prompt template: {args['prompt_template'][:50]}...")
 
         return args
 

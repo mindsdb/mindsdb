@@ -29,6 +29,7 @@ from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.variables.variables_controller import variables_controller
 from mindsdb.interfaces.knowledge_base.preprocessing.models import PreprocessingConfig, Document
 from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor import PreprocessorFactory
+from mindsdb.interfaces.knowledge_base.evaluate import EvaluateBase
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
@@ -178,7 +179,7 @@ class KnowledgeBaseTable:
         query_conditions = db_handler.extract_conditions(query.where)
         if query_conditions is not None:
             for item in query_conditions:
-                if item.column == "relevance_threshold" and item.op.value == "=":
+                if item.column == "relevance" and item.op.value == FilterOperator.GREATER_THAN_OR_EQUAL.value:
                     try:
                         relevance_threshold = float(item.value)
                         # Validate range: must be between 0 and 1
@@ -189,6 +190,10 @@ class KnowledgeBaseTable:
                         error_msg = f"Invalid relevance_threshold value: {item.value}. {str(e)}"
                         logger.error(error_msg)
                         raise ValueError(error_msg)
+                elif item.column == "relevance" and item.op.value != FilterOperator.GREATER_THAN_OR_EQUAL.value:
+                    raise ValueError(
+                        f"Invalid operator for relevance: {item.op.value}. Only GREATER_THAN_OR_EQUAL is allowed."
+                    )
                 elif item.column == TableField.CONTENT.value:
                     query_text = item.value
 
@@ -237,6 +242,10 @@ class KnowledgeBaseTable:
             df = query_df(df, query_copy, session=self.session)
 
         return df
+
+    def score_documents(self, query_text, documents, reranking_model_params):
+        reranker = get_reranking_model_from_params(reranking_model_params)
+        return reranker.get_scores(query_text, documents)
 
     def add_relevance(self, df, query_text, relevance_threshold=None):
         relevance_column = TableField.RELEVANCE.value
@@ -935,7 +944,16 @@ class KnowledgeBaseController:
             model_record = db.Predictor.query.get(model["id"])
             embedding_model_id = model_record.id
 
-        reranking_model_params = get_model_params(params.get("reranking_model", {}), "default_reranking_model")
+        # if params.get("reranking_model", {}) is bool and False we evaluate it to empty dictionary
+        reranking_model_params = params.get("reranking_model", {})
+
+        if isinstance(reranking_model_params, bool) and not reranking_model_params:
+            params["reranking_model"] = {}
+        # if params.get("reranking_model", {}) is string and false in any case we evaluate it to empty dictionary
+        if isinstance(reranking_model_params, str) and reranking_model_params.lower() == "false":
+            params["reranking_model"] = {}
+
+        reranking_model_params = get_model_params(reranking_model_params, "default_reranking_model")
         if reranking_model_params:
             # Get reranking model from params.
             # This is called here to check validaity of the parameters.
@@ -1028,7 +1046,7 @@ class KnowledgeBaseController:
         except PredictorRecordNotFound:
             pass
 
-        if params.get("provider", None) not in ("openai", "azure"):
+        if params.get("provider", None) not in ("openai", "azure_openai"):
             # try use litellm
             KnowledgeBaseTable.call_litellm_embedding(self.session, params, ["test"])
             return
@@ -1192,3 +1210,18 @@ class KnowledgeBaseController:
         Update a knowledge base record
         """
         raise NotImplementedError()
+
+    def evaluate(self, table_name: str, project_name: str, params: dict = None) -> pd.DataFrame:
+        """
+        Run evaluate and/or create test data for evaluation
+        :param table_name: name of KB
+        :param project_name: project of KB
+        :param params: evaluation parameters
+        :return: evaluation results
+        """
+        project_id = self.session.database_controller.get_project(project_name).id
+        kb_table = self.get_table(table_name, project_id)
+
+        scores = EvaluateBase.run(self.session, kb_table, params)
+
+        return scores

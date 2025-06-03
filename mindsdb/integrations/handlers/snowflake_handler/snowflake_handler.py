@@ -16,12 +16,13 @@ from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 try:
     import pyarrow as pa
+
     memory_pool = pa.default_memory_pool()
 except Exception:
     memory_pool = None
@@ -31,7 +32,7 @@ logger = log.getLogger(__name__)
 
 
 def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
-    """ Map Snowflake types to MySQL types.
+    """Map Snowflake types to MySQL types.
 
     Args:
         internal_type_name (str): The name of the Snowflake type to map.
@@ -41,22 +42,22 @@ def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
     """
     internal_type_name = internal_type_name.upper()
     types_map = {
-        ('NUMBER', 'DECIMAL', 'DEC', 'NUMERIC'): MYSQL_DATA_TYPE.DECIMAL,
-        ('INT , INTEGER , BIGINT , SMALLINT , TINYINT , BYTEINT'): MYSQL_DATA_TYPE.INT,
-        ('FLOAT', 'FLOAT4', 'FLOAT8'): MYSQL_DATA_TYPE.FLOAT,
-        ('DOUBLE', 'DOUBLE PRECISION', 'REAL'): MYSQL_DATA_TYPE.DOUBLE,
-        ('VARCHAR'): MYSQL_DATA_TYPE.VARCHAR,
-        ('CHAR', 'CHARACTER', 'NCHAR'): MYSQL_DATA_TYPE.CHAR,
-        ('STRING', 'TEXT', 'NVARCHAR'): MYSQL_DATA_TYPE.TEXT,
-        ('NVARCHAR2', 'CHAR VARYING', 'NCHAR VARYING'): MYSQL_DATA_TYPE.VARCHAR,
-        ('BINARY', 'VARBINARY'): MYSQL_DATA_TYPE.BINARY,
-        ('BOOLEAN',): MYSQL_DATA_TYPE.BOOL,
-        ('TIMESTAMP_NTZ', 'DATETIME'): MYSQL_DATA_TYPE.DATETIME,
-        ('DATE',): MYSQL_DATA_TYPE.DATE,
-        ('TIME',): MYSQL_DATA_TYPE.TIME,
-        ('TIMESTAMP_LTZ'): MYSQL_DATA_TYPE.DATETIME,
-        ('TIMESTAMP_TZ'): MYSQL_DATA_TYPE.DATETIME,
-        ('VARIANT', 'OBJECT', 'ARRAY', 'MAP', 'GEOGRAPHY', 'GEOMETRY', 'VECTOR'): MYSQL_DATA_TYPE.VARCHAR
+        ("NUMBER", "DECIMAL", "DEC", "NUMERIC"): MYSQL_DATA_TYPE.DECIMAL,
+        ("INT , INTEGER , BIGINT , SMALLINT , TINYINT , BYTEINT"): MYSQL_DATA_TYPE.INT,
+        ("FLOAT", "FLOAT4", "FLOAT8"): MYSQL_DATA_TYPE.FLOAT,
+        ("DOUBLE", "DOUBLE PRECISION", "REAL"): MYSQL_DATA_TYPE.DOUBLE,
+        ("VARCHAR"): MYSQL_DATA_TYPE.VARCHAR,
+        ("CHAR", "CHARACTER", "NCHAR"): MYSQL_DATA_TYPE.CHAR,
+        ("STRING", "TEXT", "NVARCHAR"): MYSQL_DATA_TYPE.TEXT,
+        ("NVARCHAR2", "CHAR VARYING", "NCHAR VARYING"): MYSQL_DATA_TYPE.VARCHAR,
+        ("BINARY", "VARBINARY"): MYSQL_DATA_TYPE.BINARY,
+        ("BOOLEAN",): MYSQL_DATA_TYPE.BOOL,
+        ("TIMESTAMP_NTZ", "DATETIME"): MYSQL_DATA_TYPE.DATETIME,
+        ("DATE",): MYSQL_DATA_TYPE.DATE,
+        ("TIME",): MYSQL_DATA_TYPE.TIME,
+        ("TIMESTAMP_LTZ"): MYSQL_DATA_TYPE.DATETIME,
+        ("TIMESTAMP_TZ"): MYSQL_DATA_TYPE.DATETIME,
+        ("VARIANT", "OBJECT", "ARRAY", "MAP", "GEOGRAPHY", "GEOMETRY", "VECTOR"): MYSQL_DATA_TYPE.VARCHAR,
     }
 
     for db_types_list, mysql_data_type in types_map.items():
@@ -84,29 +85,29 @@ def _make_table_response(result: DataFrame, cursor: SnowflakeCursor) -> Response
     for column in description:
         column_dtype = result[column.name].dtype
         description_column_type = connector.constants.FIELD_ID_TO_NAME.get(column.type_code)
-        if description_column_type in ('OBJECT', 'ARRAY'):
+        if description_column_type in ("OBJECT", "ARRAY"):
             mysql_types.append(MYSQL_DATA_TYPE.JSON)
             continue
         if pd_types.is_integer_dtype(column_dtype):
             column_dtype_name = column_dtype.name
-            if column_dtype_name in ('int8', 'Int8'):
+            if column_dtype_name in ("int8", "Int8"):
                 mysql_types.append(MYSQL_DATA_TYPE.TINYINT)
-            elif column_dtype in ('int16', 'Int16'):
+            elif column_dtype in ("int16", "Int16"):
                 mysql_types.append(MYSQL_DATA_TYPE.SMALLINT)
-            elif column_dtype in ('int32', 'Int32'):
+            elif column_dtype in ("int32", "Int32"):
                 mysql_types.append(MYSQL_DATA_TYPE.MEDIUMINT)
-            elif column_dtype in ('int64', 'Int64'):
+            elif column_dtype in ("int64", "Int64"):
                 mysql_types.append(MYSQL_DATA_TYPE.BIGINT)
             else:
                 mysql_types.append(MYSQL_DATA_TYPE.INT)
             continue
         if pd_types.is_float_dtype(column_dtype):
             column_dtype_name = column_dtype.name
-            if column_dtype_name in ('float16', 'Float16'):  # Float16 does not exists so far
+            if column_dtype_name in ("float16", "Float16"):  # Float16 does not exists so far
                 mysql_types.append(MYSQL_DATA_TYPE.FLOAT)
-            elif column_dtype_name in ('float32', 'Float32'):
+            elif column_dtype_name in ("float32", "Float32"):
                 mysql_types.append(MYSQL_DATA_TYPE.FLOAT)
-            elif column_dtype_name in ('float64', 'Float64'):
+            elif column_dtype_name in ("float64", "Float64"):
                 mysql_types.append(MYSQL_DATA_TYPE.DOUBLE)
             else:
                 mysql_types.append(MYSQL_DATA_TYPE.FLOAT)
@@ -118,35 +119,35 @@ def _make_table_response(result: DataFrame, cursor: SnowflakeCursor) -> Response
             mysql_types.append(MYSQL_DATA_TYPE.DATETIME)
             series = result[column.name]
             # snowflake use pytz.timezone
-            if series.dt.tz is not None and getattr(series.dt.tz, 'zone', 'UTC') != 'UTC':
-                series = series.dt.tz_convert('UTC')
+            if series.dt.tz is not None and getattr(series.dt.tz, "zone", "UTC") != "UTC":
+                series = series.dt.tz_convert("UTC")
                 result[column.name] = series.dt.tz_localize(None)
             continue
 
         if pd_types.is_object_dtype(column_dtype):
-            if description_column_type == 'TEXT':
+            if description_column_type == "TEXT":
                 # we can also check column.internal_size, if == 16777216 then it is TEXT, else VARCHAR(internal_size)
                 mysql_types.append(MYSQL_DATA_TYPE.TEXT)
                 continue
-            elif description_column_type == 'BINARY':
+            elif description_column_type == "BINARY":
                 # if column.internal_size == 8388608 then BINARY, else VARBINARY(internal_size)
                 mysql_types.append(MYSQL_DATA_TYPE.BINARY)
                 continue
-            elif description_column_type == 'DATE':
+            elif description_column_type == "DATE":
                 mysql_types.append(MYSQL_DATA_TYPE.DATE)
                 continue
-            elif description_column_type == 'TIME':
+            elif description_column_type == "TIME":
                 mysql_types.append(MYSQL_DATA_TYPE.TIME)
                 continue
 
-        if description_column_type == 'FIXED':
+        if description_column_type == "FIXED":
             if column.scale == 0:
                 mysql_types.append(MYSQL_DATA_TYPE.INT)
             else:
                 # It is NUMBER, DECIMAL or NUMERIC with scale > 0
                 mysql_types.append(MYSQL_DATA_TYPE.FLOAT)
             continue
-        elif description_column_type == 'REAL':
+        elif description_column_type == "REAL":
             mysql_types.append(MYSQL_DATA_TYPE.FLOAT)
             continue
 
@@ -157,12 +158,7 @@ def _make_table_response(result: DataFrame, cursor: SnowflakeCursor) -> Response
         columns=[column.name for column in description],
     )
 
-    return Response(
-        RESPONSE_TYPE.TABLE,
-        data_frame=df,
-        affected_rows=None,
-        mysql_types=mysql_types
-    )
+    return Response(RESPONSE_TYPE.TABLE, data_frame=df, affected_rows=None, mysql_types=mysql_types)
 
 
 class SnowflakeHandler(DatabaseHandler):
@@ -170,11 +166,11 @@ class SnowflakeHandler(DatabaseHandler):
     This handler handles connection and execution of the Snowflake statements.
     """
 
-    name = 'snowflake'
+    name = "snowflake"
 
     def __init__(self, name, **kwargs):
         super().__init__(name)
-        self.connection_data = kwargs.get('connection_data')
+        self.connection_data = kwargs.get("connection_data")
         self.renderer = SqlalchemyRender(snowdialect.dialect)
 
         self.is_connected = False
@@ -196,18 +192,18 @@ class SnowflakeHandler(DatabaseHandler):
             return self.connection
 
         # Mandatory connection parameters
-        if not all(key in self.connection_data for key in ['account', 'user', 'password', 'database']):
-            raise ValueError('Required parameters (account, user, password, database) must be provided.')
+        if not all(key in self.connection_data for key in ["account", "user", "password", "database"]):
+            raise ValueError("Required parameters (account, user, password, database) must be provided.")
 
         config = {
-            'account': self.connection_data.get('account'),
-            'user': self.connection_data.get('user'),
-            'password': self.connection_data.get('password'),
-            'database': self.connection_data.get('database')
+            "account": self.connection_data.get("account"),
+            "user": self.connection_data.get("user"),
+            "password": self.connection_data.get("password"),
+            "database": self.connection_data.get("database"),
         }
 
         # Optional connection parameters
-        optional_params = ['schema', 'warehouse', 'role']
+        optional_params = ["schema", "warehouse", "role"]
         for param in optional_params:
             if param in self.connection_data:
                 config[param] = self.connection_data[param]
@@ -218,7 +214,7 @@ class SnowflakeHandler(DatabaseHandler):
             self.is_connected = True
             return self.connection
         except connector.errors.Error as e:
-            logger.error(f'Error connecting to Snowflake, {e}!')
+            logger.error(f"Error connecting to Snowflake, {e}!")
             raise
 
     def disconnect(self):
@@ -247,10 +243,10 @@ class SnowflakeHandler(DatabaseHandler):
 
             # Execute a simple query to test the connection
             with connection.cursor() as cur:
-                cur.execute('select 1;')
+                cur.execute("select 1;")
             response.success = True
         except (connector.errors.Error, ValueError) as e:
-            logger.error(f'Error connecting to Snowflake, {e}!')
+            logger.error(f"Error connecting to Snowflake, {e}!")
             response.error_message = str(e)
 
         if response.success and need_to_close:
@@ -279,7 +275,6 @@ class SnowflakeHandler(DatabaseHandler):
             try:
                 cur.execute(query)
                 try:
-
                     try:
                         batches_iter = cur.fetch_pandas_batches()
                     except ValueError:
@@ -300,64 +295,52 @@ class SnowflakeHandler(DatabaseHandler):
                         if memory_estimation_check_done is False and batches_rowcount > 1000:
                             memory_estimation_check_done = True
                             available_memory_kb = psutil.virtual_memory().available >> 10
-                            batches_size_kb = sum([(x.memory_usage(index=True, deep=True).sum() >> 10) for x in batches])
+                            batches_size_kb = sum(
+                                [(x.memory_usage(index=True, deep=True).sum() >> 10) for x in batches]
+                            )
                             total_rowcount = cur.rowcount
                             rest_rowcount = total_rowcount - batches_rowcount
                             rest_estimated_size_kb = int((rest_rowcount / batches_rowcount) * batches_size_kb)
                             if (available_memory_kb * 0.9) < rest_estimated_size_kb:
                                 logger.error(
-                                    'Attempt to get too large dataset:\n'
-                                    f'batches_rowcount={batches_rowcount}, size_kb={batches_size_kb}\n'
-                                    f'total_rowcount={total_rowcount}, estimated_size_kb={rest_estimated_size_kb}\n'
-                                    f'available_memory_kb={available_memory_kb}'
+                                    "Attempt to get too large dataset:\n"
+                                    f"batches_rowcount={batches_rowcount}, size_kb={batches_size_kb}\n"
+                                    f"total_rowcount={total_rowcount}, estimated_size_kb={rest_estimated_size_kb}\n"
+                                    f"available_memory_kb={available_memory_kb}"
                                 )
-                                raise MemoryError('Not enought memory')
+                                raise MemoryError("Not enought memory")
                         # endregion
                     if len(batches) > 0:
                         response = _make_table_response(result=pandas.concat(batches, ignore_index=True), cursor=cur)
                     else:
-                        response = Response(
-                            RESPONSE_TYPE.TABLE,
-                            DataFrame(
-                                [],
-                                columns=[x[0] for x in cur.description]
-                            )
-                        )
+                        response = Response(RESPONSE_TYPE.TABLE, DataFrame([], columns=[x[0] for x in cur.description]))
                 except NotSupportedError:
                     # Fallback for CREATE/DELETE/UPDATE. These commands returns table with single column,
                     # but it cannot be retrieved as pandas DataFrame.
                     result = cur.fetchall()
                     match result:
                         case (
-                            [{'number of rows inserted': affected_rows}]
-                            | [{'number of rows deleted': affected_rows}]
-                            | [{'number of rows updated': affected_rows, 'number of multi-joined rows updated': _}]
+                            [{"number of rows inserted": affected_rows}]
+                            | [{"number of rows deleted": affected_rows}]
+                            | [{"number of rows updated": affected_rows, "number of multi-joined rows updated": _}]
                         ):
                             response = Response(RESPONSE_TYPE.OK, affected_rows=affected_rows)
                         case list():
                             response = Response(
-                                RESPONSE_TYPE.TABLE,
-                                DataFrame(
-                                    result,
-                                    columns=[x[0] for x in cur.description]
-                                )
+                                RESPONSE_TYPE.TABLE, DataFrame(result, columns=[x[0] for x in cur.description])
                             )
                         case _:
                             # Looks like SnowFlake always returns something in response, so this is suspicious
-                            logger.warning('Snowflake did not return any data in response.')
+                            logger.warning("Snowflake did not return any data in response.")
                             response = Response(RESPONSE_TYPE.OK)
             except Exception as e:
                 logger.error(f"Error running query: {query} on {self.connection_data.get('database')}, {e}!")
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_code=0,
-                    error_message=str(e)
-                )
+                response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(e))
 
         if need_to_close is True:
             self.disconnect()
 
-        if memory_pool is not None and memory_pool.backend_name == 'jemalloc':
+        if memory_pool is not None and memory_pool.backend_name == "jemalloc":
             # This reduce memory consumption, but will slow down next query slightly.
             # Except pool type 'jemalloc': memory consumption do not change significantly
             # and next query processing time may be even lower.
@@ -388,7 +371,7 @@ class SnowflakeHandler(DatabaseHandler):
         quoted_columns = []
         if query.targets is not None:
             for column in query.targets:
-                if hasattr(column, 'alias') and column.alias is not None:
+                if hasattr(column, "alias") and column.alias is not None:
                     if column.alias.is_quoted[-1]:
                         quoted_columns.append(column.alias.parts[-1])
                 elif isinstance(column, Identifier):

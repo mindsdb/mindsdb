@@ -1046,7 +1046,7 @@ class KnowledgeBaseController:
         except PredictorRecordNotFound:
             pass
 
-        if params.get("provider", None) not in ("openai", "azure"):
+        if params.get("provider", None) not in ("openai", "azure_openai"):
             # try use litellm
             KnowledgeBaseTable.call_litellm_embedding(self.session, params, ["test"])
             return

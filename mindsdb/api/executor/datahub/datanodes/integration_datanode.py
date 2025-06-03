@@ -1,7 +1,7 @@
 import time
 import inspect
 from dataclasses import astuple
-from typing import Iterable
+from typing import Iterable, List
 
 import numpy as np
 import pandas as pd
@@ -43,7 +43,13 @@ class IntegrationDataNode(DataNode):
 
     def get_tables(self):
         response = self.integration_handler.get_tables()
-        if response.type != RESPONSE_TYPE.TABLE:
+        if response.type == RESPONSE_TYPE.TABLE:
+            result_dict = response.data_frame.to_dict(orient="records")
+            result = []
+            for row in result_dict:
+                result.append(TablesRow.from_dict(row))
+            return result
+        else:
             raise Exception(f"Can't get tables: {response.error_message}")
 
         result_dict = response.data_frame.to_dict(orient="records")
@@ -117,22 +123,20 @@ class IntegrationDataNode(DataNode):
         self,
         table_name: Identifier,
         result_set: ResultSet = None,
-        columns=None,
-        is_replace=False,
-        is_create=False,
+        columns: List[TableColumn] = None,
+        is_replace: bool = False,
+        is_create: bool = False,
+        raise_if_exists: bool = True,
         **kwargs,
     ) -> DataHubResponse:
         # is_create - create table
+        #   if !raise_if_exists: error will be skipped
         # is_replace - drop table if exists
         # is_create==False and is_replace==False: just insert
 
         table_columns_meta = {}
 
         if columns is None:
-            columns = []
-
-            df = result_set.get_raw_df()
-
             columns: list[TableColumn] = result_set.get_ast_columns()
             table_columns_meta = {column.name: column.type for column in columns}
 
@@ -144,7 +148,11 @@ class IntegrationDataNode(DataNode):
 
         if is_create:
             create_table_ast = CreateTable(name=table_name, columns=columns, is_replace=is_replace)
-            self.query(create_table_ast)
+            try:
+                self.query(create_table_ast)
+            except Exception as e:
+                if raise_if_exists:
+                    raise e
 
         if result_set is None:
             # it is just a 'create table'

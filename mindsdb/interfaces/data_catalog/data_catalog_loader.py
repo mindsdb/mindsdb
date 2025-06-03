@@ -212,22 +212,29 @@ class DataCatalogLoader(BaseDataCatalog):
         """
         foreign_keys = []
         for row in df.to_dict(orient="records"):
-            parent_table_id = next((table.id for table in tables if table.name == row.get("parent_table_name")))
-            parent_column_id = next(
-                (
-                    column.id
-                    for column in columns
-                    if column.name == row.get("parent_column_name") and column.table_id == parent_table_id
+            try:
+                parent_table_id = next((table.id for table in tables if table.name == row.get("parent_table_name")))
+                parent_column_id = next(
+                    (
+                        column.id
+                        for column in columns
+                        if column.name == row.get("parent_column_name") and column.table_id == parent_table_id
+                    )
                 )
-            )
-            child_table_id = next((table.id for table in tables if table.name == row.get("child_table_name")))
-            child_column_id = next(
-                (
-                    column.id
-                    for column in columns
-                    if column.name == row.get("child_column_name") and column.table_id == child_table_id
+                child_table_id = next((table.id for table in tables if table.name == row.get("child_table_name")))
+                child_column_id = next(
+                    (
+                        column.id
+                        for column in columns
+                        if column.name == row.get("child_column_name") and column.table_id == child_table_id
+                    )
                 )
-            )
+            except StopIteration:
+                self.logger.warning(
+                    f"The foreign key relationship for {row.get('parent_table_name')} -> {row.get('child_table_name')} "
+                    f"could not be established. One or more tables or columns may not exist in the metadata."
+                )
+                continue
 
             record = db.MetaForeignKeys(
                 parent_table_id=parent_table_id,

@@ -2,8 +2,8 @@ import unittest
 import time
 import json
 import threading
+import pytest
 from http.server import HTTPServer, BaseHTTPRequestHandler
-
 
 from tests.unit.api.a2a.streaming_test_client import StreamingTestClient
 
@@ -25,9 +25,7 @@ class StreamingHandler(BaseHTTPRequestHandler):
             # Format the chunk properly for chunked transfer encoding
             # Format: [chunk size in hex]\r\n[chunk data]\r\n
             chunk_data = json.dumps({"chunk": i, "timestamp": time.time()}) + "\n"
-            chunk_size = hex(len(chunk_data))[
-                2:
-            ]  # Convert to hex and remove '0x' prefix
+            chunk_size = hex(len(chunk_data))[2:]  # Convert to hex and remove '0x' prefix
 
             self.wfile.write(f"{chunk_size}\r\n".encode("utf-8"))
             self.wfile.write(chunk_data.encode("utf-8"))
@@ -63,9 +61,7 @@ class StreamingHandler(BaseHTTPRequestHandler):
         for i in range(chunks):
             # Format the chunk properly for chunked transfer encoding
             chunk_data = json.dumps({"chunk": i, "timestamp": time.time()}) + "\n"
-            chunk_size = hex(len(chunk_data))[
-                2:
-            ]  # Convert to hex and remove '0x' prefix
+            chunk_size = hex(len(chunk_data))[2:]  # Convert to hex and remove '0x' prefix
 
             self.wfile.write(f"{chunk_size}\r\n".encode("utf-8"))
             self.wfile.write(chunk_data.encode("utf-8"))
@@ -118,22 +114,19 @@ class TestStreamingVerification(unittest.TestCase):
         )  # 90% of expected time to account for timing variations
 
         # Verify that the average interval is close to our delay
-        self.assertGreaterEqual(
-            timing["average_interval"], 0.5 * 0.8
-        )  # 80% of expected delay
+        self.assertGreaterEqual(timing["average_interval"], 0.5 * 0.8)  # 80% of expected delay
 
         # Print timing information for debugging
         print(f"Streaming GET timing: {timing}")
 
+    @pytest.mark.slow
     def test_post_streaming(self):
         """Test that POST responses are properly streamed."""
         client = StreamingTestClient()
 
         # Test with different delays
         for delay in [0.2, 0.5, 1.0]:
-            chunks, timestamps = client.post_with_timing(
-                f"{self.base_url}/stream", json={"delay": delay, "chunks": 5}
-            )
+            chunks, timestamps = client.post_with_timing(f"{self.base_url}/stream", json={"delay": delay, "chunks": 5})
 
             # Verify we got the expected number of chunks
             self.assertEqual(len(chunks), 5)
@@ -143,14 +136,10 @@ class TestStreamingVerification(unittest.TestCase):
 
             # Verify that chunks were received over time, not all at once
             # The total time should be at least (chunks-1) * delay
-            self.assertGreaterEqual(
-                timing["total_time"], delay * 4 * 0.9
-            )  # 90% of expected time
+            self.assertGreaterEqual(timing["total_time"], delay * 4 * 0.9)  # 90% of expected time
 
             # Verify that the average interval is close to our delay
-            self.assertGreaterEqual(
-                timing["average_interval"], delay * 0.8
-            )  # 80% of expected delay
+            self.assertGreaterEqual(timing["average_interval"], delay * 0.8)  # 80% of expected delay
 
             # Print timing information for debugging
             print(f"Streaming POST timing with delay {delay}: {timing}")
@@ -162,9 +151,7 @@ class TestStreamingVerification(unittest.TestCase):
         This test uses a longer delay to make it more obvious if batching occurs.
         """
         client = StreamingTestClient()
-        chunks, timestamps = client.post_with_timing(
-            f"{self.base_url}/stream", json={"delay": 1.0, "chunks": 5}
-        )
+        chunks, timestamps = client.post_with_timing(f"{self.base_url}/stream", json={"delay": 1.0, "chunks": 5})
 
         # Verify we got the expected number of chunks
         self.assertEqual(len(chunks), 5)

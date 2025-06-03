@@ -649,3 +649,9 @@ class SnowflakeHandler(MetaDatabaseHandler):
         except Exception as e:
             logger.error(f"Exception in meta_get_primary_keys: {e!r}")
             return Response(RESPONSE_TYPE.ERROR, error_message=f"Exception querying primary keys: {e!r}")
+
+    def meta_get_foreign_keys(self, table_names: Optional[List[str]] = None) -> Response:
+        # To prevent NotImplementedError if foreign key retrieval is not yet supported/desired
+        # Return an empty DataFrame with expected columns if possible, or just an empty table response.
+        # For now, returning a simple empty table response.
+        return Response(RESPONSE_TYPE.TABLE, data_frame=pandas.DataFrame())

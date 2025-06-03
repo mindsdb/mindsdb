@@ -1,3 +1,6 @@
+PYTEST_ARGS = -v -rs --disable-warnings -n auto --dist loadfile
+PYTEST_ARGS_DEBUG = --runslow -vs -rs
+
 install_mindsdb:
 	pip install -e .
 	pip install -r requirements/requirements-dev.txt
@@ -31,21 +34,29 @@ run_docker: build_docker
 
 integration_tests:
 	# Run tests in parallel and distribute a whole file to each worker
-	pytest -v -rs --disable-warnings -n 8 --dist loadfile tests/integration/ -k "not test_auth"
+	pytest $(PYTEST_ARGS) tests/integration/ -k "not test_auth"
 	# Run this test separately because it alters the auth requirements, which breaks other tests
-	pytest -v -rs --disable-warnings tests/integration/ -k test_auth
+	pytest $(PYTEST_ARGS) tests/integration/ -k test_auth
+
+integration_tests_slow:
+	pytest --runslow $(PYTEST_ARGS) tests/integration/ -k "not test_auth"
+	pytest --runslow $(PYTEST_ARGS) tests/integration/ -k test_auth
 
 integration_tests_debug:
-	pytest -vs -rs tests/integration/ -k "not test_auth"
-	pytest -vs -rs tests/integration/ -k test_auth
+	pytest $(PYTEST_ARGS_DEBUG) tests/integration/ -k "not test_auth"
+	pytest $(PYTEST_ARGS_DEBUG) tests/integration/ -k test_auth
 
 unit_tests:
-	env PYTHONPATH=./ pytest -v -rs --disable-warnings -n auto --dist loadfile tests/unit/executor/  # We have to run executor tests separately because they do weird things that break everything else
-	pytest -v -rs --disable-warnings -n auto --dist loadfile --ignore=tests/unit/executor tests/unit/
+	# We have to run executor tests separately because they do weird things that break everything else
+	env PYTHONPATH=./ pytest $(PYTEST_ARGS) tests/unit/executor/  
+	pytest $(PYTEST_ARGS) --ignore=tests/unit/executor tests/unit/
 
 unit_tests_slow:
-	env PYTHONPATH=./ pytest --runslow -v -rs --disable-warnings  tests/unit/executor/  # We have to run executor tests separately because they do weird things that break everything else
-	pytest --runslow -v -rs --disable-warnings --ignore=tests/unit/executor tests/unit/
+	env PYTHONPATH=./ pytest --runslow $(PYTEST_ARGS) tests/unit/executor/  # We have to run executor tests separately because they do weird things that break everything else
+	pytest --runslow $(PYTEST_ARGS) --ignore=tests/unit/executor tests/unit/
 
+unit_tests_debug:
+	env PYTHONPATH=./ pytest $(PYTEST_ARGS_DEBUG) tests/unit/executor/  
+	pytest $(PYTEST_ARGS_DEBUG) --ignore=tests/unit/executor tests/unit/
 
-.PHONY: install_mindsdb install_handler precommit format run_mindsdb check build_docker run_docker integration_tests integration_tests_debug unit_tests unit_tests_slow
+.PHONY: install_mindsdb install_handler precommit format run_mindsdb check build_docker run_docker integration_tests integration_tests_slow integration_tests_debug unit_tests unit_tests_slow unit_tests_debug

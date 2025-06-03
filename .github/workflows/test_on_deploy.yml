@@ -81,7 +81,7 @@ jobs:
 
     - name: Run Integration Tests on Deploy
       run: |
-          make integration_tests
+          make integration_tests_slow
       env:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         INTERNAL_URL: ${{ vars.INTERNAL_URL }}

@@ -1,7 +1,7 @@
 import time
 import os
 import json
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 import threading
 from contextlib import contextmanager
 
@@ -203,16 +203,31 @@ class TestAgent(BaseExecutorDummyML):
         assert agent_params.get("api_version") == "2024-02-01"
         assert agent_params.get("method") == "multi-class"
 
-        # Test that the agent works
-        ret = self.run_sql("select * from default_params_agent where question = 'hi'")
-        assert agent_response in ret.answer[0]
+        # Mock the OpenAI client for the agent execution
+        with (
+            patch("openai.AsyncOpenAI") as mock_async_openai,
+            patch("langchain_openai.chat_models.base.ChatOpenAI.validate_environment", return_value=None),
+        ):
+            # Set up the mock for async client
+            mock_async_client = MagicMock()
+            mock_async_openai.return_value = mock_async_client
+
+            # Configure the mock completion
+            mock_completion = MagicMock()
+            mock_completion.choices = [MagicMock()]
+            mock_completion.choices[0].message.content = agent_response
+            mock_async_client.chat.completions.create = AsyncMock(return_value=mock_completion)
+
+            # Test that the agent works
+            ret = self.run_sql("select * from default_params_agent where question = 'hi'")
+            assert agent_response in ret.answer[0]
 
         # Now create an agent with explicit parameters that should override defaults
         self.run_sql("""
             CREATE AGENT explicit_params_agent
             USING
              provider='openai',
-             model='gpt-3.5-turbo',
+             model = "gpt-3.5-turbo",
              base_url='https://custom-url.com/',
              prompt_template="Answer the user input in a helpful way"
          """)
@@ -225,6 +240,25 @@ class TestAgent(BaseExecutorDummyML):
         assert agent_params.get("base_url") == "https://custom-url.com/"  # Explicit value
         assert agent_params.get("api_version") == "2024-02-01"  # Default value
         assert agent_params.get("method") == "multi-class"  # Default value
+
+        # Mock the OpenAI client for the second agent execution
+        with (
+            patch("openai.AsyncOpenAI") as mock_async_openai,
+            patch("langchain_openai.chat_models.base.ChatOpenAI.validate_environment", return_value=None),
+        ):
+            # Set up the mock for async client
+            mock_async_client = MagicMock()
+            mock_async_openai.return_value = mock_async_client
+
+            # Configure the mock completion
+            mock_completion = MagicMock()
+            mock_completion.choices = [MagicMock()]
+            mock_completion.choices[0].message.content = agent_response
+            mock_async_client.chat.completions.create = AsyncMock(return_value=mock_completion)
+
+            # Test that the agent works with explicit parameters
+            ret = self.run_sql("select * from explicit_params_agent where question = 'hi'")
+            assert agent_response in ret.answer[0]
 
     @patch("openai.OpenAI")
     def test_agent_with_tables(self, mock_openai):

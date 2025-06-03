@@ -19,7 +19,11 @@ class KnowledgeBaseListTool(BaseTool):
 
     def _run(self, tool_input: str) -> str:
         """List all knowledge bases."""
-        return self.db.get_usable_knowledge_base_names()
+        kb_names = self.db.get_usable_knowledge_base_names()
+        # Convert list to a formatted string for better readability
+        if not kb_names:
+            return "No knowledge bases found."
+        return json.dumps(kb_names)
 
 
 class KnowledgeBaseInfoToolInput(BaseModel):
@@ -218,6 +222,9 @@ class KnowledgeBaseQueryTool(BaseTool):
 
                 return table
 
-            return result
+            # Ensure we always return a string
+            if isinstance(result, (list, dict)):
+                return json.dumps(result, indent=2)
+            return str(result)
         except Exception as e:
             return f"Error executing query: {str(e)}"

@@ -36,13 +36,24 @@ class TestSelect(BaseExecutorDummyML):
 
         # use model
         ret = self.run_sql('''
-             SELECT m.*
-               FROM mindsdb.vtasks as t
-               JOIN mindsdb.task_model as m
+            SELECT m.*
+            FROM mindsdb.vtasks as t
+            JOIN mindsdb.task_model as m
         ''')
 
         assert len(ret) == 2
         assert ret.predicted[0] == 42
+
+        # check case-insensitive in subselect step
+        ret = self.run_sql('''
+            SELECT
+                m.predicted as lower,
+                m.PREDICTED as upper,
+                M.PREDIcted as varcase
+            FROM mindsdb.vtasks as t
+            JOIN mindsdb.task_model as m
+        ''')
+        assert ret.lower[0] == ret.upper[0] == ret.varcase[0]
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_complex_joins(self, data_handler):

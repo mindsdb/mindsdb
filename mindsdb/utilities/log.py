@@ -60,7 +60,7 @@ def get_mindsdb_log_level() -> int:
     return min(console_handler_config_level, file_handler_config_level)
 
 
-def configure_logging():
+def configure_logging(process_name: str = None):
     handlers_config = {}
     console_handler_config = app_config['logging']['handlers']['console']
     console_handler_config_level = getattr(logging, console_handler_config["level"])
@@ -74,11 +74,18 @@ def configure_logging():
     file_handler_config = app_config['logging']['handlers']['file']
     file_handler_config_level = getattr(logging, file_handler_config["level"])
     if file_handler_config['enabled'] is True:
+        file_name = file_handler_config["filename"]
+        if process_name is not None:
+            if '.' in file_name:
+                parts = file_name.rpartition('.')
+                file_name = f'{parts[0]}_{process_name}.{parts[2]}'
+            else:
+                file_name = f'{file_name}_{process_name}'
         handlers_config['file'] = {
             "class": "logging.handlers.RotatingFileHandler",
             "formatter": "file",
             "level": file_handler_config_level,
-            "filename": app_config.paths["log"] / file_handler_config["filename"],
+            "filename": app_config.paths["log"] / file_name,
             "maxBytes": file_handler_config["maxBytes"],  # 0.5 Mb
             "backupCount": file_handler_config["backupCount"]
         }
@@ -115,6 +122,15 @@ def configure_logging():
     dictConfig(logging_config)
 
 
+def initialize_logging(process_name: str = None) -> None:
+    """Initialyze logging
+    """
+    global logging_initialized
+    if not logging_initialized:
+        configure_logging(process_name)
+        logging_initialized = True
+
+
 # I would prefer to leave code to use logging.getLogger(), but there are a lot of complicated situations
 # in MindsDB with processes being spawned that require logging to be configured again in a lot of cases.
 # Using a custom logger-getter like this lets us do that logic here, once.
@@ -122,9 +138,5 @@ def getLogger(name=None):
     """
     Get a new logger, configuring logging first if it hasn't been done yet.
     """
-    global logging_initialized
-    if not logging_initialized:
-        configure_logging()
-        logging_initialized = True
-
+    initialize_logging()
     return logging.getLogger(name)

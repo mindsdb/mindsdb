@@ -131,7 +131,7 @@ class BaseStuff:
         )
 
 
-@pytest.mark.parametrize("use_binary", (False, True), indirect=True)
+@pytest.mark.parametrize("use_binary", [False, True], indirect=True)
 class TestMySqlApi(BaseStuff):
     @pytest.fixture
     def use_binary(self, request):
@@ -153,7 +153,7 @@ class TestMySqlApi(BaseStuff):
         self.validate_database_creation("test_demo_postgres")
 
     # NOTE unhide this after test data created in test db
-    # @pytest.mark.parametrize("table_name", ('types_test_data', 'types_test_data_with_nulls'))
+    # @pytest.mark.parametrize("table_name", ['types_test_data', 'types_test_data_with_nulls'])
     # def test_response_types(self, use_binary, table_name):
     #     """Test that data conversion is correct. Postgres used as source database.
     #     Used two tables: with and without nulls in rows. This is because pd.DataFrame cast data

@@ -4,6 +4,7 @@ from typing import Dict, List, Optional
 
 import pandas as pd
 import numpy as np
+from sqlalchemy.orm.attributes import flag_modified
 
 from mindsdb_sql_parser.ast import BinaryOperation, Constant, Identifier, Select, Update, Delete, Star
 from mindsdb_sql_parser.ast.mindsdb import CreatePredictor
@@ -593,16 +594,15 @@ class KnowledgeBaseTable:
             metadata_columns = [column_map.get(col.lower(), col) for col in metadata_columns]
             logger.debug(f"Mapped metadata columns: {metadata_columns}")
 
-        if content_columns is not None:
-            content_columns = list(set(content_columns).intersection(columns))
-            if len(content_columns) == 0:
-                raise ValueError(f"Content columns {params.get('content_columns')} not found in dataset: {columns}")
+        content_columns = list(set(content_columns).intersection(columns))
+        if len(content_columns) == 0:
+            raise ValueError(f"Content columns {params.get('content_columns')} not found in dataset: {columns}")
 
-            if metadata_columns is not None:
-                metadata_columns = list(set(metadata_columns).intersection(columns))
-            else:
-                # all the rest columns
-                metadata_columns = list(set(columns).difference(content_columns))
+        if metadata_columns is not None:
+            metadata_columns = list(set(metadata_columns).intersection(columns))
+        else:
+            # all the rest columns
+            metadata_columns = list(set(columns).difference(content_columns))
 
         # Add content columns directly (don't combine them)
         for col in content_columns:

@@ -484,6 +484,7 @@ class TestMySqlApi(BaseStuff):
         _query = f"select * from files.{self.file_datasource_name};"
         self.query(_query)
 
+    @pytest.mark.slow
     def test_ts_train_and_predict(self, subtests, use_binary):
         train_df = pd.DataFrame(
             {
@@ -552,6 +553,7 @@ class TestMySqlApi(BaseStuff):
                 res = self.query(select_query % predictor_name)
                 assert len(res) == res_len, f"prediction result {res} contains more that {res_len} records"
 
+    @pytest.mark.slow
     def test_tableau_queries(self, subtests, use_binary):
         test_ds_name = self.file_datasource_name
         predictor_name = "predictor_from_file"

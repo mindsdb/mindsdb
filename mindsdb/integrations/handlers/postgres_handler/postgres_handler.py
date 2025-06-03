@@ -1,3 +1,5 @@
+import csv
+import io
 import time
 import json
 from typing import Optional, Any
@@ -13,7 +15,7 @@ from mindsdb_sql_parser import parse_sql
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql_parser.ast.base import ASTNode
 
-from mindsdb.integrations.libs.base import DatabaseHandler
+from mindsdb.integrations.libs.base import MetaDatabaseHandler
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -123,7 +125,7 @@ def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
     return Response(RESPONSE_TYPE.TABLE, data_frame=df, affected_rows=cursor.rowcount, mysql_types=mysql_types)
 
 
-class PostgresHandler(DatabaseHandler):
+class PostgresHandler(MetaDatabaseHandler):
     """
     This handler handles connection and execution of the PostgreSQL statements.
     """
@@ -549,3 +551,205 @@ class PostgresHandler(DatabaseHandler):
             conn.commit()
 
             conn.close()
+
+    def meta_get_tables(self, table_names: Optional[list] = None) -> Response:
+        """
+        Retrieves metadata information about the tables in the PostgreSQL database to be stored in the data catalog.
+
+        Args:
+            table_names (list): A list of table names for which to retrieve metadata information.
+
+        Returns:
+            Response: A response object containing the metadata information, formatted as per the `Response` class.
+        """
+        query = """
+            SELECT
+                t.table_name,
+                t.table_schema,
+                t.table_type,
+                obj_description(pgc.oid, 'pg_class') AS table_description,
+                pgc.reltuples AS row_count
+            FROM information_schema.tables t
+            JOIN pg_catalog.pg_class pgc ON pgc.relname = t.table_name
+            JOIN pg_catalog.pg_namespace pgn ON pgn.oid = pgc.relnamespace
+            WHERE t.table_schema = current_schema()
+            AND t.table_type in ('BASE TABLE', 'VIEW')
+            AND t.table_name NOT LIKE 'pg_%'
+            AND t.table_name NOT LIKE 'sql_%'
+        """
+
+        if table_names is not None and len(table_names) > 0:
+            table_names = [f"'{t}'" for t in table_names]
+            query += f" AND t.table_name IN ({','.join(table_names)})"
+
+        result = self.native_query(query)
+        return result
+
+    def meta_get_columns(self, table_names: Optional[list] = None) -> Response:
+        """
+        Retrieves column metadata for the specified tables (or all tables if no list is provided).
+
+        Args:
+            table_names (list): A list of table names for which to retrieve column metadata.
+
+        Returns:
+            Response: A response object containing the column metadata.
+        """
+        query = """
+            SELECT
+                c.table_name,
+                c.column_name,
+                c.data_type,
+                col_description(pgc.oid, c.ordinal_position) AS column_description,
+                c.column_default,
+                (c.is_nullable = 'YES') AS is_nullable
+            FROM information_schema.columns c
+            JOIN pg_catalog.pg_class pgc ON pgc.relname = c.table_name
+            JOIN pg_catalog.pg_namespace pgn ON pgn.oid = pgc.relnamespace
+            WHERE c.table_schema = current_schema()
+            AND pgc.relkind = 'r'  -- Only consider regular tables (avoids indexes, sequences, etc.)
+            AND c.table_name NOT LIKE 'pg_%'
+            AND c.table_name NOT LIKE 'sql_%'
+            AND pgn.nspname = c.table_schema
+        """
+
+        if table_names is not None and len(table_names) > 0:
+            table_names = [f"'{t}'" for t in table_names]
+            query += f" AND c.table_name IN ({','.join(table_names)})"
+
+        result = self.native_query(query)
+        return result
+
+    def meta_get_column_statistics(self, table_names: Optional[list] = None) -> dict:
+        """
+        Retrieves column statistics (e.g., most common values, frequencies, null percentage, and distinct value count)
+        for the specified tables or all tables if no list is provided.
+
+        Args:
+            table_names (list): A list of table names for which to retrieve column statistics.
+
+        Returns:
+            dict: A dictionary containing the column statistics.
+        """
+        query = """
+            SELECT
+                ps.attname AS column_name,
+                ps.tablename AS table_name,
+                ps.most_common_vals AS most_common_values,
+                ps.most_common_freqs::text AS most_common_frequencies,
+                ps.null_frac * 100 AS null_percentage,
+                ps.n_distinct AS distinct_values_count,
+                ps.histogram_bounds AS histogram_bounds
+            FROM pg_stats ps
+            WHERE ps.schemaname = current_schema()
+            AND ps.tablename NOT LIKE 'pg_%'
+            AND ps.tablename NOT LIKE 'sql_%'
+        """
+
+        if table_names is not None and len(table_names) > 0:
+            table_names = [f"'{t}'" for t in table_names]
+            query += f" AND ps.tablename IN ({','.join(table_names)})"
+
+        result = self.native_query(query)
+        df = result.data_frame
+
+        def parse_pg_array_string(x):
+            try:
+                return (
+                    [item.strip(" ,") for row in csv.reader(io.StringIO(x.strip("{}"))) for item in row if item.strip()]
+                    if x
+                    else []
+                )
+            except IndexError:
+                logger.error(f"Error parsing PostgreSQL array string: {x}")
+                return []
+
+        # Convert most_common_values and most_common_frequencies from string representation to lists.
+        df["most_common_values"] = df["most_common_values"].apply(lambda x: parse_pg_array_string(x))
+        df["most_common_frequencies"] = df["most_common_frequencies"].apply(lambda x: parse_pg_array_string(x))
+
+        # Get the minimum and maximum values from the histogram bounds.
+        df["minimum_value"] = df["histogram_bounds"].apply(lambda x: parse_pg_array_string(x)[0] if x else None)
+        df["maximum_value"] = df["histogram_bounds"].apply(lambda x: parse_pg_array_string(x)[-1] if x else None)
+
+        # Handle cases where distinct_values_count is negative (indicating an approximation).
+        df["distinct_values_count"] = df["distinct_values_count"].apply(lambda x: x if x >= 0 else None)
+
+        result.data_frame = df.drop(columns=["histogram_bounds"])
+
+        return result
+
+    def meta_get_primary_keys(self, table_names: Optional[list] = None) -> Response:
+        """
+        Retrieves primary key information for the specified tables (or all tables if no list is provided).
+
+        Args:
+            table_names (list): A list of table names for which to retrieve primary key information.
+
+        Returns:
+            Response: A response object containing the primary key information.
+        """
+        query = """
+            SELECT
+                tc.table_name,
+                kcu.column_name,
+                kcu.ordinal_position,
+                tc.constraint_name
+            FROM
+                information_schema.table_constraints AS tc
+            JOIN
+                information_schema.key_column_usage AS kcu
+            ON
+                tc.constraint_name = kcu.constraint_name
+            WHERE
+                tc.constraint_type = 'PRIMARY KEY'
+                AND tc.table_schema = current_schema()
+            ORDER BY
+                tc.table_name, kcu.ordinal_position
+        """
+
+        if table_names is not None and len(table_names) > 0:
+            table_names = [f"'{t}'" for t in table_names]
+            query += f" AND tc.table_name IN ({','.join(table_names)})"
+
+        result = self.native_query(query)
+        return result
+
+    def meta_get_foreign_keys(self, table_names: Optional[list] = None) -> Response:
+        """
+        Retrieves foreign key information for the specified tables (or all tables if no list is provided).
+
+        Args:
+            table_names (list): A list of table names for which to retrieve foreign key information.
+
+        Returns:
+            Response: A response object containing the foreign key information.
+        """
+        query = """
+            SELECT
+                ccu.table_name AS parent_table_name,
+                ccu.column_name AS parent_column_name,
+                tc.table_name AS child_table_name,
+                kcu.column_name AS child_column_name,
+                tc.constraint_name
+            FROM
+                information_schema.table_constraints AS tc
+            JOIN
+                information_schema.key_column_usage AS kcu
+            ON
+                tc.constraint_name = kcu.constraint_name
+            JOIN
+                information_schema.constraint_column_usage AS ccu
+            ON
+                ccu.constraint_name = tc.constraint_name
+            WHERE
+                tc.constraint_type = 'FOREIGN KEY'
+                AND tc.table_schema = current_schema()
+        """
+
+        if table_names is not None and len(table_names) > 0:
+            table_names = [f"'{t}'" for t in table_names]
+            query += f" AND tc.table_name IN ({','.join(table_names)})"
+
+        result = self.native_query(query)
+        return result

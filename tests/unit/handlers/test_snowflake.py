@@ -1,11 +1,17 @@
+import pytest
+
+try:
+    import snowflake
+    import snowflake.connector
+    from mindsdb.integrations.handlers.snowflake_handler.snowflake_handler import SnowflakeHandler
+except ImportError:
+    pytestmark = pytest.mark.skip("Snowflake handler not installed")
+
 import unittest
 from unittest.mock import patch, MagicMock
 from collections import OrderedDict
 from decimal import Decimal
 import datetime
-
-import snowflake
-import snowflake.connector
 import pandas as pd
 from pandas import DataFrame
 

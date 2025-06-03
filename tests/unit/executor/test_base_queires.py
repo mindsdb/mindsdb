@@ -49,11 +49,14 @@ class TestSelect(BaseExecutorDummyML):
             SELECT
                 m.predicted as lower,
                 m.PREDICTED as upper,
-                M.PREDIcted as varcase
+                M.PREDIcted as varcase,
+                m.predicted as value,
+                m.PREDICTED as VALUE
             FROM mindsdb.vtasks as t
             JOIN mindsdb.task_model as m
         ''')
         assert ret.lower[0] == ret.upper[0] == ret.varcase[0]
+        assert ret.value[0] == ret.VALUE[0]
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_complex_joins(self, data_handler):

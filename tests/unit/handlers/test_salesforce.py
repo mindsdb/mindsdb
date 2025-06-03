@@ -1,13 +1,18 @@
 from collections import OrderedDict
+import pytest
 import unittest
 from unittest.mock import patch, MagicMock
 
-from salesforce_api.exceptions import AuthenticationError
-from mindsdb_sql_parser.ast import BinaryOperation, Constant, Identifier, Select, Star
+try:
+    from salesforce_api.exceptions import AuthenticationError
+    from mindsdb.integrations.handlers.salesforce_handler.salesforce_handler import SalesforceHandler
+    from mindsdb.integrations.handlers.salesforce_handler.salesforce_tables import create_table_class
+except ImportError:
+    pytestmark = pytest.mark.skip("Salesforce handler not installed")
 
+from mindsdb_sql_parser.ast import BinaryOperation, Constant, Identifier, Select, Star
 from base_handler_test import BaseHandlerTestSetup, BaseAPIResourceTestSetup
-from mindsdb.integrations.handlers.salesforce_handler.salesforce_handler import SalesforceHandler
-from mindsdb.integrations.handlers.salesforce_handler.salesforce_tables import create_table_class
+
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,

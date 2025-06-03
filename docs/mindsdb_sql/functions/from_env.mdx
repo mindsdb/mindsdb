@@ -1,0 +1,37 @@
+---
+title: The from_env() Function
+sidebarTitle: The from_env() Function
+---
+
+MindsDB provides the `from_env()` function that lets users pull values from the environment variables into MindsDB.
+
+## Usage
+
+Here is how to use the `from_env()` function.
+
+* Save the environment variable into a variable using the `from_env()` function (or saving the value directly).
+
+```sql
+SET @my_env_var  = from_env("MDB_MY_ENV_VAR")
+
+SET @my_value  = "123456"
+```
+
+<Note>
+Note that due to security concerns, only the environment variables with name starting with `MDB_` can be extracted with the `from_env()` function.
+</Note>
+
+* Use this variable to pass parameter while creating object in MindsDB.
+
+Here is an example for [knowledge bases](/mindsdb_sql/knowledge-bases).
+
+```sql
+CREATE KNOWLEDGE_BASE my_kb
+USING
+    embedding_model = {
+       "provider": "openai",
+       "model_name" : "text-embedding-3-large",
+       "api_key": @my_env_var
+    },
+    ...;
+```

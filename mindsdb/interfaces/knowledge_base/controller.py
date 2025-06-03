@@ -176,6 +176,7 @@ class KnowledgeBaseTable:
         conditions = []
         query_text = None
         relevance_threshold = None
+        reranking_enabled_flag = True
         query_conditions = db_handler.extract_conditions(query.where)
         if query_conditions is not None:
             for item in query_conditions:
@@ -190,6 +191,11 @@ class KnowledgeBaseTable:
                         error_msg = f"Invalid relevance_threshold value: {item.value}. {str(e)}"
                         logger.error(error_msg)
                         raise ValueError(error_msg)
+                elif item.column == "reranking":
+                    reranking_enabled_flag = item.value
+                    # cast to boolean
+                    if isinstance(reranking_enabled_flag, str):
+                        reranking_enabled_flag = reranking_enabled_flag.lower() not in ("false")
                 elif item.column == "relevance" and item.op.value != FilterOperator.GREATER_THAN_OR_EQUAL.value:
                     raise ValueError(
                         f"Invalid operator for relevance: {item.op.value}. Only GREATER_THAN_OR_EQUAL is allowed."
@@ -227,8 +233,7 @@ class KnowledgeBaseTable:
         logger.debug(f"Query returned {len(df)} rows")
         logger.debug(f"Columns in response: {df.columns.tolist()}")
         # Check if we have a rerank_model configured in KB params
-
-        df = self.add_relevance(df, query_text, relevance_threshold)
+        df = self.add_relevance(df, query_text, relevance_threshold, reranking_enabled_flag)
 
         if (
             query.group_by is not None
@@ -247,11 +252,11 @@ class KnowledgeBaseTable:
         reranker = get_reranking_model_from_params(reranking_model_params)
         return reranker.get_scores(query_text, documents)
 
-    def add_relevance(self, df, query_text, relevance_threshold=None):
+    def add_relevance(self, df, query_text, relevance_threshold=None, reranking_enabled_flag=True):
         relevance_column = TableField.RELEVANCE.value
 
         reranking_model_params = get_model_params(self._kb.params.get("reranking_model"), "default_reranking_model")
-        if reranking_model_params and query_text and len(df) > 0:
+        if reranking_model_params and query_text and len(df) > 0 and reranking_enabled_flag:
             # Use reranker for relevance score
             try:
                 logger.info(f"Using knowledge reranking model from params: {reranking_model_params}")

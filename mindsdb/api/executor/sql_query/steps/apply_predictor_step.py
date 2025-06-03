@@ -91,20 +91,17 @@ class ApplyPredictorRowStepCall(ApplyPredictorBaseCall):
 
         table_name = get_preditor_alias(step, self.context.get('database'))
 
-        result = ResultSet()
-        result.is_prediction = True
         if len(predictions) == 0:
             columns_names = project_datanode.get_table_columns_names(predictor_name)
             predictions = pd.DataFrame([], columns=columns_names)
 
-        result.from_df(
-            predictions,
+        return ResultSet.from_df(
+            df=predictions,
             database=table_name[0],
             table_name=table_name[1],
-            table_alias=table_name[2]
+            table_alias=table_name[2],
+            is_prediction=True
         )
-
-        return result
 
 
 class ApplyPredictorStepCall(ApplyPredictorBaseCall):
@@ -164,15 +161,14 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
                 params['force_ts_infer'] = True
                 _mdb_forecast_offset = None
 
-            data.add_column(Column('__mdb_forecast_offset'), _mdb_forecast_offset)
+            data.add_column(Column(name='__mdb_forecast_offset'), _mdb_forecast_offset)
 
         table_name = get_preditor_alias(step, self.context['database'])
-        result = ResultSet()
-        result.is_prediction = True
 
         project_datanode = self.session.datahub.get(project_name)
         if len(data) == 0:
             columns_names = project_datanode.get_table_columns_names(predictor_name) + ['__mindsdb_row_id']
+            result = ResultSet(is_prediction=True)
             for column_name in columns_names:
                 result.add_column(Column(
                     name=column_name,
@@ -230,11 +226,12 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
                 pred_data = self.apply_ts_filter(pred_data, where_data, step, predictor_metadata)
                 predictions = pd.DataFrame(pred_data)
 
-            result.from_df(
+            result = ResultSet.from_df(
                 predictions,
                 database=table_name[0],
                 table_name=table_name[1],
-                table_alias=table_name[2]
+                table_alias=table_name[2],
+                is_prediction=True
             )
 
         return result

@@ -52,11 +52,11 @@ class InsertToTableCall(BaseStepCall):
                 table_columns_df = dn.get_table_columns_df(str(table_name))
                 columns_names = table_columns_df[INF_SCHEMA_COLUMNS_NAMES.COLUMN_NAME].to_list()
                 for column_name in columns_names:
-                    data.add_column(Column(column_name))
+                    data.add_column(Column(name=column_name))
             else:
                 # Is query like: INSERT INTO table (column_name, ...) VALUES (...)
                 for col in step.query.columns:
-                    data.add_column(Column(col.name))
+                    data.add_column(Column(name=col.name))
 
             records = []
             for row in step.query.values:

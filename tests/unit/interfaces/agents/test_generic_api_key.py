@@ -59,6 +59,18 @@ class TestGenericApiKeyHandling(unittest.TestCase):
         )
         self.assertEqual(api_key, "test-specific-using-api-key")
 
+    def test_get_generic_api_key_for_google_provider(self):
+        """Test retrieving generic API key for Google/Gemini provider."""
+        # Test getting generic API key for Google provider
+        api_key = get_api_key("google", {"api_key": "test-generic-google-api-key"})
+        self.assertEqual(api_key, "test-generic-google-api-key")
+
+        # Test that provider-specific key takes priority for Google provider
+        api_key = get_api_key(
+            "google", {"google_api_key": "test-specific-google-api-key", "api_key": "test-generic-google-api-key"}
+        )
+        self.assertEqual(api_key, "test-specific-google-api-key")
+
     @patch("mindsdb.interfaces.agents.agents_controller.AgentsController.check_model_provider")
     @patch("mindsdb.interfaces.agents.agents_controller.AgentsController.get_agent")
     @patch("mindsdb.interfaces.agents.agents_controller.ProjectController")

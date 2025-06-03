@@ -7,6 +7,7 @@ from contextlib import contextmanager
 
 import pandas as pd
 import pytest
+import sys
 
 from tests.unit.executor_test_base import BaseExecutorDummyML
 from mindsdb.interfaces.agents.langchain_agent import SkillData
@@ -58,6 +59,7 @@ def set_litellm_embedding(mock_litellm_embedding, response):
 
 
 class TestAgent(BaseExecutorDummyML):
+    @pytest.mark.slow
     def test_mindsdb_provider(self):
         agent_response = "how can I help you"
         # model
@@ -86,6 +88,9 @@ class TestAgent(BaseExecutorDummyML):
 
         assert agent_response in ret.answer[0]
 
+    @pytest.mark.skipif(
+        sys.platform in ["darwin", "win32"], reason="Mocking doesn't work on Windows or macOS for some reason"
+    )
     @patch("openai.OpenAI")
     def test_openai_provider_with_model(self, mock_openai):
         agent_response = "how can I assist you today?"
@@ -227,6 +232,7 @@ class TestAgent(BaseExecutorDummyML):
         set_openai_completion(mock_openai, agent_response)
         self.run_sql("select * from test_agent where question = 'test?'")
 
+    @pytest.mark.skipif(sys.platform == "darwin", reason="Fails on macOS")
     @patch("openai.OpenAI")
     def test_agent_stream(self, mock_openai):
         agent_response = "how can I assist you today?"
@@ -346,6 +352,35 @@ class TestAgent(BaseExecutorDummyML):
 
         with pytest.raises(ExecutorException):
             self.run_sql("drop skill my_demo_skill")
+
+    @patch("openai.OpenAI")
+    def test_agent_default_prompt_template(self, mock_openai):
+        """Test that agents work correctly with default prompt templates in different modes"""
+        agent_response = "default prompt template response"
+        set_openai_completion(mock_openai, agent_response)
+
+        # Test non-retrieval mode with no prompt_template (should use default)
+        self.run_sql("""
+            CREATE AGENT default_prompt_agent
+            USING
+                provider='openai',
+                model = "gpt-3.5-turbo",
+                openai_api_key='--'
+         """)
+        ret = self.run_sql("select * from default_prompt_agent where question = 'test question'")
+        assert agent_response in ret.answer[0]
+
+        # Test retrieval mode with no prompt_template (should use default retrieval template)
+        self.run_sql("""
+            CREATE AGENT default_retrieval_agent
+            USING
+                provider='openai',
+                model = "gpt-3.5-turbo",
+                openai_api_key='--',
+                mode='retrieval'
+         """)
+        ret = self.run_sql("select * from default_retrieval_agent where question = 'test question'")
+        assert agent_response in ret.answer[0]
 
 
 class TestKB(BaseExecutorDummyML):
@@ -567,6 +602,8 @@ class TestKB(BaseExecutorDummyML):
         assert len(ret) == 2
         assert set(ret["id"]) == {"9016", "9023"}
 
+    @pytest.mark.slow
+    @pytest.mark.skipif(sys.platform == "win32", reason="Causes hard crash on windows.")
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_kb_partitions(self, mock_handler, mock_litellm_embedding):

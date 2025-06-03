@@ -84,7 +84,7 @@ We start by creating a knowledge base and inserting data. Next we can run semant
     SELECT *
     FROM my_kb
     WHERE content = 'color'
-    AND relevance_threshold = 0.2502;
+    AND relevance >= 0.2502;
     ```
 
     This query returns:
@@ -106,7 +106,7 @@ We start by creating a knowledge base and inserting data. Next we can run semant
     FROM my_kb
     WHERE product = 'Wireless Mouse'
     AND content = 'color'
-    AND relevance_threshold = 0.2502;
+    AND relevance >= 0.2502;
     ```
     
     This query returns:
@@ -349,7 +349,7 @@ The data inserted into the knowledge base can be classified as metadata, which e
 Note that source data column(s) included in `metadata_columns` cannot be used in `content_columns`, and vice versa.
 </Note>
 
-This parameter is an array of strings that lists column names from the source data to be used as metadata. If not provided, the metadata is not used.
+This parameter is an array of strings that lists column names from the source data to be used as metadata. If not provided, then all inserted columns (except for columns defined as `id_column` and `content_columns`) are considered metadata columns.
 
 Here is an example of usage. A user wants to store the following data in a knowledge base.
 
@@ -522,7 +522,46 @@ FROM sample_data.orders;
 Upon execution, it inserts data into a knowledge base, using the embedding model to embed it into vectors before inserting into an underlying vector database.
 
 <Note>
-Note that when inserting the same data into the knowledge base again, then no new rows are inserted, as the content already exists in the knowledge base.
+**Handling duplicate data while inserting into the knowledge base**
+
+Knowledge bases uniquely identify data rows using an ID column, which prevents from inserting duplicate data, as follows.
+
+* **Case 1: Inserting data into the knowledge base without the `id_column` defined.**
+
+    When users do not define the `id_column` during the creation of a knowledge base, MindsDB generates the ID for each row using a hash of the content columns, as [explained here](/mindsdb_sql/knowledge-bases#id-column).
+
+    **Example:**
+
+    If two rows have exactly the same content in the content columns, their hash (and thus their generated ID) will be the same.
+
+    Note that duplicate rows are skipped and not inserted.
+
+    Since both rows in the below table have the same content, only one row will be inserted.
+
+    | name  | age |
+    |-------|-----|
+    | Alice | 25  |
+    | Alice | 25  |
+
+* **Case 2: Inserting data into the knowledge base with the `id_column` defined.**
+
+    When users define the `id_column` during the creation of a knowledge base, then the knowledge base uses that column's values as the row ID.
+
+    **Example:**
+
+    If the `id_column` has duplicate values, the knowledge base skips the duplicate row(s) during the insert.
+
+    The second row in the below table has the same `id` as the first row, so only one of these rows is inserted.
+
+    | id  | name  | age |
+    |-----|-------|-----|
+    | 1   | Alice | 25  |
+    | 1   | Bob   | 30  |
+
+**Best practice**
+
+Ensure the `id_column` uniquely identifies each row to avoid unintentional data loss due to duplicate ID skipping.
+
 </Note>
 
 ### Update Existing Data
@@ -668,6 +707,22 @@ SELECT order_id, notes AS content
 FROM sample_data.orders;
 ```
 </Note>
+
+## `CREATE INDEX ON KNOWLEDGE_BASE` Syntax
+
+Users can create index on the knowledge base to speed up the search operations.
+
+```sql
+CREATE INDEX ON KNOWLEDGE_BASE my_kb;
+```
+
+<Warning>
+Note that this feature works only when PGVector is used as the [storage of the knowledge base](/mindsdb_sql/knowledge-bases#storage), as ChromaDB provides the index features by default.
+</Warning>
+
+Upon executing this statement, an index is created on the knowledge base's underlying vector store. This is essentially a database index created on the vector database.
+
+Note that having an index on the knowledge base may reduce the speed of the insert operations. Therefore, it is recommended to insert bulk data into the knowledge base before creating an index. The index improves performance of querying the knowledge base, while it may slow down subsequent data inserts.
 
 ## `SELECT FROM KB` Syntax
 

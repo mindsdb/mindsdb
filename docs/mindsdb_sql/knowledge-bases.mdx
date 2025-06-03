@@ -164,6 +164,51 @@ USING
 ```
 </Note>
 
+### Supported LLMs
+
+Below is the list of all language models supported for the `embedding_model` and `reranking_model` parameters.
+
+#### `provider = 'openai'`
+
+When choosing `openai` as the model provider, users should define the following model parameters.
+
+* `model_name`
+* `api_key`
+
+#### `provider = 'openai_azure'`
+
+When choosing `openai_azure` as the model provider, users should define the following model parameters.
+
+* `model_name`
+* `api_key`
+* `base_url`
+* `api_version`
+
+#### `provider = 'bedrock'`
+
+When choosing `bedrock` as the model provider, users should define the following model parameters.
+
+* `model_name`
+* `aws_access_key_id`
+* `aws_region_name`
+* `aws_secret_access_key`
+* `aws_session_token`
+
+#### `provider = 'snowflake'`
+
+When choosing `snowflake` as the model provider, users should define the following model parameters.
+
+* `model_name`
+* `api_key`
+* `snowflake_account_id`
+
+#### `provider = 'ollama'`
+
+When choosing `ollama` as the model provider, users should define the following model parameters.
+
+* `model_name`
+* `base_url`
+
 ### `embedding_model`
 
 The embedding model is a required component of the knowledge base. It stores specifications of the embedding model to be used.

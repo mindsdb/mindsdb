@@ -84,7 +84,7 @@ class BinaryResultsetRowPacket(Packet):
             elif col_type == TYPES.MYSQL_TYPE_NEWDECIMAL:
                 enc = 'string'
             elif col_type == TYPES.MYSQL_TYPE_JSON:
-                # json have to be encoded as byte<lenenc>, but actually for json tthere is no differ with string<>
+                # json have to be encoded as byte<lenenc>, but actually for json there is no differ with string<>
                 enc = 'string'
             else:
                 enc = 'string'

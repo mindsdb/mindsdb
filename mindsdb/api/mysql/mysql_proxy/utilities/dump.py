@@ -102,9 +102,6 @@ def _dump_str(var: Any) -> str | None:
     Returns:
         str | None: The string representation of the value or None if the value is None
     """
-    if isinstance(var, list) is False and pd.isna(var):
-        # pd.isna returns array of bools for list, so we need to check if it is not a list
-        return None
     if isinstance(var, bytes):
         try:
             return var.decode('utf-8')
@@ -115,6 +112,9 @@ def _dump_str(var: Any) -> str | None:
             return json.dumps(var)
         except Exception:
             return str(var)
+    if isinstance(var, list) is False and pd.isna(var):
+        # pd.isna returns array of bools for list, so we need to check if it is not a list
+        return None
     return str(var)
 
 

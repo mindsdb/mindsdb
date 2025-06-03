@@ -98,10 +98,12 @@ class QueryStepCall(BaseStepCall):
 
         lower_col_idx = {}
         for key, value in col_idx.items():
+            if isinstance(key, int):
+                key = str(key)
             if isinstance(key, str):
                 lower_col_idx[key.lower()] = value
                 continue
-            lower_col_idx[tuple(x.lower() for x in key)] = value
+            lower_col_idx[tuple(str(x).lower() for x in key)] = value
 
         # get aliases of first level
         aliases = []

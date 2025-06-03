@@ -41,7 +41,7 @@ def set_openai_completion(mock_openai, response):
         else:
             resp = response.pop(0)
 
-        return {"choices": [{"message": {"role": "system", "content": resp}}]}
+        return {"choices": [{"message": {"role": "assistant", "content": resp}}]}
 
     mock_openai().chat.completions.create.side_effect = resp_f
 
@@ -258,6 +258,77 @@ class TestAgent(BaseExecutorDummyML):
 
             # Test that the agent works with explicit parameters
             ret = self.run_sql("select * from explicit_params_agent where question = 'hi'")
+            assert agent_response in ret.answer[0]
+
+    @patch("mindsdb.interfaces.agents.agents_controller.AgentsController.check_model_provider")
+    @patch("mindsdb.utilities.config.Config.get")
+    @patch("openai.OpenAI")
+    def test_agent_minimal_syntax_with_default_llm(self, mock_openai, mock_config_get, mock_check_model_provider):
+        """Test that agent creation works with minimal syntax using default_llm config"""
+        # Mock the model provider check to return a valid model and provider
+        mock_check_model_provider.return_value = ("gpt-4o", "openai")
+
+        # Mock the config.get method to return default LLM parameters
+        def config_get_side_effect(key, default=None):
+            if key == "default_llm":
+                return {
+                    "provider": "openai",
+                    "model_name": "gpt-4o",
+                    "api_key": "sk-abc123",
+                    "base_url": "https://api.openai.com/v1",
+                    "api_version": "2024-02-01",
+                    "method": "multi-class",
+                }
+            elif key == "default_project":
+                return "mindsdb"
+            elif key == "cache":
+                return {"type": "local"}
+            return default
+
+        mock_config_get.side_effect = config_get_side_effect
+
+        agent_response = "response from minimal syntax agent"
+        set_openai_completion(mock_openai, agent_response)
+
+        # Create an agent with minimal syntax - should use all default LLM params
+        self.run_sql("""
+            CREATE AGENT minimal_syntax_agent
+            USING
+              include_tables = ['test.table1', 'test.table2'];
+         """)
+
+        # Check that the agent was created with the default parameters
+        agent_info = self.run_sql("SELECT * FROM information_schema.agents WHERE name = 'minimal_syntax_agent'")
+
+        # Verify model_name is set correctly
+        assert agent_info["MODEL_NAME"].iloc[0] == "gpt-4o"
+
+        # Verify the agent has the default parameters and include_tables
+        agent_params = json.loads(agent_info["PARAMS"].iloc[0])
+        assert agent_params.get("api_key") == "sk-abc123"
+        assert agent_params.get("base_url") == "https://api.openai.com/v1"
+        assert agent_params.get("api_version") == "2024-02-01"
+        assert agent_params.get("method") == "multi-class"
+        assert "include_tables" in agent_params
+        assert agent_params["include_tables"] == ["test.table1", "test.table2"]
+
+        # Mock the OpenAI client for the agent execution
+        with (
+            patch("openai.AsyncOpenAI") as mock_async_openai,
+            patch("langchain_openai.chat_models.base.ChatOpenAI.validate_environment", return_value=None),
+        ):
+            # Set up the mock for async client
+            mock_async_client = MagicMock()
+            mock_async_openai.return_value = mock_async_client
+
+            # Configure the mock completion
+            mock_completion = MagicMock()
+            mock_completion.choices = [MagicMock()]
+            mock_completion.choices[0].message.content = agent_response
+            mock_async_client.chat.completions.create = AsyncMock(return_value=mock_completion)
+
+            # Test that the agent works
+            ret = self.run_sql("select * from minimal_syntax_agent where question = 'hi'")
             assert agent_response in ret.answer[0]
 
     @patch("openai.OpenAI")

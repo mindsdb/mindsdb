@@ -136,7 +136,6 @@ jobs:
     needs: [changes, matrix_prep, code_checking]
     strategy:
       matrix: ${{fromJson(needs.matrix_prep.outputs.matrix)}}
-      fail-fast: false
     runs-on: ${{ matrix.runs_on }}
     if: github.ref_type == 'branch'
     steps:

@@ -31,17 +31,21 @@ run_docker: build_docker
 
 integration_tests:
 	# Run tests in parallel and distribute a whole file to each worker
-	pytest -n 8 -rs -v --dist loadfile tests/integration/ -k "not test_auth"
+	pytest -v -rs --disable-warnings -n 8 --dist loadfile tests/integration/ -k "not test_auth"
 	# Run this test separately because it alters the auth requirements, which breaks other tests
-	pytest -v tests/integration/ -k test_auth
+	pytest -v -rs --disable-warnings tests/integration/ -k test_auth
 
 integration_tests_debug:
-	pytest -vxs tests/integration/ -k "not test_auth"
-	pytest -vxs tests/integration/ -k test_auth
+	pytest -vs -rs tests/integration/ -k "not test_auth"
+	pytest -vs -rs tests/integration/ -k test_auth
 
 unit_tests:
-	env PYTHONPATH=./ pytest tests/unit/executor/  # We have to run executor tests separately because they do weird things that break everything else
-	pytest --durations=0 --ignore=tests/unit/executor tests/unit/
+	env PYTHONPATH=./ pytest -v -rs --disable-warnings -n auto --dist loadfile tests/unit/executor/  # We have to run executor tests separately because they do weird things that break everything else
+	pytest -v -rs --disable-warnings -n auto --dist loadfile --ignore=tests/unit/executor tests/unit/
+
+unit_tests_slow:
+	env PYTHONPATH=./ pytest --runslow -v -rs --disable-warnings  tests/unit/executor/  # We have to run executor tests separately because they do weird things that break everything else
+	pytest --runslow -v -rs --disable-warnings --ignore=tests/unit/executor tests/unit/
 
 
-.PHONY: install_mindsdb install_handler precommit format run_mindsdb check build_docker run_docker integration_tests integration_tests_debug unit_tests
+.PHONY: install_mindsdb install_handler precommit format run_mindsdb check build_docker run_docker integration_tests integration_tests_debug unit_tests unit_tests_slow

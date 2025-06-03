@@ -244,11 +244,11 @@ class KnowledgeBaseTable:
 
         return df
 
-    def add_relevance(self, df, query_text, relevance_threshold=None, reranking_flag=True):
+    def add_relevance(self, df, query_text, relevance_threshold=None, reranking_enabled_flag=True):
         relevance_column = TableField.RELEVANCE.value
 
         reranking_model_params = get_model_params(self._kb.params.get("reranking_model"), "default_reranking_model")
-        if reranking_model_params and query_text and len(df) > 0 and reranking_flag:
+        if reranking_model_params and query_text and len(df) > 0 and reranking_enabled_flag:
             # Use reranker for relevance score
             try:
                 logger.info(f"Using knowledge reranking model from params: {reranking_model_params}")

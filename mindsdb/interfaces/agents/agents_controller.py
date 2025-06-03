@@ -180,7 +180,33 @@ class AgentsController:
         if agent is not None:
             raise ValueError(f"Agent with name already exists: {name}")
 
+        # Get default LLM parameters from config if they exist
+        default_llm_params = config.get("default_llm", {})
+
+        # If model_name is not provided but available in default_llm config, use it
+        if model_name is None and default_llm_params and "model_name" in default_llm_params:
+            model_name = default_llm_params.get("model_name")
+
+        # If provider is not provided but available in default_llm config, use it
+        if provider is None and default_llm_params and "provider" in default_llm_params:
+            provider = default_llm_params.get("provider")
+
+        # Check if model_name is still None after trying to get it from default_llm
+        if model_name is None:
+            raise ValueError("Model name must be provided either directly or through default_llm configuration")
+
         _, provider = self.check_model_provider(model_name, provider)
+
+        # Only use default parameters if they aren't already specified in params
+        # and if the provider matches the default_llm provider
+        if default_llm_params and "provider" in default_llm_params:
+            default_provider = default_llm_params.get("provider")
+            # If provider matches the default provider
+            if provider.lower() == default_provider.lower():
+                # Copy default parameters that aren't already in params
+                for key, value in default_llm_params.items():
+                    if key not in params and key != "provider" and key != "model_name":
+                        params[key] = value
 
         # Extract API key if provided in the format <provider>_api_key
         provider_api_key_param = f"{provider.lower()}_api_key"

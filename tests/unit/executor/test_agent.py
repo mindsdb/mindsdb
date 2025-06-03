@@ -158,6 +158,74 @@ class TestAgent(BaseExecutorDummyML):
         """)
         assert len(ret) == 0
 
+    @patch("mindsdb.interfaces.agents.agents_controller.AgentsController.check_model_provider")
+    @patch("mindsdb.utilities.config.Config.get")
+    @patch("openai.OpenAI")
+    def test_agent_with_default_llm_params(self, mock_openai, mock_config_get, mock_check_model_provider):
+        # Mock the model provider check to return a valid model and provider
+        mock_check_model_provider.return_value = (None, "openai")
+
+        # Mock the config.get method to return default LLM parameters
+        def config_get_side_effect(key, default=None):
+            if key == "default_llm":
+                return {
+                    "provider": "openai",
+                    "model_name": "gpt-4o",
+                    "api_key": "sk-abc123",
+                    "base_url": "https://api.openai.com/v1",
+                    "api_version": "2024-02-01",
+                    "method": "multi-class",
+                }
+            elif key == "default_project":
+                return "mindsdb"
+            return default
+
+        mock_config_get.side_effect = config_get_side_effect
+
+        agent_response = "how can I assist you today?"
+        set_openai_completion(mock_openai, agent_response)
+
+        # Create an agent with only provider specified - should use default LLM params
+        self.run_sql("""
+            CREATE AGENT default_params_agent
+            USING
+             provider='openai',
+             model='gpt-4o',
+             prompt_template="Answer the user input in a helpful way"
+         """)
+
+        # Check that the agent was created with the default parameters
+        agent_info = self.run_sql("SELECT * FROM information_schema.agents WHERE name = 'default_params_agent'")
+
+        # Verify the agent has the default parameters
+        agent_params = json.loads(agent_info["PARAMS"].iloc[0])
+        assert agent_params.get("base_url") == "https://api.openai.com/v1"
+        assert agent_params.get("api_version") == "2024-02-01"
+        assert agent_params.get("method") == "multi-class"
+
+        # Test that the agent works
+        ret = self.run_sql("select * from default_params_agent where question = 'hi'")
+        assert agent_response in ret.answer[0]
+
+        # Now create an agent with explicit parameters that should override defaults
+        self.run_sql("""
+            CREATE AGENT explicit_params_agent
+            USING
+             provider='openai',
+             model='gpt-3.5-turbo',
+             base_url='https://custom-url.com/',
+             prompt_template="Answer the user input in a helpful way"
+         """)
+
+        # Check that the agent was created with the explicit parameters
+        agent_info = self.run_sql("SELECT * FROM information_schema.agents WHERE name = 'explicit_params_agent'")
+
+        # Verify the agent has the explicit parameters (overriding defaults)
+        agent_params = json.loads(agent_info["PARAMS"].iloc[0])
+        assert agent_params.get("base_url") == "https://custom-url.com/"  # Explicit value
+        assert agent_params.get("api_version") == "2024-02-01"  # Default value
+        assert agent_params.get("method") == "multi-class"  # Default value
+
     @patch("openai.OpenAI")
     def test_agent_with_tables(self, mock_openai):
         sd = SkillData(name="test", type="", project_id=1, params={"tables": []}, agent_tables_list=[])
@@ -325,6 +393,7 @@ class TestAgent(BaseExecutorDummyML):
             args, _ = kb_select.call_args
             assert user_question in args[0].where.args[1].value
 
+    # should not be possible to drop demo agent
     def test_drop_demo_agent(self):
         """should not be possible to drop demo agent"""
         from mindsdb.api.executor.exceptions import ExecutorException

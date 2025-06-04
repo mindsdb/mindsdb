@@ -189,6 +189,12 @@ class AgentsController:
             # It will be picked up by get_api_key() in handler_utils.py
             pass
 
+        # Handle generic api_key parameter if provided
+        if "api_key" in params:
+            # Keep the generic API key in params for the agent to use
+            # It will be picked up by get_api_key() in handler_utils.py
+            pass
+
         # Extract table and knowledge base parameters from params
         database = params.pop("database", None)
         knowledge_base_database = params.pop("knowledge_base_database", DEFAULT_TEXT2SQL_DATABASE)

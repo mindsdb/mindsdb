@@ -1478,6 +1478,9 @@ class ExecuteCommands:
         is_full=False,
         database_name=None,
     ):
+        if isinstance(target, Identifier) is False:
+            raise TableNotExistError("The table name is required for the query.")
+
         if len(target.parts) > 1:
             db = target.parts[0]
         elif isinstance(database_name, str) and len(database_name) > 0:

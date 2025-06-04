@@ -1020,11 +1020,11 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
         # assert mock_handler().native_query.call_args[0][0] == 'select * from tasks'
 
         # test alter view
-        view_query = 'select * from pg (select a, b from tasks)'
-        self.execute(f'alter view mindsdb.vtasks as ({view_query})')
-        ret = self.execute('select * from information_schema.views')
+        view_query = "select * from pg (select a, b from tasks)"
+        self.execute(f"alter view mindsdb.vtasks as ({view_query})")
+        ret = self.execute("select * from information_schema.views")
         assert len(ret.data) == 1
-        assert ret.data.records[0]['QUERY'] == view_query
+        assert ret.data.records[0]["QUERY"] == view_query
 
         # --- drop view ---
         self.execute("drop view vtasks")

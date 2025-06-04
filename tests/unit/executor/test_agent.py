@@ -488,10 +488,12 @@ class TestKB(BaseExecutorDummyML):
         assert len(ret) == 0
 
         # product/url in metadata
-        ret = self.run_sql("select * from kb_review where product = 'probook'")
+        ret = self.run_sql(
+            "select metadata->>'product' as product, metadata->>'url' as url from kb_review where product = 'probook'"
+        )
         assert len(ret) == 1
-        assert ret["metadata"][0]["product"] == record["product"]
-        assert ret["metadata"][0]["url"] == record["url"]
+        assert ret["product"][0] == record["product"]
+        assert ret["url"][0] == record["url"]
 
         # ---  case 2: kb with defined columns ---
         self._create_kb(
@@ -504,7 +506,9 @@ class TestKB(BaseExecutorDummyML):
             select * from files.reviews
         """)
 
-        ret = self.run_sql("select * from kb_review")  # url in id
+        ret = self.run_sql(
+            "select chunk_content, metadata->>'specs' as specs, metadata->>'id' as id from kb_review"
+        )  # url in id
 
         assert len(ret) == 2  # two columns are split in two records
 
@@ -514,9 +518,8 @@ class TestKB(BaseExecutorDummyML):
         assert record["product"] in content
 
         # specs/id in metadata
-        metadata = ret["metadata"][0]
-        assert metadata["specs"] == record["specs"]
-        assert str(metadata["id"]) == str(record["id"])
+        assert ret["specs"][0] == record["specs"]
+        assert str(ret["id"][0]) == str(record["id"])
 
         # ---  case 3: content is defined, id is id, the rest goes to metadata ---
         self._create_kb("kb_review", content_columns=["review"])
@@ -527,16 +530,20 @@ class TestKB(BaseExecutorDummyML):
             select * from files.reviews
         """)
 
-        ret = self.run_sql("select * from kb_review where original_doc_id = 123")  # id is id
+        ret = self.run_sql("""
+                select chunk_content,
+                 metadata->>'specs' as specs, metadata->>'product' as product, metadata->>'url' as url
+                from kb_review 
+                where original_doc_id = 123 -- id is id
+        """)
         assert len(ret) == 1
         # review in content
         assert ret["chunk_content"][0] == record["review"]
 
         # specs/url/product in metadata
-        metadata = ret["metadata"][0]
-        assert metadata["specs"] == record["specs"]
-        assert metadata["url"] == record["url"]
-        assert metadata["product"] == record["product"]
+        assert ret["specs"][0] == record["specs"]
+        assert ret["url"][0] == record["url"]
+        assert ret["product"][0] == record["product"]
 
     def _get_ral_table(self):
         data = [

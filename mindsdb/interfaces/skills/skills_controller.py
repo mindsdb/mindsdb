@@ -7,6 +7,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.data_catalog.data_catalog_loader import DataCatalogLoader
+from mindsdb.interfaces.skills.skill_tool import SkillType
 from mindsdb.utilities.config import config
 from mindsdb.utilities import log
 
@@ -99,20 +100,20 @@ class SkillsController:
             raise ValueError(f"Skill with name already exists: {name}")
 
         # Load metadata to data catalog (if enabled) if the skill is Text-to-SQL.
-        if config.get("data_catalog", {}).get("enabled", False) and type == "sql":
-            if params.get("database"):
-                data_catalog_loader = DataCatalogLoader(
-                    database_name=params["database"], table_names=params["tables"] if "tables" in params else None
-                )
-                data_catalog_loader.load_metadata()
+        if config.get("data_catalog", {}).get("enabled", False):
+            if type == SkillType.TEXT2SQL.value:
+                # TODO: Is it possible to create a skill with complete access to the database with the new agent syntax?
+                # TODO: Handle the case where `ignore_tables` is provided. Is this a valid parameter?
+                # TODO: Knowledge Bases?
+                if "include_tables" not in params:
+                    raise ValueError(
+                        "Data catalog is enabled, but `include_tables` parameter is not provided. "
+                        "Metadata cannot be loaded for the skill."
+                    )
 
-            elif params.get("include_tables"):
-                # TODO: Handle the case where ignore_tables is provided. Is this a valid parameter?
                 database_table_map = {}
                 for table in params["include_tables"]:
-                    # TODO: Handle the case where a schema is provided.
-                    # TODO: Handle the case where a file path is provided with an extension.
-                    parts = table.split(".")
+                    parts = table.split(".", 1)
                     database_table_map[parts[0]] = database_table_map.get(parts[0], []) + [parts[1]]
 
                 for database_name, table_names in database_table_map.items():
@@ -121,13 +122,18 @@ class SkillsController:
                     )
                     data_catalog_loader.load_metadata()
 
-            else:
-                raise ValueError(
-                    "Data catalog is enabled, but no database or tables were provided. "
-                    "Metadata will not be loaded."
-                )
+            # Legacy parameters for skill creation include the `database` and `tables` parameters.
+            elif type == SkillType.TEXT2SQL_LEGACY.value:
+                if "database" not in params:
+                    raise ValueError(
+                        "Data catalog is enabled, but `database` parameter is not provided. "
+                        "Metadata cannot be loaded for the skill."
+                    )
 
-            # TODO: Is it possible to create a skill with complete access to the database with the new agent syntax?
+                data_catalog_loader = DataCatalogLoader(
+                    database_name=params["database"], table_names=params["tables"] if "tables" in params else None
+                )
+                data_catalog_loader.load_metadata()
 
         new_skill = db.Skills(
             name=name,

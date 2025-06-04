@@ -334,7 +334,7 @@ class TestMySqlApi(BaseStuff):
             column_description = description_dict[column_name]
 
             # TEMP
-            if column_name == 'n_bigint':
+            if column_name == "n_bigint":
                 continue
 
             if column_name == "dt_date" and isinstance(row[column_name], datetime.datetime):

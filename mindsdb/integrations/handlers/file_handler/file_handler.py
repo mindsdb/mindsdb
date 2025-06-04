@@ -75,10 +75,7 @@ class FileHandler(DatabaseHandler):
     def query(self, query: ASTNode) -> Response:
         if type(query) is DropTables:
             for table_identifier in query.tables:
-                if (
-                    len(table_identifier.parts) == 2
-                    and table_identifier.parts[0] != self.name
-                ):
+                if len(table_identifier.parts) == 2 and table_identifier.parts[0] != self.name:
                     return Response(
                         RESPONSE_TYPE.ERROR,
                         error_message=f"Can't delete table from database '{table_identifier.parts[0]}'",
@@ -143,13 +140,13 @@ class FileHandler(DatabaseHandler):
                     raise RuntimeError(sub_result.error_message)
 
                 df = sub_result.data_frame
-                query.from_table = Identifier('t')
+                query.from_table = Identifier("t")
             elif isinstance(query.from_table, Identifier):
                 table_name, page_name = self._get_table_page_names(query.from_table)
 
                 df = self.file_controller.get_file_data(table_name, page_name)
             else:
-                raise RuntimeError(f'Not supported query target: {query}')
+                raise RuntimeError(f"Not supported query target: {query}")
 
             # Process the SELECT query
             result_df = query_df(df, query)
@@ -202,9 +199,7 @@ class FileHandler(DatabaseHandler):
             data_frame=pd.DataFrame(
                 [
                     {
-                        "Field": x["name"].strip()
-                        if isinstance(x, dict)
-                        else x.strip(),
+                        "Field": x["name"].strip() if isinstance(x, dict) else x.strip(),
                         "Type": "str",
                     }
                     for x in file_meta["columns"]

@@ -1,6 +1,8 @@
 import os
 import copy
 from typing import Dict, List, Optional
+import json
+import decimal
 
 import pandas as pd
 import numpy as np
@@ -29,6 +31,7 @@ from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.variables.variables_controller import variables_controller
 from mindsdb.interfaces.knowledge_base.preprocessing.models import PreprocessingConfig, Document
 from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor import PreprocessorFactory
+from mindsdb.interfaces.knowledge_base.evaluate import EvaluateBase
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
@@ -108,6 +111,15 @@ def safe_pandas_is_datetime(value: str) -> bool:
         return False
 
 
+def to_json(obj):
+    if obj is None:
+        return None
+    try:
+        return json.dumps(obj)
+    except TypeError:
+        return obj
+
+
 class KnowledgeBaseTable:
     """
     Knowledge base table interface
@@ -175,6 +187,7 @@ class KnowledgeBaseTable:
         conditions = []
         query_text = None
         relevance_threshold = None
+        reranking_enabled_flag = True
         query_conditions = db_handler.extract_conditions(query.where)
         if query_conditions is not None:
             for item in query_conditions:
@@ -189,6 +202,11 @@ class KnowledgeBaseTable:
                         error_msg = f"Invalid relevance_threshold value: {item.value}. {str(e)}"
                         logger.error(error_msg)
                         raise ValueError(error_msg)
+                elif item.column == "reranking":
+                    reranking_enabled_flag = item.value
+                    # cast to boolean
+                    if isinstance(reranking_enabled_flag, str):
+                        reranking_enabled_flag = reranking_enabled_flag.lower() not in ("false")
                 elif item.column == "relevance" and item.op.value != FilterOperator.GREATER_THAN_OR_EQUAL.value:
                     raise ValueError(
                         f"Invalid operator for relevance: {item.op.value}. Only GREATER_THAN_OR_EQUAL is allowed."
@@ -226,8 +244,7 @@ class KnowledgeBaseTable:
         logger.debug(f"Query returned {len(df)} rows")
         logger.debug(f"Columns in response: {df.columns.tolist()}")
         # Check if we have a rerank_model configured in KB params
-
-        df = self.add_relevance(df, query_text, relevance_threshold)
+        df = self.add_relevance(df, query_text, relevance_threshold, reranking_enabled_flag)
 
         if (
             query.group_by is not None
@@ -238,15 +255,22 @@ class KnowledgeBaseTable:
             or not isinstance(query.targets[0], Star)
         ):
             query_copy.where = None
+            if "metadata" in df.columns:
+                df["metadata"] = df["metadata"].apply(to_json)
+
             df = query_df(df, query_copy, session=self.session)
 
         return df
 
-    def add_relevance(self, df, query_text, relevance_threshold=None):
+    def score_documents(self, query_text, documents, reranking_model_params):
+        reranker = get_reranking_model_from_params(reranking_model_params)
+        return reranker.get_scores(query_text, documents)
+
+    def add_relevance(self, df, query_text, relevance_threshold=None, reranking_enabled_flag=True):
         relevance_column = TableField.RELEVANCE.value
 
         reranking_model_params = get_model_params(self._kb.params.get("reranking_model"), "default_reranking_model")
-        if reranking_model_params and query_text and len(df) > 0:
+        if reranking_model_params and query_text and len(df) > 0 and reranking_enabled_flag:
             # Use reranker for relevance score
             try:
                 logger.info(f"Using knowledge reranking model from params: {reranking_model_params}")
@@ -605,14 +629,15 @@ class KnowledgeBaseTable:
                 metadata = {}
                 for col in metadata_columns:
                     value = row[col]
+                    value_type = type(value)
                     # Convert numpy/pandas types to Python native types
                     if safe_pandas_is_datetime(value) or isinstance(value, pd.Timestamp):
                         value = str(value)
-                    elif pd.api.types.is_integer_dtype(value):
+                    elif pd.api.types.is_integer_dtype(value_type):
                         value = int(value)
-                    elif pd.api.types.is_float_dtype(value):
+                    elif pd.api.types.is_float_dtype(value_type) or isinstance(value, decimal.Decimal):
                         value = float(value)
-                    elif pd.api.types.is_bool_dtype(value):
+                    elif pd.api.types.is_bool_dtype(value_type):
                         value = bool(value)
                     elif isinstance(value, dict):
                         metadata.update(value)
@@ -1041,7 +1066,7 @@ class KnowledgeBaseController:
         except PredictorRecordNotFound:
             pass
 
-        if params.get("provider", None) not in ("openai", "azure"):
+        if params.get("provider", None) not in ("openai", "azure_openai"):
             # try use litellm
             KnowledgeBaseTable.call_litellm_embedding(self.session, params, ["test"])
             return
@@ -1205,3 +1230,18 @@ class KnowledgeBaseController:
         Update a knowledge base record
         """
         raise NotImplementedError()
+
+    def evaluate(self, table_name: str, project_name: str, params: dict = None) -> pd.DataFrame:
+        """
+        Run evaluate and/or create test data for evaluation
+        :param table_name: name of KB
+        :param project_name: project of KB
+        :param params: evaluation parameters
+        :return: evaluation results
+        """
+        project_id = self.session.database_controller.get_project(project_name).id
+        kb_table = self.get_table(table_name, project_id)
+
+        scores = EvaluateBase.run(self.session, kb_table, params)
+
+        return scores

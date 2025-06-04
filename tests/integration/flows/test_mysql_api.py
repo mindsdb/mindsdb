@@ -333,10 +333,6 @@ class TestMySqlApi(BaseStuff):
         for column_name, expected_type in expected_types.items():
             column_description = description_dict[column_name]
 
-            # TEMP
-            if column_name == "n_bigint":
-                continue
-
             if column_name == "dt_date" and isinstance(row[column_name], datetime.datetime):
                 # NOTE sometime mysql.connector returns datetime instead of date for dt_date. This is suspicious, but ok
                 assert row[column_name].hour == 0

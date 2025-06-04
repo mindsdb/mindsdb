@@ -233,7 +233,7 @@ class AgentsController:
             ignore_knowledge_bases = [kb.strip() for kb in ignore_knowledge_bases.split(",")]
 
         # Auto-create SQL skill if no skills are provided but include_tables or include_knowledge_bases params are provided
-        if not skills:
+        if not skills and (include_tables or include_knowledge_bases):
             # Create a default SQL skill
             skill_name = f"{name}_sql_skill"
             skill_params = {

@@ -353,6 +353,35 @@ class TestAgent(BaseExecutorDummyML):
         with pytest.raises(ExecutorException):
             self.run_sql("drop skill my_demo_skill")
 
+    @patch("openai.OpenAI")
+    def test_agent_default_prompt_template(self, mock_openai):
+        """Test that agents work correctly with default prompt templates in different modes"""
+        agent_response = "default prompt template response"
+        set_openai_completion(mock_openai, agent_response)
+
+        # Test non-retrieval mode with no prompt_template (should use default)
+        self.run_sql("""
+            CREATE AGENT default_prompt_agent
+            USING
+                provider='openai',
+                model = "gpt-3.5-turbo",
+                openai_api_key='--'
+         """)
+        ret = self.run_sql("select * from default_prompt_agent where question = 'test question'")
+        assert agent_response in ret.answer[0]
+
+        # Test retrieval mode with no prompt_template (should use default retrieval template)
+        self.run_sql("""
+            CREATE AGENT default_retrieval_agent
+            USING
+                provider='openai',
+                model = "gpt-3.5-turbo",
+                openai_api_key='--',
+                mode='retrieval'
+         """)
+        ret = self.run_sql("select * from default_retrieval_agent where question = 'test question'")
+        assert agent_response in ret.answer[0]
+
 
 class TestKB(BaseExecutorDummyML):
     def _create_kb(

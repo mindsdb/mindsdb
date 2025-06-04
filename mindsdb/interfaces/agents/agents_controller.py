@@ -197,16 +197,12 @@ class AgentsController:
 
         _, provider = self.check_model_provider(model_name, provider)
 
-        # Only use default parameters if they aren't already specified in params
-        # and if the provider matches the default_llm provider
-        if default_llm_params and "provider" in default_llm_params:
-            default_provider = default_llm_params.get("provider")
-            # If provider matches the default provider
-            if provider.lower() == default_provider.lower():
-                # Copy default parameters that aren't already in params
-                for key, value in default_llm_params.items():
-                    if key not in params and key != "provider" and key != "model_name":
-                        params[key] = value
+        # Apply default parameters that aren't already specified in params
+        if default_llm_params:
+            for key, value in default_llm_params.items():
+                # Skip provider and model_name as they're handled separately
+                if key not in params and key != "provider" and key != "model_name":
+                    params[key] = value
 
         # Extract API key if provided in the format <provider>_api_key
         provider_api_key_param = f"{provider.lower()}_api_key"

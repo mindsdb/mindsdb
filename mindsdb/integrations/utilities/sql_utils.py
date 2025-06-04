@@ -90,30 +90,38 @@ def conditions_to_filter(binary_op: ASTNode):
     return filters
 
 
-def extract_comparison_conditions(binary_op: ASTNode):
+def extract_comparison_conditions(binary_op: ASTNode, ignore_functions=False):
     '''Extracts all simple comparison conditions that must be true from an AST node.
     Does NOT support 'or' conditions.
     '''
     conditions = []
 
-    def _extract_comparison_conditions(node: ASTNode, **kwargs):
+    def _extract_comparison_conditions(node: ASTNode,  **kwargs):
         if isinstance(node, ast.BinaryOperation):
             op = node.op.lower()
             if op == 'and':
                 # Want to separate individual conditions, not include 'and' as its own condition.
                 return
-            elif not isinstance(node.args[0], ast.Identifier):
+
+            arg1, arg2 = node.args
+            if ignore_functions and isinstance(arg1, ast.Function):
+                # handle lower/upper
+                if arg1.op.lower() in ('lower', 'upper'):
+                    if isinstance(arg1.args[0], ast.Identifier):
+                        arg1 = arg1.args[0]
+
+            if not isinstance(arg1, ast.Identifier):
                 # Only support [identifier] =/</>/>=/<=/etc [constant] comparisons.
-                raise NotImplementedError(f'Not implemented arg1: {node.args[0]}')
+                raise NotImplementedError(f'Not implemented arg1: {arg1}')
 
-            if isinstance(node.args[1], ast.Constant):
-                value = node.args[1].value
-            elif isinstance(node.args[1], ast.Tuple):
-                value = [i.value for i in node.args[1].items]
+            if isinstance(arg2, ast.Constant):
+                value = arg2.value
+            elif isinstance(arg2, ast.Tuple):
+                value = [i.value for i in arg2.items]
             else:
-                raise NotImplementedError(f'Not implemented arg2: {node.args[1]}')
+                raise NotImplementedError(f'Not implemented arg2: {arg2}')
 
-            conditions.append([op, node.args[0].parts[-1], value])
+            conditions.append([op, arg1.parts[-1], value])
         if isinstance(node, ast.BetweenOperation):
             var, up, down = node.args
             if not (

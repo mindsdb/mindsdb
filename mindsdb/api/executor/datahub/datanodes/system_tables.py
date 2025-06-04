@@ -18,7 +18,7 @@ logger = log.getLogger(__name__)
 def _get_scope(query):
     databases, tables = None, None
     try:
-        conditions = extract_comparison_conditions(query.where)
+        conditions = extract_comparison_conditions(query.where, ignore_functions=True)
     except NotImplementedError:
         return databases, tables
     for op, arg1, arg2 in conditions:

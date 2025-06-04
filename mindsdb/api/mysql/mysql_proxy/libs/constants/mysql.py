@@ -1192,6 +1192,7 @@ SERVER_VARIABLES = {
     '@@interactive_timeout': (28800, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS['binary']),
     '@@license': ('GPL', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
     '@@lower_case_table_names': (0, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS['binary']),
+    '@@GLOBAL.lower_case_table_names': (0, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS['binary']),
     '@@max_allowed_packet': (16777216, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS['binary']),
     '@@net_buffer_length': (16384, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS['binary']),
     '@@net_write_timeout': (60, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS['binary']),
@@ -1217,6 +1218,9 @@ SERVER_VARIABLES = {
 
     '@@GLOBAL.transaction_isolation': ('REPEATABLE-READ', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
     '@@transaction_isolation': ('REPEATABLE-READ', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
+    '@@event_scheduler': ('OFF', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
+    '@@default_storage_engine': ('InnoDB', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
+    '@@default_tmp_storage_engine': ('InnoDB', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
 }
 
 

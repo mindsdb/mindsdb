@@ -9,12 +9,21 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.utilities import log
 
-from .coinmarketcap_tables import (
-    ListingTable,
-    QuotesTable,
-    InfoTable,
-    GlobalMetricsTable
-)
+# FIXED IMPORTS - work both in MindsDB and standalone
+try:
+    from .coinmarketcap_tables import (
+        ListingTable,
+        QuotesTable,
+        InfoTable,
+        GlobalMetricsTable
+    )
+except ImportError:
+    from coinmarketcap_tables import (
+        ListingTable,
+        QuotesTable,
+        InfoTable,
+        GlobalMetricsTable
+    )
 
 logger = log.getLogger(__name__)
 

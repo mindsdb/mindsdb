@@ -6,6 +6,7 @@ import pandas
 
 from mindsdb.utilities import log
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 from mindsdb_sql_parser.ast import ASTNode
 
 
@@ -40,13 +41,9 @@ INF_SCHEMA_COLUMNS_NAMES_SET = set(f.name for f in fields(INF_SCHEMA_COLUMNS_NAM
 
 class HandlerResponse:
     def __init__(
-        self,
-        resp_type: RESPONSE_TYPE,
-        data_frame: pandas.DataFrame = None,
-        query: ASTNode = 0,
-        error_code: int = 0,
-        error_message: str | None = None,
-        affected_rows: int | None = None,
+            self, resp_type: RESPONSE_TYPE, data_frame: pandas.DataFrame = None, query: ASTNode = 0,
+            error_code: int = 0, error_message: str | None = None, affected_rows: int | None = None,
+            mysql_types: list[MYSQL_DATA_TYPE] | None = None
     ) -> None:
         self.resp_type = resp_type
         self.query = query
@@ -56,6 +53,7 @@ class HandlerResponse:
         self.affected_rows = affected_rows
         if isinstance(self.affected_rows, int) is False or self.affected_rows < 0:
             self.affected_rows = 0
+        self.mysql_types = mysql_types
 
     @property
     def type(self):
@@ -129,17 +127,14 @@ class HandlerResponse:
         }
 
     def __repr__(self):
-        return (
-            "%s: resp_type=%s, query=%s, data_frame=%s, err_code=%s, error=%s, affected_rows=%s"
-            % (
-                self.__class__.__name__,
-                self.resp_type,
-                self.query,
-                self.data_frame,
-                self.error_code,
-                self.error_message,
-                self.affected_rows,
-            )
+        return "%s: resp_type=%s, query=%s, data_frame=\n%s\nerr_code=%s, error=%s, affected_rows=%s" % (
+            self.__class__.__name__,
+            self.resp_type,
+            self.query,
+            self.data_frame,
+            self.error_code,
+            self.error_message,
+            self.affected_rows,
         )
 
 

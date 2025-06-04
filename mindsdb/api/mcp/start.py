@@ -77,10 +77,10 @@ def query(query: str, context: Optional[Dict] = None) -> Dict[str, Any]:
         if result.type == SQL_RESPONSE_TYPE.TABLE:
             return {
                 "type": SQL_RESPONSE_TYPE.TABLE,
-                "data": result.data.to_lists(json_types=True),
+                "data": result.result_set.to_lists(json_types=True),
                 "column_names": [
-                    x["alias"] or x["name"] if "alias" in x else x["name"]
-                    for x in result.columns
+                    column.alias or column.name
+                    for column in result.result_set.columns
                 ],
             }
         else:
@@ -123,7 +123,7 @@ def list_databases() -> Dict[str, Any]:
             return {"type": "ok"}
 
         elif result.type == SQL_RESPONSE_TYPE.TABLE:
-            data = result.data.to_lists(json_types=True)
+            data = result.result_set.to_lists(json_types=True)
             return data
 
     except Exception as e:

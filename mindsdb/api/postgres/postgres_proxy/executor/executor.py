@@ -180,9 +180,9 @@ class Executor:
 
             self.params = [
                 Column(
+                    name=p.value,
                     alias=p.value,
                     type="str",
-                    name=p.value,
                 )
                 for p in params
             ]

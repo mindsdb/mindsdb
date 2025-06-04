@@ -163,6 +163,10 @@ class S3Handler(APIHandler):
         region = self._regions[bucket]
         duckdb_conn.execute(f"SET s3_region='{region}'")
 
+        if 'endpoint_url' in self.connection_data:
+            endpoint = self.connection_data['endpoint_url'].replace('https://', '').replace('http://', '').rstrip('/')
+            duckdb_conn.execute(f"SET s3_endpoint='{endpoint}'")
+
         try:
             yield duckdb_conn
         finally:
@@ -180,6 +184,10 @@ class S3Handler(APIHandler):
             'aws_access_key_id': self.connection_data['aws_access_key_id'],
             'aws_secret_access_key': self.connection_data['aws_secret_access_key']
         }
+
+        # Configure endpoint_url 
+        if 'endpoint_url' in self.connection_data:
+            config['endpoint_url'] = self.connection_data['endpoint_url']
 
         # Configure optional parameters.
         if 'aws_session_token' in self.connection_data:

@@ -235,7 +235,7 @@ class AgentsController:
                 "database": database,
                 "description": f"Auto-generated SQL skill for agent {name}",
             }
-            
+
             # Add table restrictions if provided
             if include_tables:
                 skill_params["include_tables"] = include_tables

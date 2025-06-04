@@ -255,8 +255,8 @@ class KnowledgeBaseTable:
             or not isinstance(query.targets[0], Star)
         ):
             query_copy.where = None
-            if 'metadata' in df.columns:
-                df['metadata'] = df['metadata'].apply(to_json)
+            if "metadata" in df.columns:
+                df["metadata"] = df["metadata"].apply(to_json)
 
             df = query_df(df, query_copy, session=self.session)
 

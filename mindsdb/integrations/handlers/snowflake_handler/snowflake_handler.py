@@ -6,12 +6,13 @@ from snowflake.sqlalchemy import snowdialect
 from snowflake import connector
 from snowflake.connector.errors import NotSupportedError
 from snowflake.connector.cursor import SnowflakeCursor, ResultMetadata
+from typing import Optional, List
 
 from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb_sql_parser.ast import Select, Identifier
 
 from mindsdb.utilities import log
-from mindsdb.integrations.libs.base import DatabaseHandler
+from mindsdb.integrations.libs.base import MetaDatabaseHandler
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -161,7 +162,7 @@ def _make_table_response(result: DataFrame, cursor: SnowflakeCursor) -> Response
     return Response(RESPONSE_TYPE.TABLE, data_frame=df, affected_rows=None, mysql_types=mysql_types)
 
 
-class SnowflakeHandler(DatabaseHandler):
+class SnowflakeHandler(MetaDatabaseHandler):
     """
     This handler handles connection and execution of the Snowflake statements.
     """
@@ -441,3 +442,219 @@ class SnowflakeHandler(DatabaseHandler):
         result.to_columns_table_response(map_type_fn=_map_type)
 
         return result
+
+    def meta_get_tables(self, table_names: Optional[List[str]] = None) -> Response:
+        """
+        Retrieves metadata information about the tables in the Snowflake database to be stored in the data catalog.
+
+        Args:
+            table_names (list): A list of table names for which to retrieve metadata information.
+
+        Returns:
+            Response: A response object containing the metadata information, formatted as per the `Response` class.
+        """
+        query = """
+            SELECT
+                TABLE_CATALOG,
+                TABLE_SCHEMA,
+                TABLE_NAME,
+                TABLE_TYPE,
+                COMMENT AS TABLE_DESCRIPTION,
+                ROW_COUNT,
+                CREATED,
+                LAST_ALTERED
+            FROM INFORMATION_SCHEMA.TABLES
+            WHERE TABLE_SCHEMA = current_schema()
+            AND TABLE_TYPE IN ('BASE TABLE', 'VIEW')
+        """
+
+        if table_names is not None and len(table_names) > 0:
+            table_names_str = ", ".join([f"'{t.upper()}'" for t in table_names])
+            query += f" AND TABLE_NAME IN ({table_names_str})"
+
+        result = self.native_query(query)
+        return result
+
+    def meta_get_columns(self, table_names: Optional[List[str]] = None) -> Response:
+        """
+        Retrieves column metadata for the specified tables (or all tables if no list is provided).
+
+        Args:
+            table_names (list): A list of table names for which to retrieve column metadata.
+
+        Returns:
+            Response: A response object containing the column metadata.
+        """
+        query = """
+            SELECT
+                TABLE_NAME,
+                COLUMN_NAME,
+                DATA_TYPE,
+                COMMENT AS COLUMN_DESCRIPTION,
+                COLUMN_DEFAULT,
+                (IS_NULLABLE = 'YES') AS IS_NULLABLE,
+                CHARACTER_MAXIMUM_LENGTH,
+                CHARACTER_OCTET_LENGTH,
+                NUMERIC_PRECISION,
+                NUMERIC_SCALE,
+                DATETIME_PRECISION,
+                CHARACTER_SET_NAME,
+                COLLATION_NAME
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = current_schema()
+        """
+
+        if table_names is not None and len(table_names) > 0:
+            table_names_str = ", ".join([f"'{t.upper()}'" for t in table_names])
+            query += f" AND TABLE_NAME IN ({table_names_str})"
+
+        result = self.native_query(query)
+        return result
+
+    def meta_get_column_statistics(self, table_names: Optional[List[str]] = None) -> Response:
+        """
+        Retrieves basic column statistics: null %, distinct count.
+        Due to Snowflake limitations, this runs per-table not per-column.
+        TODO:  Add most_common_values and most_common_frequencies
+        """
+        columns_query = """
+            SELECT TABLE_NAME, COLUMN_NAME
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = current_schema()
+        """
+        if table_names:
+            table_names_str = ", ".join([f"'{t.upper()}'" for t in table_names])
+            columns_query += f" AND TABLE_NAME IN ({table_names_str})"
+
+        columns_result = self.native_query(columns_query)
+        if (
+            columns_result.type == RESPONSE_TYPE.ERROR
+            or columns_result.data_frame is None
+            or columns_result.data_frame.empty
+        ):
+            return Response(RESPONSE_TYPE.ERROR, error_message="No columns found.")
+
+        columns_df = columns_result.data_frame
+        grouped = columns_df.groupby("TABLE_NAME")
+        all_stats = []
+
+        for table_name, group in grouped:
+            select_parts = []
+            for _, row in group.iterrows():
+                col = row["COLUMN_NAME"]
+                # Ensure column names in the query are properly quoted if they contain special characters or are case-sensitive
+                quoted_col = f'"{col}"'
+                select_parts.extend(
+                    [
+                        f'COUNT_IF({quoted_col} IS NULL) AS "nulls_{col}"',
+                        f'APPROX_COUNT_DISTINCT({quoted_col}) AS "distincts_{col}"',
+                        f'MIN({quoted_col}) AS "min_{col}"',
+                        f'MAX({quoted_col}) AS "max_{col}"',
+                    ]
+                )
+
+            quoted_table_name = f'"{table_name}"'
+            stats_query = f"""
+            SELECT COUNT(*) AS "total_rows", {", ".join(select_parts)}
+            FROM {quoted_table_name}
+            """
+            try:
+                stats_res = self.native_query(stats_query)
+                if stats_res.type != RESPONSE_TYPE.TABLE or stats_res.data_frame is None or stats_res.data_frame.empty:
+                    logger.warning(
+                        f"Could not retrieve stats for table {table_name}. Query returned no data or an error: {stats_res.error_message if stats_res.type == RESPONSE_TYPE.ERROR else 'No data'}"
+                    )
+                    # Add placeholder stats if query fails or returns empty
+                    for _, row in group.iterrows():
+                        all_stats.append(
+                            {
+                                "table_name": table_name,
+                                "column_name": row["COLUMN_NAME"],
+                                "null_percentage": None,
+                                "distinct_values_count": None,
+                                "most_common_values": [],
+                                "most_common_frequencies": [],
+                                "minimum_value": None,
+                                "maximum_value": None,
+                            }
+                        )
+                    continue
+
+                stats_data = stats_res.data_frame.iloc[0]
+                total_rows = stats_data.get("total_rows", 0)
+
+                for _, row in group.iterrows():
+                    col = row["COLUMN_NAME"]
+                    # Keys for stats_data should match the aliases in stats_query (e.g., "nulls_COLNAME")
+                    nulls = stats_data.get(f"nulls_{col}", 0)
+                    distincts = stats_data.get(f"distincts_{col}", None)
+                    min_val = stats_data.get(f"min_{col}", None)
+                    max_val = stats_data.get(f"max_{col}", None)
+                    null_pct = (nulls / total_rows) * 100 if total_rows is not None and total_rows > 0 else None
+
+                    all_stats.append(
+                        {
+                            "table_name": table_name,
+                            "column_name": col,
+                            "null_percentage": null_pct,
+                            "distinct_values_count": distincts,
+                            "most_common_values": [],
+                            "most_common_frequencies": [],
+                            "minimum_value": min_val,
+                            "maximum_value": max_val,
+                        }
+                    )
+            except Exception as e:
+                logger.error(f"Exception while fetching statistics for table {table_name}: {e}")
+                for _, row in group.iterrows():
+                    all_stats.append(
+                        {
+                            "table_name": table_name,
+                            "column_name": row["COLUMN_NAME"],
+                            "null_percentage": None,
+                            "distinct_values_count": None,
+                            "most_common_values": [],
+                            "most_common_frequencies": [],
+                            "minimum_value": None,
+                            "maximum_value": None,
+                        }
+                    )
+
+        if not all_stats:
+            return Response(RESPONSE_TYPE.TABLE, data_frame=pandas.DataFrame())
+
+        return Response(RESPONSE_TYPE.TABLE, data_frame=pandas.DataFrame(all_stats))
+
+    def meta_get_primary_keys(self, table_names: Optional[List[str]] = None) -> Response:
+        try:
+            filters = ["t.CONSTRAINT_TYPE = 'PRIMARY KEY'", "t.TABLE_SCHEMA = current_schema()"]
+
+            if table_names:
+                table_list = ", ".join(f"'{t.upper()}'" for t in table_names)
+                filters.append(f"t.TABLE_NAME IN ({table_list})")
+
+            query = f"""
+                SELECT k.TABLE_NAME, k.COLUMN_NAME
+                FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS t
+                JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE k
+                ON t.CONSTRAINT_NAME = k.CONSTRAINT_NAME
+                AND t.TABLE_NAME = k.TABLE_NAME
+                AND t.TABLE_SCHEMA = k.TABLE_SCHEMA
+                WHERE {" AND ".join(filters)}
+                ORDER BY k.TABLE_NAME, k.ORDINAL_POSITION;
+            """
+
+            response = self.native_query(query)
+            if response.type == RESPONSE_TYPE.ERROR and response.error_message:
+                logger.error(f"Query error in meta_get_primary_keys: {response.error_message}\nQuery:\n{query}")
+            return response
+
+        except Exception as e:
+            logger.error(f"Exception in meta_get_primary_keys: {e!r}")
+            return Response(RESPONSE_TYPE.ERROR, error_message=f"Exception querying primary keys: {e!r}")
+
+    def meta_get_foreign_keys(self, table_names: Optional[List[str]] = None) -> Response:
+        # To prevent NotImplementedError if foreign key retrieval is not yet supported/desired
+        # Return an empty DataFrame with expected columns if possible, or just an empty table response.
+        # For now, returning a simple empty table response.
+        return Response(RESPONSE_TYPE.TABLE, data_frame=pandas.DataFrame())

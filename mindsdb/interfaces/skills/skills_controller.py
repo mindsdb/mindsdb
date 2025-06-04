@@ -8,7 +8,10 @@ from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.data_catalog.data_catalog_loader import DataCatalogLoader
 from mindsdb.utilities.config import config
+from mindsdb.utilities import log
 
+
+logger = log.getLogger(__name__)
 
 default_project = config.get("default_project")
 
@@ -97,10 +100,34 @@ class SkillsController:
 
         # Load metadata to data catalog (if enabled) if the skill is Text-to-SQL.
         if config.get("data_catalog", {}).get("enabled", False) and type == "sql":
-            data_catalog_loader = DataCatalogLoader(
-                database_name=params["database"], table_names=params["tables"] if "tables" in params else None
-            )
-            data_catalog_loader.load_metadata()
+            if params.get("database"):
+                data_catalog_loader = DataCatalogLoader(
+                    database_name=params["database"], table_names=params["tables"] if "tables" in params else None
+                )
+                data_catalog_loader.load_metadata()
+
+            elif params.get("include_tables"):
+                # TODO: Handle the case where ignore_tables is provided. Is this a valid parameter?
+                database_table_map = {}
+                for table in params["include_tables"]:
+                    # TODO: Handle the case where a schema is provided.
+                    # TODO: Handle the case where a file path is provided with an extension.
+                    parts = table.split(".")
+                    database_table_map[parts[0]] = database_table_map.get(parts[0], []) + [parts[1]]
+
+                for database_name, table_names in database_table_map.items():
+                    data_catalog_loader = DataCatalogLoader(
+                        database_name=database_name, table_names=table_names
+                    )
+                    data_catalog_loader.load_metadata()
+
+            else:
+                raise ValueError(
+                    "Data catalog is enabled, but no database or tables were provided. "
+                    "Metadata will not be loaded."
+                )
+
+            # TODO: Is it possible to create a skill with complete access to the database with the new agent syntax?
 
         new_skill = db.Skills(
             name=name,

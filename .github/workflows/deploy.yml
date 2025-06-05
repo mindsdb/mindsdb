@@ -40,7 +40,7 @@ jobs:
       with:
         repository: mindsdb/github-actions
         path: github-actions
-        ref: 305d8a9a7d255001d1b274cfbf1584fce17d110f
+        ref: ea2a89df4be86179d22e11fa2d5cd6eab16f13f1
     - uses: FranzDiebold/github-env-vars-action@v2
     - name: Notify of deployment starting
       id: slack

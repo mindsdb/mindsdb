@@ -28,7 +28,7 @@ def get_table_alias(table_obj, default_db_name):
     elif isinstance(table_obj, Select):
         # it is subquery
         if table_obj.alias is None:
-            name = 't'
+            name = "t"
         else:
             name = table_obj.alias.parts[0]
         name = (default_db_name, name)
@@ -37,10 +37,10 @@ def get_table_alias(table_obj, default_db_name):
         return get_table_alias(table_obj.left, default_db_name)
     else:
         # unknown yet object
-        return default_db_name, 't', 't'
+        return default_db_name, "t", "t"
 
     if table_obj.alias is not None:
-        name = name + ('.'.join(table_obj.alias.parts),)
+        name = name + (".".join(table_obj.alias.parts),)
     else:
         name = name + (name[1],)
     return name
@@ -57,7 +57,7 @@ def get_fill_param_fnc(steps_data):
                 node_prev = callstack[0]
                 if isinstance(node_prev, BinaryOperation):
                     # Check case: 'something IN Parameter()'
-                    if node_prev.op.lower() == 'in' and node_prev.args[1] is node:
+                    if node_prev.op.lower() == "in" and node_prev.args[1] is node:
                         is_single_item = False
 
             if is_single_item and len(items) == 1:
@@ -71,32 +71,28 @@ def get_fill_param_fnc(steps_data):
             rs = steps_data[node.value.step_num]
             items = [Constant(i) for i in rs.get_column_values(col_idx=0)]
             return Tuple(items)
+
     return fill_params
 
 
 class FetchDataframeStepCall(BaseStepCall):
-
     bind = FetchDataframeStep
 
     def call(self, step):
-
         dn = self.session.datahub.get(step.integration)
         query = step.query
 
         if dn is None:
-            raise UnknownError(f'Unknown integration name: {step.integration}')
+            raise UnknownError(f"Unknown integration name: {step.integration}")
 
         if query is None:
-            table_alias = (self.context.get('database'), 'result', 'result')
+            table_alias = (self.context.get("database"), "result", "result")
 
             # fetch raw_query
-            response: DataHubResponse = dn.query(
-                native_query=step.raw_query,
-                session=self.session
-            )
+            response: DataHubResponse = dn.query(native_query=step.raw_query, session=self.session)
             df = response.data_frame
         else:
-            table_alias = get_table_alias(step.query.from_table, self.context.get('database'))
+            table_alias = get_table_alias(step.query.from_table, self.context.get("database"))
 
             # TODO for information_schema we have 'database' = 'mindsdb'
 
@@ -106,10 +102,7 @@ class FetchDataframeStepCall(BaseStepCall):
 
             query, context_callback = query_context_controller.handle_db_context_vars(query, dn, self.session)
 
-            response: DataHubResponse = dn.query(
-                query=query,
-                session=self.session
-            )
+            response: DataHubResponse = dn.query(query=query, session=self.session)
             df = response.data_frame
 
             if context_callback:
@@ -123,5 +116,5 @@ class FetchDataframeStepCall(BaseStepCall):
             table_name=table_alias[1],
             table_alias=table_alias[2],
             database=table_alias[0],
-            mysql_types=response.mysql_types
+            mysql_types=response.mysql_types,
         )

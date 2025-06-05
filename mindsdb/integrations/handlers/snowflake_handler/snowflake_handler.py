@@ -625,6 +625,15 @@ class SnowflakeHandler(MetaDatabaseHandler):
         return Response(RESPONSE_TYPE.TABLE, data_frame=pandas.DataFrame(all_stats))
 
     def meta_get_primary_keys(self, table_names: Optional[List[str]] = None) -> Response:
+        """
+        Retrieves primary key information for the specified tables (or all tables if no list is provided).
+
+        Args:
+            table_names (list): A list of table names for which to retrieve primary key information.
+
+        Returns:
+            Response: A response object containing the primary key information.
+        """
         try:
             query = f"""
                 SHOW PRIMARY KEYS IN TABLE;
@@ -637,10 +646,10 @@ class SnowflakeHandler(MetaDatabaseHandler):
             df = response.data_frame
             if not df.empty:
                 if table_names:
-                    df = df[df["TABLE_NAME"].isin(table_names)]
+                    df = df[df["table_name"].isin(table_names)]
 
-                df = df[["TABLE_NAME", "COLUMN_NAME", "KEY_SEQUENCE", "CONSTRAINT_NAME"]]
-                df = df.rename(columns={"KEY_SEQUENCE": "ORDINAL_POSITION"})
+                df = df[["table_name", "column_name", "key_sequence", "constraint_name"]]
+                df = df.rename(columns={"key_sequence": "ordinal_position"})
 
             response.data_frame = df
 
@@ -651,7 +660,43 @@ class SnowflakeHandler(MetaDatabaseHandler):
             return Response(RESPONSE_TYPE.ERROR, error_message=f"Exception querying primary keys: {e!r}")
 
     def meta_get_foreign_keys(self, table_names: Optional[List[str]] = None) -> Response:
-        # To prevent NotImplementedError if foreign key retrieval is not yet supported/desired
-        # Return an empty DataFrame with expected columns if possible, or just an empty table response.
-        # For now, returning a simple empty table response.
-        return Response(RESPONSE_TYPE.TABLE, data_frame=pandas.DataFrame())
+        """
+        Retrieves foreign key information for the specified tables (or all tables if no list is provided).
+
+        Args:
+            table_names (list): A list of table names for which to retrieve foreign key information.
+
+        Returns:
+            Response: A response object containing the foreign key information.
+        """
+        try:
+            query = f"""
+                SHOW IMPORTED KEYS IN TABLE;
+            """
+
+            response = self.native_query(query)
+            if response.type == RESPONSE_TYPE.ERROR and response.error_message:
+                logger.error(f"Query error in meta_get_primary_keys: {response.error_message}\nQuery:\n{query}")
+
+            df = response.data_frame
+            if not df.empty:
+                if table_names:
+                    df = df[df["pk_table_name"].isin(table_names) & df["fk_table_name"].isin(table_names)]
+
+                df = df[["pk_table_name", "pk_column_name", "fk_table_name", "fk_column_name"]]
+                df = df.rename(
+                    columns={
+                        "pk_table_name": "child_table_name",
+                        "pk_column_name": "child_column_name",
+                        "fk_table_name": "parent_table_name",
+                        "fk_column_name": "parent_column_name",
+                    }
+                )
+
+            response.data_frame = df
+
+            return response
+
+        except Exception as e:
+            logger.error(f"Exception in meta_get_primary_keys: {e!r}")
+            return Response(RESPONSE_TYPE.ERROR, error_message=f"Exception querying primary keys: {e!r}")

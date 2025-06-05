@@ -52,6 +52,9 @@ class IntegrationDataNode(DataNode):
         else:
             raise Exception(f"Can't get tables: {response.error_message}")
 
+        result_dict = response.data_frame.to_dict(orient="records")
+        return [TablesRow.from_dict(row) for row in result_dict]
+
     def get_table_columns_df(self, table_name: str, schema_name: str | None = None) -> pd.DataFrame:
         """Get a DataFrame containing representation of information_schema.columns for the specified table.
 

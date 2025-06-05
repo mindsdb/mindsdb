@@ -635,7 +635,7 @@ class SnowflakeHandler(MetaDatabaseHandler):
             Response: A response object containing the primary key information.
         """
         try:
-            query = f"""
+            query = """
                 SHOW PRIMARY KEYS IN TABLE;
             """
 
@@ -670,7 +670,7 @@ class SnowflakeHandler(MetaDatabaseHandler):
             Response: A response object containing the foreign key information.
         """
         try:
-            query = f"""
+            query = """
                 SHOW IMPORTED KEYS IN TABLE;
             """
 

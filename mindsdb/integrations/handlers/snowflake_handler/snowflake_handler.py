@@ -470,8 +470,8 @@ class SnowflakeHandler(MetaDatabaseHandler):
             query += f" AND TABLE_NAME IN ({table_names_str})"
 
         result = self.native_query(query)
-        result.data_frame['ROW_COUNT'] = result.data_frame['ROW_COUNT'].astype(int)
-        
+        result.data_frame["ROW_COUNT"] = result.data_frame["ROW_COUNT"].astype(int)
+
         return result
 
     def meta_get_columns(self, table_names: Optional[List[str]] = None) -> Response:

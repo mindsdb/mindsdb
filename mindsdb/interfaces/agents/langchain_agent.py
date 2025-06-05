@@ -5,6 +5,7 @@ from uuid import uuid4
 import queue
 import re
 import threading
+import copy
 import numpy as np
 import pandas as pd
 
@@ -33,6 +34,7 @@ from mindsdb.utilities import log
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.config import config
 
 from .mindsdb_chat_model import ChatMindsdb
 from .callback_handlers import LogCallbackHandler, ContextCaptureCallback
@@ -226,9 +228,10 @@ def process_chunk(chunk):
 
 
 class LangchainAgent:
-    def __init__(self, agent: db.Agents, model: dict = None):
+    def __init__(self, agent: db.Agents, model: dict = None, params: dict = None):
         self.agent = agent
         self.model = model
+        self.runtime_params = params
 
         self.run_completion_span: Optional[object] = None
         self.llm: Optional[object] = None
@@ -246,7 +249,29 @@ class LangchainAgent:
 
     def _initialize_args(self) -> dict:
         """Initialize the arguments based on the agent's parameters."""
-        args = self.agent.params.copy()
+        # Start with stored agent parameters
+        args = self.agent.params.copy() if self.agent.params else {}
+
+        # Apply default LLM parameters from config
+        default_llm_params = copy.deepcopy(config.get("default_llm", {}))
+
+        # Apply runtime parameters if provided (these override both stored and default params)
+        if self.runtime_params:
+            # Merge default parameters with runtime parameters
+            for key, value in default_llm_params.items():
+                # Only apply defaults for keys not in runtime_params or stored params
+                if key not in self.runtime_params and key not in args:
+                    args[key] = value
+
+            # Apply runtime parameters (highest priority)
+            args.update(self.runtime_params)
+        else:
+            # If no runtime params, just apply defaults for missing keys
+            for key, value in default_llm_params.items():
+                if key not in args:
+                    args[key] = value
+
+        # Set model name and provider
         args["model_name"] = self.agent.model_name
         args["provider"] = self.agent.provider
         args["embedding_model_provider"] = args.get("embedding_model", get_embedding_model_provider(args))

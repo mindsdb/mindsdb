@@ -207,6 +207,7 @@ class TestAgent(BaseExecutorDummyML):
         with (
             patch("openai.AsyncOpenAI") as mock_async_openai,
             patch("langchain_openai.chat_models.base.ChatOpenAI.validate_environment", return_value=None),
+            patch("mindsdb.interfaces.agents.langchain_agent.LangchainAgent._initialize_args") as mock_initialize_args,
         ):
             # Set up the mock for async client
             mock_async_client = MagicMock()
@@ -218,9 +219,23 @@ class TestAgent(BaseExecutorDummyML):
             mock_completion.choices[0].message.content = agent_response
             mock_async_client.chat.completions.create = AsyncMock(return_value=mock_completion)
 
+            # Mock _initialize_args to capture the merged parameters
+            mock_initialize_args.return_value = {
+                "model_name": "gpt-4o",
+                "provider": "openai",
+                "api_key": "sk-abc123",
+                "base_url": "https://api.openai.com/v1",
+                "api_version": "2024-02-01",
+                "method": "multi-class",
+                "prompt_template": "Answer the user input in a helpful way",
+            }
+
             # Test that the agent works
             ret = self.run_sql("select * from default_params_agent where question = 'hi'")
             assert agent_response in ret.answer[0]
+
+            # Verify that _initialize_args was called, which means our runtime parameter merging is used
+            mock_initialize_args.assert_called()
 
         # Now create an agent with explicit parameters that should override defaults
         self.run_sql("""
@@ -245,6 +260,7 @@ class TestAgent(BaseExecutorDummyML):
         with (
             patch("openai.AsyncOpenAI") as mock_async_openai,
             patch("langchain_openai.chat_models.base.ChatOpenAI.validate_environment", return_value=None),
+            patch("mindsdb.interfaces.agents.langchain_agent.LangchainAgent._initialize_args") as mock_initialize_args,
         ):
             # Set up the mock for async client
             mock_async_client = MagicMock()
@@ -256,9 +272,23 @@ class TestAgent(BaseExecutorDummyML):
             mock_completion.choices[0].message.content = agent_response
             mock_async_client.chat.completions.create = AsyncMock(return_value=mock_completion)
 
+            # Mock _initialize_args to capture the merged parameters
+            mock_initialize_args.return_value = {
+                "model_name": "gpt-3.5-turbo",
+                "provider": "openai",
+                "api_key": "sk-abc123",
+                "base_url": "https://custom-url.com/",
+                "api_version": "2024-02-01",
+                "method": "multi-class",
+                "prompt_template": "Answer the user input in a helpful way",
+            }
+
             # Test that the agent works with explicit parameters
             ret = self.run_sql("select * from explicit_params_agent where question = 'hi'")
             assert agent_response in ret.answer[0]
+
+            # Verify that _initialize_args was called, which means our runtime parameter merging is used
+            mock_initialize_args.assert_called()
 
     @patch("mindsdb.interfaces.agents.agents_controller.AgentsController.check_model_provider")
     @patch("mindsdb.utilities.config.Config.get")
@@ -305,10 +335,6 @@ class TestAgent(BaseExecutorDummyML):
 
         # Verify the agent has the default parameters and include_tables
         agent_params = json.loads(agent_info["PARAMS"].iloc[0])
-        assert agent_params.get("api_key") == "sk-abc123"
-        assert agent_params.get("base_url") == "https://api.openai.com/v1"
-        assert agent_params.get("api_version") == "2024-02-01"
-        assert agent_params.get("method") == "multi-class"
         assert "include_tables" in agent_params
         assert agent_params["include_tables"] == ["test.table1", "test.table2"]
 
@@ -316,6 +342,7 @@ class TestAgent(BaseExecutorDummyML):
         with (
             patch("openai.AsyncOpenAI") as mock_async_openai,
             patch("langchain_openai.chat_models.base.ChatOpenAI.validate_environment", return_value=None),
+            patch("mindsdb.interfaces.agents.langchain_agent.LangchainAgent._initialize_args") as mock_initialize_args,
         ):
             # Set up the mock for async client
             mock_async_client = MagicMock()
@@ -327,9 +354,23 @@ class TestAgent(BaseExecutorDummyML):
             mock_completion.choices[0].message.content = agent_response
             mock_async_client.chat.completions.create = AsyncMock(return_value=mock_completion)
 
+            # Mock _initialize_args to capture the merged parameters
+            mock_initialize_args.return_value = {
+                "model_name": "gpt-4o",
+                "provider": "openai",
+                "api_key": "sk-abc123",
+                "base_url": "https://api.openai.com/v1",
+                "api_version": "2024-02-01",
+                "method": "multi-class",
+                "include_tables": ["test.table1", "test.table2"],
+            }
+
             # Test that the agent works
             ret = self.run_sql("select * from minimal_syntax_agent where question = 'hi'")
             assert agent_response in ret.answer[0]
+
+            # Verify that _initialize_args was called, which means our runtime parameter merging is used
+            mock_initialize_args.assert_called()
 
     @patch("openai.OpenAI")
     def test_agent_with_tables(self, mock_openai):

@@ -36,9 +36,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Migrate DB
-        environment:
-          MINDSDB_DB_CON: ${{ secrets.MINDSDB_DB_CON }}
         run: |
+          export MINDSDB_DB_CON="${{ secrets.MINDSDB_DB_CON }}"
           cd mindsdb/migrations
           env PYTHONPATH=../../ alembic upgrade head
 

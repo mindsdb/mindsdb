@@ -168,6 +168,15 @@ class SqlalchemyRender:
         is_quoted = get_is_quoted(alias)[0]
         return AttributedStr(alias.parts[0], is_quoted)
 
+    def make_unique_alias(self, name):
+        if self.selects_stack:
+            aliases = self.selects_stack[-1]['aliases']
+            for i in range(10):
+                name2 = f"{name}_{i}"
+                if name2 not in aliases:
+                    aliases.append(name2)
+                    return name2
+
     def to_expression(self, t):
 
         # simple type
@@ -223,12 +232,9 @@ class SqlalchemyRender:
                 alias = self.get_alias(t.alias)
                 col = col.label(alias)
             else:
-                alias = str(t.op)
-                if self.selects_stack:
-                    aliases = self.selects_stack[-1]['aliases']
-                    if alias not in aliases:
-                        aliases.append(alias)
-                        col = col.label(alias)
+                alias = self.make_unique_alias(str(t.op))
+                if alias:
+                    col = col.label(alias)
 
         elif isinstance(t, ast.BinaryOperation):
             ops = {
@@ -380,6 +386,10 @@ class SqlalchemyRender:
             if t.alias:
                 alias = self.get_alias(t.alias)
                 col = col.label(alias)
+            else:
+                alias = self.make_unique_alias("cast")
+                if alias:
+                    col = col.label(alias)
         elif isinstance(t, ast.Parameter):
             col = sa.column(t.value, is_literal=True)
             if t.alias:

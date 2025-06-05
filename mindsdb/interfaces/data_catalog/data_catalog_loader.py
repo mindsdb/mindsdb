@@ -60,7 +60,7 @@ class DataCatalogLoader(BaseDataCatalog):
         self.logger.info(f"Loading table metadata for {self.database_name}")
         response = self.data_handler.meta_get_tables(self.table_names)
         df = response.data_frame
-        
+
         if df.empty:
             self.logger.info(f"No table metadata to add for {self.database_name}.")
             return []
@@ -110,7 +110,7 @@ class DataCatalogLoader(BaseDataCatalog):
         self.logger.info(f"Loading column metadata for {self.database_name}")
         response = self.data_handler.meta_get_columns(self.table_names)
         df = response.data_frame
-        
+
         if df.empty:
             self.logger.info(f"No column metadata to load for {self.database_name}.")
             return []
@@ -152,7 +152,7 @@ class DataCatalogLoader(BaseDataCatalog):
         self.logger.info(f"Loading column statistics for {self.database_name}")
         response = self.data_handler.meta_get_column_statistics(self.table_names)
         df = response.data_frame
-        
+
         if df.empty:
             self.logger.info(f"No column statistics metadata to load for {self.database_name}.")
 
@@ -249,7 +249,7 @@ class DataCatalogLoader(BaseDataCatalog):
         self.logger.info(f"Loading foreign keys for {self.database_name}")
         response = self.data_handler.meta_get_foreign_keys(self.table_names)
         df = response.data_frame
-        
+
         if df.empty:
             self.logger.info(f"No foreign keys metadata to load for {self.database_name}.")
             return []

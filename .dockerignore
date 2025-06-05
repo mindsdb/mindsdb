@@ -24,3 +24,26 @@ docs
 helm
 var
 **/__pycache__
+
+# Streamlined build optimizations
+tests/
+examples/
+*.md
+!README.md
+*.log
+logs/
+tmp/
+temp/
+.tmp/
+*.backup
+*.bak
+*-backup.txt
+*-original-backup.txt
+data/
+.env.streamlined
+config.json
+.coverage
+.tox/
+node_modules/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  mindsdb-streamlined:
+    build:
+      context: .
+      dockerfile: Dockerfile.streamlined
+    container_name: mindsdb-streamlined
+    ports:
+      - "47334:47334"  # HTTP API
+    environment:
+      - MINDSDB_STORAGE_DIR=/home/mindsdb/data
+      - MINDSDB_CONFIG_PATH=/home/mindsdb/config.json
+      - MINDSDB_APIS=http
+      - MINDSDB_DOCKER_ENV=True
+      - MINDSDB_ENABLED_HANDLERS=airtable,supabase,gmail,google_analytics,lightwood,huggingface,huggingface_api,langchain,langchain_embedding,pgvector,postgres,sheets,s3,minds_endpoint,rag
+      - MINDSDB_LOG_LEVEL=INFO
+    volumes:
+      - mindsdb_data:/home/mindsdb/data
+      - ./config-streamlined.json:/home/mindsdb/config.json:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:47334/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  mindsdb_data:
+    driver: local

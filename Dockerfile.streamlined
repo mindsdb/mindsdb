@@ -1,0 +1,58 @@
+FROM python:3.11-slim as builder
+WORKDIR /build
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy and install streamlined requirements
+COPY requirements/requirements-streamlined.txt .
+RUN pip wheel --no-cache-dir --no-deps --wheel-dir /build/wheels \
+    -r requirements-streamlined.txt
+
+# Runtime stage
+FROM python:3.11-slim
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy wheels and install
+COPY --from=builder /build/wheels /wheels
+RUN pip install --no-cache /wheels/* && rm -rf /wheels
+
+# Create non-root user
+RUN useradd -m -u 1000 mindsdb
+USER mindsdb
+
+# Copy MindsDB source code
+COPY --chown=mindsdb:mindsdb mindsdb /home/mindsdb/mindsdb
+COPY --chown=mindsdb:mindsdb setup.py /home/mindsdb/
+COPY --chown=mindsdb:mindsdb pyproject.toml /home/mindsdb/
+COPY --chown=mindsdb:mindsdb MANIFEST.in /home/mindsdb/
+COPY --chown=mindsdb:mindsdb default_handlers.txt /home/mindsdb/
+
+# Install MindsDB in development mode
+USER root
+WORKDIR /home/mindsdb
+RUN pip install -e .
+USER mindsdb
+
+# Configuration and startup
+COPY --chown=mindsdb:mindsdb config-streamlined.json /home/mindsdb/config.json
+
+# Create data directory
+RUN mkdir -p /home/mindsdb/data
+
+EXPOSE 47334
+ENV MINDSDB_STORAGE_DIR=/home/mindsdb/data
+ENV MINDSDB_CONFIG_PATH=/home/mindsdb/config.json
+ENV MINDSDB_APIS=http
+ENV MINDSDB_DOCKER_ENV=True
+ENV MINDSDB_ENABLED_HANDLERS=airtable,supabase,gmail,google_analytics,lightwood,huggingface,huggingface_api,langchain,langchain_embedding,pgvector,postgres,sheets,s3,minds_endpoint,rag
+
+CMD ["python", "-m", "mindsdb", "--config", "/home/mindsdb/config.json", "--api", "http"]

@@ -710,6 +710,12 @@ class IntegrationController:
             mindsdb_path = Path(importlib.util.find_spec('mindsdb').origin).parent.joinpath('mindsdb')
             handlers_path = mindsdb_path.joinpath('integrations/handlers')
 
+        # Check for enabled handlers environment variable
+        enabled_handlers = None
+        if os.environ.get('MINDSDB_ENABLED_HANDLERS'):
+            enabled_handlers = [h.strip() for h in os.environ.get('MINDSDB_ENABLED_HANDLERS').split(',')]
+            logger.info(f"Loading only enabled handlers: {enabled_handlers}")
+
         self.handler_modules = {}
         self.handlers_import_status = {}
         for handler_dir in handlers_path.iterdir():
@@ -720,6 +726,11 @@ class IntegrationController:
             if 'name' not in handler_info:
                 continue
             handler_name = handler_info['name']
+            
+            # Skip handler if not in enabled list (when environment variable is set)
+            if enabled_handlers is not None and handler_name not in enabled_handlers:
+                logger.debug(f"Skipping handler {handler_name} - not in enabled handlers list")
+                continue
             dependencies = self._read_dependencies(handler_dir)
             handler_meta = {
                 'path': handler_dir,

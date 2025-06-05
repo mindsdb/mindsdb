@@ -350,7 +350,7 @@ class LangchainAgent:
         self.provider = args.get("provider", get_llm_provider(args))
 
         df = df.reset_index(drop=True)
-        agent = self.create_agent(df, args)
+        agent = self.create_agent(df)
         # Use last message as prompt, remove other questions.
         user_column = args.get("user_column", USER_COLUMN)
         df.iloc[:-1, df.columns.get_loc(user_column)] = None
@@ -380,14 +380,17 @@ class LangchainAgent:
         self.provider = args.get("provider", get_llm_provider(args))
 
         df = df.reset_index(drop=True)
-        agent = self.create_agent(df, args)
+        agent = self.create_agent(df)
         # Use last message as prompt, remove other questions.
         user_column = args.get("user_column", USER_COLUMN)
         df.iloc[:-1, df.columns.get_loc(user_column)] = None
         return self.stream_agent(df, agent, args)
 
-    def create_agent(self, df: pd.DataFrame, args: Dict = None) -> AgentExecutor:
+    def create_agent(self, df: pd.DataFrame) -> AgentExecutor:
         # Set up tools.
+
+        args = self.args
+
         llm = create_chat_model(args)
         self.llm = llm
 

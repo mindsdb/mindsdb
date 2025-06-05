@@ -27,17 +27,20 @@ jobs:
       fail-fast: false
       matrix:
         deploy-env: ${{ fromJson(inputs.deploy-envs) }}
-    
+    environment:
+      name: ${{ matrix.deploy-env }}
+      url: ${{ vars.ENV_URL }}
     # We only want to run one deploy job for an env at a time
     # Don't cancel in progress jobs because it may be for a different PR
     concurrency:
       group: deploy-${{ matrix.deploy-env }}
       cancel-in-progress: false
+    env:
+      MINDSDB_DB_CON: ${{ secrets.MINDSDB_DB_CON }}
     steps:
       - uses: actions/checkout@v4
       - name: Migrate DB
         run: |
-          export MINDSDB_DB_CON="${{ secrets.MINDSDB_DB_CON }}"
           cd mindsdb/migrations
           env PYTHONPATH=../../ alembic upgrade head
 

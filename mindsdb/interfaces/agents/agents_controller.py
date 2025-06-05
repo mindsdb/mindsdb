@@ -196,12 +196,8 @@ class AgentsController:
 
         _, provider = self.check_model_provider(model_name, provider)
 
-        # Initialize params if None
-        if params is None:
-            params = {}
-        else:
-            # Make a copy to avoid modifying the input
-            params = params.copy()
+        # Initialize params with a copy to avoid modifying the input
+        params = (params or {}).copy()
 
         # Extract API key if provided in the format <provider>_api_key
         provider_api_key_param = f"{provider.lower()}_api_key"

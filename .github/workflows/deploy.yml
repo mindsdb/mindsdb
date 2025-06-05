@@ -49,10 +49,9 @@ jobs:
           python-version: ${{ vars.CI_PYTHON_VERSION || '3.10' }}
       - name: Install dependencies
         run: |
-          uv pip install -r requirements/requirements.txt
+          uv pip install --prerelease=allow -r requirements/requirements.txt
       - name: Migrate DB
         run: |
-          python -m pip install --prerelease=allow "$(grep alembic requirements/requirements.txt)"
           cd mindsdb/migrations
           env PYTHONPATH=../../ alembic upgrade head
 

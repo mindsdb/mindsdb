@@ -217,6 +217,9 @@ class Config:
                 "project_name": "mindsdb",
                 "enabled": False,
             },
+            "data_catalog": {
+                "enabled": False,
+            },
         }
         # endregion
 
@@ -360,6 +363,8 @@ class Config:
             self._env_config["default_reranking_model"] = {
                 "api_key": os.environ["MINDSDB_DEFAULT_RERANKING_MODEL_API_KEY"]
             }
+        if os.environ.get("MINDSDB_DATA_CATALOG_ENABLED", "").lower() in ("1", "true"):
+            self._env_config["data_catalog"] = {"enabled": True}
 
         # region vars: a2a configuration
         a2a_config = {}
@@ -399,7 +404,9 @@ class Config:
             try:
                 self._auto_config = json.loads(self.auto_config_path.read_text())
             except json.JSONDecodeError as e:
-                raise ValueError(f"The 'auto' configuration file ({self.auto_config_path}) contains invalid JSON: {e}")
+                raise ValueError(
+                    f"The 'auto' configuration file ({self.auto_config_path}) contains invalid JSON: {e}\nFile content: {self.auto_config_path.read_text()}"
+                )
             self.auto_config_mtime = self.auto_config_path.stat().st_mtime
             return True
         return False

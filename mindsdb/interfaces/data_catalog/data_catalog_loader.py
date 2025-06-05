@@ -58,6 +58,10 @@ class DataCatalogLoader(BaseDataCatalog):
         self.logger.info(f"Loading table metadata for {self.database_name}")
         response = self.data_handler.meta_get_tables(self.table_names)
         df = response.data_frame
+        
+        if df.empty:
+            self.logger.info(f"No table metadata to add for {self.database_name}.")
+            return []
 
         # Filter out tables that are already loaded in the data catalog
         if loaded_table_names:
@@ -67,7 +71,10 @@ class DataCatalogLoader(BaseDataCatalog):
             self.logger.info(f"No new tables to load for {self.database_name}.")
             return []
 
-        return self._add_table_metadata(df)
+        df.columns = df.columns.str.lower()
+        tables = self._add_table_metadata(df)
+        self.logger.info(f"Table metadata loaded for {self.database_name}.")
+        return tables
 
     def _add_table_metadata(self, df: pd.DataFrame) -> List[db.MetaTables]:
         """
@@ -101,8 +108,15 @@ class DataCatalogLoader(BaseDataCatalog):
         self.logger.info(f"Loading column metadata for {self.database_name}")
         response = self.data_handler.meta_get_columns(self.table_names)
         df = response.data_frame
+        
+        if df.empty:
+            self.logger.info(f"No column metadata to load for {self.database_name}.")
+            return []
 
-        return self._add_column_metadata(df, tables)
+        df.columns = df.columns.str.lower()
+        columns = self._add_column_metadata(df, tables)
+        self.logger.info(f"Column metadata loaded for {self.database_name}.")
+        return columns
 
     def _add_column_metadata(self, df: pd.DataFrame, tables: db.MetaTables) -> List[db.MetaColumns]:
         """
@@ -136,8 +150,13 @@ class DataCatalogLoader(BaseDataCatalog):
         self.logger.info(f"Loading column statistics for {self.database_name}")
         response = self.data_handler.meta_get_column_statistics(self.table_names)
         df = response.data_frame
+        
+        if df.empty:
+            self.logger.info(f"No column statistics metadata to load for {self.database_name}.")
 
-        return self._add_column_statistics(df, tables, columns)
+        df.columns = df.columns.str.lower()
+        self._add_column_statistics(df, tables, columns)
+        self.logger.info(f"Column statistics metadata loaded for {self.database_name}.")
 
     def _add_column_statistics(self, df: pd.DataFrame, tables: db.MetaTables, columns: db.MetaColumns) -> None:
         """
@@ -184,7 +203,12 @@ class DataCatalogLoader(BaseDataCatalog):
         response = self.data_handler.meta_get_primary_keys(self.table_names)
         df = response.data_frame
 
-        return self._add_primary_keys(df, tables, columns)
+        if df.empty:
+            self.logger.info(f"No primary keys metadata to load for {self.database_name}.")
+
+        df.columns = df.columns.str.lower()
+        self._add_primary_keys(df, tables, columns)
+        self.logger.info(f"Primary keys metadata loaded for {self.database_name}.")
 
     def _add_primary_keys(self, df: pd.DataFrame, tables: db.MetaTables, columns: db.MetaColumns) -> None:
         """
@@ -223,8 +247,14 @@ class DataCatalogLoader(BaseDataCatalog):
         self.logger.info(f"Loading foreign keys for {self.database_name}")
         response = self.data_handler.meta_get_foreign_keys(self.table_names)
         df = response.data_frame
+        
+        if df.empty:
+            self.logger.info(f"No foreign keys metadata to load for {self.database_name}.")
+            return []
 
-        return self._add_foreign_keys(df, tables, columns)
+        df.columns = df.columns.str.lower()
+        self._add_foreign_keys(df, tables, columns)
+        self.logger.info(f"Foreign keys metadata loaded for {self.database_name}.")
 
     def _add_foreign_keys(self, df: pd.DataFrame, tables: db.MetaTables, columns: db.MetaColumns) -> None:
         """

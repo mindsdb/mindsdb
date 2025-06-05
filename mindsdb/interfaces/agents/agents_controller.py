@@ -199,12 +199,9 @@ class AgentsController:
         # Initialize params with a copy to avoid modifying the input
         params = (params or {}).copy()
 
-        # Apply default LLM parameters to the params for storage in the database
-        # This is needed for backward compatibility with tests that expect these parameters to be stored
-        # Only apply defaults for keys not already in params (user params take precedence)
-        for key, value in default_llm_params.items():
-            if key not in params:
-                params[key] = value
+        # DO NOT store default LLM parameters in the database
+        # Default parameters will be applied at runtime via get_agent_llm_params
+        # This allows global default updates to apply to all agents immediately
 
         # Extract API key if provided in the format <provider>_api_key
         provider_api_key_param = f"{provider.lower()}_api_key"

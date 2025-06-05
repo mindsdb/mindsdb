@@ -5,7 +5,6 @@ from uuid import uuid4
 import queue
 import re
 import threading
-import copy
 import numpy as np
 import pandas as pd
 
@@ -34,7 +33,6 @@ from mindsdb.utilities import log
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities.config import config
 
 from .mindsdb_chat_model import ChatMindsdb
 from .callback_handlers import LogCallbackHandler, ContextCaptureCallback
@@ -231,7 +229,6 @@ class LangchainAgent:
     def __init__(self, agent: db.Agents, model: dict = None, params: dict = None):
         self.agent = agent
         self.model = model
-        self.runtime_params = params
 
         self.run_completion_span: Optional[object] = None
         self.llm: Optional[object] = None
@@ -242,34 +239,29 @@ class LangchainAgent:
         self.mdb_langfuse_callback_handler: Optional[object] = None  # custom (see langfuse_callback_handler.py)
 
         self.langfuse_client_wrapper = LangfuseClientWrapper()
-        self.args = self._initialize_args()
+        self.args = self._initialize_args(params)
 
         # Back compatibility for old models
         self.provider = self.args.get("provider", get_llm_provider(self.args))
 
-    def _initialize_args(self) -> dict:
-        """Initialize the arguments based on the agent's parameters."""
-        # Start with stored agent parameters
-        args = self.agent.params.copy() if self.agent.params else {}
+    def _initialize_args(self, params: dict = None) -> dict:
+        """
+        Initialize the arguments for agent execution.
 
-        # Apply default LLM parameters from config
-        default_llm_params = copy.deepcopy(config.get("default_llm", {}))
+        Takes the parameters passed during execution and sets necessary defaults.
+        The params are already merged with defaults by AgentsController.get_agent_llm_params.
 
-        # Apply runtime parameters if provided (these override both stored and default params)
-        if self.runtime_params:
-            # Merge default parameters with runtime parameters
-            for key, value in default_llm_params.items():
-                # Only apply defaults for keys not in runtime_params or stored params
-                if key not in self.runtime_params and key not in args:
-                    args[key] = value
+        Args:
+            params: Parameters for agent execution (already merged with defaults)
 
-            # Apply runtime parameters (highest priority)
-            args.update(self.runtime_params)
-        else:
-            # If no runtime params, just apply defaults for missing keys
-            for key, value in default_llm_params.items():
-                if key not in args:
-                    args[key] = value
+        Returns:
+            dict: Final parameters for agent execution
+        """
+        # Start with parameters passed to the method (already merged with defaults)
+        args = params.copy() if params else {}
+        if not args and self.agent.params:
+            logger.debug("using agent params, run time time agent params empty ")
+            args = self.agent.params.copy()
 
         # Set model name and provider
         args["model_name"] = self.agent.model_name
@@ -286,7 +278,9 @@ class LangchainAgent:
                 # only update prompt_template if it is set on the model
                 args["prompt_template"] = prompt_template
 
+        # Set default prompt template if not provided
         if args.get("prompt_template") is None:
+            # Default prompt template depends on agent mode
             if args.get("mode") == "retrieval":
                 args["prompt_template"] = DEFAULT_RAG_PROMPT_TEMPLATE
                 logger.info(f"Using default retrieval prompt template: {DEFAULT_RAG_PROMPT_TEMPLATE[:50]}...")

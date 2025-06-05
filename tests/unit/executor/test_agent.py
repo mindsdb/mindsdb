@@ -200,11 +200,15 @@ class TestAgent(BaseExecutorDummyML):
         # Verify model_name is set correctly
         assert agent_info["MODEL_NAME"].iloc[0] == "gpt-4o"
 
-        # Verify the agent has the default parameters
+        # Verify the agent has the user-specified parameters but not default parameters
         agent_params = json.loads(agent_info["PARAMS"].iloc[0])
-        assert agent_params.get("base_url") == "https://api.openai.com/v1"
-        assert agent_params.get("api_version") == "2024-02-01"
-        assert agent_params.get("method") == "multi-class"
+        assert agent_params.get("prompt_template") == "Answer the user input in a helpful way"
+
+        # Default parameters should NOT be stored in the database
+        # They will be applied at runtime via get_agent_llm_params
+        assert "base_url" not in agent_params
+        assert "api_version" not in agent_params
+        assert "method" not in agent_params
 
         # Mock the OpenAI client for the agent execution
         with (
@@ -255,9 +259,12 @@ class TestAgent(BaseExecutorDummyML):
 
         # Verify the agent has the explicit parameters (overriding defaults)
         agent_params = json.loads(agent_info["PARAMS"].iloc[0])
-        assert agent_params.get("base_url") == "https://custom-url.com/"  # Explicit value
-        assert agent_params.get("api_version") == "2024-02-01"  # Default value
-        assert agent_params.get("method") == "multi-class"  # Default value
+        assert agent_params.get("base_url") == "https://custom-url.com/"  # Explicit value should be stored
+        assert agent_params.get("prompt_template") == "Answer the user input in a helpful way"  # User-specified value
+
+        # Default parameters should NOT be stored in the database
+        assert "api_version" not in agent_params
+        assert "method" not in agent_params
 
         # Mock the OpenAI client for the second agent execution
         with (

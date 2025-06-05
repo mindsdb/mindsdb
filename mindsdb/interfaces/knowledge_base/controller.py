@@ -265,8 +265,8 @@ class KnowledgeBaseTable:
         return df
 
     def _get_metadata_columns(self):
-        user_columns = self._kb.params.get('metadata_columns', [])
-        dynamic_columns = self._kb.params.get('inserted_metadata', [])
+        user_columns = self._kb.params.get("metadata_columns", [])
+        dynamic_columns = self._kb.params.get("inserted_metadata", [])
 
         return list(set(user_columns) | set(dynamic_columns))
 
@@ -626,10 +626,10 @@ class KnowledgeBaseTable:
             metadata_columns = list(set(columns).difference(content_columns))
 
             # update list of used columns
-            inserted_metadata = set(self._kb.params.get('inserted_metadata', []))
+            inserted_metadata = set(self._kb.params.get("inserted_metadata", []))
             inserted_metadata.update(metadata_columns)
-            self._kb.params['inserted_metadata'] = list(inserted_metadata)
-            flag_modified(self._kb, 'params')
+            self._kb.params["inserted_metadata"] = list(inserted_metadata)
+            flag_modified(self._kb, "params")
             db.session.commit()
 
         # Add content columns directly (don't combine them)

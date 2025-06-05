@@ -18,35 +18,34 @@ logger = log.getLogger(__name__)
 def _get_scope(query):
     databases, tables = None, None
     try:
-        conditions = extract_comparison_conditions(query.where)
+        conditions = extract_comparison_conditions(query.where, ignore_functions=True)
     except NotImplementedError:
         return databases, tables
     for op, arg1, arg2 in conditions:
-        if op == '=':
+        if op == "=":
             scope = [arg2]
-        elif op == 'in':
+        elif op == "in":
             if not isinstance(arg2, list):
                 arg2 = [arg2]
             scope = arg2
         else:
             continue
 
-        if arg1.lower() == 'table_schema':
+        if arg1.lower() == "table_schema":
             databases = scope
-        elif arg1.lower() == 'table_name':
+        elif arg1.lower() == "table_name":
             tables = scope
     return databases, tables
 
 
 class Table:
-
     deletable: bool = False
     visible: bool = False
-    kind: str = 'table'
+    kind: str = "table"
 
 
 class SchemataTable(Table):
-    name = 'SCHEMATA'
+    name = "SCHEMATA"
     columns = [
         "CATALOG_NAME",
         "SCHEMA_NAME",
@@ -57,19 +56,15 @@ class SchemataTable(Table):
 
     @classmethod
     def get_data(cls, inf_schema=None, **kwargs):
-
         databases_meta = inf_schema.session.database_controller.get_list()
-        data = [
-            ["def", x["name"], "utf8mb4", "utf8mb4_0900_ai_ci", None]
-            for x in databases_meta
-        ]
+        data = [["def", x["name"], "utf8mb4", "utf8mb4_0900_ai_ci", None] for x in databases_meta]
 
         df = pd.DataFrame(data, columns=cls.columns)
         return df
 
 
 class TablesTable(Table):
-    name = 'TABLES'
+    name = "TABLES"
 
     columns = [
         "TABLE_CATALOG",
@@ -97,7 +92,6 @@ class TablesTable(Table):
 
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
-
         databases, _ = _get_scope(query)
 
         data = []
@@ -111,28 +105,16 @@ class TablesTable(Table):
             if databases is not None and ds_name not in databases:
                 continue
 
-            if hasattr(ds, 'get_tables_rows'):
+            if hasattr(ds, "get_tables_rows"):
                 ds_tables = ds.get_tables_rows()
             else:
                 ds_tables = ds.get_tables()
             if len(ds_tables) == 0:
                 continue
             elif isinstance(ds_tables[0], dict):
-                ds_tables = [
-                    TablesRow(
-                        TABLE_TYPE=TABLES_ROW_TYPE.BASE_TABLE, TABLE_NAME=x["name"]
-                    )
-                    for x in ds_tables
-                ]
-            elif (
-                isinstance(ds_tables, list)
-                and len(ds_tables) > 0
-                and isinstance(ds_tables[0], str)
-            ):
-                ds_tables = [
-                    TablesRow(TABLE_TYPE=TABLES_ROW_TYPE.BASE_TABLE, TABLE_NAME=x)
-                    for x in ds_tables
-                ]
+                ds_tables = [TablesRow(TABLE_TYPE=TABLES_ROW_TYPE.BASE_TABLE, TABLE_NAME=x["name"]) for x in ds_tables]
+            elif isinstance(ds_tables, list) and len(ds_tables) > 0 and isinstance(ds_tables[0], str):
+                ds_tables = [TablesRow(TABLE_TYPE=TABLES_ROW_TYPE.BASE_TABLE, TABLE_NAME=x) for x in ds_tables]
             for row in ds_tables:
                 row.TABLE_SCHEMA = ds_name
                 data.append(row.to_list())
@@ -174,11 +156,11 @@ def infer_mysql_type(original_type: str) -> MYSQL_DATA_TYPE:
         MYSQL_DATA_TYPE: The inferred MySQL data type.
     """
     match original_type.lower():
-        case 'double precision' | 'real' | 'numeric' | 'float':
+        case "double precision" | "real" | "numeric" | "float":
             data_type = MYSQL_DATA_TYPE.FLOAT
-        case 'integer' | 'smallint' | 'int' | 'bigint':
+        case "integer" | "smallint" | "int" | "bigint":
             data_type = MYSQL_DATA_TYPE.BIGINT
-        case 'timestamp without time zone' | 'timestamp with time zone' | 'date' | 'timestamp':
+        case "timestamp without time zone" | "timestamp with time zone" | "date" | "timestamp":
             data_type = MYSQL_DATA_TYPE.DATETIME
         case _:
             data_type = MYSQL_DATA_TYPE.VARCHAR
@@ -195,13 +177,14 @@ class ColumnsTableRow:
 
     NOTE: The order of attributes is significant and matches the MySQL column order.
     """
-    TABLE_CATALOG: Literal['def'] = 'def'
+
+    TABLE_CATALOG: Literal["def"] = "def"
     TABLE_SCHEMA: Optional[str] = None
     TABLE_NAME: Optional[str] = None
     COLUMN_NAME: Optional[str] = None
     ORDINAL_POSITION: int = 0
     COLUMN_DEFAULT: Optional[str] = None
-    IS_NULLABLE: Literal['YES', 'NO'] = 'YES'
+    IS_NULLABLE: Literal["YES", "NO"] = "YES"
     DATA_TYPE: str = MYSQL_DATA_TYPE.VARCHAR.value
     CHARACTER_MAXIMUM_LENGTH: Optional[int] = None
     CHARACTER_OCTET_LENGTH: Optional[int] = None
@@ -213,7 +196,7 @@ class ColumnsTableRow:
     COLUMN_TYPE: Optional[str] = None
     COLUMN_KEY: Optional[str] = None
     EXTRA: Optional[str] = None
-    PRIVILEGES: str = 'select'
+    PRIVILEGES: str = "select"
     COLUMN_COMMENT: Optional[str] = None
     GENERATION_EXPRESSION: Optional[str] = None
     SRS_ID: Optional[str] = None
@@ -221,7 +204,7 @@ class ColumnsTableRow:
     ORIGINAL_TYPE: Optional[str] = None
 
     @classmethod
-    def from_is_columns_row(cls, table_schema: str, table_name: str, row: pd.Series) -> 'ColumnsTableRow':
+    def from_is_columns_row(cls, table_schema: str, table_name: str, row: pd.Series) -> "ColumnsTableRow":
         """Transform row from response of `handler.get_columns(...)` to internal information_schema.columns row.
 
         Args:
@@ -232,7 +215,7 @@ class ColumnsTableRow:
         Returns:
             ColumnsTableRow: A row in the MindsDB's internal INFORMATION_SCHEMA.COLUMNS table.
         """
-        original_type: str = row[INF_SCHEMA_COLUMNS_NAMES.DATA_TYPE] or ''
+        original_type: str = row[INF_SCHEMA_COLUMNS_NAMES.DATA_TYPE] or ""
         data_type: MYSQL_DATA_TYPE | None = row[INF_SCHEMA_COLUMNS_NAMES.MYSQL_DATA_TYPE]
         if isinstance(data_type, MYSQL_DATA_TYPE) is False:
             data_type = infer_mysql_type(original_type)
@@ -247,22 +230,22 @@ class ColumnsTableRow:
         # region determine COLUMN_TYPE - it is text representation of DATA_TYPE with additioan attributes
         match data_type:
             case MYSQL_DATA_TYPE.DECIMAL:
-                column_type = f'decimal({row[INF_SCHEMA_COLUMNS_NAMES.NUMERIC_PRECISION]},{INF_SCHEMA_COLUMNS_NAMES.NUMERIC_SCALE})'
+                column_type = f"decimal({row[INF_SCHEMA_COLUMNS_NAMES.NUMERIC_PRECISION]},{INF_SCHEMA_COLUMNS_NAMES.NUMERIC_SCALE})"
             case MYSQL_DATA_TYPE.VARCHAR:
-                column_type = f'varchar({row[INF_SCHEMA_COLUMNS_NAMES.CHARACTER_MAXIMUM_LENGTH]})'
+                column_type = f"varchar({row[INF_SCHEMA_COLUMNS_NAMES.CHARACTER_MAXIMUM_LENGTH]})"
             case MYSQL_DATA_TYPE.VARBINARY:
-                column_type = f'varbinary({row[INF_SCHEMA_COLUMNS_NAMES.CHARACTER_MAXIMUM_LENGTH]})'
+                column_type = f"varbinary({row[INF_SCHEMA_COLUMNS_NAMES.CHARACTER_MAXIMUM_LENGTH]})"
             case MYSQL_DATA_TYPE.BIT | MYSQL_DATA_TYPE.BINARY | MYSQL_DATA_TYPE.CHAR:
-                column_type = f'{data_type.value.lower()}(1)'
+                column_type = f"{data_type.value.lower()}(1)"
             case MYSQL_DATA_TYPE.BOOL | MYSQL_DATA_TYPE.BOOLEAN:
-                column_type = 'tinyint(1)'
+                column_type = "tinyint(1)"
             case _:
                 column_type = data_type.value.lower()
         # endregion
 
         # BOOLean types had 'tinyint' DATA_TYPE in MySQL
         if data_type in (MYSQL_DATA_TYPE.BOOL, MYSQL_DATA_TYPE.BOOLEAN):
-            data_type = 'tinyint'
+            data_type = "tinyint"
         else:
             data_type = data_type.value.lower()
 
@@ -282,19 +265,18 @@ class ColumnsTableRow:
             CHARACTER_SET_NAME=row[INF_SCHEMA_COLUMNS_NAMES.CHARACTER_SET_NAME],
             COLLATION_NAME=row[INF_SCHEMA_COLUMNS_NAMES.COLLATION_NAME],
             COLUMN_TYPE=column_type,
-            ORIGINAL_TYPE=original_type
+            ORIGINAL_TYPE=original_type,
         )
 
     def __post_init__(self):
-        """Check if all mandatory fields are filled.
-        """
-        mandatory_fields = ['TABLE_SCHEMA', 'TABLE_NAME', 'COLUMN_NAME']
+        """Check if all mandatory fields are filled."""
+        mandatory_fields = ["TABLE_SCHEMA", "TABLE_NAME", "COLUMN_NAME"]
         if any(getattr(self, field_name) is None for field_name in mandatory_fields):
-            raise ValueError('One of mandatory fields is missed when creating ColumnsTableRow')
+            raise ValueError("One of mandatory fields is missed when creating ColumnsTableRow")
 
 
 class ColumnsTable(Table):
-    name = 'COLUMNS'
+    name = "COLUMNS"
     columns = [field.name for field in fields(ColumnsTableRow)]
 
     @classmethod
@@ -302,11 +284,7 @@ class ColumnsTable(Table):
         databases, tables_names = _get_scope(query)
 
         if databases is None:
-            databases = [
-                'information_schema',
-                config.get('default_project'),
-                'files'
-            ]
+            databases = ["information_schema", config.get("default_project"), "files"]
 
         result = []
         for db_name in databases:
@@ -326,11 +304,7 @@ class ColumnsTable(Table):
             for table_name, table_columns_df in tables.items():
                 for _, row in table_columns_df.iterrows():
                     result.append(
-                        ColumnsTableRow.from_is_columns_row(
-                            table_schema=db_name,
-                            table_name=table_name,
-                            row=row
-                        )
+                        ColumnsTableRow.from_is_columns_row(table_schema=db_name, table_name=table_name, row=row)
                     )
 
         return pd.DataFrame(result, columns=cls.columns)

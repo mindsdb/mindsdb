@@ -186,6 +186,7 @@ class MYSQL_DATA_TYPE(enum.Enum):
     BOOL = "BOOL"
     BOOLEAN = "BOOLEAN"
     JSON = "JSON"
+    VECTOR = "VECTOR"
 
 
 # Default values for attributes of MySQL data types as they appear in information_schema.columns
@@ -361,6 +362,9 @@ DATA_C_TYPE_MAP = {
     MYSQL_DATA_TYPE.JSON: CTypeProperties(
         C_TYPES.MYSQL_TYPE_JSON, flags=[FIELD_FLAG.BLOB, FIELD_FLAG.BINARY_COLLATION]
     ),
+    MYSQL_DATA_TYPE.VECTOR: CTypeProperties(
+        C_TYPES.MYSQL_TYPE_VECTOR, flags=[FIELD_FLAG.BLOB, FIELD_FLAG.BINARY_COLLATION]
+    )
 }
 
 

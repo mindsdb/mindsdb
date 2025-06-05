@@ -31,6 +31,8 @@ class DataCatalogLoader(BaseDataCatalog):
 
             self._load_foreign_keys(tables, columns)
 
+        self.logger.info(f"Metadata loading completed for {self.database_name}.")
+
     def _get_loaded_table_names(self) -> List[str]:
         """
         Retrieve the names of tables that are already present in the data catalog for the current integration.

@@ -27,8 +27,6 @@ jobs:
       fail-fast: false
       matrix:
         deploy-env: ${{ fromJson(inputs.deploy-envs) }}
-    environment:
-      MINDSDB_DB_CON: ${{ secrets.MINDSDB_DB_CON }}
     
     # We only want to run one deploy job for an env at a time
     # Don't cancel in progress jobs because it may be for a different PR
@@ -38,6 +36,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Migrate DB
+        environment:
+          MINDSDB_DB_CON: ${{ secrets.MINDSDB_DB_CON }}
         run: |
           cd mindsdb/migrations
           env PYTHONPATH=../../ alembic upgrade head

@@ -234,33 +234,23 @@ class AgentsController:
 
         # Auto-create SQL skill if no skills are provided but include_tables or include_knowledge_bases params are provided
         if not skills and (include_tables or include_knowledge_bases):
-            # Determine database to use (default to 'mindsdb')
-            db_name = database
-            kb_db_name = knowledge_base_database
-
-            # If database is not explicitly provided but tables are, try to extract the database name from the first table
-            if not database and include_tables and len(include_tables) > 0:
-                parts = include_tables[0].split(".")
-                if len(parts) >= 2:
-                    db_name = parts[0]
-            elif not database and ignore_tables and len(ignore_tables) > 0:
-                parts = ignore_tables[0].split(".")
-                if len(parts) >= 2:
-                    db_name = parts[0]
-
             # Create a default SQL skill
             skill_name = f"{name}_sql_skill"
             skill_params = {
                 "type": "sql",
-                "database": db_name,
+                "database": database,
                 "description": f"Auto-generated SQL skill for agent {name}",
             }
 
-            # Add knowledge base database if provided
-            if knowledge_base_database:
-                skill_params["knowledge_base_database"] = knowledge_base_database
+            # Add table restrictions if provided
+            if include_tables:
+                skill_params["include_tables"] = include_tables
+            if ignore_tables:
+                skill_params["ignore_tables"] = ignore_tables
 
             # Add knowledge base parameters if provided
+            if knowledge_base_database:
+                skill_params["knowledge_base_database"] = knowledge_base_database
             if include_knowledge_bases:
                 skill_params["include_knowledge_bases"] = include_knowledge_bases
             if ignore_knowledge_bases:
@@ -278,30 +268,11 @@ class AgentsController:
                     # Update the skill if parameters have changed
                     params_changed = False
 
-                    # Check if database has changed
-                    if existing_skill.params.get("database") != db_name:
-                        existing_skill.params["database"] = db_name
-                        params_changed = True
-
-                    # Check if knowledge base database has changed
-                    if knowledge_base_database and existing_skill.params.get("knowledge_base_database") != kb_db_name:
-                        existing_skill.params["knowledge_base_database"] = kb_db_name
-                        params_changed = True
-
-                    # Check if knowledge base parameters have changed
-                    if (
-                        include_knowledge_bases
-                        and existing_skill.params.get("include_knowledge_bases") != include_knowledge_bases
-                    ):
-                        existing_skill.params["include_knowledge_bases"] = include_knowledge_bases
-                        params_changed = True
-
-                    if (
-                        ignore_knowledge_bases
-                        and existing_skill.params.get("ignore_knowledge_bases") != ignore_knowledge_bases
-                    ):
-                        existing_skill.params["ignore_knowledge_bases"] = ignore_knowledge_bases
-                        params_changed = True
+                    # Check if skill parameters need to be updated
+                    for param_key, param_value in skill_params.items():
+                        if existing_skill.params.get(param_key) != param_value:
+                            existing_skill.params[param_key] = param_value
+                            params_changed = True
 
                     # Update the skill if needed
                     if params_changed:

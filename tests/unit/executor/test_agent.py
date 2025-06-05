@@ -197,6 +197,9 @@ class TestAgent(BaseExecutorDummyML):
         # Check that the agent was created with the default parameters
         agent_info = self.run_sql("SELECT * FROM information_schema.agents WHERE name = 'default_params_agent'")
 
+        # Verify model_name is set correctly
+        assert agent_info["MODEL_NAME"].iloc[0] == "gpt-4o"
+
         # Verify the agent has the default parameters
         agent_params = json.loads(agent_info["PARAMS"].iloc[0])
         assert agent_params.get("base_url") == "https://api.openai.com/v1"
@@ -227,7 +230,7 @@ class TestAgent(BaseExecutorDummyML):
                 "base_url": "https://api.openai.com/v1",
                 "api_version": "2024-02-01",
                 "method": "multi-class",
-                "prompt_template": "Answer the user input in a helpful way",
+                "prompt_template": "You are an assistant, answer using the tables connected",
             }
 
             # Test that the agent works
@@ -280,7 +283,7 @@ class TestAgent(BaseExecutorDummyML):
                 "base_url": "https://custom-url.com/",
                 "api_version": "2024-02-01",
                 "method": "multi-class",
-                "prompt_template": "Answer the user input in a helpful way",
+                "prompt_template": "You are an assistant, answer using the tables connected",
             }
 
             # Test that the agent works with explicit parameters
@@ -363,6 +366,7 @@ class TestAgent(BaseExecutorDummyML):
                 "api_version": "2024-02-01",
                 "method": "multi-class",
                 "include_tables": ["test.table1", "test.table2"],
+                "prompt_template": "You are an assistant, answer using the tables connected",
             }
 
             # Test that the agent works

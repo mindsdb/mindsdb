@@ -1,2 +1,0 @@
-virtualenv
-pyarrow==19.0.0

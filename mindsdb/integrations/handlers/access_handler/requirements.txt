@@ -1,2 +1,0 @@
-pyodbc
-sqlalchemy-access

@@ -5,7 +5,7 @@ from google.cloud.bigquery import Client, QueryJobConfig
 
 from mindsdb.utilities import log
 from mindsdb_sql_parser.ast.base import ASTNode
-from mindsdb.integrations.libs.base import DatabaseHandler
+from mindsdb.integrations.libs.base import MetaDatabaseHandler
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.utilities.handlers.auth_utilities.google import GoogleServiceAccountOAuth2Manager
 from mindsdb.integrations.libs.response import (
@@ -17,7 +17,7 @@ from mindsdb.integrations.libs.response import (
 logger = log.getLogger(__name__)
 
 
-class BigQueryHandler(DatabaseHandler):
+class BigQueryHandler(MetaDatabaseHandler):
     """
     This handler handles connection and execution of Google BigQuery statements.
     """
@@ -177,5 +177,137 @@ class BigQueryHandler(DatabaseHandler):
             FROM `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.COLUMNS`
             WHERE table_name = '{table_name}'
         """
+        result = self.native_query(query)
+        return result
+
+    def meta_get_tables(self, table_names: Optional[list] = None) -> Response:
+        """
+        Retrieves table metadata for the specified tables (or all tables if no list is provided).
+
+        Args:
+            table_names (list): A list of table names for which to retrieve metadata information.
+
+        Returns:
+            Response: A response object containing the metadata information, formatted as per the `Response` class.
+        """
+        query = f"""
+            SELECT
+                t.table_name,
+                t.table_schema,
+                t.table_type,
+                st.row_count
+            FROM 
+                `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.TABLES AS t`
+            JOIN 
+                `{self.connection_data['project_id']}.{self.connection_data['dataset']}.__TABLES__` AS st
+            ON 
+                t.table_name = st.table_id
+            WHERE 
+                t.table_type IN ('BASE TABLE', 'VIEW')
+        """
+
+        if table_names is not None and len(table_names) > 0:
+            table_names = [f"'{t}'" for t in table_names]
+            query += f" AND t.table_name IN ({','.join(table_names)})"
+
+        result = self.native_query(query)
+        return result
+
+    def meta_get_columns(self, table_names: Optional[list] = None) -> Response:
+        """
+        Retrieves column metadata for the specified tables (or all tables if no list is provided).
+
+        Args:
+            table_names (list): A list of table names for which to retrieve column metadata.
+
+        Returns:
+            Response: A response object containing the column metadata.
+        """
+        query = f"""
+            SELECT 
+                table_name,
+                column_name,
+                data_type,
+                column_default,
+                is_nullable
+            FROM 
+                `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.COLUMNS`
+        """
+
+        if table_names is not None and len(table_names) > 0:
+            table_names = [f"'{t}'" for t in table_names]
+            query += f" AND table_name IN ({','.join(table_names)})"
+
+        result = self.native_query(query)
+        return result
+
+    def meta_get_primary_keys(self, table_names: Optional[list] = None) -> Response:
+        """
+        Retrieves primary key information for the specified tables (or all tables if no list is provided).
+
+        Args:
+            table_names (list): A list of table names for which to retrieve primary key information.
+
+        Returns:
+            Response: A response object containing the primary key information.
+        """
+        query = f"""
+            SELECT
+                tc.table_name
+                kcu.column_name,
+                kcu.ordinal_position,
+                tc.constraint_name,
+            FROM
+                `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.TABLE_CONSTRAINTS` AS tc
+            JOIN
+                `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.KEY_COLUMN_USAGE` AS kcu
+            ON
+                tc.constraint_name = kcu.constraint_name
+            WHERE
+                tc.constraint_type = 'PRIMARY KEY'
+        """
+
+        if table_names is not None and len(table_names) > 0:
+            table_names = [f"'{t}'" for t in table_names]
+            query += f" AND tc.table_name IN ({','.join(table_names)})"
+
+        result = self.native_query(query)
+        return result
+
+    def meta_get_foreign_keys(self, table_names: Optional[list] = None) -> Response:
+        """
+        Retrieves foreign key information for the specified tables (or all tables if no list is provided).
+
+        Args:
+            table_names (list): A list of table names for which to retrieve foreign key information.
+
+        Returns:
+            Response: A response object containing the foreign key information.
+        """
+        query = f"""
+            SELECT
+                ccu.table_name AS parent_table_name,
+                ccu.column_name AS parent_column_name,
+                kcu.table_name AS child_table_name,
+                kcu.column_name AS child_column_name,
+                tc.constraint_name
+            FROM
+                `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.TABLE_CONSTRAINTS` AS tc
+            JOIN
+                `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.KEY_COLUMN_USAGE` AS kcu
+            ON
+                tc.constraint_name = kcu.constraint_name
+            JOIN
+                `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE` AS ccu
+            ON
+                tc.constraint_name = ccu.constraint_name
+            WHERE
+                tc.constraint_type = 'FOREIGN KEY'
+        """
+
+        if table_names is not None and len(table_names) > 0:
+            table_names = [f"'{t}'" for t in table_names]
+            query += f" AND tc.table_name IN ({','.join(table_names)})"
+
         result = self.native_query(query)
         return result

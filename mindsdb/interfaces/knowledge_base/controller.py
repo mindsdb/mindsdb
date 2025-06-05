@@ -148,10 +148,12 @@ class KnowledgeBaseTable:
             if "content_column" not in config["json_chunking_config"]:
                 config["json_chunking_config"]["content_column"] = "content"
 
-        config["doc_id_column_name"] = self.kb_to_vector_columns["id"]
-
         preprocessing_config = PreprocessingConfig(**config)
         self.document_preprocessor = PreprocessorFactory.create_preprocessor(preprocessing_config)
+
+        # set doc_id column name
+        self.document_preprocessor.config.doc_id_column_name = self.kb_to_vector_columns["id"]
+
         logger.debug(f"Created preprocessor of type: {type(self.document_preprocessor)}")
 
     def select_query(self, query: Select) -> pd.DataFrame:

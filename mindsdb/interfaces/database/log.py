@@ -217,6 +217,9 @@ class LogDBController:
     def get_tables(self) -> OrderedDict:
         return self._tables
 
+    def get_tree_tables(self) -> OrderedDict:
+        return self._tables
+
     def get_tables_rows(self) -> List[TablesRow]:
         return [
             TablesRow(TABLE_TYPE=TABLES_ROW_TYPE.SYSTEM_VIEW, TABLE_NAME=table_name)

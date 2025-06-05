@@ -626,26 +626,24 @@ class SnowflakeHandler(MetaDatabaseHandler):
 
     def meta_get_primary_keys(self, table_names: Optional[List[str]] = None) -> Response:
         try:
-            filters = ["t.CONSTRAINT_TYPE = 'PRIMARY KEY'", "t.TABLE_SCHEMA = current_schema()"]
-
-            if table_names:
-                table_list = ", ".join(f"'{t.upper()}'" for t in table_names)
-                filters.append(f"t.TABLE_NAME IN ({table_list})")
-
             query = f"""
-                SELECT k.TABLE_NAME, k.COLUMN_NAME
-                FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS t
-                JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE k
-                ON t.CONSTRAINT_NAME = k.CONSTRAINT_NAME
-                AND t.TABLE_NAME = k.TABLE_NAME
-                AND t.TABLE_SCHEMA = k.TABLE_SCHEMA
-                WHERE {" AND ".join(filters)}
-                ORDER BY k.TABLE_NAME, k.ORDINAL_POSITION;
+                SHOW PRIMARY KEYS IN TABLE;
             """
 
             response = self.native_query(query)
             if response.type == RESPONSE_TYPE.ERROR and response.error_message:
                 logger.error(f"Query error in meta_get_primary_keys: {response.error_message}\nQuery:\n{query}")
+
+            df = response.data_frame
+            if not df.empty:
+                if table_names:
+                    df = df[df["TABLE_NAME"].isin(table_names)]
+
+                df = df[["TABLE_NAME", "COLUMN_NAME", "KEY_SEQUENCE", "CONSTRAINT_NAME"]]
+                df = df.rename(columns={"KEY_SEQUENCE": "ORDINAL_POSITION"})
+
+            response.data_frame = df
+
             return response
 
         except Exception as e:

@@ -436,7 +436,6 @@ if __name__ == '__main__':
                 'max_restart_interval_seconds', TrunkProcessData.max_restart_interval_seconds
             )
         ),
-
         TrunkProcessEnum.POSTGRES: TrunkProcessData(
             name=TrunkProcessEnum.POSTGRES.value,
             entrypoint=start_postgres,

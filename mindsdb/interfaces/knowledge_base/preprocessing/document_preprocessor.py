@@ -31,17 +31,10 @@ _DEFAULT_CONTENT_COLUMN_NAME = "content"
 class DocumentPreprocessor:
     """Base class for document preprocessing"""
 
-    RESERVED_METADATA_FIELDS = {
-        "content",
-        "id",
-        "embeddings",
-        "original_doc_id",
-        "chunk_index",
-    }
-
     def __init__(self):
         """Initialize preprocessor"""
         self.splitter = None  # Will be set by child classes
+        self.config = None
 
     def process_documents(self, documents: List[Document]) -> List[ProcessedChunk]:
         """Base implementation - should be overridden by child classes
@@ -118,7 +111,7 @@ class DocumentPreprocessor:
 
         # Always preserve original document ID
         if doc_id is not None:
-            metadata["_original_doc_id"] = doc_id
+            metadata[self.config.doc_id_column_name] = doc_id
 
         # Add chunk index only for multi-chunk cases
         if chunk_index is not None:

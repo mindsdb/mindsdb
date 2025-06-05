@@ -37,8 +37,19 @@ jobs:
       cancel-in-progress: false
     env:
       MINDSDB_DB_CON: ${{ secrets.MINDSDB_DB_CON }}
+      UV_LINK_MODE: "symlink"
     steps:
       - uses: actions/checkout@v4
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          # Place cache in the tool dir because we mount this in our runnners
+          cache-local-path: "/home/runner/_work/_tool/uv-local-cache"
+          prune-cache: false
+          python-version: ${{ vars.CI_PYTHON_VERSION || '3.10' }}
+      - name: Install dependencies
+        run: |
+          uv pip install -r requirements/requirements.txt
       - name: Migrate DB
         run: |
           python -m pip install "$(grep alembic requirements/requirements.txt)"

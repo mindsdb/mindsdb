@@ -6,6 +6,7 @@ from functools import reduce
 
 import pandas as pd
 from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser.ast.mindsdb import AlterDatabase
 from mindsdb_sql_parser.ast import (
     Alter,
     ASTNode,
@@ -15,7 +16,6 @@ from mindsdb_sql_parser.ast import (
     CreateTable,
     Delete,
     Describe,
-    UpdateDatabase,
     DropDatabase,
     DropTables,
     DropView,
@@ -192,8 +192,8 @@ class ExecuteCommands:
             return self.answer_drop_tables(statement, database_name)
         elif statement_type is DropDatasource or statement_type is DropDatabase:
             return self.answer_drop_database(statement)
-        elif statement_type is UpdateDatabase:
-            return self.answer_update_database(statement)
+        elif statement_type is AlterDatabase:
+            return self.answer_alter_database(statement)
         elif statement_type is Describe:
             # NOTE in sql 'describe table' is same as 'show columns'
             obj_type = statement.type
@@ -1198,12 +1198,11 @@ class ExecuteCommands:
                 raise
         return ExecuteAnswer()
 
-    def answer_update_database(self, statement):
+    def answer_alter_database(self, statement):
         if len(statement.name.parts) != 1:
             raise Exception("Database name should contain only 1 part.")
         db_name = statement.name.parts[0]
-        data = statement.data
-        self.session.database_controller.update(db_name, data=data)
+        self.session.database_controller.update(db_name, data=statement.params)
         return ExecuteAnswer()
 
     def answer_drop_tables(self, statement, database_name):

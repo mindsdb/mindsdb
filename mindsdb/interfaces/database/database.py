@@ -133,7 +133,7 @@ class DatabaseController:
             # Only the name of the project can be updated.
             if {"name"} != set(data):
                 raise ValueError("Only the 'name' field can be updated for projects.")
-            self.project_controller.update(name=name, new_name=data["name"])
+            self.project_controller.update(name=name, new_name=str(data["name"]))
             return
 
         elif db_type == "data":

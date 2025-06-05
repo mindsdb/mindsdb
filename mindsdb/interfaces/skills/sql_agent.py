@@ -411,9 +411,7 @@ class SQLAgent:
 
             data_catalog_str = ""
             for database_name, table_names in database_table_map.items():
-                data_catalog_reader = DataCatalogReader(
-                    database_name=database_name, table_names=table_names
-                )
+                data_catalog_reader = DataCatalogReader(database_name=database_name, table_names=table_names)
 
                 data_catalog_str += data_catalog_reader.read_metadata_as_string()
 

@@ -117,9 +117,7 @@ class SkillsController:
                     database_table_map[parts[0]] = database_table_map.get(parts[0], []) + [parts[1]]
 
                 for database_name, table_names in database_table_map.items():
-                    data_catalog_loader = DataCatalogLoader(
-                        database_name=database_name, table_names=table_names
-                    )
+                    data_catalog_loader = DataCatalogLoader(database_name=database_name, table_names=table_names)
                     data_catalog_loader.load_metadata()
 
             # Legacy parameters for skill creation include the `database` and `tables` parameters.

@@ -1,0 +1,39 @@
+{
+  "config_version": "1.4",
+  "paths": {
+    "root": "STORAGE_DIR_PLACEHOLDER",
+    "static": "STATIC_DIR_PLACEHOLDER"
+  },
+  "debug": false,
+  "integrations": {
+    "default_handlers": {
+      "airtable": {"enabled": true},
+      "supabase": {"enabled": true},
+      "gmail": {"enabled": true},
+      "google_analytics": {"enabled": true},
+      "lightwood": {"enabled": true},
+      "huggingface": {"enabled": true},
+      "huggingface_api": {"enabled": true},
+      "langchain": {"enabled": true},
+      "langchain_embedding": {"enabled": true},
+      "pgvector": {"enabled": true},
+      "postgres": {"enabled": true},
+      "sheets": {"enabled": true},
+      "s3": {"enabled": true},
+      "minds_endpoint": {"enabled": true},
+      "rag": {"enabled": true}
+    }
+  },
+  "api": {
+    "http": {
+      "host": "0.0.0.0",
+      "port": "47334"
+    }
+  },
+  "gui": {
+    "autoupdate": false
+  },
+  "log": {
+    "level": "INFO"
+  }
+}

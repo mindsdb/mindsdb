@@ -7,6 +7,7 @@ python-multipart == 0.0.18
 cryptography>=35.0
 psycopg[binary]
 waitress >= 1.4.4
+pymongo[srv] == 4.8.0
 psutil
 sqlalchemy >= 2.0.0, < 3.0.0
 psycopg2-binary  # This is required for using sqlalchemy with postgres

@@ -153,9 +153,9 @@ class TestDocumentPreprocessor:
             assert "_original_doc_id" in chunk.metadata
             assert chunk.metadata["_original_doc_id"] == "parent_doc"
             # Verify chunk position metadata
-            assert "start_char" in chunk.metadata
-            assert "end_char" in chunk.metadata
-            assert chunk.metadata["end_char"] > chunk.metadata["start_char"]
+            assert "_start_char" in chunk.metadata
+            assert "_end_char" in chunk.metadata
+            assert chunk.metadata["_end_char"] > chunk.metadata["_start_char"]
 
         # Test with delete_existing=True
         chunks = preprocessor.process_documents([parent_doc])

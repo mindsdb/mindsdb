@@ -83,7 +83,6 @@ jobs:
         with:
           repository: mindsdb/github-actions
           path: github-actions
-          ssh-key: ${{ secrets.GH_ACTIONS_PULL_SSH }}
       # Build the bakefile and push
       - uses: ./github-actions/docker-bake
         with:
@@ -114,17 +113,6 @@ jobs:
           push-cache: true
           cache-only: true
 
-  # Call our deployment workflow
-  deploy:
-    name: Deploy to Prod
-    needs: [build]
-    uses: ./.github/workflows/deploy.yml
-    with:
-      deploy-envs: '["prod"]'
-      image-tag: ${{ github.event.release.tag_name }}
-      prod: true
-    secrets: inherit
-  
   # Trigger private repo to deploy the docker desktop extension
   trigger_dd_extension_release:
     name: Deploy Docker Desktop Extension
@@ -146,19 +134,6 @@ jobs:
           workflow_file_name: bump-mindsdb-version.yml
           ref: main
           client_payload: '{"image-tag": "${{ env.CI_REF_NAME }}"}'
-
-  # Run integration tests
-  # TODO: Run these against the deployed environment
-  run_tests:
-    name: Run Integration Tests
-    needs: [deploy]
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-tests
-      cancel-in-progress: true
-    uses: ./.github/workflows/test_on_deploy.yml
-    with:
-      deploy-env: prod
-    secrets: inherit
 
   slack_message:
     if: always()

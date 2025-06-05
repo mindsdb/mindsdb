@@ -39,6 +39,7 @@ from mindsdb_sql_parser.ast import (
 
 # typed models
 from mindsdb_sql_parser.ast.mindsdb import (
+    AlterView,
     CreateAgent,
     CreateAnomalyDetectionModel,
     CreateChatBot,
@@ -51,6 +52,7 @@ from mindsdb_sql_parser.ast.mindsdb import (
     CreateTrigger,
     CreateView,
     CreateKnowledgeBaseIndex,
+    EvaluateKnowledgeBase,
     DropAgent,
     DropChatBot,
     DropDatasource,
@@ -551,7 +553,9 @@ class ExecuteCommands:
         ):
             return self.answer_create_predictor(statement, database_name)
         elif statement_type is CreateView:
-            return self.answer_create_view(statement, database_name)
+            return self.answer_create_or_alter_view(statement, database_name)
+        elif statement_type is AlterView:
+            return self.answer_create_or_alter_view(statement, database_name)
         elif statement_type is DropView:
             return self.answer_drop_view(statement, database_name)
         elif statement_type is Delete:
@@ -618,6 +622,8 @@ class ExecuteCommands:
             return self.answer_evaluate_metric(statement, database_name)
         elif statement_type is CreateKnowledgeBaseIndex:
             return self.answer_create_kb_index(statement, database_name)
+        elif statement_type is EvaluateKnowledgeBase:
+            return self.answer_evaluate_kb(statement, database_name)
         else:
             logger.warning(f"Unknown SQL statement: {sql}")
             raise NotSupportedYet(f"Unknown SQL statement: {sql}")
@@ -905,6 +911,14 @@ class ExecuteCommands:
         project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
         self.session.kb_controller.create_index(table_name=table_name, project_name=project_name)
         return ExecuteAnswer()
+
+    def answer_evaluate_kb(self, statement: EvaluateKnowledgeBase, database_name):
+        table_name = statement.name.parts[-1]
+        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
+        scores = self.session.kb_controller.evaluate(
+            table_name=table_name, project_name=project_name, params=statement.params
+        )
+        return ExecuteAnswer(data=ResultSet.from_df(scores))
 
     def _get_model_info(self, identifier, except_absent=True, database_name=None):
         if len(identifier.parts) == 1:
@@ -1214,17 +1228,35 @@ class ExecuteCommands:
 
         return ExecuteAnswer()
 
-    def answer_create_view(self, statement, database_name):
+    def answer_create_or_alter_view(self, statement: ASTNode, database_name: str) -> ExecuteAnswer:
+        """Process CREATE and ALTER VIEW commands
+
+        Args:
+            statement (ASTNode): data for creating or altering view
+            database_name (str): name of the current database
+
+        Returns:
+            ExecuteAnswer: answer for the command
+        """
         project_name = database_name
-        # TEMP
-        if isinstance(statement.name, Identifier):
+
+        if isinstance(statement.name, str):
+            parts = statement.name.split(".")
+        elif isinstance(statement.name, Identifier):
             parts = statement.name.parts
         else:
-            parts = statement.name.split(".")
+            raise ValueError(f"Unknown type of view name: {statement.name}")
 
-        view_name = parts[-1]
-        if len(parts) == 2:
-            project_name = parts[0]
+        match parts:
+            case [project_name, view_name]:
+                pass
+            case [view_name]:
+                pass
+            case _:
+                raise ValueError(
+                    'View name should be in the form "project_name.view_name" '
+                    f'or "view_name", got {statement.name.parts}'
+                )
 
         query_str = statement.query_str
 
@@ -1233,7 +1265,7 @@ class ExecuteCommands:
                 targets=[Star()],
                 from_table=NativeQuery(integration=statement.from_table, query=statement.query_str),
             )
-            query_str = str(query)
+            query_str = query.to_string()
         else:
             query = parse_sql(query_str)
 
@@ -1248,11 +1280,21 @@ class ExecuteCommands:
                 query_context_controller.release_context(query_context_controller.IGNORE_CONTEXT)
 
         project = self.session.database_controller.get_project(project_name)
-        try:
-            project.create_view(view_name, query=query_str)
-        except EntityExistsError:
-            if getattr(statement, "if_not_exists", False) is False:
-                raise
+
+        if isinstance(statement, CreateView):
+            try:
+                project.create_view(view_name, query=query_str)
+            except EntityExistsError:
+                if getattr(statement, "if_not_exists", False) is False:
+                    raise
+        elif isinstance(statement, AlterView):
+            try:
+                project.update_view(view_name, query=query_str)
+            except EntityNotExistsError:
+                raise ExecutorException(f"View {view_name} does not exist in {project_name}")
+        else:
+            raise ValueError(f"Unknown view DDL statement: {statement}")
+
         return ExecuteAnswer()
 
     def answer_drop_view(self, statement, database_name):
@@ -1467,6 +1509,9 @@ class ExecuteCommands:
         is_full=False,
         database_name=None,
     ):
+        if isinstance(target, Identifier) is False:
+            raise TableNotExistError("The table name is required for the query.")
+
         if len(target.parts) > 1:
             db = target.parts[0]
         elif isinstance(database_name, str) and len(database_name) > 0:

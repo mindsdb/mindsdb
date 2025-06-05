@@ -8,10 +8,6 @@ def start_mysql(*args, **kwargs):
     start(*args, **kwargs)
 
 
-def start_mongo(*args, **kwargs):
-    from mindsdb.api.mongo.start import start
-    start(*args, **kwargs)
-
 
 def start_postgres(*args, **kwargs):
     from mindsdb.api.postgres.start import start

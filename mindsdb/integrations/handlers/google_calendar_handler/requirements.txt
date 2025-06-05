@@ -1,2 +1,0 @@
-google-api-python-client
--r mindsdb/integrations/utilities/handlers/auth_utilities/google/requirements.txt

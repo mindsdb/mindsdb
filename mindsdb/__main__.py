@@ -25,7 +25,7 @@ logger.debug("Starting MindsDB...")
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.utilities.config import config
 from mindsdb.utilities.starters import (
-    start_http, start_mysql, start_mongo, start_postgres, start_ml_task_queue,
+    start_http, start_mysql, start_postgres, start_ml_task_queue,
     start_scheduler, start_tasks, start_mcp, start_litellm
 )
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
@@ -52,7 +52,6 @@ _stop_event = threading.Event()
 class TrunkProcessEnum(Enum):
     HTTP = 'http'
     MYSQL = 'mysql'
-    MONGODB = 'mongodb'
     POSTGRES = 'postgres'
     JOBS = 'jobs'
     TASKS = 'tasks'
@@ -437,12 +436,7 @@ if __name__ == '__main__':
                 'max_restart_interval_seconds', TrunkProcessData.max_restart_interval_seconds
             )
         ),
-        TrunkProcessEnum.MONGODB: TrunkProcessData(
-            name=TrunkProcessEnum.MONGODB.value,
-            entrypoint=start_mongo,
-            port=config['api']['mongodb']['port'],
-            args=(config.cmd_args.verbose,)
-        ),
+
         TrunkProcessEnum.POSTGRES: TrunkProcessData(
             name=TrunkProcessEnum.POSTGRES.value,
             entrypoint=start_postgres,

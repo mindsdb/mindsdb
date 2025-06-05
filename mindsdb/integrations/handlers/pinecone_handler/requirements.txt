@@ -1,1 +1,0 @@
-pinecone-client==5.0.1

@@ -193,11 +193,7 @@ class Config:
                     "max_restart_count": 1,
                     "max_restart_interval_seconds": 60
                 },
-                "mongodb": {
-                    "host": api_host,
-                    "port": "47336",
-                    "database": "mindsdb"
-                },
+
                 "postgres": {
                     "host": api_host,
                     "port": "55432",

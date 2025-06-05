@@ -1,2 +1,0 @@
-lightfm==1.17
-dataprep_ml==24.5.1.2

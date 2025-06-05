@@ -1,3 +1,0 @@
-ludwig[distributed]>=0.5.2
-ray==2.8.1
-dask

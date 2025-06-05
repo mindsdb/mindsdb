@@ -1,6 +1,23 @@
-file                 # Required by the core codebase
-postgres
-mysql
-openai
-web
-langchain            # For agents & completions
+# Streamlined MindsDB Handler Configuration
+# Essential handlers for core functionality
+
+# Core ML and AI handlers
+lightwood            # Core ML engine
+huggingface          # HuggingFace models
+huggingface_api      # HuggingFace API
+langchain            # LangChain integration
+langchain_embedding  # LangChain embeddings
+rag                  # RAG functionality
+
+# Database and storage handlers
+postgres             # PostgreSQL database
+pgvector             # Vector database
+s3                   # AWS S3 storage
+supabase             # Supabase integration
+
+# API and service handlers
+gmail                # Gmail integration
+google_analytics     # Google Analytics
+sheets               # Google Sheets
+airtable             # Airtable integration
+minds_endpoint       # MindsDB endpoint handler

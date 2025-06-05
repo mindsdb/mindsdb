@@ -1,3 +1,0 @@
-lancedb~=0.3.1
-lance
-pyarrow~=19.0.0

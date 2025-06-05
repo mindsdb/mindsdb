@@ -52,7 +52,7 @@ jobs:
           uv pip install -r requirements/requirements.txt
       - name: Migrate DB
         run: |
-          python -m pip install "$(grep alembic requirements/requirements.txt)"
+          python -m pip install --prerelease=allow "$(grep alembic requirements/requirements.txt)"
           cd mindsdb/migrations
           env PYTHONPATH=../../ alembic upgrade head
 

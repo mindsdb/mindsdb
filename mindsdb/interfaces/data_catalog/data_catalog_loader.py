@@ -74,19 +74,24 @@ class DataCatalogLoader(BaseDataCatalog):
         Add the table metadata to the database.
         """
         tables = []
-        for row in df.to_dict(orient="records"):
-            record = db.MetaTables(
-                integration_id=self.integration_id,
-                name=row.get("table_name") or row.get("name"),
-                schema=row.get("table_schema"),
-                description=row.get("table_description"),
-                type=row.get("table_type"),
-                row_count=row.get("row_count"),
-            )
-            tables.append(record)
+        try:
+            for row in df.to_dict(orient="records"):
+                record = db.MetaTables(
+                    integration_id=self.integration_id,
+                    name=row.get("table_name") or row.get("name"),
+                    schema=row.get("table_schema"),
+                    description=row.get("table_description"),
+                    type=row.get("table_type"),
+                    row_count=row.get("row_count"),
+                )
+                tables.append(record)
 
-        db.session.add_all(tables)
-        db.session.commit()
+            db.session.add_all(tables)
+            db.session.commit()
+        except Exception as e:
+            self.logger.error(f"Failed to add table metadata: {e}")
+            db.session.rollback()
+            raise
         return tables
 
     def _load_column_metadata(self, tables: db.MetaTables) -> List[db.MetaColumns]:
@@ -104,19 +109,24 @@ class DataCatalogLoader(BaseDataCatalog):
         Add the column metadata to the database.
         """
         columns = []
-        for row in df.to_dict(orient="records"):
-            record = db.MetaColumns(
-                table_id=next((table.id for table in tables if table.name == row.get("table_name"))),
-                name=row.get("column_name"),
-                data_type=row.get("data_type"),
-                default_value=row.get("column_default"),
-                description=row.get("description"),
-                is_nullable=row.get("is_nullable"),
-            )
-            columns.append(record)
+        try:
+            for row in df.to_dict(orient="records"):
+                record = db.MetaColumns(
+                    table_id=next((table.id for table in tables if table.name == row.get("table_name"))),
+                    name=row.get("column_name"),
+                    data_type=row.get("data_type"),
+                    default_value=row.get("column_default"),
+                    description=row.get("description"),
+                    is_nullable=row.get("is_nullable"),
+                )
+                columns.append(record)
 
-        db.session.add_all(columns)
-        db.session.commit()
+            db.session.add_all(columns)
+            db.session.commit()
+        except Exception as e:
+            self.logger.error(f"Failed to add column metadata: {e}")
+            db.session.rollback()
+            raise
         return columns
 
     def _load_column_statistics(self, tables: db.MetaTables, columns: db.MetaColumns) -> None:
@@ -134,32 +144,37 @@ class DataCatalogLoader(BaseDataCatalog):
         Add the column statistics metadata to the database.
         """
         column_statistics = []
-        for row in df.to_dict(orient="records"):
-            table_id = next((table.id for table in tables if table.name == row.get("table_name")))
-            column_id = next(
-                (
-                    column.id
-                    for column in columns
-                    if column.name == row.get("column_name") and column.table_id == table_id
+        try:
+            for row in df.to_dict(orient="records"):
+                table_id = next((table.id for table in tables if table.name == row.get("table_name")))
+                column_id = next(
+                    (
+                        column.id
+                        for column in columns
+                        if column.name == row.get("column_name") and column.table_id == table_id
+                    )
                 )
-            )
 
-            # Convert the most_common_frequencies to a list of strings.
-            most_common_frequencies = [str(val) for val in row.get("most_common_frequencies") or []]
+                # Convert the most_common_frequencies to a list of strings.
+                most_common_frequencies = [str(val) for val in row.get("most_common_frequencies") or []]
 
-            record = db.MetaColumnStatistics(
-                column_id=column_id,
-                most_common_values=row.get("most_common_values"),
-                most_common_frequencies=most_common_frequencies,
-                null_percentage=row.get("null_percentage"),
-                distinct_values_count=row.get("distinct_values_count"),
-                minimum_value=row.get("minimum_value"),
-                maximum_value=row.get("maximum_value"),
-            )
-            column_statistics.append(record)
+                record = db.MetaColumnStatistics(
+                    column_id=column_id,
+                    most_common_values=row.get("most_common_values"),
+                    most_common_frequencies=most_common_frequencies,
+                    null_percentage=row.get("null_percentage"),
+                    distinct_values_count=row.get("distinct_values_count"),
+                    minimum_value=row.get("minimum_value"),
+                    maximum_value=row.get("maximum_value"),
+                )
+                column_statistics.append(record)
 
-        db.session.add_all(column_statistics)
-        db.session.commit()
+            db.session.add_all(column_statistics)
+            db.session.commit()
+        except Exception as e:
+            self.logger.error(f"Failed to add column statistics metadata: {e}")
+            db.session.rollback()
+            raise
 
     def _load_primary_keys(self, tables: db.MetaTables, columns: db.MetaColumns) -> None:
         """
@@ -176,25 +191,30 @@ class DataCatalogLoader(BaseDataCatalog):
         Add the primary keys metadata to the database.
         """
         primary_keys = []
-        for row in df.to_dict(orient="records"):
-            table_id = next((table.id for table in tables if table.name == row.get("table_name")))
-            column_id = next(
-                (
-                    column.id
-                    for column in columns
-                    if column.name == row.get("column_name") and column.table_id == table_id
+        try:
+            for row in df.to_dict(orient="records"):
+                table_id = next((table.id for table in tables if table.name == row.get("table_name")))
+                column_id = next(
+                    (
+                        column.id
+                        for column in columns
+                        if column.name == row.get("column_name") and column.table_id == table_id
+                    )
                 )
-            )
 
-            record = db.MetaPrimaryKeys(
-                table_id=table_id,
-                column_id=column_id,
-                constraint_name=row.get("constraint_name"),
-            )
-            primary_keys.append(record)
+                record = db.MetaPrimaryKeys(
+                    table_id=table_id,
+                    column_id=column_id,
+                    constraint_name=row.get("constraint_name"),
+                )
+                primary_keys.append(record)
 
-        db.session.add_all(primary_keys)
-        db.session.commit()
+            db.session.add_all(primary_keys)
+            db.session.commit()
+        except Exception as e:
+            self.logger.error(f"Failed to add primary keys metadata: {e}")
+            db.session.rollback()
+            raise
 
     def _load_foreign_keys(self, tables: db.MetaTables, columns: db.MetaColumns) -> None:
         """
@@ -211,42 +231,47 @@ class DataCatalogLoader(BaseDataCatalog):
         Add the foreign keys metadata to the database.
         """
         foreign_keys = []
-        for row in df.to_dict(orient="records"):
-            try:
-                parent_table_id = next((table.id for table in tables if table.name == row.get("parent_table_name")))
-                parent_column_id = next(
-                    (
-                        column.id
-                        for column in columns
-                        if column.name == row.get("parent_column_name") and column.table_id == parent_table_id
+        try:
+            for row in df.to_dict(orient="records"):
+                try:
+                    parent_table_id = next((table.id for table in tables if table.name == row.get("parent_table_name")))
+                    parent_column_id = next(
+                        (
+                            column.id
+                            for column in columns
+                            if column.name == row.get("parent_column_name") and column.table_id == parent_table_id
+                        )
                     )
-                )
-                child_table_id = next((table.id for table in tables if table.name == row.get("child_table_name")))
-                child_column_id = next(
-                    (
-                        column.id
-                        for column in columns
-                        if column.name == row.get("child_column_name") and column.table_id == child_table_id
+                    child_table_id = next((table.id for table in tables if table.name == row.get("child_table_name")))
+                    child_column_id = next(
+                        (
+                            column.id
+                            for column in columns
+                            if column.name == row.get("child_column_name") and column.table_id == child_table_id
+                        )
                     )
-                )
-            except StopIteration:
-                self.logger.warning(
-                    f"The foreign key relationship for {row.get('parent_table_name')} -> {row.get('child_table_name')} "
-                    f"could not be established. One or more tables or columns may not exist in the metadata."
-                )
-                continue
+                except StopIteration:
+                    self.logger.warning(
+                        f"The foreign key relationship for {row.get('parent_table_name')} -> {row.get('child_table_name')} "
+                        f"could not be established. One or more tables or columns may not exist in the metadata."
+                    )
+                    continue
 
-            record = db.MetaForeignKeys(
-                parent_table_id=parent_table_id,
-                parent_column_id=parent_column_id,
-                child_table_id=child_table_id,
-                child_column_id=child_column_id,
-                constraint_name=row.get("constraint_name"),
-            )
-            foreign_keys.append(record)
+                record = db.MetaForeignKeys(
+                    parent_table_id=parent_table_id,
+                    parent_column_id=parent_column_id,
+                    child_table_id=child_table_id,
+                    child_column_id=child_column_id,
+                    constraint_name=row.get("constraint_name"),
+                )
+                foreign_keys.append(record)
 
-        db.session.add_all(foreign_keys)
-        db.session.commit()
+            db.session.add_all(foreign_keys)
+            db.session.commit()
+        except Exception as e:
+            self.logger.error(f"Failed to add foreign keys metadata: {e}")
+            db.session.rollback()
+            raise
 
     def unload_metadata(self) -> None:
         """

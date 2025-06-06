@@ -101,16 +101,10 @@ class SkillsController:
 
         # Load metadata to data catalog (if enabled) if the skill is Text-to-SQL.
         if config.get("data_catalog", {}).get("enabled", False):
-            if type == SkillType.TEXT2SQL.value:
+            if type == SkillType.TEXT2SQL.value and "include_tables" in params:
                 # TODO: Is it possible to create a skill with complete access to the database with the new agent syntax?
                 # TODO: Handle the case where `ignore_tables` is provided. Is this a valid parameter?
                 # TODO: Knowledge Bases?
-                if "include_tables" not in params:
-                    raise ValueError(
-                        "Data catalog is enabled, but `include_tables` parameter is not provided. "
-                        "Metadata cannot be loaded for the skill."
-                    )
-
                 database_table_map = {}
                 for table in params["include_tables"]:
                     parts = table.split(".", 1)
@@ -120,14 +114,7 @@ class SkillsController:
                     data_catalog_loader = DataCatalogLoader(database_name=database_name, table_names=table_names)
                     data_catalog_loader.load_metadata()
 
-            # Legacy parameters for skill creation include the `database` and `tables` parameters.
-            elif type == SkillType.TEXT2SQL_LEGACY.value:
-                if "database" not in params:
-                    raise ValueError(
-                        "Data catalog is enabled, but `database` parameter is not provided. "
-                        "Metadata cannot be loaded for the skill."
-                    )
-
+            if type in [SkillType.TEXT2SQL.value, SkillType.TEXT2SQL_LEGACY] and "database" in params:
                 data_catalog_loader = DataCatalogLoader(
                     database_name=params["database"], table_names=params["tables"] if "tables" in params else None
                 )

@@ -411,7 +411,7 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.FLOAT,
             MYSQL_DATA_TYPE.FLOAT
         ]
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         for columns_name, input_value in input_row.items():
             result_value = response.data_frame[columns_name][0]
             self.assertEqual(result_value, input_value)
@@ -502,7 +502,7 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.TEXT,
             MYSQL_DATA_TYPE.BINARY
         ]
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         for columns_name, input_value in input_row.items():
             result_value = response.data_frame[columns_name][0]
             self.assertEqual(result_value, input_value)
@@ -582,7 +582,7 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.DATETIME,
             MYSQL_DATA_TYPE.DATETIME
         ]
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         for columns_name, input_value in input_row.items():
             result_value = response.data_frame[columns_name][0]
             if columns_name == 'd_datetimeoffset_p':

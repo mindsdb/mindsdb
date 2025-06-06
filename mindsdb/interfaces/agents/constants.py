@@ -15,7 +15,10 @@ OPEN_AI_CHAT_MODELS = (
     "gpt-4-32k",
     "gpt-4-1106-preview",
     "gpt-4-0125-preview",
+    "gpt-4.1",
+    "gpt-4.1-mini",
     "gpt-4o",
+    "o4-mini",
     "o3-mini",
     "o1-mini",
 )

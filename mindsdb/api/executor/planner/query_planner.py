@@ -193,6 +193,11 @@ class QueryPlanner:
         # remove predictor params
         if fetch_df_select.using is not None:
             fetch_df_select.using = None
+        fetch_params = self.get_fetch_params(params)
+        return FetchDataframeStep(integration=integration_name, query=fetch_df_select, params=fetch_params)
+
+    def get_fetch_params(self, params):
+        # extracts parameters for fetching
 
         if params:
             fetch_params = params.copy()
@@ -204,7 +209,7 @@ class QueryPlanner:
                 fetch_params['track_column'] = fetch_params['track_column'].parts[-1]
         else:
             fetch_params = None
-        return FetchDataframeStep(integration=integration_name, query=fetch_df_select, params=fetch_params)
+        return fetch_params
 
     def plan_integration_select(self, select):
         """Plan for a select query that can be fully executed in an integration"""
@@ -647,7 +652,7 @@ class QueryPlanner:
         # create table step
         self.plan.add_step(SaveToTable(
             table=query.name,
-            dataframe=last_step,
+            dataframe=last_step.result,
             is_replace=query.is_replace,
         ))
 
@@ -669,7 +674,7 @@ class QueryPlanner:
 
             self.plan.add_step(InsertToTable(
                 table=table,
-                dataframe=last_step,
+                dataframe=last_step.result,
                 params=params,
             ))
         else:

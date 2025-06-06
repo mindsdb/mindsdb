@@ -1451,7 +1451,7 @@ class TestJoinTimeseriesPredictor:
         expected_plan2.add_step(
             SaveToTable(
                 table=Identifier('files.model_name'),
-                dataframe=expected_plan2.steps[-1],
+                dataframe=Result(expected_plan2.steps[-1].step_num),
                 is_replace=True,
             )
         )
@@ -1472,7 +1472,7 @@ class TestJoinTimeseriesPredictor:
         expected_plan2.add_step(
             SaveToTable(
                 table=Identifier('int1.model_name'),
-                dataframe=expected_plan2.steps[-1],
+                dataframe=Result(expected_plan2.steps[-1].step_num),
                 is_replace=True,
             )
         )
@@ -1483,7 +1483,7 @@ class TestJoinTimeseriesPredictor:
         expected_plan2.add_step(
             InsertToTable(
                 table=Identifier('int1.model_name'),
-                dataframe=expected_plan2.steps[-1],
+                dataframe=Result(expected_plan2.steps[-1].step_num),
             )
         )
 

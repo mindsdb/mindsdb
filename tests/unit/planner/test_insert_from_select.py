@@ -1,3 +1,4 @@
+from mindsdb_sql_parser import parse_sql, Join
 from mindsdb_sql_parser.ast import (
     Identifier, Insert, Select, Constant,
     Star, BinaryOperation, Function,
@@ -6,11 +7,16 @@ import pandas as pd
 
 from mindsdb.api.executor.planner import plan_query
 from mindsdb.api.executor.planner.query_plan import QueryPlan
+from mindsdb.api.executor.planner.step_result import Result
 from mindsdb.api.executor.planner.steps import (
     FetchDataframeStep,
     InsertToTable,
-    QueryStep
+    QueryStep,
+    FetchDataframeStepPartition,
+    JoinStep,
+    ApplyPredictorStep,
 )
+from mindsdb_sql_parser.utils import JoinType
 
 
 class TestPlanInsertFromSelect:
@@ -41,7 +47,7 @@ class TestPlanInsertFromSelect:
                 InsertToTable(
                     table=Identifier('INT_1.table_1'),
                     step_num=1,
-                    dataframe=step_1
+                    dataframe=Result(0)
                 )
             ]
         )
@@ -75,7 +81,7 @@ class TestPlanInsertFromSelect:
                 InsertToTable(
                     table=Identifier('INT_1.table_1'),
                     step_num=1,
-                    dataframe=step_1,
+                    dataframe=Result(0),
                 )
             ]
         )
@@ -121,7 +127,7 @@ class TestPlanInsertFromSelect:
                 InsertToTable(
                     table=Identifier('INT_1.table_1'),
                     step_num=1,
-                    dataframe=step_1,
+                    dataframe=Result(0),
                 )
             ]
         )
@@ -153,7 +159,7 @@ class TestPlanInsertFromSelect:
                 InsertToTable(
                     table=Identifier('INT_1.table_1'),
                     step_num=1,
-                    dataframe=step_1
+                    dataframe=Result(0)
                 )
             ]
         )
@@ -163,7 +169,120 @@ class TestPlanInsertFromSelect:
 
             if hasattr(step, 'from_table') and isinstance(step.from_table, pd.DataFrame) and isinstance(expected_step.from_table, pd.DataFrame):
                 assert step.from_table.equals(expected_step.from_table)
-            elif hasattr(step, 'dataframe') and isinstance(step.dataframe.from_table, pd.DataFrame) and isinstance(expected_step.dataframe.from_table, pd.DataFrame):
-                assert step.dataframe.from_table.equals(expected_step.dataframe.from_table)
             else:
                 assert step == expected_step
+
+
+class TestPartitions:
+    def test_insert_from_select(self):
+        query = parse_sql("""
+            insert into int2.table2
+            select id from int1.table1
+            using track_column = id, batch_size=100
+        """)
+
+        plan = plan_query(query, integrations=['int1', 'int2'])
+
+        expected_plan = QueryPlan(
+            integrations=['int'],
+            steps=[
+                FetchDataframeStepPartition(
+                    step_num=0,
+                    integration='int1',
+                    query=parse_sql('select id as id from table1'),
+                    params={'batch_size': 100, 'track_column': 'id'},
+                    steps=[
+                        InsertToTable(
+                            table=Identifier('int2.table2'),
+                            step_num=1,
+                            dataframe=Result(0)
+                        )
+                    ]
+                )
+            ],
+        )
+
+        assert plan.steps == expected_plan.steps
+
+    def test_insert_from_join(self):
+        query = parse_sql("""
+            insert into int2.table2
+            ( select a, b from int1.table1
+              join int1.table3 )
+            using track_column = id, batch_size=100
+        """)
+
+        plan = plan_query(query, integrations=['int1', 'int2'])
+
+        expected_plan = QueryPlan(
+            integrations=['int'],
+            steps=[
+                FetchDataframeStepPartition(
+                    step_num=0,
+                    integration='int1',
+                    query=parse_sql('select a, b from table1 join table3'),
+                    params={'batch_size': 100, 'track_column': 'id'},
+                    steps=[
+                        InsertToTable(
+                            table=Identifier('int2.table2'),
+                            step_num=1,
+                            dataframe=Result(0)
+                        )
+                    ]
+                )
+            ],
+        )
+
+        assert plan.steps == expected_plan.steps
+
+    def test_select_join_model(self):
+        query = parse_sql("""
+            select id from int1.table1
+            join pred
+            using track_column = id, batch_size=100
+        """)
+
+        plan = plan_query(
+            query,
+            integrations=['int1', 'int2'],
+            default_namespace='mindsdb',
+            predictor_metadata=[
+                {'name': 'pred', 'integration_name': 'mindsdb', 'to_predict': ['ttt']},
+            ]
+        )
+
+        expected_plan = QueryPlan(
+            integrations=['int'],
+            steps=[
+                FetchDataframeStepPartition(
+                    step_num=0,
+                    integration='int1',
+                    query=parse_sql('select * from table1'),
+                    params={'batch_size': 100, 'track_column': 'id'},
+                    steps=[
+                        ApplyPredictorStep(
+                            step_num=1,
+                            namespace='mindsdb', dataframe=Result(0), params={},
+                            predictor=Identifier('pred'),
+                        ),
+                        JoinStep(
+                            step_num=2,
+                            left=Result(0),
+                            right=Result(1),
+                            query=Join(
+                                left=Identifier('tab1'),
+                                right=Identifier('tab2'),
+                                join_type=JoinType.JOIN
+                            )
+                        ),
+                        QueryStep(
+                            step_num=3,
+                            query=parse_sql("select id"),
+                            from_table=Result(2), strict_where=False
+                        ),
+                    ]
+                )
+            ],
+        )
+
+        assert plan.steps == expected_plan.steps

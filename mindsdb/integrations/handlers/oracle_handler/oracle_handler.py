@@ -22,7 +22,7 @@ logger = log.getLogger(__name__)
 
 def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
     """ Map Oracle types to MySQL types.
-        List of types: https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/Data-Types.html
+        List of types: https://docs.oracle.com/en/database/oracle/oracle-database/23/sqlrf/Data-Types.html
 
     Args:
         internal_type_name (str): The name of the Oracle type to map.
@@ -48,6 +48,8 @@ def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
         ('RAW', 'LONG RAW', 'BLOB', 'BFILE'): MYSQL_DATA_TYPE.BINARY,
         ('ROWID', 'UROWID'): MYSQL_DATA_TYPE.TEXT,
         ('CHAR', 'NCHAR', 'CLOB', 'NCLOB', 'CHARACTER'): MYSQL_DATA_TYPE.CHAR,
+        ('VECTOR',): MYSQL_DATA_TYPE.VECTOR,
+        ('JSON',): MYSQL_DATA_TYPE.JSON
     }
 
     for db_types_list, mysql_data_type in types_map.items():
@@ -74,7 +76,11 @@ def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
         db_type = column[1]
         precision = column[4]
         scale = column[5]
-        if db_type is oracledb.DB_TYPE_NUMBER:
+        if db_type is oracledb.DB_TYPE_JSON:
+            mysql_types.append(MYSQL_DATA_TYPE.JSON)
+        elif db_type is oracledb.DB_TYPE_VECTOR:
+            mysql_types.append(MYSQL_DATA_TYPE.VECTOR)
+        elif db_type is oracledb.DB_TYPE_NUMBER:
             if scale != 0:
                 mysql_types.append(MYSQL_DATA_TYPE.FLOAT)
             else:

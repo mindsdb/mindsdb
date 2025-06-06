@@ -84,6 +84,8 @@ class BinaryResultsetRowPacket(Packet):
                 env_val = self.encode_time(val)
             elif col_type == TYPES.MYSQL_TYPE_NEWDECIMAL:
                 enc = "string"
+            elif col_type == TYPES.MYSQL_TYPE_VECTOR:
+                enc = "byte"
             elif col_type == TYPES.MYSQL_TYPE_JSON:
                 # json have to be encoded as byte<lenenc>, but actually for json there is no differ with string<>
                 enc = "string"
@@ -93,7 +95,9 @@ class BinaryResultsetRowPacket(Packet):
             if enc == "":
                 raise Exception(f"Column with type {col_type} cant be encripted")
 
-            if enc == "string":
+            if enc == "byte":
+                self.value.append(Datum("string", val, "lenenc").toStringPacket())
+            elif enc == "string":
                 if not isinstance(val, str):
                     val = str(val)
                 self.value.append(Datum("string", val, "lenenc").toStringPacket())

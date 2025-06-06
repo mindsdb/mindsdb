@@ -1,6 +1,7 @@
-import json
+import struct
 import datetime
 from typing import Any
+from array import array
 
 import numpy as np
 from numpy import dtype as np_dtype
@@ -16,8 +17,11 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     CHARSET_NUMBERS,
 )
 from mindsdb.utilities import log
+from mindsdb.utilities.json_encoder import CustomJSONEncoder
 
 logger = log.getLogger(__name__)
+
+json_encoder = CustomJSONEncoder()
 
 
 def column_to_mysql_column_dict(column: Column, database_name: str | None = None) -> dict[str, str | int]:
@@ -61,7 +65,7 @@ def column_to_mysql_column_dict(column: Column, database_name: str | None = None
         column.type = MYSQL_DATA_TYPE.TEXT
 
     charset = CHARSET_NUMBERS["utf8_unicode_ci"]
-    if column.type == MYSQL_DATA_TYPE.JSON:
+    if column.type in (MYSQL_DATA_TYPE.JSON, MYSQL_DATA_TYPE.VECTOR):
         charset = CHARSET_NUMBERS["binary"]
 
     type_properties: CTypeProperties = DATA_C_TYPE_MAP[column.type]
@@ -111,7 +115,7 @@ def _dump_str(var: Any) -> str | None:
             return str(var)[2:-1]
     if isinstance(var, (dict, list)):
         try:
-            return json.dumps(var)
+            return json_encoder.encode(var)
         except Exception:
             return str(var)
     if isinstance(var, list) is False and pd.isna(var):
@@ -219,6 +223,24 @@ def _dump_time(var: datetime.time | str | None) -> str | None:
     return _dump_str(var)
 
 
+def _dump_vector(value: Any) -> bytes | None:
+    """Convert array or list of floats to a bytes.
+
+    Args:
+        value (Any): The value to dump
+
+    Returns:
+        bytes | None: The bytes representation of the vector value or None if the value is None
+    """
+    if isinstance(value, (array, list, np.ndarray)):
+        return b''.join([struct.pack('<f', el) for el in value])
+    elif pd.isna(value):
+        return None
+    err_msg = f"Unexpected value type for VECTOR: {type(value)}, {value}"
+    logger.error(err_msg)
+    raise ValueError(err_msg)
+
+
 def _handle_series_as_date(series: pd.Series) -> pd.Series:
     """Convert values in a series to a string representation of a date.
     NOTE: MySQL require exactly %Y-%m-%d for DATE type.
@@ -296,6 +318,19 @@ def _handle_series_as_int(series: pd.Series) -> pd.Series:
     return series.apply(_dump_int_or_str)
 
 
+def _handle_series_as_vector(series: pd.Series) -> pd.Series:
+    """Convert values in a series to a bytes representation of a vector.
+    NOTE: MySQL's VECTOR type require exactly 4 bytes per float.
+
+    Args:
+        series (pd.Series): The series to handle
+
+    Returns:
+        pd.Series: The series with the vector values as bytes
+    """
+    return series.apply(_dump_vector)
+
+
 def dump_result_set_to_mysql(
     result_set: ResultSet, infer_column_size: bool = False
 ) -> tuple[pd.DataFrame, list[dict[str, str | int]]]:
@@ -340,6 +375,8 @@ def dump_result_set_to_mysql(
                 | MYSQL_DATA_TYPE.YEAR
             ):
                 series = _handle_series_as_int(series)
+            case MYSQL_DATA_TYPE.VECTOR:
+                series = _handle_series_as_vector(series)
             case _:
                 series = series.apply(_dump_str)
 

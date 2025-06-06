@@ -33,10 +33,6 @@ defaults:
   run:
     shell: bash
 
-concurrency:
-  group: test-${{ inputs.deploy-env }}
-  cancel-in-progress: true
-
 env:
   UV_LINK_MODE: "symlink"
 

@@ -1,5 +1,8 @@
 name: Build and deploy release
 
+permissions:
+  contents: read
+
 on:
   release:
     types: [published]

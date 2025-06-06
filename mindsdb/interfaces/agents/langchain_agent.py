@@ -257,11 +257,9 @@ class LangchainAgent:
         Returns:
             dict: Final parameters for agent execution
         """
-        # Start with parameters passed to the method (already merged with defaults)
+        # Use the parameters passed to the method (already merged with defaults by AgentsController)
+        # No fallback needed as AgentsController.get_agent_llm_params already handles this
         args = params.copy() if params else {}
-        if not args and self.agent.params:
-            logger.debug("using agent params, run time time agent params empty ")
-            args = self.agent.params.copy()
 
         # Set model name and provider
         args["model_name"] = self.agent.model_name

@@ -196,8 +196,8 @@ class AgentsController:
 
         _, provider = self.check_model_provider(model_name, provider)
 
-        # Initialize params with a copy to avoid modifying the input
-        params = (params or {}).copy()
+        # No need to copy params since we're not preserving the original reference
+        params = params or {}
 
         # DO NOT store default LLM parameters in the database
         # Default parameters will be applied at runtime via get_agent_llm_params

@@ -8,6 +8,7 @@ from mindsdb_sql_parser import parse_sql
 import pandas as pd
 from typing import Text, Dict, Optional
 from botocore.exceptions import ClientError
+from urllib.parse import urlparse
 
 from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb_sql_parser.ast import Select, Identifier, Insert, Star, Constant
@@ -163,6 +164,17 @@ class S3Handler(APIHandler):
         region = self._regions[bucket]
         duckdb_conn.execute(f"SET s3_region='{region}'")
 
+        # Set custom endpoint if provided
+        if 'endpoint_url' in self.connection_data:
+            # Extract host and port from endpoint URL
+            raw_url = self.connection_data['endpoint_url']
+            parsed_url = urlparse(raw_url)
+            endpoint_host = (parsed_url.netloc or parsed_url.path).rstrip('/')  # handles cases like "http://localhost:9000" or "localhost:9000"
+
+            duckdb_conn.execute(f"SET s3_endpoint='{endpoint_host}'")
+            duckdb_conn.execute("SET s3_url_style='path'")
+            duckdb_conn.execute("SET s3_use_ssl='false'")
+
         try:
             yield duckdb_conn
         finally:
@@ -184,6 +196,10 @@ class S3Handler(APIHandler):
         # Configure optional parameters.
         if 'aws_session_token' in self.connection_data:
             config['aws_session_token'] = self.connection_data['aws_session_token']
+        if 'region_name' in self.connection_data:
+            config['region_name'] = self.connection_data['region_name']
+        if 'endpoint_url' in self.connection_data:
+            config['endpoint_url'] = self.connection_data['endpoint_url']
 
         client = boto3.client('s3', **config)
 
@@ -275,20 +291,26 @@ class S3Handler(APIHandler):
 
         try:
             client = self.connect()
-            client.head_object(Bucket=bucket, Key=key)
+            # Only check if file exists if we're not using a custom endpoint
+            if 'endpoint_url' not in self.connection_data:
+                client.head_object(Bucket=bucket, Key=key)
         except ClientError as e:
-            logger.error(f'Error querying the file {key} in the bucket {bucket}, {e}!')
-            raise e
+            if e.response['Error']['Code'] == '404':
+                # File doesn't exist yet, that's okay
+                pass
+            else:
+                logger.error(f'Error querying the file {key} in the bucket {bucket}, {e}!')
+                raise e
 
         with self._connect_duckdb(bucket) as connection:
-            # copy
-            connection.execute(f"CREATE TABLE tmp_table AS SELECT * FROM 's3://{bucket}/{key}'")
-
-            # insert
-            connection.execute("INSERT INTO tmp_table BY NAME SELECT * FROM df")
-
-            # upload
+            # Create a temporary table with the data
+            connection.execute("CREATE TABLE tmp_table AS SELECT * FROM df")
+            
+            # Upload the data to S3
             connection.execute(f"COPY tmp_table TO 's3://{bucket}/{key}'")
+            
+            # Clean up
+            connection.execute("DROP TABLE tmp_table")
 
     def query(self, query: ASTNode) -> Response:
         """

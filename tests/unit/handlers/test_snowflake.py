@@ -12,6 +12,7 @@ from unittest.mock import patch, MagicMock
 from collections import OrderedDict
 from decimal import Decimal
 import datetime
+import numpy as np
 import pandas as pd
 from pandas import DataFrame
 
@@ -1111,6 +1112,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             select
                 OBJECT_CONSTRUCT('name', 'Jones', 'age', 42) as t_json,
                 ARRAY_CONSTRUCT(12, 'twelve', NULL) as t_array
+                [1.1,2.2,3.3]::VECTOR(FLOAT,3) as t_vector
         );
         """
         input_data = pd.DataFrame(
@@ -1118,6 +1120,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                 "T_JSON": pd.Series([{"name": "Jones", "age": 42}], dtype="object"),
                 # snowflake returns arrays as text
                 "T_ARRAY": pd.Series(['[\n  12,\n  "twelve",\n  undefined\n]'], dtype="object"),
+                "T_VECTOR": pd.Series([np.array([1.1, 2.2, 3.3], dtype="float32")], dtype="object"),
             }
         )
         mock_cursor.fetch_pandas_batches.return_value = iter([input_data])
@@ -1140,14 +1143,24 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                 scale=None,
                 is_nullable=True,
             ),
+            ColumnDescription(
+                name="T_VECTOR",
+                type_code=16,
+                display_size=None,
+                internal_size=None,
+                precision=None,
+                scale=None,
+                is_nullable=True,
+            ),
         ]
 
-        excepted_mysql_types = [MYSQL_DATA_TYPE.JSON, MYSQL_DATA_TYPE.JSON]
+        excepted_mysql_types = [MYSQL_DATA_TYPE.JSON, MYSQL_DATA_TYPE.JSON, MYSQL_DATA_TYPE.VECTOR]
 
         expected_result_df = pd.DataFrame(
             {
                 "T_JSON": pd.Series([{"name": "Jones", "age": 42}], dtype="object"),
                 "T_ARRAY": pd.Series(['[\n  12,\n  "twelve",\n  undefined\n]'], dtype="object"),
+                "T_VECTOR": pd.Series([np.array([1.1, 2.2, 3.3], dtype="float32")], dtype="object"),
             }
         )
         response = self.handler.native_query(query_str)

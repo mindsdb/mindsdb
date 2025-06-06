@@ -1,15 +1,19 @@
 from collections import OrderedDict
 import unittest
+import pytest
 from decimal import Decimal
 from unittest.mock import patch, MagicMock
 from uuid import UUID
 import datetime
-
-from pymssql import OperationalError
+try:
+    from pymssql import OperationalError
+    from mindsdb.integrations.handlers.mssql_handler.mssql_handler import SqlServerHandler
+except ImportError:
+    pytestmark = pytest.mark.skip("MSSQL handler not installed")
+    
 from pandas import DataFrame
 
 from base_handler_test import BaseDatabaseHandlerTest
-from mindsdb.integrations.handlers.mssql_handler.mssql_handler import SqlServerHandler
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     INF_SCHEMA_COLUMNS_NAMES_SET,

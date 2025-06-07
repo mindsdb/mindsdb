@@ -1,10 +1,11 @@
 import datetime
-from typing import Dict, Iterator, List, Union, Tuple, Optional
+from typing import Dict, Iterator, List, Any, Union, Tuple, Optional
 
 from langchain_core.tools import BaseTool
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import null
 import pandas as pd
+import json
 
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.storage.db import Predictor
@@ -18,6 +19,7 @@ from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
 from .constants import ASSISTANT_COLUMN, SUPPORTED_PROVIDERS, PROVIDER_TO_MODELS
 from .langchain_agent import get_llm_provider
+from .crewai_pipeline import CrewAITextToSQLPipeline
 
 default_project = config.get("default_project")
 
@@ -255,6 +257,7 @@ class AgentsController:
                 skill_params["include_knowledge_bases"] = include_knowledge_bases
             if ignore_knowledge_bases:
                 skill_params["ignore_knowledge_bases"] = ignore_knowledge_bases
+
             try:
                 # Check if skill already exists
                 existing_skill = self.skills_controller.get_skill(skill_name, project_name)
@@ -504,6 +507,143 @@ class AgentsController:
         agent.deleted_at = datetime.datetime.now()
         db.session.commit()
 
+    def create_crewai_agents(
+        self,
+        name: str,
+        project_name: str,
+        model_name: str,
+        tables: List[str] = None,
+        knowledge_bases: List[str] = None,
+        provider: str = "openai",
+        params: Dict[str, str] = {},
+    ):
+        """
+        Creates a CrewAI agent pipeline.
+
+        Parameters:
+            name (str): The name of the new CrewAI agent group
+            project_name (str): The containing project
+            model_name (str): The name of the model the agent will use
+            tables (List[str]): List of tables to use in format 'database.table'
+            knowledge_bases (List[str]): List of knowledge bases to use
+            provider (str): The provider of the model (only 'openai' supported)
+            params (Dict[str, str]): Parameters to use when running the agent
+
+        Returns:
+            agent (db.Agents): The created agent
+
+        Raises:
+            ValueError: Agent with given name already exists, or provider is not supported
+        """
+        if project_name is None:
+            project_name = default_project
+
+        project = self.project_controller.get(name=project_name)
+        agent = self.get_agent(name, project_name)
+
+        if agent is not None:
+            raise ValueError(f"Agent with name already exists: {name}")
+
+        # if provider.lower() != 'openai':
+        #     raise ValueError(f'Provider {provider} is not supported for CrewAI agents. Only "openai" is supported.')
+
+        # Set default parameters if not provided
+        if "verbose" not in params:
+            params["verbose"] = True
+        if "max_tokens" not in params:
+            params["max_tokens"] = 2000
+
+        # Store CrewAI type in params
+        params["agent_type"] = "crewai"
+
+        # Store tables and knowledge bases in params
+        params["tables"] = tables or []
+        params["knowledge_bases"] = knowledge_bases or []
+        # Persist provider information inside params as well so it is available at run-time
+        params["provider"] = provider
+        agent = db.Agents(
+            name=name,
+            project_id=project.id,
+            company_id=ctx.company_id,
+            user_class=ctx.user_class,
+            model_name=model_name,
+            provider=provider,
+            params=params,
+        )
+
+        db.session.add(agent)
+        db.session.commit()
+
+        return agent
+
+    def get_completion_crewai(
+        self, agent: db.Agents, user_query: str, project_name: str = default_project
+    ) -> pd.DataFrame:
+        """
+        Processes a query using the CrewAI text-to-SQL pipeline.
+
+        Parameters:
+            agent (db.Agents): Existing CrewAI agent to get completion from
+            user_query (str): The natural language query from the user
+            project_name (str): Project the agent belongs to (default mindsdb)
+
+        Returns:
+            response (pd.DataFrame): The processed query result formatted as a DataFrame
+
+        Raises:
+            ValueError: If the agent is not a CrewAI agent
+        """
+        if not agent.params.get("agent_type") == "crewai":
+            raise ValueError(f"Agent {agent.name} is not a CrewAI agent")
+
+        # Check for API key in agent parameters using both common parameter names
+        api_key = agent.params.get("api_key")
+
+        # If not in agent params, check configuration
+        if not api_key:
+            api_key = config.get("openai", {}).get("api_key")
+
+        # Convert the user_query to a proper format if it's in JSON format
+        try:
+            # Try to parse as JSON in case the query comes in the format:
+            # '{"role": "user", "content": "What are the available databases"}'
+            query_data = json.loads(user_query)
+            if isinstance(query_data, dict) and "content" in query_data:
+                user_query = query_data["content"]
+        except (json.JSONDecodeError, TypeError):
+            # If not JSON, just use the raw query
+            pass
+
+        # Determine provider – prefer explicit value stored in params, fallback to the column
+        provider = agent.params.get("provider") or agent.provider or "openai"
+        # Create the CrewAI pipeline
+        pipeline = CrewAITextToSQLPipeline(
+            tables=agent.params.get("tables", []),
+            knowledge_bases=agent.params.get("knowledge_bases", []),
+            model=agent.model_name,
+            provider=provider,
+            api_key=api_key,
+            prompt_template=agent.params.get("prompt_template"),
+            verbose=agent.params.get("verbose", True),
+            max_tokens=agent.params.get("max_tokens", 2000),
+        )
+
+        # Process the query
+        result = pipeline.process_query(user_query)
+
+        # Convert the result to a DataFrame for compatibility with MindsDB SQL interface
+        import pandas as pd
+
+        # Format the result data as a DataFrame
+        # Use the column names expected by MindsDB - use the ASSISTANT_COLUMN constant
+        df = pd.DataFrame(
+            {
+                self.assistant_column: [result],
+            }
+        )
+
+        return df
+
     def get_completion(
         self,
         agent: db.Agents,
@@ -511,7 +651,7 @@ class AgentsController:
         project_name: str = default_project,
         tools: List[BaseTool] = None,
         stream: bool = False,
-    ) -> Union[Iterator[object], pd.DataFrame]:
+    ) -> Union[Iterator[object], pd.DataFrame, Dict[str, Any]]:
         """
         Queries an agent to get a completion.
 
@@ -523,11 +663,58 @@ class AgentsController:
             stream (bool): Whether to stream the response
 
         Returns:
-            response (Union[Iterator[object], pd.DataFrame]): Completion as a DataFrame or iterator of completion chunks
+            response (Union[Iterator[object], pd.DataFrame, Dict[str, Any]]):  Completion as DataFrame, iterator of chunks, or dict for CrewAI
 
         Raises:
             ValueError: Agent's model does not exist.
         """
+        # Check if this is a CrewAI agent
+        if agent.params and agent.params.get("agent_type") == "crewai":
+            # For CrewAI agents, extract the user query
+            user_query = None
+
+            # First check if the last message is a user message
+            if messages and len(messages) > 0:
+                last_message = messages[-1]
+                if isinstance(last_message, dict):
+                    # Try several possible field names that might contain the query
+                    for field in ["content", "question", "text", "input"]:
+                        if field in last_message:
+                            user_query = last_message[field]
+                            break
+                    # If we still don't have a query and there's a role field
+                    if user_query is None and "role" in last_message and last_message["role"] == "user":
+                        # Try to find any string value to use as query
+                        for key, value in last_message.items():
+                            if isinstance(value, str) and key != "role":
+                                user_query = value
+                                break
+
+            # If we couldn't extract a query from messages but have a DataFrame in messages
+            if user_query is None and isinstance(messages, pd.DataFrame):
+                # Try to find the query in any common column names
+                for col in ["question", "content", "text", "input", "query"]:
+                    if col in messages.columns:
+                        # Get the first non-empty value in the column
+                        values = messages[col].dropna()
+                        if not values.empty:
+                            user_query = values.iloc[0]
+                            break
+
+            # If we still don't have a query, try to extract from any string in messages
+            if user_query is None:
+                # Just use the string representation as a last resort
+                user_query = str(messages)
+
+            # If streaming is requested, use the streaming method
+            if stream:
+                return self._get_crewai_completion_stream(agent, user_query, project_name)
+            else:
+                # Process the query with CrewAI (non-streaming)
+                result_df = self.get_completion_crewai(agent, user_query, project_name)
+                return result_df
+
+        # Handle regular LangChain agents
         if stream:
             return self._get_completion_stream(agent, messages, project_name=project_name, tools=tools)
         from .langchain_agent import LangchainAgent
@@ -577,3 +764,68 @@ class AgentsController:
 
         lang_agent = LangchainAgent(agent, model=model)
         return lang_agent.get_completion(messages, stream=True)
+
+    def _get_crewai_completion_stream(
+        self, agent: db.Agents, user_query: str, project_name: str = default_project
+    ) -> Iterator[object]:
+        """
+        Queries an agent to get a stream of completion chunks.
+
+        Parameters:
+            agent (db.Agents): Existing agent to get completion from
+            user_query (str): The natural language query from the user
+            project_name (str): Project the agent belongs to (default mindsdb)
+
+        Returns:
+            chunks (Iterator[object]): Completion chunks as an iterator
+
+        Raises:
+            ValueError: Agent's model does not exist.
+        """
+        # For circular dependency.
+        from .crewai_pipeline import CrewAITextToSQLPipeline
+
+        # Create the CrewAI pipeline
+        pipeline = CrewAITextToSQLPipeline(
+            tables=agent.params.get("tables", []),
+            knowledge_bases=agent.params.get("knowledge_bases", []),
+            model=agent.model_name,
+            provider=agent.params.get("provider") or agent.provider or "openai",
+            api_key=agent.params.get("api_key"),
+            prompt_template=agent.params.get("prompt_template"),
+            verbose=agent.params.get("verbose", True),
+            max_tokens=agent.params.get("max_tokens", 2000),
+        )
+
+        # Process the query with streaming
+        for chunk in pipeline.process_query_stream(user_query):
+            # Add metadata and format chunk similar to LangChain agents
+            processed_chunk = self._process_crewai_chunk(chunk)
+            yield processed_chunk
+
+    def _process_crewai_chunk(self, chunk: Dict) -> Dict:
+        """Process a CrewAI streaming chunk to match LangChain format.
+
+        Args:
+            chunk: Raw chunk from CrewAI streaming
+
+        Returns:
+            Processed chunk with proper metadata
+        """
+        # Add trace_id if available (similar to LangChain)
+        if hasattr(self, "langfuse_client_wrapper"):
+            chunk["trace_id"] = self.langfuse_client_wrapper.get_trace_id()
+        else:
+            chunk["trace_id"] = "crewai-stream"
+
+        # Set is_task_complete flag
+        if "output" in chunk and chunk.get("type") == "answer":
+            chunk["is_task_complete"] = True
+        else:
+            chunk["is_task_complete"] = False
+
+        # Ensure metadata exists
+        if "metadata" not in chunk:
+            chunk["metadata"] = {}
+
+        return chunk

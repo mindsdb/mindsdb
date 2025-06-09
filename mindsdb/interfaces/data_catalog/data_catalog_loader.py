@@ -176,6 +176,10 @@ class DataCatalogLoader(BaseDataCatalog):
                     )
                 )
 
+                # Convert the distinct_values_count to an integer if it is not NaN, otherwise set it to None.
+                val = row.get("distinct_values_count")
+                distinct_values_count = int(val) if pd.notna(val) else None
+
                 # Convert the most_common_frequencies to a list of strings.
                 most_common_frequencies = [str(val) for val in row.get("most_common_frequencies") or []]
 
@@ -184,7 +188,7 @@ class DataCatalogLoader(BaseDataCatalog):
                     most_common_values=row.get("most_common_values"),
                     most_common_frequencies=most_common_frequencies,
                     null_percentage=row.get("null_percentage"),
-                    distinct_values_count=row.get("distinct_values_count"),
+                    distinct_values_count=distinct_values_count,
                     minimum_value=row.get("minimum_value"),
                     maximum_value=row.get("maximum_value"),
                 )

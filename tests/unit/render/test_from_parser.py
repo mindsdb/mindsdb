@@ -116,7 +116,7 @@ def parse_sql2(sql, dialect="mindsdb"):
 
 
 class TestFromParser:
-    def test_from_parser(self):
+    def test_from_parser(self, pytestconfig):
         try:
             from parser_tests.tests.test_base_sql import (
                 test_select_operations,
@@ -130,10 +130,12 @@ class TestFromParser:
 
         except ImportError as e:
             print(
-                "Unable to import render's tests. Make sure they are in PYTHONPATH. It can be done by:"
+                "Unable to import render's tests. Make sure they are in the mindsdb folder. It can be done by:"
                 "- git clone https://github.com/mindsdb/mindsdb_sql_parser.git parser_tests"
-                f"- env PYTHONPATH=./:parser_tests/tests pytest\n\nError: {e}"
+                f"\nError: {e}"
             )
+            if pytestconfig.getoption("runslow") is True:
+                pytest.fail("Failing on above error because --runslow option is set.")
             pytest.skip("Parser tests not found")
 
         modules = (

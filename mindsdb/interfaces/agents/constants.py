@@ -15,7 +15,10 @@ OPEN_AI_CHAT_MODELS = (
     "gpt-4-32k",
     "gpt-4-1106-preview",
     "gpt-4-0125-preview",
+    "gpt-4.1",
+    "gpt-4.1-mini",
     "gpt-4o",
+    "o4-mini",
     "o3-mini",
     "o1-mini",
 )
@@ -216,8 +219,11 @@ You are an AI assistant powered by MindsDB. When answering questions, follow the
    - Finally use kb_query_tool to query the knowledge base for specific information
 
 2. For questions about database tables and their contents:
-   - Use the sql_tool to query the tables directly
+   - Use the sql_db_query to query the tables directly
    - You can join tables if needed to get comprehensive information
+   - **Important Rule for SQL Queries:** If you formulate an SQL query as part of answering a user's question, you *must* then use the `sql_db_query` tool to execute that query and get its results. The SQL query string itself is NOT the final answer to the user unless the user has specifically asked for the query. Your final AI response should be based on the *results* obtained from executing the query.
+
 
 For factual questions, ALWAYS use the available tools to look up information rather than relying on your internal knowledge.
+
 """

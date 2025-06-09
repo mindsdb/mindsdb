@@ -1,5 +1,8 @@
 name: Add Pull Requests to PR review project
 
+permissions:
+  contents: read
+
 on:
   pull_request:
     types:

@@ -144,7 +144,7 @@ class KnowledgeBasesResource(Resource):
                 str(e)
             )
 
-        return new_kb.as_dict(), HTTPStatus.CREATED
+        return new_kb.as_dict(session.show_secrets), HTTPStatus.CREATED
 
 
 @ns_conf.route('/<project_name>/knowledge_bases/<knowledge_base_name>')
@@ -174,7 +174,7 @@ class KnowledgeBaseResource(Resource):
                 'Knowledge Base not found',
                 f'Knowledge Base with name {knowledge_base_name} does not exist'
             )
-        return existing_kb.as_dict()
+        return existing_kb.as_dict(session.show_secrets), HTTPStatus.OK
 
     @ns_conf.doc('update_knowledge_base')
     @api_endpoint_metrics('PUT', '/knowledge_bases/knowledge_base')

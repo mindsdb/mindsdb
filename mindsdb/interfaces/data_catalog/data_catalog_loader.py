@@ -164,10 +164,12 @@ class DataCatalogLoader(BaseDataCatalog):
         response = self.data_handler.meta_get_column_statistics(self.table_names)
         if response.resp_type != RESPONSE_TYPE.TABLE:
             self.logger.error(f"Failed to load column statistics for {self.database_name}: {response.error_message}")
+            return
 
         df = response.data_frame
         if df.empty:
             self.logger.info(f"No column statistics to load for {self.database_name}.")
+            return
 
         df.columns = df.columns.str.lower()
         self._add_column_statistics(df, tables, columns)
@@ -222,10 +224,12 @@ class DataCatalogLoader(BaseDataCatalog):
         response = self.data_handler.meta_get_primary_keys(self.table_names)
         if response.resp_type != RESPONSE_TYPE.TABLE:
             self.logger.error(f"Failed to load primary keys for {self.database_name}: {response.error_message}")
+            return
 
         df = response.data_frame
         if df.empty:
             self.logger.info(f"No primary keys to load for {self.database_name}.")
+            return
 
         df.columns = df.columns.str.lower()
         self._add_primary_keys(df, tables, columns)
@@ -269,11 +273,12 @@ class DataCatalogLoader(BaseDataCatalog):
         response = self.data_handler.meta_get_foreign_keys(self.table_names)
         if response.resp_type != RESPONSE_TYPE.TABLE:
             self.logger.error(f"Failed to foreign keys for {self.database_name}: {response.error_message}")
+            return
 
         df = response.data_frame
         if df.empty:
             self.logger.info(f"No foreign keys to load for {self.database_name}.")
-            return []
+            return
 
         df.columns = df.columns.str.lower()
         self._add_foreign_keys(df, tables, columns)

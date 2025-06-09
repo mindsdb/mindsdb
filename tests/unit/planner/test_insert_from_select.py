@@ -1,7 +1,12 @@
 from mindsdb_sql_parser import parse_sql, Join
 from mindsdb_sql_parser.ast import (
-    Identifier, Insert, Select, Constant,
-    Star, BinaryOperation, Function,
+    Identifier,
+    Insert,
+    Select,
+    Constant,
+    Star,
+    BinaryOperation,
+    Function,
 )
 import pandas as pd
 
@@ -22,34 +27,27 @@ from mindsdb_sql_parser.utils import JoinType
 class TestPlanInsertFromSelect:
     def test_insert_from_select_with_table_plan(self):
         query = Insert(
-            table=Identifier('INT_1.table_1'),
+            table=Identifier("INT_1.table_1"),
             columns=None,
             from_select=Select(
                 targets=[Star()],
-                from_table=Identifier('INT_2.table_2'),
+                from_table=Identifier("INT_2.table_2"),
                 where=None,
-            )
+            ),
         )
-        plan = plan_query(query, integrations=['INT_1', 'INT_2'])
+        plan = plan_query(query, integrations=["INT_1", "INT_2"])
 
         step_1 = FetchDataframeStep(
-            integration='int_2',
+            integration="int_2",
             query=Select(
                 targets=[Star()],
-                from_table=Identifier('table_2'),
+                from_table=Identifier("table_2"),
                 where=None,
             ),
             step_num=0,
         )
         expected_plan = QueryPlan(
-            steps=[
-                step_1,
-                InsertToTable(
-                    table=Identifier('INT_1.table_1'),
-                    step_num=1,
-                    dataframe=Result(0)
-                )
-            ]
+            steps=[step_1, InsertToTable(table=Identifier("INT_1.table_1"), step_num=1, dataframe=Result(0))]
         )
 
         for i in range(len(plan.steps)):
@@ -57,20 +55,23 @@ class TestPlanInsertFromSelect:
 
     def test_insert_from_select_with_table_and_columns_plan(self):
         query = Insert(
-            table=Identifier('INT_1.table_1'),
+            table=Identifier("INT_1.table_1"),
             from_select=Select(
-                targets=[Identifier('column_1'), Identifier('column_2')],
-                from_table=Identifier('INT_2.table_2'),
+                targets=[Identifier("column_1"), Identifier("column_2")],
+                from_table=Identifier("INT_2.table_2"),
                 where=None,
-            )
+            ),
         )
-        plan = plan_query(query, integrations=['INT_1', 'INT_2'])
+        plan = plan_query(query, integrations=["INT_1", "INT_2"])
 
         step_1 = FetchDataframeStep(
-            integration='int_2',
+            integration="int_2",
             query=Select(
-                targets=[Identifier('column_1', alias=Identifier('column_1')), Identifier('column_2', alias=Identifier('column_2'))],
-                from_table=Identifier('table_2'),
+                targets=[
+                    Identifier("column_1", alias=Identifier("column_1")),
+                    Identifier("column_2", alias=Identifier("column_2")),
+                ],
+                from_table=Identifier("table_2"),
                 where=None,
             ),
             step_num=0,
@@ -79,10 +80,10 @@ class TestPlanInsertFromSelect:
             steps=[
                 step_1,
                 InsertToTable(
-                    table=Identifier('INT_1.table_1'),
+                    table=Identifier("INT_1.table_1"),
                     step_num=1,
                     dataframe=Result(0),
-                )
+                ),
             ]
         )
 
@@ -91,33 +92,36 @@ class TestPlanInsertFromSelect:
 
     def test_insert_from_select_with_table_and_columns_and_where_plan(self):
         query = Insert(
-            table=Identifier('INT_1.table_1'),
+            table=Identifier("INT_1.table_1"),
             from_select=Select(
-                targets=[Identifier('column_1'), Identifier('column_2')],
-                from_table=Identifier('INT_2.table_2'),
+                targets=[Identifier("column_1"), Identifier("column_2")],
+                from_table=Identifier("INT_2.table_2"),
                 where=BinaryOperation(
-                    op='>',
+                    op=">",
                     args=[
-                        Identifier('column_3', alias=Identifier('column_3')),
+                        Identifier("column_3", alias=Identifier("column_3")),
                         Constant(10),
                     ],
                 ),
-            )
+            ),
         )
-        plan = plan_query(query, integrations=['INT_1', 'INT_2'])
+        plan = plan_query(query, integrations=["INT_1", "INT_2"])
 
         step_1 = FetchDataframeStep(
-            integration='int_2',
+            integration="int_2",
             query=Select(
-                targets=[Identifier('column_1', alias=Identifier('column_1')), Identifier('column_2', alias=Identifier('column_2'))],
-                from_table=Identifier('table_2'),
+                targets=[
+                    Identifier("column_1", alias=Identifier("column_1")),
+                    Identifier("column_2", alias=Identifier("column_2")),
+                ],
+                from_table=Identifier("table_2"),
                 where=BinaryOperation(
-                    op='>',
+                    op=">",
                     args=[
-                        Identifier('column_3', alias=Identifier('column_3')),
+                        Identifier("column_3", alias=Identifier("column_3")),
                         Constant(10),
                     ],
-                )
+                ),
             ),
             step_num=0,
         )
@@ -125,10 +129,10 @@ class TestPlanInsertFromSelect:
             steps=[
                 step_1,
                 InsertToTable(
-                    table=Identifier('INT_1.table_1'),
+                    table=Identifier("INT_1.table_1"),
                     step_num=1,
                     dataframe=Result(0),
-                )
+                ),
             ]
         )
 
@@ -137,16 +141,13 @@ class TestPlanInsertFromSelect:
 
     def test_insert_from_select_without_table_plan(self):
         select_query = Select(
-            targets=[Function('function', args=[])],
+            targets=[Function("function", args=[])],
             from_table=None,
             where=None,
         )
-        query = Insert(
-            table=Identifier('INT_1.table_1'),
-            from_select=select_query
-        )
+        query = Insert(table=Identifier("INT_1.table_1"), from_select=select_query)
 
-        plan = plan_query(query, integrations=['INT_1'])
+        plan = plan_query(query, integrations=["INT_1"])
 
         step_1 = QueryStep(
             query=select_query,
@@ -154,20 +155,17 @@ class TestPlanInsertFromSelect:
             from_table=pd.DataFrame([None]),
         )
         expected_plan = QueryPlan(
-            steps=[
-                step_1,
-                InsertToTable(
-                    table=Identifier('INT_1.table_1'),
-                    step_num=1,
-                    dataframe=Result(0)
-                )
-            ]
+            steps=[step_1, InsertToTable(table=Identifier("INT_1.table_1"), step_num=1, dataframe=Result(0))]
         )
         for i in range(len(plan.steps)):
             step = plan.steps[i]
             expected_step = expected_plan.steps[i]
 
-            if hasattr(step, 'from_table') and isinstance(step.from_table, pd.DataFrame) and isinstance(expected_step.from_table, pd.DataFrame):
+            if (
+                hasattr(step, "from_table")
+                and isinstance(step.from_table, pd.DataFrame)
+                and isinstance(expected_step.from_table, pd.DataFrame)
+            ):
                 assert step.from_table.equals(expected_step.from_table)
             else:
                 assert step == expected_step
@@ -181,23 +179,17 @@ class TestPartitions:
             using track_column = id, batch_size=100
         """)
 
-        plan = plan_query(query, integrations=['int1', 'int2'])
+        plan = plan_query(query, integrations=["int1", "int2"])
 
         expected_plan = QueryPlan(
-            integrations=['int'],
+            integrations=["int"],
             steps=[
                 FetchDataframeStepPartition(
                     step_num=0,
-                    integration='int1',
-                    query=parse_sql('select id as id from table1'),
-                    params={'batch_size': 100, 'track_column': 'id'},
-                    steps=[
-                        InsertToTable(
-                            table=Identifier('int2.table2'),
-                            step_num=1,
-                            dataframe=Result(0)
-                        )
-                    ]
+                    integration="int1",
+                    query=parse_sql("select id as id from table1"),
+                    params={"batch_size": 100, "track_column": "id"},
+                    steps=[InsertToTable(table=Identifier("int2.table2"), step_num=1, dataframe=Result(0))],
                 )
             ],
         )
@@ -212,23 +204,17 @@ class TestPartitions:
             using track_column = id, batch_size=100
         """)
 
-        plan = plan_query(query, integrations=['int1', 'int2'])
+        plan = plan_query(query, integrations=["int1", "int2"])
 
         expected_plan = QueryPlan(
-            integrations=['int'],
+            integrations=["int"],
             steps=[
                 FetchDataframeStepPartition(
                     step_num=0,
-                    integration='int1',
-                    query=parse_sql('select a, b from table1 join table3'),
-                    params={'batch_size': 100, 'track_column': 'id'},
-                    steps=[
-                        InsertToTable(
-                            table=Identifier('int2.table2'),
-                            step_num=1,
-                            dataframe=Result(0)
-                        )
-                    ]
+                    integration="int1",
+                    query=parse_sql("select a, b from table1 join table3"),
+                    params={"batch_size": 100, "track_column": "id"},
+                    steps=[InsertToTable(table=Identifier("int2.table2"), step_num=1, dataframe=Result(0))],
                 )
             ],
         )
@@ -244,43 +230,37 @@ class TestPartitions:
 
         plan = plan_query(
             query,
-            integrations=['int1', 'int2'],
-            default_namespace='mindsdb',
+            integrations=["int1", "int2"],
+            default_namespace="mindsdb",
             predictor_metadata=[
-                {'name': 'pred', 'integration_name': 'mindsdb', 'to_predict': ['ttt']},
-            ]
+                {"name": "pred", "integration_name": "mindsdb", "to_predict": ["ttt"]},
+            ],
         )
 
         expected_plan = QueryPlan(
-            integrations=['int'],
+            integrations=["int"],
             steps=[
                 FetchDataframeStepPartition(
                     step_num=0,
-                    integration='int1',
-                    query=parse_sql('select * from table1'),
-                    params={'batch_size': 100, 'track_column': 'id'},
+                    integration="int1",
+                    query=parse_sql("select * from table1"),
+                    params={"batch_size": 100, "track_column": "id"},
                     steps=[
                         ApplyPredictorStep(
                             step_num=1,
-                            namespace='mindsdb', dataframe=Result(0), params={},
-                            predictor=Identifier('pred'),
+                            namespace="mindsdb",
+                            dataframe=Result(0),
+                            params={},
+                            predictor=Identifier("pred"),
                         ),
                         JoinStep(
                             step_num=2,
                             left=Result(0),
                             right=Result(1),
-                            query=Join(
-                                left=Identifier('tab1'),
-                                right=Identifier('tab2'),
-                                join_type=JoinType.JOIN
-                            )
+                            query=Join(left=Identifier("tab1"), right=Identifier("tab2"), join_type=JoinType.JOIN),
                         ),
-                        QueryStep(
-                            step_num=3,
-                            query=parse_sql("select id"),
-                            from_table=Result(2), strict_where=False
-                        ),
-                    ]
+                        QueryStep(step_num=3, query=parse_sql("select id"), from_table=Result(2), strict_where=False),
+                    ],
                 )
             ],
         )

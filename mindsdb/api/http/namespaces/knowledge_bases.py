@@ -134,7 +134,7 @@ class KnowledgeBasesResource(Resource):
                 kb_name,
                 project.name,
                 embedding_table_identifier,
-                params=knowledge_base.get('params', {}),
+                params=params,
                 preprocessing_config=knowledge_base.get('preprocessing')
             )
         except ValueError as e:

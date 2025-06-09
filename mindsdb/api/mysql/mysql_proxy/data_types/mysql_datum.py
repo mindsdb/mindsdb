@@ -128,7 +128,7 @@ class Datum:
         return self.get_serializer()(self.value)
 
     def get_serializer(self):
-        if self.var_type == "string":
+        if self.var_type in ("string", "byte"):
             if self.var_len == "lenenc":
                 if isinstance(self.value, bytes):
                     return self.serialize_bytes

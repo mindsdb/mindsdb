@@ -27,6 +27,8 @@ class ResultsetRowPacket(Packet):
         for val in data:
             if val is None:
                 self.value.append(NULL_VALUE)
+            elif isinstance(val, bytes):
+                self.value.append(Datum('byte<lenenc>', val))
             else:
                 self.value.append(Datum('string<lenenc>', str(val)))
 

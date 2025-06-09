@@ -336,7 +336,7 @@ class KBTable(MdbTable):
 
         from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseController
         controller = KnowledgeBaseController(inf_schema.session)
-        kb_list = controller.list(project_name, with_secrets=inf_schema.session.show_secrets)
+        kb_list = controller.list(project_name)
 
         # shouldn't be a lot of queries, we can fetch them all
         queries_data = {

@@ -85,13 +85,17 @@ class DataCatalogLoader(BaseDataCatalog):
         tables = []
         try:
             for row in df.to_dict(orient="records"):
+                # Convert the distinct_values_count to an integer if it is not NaN, otherwise set it to None.
+                val = row.get("row_count")
+                row_count = int(val) if pd.notna(val) else None
+
                 record = db.MetaTables(
                     integration_id=self.integration_id,
                     name=row.get("table_name") or row.get("name"),
                     schema=row.get("table_schema"),
                     description=row.get("table_description"),
                     type=row.get("table_type"),
-                    row_count=row.get("row_count"),
+                    row_count=row_count,
                 )
                 tables.append(record)
 

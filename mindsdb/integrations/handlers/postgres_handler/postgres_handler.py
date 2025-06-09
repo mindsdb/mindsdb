@@ -690,8 +690,6 @@ class PostgresHandler(MetaDatabaseHandler):
             WHERE
                 tc.constraint_type = 'PRIMARY KEY'
                 AND tc.table_schema = current_schema()
-            ORDER BY
-                tc.table_name, kcu.ordinal_position
         """
 
         if table_names is not None and len(table_names) > 0:

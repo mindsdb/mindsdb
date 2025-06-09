@@ -212,7 +212,11 @@ class TestPartitions:
                 FetchDataframeStepPartition(
                     step_num=0,
                     integration="int1",
-                    query=parse_sql("select a, b from table1 join table3"),
+                    query=Select(
+                        targets=[Identifier("a"), Identifier("b")],
+                        from_table=Join(left=Identifier("table1"), right=Identifier("table3"), join_type="join"),
+                        using={},
+                    ),
                     params={"track_column": "id", "batch_size": 100},
                     steps=[InsertToTable(table=Identifier("int2.table2"), step_num=1, dataframe=Result(0))],
                 )

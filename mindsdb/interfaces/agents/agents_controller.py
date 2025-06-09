@@ -15,10 +15,14 @@ from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.skills.skills_controller import SkillsController
 from mindsdb.utilities.config import config
+from mindsdb.utilities import log
+
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
 from .constants import ASSISTANT_COLUMN, SUPPORTED_PROVIDERS, PROVIDER_TO_MODELS, DEFAULT_TEXT2SQL_DATABASE
 from .langchain_agent import get_llm_provider
+
+logger = log.getLogger(__name__)
 
 default_project = config.get("default_project")
 
@@ -179,27 +183,16 @@ class AgentsController:
         if agent is not None:
             raise ValueError(f"Agent with name already exists: {name}")
 
-        # Get default LLM parameters from config if they exist
-        default_llm_params = config.get("default_llm", {})
-
-        # If model_name is not provided but available in default_llm config, use it
-        if model_name is None and default_llm_params and "model_name" in default_llm_params:
-            model_name = default_llm_params.get("model_name")
-
-        # If provider is not provided but available in default_llm config, use it
-        if provider is None and default_llm_params and "provider" in default_llm_params:
-            provider = default_llm_params.get("provider")
-
-        # Check if model_name is still None after trying to get it from default_llm
-        if model_name is None:
-            raise ValueError("Model name must be provided either directly or through default_llm configuration")
-
-        _, provider = self.check_model_provider(model_name, provider)
+        if model_name is not None:
+            _, provider = self.check_model_provider(model_name, provider)
 
         # No need to copy params since we're not preserving the original reference
         params = params or {}
 
-        # DO NOT store default LLM parameters in the database
+        if model_name is None:
+            logger.warning("'model_name' param is not provided. Using default global llm model at runtime.")
+
+        # If model_name is not provided, we use default global llm model at runtime
         # Default parameters will be applied at runtime via get_agent_llm_params
         # This allows global default updates to apply to all agents immediately
 

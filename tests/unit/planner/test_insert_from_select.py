@@ -213,7 +213,7 @@ class TestPartitions:
                     step_num=0,
                     integration="int1",
                     query=parse_sql("select a, b from table1 join table3"),
-                    params={"batch_size": 100, "track_column": "id"},
+                    params={"track_column": "id", "batch_size": 100},
                     steps=[InsertToTable(table=Identifier("int2.table2"), step_num=1, dataframe=Result(0))],
                 )
             ],

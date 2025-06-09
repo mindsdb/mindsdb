@@ -28,7 +28,7 @@ class GetConfig(Resource):
     def get(self):
         config = Config()
         resp = {"auth": {"http_auth_enabled": config["auth"]["http_auth_enabled"]}}
-        for key in ["default_llm", "default_embedding_model", "default_reranking_model"]:
+        for key in ["default_llm", "default_embedding_model", "default_reranking_model", "a2a"]:
             value = config.get(key)
             if value is not None:
                 resp[key] = value

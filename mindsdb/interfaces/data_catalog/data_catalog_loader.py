@@ -2,6 +2,7 @@ from typing import List, Union
 
 import pandas as pd
 
+from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.interfaces.data_catalog.base_data_catalog import BaseDataCatalog
 from mindsdb.interfaces.storage import db
 
@@ -57,12 +58,15 @@ class DataCatalogLoader(BaseDataCatalog):
         """
         Load the table metadata from the handler.
         """
-        self.logger.info(f"Loading table metadata for {self.database_name}")
+        self.logger.info(f"Loading tables for {self.database_name}")
         response = self.data_handler.meta_get_tables(self.table_names)
-        df = response.data_frame
+        if response.resp_type != RESPONSE_TYPE.TABLE:
+            self.logger.error(f"Failed to load tables for {self.database_name}: {response.error_message}")
+            return []
 
+        df = response.data_frame
         if df.empty:
-            self.logger.info(f"No table metadata to add for {self.database_name}.")
+            self.logger.info(f"No tables to add for {self.database_name}.")
             return []
 
         # Filter out tables that are already loaded in the data catalog
@@ -75,7 +79,7 @@ class DataCatalogLoader(BaseDataCatalog):
 
         df.columns = df.columns.str.lower()
         tables = self._add_table_metadata(df)
-        self.logger.info(f"Table metadata loaded for {self.database_name}.")
+        self.logger.info(f"Tables loaded for {self.database_name}.")
         return tables
 
     def _add_table_metadata(self, df: pd.DataFrame) -> List[db.MetaTables]:
@@ -102,7 +106,7 @@ class DataCatalogLoader(BaseDataCatalog):
             db.session.add_all(tables)
             db.session.commit()
         except Exception as e:
-            self.logger.error(f"Failed to add table metadata: {e}")
+            self.logger.error(f"Failed to add tables: {e}")
             db.session.rollback()
             raise
         return tables
@@ -111,17 +115,20 @@ class DataCatalogLoader(BaseDataCatalog):
         """
         Load the column metadata from the handler.
         """
-        self.logger.info(f"Loading column metadata for {self.database_name}")
+        self.logger.info(f"Loading columns for {self.database_name}")
         response = self.data_handler.meta_get_columns(self.table_names)
-        df = response.data_frame
+        if response.resp_type != RESPONSE_TYPE.TABLE:
+            self.logger.error(f"Failed to load columns for {self.database_name}: {response.error_message}")
+            return []
 
+        df = response.data_frame
         if df.empty:
-            self.logger.info(f"No column metadata to load for {self.database_name}.")
+            self.logger.info(f"No columns to load for {self.database_name}.")
             return []
 
         df.columns = df.columns.str.lower()
         columns = self._add_column_metadata(df, tables)
-        self.logger.info(f"Column metadata loaded for {self.database_name}.")
+        self.logger.info(f"Columns loaded for {self.database_name}.")
         return columns
 
     def _add_column_metadata(self, df: pd.DataFrame, tables: db.MetaTables) -> List[db.MetaColumns]:
@@ -144,7 +151,7 @@ class DataCatalogLoader(BaseDataCatalog):
             db.session.add_all(columns)
             db.session.commit()
         except Exception as e:
-            self.logger.error(f"Failed to add column metadata: {e}")
+            self.logger.error(f"Failed to add columns: {e}")
             db.session.rollback()
             raise
         return columns
@@ -155,14 +162,16 @@ class DataCatalogLoader(BaseDataCatalog):
         """
         self.logger.info(f"Loading column statistics for {self.database_name}")
         response = self.data_handler.meta_get_column_statistics(self.table_names)
-        df = response.data_frame
+        if response.resp_type != RESPONSE_TYPE.TABLE:
+            self.logger.error(f"Failed to load column statistics for {self.database_name}: {response.error_message}")
 
+        df = response.data_frame
         if df.empty:
-            self.logger.info(f"No column statistics metadata to load for {self.database_name}.")
+            self.logger.info(f"No column statistics to load for {self.database_name}.")
 
         df.columns = df.columns.str.lower()
         self._add_column_statistics(df, tables, columns)
-        self.logger.info(f"Column statistics metadata loaded for {self.database_name}.")
+        self.logger.info(f"Column statistics loaded for {self.database_name}.")
 
     def _add_column_statistics(self, df: pd.DataFrame, tables: db.MetaTables, columns: db.MetaColumns) -> None:
         """
@@ -201,7 +210,7 @@ class DataCatalogLoader(BaseDataCatalog):
             db.session.add_all(column_statistics)
             db.session.commit()
         except Exception as e:
-            self.logger.error(f"Failed to add column statistics metadata: {e}")
+            self.logger.error(f"Failed to add column statistics: {e}")
             db.session.rollback()
             raise
 
@@ -211,14 +220,16 @@ class DataCatalogLoader(BaseDataCatalog):
         """
         self.logger.info(f"Loading primary keys for {self.database_name}")
         response = self.data_handler.meta_get_primary_keys(self.table_names)
-        df = response.data_frame
+        if response.resp_type != RESPONSE_TYPE.TABLE:
+            self.logger.error(f"Failed to load primary keys for {self.database_name}: {response.error_message}")
 
+        df = response.data_frame
         if df.empty:
-            self.logger.info(f"No primary keys metadata to load for {self.database_name}.")
+            self.logger.info(f"No primary keys to load for {self.database_name}.")
 
         df.columns = df.columns.str.lower()
         self._add_primary_keys(df, tables, columns)
-        self.logger.info(f"Primary keys metadata loaded for {self.database_name}.")
+        self.logger.info(f"Primary keys loaded for {self.database_name}.")
 
     def _add_primary_keys(self, df: pd.DataFrame, tables: db.MetaTables, columns: db.MetaColumns) -> None:
         """
@@ -246,7 +257,7 @@ class DataCatalogLoader(BaseDataCatalog):
             db.session.add_all(primary_keys)
             db.session.commit()
         except Exception as e:
-            self.logger.error(f"Failed to add primary keys metadata: {e}")
+            self.logger.error(f"Failed to add primary keys: {e}")
             db.session.rollback()
             raise
 
@@ -256,15 +267,17 @@ class DataCatalogLoader(BaseDataCatalog):
         """
         self.logger.info(f"Loading foreign keys for {self.database_name}")
         response = self.data_handler.meta_get_foreign_keys(self.table_names)
-        df = response.data_frame
+        if response.resp_type != RESPONSE_TYPE.TABLE:
+            self.logger.error(f"Failed to foreign keys for {self.database_name}: {response.error_message}")
 
+        df = response.data_frame
         if df.empty:
-            self.logger.info(f"No foreign keys metadata to load for {self.database_name}.")
+            self.logger.info(f"No foreign keys to load for {self.database_name}.")
             return []
 
         df.columns = df.columns.str.lower()
         self._add_foreign_keys(df, tables, columns)
-        self.logger.info(f"Foreign keys metadata loaded for {self.database_name}.")
+        self.logger.info(f"Foreign keys loaded for {self.database_name}.")
 
     def _add_foreign_keys(self, df: pd.DataFrame, tables: db.MetaTables, columns: db.MetaColumns) -> None:
         """
@@ -309,7 +322,7 @@ class DataCatalogLoader(BaseDataCatalog):
             db.session.add_all(foreign_keys)
             db.session.commit()
         except Exception as e:
-            self.logger.error(f"Failed to add foreign keys metadata: {e}")
+            self.logger.error(f"Failed to add foreign keys: {e}")
             db.session.rollback()
             raise
 

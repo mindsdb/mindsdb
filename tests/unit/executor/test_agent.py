@@ -158,13 +158,9 @@ class TestAgent(BaseExecutorDummyML):
         """)
         assert len(ret) == 0
 
-    @patch("mindsdb.interfaces.agents.agents_controller.AgentsController.check_model_provider")
     @patch("mindsdb.utilities.config.Config.get")
     @patch("openai.OpenAI")
-    def test_agent_with_default_llm_params(self, mock_openai, mock_config_get, mock_check_model_provider):
-        # Mock the model provider check to return a valid model and provider
-        mock_check_model_provider.return_value = (None, "openai")
-
+    def test_agent_with_default_llm_params(self, mock_openai, mock_config_get):
         # Mock the config.get method to return default LLM parameters
         def config_get_side_effect(key, default=None):
             if key == "default_llm":
@@ -300,13 +296,10 @@ class TestAgent(BaseExecutorDummyML):
             # Verify that _initialize_args was called, which means our runtime parameter merging is used
             mock_initialize_args.assert_called()
 
-    @patch("mindsdb.interfaces.agents.agents_controller.AgentsController.check_model_provider")
     @patch("mindsdb.utilities.config.Config.get")
     @patch("openai.OpenAI")
-    def test_agent_minimal_syntax_with_default_llm(self, mock_openai, mock_config_get, mock_check_model_provider):
+    def test_agent_minimal_syntax_with_default_llm(self, mock_openai, mock_config_get):
         """Test that agent creation works with minimal syntax using default_llm config"""
-        # Mock the model provider check to return a valid model and provider
-        mock_check_model_provider.return_value = ("gpt-4o", "openai")
 
         # Mock the config.get method to return default LLM parameters
         def config_get_side_effect(key, default=None):
@@ -340,8 +333,8 @@ class TestAgent(BaseExecutorDummyML):
         # Check that the agent was created with the default parameters
         agent_info = self.run_sql("SELECT * FROM information_schema.agents WHERE name = 'minimal_syntax_agent'")
 
-        # Verify model_name is set correctly
-        assert agent_info["MODEL_NAME"].iloc[0] == "gpt-4o"
+        # Verify model_name is None (as expected when using default LLM)
+        assert agent_info["MODEL_NAME"].iloc[0] is None
 
         # Verify the agent has the default parameters and include_tables
         agent_params = json.loads(agent_info["PARAMS"].iloc[0])

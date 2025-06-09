@@ -64,6 +64,10 @@ class AgentsController:
         """
         model = None
 
+        # Handle the case when model_name is None (using default LLM)
+        if model_name is None:
+            return model, provider
+
         try:
             model_name_no_version, model_version = Predictor.get_name_and_version(model_name)
             model = self.model_controller.get_model(model_name_no_version, version=model_version)
@@ -197,11 +201,12 @@ class AgentsController:
         # This allows global default updates to apply to all agents immediately
 
         # Extract API key if provided in the format <provider>_api_key
-        provider_api_key_param = f"{provider.lower()}_api_key"
-        if provider_api_key_param in params:
-            # Keep the API key in params for the agent to use
-            # It will be picked up by get_api_key() in handler_utils.py
-            pass
+        if provider is not None:
+            provider_api_key_param = f"{provider.lower()}_api_key"
+            if provider_api_key_param in params:
+                # Keep the API key in params for the agent to use
+                # It will be picked up by get_api_key() in handler_utils.py
+                pass
 
         # Handle generic api_key parameter if provided
         if "api_key" in params:

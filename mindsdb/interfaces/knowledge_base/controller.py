@@ -1183,7 +1183,7 @@ class KnowledgeBaseController:
 
             return table
 
-    def list(self, project_name: str = None, with_secrets: Optional[bool] = True) -> List[dict]:
+    def list(self, project_name: str = None) -> List[dict]:
         """
         List all knowledge bases from the database
         belonging to a project
@@ -1201,33 +1201,10 @@ class KnowledgeBaseController:
         project_names = {i.id: i.name for i in project_controller.get_list()}
 
         for record in query:
-            vector_database = record.vector_database
-          
-            params = record.params.copy()
-            embedding_model = params.pop('embedding_model', None)
-            reranking_model = params.pop('reranking_model', None)
-            
-            if not with_secrets:
-                if embedding_model and 'api_key' in embedding_model:
-                    embedding_model['api_key'] = '******'
-                    
-                 if reranking_model and 'api_key' in reranking_model:
-                    reranking_model['api_key'] = '******'
+            kb = record.as_dict(with_secrets=self.session.show_secrets)
+            kb["project_name"] = project_names[record.project_id]
 
-            data.append(
-                {
-                    "id": record.id,
-                    "name": record.name,
-                    "project_id": record.project_id,
-                    "project_name": project_names[record.project_id],
-                    "embedding_model": embedding_model,
-                    "reranking_model": reranking_model,
-                    "vector_database": None if vector_database is None else vector_database.name,
-                    "vector_database_table": record.vector_database_table,
-                    "query_id": record.query_id,
-                    "params": params,
-                }
-            )
+            data.append(kb)
 
         return data
 

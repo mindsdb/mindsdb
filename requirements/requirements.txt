@@ -71,4 +71,4 @@ typing-extensions==4.13.2
 python-dotenv==1.1.0
 jwcrypto==1.5.6
 pyjwt==2.10.1
-pydantic_core==2.23.2
+pydantic_core>=2.23.2

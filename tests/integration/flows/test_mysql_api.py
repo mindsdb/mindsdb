@@ -271,10 +271,11 @@ class TestMySqlApi(BaseStuff):
             "t_text": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.TEXT],
             "t_bytea": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.BINARY],
             # text types: fallbacks to varchar
-            "t_json": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.VARCHAR],
-            "t_jsonb": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.VARCHAR],
             "t_xml": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.VARCHAR],
             "t_uuid": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.VARCHAR],
+            # json types
+            "t_json": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.JSON],
+            "t_jsonb": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.JSON],
             # numeric types
             "n_smallint": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.SMALLINT],
             "n_integer": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.INT],
@@ -339,6 +340,10 @@ class TestMySqlApi(BaseStuff):
                 assert row[column_name].minute == 0
                 assert row[column_name].second == 0
                 row[column_name] = row[column_name].date()
+            elif column_name in ('t_json', 't_jsonb') and self.use_binary:
+                # NOTE 'binary' protocol returns json as bytearray.
+                # by some reason, if use pytest then result is bytes instead of bytearray, but that is ok
+                row[column_name] = row[column_name].decode()
 
             if isinstance(expected_values[column_name], float):
                 assert abs(row[column_name] - expected_values[column_name]) < 1e-5, (

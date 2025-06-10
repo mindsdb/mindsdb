@@ -261,9 +261,13 @@ class LangchainAgent:
         # No fallback needed as AgentsController.get_agent_llm_params already handles this
         args = params.copy() if params else {}
 
-        # Set model name and provider
-        args["model_name"] = self.agent.model_name
-        args["provider"] = self.agent.provider
+        # Set model name and provider if given in create agent otherwise use global llm defaults
+        # AgentsController.get_agent_llm_params
+        if self.agent.model_name is not None:
+            args["model_name"] = self.agent.model_name
+        if self.agent.provider is not None:
+            args["provider"] = self.agent.provider
+
         args["embedding_model_provider"] = args.get("embedding_model", get_embedding_model_provider(args))
 
         # agent is using current langchain model

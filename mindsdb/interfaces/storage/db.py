@@ -5,6 +5,7 @@ from typing import Dict, List
 import numpy as np
 from sqlalchemy import (
     JSON,
+    BigInteger,
     Boolean,
     Column,
     DateTime,
@@ -589,7 +590,7 @@ class MetaTables(Base):
     schema: str = Column(String, nullable=True)
     description: str = Column(String, nullable=True)
     type: str = Column(String, nullable=True)
-    row_count: int = Column(Integer, nullable=True)
+    row_count: int = Column(BigInteger, nullable=True)
 
     meta_columns: Mapped[List["MetaColumns"]] = relationship("MetaColumns", back_populates="meta_tables")
     meta_primary_keys: Mapped[List["MetaPrimaryKeys"]] = relationship("MetaPrimaryKeys", back_populates="meta_tables")
@@ -682,7 +683,7 @@ class MetaColumnStatistics(Base):
     most_common_values: str = Column(Array, nullable=True)
     most_common_frequencies: str = Column(Array, nullable=True)
     null_percentage: float = Column(Numeric(5, 2), nullable=True)
-    distinct_values_count: int = Column(Integer, nullable=True)
+    distinct_values_count: int = Column(BigInteger, nullable=True)
     minimum_value: str = Column(String, nullable=True)
     maximum_value: str = Column(String, nullable=True)
 

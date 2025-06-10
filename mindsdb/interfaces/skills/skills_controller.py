@@ -114,7 +114,7 @@ class SkillsController:
                     data_catalog_loader = DataCatalogLoader(database_name=database_name, table_names=table_names)
                     data_catalog_loader.load_metadata()
 
-            if type in [SkillType.TEXT2SQL.value, SkillType.TEXT2SQL_LEGACY] and "database" in params:
+            elif type in [SkillType.TEXT2SQL.value, SkillType.TEXT2SQL_LEGACY.value] and "database" in params:
                 data_catalog_loader = DataCatalogLoader(
                     database_name=params["database"], table_names=params["tables"] if "tables" in params else None
                 )

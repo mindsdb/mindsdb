@@ -563,18 +563,14 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         # region test vector type
         input_row = {
-            "t_vector": array('f', [1.1, 2.2, 3.3]),
+            "t_vector": array("f", [1.1, 2.2, 3.3]),
         }
         mock_cursor.fetchall.return_value = [input_row]
 
-        mock_cursor.description = [
-            ("t_vector", 242, None, None, None, None, 1, 144, 63)
-        ]
+        mock_cursor.description = [("t_vector", 242, None, None, None, None, 1, 144, 63)]
 
         response: Response = self.handler.native_query(query_str)
-        excepted_mysql_types = [
-            MYSQL_DATA_TYPE.VECTOR
-        ]
+        excepted_mysql_types = [MYSQL_DATA_TYPE.VECTOR]
         self.assertEqual(response.mysql_types, excepted_mysql_types)
         self.assertEqual(input_row["t_vector"], response.data_frame["t_vector"][0])
         # endregion

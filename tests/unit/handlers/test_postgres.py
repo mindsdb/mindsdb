@@ -796,7 +796,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             [1, None, 3],  # int_arr1
             [[1, 2, 3], [4, None, 6]],  # int_arr2
             ["test1", None, "test3"],  # text_arr1
-            np.array([1.1, 2.2, 3.3], dtype='float32')
+            np.array([1.1, 2.2, 3.3], dtype="float32"),
         )
         mock_cursor.fetchall.return_value = [input_row]
 
@@ -804,7 +804,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ColumnDescription(name="int_arr1", type_code=type_name_to_array_oid["int4"]),
             ColumnDescription(name="int_arr2", type_code=type_name_to_array_oid["int4"]),
             ColumnDescription(name="text_arr1", type_code=type_name_to_array_oid["varchar"]),
-            ColumnDescription(name="embedding", type_code=16390, type_display='vector'),
+            ColumnDescription(name="embedding", type_code=16390, type_display="vector"),
         ]
         mock_cursor.description = description
 

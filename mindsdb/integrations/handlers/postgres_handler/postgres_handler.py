@@ -84,7 +84,7 @@ def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
     description: list[PGColumn] = cursor.description
     mysql_types: list[MYSQL_DATA_TYPE] = []
     for column in description:
-        if column.type_display == 'vector':
+        if column.type_display == "vector":
             # 'vector' is type of pgvector extension, added here as text to not import pgvector
             # NOTE: data returned as numpy array
             mysql_types.append(MYSQL_DATA_TYPE.VECTOR)

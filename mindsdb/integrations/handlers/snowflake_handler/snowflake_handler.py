@@ -89,7 +89,7 @@ def _make_table_response(result: DataFrame, cursor: SnowflakeCursor) -> Response
         if description_column_type in ("OBJECT", "ARRAY"):
             mysql_types.append(MYSQL_DATA_TYPE.JSON)
             continue
-        if description_column_type == 'VECTOR':
+        if description_column_type == "VECTOR":
             mysql_types.append(MYSQL_DATA_TYPE.VECTOR)
             continue
         if pd_types.is_integer_dtype(column_dtype):

@@ -364,7 +364,7 @@ DATA_C_TYPE_MAP = {
     ),
     MYSQL_DATA_TYPE.VECTOR: CTypeProperties(
         C_TYPES.MYSQL_TYPE_VECTOR, 4096, flags=[FIELD_FLAG.BLOB, FIELD_FLAG.BINARY_COLLATION]
-    )
+    ),
 }
 
 

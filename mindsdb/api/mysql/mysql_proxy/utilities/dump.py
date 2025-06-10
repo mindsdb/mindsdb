@@ -233,7 +233,7 @@ def _dump_vector(value: Any) -> bytes | None:
         bytes | None: The bytes representation of the vector value or None if the value is None
     """
     if isinstance(value, (array, list, np.ndarray)):
-        return b''.join([struct.pack('<f', el) for el in value])
+        return b"".join([struct.pack("<f", el) for el in value])
     elif pd.isna(value):
         return None
     err_msg = f"Unexpected value type for VECTOR: {type(value)}, {value}"

@@ -63,10 +63,6 @@ def _make_table_response(result: list[dict], cursor: mysql.connector.cursor.MySQ
             mysql_types.append(reverse_c_type_map[type_int])
             continue
 
-        if type_int == C_TYPES.MYSQL_TYPE_JSON:
-            mysql_types.append(reverse_c_type_map[type_int])
-            continue
-
         if type_int == C_TYPES.MYSQL_TYPE_BLOB:
             # region determine text/blob type by flags
             # Unfortunately, there is no way to determine particular type of text/blob column by flags.

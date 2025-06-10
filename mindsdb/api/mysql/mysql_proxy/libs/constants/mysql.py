@@ -185,6 +185,7 @@ class MYSQL_DATA_TYPE(enum.Enum):
     BIT = "BIT"
     BOOL = "BOOL"
     BOOLEAN = "BOOLEAN"
+    JSON = "JSON"
 
 
 # Default values for attributes of MySQL data types as they appear in information_schema.columns
@@ -357,6 +358,9 @@ DATA_C_TYPE_MAP = {
     MYSQL_DATA_TYPE.BIT: CTypeProperties(C_TYPES.MYSQL_TYPE_BIT, 8, [FIELD_FLAG.UNSIGNED]),
     MYSQL_DATA_TYPE.BOOL: CTypeProperties(C_TYPES.MYSQL_TYPE_TINY, 1),
     MYSQL_DATA_TYPE.BOOLEAN: CTypeProperties(C_TYPES.MYSQL_TYPE_TINY, 1),
+    MYSQL_DATA_TYPE.JSON: CTypeProperties(
+        C_TYPES.MYSQL_TYPE_JSON, flags=[FIELD_FLAG.BLOB, FIELD_FLAG.BINARY_COLLATION]
+    ),
 }
 
 

@@ -16,6 +16,7 @@ import pandas as pd
 from pandas import DataFrame
 
 from base_handler_test import BaseDatabaseHandlerTest
+from mindsdb.integrations.handlers.snowflake_handler.snowflake_handler import SnowflakeHandler
 from mindsdb.integrations.libs.response import HandlerResponse as Response, INF_SCHEMA_COLUMNS_NAMES_SET, RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
@@ -1096,6 +1097,57 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                 "D_TIMESTAMP_NTZ_P": pd.Series([pd.Timestamp("2023-10-15 14:30:45.123456")], dtype="datetime64[ns]"),
                 "D_TIMESTAMP_TZ": pd.Series([pd.Timestamp("2023-10-15 11:30:45.123456789")], dtype="datetime64[ns]"),
                 "D_TIMESTAMP_TZ_P": pd.Series([pd.Timestamp("2023-10-15 11:30:45.123456789")], dtype="datetime64[ns]"),
+            }
+        )
+        response = self.handler.native_query(query_str)
+        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertTrue(response.data_frame.equals(expected_result_df))
+        # endregion
+
+        # region json/array types
+        """Test request:
+
+        select * from demo_snowflake (
+            select
+                OBJECT_CONSTRUCT('name', 'Jones', 'age', 42) as t_json,
+                ARRAY_CONSTRUCT(12, 'twelve', NULL) as t_array
+        );
+        """
+        input_data = pd.DataFrame(
+            {
+                "T_JSON": pd.Series([{"name": "Jones", "age": 42}], dtype="object"),
+                # snowflake returns arrays as text
+                "T_ARRAY": pd.Series(['[\n  12,\n  "twelve",\n  undefined\n]'], dtype="object"),
+            }
+        )
+        mock_cursor.fetch_pandas_batches.return_value = iter([input_data])
+        mock_cursor.description = [
+            ColumnDescription(
+                name="T_JSON",
+                type_code=9,
+                display_size=None,
+                internal_size=None,
+                precision=None,
+                scale=None,
+                is_nullable=True,
+            ),
+            ColumnDescription(
+                name="T_ARRAY",
+                type_code=10,
+                display_size=None,
+                internal_size=None,
+                precision=None,
+                scale=None,
+                is_nullable=True,
+            ),
+        ]
+
+        excepted_mysql_types = [MYSQL_DATA_TYPE.JSON, MYSQL_DATA_TYPE.JSON]
+
+        expected_result_df = pd.DataFrame(
+            {
+                "T_JSON": pd.Series([{"name": "Jones", "age": 42}], dtype="object"),
+                "T_ARRAY": pd.Series(['[\n  12,\n  "twelve",\n  undefined\n]'], dtype="object"),
             }
         )
         response = self.handler.native_query(query_str)

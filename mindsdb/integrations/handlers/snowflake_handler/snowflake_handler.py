@@ -86,6 +86,9 @@ def _make_table_response(result: DataFrame, cursor: SnowflakeCursor) -> Response
     for column in description:
         column_dtype = result[column.name].dtype
         description_column_type = connector.constants.FIELD_ID_TO_NAME.get(column.type_code)
+        if description_column_type in ("OBJECT", "ARRAY"):
+            mysql_types.append(MYSQL_DATA_TYPE.JSON)
+            continue
         if pd_types.is_integer_dtype(column_dtype):
             column_dtype_name = column_dtype.name
             if column_dtype_name in ("int8", "Int8"):

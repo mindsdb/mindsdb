@@ -60,6 +60,7 @@ def _map_type(internal_type_name: str | None) -> MYSQL_DATA_TYPE:
         ("time", "time without time zone", "time with time zone"): MYSQL_DATA_TYPE.TIME,
         ("boolean",): MYSQL_DATA_TYPE.BOOL,
         ("bytea",): MYSQL_DATA_TYPE.BINARY,
+        ("json", "jsonb"): MYSQL_DATA_TYPE.JSON,
     }
 
     for db_types_list, mysql_data_type in types_map.items():
@@ -85,8 +86,21 @@ def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
     for column in description:
         pg_type_info: TypeInfo = pg_types.get(column.type_code)
         if pg_type_info is None:
-            logger.warning(f"Postgres handler: unknown type: {column.type_code}")
-        regtype: str = pg_type_info.regtype if pg_type_info is not None else None
+            # postgres may return 'polymorphic type', which are not present in the pg_types
+            # list of 'polymorphic type' can be obtained:
+            # SELECT oid, typname, typcategory FROM pg_type WHERE typcategory = 'P' ORDER BY oid;
+            if column.type_code in (2277, 5078):
+                # anyarray, anycompatiblearray
+                regtype = "json"
+            else:
+                logger.warning(f"Postgres handler: unknown type: {column.type_code}")
+                mysql_types.append(MYSQL_DATA_TYPE.TEXT)
+                continue
+        elif pg_type_info.array_oid == column.type_code:
+            # it is any array, handle is as json
+            regtype: str = "json"
+        else:
+            regtype: str = pg_type_info.regtype if pg_type_info is not None else None
         mysql_type = _map_type(regtype)
         mysql_types.append(mysql_type)
 

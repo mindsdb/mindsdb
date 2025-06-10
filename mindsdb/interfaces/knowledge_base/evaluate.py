@@ -440,8 +440,7 @@ class EvaluateDocID(EvaluateBase):
             {"role": "system", "content": GENERATE_QA_SYSTEM_PROMPT},
             {"role": "user", "content": f"\n\nText:\n{text}\n\n"},
         ]
-        response = self.llm_client.completion(messages)
-        answer = response.choices[0].message.content
+        answer = self.llm_client.completion(messages)
         try:
             output = json.loads(answer)
         except json.JSONDecodeError:

@@ -1111,7 +1111,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         select * from demo_snowflake (
             select
                 OBJECT_CONSTRUCT('name', 'Jones', 'age', 42) as t_json,
-                ARRAY_CONSTRUCT(12, 'twelve', NULL) as t_array
+                ARRAY_CONSTRUCT(12, 'twelve', NULL) as t_array,
                 [1.1,2.2,3.3]::VECTOR(FLOAT,3) as t_vector
         );
         """

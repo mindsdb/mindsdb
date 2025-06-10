@@ -346,12 +346,6 @@ class KBTable(MdbTable):
 
         data = []
 
-        project_controller = ProjectController()
-        project_names = {
-            i.id: i.name
-            for i in project_controller.get_list()
-        }
-
         for kb in kb_list:
 
             query_item = {}
@@ -364,7 +358,7 @@ class KBTable(MdbTable):
 
             data.append((
                 kb['name'],
-                project_names.get(kb['project_id']),
+                kb['project_name'],
                 to_json(kb['embedding_model']),
                 to_json(kb['reranking_model']),
                 kb['vector_database'] + '.' + kb['vector_database_table'],

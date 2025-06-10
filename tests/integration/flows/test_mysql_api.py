@@ -340,7 +340,7 @@ class TestMySqlApi(BaseStuff):
                 assert row[column_name].minute == 0
                 assert row[column_name].second == 0
                 row[column_name] = row[column_name].date()
-            elif column_name in ('t_json', 't_jsonb') and self.use_binary:
+            elif column_name in ("t_json", "t_jsonb") and self.use_binary:
                 # NOTE 'binary' protocol returns json as bytearray.
                 # by some reason, if use pytest then result is bytes instead of bytearray, but that is ok
                 row[column_name] = row[column_name].decode()

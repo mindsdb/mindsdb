@@ -14,7 +14,7 @@ from mindsdb.interfaces.data_catalog.data_catalog_loader import DataCatalogLoade
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.interfaces.model.model_controller import ModelController
-from mindsdb.interfaces.skills.skills_controller import SkillsController
+from mindsdb.interfaces.skills.skills_controller import SkillsController, SkillType
 from mindsdb.utilities.config import config
 from mindsdb.utilities import log
 
@@ -254,22 +254,6 @@ class AgentsController:
 
         # Auto-create SQL skill if no skills are provided but include_tables or include_knowledge_bases params are provided
         if not skills and (include_tables or include_knowledge_bases):
-            # Run Data Catalog loader if enabled, for auto-created SQL skills
-            if config.get("data_catalog", {}).get("enabled", False):
-                # TODO: Is it possible to create a skill with complete access to the database with the new agent syntax?
-                # TODO: Handle the case where `ignore_tables` is provided. Is this a valid parameter?
-                # TODO: Handle knowledge bases?
-                if include_tables:
-                    database_table_map = {}
-
-                    for table in params["include_tables"]:
-                        parts = table.split(".", 1)
-                        database_table_map[parts[0]] = database_table_map.get(parts[0], []) + [parts[1]]
-
-                    for database_name, table_names in database_table_map.items():
-                        data_catalog_loader = DataCatalogLoader(database_name=database_name, table_names=table_names)
-                        data_catalog_loader.load_metadata()
-            
             # Create a default SQL skill
             skill_name = f"{name}_sql_skill"
             skill_params = {
@@ -342,12 +326,29 @@ class AgentsController:
                 db.session.rollback()
                 raise ValueError(f"Skill with name does not exist: {skill_name}")
 
-            # Add table restrictions if this is a text2sql skill
-            if existing_skill.type == "sql" and (include_tables or ignore_tables):
-                parameters["tables"] = include_tables or ignore_tables
-
-            # Add knowledge base restrictions if this is a text2sql skill
             if existing_skill.type == "sql":
+                # Run Data Catalog loader if enabled
+                if config.get("data_catalog", {}).get("enabled", False):
+                    if include_tables:
+                        database_table_map = {}
+                        for table in include_tables:
+                            parts = table.split(".", 1)
+                            database_table_map[parts[0]] = database_table_map.get(parts[0], []) + [parts[1]]
+
+                        for database_name, table_names in database_table_map.items():
+                            data_catalog_loader = DataCatalogLoader(database_name=database_name, table_names=table_names)
+                            data_catalog_loader.load_metadata()
+
+                    elif "database" in parameters:
+                        data_catalog_loader = DataCatalogLoader(
+                            database_name=parameters["database"], table_names=parameters["tables"] if "tables" in parameters else None
+                        )
+                        data_catalog_loader.load_metadata()
+
+                # Add table restrictions if this is a text2sql skill
+                if (include_tables or ignore_tables):
+                    parameters["tables"] = include_tables or ignore_tables
+
                 # Pass database parameter if provided
                 if database and "database" not in parameters:
                     parameters["database"] = database
@@ -372,14 +373,6 @@ class AgentsController:
                 if knowledge_base_database and "knowledge_base_database" not in existing_skill.params:
                     existing_skill.params["knowledge_base_database"] = knowledge_base_database
                     flag_modified(existing_skill, "params")
-
-            # Run Data Catalog loader if enabled, for existing SQL skills
-            if config.get("data_catalog", {}).get("enabled", False):
-                if 'database' in parameters:
-                    data_catalog_loader = DataCatalogLoader(
-                        database_name=parameters["database"], table_names=parameters["tables"] if "tables" in parameters else None
-                    )
-                    data_catalog_loader.load_metadata()
 
             association = db.AgentSkillsAssociation(parameters=parameters, agent=agent, skill=existing_skill)
             db.session.add(association)

@@ -402,11 +402,13 @@ class SQLAgent:
         """
         if config.get("data_catalog", {}).get("enabled", False):
             database_table_map = {}
-            for name in self.get_usable_table_names():
+            for name in (table_names or self.get_usable_table_names()):
                 name = name.replace("`", "")
 
-                # TODO: Can there be situations where the database name is returned from the above method?
                 parts = name.split(".", 1)
+                if len(parts) == 1:
+                    raise ValueError(f"Invalid table name: {name}. Expected format is 'database.table'.")
+
                 database_table_map[parts[0]] = database_table_map.get(parts[0], []) + [parts[1]]
 
             data_catalog_str = ""
@@ -430,8 +432,8 @@ class SQLAgent:
                 else:
                     all_tables.append(Identifier(name))
 
-            # if table_names is not None:
-            #     all_tables = self._resolve_table_names(table_names, all_tables)
+            if table_names is not None:
+                all_tables = self._resolve_table_names(table_names, all_tables)
 
             tables_info = []
             for table in all_tables:

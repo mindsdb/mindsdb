@@ -1,7 +1,9 @@
-from typing import Text, Dict, Any
-from google.api_core.exceptions import BadRequest
-from sqlalchemy_bigquery.base import BigQueryDialect
+import concurrent.futures
 from google.cloud.bigquery import Client, QueryJobConfig
+from google.api_core.exceptions import BadRequest
+import pandas as pd
+from sqlalchemy_bigquery.base import BigQueryDialect
+from typing import Any, Dict, Optional, Text
 
 from mindsdb.utilities import log
 from mindsdb_sql_parser.ast.base import ASTNode
@@ -240,6 +242,80 @@ class BigQueryHandler(MetaDatabaseHandler):
 
         result = self.native_query(query)
         return result
+    
+    def meta_get_column_statistics(self, table_names: Optional[list] = None) -> Response:
+        """
+        Retrieves column statistics for the specified tables (or all tables if no list is provided).
+
+        Args:
+            table_names (list): A list of table names for which to retrieve column statistics.
+
+        Returns:
+            Response: A response object containing the column statistics.
+        """
+        def meta_get_column_statistics_for_table(table_name: str, columns: list) -> Response:
+            """
+            Retrieves statistics for the specified columns in a table.
+
+            Args:
+                table_name (str): The name of the table.
+                columns (list): A list of column names to retrieve statistics for.
+
+            Returns:
+                Response: A response object containing the column statistics.
+            """
+            queries = []
+            for column in columns:
+                queries.append(
+                    f"""
+                    WITH column_stats AS (
+                        SELECT
+                            '{table_name}' AS table_name,
+                            '{column}' AS column_name,
+                            SAFE_DIVIDE(COUNTIF({column} IS NULL), COUNT(*)) * 100 AS null_percentage,
+                            MIN({column}) AS minimum_value,
+                            MAX({column}) AS maximum_value,
+                            COUNT(DISTINCT {column}) AS distinct_values_count
+                        FROM
+                            `{self.connection_data['project_id']}.{self.connection_data['dataset']}.{table_name}`
+                    )
+                    SELECT * FROM column_stats
+                    """
+                )
+
+            query = " UNION ALL ".join(queries)
+            result = self.native_query(query)
+            return result
+        
+        meta_columns = self.meta_get_columns(table_names)
+        grouped_columns = meta_columns.data_frame.groupby('table_name').agg({
+            'column_name': list,
+        }).reset_index()
+        
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
+        futures = []
+
+        results = []
+        with executor:
+            for _, row in grouped_columns.iterrows():
+                table_name = row['table_name']
+                columns = row['column_name']
+                futures.append(executor.submit(meta_get_column_statistics_for_table, table_name, columns))
+
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    result = future.result()
+                    if result.resp_type != RESPONSE_TYPE.TABLE:
+                        results.append(result.data_frame)
+                    else:
+                        logger.error(f"Error retrieving column statistics for table {table_name}: {result.error_message}")
+                except Exception as e:
+                    logger.error(f"Exception occurred while retrieving column statistics for table {table_name}: {e}")
+            
+        return Response(
+            RESPONSE_TYPE.TABLE,
+            pd.concat(results, ignore_index=True) if results else pd.DataFrame()
+        )
 
     def meta_get_primary_keys(self, table_names: Optional[list] = None) -> Response:
         """

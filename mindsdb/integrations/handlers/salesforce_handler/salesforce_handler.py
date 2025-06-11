@@ -170,6 +170,25 @@ class SalesforceHandler(MetaAPIHandler):
             ]
 
         return self.resource_names
+    
+    def meta_get_handler_info(self, **kwargs) -> str:
+        """
+        Retrieves information about the design and implementation of the API handler.
+        This should include, but not be limited to, the following:
+        - The type of SQL queries and operations that the handler supports.
+        - etc.
+
+        Args:
+            kwargs: Additional keyword arguments that may be used in generating the handler information.
+
+        Returns:
+            str: A string containing information about the API handler's design and implementation.
+        """
+        return (
+            "This integration with Salesforce allows resources to be queried using SOQL (Salesforce Object Query Language). "
+            "Only queries that are compatible with SOQL are supported. "
+            "This means that certain SQL features, such as explicit joins, aliases, certain functions etc., are not supported. "
+        )
 
     def meta_get_tables(self, table_names: Optional[List[str]] = None) -> Response:
         """

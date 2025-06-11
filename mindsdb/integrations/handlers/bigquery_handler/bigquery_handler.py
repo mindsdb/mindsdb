@@ -199,7 +199,7 @@ class BigQueryHandler(MetaDatabaseHandler):
                 t.table_type,
                 st.row_count
             FROM 
-                `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.TABLES AS t`
+                `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.TABLES` AS t
             JOIN 
                 `{self.connection_data['project_id']}.{self.connection_data['dataset']}.__TABLES__` AS st
             ON 
@@ -242,7 +242,7 @@ class BigQueryHandler(MetaDatabaseHandler):
 
         result = self.native_query(query)
         return result
-    
+
     def meta_get_column_statistics(self, table_names: Optional[list] = None) -> Response:
         """
         Retrieves column statistics for the specified tables (or all tables if no list is provided).
@@ -291,7 +291,7 @@ class BigQueryHandler(MetaDatabaseHandler):
         grouped_columns = meta_columns.data_frame.groupby('table_name').agg({
             'column_name': list,
         }).reset_index()
-        
+
         executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
         futures = []
 
@@ -311,7 +311,7 @@ class BigQueryHandler(MetaDatabaseHandler):
                         logger.error(f"Error retrieving column statistics for table {table_name}: {result.error_message}")
                 except Exception as e:
                     logger.error(f"Exception occurred while retrieving column statistics for table {table_name}: {e}")
-            
+
         return Response(
             RESPONSE_TYPE.TABLE,
             pd.concat(results, ignore_index=True) if results else pd.DataFrame()

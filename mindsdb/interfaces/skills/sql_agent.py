@@ -402,7 +402,7 @@ class SQLAgent:
         """
         if config.get("data_catalog", {}).get("enabled", False):
             database_table_map = {}
-            for name in (table_names or self.get_usable_table_names()):
+            for name in table_names or self.get_usable_table_names():
                 name = name.replace("`", "")
 
                 parts = name.split(".", 1)

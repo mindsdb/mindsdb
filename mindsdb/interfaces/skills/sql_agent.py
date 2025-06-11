@@ -406,6 +406,8 @@ class SQLAgent:
                 name = name.replace("`", "")
 
                 parts = name.split(".", 1)
+                # TODO: Will there be situations where parts has more than 2 elements? Like a schema?
+                # This is unlikely given that we default to a single schema per database.
                 if len(parts) == 1:
                     raise ValueError(f"Invalid table name: {name}. Expected format is 'database.table'.")
 

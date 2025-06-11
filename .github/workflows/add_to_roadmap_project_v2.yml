@@ -1,4 +1,8 @@
 name: Add issue to roadmap project
+
+permissions:
+  contents: read
+
 on:
   issues:
     types:

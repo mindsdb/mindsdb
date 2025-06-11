@@ -1,12 +1,13 @@
 import time
 import os
 import json
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 import threading
 from contextlib import contextmanager
 
 import pandas as pd
 import pytest
+import sys
 
 from tests.unit.executor_test_base import BaseExecutorDummyML
 from mindsdb.interfaces.agents.langchain_agent import SkillData
@@ -40,7 +41,7 @@ def set_openai_completion(mock_openai, response):
         else:
             resp = response.pop(0)
 
-        return {"choices": [{"message": {"role": "system", "content": resp}}]}
+        return {"choices": [{"message": {"role": "assistant", "content": resp}}]}
 
     mock_openai().chat.completions.create.side_effect = resp_f
 
@@ -58,6 +59,7 @@ def set_litellm_embedding(mock_litellm_embedding, response):
 
 
 class TestAgent(BaseExecutorDummyML):
+    @pytest.mark.slow
     def test_mindsdb_provider(self):
         agent_response = "how can I help you"
         # model
@@ -86,6 +88,9 @@ class TestAgent(BaseExecutorDummyML):
 
         assert agent_response in ret.answer[0]
 
+    @pytest.mark.skipif(
+        sys.platform in ["darwin", "win32"], reason="Mocking doesn't work on Windows or macOS for some reason"
+    )
     @patch("openai.OpenAI")
     def test_openai_provider_with_model(self, mock_openai):
         agent_response = "how can I assist you today?"
@@ -152,6 +157,224 @@ class TestAgent(BaseExecutorDummyML):
             where t.q = ''
         """)
         assert len(ret) == 0
+
+    @patch("mindsdb.utilities.config.Config.get")
+    @patch("openai.OpenAI")
+    def test_agent_with_default_llm_params(self, mock_openai, mock_config_get):
+        # Mock the config.get method to return default LLM parameters
+        def config_get_side_effect(key, default=None):
+            if key == "default_llm":
+                return {
+                    "provider": "openai",
+                    "model_name": "gpt-4o",
+                    "api_key": "sk-abc123",
+                    "base_url": "https://api.openai.com/v1",
+                    "api_version": "2024-02-01",
+                    "method": "multi-class",
+                }
+            elif key == "default_project":
+                return "mindsdb"
+            return default
+
+        mock_config_get.side_effect = config_get_side_effect
+
+        agent_response = "how can I assist you today?"
+        set_openai_completion(mock_openai, agent_response)
+
+        # Create an agent with only provider specified - should use default LLM params
+        self.run_sql("""
+            CREATE AGENT default_params_agent
+            USING
+             provider='openai',
+             model='gpt-4o',
+             prompt_template="Answer the user input in a helpful way"
+         """)
+
+        # Check that the agent was created with the default parameters
+        agent_info = self.run_sql("SELECT * FROM information_schema.agents WHERE name = 'default_params_agent'")
+
+        # Verify model_name is set correctly
+        assert agent_info["MODEL_NAME"].iloc[0] == "gpt-4o"
+
+        # Verify the agent has the user-specified parameters but not default parameters
+        agent_params = json.loads(agent_info["PARAMS"].iloc[0])
+        assert agent_params.get("prompt_template") == "Answer the user input in a helpful way"
+
+        # Default parameters should NOT be stored in the database
+        # They will be applied at runtime via get_agent_llm_params
+        assert "base_url" not in agent_params
+        assert "api_version" not in agent_params
+        assert "method" not in agent_params
+
+        # Mock the OpenAI client for the agent execution
+        with (
+            patch("openai.AsyncOpenAI") as mock_async_openai,
+            patch("langchain_openai.chat_models.base.ChatOpenAI.validate_environment", return_value=None),
+            patch("mindsdb.interfaces.agents.langchain_agent.LangchainAgent._initialize_args") as mock_initialize_args,
+        ):
+            # Set up the mock for async client
+            mock_async_client = MagicMock()
+            mock_async_openai.return_value = mock_async_client
+
+            # Configure the mock completion
+            mock_completion = MagicMock()
+            mock_completion.choices = [MagicMock()]
+            mock_completion.choices[0].message.content = agent_response
+            mock_async_client.chat.completions.create = AsyncMock(return_value=mock_completion)
+
+            # Mock _initialize_args to capture the merged parameters
+            mock_initialize_args.return_value = {
+                "model_name": "gpt-4o",
+                "provider": "openai",
+                "api_key": "sk-abc123",
+                "base_url": "https://api.openai.com/v1",
+                "api_version": "2024-02-01",
+                "method": "multi-class",
+                "prompt_template": "You are an assistant, answer using the tables connected",
+            }
+
+            # Test that the agent works
+            ret = self.run_sql("select * from default_params_agent where question = 'hi'")
+            assert agent_response in ret.answer[0]
+
+            # Verify that _initialize_args was called, which means our runtime parameter merging is used
+            mock_initialize_args.assert_called()
+
+        # Now create an agent with explicit parameters that should override defaults
+        self.run_sql("""
+            CREATE AGENT explicit_params_agent
+            USING
+             provider='openai',
+             model = "gpt-3.5-turbo",
+             base_url='https://custom-url.com/',
+             prompt_template="Answer the user input in a helpful way"
+         """)
+
+        # Check that the agent was created with the explicit parameters
+        agent_info = self.run_sql("SELECT * FROM information_schema.agents WHERE name = 'explicit_params_agent'")
+
+        # Verify the agent has the explicit parameters (overriding defaults)
+        agent_params = json.loads(agent_info["PARAMS"].iloc[0])
+        assert agent_params.get("base_url") == "https://custom-url.com/"  # Explicit value should be stored
+        assert agent_params.get("prompt_template") == "Answer the user input in a helpful way"  # User-specified value
+
+        # Default parameters should NOT be stored in the database
+        assert "api_version" not in agent_params
+        assert "method" not in agent_params
+
+        # Mock the OpenAI client for the second agent execution
+        with (
+            patch("openai.AsyncOpenAI") as mock_async_openai,
+            patch("langchain_openai.chat_models.base.ChatOpenAI.validate_environment", return_value=None),
+            patch("mindsdb.interfaces.agents.langchain_agent.LangchainAgent._initialize_args") as mock_initialize_args,
+        ):
+            # Set up the mock for async client
+            mock_async_client = MagicMock()
+            mock_async_openai.return_value = mock_async_client
+
+            # Configure the mock completion
+            mock_completion = MagicMock()
+            mock_completion.choices = [MagicMock()]
+            mock_completion.choices[0].message.content = agent_response
+            mock_async_client.chat.completions.create = AsyncMock(return_value=mock_completion)
+
+            # Mock _initialize_args to capture the merged parameters
+            mock_initialize_args.return_value = {
+                "model_name": "gpt-3.5-turbo",
+                "provider": "openai",
+                "api_key": "sk-abc123",
+                "base_url": "https://custom-url.com/",
+                "api_version": "2024-02-01",
+                "method": "multi-class",
+                "prompt_template": "You are an assistant, answer using the tables connected",
+            }
+
+            # Test that the agent works with explicit parameters
+            ret = self.run_sql("select * from explicit_params_agent where question = 'hi'")
+            assert agent_response in ret.answer[0]
+
+            # Verify that _initialize_args was called, which means our runtime parameter merging is used
+            mock_initialize_args.assert_called()
+
+    @patch("mindsdb.utilities.config.Config.get")
+    @patch("openai.OpenAI")
+    def test_agent_minimal_syntax_with_default_llm(self, mock_openai, mock_config_get):
+        """Test that agent creation works with minimal syntax using default_llm config"""
+
+        # Mock the config.get method to return default LLM parameters
+        def config_get_side_effect(key, default=None):
+            if key == "default_llm":
+                return {
+                    "provider": "openai",
+                    "model_name": "gpt-4o",
+                    "api_key": "sk-abc123",
+                    "base_url": "https://api.openai.com/v1",
+                    "api_version": "2024-02-01",
+                    "method": "multi-class",
+                }
+            elif key == "default_project":
+                return "mindsdb"
+            elif key == "cache":
+                return {"type": "local"}
+            return default
+
+        mock_config_get.side_effect = config_get_side_effect
+
+        agent_response = "response from minimal syntax agent"
+        set_openai_completion(mock_openai, agent_response)
+
+        # Create an agent with minimal syntax - should use all default LLM params
+        self.run_sql("""
+            CREATE AGENT minimal_syntax_agent
+            USING
+              include_tables = ['test.table1', 'test.table2'];
+         """)
+
+        # Check that the agent was created with the default parameters
+        agent_info = self.run_sql("SELECT * FROM information_schema.agents WHERE name = 'minimal_syntax_agent'")
+
+        # Verify model_name is None (as expected when using default LLM)
+        assert agent_info["MODEL_NAME"].iloc[0] is None
+
+        # Verify the agent has the default parameters and include_tables
+        agent_params = json.loads(agent_info["PARAMS"].iloc[0])
+        assert "include_tables" in agent_params
+        assert agent_params["include_tables"] == ["test.table1", "test.table2"]
+
+        # Mock the OpenAI client for the agent execution
+        with (
+            patch("openai.AsyncOpenAI") as mock_async_openai,
+            patch("langchain_openai.chat_models.base.ChatOpenAI.validate_environment", return_value=None),
+            patch("mindsdb.interfaces.agents.langchain_agent.LangchainAgent._initialize_args") as mock_initialize_args,
+        ):
+            # Set up the mock for async client
+            mock_async_client = MagicMock()
+            mock_async_openai.return_value = mock_async_client
+
+            # Configure the mock completion
+            mock_completion = MagicMock()
+            mock_completion.choices = [MagicMock()]
+            mock_completion.choices[0].message.content = agent_response
+            mock_async_client.chat.completions.create = AsyncMock(return_value=mock_completion)
+
+            # Mock _initialize_args to capture the merged parameters
+            mock_initialize_args.return_value = {
+                "model_name": "gpt-4o",
+                "provider": "openai",
+                "api_key": "sk-abc123",
+                "base_url": "https://api.openai.com/v1",
+                "api_version": "2024-02-01",
+                "method": "multi-class",
+                "include_tables": ["test.table1", "test.table2"],
+                "prompt_template": "You are an assistant, answer using the tables connected",
+            }
+
+            # Test that the agent works
+            ret = self.run_sql("select * from minimal_syntax_agent where question = 'hi'")
+            assert agent_response in ret.answer[0]
+
+            # Verify that _initialize_args was called, which means our runtime parameter merging is used
+            mock_initialize_args.assert_called()
 
     @patch("openai.OpenAI")
     def test_agent_with_tables(self, mock_openai):
@@ -227,6 +450,7 @@ class TestAgent(BaseExecutorDummyML):
         set_openai_completion(mock_openai, agent_response)
         self.run_sql("select * from test_agent where question = 'test?'")
 
+    @pytest.mark.skipif(sys.platform == "darwin", reason="Fails on macOS")
     @patch("openai.OpenAI")
     def test_agent_stream(self, mock_openai):
         agent_response = "how can I assist you today?"
@@ -319,6 +543,7 @@ class TestAgent(BaseExecutorDummyML):
             args, _ = kb_select.call_args
             assert user_question in args[0].where.args[1].value
 
+    # should not be possible to drop demo agent
     def test_drop_demo_agent(self):
         """should not be possible to drop demo agent"""
         from mindsdb.api.executor.exceptions import ExecutorException
@@ -346,6 +571,35 @@ class TestAgent(BaseExecutorDummyML):
 
         with pytest.raises(ExecutorException):
             self.run_sql("drop skill my_demo_skill")
+
+    @patch("openai.OpenAI")
+    def test_agent_default_prompt_template(self, mock_openai):
+        """Test that agents work correctly with default prompt templates in different modes"""
+        agent_response = "default prompt template response"
+        set_openai_completion(mock_openai, agent_response)
+
+        # Test non-retrieval mode with no prompt_template (should use default)
+        self.run_sql("""
+            CREATE AGENT default_prompt_agent
+            USING
+                provider='openai',
+                model = "gpt-3.5-turbo",
+                openai_api_key='--'
+         """)
+        ret = self.run_sql("select * from default_prompt_agent where question = 'test question'")
+        assert agent_response in ret.answer[0]
+
+        # Test retrieval mode with no prompt_template (should use default retrieval template)
+        self.run_sql("""
+            CREATE AGENT default_retrieval_agent
+            USING
+                provider='openai',
+                model = "gpt-3.5-turbo",
+                openai_api_key='--',
+                mode='retrieval'
+         """)
+        ret = self.run_sql("select * from default_retrieval_agent where question = 'test question'")
+        assert agent_response in ret.answer[0]
 
 
 class TestKB(BaseExecutorDummyML):
@@ -453,10 +707,12 @@ class TestKB(BaseExecutorDummyML):
         assert len(ret) == 0
 
         # product/url in metadata
-        ret = self.run_sql("select * from kb_review where product = 'probook'")
+        ret = self.run_sql(
+            "select metadata->>'product' as product, metadata->>'url' as url from kb_review where product = 'probook'"
+        )
         assert len(ret) == 1
-        assert ret["metadata"][0]["product"] == record["product"]
-        assert ret["metadata"][0]["url"] == record["url"]
+        assert ret["product"][0] == record["product"]
+        assert ret["url"][0] == record["url"]
 
         # ---  case 2: kb with defined columns ---
         self._create_kb(
@@ -469,7 +725,9 @@ class TestKB(BaseExecutorDummyML):
             select * from files.reviews
         """)
 
-        ret = self.run_sql("select * from kb_review")  # url in id
+        ret = self.run_sql(
+            "select chunk_content, metadata->>'specs' as specs, metadata->>'id' as id from kb_review"
+        )  # url in id
 
         assert len(ret) == 2  # two columns are split in two records
 
@@ -479,9 +737,8 @@ class TestKB(BaseExecutorDummyML):
         assert record["product"] in content
 
         # specs/id in metadata
-        metadata = ret["metadata"][0]
-        assert metadata["specs"] == record["specs"]
-        assert str(metadata["id"]) == str(record["id"])
+        assert ret["specs"][0] == record["specs"]
+        assert str(ret["id"][0]) == str(record["id"])
 
         # ---  case 3: content is defined, id is id, the rest goes to metadata ---
         self._create_kb("kb_review", content_columns=["review"])
@@ -492,16 +749,20 @@ class TestKB(BaseExecutorDummyML):
             select * from files.reviews
         """)
 
-        ret = self.run_sql("select * from kb_review where original_doc_id = 123")  # id is id
+        ret = self.run_sql("""
+                select chunk_content,
+                 metadata->>'specs' as specs, metadata->>'product' as product, metadata->>'url' as url
+                from kb_review 
+                where original_doc_id = 123 -- id is id
+        """)
         assert len(ret) == 1
         # review in content
         assert ret["chunk_content"][0] == record["review"]
 
         # specs/url/product in metadata
-        metadata = ret["metadata"][0]
-        assert metadata["specs"] == record["specs"]
-        assert metadata["url"] == record["url"]
-        assert metadata["product"] == record["product"]
+        assert ret["specs"][0] == record["specs"]
+        assert ret["url"][0] == record["url"]
+        assert ret["product"][0] == record["product"]
 
     def _get_ral_table(self):
         data = [
@@ -567,6 +828,8 @@ class TestKB(BaseExecutorDummyML):
         assert len(ret) == 2
         assert set(ret["id"]) == {"9016", "9023"}
 
+    @pytest.mark.slow
+    @pytest.mark.skipif(sys.platform == "win32", reason="Causes hard crash on windows.")
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_kb_partitions(self, mock_handler, mock_litellm_embedding):

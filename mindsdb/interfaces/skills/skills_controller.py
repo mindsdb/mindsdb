@@ -7,8 +7,12 @@ from sqlalchemy.orm.attributes import flag_modified
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.data_catalog.data_catalog_loader import DataCatalogLoader
+from mindsdb.interfaces.skills.skill_tool import SkillType
 from mindsdb.utilities.config import config
+from mindsdb.utilities import log
 
+
+logger = log.getLogger(__name__)
 
 default_project = config.get("default_project")
 
@@ -96,11 +100,25 @@ class SkillsController:
             raise ValueError(f"Skill with name already exists: {name}")
 
         # Load metadata to data catalog (if enabled) if the skill is Text-to-SQL.
-        if config.get("data_catalog", {}).get("enabled", False) and type == "text2sql":
-            data_catalog_loader = DataCatalogLoader(
-                database_name=params["database"], table_names=params["tables"] if "tables" in params else None
-            )
-            data_catalog_loader.load_metadata()
+        if config.get("data_catalog", {}).get("enabled", False):
+            if type == SkillType.TEXT2SQL.value and "include_tables" in params:
+                # TODO: Is it possible to create a skill with complete access to the database with the new agent syntax?
+                # TODO: Handle the case where `ignore_tables` is provided. Is this a valid parameter?
+                # TODO: Knowledge Bases?
+                database_table_map = {}
+                for table in params["include_tables"]:
+                    parts = table.split(".", 1)
+                    database_table_map[parts[0]] = database_table_map.get(parts[0], []) + [parts[1]]
+
+                for database_name, table_names in database_table_map.items():
+                    data_catalog_loader = DataCatalogLoader(database_name=database_name, table_names=table_names)
+                    data_catalog_loader.load_metadata()
+
+            elif type in [SkillType.TEXT2SQL.value, SkillType.TEXT2SQL_LEGACY.value] and "database" in params:
+                data_catalog_loader = DataCatalogLoader(
+                    database_name=params["database"], table_names=params["tables"] if "tables" in params else None
+                )
+                data_catalog_loader.load_metadata()
 
         new_skill = db.Skills(
             name=name,

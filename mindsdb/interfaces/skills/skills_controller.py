@@ -6,8 +6,6 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
-from mindsdb.interfaces.data_catalog.data_catalog_loader import DataCatalogLoader
-from mindsdb.interfaces.skills.skill_tool import SkillType
 from mindsdb.utilities.config import config
 from mindsdb.utilities import log
 

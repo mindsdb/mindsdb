@@ -401,15 +401,28 @@ class SQLAgent:
         appended to each table description. This can increase performance as demonstrated in the paper.
         """
         if config.get("data_catalog", {}).get("enabled", False):
-            datasource = next(iter(self._mindsdb_db_struct), None)
-            data_catalog_reader_instance = DataCatalogReader(
-                database_name=datasource, table_names=self._tables_to_include
-            )
-            return data_catalog_reader_instance.read_metadata_as_string()
+            database_table_map = {}
+            for name in table_names or self.get_usable_table_names():
+                name = name.replace("`", "")
+
+                parts = name.split(".", 1)
+                # TODO: Will there be situations where parts has more than 2 elements? Like a schema?
+                # This is unlikely given that we default to a single schema per database.
+                if len(parts) == 1:
+                    raise ValueError(f"Invalid table name: {name}. Expected format is 'database.table'.")
+
+                database_table_map[parts[0]] = database_table_map.get(parts[0], []) + [parts[1]]
+
+            data_catalog_str = ""
+            for database_name, table_names in database_table_map.items():
+                data_catalog_reader = DataCatalogReader(database_name=database_name, table_names=table_names)
+
+                data_catalog_str += data_catalog_reader.read_metadata_as_string()
+
+            return data_catalog_str
+
         else:
-            """
-            TODO: Improve old logic without data catalog
-            """
+            # TODO: Improve old logic without data catalog
             all_tables = []
             for name in self.get_usable_table_names():
                 # remove backticks
@@ -421,8 +434,8 @@ class SQLAgent:
                 else:
                     all_tables.append(Identifier(name))
 
-            # if table_names is not None:
-            #     all_tables = self._resolve_table_names(table_names, all_tables)
+            if table_names is not None:
+                all_tables = self._resolve_table_names(table_names, all_tables)
 
             tables_info = []
             for table in all_tables:

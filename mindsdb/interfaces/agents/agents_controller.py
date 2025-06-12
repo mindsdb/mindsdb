@@ -1,5 +1,6 @@
 import datetime
-from typing import Dict, Iterator, List, Union, Tuple, Optional
+from typing import Dict, Iterator, List, Union, Tuple, Optional, Any
+import copy
 
 from langchain_core.tools import BaseTool
 from sqlalchemy.orm.attributes import flag_modified
@@ -14,14 +15,16 @@ from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.skills.skills_controller import SkillsController
 from mindsdb.utilities.config import config
+from mindsdb.utilities import log
+
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
-from .constants import ASSISTANT_COLUMN, SUPPORTED_PROVIDERS, PROVIDER_TO_MODELS
+from .constants import ASSISTANT_COLUMN, SUPPORTED_PROVIDERS, PROVIDER_TO_MODELS, DEFAULT_TEXT2SQL_DATABASE
 from .langchain_agent import get_llm_provider
 
-default_project = config.get("default_project")
+logger = log.getLogger(__name__)
 
-DEFAULT_TEXT2SQL_DATABASE = "mindsdb"
+default_project = config.get("default_project")
 
 
 class AgentsController:
@@ -60,6 +63,10 @@ class AgentsController:
             provider (str): The provider of the model
         """
         model = None
+
+        # Handle the case when model_name is None (using default LLM)
+        if model_name is None:
+            return model, provider
 
         try:
             model_name_no_version, model_version = Predictor.get_name_and_version(model_name)
@@ -140,11 +147,11 @@ class AgentsController:
     def add_agent(
         self,
         name: str,
-        project_name: str,
-        model_name: str,
-        skills: List[Union[str, dict]],
+        project_name: str = None,
+        model_name: str = None,
+        skills: List[Union[str, dict]] = None,
         provider: str = None,
-        params: Dict[str, str] = {},
+        params: Dict[str, Any] = None,
     ) -> db.Agents:
         """
         Adds an agent to the database.
@@ -180,14 +187,26 @@ class AgentsController:
         if agent is not None:
             raise ValueError(f"Agent with name already exists: {name}")
 
-        _, provider = self.check_model_provider(model_name, provider)
+        if model_name is not None:
+            _, provider = self.check_model_provider(model_name, provider)
+
+        # No need to copy params since we're not preserving the original reference
+        params = params or {}
+
+        if model_name is None:
+            logger.warning("'model_name' param is not provided. Using default global llm model at runtime.")
+
+        # If model_name is not provided, we use default global llm model at runtime
+        # Default parameters will be applied at runtime via get_agent_llm_params
+        # This allows global default updates to apply to all agents immediately
 
         # Extract API key if provided in the format <provider>_api_key
-        provider_api_key_param = f"{provider.lower()}_api_key"
-        if provider_api_key_param in params:
-            # Keep the API key in params for the agent to use
-            # It will be picked up by get_api_key() in handler_utils.py
-            pass
+        if provider is not None:
+            provider_api_key_param = f"{provider.lower()}_api_key"
+            if provider_api_key_param in params:
+                # Keep the API key in params for the agent to use
+                # It will be picked up by get_api_key() in handler_utils.py
+                pass
 
         # Handle generic api_key parameter if provided
         if "api_key" in params:
@@ -504,6 +523,18 @@ class AgentsController:
         agent.deleted_at = datetime.datetime.now()
         db.session.commit()
 
+    def get_agent_llm_params(self, model_params: dict):
+        """
+        Get agent LLM parameters by combining default config with user provided parameters.
+        Similar to how knowledge bases handle default parameters.
+        """
+        combined_model_params = copy.deepcopy(config.get("default_llm", {}))
+
+        if model_params:
+            combined_model_params.update(model_params)
+
+        return combined_model_params
+
     def get_completion(
         self,
         agent: db.Agents,
@@ -538,7 +569,10 @@ class AgentsController:
             agent.provider = provider
             db.session.commit()
 
-        lang_agent = LangchainAgent(agent, model)
+        # Get agent parameters and combine with default LLM parameters at runtime
+        agent_params = self.get_agent_llm_params(agent.params)
+
+        lang_agent = LangchainAgent(agent, model, params=agent_params)
         return lang_agent.get_completion(messages)
 
     def _get_completion_stream(
@@ -575,5 +609,8 @@ class AgentsController:
             agent.provider = provider
             db.session.commit()
 
-        lang_agent = LangchainAgent(agent, model=model)
+        # Get agent parameters and combine with default LLM parameters at runtime
+        agent_params = self.get_agent_llm_params(agent.params)
+
+        lang_agent = LangchainAgent(agent, model=model, params=agent_params)
         return lang_agent.get_completion(messages, stream=True)

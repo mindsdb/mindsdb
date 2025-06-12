@@ -440,8 +440,7 @@ class EvaluateDocID(EvaluateBase):
             {"role": "system", "content": GENERATE_QA_SYSTEM_PROMPT},
             {"role": "user", "content": f"\n\nText:\n{text}\n\n"},
         ]
-        response = self.llm_client.completion(messages)
-        answer = response.choices[0].message.content
+        answer = self.llm_client.completion(messages)
         try:
             output = json.loads(answer)
         except json.JSONDecodeError:
@@ -493,8 +492,6 @@ class EvaluateDocID(EvaluateBase):
         total_questions = len(stats)
         total_found = sum([1 for stat in stats if stat["doc_found"]])
 
-        total_accurately_retrieved = sum([1 for stat in stats if stat["doc_found"]])
-
         accurate_in_top_10 = sum([1 for stat in stats if stat["doc_found"] and stat["doc_position"] < 10])
 
         # calculate recall curve by position
@@ -513,7 +510,6 @@ class EvaluateDocID(EvaluateBase):
         return {
             "total": total_questions,
             "total_found": total_found,
-            "retrieved_in_top_k": total_accurately_retrieved,
             "retrieved_in_top_10": accurate_in_top_10,
             "cumulative_recall": cumulative_recall,
             "avg_query_time": avg_query_time,

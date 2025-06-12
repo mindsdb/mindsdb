@@ -1,4 +1,3 @@
-import concurrent.futures
 from google.cloud.bigquery import Client, QueryJobConfig
 from google.api_core.exceptions import BadRequest
 import pandas as pd

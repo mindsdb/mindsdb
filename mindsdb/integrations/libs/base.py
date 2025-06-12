@@ -170,12 +170,18 @@ class MetaDatabaseHandler(DatabaseHandler):
             - MAXIMUM_VALUE (str): Maximum value in the column (optional).
             - DISTINCT_VALUES_COUNT (int): Count of distinct values in the column (optional).
         """
-        method = getattr(self, 'meta_get_column_statistics_for_table')
+        method = getattr(self, "meta_get_column_statistics_for_table")
         if method.__func__ is not MetaDatabaseHandler.meta_get_column_statistics_for_table:
             meta_columns = self.meta_get_columns(table_names)
-            grouped_columns = meta_columns.data_frame.groupby('table_name').agg({
-                'column_name': list,
-            }).reset_index()
+            grouped_columns = (
+                meta_columns.data_frame.groupby("table_name")
+                .agg(
+                    {
+                        "column_name": list,
+                    }
+                )
+                .reset_index()
+            )
 
             executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
             futures = []
@@ -183,8 +189,8 @@ class MetaDatabaseHandler(DatabaseHandler):
             results = []
             with executor:
                 for _, row in grouped_columns.iterrows():
-                    table_name = row['table_name']
-                    columns = row['column_name']
+                    table_name = row["table_name"]
+                    columns = row["column_name"]
                     futures.append(executor.submit(self.meta_get_column_statistics_for_table, table_name, columns))
 
             for future in concurrent.futures.as_completed(futures):
@@ -193,7 +199,9 @@ class MetaDatabaseHandler(DatabaseHandler):
                     if result.resp_type == RESPONSE_TYPE.TABLE:
                         results.append(result.data_frame)
                     else:
-                        logger.error(f"Error retrieving column statistics for table {table_name}: {result.error_message}")
+                        logger.error(
+                            f"Error retrieving column statistics for table {table_name}: {result.error_message}"
+                        )
                 except Exception as e:
                     logger.error(f"Exception occurred while retrieving column statistics for table {table_name}: {e}")
 
@@ -201,14 +209,15 @@ class MetaDatabaseHandler(DatabaseHandler):
                 logger.warning("No column statistics could be retrieved for the specified tables.")
                 return HandlerResponse(RESPONSE_TYPE.ERROR, error_message="No column statistics could be retrieved.")
             return HandlerResponse(
-                RESPONSE_TYPE.TABLE,
-                pd.concat(results, ignore_index=True) if results else pd.DataFrame()
+                RESPONSE_TYPE.TABLE, pd.concat(results, ignore_index=True) if results else pd.DataFrame()
             )
 
         else:
             raise NotImplementedError()
 
-    def meta_get_column_statistics_for_table(self, table_name: str, column_names: Optional[List[str]] = None) -> HandlerResponse:
+    def meta_get_column_statistics_for_table(
+        self, table_name: str, column_names: Optional[List[str]] = None
+    ) -> HandlerResponse:
         """
         Returns metadata statistical information about the columns in a specific table to be stored in the data catalog.
         Either this method should be implemented in the handler or `meta_get_column_statistics` should be overridden.

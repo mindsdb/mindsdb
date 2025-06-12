@@ -271,18 +271,15 @@ class BigQueryHandler(MetaDatabaseHandler):
             for column in columns:
                 queries.append(
                     f"""
-                    WITH column_stats AS (
-                        SELECT
-                            '{table_name}' AS table_name,
-                            '{column}' AS column_name,
-                            SAFE_DIVIDE(COUNTIF({column} IS NULL), COUNT(*)) * 100 AS null_percentage,
-                            MIN({column}) AS minimum_value,
-                            MAX({column}) AS maximum_value,
-                            COUNT(DISTINCT {column}) AS distinct_values_count
-                        FROM
-                            `{self.connection_data['project_id']}.{self.connection_data['dataset']}.{table_name}`
-                    )
-                    SELECT * FROM column_stats
+                    SELECT
+                        '{table_name}' AS table_name,
+                        '{column}' AS column_name,
+                        SAFE_DIVIDE(COUNTIF({column} IS NULL), COUNT(*)) * 100 AS null_percentage,
+                        CAST(MIN(`{column}`) AS STRING) AS minimum_value,
+                        CAST(MAX(`{column}`) AS STRING) AS maximum_value,
+                        COUNT(DISTINCT {column}) AS distinct_values_count
+                    FROM
+                        `{self.connection_data['project_id']}.{self.connection_data['dataset']}.{table_name}`
                     """
                 )
 
@@ -307,14 +304,17 @@ class BigQueryHandler(MetaDatabaseHandler):
 
             for future in concurrent.futures.as_completed(futures):
                 try:
-                    result = future.result()
-                    if result.resp_type != RESPONSE_TYPE.TABLE:
+                    result = future.result(timeout=120)
+                    if result.resp_type == RESPONSE_TYPE.TABLE:
                         results.append(result.data_frame)
                     else:
                         logger.error(f"Error retrieving column statistics for table {table_name}: {result.error_message}")
                 except Exception as e:
                     logger.error(f"Exception occurred while retrieving column statistics for table {table_name}: {e}")
 
+        if not results:
+            logger.warning("No column statistics could be retrieved for the specified tables.")
+            return Response(RESPONSE_TYPE.ERROR, error_message="No column statistics could be retrieved.")
         return Response(
             RESPONSE_TYPE.TABLE,
             pd.concat(results, ignore_index=True) if results else pd.DataFrame()

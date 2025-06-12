@@ -336,17 +336,20 @@ class AgentsController:
                             database_table_map[parts[0]] = database_table_map.get(parts[0], []) + [parts[1]]
 
                         for database_name, table_names in database_table_map.items():
-                            data_catalog_loader = DataCatalogLoader(database_name=database_name, table_names=table_names)
+                            data_catalog_loader = DataCatalogLoader(
+                                database_name=database_name, table_names=table_names
+                            )
                             data_catalog_loader.load_metadata()
 
                     elif "database" in parameters:
                         data_catalog_loader = DataCatalogLoader(
-                            database_name=parameters["database"], table_names=parameters["tables"] if "tables" in parameters else None
+                            database_name=parameters["database"],
+                            table_names=parameters["tables"] if "tables" in parameters else None,
                         )
                         data_catalog_loader.load_metadata()
 
                 # Add table restrictions if this is a text2sql skill
-                if (include_tables or ignore_tables):
+                if include_tables or ignore_tables:
                     parameters["tables"] = include_tables or ignore_tables
 
                 # Pass database parameter if provided

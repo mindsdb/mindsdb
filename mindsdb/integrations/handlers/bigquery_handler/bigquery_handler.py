@@ -231,7 +231,10 @@ class BigQueryHandler(MetaDatabaseHandler):
                 column_name,
                 data_type,
                 column_default,
-                is_nullable
+                CASE is_nullable
+                    WHEN 'YES' THEN TRUE
+                    ELSE FALSE
+                END AS is_nullable
             FROM 
                 `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.COLUMNS`
         """

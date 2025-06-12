@@ -256,6 +256,7 @@ class BigQueryHandler(MetaDatabaseHandler):
         Returns:
             Response: A response object containing the column statistics.
         """
+
         def meta_get_column_statistics_for_table(table_name: str, columns: list) -> Response:
             """
             Retrieves statistics for the specified columns in a table.
@@ -267,26 +268,56 @@ class BigQueryHandler(MetaDatabaseHandler):
             Returns:
                 Response: A response object containing the column statistics.
             """
-            queries = []
-            for column in columns:
-                queries.append(
-                    f"""
-                    SELECT
-                        '{table_name}' AS table_name,
-                        '{column}' AS column_name,
-                        SAFE_DIVIDE(COUNTIF({column} IS NULL), COUNT(*)) * 100 AS null_percentage,
-                        CAST(MIN(`{column}`) AS STRING) AS minimum_value,
-                        CAST(MAX(`{column}`) AS STRING) AS maximum_value,
-                        COUNT(DISTINCT {column}) AS distinct_values_count
-                    FROM
-                        `{self.connection_data['project_id']}.{self.connection_data['dataset']}.{table_name}`
-                    """
-                )
+            # To avoid hitting BigQuery's query size limits, we will chunk the columns into batches.
+            BATCH_SIZE = 20
 
-            query = " UNION ALL ".join(queries)
-            result = self.native_query(query)
-            return result
-        
+            def chunked(lst, n):
+                """
+                Yields successive n-sized chunks from lst.
+                """
+                for i in range(0, len(lst), n):
+                    yield lst[i:i + n]
+
+            queries = []
+            for column_batch in chunked(columns, BATCH_SIZE):
+                batch_queries = []
+                for column in column_batch:
+                    batch_queries.append(
+                        f"""
+                        SELECT
+                            '{table_name}' AS table_name,
+                            '{column}' AS column_name,
+                            SAFE_DIVIDE(COUNTIF({column} IS NULL), COUNT(*)) * 100 AS null_percentage,
+                            CAST(MIN(`{column}`) AS STRING) AS minimum_value,
+                            CAST(MAX(`{column}`) AS STRING) AS maximum_value,
+                            COUNT(DISTINCT {column}) AS distinct_values_count
+                        FROM
+                            `{self.connection_data['project_id']}.{self.connection_data['dataset']}.{table_name}`
+                        """
+                    )
+
+                query = " UNION ALL ".join(batch_queries)
+                queries.append(query)
+
+            results = []    
+            for query in queries:
+                try:
+                    result = self.native_query(query)
+                    if result.resp_type == RESPONSE_TYPE.TABLE:
+                        results.append(result.data_frame)
+                    else:
+                        logger.error(f"Error retrieving column statistics for table {table_name}: {result.error_message}")
+                except Exception as e:
+                    logger.error(f"Exception occurred while retrieving column statistics for table {table_name}: {e}")
+
+            if not results:
+                logger.warning(f"No column statistics could be retrieved for table {table_name}.")
+                return Response(RESPONSE_TYPE.ERROR, error_message=f"No column statistics could be retrieved for table {table_name}.")
+            return Response(
+                RESPONSE_TYPE.TABLE,
+                pd.concat(results, ignore_index=True) if results else pd.DataFrame()
+            )
+
         meta_columns = self.meta_get_columns(table_names)
         grouped_columns = meta_columns.data_frame.groupby('table_name').agg({
             'column_name': list,

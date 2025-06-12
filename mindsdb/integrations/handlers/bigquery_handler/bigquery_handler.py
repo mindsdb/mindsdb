@@ -238,7 +238,7 @@ class BigQueryHandler(MetaDatabaseHandler):
 
         if table_names is not None and len(table_names) > 0:
             table_names = [f"'{t}'" for t in table_names]
-            query += f" AND table_name IN ({','.join(table_names)})"
+            query += f" WHERE table_name IN ({','.join(table_names)})"
 
         result = self.native_query(query)
         return result

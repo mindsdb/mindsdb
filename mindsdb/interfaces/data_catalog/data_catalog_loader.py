@@ -69,6 +69,8 @@ class DataCatalogLoader(BaseDataCatalog):
             self.logger.info(f"No tables to add for {self.database_name}.")
             return []
 
+        df.columns = df.columns.str.lower()
+
         # Filter out tables that are already loaded in the data catalog
         if loaded_table_names:
             df = df[~df["table_name"].isin(loaded_table_names)]
@@ -77,7 +79,6 @@ class DataCatalogLoader(BaseDataCatalog):
             self.logger.info(f"No new tables to load for {self.database_name}.")
             return []
 
-        df.columns = df.columns.str.lower()
         tables = self._add_table_metadata(df)
         self.logger.info(f"Tables loaded for {self.database_name}.")
         return tables

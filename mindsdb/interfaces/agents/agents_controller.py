@@ -53,7 +53,7 @@ class AgentsController:
         """
         Checks if a model exists, and gets the provider of the model.
 
-        The provider is either the provider of the model, or the provider given as an argument.
+        The provider is either the provider of the model or the provider given as an argument.
 
         Parameters:
             model_name (str): The name of the model

@@ -11,12 +11,12 @@ class QueryStorage:
     create_db = f"""
 CREATE DATABASE {example_sentiment_hf_db}
 WITH ENGINE = "postgres",
-PARAMETERS = {"user": "demo_user",
+PARAMETERS = {{"user": "demo_user",
     "password": "demo_password",
     "host": "samples.mindsdb.com",
     "port": "5432",
     "database": "demo"
-    };
+    }};
 """
     check_db_created = f"""
 SELECT *
@@ -47,7 +47,7 @@ DROP MODEL
 SELECT * FROM {model_name}
 WHERE comment='It is really easy to do NLP with MindsDB';
 """
-    bulk_prediction = """
+    bulk_prediction = f"""
 SELECT input.comment, model.sentiment
 FROM {example_sentiment_hf_db}.demo_data.user_comments AS input
 JOIN {model_name} AS model;

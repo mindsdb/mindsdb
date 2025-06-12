@@ -17,13 +17,14 @@ class QueryStorage:
     create_db = f"""
 CREATE DATABASE {example_sentiment_openai_db}
 WITH ENGINE = "postgres",
-PARAMETERS = {"user": "demo_user",
+PARAMETERS = {{
+    "user": "demo_user",
     "password": "demo_password",
     "host": "samples.mindsdb.com",
     "port": "5432",
     "database": "demo",
     "schema": "demo_data"
-    };
+    }};
 """
     check_db_created = f"""
 SELECT *

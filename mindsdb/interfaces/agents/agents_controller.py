@@ -14,7 +14,7 @@ from mindsdb.interfaces.data_catalog.data_catalog_loader import DataCatalogLoade
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.interfaces.model.model_controller import ModelController
-from mindsdb.interfaces.skills.skills_controller import SkillsController, SkillType
+from mindsdb.interfaces.skills.skills_controller import SkillsController
 from mindsdb.utilities.config import config
 from mindsdb.utilities import log
 

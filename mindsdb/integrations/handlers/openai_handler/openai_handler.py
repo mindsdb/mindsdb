@@ -248,7 +248,7 @@ class OpenAIHandler(BaseMLEngine):
                     args['model_name'] = self.default_image_model
                 else:
                     args['model_name'] = self.default_model
-            elif args['model_name'] not in available_models:
+            elif (args["model_name"] not in available_models) and (args["mode"] != "embedding"):
                 raise Exception(f"Invalid model name. Please use one of {available_models}")
         finally:
             self.model_storage.json_set('args', args)

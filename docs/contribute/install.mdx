@@ -120,3 +120,74 @@ You can find all available [handlers here](https://github.com/mindsdb/mindsdb/tr
 Now that you installed and started MindsDB locally, go ahead and find out how to create and train a model using the [`CREATE MODEL`](/sql/create/model) statement.
 
 Check out the [Use Cases](/use-cases/overview) section to follow tutorials that cover Large Language Models, Chatbots, Time Series, Classification, and Regression models, Semantic Search, and more.
+
+
+## Install MindsDB on Windows — No Docker
+
+This method is perfect if you're a beginner and want to use MindsDB locally without Docker.
+
+### ✅ Requirements
+
+| Tool   | Version                        |
+| ------ | ------------------------------ |
+| Python | 3.10.x or 3.11.x (avoid 3.12+) |
+| pip    | Comes with Python              |
+| Git    | (Optional) For advanced usage  |
+
+
+### Step 1: Install Python
+
+1. Download from [python.org](https://www.python.org/downloads/)
+2. Run the installer:
+
+   * ✅ Check **"Add Python to PATH"**
+   * Click **Install Now**
+
+
+### Step 2: Verify Installation
+
+```bash
+python --version
+pip --version
+```
+
+
+### Step 3: Create and Activate Virtual Environment
+
+```bash
+cd C:\Users\YourUsername\Documents
+mkdir MindsDB && cd MindsDB
+python -m venv mindsdb_env
+.\mindsdb_env\Scripts\activate
+```
+
+You’ll see:
+
+```
+(mindsdb_env) C:\Users\YourUsername\Documents\MindsDB>
+```
+
+
+### Step 4: Upgrade Tools and Install MindsDB
+
+```bash
+python -m pip install --upgrade pip setuptools wheel
+pip install mindsdb
+```
+
+
+### Step 5: Run MindsDB
+
+```bash
+python -m mindsdb
+```
+
+You should see:
+
+```
+INFO    MindsDB API running on http://127.0.0.1:47334
+INFO    MindsDB Studio running on http://127.0.0.1:47335
+```
+
+Open your browser at: [http://127.0.0.1:47335](http://127.0.0.1:47335)
+

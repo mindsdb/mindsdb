@@ -514,6 +514,21 @@ class MetaAPIHandler(APIHandler):
 
     This class is used when the handler is also needed to store information in the data catalog.
     """
+    
+    def meta_get_handler_info(self, **kwargs) -> str:
+        """
+        Retrieves information about the design and implementation of the API handler.
+        This should include, but not be limited to, the following:
+        - The type of SQL queries and operations that the handler supports.
+        - etc.
+
+        Args:
+            kwargs: Additional keyword arguments that may be used in generating the handler information.
+
+        Returns:
+            str: A string containing information about the API handler's design and implementation.
+        """
+        pass
 
     def meta_get_tables(self, table_names: Optional[List[str]] = None, **kwargs) -> Response:
         """

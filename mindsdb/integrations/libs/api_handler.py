@@ -514,7 +514,7 @@ class MetaAPIHandler(APIHandler):
 
     This class is used when the handler is also needed to store information in the data catalog.
     """
-    
+
     def meta_get_handler_info(self, **kwargs) -> str:
         """
         Retrieves information about the design and implementation of the API handler.

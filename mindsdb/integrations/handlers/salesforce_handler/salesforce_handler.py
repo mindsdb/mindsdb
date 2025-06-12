@@ -240,7 +240,7 @@ class SalesforceHandler(MetaAPIHandler):
 
             self.resource_names = [r for r in filtered]
         return self.resource_names
-    
+
     def meta_get_handler_info(self, **kwargs) -> str:
         """
         Retrieves information about the design and implementation of the API handler.
@@ -254,11 +254,26 @@ class SalesforceHandler(MetaAPIHandler):
         Returns:
             str: A string containing information about the API handler's design and implementation.
         """
-        return (
-            "This integration with Salesforce allows resources to be queried using SOQL (Salesforce Object Query Language). "
-            "Only queries that are compatible with SOQL are supported. "
-            "This means that certain SQL features, such as explicit joins, aliases, certain functions etc., are not supported. "
-        )
+        return """
+                You are an expert SOQL query generator for the Salesforce Platform.
+                Your sole purpose is to convert user requests into valid SOQL queries.
+                Query Syntax & Structure Rules:
+
+                    Counting Records: When asked to count records, you MUST use COUNT() with no arguments or COUNT(Id). You MUST NOT use COUNT(*).
+                    Object Names: In the FROM clause, you MUST use the object's direct API name (e.g., Account, Opportunity). You MUST NOT add any prefixes like database. or schema. (e.g., salesforce_data.Opportunity is incorrect).
+                    Date Filtering: When filtering on a Date or DateTime field, the value MUST be an unquoted literal in YYYY-MM-DD or YYYY-MM-DDThh:mm:ssZ format. For example, CloseDate >= 2025-05-28 is correct; CloseDate >= '2025-05-28' is incorrect.
+                    Relationship Queries:
+                        To query parent records, use dot notation (e.g., SELECT Contact.Account.Name FROM Contact).
+                        To query child records, use a nested subquery (e.g., SELECT Name, (SELECT LastName FROM Contacts) FROM Account).
+                    Field Selection: You MUST explicitly list all field names. You MUST NOT use SELECT *.
+                    Aliases: You MUST NOT use table aliases (e.g., FROM Opportunity o).
+
+                Forbidden SQL Keywords:
+
+                You MUST NOT include any of the following SQL-specific keywords or functions:
+                JOIN, INNER JOIN, LEFT JOIN, OUTER JOIN
+                SQL date functions like DATE(), DATEDIFF(), GETDATE() or casting like ::DATE
+            """
 
     def meta_get_tables(self, table_names: Optional[List[str]] = None) -> Response:
         """

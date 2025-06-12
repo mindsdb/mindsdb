@@ -341,12 +341,17 @@ class AgentsController:
                             )
                             data_catalog_loader.load_metadata()
 
-                    elif "database" in parameters:
+                    elif "database" in existing_skill.params:
                         data_catalog_loader = DataCatalogLoader(
-                            database_name=parameters["database"],
+                            database_name=existing_skill.params["database"],
                             table_names=parameters["tables"] if "tables" in parameters else None,
                         )
                         data_catalog_loader.load_metadata()
+
+                    else:
+                        raise ValueError(
+                            "Data Catalog loading is enabled, but the provided parameters are insufficient to load metadata. "
+                        )
 
                 # Add table restrictions if this is a text2sql skill
                 if include_tables or ignore_tables:

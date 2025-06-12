@@ -332,7 +332,7 @@ class BigQueryHandler(MetaDatabaseHandler):
         """
         query = f"""
             SELECT
-                tc.table_name
+                tc.table_name,
                 kcu.column_name,
                 kcu.ordinal_position,
                 tc.constraint_name,

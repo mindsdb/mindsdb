@@ -457,11 +457,11 @@ class APIHandler(BaseHandler):
 
     def query(self, query: ASTNode):
         if isinstance(query, Select):
-            # Check if the list() method is overridden in the table class and not the default APIResource.list method.
+            # If the list method exists, it should be overridden in the child class.
             # The APIResource class could be used as a base class by overriding the select method, but not the list method.
             table = self._get_table(query.from_table)
             list_method = getattr(table, "list", None)
-            if list_method and list_method.__func__ is APIResource.list:
+            if not list_method or (list_method and list_method.__func__ is APIResource.list):
                 # for back compatibility, targets wasn't passed in previous version
                 query.targets = [Star()]
             result = self._get_table(query.from_table).select(query)

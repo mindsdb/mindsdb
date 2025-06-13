@@ -15,7 +15,7 @@ from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES
 from mindsdb.utilities import log
 
 from .system_tables import (
-    SchemataTable, TablesTable, MetaTablesTable, ColumnsTable, EventsTable, RoutinesTable,
+    SchemataTable, TablesTable, MetaTablesTable, ColumnsTable, MetaColumnsTable, EventsTable, RoutinesTable,
     PluginsTable, EnginesTable, TableConstraintsTable, KeyColumnUsageTable, StatisticsTable,
     ColumnStatisticsTable, CharacterSetsTable, CollationsTable)
 from .mindsdb_tables import (
@@ -32,7 +32,7 @@ class InformationSchemaDataNode(DataNode):
     type = "INFORMATION_SCHEMA"
 
     tables_list = [
-        SchemataTable, TablesTable, MetaTablesTable, ColumnsTable, EventsTable, RoutinesTable,
+        SchemataTable, TablesTable, MetaTablesTable, ColumnsTable, MetaColumnsTable, EventsTable, RoutinesTable,
         PluginsTable, EnginesTable, TableConstraintsTable, KeyColumnUsageTable, StatisticsTable,
         ColumnStatisticsTable, CharacterSetsTable, CollationsTable,
         ModelsTable, DatabasesTable, MLEnginesTable, HandlersTable, JobsTable,

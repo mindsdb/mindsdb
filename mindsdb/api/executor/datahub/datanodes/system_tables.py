@@ -162,7 +162,7 @@ class TablesTable(Table):
 
 
 class MetaTablesTable(Table):
-    name = "TABLES"
+    name = "META_TABLES"
 
     columns = [
         "TABLE_CATALOG",
@@ -357,6 +357,49 @@ class ColumnsTable(Table):
                     )
 
         return pd.DataFrame(result, columns=cls.columns)
+    
+    
+class MetaColumnsTable(Table):
+    name = "META_COLUMNS"
+
+    columns = [
+        "TABLE_CATALOG",
+        "TABLE_SCHEMA",
+        "TABLE_NAME",
+        "COLUMN_NAME",
+        "DATA_TYPE",
+        "COLUMN_DESCRIPTION",
+        "COLUMN_DEFAULT",
+        "IS_NULLABLE",
+    ]
+
+    @classmethod
+    def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
+        databases, tables = _get_scope(query)
+
+        records = _get_records_from_data_catalog(databases, tables)
+
+        data = []
+        for record in records:
+            database_name = record.integration.name
+            table_name = record.name
+            columns = record.meta_columns
+
+            for column in columns:
+                item = {
+                    "TABLE_CATALOG": "def",
+                    "TABLE_SCHEMA": database_name,
+                    "TABLE_NAME": table_name,
+                    "COLUMN_NAME": column.name,
+                    "DATA_TYPE": column.data_type,
+                    "COLUMN_DESCRIPTION": column.description or "",
+                    "COLUMN_DEFAULT": column.default_value,
+                    "IS_NULLABLE": "YES" if column.is_nullable else "NO",
+                }
+                data.append(item)
+
+        df = pd.DataFrame(data, columns=cls.columns)
+        return df
 
 
 class EventsTable(Table):

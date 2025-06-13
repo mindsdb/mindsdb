@@ -1,6 +1,6 @@
 import json
 import datetime
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import numpy as np
 from sqlalchemy import (
@@ -494,17 +494,33 @@ class KnowledgeBase(Base):
 
     __table_args__ = (UniqueConstraint("name", "project_id", name="unique_knowledge_base_name_project_id"),)
 
-    def as_dict(self) -> Dict:
+    def as_dict(self, with_secrets: Optional[bool] = True) -> Dict:
+        params = self.params.copy()
+        embedding_model = params.pop("embedding_model", None)
+        reranking_model = params.pop("reranking_model", None)
+
+        if not with_secrets:
+            if embedding_model and "api_key" in embedding_model:
+                embedding_model["api_key"] = "******"
+
+            if reranking_model and "api_key" in reranking_model:
+                reranking_model["api_key"] = "******"
+
         return {
             "id": self.id,
             "name": self.name,
             "project_id": self.project_id,
-            "embedding_model": None if self.embedding_model is None else self.embedding_model.name,
             "vector_database": None if self.vector_database is None else self.vector_database.name,
             "vector_database_table": self.vector_database_table,
             "updated_at": self.updated_at,
             "created_at": self.created_at,
-            "params": self.params,
+            "query_id": self.query_id,
+            "embedding_model": embedding_model,
+            "reranking_model": reranking_model,
+            "metadata_columns": params.pop("metadata_columns", None),
+            "content_columns": params.pop("content_columns", None),
+            "id_column": params.pop("id_column", None),
+            "params": params,
         }
 
 

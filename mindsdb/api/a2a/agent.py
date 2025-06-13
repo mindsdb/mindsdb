@@ -263,24 +263,19 @@ class MindsDBAgent:
                 for msg in history:
                     # Convert Message object to dict if needed
                     msg_dict = msg.dict() if hasattr(msg, "dict") else msg
+                    role = msg_dict.get("role", "user")
 
-                    if msg_dict.get("role") == "user":
-                        # Extract text from parts
-                        text = ""
-                        for part in msg_dict.get("parts", []):
-                            if part.get("type") == "text":
-                                text = part.get("text", "")
-                                break
-                        if text:
+                    # Extract text from parts
+                    text = ""
+                    for part in msg_dict.get("parts", []):
+                        if part.get("type") == "text":
+                            text = part.get("text", "")
+                            break
+
+                    if text:
+                        if role == "user":
                             formatted_messages.append({"question": text, "answer": None})
-                    elif msg_dict.get("role") == "assistant":
-                        # Extract text from parts
-                        text = ""
-                        for part in msg_dict.get("parts", []):
-                            if part.get("type") == "text":
-                                text = part.get("text", "")
-                                break
-                        if text and formatted_messages:
+                        elif role == "assistant" and formatted_messages:
                             # Add the answer to the last question
                             formatted_messages[-1]["answer"] = text
 

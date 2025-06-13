@@ -376,8 +376,14 @@ class AgentTaskManager(InMemoryTaskManager):
                 # Get history from request if available
                 history = []
                 if hasattr(task_send_params, "history") and task_send_params.history:
-                    # Convert each history item to dict if needed
-                    history = [item.dict() if hasattr(item, "dict") else item for item in task_send_params.history]
+                    # Convert each history item to dict if needed and ensure proper role
+                    for item in task_send_params.history:
+                        item_dict = item.dict() if hasattr(item, "dict") else item
+                        # Ensure the role is properly set
+                        if "role" not in item_dict:
+                            item_dict["role"] = "assistant" if "answer" in item_dict else "user"
+                        history.append(item_dict)
+
                 # Add current message to history
                 history.append(message_dict)
 
@@ -398,6 +404,20 @@ class AgentTaskManager(InMemoryTaskManager):
                 # Update the existing task
                 if task.history is None:
                     task.history = []
+
+                # If we have new history from the request, use it
+                if hasattr(task_send_params, "history") and task_send_params.history:
+                    # Convert each history item to dict if needed and ensure proper role
+                    history = []
+                    for item in task_send_params.history:
+                        item_dict = item.dict() if hasattr(item, "dict") else item
+                        # Ensure the role is properly set
+                        if "role" not in item_dict:
+                            item_dict["role"] = "assistant" if "answer" in item_dict else "user"
+                        history.append(item_dict)
+                    task.history = history
+
+                # Add current message to history
                 task.history.append(message_dict)
             return task
 
@@ -485,6 +505,17 @@ class AgentTaskManager(InMemoryTaskManager):
                 self.tasks[task_id] = task
 
             task.status = status
+
+            # Store assistant's response in history if we have a message
+            if status.message and status.message.role == "agent":
+                if task.history is None:
+                    task.history = []
+                # Convert message to dict if needed
+                message_dict = status.message.dict() if hasattr(status.message, "dict") else status.message
+                # Ensure role is set to assistant
+                message_dict["role"] = "assistant"
+                task.history.append(message_dict)
+
             if artifacts is not None:
                 for artifact in artifacts:
                     if artifact.append and len(task.artifacts) > 0:

@@ -1,32 +1,28 @@
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from tests.integration.utils.http_test_helpers import HTTPHelperMixin
-import uuid
-
-random_str = uuid.uuid4().hex[:6]
-example_sentiment_hf_db = f"example_sentiment_huggingface_db{random_str}"
-model_name = f"sentiment_classifier_gpt3_{random_str}"
 
 
 class QueryStorage:
-    create_db = f"""
-CREATE DATABASE {example_sentiment_hf_db}
+    create_db = """
+CREATE DATABASE example_sentiment_huggingface_db
 WITH ENGINE = "postgres",
-PARAMETERS = {{"user": "demo_user",
+PARAMETERS = {
+    "user": "demo_user",
     "password": "demo_password",
     "host": "samples.mindsdb.com",
     "port": "5432",
     "database": "demo"
-    }};
+    };
 """
-    check_db_created = f"""
+    check_db_created = """
 SELECT *
-FROM {example_sentiment_hf_db}.demo_data.user_comments LIMIT 3;
+FROM example_sentiment_huggingface_db.demo_data.user_comments LIMIT 3;
 """
-    delete_db = f"""
-DROP DATABASE {example_sentiment_hf_db};
+    delete_db = """
+DROP DATABASE example_sentiment_huggingface_db;
 """
-    create_model = f"""
-CREATE MODEL {model_name}
+    create_model = """
+CREATE MODEL sentiment_classifier
 PREDICT sentiment
 USING engine='huggingface',
   task = 'text-classification',
@@ -34,23 +30,23 @@ USING engine='huggingface',
   input_column = 'comment',
   labels=['negative','neutral','positive'];
 """
-    check_status = f"""
+    check_status = """
 SELECT *
 FROM models
-WHERE name = {model_name};
+WHERE name = 'sentiment_classifier';
 """
-    delete_model = f"""
+    delete_model = """
 DROP MODEL
-  mindsdb.{model_name};
+  mindsdb.sentiment_classifier;
 """
-    prediction = f"""
-SELECT * FROM {model_name}
+    prediction = """
+SELECT * FROM sentiment_classifier
 WHERE comment='It is really easy to do NLP with MindsDB';
 """
-    bulk_prediction = f"""
+    bulk_prediction = """
 SELECT input.comment, model.sentiment
-FROM {example_sentiment_hf_db}.demo_data.user_comments AS input
-JOIN {model_name} AS model;
+FROM example_sentiment_huggingface_db.demo_data.user_comments AS input
+JOIN sentiment_classifier AS model;
 """
 
 

@@ -1,6 +1,6 @@
 from typing import Dict, List, Text
 
-from mindsdb_sql_parser.ast import Select, Star, Identifier
+from mindsdb_sql_parser.ast import Function, Select, Star, Identifier
 import pandas as pd
 from salesforce_api.exceptions import RestRequestCouldNotBeUnderstoodError
 
@@ -52,9 +52,14 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
 
             # SOQL does not support column aliases. Remove column aliases.
             column_aliases = {}
-            for column in query.targets:
+            for index, column in enumerate(query.targets):
                 if column.alias is not None:
-                    column_aliases[column.parts[-1]] = column.alias.parts[-1]
+                    # When the column is a function, Salesforce gives it an alias like 'expr0', 'expr1', etc.
+                    if isinstance(column, Function):
+                        column_aliases[f"expr{index}"] = column.alias.parts[-1]
+                    else:
+                        column_aliases[column.parts[-1]] = column.alias.parts[-1]
+
                     column.alias = None
 
             client = self.handler.connect()
@@ -69,7 +74,8 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
                 del result["attributes"]
 
             df = pd.DataFrame(results)
-            df.rename(columns=column_aliases, inplace=True)
+            if column_aliases:
+                df.rename(columns=column_aliases, inplace=True)
 
             return df
 

@@ -353,6 +353,14 @@ The vector store is a required component of the knowledge base. It stores data i
 
 It is optional for users to provide the `storage` parameter. If not provided, the default ChromaDB is created when creating a knowledge base.
 
+The available options include either [PGVector](/integrations/vector-db-integrations/pgvector) or [ChromaDB](/integrations/vector-db-integrations/chromadb).
+
+<Tip>
+It is recommended to use PGVector version 0.8.0 or higher for a better performance.
+</Tip>
+
+If the `storage` parameter is not provided, the system creates the default ChromaDB vector database called `<kb_name>_chromadb` with the default table called `default_collection` that stores the embedded data. This default ChromaDB vector database is stored in MindsDB's storage.
+
 In order to provide the storage vector database, it is required to connect it to MindsDB beforehand.
 
 Here is an example for [PGVector](/integrations/vector-db-integrations/pgvector).
@@ -379,14 +387,6 @@ USING
 <Info>
 Note that you do not need to have the `storage_table` created as it is created when creating a knowledge base.
 </Info>
-
-The available options include either [PGVector](/integrations/vector-db-integrations/pgvector) or [ChromaDB](/integrations/vector-db-integrations/chromadb).
-
-If the `storage` parameter is not provided, the system creates the default ChromaDB vector database called `<kb_name>_chromadb` with the default table called `default_collection` that stores the embedded data.
-
-<Note>
-This default ChromaDB vector database is stored in MindsDB's storage. In order to define a different storage directory, create your own ChromaDB referring to [this documentation page](/integrations/vector-db-integrations/chromadb).
-</Note>
 
 ### `metadata_columns`
 
@@ -674,7 +674,7 @@ WHERE order_id = 'Q7P';
 
 The knowledge base matches the ID value to the existing one and updates the data if required.
 
-### Optimize Data Insertion
+### Insert Data using Partitions
 
 In order to optimize the performance of data insertion into the knowledge base, users can set up partitions and threads to insert batches of data in parallel. This also enables tracking the progress of data insertion process including cancelling and resuming it if required.
 
@@ -848,22 +848,6 @@ SELECT order_id, notes AS content
 FROM sample_data.orders;
 ```
 </Note>
-
-## `CREATE INDEX ON KNOWLEDGE_BASE` Syntax
-
-Users can create index on the knowledge base to speed up the search operations.
-
-```sql
-CREATE INDEX ON KNOWLEDGE_BASE my_kb;
-```
-
-<Warning>
-Note that this feature works only when PGVector is used as the [storage of the knowledge base](/mindsdb_sql/knowledge-bases#storage), as ChromaDB provides the index features by default.
-</Warning>
-
-Upon executing this statement, an index is created on the knowledge base's underlying vector store. This is essentially a database index created on the vector database.
-
-Note that having an index on the knowledge base may reduce the speed of the insert operations. Therefore, it is recommended to insert bulk data into the knowledge base before creating an index. The index improves performance of querying the knowledge base, while it may slow down subsequent data inserts.
 
 ## `SELECT FROM KB` Syntax
 
@@ -1046,6 +1030,139 @@ Here is the output:
 | A1B | A1B_notes:1of1:0to20 | Request color: black   | {"chunk_index":0,"content_column":"notes","end_char":20,"original_doc_id":"A1B_notes","original_row_id":"A1B","product":"Wireless Mouse","source":"TextChunkingPreprocessor","start_char":0} | 0.5743341242061104 | 0.504396172197583 |
 +-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+-------------------+
 ```
+
+## `EVALUATE KNOWLEDGE_BASE` Syntax
+
+With the `EVALUATE KNOWLEDGE_BASE` command, users can evaluate the relevancy and accuracy of the documents and data returned by the knowledge base.
+
+Below is the complete syntax that includes both required and optional parameters.
+
+```sql
+EVALUATE KNOWLEDGE_BASE my_kb
+USING
+    test_table = my_datasource.my_test_table,
+    version = 'doc_id',
+    generate_data = {
+        'from_sql': 'SELECT content FROM my_datasource.my_table',
+        'count': 100
+    }, 
+    evaluate = false,
+    llm = {
+        'provider': 'openai',
+        'api_key':'sk-xxx',
+        'model':'gpt-4'
+    },
+    save_to = my_datasource.my_result_table; 
+```
+
+### `test_table`
+
+This is a required parameter that stores the name of the table from one of the data sources connected to MindsDB. For example, `test_table = my_datasource.my_test_table` defines a table named `my_test_table` from a data source named `my_datasource`.
+
+This test table stores test data commonly in form of questions and answers. Its content depends on the `version` parameter defined below.
+
+Users can provide their own test data or have the test data generated by the `EVALUATE KNOWLEDGE_BASE` command, which is performed when setting the `generate_data` parameter defined below.
+
+### `version`
+
+This is an optional parameter that defines the version of the evaluator. If not defined, its default value is `doc_id`.
+
+* `version = 'doc_id'`
+    The evaluator checks whether the document ID returned by the knowledge base matched the expected document ID as defined in the test table.
+
+* `version = 'llm_relevancy'`
+    The evaluator uses a language model to rank and evaluate responses from the knowledge base.
+
+### `generate_data`
+
+This is an optional parameter used to configure the test data generation, which is saved into the table defined in the `test_table` parameter. If not defined, its default value is `false`, meaning that no test data is generated.
+
+Available values are as follows:
+
+* A dictionary containing the following values:
+    * `from_sql` defines the SQL query that fetches the test data. For example, `'from_sql': 'SELECT content FROM my_datasource.my_table'`. If not defined, it fetches test data from the knowledge base on which the `EVALUATE` command is executed: `SELECT chunk_content, id FROM my_kb`.
+    * `count` defines the size of the test dataset. For example, `'count': 100`. Its default value is 20.
+
+* A value of `true`, such as `generate_data = true`, which implies that default values for `from_sql` and `count` will be used.
+
+### `evaluate`
+
+This is an optional parameter that defines whether to evaluate the knowledge base. If not defined, its default value is `true`.
+
+Users can opt for setting it to false, `evaluate = false`, in order to generate test data into the test table without running the evaluator.
+
+### `llm`
+
+This is an optional parameter that defines a language model to be used for evaluations, if `version` is set to `llm_relevancy`.
+
+If not defined, its default value is the [`reranking_model` defined with the knowledge base](/mindsdb_sql/knowledge-bases#reranking-model).
+
+Users can define it with the `EVALUATE KNOWLEDGE_BASE` command in the same manner.
+
+```sql
+EVALUATE KNOWLEDGE_BASE my_kb
+USING
+    ...
+    llm = {
+        "provider": "azure_openai",
+        "model_name" : "gpt-4o",
+        "api_key": "sk-abc123",
+        "base_url": "https://ai-6689.openai.azure.com/",
+        "api_version": "2024-02-01",
+        "method": "multi-class"
+    },
+    ...
+```
+
+### `save_to`
+
+This is an optional parameter that stores the name of the table from one of the data sources connected to MindsDB. For example, `save_to = my_datasource.my_result_table` defines a table named `my_result_table` from the data source named `my_datasource`. If not defined, the results are not saved into a table.
+
+This table is used to save the evaluation results.
+
+By default, evaluation results are returned after executing the `EVALUATE KNOWLEDGE_BASE` statement.
+
+### Evaluation Results
+
+When using `version = 'doc_id'`, the following columns are included in the evaluation results:
+
+- `total` stores the total number of questions.
+- `total_found` stores the number of questions to which the knowledge bases provided correct answers.
+- `retrieved_in_top_10` stores the number of top 10 questions to which the knowledge bases provided correct answers.
+- `cumulative_recall` stores data that can be used to create a chart.
+- `avg_query_time` stores the execution time of a search query of the knowledge base.
+- `name` stores the knowledge base name.
+- `created_at` stores the timestamp when the evaluation was created.
+
+When using `version = 'llm_relevancy'`, the following columns are included in the evaluation results:
+
+- `avg_relevancy` stores the average relevancy.
+- `avg_relevance_score_by_k` stores the average relevancy at k.
+- `avg_first_relevant_position` stores the average first relevant position.
+- `mean_mrr` stores the Mean Reciprocal Rank (MRR).
+- `hit_at_k` stores the Hit@k value.
+- `bin_precision_at_k` stores the Binary Precision@k.
+- `avg_entropy` stores the average relevance score entropy.
+- `avg_ndcg` stores the average nDCG.
+- `avg_query_time` stores the execution time of a search query of the knowledge base.
+- `name` stores the knowledge base name.
+- `created_at` stores the timestamp when the evaluation was created.
+
+## `CREATE INDEX ON KNOWLEDGE_BASE` Syntax
+
+Users can create index on the knowledge base to speed up the search operations.
+
+```sql
+CREATE INDEX ON KNOWLEDGE_BASE my_kb;
+```
+
+<Warning>
+Note that this feature works only when PGVector is used as the [storage of the knowledge base](/mindsdb_sql/knowledge-bases#storage), as ChromaDB provides the index features by default.
+</Warning>
+
+Upon executing this statement, an index is created on the knowledge base's underlying vector store. This is essentially a database index created on the vector database.
+
+Note that having an index on the knowledge base may reduce the speed of the insert operations. Therefore, it is recommended to insert bulk data into the knowledge base before creating an index. The index improves performance of querying the knowledge base, while it may slow down subsequent data inserts.
 
 ## `JOIN` Syntax
 

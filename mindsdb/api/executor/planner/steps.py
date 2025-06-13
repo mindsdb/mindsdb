@@ -9,7 +9,9 @@ class PlanStep:
     @property
     def result(self):
         if self.step_num is None:
-            raise PlanningException(f'Can\'t reference a step with no assigned step number. Tried to reference: {type(self)}')
+            raise PlanningException(
+                f"Can't reference a step with no assigned step number. Tried to reference: {type(self)}"
+            )
         return Result(self.step_num)
 
     def __eq__(self, other):
@@ -18,7 +20,7 @@ class PlanStep:
 
         for k in vars(self):
             # skip result comparison
-            if k == 'result_data':
+            if k == "result_data":
                 continue
 
             if getattr(self, k) != getattr(other, k):
@@ -28,8 +30,8 @@ class PlanStep:
 
     def __repr__(self):
         attrs_dict = vars(self)
-        attrs_str = ', '.join([f'{k}={str(v)}' for k, v in attrs_dict.items()])
-        return f'{self.__class__.__name__}({attrs_str})'
+        attrs_str = ", ".join([f"{k}={str(v)}" for k, v in attrs_dict.items()])
+        return f"{self.__class__.__name__}({attrs_str})"
 
     def set_result(self, result):
         self.result_data = result
@@ -37,6 +39,7 @@ class PlanStep:
 
 class ProjectStep(PlanStep):
     """Selects columns from a dataframe"""
+
     def __init__(self, columns, dataframe, ignore_doubles=False, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.columns = columns
@@ -47,6 +50,7 @@ class ProjectStep(PlanStep):
 # TODO remove
 class FilterStep(PlanStep):
     """Filters some dataframe according to a query"""
+
     def __init__(self, dataframe, query, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.dataframe = dataframe
@@ -66,6 +70,7 @@ class GroupByStep(PlanStep):
 
 class JoinStep(PlanStep):
     """Joins two dataframes, producing a new dataframe"""
+
     def __init__(self, left, right, query, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.left = left
@@ -75,7 +80,8 @@ class JoinStep(PlanStep):
 
 class UnionStep(PlanStep):
     """Union of two dataframes, producing a new dataframe"""
-    def __init__(self, left, right, unique, operation='union', *args, **kwargs):
+
+    def __init__(self, left, right, unique, operation="union", *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.left = left
         self.right = right
@@ -95,6 +101,7 @@ class OrderByStep(PlanStep):
 
 class LimitOffsetStep(PlanStep):
     """Applies limit and offset to a dataframe"""
+
     def __init__(self, dataframe, limit=None, offset=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.dataframe = dataframe
@@ -104,6 +111,7 @@ class LimitOffsetStep(PlanStep):
 
 class FetchDataframeStep(PlanStep):
     """Fetches a dataframe from external integration"""
+
     def __init__(self, integration, query=None, raw_query=None, params=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.integration = integration
@@ -114,15 +122,28 @@ class FetchDataframeStep(PlanStep):
 
 class FetchDataframeStepPartition(FetchDataframeStep):
     """Fetches a dataframe from external integration in partitions"""
-    def __init__(self, *args, **kwargs):
+
+    def __init__(self, steps=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.steps = []
+        if steps is None:
+            steps = []
+        self.steps = steps
 
 
 class ApplyPredictorStep(PlanStep):
     """Applies a mindsdb predictor on some dataframe and returns a new dataframe with predictions"""
-    def __init__(self, namespace, predictor, dataframe, params: dict = None,
-                 row_dict: dict = None, columns_map: dict = None, *args, **kwargs):
+
+    def __init__(
+        self,
+        namespace,
+        predictor,
+        dataframe,
+        params: dict = None,
+        row_dict: dict = None,
+        columns_map: dict = None,
+        *args,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
         self.namespace = namespace
         self.predictor = predictor
@@ -149,6 +170,7 @@ class ApplyTimeseriesPredictorStep(ApplyPredictorStep):
 
 class ApplyPredictorRowStep(PlanStep):
     """Applies a mindsdb predictor to one row of values and returns a dataframe of one row, the predictor."""
+
     def __init__(self, namespace, predictor, row_dict, params=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.namespace = namespace
@@ -159,6 +181,7 @@ class ApplyPredictorRowStep(PlanStep):
 
 class GetPredictorColumns(PlanStep):
     """Returns an empty dataframe of shape and columns like predictor results."""
+
     def __init__(self, namespace, predictor, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.namespace = namespace
@@ -167,6 +190,7 @@ class GetPredictorColumns(PlanStep):
 
 class GetTableColumns(PlanStep):
     """Returns an empty dataframe of shape and columns like select from table."""
+
     def __init__(self, namespace, table, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.namespace = namespace
@@ -175,7 +199,8 @@ class GetTableColumns(PlanStep):
 
 class MapReduceStep(PlanStep):
     """Applies a step for each value in a list, and then reduces results to a single dataframe"""
-    def __init__(self, values, step, reduce='union', partition=None, *args, **kwargs):
+
+    def __init__(self, values, step, reduce="union", partition=None, *args, **kwargs):
         """
         :param values: input step data
         :param step: step to be applied
@@ -202,8 +227,8 @@ class MultipleSteps(PlanStep):
 class SaveToTable(PlanStep):
     def __init__(self, table, dataframe, is_replace=False, params=None, *args, **kwargs):
         """
-            Creates table if not exists and fills it with content of dataframe
-            is_replace - to drop table beforehand
+        Creates table if not exists and fills it with content of dataframe
+        is_replace - to drop table beforehand
         """
         super().__init__(*args, **kwargs)
         self.table = table

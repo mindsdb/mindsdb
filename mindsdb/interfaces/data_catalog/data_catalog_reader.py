@@ -11,8 +11,6 @@ class DataCatalogReader(BaseDataCatalog):
         """
         Read the metadata from the data catalog and return it as a string.
         """
-        if not self.is_data_catalog_supported():
-            return f"Data catalog is not supported for database '{self.database_name}'."
         tables = self._read_metadata()
         if not tables:
             self.logger.warning(f"No metadata found for database '{self.database_name}'")
@@ -22,10 +20,23 @@ class DataCatalogReader(BaseDataCatalog):
             metadata_str += table.as_string() + "\n\n"
         return metadata_str
 
+    def read_metadata_as_records(self) -> list:
+        """
+        Read the metadata from the data catalog and return it as a list of database records.
+        """
+        tables = self._read_metadata()
+        if not tables:
+            self.logger.warning(f"No metadata found for database '{self.database_name}'")
+            return []
+        return tables
+
     def _read_metadata(self) -> list:
         """
         Read the metadata from the data catalog and return it in a structured format.
         """
+        if not self.is_data_catalog_supported():
+            return f"Data catalog is not supported for database '{self.database_name}'."
+
         query = db.session.query(db.MetaTables).filter_by(integration_id=self.integration_id)
         if self.table_names:
             cleaned_table_names = [name.strip("`").split(".")[-1] for name in self.table_names]

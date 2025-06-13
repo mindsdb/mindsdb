@@ -85,7 +85,8 @@ class TablesCollection:
     Collection of identifiers.
     Supports wildcard in tables name.
     """
-    def __init__(self, items: List[Identifier|str] = None):
+
+    def __init__(self, items: List[Identifier | str] = None):
         if items is None:
             items = []
 
@@ -109,7 +110,7 @@ class TablesCollection:
                     self._schemas[db][schema] = set()
                 self._schemas[db][schema].add(tbl)
 
-            if '*' in tbl:
+            if "*" in tbl:
                 self.has_wildcard = True
             self.databases.add(db)
 
@@ -138,27 +139,17 @@ class TablesCollection:
             return tbl in self._no_db_tables
 
         if schema is not None:
-            if any(
-                [
-                    fnmatch.fnmatch(tbl, pattern)
-                    for pattern in self._schemas[db].get(schema, [])
-                ]
-            ):
+            if any([fnmatch.fnmatch(tbl, pattern) for pattern in self._schemas[db].get(schema, [])]):
                 return True
 
         # table might be specified without schema
-        return any(
-            [
-                fnmatch.fnmatch(tbl, pattern)
-                for pattern in self._dbs[db]
-            ]
-        )
+        return any([fnmatch.fnmatch(tbl, pattern) for pattern in self._dbs[db]])
 
     def __bool__(self):
         return len(self.items) > 0
 
     def __repr__(self):
-        return f'Tables({self.items})'
+        return f"Tables({self.items})"
 
 
 class SQLAgent:
@@ -297,7 +288,6 @@ class SQLAgent:
         result_tables = []
 
         for db_name in self._tables_to_include.databases:
-
             handler = self._command_executor.session.integration_controller.get_data_handler(db_name)
 
             if "all" in inspect.signature(handler.get_tables).parameters:
@@ -305,15 +295,14 @@ class SQLAgent:
             else:
                 response = handler.get_tables()
             df = response.data_frame
-            col_name = 'table_name'
+            col_name = "table_name"
             if col_name not in df.columns:
                 # get first column if not found
                 col_name = df.columns[0]
 
             for _, row in df.iterrows():
-
                 if "table_schema" in row:
-                    parts = [db_name, row['table_schema'], row[col_name]]
+                    parts = [db_name, row["table_schema"], row[col_name]]
                 else:
                     parts = [db_name, row[col_name]]
                 if self._tables_to_include.match(Identifier(parts=parts)):
@@ -349,7 +338,7 @@ class SQLAgent:
 
         try:
             # Query to get all knowledge bases
-            query = f"SHOW KNOWLEDGE_BASES"
+            query = "SHOW KNOWLEDGE_BASES"
             try:
                 result = self._call_engine(query, database=self.knowledge_base_database)
             except Exception as e:

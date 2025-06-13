@@ -15,9 +15,9 @@ from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES
 from mindsdb.utilities import log
 
 from .system_tables import (
-    SchemataTable, TablesTable, ColumnsTable, EventsTable, RoutinesTable,
-    PluginsTable, EnginesTable, KeyColumnUsageTable, StatisticsTable,
-    CharacterSetsTable, CollationsTable)
+    SchemataTable, TablesTable, MetaTablesTable, ColumnsTable, MetaColumnsTable, EventsTable, RoutinesTable,
+    PluginsTable, EnginesTable, TableConstraintsTable, KeyColumnUsageTable, StatisticsTable,
+    ColumnStatisticsTable, CharacterSetsTable, CollationsTable)
 from .mindsdb_tables import (
     ModelsTable, DatabasesTable, MLEnginesTable, HandlersTable, JobsTable, QueriesTable,
     ChatbotsTable, KBTable, SkillsTable, AgentsTable, ViewsTable, TriggersTable)
@@ -32,9 +32,9 @@ class InformationSchemaDataNode(DataNode):
     type = "INFORMATION_SCHEMA"
 
     tables_list = [
-        SchemataTable, TablesTable, ColumnsTable, EventsTable, RoutinesTable,
-        PluginsTable, EnginesTable, KeyColumnUsageTable, StatisticsTable,
-        CharacterSetsTable, CollationsTable,
+        SchemataTable, TablesTable, MetaTablesTable, ColumnsTable, MetaColumnsTable, EventsTable, RoutinesTable,
+        PluginsTable, EnginesTable, TableConstraintsTable, KeyColumnUsageTable, StatisticsTable,
+        ColumnStatisticsTable, CharacterSetsTable, CollationsTable,
         ModelsTable, DatabasesTable, MLEnginesTable, HandlersTable, JobsTable,
         ChatbotsTable, KBTable, SkillsTable, AgentsTable, ViewsTable, TriggersTable,
         QueriesTable

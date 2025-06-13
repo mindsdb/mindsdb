@@ -63,7 +63,8 @@ class AgentTaskManager(InMemoryTaskManager):
 
         # Create and store the task first to ensure it exists
         try:
-            await self.upsert_task(task_send_params)
+            task = await self.upsert_task(task_send_params)
+            logger.info(f"Task created/updated with history length: {len(task.history) if task.history else 0}")
         except Exception as e:
             logger.error(f"Error creating task: {str(e)}")
             yield SendTaskStreamingResponse(
@@ -74,10 +75,27 @@ class AgentTaskManager(InMemoryTaskManager):
 
         agent = self._create_agent(agent_name)
 
+        # Get the history from the task
+        history = task.history if task and task.history else []
+        logger.info(f"Using history with length {len(history)} for request")
+
+        # Log the history for debugging
+        logger.info(f"Conversation history for task {task_send_params.id}:")
+        for idx, msg in enumerate(history):
+            # Convert Message object to dict if needed
+            msg_dict = msg.dict() if hasattr(msg, "dict") else msg
+            role = msg_dict.get("role", "unknown")
+            text = ""
+            for part in msg_dict.get("parts", []):
+                if part.get("type") == "text":
+                    text = part.get("text", "")
+                    break
+            logger.info(f"Message {idx + 1} ({role}): {text[:100]}...")
+
         if not streaming:
             # If streaming is disabled, use invoke and return a single response
             try:
-                result = agent.invoke(query, task_send_params.sessionId)
+                result = agent.invoke(query, task_send_params.sessionId, history=history)
 
                 # Use the parts from the agent response if available, or create them
                 if "parts" in result:
@@ -131,23 +149,6 @@ class AgentTaskManager(InMemoryTaskManager):
 
         # If streaming is enabled (default), use the streaming implementation
         try:
-            # Get the history from the task
-            task = self.tasks.get(task_send_params.id)
-            history = task.history if task and task.history else []
-
-            # Log the history for debugging
-            logger.info(f"Conversation history for task {task_send_params.id}:")
-            for idx, msg in enumerate(history):
-                # Convert Message object to dict if needed
-                msg_dict = msg.dict() if hasattr(msg, "dict") else msg
-                role = msg_dict.get("role", "unknown")
-                text = ""
-                for part in msg_dict.get("parts", []):
-                    if part.get("type") == "text":
-                        text = part.get("text", "")
-                        break
-                logger.info(f"Message {idx + 1} ({role}): {text[:100]}...")
-
             # Track the chunks we've seen to avoid duplicates
             seen_chunks = set()
 

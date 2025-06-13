@@ -431,7 +431,8 @@ class EnginesTable(Table):
 
         df = pd.DataFrame(data, columns=cls.columns)
         return df
-    
+
+
 class TableConstraintsTable(Table):
     name = "TABLE_CONSTRAINTS"
     columns = [
@@ -482,6 +483,7 @@ class TableConstraintsTable(Table):
         df = pd.DataFrame(data, columns=cls.columns)
         return df
 
+
 class KeyColumnUsageTable(Table):
     name = "KEY_COLUMN_USAGE"
     columns = [
@@ -498,6 +500,60 @@ class KeyColumnUsageTable(Table):
         "REFERENCED_TABLE_NAME",
         "REFERENCED_COLUMN_NAME",
     ]
+
+    @classmethod
+    def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
+        databases, tables = _get_scope(query)
+
+        records = _get_records_from_data_catalog(databases, tables)
+
+        data = []
+        for record in records:
+            database_name = record.integration.name
+            table_name = record.name
+            primary_keys = record.meta_primary_keys
+            foreign_keys = record.meta_foreign_keys_children
+
+            for pk in primary_keys:
+                column = pk.meta_columns
+                
+                item = {
+                    "CONSTRAINT_CATALOG": "def",
+                    "CONSTRAINT_SCHEMA": database_name,
+                    "CONSTRAINT_NAME": pk.constraint_name,
+                    "TABLE_CATALOG": "def",
+                    "TABLE_SCHEMA": database_name,
+                    "TABLE_NAME": table_name,
+                    "COLUMN_NAME": column.name,
+                    "ORDINAL_POSITION": pk.ordinal_position,
+                    "POSITION_IN_UNIQUE_CONSTRAINT": None,
+                    "REFERENCED_TABLE_SCHEMA": None,
+                    "REFERENCED_TABLE_NAME": None,
+                    "REFERENCED_COLUMN_NAME": None,
+                }
+                data.append(item)
+
+            for fk in foreign_keys:
+                # child_table is the current table (record), child_column is the referencing column
+                # parent_table is the referenced table, parent_column is the referenced column
+                item = {
+                    "CONSTRAINT_CATALOG": "def",
+                    "CONSTRAINT_SCHEMA": database_name,
+                    "CONSTRAINT_NAME": fk.constraint_name,
+                    "TABLE_CATALOG": "def",
+                    "TABLE_SCHEMA": database_name,
+                    "TABLE_NAME": table_name,
+                    "COLUMN_NAME": fk.child_column.name,  # referencing column in this table
+                    "ORDINAL_POSITION": None,  # Set if you have this info
+                    "POSITION_IN_UNIQUE_CONSTRAINT": None,  # Set if you have this info
+                    "REFERENCED_TABLE_SCHEMA": fk.parent_table.integration.name if fk.parent_table else None,
+                    "REFERENCED_TABLE_NAME": fk.parent_table.name if fk.parent_table else None,
+                    "REFERENCED_COLUMN_NAME": fk.parent_column.name if fk.parent_column else None,
+                }
+                data.append(item)
+
+        df = pd.DataFrame(data, columns=cls.columns)
+        return df
 
 
 class StatisticsTable(Table):

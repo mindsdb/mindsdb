@@ -256,7 +256,7 @@ class IntegrationController:
 
         # Remove the integration metadata from the data catalog (if enabled).
         # TODO: Can this be handled via cascading delete in the database?
-        if Config().get("data_catalog", {}).get("enabled", False):
+        if self.get_handler_meta(integration_record.engine).get("type") == HANDLER_TYPE.DATA and Config().get("data_catalog", {}).get("enabled", False):
             data_catalog_reader = DataCatalogLoader(database_name=name)
             data_catalog_reader.unload_metadata()
 

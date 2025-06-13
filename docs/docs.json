@@ -803,7 +803,7 @@
                         "pages": [
                           "sdks/python/agents",
                           "sdks/python/agents_skills",
-                          "sdks/python/agents_knowledge_bases"
+                          "mindsdb_sql/knowledge-bases"
                         ]
                       }
                     ]

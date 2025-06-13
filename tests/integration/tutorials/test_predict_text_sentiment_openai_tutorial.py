@@ -30,15 +30,25 @@ PARAMETERS = {{
 SELECT *
 FROM {example_sentiment_openai_db}.amazon_reviews LIMIT 3;
 """
+<<<<<<< agent-sf-fixes
     delete_db = f"""
 DROP DATABASE {example_sentiment_openai_db};
+=======
+    delete_db = """
+DROP DATABASE IF EXISTS example_sentiment_openai_db;
+>>>>>>> main
 """
     create_engine = f"""
 CREATE ML_ENGINE {openai_engine}
 FROM openai USING openai_api_key='%s';
 """
+<<<<<<< agent-sf-fixes
     delete_engine = f"""
 DROP ML_ENGINE {openai_engine};
+=======
+    delete_engine = """
+DROP ML_ENGINE IF EXISTS openai2;
+>>>>>>> main
 """
     create_model = f"""
 CREATE MODEL {model_name}
@@ -56,9 +66,15 @@ openai_api_key = '%s';
 SELECT * FROM models
 WHERE name = '{model_name}';
 """
+<<<<<<< agent-sf-fixes
     delete_model = f"""
 DROP MODEL
   mindsdb.{model_name};
+=======
+    delete_model = """
+DROP MODEL IF EXISTS
+  mindsdb.sentiment_classifier_gpt3;
+>>>>>>> main
 """
     prediction = f"""
 SELECT review, sentiment
@@ -75,9 +91,9 @@ LIMIT 5;
 
 class TestPredictTextSentimentOpenAI(HTTPHelperMixin):
     def setup_class(self):
-        self.sql_via_http(self, QueryStorage.delete_db)
-        self.sql_via_http(self, QueryStorage.delete_model)
-        self.sql_via_http(self, QueryStorage.delete_engine)
+        self.sql_via_http(self, QueryStorage.delete_db, RESPONSE_TYPE.OK)
+        self.sql_via_http(self, QueryStorage.delete_model, RESPONSE_TYPE.OK)
+        self.sql_via_http(self, QueryStorage.delete_engine, RESPONSE_TYPE.OK)
 
     def test_create_db(self):
         sql = QueryStorage.create_db

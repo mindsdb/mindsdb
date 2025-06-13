@@ -12,7 +12,7 @@ from mindsdb.integrations.utilities.handlers.auth_utilities.google import Google
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 
 logger = log.getLogger(__name__)
@@ -22,6 +22,7 @@ class BigQueryHandler(MetaDatabaseHandler):
     """
     This handler handles connection and execution of Google BigQuery statements.
     """
+
     name = "bigquery"
 
     def __init__(self, name: Text, connection_data: Dict, **kwargs: Any):
@@ -50,19 +51,16 @@ class BigQueryHandler(MetaDatabaseHandler):
             return self.connection
 
         # Mandatory connection parameters
-        if not all(key in self.connection_data for key in ['project_id', 'dataset']):
-            raise ValueError('Required parameters (project_id, dataset) must be provided.')
+        if not all(key in self.connection_data for key in ["project_id", "dataset"]):
+            raise ValueError("Required parameters (project_id, dataset) must be provided.")
 
         google_sa_oauth2_manager = GoogleServiceAccountOAuth2Manager(
-            credentials_file=self.connection_data.get('service_account_keys'),
-            credentials_json=self.connection_data.get('service_account_json')
+            credentials_file=self.connection_data.get("service_account_keys"),
+            credentials_json=self.connection_data.get("service_account_json"),
         )
         credentials = google_sa_oauth2_manager.get_oauth2_credentials()
 
-        client = Client(
-            project=self.connection_data["project_id"],
-            credentials=credentials
-        )
+        client = Client(project=self.connection_data["project_id"], credentials=credentials)
         self.is_connected = True
         self.connection = client
         return self.connection
@@ -87,14 +85,14 @@ class BigQueryHandler(MetaDatabaseHandler):
 
         try:
             connection = self.connect()
-            connection.query('SELECT 1;')
+            connection.query("SELECT 1;")
 
             # Check if the dataset exists
-            connection.get_dataset(self.connection_data['dataset'])
+            connection.get_dataset(self.connection_data["dataset"])
 
             response.success = True
         except (BadRequest, ValueError) as e:
-            logger.error(f'Error connecting to BigQuery {self.connection_data["project_id"]}, {e}!')
+            logger.error(f"Error connecting to BigQuery {self.connection_data['project_id']}, {e}!")
             response.error_message = e
 
         if response.success is False and self.is_connected is True:
@@ -114,22 +112,18 @@ class BigQueryHandler(MetaDatabaseHandler):
         """
         connection = self.connect()
         try:
-            job_config = QueryJobConfig(default_dataset=f"{self.connection_data['project_id']}.{self.connection_data['dataset']}")
+            job_config = QueryJobConfig(
+                default_dataset=f"{self.connection_data['project_id']}.{self.connection_data['dataset']}"
+            )
             query = connection.query(query, job_config=job_config)
             result = query.to_dataframe()
             if not result.empty:
-                response = Response(
-                    RESPONSE_TYPE.TABLE,
-                    result
-                )
+                response = Response(RESPONSE_TYPE.TABLE, result)
             else:
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
-            logger.error(f'Error running query: {query} on {self.connection_data["project_id"]}!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
-            )
+            logger.error(f"Error running query: {query} on {self.connection_data['project_id']}!")
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
         return response
 
     def query(self, query: ASTNode) -> Response:
@@ -155,7 +149,7 @@ class BigQueryHandler(MetaDatabaseHandler):
         """
         query = f"""
             SELECT table_name, table_schema, table_type
-            FROM `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.TABLES`
+            FROM `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.INFORMATION_SCHEMA.TABLES`
             WHERE table_type IN ('BASE TABLE', 'VIEW')
         """
         result = self.native_query(query)
@@ -175,7 +169,7 @@ class BigQueryHandler(MetaDatabaseHandler):
         """
         query = f"""
             SELECT column_name AS Field, data_type as Type
-            FROM `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.COLUMNS`
+            FROM `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.INFORMATION_SCHEMA.COLUMNS`
             WHERE table_name = '{table_name}'
         """
         result = self.native_query(query)
@@ -198,9 +192,9 @@ class BigQueryHandler(MetaDatabaseHandler):
                 t.table_type,
                 st.row_count
             FROM 
-                `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.TABLES` AS t
+                `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.INFORMATION_SCHEMA.TABLES` AS t
             JOIN 
-                `{self.connection_data['project_id']}.{self.connection_data['dataset']}.__TABLES__` AS st
+                `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.__TABLES__` AS st
             ON 
                 t.table_name = st.table_id
             WHERE 
@@ -235,7 +229,7 @@ class BigQueryHandler(MetaDatabaseHandler):
                     ELSE FALSE
                 END AS is_nullable
             FROM 
-                `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.COLUMNS`
+                `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.INFORMATION_SCHEMA.COLUMNS`
         """
 
         if table_names is not None and len(table_names) > 0:
@@ -265,7 +259,7 @@ class BigQueryHandler(MetaDatabaseHandler):
             Yields successive n-sized chunks from lst.
             """
             for i in range(0, len(lst), n):
-                yield lst[i:i + n]
+                yield lst[i : i + n]
 
         queries = []
         for column_batch in chunked(columns, BATCH_SIZE):
@@ -281,14 +275,14 @@ class BigQueryHandler(MetaDatabaseHandler):
                         CAST(MAX(`{column}`) AS STRING) AS maximum_value,
                         COUNT(DISTINCT {column}) AS distinct_values_count
                     FROM
-                        `{self.connection_data['project_id']}.{self.connection_data['dataset']}.{table_name}`
+                        `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.{table_name}`
                     """
                 )
 
             query = " UNION ALL ".join(batch_queries)
             queries.append(query)
 
-        results = []    
+        results = []
         for query in queries:
             try:
                 result = self.native_query(query)
@@ -301,11 +295,10 @@ class BigQueryHandler(MetaDatabaseHandler):
 
         if not results:
             logger.warning(f"No column statistics could be retrieved for table {table_name}.")
-            return Response(RESPONSE_TYPE.ERROR, error_message=f"No column statistics could be retrieved for table {table_name}.")
-        return Response(
-            RESPONSE_TYPE.TABLE,
-            pd.concat(results, ignore_index=True) if results else pd.DataFrame()
-        )
+            return Response(
+                RESPONSE_TYPE.ERROR, error_message=f"No column statistics could be retrieved for table {table_name}."
+            )
+        return Response(RESPONSE_TYPE.TABLE, pd.concat(results, ignore_index=True) if results else pd.DataFrame())
 
     def meta_get_primary_keys(self, table_names: Optional[list] = None) -> Response:
         """
@@ -324,9 +317,9 @@ class BigQueryHandler(MetaDatabaseHandler):
                 kcu.ordinal_position,
                 tc.constraint_name,
             FROM
-                `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.TABLE_CONSTRAINTS` AS tc
+                `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.INFORMATION_SCHEMA.TABLE_CONSTRAINTS` AS tc
             JOIN
-                `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.KEY_COLUMN_USAGE` AS kcu
+                `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.INFORMATION_SCHEMA.KEY_COLUMN_USAGE` AS kcu
             ON
                 tc.constraint_name = kcu.constraint_name
             WHERE
@@ -358,13 +351,13 @@ class BigQueryHandler(MetaDatabaseHandler):
                 kcu.column_name AS child_column_name,
                 tc.constraint_name
             FROM
-                `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.TABLE_CONSTRAINTS` AS tc
+                `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.INFORMATION_SCHEMA.TABLE_CONSTRAINTS` AS tc
             JOIN
-                `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.KEY_COLUMN_USAGE` AS kcu
+                `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.INFORMATION_SCHEMA.KEY_COLUMN_USAGE` AS kcu
             ON
                 tc.constraint_name = kcu.constraint_name
             JOIN
-                `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE` AS ccu
+                `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE` AS ccu
             ON
                 tc.constraint_name = ccu.constraint_name
             WHERE

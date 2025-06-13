@@ -1,3 +1,4 @@
+import copy
 from typing import Dict, List, Text
 
 from mindsdb_sql_parser.ast import Function, Select, Star, Identifier
@@ -44,15 +45,16 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
             Returns:
                 pd.DataFrame: A DataFrame containing the data retrieved from the Salesforce resource.
             """
-            query.from_table = resource_name
+            query_copy = copy.deepcopy(query)
+            query_copy.from_table = resource_name
 
             # SOQL does not support * in SELECT queries. Replace * with column names.
-            if isinstance(query.targets[0], Star):
-                query.targets = [Identifier(column) for column in self.get_columns()]
+            if isinstance(query_copy.targets[0], Star):
+                query_copy.targets = [Identifier(column) for column in self.get_columns()]
 
             # SOQL does not support column aliases. Remove column aliases.
             column_aliases = {}
-            for index, column in enumerate(query.targets):
+            for index, column in enumerate(query_copy.targets):
                 if column.alias is not None:
                     # When the column is a function, Salesforce gives it an alias like 'expr0', 'expr1', etc.
                     if isinstance(column, Function):
@@ -64,7 +66,7 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
 
             client = self.handler.connect()
 
-            query_str = query.to_string()
+            query_str = query_copy.to_string()
 
             # SOQL does not support backticks. Remove backticks.
             query_str = query_str.replace("`", "")

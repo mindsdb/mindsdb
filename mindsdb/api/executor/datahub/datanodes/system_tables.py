@@ -161,6 +161,40 @@ class TablesTable(Table):
         return df
 
 
+class MetaTablesTable(Table):
+    name = "TABLES"
+
+    columns = [
+        "TABLE_CATALOG",
+        "TABLE_SCHEMA",
+        "TABLE_NAME",
+        "TABLE_TYPE",
+        "TABLE_DESCRIPTION",
+        "ROW_COUNT"
+    ]
+    
+    @classmethod
+    def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
+        databases, _ = _get_scope(query)
+
+        records = _get_records_from_data_catalog(databases)
+        
+        data = []
+        for record in records:
+            item = {
+                "TABLE_CATALOG": "def",
+                "TABLE_SCHEMA": record.integration.name,
+                "TABLE_NAME": record.name,
+                "TABLE_TYPE": record.type,
+                "TABLE_DESCRIPTION": record.description or "",
+                "ROW_COUNT": record.row_count
+            }
+            data.append(item)
+
+        df = pd.DataFrame(data, columns=cls.columns)
+        return df
+
+
 def infer_mysql_type(original_type: str) -> MYSQL_DATA_TYPE:
     """Infer MySQL data type from original type string from a database.
 

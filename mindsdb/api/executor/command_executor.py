@@ -36,6 +36,7 @@ from mindsdb_sql_parser.ast import (
     Tuple,
     Function,
     Variable,
+    Intersect,
 )
 
 # typed models
@@ -627,6 +628,9 @@ class ExecuteCommands:
             return self.answer_create_kb_index(statement, database_name)
         elif statement_type is EvaluateKnowledgeBase:
             return self.answer_evaluate_kb(statement, database_name)
+        elif statement_type is Intersect:
+            query = SQLQuery(statement, session=self.session, database=database_name)
+            return self.answer_select(query)
         else:
             logger.warning(f"Unknown SQL statement: {sql}")
             raise NotSupportedYet(f"Unknown SQL statement: {sql}")

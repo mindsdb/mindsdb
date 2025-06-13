@@ -1,5 +1,4 @@
 import os
-import uuid
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from tests.integration.utils.http_test_helpers import HTTPHelperMixin
@@ -7,54 +6,39 @@ from tests.integration.utils.http_test_helpers import HTTPHelperMixin
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
-random_str = uuid.uuid4().hex[:6]
-example_sentiment_openai_db = f"example_sentiment_openai_db_{random_str}"
-openai_engine = f"openai2_{random_str}"
-model_name = f"sentiment_classifier_gpt3_{random_str}"
-
 
 class QueryStorage:
-    create_db = f"""
-CREATE DATABASE {example_sentiment_openai_db}
+    create_db = """
+CREATE DATABASE example_sentiment_openai_db
 WITH ENGINE = "postgres",
-PARAMETERS = {{
+PARAMETERS = {
     "user": "demo_user",
     "password": "demo_password",
     "host": "samples.mindsdb.com",
     "port": "5432",
     "database": "demo",
     "schema": "demo_data"
-    }};
+    };
 """
-    check_db_created = f"""
+    check_db_created = """
 SELECT *
-FROM {example_sentiment_openai_db}.amazon_reviews LIMIT 3;
+FROM example_sentiment_openai_db.amazon_reviews LIMIT 3;
 """
-<<<<<<< agent-sf-fixes
-    delete_db = f"""
-DROP DATABASE {example_sentiment_openai_db};
-=======
     delete_db = """
 DROP DATABASE IF EXISTS example_sentiment_openai_db;
->>>>>>> main
 """
-    create_engine = f"""
-CREATE ML_ENGINE {openai_engine}
+    create_engine = """
+CREATE ML_ENGINE openai2
 FROM openai USING openai_api_key='%s';
 """
-<<<<<<< agent-sf-fixes
-    delete_engine = f"""
-DROP ML_ENGINE {openai_engine};
-=======
     delete_engine = """
 DROP ML_ENGINE IF EXISTS openai2;
->>>>>>> main
 """
-    create_model = f"""
-CREATE MODEL {model_name}
+    create_model = """
+CREATE MODEL sentiment_classifier_gpt3
 PREDICT sentiment
 USING
-engine = '{openai_engine}',
+engine = 'openai2',
 prompt_template = 'describe the sentiment of the reviews
 strictly as "positive", "neutral", or "negative".
 "I love the product":positive
@@ -62,29 +46,23 @@ strictly as "positive", "neutral", or "negative".
 "{{review}}.":',
 openai_api_key = '%s';
 """
-    check_status = f"""
+    check_status = """
 SELECT * FROM models
-WHERE name = '{model_name}';
+WHERE name = 'sentiment_classifier_gpt3';
 """
-<<<<<<< agent-sf-fixes
-    delete_model = f"""
-DROP MODEL
-  mindsdb.{model_name};
-=======
     delete_model = """
 DROP MODEL IF EXISTS
   mindsdb.sentiment_classifier_gpt3;
->>>>>>> main
 """
-    prediction = f"""
+    prediction = """
 SELECT review, sentiment
-FROM {model_name}
+FROM sentiment_classifier_gpt3
 WHERE review = 'It is ok.';
 """
-    bulk_prediction = f"""
+    bulk_prediction = """
 SELECT input.review, output.sentiment
-FROM {example_sentiment_openai_db}.amazon_reviews AS input
-JOIN {model_name} AS output
+FROM example_sentiment_openai_db.amazon_reviews AS input
+JOIN sentiment_classifier_gpt3 AS output
 LIMIT 5;
 """
 

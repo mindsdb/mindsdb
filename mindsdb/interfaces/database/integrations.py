@@ -800,7 +800,7 @@ class IntegrationController:
         for item in code.body:
             if isinstance(item, ast.ClassDef):
                 bases = [base.id for base in item.bases]
-                if "APIHandler" in bases:
+                if "APIHandler" in bases or "MetaAPIHandler" in bases:
                     return "api"
         return "sql"
 

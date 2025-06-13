@@ -1201,22 +1201,10 @@ class KnowledgeBaseController:
         project_names = {i.id: i.name for i in project_controller.get_list()}
 
         for record in query:
-            vector_database = record.vector_database
-            embedding_model = record.embedding_model
+            kb = record.as_dict(with_secrets=self.session.show_secrets)
+            kb["project_name"] = project_names[record.project_id]
 
-            data.append(
-                {
-                    "id": record.id,
-                    "name": record.name,
-                    "project_id": record.project_id,
-                    "project_name": project_names[record.project_id],
-                    "embedding_model": embedding_model.name if embedding_model is not None else None,
-                    "vector_database": None if vector_database is None else vector_database.name,
-                    "vector_database_table": record.vector_database_table,
-                    "query_id": record.query_id,
-                    "params": record.params,
-                }
-            )
+            data.append(kb)
 
         return data
 

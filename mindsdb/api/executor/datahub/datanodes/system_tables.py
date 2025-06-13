@@ -1,4 +1,4 @@
-from typing import Optional, Literal
+from typing import Optional, List, Literal
 from dataclasses import dataclass, fields
 
 import pandas as pd
@@ -37,6 +37,20 @@ def _get_scope(query):
         elif arg1.lower() == "table_name":
             tables = scope
     return databases, tables
+
+
+def _get_records_from_data_catalog(databases: List, tables: Optional[List[str]] = None) -> List:
+    """Get records from the data catalog based on the specified databases and tables."""
+    # TODO: Should we allow to query all databases?
+    if not databases:
+        raise ValueError("At least one database must be specified in the query.")
+
+    records = []
+    for database in databases:
+        data_catalog_reader = DataCatalogReader(database_name=database, table_names=tables)
+        records.extend(data_catalog_reader.read_metadata_as_records())
+
+    return records
 
 
 class Table:
@@ -417,7 +431,56 @@ class EnginesTable(Table):
 
         df = pd.DataFrame(data, columns=cls.columns)
         return df
+    
+class TableConstraintsTable(Table):
+    name = "TABLE_CONSTRAINTS"
+    columns = [
+        "CONSTRAINT_CATALOG",
+        "CONSTRAINT_SCHEMA",
+        "CONSTRAINT_NAME",
+        "TABLE_SCHEMA",
+        "TABLE_NAME",
+        "CONSTRAINT_TYPE",
+        "ENFORCED",
+    ]
 
+    @classmethod
+    def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
+        databases, tables = _get_scope(query)
+        
+        records = _get_records_from_data_catalog(databases, tables)
+
+        data = []
+        for record in records:
+            database_name = record.integration.name
+            table_name = record.name
+            primary_keys = record.meta_primary_keys
+            foreign_keys = record.meta_foreign_keys_children
+            
+            for pk in primary_keys:
+                item = {
+                    "CONSTRAINT_CATALOG": "def",
+                    "CONSTRAINT_SCHEMA": database_name,
+                    "CONSTRAINT_NAME": pk.constraint_name,
+                    "TABLE_SCHEMA": database_name,
+                    "TABLE_NAME": table_name,
+                    "CONSTRAINT_TYPE": "PRIMARY KEY",
+                }
+                data.append(item)
+                
+            for fk in foreign_keys:
+                item = {
+                    "CONSTRAINT_CATALOG": "def",
+                    "CONSTRAINT_SCHEMA": database_name,
+                    "CONSTRAINT_NAME": fk.constraint_name,
+                    "TABLE_SCHEMA": database_name,
+                    "TABLE_NAME": table_name,
+                    "CONSTRAINT_TYPE": "FOREIGN KEY",
+                }
+                data.append(item)
+
+        df = pd.DataFrame(data, columns=cls.columns)
+        return df
 
 class KeyColumnUsageTable(Table):
     name = "KEY_COLUMN_USAGE"
@@ -479,14 +542,7 @@ class ColumnStatisticsTable(Table):
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
         databases, tables = _get_scope(query)
 
-        # TODO: Should querying without a database be allowed? 
-        if not databases:
-            raise ValueError("At least one database must be specified in the query.")
-
-        records = []
-        for database in databases:
-            data_catalog_reader = DataCatalogReader(database_name=database, table_names=tables)
-            records.extend(data_catalog_reader.read_metadata_as_records())
+        records = _get_records_from_data_catalog(databases, tables)
 
         data = []
         for record in records:

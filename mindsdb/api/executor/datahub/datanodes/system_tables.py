@@ -8,6 +8,7 @@ from mindsdb.utilities import log
 from mindsdb.utilities.config import config
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES
+from mindsdb.interfaces.data_catalog.data_catalog_reader import DataCatalogReader
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE, MYSQL_DATA_TYPE_COLUMNS_DEFAULT
 from mindsdb.api.executor.datahub.classes.tables_row import TABLES_ROW_TYPE, TablesRow
 
@@ -458,6 +459,64 @@ class StatisticsTable(Table):
         "IS_VISIBLE",
         "EXPRESSION",
     ]
+    
+    
+class ColumnStatisticsTable(Table):
+    name = "COLUMN_STATISTICS"
+    columns = [
+        "TABLE_SCHEMA",
+        "TABLE_NAME",
+        "COLUMN_NAME",
+        "MOST_COMMON_VALS",
+        "MOST_COMMON_FREQS",
+        "NULL_FRAC",
+        "N_DISTINCT",
+        "MIN_VALUE",
+        "MAX_VALUE",
+    ]
+
+    @classmethod
+    def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
+        databases, tables = _get_scope(query)
+
+        # TODO: Should querying without a database be allowed? 
+        if not databases:
+            raise ValueError("At least one database must be specified in the query.")
+
+        records = []
+        for database in databases:
+            data_catalog_reader = DataCatalogReader(database_name=database, table_names=tables)
+            records.extend(data_catalog_reader.read_metadata_as_records())
+
+        data = []
+        for record in records:
+            database_name = record.integration.name
+            table_name = record.name
+            columns = record.meta_columns
+
+            for column in columns:
+                column_statistics = column.meta_column_statistics[0]
+
+                item = {
+                    "TABLE_SCHEMA": database_name,
+                    "TABLE_NAME": table_name,
+                    "COLUMN_NAME": column.name,
+                }
+
+                if column_statistics:
+                    item.update({
+                        "MOST_COMMON_VALS": column_statistics.most_common_values,
+                        "MOST_COMMON_FREQS": column_statistics.most_common_frequencies,
+                        "NULL_FRAC": column_statistics.null_percentage,
+                        "N_DISTINCT": column_statistics.distinct_values_count,
+                        "MIN_VALUE": column_statistics.minimum_value,
+                        "MAX_VALUE": column_statistics.maximum_value,
+                    })
+
+                data.append(item)
+
+        df = pd.DataFrame(data, columns=cls.columns)
+        return df
 
 
 class CharacterSetsTable(Table):

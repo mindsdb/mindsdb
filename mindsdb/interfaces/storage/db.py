@@ -500,11 +500,11 @@ class KnowledgeBase(Base):
         reranking_model = params.pop("reranking_model", None)
 
         if not with_secrets:
-            if embedding_model and 'api_key' in embedding_model:
-                embedding_model['api_key'] = '******'
+            if embedding_model and "api_key" in embedding_model:
+                embedding_model["api_key"] = "******"
 
-            if reranking_model and 'api_key' in reranking_model:
-                reranking_model['api_key'] = '******'
+            if reranking_model and "api_key" in reranking_model:
+                reranking_model["api_key"] = "******"
 
         return {
             "id": self.id,
@@ -520,7 +520,7 @@ class KnowledgeBase(Base):
             "metadata_columns": params.pop("metadata_columns", None),
             "content_columns": params.pop("content_columns", None),
             "id_column": params.pop("id_column", None),
-            "params": params
+            "params": params,
         }
 
 

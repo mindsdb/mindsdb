@@ -161,6 +161,7 @@ class TablesTable(Table):
         return df
 
 
+# TODO: Combine with existing 'MetaTablesTable'?
 class MetaTablesTable(Table):
     name = "META_TABLES"
 
@@ -357,8 +358,9 @@ class ColumnsTable(Table):
                     )
 
         return pd.DataFrame(result, columns=cls.columns)
-    
-    
+
+
+# TODO: Combine with existing 'ColumnsTable'? 
 class MetaColumnsTable(Table):
     name = "META_COLUMNS"
 

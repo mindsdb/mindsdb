@@ -256,8 +256,7 @@ class SalesforceHandler(MetaAPIHandler):
         """
         # TODO: Relationships? Aliases?
         return """
-                You are an expert SOQL query generator for the Salesforce Platform.
-                Your sole purpose is to convert user requests into valid SOQL queries.
+                Your sole purpose is to convert user requests into valid SQL queries.
                 Query Syntax & Structure Rules:
 
                     Counting Records: When asked to count records, you MUST use COUNT() with no arguments or COUNT(Id). You MUST NOT use COUNT(*).

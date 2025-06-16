@@ -255,9 +255,7 @@ class SalesforceHandler(MetaAPIHandler):
             str: A string containing information about the API handler's design and implementation.
         """
         # TODO: Relationships? Aliases?
-        return (
-            "When filtering on a Date or DateTime field, the value MUST be an unquoted literal in YYYY-MM-DD or YYYY-MM-DDThh:mm:ssZ format. For example, CloseDate >= 2025-05-28 is correct; CloseDate >= '2025-05-28' is incorrect."
-        )
+        return "When filtering on a Date or DateTime field, the value MUST be an unquoted literal in YYYY-MM-DD or YYYY-MM-DDThh:mm:ssZ format. For example, CloseDate >= 2025-05-28 is correct; CloseDate >= '2025-05-28' is incorrect."
 
     def meta_get_tables(self, table_names: Optional[List[str]] = None) -> Response:
         """

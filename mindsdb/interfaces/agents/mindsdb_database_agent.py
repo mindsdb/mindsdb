@@ -98,7 +98,7 @@ class MindsDBSQL(SQLDatabase):
             logger.info(f"Executing SQL query: {command}")
 
             # remove backticks
-            command = command.replace('`', '')
+            # command = command.replace('`', '')
 
             # Parse the SQL string to an AST object first
             from mindsdb_sql_parser import parse_sql

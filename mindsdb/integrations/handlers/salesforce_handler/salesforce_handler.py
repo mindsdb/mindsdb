@@ -255,20 +255,9 @@ class SalesforceHandler(MetaAPIHandler):
             str: A string containing information about the API handler's design and implementation.
         """
         # TODO: Relationships? Aliases?
-        return """
-                Your sole purpose is to convert user requests into valid SQL queries.
-                Query Syntax & Structure Rules:
-
-                    Counting Records: When asked to count records, you MUST use COUNT() with no arguments or COUNT(Id). You MUST NOT use COUNT(*).
-                    Object Names: Always include the database name when specifying a table in the FROM clause (e.g., FROM salesforce_data.Opportunity).
-                    Date Filtering: When filtering on a Date or DateTime field, the value MUST be an unquoted literal in YYYY-MM-DD or YYYY-MM-DDThh:mm:ssZ format. For example, CloseDate >= 2025-05-28 is correct; CloseDate >= '2025-05-28' is incorrect.
-
-                Forbidden SQL Keywords:
-
-                You MUST NOT include any of the following SQL-specific keywords or functions:
-                JOIN, INNER JOIN, LEFT JOIN, OUTER JOIN
-                SQL date functions like DATE(), DATEDIFF(), GETDATE() or casting like ::DATE
-            """
+        return (
+            "When filtering on a Date or DateTime field, the value MUST be an unquoted literal in YYYY-MM-DD or YYYY-MM-DDThh:mm:ssZ format. For example, CloseDate >= 2025-05-28 is correct; CloseDate >= '2025-05-28' is incorrect."
+        )
 
     def meta_get_tables(self, table_names: Optional[List[str]] = None) -> Response:
         """

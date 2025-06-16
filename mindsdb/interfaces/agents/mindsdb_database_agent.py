@@ -97,6 +97,7 @@ class MindsDBSQL(SQLDatabase):
             # Log the query for debugging
             logger.info(f"Executing SQL query: {command}")
 
+            # Removing backticks causes in query execution.
             # remove backticks
             # command = command.replace('`', '')
 

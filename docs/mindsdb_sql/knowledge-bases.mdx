@@ -175,6 +175,8 @@ When choosing `openai` as the model provider, users should define the following 
 * `model_name` stores the name of the OpenAI model to be used.
 * `api_key` stores the OpenAI API key.
 
+Learn more about the [OpenAI integration with MindsDB here](/integrations/ai-engines/openai).
+
 #### `provider = 'openai_azure'`
 
 When choosing `openai_azure` as the model provider, users should define the following model parameters.
@@ -210,6 +212,7 @@ When choosing `ollama` as the model provider, users should define the following 
 * `base_url` stores the base URL for accessing you Ollama instance.
 
 Example:
+
 ```sql
 CREATE KNOWLEDGE_BASE my_kb
         USING
@@ -225,6 +228,9 @@ CREATE KNOWLEDGE_BASE my_kb
             "base_url": "http://localhost:11434"
         };
 ```
+
+Learn more about the [Ollama integration with MindsDB here](/integrations/ai-engines/ollama).
+
 
 ### `embedding_model`
 

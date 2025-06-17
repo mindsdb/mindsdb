@@ -266,6 +266,21 @@ class MetaDatabaseHandler(DatabaseHandler):
         """
         raise NotImplementedError()
 
+    def meta_get_handler_info(self, **kwargs) -> str:
+        """
+        Retrieves information about the design and implementation of the database handler.
+        This should include, but not be limited to, the following:
+        - The type of SQL queries and operations that the handler supports.
+        - etc.
+
+        Args:
+            kwargs: Additional keyword arguments that may be used in generating the handler information.
+
+        Returns:
+            str: A string containing information about the database handler's design and implementation.
+        """
+        pass
+
 
 class ArgProbeMixin:
     """

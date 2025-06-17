@@ -265,7 +265,7 @@ class MetaDatabaseHandler(DatabaseHandler):
             - CONSTRAINT_NAME (str): Name of the foreign key constraint (optional).
         """
         raise NotImplementedError()
-    
+
     def meta_get_handler_info(self, **kwargs) -> str:
         """
         Retrieves information about the design and implementation of the database handler.

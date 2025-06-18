@@ -802,20 +802,17 @@ class MetaColumnUsageTable(Table):
 
 class MetaHandlerInfoTable(Table):
     name = "META_HANDLER_INFO"
-    columns = ["HANDLER_INFO"]
+    columns = ["HANDLER_INFO", "TABLE_SCHEMA"]
 
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
         databases, tables = _get_scope(query)
 
-        records = _get_records_from_data_catalog(databases, tables)
-
         data = []
-        for record in records:
-            item = {
-                "HANDLER_INFO": record.handler_info,
-            }
-            data.append(item)
+        for database in databases:
+            data_catalog_reader = DataCatalogReader(database_name=database, table_names=tables)
+            handler_info = data_catalog_reader.get_handler_info()
+            data.append({"HANDLER_INFO": str(handler_info), "TABLE_SCHEMA": database})
 
         df = pd.DataFrame(data, columns=cls.columns)
         return df

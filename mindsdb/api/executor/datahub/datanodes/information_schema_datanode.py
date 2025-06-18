@@ -31,6 +31,7 @@ from .system_tables import (
     MetaColumnStatisticsTable,
     CharacterSetsTable,
     CollationsTable,
+    MetaHandlerInfoTable,
 )
 from .mindsdb_tables import (
     ModelsTable,
@@ -85,6 +86,7 @@ class InformationSchemaDataNode(DataNode):
         ViewsTable,
         TriggersTable,
         QueriesTable,
+        MetaHandlerInfoTable,
     ]
 
     def __init__(self, session):

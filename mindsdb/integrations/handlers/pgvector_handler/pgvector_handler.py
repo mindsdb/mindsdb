@@ -154,7 +154,6 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         """
         table_name = self._check_table(table_name)
         query = f"CREATE INDEX IF NOT EXISTS {table_name}_{column_name}_fts_idx ON {table_name} USING gin(to_tsvector('english', {column_name}))"
-        print(query)
         self.raw_query(query)
         return Response(RESPONSE_TYPE.OK)
 

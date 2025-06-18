@@ -16,7 +16,7 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
     FilterCondition,
     VectorStoreHandler,
     DistanceFunction,
-    TableField
+    TableField,
 )
 from mindsdb.utilities import log
 from mindsdb.utilities.profiler import profiler
@@ -32,13 +32,12 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
     name = "pgvector"
 
     def __init__(self, name: str, **kwargs):
-
         super().__init__(name=name, **kwargs)
         self._is_shared_db = False
         self._is_vector_registered = False
         # we get these from the connection args on PostgresHandler parent
-        self._is_sparse = self.connection_args.get('is_sparse', False)
-        self._vector_size = self.connection_args.get('vector_size', None)
+        self._is_sparse = self.connection_args.get("is_sparse", False)
+        self._vector_size = self.connection_args.get("vector_size", None)
 
         if self._is_sparse:
             if not self._vector_size:
@@ -48,20 +47,20 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
                 distance_op = "<#>"
 
         else:
-            distance_op = '<=>'
-            if 'distance' in self.connection_args:
+            distance_op = "<=>"
+            if "distance" in self.connection_args:
                 distance_ops = {
-                    'l1': '<+>',
-                    'l2': '<->',
-                    'ip': '<#>',  # inner product
-                    'cosine': '<=>',
-                    'hamming': '<~>',
-                    'jaccard': '<%>'
+                    "l1": "<+>",
+                    "l2": "<->",
+                    "ip": "<#>",  # inner product
+                    "cosine": "<=>",
+                    "hamming": "<~>",
+                    "jaccard": "<%>",
                 }
 
-                distance_op = distance_ops.get(self.connection_args['distance'])
+                distance_op = distance_ops.get(self.connection_args["distance"])
                 if distance_op is None:
-                    raise ValueError(f'Wrong distance type. Allowed options are {list(distance_ops.keys())}')
+                    raise ValueError(f"Wrong distance type. Allowed options are {list(distance_ops.keys())}")
 
         self.distance_op = distance_op
         self.connect()
@@ -72,26 +71,26 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
 
         """
         distance_ops_to_metric_type_map = {
-            '<->': 'vector_l2_ops',
-            '<#>': 'vector_ip_ops',
-            '<=>': 'vector_cosine_ops',
-            '<+>': 'vector_l1_ops',
-            '<~>': 'bit_hamming_ops',
-            '<%>': 'bit_jaccard_ops'
+            "<->": "vector_l2_ops",
+            "<#>": "vector_ip_ops",
+            "<=>": "vector_cosine_ops",
+            "<+>": "vector_l1_ops",
+            "<~>": "bit_hamming_ops",
+            "<%>": "bit_jaccard_ops",
         }
-        return distance_ops_to_metric_type_map.get(self.distance_op, 'vector_cosine_ops')
+        return distance_ops_to_metric_type_map.get(self.distance_op, "vector_cosine_ops")
 
     def _make_connection_args(self):
-        cloud_pgvector_url = os.environ.get('KB_PGVECTOR_URL')
+        cloud_pgvector_url = os.environ.get("KB_PGVECTOR_URL")
         # if no connection args and shared pg vector defined - use it
         if len(self.connection_args) == 0 and cloud_pgvector_url is not None:
             result = urlparse(cloud_pgvector_url)
             self.connection_args = {
-                'host': result.hostname,
-                'port': result.port,
-                'user': result.username,
-                'password': result.password,
-                'database': result.path[1:]
+                "host": result.hostname,
+                "port": result.port,
+                "user": result.username,
+                "password": result.password,
+                "database": result.path[1:],
             }
             self._is_shared_db = True
         return super()._make_connection_args()
@@ -132,9 +131,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
 
             except psycopg.Error as e:
                 self.connection.rollback()
-                logger.error(
-                    f"Error loading pg_vector extension, ensure you have installed it before running, {e}!"
-                )
+                logger.error(f"Error loading pg_vector extension, ensure you have installed it before running, {e}!")
                 raise
 
         # register vector type with psycopg2 connection
@@ -142,6 +139,20 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         self._is_vector_registered = True
 
         return self.connection
+
+    def add_full_text_index(self, table_name: str, column_name: str) -> Response:
+        """
+        Add a full text index to the specified column of the table.
+        Args:
+            table_name (str): Name of the table to add the index to.
+            column_name (str): Name of the column to add the index to.
+        Returns:
+            Response: Response object indicating success or failure.
+        """
+        table_name = self._check_table(table_name)
+        query = f"CREATE INDEX IF NOT EXISTS {table_name}_{column_name}_fts_idx ON {table_name} USING gin(to_tsvector('english', {column_name}))"
+        self.raw_query(query)
+        return Response(RESPONSE_TYPE.OK)
 
     @staticmethod
     def _translate_conditions(conditions: List[FilterCondition]) -> Union[dict, None]:
@@ -155,7 +166,6 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         filter_conditions = {}
 
         for condition in conditions:
-
             parts = condition.column.split(".")
             key = parts[0]
             # converts 'col.el1.el2' to col->'el1'->>'el2'
@@ -187,12 +197,12 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         for key, value in filter_conditions.items():
             if key == "embeddings":
                 continue
-            if value['op'].lower() in ('in', 'not in'):
-                values = list(repr(i) for i in value['value'])
-                value['value'] = '({})'.format(', '.join(values))
+            if value["op"].lower() in ("in", "not in"):
+                values = list(repr(i) for i in value["value"])
+                value["value"] = "({})".format(", ".join(values))
             else:
-                value['value'] = repr(value['value'])
-            where_clauses.append(f'{key} {value["op"]} {value["value"]}')
+                value["value"] = repr(value["value"])
+            where_clauses.append(f"{key} {value['op']} {value['value']}")
 
         if len(where_clauses) > 1:
             return f"WHERE {' AND '.join(where_clauses)}"
@@ -207,7 +217,6 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         offset_clause: str,
         limit_clause: str,
     ) -> str:
-
         return f"{where_clause} {offset_clause} {limit_clause}"
 
     def _build_select_query(
@@ -243,13 +252,12 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
                 else:
                     modified_columns.append(col)
         else:
-            modified_columns = ['id', 'content', 'embeddings', 'metadata']
+            modified_columns = ["id", "content", "embeddings", "metadata"]
             has_distance = True
 
-        targets = ', '.join(modified_columns)
+        targets = ", ".join(modified_columns)
 
         if filter_conditions:
-
             if embedding_search:
                 search_vector = filter_conditions["embeddings"]["value"]
                 filter_conditions.pop("embeddings")
@@ -258,6 +266,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
                     # Convert dict to sparse vector if needed
                     if isinstance(search_vector, dict):
                         from pgvector.utils import SparseVector
+
                         embedding = SparseVector(search_vector, self._vector_size)
                         search_vector = embedding.to_text()
                 else:
@@ -282,8 +291,8 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
     def _check_table(self, table_name: str):
         # Apply namespace for a user
         if self._is_shared_db:
-            company_id = ctx.company_id or 'x'
-            return f't_{company_id}_{table_name}'
+            company_id = ctx.company_id or "x"
+            return f"t_{company_id}_{table_name}"
         return table_name
 
     def select(
@@ -318,9 +327,9 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         query: str = None,
         metadata: Dict[str, str] = None,
         distance_function=DistanceFunction.COSINE_DISTANCE,
-        **kwargs
+        **kwargs,
     ) -> pd.DataFrame:
-        '''
+        """
         Executes a hybrid search, combining semantic search and one or both of keyword/metadata search.
 
         For insight on the query construction, see: https://docs.pgvecto.rs/use-case/hybrid-search.html#advanced-search-merge-the-results-of-full-text-search-and-vector-search.
@@ -340,23 +349,25 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
 
         Returns:
             df(pd.DataFrame): Hybrid search result, sorted by hybrid search rank
-        '''
+        """
         if query is None and metadata is None:
-            raise ValueError('Must provide at least one of: query for keyword search, or metadata filters. For only embeddings search, use normal search instead.')
+            raise ValueError(
+                "Must provide at least one of: query for keyword search, or metadata filters. For only embeddings search, use normal search instead."
+            )
 
-        id_column_name = kwargs.get('id_column_name', 'id')
-        content_column_name = kwargs.get('content_column_name', 'content')
-        embeddings_column_name = kwargs.get('embeddings_column_name', 'embeddings')
-        metadata_column_name = kwargs.get('metadata_column_name', 'metadata')
+        id_column_name = kwargs.get("id_column_name", "id")
+        content_column_name = kwargs.get("content_column_name", "content")
+        embeddings_column_name = kwargs.get("embeddings_column_name", "embeddings")
+        metadata_column_name = kwargs.get("metadata_column_name", "metadata")
         # Filter by given metadata for semantic search & full text search CTEs, if present.
-        where_clause = ' WHERE '
+        where_clause = " WHERE "
         if metadata is None:
-            where_clause = ''
+            where_clause = ""
             metadata = {}
         for i, (k, v) in enumerate(metadata.items()):
             where_clause += f"{metadata_column_name}->>'{k}' = '{v}'"
             if i < len(metadata.items()) - 1:
-                where_clause += ' AND '
+                where_clause += " AND "
 
         # See https://docs.pgvecto.rs/use-case/hybrid-search.html#advanced-search-merge-the-results-of-full-text-search-and-vector-search.
         #
@@ -381,47 +392,51 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         # Or, if we are only doing metadata search, we leave out the JOIN & full text search CTEs.
         #
         # We calculate the final "hybrid" rank by summing the reciprocals of the ranks from each individual CTE.
-        semantic_search_cte = f'''WITH semantic_search AS (
+        semantic_search_cte = f"""WITH semantic_search AS (
     SELECT {id_column_name}, {content_column_name}, {embeddings_column_name},
     RANK () OVER (ORDER BY {embeddings_column_name} {distance_function.value} '{str(embeddings)}') AS rank
     FROM {table_name}{where_clause}
     ORDER BY {embeddings_column_name} {distance_function.value} '{str(embeddings)}'::vector
-    )'''
+    )"""
 
-        full_text_search_cte = ''
+        full_text_search_cte = ""
         if query is not None:
-            ts_vector_clause = f"WHERE to_tsvector('english', {content_column_name}) @@ plainto_tsquery('english', '{query}')"
+            ts_vector_clause = (
+                f"WHERE to_tsvector('english', {content_column_name}) @@ plainto_tsquery('english', '{query}')"
+            )
             if metadata:
-                ts_vector_clause = f"AND to_tsvector('english', {content_column_name}) @@ plainto_tsquery('english', '{query}')"
-            full_text_search_cte = f''',
+                ts_vector_clause = (
+                    f"AND to_tsvector('english', {content_column_name}) @@ plainto_tsquery('english', '{query}')"
+                )
+            full_text_search_cte = f""",
     full_text_search AS (
     SELECT {id_column_name}, {content_column_name}, {embeddings_column_name},
     RANK () OVER (ORDER BY ts_rank(to_tsvector('english', {content_column_name}), plainto_tsquery('english', '{query}')) DESC) AS rank
     FROM {table_name}{where_clause}
     {ts_vector_clause}
     ORDER BY ts_rank(to_tsvector('english', {content_column_name}), plainto_tsquery('english', '{query}')) DESC
-    )'''
+    )"""
 
-        hybrid_select = '''
-    SELECT * FROM semantic_search'''
+        hybrid_select = """
+    SELECT * FROM semantic_search"""
         if query is not None:
-            hybrid_select = f'''
+            hybrid_select = f"""
     SELECT
         COALESCE(semantic_search.{id_column_name}, full_text_search.{id_column_name}) AS id,
         COALESCE(semantic_search.{content_column_name}, full_text_search.{content_column_name}) AS content,
         COALESCE(semantic_search.{embeddings_column_name}, full_text_search.{embeddings_column_name}) AS embeddings,
         COALESCE(1.0 / (1 + semantic_search.rank), 0.0) + COALESCE(1.0 / (1 + full_text_search.rank), 0.0) AS rank
     FROM semantic_search FULL OUTER JOIN full_text_search USING ({id_column_name}) ORDER BY rank DESC;
-        '''
+        """
 
-        full_search_query = f'{semantic_search_cte}{full_text_search_cte}{hybrid_select}'
+        full_search_query = f"{semantic_search_cte}{full_text_search_cte}{hybrid_select}"
         return self.raw_query(full_search_query)
 
     def create_table(self, table_name: str):
         """Create a table with a vector column."""
         with self.connection.cursor() as cur:
             # For sparse vectors, use sparsevec type
-            vector_column_type = 'sparsevec' if self._is_sparse else 'vector'
+            vector_column_type = "sparsevec" if self._is_sparse else "vector"
 
             # Vector size is required for sparse vectors, optional for dense
             if self._is_sparse and not self._vector_size:
@@ -429,8 +444,8 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
 
             # Add vector size specification only if provided
             size_spec = f"({self._vector_size})" if self._vector_size is not None else "()"
-            if vector_column_type == 'vector':
-                size_spec = ''
+            if vector_column_type == "vector":
+                size_spec = ""
 
             cur.execute(f"""
                 CREATE TABLE IF NOT EXISTS {table_name} (
@@ -442,16 +457,14 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
             """)
             self.connection.commit()
 
-    def insert(
-        self, table_name: str, data: pd.DataFrame
-    ):
+    def insert(self, table_name: str, data: pd.DataFrame):
         """
         Insert data into the pgvector table database.
         """
         table_name = self._check_table(table_name)
 
-        if 'metadata' in data.columns:
-            data['metadata'] = data['metadata'].apply(json.dumps)
+        if "metadata" in data.columns:
+            data["metadata"] = data["metadata"].apply(json.dumps)
 
         resp = super().insert(table_name, data)
         if resp.resp_type == RESPONSE_TYPE.ERROR:
@@ -459,9 +472,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         if resp.resp_type == RESPONSE_TYPE.TABLE:
             return resp.data_frame
 
-    def update(
-        self, table_name: str, data: pd.DataFrame, key_columns: List[str] = None
-    ):
+    def update(self, table_name: str, data: pd.DataFrame, key_columns: List[str] = None):
         """
         Udate data into the pgvector table database.
         """
@@ -471,43 +482,32 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         update_columns = {}
 
         for col in data.columns:
-            value = Parameter('%s')
+            value = Parameter("%s")
 
             if col in key_columns:
-                cond = BinaryOperation(
-                    op='=',
-                    args=[Identifier(col), value]
-                )
+                cond = BinaryOperation(op="=", args=[Identifier(col), value])
                 if where is None:
                     where = cond
                 else:
-                    where = BinaryOperation(
-                        op='AND',
-                        args=[where, cond]
-                    )
+                    where = BinaryOperation(op="AND", args=[where, cond])
             else:
                 update_columns[col] = value
 
-        query = Update(
-            table=Identifier(table_name),
-            update_columns=update_columns,
-            where=where
-        )
+        query = Update(table=Identifier(table_name), update_columns=update_columns, where=where)
 
         if TableField.METADATA.value in data.columns:
+
             def fnc(v):
                 if isinstance(v, dict):
                     return json.dumps(v)
+
             data[TableField.METADATA.value] = data[TableField.METADATA.value].apply(fnc)
 
             data = data.astype({TableField.METADATA.value: str})
 
         transposed_data = []
         for _, record in data.iterrows():
-            row = [
-                record[col]
-                for col in update_columns.keys()
-            ]
+            row = [record[col] for col in update_columns.keys()]
             for key_column in key_columns:
                 row.append(record[key_column])
             transposed_data.append(row)
@@ -515,17 +515,13 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         query_str = self.renderer.get_string(query)
         self.raw_query(query_str, transposed_data)
 
-    def delete(
-        self, table_name: str, conditions: List[FilterCondition] = None
-    ):
+    def delete(self, table_name: str, conditions: List[FilterCondition] = None):
         table_name = self._check_table(table_name)
 
         filter_conditions = self._translate_conditions(conditions)
         where_clause = self._construct_where_clause(filter_conditions)
 
-        query = (
-            f"DELETE FROM {table_name} {where_clause}"
-        )
+        query = f"DELETE FROM {table_name} {where_clause}"
         self.raw_query(query)
 
     def drop_table(self, table_name: str, if_exists=True):
@@ -535,7 +531,13 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         table_name = self._check_table(table_name)
         self.raw_query(f"DROP TABLE IF EXISTS {table_name}")
 
-    def create_index(self, table_name: str, column_name: str = "embeddings", index_type: Literal['ivfflat', 'hnsw'] = "hnsw", metric_type: str = None):
+    def create_index(
+        self,
+        table_name: str,
+        column_name: str = "embeddings",
+        index_type: Literal["ivfflat", "hnsw"] = "hnsw",
+        metric_type: str = None,
+    ):
         """
         Create an index on the pgvector table.
         Args:
@@ -547,7 +549,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         if metric_type is None:
             metric_type = self.get_metric_type()
         # Check if the index type is supported
-        if index_type not in ['ivfflat', 'hnsw']:
+        if index_type not in ["ivfflat", "hnsw"]:
             raise ValueError("Invalid index type. Supported types are 'ivfflat' and 'hnsw'.")
         table_name = self._check_table(table_name)
         # first we make sure embedding dimension is set
@@ -564,3 +566,16 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
 
         # Create the index
         self.raw_query(f"CREATE INDEX ON {table_name} USING {index_type} ({column_name} {metric_type})")
+
+    def is_table_empty(self, table_name: str) -> bool:
+        """
+        Check if the table is empty.
+        """
+        table_name = self._check_table(table_name)
+        query = f"SELECT * FROM {table_name} LIMIT 1"
+        try:
+            result = self.raw_query(query)
+            return result.empty
+        except psycopg.Error as e:
+            logger.error(f"Error checking if table {table_name} is empty: {e}")
+            return False

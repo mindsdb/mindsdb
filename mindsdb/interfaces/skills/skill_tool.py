@@ -344,7 +344,8 @@ class SkillToolController:
         db = MindsDBSQL.custom_init(
             sql_agent=sql_agent
         )
-        toolkit = MindsDBSQLToolkit(db=db, llm=llm)
+        should_include_kb_tools = include_knowledge_bases is not None and len(include_knowledge_bases) > 0
+        toolkit = MindsDBSQLToolkit(db=db, llm=llm, include_knowledge_base_tools=should_include_kb_tools)
         return toolkit.get_tools()
 
     def _make_retrieval_tools(self, skill: db.Skills, llm, embedding_model):

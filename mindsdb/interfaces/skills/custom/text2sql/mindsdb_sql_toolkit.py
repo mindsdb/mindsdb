@@ -16,6 +16,8 @@ from mindsdb.interfaces.skills.custom.text2sql.mindsdb_kb_tools import (
 
 class MindsDBSQLToolkit(SQLDatabaseToolkit):
 
+    include_knowledge_base_tools: bool = True
+
     def get_tools(self, prefix='') -> List[BaseTool]:
 
         current_date_time = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -112,6 +114,15 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
             description=mindsdb_sql_parser_tool_description
         )
 
+        sql_tools = [
+            query_sql_database_tool,
+            info_sql_database_tool,
+            list_sql_database_tool,
+            mindsdb_sql_parser_tool,
+        ]
+        if not self.include_knowledge_base_tools:
+            return sql_tools
+
         # Knowledge base tools
         kb_list_tool = KnowledgeBaseListTool(
             name=f'kb_list_tool{prefix}',
@@ -196,11 +207,7 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
         )
 
         # Return standard SQL tools and knowledge base tools
-        return [
-            query_sql_database_tool,
-            info_sql_database_tool,
-            list_sql_database_tool,
-            mindsdb_sql_parser_tool,
+        return sql_tools + [
             kb_list_tool,
             kb_info_tool,
             kb_query_tool,

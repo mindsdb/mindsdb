@@ -798,3 +798,24 @@ class MetaColumnUsageTable(Table):
 
         df = pd.DataFrame(data, columns=cls.columns)
         return df
+
+
+class MetaHandlerInfoTable(Table):
+    name = "META_HANDLER_INFO"
+    columns = ["HANDLER_INFO"]
+
+    @classmethod
+    def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
+        databases, tables = _get_scope(query)
+
+        records = _get_records_from_data_catalog(databases, tables)
+
+        data = []
+        for record in records:
+            item = {
+                "HANDLER_INFO": record.handler_info,
+            }
+            data.append(item)
+
+        df = pd.DataFrame(data, columns=cls.columns)
+        return df

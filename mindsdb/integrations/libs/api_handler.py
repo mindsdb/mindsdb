@@ -453,9 +453,10 @@ class APIHandler(BaseHandler):
             name (Identifier): the table name
         """
         name = name.parts[-1]
-        if name in self._tables:
+        is_quoted = name.is_quoted[-1]
+        if is_quoted and name in self._tables:
             return self._tables[name]
-        if name.lower() in self._lower_tables:
+        if not is_quoted and name.lower() in self._lower_tables:
             return self._lower_tables[name.lower()]
         raise TableNotFound(f"Table not found: {name}")
 

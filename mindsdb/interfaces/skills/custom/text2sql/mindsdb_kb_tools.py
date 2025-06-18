@@ -55,6 +55,26 @@ class KnowledgeBaseInfoTool(BaseTool):
         except (json.JSONDecodeError, TypeError):
             pass
 
+        def strip(s):
+            length = -1
+            while length != len(s):
+                length = len(s)
+
+                # remove ```
+                if s.startswith('```'):
+                    s = s[3:]
+                if s.endswith('```'):
+                    s = s[:-3]
+
+                # remove trailing new lines
+                s = s.strip("\n")
+
+                # remove extra quotes
+                for q in ('"', "'", "`"):
+                    if s.count(q) == 1:
+                        s = s.strip(q)
+            return s
+
         # Finally, try the original regex pattern for $START$ and $STOP$ markers
         match = re.search(r"\$START\$(.*?)\$STOP\$", tool_input, re.DOTALL)
         if not match:
@@ -63,12 +83,14 @@ class KnowledgeBaseInfoTool(BaseTool):
                 return [kb.strip() for kb in tool_input.split(",")]
             # If it's just a single string without formatting, return it as a single item
             if tool_input.strip():
-                return [tool_input.strip()]
+                return [strip(tool_input)]
             return []
 
         # Extract and clean the knowledge base names
         kb_names_str = match.group(1).strip()
         kb_names = re.findall(r"`([^`]+)`", kb_names_str)
+
+        kb_names = [strip(n) for n in kb_names]
         return kb_names
 
     def _run(self, tool_input: str) -> str:

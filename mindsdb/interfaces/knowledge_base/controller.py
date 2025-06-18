@@ -54,8 +54,10 @@ def get_model_params(model_params: dict, default_config_key: str):
     """
     # If the default config key is for reranking and the switch to use the default LLM is enabled,
     # switch to the default LLM model.
-    if default_config_key == "default_reranking_model" and config.get("default_reranking_model").get("use_default_llm", False):
-            default_config_key = "default_llm_model"
+    if default_config_key == "default_reranking_model" and config.get("default_reranking_model").get(
+        "use_default_llm", False
+    ):
+        default_config_key = "default_llm_model"
 
     combined_model_params = copy.deepcopy(config.get(default_config_key, {}))
 

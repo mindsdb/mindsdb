@@ -34,6 +34,12 @@ class DataCatalogReader(BaseDataCatalog):
             return []
         return tables
 
+    def get_handler_info(self) -> str:
+        """
+        Get the handler info for the database.
+        """
+        return self.data_handler.meta_get_handler_info()
+
     def _read_metadata(self) -> list:
         """
         Read the metadata from the data catalog and return it in a structured format.

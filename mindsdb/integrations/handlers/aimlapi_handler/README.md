@@ -1,0 +1,115 @@
+---
+title: Aimlapi
+sidebarTitle: Aimlapi
+---
+
+This documentation describes the integration of MindsDB with [Aimlapi](http://aimlapi.com/), a provider of AI language models.
+The integration allows for the deployment of Aimlapi models within MindsDB, providing the models with access to data from various data sources.
+
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
+2. To use Aimlapi within MindsDB, install the required dependencies following [this instruction](https://docs.mindsdb.com/setup/self-hosted/docker#install-dependencies).
+3. Obtain the Aimlapi API key required to deploy and use Aimlapi models within MindsDB.
+
+## Setup
+
+Create an AI engine from the [Aimlapi handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/aimlapi_handler).
+
+```sql
+CREATE ML_ENGINE aimlapi_engine
+FROM aimlapi
+USING
+    aimlapi_api_key = 'api-key-value';
+```
+
+Create a model using `aimlapi_engine` as an engine.
+
+```sql
+CREATE MODEL aimlapi_model
+PREDICT target_column
+USING
+      engine = 'aimlapi_engine',  -- engine name as created via CREATE ML_ENGINE
+      api_base = 'base-url', -- optional, replaces the default base URL
+      model_name = 'aimlapi_model_name',  -- optional with default value of `aimlapi-chat`
+      question_column = 'question',  -- optional, column name that stores user input
+      context_column = 'context',  -- optional, column that stores context of the user input
+      prompt_template = 'input your query here', -- optional, user provides instructions to the model here
+      user_column = 'user_input', -- optional, stores user input
+      prompt = 'instruction to the model'; -- optional stores instruction to the model
+```
+
+The following parameters are available to use when creating an Aimlapi model:
+
+* `engine`: This is the engine name as created with the [`CREATE ML_ENGINE`](https://docs.mindsdb.com/mindsdb_sql/sql/create/ml-engine) statement.
+* `api_base`: This parameter is optional. It replaces the default Aimlapi base URL with the defined value.
+* `model_name`: This parameter is optional. By default, the `aimlapi-chat` model is used.
+* `question_column`: This parameter is optional. It contains the column name that stores user input.
+* `context_column`: This parameter is optional. It contains the column name that stores context for the user input.
+* `prompt_template`: This parameter is optional if you use `question_column`. It stores the message or instructions to the model.
+
+## Usage
+
+The following usage examples utilize `aimlapi_engine` to create a model with the `CREATE MODEL` statement.
+
+### Answering questions without context
+
+```sql
+CREATE MODEL aimlapi_model
+PREDICT answer
+USING
+    engine = 'aimlapi_engine',
+    question_column = 'question';
+```
+
+Query the model to get predictions.
+
+```sql
+SELECT question, answer
+FROM aimlapi_model
+WHERE question = 'Where is Stockholm located?';
+```
+
+### Answering questions with context
+
+```sql
+CREATE MODEL aimlapi_model
+PREDICT answer
+USING
+    engine = 'aimlapi_engine',
+    question_column = 'question',
+    context_column = 'context';
+```
+
+Query the model to get predictions.
+
+```sql
+SELECT context, question, answer
+FROM aimlapi_model
+WHERE context = 'Answer accurately'
+AND question = 'How many planets exist in the solar system?';
+```
+
+### JSON-Struct Mode
+
+```sql
+CREATE MODEL product_extract_json
+PREDICT json
+USING
+    engine = 'aimlapi_engine',
+    json_struct = {
+        'product_name': 'name',
+        'product_category': 'category',
+        'product_price': 'price'
+    },
+    input_text = 'description';
+```
+
+```sql
+SELECT json
+FROM product_extract_json
+WHERE description = "some product description";
+```
+

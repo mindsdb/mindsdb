@@ -3,6 +3,7 @@ import re
 import json
 from pydantic import BaseModel, Field
 from langchain_core.tools import BaseTool
+from mindsdb_sql_parser.ast import Describe, Select, Identifier, Constant, Star
 
 
 class KnowledgeBaseListToolInput(BaseModel):
@@ -55,6 +56,26 @@ class KnowledgeBaseInfoTool(BaseTool):
         except (json.JSONDecodeError, TypeError):
             pass
 
+        def strip(s):
+            length = -1
+            while length != len(s):
+                length = len(s)
+
+                # remove ```
+                if s.startswith("```"):
+                    s = s[3:]
+                if s.endswith("```"):
+                    s = s[:-3]
+
+                # remove trailing new lines
+                s = s.strip("\n")
+
+                # remove extra quotes
+                for q in ('"', "'", "`"):
+                    if s.count(q) == 1:
+                        s = s.strip(q)
+            return s
+
         # Finally, try the original regex pattern for $START$ and $STOP$ markers
         match = re.search(r"\$START\$(.*?)\$STOP\$", tool_input, re.DOTALL)
         if not match:
@@ -63,12 +84,14 @@ class KnowledgeBaseInfoTool(BaseTool):
                 return [kb.strip() for kb in tool_input.split(",")]
             # If it's just a single string without formatting, return it as a single item
             if tool_input.strip():
-                return [tool_input.strip()]
+                return [strip(tool_input)]
             return []
 
         # Extract and clean the knowledge base names
         kb_names_str = match.group(1).strip()
         kb_names = re.findall(r"`([^`]+)`", kb_names_str)
+
+        kb_names = [strip(n) for n in kb_names]
         return kb_names
 
     def _run(self, tool_input: str) -> str:
@@ -83,7 +106,7 @@ class KnowledgeBaseInfoTool(BaseTool):
         for kb_name in kb_names:
             try:
                 # Get knowledge base schema
-                schema_result = self.db.run_no_throw(f"DESCRIBE KNOWLEDGE_BASE `{kb_name}`;")
+                schema_result = self.db.run_no_throw(str(Describe(kb_name, type="knowledge_base")))
 
                 if not schema_result:
                     results.append(f"Knowledge base `{kb_name}` not found or has no schema information.")
@@ -111,7 +134,9 @@ class KnowledgeBaseInfoTool(BaseTool):
                 kb_info += "```\n\n"
 
                 # Get sample data
-                sample_data = self.db.run_no_throw(f"SELECT * FROM `{kb_name}` LIMIT 10;")
+                sample_data = self.db.run_no_throw(
+                    str(Select(targets=[Star()], from_table=Identifier(kb_name), limit=Constant(20)))
+                )
 
                 # Sample data
                 kb_info += "### Sample Data:\n"

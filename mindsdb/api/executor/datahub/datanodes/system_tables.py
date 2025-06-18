@@ -39,20 +39,6 @@ def _get_scope(query):
     return databases, tables
 
 
-def _get_records_from_data_catalog(databases: List, tables: Optional[List[str]] = None) -> List:
-    """Get records from the data catalog based on the specified databases and tables."""
-    # TODO: Should we allow to query all databases?
-    if not databases:
-        raise ValueError("At least one database must be specified in the query.")
-
-    records = []
-    for database in databases:
-        data_catalog_reader = DataCatalogReader(database_name=database, table_names=tables)
-        records.extend(data_catalog_reader.read_metadata_as_records())
-
-    return records
-
-
 class Table:
     deletable: bool = False
     visible: bool = False
@@ -156,41 +142,6 @@ class TablesTable(Table):
             for row in project_tables:
                 row.TABLE_SCHEMA = project_name
                 data.append(row.to_list())
-
-        df = pd.DataFrame(data, columns=cls.columns)
-        return df
-
-
-# TODO: Combine with existing 'MetaTablesTable'?
-class MetaTablesTable(Table):
-    name = "META_TABLES"
-
-    columns = [
-        "TABLE_CATALOG",
-        "TABLE_SCHEMA",
-        "TABLE_NAME",
-        "TABLE_TYPE",
-        "TABLE_DESCRIPTION",
-        "ROW_COUNT"
-    ]
-    
-    @classmethod
-    def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
-        databases, _ = _get_scope(query)
-
-        records = _get_records_from_data_catalog(databases)
-        
-        data = []
-        for record in records:
-            item = {
-                "TABLE_CATALOG": "def",
-                "TABLE_SCHEMA": record.integration.name,
-                "TABLE_NAME": record.name,
-                "TABLE_TYPE": record.type,
-                "TABLE_DESCRIPTION": record.description or "",
-                "ROW_COUNT": record.row_count
-            }
-            data.append(item)
 
         df = pd.DataFrame(data, columns=cls.columns)
         return df
@@ -360,50 +311,6 @@ class ColumnsTable(Table):
         return pd.DataFrame(result, columns=cls.columns)
 
 
-# TODO: Combine with existing 'ColumnsTable'? 
-class MetaColumnsTable(Table):
-    name = "META_COLUMNS"
-
-    columns = [
-        "TABLE_CATALOG",
-        "TABLE_SCHEMA",
-        "TABLE_NAME",
-        "COLUMN_NAME",
-        "DATA_TYPE",
-        "COLUMN_DESCRIPTION",
-        "COLUMN_DEFAULT",
-        "IS_NULLABLE",
-    ]
-
-    @classmethod
-    def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
-        databases, tables = _get_scope(query)
-
-        records = _get_records_from_data_catalog(databases, tables)
-
-        data = []
-        for record in records:
-            database_name = record.integration.name
-            table_name = record.name
-            columns = record.meta_columns
-
-            for column in columns:
-                item = {
-                    "TABLE_CATALOG": "def",
-                    "TABLE_SCHEMA": database_name,
-                    "TABLE_NAME": table_name,
-                    "COLUMN_NAME": column.name,
-                    "DATA_TYPE": column.data_type,
-                    "COLUMN_DESCRIPTION": column.description or "",
-                    "COLUMN_DEFAULT": column.default_value,
-                    "IS_NULLABLE": "YES" if column.is_nullable else "NO",
-                }
-                data.append(item)
-
-        df = pd.DataFrame(data, columns=cls.columns)
-        return df
-
-
 class EventsTable(Table):
     name = "EVENTS"
 
@@ -512,8 +419,242 @@ class EnginesTable(Table):
         return df
 
 
-class TableConstraintsTable(Table):
-    name = "TABLE_CONSTRAINTS"
+class KeyColumnUsageTable(Table):
+    name = "KEY_COLUMN_USAGE"
+    columns = [
+        "CONSTRAINT_CATALOG",
+        "CONSTRAINT_SCHEMA",
+        "CONSTRAINT_NAME",
+        "TABLE_CATALOG",
+        "TABLE_SCHEMA",
+        "TABLE_NAME",
+        "COLUMN_NAME",
+        "ORDINAL_POSITION",
+        "POSITION_IN_UNIQUE_CONSTRAINT",
+        "REFERENCED_TABLE_SCHEMA",
+        "REFERENCED_TABLE_NAME",
+        "REFERENCED_COLUMN_NAME",
+    ]
+
+
+class StatisticsTable(Table):
+    name = "STATISTICS"
+    columns = [
+        "TABLE_CATALOG",
+        "TABLE_SCHEMA",
+        "TABLE_NAME",
+        "NON_UNIQUE",
+        "INDEX_SCHEMA",
+        "INDEX_NAME",
+        "SEQ_IN_INDEX",
+        "COLUMN_NAME",
+        "COLLATION",
+        "CARDINALITY",
+        "SUB_PART",
+        "PACKED",
+        "NULLABLE",
+        "INDEX_TYPE",
+        "COMMENT",
+        "INDEX_COMMENT",
+        "IS_VISIBLE",
+        "EXPRESSION",
+    ]
+
+
+class CharacterSetsTable(Table):
+    name = "CHARACTER_SETS"
+    columns = [
+        "CHARACTER_SET_NAME",
+        "DEFAULT_COLLATE_NAME",
+        "DESCRIPTION",
+        "MAXLEN",
+    ]
+
+    @classmethod
+    def get_data(cls, **kwargs):
+        data = [
+            ["utf8", "UTF-8 Unicode", "utf8_general_ci", 3],
+            ["latin1", "cp1252 West European", "latin1_swedish_ci", 1],
+            ["utf8mb4", "UTF-8 Unicode", "utf8mb4_general_ci", 4],
+        ]
+
+        df = pd.DataFrame(data, columns=cls.columns)
+        return df
+
+
+class CollationsTable(Table):
+    name = "COLLATIONS"
+
+    columns = [
+        "COLLATION_NAME",
+        "CHARACTER_SET_NAME",
+        "ID",
+        "IS_DEFAULT",
+        "IS_COMPILED",
+        "SORTLEN",
+        "PAD_ATTRIBUTE",
+    ]
+
+    @classmethod
+    def get_data(cls, **kwargs):
+        data = [
+            ["utf8_general_ci", "utf8", 33, "Yes", "Yes", 1, "PAD SPACE"],
+            ["latin1_swedish_ci", "latin1", 8, "Yes", "Yes", 1, "PAD SPACE"],
+        ]
+
+        df = pd.DataFrame(data, columns=cls.columns)
+        return df
+
+
+# Data Catalog tables
+# TODO: Should these be placed in a separate schema?
+
+def _get_records_from_data_catalog(databases: List, tables: Optional[List[str]] = None) -> List:
+    """Get records from the data catalog based on the specified databases and tables."""
+    # TODO: Should we allow to query all databases?
+    if not databases:
+        raise ValueError("At least one database must be specified in the query.")
+
+    records = []
+    for database in databases:
+        data_catalog_reader = DataCatalogReader(database_name=database, table_names=tables)
+        records.extend(data_catalog_reader.read_metadata_as_records())
+
+    return records
+
+
+# TODO: Combine with existing 'TablesTable'?
+class MetaTablesTable(Table):
+    name = "META_TABLES"
+
+    columns = [
+        "TABLE_CATALOG",
+        "TABLE_SCHEMA",
+        "TABLE_NAME",
+        "TABLE_TYPE",
+        "TABLE_DESCRIPTION",
+        "ROW_COUNT"
+    ]
+    
+    @classmethod
+    def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
+        databases, _ = _get_scope(query)
+
+        records = _get_records_from_data_catalog(databases)
+        
+        data = []
+        for record in records:
+            item = {
+                "TABLE_CATALOG": "def",
+                "TABLE_SCHEMA": record.integration.name,
+                "TABLE_NAME": record.name,
+                "TABLE_TYPE": record.type,
+                "TABLE_DESCRIPTION": record.description or "",
+                "ROW_COUNT": record.row_count
+            }
+            data.append(item)
+
+        df = pd.DataFrame(data, columns=cls.columns)
+        return df
+
+
+# TODO: Combine with existing 'ColumnsTable'? 
+class MetaColumnsTable(Table):
+    name = "META_COLUMNS"
+
+    columns = [
+        "TABLE_CATALOG",
+        "TABLE_SCHEMA",
+        "TABLE_NAME",
+        "COLUMN_NAME",
+        "DATA_TYPE",
+        "COLUMN_DESCRIPTION",
+        "COLUMN_DEFAULT",
+        "IS_NULLABLE",
+    ]
+
+    @classmethod
+    def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
+        databases, tables = _get_scope(query)
+
+        records = _get_records_from_data_catalog(databases, tables)
+
+        data = []
+        for record in records:
+            database_name = record.integration.name
+            table_name = record.name
+            columns = record.meta_columns
+
+            for column in columns:
+                item = {
+                    "TABLE_CATALOG": "def",
+                    "TABLE_SCHEMA": database_name,
+                    "TABLE_NAME": table_name,
+                    "COLUMN_NAME": column.name,
+                    "DATA_TYPE": column.data_type,
+                    "COLUMN_DESCRIPTION": column.description or "",
+                    "COLUMN_DEFAULT": column.default_value,
+                    "IS_NULLABLE": "YES" if column.is_nullable else "NO",
+                }
+                data.append(item)
+
+        df = pd.DataFrame(data, columns=cls.columns)
+        return df
+
+
+class MetaColumnStatisticsTable(Table):
+    name = "META_COLUMN_STATISTICS"
+    columns = [
+        "TABLE_SCHEMA",
+        "TABLE_NAME",
+        "COLUMN_NAME",
+        "MOST_COMMON_VALS",
+        "MOST_COMMON_FREQS",
+        "NULL_FRAC",
+        "N_DISTINCT",
+        "MIN_VALUE",
+        "MAX_VALUE",
+    ]
+
+    @classmethod
+    def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
+        databases, tables = _get_scope(query)
+
+        records = _get_records_from_data_catalog(databases, tables)
+
+        data = []
+        for record in records:
+            database_name = record.integration.name
+            table_name = record.name
+            columns = record.meta_columns
+
+            for column in columns:
+                column_statistics = column.meta_column_statistics[0]
+
+                item = {
+                    "TABLE_SCHEMA": database_name,
+                    "TABLE_NAME": table_name,
+                    "COLUMN_NAME": column.name,
+                }
+
+                if column_statistics:
+                    item.update({
+                        "MOST_COMMON_VALS": column_statistics.most_common_values,
+                        "MOST_COMMON_FREQS": column_statistics.most_common_frequencies,
+                        "NULL_FRAC": column_statistics.null_percentage,
+                        "N_DISTINCT": column_statistics.distinct_values_count,
+                        "MIN_VALUE": column_statistics.minimum_value,
+                        "MAX_VALUE": column_statistics.maximum_value,
+                    })
+
+                data.append(item)
+
+        df = pd.DataFrame(data, columns=cls.columns)
+        return df
+
+
+class MetaTableConstraintsTable(Table):
+    name = "META_TABLE_CONSTRAINTS"
     columns = [
         "CONSTRAINT_CATALOG",
         "CONSTRAINT_SCHEMA",
@@ -563,8 +704,8 @@ class TableConstraintsTable(Table):
         return df
 
 
-class KeyColumnUsageTable(Table):
-    name = "KEY_COLUMN_USAGE"
+class MetaColumnUsageTable(Table):
+    name = "META_KEY_COLUMN_USAGE"
     columns = [
         "CONSTRAINT_CATALOG",
         "CONSTRAINT_SCHEMA",
@@ -630,126 +771,6 @@ class KeyColumnUsageTable(Table):
                     "REFERENCED_COLUMN_NAME": fk.parent_column.name if fk.parent_column else None,
                 }
                 data.append(item)
-
-        df = pd.DataFrame(data, columns=cls.columns)
-        return df
-
-
-class StatisticsTable(Table):
-    name = "STATISTICS"
-    columns = [
-        "TABLE_CATALOG",
-        "TABLE_SCHEMA",
-        "TABLE_NAME",
-        "NON_UNIQUE",
-        "INDEX_SCHEMA",
-        "INDEX_NAME",
-        "SEQ_IN_INDEX",
-        "COLUMN_NAME",
-        "COLLATION",
-        "CARDINALITY",
-        "SUB_PART",
-        "PACKED",
-        "NULLABLE",
-        "INDEX_TYPE",
-        "COMMENT",
-        "INDEX_COMMENT",
-        "IS_VISIBLE",
-        "EXPRESSION",
-    ]
-    
-    
-class ColumnStatisticsTable(Table):
-    name = "COLUMN_STATISTICS"
-    columns = [
-        "TABLE_SCHEMA",
-        "TABLE_NAME",
-        "COLUMN_NAME",
-        "MOST_COMMON_VALS",
-        "MOST_COMMON_FREQS",
-        "NULL_FRAC",
-        "N_DISTINCT",
-        "MIN_VALUE",
-        "MAX_VALUE",
-    ]
-
-    @classmethod
-    def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
-        databases, tables = _get_scope(query)
-
-        records = _get_records_from_data_catalog(databases, tables)
-
-        data = []
-        for record in records:
-            database_name = record.integration.name
-            table_name = record.name
-            columns = record.meta_columns
-
-            for column in columns:
-                column_statistics = column.meta_column_statistics[0]
-
-                item = {
-                    "TABLE_SCHEMA": database_name,
-                    "TABLE_NAME": table_name,
-                    "COLUMN_NAME": column.name,
-                }
-
-                if column_statistics:
-                    item.update({
-                        "MOST_COMMON_VALS": column_statistics.most_common_values,
-                        "MOST_COMMON_FREQS": column_statistics.most_common_frequencies,
-                        "NULL_FRAC": column_statistics.null_percentage,
-                        "N_DISTINCT": column_statistics.distinct_values_count,
-                        "MIN_VALUE": column_statistics.minimum_value,
-                        "MAX_VALUE": column_statistics.maximum_value,
-                    })
-
-                data.append(item)
-
-        df = pd.DataFrame(data, columns=cls.columns)
-        return df
-
-
-class CharacterSetsTable(Table):
-    name = "CHARACTER_SETS"
-    columns = [
-        "CHARACTER_SET_NAME",
-        "DEFAULT_COLLATE_NAME",
-        "DESCRIPTION",
-        "MAXLEN",
-    ]
-
-    @classmethod
-    def get_data(cls, **kwargs):
-        data = [
-            ["utf8", "UTF-8 Unicode", "utf8_general_ci", 3],
-            ["latin1", "cp1252 West European", "latin1_swedish_ci", 1],
-            ["utf8mb4", "UTF-8 Unicode", "utf8mb4_general_ci", 4],
-        ]
-
-        df = pd.DataFrame(data, columns=cls.columns)
-        return df
-
-
-class CollationsTable(Table):
-    name = "COLLATIONS"
-
-    columns = [
-        "COLLATION_NAME",
-        "CHARACTER_SET_NAME",
-        "ID",
-        "IS_DEFAULT",
-        "IS_COMPILED",
-        "SORTLEN",
-        "PAD_ATTRIBUTE",
-    ]
-
-    @classmethod
-    def get_data(cls, **kwargs):
-        data = [
-            ["utf8_general_ci", "utf8", 33, "Yes", "Yes", 1, "PAD SPACE"],
-            ["latin1_swedish_ci", "latin1", 8, "Yes", "Yes", 1, "PAD SPACE"],
-        ]
 
         df = pd.DataFrame(data, columns=cls.columns)
         return df

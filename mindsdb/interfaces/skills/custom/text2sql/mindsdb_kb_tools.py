@@ -3,6 +3,7 @@ import re
 import json
 from pydantic import BaseModel, Field
 from langchain_core.tools import BaseTool
+from mindsdb_sql_parser.ast import Describe, Select, Identifier, Constant, Star
 
 
 class KnowledgeBaseListToolInput(BaseModel):
@@ -105,7 +106,7 @@ class KnowledgeBaseInfoTool(BaseTool):
         for kb_name in kb_names:
             try:
                 # Get knowledge base schema
-                schema_result = self.db.run_no_throw(f"DESCRIBE KNOWLEDGE_BASE `{kb_name}`;")
+                schema_result = self.db.run_no_throw(str(Describe(kb_name, type='knowledge_base')))
 
                 if not schema_result:
                     results.append(f"Knowledge base `{kb_name}` not found or has no schema information.")
@@ -133,7 +134,9 @@ class KnowledgeBaseInfoTool(BaseTool):
                 kb_info += "```\n\n"
 
                 # Get sample data
-                sample_data = self.db.run_no_throw(f"SELECT * FROM `{kb_name}` LIMIT 10;")
+                sample_data = self.db.run_no_throw(str(
+                    Select(targets=[Star()], from_table=Identifier(kb_name), limit=Constant(20))
+                ))
 
                 # Sample data
                 kb_info += "### Sample Data:\n"

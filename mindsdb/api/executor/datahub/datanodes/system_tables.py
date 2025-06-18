@@ -9,6 +9,7 @@ from mindsdb.utilities.config import config
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES
 from mindsdb.interfaces.data_catalog.data_catalog_reader import DataCatalogReader
+from mindsdb.interfaces.storage import db
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE, MYSQL_DATA_TYPE_COLUMNS_DEFAULT
 from mindsdb.api.executor.datahub.classes.tables_row import TABLES_ROW_TYPE, TablesRow
 
@@ -676,7 +677,8 @@ class MetaTableConstraintsTable(Table):
             database_name = record.integration.name
             table_name = record.name
             primary_keys = record.meta_primary_keys
-            foreign_keys = record.meta_foreign_keys_children
+            foreign_keys_children = record.meta_foreign_keys_children
+            foreign_keys_parents = record.meta_foreign_keys_parents
             
             for pk in primary_keys:
                 item = {
@@ -688,8 +690,19 @@ class MetaTableConstraintsTable(Table):
                     "CONSTRAINT_TYPE": "PRIMARY KEY",
                 }
                 data.append(item)
-                
-            for fk in foreign_keys:
+
+            for fk in foreign_keys_children:
+                item = {
+                    "CONSTRAINT_CATALOG": "def",
+                    "CONSTRAINT_SCHEMA": database_name,
+                    "CONSTRAINT_NAME": fk.constraint_name,
+                    "TABLE_SCHEMA": database_name,
+                    "TABLE_NAME": table_name,
+                    "CONSTRAINT_TYPE": "FOREIGN KEY",
+                }
+                data.append(item)
+
+            for fk in foreign_keys_parents:
                 item = {
                     "CONSTRAINT_CATALOG": "def",
                     "CONSTRAINT_SCHEMA": database_name,
@@ -732,7 +745,8 @@ class MetaColumnUsageTable(Table):
             database_name = record.integration.name
             table_name = record.name
             primary_keys = record.meta_primary_keys
-            foreign_keys = record.meta_foreign_keys_children
+            foreign_keys_children = record.meta_foreign_keys_children
+            foreign_keys_parents = record.meta_foreign_keys_parents
 
             for pk in primary_keys:
                 column = pk.meta_columns
@@ -753,9 +767,7 @@ class MetaColumnUsageTable(Table):
                 }
                 data.append(item)
 
-            for fk in foreign_keys:
-                # child_table is the current table (record), child_column is the referencing column
-                # parent_table is the referenced table, parent_column is the referenced column
+            for fk in foreign_keys_children:
                 item = {
                     "CONSTRAINT_CATALOG": "def",
                     "CONSTRAINT_SCHEMA": database_name,
@@ -763,12 +775,29 @@ class MetaColumnUsageTable(Table):
                     "TABLE_CATALOG": "def",
                     "TABLE_SCHEMA": database_name,
                     "TABLE_NAME": table_name,
-                    "COLUMN_NAME": fk.child_column.name,  # referencing column in this table
-                    "ORDINAL_POSITION": None,  # Set if you have this info
-                    "POSITION_IN_UNIQUE_CONSTRAINT": None,  # Set if you have this info
+                    "COLUMN_NAME": fk.child_column.name,
+                    "ORDINAL_POSITION": None,
+                    "POSITION_IN_UNIQUE_CONSTRAINT": None,
                     "REFERENCED_TABLE_SCHEMA": fk.parent_table.integration.name if fk.parent_table else None,
                     "REFERENCED_TABLE_NAME": fk.parent_table.name if fk.parent_table else None,
                     "REFERENCED_COLUMN_NAME": fk.parent_column.name if fk.parent_column else None,
+                }
+                data.append(item)
+
+            for fk in foreign_keys_parents:
+                item = {
+                    "CONSTRAINT_CATALOG": "def",
+                    "CONSTRAINT_SCHEMA": database_name,
+                    "CONSTRAINT_NAME": fk.constraint_name,
+                    "TABLE_CATALOG": "def",
+                    "TABLE_SCHEMA": database_name,
+                    "TABLE_NAME": table_name,
+                    "COLUMN_NAME": fk.child_column.name,
+                    "ORDINAL_POSITION": None,
+                    "POSITION_IN_UNIQUE_CONSTRAINT": None,
+                    "REFERENCED_TABLE_SCHEMA": fk.child_table.integration.name if fk.child_table else None,
+                    "REFERENCED_TABLE_NAME": fk.child_table.name if fk.child_table else None,
+                    "REFERENCED_COLUMN_NAME": fk.parent_column.name if fk.child_column else None,
                 }
                 data.append(item)
 

@@ -509,6 +509,7 @@ class CollationsTable(Table):
 # Data Catalog tables
 # TODO: Should these be placed in a separate schema?
 
+
 def _get_records_from_data_catalog(databases: List, tables: Optional[List[str]] = None) -> List:
     """Get records from the data catalog based on the specified databases and tables."""
     # TODO: Should we allow to query all databases?
@@ -527,21 +528,14 @@ def _get_records_from_data_catalog(databases: List, tables: Optional[List[str]] 
 class MetaTablesTable(Table):
     name = "META_TABLES"
 
-    columns = [
-        "TABLE_CATALOG",
-        "TABLE_SCHEMA",
-        "TABLE_NAME",
-        "TABLE_TYPE",
-        "TABLE_DESCRIPTION",
-        "ROW_COUNT"
-    ]
-    
+    columns = ["TABLE_CATALOG", "TABLE_SCHEMA", "TABLE_NAME", "TABLE_TYPE", "TABLE_DESCRIPTION", "ROW_COUNT"]
+
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
         databases, _ = _get_scope(query)
 
         records = _get_records_from_data_catalog(databases)
-        
+
         data = []
         for record in records:
             item = {
@@ -550,7 +544,7 @@ class MetaTablesTable(Table):
                 "TABLE_NAME": record.name,
                 "TABLE_TYPE": record.type,
                 "TABLE_DESCRIPTION": record.description or "",
-                "ROW_COUNT": record.row_count
+                "ROW_COUNT": record.row_count,
             }
             data.append(item)
 
@@ -558,7 +552,7 @@ class MetaTablesTable(Table):
         return df
 
 
-# TODO: Combine with existing 'ColumnsTable'? 
+# TODO: Combine with existing 'ColumnsTable'?
 class MetaColumnsTable(Table):
     name = "META_COLUMNS"
 
@@ -638,14 +632,16 @@ class MetaColumnStatisticsTable(Table):
                 }
 
                 if column_statistics:
-                    item.update({
-                        "MOST_COMMON_VALS": column_statistics.most_common_values,
-                        "MOST_COMMON_FREQS": column_statistics.most_common_frequencies,
-                        "NULL_FRAC": column_statistics.null_percentage,
-                        "N_DISTINCT": column_statistics.distinct_values_count,
-                        "MIN_VALUE": column_statistics.minimum_value,
-                        "MAX_VALUE": column_statistics.maximum_value,
-                    })
+                    item.update(
+                        {
+                            "MOST_COMMON_VALS": column_statistics.most_common_values,
+                            "MOST_COMMON_FREQS": column_statistics.most_common_frequencies,
+                            "NULL_FRAC": column_statistics.null_percentage,
+                            "N_DISTINCT": column_statistics.distinct_values_count,
+                            "MIN_VALUE": column_statistics.minimum_value,
+                            "MAX_VALUE": column_statistics.maximum_value,
+                        }
+                    )
 
                 data.append(item)
 
@@ -668,7 +664,7 @@ class MetaTableConstraintsTable(Table):
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
         databases, tables = _get_scope(query)
-        
+
         records = _get_records_from_data_catalog(databases, tables)
 
         data = []
@@ -678,7 +674,7 @@ class MetaTableConstraintsTable(Table):
             primary_keys = record.meta_primary_keys
             foreign_keys_children = record.meta_foreign_keys_children
             foreign_keys_parents = record.meta_foreign_keys_parents
-            
+
             for pk in primary_keys:
                 item = {
                     "CONSTRAINT_CATALOG": "def",
@@ -749,7 +745,7 @@ class MetaColumnUsageTable(Table):
 
             for pk in primary_keys:
                 column = pk.meta_columns
-                
+
                 item = {
                     "CONSTRAINT_CATALOG": "def",
                     "CONSTRAINT_SCHEMA": database_name,

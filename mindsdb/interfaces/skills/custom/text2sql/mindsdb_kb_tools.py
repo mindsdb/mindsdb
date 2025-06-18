@@ -62,9 +62,9 @@ class KnowledgeBaseInfoTool(BaseTool):
                 length = len(s)
 
                 # remove ```
-                if s.startswith('```'):
+                if s.startswith("```"):
                     s = s[3:]
-                if s.endswith('```'):
+                if s.endswith("```"):
                     s = s[:-3]
 
                 # remove trailing new lines
@@ -106,7 +106,7 @@ class KnowledgeBaseInfoTool(BaseTool):
         for kb_name in kb_names:
             try:
                 # Get knowledge base schema
-                schema_result = self.db.run_no_throw(str(Describe(kb_name, type='knowledge_base')))
+                schema_result = self.db.run_no_throw(str(Describe(kb_name, type="knowledge_base")))
 
                 if not schema_result:
                     results.append(f"Knowledge base `{kb_name}` not found or has no schema information.")
@@ -134,9 +134,9 @@ class KnowledgeBaseInfoTool(BaseTool):
                 kb_info += "```\n\n"
 
                 # Get sample data
-                sample_data = self.db.run_no_throw(str(
-                    Select(targets=[Star()], from_table=Identifier(kb_name), limit=Constant(20))
-                ))
+                sample_data = self.db.run_no_throw(
+                    str(Select(targets=[Star()], from_table=Identifier(kb_name), limit=Constant(20)))
+                )
 
                 # Sample data
                 kb_info += "### Sample Data:\n"

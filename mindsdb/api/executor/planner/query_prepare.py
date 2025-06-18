@@ -515,6 +515,7 @@ class PreparedStatementPlanner():
                 or isinstance(query, ast.Update)
                 or isinstance(query, ast.Delete)
                 or isinstance(query, ast.Intersect)
+                or isinstance(query, ast.Except)
         ):
             return self.plan_query(query)
         else:

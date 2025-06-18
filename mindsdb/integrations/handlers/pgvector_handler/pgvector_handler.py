@@ -579,16 +579,3 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
 
         # Create the index
         self.raw_query(f"CREATE INDEX ON {table_name} USING {index_type} ({column_name} {metric_type})")
-
-    def is_table_empty(self, table_name: str) -> bool:
-        """
-        Check if the table is empty.
-        """
-        table_name = self._check_table(table_name)
-        query = f"SELECT * FROM {table_name} LIMIT 1"
-        try:
-            result = self.raw_query(query)
-            return result.empty
-        except psycopg.Error as e:
-            logger.error(f"Error checking if table {table_name} is empty: {e}")
-            return False

@@ -377,18 +377,21 @@ class PreprocessorFactory:
     ) -> DocumentPreprocessor:
         """
         Create appropriate preprocessor based on configuration
-        : param config: Preprocessing configuration
-        : return: Configured preprocessor instance
-        : raises ValueError: If unknown preprocessor type specified
+        :param config: Preprocessing configuration
+        :return: Configured preprocessor instance
+        :raises ValueError: If unknown preprocessor type specified
         """
         if config is None:
+            # Default to text chunking if no config provided
             return TextChunkingPreprocessor()
 
-        if config.type == PreprocessorType.CONTEXTUAL:
-            return ContextualPreprocessor(
-                config.contextual_config or ContextualConfig()
-            )
-        elif config.type == PreprocessorType.TEXT_CHUNKING:
+        if config.type == PreprocessorType.TEXT_CHUNKING:
             return TextChunkingPreprocessor(config.text_chunking_config)
-
-        raise ValueError(f"Unknown preprocessor type: {config.type}")
+        elif config.type == PreprocessorType.CONTEXTUAL:
+            return ContextualPreprocessor(config.contextual_config)
+        elif config.type == PreprocessorType.JSON_CHUNKING:
+            # Import here to avoid circular imports
+            from mindsdb.interfaces.knowledge_base.preprocessing.json_chunker import JSONChunkingPreprocessor
+            return JSONChunkingPreprocessor(config.json_chunking_config)
+        else:
+            raise ValueError(f"Unknown preprocessor type: {config.type}")

@@ -59,6 +59,12 @@ connection_args = OrderedDict(
         "required": False,
         "label": "Auth Mode",
     },
+    thick_mode={
+        "type": ARG_TYPE.BOOL,
+        "description": "Set to `true` to use thick mode for the connection. Thin mode is used by default.",
+        "required": False,
+        "label": "Connection mode",
+    }
 )
 
 connection_args_example = OrderedDict(

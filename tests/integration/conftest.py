@@ -1,5 +1,12 @@
 import pytest
+import os
 from filelock import FileLock
+
+INTERNAL_URL = os.environ.get("INTERNAL_URL", "localhost")
+HTTP_PORT = "80" if "svc.cluster.local" in INTERNAL_URL else "47334"
+
+HTTP_API_ROOT = f"http://{INTERNAL_URL}:{HTTP_PORT}/api"
+MYSQL_API_ROOT = INTERNAL_URL
 
 lock = FileLock("train_finetune.lock")
 

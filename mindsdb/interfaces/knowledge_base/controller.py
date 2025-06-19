@@ -184,7 +184,6 @@ class KnowledgeBaseTable:
         return df
 
     def select(self, query, disable_reranking=False):
-
         logger.debug(f"Processing select query: {query}")
 
         # Extract the content query text for potential reranking

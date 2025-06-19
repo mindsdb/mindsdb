@@ -361,7 +361,7 @@ class KnowledgeBaseTable:
     def insert_query_result(self, query: str, project_name: str):
         """Process and insert SQL query results"""
         ast_query = parse_sql(query)
-        
+
         command_executor = ExecuteCommands(self.session)
         response = command_executor.execute_command(ast_query, project_name)
 

@@ -2,7 +2,6 @@ import os
 from typing import List, Iterator
 from langchain_core.documents import Document as LangchainDocument
 from langchain_text_splitters import MarkdownHeaderTextSplitter
-import pandas as pd
 
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.utilities.rag.loaders.file_loader import FileLoader
@@ -20,12 +19,12 @@ class DocumentLoader:
     """Handles loading documents from various sources including SQL queries"""
 
     def __init__(
-            self,
-            file_controller: FileController,
-            file_splitter: FileSplitter,
-            markdown_splitter: MarkdownHeaderTextSplitter,
-            file_loader_class=FileLoader,
-            mysql_proxy=None
+        self,
+        file_controller: FileController,
+        file_splitter: FileSplitter,
+        markdown_splitter: MarkdownHeaderTextSplitter,
+        file_loader_class=FileLoader,
+        mysql_proxy=None,
     ):
         """
         Initialize with required dependencies
@@ -52,8 +51,8 @@ class DocumentLoader:
             for doc in loader.lazy_load():
                 # Add file extension to metadata for proper splitting
                 extension = os.path.splitext(file_path)[1].lower()
-                doc.metadata['extension'] = extension
-                doc.metadata['source'] = file_name
+                doc.metadata["extension"] = extension
+                doc.metadata["source"] = file_name
 
                 # Use FileSplitter to handle the document based on its type
                 split_docs = self.file_splitter.split_documents([doc])
@@ -62,34 +61,22 @@ class DocumentLoader:
                     metadata = doc.metadata.copy()
                     metadata.update(split_doc.metadata or {})
 
-                    yield Document(
-                        content=split_doc.page_content,
-                        metadata=metadata
-                    )
+                    yield Document(content=split_doc.page_content, metadata=metadata)
 
     def load_web_pages(
-            self,
-            urls: List[str],
-            crawl_depth: int,
-            limit: int,
-            filters: List[str] = None,
+        self,
+        urls: List[str],
+        crawl_depth: int,
+        limit: int,
+        filters: List[str] = None,
     ) -> Iterator[Document]:
         """Load and split documents from web pages"""
-        websites_df = get_all_websites(
-            urls,
-            crawl_depth=crawl_depth,
-            limit=limit,
-            filters=filters
-        )
+        websites_df = get_all_websites(urls, crawl_depth=crawl_depth, limit=limit, filters=filters)
 
         for _, row in websites_df.iterrows():
             # Create a document with HTML extension for proper splitting
             doc = LangchainDocument(
-                page_content=row['text_content'],
-                metadata={
-                    'extension': '.html',
-                    'url': row['url']
-                }
+                page_content=row["text_content"], metadata={"extension": ".html", "url": row["url"]}
             )
 
             # Use FileSplitter to handle HTML content
@@ -98,7 +85,4 @@ class DocumentLoader:
                 metadata = doc.metadata.copy()
                 metadata.update(split_doc.metadata or {})
 
-                yield Document(
-                    content=split_doc.page_content,
-                    metadata=metadata
-                )
+                yield Document(content=split_doc.page_content, metadata=metadata)

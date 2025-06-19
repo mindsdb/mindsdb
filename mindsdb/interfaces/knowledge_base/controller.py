@@ -9,6 +9,7 @@ import numpy as np
 
 from mindsdb_sql_parser.ast import BinaryOperation, Constant, Identifier, Select, Update, Delete, Star
 from mindsdb_sql_parser.ast.mindsdb import CreatePredictor
+from mindsdb_sql_parser import parse_sql
 
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 
@@ -359,12 +360,21 @@ class KnowledgeBaseTable:
 
     def insert_query_result(self, query: str, project_name: str):
         """Process and insert SQL query results"""
-        if not self.document_loader:
-            raise ValueError("Document loader not configured")
+        ast_query = parse_sql(query)
+        
+        command_executor = ExecuteCommands(self.session)
+        response = command_executor.execute_command(ast_query, project_name)
 
-        documents = list(self.document_loader.load_query_result(query, project_name))
-        if documents:
-            self.insert_documents(documents)
+        if response.error_code is not None:
+            raise ValueError(f"Error executing query: {response.error_message}")
+
+        if response.data is None:
+            raise ValueError("Query returned no data")
+
+        records = response.data.records
+        df = pd.DataFrame(records)
+
+        self.insert(df)
 
     def insert_rows(self, rows: List[Dict]):
         """Process and insert raw data rows"""

@@ -40,7 +40,7 @@ class KnowledgeBaseQueryExecutor:
         # Change operator of binary operation to opposite one
         op_map = {"=": "!=", "!=": "=", "LIKE": "!=", "NOT LIKE": "=", "IN": "NOT IN"}
         if not node.op.upper() in op_map:
-            raise NotImplementedError(str(node))
+            raise NotImplementedError(f"Can't handle condition: '{str(node)}'")
         node.op = op_map[node.op.upper()]
         return node
 
@@ -117,7 +117,7 @@ class KnowledgeBaseQueryExecutor:
                 node.op = node.op.upper()
                 return node
 
-        raise NotImplementedError
+        raise NotImplementedError(f"Unknown node '{node}'")
 
     def call_kb(
         self, conditions: List[BinaryOperation], disable_reranking: bool = False, limit: int = None

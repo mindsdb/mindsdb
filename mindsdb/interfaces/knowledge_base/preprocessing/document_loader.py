@@ -102,4 +102,3 @@ class DocumentLoader:
                     content=split_doc.page_content,
                     metadata=metadata
                 )
-

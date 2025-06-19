@@ -1,9 +1,9 @@
 ---
-title: Aimlapi
-sidebarTitle: Aimlapi
+title: AI/ML API
+sidebarTitle: AI/ML API
 ---
 
-This documentation describes the integration of MindsDB with [Aimlapi](http://aimlapi.com/), a provider of AI language models.
+This documentation describes the integration of MindsDB with [AI/ML API](https://aimlapi.com/app/?utm_source=_&utm_medium=github&utm_campaign=integration), a provider of AI language models.
 The integration allows for the deployment of Aimlapi models within MindsDB, providing the models with access to data from various data sources.
 
 ## Prerequisites

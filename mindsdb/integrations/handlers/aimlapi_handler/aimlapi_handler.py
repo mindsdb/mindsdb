@@ -48,7 +48,18 @@ class AimlapiHandler(BaseMLEngine):
 
     @staticmethod
     def _get_client(api_key: Text, base_url: Text, org: Optional[Text] = None) -> OpenAI:
-        return OpenAI(api_key=api_key, base_url=base_url, organization=org)
+        headers = {
+            "HTTP-Referer": "https://mindsdb.com/",
+            "X-Title": "MindsDB",
+        }
+
+        client = OpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            organization=org,
+            default_headers=headers
+        )
+        return client
 
     def create(self, target, args: Dict = None, **kwargs: Any) -> None:
         args = args["using"]

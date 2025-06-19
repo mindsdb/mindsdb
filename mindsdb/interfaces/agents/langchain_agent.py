@@ -432,7 +432,7 @@ class LangchainAgent:
                 "output_parser": SafeOutputParser(),
                 "prefix": MINDSDB_PREFIX,  # Override default "Assistant is a large language model..." text
                 "format_instructions": EXPLICIT_FORMAT_INSTRUCTIONS,  # More explicit tool calling instructions
-                "ai_prefix": "AI"
+                "ai_prefix": "AI",
             },
             # Calls the agent's LLM Chain one final time to generate a final answer based on the previous steps
             early_stopping_method="generate",

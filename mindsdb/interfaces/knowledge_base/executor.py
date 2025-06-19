@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 import copy
+from typing import List, Optional, Union
 
-from mindsdb_sql_parser.ast import BinaryOperation, Identifier, Constant, UnaryOperation, Select, Star, Tuple
+from mindsdb_sql_parser.ast import BinaryOperation, Identifier, Constant, UnaryOperation, Select, Star, Tuple, ASTNode
 import pandas as pd
 
 from mindsdb.integrations.utilities.query_traversal import query_traversal
@@ -14,14 +15,19 @@ class ConditionBlock:
 
 
 class KnowledgeBaseQueryExecutor:
-
-    def __init__(self, kb, content_column='content', id_column='chunk_id'):
+    def __init__(self, kb, content_column="content", id_column="chunk_id"):
         self.kb = kb
         self.content_column = content_column.lower()
         self.id_column = id_column
         self.limit = None
+        self._negative_set_size = 100
 
-    def is_content_condition(self, node):
+    def is_content_condition(self, node: ASTNode) -> bool:
+        """
+        Checks if the node is a condition to Content column
+
+        :param node: condition to check
+        """
         if isinstance(node, BinaryOperation):
             if isinstance(node.args[0], Identifier):
                 parts = node.args[0].parts
@@ -29,22 +35,27 @@ class KnowledgeBaseQueryExecutor:
                     return True
         return False
 
-    def invert_content_op(self, node):
-        op_map = {
-            '=': '!=',
-            '!=': '=',
-            'LIKE': '!=',
-            'NOT LIKE': '=',
-            'IN': 'NOT IN'
-        }
+    @staticmethod
+    def invert_content_op(node: BinaryOperation) -> BinaryOperation:
+        # Change operator of binary operation to opposite one
+        op_map = {"=": "!=", "!=": "=", "LIKE": "!=", "NOT LIKE": "=", "IN": "NOT IN"}
         if not node.op.upper() in op_map:
             raise NotImplementedError(str(node))
         node.op = op_map[node.op.upper()]
         return node
 
-    def convert_unary_ops(self, node, callstack, **kwargs):
+    def convert_unary_ops(self, node: ASTNode, callstack: List[ASTNode], **kwargs) -> ASTNode:
+        """
+        Tries to remove unary operator and apply it to Binary operation.
+        Supported cases:
+        - "NOT content <op> value" => "content <!op> value"
+        - "content <op> NOT value" => "content <!op> value"
+
+        Where <!op> is inverted operator of <op>
+        """
+
         if isinstance(node, UnaryOperation):
-            if node.op.upper() == 'NOT':
+            if node.op.upper() == "NOT":
                 # two options:
                 # 1. NOT content <op> value
                 if self.is_content_condition(node.args[0]):
@@ -53,11 +64,12 @@ class KnowledgeBaseQueryExecutor:
 
                 # 2. content <op> NOT value
                 if self.is_content_condition(callstack[0]):
-                    item = callstack[0]
-                    self.invert_content_op(item)
+                    self.invert_content_op(callstack[0])
                     return node.args[0]
 
-    def union(self, results):
+    def union(self, results: List[pd.DataFrame]) -> pd.DataFrame:
+        # combine dataframes from input list to single one
+
         if len(results) == 1:
             return results[0]
 
@@ -65,7 +77,9 @@ class KnowledgeBaseQueryExecutor:
         df = res.drop_duplicates(subset=[self.id_column]).reset_index()
         return df
 
-    def intersect(self, results):
+    def intersect(self, results: List[pd.DataFrame]) -> pd.DataFrame:
+        # intersect dataframes from input list: return dataframe with rows that exist in all input dataframes
+
         if len(results) == 1:
             return results[0]
 
@@ -76,16 +90,20 @@ class KnowledgeBaseQueryExecutor:
         df = item
         return df
 
-    def flatten(self, node):
+    def flatten_conditions(self, node: ASTNode) -> Union[ASTNode, ConditionBlock]:
         """
-        collect 'AND' and 'OR' conditions of the same level to a single ConditionBlock
+        Recursively inspect conditions tree and move conditions related to 'OR' or 'AND' operators of the same level
+          to same ConditionBlock
+        Example: or (a=1, or (b=2, c=3))
+          is converted to: ConditionBlock(or, [a=1, b=2, c=3])
         """
+
         if isinstance(node, BinaryOperation):
             op = node.op.upper()
-            if op in ('AND', 'OR'):
+            if op in ("AND", "OR"):
                 block = ConditionBlock(op, [])
                 for arg in node.args:
-                    item = self.flatten(arg)
+                    item = self.flatten_conditions(arg)
                     if isinstance(item, ConditionBlock):
                         if item.op == block.op:
                             block.items.extend(item.items)
@@ -101,24 +119,27 @@ class KnowledgeBaseQueryExecutor:
 
         raise NotImplementedError
 
-    def make_query(self, conditions):
-        # create AST query to KB
+    def call_kb(
+        self, conditions: List[BinaryOperation], disable_reranking: bool = False, limit: int = None
+    ) -> pd.DataFrame:
+        """
+        Call KB with list of prepared conditions
+
+        :param conditions: input conditions
+        :param disable_reranking: flag disable reranking
+        :param limit: use custom limit
+        :return: result of querying KB
+        """
+
         where = None
         for condition in conditions:
             if where is None:
                 where = condition
             else:
-                where = BinaryOperation('AND', args=[where, condition])
+                where = BinaryOperation("AND", args=[where, condition])
 
-        return Select(
-            targets=[Star()],
-            where=where
-        )
+        query = Select(targets=[Star()], where=where)
 
-    def call_kb(self, conditions, disable_reranking=False, limit=None):
-        # call KB with list of prepared conditions
-
-        query = self.make_query(conditions)
         if limit is not None:
             query.limit = Constant(limit)
         elif self.limit is not None:
@@ -126,65 +147,98 @@ class KnowledgeBaseQueryExecutor:
 
         return self.kb.select(query, disable_reranking=disable_reranking)
 
-    def execute_conditions(self, conditions, content_condition=None, disable_reranking=False, limit=None):
-        # call KB with set of conditions. it might have a single condition for content
-        # it can be several calls to KB (depending on type of condition)
-
-        if content_condition is not None:
-            if content_condition.op == 'IN':
-                # (select where content = ‘a’) UNION (select where content = ‘b’)
-                results = []
-                for el in content_condition.args[1].items:
-                    el_cond = BinaryOperation(op='=', args=[Identifier(self.content_column), Constant(el)])
-                    results.append(self.call_kb([el_cond] + conditions, disable_reranking=disable_reranking))
-                return self.union(results)
-            elif content_condition.op in ('!=', '<>', 'NOT LIKE'):
-                # id NOT IN (SELECT DISTINCT id FROM kb WHERE content =’...’ limit X)
-                el_cond = BinaryOperation(op='=', args=content_condition.args)
-                res = self.call_kb([el_cond] + conditions, disable_reranking=True, limit=100)
-
-                return list(res[self.id_column])
-                values = [Constant(i) for i in res[self.id_column]]
-                cond2 = BinaryOperation(op='NOT IN', args=[Identifier(self.id_column), Tuple(values)])
-                return self.call_kb([cond2]+conditions)
-
-            elif content_condition.op in ('=', 'LIKE'):
-                # just '='
-                content_condition2 = copy.deepcopy(content_condition)
-                content_condition2.op = '='
-                return self.call_kb([content_condition2] + conditions)
-
-            elif content_condition.op == 'NOT IN':
-                # id NOT IN (
-                #   (select id where content = ‘a’) UNION (select id where content = ‘b’)
-                # )
-                content_condition2 = copy.deepcopy(content_condition)
-                content_condition2.op = 'IN'
-                res = self.execute_conditions(conditions, content_condition2, disable_reranking=True, limit=100)
-
-                values = [Constant(i) for i in res[self.id_column]]
-                cond2 = BinaryOperation(op='NOT IN', args=[Identifier(self.id_column), Tuple(values)])
-                return self.call_kb([cond2] + conditions)
-            else:
-                raise NotImplementedError
-
-        return self.call_kb(conditions)
-
-    def execute_blocks(self, block):
+    def execute_content_condition(
+        self,
+        content_condition: BinaryOperation,
+        other_conditions: List[BinaryOperation] = None,
+        disable_reranking: bool = False,
+        limit: int = None,
+    ) -> pd.DataFrame:
         """
-        Split block to set of calls with conditions and execute them
+        Call KB using content condition. Only positive conditions for content can be here.
+        Negative conditions can be only as filter of ID
+        :param content_condition: condition for Content column
+        :param other_conditions: conditions for other columns
+        :param disable_reranking: turn off reranking
+        :param limit: override default limit
+        :return: result of the query
+        """
+
+        if other_conditions is None:
+            other_conditions = []
+
+        if content_condition.op == "IN":
+            # (select where content = ‘a’) UNION (select where content = ‘b’)
+            results = []
+            for el in content_condition.args[1].items:
+                el_cond = BinaryOperation(op="=", args=[Identifier(self.content_column), Constant(el)])
+                results.append(
+                    self.call_kb([el_cond] + other_conditions, disable_reranking=disable_reranking, limit=limit)
+                )
+            return self.union(results)
+
+        elif content_condition.op in ("=", "LIKE"):
+            # just '='
+            content_condition2 = copy.deepcopy(content_condition)
+            content_condition2.op = "="
+            return self.call_kb([content_condition2] + other_conditions)
+
+        else:
+            raise NotImplementedError(
+                f'Operator "{content_condition.op}" is not supported for condition: {content_condition}'
+            )
+
+    def to_excluded_ids(
+        self, content_condition: BinaryOperation, other_conditions: List[BinaryOperation]
+    ) -> Optional[List[str]]:
+        """
+        Handles negative conditions for content. If it is negative condition: extract and return list of IDs
+         that have to be excluded by parent query
+
+        :param content_condition: condition for Content column
+        :param other_conditions:  conditions for other columns
+        :return: list of IDs to exclude or None
+        """
+
+        if content_condition.op in ("!=", "<>", "NOT LIKE"):
+            # id NOT IN (
+            #    SELECT id FROM kb WHERE content =’...’ limit X
+            # )
+            el_cond = BinaryOperation(op="=", args=content_condition.args)
+            res = self.call_kb([el_cond] + other_conditions, disable_reranking=True, limit=self._negative_set_size)
+
+            return list(res[self.id_column])
+
+        elif content_condition.op == "NOT IN":
+            # id NOT IN (
+            #   select id where content in (‘a’, ‘b’)
+            # )
+            content_condition2 = copy.deepcopy(content_condition)
+            content_condition2.op = "IN"
+            res = self.execute_content_condition(
+                content_condition2, other_conditions, disable_reranking=True, limit=self._negative_set_size
+            )
+
+            return list(res[self.id_column])
+        else:
+            return None
+
+    def execute_blocks(self, block: ConditionBlock) -> pd.DataFrame:
+        """
+        Split block to set of calls with conditions and execute them. Nested blocks are supported
+
+        :param block:
+        :return: dataframe with result of block execution
         """
 
         if not isinstance(block, ConditionBlock):
-              # single condition
-              if self.is_content_condition(block):
-                  # col_name = block.args[0].parts[-1].lower()
-                  # if col_name == self.content_column:
-                  return self.execute_conditions([], content_condition=block)
-              else:
-                  return self.execute_conditions([block])
+            # single condition
+            if self.is_content_condition(block):
+                return self.execute_content_condition(block)
+            else:
+                return self.call_kb([block])
 
-        if block.op == 'AND':
+        if block.op == "AND":
             results = []
 
             content_filters, other_filters = [], []
@@ -193,31 +247,61 @@ class KnowledgeBaseQueryExecutor:
                     results.append(self.execute_blocks(item))
                 else:
                     if self.is_content_condition(item):
-                        # col_name = item.args[0].parts[-1].lower()
-                        # if col_name == self.content_column:
                         content_filters.append(item)
                     else:
                         other_filters.append(item)
             if len(content_filters) > 0:
+                content_filters2 = []
+                exclude_ids = set()
+                # exclude content conditions
                 for condition in content_filters:
-                    result = self.execute_conditions(other_filters, content_condition=condition)
+                    ids = self.to_excluded_ids(condition, other_filters)
+                    if ids is not None:
+                        exclude_ids.update(ids)
+                    else:
+                        # keep origin content filter
+                        content_filters2.append(condition)
+
+                if exclude_ids:
+                    # add to filter
+                    values = [Constant(i) for i in exclude_ids]
+                    condition = BinaryOperation(op="NOT IN", args=[Identifier(self.id_column), Tuple(values)])
+                    other_filters.append(condition)
+                # execute content filters
+                for condition in content_filters2:
+                    result = self.execute_content_condition(condition, other_filters)
                     results.append(result)
             elif len(other_filters) > 0:
-                results.append(self.execute_conditions(other_filters))
+                results.append(self.call_kb(other_filters))
 
             return self.intersect(results)
 
-        elif block.op == 'OR':
+        elif block.op == "OR":
             results = []
             for item in block.items:
                 results.append(self.execute_blocks(item))
 
             return self.union(results)
 
-    def run(self, query):
+    def run(self, query: Select) -> pd.DataFrame:
+        """
+        Plan and execute query to KB. If query has complex conditions:
+         - convert them to several queries with simple conditions, execute them and combine results
+
+        Stages:
+        - Remove unary NOT from condition: try to apply it to related operator
+        - Flat conditions tree: convert into condition blocks:
+           - having with same operators of the same levels in the same block
+        - Recursively execute blocks
+           - get data from OR blocks and union them
+           - get data from AND blocks and intersect them
+
+        :param query: select query
+        :return: results
+        """
         if query.where is not None:
             query_traversal(query.where, self.convert_unary_ops)
-            blocks_tree = self.flatten(query.where)
+            blocks_tree = self.flatten_conditions(query.where)
             if query.limit is not None:
                 self.limit = query.limit.value
             return self.execute_blocks(blocks_tree)

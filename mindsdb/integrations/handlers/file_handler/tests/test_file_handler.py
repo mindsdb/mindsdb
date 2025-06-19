@@ -7,13 +7,22 @@ from pathlib import Path
 import pandas
 import pytest
 from mindsdb_sql_parser.exceptions import ParsingException
-from mindsdb_sql_parser.ast import CreateTable, DropTables, Identifier, Insert, TableColumn, Update
-from pytest_lazyfixture import lazy_fixture
+from mindsdb_sql_parser.ast import (
+    CreateTable,
+    DropTables,
+    Identifier,
+    Insert,
+    TableColumn,
+    Update,
+)
 
 from mindsdb.integrations.handlers.file_handler.file_handler import FileHandler
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 
-from mindsdb.integrations.utilities.files.file_reader import FileReader
+from mindsdb.integrations.utilities.files.file_reader import (
+    FileReader,
+    FileProcessingError,
+)
 
 
 # Define a table to use as content for all of the file types
@@ -75,33 +84,26 @@ def curr_dir():
     return os.path.dirname(os.path.realpath(__file__))
 
 
-# Fixtures to get a path to a partiular type of file
-@pytest.fixture
 def csv_file() -> str:
     return os.path.join(curr_dir(), "data", "test.csv")
 
 
-@pytest.fixture
 def xlsx_file() -> str:
     return os.path.join(curr_dir(), "data", "test.xlsx")
 
 
-@pytest.fixture
 def json_file() -> str:
     return os.path.join(curr_dir(), "data", "test.json")
 
 
-@pytest.fixture
 def parquet_file() -> str:
     return os.path.join(curr_dir(), "data", "test.parquet")
 
 
-@pytest.fixture
 def pdf_file() -> str:
     return os.path.join(curr_dir(), "data", "test.pdf")
 
 
-@pytest.fixture
 def txt_file() -> str:
     return os.path.join(curr_dir(), "data", "test.txt")
 
@@ -109,56 +111,44 @@ def txt_file() -> str:
 class TestIsItX:
     """Tests all of the 'is_it_x()' functions to determine a file's type"""
 
-    # We can't test xlsx or parquet here because they're binary files
-    @pytest.mark.parametrize(
-        "file_path,result",
-        [(lazy_fixture("csv_file"), True), (lazy_fixture("json_file"), False)],
-    )
-    def test_is_it_csv(self, file_path, result):
-        with open(file_path, "r") as fh:
-            assert FileReader.is_csv(StringIO(fh.read())) is result
+    def test_is_it_csv(self):
+        # We can't test xlsx or parquet here because they're binary files
+        for file_path, result in ((csv_file(), True), (json_file(), False)):
+            with open(file_path, "r") as fh:
+                assert FileReader.is_csv(StringIO(fh.read())) is result
 
-    @pytest.mark.parametrize(
-        "file_path,result",
-        [
-            (lazy_fixture("csv_file"), 'csv'),
-            (lazy_fixture("xlsx_file"), 'xlsx'),
-            (lazy_fixture("json_file"), 'json'),
-            (lazy_fixture("parquet_file"), 'parquet'),
-            (lazy_fixture("txt_file"), 'txt'),
-            (lazy_fixture("pdf_file"), 'pdf'),
-        ],
-    )
-    def test_format(self, file_path, result):
-        assert FileReader(path=file_path).get_format() == result
+    def test_format(self):
+        for file_path, result in (
+            (csv_file(), "csv"),
+            (xlsx_file(), "xlsx"),
+            (json_file(), "json"),
+            (parquet_file(), "parquet"),
+            (txt_file(), "txt"),
+            (pdf_file(), "pdf"),
+        ):
+            assert FileReader(path=file_path).get_format() == result
 
-    # We can't test xlsx or parquet here because they're binary files
-    @pytest.mark.parametrize(
-        "file_path,result",
-        [
-            (lazy_fixture("csv_file"), False),
-            (lazy_fixture("json_file"), True),
-            (lazy_fixture("txt_file"), False),
-        ],
-    )
-    def test_is_it_json(self, file_path, result):
-        with open(file_path, "r") as fh:
-            assert FileReader.is_json(StringIO(fh.read())) is result
+    def test_is_it_json(self):
+        # We can't test xlsx or parquet here because they're binary files
+        for file_path, result in (
+            (csv_file(), False),
+            (json_file(), True),
+            (txt_file(), False),
+        ):
+            with open(file_path, "r") as fh:
+                assert FileReader.is_json(StringIO(fh.read())) is result
 
-    @pytest.mark.parametrize(
-        "file_path,result",
-        [
-            (lazy_fixture("csv_file"), False),
-            (lazy_fixture("xlsx_file"), False),
-            (lazy_fixture("json_file"), False),
-            (lazy_fixture("parquet_file"), True),
-            (lazy_fixture("txt_file"), False),
-            (lazy_fixture("pdf_file"), False),
-        ],
-    )
-    def test_is_it_parquet(self, file_path, result):
-        with open(file_path, "rb") as fh:
-            assert FileReader.is_parquet(BytesIO(fh.read())) is result
+    def test_is_it_parquet(self):
+        for file_path, result in (
+            (csv_file(), False),
+            (xlsx_file(), False),
+            (json_file(), False),
+            (parquet_file(), True),
+            (txt_file(), False),
+            (pdf_file(), False),
+        ):
+            with open(file_path, "rb") as fh:
+                assert FileReader.is_parquet(BytesIO(fh.read())) is result
 
 
 class TestQuery:
@@ -188,16 +178,18 @@ class TestQuery:
 
         assert response.type == RESPONSE_TYPE.ERROR
 
-    def test_query_insert(self, csv_file, monkeypatch):
+    def test_query_insert(self, monkeypatch):
         """Test an invalid insert query"""
         # Create a temporary file to save the csv file to.
+        csv_file_path = csv_file()
         csv_tmp = os.path.join(tempfile.gettempdir(), "test.csv")
         if os.path.exists(csv_tmp):
             os.remove(csv_tmp)
-        shutil.copy(csv_file, csv_tmp)
+        shutil.copy(csv_file_path, csv_tmp)
 
         def mock_get_file_path(self, name):
             return csv_tmp
+
         monkeypatch.setattr(MockFileController, "get_file_path", mock_get_file_path)
 
         file_handler = FileHandler(file_controller=MockFileController())
@@ -270,26 +262,14 @@ class TestQuery:
             file_handler.native_query("INVALID QUERY")
 
 
-@pytest.mark.parametrize(
-    "file_path,expected_columns",
-    [
-        (lazy_fixture("csv_file"), test_file_content[0]),
-        (lazy_fixture("xlsx_file"), test_file_content[0]),
-        (lazy_fixture("json_file"), test_file_content[0]),
-        (lazy_fixture("parquet_file"), test_file_content[0]),
-        (lazy_fixture("pdf_file"), ["content", "metadata"]),
-        (lazy_fixture("txt_file"), ["content", "metadata"]),
-    ],
-)
-def test_handle_source(file_path, expected_columns):
-
+def test_handle_source():
     def get_reader(file_path):
         # using path
         reader = FileReader(path=file_path)
         yield reader
 
         # using file descriptor
-        with open(file_path, 'rb') as fd:
+        with open(file_path, "rb") as fd:
             reader = FileReader(file=fd)
             yield reader
             fd.seek(0)
@@ -300,17 +280,25 @@ def test_handle_source(file_path, expected_columns):
         reader = FileReader(file=fd, name=Path(file_path).name)
         yield reader
 
-    # using different methods to create reader
-    for reader in get_reader(file_path):
-        df = reader.get_page_content()
-        assert isinstance(df, pandas.DataFrame)
+    for file_path, expected_columns in (
+        (csv_file(), test_file_content[0]),
+        (xlsx_file(), test_file_content[0]),
+        (json_file(), test_file_content[0]),
+        (parquet_file(), test_file_content[0]),
+        (pdf_file(), ["content", "metadata"]),
+        (txt_file(), ["content", "metadata"]),
+    ):
+        # using different methods to create reader
+        for reader in get_reader(file_path):
+            df = reader.get_page_content()
+            assert isinstance(df, pandas.DataFrame)
 
-        assert df.columns.tolist() == expected_columns
+            assert df.columns.tolist() == expected_columns
 
-        # The pdf and txt files have some different content
-        if reader.get_format() not in ("pdf", "txt"):
-            assert len(df) == len(test_file_content) - 1
-            assert df.values.tolist() == test_file_content[1:]
+            # The pdf and txt files have some different content
+            if reader.get_format() not in ("pdf", "txt"):
+                assert len(df) == len(test_file_content) - 1
+                assert df.values.tolist() == test_file_content[1:]
 
 
 @pytest.mark.parametrize(
@@ -329,12 +317,29 @@ def test_check_valid_dialects(csv_string, delimiter):
 def test_tsv():
     file = BytesIO(b"example;csv;file\tname")
 
-    reader = FileReader(file=file, name='test.tsv')
-    assert reader.get_format() == 'csv'
-    assert reader.parameters['delimiter'] == '\t'
+    reader = FileReader(file=file, name="test.tsv")
+    assert reader.get_format() == "csv"
+    assert reader.parameters["delimiter"] == "\t"
 
     df = reader.get_page_content()
     assert len(df.columns) == 2
+
+
+def test_bad_csv_header():
+    file = BytesIO(b" a,b  ,c\n1,2,3\n")
+    reader = FileReader(file=file, name="test.tsv")
+    df = reader.get_page_content()
+    assert set(df.columns) == set(["a", "b", "c"])
+
+    wrong_data = [
+        b"a, ,c\n1,2,3\n",
+        b"a,  \t,c\n1,2,3\n",
+        b"   ,b,c\n1,2,3\n",
+    ]
+    for data in wrong_data:
+        reader = FileReader(file=BytesIO(data), name="test.tsv")
+        with pytest.raises(FileProcessingError):
+            df = reader.get_page_content()
 
 
 def test_check_invalid_dialects():
@@ -353,10 +358,7 @@ def test_get_tables():
     assert response.type == RESPONSE_TYPE.TABLE
 
     expected_df = pandas.DataFrame(
-        [
-            {"TABLE_NAME": x[0], "TABLE_ROWS": x[1], "TABLE_TYPE": "BASE TABLE"}
-            for x in file_records
-        ]
+        [{"TABLE_NAME": x[0], "TABLE_ROWS": x[1], "TABLE_TYPE": "BASE TABLE"} for x in file_records]
     )
 
     assert response.data_frame.equals(expected_df)
@@ -368,8 +370,6 @@ def test_get_columns():
 
     assert response.type == RESPONSE_TYPE.TABLE
 
-    expected_df = pandas.DataFrame(
-        [{"Field": x, "Type": "str"} for x in file_records[0][2]]
-    )
+    expected_df = pandas.DataFrame([{"Field": x, "Type": "str"} for x in file_records[0][2]])
 
     assert response.data_frame.equals(expected_df)

@@ -1,0 +1,204 @@
+---
+title: Create Message
+sidebarTitle: Create Message
+---
+
+This API endpoint creates a Message in a Thread using the `POST` method.
+
+### Body
+
+<ParamField body='role' type='string' required>
+
+Role used to send a Message (e.g., "user" or "assistant").
+
+</ParamField>
+
+<ParamField body='content' type='string' required>
+
+A Message to be posted to a Thread.
+
+</ParamField>
+
+### Response
+
+<ResponseField name="id" type="string" required>  
+
+Unique identifier for the created message.
+
+</ResponseField>
+
+<ResponseField name="assistant_id" type="string">  
+
+ID of the assistant, if applicable.
+
+</ResponseField>
+
+<ResponseField name="attachments" type="array">  
+
+Any attachments associated with the message.
+
+</ResponseField>
+
+<ResponseField name="completed_at" type="number">  
+
+Timestamp when the message was completed.
+
+</ResponseField>
+
+<ResponseField name="content" type="array" required>  
+
+Content of the message, including text and annotations.
+
+</ResponseField>
+
+<ResponseField name="created_at" type="number" required>  
+
+Timestamp when the message was created.
+
+</ResponseField>
+
+<ResponseField name="incomplete_at" type="number">  
+
+Timestamp when the message became incomplete, if applicable.
+
+</ResponseField>
+
+<ResponseField name="incomplete_details" type="object">  
+
+Details on why the message was incomplete.
+
+</ResponseField>
+
+<ResponseField name="metadata" type="object">  
+
+Additional metadata about the message.
+
+</ResponseField>
+
+<ResponseField name="object" type="string">  
+
+Type of the object.
+
+</ResponseField>
+
+<ResponseField name="role" type="string" required>  
+
+The role that generated the message.
+
+</ResponseField>
+
+<ResponseField name="run_id" type="string">  
+
+Run ID associated with the message.
+
+</ResponseField>
+
+<ResponseField name="status" type="string">  
+
+Status of the message.
+
+</ResponseField>
+
+<ResponseField name="thread_id" type="string" required>  
+
+ID of the thread the message belongs to.
+
+</ResponseField>
+
+### Authorization
+
+A valid API key must be passed in the `Authorization` header:
+
+```
+Authorization: Bearer MINDS_API_KEY
+```
+
+Generate your [API key here](https://mdb.ai/apiKeys).
+
+### Path Parameters
+
+<ParamField body='thread_id' type='string' required>
+
+Id of the Thread to post the message to.
+
+</ParamField>
+
+<RequestExample>
+
+```shell Shell
+curl -X POST "https://mdb.ai/threads/mdb_thread_cfa0fac64cd94faab3ae269d768c0cb0/messages" \
+  -H "Authorization: Bearer MINDS_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+      "role": "user",
+      "content": "What data do you have access to?"
+  }'
+```
+
+```python Python
+from openai import OpenAI
+client = OpenAI(
+    api_key='MINDS_API_KEY',
+    base_url='https://mdb.ai/'
+)
+
+thread_message = client.beta.threads.messages.create(
+  "thread_abc123",
+  role="user",
+  content="What is AI?",
+)
+print(thread_message)
+```
+
+```js Node
+import OpenAI from "openai";
+
+const openai = new OpenAI(
+    api_key='MINDS_API_KEY',
+    baseURL='https://mdb.ai/'
+);
+
+async function main() {
+  const threadMessages = await openai.beta.threads.messages.create(
+    "thread_abc123",
+    { role: "user", content: "What data do you have access to?" }
+  );
+
+  console.log(threadMessages);
+}
+
+main();
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Response
+{
+    "id": "mdb_msg_7a74bc341b194af1ab8228e57a85d462",
+    "assistant_id": null,
+    "attachments": null,
+    "completed_at": null,
+    "content": [
+        {
+            "text": {
+                "annotations": [],
+                "value": "What data do you have access to?"
+            },
+            "type": "text"
+        }
+    ],
+    "created_at": 1718885284.3509543,
+    "incomplete_at": null,
+    "incomplete_details": null,
+    "metadata": null,
+    "object": null,
+    "role": "user",
+    "run_id": null,
+    "status": null,
+    "thread_id": "mdb_thread_cfa0fac64cd94faab3ae269d768c0cb0"
+}
+```
+
+</ResponseExample>

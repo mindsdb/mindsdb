@@ -1,5 +1,12 @@
 import unittest
-from databricks.sql import RequestError
+import pytest
+
+try:
+    from databricks.sql import RequestError
+    from mindsdb.integrations.handlers.databricks_handler.databricks_handler import DatabricksHandler
+except ImportError:
+    pytestmark = pytest.mark.skip("Databricks handler not installed")
+
 from unittest.mock import patch, MagicMock, Mock
 from collections import OrderedDict
 
@@ -7,7 +14,6 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
 )
-from mindsdb.integrations.handlers.databricks_handler.databricks_handler import DatabricksHandler
 
 
 class CursorContextManager(Mock):
@@ -19,17 +25,16 @@ class CursorContextManager(Mock):
 
 
 class TestDatabricksHandler(unittest.TestCase):
-
     dummy_connection_data = OrderedDict(
-        server_hostname='adb-1234567890123456.7.azuredatabricks.net',
-        http_path='sql/protocolv1/o/1234567890123456/1234-567890-test123',
-        access_token='dapi1234567890ab1cde2f3ab456c7d89efa'
+        server_hostname="adb-1234567890123456.7.azuredatabricks.net",
+        http_path="sql/protocolv1/o/1234567890123456/1234-567890-test123",
+        access_token="dapi1234567890ab1cde2f3ab456c7d89efa",
     )
 
     def setUp(self):
-        self.patcher = patch('databricks.sql.client.Connection')
+        self.patcher = patch("databricks.sql.client.Connection")
         self.mock_connect = self.patcher.start()
-        self.handler = DatabricksHandler('databricks', connection_data=self.dummy_connection_data)
+        self.handler = DatabricksHandler("databricks", connection_data=self.dummy_connection_data)
 
     def tearDown(self):
         self.patcher.stop()
@@ -116,7 +121,7 @@ class TestDatabricksHandler(unittest.TestCase):
         """
         self.handler.native_query = MagicMock()
 
-        table_name = 'mock_table'
+        table_name = "mock_table"
         self.handler.get_columns(table_name)
 
         expected_query = f"""DESCRIBE TABLE {table_name};"""
@@ -124,5 +129,5 @@ class TestDatabricksHandler(unittest.TestCase):
         self.handler.native_query.assert_called_once_with(expected_query)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

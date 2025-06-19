@@ -1,7 +1,6 @@
 from typing import List, Dict, Optional, Any
 import pandas as pd
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-import hashlib
 import asyncio
 
 
@@ -26,6 +25,8 @@ from langchain_core.documents import Document as LangchainDocument
 
 logger = log.getLogger(__name__)
 
+_DEFAULT_CONTENT_COLUMN_NAME = "content"
+
 
 class DocumentPreprocessor:
     """Base class for document preprocessing"""
@@ -43,7 +44,11 @@ class DocumentPreprocessor:
         self.splitter = None  # Will be set by child classes
 
     def process_documents(self, documents: List[Document]) -> List[ProcessedChunk]:
-        """Base implementation - should be overridden by child classes"""
+        """Base implementation - should be overridden by child classes
+
+        Args:
+            documents: List of documents to process
+        """
         raise NotImplementedError("Subclasses must implement process_documents")
 
     def _split_document(self, doc: Document) -> List[Document]:
@@ -80,29 +85,26 @@ class DocumentPreprocessor:
             metadata=data.get("metadata", {}),
         )
 
-    def _generate_deterministic_id(
-        self, content: str, content_column: str = None, provided_id: str = None
-    ) -> str:
-        """Generate a deterministic ID based on content and column"""
-        if provided_id is not None:
-            return f"{provided_id}_{content_column}"
-
-        id_string = f"content={content}_column={content_column}"
-        return hashlib.sha256(id_string.encode()).hexdigest()
-
     def _generate_chunk_id(
         self,
-        content: str,
         chunk_index: Optional[int] = None,
-        content_column: str = None,
+        total_chunks: Optional[int] = None,
+        start_char: Optional[int] = None,
+        end_char: Optional[int] = None,
         provided_id: str = None,
+        content_column: str = None,
     ) -> str:
-        """Generate deterministic ID for a chunk"""
-        base_id = self._generate_deterministic_id(content, content_column, provided_id)
-        chunk_id = (
-            f"{base_id}_chunk_{chunk_index}" if chunk_index is not None else base_id
-        )
-        logger.debug(f"Generated chunk ID: {chunk_id} for content hash: {base_id}")
+        """Generate human-readable deterministic ID for a chunk
+        Format: <doc_id>:<content_column>:<chunk_number>of<total_chunks>:<start_char>to<end_char>
+        """
+        if provided_id is None:
+            raise ValueError("Document ID must be provided for chunk ID generation")
+
+        if content_column is None:
+            raise ValueError("Content column must be provided for chunk ID generation")
+
+        chunk_id = f"{provided_id}:{content_column}:{chunk_index + 1}of{total_chunks}:{start_char}to{end_char}"
+        logger.debug(f"Generated chunk ID: {chunk_id}")
         return chunk_id
 
     def _prepare_chunk_metadata(
@@ -209,14 +211,10 @@ Please give a short succinct context to situate this chunk within the overall do
         processed_chunks = []
 
         for doc_index, doc in enumerate(documents):
-            # Get content_column from metadata if available
-            content_column = (
-                doc.metadata.get("content_column") if doc.metadata else None
-            )
 
-            # Ensure document has an ID
+            # Document ID must be provided by this point
             if doc.id is None:
-                doc.id = self._generate_deterministic_id(doc.content, content_column)
+                raise ValueError("Document ID must be provided before preprocessing")
 
             # Skip empty or whitespace-only content
             if not doc.content or not doc.content.strip():
@@ -262,15 +260,15 @@ Please give a short succinct context to situate this chunk within the overall do
             if doc.metadata:
                 metadata.update(doc.metadata)
 
-            # Pass through doc.id and content_column
-            content_column = (
-                doc.metadata.get("content_column") if doc.metadata else None
-            )
+            # Get content_column from metadata or use default
+            content_column = metadata.get('content_column')
+            if content_column is None:
+                # If content_column is not in metadata, use the default column name
+                content_column = _DEFAULT_CONTENT_COLUMN_NAME
+                logger.debug(f"No content_column found in metadata, using default: {_DEFAULT_CONTENT_COLUMN_NAME}")
+
             chunk_id = self._generate_chunk_id(
-                processed_content,
-                chunk_index,
-                content_column=content_column,
-                provided_id=doc.id,
+                chunk_index=chunk_index, provided_id=doc.id, content_column=content_column
             )
             processed_chunks.append(
                 ProcessedChunk(
@@ -307,70 +305,65 @@ class TextChunkingPreprocessor(DocumentPreprocessor):
         processed_chunks = []
 
         for doc in documents:
-            # Get content_column from metadata if available
-            content_column = (
-                doc.metadata.get("content_column") if doc.metadata else None
-            )
 
-            # Ensure document has an ID
+            # Document ID must be provided by this point
             if doc.id is None:
-                doc.id = self._generate_deterministic_id(doc.content, content_column)
+                raise ValueError("Document ID must be provided before preprocessing")
 
             # Skip empty or whitespace-only content
             if not doc.content or not doc.content.strip():
                 continue
 
             chunk_docs = self._split_document(doc)
+            total_chunks = len(chunk_docs)
 
-            # Single chunk case
-            if len(chunk_docs) == 1:
-                chunk_doc = chunk_docs[0]
+            # Track character positions
+            current_pos = 0
+            for i, chunk_doc in enumerate(chunk_docs):
                 if not chunk_doc.content or not chunk_doc.content.strip():
                     continue
+
+                # Calculate chunk positions
+                start_char = current_pos
+                end_char = start_char + len(chunk_doc.content)
+                current_pos = end_char + 1  # +1 for separator
 
                 # Initialize metadata
                 metadata = {}
                 if doc.metadata:
                     metadata.update(doc.metadata)
 
-                # Pass through doc.id and content_column
-                id = self._generate_chunk_id(
-                    chunk_doc.content, content_column=content_column, provided_id=doc.id
+                # Add position metadata
+                metadata["start_char"] = start_char
+                metadata["end_char"] = end_char
+
+                # Get content_column from metadata or use default
+                content_column = None
+                if doc.metadata:
+                    content_column = doc.metadata.get('content_column')
+
+                if content_column is None:
+                    # If content_column is not in metadata, use the default column name
+                    content_column = _DEFAULT_CONTENT_COLUMN_NAME
+                    logger.debug(f"No content_column found in metadata, using default: {_DEFAULT_CONTENT_COLUMN_NAME}")
+
+                chunk_id = self._generate_chunk_id(
+                    chunk_index=i,
+                    total_chunks=total_chunks,
+                    start_char=start_char,
+                    end_char=end_char,
+                    provided_id=doc.id,
+                    content_column=content_column
                 )
+
                 processed_chunks.append(
                     ProcessedChunk(
-                        id=id,
+                        id=chunk_id,
                         content=chunk_doc.content,
                         embeddings=doc.embeddings,
-                        metadata=self._prepare_chunk_metadata(doc.id, None, metadata),
+                        metadata=self._prepare_chunk_metadata(doc.id, i, metadata),
                     )
                 )
-            else:
-                # Multiple chunks case
-                for i, chunk_doc in enumerate(chunk_docs):
-                    if not chunk_doc.content or not chunk_doc.content.strip():
-                        continue
-
-                    # Initialize metadata
-                    metadata = {}
-                    if doc.metadata:
-                        metadata.update(doc.metadata)
-
-                    # Pass through doc.id and content_column
-                    chunk_id = self._generate_chunk_id(
-                        chunk_doc.content,
-                        i,
-                        content_column=content_column,
-                        provided_id=doc.id,
-                    )
-                    processed_chunks.append(
-                        ProcessedChunk(
-                            id=chunk_id,
-                            content=chunk_doc.content,
-                            embeddings=doc.embeddings,
-                            metadata=self._prepare_chunk_metadata(doc.id, i, metadata),
-                        )
-                    )
 
         return processed_chunks
 
@@ -384,18 +377,21 @@ class PreprocessorFactory:
     ) -> DocumentPreprocessor:
         """
         Create appropriate preprocessor based on configuration
-        : param config: Preprocessing configuration
-        : return: Configured preprocessor instance
-        : raises ValueError: If unknown preprocessor type specified
+        :param config: Preprocessing configuration
+        :return: Configured preprocessor instance
+        :raises ValueError: If unknown preprocessor type specified
         """
         if config is None:
+            # Default to text chunking if no config provided
             return TextChunkingPreprocessor()
 
-        if config.type == PreprocessorType.CONTEXTUAL:
-            return ContextualPreprocessor(
-                config.contextual_config or ContextualConfig()
-            )
-        elif config.type == PreprocessorType.TEXT_CHUNKING:
+        if config.type == PreprocessorType.TEXT_CHUNKING:
             return TextChunkingPreprocessor(config.text_chunking_config)
-
-        raise ValueError(f"Unknown preprocessor type: {config.type}")
+        elif config.type == PreprocessorType.CONTEXTUAL:
+            return ContextualPreprocessor(config.contextual_config)
+        elif config.type == PreprocessorType.JSON_CHUNKING:
+            # Import here to avoid circular imports
+            from mindsdb.interfaces.knowledge_base.preprocessing.json_chunker import JSONChunkingPreprocessor
+            return JSONChunkingPreprocessor(config.json_chunking_config)
+        else:
+            raise ValueError(f"Unknown preprocessor type: {config.type}")

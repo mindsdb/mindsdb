@@ -117,7 +117,7 @@ class HuggingFaceHandler(BaseMLEngine):
         try:
             pipeline = transformers.pipeline(task=args['task_proper'], model=hf_model_storage_path,
                                              tokenizer=hf_model_storage_path)
-            logger.debug(f'Model already downloaded!')
+            logger.debug('Model already downloaded!')
         ####
         # Otherwise download it
         except (ValueError, OSError):
@@ -154,10 +154,10 @@ class HuggingFaceHandler(BaseMLEngine):
                 labels_map[labels_default[num]] = labels_default[num]
             args["labels_map"] = labels_map
 
-        ###### store and persist in model folder
+        # store and persist in model folder
         self.model_storage.json_set("args", args)
 
-        ###### persist changes to handler folder
+        # persist changes to handler folder
         self.engine_storage.folder_sync(model_name)
 
     # todo move infer tasks to a seperate file
@@ -257,7 +257,7 @@ class HuggingFaceHandler(BaseMLEngine):
             "fill-mask": self.predict_fill_mask,
         }
 
-        ###### get stuff from model folder
+        # get stuff from model folder
         args = self.model_storage.json_get("args")
 
         task = args["task"]
@@ -310,11 +310,11 @@ class HuggingFaceHandler(BaseMLEngine):
                         continue
                     elif truncation_policy == "left":
                         tokens = tokens[
-                            -max_tokens + 1 : -1
+                            -max_tokens + 1: -1
                         ]  # cut 2 empty tokens from left and right
                     else:
                         tokens = tokens[
-                            1 : max_tokens - 1
+                            1: max_tokens - 1
                         ]  # cut 2 empty tokens from left and right
 
                     item = pipeline.tokenizer.decode(tokens)

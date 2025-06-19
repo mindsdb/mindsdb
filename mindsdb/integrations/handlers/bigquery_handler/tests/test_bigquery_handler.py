@@ -4,7 +4,7 @@ import pandas as pd
 from google.cloud import bigquery
 
 from mindsdb.integrations.handlers.bigquery_handler.bigquery_handler import BigQueryHandler
-from mindsdb.integrations.utilities.handlers.auth_utilities import GoogleServiceAccountOAuth2Manager
+from mindsdb.integrations.utilities.handlers.auth_utilities.google import GoogleServiceAccountOAuth2Manager
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE,

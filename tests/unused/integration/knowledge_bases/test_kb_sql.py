@@ -1,6 +1,8 @@
+import copy
 import json
 import time
 import datetime as dt
+import os
 
 import mindsdb_sdk
 from threading import Thread
@@ -9,16 +11,16 @@ import pandas as pd
 
 
 class KBTestBase:
-    def __init__(self, vectordb=None, mindsdb_server=None):
+    def __init__(self, vectordb=None, mindsdb_server=None, embed_model=None):
         self.vectordb = vectordb
         self.vectordb_engine = vectordb["engine"]
-        self.emb_model = emb_model
         if mindsdb_server is None:
             # use localhost
             mindsdb_server = {"url": "http://127.0.0.1:47334/"}
 
         self.con = mindsdb_sdk.connect(**mindsdb_server)
 
+        self.embed_model = embed_model
         self.prepare()
 
     def create_vector_db(self, connection_args):
@@ -81,25 +83,25 @@ class KBTestBase:
         # connect database
         self.db_name = self.create_db()
 
-    def create_kb(self, name, reranking_model=None, embedding_model=None):
+    def create_kb(self, name, reranking_model=None, embedding_model=None, params=None):
         self.run_sql(f"drop knowledge base if exists {name}")
 
         openai_api_key = os.getenv("OPENAI_API_KEY")
 
-        if reranking_model is None:
-            reranking_model = {"provider": "openai", "model_name": "gpt-4", "api_key": openai_api_key}
-
         if embedding_model is None:
-            embedding_model = {"provider": "openai", "model_name": "text-embedding-ada-002", "api_key": openai_api_key}
+            if self.embed_model is not None:
+                embedding_model = self.embed_model
+            else:
+                embedding_model = {"provider": "openai", "model_name": "text-embedding-ada-002", "api_key": openai_api_key}
 
         # prepare KB
-        kb_params = {
-            "embedding_model": embedding_model,
-            "reranking_model": reranking_model,
-            "metadata_columns": ["status", "category"],
-            "content_columns": ["message_body"],
-            "id_column": "id",
-        }
+        if params is None:
+            kb_params = {}
+        else:
+            kb_params = copy.deepcopy(params)
+
+        kb_params['embedding_model'] = embedding_model
+        kb_params['reranking_model'] = reranking_model
 
         param_str = ""
         if kb_params:
@@ -363,7 +365,7 @@ class KBTest(KBTestBase):
             params={
                 "metadata_columns": ["status", "category"],
                 "content_columns": ["message_body"],
-                "id_column": "id",
+                "id_column": "pk",
             },
         )
 
@@ -420,8 +422,11 @@ class KBTest(KBTestBase):
         assert "noise" in ret.chunk_content[0]  # first line contents word
         assert len(ret[ret.relevance < 0.65]) == 0
 
-    def test_relevance(self):
-        self.create_kb("kb_crm")
+    def test_relevance(self, reranking_model=None):
+        if reranking_model is None:
+            openai_api_key = os.getenv("OPENAI_API_KEY")
+            reranking_model = {"provider": "openai", "model_name": "gpt-4", "api_key": openai_api_key}
+        self.create_kb("kb_crm", reranking_model=reranking_model)
 
         self.run_sql("""
             INSERT INTO kb_crm (

@@ -6,7 +6,7 @@ from snowflake.sqlalchemy import snowdialect
 from snowflake import connector
 from snowflake.connector.errors import NotSupportedError
 from snowflake.connector.cursor import SnowflakeCursor, ResultMetadata
-from typing import Optional, List
+from typing import Any, Optional, List
 
 from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb_sql_parser.ast import Select, Identifier
@@ -706,3 +706,21 @@ class SnowflakeHandler(MetaDatabaseHandler):
         except Exception as e:
             logger.error(f"Exception in meta_get_primary_keys: {e!r}")
             return Response(RESPONSE_TYPE.ERROR, error_message=f"Exception querying primary keys: {e!r}")
+
+    def meta_get_handler_info(self, **kwargs: Any) -> str:
+        """
+        Retrieves information about the design and implementation of the database handler.
+        This should include, but not be limited to, the following:
+        - The type of SQL queries and operations that the handler supports.
+        - etc.
+
+        Args:
+            kwargs: Additional keyword arguments that may be used in generating the handler information.
+
+        Returns:
+            str: A string containing information about the database handler's design and implementation.
+        """
+        return (
+            "To query columns that contain special characters, use ticks around the column name, e.g. `column name`.\n"
+            "DO NOT use double quotes for this purpose."
+        )

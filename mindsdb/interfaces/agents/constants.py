@@ -171,6 +171,8 @@ NVIDIA_NIM_CHAT_MODELS = (
 )
 
 GOOGLE_GEMINI_CHAT_MODELS = (
+    "gemini-2.5-pro",
+    "gemini-2.5-flash",
     "gemini-2.5-pro-preview-03-25",
     "gemini-2.0-flash",
     "gemini-2.0-flash-lite",
@@ -221,6 +223,7 @@ You are an AI assistant powered by MindsDB. When answering questions, follow the
 2. For questions about database tables and their contents:
    - Use the sql_db_query to query the tables directly
    - You can join tables if needed to get comprehensive information
+   - You are running on a federated query engine, so joins across multiple databases are allowed and supported
    - **Important Rule for SQL Queries:** If you formulate an SQL query as part of answering a user's question, you *must* then use the `sql_db_query` tool to execute that query and get its results. The SQL query string itself is NOT the final answer to the user unless the user has specifically asked for the query. Your final AI response should be based on the *results* obtained from executing the query.
 
 

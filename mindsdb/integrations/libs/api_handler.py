@@ -457,8 +457,11 @@ class APIHandler(BaseHandler):
 
     def query(self, query: ASTNode):
         if isinstance(query, Select):
+            # If the list method exists, it should be overridden in the child class.
+            # The APIResource class could be used as a base class by overriding the select method, but not the list method.
             table = self._get_table(query.from_table)
-            if not hasattr(table, "list"):
+            list_method = getattr(table, "list", None)
+            if not list_method or (list_method and list_method.__func__ is APIResource.list):
                 # for back compatibility, targets wasn't passed in previous version
                 query.targets = [Star()]
             result = self._get_table(query.from_table).select(query)
@@ -514,6 +517,21 @@ class MetaAPIHandler(APIHandler):
 
     This class is used when the handler is also needed to store information in the data catalog.
     """
+
+    def meta_get_handler_info(self, **kwargs) -> str:
+        """
+        Retrieves information about the design and implementation of the API handler.
+        This should include, but not be limited to, the following:
+        - The type of SQL queries and operations that the handler supports.
+        - etc.
+
+        Args:
+            kwargs: Additional keyword arguments that may be used in generating the handler information.
+
+        Returns:
+            str: A string containing information about the API handler's design and implementation.
+        """
+        pass
 
     def meta_get_tables(self, table_names: Optional[List[str]] = None, **kwargs) -> Response:
         """

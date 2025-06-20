@@ -172,6 +172,9 @@ class AgentsController:
                 include_knowledge_bases: List of knowledge bases to include for text2sql skills
                 ignore_knowledge_bases: List of knowledge bases to ignore for text2sql skills
                 <provider>_api_key: API key for the provider (e.g., openai_api_key)
+                data: Dict, data sources for an agent, keys:
+                  - knowledge_bases: List of KBs to use (alternative to `include_knowledge_bases`)
+                  - tables: list of tables to use (alternative to `include_tables`)
 
         Returns:
             agent (db.Agents): The created agent
@@ -229,6 +232,12 @@ class AgentsController:
 
         if "database" in params or need_params:
             params["database"] = database
+
+        if "data" in params:
+            if include_knowledge_bases is None:
+                include_knowledge_bases = params["data"].get("knowledge_bases")
+            if include_tables is None:
+                include_tables = params["data"].get("tables")
 
         if "knowledge_base_database" in params or include_knowledge_bases or ignore_knowledge_bases:
             params["knowledge_base_database"] = knowledge_base_database

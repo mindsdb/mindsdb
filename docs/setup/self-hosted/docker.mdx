@@ -33,8 +33,7 @@ Follow the steps to set up MindsDB in a Docker container.
 Run this command to create a Docker container with MindsDB:
 
 ```bash
-docker run --name mindsdb_container \
--p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+docker run --name mindsdb_container -e MINDSDB_APIS=http,mysql -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
 ```
 
 Where:
@@ -65,8 +64,7 @@ Once the container is created, you can use the following commands:
 If you don't want to follow the logs and get the prompt back, add the `-d` flag that stands for *detach*.
 
 ```bash
-docker run --name mindsdb_container \
--d -p 47334:47334 mindsdb/mindsdb
+docker run --name mindsdb_container -e MINDSDB_APIS=http -d -p 47334:47334 mindsdb/mindsdb
 ```
 </Tip>
 
@@ -75,8 +73,7 @@ If you want to persist your models and configurations in the host machine, run t
 
 ```bash
 mkdir mdb_data
-docker run --name mindsdb_container \
--p 47334:47334 -v $(pwd)/mdb_data:/root/mdb_storage mindsdb/mindsdb
+docker run --name mindsdb_container -e MINDSDB_APIS=http -p 47334:47334 -v $(pwd)/mdb_data:/root/mdb_storage mindsdb/mindsdb
 ```
 
 Where `-v $(pwd)/mdb_data:/root/mdb_storage` maps the newly created folder `mdb_data` on the host machine to the `/root/mdb_storage` inside the container.
@@ -92,8 +89,7 @@ Now you can access the MindsDB editor by going to `127.0.0.1:47334` in your brow
 If you experience any issues related to MKL or your training process does not complete, please add the `MKL_SERVICE_FORCE_INTEL` environment variable, as below.
 
 ```bash
-docker run --name mindsdb_container -e MKL_SERVICE_FORCE_INTEL=1 \
--p 47334:47334 mindsdb/mindsdb
+docker run --name mindsdb_container -e MKL_SERVICE_FORCE_INTEL=1 -e MINDSDB_APIS=http -p 47334:47334 mindsdb/mindsdb
 ```
 </Warning>
 
@@ -101,9 +97,7 @@ docker run --name mindsdb_container -e MKL_SERVICE_FORCE_INTEL=1 \
 If you want to enable authentication for MindsDB, you do so by passing the `MINDSDB_USERNAME` and `MINDSDB_PASSWORD` environment variables when running the container.
 
 ```bash
-docker run --name mindsdb_container \
--e MINDSDB_USERNAME='admin' -e MINDSDB_PASSWORD='password' \
--p 47334:47334 mindsdb/mindsdb
+docker run --name mindsdb_container -e MINDSDB_USERNAME='admin' -e MINDSDB_PASSWORD='password' -e MINDSDB_APIS=http -p 47334:47334 mindsdb/mindsdb
 ```
 </Tip>
 
@@ -135,8 +129,7 @@ If you haven't specified a container name when spinning up a container with `doc
 If you haven't yet created a container, use this command:
 
 ```bash
-docker run --name mindsdb_container \
--d -p 47334:47334 mindsdb/mindsdb
+docker run --name mindsdb_container -e MINDSDB_APIS=http -d -p 47334:47334 mindsdb/mindsdb
 ```
 </Tip>
 
@@ -213,8 +206,7 @@ The default configuration for MindsDB's Docker image is stored as a JSON code, a
 To override the default configuration, you can mount a config file over `/root/mindsdb_config.json`, as below.
 
 ```bash
-docker run --name mindsdb_container -d -p 47334:47334 \
--v mdb_config.json:/root/mindsdb_config.json mindsdb/mindsdb
+docker run --name mindsdb_container -e MINDSDB_APIS=http -d -p 47334:47334 -v mdb_config.json:/root/mindsdb_config.json mindsdb/mindsdb
 ```
 
 <Tip>

@@ -204,34 +204,6 @@ When choosing `snowflake` as the model provider, users should define the followi
 * `api_key` stores the Snowflake API key.
 * `snowflake_account_id` stores the Snowflake account ID.
 
-#### `provider = 'ollama'`
-
-When choosing `ollama` as the model provider, users should define the following model parameters.
-
-* `model_name` stores the name of the model available via Ollama.
-* `base_url` stores the base URL for accessing you Ollama instance.
-
-Example:
-
-```sql
-CREATE KNOWLEDGE_BASE my_kb
-        USING
-        ...
-        embedding_model = {
-            "provider": "ollama",
-            "model_name": "mxbai-embed-large",
-            "base_url": "http://localhost:11434"
-        },
-        reranking_model = {
-            "provider": "ollama",
-            "model_name": "deepseek-r1:1.5b",
-            "base_url": "http://localhost:11434"
-        };
-```
-
-Learn more about the [Ollama integration with MindsDB here](/integrations/ai-engines/ollama).
-
-
 ### `embedding_model`
 
 The embedding model is a required component of the knowledge base. It stores specifications of the embedding model to be used.

@@ -33,9 +33,14 @@ class UnionStepCall(BaseStepCall):
         table_a, names = left_result.to_df_cols()
         table_b, _ = right_result.to_df_cols()
 
-        op = 'UNION ALL'
-        if step.unique:
+        if step.operation.lower() == 'intersect':
+            op = 'INTERSECT'
+        else:
             op = 'UNION'
+
+        if step.unique is not True:
+            op += ' ALL'
+
         query = f"""
             SELECT * FROM table_a
             {op}

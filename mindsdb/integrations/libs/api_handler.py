@@ -433,16 +433,15 @@ class APIHandler(BaseHandler):
         Args:
             name (str): the handler name
         """
-
         self._tables = {}
 
     def _register_table(self, table_name: str, table_class: Any):
         """
         Register the data resource. For e.g if you are using Twitter API it registers the `tweets` resource from `/api/v2/tweets`.
         """
-        if table_name in self._tables:
+        if table_name.lower() in self._tables:
             raise TableAlreadyExists(f"Table with name {table_name} already exists for this handler")
-        self._tables[table_name] = table_class
+        self._tables[table_name.lower()] = table_class
 
     def _get_table(self, name: Identifier):
         """
@@ -450,10 +449,10 @@ class APIHandler(BaseHandler):
         Args:
             name (Identifier): the table name
         """
-        name = name.parts[-1]
-        if name not in self._tables:
-            raise TableNotFound(f"Table not found: {name}")
-        return self._tables[name]
+        name = name.parts[-1].lower()
+        if name in self._tables:
+            return self._tables[name]
+        raise TableNotFound(f"Table not found: {name}")
 
     def query(self, query: ASTNode):
         if isinstance(query, Select):

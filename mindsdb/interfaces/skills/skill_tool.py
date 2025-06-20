@@ -363,9 +363,9 @@ class SkillToolController:
             name=params.get("name", skill.name),
             source=params.get("source", None),
             config=config,
-            description=f'You must use this tool to get more context or information '
-            f'to answer a question about {params["description"]}. '
-            f'The input should be the exact question the user is asking.',
+            description=f"You must use this tool to get more context or information "
+            f"to answer a question about {params['description']}. "
+            f"The input should be the exact question the user is asking.",
             type=skill.type,
         )
         pred_args = {}
@@ -405,7 +405,7 @@ class SkillToolController:
         description = skill.params.get("description", "")
 
         logger.warning(
-            "This skill is deprecated and will be removed in the future. " "Please use `retrieval` skill instead "
+            "This skill is deprecated and will be removed in the future. Please use `retrieval` skill instead "
         )
 
         return dict(

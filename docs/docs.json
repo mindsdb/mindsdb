@@ -363,6 +363,18 @@
                     ]
                   }
                 ]
+              },
+              {
+                "group": "Data Catalogue",
+                "pages": [
+                  {
+                    "group": "Integrations Data Catalogue",
+                    "pages": [
+                      "data_catalogue/overview",
+                      "data_catalogue/query"
+                    ]
+                  }
+                ]
               }
             ]
           },

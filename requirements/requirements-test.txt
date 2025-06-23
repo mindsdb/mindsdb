@@ -1,3 +1,4 @@
+skipy<=1.15.3
 docker >= 5.0.3
 openai<2.0.0,>=1.54.0
 pytest >= 8.3.5, < 9.0.0
@@ -15,4 +16,3 @@ mindsdb-sdk
 filelock==3.18.0
 mysql-connector-python==9.1.0
 walrus==0.9.3
-skipy<=1.15.3

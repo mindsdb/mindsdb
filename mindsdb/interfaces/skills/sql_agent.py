@@ -330,7 +330,7 @@ class SQLAgent:
         #        return cached_kbs
 
         if not self._knowledge_bases_to_include and not self._knowledge_bases_to_ignore:
-            # white of black list have to be set
+            # white or black list have to be set
             return []
 
         if self._knowledge_bases_to_include and not self._knowledge_bases_to_include.has_wildcard:

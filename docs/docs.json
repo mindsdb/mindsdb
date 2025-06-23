@@ -365,13 +365,14 @@
                 ]
               },
               {
-                "group": "Data Catalogue",
+                "group": "Data Catalog",
                 "pages": [
+                  "data_catalog/overview",
                   {
-                    "group": "Integrations Data Catalogue",
+                    "group": "Data Catalog for Integrations",
                     "pages": [
-                      "data_catalogue/overview",
-                      "data_catalogue/query"
+                      "data_catalog/integrations/overview",
+                      "data_catalog/integrations/query"
                     ]
                   }
                 ]

@@ -78,7 +78,7 @@ We start by creating a knowledge base and inserting data. Next we can run semant
     ```
   </Step>
   <Step title="Get the most relevant search results">
-    Query the knowledge base using semantic search and define the `relevance_threshold` parameter to receive only the best matching data for your use case.
+    Query the knowledge base using semantic search and define the `relevance` parameter to receive only the best matching data for your use case.
 
     ```sql
     SELECT *
@@ -203,34 +203,6 @@ When choosing `snowflake` as the model provider, users should define the followi
 * `model_name` stores the name of the model available via Snowflake Cortex AI.
 * `api_key` stores the Snowflake API key.
 * `snowflake_account_id` stores the Snowflake account ID.
-
-#### `provider = 'ollama'`
-
-When choosing `ollama` as the model provider, users should define the following model parameters.
-
-* `model_name` stores the name of the model available via Ollama.
-* `base_url` stores the base URL for accessing you Ollama instance.
-
-Example:
-
-```sql
-CREATE KNOWLEDGE_BASE my_kb
-        USING
-        ...
-        embedding_model = {
-            "provider": "ollama",
-            "model_name": "mxbai-embed-large",
-            "base_url": "http://localhost:11434"
-        },
-        reranking_model = {
-            "provider": "ollama",
-            "model_name": "deepseek-r1:1.5b",
-            "base_url": "http://localhost:11434"
-        };
-```
-
-Learn more about the [Ollama integration with MindsDB here](/integrations/ai-engines/ollama).
-
 
 ### `embedding_model`
 
@@ -915,14 +887,14 @@ It stores the general metadata and the metadata defined in the `metadata_columns
 It stores the calculated distance between the chunk's content and the search phrase.
 
 `relevance`
-It stores the calculated relevance of the chunk as compared to the search phrase.
+It stores the calculated relevance of the chunk as compared to the search phrase. Its values are between 0 and 1.
 
 <Note>
-Note that the calculation method of `relevance_threshold` differs as follows:
+Note that the calculation method of `relevance` differs as follows:
 
-- When the ranking model is provided, the default `relevance_threshold` is 0, unless defined otherwise in the `WHERE` clause.
-- When the reranking model is not provided and the `relevance_threshold` is not defined in the query, then no relevance filtering is applied and the output includes all rows matched based on the similarity and metadata search.
-- When the reranking model is not provided but the `relevance_threshold` is defined in the query, then the relevance is calculated based on the `distance` column (`1/(1+ distance)`) and the `relevance_threshold` value is compared with this relevance value to filter the output.
+- When the ranking model is provided, the default `relevance` is equal or greater than 0, unless defined otherwise in the `WHERE` clause.
+- When the reranking model is not provided and the `relevance` is not defined in the query, then no relevance filtering is applied and the output includes all rows matched based on the similarity and metadata search.
+- When the reranking model is not provided but the `relevance` is defined in the query, then the relevance is calculated based on the `distance` column (`1/(1+ distance)`) and the `relevance` value is compared with this relevance value to filter the output.
 </Note>
 
 ### Semantic Search
@@ -950,34 +922,34 @@ Here is the output:
 <Note>
 When querying a knowledge base, the default values include the following:
 
-* `relevance_threshold` <br></br>
-If not provided, its default value is 0, ensuring there is no filtering of rows based on their relevance.
+* `relevance` <br></br>
+If not provided, its default value is equal to or greater than 0, ensuring there is no filtering of rows based on their relevance.
 
 * `LIMIT` <br></br>
 If not provided, its default value is 10, returning a maximum of 10 rows.
 </Note>
 
 <Tip>
-Note that when specifying both `relevance_threshold` and `LIMIT` as follows:
+Note that when specifying both `relevance` and `LIMIT` as follows:
 
 ```sql
 SELECT *
 FROM my_kb
 WHERE content = 'color'
-AND relevance_threshold = 0.5
+AND relevance >= 0.5
 LIMIT 20;
 ```
 
-The query extracts 20 rows (as defined in the `LIMIT` clause) that match the defined `content`. Next, these set of rows is filtered out to match the defined `relevance_threshold`.
+The query extracts 20 rows (as defined in the `LIMIT` clause) that match the defined `content`. Next, these set of rows is filtered out to match the defined `relevance`.
 </Tip>
 
-Users can limit the `relevance_threshold` in order to get only the most relevant results.
+Users can limit the `relevance` in order to get only the most relevant results.
 
 ```sql
 SELECT *
 FROM my_kb
 WHERE content = 'color'
-AND relevance_threshold = 0.5;
+AND relevance >= 0.5;
 ```
 
 Here is the output:
@@ -990,7 +962,7 @@ Here is the output:
 +-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
 ```
 
-By providing the `relevance_threshold` filter, the output is limited to only data with relevance score of the provided value or higher. The available value of `relevance_threshold` are between 0 and 1, and its default value is 0.
+By providing the `relevance` filter, the output is limited to only data with relevance score of the provided value. The available values of `relevance` are between 0 and 1, and its default value covers all available relevance values ensuring no filtering based on the relevance score.
 
 Users can limit the number of rows returned.
 
@@ -1041,7 +1013,7 @@ SELECT *
 FROM my_kb
 WHERE product = 'Wireless Mouse'
 AND content = 'color'
-AND relevance_threshold = 0.5;
+AND relevance >= 0.5;
 ```
 
 Here is the output:
@@ -1300,7 +1272,7 @@ SELECT *
 FROM my_kb
 WHERE product = 'Wireless Mouse'
 AND content = 'color'
-AND relevance_threshold = 0.5;
+AND relevance > 0.5;
 ```
 
 ### Financial Data
@@ -1383,13 +1355,13 @@ This query returns 20 rows, as the user-defined `LIMIT` is set to 20.
   <img src="/assets/sql/kb_retrieval_example2.png" />
 </p>
 
-* Query with defined `LIMIT` and `relevance_threshold`
+* Query with defined `LIMIT` and `relevance`
 
 ```sql
 SELECT *
 FROM my_kb
 WHERE content = 'investors'
-AND relevance_threshold = 0.8
+AND relevance >= 0.8
 LIMIT 20;
 ```
 

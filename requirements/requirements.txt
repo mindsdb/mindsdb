@@ -20,7 +20,7 @@ mindsdb-sql-parser ~= 0.10.1
 pydantic == 2.9.2
 mindsdb-evaluator == 0.0.17
 duckdb ~= 1.2.1
-requests == 2.32.3
+requests == 2.32.4
 dateparser==1.2.0
 dill == 0.3.6
 numpy

@@ -271,6 +271,14 @@ WHERE question = 'What is the average number of orders per customers?';
 
 MindsDB provides a chat interface that enables users to chat with their data.
 
+<Note>
+To access the chat interface and converse with agents, users need to enable the A2A API that is used to communicate between the chat interface and the agent.
+
+```bash
+docker run --name mindsdb_container -e MINDSDB_APIS=http,mysql,a2a -p 47334:47334 -p 47335:47335 -p 47337:47337 -p 47338:47338 mindsdb/mindsdb
+```
+</Note>
+
 <p align="center">
   <img src="/assets/mindsdb_gui_respond.png" />
 </p>

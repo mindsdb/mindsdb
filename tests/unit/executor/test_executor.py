@@ -624,11 +624,8 @@ class TestComplexQueries(BaseExecutorMockPredictor):
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_union(self, mock_handler):
         jobs_df = self.df.copy(deep=True)
-        jobs_df['a'][2] = 3
-        self.set_handler(mock_handler, name="pg", tables={
-            "tasks": self.df,
-            "jobs": jobs_df
-        })
+        jobs_df["a"][2] = 3
+        self.set_handler(mock_handler, name="pg", tables={"tasks": self.df, "jobs": jobs_df})
 
         # --- use predictor ---
         self.set_predictor(self.task_predictor)
@@ -670,15 +667,15 @@ class TestComplexQueries(BaseExecutorMockPredictor):
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_intersect(self, mock_handler):
-        df_a = pd.DataFrame([[1, 'x'], [1, 'x'], [2, 'y'], [3, 'z']], columns=['a', 'b'])
-        df_b = pd.DataFrame([[1, 'x'], [1, 'x'], [2, 'y'], [3, 'w']], columns=['a', 'b'])
+        df_a = pd.DataFrame([[1, "x"], [1, "x"], [2, "y"], [3, "z"]], columns=["a", "b"])
+        df_b = pd.DataFrame([[1, "x"], [1, "x"], [2, "y"], [3, "w"]], columns=["a", "b"])
 
         self.set_handler(mock_handler, name="pg1", tables={"df_a": df_a, "df_b": df_b})
         self.set_handler(mock_handler, name="pg2", tables={"df_a": df_a, "df_b": df_b})
 
         # INTERSECT operations with tables from the same database and from different databases
         # are processed differently, so tests should cover both scenarios.
-        for db_name in ['pg1', 'pg2']:
+        for db_name in ["pg1", "pg2"]:
             sql = f"""
                 SELECT * FROM pg1.df_a
                 INTERSECT
@@ -688,8 +685,8 @@ class TestComplexQueries(BaseExecutorMockPredictor):
             ret_df = self.ret_to_df(ret)
             assert list(ret_df.columns) == ["a", "b"]
             assert ret_df.shape[0] == 2
-            assert ((ret_df['a'] == 1) & (ret_df['b'] == 'x')).any()
-            assert ((ret_df['a'] == 2) & (ret_df['b'] == 'y')).any()
+            assert ((ret_df["a"] == 1) & (ret_df["b"] == "x")).any()
+            assert ((ret_df["a"] == 2) & (ret_df["b"] == "y")).any()
 
             sql = f"""
                 SELECT * FROM pg1.df_a
@@ -700,8 +697,8 @@ class TestComplexQueries(BaseExecutorMockPredictor):
             ret_df = self.ret_to_df(ret)
             assert list(ret_df.columns) == ["a", "b"]
             assert ret_df.shape[0] == 2
-            assert ((ret_df['a'] == 1) & (ret_df['b'] == 'x')).any()
-            assert ((ret_df['a'] == 2) & (ret_df['b'] == 'y')).any()
+            assert ((ret_df["a"] == 1) & (ret_df["b"] == "x")).any()
+            assert ((ret_df["a"] == 2) & (ret_df["b"] == "y")).any()
 
             sql = f"""
                 SELECT * FROM pg1.df_a
@@ -712,8 +709,8 @@ class TestComplexQueries(BaseExecutorMockPredictor):
             ret_df = self.ret_to_df(ret)
             assert list(ret_df.columns) == ["a", "b"]
             assert ret_df.shape[0] == 3
-            assert ((ret_df['a'] == 2) & (ret_df['b'] == 'y')).any()
-            assert ret_df[(ret_df['a'] == 1) & (ret_df['b'] == 'x')].shape[0] == 2
+            assert ((ret_df["a"] == 2) & (ret_df["b"] == "y")).any()
+            assert ret_df[(ret_df["a"] == 1) & (ret_df["b"] == "x")].shape[0] == 2
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_update_from_select(self, mock_handler):

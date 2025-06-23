@@ -37,7 +37,7 @@ from mindsdb_sql_parser.ast import (
     Function,
     Variable,
     Intersect,
-    Except
+    Except,
 )
 
 # typed models

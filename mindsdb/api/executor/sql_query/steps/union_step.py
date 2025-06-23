@@ -9,7 +9,6 @@ from .base import BaseStepCall
 
 
 class UnionStepCall(BaseStepCall):
-
     bind = UnionStep
 
     def call(self, step):
@@ -19,7 +18,8 @@ class UnionStepCall(BaseStepCall):
         # count of columns have to match
         if len(left_result.columns) != len(right_result.columns):
             raise WrongArgumentError(
-                f'UNION columns count mismatch: {len(left_result.columns)} != {len(right_result.columns)} ')
+                f"UNION columns count mismatch: {len(left_result.columns)} != {len(right_result.columns)} "
+            )
 
         # types have to match
         # TODO: return checking type later
@@ -33,13 +33,13 @@ class UnionStepCall(BaseStepCall):
         table_a, names = left_result.to_df_cols()
         table_b, _ = right_result.to_df_cols()
 
-        if step.operation.lower() == 'intersect':
-            op = 'INTERSECT'
+        if step.operation.lower() == "intersect":
+            op = "INTERSECT"
         else:
-            op = 'UNION'
+            op = "UNION"
 
         if step.unique is not True:
-            op += ' ALL'
+            op += " ALL"
 
         query = f"""
             SELECT * FROM table_a
@@ -47,10 +47,7 @@ class UnionStepCall(BaseStepCall):
             SELECT * FROM table_b
         """
 
-        resp_df, _description = query_df_with_type_infer_fallback(query, {
-            'table_a': table_a,
-            'table_b': table_b
-        })
+        resp_df, _description = query_df_with_type_infer_fallback(query, {"table_a": table_a, "table_b": table_b})
         resp_df.replace({np.nan: None}, inplace=True)
 
         return ResultSet.from_df_cols(df=resp_df, columns_dict=names)

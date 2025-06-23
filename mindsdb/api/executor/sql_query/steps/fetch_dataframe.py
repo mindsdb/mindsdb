@@ -7,7 +7,7 @@ from mindsdb_sql_parser.ast import (
     BinaryOperation,
     Tuple,
     Union,
-    Intersect
+    Intersect,
 )
 
 from mindsdb.api.executor.planner.steps import FetchDataframeStep
@@ -95,7 +95,7 @@ class FetchDataframeStepCall(BaseStepCall):
             df = response.data_frame
         else:
             if isinstance(step.query, (Union, Intersect)):
-                table_alias = ['', '', '']
+                table_alias = ["", "", ""]
             else:
                 table_alias = get_table_alias(step.query.from_table, self.context.get("database"))
 

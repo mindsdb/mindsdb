@@ -23,6 +23,32 @@ To enable the Data Catalog feature in MindsDB, update your `config.json` file by
 
 Follow this doc page to learn how to [start MindsDB with custom configuration](/setup/custom-config).
 
+<Note>
+Note that the data catalog is generated for a data source only after this data source is connected to an agent.
+
+Here is an example:
+
+```sql
+CREATE DATABASE snowflake_data
+WITH
+    ENGINE = 'snowflake',
+    PARAMETERS = {
+        "account": "abc123-xyz987",
+        "user": "username",
+        "password": "password",
+        "database": "database_name",
+        "schema": "schema_name",
+        "warehouse": "warehouse_name"
+    };
+
+CREATE AGENT my_agent
+USING
+    include_tables= ['snowflake_data.table_name', ...];
+```
+
+Now you can [query the data catalog](/data_catalog/integrations/query) generated for the `snowflake_data` integration.
+</Note>
+
 ### How It Works
 
 When you create an [agent](/mindsdb_sql/agents/agent) in MindsDB that connects to one of the supported integrations, the Data Catalog automatically:

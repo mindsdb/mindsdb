@@ -970,8 +970,8 @@ class TestKB(BaseExecutorDummyML):
             for size in ("big", "middle", "small"):
                 for shape in ("square", "triangle", "circle"):
                     i += 1
-                    lines.append([i, f"{color} {size} {shape}", color, size, shape])
-        df = pd.DataFrame(lines, columns=["id", "content", "color", "size", "shape"])
+                    lines.append([i, i, f"{color} {size} {shape}", color, size, shape])
+        df = pd.DataFrame(lines, columns=["id", "num", "content", "color", "size", "shape"])
 
         self.save_file("items", df)
 
@@ -1043,3 +1043,16 @@ class TestKB(BaseExecutorDummyML):
                 assert "big" in content
             else:
                 assert "small" in content
+
+        # -- using between
+
+        ret = self.run_sql("""
+           select * from kb_alg where
+            content like 'white' and num between 3 and 4
+           limit 3
+        """)
+        assert len(ret) == 2
+
+        for _, item in ret.iterrows():
+            assert "white" in item["chunk_content"]
+            assert item["metadata"]["num"] in (3, 4)

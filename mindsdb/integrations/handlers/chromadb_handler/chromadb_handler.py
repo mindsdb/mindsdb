@@ -269,15 +269,21 @@ class ChromaDBHandler(VectorStoreHandler):
             vector_filter = vector_filter[0]
         else:
             vector_filter = None
-        id_filters = []
+        ids_include = []
+        ids_exclude = []
+
         if conditions is not None:
             for condition in conditions:
                 if condition.column != TableField.ID.value:
                     continue
                 if condition.op == FilterOperator.EQUAL:
-                    id_filters.append(condition.value)
+                    ids_include.append(condition.value)
                 elif condition.op == FilterOperator.IN:
-                    id_filters.extend(condition.value)
+                    ids_include.extend(condition.value)
+                elif condition.op == FilterOperator.NOT_EQUAL:
+                    ids_exclude.append(condition.value)
+                elif condition.op == FilterOperator.NOT_IN:
+                    ids_exclude.extend(condition.value)
 
         if vector_filter is not None:
             # similarity search
@@ -288,8 +294,13 @@ class ChromaDBHandler(VectorStoreHandler):
                 else None,
                 "include": include + ["distances"],
             }
+
             if limit is not None:
-                query_payload["n_results"] = limit
+                if len(ids_include) == 0 and len(ids_exclude) == 0:
+                    query_payload["n_results"] = limit
+                else:
+                    # get more results if we have filters by id
+                    query_payload["n_results"] = limit * 10
 
             result = collection.query(**query_payload)
             ids = result["ids"][0]
@@ -301,7 +312,7 @@ class ChromaDBHandler(VectorStoreHandler):
         else:
             # general get query
             result = collection.get(
-                ids=id_filters or None,
+                ids=ids_include or None,
                 where=filters,
                 limit=limit,
                 offset=offset,
@@ -337,6 +348,14 @@ class ChromaDBHandler(VectorStoreHandler):
                         break
 
         df = pd.DataFrame(payload)
+        if ids_exclude or ids_include:
+            if ids_exclude:
+                df = df[~df[TableField.ID.value].isin(ids_exclude)]
+            if ids_include:
+                df = df[df[TableField.ID.value].isin(ids_include)]
+            if limit is not None:
+                df = df[: limit]
+
         if distance_filter is not None:
             op_map = {
                 '<': '__lt__',

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import copy
 from typing import List, Optional, Union
 
-from mindsdb_sql_parser.ast import BinaryOperation, Identifier, Constant, UnaryOperation, Select, Star, Tuple, ASTNode
+from mindsdb_sql_parser.ast import BinaryOperation, Identifier, Constant, UnaryOperation, Select, Star, Tuple, ASTNode, BetweenOperation
 import pandas as pd
 
 from mindsdb.integrations.utilities.query_traversal import query_traversal
@@ -116,6 +116,13 @@ class KnowledgeBaseQueryExecutor:
             else:
                 node.op = node.op.upper()
                 return node
+
+        elif isinstance(node, BetweenOperation):
+            block = ConditionBlock("AND", [
+                BinaryOperation('>=', args=[node.args[0], node.args[1]]),
+                BinaryOperation('<=', args=[node.args[0], node.args[2]]),
+            ])
+            return block
 
         raise NotImplementedError(f"Unknown node '{node}'")
 

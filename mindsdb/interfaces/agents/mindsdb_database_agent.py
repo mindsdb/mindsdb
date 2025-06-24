@@ -119,7 +119,7 @@ class MindsDBSQL(SQLDatabase):
             logger.error(f"Error getting usable knowledge base names: {str(e)}")
             return []
 
-    def check_knowledge_base_permission(self, name) -> '':
+    def check_knowledge_base_permission(self, name):
         """Get a list of usable knowledge base names.
 
         Returns:

@@ -332,11 +332,9 @@ class SQLAgent:
             # white or black list have to be set
             return []
 
-
         # Filter knowledge bases based on ignore list
         kb_names = []
         for kb_name in self.get_all_knowledge_base_names():
-
             kb = Identifier(parts=[self.knowledge_base_database, kb_name])
             if self._knowledge_bases_to_include and not self._knowledge_bases_to_include.match(kb):
                 continue
@@ -350,7 +348,7 @@ class SQLAgent:
         Returns:
             Iterable[str]: list with knowledge base names
         """
-        cache_key = f"{ctx.company_id}_{self.knowledge_base_database}_knowledge_bases"
+        # cache_key = f"{ctx.company_id}_{self.knowledge_base_database}_knowledge_bases"
 
         # todo we need to fix the cache, file cache can potentially store out of data information
         # # first check cache and return if found
@@ -361,7 +359,7 @@ class SQLAgent:
 
         try:
             # Query to get all knowledge bases
-            ast_query = Show(category='Knowledge Bases')
+            ast_query = Show(category="Knowledge Bases")
             result = self._command_executor.execute_command(ast_query, database_name=self.knowledge_base_database)
 
             # Filter knowledge bases based on ignore list

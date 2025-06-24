@@ -669,12 +669,12 @@ class TestAgent(BaseExecutorDummyML):
         set_openai_completion(
             mock_openai,
             [
-                dedent(f"""
+                dedent("""
                     Thought: Do I need to use a tool? Yes
                     Action: kb_info_tool
                     Action Input: kb_hide
                 """),
-                dedent(f"""
+                dedent("""
                     Thought: Do I need to use a tool? Yes
                     Action: kb_query_tool
                     Action Input: select * from kb_hide where content='Moon'
@@ -682,7 +682,7 @@ class TestAgent(BaseExecutorDummyML):
                 "Hi!",
             ],
         )
-        self.run_sql(f"select * from my_agent where question = 'test'")
+        self.run_sql("select * from my_agent where question = 'test'")
 
         # result of kb_info_tool
         assert "Knowledge base kb_hide not found" in mock_openai.agent_calls[1]
@@ -696,17 +696,17 @@ class TestAgent(BaseExecutorDummyML):
         set_openai_completion(
             mock_openai,
             [
-                dedent(f"""
+                dedent("""
                     Thought: Do I need to use a tool? Yes
                     Action: kb_list_tool
                     Action Input:
                 """),
-                dedent(f"""
+                dedent("""
                     Thought: Do I need to use a tool? Yes
                     Action: kb_info_tool
                     Action Input: kb_show1
                 """),
-                dedent(f"""
+                dedent("""
                     Thought: Do I need to use a tool? Yes
                     Action: kb_query_tool
                     Action Input: select * from kb_show1 where content='Moon' limit 1
@@ -714,7 +714,7 @@ class TestAgent(BaseExecutorDummyML):
                 "Hi!",
             ],
         )
-        self.run_sql(f"select * from my_agent where question = 'test'")
+        self.run_sql("select * from my_agent where question = 'test'")
 
         # result of kb_list_tool
         assert "kb_hide" not in mock_openai.agent_calls[1]
@@ -734,12 +734,12 @@ class TestAgent(BaseExecutorDummyML):
         set_openai_completion(
             mock_openai,
             [
-                dedent(f"""
+                dedent("""
                     Thought: Do I need to use a tool? Yes
                     Action: sql_db_schema
                     Action Input: files.hide
                 """),
-                dedent(f"""
+                dedent("""
                     Thought: Do I need to use a tool? Yes
                     Action: sql_db_query
                     Action Input: select * from files.hide
@@ -747,7 +747,7 @@ class TestAgent(BaseExecutorDummyML):
                 "Hi!",
             ],
         )
-        self.run_sql(f"select * from my_agent where question = 'test'")
+        self.run_sql("select * from my_agent where question = 'test'")
         # result of sql_db_schema
         assert "hide not found" in mock_openai.agent_calls[1]
         # result of sql_db_query
@@ -761,17 +761,17 @@ class TestAgent(BaseExecutorDummyML):
             mock_openai,
             [
                 # first step, use kb
-                dedent(f"""
+                dedent("""
                     Thought: Do I need to use a tool? Yes
                     Action: sql_db_list_tables
                     Action Input: 
                 """),
-                dedent(f"""
+                dedent("""
                     Thought: Do I need to use a tool? Yes
                     Action: sql_db_schema
                     Action Input: files.show1
                 """),
-                dedent(f"""
+                dedent("""
                     Thought: Do I need to use a tool? Yes
                     Action: sql_db_query
                     Action Input: select * from files.show1 where id = '1001'
@@ -780,7 +780,7 @@ class TestAgent(BaseExecutorDummyML):
             ],
         )
 
-        self.run_sql(f"select * from my_agent where question = 'test'")
+        self.run_sql("select * from my_agent where question = 'test'")
 
         # result of sql_db_list_tables
         assert "hide" not in mock_openai.agent_calls[1]

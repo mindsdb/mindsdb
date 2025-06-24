@@ -56,6 +56,9 @@ def get_model_params(model_params: dict, default_config_key: str):
     combined_model_params = copy.deepcopy(config.get(default_config_key, {}))
 
     if model_params:
+        if not isinstance(model_params, dict):
+            raise ValueError(f"Model parameters must be passed as a JSON object")
+
         combined_model_params.update(model_params)
 
     combined_model_params.pop("use_default_llm", None)
@@ -954,10 +957,10 @@ class KnowledgeBaseController:
         #         # it is params for model
         #         embedding_params.update(params["embedding_model"])
 
-        if "embedding_model" in params:
-            if not isinstance(params["embedding_model"], dict):
-                raise ValueError("embedding_model should be JSON object with model parameters.")
-            embedding_params.update(params["embedding_model"])
+        embedding_params = get_model_params(
+            params.get("embedding_model", {}),
+            "default_embedding_model"
+        )
 
         # if model_name is None:  # Legacy
         model_name = self._create_embedding_model(

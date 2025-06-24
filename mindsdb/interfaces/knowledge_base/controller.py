@@ -58,6 +58,8 @@ def get_model_params(model_params: dict, default_config_key: str):
     if model_params:
         combined_model_params.update(model_params)
 
+    combined_model_params.pop("use_default_llm", None)
+
     return combined_model_params
 
 
@@ -97,8 +99,6 @@ def get_reranking_model_from_params(reranking_model_params: dict):
     if "api_key" not in params_copy:
         params_copy["api_key"] = get_api_key(provider, params_copy, strict=False)
     params_copy["model"] = params_copy.pop("model_name", None)
-
-    params_copy.pop("use_default_llm", None)
 
     return BaseLLMReranker(**params_copy)
 

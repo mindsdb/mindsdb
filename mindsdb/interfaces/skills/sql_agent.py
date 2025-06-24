@@ -231,6 +231,8 @@ class SQLAgent:
         if not isinstance(ast_query, (Select, Show, Describe, Explain)):
             raise ValueError(f"Query is not allowed: {ast_query.to_string()}")
 
+        kb_names = self.get_all_knowledge_base_names()
+
         # Check tables
         if self._tables_to_include:
 
@@ -238,31 +240,33 @@ class SQLAgent:
                 if is_table and isinstance(node, Identifier):
                     table_name = ".".join(node.parts)
 
-                    # Get the list of available knowledge bases
-                    # TODO move outside
-                    kb_names = self.get_usable_knowledge_base_names()
-
                     # Check if this table is a knowledge base
-                    if table_name in kb_names:
+                    if table_name in kb_names or node.parts[-1] in kb_names:
                         # If it's a knowledge base and we have knowledge base restrictions
-                        if self._knowledge_bases_to_include and not self._knowledge_bases_to_include.match(node):
-                            raise ValueError(
-                                f"Knowledge base {table_name} not found. Available knowledge bases: {', '.join(self._knowledge_bases_to_include.items)}"
-                            )
-                        # Check if it's a restricted knowledge base
-                        if self._knowledge_bases_to_ignore and self._knowledge_bases_to_ignore.match(node):
-                            raise ValueError(f"Knowledge base {table_name} is not allowed.")
+                        self.check_knowledge_base_permission(node)
                     else:
                         # Regular table check
-                        if self._tables_to_include and not self._tables_to_include.match(node):
-                            raise ValueError(
-                                f"Table {table_name} not found. Available tables: {', '.join(self._tables_to_include.items)}"
-                            )
-                        # Check if it's a restricted table
-                        if self._tables_to_ignore and self._tables_to_ignore.match(node):
-                            raise ValueError(f"Table {table_name} is not allowed.")
+                        self.check_table_permission(node)
 
             query_traversal(ast_query, _check_f)
+
+    def check_knowledge_base_permission(self, node):
+        if self._knowledge_bases_to_include and not self._knowledge_bases_to_include.match(node):
+            raise ValueError(
+                f"Knowledge base {str(node)} not found. Available knowledge bases: {', '.join(self._knowledge_bases_to_include.items)}"
+            )
+        # Check if it's a restricted knowledge base
+        if self._knowledge_bases_to_ignore and self._knowledge_bases_to_ignore.match(node):
+            raise ValueError(f"Knowledge base {str(node)} is not allowed.")
+
+    def check_table_permission(self, node):
+        if self._tables_to_include and not self._tables_to_include.match(node):
+            raise ValueError(
+                f"Table {str(node)} not found. Available tables: {', '.join(self._tables_to_include.items)}"
+            )
+        # Check if it's a restricted table
+        if self._tables_to_ignore and self._tables_to_ignore.match(node):
+            raise ValueError(f"Table {str(node)} is not allowed.")
 
     def get_usable_table_names(self) -> Iterable[str]:
         """Get a list of tables that the agent has access to.
@@ -319,6 +323,29 @@ class SQLAgent:
         Returns:
             Iterable[str]: list with knowledge base names
         """
+
+        if not self._knowledge_bases_to_include and not self._knowledge_bases_to_ignore:
+            # white or black list have to be set
+            return []
+
+
+        # Filter knowledge bases based on ignore list
+        kb_names = []
+        for kb_name in self.get_all_knowledge_base_names():
+
+            kb = Identifier(parts=[self.knowledge_base_database, kb_name])
+            if self._knowledge_bases_to_include and not self._knowledge_bases_to_include.match(kb):
+                continue
+            if not self._knowledge_bases_to_ignore.match(kb):
+                kb_names.append(kb_name)
+        return kb_names
+
+    def get_all_knowledge_base_names(self) -> Iterable[str]:
+        """Get a list of all knowledge bases
+
+        Returns:
+            Iterable[str]: list with knowledge base names
+        """
         cache_key = f"{ctx.company_id}_{self.knowledge_base_database}_knowledge_bases"
 
         # todo we need to fix the cache, file cache can potentially store out of data information
@@ -328,67 +355,18 @@ class SQLAgent:
         #     if cached_kbs:
         #        return cached_kbs
 
-        if not self._knowledge_bases_to_include and not self._knowledge_bases_to_ignore:
-            # white or black list have to be set
-            return []
-
-        if self._knowledge_bases_to_include and not self._knowledge_bases_to_include.has_wildcard:
-            return self._knowledge_bases_to_include.items
-
         try:
             # Query to get all knowledge bases
-            query = "SHOW KNOWLEDGE_BASES"
-            try:
-                result = self._call_engine(query, database=self.knowledge_base_database)
-            except Exception as e:
-                # TODO remove this block? is it used?
-
-                # If the direct query fails, try a different approach
-                # This handles the case where knowledge_base_database is not a valid integration
-                logger.warning(f"Error querying knowledge bases from {self.knowledge_base_database}: {str(e)}")
-                # Try to get knowledge bases directly from the project database
-                try:
-                    # Get knowledge bases from the project database
-                    kb_controller = self._command_executor.session.kb_controller
-                    kb_names = [kb["name"] for kb in kb_controller.list()]
-
-                    # Filter knowledge bases based on include list
-                    if self._knowledge_bases_to_include:
-                        kb_names = [kb_name for kb_name in kb_names if self._knowledge_bases_to_include.match(kb_name)]
-                        if not kb_names:
-                            logger.warning(
-                                f"No knowledge bases found in the include list: {self._knowledge_bases_to_include.items}"
-                            )
-                            return []
-
-                        return kb_names
-
-                    # Filter knowledge bases based on ignore list
-                    kb_names = [kb_name for kb_name in kb_names if not self._knowledge_bases_to_ignore.match(kb_name)]
-
-                    if self._cache:
-                        self._cache.set(cache_key, set(kb_names))
-
-                    return kb_names
-                except Exception as inner_e:
-                    logger.error(f"Error getting knowledge bases from kb_controller: {str(inner_e)}")
-                    return []
-
-            if not result:
-                return []
+            ast_query = Show(category='Knowledge Bases')
+            result = self._command_executor.execute_command(ast_query, database_name=self.knowledge_base_database)
 
             # Filter knowledge bases based on ignore list
             kb_names = []
             for row in result.data.records:
-                kb_name = row["NAME"]
-                kb = Identifier(parts=[self.knowledge_base_database, kb_name])
-                if self._knowledge_bases_to_include and not self._knowledge_bases_to_include.match(kb):
-                    continue
-                if not self._knowledge_bases_to_ignore.match(kb):
-                    kb_names.append(kb_name)
+                kb_names.append(row["NAME"])
 
-            if self._cache:
-                self._cache.set(cache_key, set(kb_names))
+            # if self._cache:
+            #     self._cache.set(cache_key, set(kb_names))
 
             return kb_names
         except Exception as e:

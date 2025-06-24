@@ -52,7 +52,7 @@ def dummy_embeddings(string):
     embeds = [0] * 25**2
     base = 25
 
-    string = string.lower().replace(',', ' ').replace('.', ' ')
+    string = string.lower().replace(",", " ").replace(".", " ")
     for word in string.split():
         # encode letters to numbers
         values = []
@@ -66,10 +66,7 @@ def dummy_embeddings(string):
 
         # the next 4: are value of the vector
         values = values[2:6]
-        emb = sum([
-            val / base ** (i + 1)
-            for i, val in enumerate(values)
-        ])
+        emb = sum([val / base ** (i + 1) for i, val in enumerate(values)])
 
         embeds[pos] += emb
 
@@ -77,7 +74,6 @@ def dummy_embeddings(string):
 
 
 def set_litellm_embedding(mock_litellm_embedding):
-
     def resp_f(input, *args, **kwargs):
         mock_response = MagicMock()
         mock_response.data = [{"embedding": dummy_embeddings(s)} for s in input]
@@ -964,3 +960,86 @@ class TestKB(BaseExecutorDummyML):
                 insert into kb_part SELECT id, english FROM pg.ral
                 using batch_size=20, track_column=id, threads = 3
             """)
+
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_kb_algebra(self, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding)
+
+        lines, i = [], 0
+        for color in ("white", "red", "green"):
+            for size in ("big", "middle", "small"):
+                for shape in ("square", "triangle", "circle"):
+                    i += 1
+                    lines.append([i, f"{color} {size} {shape}", color, size, shape])
+        df = pd.DataFrame(lines, columns=["id", "content", "color", "size", "shape"])
+
+        self.save_file("items", df)
+
+        self.run_sql("""
+            create knowledge base kb_alg
+            using
+                embedding_model = {
+                    "provider": "bedrock",
+                    "model_name": "titan"
+                }
+        """)
+
+        self.run_sql("""
+        insert into kb_alg
+            select * from files.items
+        """)
+
+        # --- search value excluding others
+
+        ret = self.run_sql("""
+           select * from kb_alg where
+            content = 'green'
+            and content not IN ('square', 'triangle')
+           limit 3
+        """)
+
+        # check 3 most relative records
+        for content in ret["chunk_content"]:
+            assert "green" in content
+            assert "square" not in content
+            assert "triangle" not in content
+
+        # --- search value excluding other and metadata
+
+        ret = self.run_sql("""
+           select * from kb_alg where
+            content = 'green'
+            and content != 'square'
+            and shape != 'triangle'
+           limit 3
+        """)
+
+        for content in ret["chunk_content"]:
+            assert "green" in content
+            assert "square" not in content
+            assert "triangle" not in content
+
+        # -- searching value in list with excluding
+
+        ret = self.run_sql("""
+           select * from kb_alg where
+            content in ('green', 'white')
+            and content not like 'green'
+           limit 3
+        """)
+        for content in ret["chunk_content"]:
+            assert "white" in content
+
+        # -- using OR
+
+        ret = self.run_sql("""
+           select * from kb_alg where
+               (content like 'green' and size='big') 
+            or (content like 'white' and size='small') 
+           limit 3
+        """)
+        for content in ret["chunk_content"]:
+            if "green" in content:
+                assert "big" in content
+            else:
+                assert "small" in content

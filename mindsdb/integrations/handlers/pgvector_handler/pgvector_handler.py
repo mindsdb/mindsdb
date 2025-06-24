@@ -251,35 +251,29 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
 
         targets = ', '.join(modified_columns)
 
-        if filter_conditions:
+        if embedding_search:
+            search_vector = embedding_search["value"]
 
-            if embedding_search:
-                search_vector = embedding_search["value"]
-
-                if self._is_sparse:
-                    # Convert dict to sparse vector if needed
-                    if isinstance(search_vector, dict):
-                        from pgvector.utils import SparseVector
-                        embedding = SparseVector(search_vector, self._vector_size)
-                        search_vector = embedding.to_text()
-                else:
-                    # Convert list to vector string if needed
-                    if isinstance(search_vector, list):
-                        search_vector = f"[{','.join(str(x) for x in search_vector)}]"
-
-                # Calculate distance as part of the query if needed
-                if has_distance:
-                    targets = f"{targets}, (embeddings {self.distance_op} '{search_vector}') as distance"
-
-                return f"SELECT {targets} FROM {table_name} {where_clause} ORDER BY embeddings {self.distance_op} '{search_vector}' ASC {limit_clause} {offset_clause} "
-
+            if self._is_sparse:
+                # Convert dict to sparse vector if needed
+                if isinstance(search_vector, dict):
+                    from pgvector.utils import SparseVector
+                    embedding = SparseVector(search_vector, self._vector_size)
+                    search_vector = embedding.to_text()
             else:
-                # if filter conditions, return rows that satisfy the conditions
-                return f"SELECT {targets} FROM {table_name} {where_clause} {limit_clause} {offset_clause}"
+                # Convert list to vector string if needed
+                if isinstance(search_vector, list):
+                    search_vector = f"[{','.join(str(x) for x in search_vector)}]"
+
+            # Calculate distance as part of the query if needed
+            if has_distance:
+                targets = f"{targets}, (embeddings {self.distance_op} '{search_vector}') as distance"
+
+            return f"SELECT {targets} FROM {table_name} {where_clause} ORDER BY embeddings {self.distance_op} '{search_vector}' ASC {limit_clause} {offset_clause} "
 
         else:
-            # if no filter conditions, return all rows
-            return f"SELECT {targets} FROM {table_name} {limit_clause} {offset_clause}"
+            # if filter conditions, return rows that satisfy the conditions
+            return f"SELECT {targets} FROM {table_name} {where_clause} {limit_clause} {offset_clause}"
 
     def _check_table(self, table_name: str):
         # Apply namespace for a user

@@ -21,6 +21,7 @@ class KnowledgeBaseQueryExecutor:
         self.id_column = id_column
         self.limit = None
         self._negative_set_size = 100
+        self._negative_set_threshold = 0.5
 
     def is_content_condition(self, node: ASTNode) -> bool:
         """
@@ -38,8 +39,8 @@ class KnowledgeBaseQueryExecutor:
     @staticmethod
     def invert_content_op(node: BinaryOperation) -> BinaryOperation:
         # Change operator of binary operation to opposite one
-        op_map = {"=": "!=", "!=": "=", "LIKE": "!=", "NOT LIKE": "=", "IN": "NOT IN"}
-        if not node.op.upper() in op_map:
+        op_map = {"=": "!=", "!=": "=", "LIKE": "!=", "NOT LIKE": "=", "IN": "NOT IN", "NOT IN": "IN"}
+        if node.op.upper() not in op_map:
             raise NotImplementedError(f"Can't handle condition: '{str(node)}'")
         node.op = op_map[node.op.upper()]
         return node
@@ -90,7 +91,8 @@ class KnowledgeBaseQueryExecutor:
         df = item
         return df
 
-    def flatten_conditions(self, node: ASTNode) -> Union[ASTNode, ConditionBlock]:
+    @classmethod
+    def flatten_conditions(cls, node: ASTNode) -> Union[ASTNode, ConditionBlock]:
         """
         Recursively inspect conditions tree and move conditions related to 'OR' or 'AND' operators of the same level
           to same ConditionBlock
@@ -103,7 +105,7 @@ class KnowledgeBaseQueryExecutor:
             if op in ("AND", "OR"):
                 block = ConditionBlock(op, [])
                 for arg in node.args:
-                    item = self.flatten_conditions(arg)
+                    item = cls.flatten_conditions(arg)
                     if isinstance(item, ConditionBlock):
                         if item.op == block.op:
                             block.items.extend(item.items)
@@ -178,7 +180,7 @@ class KnowledgeBaseQueryExecutor:
             # (select where content = ‘a’) UNION (select where content = ‘b’)
             results = []
             for el in content_condition.args[1].items:
-                el_cond = BinaryOperation(op="=", args=[Identifier(self.content_column), Constant(el)])
+                el_cond = BinaryOperation(op="=", args=[Identifier(self.content_column), el])
                 results.append(
                     self.call_kb([el_cond] + other_conditions, disable_reranking=disable_reranking, limit=limit)
                 )
@@ -212,7 +214,8 @@ class KnowledgeBaseQueryExecutor:
             #    SELECT id FROM kb WHERE content =’...’ limit X
             # )
             el_cond = BinaryOperation(op="=", args=content_condition.args)
-            res = self.call_kb([el_cond] + other_conditions, disable_reranking=True, limit=self._negative_set_size)
+            threshold = BinaryOperation(op=">=", args=[Identifier('relevance'), Constant(self._negative_set_threshold)])
+            res = self.call_kb([el_cond, threshold] + other_conditions, disable_reranking=True, limit=self._negative_set_size)
 
             return list(res[self.id_column])
 
@@ -222,8 +225,10 @@ class KnowledgeBaseQueryExecutor:
             # )
             content_condition2 = copy.deepcopy(content_condition)
             content_condition2.op = "IN"
+
+            threshold = BinaryOperation(op=">=", args=[Identifier('relevance'), Constant(self._negative_set_threshold)])
             res = self.execute_content_condition(
-                content_condition2, other_conditions, disable_reranking=True, limit=self._negative_set_size
+                content_condition2, other_conditions + [threshold], disable_reranking=True, limit=self._negative_set_size
             )
 
             return list(res[self.id_column])

@@ -46,13 +46,41 @@ def set_openai_completion(mock_openai, response):
     mock_openai().chat.completions.create.side_effect = resp_f
 
 
-def set_litellm_embedding(mock_litellm_embedding, response):
-    if not isinstance(response, list):
-        response = [response]
+def dummy_embeddings(string):
+    # Imitates embedding generation: create vectors which are similar for similar words in inputs
 
-    def resp_f(*args, **kwargs):
+    embeds = [0] * 25**2
+    base = 25
+
+    string = string.lower().replace(',', ' ').replace('.', ' ')
+    for word in string.split():
+        # encode letters to numbers
+        values = []
+        for letter in word:
+            val = ord(letter) - 97
+            val = min(max(val, 0), 122)
+            values.append(val)
+
+        # first two values are position in vector
+        pos = values[0] * base + values[1]
+
+        # the next 4: are value of the vector
+        values = values[2:6]
+        emb = sum([
+            val / base ** (i + 1)
+            for i, val in enumerate(values)
+        ])
+
+        embeds[pos] += emb
+
+    return embeds
+
+
+def set_litellm_embedding(mock_litellm_embedding):
+
+    def resp_f(input, *args, **kwargs):
         mock_response = MagicMock()
-        mock_response.data = [{"embedding": emb} for emb in response]
+        mock_response.data = [{"embedding": dummy_embeddings(s)} for s in input]
         return mock_response
 
     mock_litellm_embedding.side_effect = resp_f
@@ -479,7 +507,7 @@ class TestAgent(BaseExecutorDummyML):
     @patch("litellm.embedding")
     @patch("openai.OpenAI")
     def test_agent_retrieval(self, mock_openai, mock_litellm_embedding):
-        set_litellm_embedding(mock_litellm_embedding, [[0.1] * 1536])
+        set_litellm_embedding(mock_litellm_embedding)
         self.run_sql("""
             create knowledge base kb_review
             using
@@ -650,7 +678,7 @@ class TestKB(BaseExecutorDummyML):
     def test_kb(self, mock_litellm_embedding):
         self._create_kb("kb_review")
 
-        set_litellm_embedding(mock_litellm_embedding, [[0.1] * 1536])
+        set_litellm_embedding(mock_litellm_embedding)
         self.run_sql("insert into kb_review (content) values ('review')")
 
         # selectable
@@ -680,7 +708,7 @@ class TestKB(BaseExecutorDummyML):
         # ---  case 1: kb with default columns settings ---
         self._create_kb("kb_review")
 
-        set_litellm_embedding(mock_litellm_embedding, [[0.1] * 1536])
+        set_litellm_embedding(mock_litellm_embedding)
 
         self.run_sql("""
             insert into kb_review
@@ -719,7 +747,7 @@ class TestKB(BaseExecutorDummyML):
             "kb_review", content_columns=["review", "product"], id_column="url", metadata_columns=["specs", "id"]
         )
 
-        set_litellm_embedding(mock_litellm_embedding, [[0.1] * 1536, [0.2] * 1536])
+        set_litellm_embedding(mock_litellm_embedding)
         self.run_sql("""
             insert into kb_review
             select * from files.reviews
@@ -743,7 +771,7 @@ class TestKB(BaseExecutorDummyML):
         # ---  case 3: content is defined, id is id, the rest goes to metadata ---
         self._create_kb("kb_review", content_columns=["review"])
 
-        set_litellm_embedding(mock_litellm_embedding, [[0.1] * 1536])
+        set_litellm_embedding(mock_litellm_embedding)
         self.run_sql("""
             insert into kb_review
             select * from files.reviews
@@ -781,7 +809,7 @@ class TestKB(BaseExecutorDummyML):
 
         self._create_kb("kb_ral")
 
-        set_litellm_embedding(mock_litellm_embedding, [[0.1] * 1536, [0.2] * 1536, [0.3] * 1536, [0.4] * 1536])
+        set_litellm_embedding(mock_litellm_embedding)
         self.run_sql("""
             insert into kb_ral
             select ral id, english content from files.ral
@@ -846,7 +874,7 @@ class TestKB(BaseExecutorDummyML):
             self._create_kb("kb_part", content_columns=["english"])
 
             # load kb
-            set_litellm_embedding(mock_litellm_embedding, [[0.1] * 1536] * len(df))
+            set_litellm_embedding(mock_litellm_embedding)
             ret = self.run_sql(insert_sql)
             # inserts returns query
             query_id = ret["ID"][0]

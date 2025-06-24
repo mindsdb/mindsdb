@@ -957,10 +957,7 @@ class KnowledgeBaseController:
         #         # it is params for model
         #         embedding_params.update(params["embedding_model"])
 
-        embedding_params = get_model_params(
-            params.get("embedding_model", {}),
-            "default_embedding_model"
-        )
+        embedding_params = get_model_params(params.get("embedding_model", {}), "default_embedding_model")
 
         # if model_name is None:  # Legacy
         model_name = self._create_embedding_model(

@@ -57,7 +57,7 @@ def get_model_params(model_params: dict, default_config_key: str):
 
     if model_params:
         if not isinstance(model_params, dict):
-            raise ValueError(f"Model parameters must be passed as a JSON object")
+            raise ValueError("Model parameters must be passed as a JSON object")
 
         combined_model_params.update(model_params)
 

@@ -9,6 +9,7 @@ import numpy as np
 
 from mindsdb_sql_parser.ast import BinaryOperation, Constant, Identifier, Select, Update, Delete, Star
 from mindsdb_sql_parser.ast.mindsdb import CreatePredictor
+from mindsdb_sql_parser import parse_sql
 
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 
@@ -52,6 +53,13 @@ def get_model_params(model_params: dict, default_config_key: str):
     """
     Get model parameters by combining default config with user provided parameters.
     """
+    # If the default config key is for reranking and the switch to use the default LLM is enabled,
+    # switch to the default LLM model.
+    if default_config_key == "default_reranking_model" and config.get("default_reranking_model").get(
+        "use_default_llm", False
+    ):
+        default_config_key = "default_llm_model"
+
     combined_model_params = copy.deepcopy(config.get(default_config_key, {}))
 
     if model_params:
@@ -96,6 +104,8 @@ def get_reranking_model_from_params(reranking_model_params: dict):
     if "api_key" not in params_copy:
         params_copy["api_key"] = get_api_key(provider, params_copy, strict=False)
     params_copy["model"] = params_copy.pop("model_name", None)
+
+    params_copy.pop("use_default_llm", None)
 
     return BaseLLMReranker(**params_copy)
 
@@ -359,23 +369,30 @@ class KnowledgeBaseTable:
 
     def insert_query_result(self, query: str, project_name: str):
         """Process and insert SQL query results"""
-        if not self.document_loader:
-            raise ValueError("Document loader not configured")
+        ast_query = parse_sql(query)
 
-        documents = list(self.document_loader.load_query_result(query, project_name))
-        if documents:
-            self.insert_documents(documents)
+        command_executor = ExecuteCommands(self.session)
+        response = command_executor.execute_command(ast_query, project_name)
+
+        if response.error_code is not None:
+            raise ValueError(f"Error executing query: {response.error_message}")
+
+        if response.data is None:
+            raise ValueError("Query returned no data")
+
+        records = response.data.records
+        df = pd.DataFrame(records)
+
+        self.insert(df)
 
     def insert_rows(self, rows: List[Dict]):
         """Process and insert raw data rows"""
         if not rows:
             return
 
-        documents = [
-            Document(content=row.get("content", ""), id=row.get("id"), metadata=row.get("metadata", {})) for row in rows
-        ]
+        df = pd.DataFrame(rows)
 
-        self.insert_documents(documents)
+        self.insert(df)
 
     def insert_documents(self, documents: List[Document]):
         """Process and insert documents with preprocessing if configured"""
@@ -1201,22 +1218,10 @@ class KnowledgeBaseController:
         project_names = {i.id: i.name for i in project_controller.get_list()}
 
         for record in query:
-            vector_database = record.vector_database
-            embedding_model = record.embedding_model
+            kb = record.as_dict(with_secrets=self.session.show_secrets)
+            kb["project_name"] = project_names[record.project_id]
 
-            data.append(
-                {
-                    "id": record.id,
-                    "name": record.name,
-                    "project_id": record.project_id,
-                    "project_name": project_names[record.project_id],
-                    "embedding_model": embedding_model.name if embedding_model is not None else None,
-                    "vector_database": None if vector_database is None else vector_database.name,
-                    "vector_database_table": record.vector_database_table,
-                    "query_id": record.query_id,
-                    "params": record.params,
-                }
-            )
+            data.append(kb)
 
         return data
 

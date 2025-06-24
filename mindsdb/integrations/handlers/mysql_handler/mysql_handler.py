@@ -179,6 +179,9 @@ class MySQLHandler(DatabaseHandler):
                 config["ssl_cert"] = ssl_cert
             if ssl_key is not None:
                 config["ssl_key"] = ssl_key
+        elif ssl is False:
+            config["ssl_disabled"] = True
+
         if "collation" not in config:
             config["collation"] = "utf8mb4_general_ci"
         if "use_pure" not in config:

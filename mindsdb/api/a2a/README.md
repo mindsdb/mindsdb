@@ -33,6 +33,7 @@ You can configure the A2A API using a config.json file. If not provided, default
   "a2a": {
     "host": "0.0.0.0",
     "port": 47338,
+    "mindsdb_protocol": "http",
     "mindsdb_host": "localhost",
     "mindsdb_port": 47334,
     "project_name": "mindsdb",

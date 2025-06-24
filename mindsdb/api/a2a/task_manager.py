@@ -30,12 +30,14 @@ class AgentTaskManager(InMemoryTaskManager):
     def __init__(
         self,
         project_name: str,
+        mindsdb_protocol: str,
         mindsdb_host: str,
         mindsdb_port: int,
         agent_name: str = None,
     ):
         super().__init__()
         self.project_name = project_name
+        self.mindsdb_protocol = mindsdb_protocol
         self.mindsdb_host = mindsdb_host
         self.mindsdb_port = mindsdb_port
         self.agent_name = agent_name
@@ -50,6 +52,7 @@ class AgentTaskManager(InMemoryTaskManager):
         return MindsDBAgent(
             agent_name=agent_name,
             project_name=self.project_name,
+            protocol=self.mindsdb_protocol,
             host=self.mindsdb_host,
             port=self.mindsdb_port,
         )

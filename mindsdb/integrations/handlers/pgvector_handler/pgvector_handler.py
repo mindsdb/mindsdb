@@ -150,9 +150,10 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         """
 
         if conditions is None:
-            return {}
+            conditions = []
 
-        filter_conditions = {}
+        filter_conditions = []
+        embdedding_condition = None
 
         for condition in conditions:
 
@@ -167,12 +168,17 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
                 # last element
                 key += f" ->> '{parts[-1]}'"
 
-            filter_conditions[key] = {
+            item = {
+                "name": key,
                 "op": condition.op.value,
                 "value": condition.value,
             }
+            if key == "embeddings":
+                embdedding_condition = item
+            else:
+                filter_conditions.append(item)
 
-        return filter_conditions
+        return filter_conditions, embdedding_condition
 
     @staticmethod
     def _construct_where_clause(filter_conditions=None):
@@ -184,15 +190,15 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
 
         where_clauses = []
 
-        for key, value in filter_conditions.items():
-            if key == "embeddings":
-                continue
-            if value['op'].lower() in ('in', 'not in'):
-                values = list(repr(i) for i in value['value'])
-                value['value'] = '({})'.format(', '.join(values))
+        for item in filter_conditions:
+            key = item["name"]
+
+            if item['op'].lower() in ('in', 'not in'):
+                values = list(repr(i) for i in item['value'])
+                item['value'] = '({})'.format(', '.join(values))
             else:
-                value['value'] = repr(value['value'])
-            where_clauses.append(f'{key} {value["op"]} {value["value"]}')
+                item['value'] = repr(item['value'])
+            where_clauses.append(f'{key} {item["op"]} {item["value"]}')
 
         if len(where_clauses) > 1:
             return f"WHERE {' AND '.join(where_clauses)}"
@@ -225,10 +231,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         offset_clause = f"OFFSET {offset}" if offset else ""
 
         # translate filter conditions to dictionary
-        filter_conditions = self._translate_conditions(conditions)
-
-        # check if search vector is in filter conditions
-        embedding_search = filter_conditions.get("embeddings", None)
+        filter_conditions, embedding_search = self._translate_conditions(conditions)
 
         # given filter conditions, construct where clause
         where_clause = self._construct_where_clause(filter_conditions)
@@ -251,8 +254,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         if filter_conditions:
 
             if embedding_search:
-                search_vector = filter_conditions["embeddings"]["value"]
-                filter_conditions.pop("embeddings")
+                search_vector = embedding_search["value"]
 
                 if self._is_sparse:
                     # Convert dict to sparse vector if needed
@@ -520,7 +522,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
     ):
         table_name = self._check_table(table_name)
 
-        filter_conditions = self._translate_conditions(conditions)
+        filter_conditions, _ = self._translate_conditions(conditions)
         where_clause = self._construct_where_clause(filter_conditions)
 
         query = (

@@ -394,6 +394,7 @@
                       "mindsdb_sql/sql/create/view",
                       "mindsdb_sql/sql/drop/view",
                       "mindsdb_sql/sql/api/select-view",
+                      "mindsdb_sql/sql/api/alter-view",
                       "mindsdb_sql/sql/create/file",
                       "mindsdb_sql/sql/drop/file",
                       "mindsdb_sql/sql/api/select-files"

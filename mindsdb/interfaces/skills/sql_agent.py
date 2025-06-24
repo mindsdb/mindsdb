@@ -76,7 +76,7 @@ def split_table_name(table_name: str) -> List[str]:
         result.append(current.strip("`"))
 
     # ensure we split the table name
-    result = [r.split(".") for r in result][0]
+    # result = [r.split(".") for r in result][0]
 
     return result
 

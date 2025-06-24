@@ -111,24 +111,12 @@ class MindsDBSQL(SQLDatabase):
             )
 
             # Convert ExecuteAnswer to a DataFrame for easier manipulation
-            df = None
-            if hasattr(result, "data") and hasattr(result.data, "data_frame"):
-                df = result.data.data_frame
+            if result.data is not None:
+                df = result.data.to_df()
+                return df.to_string(index=False)
+
             else:
-                # Fallback to to_df when data_frame attr not available
-                try:
-                    df = result.data.to_df()
-                except Exception:
-                    df = None
-
-            # Default behaviour (string)
-            if df is not None:
-                if not df.empty:
-                    return df.to_string(index=False)
-                else:
-                    return "Query executed successfully, but returned no data."
-
-            return str(result)
+                return "Query executed successfully, but returned no data."
 
         except Exception as e:
             logger.error(f"Error executing SQL command: {str(e)}\n{traceback.format_exc()}")

@@ -255,7 +255,7 @@ class QueryPlanner:
 
         database = self.default_namespace
 
-        err_msg_suffix = ''
+        err_msg_suffix = ""
         if len(parts) > 1:
             if parts[0].lower() in self.databases:
                 database = parts.pop(0).lower()

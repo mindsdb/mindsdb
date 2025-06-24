@@ -244,7 +244,8 @@ class IntegrationDataNode(DataNode):
             failed_sql_query = native_query
             if query is not None:
                 failed_sql_query = query.to_string()
-            raise Exception(dedent(f"""\
+            raise Exception(
+                dedent(f"""\
                 Failed to execute external database query during query processing.
                 
                 Database Details:
@@ -253,7 +254,8 @@ class IntegrationDataNode(DataNode):
                 
                 Error: {result.error_message}
                 Failed Query: {failed_sql_query}
-            """))
+            """)
+            )
         if result.type == RESPONSE_TYPE.OK:
             return DataHubResponse(affected_rows=result.affected_rows)
 

@@ -209,7 +209,7 @@ class Config:
             "default_embedding_model": {},
             "default_reranking_model": {},
             "a2a": {
-                "host": "localhost",
+                "host": api_host,
                 "port": 47338,
                 "mindsdb_host": "localhost",
                 "mindsdb_port": 47334,

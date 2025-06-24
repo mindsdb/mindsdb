@@ -118,17 +118,16 @@ class TablesCollection:
         # split identifier to db, schema, table name
         schema = None
         db = None
-        if len(table.parts) == 1:
-            tbl = table.parts[0]
-        elif len(table.parts) == 2:
-            db, tbl = table.parts
-            db = db.lower()
-        elif len(table.parts) == 3:
-            db, schema, tbl = table.parts
-            schema = schema.lower()
-            db = db.lower()
-        else:
-            raise NotImplementedError
+
+        match [x.lower() for x in table.parts]:
+            case [tbl]:
+                pass
+            case [db, tbl]:
+                pass
+            case [db, schema, tbl]:
+                pass
+            case _:
+                raise NotImplementedError
         return db, schema, tbl.lower()
 
     def match(self, table: Identifier) -> bool:

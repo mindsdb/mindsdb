@@ -86,7 +86,7 @@ class TablesCollection:
     Supports wildcard in tables name.
     """
 
-    def __init__(self, items: List[Identifier | str] = None):
+    def __init__(self, items: List[Identifier | str] = None, default_db=None):
         if items is None:
             items = []
 
@@ -96,6 +96,7 @@ class TablesCollection:
         self._no_db_tables = set()
         self.has_wildcard = False
         self.databases = set()
+        self._default_db = default_db
 
         for name in items:
             if not isinstance(name, Identifier):
@@ -135,7 +136,10 @@ class TablesCollection:
 
         db, schema, tbl = self._get_paths(table)
         if db is None:
-            return tbl in self._no_db_tables
+            if tbl in self._no_db_tables:
+                return True
+            if self._default_db is not None:
+                return self.match(Identifier(parts=[self._default_db, tbl]))
 
         if schema is not None:
             if any([fnmatch.fnmatch(tbl, pattern) for pattern in self._schemas[db].get(schema, [])]):
@@ -197,12 +201,12 @@ class SQLAgent:
             ignore_tables = []
         self._tables_to_ignore = TablesCollection(ignore_tables)
 
-        self._knowledge_bases_to_include = TablesCollection(include_knowledge_bases)
+        self._knowledge_bases_to_include = TablesCollection(include_knowledge_bases, default_db=knowledge_base_database)
         if self._knowledge_bases_to_include:
             # ignore_knowledge_bases and include_knowledge_bases should not be used together.
             # include_knowledge_bases takes priority if it's set.
             ignore_knowledge_bases = []
-        self._knowledge_bases_to_ignore = TablesCollection(ignore_knowledge_bases)
+        self._knowledge_bases_to_ignore = TablesCollection(ignore_knowledge_bases, default_db=knowledge_base_database)
 
         self._cache = cache
 

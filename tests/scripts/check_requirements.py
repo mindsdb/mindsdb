@@ -60,7 +60,7 @@ MAIN_RULE_IGNORES = {
         "lxml",
         "openpyxl",
         "onnxruntime",
-        "skipy",
+        "scipy",
     ],
 }
 
@@ -120,7 +120,7 @@ DEP002_IGNORE_HANDLER_DEPS = list(
         + LANGCHAIN_EMBEDDING_DEP002_IGNORE_HANDLER_DEPS
         + OPENAI_DEP002_IGNORE_HANDLER_DEPS
         + CHROMADB_EP002_IGNORE_HANDLER_DEPS
-        + ["skipy"]
+        + ["scipy"]
     )
 )
 

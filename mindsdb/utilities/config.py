@@ -400,7 +400,11 @@ class Config:
             bool: True if config was loaded or updated
         """
 
-        if self.auto_config_path.is_file() and self.auto_config_mtime != self.auto_config_path.stat().st_mtime:
+        if (
+            self.auto_config_path.is_file()
+            and self.auto_config_path.read_text() != ""
+            and self.auto_config_mtime != self.auto_config_path.stat().st_mtime
+        ):
             try:
                 self._auto_config = json.loads(self.auto_config_path.read_text())
             except json.JSONDecodeError as e:

@@ -1,7 +1,8 @@
 """
-    Wrapper around MindsDB's executor and integration controller following the implementation of the original
-    langchain.sql_database.SQLDatabase class to partly replicate its behavior.
+Wrapper around MindsDB's executor and integration controller following the implementation of the original
+langchain.sql_database.SQLDatabase class to partly replicate its behavior.
 """
+
 import traceback
 from typing import Any, Iterable, List, Optional
 
@@ -13,26 +14,25 @@ logger = log.getLogger(__name__)
 
 
 def extract_essential(input: str) -> str:
-    """ Sometimes LLM include to input unnecessary data. We can't control stochastic nature of LLM, so we need to
-        'clean' input somehow. LLM prompt contains instruction to enclose input between '$START$' and '$STOP$'.
+    """Sometimes LLM include to input unnecessary data. We can't control stochastic nature of LLM, so we need to
+    'clean' input somehow. LLM prompt contains instruction to enclose input between '$START$' and '$STOP$'.
     """
-    if '$START$' in input:
-        input = input.partition('$START$')[-1]
-    if '$STOP$' in input:
-        input = input.partition('$STOP$')[0]
-    return input.strip(' ')
+    if "$START$" in input:
+        input = input.partition("$START$")[-1]
+    if "$STOP$" in input:
+        input = input.partition("$STOP$")[0]
+    return input.strip(" ")
 
 
 class MindsDBSQL(SQLDatabase):
     @staticmethod
-    def custom_init(
-        sql_agent: 'SQLAgent'
-    ) -> 'MindsDBSQL':
+    def custom_init(sql_agent: "SQLAgent") -> "MindsDBSQL":
         instance = MindsDBSQL()
         instance._sql_agent = sql_agent
         return instance
 
     """ Can't modify signature, as LangChain does a Pydantic check."""
+
     def __init__(
         self,
         engine: Optional[Any] = None,
@@ -51,7 +51,7 @@ class MindsDBSQL(SQLDatabase):
 
     @property
     def dialect(self) -> str:
-        return 'mindsdb'
+        return "mindsdb"
 
     @property
     def table_info(self) -> str:
@@ -93,44 +93,37 @@ class MindsDBSQL(SQLDatabase):
         command = extract_essential(command)
 
         try:
-
             # Log the query for debugging
             logger.info(f"Executing SQL query: {command}")
 
+            # Removing backticks causes in query execution.
             # remove backticks
-            command = command.replace('`', '')
+            # command = command.replace('`', '')
 
             # Parse the SQL string to an AST object first
             from mindsdb_sql_parser import parse_sql
+
             ast_query = parse_sql(command)
 
             # Now execute the parsed query
-            result = self._sql_agent.skill_tool.get_command_executor().execute_command(ast_query, database_name="mindsdb")
+            result = self._sql_agent.skill_tool.get_command_executor().execute_command(
+                ast_query, database_name="mindsdb"
+            )
 
             # Convert ExecuteAnswer to a DataFrame for easier manipulation
-            df = None
-            if hasattr(result, 'data') and hasattr(result.data, 'data_frame'):
-                df = result.data.data_frame
+            if result.data is not None:
+                df = result.data.to_df()
+                return df.to_string(index=False)
+
             else:
-                # Fallback to to_df when data_frame attr not available
-                try:
-                    df = result.data.to_df()
-                except Exception:
-                    df = None
-
-            # Default behaviour (string)
-            if df is not None:
-                if not df.empty:
-                    return df.to_string(index=False)
-                else:
-                    return "Query executed successfully, but returned no data."
-
-            return str(result)
+                return "Query executed successfully, but returned no data."
 
         except Exception as e:
             logger.error(f"Error executing SQL command: {str(e)}\n{traceback.format_exc()}")
             # If this is a knowledge base query, provide a more helpful error message
-            if "knowledge_base" in command.lower() or any(kb in command for kb in self._sql_agent.get_usable_knowledge_base_names()):
+            if "knowledge_base" in command.lower() or any(
+                kb in command for kb in self._sql_agent.get_usable_knowledge_base_names()
+            ):
                 return f"Error executing knowledge base query: {str(e)}. Please check that the knowledge base exists and your query syntax is correct."
             return f"Error: {str(e)}"
 

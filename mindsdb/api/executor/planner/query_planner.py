@@ -255,12 +255,18 @@ class QueryPlanner:
 
         database = self.default_namespace
 
+        err_msg_suffix = ""
         if len(parts) > 1:
             if parts[0].lower() in self.databases:
                 database = parts.pop(0).lower()
+            else:
+                err_msg_suffix = f"'{parts[0].lower()}' is not valid database name."
 
         if database is None:
-            raise PlanningException(f"Integration not found for: {node}")
+            raise PlanningException(
+                f"Invalid or missing database name for identifier '{node}'. {err_msg_suffix}\n"
+                "Query must include a valid database name prefix in format: 'database_name.table_name' or 'database_name.schema_name.table_name'"
+            )
 
         return database, Identifier(parts=parts, alias=alias)
 

@@ -60,14 +60,19 @@ class DataCatalogLoader(BaseDataCatalog):
         """
         self.logger.info(f"Loading tables for {self.database_name}")
         response = self.data_handler.meta_get_tables(self.table_names)
-        if response.resp_type != RESPONSE_TYPE.TABLE:
+        if response.resp_type == RESPONSE_TYPE.ERROR:
             self.logger.error(f"Failed to load tables for {self.database_name}: {response.error_message}")
+            return []
+        elif response.resp_type == RESPONSE_TYPE.OK:
+            self.logger.error(f"No tables found for {self.database_name}.")
             return []
 
         df = response.data_frame
         if df.empty:
             self.logger.info(f"No tables to add for {self.database_name}.")
             return []
+
+        df.columns = df.columns.str.lower()
 
         # Filter out tables that are already loaded in the data catalog
         if loaded_table_names:
@@ -77,7 +82,6 @@ class DataCatalogLoader(BaseDataCatalog):
             self.logger.info(f"No new tables to load for {self.database_name}.")
             return []
 
-        df.columns = df.columns.str.lower()
         tables = self._add_table_metadata(df)
         self.logger.info(f"Tables loaded for {self.database_name}.")
         return tables
@@ -117,8 +121,11 @@ class DataCatalogLoader(BaseDataCatalog):
         """
         self.logger.info(f"Loading columns for {self.database_name}")
         response = self.data_handler.meta_get_columns(self.table_names)
-        if response.resp_type != RESPONSE_TYPE.TABLE:
+        if response.resp_type == RESPONSE_TYPE.ERROR:
             self.logger.error(f"Failed to load columns for {self.database_name}: {response.error_message}")
+            return []
+        elif response.resp_type == RESPONSE_TYPE.OK:
+            self.logger.error(f"No columns found for {self.database_name}.")
             return []
 
         df = response.data_frame
@@ -162,8 +169,11 @@ class DataCatalogLoader(BaseDataCatalog):
         """
         self.logger.info(f"Loading column statistics for {self.database_name}")
         response = self.data_handler.meta_get_column_statistics(self.table_names)
-        if response.resp_type != RESPONSE_TYPE.TABLE:
+        if response.resp_type == RESPONSE_TYPE.ERROR:
             self.logger.error(f"Failed to load column statistics for {self.database_name}: {response.error_message}")
+            return
+        elif response.resp_type == RESPONSE_TYPE.OK:
+            self.logger.error(f"No column statistics found for {self.database_name}.")
             return
 
         df = response.data_frame
@@ -222,8 +232,11 @@ class DataCatalogLoader(BaseDataCatalog):
         """
         self.logger.info(f"Loading primary keys for {self.database_name}")
         response = self.data_handler.meta_get_primary_keys(self.table_names)
-        if response.resp_type != RESPONSE_TYPE.TABLE:
+        if response.resp_type == RESPONSE_TYPE.ERROR:
             self.logger.error(f"Failed to load primary keys for {self.database_name}: {response.error_message}")
+            return
+        elif response.resp_type == RESPONSE_TYPE.OK:
+            self.logger.error(f"No primary keys found for {self.database_name}.")
             return
 
         df = response.data_frame
@@ -271,8 +284,11 @@ class DataCatalogLoader(BaseDataCatalog):
         """
         self.logger.info(f"Loading foreign keys for {self.database_name}")
         response = self.data_handler.meta_get_foreign_keys(self.table_names)
-        if response.resp_type != RESPONSE_TYPE.TABLE:
+        if response.resp_type == RESPONSE_TYPE.ERROR:
             self.logger.error(f"Failed to foreign keys for {self.database_name}: {response.error_message}")
+            return
+        elif response.resp_type == RESPONSE_TYPE.OK:
+            self.logger.error(f"No foreign keys found for {self.database_name}.")
             return
 
         df = response.data_frame

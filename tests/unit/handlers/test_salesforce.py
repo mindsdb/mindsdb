@@ -87,7 +87,7 @@ class TestSalesforceHandler(BaseHandlerTestSetup, unittest.TestCase):
 
         df = response.data_frame
         self.assertEqual(len(df), len(mock_tables))
-        self.assertEqual(list(df["table_name"]), mock_tables)
+        self.assertEqual(list(df["table_name"]), [name.lower() for name in mock_tables])
 
     def test_get_columns(self):
         """

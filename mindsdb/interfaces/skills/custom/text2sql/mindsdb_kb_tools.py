@@ -212,6 +212,13 @@ class KnowledgeBaseQueryTool(BaseTool):
             return tool_input.strip()
 
         return ""
+    
+    def _remove_backticks_from_identifiers(self, query: str) -> str:
+        
+        """Remove backticks from all identifiers in the SQL query."""
+        # Remove backticks only from identifiers: `identifier` → identifier
+        # We do NOT remove backticks from values in quotes!
+        return re.sub(r'`([\w\.]+)`', r'\1', query)
 
     def _run(self, tool_input: str) -> str:
         """Execute a knowledge base query."""
@@ -223,6 +230,7 @@ class KnowledgeBaseQueryTool(BaseTool):
         try:
             # Execute the query
             query = llm_str_strip(query)
+            query = self._remove_backticks_from_identifiers(query)
             result = self.db.run_no_throw(query)
 
             if not result:

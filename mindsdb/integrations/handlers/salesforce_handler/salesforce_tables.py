@@ -203,6 +203,8 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
                         "column_name": field["name"],
                         "data_type": field["type"],
                         "is_nullable": field.get("nillable", False),
+                        "default_value": field.get("defaultValue", ""),
+                        "description": field.get("inlineHelpText", ""),
                     }
                 )
 

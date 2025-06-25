@@ -18,14 +18,17 @@ We start by creating a knowledge base and inserting data. Next we can run semant
     Use the `create()` function to create a knowledge base, specifying all its components.
 
     ```python
+    server = mindsdb_sdk.connect()
+    project = server.get_project()
+
     my_kb = project.knowledge_bases.create(
         'my_kb',
-        embedding_model={'provider': 'openai', 'model': 'text-embedding-ada-002', 'api_key': 'sk-...'},
-        reranking_model={'provider': 'openai', 'model': 'gpt-4', 'api_key': 'sk-...'},
-        storage=server.databases.mydb.tables.vector_store,
-        metadata_columns=['title', 'author'],
-        content_columns=['content'],
-        id_column='doc_id'
+        embedding_model={'provider': 'openai', 'model_name': 'text-embedding-3-small', 'api_key': 'sk-...'},
+        reranking_model={'provider': 'openai', 'model_name': 'gpt-4o', 'api_key': 'sk-...'},
+        storage=server.databases.my_vector_db.tables.my_table,
+        metadata_columns=['product'],
+        content_columns=['notes'],
+        id_column='order_id'
     )
     ```
   </Step>
@@ -54,7 +57,9 @@ We start by creating a knowledge base and inserting data. Next we can run semant
     Query the knowledge base using semantic search.
 
     ```python
-    results = kb.find('color').fetch()
+    results = my_kb.find('color')
+
+    print(results.fetch())
     ```
 
     This query returns:
@@ -73,7 +78,16 @@ We start by creating a knowledge base and inserting data. Next we can run semant
     Query the knowledge base using semantic search and define the `relevance` parameter to receive only the best matching data for your use case.
 
     ```python
-    results = kb.find('color').filter(relevance>=0.2502).fetch()
+    results = project.query(
+        '''
+        SELECT *
+        FROM my_kb_orders_python
+        WHERE content = 'color'
+        AND relevance >= 0.2502;
+        '''
+    )
+
+    print(results.fetch())
     ```
 
     This query returns:
@@ -90,8 +104,18 @@ We start by creating a knowledge base and inserting data. Next we can run semant
   <Step title="Filter results by metadata">
     Add metadata filtering to focus your search.
 
-    ```sql
-    results = kb.find('color').filetr(product='Wireless Mouse').filter(relevance>=0.2502).fetch()
+    ```python
+    results = project.query(
+        '''
+        SELECT *
+        FROM my_kb
+        WHERE product = 'Wireless Mouse'
+        AND content = 'color'
+        AND relevance >= 0.2502;
+        '''
+    )
+
+    print(results.fetch())
     ```
     
     This query returns:
@@ -117,11 +141,11 @@ my_kb = project.knowledge_bases.create(
     'my_kb',
     embedding_model={
         'provider': 'openai', 
-        'model': 'text-embedding-3-small', 
+        'model_name': 'text-embedding-3-small', 
         'api_key': 'sk-...'},
     reranking_model={
         'provider': 'openai', 
-        'model': 'gpt-4', 
+        'model_name': 'gpt-4', 
         'api_key': 'sk-...'},
     storage=server.databases.my_db.tables.my_table,
     metadata_columns=['date', 'creator', ...],
@@ -135,7 +159,7 @@ Upon execution, it registers `my_kb` and associates the specified models and sto
 <Note>
 As MindsDB stores objects, such as models or knowledge bases, inside [projects](/mindsdb_sql/sql/create/project), you can create a knowledge base inside a custom project.
 
-```sql
+```python
 project = server.create_project('my_project')
 
 my_kb = project.knowledge_bases.create(...)
@@ -206,6 +230,10 @@ embedding_model = {
 
 **Option 2.** Define the default embedding model in the [MindsDB configuration file](/setup/custom-config).
 
+<Tip>
+You can define the default models in the Settings of the MindsDB Editor GUI.
+</Tip>
+
 <Note>
 Note that if you define `default_embedding_model` in the configuration file, you do not need to provide the `embedding_model` parameter when creating a knowledge base. If provide both, then the values from the `embedding_model` parameter are used.
 </Note>
@@ -263,6 +291,10 @@ reranking_model = {
 ```
 
 **Option 2.** Define the default reranking model in the [MindsDB configuration file](/setup/custom-config).
+
+<Tip>
+You can define the default models in the Settings of the MindsDB Editor GUI.
+</Tip>
 
 <Note>
 Note that if you define `default_llm` in the configuration file, you do not need to provide the `reranking_model` parameter when creating a knowledge base. If provide both, then the values from the `reranking_model` parameter are used.
@@ -637,15 +669,19 @@ In order to optimize the performance of data insertion into the knowledge base, 
 
 Here is an example.
 
-```sql
-INSERT INTO my_kb
-SELECT order_id, product, notes
-FROM sample_data.orders
-USING
-    batch_size = 200,
-    track_column = order_id,
-    threads = 10,
-    error = 'skip';
+```python
+project.query(
+    '''
+    INSERT INTO my_kb
+    SELECT order_id, product, notes
+    FROM sample_data.orders
+    USING
+        batch_size = 200,
+        track_column = order_id,
+        threads = 10,
+        error = 'skip';
+    '''
+)
 ```
 
 The parameters include the following:
@@ -660,22 +696,34 @@ The parameters include the following:
 
 After executing the `INSERT INTO` statement with the above parameters, users can view the data insertion progress by querying the `information_schema.queries` table.
 
-```sql
-SELECT * FROM information_schema.queries;
+```python
+project.query(
+    '''
+    SELECT * FROM information_schema.queries;
+    '''
+)
 ```
 
 Users can cancel the data insertion process using the process ID from the `information_schema.queries` table.
 
-```sql
-SELECT query_cancel(1);
+```python
+project.query(
+    '''
+    SELECT query_cancel(1);
+    '''
+)
 ```
 
 Note that canceling the query will not remove the already inserted data.
 
 Users can resume the data insertion process using the process ID from the `information_schema.queries` table.
 
-```sql
-SELECT query_resume(1);
+```python
+project.query(
+    '''
+    SELECT query_resume(1);
+    '''
+)
 ```
 
 ### Chunking Data
@@ -692,7 +740,7 @@ Users can opt for defining the chunking parameters when creating a knowledge bas
 my_kb = project.knowledge_bases.create(
     ...
     params={
-        preprocessing = {
+        "preprocessing": {
             "text_chunking_config" : {
                 "chunk_size": 2000,
                 "chunk_overlap": 200
@@ -712,7 +760,7 @@ Users can opt for defining the chunking parameters specifically for JSON data.
 my_kb = project.knowledge_bases.create(
     ...
     params={
-        preprocessing = {
+        "preprocessing": {
             "type": "json_chunking",
             "json_chunking_config" : {
                 ...
@@ -769,7 +817,7 @@ Users can query the underlying vector store as follows.
 * KB with the default ChromaDB vector store:
 
 ```python
-server.query(
+project.query(
     '''
     SELECT id, content, metadata, embeddings
     FROM <kb_name>_chromadb.storage_table;
@@ -780,7 +828,7 @@ server.query(
 * KB with user-defined vector store (either [PGVector](/integrations/vector-db-integrations/pgvector) or [ChromaDB](/integrations/vector-db-integrations/chromadb)):
 
 ```python
-server.query(
+project.query(
     '''
     SELECT id, content, metadata, embeddings
     FROM <vector_store_connection_name>.<table_name>;
@@ -794,14 +842,15 @@ Knowledge bases provide an abstraction that enables users to see the stored data
 
 Note that here a sample knowledge base created and inserted into in the previous **Example** sections is searched.
 
-```sql
-SELECT *
-FROM my_kb;
-```
-
-TODO
 ```python
-results = my_kb.find().fetch()
+results = project.query(
+    '''
+    SELECT *
+    FROM my_kb;
+    '''
+)
+
+print(results.fetch())
 ```
 
 Here is the sample output:
@@ -850,15 +899,10 @@ Note that the calculation method of `relevance` differs as follows:
 
 Users can query a knowledge base using semantic search by providing the search phrase (called `content`) to be searched for.
 
-```sql
-SELECT *
-FROM my_kb
-WHERE content = 'color'
-```
-
-TODO
 ```python
-results = my_kb.find('color').fetch()
+results = my_kb.find('color')
+
+print(results.fetch())
 ```
 
 Here is the output:
@@ -886,17 +930,18 @@ If not provided, its default value is 10, returning a maximum of 10 rows.
 <Tip>
 Note that when specifying both `relevance` and `LIMIT` as follows:
 
-```sql
-SELECT *
-FROM my_kb
-WHERE content = 'color'
-AND relevance >= 0.5
-LIMIT 20;
-```
-
-TODO
 ```python
-results = my_kb.find('color', limit=20).filter(relevance>=0.5).fetch()
+results = project.query(
+    '''
+    SELECT *
+    FROM my_kb
+    WHERE content = 'color'
+    AND relevance >= 0.5
+    LIMIT 20;
+    '''
+)
+
+print(results.fetch())
 ```
 
 The query extracts 20 rows (as defined in the `LIMIT` clause) that match the defined `content`. Next, these set of rows is filtered out to match the defined `relevance`.
@@ -904,16 +949,17 @@ The query extracts 20 rows (as defined in the `LIMIT` clause) that match the def
 
 Users can limit the `relevance` in order to get only the most relevant results.
 
-```sql
-SELECT *
-FROM my_kb
-WHERE content = 'color'
-AND relevance >= 0.5;
-```
-
-TODO
 ```python
-results = my_kb.find('color').filter(relevance>=0.5).fetch()
+results = project.query(
+    '''
+    SELECT *
+    FROM my_kb
+    WHERE content = 'color'
+    AND relevance >= 0.5;
+    '''
+)
+
+print(results.fetch())
 ```
 
 Here is the output:
@@ -930,16 +976,17 @@ By providing the `relevance` filter, the output is limited to only data with rel
 
 Users can limit the number of rows returned.
 
-```sql
-SELECT *
-FROM my_kb
-WHERE content = 'color'
-LIMIT 2;
-```
-
-TODO
 ```python
-results = my_kb.find('color', limit=2).fetch()
+results = project.query(
+    '''
+    SELECT *
+    FROM my_kb
+    WHERE content = 'color'
+    LIMIT 2;
+    '''
+)
+
+print(results.fetch())
 ```
 
 Here is the output:
@@ -957,15 +1004,16 @@ Here is the output:
 
 Besides semantic search features, knowledge bases enable users to filter the result set by the defined metadata.
 
-```sql
-SELECT *
-FROM my_kb
-WHERE product = 'Wireless Mouse';
-```
-
-TODO
 ```python
-results = my_kb.find().filter(product='Wireless Mouse').fetch()
+results = project.query(
+    '''
+    SELECT *
+    FROM my_kb
+    WHERE product = 'Wireless Mouse';
+    '''
+)
+
+print(results.fetch())
 ```
 
 Here is the output:
@@ -982,17 +1030,18 @@ Note that when searching by metadata alone, the `relevance` column values are no
 
 Users can do both, filter by metadata and search by content.
 
-```sql
-SELECT *
-FROM my_kb
-WHERE product = 'Wireless Mouse'
-AND content = 'color'
-AND relevance >= 0.5;
-```
-
-TODO
 ```python
-results = my_kb.find('color').filter(product='Wireless Mouse').filter(relevance>=0.5).fetch()
+results = project.query(
+    '''
+    SELECT *
+    FROM my_kb
+    WHERE product = 'Wireless Mouse'
+    AND content = 'color'
+    AND relevance >= 0.5;
+    '''
+)
+
+print(results.fetch())
 ```
 
 Here is the output:

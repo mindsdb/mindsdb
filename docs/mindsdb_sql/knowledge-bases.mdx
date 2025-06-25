@@ -230,6 +230,10 @@ USING
 
 **Option 2.** Define the default embedding model in the [MindsDB configuration file](/setup/custom-config).
 
+<Tip>
+You can define the default models in the Settings of the MindsDB Editor GUI.
+</Tip>
+
 <Note>
 Note that if you define `default_embedding_model` in the configuration file, you do not need to provide the `embedding_model` parameter when creating a knowledge base. If provide both, then the values from the `embedding_model` parameter are used.
 </Note>
@@ -289,6 +293,10 @@ USING
 ```
 
 **Option 2.** Define the default reranking model in the [MindsDB configuration file](/setup/custom-config).
+
+<Tip>
+You can define the default models in the Settings of the MindsDB Editor GUI.
+</Tip>
 
 <Note>
 Note that if you define `default_llm` in the configuration file, you do not need to provide the `reranking_model` parameter when creating a knowledge base. If provide both, then the values from the `reranking_model` parameter are used.

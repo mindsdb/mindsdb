@@ -76,20 +76,13 @@ def validate_urls(urls: str | list[str], allowed_urls: list[str]) -> bool:
     if len(allowed_urls) == 0:
         return True
 
-    allowed_origins = []
-    for url in allowed_urls:
-        scheme, netloc = _split_url(url)
-        allowed_origins.append((scheme, netloc))
+    allowed_origins = [_split_url(url) for url in allowed_urls]
 
     if isinstance(urls, str):
         urls = [urls]
 
     # Check if all provided URLs are from the allowed sites
     for url in urls:
-        scheme, netloc = _split_url(url)
-        if (
-            (scheme, netloc) not in allowed_origins
-            and ("", netloc) not in allowed_origins
-        ):
+        if _split_url(url) not in allowed_origins:
             return False
     return True

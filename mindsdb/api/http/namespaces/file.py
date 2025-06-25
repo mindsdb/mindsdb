@@ -114,7 +114,7 @@ class File(Resource):
             except Exception:
                 return http_error(
                     400,
-                    "URL invalid",
+                    "Invalid URL",
                     f"The URL is not valid: {data['source']}",
                 )
 
@@ -127,7 +127,7 @@ class File(Resource):
             if validate_urls(url, allowed_origins) is False:
                 return http_error(
                     400,
-                    "Invalid File URL source.",
+                    "Invalid URL",
                     "URL is not allowed for security reasons. Allowed hosts are: "
                     f"{', '.join(allowed_origins) if allowed_origins else 'not specified'}."
                 )

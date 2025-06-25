@@ -1044,11 +1044,11 @@ class TestKB(BaseExecutorDummyML):
             else:
                 assert "small" in content
 
-        # -- using between
+        # -- using between and less than
 
         ret = self.run_sql("""
            select * from kb_alg where
-            content like 'white' and num between 3 and 4
+            content like 'white' and num between 3 and 6 and num < 5
            limit 3
         """)
         assert len(ret) == 2

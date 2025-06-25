@@ -1,6 +1,6 @@
 import os
 import json
-from typing import Dict, List, Union, Literal
+from typing import Dict, List, Literal, Tuple
 from urllib.parse import urlparse
 
 import pandas as pd
@@ -144,7 +144,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         return self.connection
 
     @staticmethod
-    def _translate_conditions(conditions: List[FilterCondition]) -> Union[dict, None]:
+    def _translate_conditions(conditions: List[FilterCondition]) -> Tuple[List[dict], dict]:
         """
         Translate filter conditions to a dictionary
         """
@@ -153,7 +153,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
             conditions = []
 
         filter_conditions = []
-        embdedding_condition = None
+        embedding_condition = None
 
         for condition in conditions:
 
@@ -168,17 +168,25 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
                 # last element
                 key += f" ->> '{parts[-1]}'"
 
+            type_cast = None
+            if isinstance(condition.value, int):
+                type_cast = 'int'
+            elif isinstance(condition.value, float):
+                type_cast = 'float'
+            if type_cast is not None:
+                key = f"({key})::{type_cast}"
+
             item = {
                 "name": key,
                 "op": condition.op.value,
                 "value": condition.value,
             }
             if key == "embeddings":
-                embdedding_condition = item
+                embedding_condition = item
             else:
                 filter_conditions.append(item)
 
-        return filter_conditions, embdedding_condition
+        return filter_conditions, embedding_condition
 
     @staticmethod
     def _construct_where_clause(filter_conditions=None):

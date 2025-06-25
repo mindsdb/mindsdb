@@ -597,6 +597,11 @@ class SnowflakeHandler(MetaDatabaseHandler):
                     max_val = stats_data.get(f"max_{col}", None)
                     null_pct = (nulls / total_rows) * 100 if total_rows is not None and total_rows > 0 else None
 
+                    if min_val is not None and not isinstance(min_val, (str, int, float)):
+                        min_val = str(min_val)
+                    if max_val is not None and not isinstance(max_val, (str, int, float)):
+                        max_val = str(max_val)
+
                     all_stats.append(
                         {
                             "table_name": table_name,

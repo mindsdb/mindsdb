@@ -165,17 +165,29 @@ class FunctionController(BYOMFunctionsController):
 
         if name in self.callbacks:
             return self.callbacks[name]
+        
+        def prepare_chat_model_params(chat_model_params: dict) -> dict:
+            """
+            Parepares the chat model parameters for the ToMarkdown function.
+            """
+            params_copy = copy.deepcopy(chat_model_params)
+            params_copy['model'] = params_copy.pop('model_name')
+
+            # Set the base_url for the Google provider.
+            if params_copy['provider'] == 'google' and 'base_url' not in params_copy:
+                params_copy['base_url'] = 'https://generativelanguage.googleapis.com/v1beta/'
+
+            params_copy.pop('api_keys')
+            params_copy.pop('provider')
+            
+            return params_copy
 
         def callback(file_path_or_url):
             chat_model_params = self._parse_chat_model_params('TO_MARKDOWN_FUNCTION_')
-
-            params_copy = copy.deepcopy(chat_model_params)
-            params_copy['model'] = params_copy.pop('model_name')
-            params_copy.pop('api_keys')
-            params_copy.pop('provider')
+            chat_model_params = prepare_chat_model_params(chat_model_params)
 
             to_markdown = ToMarkdown()
-            return to_markdown.call(file_path_or_url, **params_copy)
+            return to_markdown.call(file_path_or_url, **chat_model_params)
 
         meta = {
             'name': name,

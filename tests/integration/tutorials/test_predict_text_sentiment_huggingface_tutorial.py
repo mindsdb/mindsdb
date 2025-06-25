@@ -1,3 +1,5 @@
+import pytest
+
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from tests.integration.utils.http_test_helpers import HTTPHelperMixin
 
@@ -50,6 +52,7 @@ JOIN sentiment_classifier AS model;
 """
 
 
+@pytest.mark.skip(reason="Huggingface handler is temporary disabled")
 class TestPredictTextSentimentHuggingface(HTTPHelperMixin):
     def setup_class(self):
         self.sql_via_http(self, QueryStorage.delete_db)

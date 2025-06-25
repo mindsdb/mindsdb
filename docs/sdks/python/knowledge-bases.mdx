@@ -81,7 +81,7 @@ We start by creating a knowledge base and inserting data. Next we can run semant
     results = project.query(
         '''
         SELECT *
-        FROM my_kb_orders_python
+        FROM my_kb
         WHERE content = 'color'
         AND relevance >= 0.2502;
         '''
@@ -253,10 +253,10 @@ Note that if you define `default_embedding_model` in the configuration file, you
 The embedding model specification includes:
 
 * `provider`
-It is a required parameter. It defines the model provider. Currently, the supported providers include OpenAI (`openai`) and OpenAI via Azure (`azure_openai`).
+It is a required parameter. It defines the model provider as listed in [supported LLMs](/mindsdb_sql/knowledge-bases#supported-llms).
 
 * `model_name`
-It is a required parameter. It defines the embedding model name as specified by the provider. Users can choose one of the [OpenAI embedding models](https://platform.openai.com/docs/guides/embeddings/embedding-models#embedding-models).
+It is a required parameter. It defines the embedding model name as specified by the provider.
 
 * `api_key`
 The API key is required to access the embedding model assigned to a knowledge base. Users can provide it either in this `api_key` parameter, or in the `OPENAI_API_KEY` environment variable for `"provider": "openai"` and `AZURE_OPENAI_API_KEY` environment variable for `"provider": "azure_openai"`.
@@ -663,8 +663,6 @@ The knowledge base matches the ID value to the existing one and updates the data
 
 ### Insert Data using Partitions
 
-TODO: os this available in python sdk?
-
 In order to optimize the performance of data insertion into the knowledge base, users can set up partitions and threads to insert batches of data in parallel. This also enables tracking the progress of data insertion process including cancelling and resuming it if required.
 
 Here is an example.
@@ -688,7 +686,9 @@ The parameters include the following:
 
 * `batch_size` defines the number of rows fetched per iteration to optimize data extraction from the source. It defaults to 1000.
 
-* `threads` defines threads for running partitions. Note that if the [ML task queue](/setup/custom-config#overview-of-config-parameters) is enabled, threads are used automatically. The available values for include a number of threads to be used, for example, `threads = 10`, or a boolean value that defines whether to enable threads, setting `threads = true`, or disable threads, setting `threads = false`.
+* `threads` defines threads for running partitions. Note that if the [ML task queue](/setup/custom-config#overview-of-config-parameters) is enabled, threads are used automatically. The available values for `threads` are:
+    - a number of threads to be used, for example, `threads = 10`,
+    - a boolean value that defines whether to enable threads, setting `threads = true`, or disable threads, setting `threads = false`.
 
 * `track_column` defines the column used for sorting data before partitioning.
 
@@ -704,7 +704,7 @@ project.query(
 )
 ```
 
-Users can cancel the data insertion process using the process ID from the `information_schema.queries` table.
+Users can cancel the data insertion process using the process ID from the `information_schema.queries` table. 
 
 ```python
 project.query(
@@ -714,7 +714,7 @@ project.query(
 )
 ```
 
-Note that canceling the query will not remove the already inserted data.
+If you want to cancel the data insertion process, look up the process ID value from the `information_schema.queries` table and pass it as an argument to the `query_cancel()` function. Note that canceling the query will not remove the already inserted data.
 
 Users can resume the data insertion process using the process ID from the `information_schema.queries` table.
 
@@ -725,6 +725,8 @@ project.query(
     '''
 )
 ```
+
+If you want to resume the data insertion process (which may have been interrupted by an error or cancelled by a user), look up the process ID value from the `information_schema.queries` table and pass it as an argument to the `query_resume()` function. Note that resuming the query will not remove the already inserted data and will start appending the remaining data.
 
 ### Chunking Data
 

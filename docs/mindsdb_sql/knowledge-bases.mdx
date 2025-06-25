@@ -318,10 +318,10 @@ Note that if you define `default_llm` in the configuration file, you do not need
 The reranking model specification includes:
 
 * `provider`
-It is a required parameter. It defines the model provider. Currently, the supported providers include OpenAI (`openai`) and OpenAI via Azure (`azure_openai`).
+It is a required parameter. It defines the model provider as listed in [supported LLMs](/mindsdb_sql/knowledge-bases#supported-llms).
 
 * `model_name`
-It is a required parameter. It defines the embedding model name as specified by the provider. Users can choose one of the [OpenAI chat models](https://platform.openai.com/docs/models).
+It is a required parameter. It defines the embedding model name as specified by the provider.
 
 * `api_key`
 The API key is required to access the embedding model assigned to a knowledge base. Users can provide it either in this `api_key` parameter, or in the `OPENAI_API_KEY` environment variable for `"provider": "openai"` and `AZURE_OPENAI_API_KEY` environment variable for `"provider": "azure_openai"`.
@@ -698,7 +698,9 @@ The parameters include the following:
 
 * `batch_size` defines the number of rows fetched per iteration to optimize data extraction from the source. It defaults to 1000.
 
-* `threads` defines threads for running partitions. Note that if the [ML task queue](/setup/custom-config#overview-of-config-parameters) is enabled, threads are used automatically. The available values for include a number of threads to be used, for example, `threads = 10`, or a boolean value that defines whether to enable threads, setting `threads = true`, or disable threads, setting `threads = false`.
+* `threads` defines threads for running partitions. Note that if the [ML task queue](/setup/custom-config#overview-of-config-parameters) is enabled, threads are used automatically. The available values for `threads` are:
+    - a number of threads to be used, for example, `threads = 10`,
+    - a boolean value that defines whether to enable threads, setting `threads = true`, or disable threads, setting `threads = false`.
 
 * `track_column` defines the column used for sorting data before partitioning.
 

@@ -802,10 +802,10 @@
                         "group": "AI Agents",
                         "pages": [
                           "sdks/python/agents",
-                          "sdks/python/agents_skills",
-                          "mindsdb_sql/knowledge-bases"
+                          "sdks/python/agents_skills"
                         ]
-                      }
+                      },
+                      "sdks/python/knowledge-bases"
                     ]
                   },
                   {

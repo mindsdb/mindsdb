@@ -16,15 +16,15 @@ logger = log.getLogger(__name__)
 
 
 GENERATE_QA_SYSTEM_PROMPT = """
-Your task is to generate question and answer pairs for a search engine. 
+Your task is to generate question and answer pairs for a search engine.
 The search engine will take your query and return a list of documents.
 You will be given a text and you need to generate a question that can be answered using the information in the text.
 Your questions will be used to evaluate the search engine.
-Question should always have enough clues to identify the specific text that this question is generated from. 
+Question should always have enough clues to identify the specific text that this question is generated from.
 Never ask questions like "What license number is associated with Amend 6" because Amend 6 could be found in many documents and the question is not specific enough.
-Example output 1:  {\"query\": \"What processor does the HP 2023 14\" FHD IPS Laptop use?\", \"reference_answer\": \"Ryzen 3 5300U\"} 
+Example output 1:  {\"query\": \"What processor does the HP 2023 14\" FHD IPS Laptop use?\", \"reference_answer\": \"Ryzen 3 5300U\"}
 Example output 2: {\"query\": \"What is the name of the river in Paris?\", \"reference_answer\": \"Seine\"}
-Don't generate questions like "What is being amended in the application?" because these questions cannot be answered using the text and without knowing which document it refers to. 
+Don't generate questions like "What is being amended in the application?" because these questions cannot be answered using the text and without knowing which document it refers to.
 The question should be answerable without the text, but the answer should be present in the text.
 Return ONLY a json response. No other text.
 """
@@ -41,6 +41,25 @@ def calc_entropy(values: List[float]) -> float:
     values = [i / total for i in values if i > 0]
     # calc
     return -sum([pk * math.log(pk) for pk in values])
+
+
+def sanitize_json_response(response: str) -> str:
+    """Remove markdown code block formatting from JSON response."""
+    # Remove leading/trailing whitespace
+    response = response.strip()
+
+    # Remove ```json at the beginning
+    if response.startswith("```json"):
+        response = response[7:]  # Remove '```json'
+    elif response.startswith("```"):
+        response = response[3:]  # Remove '```'
+
+    # Remove trailing ```
+    if response.endswith("```"):
+        response = response[:-3]
+
+    # Remove any remaining leading/trailing whitespace
+    return response.strip()
 
 
 class EvaluateBase:
@@ -176,6 +195,7 @@ class EvaluateBase:
             return pd.DataFrame()
 
         scores = self.evaluate(test_data)
+        scores["id"] = math.floor(time.time())  # unique ID for the evaluation run
         scores["name"] = self.name
         scores["created_at"] = dt.datetime.now()
 
@@ -236,8 +256,12 @@ class EvaluateRerank(EvaluateBase):
             {"role": "user", "content": f"\n\nText:\n{text}\n\n"},
         ]
         answer = self.llm_client.completion(messages)
+
+        # Sanitize the response by removing markdown code block formatting like ```json
+        sanitized_answer = sanitize_json_response(answer)
+
         try:
-            output = json.loads(answer)
+            output = json.loads(sanitized_answer)
         except json.JSONDecodeError:
             raise ValueError(f"Could not parse response from LLM: {answer}")
 
@@ -441,8 +465,12 @@ class EvaluateDocID(EvaluateBase):
             {"role": "user", "content": f"\n\nText:\n{text}\n\n"},
         ]
         answer = self.llm_client.completion(messages)
+
+        # Sanitize the response by removing markdown code block formatting like ```json
+        sanitized_answer = sanitize_json_response(answer)
+
         try:
-            output = json.loads(answer)
+            output = json.loads(sanitized_answer)
         except json.JSONDecodeError:
             raise ValueError(f"Could not parse response from LLM: {answer}")
 

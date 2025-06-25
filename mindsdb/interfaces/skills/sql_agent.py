@@ -403,8 +403,6 @@ class SQLAgent:
         if config.get("data_catalog", {}).get("enabled", False):
             database_table_map = {}
             for name in table_names or self.get_usable_table_names():
-                name = name.replace("`", "")
-
                 parts = name.split(".", 1)
                 # TODO: Will there be situations where parts has more than 2 elements? Like a schema?
                 # This is unlikely given that we default to a single schema per database.

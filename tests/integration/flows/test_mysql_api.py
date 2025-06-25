@@ -360,7 +360,7 @@ class TestMySqlApi(BaseStuff):
                 f"Expected type {expected_type.code} for column {column_name}, but got {column_description['type_code']}, use_binary={self.use_binary}, table_name={table_name}"
             )
 
-            if os.uname().sysname == 'Darwin':
+            if os.uname().sysname == "Darwin":
                 # It seems that flags on macos may be modified by mysql.connector on the client side.
                 continue
             assert column_description["flags"] == sum(expected_type.flags), (

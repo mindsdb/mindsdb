@@ -2,7 +2,17 @@ from dataclasses import dataclass
 import copy
 from typing import List, Optional, Union
 
-from mindsdb_sql_parser.ast import BinaryOperation, Identifier, Constant, UnaryOperation, Select, Star, Tuple, ASTNode, BetweenOperation
+from mindsdb_sql_parser.ast import (
+    BinaryOperation,
+    Identifier,
+    Constant,
+    UnaryOperation,
+    Select,
+    Star,
+    Tuple,
+    ASTNode,
+    BetweenOperation,
+)
 import pandas as pd
 
 from mindsdb.integrations.utilities.query_traversal import query_traversal
@@ -120,10 +130,13 @@ class KnowledgeBaseQueryExecutor:
                 return node
 
         elif isinstance(node, BetweenOperation):
-            block = ConditionBlock("AND", [
-                BinaryOperation('>=', args=[node.args[0], node.args[1]]),
-                BinaryOperation('<=', args=[node.args[0], node.args[2]]),
-            ])
+            block = ConditionBlock(
+                "AND",
+                [
+                    BinaryOperation(">=", args=[node.args[0], node.args[1]]),
+                    BinaryOperation("<=", args=[node.args[0], node.args[2]]),
+                ],
+            )
             return block
 
         raise NotImplementedError(f"Unknown node '{node}'")
@@ -214,8 +227,10 @@ class KnowledgeBaseQueryExecutor:
             #    SELECT id FROM kb WHERE content =’...’ limit X
             # )
             el_cond = BinaryOperation(op="=", args=content_condition.args)
-            threshold = BinaryOperation(op=">=", args=[Identifier('relevance'), Constant(self._negative_set_threshold)])
-            res = self.call_kb([el_cond, threshold] + other_conditions, disable_reranking=True, limit=self._negative_set_size)
+            threshold = BinaryOperation(op=">=", args=[Identifier("relevance"), Constant(self._negative_set_threshold)])
+            res = self.call_kb(
+                [el_cond, threshold] + other_conditions, disable_reranking=True, limit=self._negative_set_size
+            )
 
             return list(res[self.id_column])
 
@@ -226,9 +241,12 @@ class KnowledgeBaseQueryExecutor:
             content_condition2 = copy.deepcopy(content_condition)
             content_condition2.op = "IN"
 
-            threshold = BinaryOperation(op=">=", args=[Identifier('relevance'), Constant(self._negative_set_threshold)])
+            threshold = BinaryOperation(op=">=", args=[Identifier("relevance"), Constant(self._negative_set_threshold)])
             res = self.execute_content_condition(
-                content_condition2, other_conditions + [threshold], disable_reranking=True, limit=self._negative_set_size
+                content_condition2,
+                other_conditions + [threshold],
+                disable_reranking=True,
+                limit=self._negative_set_size,
             )
 
             return list(res[self.id_column])

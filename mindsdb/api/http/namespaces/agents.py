@@ -349,10 +349,9 @@ def _completion_event_generator(
         logger.info("Completion stream finished")
 
     except Exception as e:
-        error_message = f"Error in completion event generator: {str(e)}"
-        logger.error(error_message)
+        logger.error(f"Error in completion event generator: {e}")
         logger.error(traceback.format_exc())
-        yield json_serialize({"error": error_message})
+        yield json_serialize({"error": "error in completion event generator"})
 
     finally:
         yield json_serialize({"type": "end"})

@@ -18,7 +18,9 @@ class DataCatalogReader(BaseDataCatalog):
 
         metadata_str = "Data Catalog: \n"
         if hasattr(self.data_handler, "meta_get_handler_info"):
-            metadata_str += self.data_handler.meta_get_handler_info() + "\n\n"
+            handler_info = self.data_handler.meta_get_handler_info()
+            if handler_info:
+                metadata_str += self.data_handler.meta_get_handler_info() + "\n\n"
 
         for table in tables:
             metadata_str += table.as_string() + "\n\n"

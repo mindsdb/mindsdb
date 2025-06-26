@@ -58,6 +58,8 @@ from mindsdb.interfaces.agents.constants import (
     TRACE_ID_COLUMN,
     DEFAULT_AGENT_SYSTEM_PROMPT,
     WRITER_CHAT_MODELS,
+    MINDSDB_PREFIX,
+    EXPLICIT_FORMAT_INSTRUCTIONS,
 )
 from mindsdb.interfaces.skills.skill_tool import skill_tool, SkillData
 from langchain_anthropic import ChatAnthropic
@@ -428,7 +430,12 @@ class LangchainAgent:
             llm,
             agent=agent_type,
             # Use custom output parser to handle flaky LLMs that don't ALWAYS conform to output format.
-            agent_kwargs={"output_parser": SafeOutputParser()},
+            agent_kwargs={
+                "output_parser": SafeOutputParser(),
+                "prefix": MINDSDB_PREFIX,  # Override default "Assistant is a large language model..." text
+                "format_instructions": EXPLICIT_FORMAT_INSTRUCTIONS,  # More explicit tool calling instructions
+                "ai_prefix": "AI",
+            },
             # Calls the agent's LLM Chain one final time to generate a final answer based on the previous steps
             early_stopping_method="generate",
             handle_parsing_errors=self._handle_parsing_errors,

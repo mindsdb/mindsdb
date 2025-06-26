@@ -1,0 +1,25 @@
+---
+title: Alter a View
+sidebarTitle: Alter a View
+---
+
+## Description
+
+The `ALTER VIEW` statement updates the query assigned to a view created with the [`CREATE VIEW` command](/mindsdb_sql/sql/create/view).
+
+## Syntax
+
+Here is the syntax:
+
+```sql
+ALTER VIEW view_name [AS] (
+    SELECT * FROM integration_name.table_name
+);
+
+--or
+
+ALTER VIEW name 
+FROM integration_name (
+    SELECT * FROM table_name
+);
+```

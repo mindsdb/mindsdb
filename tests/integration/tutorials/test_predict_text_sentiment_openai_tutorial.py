@@ -25,14 +25,14 @@ SELECT *
 FROM example_sentiment_openai_db.amazon_reviews LIMIT 3;
 """
     delete_db = """
-DROP DATABASE example_sentiment_openai_db;
+DROP DATABASE IF EXISTS example_sentiment_openai_db;
 """
     create_engine = """
 CREATE ML_ENGINE openai2
 FROM openai USING openai_api_key='%s';
 """
     delete_engine = """
-DROP ML_ENGINE openai2;
+DROP ML_ENGINE IF EXISTS openai2;
 """
     create_model = """
 CREATE MODEL sentiment_classifier_gpt3
@@ -51,7 +51,7 @@ SELECT * FROM models
 WHERE name = 'sentiment_classifier_gpt3';
 """
     delete_model = """
-DROP MODEL
+DROP MODEL IF EXISTS
   mindsdb.sentiment_classifier_gpt3;
 """
     prediction = """
@@ -68,11 +68,10 @@ LIMIT 5;
 
 
 class TestPredictTextSentimentOpenAI(HTTPHelperMixin):
-
     def setup_class(self):
-        self.sql_via_http(self, QueryStorage.delete_db)
-        self.sql_via_http(self, QueryStorage.delete_model)
-        self.sql_via_http(self, QueryStorage.delete_engine)
+        self.sql_via_http(self, QueryStorage.delete_db, RESPONSE_TYPE.OK)
+        self.sql_via_http(self, QueryStorage.delete_model, RESPONSE_TYPE.OK)
+        self.sql_via_http(self, QueryStorage.delete_engine, RESPONSE_TYPE.OK)
 
     def test_create_db(self):
         sql = QueryStorage.create_db
@@ -81,7 +80,7 @@ class TestPredictTextSentimentOpenAI(HTTPHelperMixin):
     def test_db_created(self):
         sql = QueryStorage.check_db_created
         resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
-        assert len(resp['data']) >= 3
+        assert len(resp["data"]) >= 3
 
     def test_create_engine(self):
         sql = QueryStorage.create_engine % OPENAI_API_KEY
@@ -91,18 +90,18 @@ class TestPredictTextSentimentOpenAI(HTTPHelperMixin):
         with train_finetune_lock.acquire(timeout=600):
             sql = QueryStorage.create_model % OPENAI_API_KEY
             resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
-            assert len(resp['data']) == 1
-            status = resp['column_names'].index('STATUS')
-            assert resp['data'][0][status] == 'generating'
+            assert len(resp["data"]) == 1
+            status = resp["column_names"].index("STATUS")
+            assert resp["data"][0][status] == "generating"
             status = self.await_model_by_query(QueryStorage.check_status, timeout=600)
-            assert status == 'complete'
+            assert status == "complete"
 
     def test_prediction(self):
         sql = QueryStorage.prediction
         resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
-        assert len(resp['data']) == 1
+        assert len(resp["data"]) == 1
 
     def test_bulk_prediciton(self):
         sql = QueryStorage.bulk_prediction
         resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
-        assert len(resp['data']) == 5
+        assert len(resp["data"]) == 5

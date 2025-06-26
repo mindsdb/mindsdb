@@ -1,5 +1,6 @@
 import unittest
 import datetime
+from array import array
 from decimal import Decimal
 from collections import OrderedDict
 from unittest.mock import patch, MagicMock
@@ -558,6 +559,20 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertEquals(response.data_frame.iloc[0, 1], 1)
         self.assertTrue(response.data_frame.iloc[1, 0] is pd.NA)
         self.assertTrue(response.data_frame.iloc[1, 1] is pd.NA)
+        # endregion
+
+        # region test vector type
+        input_row = {
+            "t_vector": array("f", [1.1, 2.2, 3.3]),
+        }
+        mock_cursor.fetchall.return_value = [input_row]
+
+        mock_cursor.description = [("t_vector", 242, None, None, None, None, 1, 144, 63)]
+
+        response: Response = self.handler.native_query(query_str)
+        excepted_mysql_types = [MYSQL_DATA_TYPE.VECTOR]
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(input_row["t_vector"], response.data_frame["t_vector"][0])
         # endregion
 
 

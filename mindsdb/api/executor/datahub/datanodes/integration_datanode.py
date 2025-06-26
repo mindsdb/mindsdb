@@ -1,5 +1,6 @@
 import time
 import inspect
+from textwrap import dedent
 from dataclasses import astuple
 from typing import Iterable, List
 
@@ -240,7 +241,21 @@ class IntegrationDataNode(DataNode):
             raise DBHandlerException(msg) from e
 
         if result.type == RESPONSE_TYPE.ERROR:
-            raise Exception(f"Error in {self.integration_name}: {result.error_message}")
+            failed_sql_query = native_query
+            if query is not None:
+                failed_sql_query = query.to_string()
+            raise Exception(
+                dedent(f"""\
+                Failed to execute external database query during query processing.
+                
+                Database Details:
+                - Name: {self.integration_handler.name}
+                - Type: {self.integration_handler.__class__.name}
+                
+                Error: {result.error_message}
+                Failed Query: {failed_sql_query}
+            """)
+            )
         if result.type == RESPONSE_TYPE.OK:
             return DataHubResponse(affected_rows=result.affected_rows)
 

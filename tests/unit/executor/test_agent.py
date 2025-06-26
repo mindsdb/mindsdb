@@ -1,6 +1,8 @@
 import time
 import os
 import json
+from textwrap import dedent
+
 from unittest.mock import patch, MagicMock, AsyncMock
 import threading
 from contextlib import contextmanager
@@ -33,13 +35,33 @@ def set_openai_completion(mock_openai, response):
     if not isinstance(response, list):
         response = [response]
 
-    def resp_f(*args, **kwargs):
-        # return all responses in sequence, then yield only latest from list
+    mock_openai.agent_calls = []
+    calls = []
+    responses = []
 
+    def resp_f(messages, *args, **kwargs):
+        # return all responses in sequence, then yield only latest from list
         if len(response) == 1:
             resp = response[0]
         else:
             resp = response.pop(0)
+
+        # log langchain agent calls, exclude previous part of message
+        agent_call = messages[0]["content"]
+        if len(calls) > 0:
+            # remove previous call
+            prev_call = calls[-1]
+            if agent_call.startswith(prev_call):
+                agent_call = agent_call[len(prev_call) :]
+            # remove previous agent response
+            prev_response = responses[-1]
+            pos = agent_call.find(prev_response)
+            if pos != -1:
+                agent_call = agent_call[pos + len(prev_response) :]
+
+        mock_openai.agent_calls.append(agent_call)
+        calls.append(messages[0]["content"])
+        responses.append(resp)
 
         return {"choices": [{"message": {"role": "assistant", "content": resp}}]}
 
@@ -540,7 +562,6 @@ class TestAgent(BaseExecutorDummyML):
 
         agent_response = "the answer is yes"
         user_question = "answer my question"
-        from textwrap import dedent
 
         set_openai_completion(
             mock_openai,
@@ -627,6 +648,250 @@ class TestAgent(BaseExecutorDummyML):
          """)
         ret = self.run_sql("select * from default_retrieval_agent where question = 'test question'")
         assert agent_response in ret.answer[0]
+
+    @patch("openai.OpenAI")
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_agent_permissions(self, mock_litellm_embedding, mock_openai):
+        set_litellm_embedding(mock_litellm_embedding, [[0.1] * 1536] * 3)
+
+        kb_sql = """
+            create knowledge base %s
+            using
+                embedding_model = {
+                    "provider": "bedrock",
+                    "model_name": "titan"
+                }
+        """
+        self.run_sql(kb_sql % "kb_show1")
+        self.run_sql(kb_sql % "kb_show2")
+        self.run_sql(kb_sql % "kb_hide")
+
+        data = [
+            ["1000", "Moon"],
+            ["1001", "Jupiter"],
+            ["1002", "Venus"],
+        ]
+        df = pd.DataFrame(data, columns=["id", "planet_name"])
+
+        self.save_file("show1", df)
+        self.save_file("show2", df)
+        self.save_file("hide", df)
+
+        self.run_sql("""
+            insert into kb_show1
+            select id, planet_name content from files.show1
+        """)
+
+        self.run_sql("""
+            CREATE AGENT my_agent
+            USING
+              model = "gpt-3.5-turbo",
+              openai_api_key='--',
+              include_knowledge_bases = ['kb_show*'],
+              include_tables = ['files.show*'];
+         """)
+
+        # ===== Access to forbidden KBs =====
+
+        set_openai_completion(
+            mock_openai,
+            [
+                dedent("""
+                    Thought: Do I need to use a tool? Yes
+                    Action: kb_info_tool
+                    Action Input: kb_hide
+                """),
+                dedent("""
+                    Thought: Do I need to use a tool? Yes
+                    Action: kb_query_tool
+                    Action Input: select * from kb_hide where content='Moon'
+                """),
+                "Hi!",
+            ],
+        )
+        self.run_sql("select * from my_agent where question = 'test'")
+
+        # result of kb_info_tool
+        assert "Knowledge base kb_hide not found" in mock_openai.agent_calls[1]
+        # it shows available KBs
+        assert "kb_show*" in mock_openai.agent_calls[1]
+
+        # result of kb_query_tool
+        assert "Knowledge base kb_hide not found" in mock_openai.agent_calls[2]
+
+        # ===== Access to exposed KBs =====
+        set_openai_completion(
+            mock_openai,
+            [
+                dedent("""
+                    Thought: Do I need to use a tool? Yes
+                    Action: kb_list_tool
+                    Action Input:
+                """),
+                dedent("""
+                    Thought: Do I need to use a tool? Yes
+                    Action: kb_info_tool
+                    Action Input: kb_show1
+                """),
+                dedent("""
+                    Thought: Do I need to use a tool? Yes
+                    Action: kb_query_tool
+                    Action Input: select * from kb_show1 where content='Moon' limit 1
+                """),
+                "Hi!",
+            ],
+        )
+        self.run_sql("select * from my_agent where question = 'test'")
+
+        # result of kb_list_tool
+        assert "kb_hide" not in mock_openai.agent_calls[1]
+        assert "kb_show1" in mock_openai.agent_calls[1]
+        assert "kb_show2" in mock_openai.agent_calls[1]
+
+        # result of kb_info_tool, shows KB name and info
+        assert "kb_show1" in mock_openai.agent_calls[2]
+        assert "Sample Data" in mock_openai.agent_calls[2]
+        assert "Schema Information" in mock_openai.agent_calls[2]
+
+        # result of kb_query_tool
+        assert "Moon" in mock_openai.agent_calls[3]
+
+        # ===== access to forbidden files =====
+
+        set_openai_completion(
+            mock_openai,
+            [
+                dedent("""
+                    Thought: Do I need to use a tool? Yes
+                    Action: sql_db_schema
+                    Action Input: files.hide
+                """),
+                dedent("""
+                    Thought: Do I need to use a tool? Yes
+                    Action: sql_db_query
+                    Action Input: select * from files.hide
+                """),
+                "Hi!",
+            ],
+        )
+        self.run_sql("select * from my_agent where question = 'test'")
+        # result of sql_db_schema
+        assert "hide not found" in mock_openai.agent_calls[1]
+        # result of sql_db_query
+        assert "hide not found" in mock_openai.agent_calls[2]
+        # it shows available tables
+        assert "show*" in mock_openai.agent_calls[2]
+
+        # ===== access to exposed files =====
+
+        set_openai_completion(
+            mock_openai,
+            [
+                # first step, use kb
+                dedent("""
+                    Thought: Do I need to use a tool? Yes
+                    Action: sql_db_list_tables
+                    Action Input: 
+                """),
+                dedent("""
+                    Thought: Do I need to use a tool? Yes
+                    Action: sql_db_schema
+                    Action Input: files.show1
+                """),
+                dedent("""
+                    Thought: Do I need to use a tool? Yes
+                    Action: sql_db_query
+                    Action Input: select * from files.show1 where id = '1001'
+                """),
+                "Hi!",
+            ],
+        )
+
+        self.run_sql("select * from my_agent where question = 'test'")
+
+        # result of sql_db_list_tables
+        assert "hide" not in mock_openai.agent_calls[1]
+        assert "show1" in mock_openai.agent_calls[1]
+        assert "show1" in mock_openai.agent_calls[1]
+
+        # result of sql_db_schema
+        assert "show1" in mock_openai.agent_calls[2]  # table name
+        assert "planet_name" in mock_openai.agent_calls[2]  # column
+        assert "Moon" in mock_openai.agent_calls[2]  # content
+
+        # result of sql_db_query
+        assert "Jupiter" in mock_openai.agent_calls[3]
+
+    @patch("openai.OpenAI")
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_agent_data(self, mock_litellm_embedding, mock_openai):
+        set_litellm_embedding(mock_litellm_embedding, [[0.1] * 1536] * 3)
+        self.run_sql("""
+            create knowledge base kb1
+            using
+                embedding_model = {
+                    "provider": "bedrock",
+                    "model_name": "titan"
+                }
+        """)
+        df = pd.DataFrame([["1000", "Moon"], ["1001", "Jupiter"]], columns=["id", "planet_name"])
+        self.save_file("file1", df)
+        self.save_file("file2", df)
+
+        self.run_sql("""
+            CREATE AGENT my_agent
+            USING
+              model = "gpt-3.5-turbo",
+              openai_api_key='--',
+              data = {
+                 "knowledge_bases": ["kb1"],
+                 "tables": ["files.file1", "files.file2"]
+              }
+         """)
+
+        # exposed
+        set_openai_completion(
+            mock_openai,
+            [
+                dedent("""
+                    Thought: Do I need to use a tool? Yes
+                    Action: kb_info_tool
+                    Action Input: kb1
+                """),
+                dedent("""
+                    Thought: Do I need to use a tool? Yes
+                    Action: sql_db_schema
+                    Action Input: files.file1
+                """),
+                "Hi!",
+            ],
+        )
+        self.run_sql("select * from my_agent where question = 'test'")
+
+        assert "Schema Information" in mock_openai.agent_calls[1]
+        assert "planet_name" in mock_openai.agent_calls[2]  # column
+
+        # not exposed
+        set_openai_completion(
+            mock_openai,
+            [
+                dedent("""
+                    Thought: Do I need to use a tool? Yes
+                    Action: kb_info_tool
+                    Action Input: kb3
+                """),
+                dedent("""
+                    Thought: Do I need to use a tool? Yes
+                    Action: sql_db_schema
+                    Action Input: files.file3
+                """),
+                "Hi!",
+            ],
+        )
+        self.run_sql("select * from my_agent where question = 'test'")
+
+        assert "kb3 not found" in mock_openai.agent_calls[1]
+        assert "file3 not found" in mock_openai.agent_calls[2]
 
 
 class TestKB(BaseExecutorDummyML):

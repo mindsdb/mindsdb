@@ -63,10 +63,6 @@ def _make_table_response(result: list[dict], cursor: mysql.connector.cursor.MySQ
             mysql_types.append(reverse_c_type_map[type_int])
             continue
 
-        if type_int == C_TYPES.MYSQL_TYPE_JSON:
-            mysql_types.append(reverse_c_type_map[type_int])
-            continue
-
         if type_int == C_TYPES.MYSQL_TYPE_BLOB:
             # region determine text/blob type by flags
             # Unfortunately, there is no way to determine particular type of text/blob column by flags.
@@ -183,6 +179,9 @@ class MySQLHandler(DatabaseHandler):
                 config["ssl_cert"] = ssl_cert
             if ssl_key is not None:
                 config["ssl_key"] = ssl_key
+        elif ssl is False:
+            config["ssl_disabled"] = True
+
         if "collation" not in config:
             config["collation"] = "utf8mb4_general_ci"
         if "use_pure" not in config:

@@ -261,7 +261,7 @@ class EvaluateRerank(EvaluateBase):
             df_answers = self.kb.select_query(
                 Select(
                     targets=[Identifier("chunk_content")],
-                    where=BinaryOperation(op='=', args=[Identifier('content'), Constant(question)]),
+                    where=BinaryOperation(op="=", args=[Identifier("content"), Constant(question)]),
                     limit=Constant(self.TOP_K),
                 )
             )
@@ -418,7 +418,7 @@ class EvaluateDocID(EvaluateBase):
     Checks if ID in response from KB is matched with doc ID in test dataset
     """
 
-    TOP_K = 100
+    TOP_K = 20
 
     def generate(self, sampled_df: pd.DataFrame) -> pd.DataFrame:
         if "id" not in sampled_df.columns:
@@ -472,8 +472,8 @@ class EvaluateDocID(EvaluateBase):
             df_answers = self.kb.select_query(
                 Select(
                     targets=[Identifier("chunk_content"), Identifier("id")],
-                    where=BinaryOperation(op='=', args=[Identifier('content'), Constant(question)]),
-                    limit=Constant(self.TOP_K)
+                    where=BinaryOperation(op="=", args=[Identifier("content"), Constant(question)]),
+                    limit=Constant(self.TOP_K),
                 )
             )
             query_time = time.time() - start_time

@@ -18,23 +18,74 @@ class TestValidateUrls:
         allowed_urls = ["https://example.com"]
         assert validate_urls(urls, allowed_urls) is False
 
-    def test_multiple_urls_all_allowed(self):
-        """Test that multiple URLs all allowed returns True"""
-        urls = ["https://example.com/file1", "https://example.com/file2"]
+    def test_single_url_disallowed(self):
+        """Test that a single disallowed URL returns False"""
+        urls = "https://example.com/file"
         allowed_urls = ["https://example.com"]
-        assert validate_urls(urls, allowed_urls) is True
+        disallowed_urls = ["https://example.com"]
+        assert validate_urls(urls, allowed_urls, disallowed_urls) is False
 
-    def test_multiple_urls_some_not_allowed(self):
-        """Test that multiple URLs with some not allowed returns False"""
+    def test_url_allowed_but_disallowed(self):
+        """Test that a URL is allowed but disallowed returns False"""
+        urls = "https://example.com/file"
+        allowed_urls = ["https://example.com"]
+        disallowed_urls = ["https://example.com"]
+        assert validate_urls(urls, allowed_urls, disallowed_urls) is False
+
+    def test_url_allowed_and_not_disallowed(self):
+        """Test that a URL is allowed and not disallowed returns True"""
+        urls = "https://example.com/file"
+        allowed_urls = ["https://example.com"]
+        disallowed_urls = ["https://malicious.com"]
+        assert validate_urls(urls, allowed_urls, disallowed_urls) is True
+
+    def test_multiple_urls_some_disallowed(self):
+        """Test that multiple URLs with some disallowed returns False"""
         urls = ["https://example.com/file1", "https://malicious.com/file2"]
-        allowed_urls = ["https://example.com"]
-        assert validate_urls(urls, allowed_urls) is False
+        allowed_urls = ["https://example.com", "https://malicious.com"]
+        disallowed_urls = ["https://malicious.com"]
+        assert validate_urls(urls, allowed_urls, disallowed_urls) is False
 
-    def test_empty_allowed_urls(self):
-        """Test that empty allowed_urls list returns True (allows everything)"""
+    def test_multiple_urls_all_disallowed(self):
+        """Test that multiple URLs all disallowed returns False"""
+        urls = ["https://example.com/file1", "https://malicious.com/file2"]
+        allowed_urls = ["https://example.com", "https://malicious.com"]
+        disallowed_urls = ["https://example.com", "https://malicious.com"]
+        assert validate_urls(urls, allowed_urls, disallowed_urls) is False
+
+    def test_multiple_urls_none_disallowed(self):
+        """Test that multiple URLs none disallowed returns True"""
+        urls = ["https://example.com/file1", "https://trusted.com/file2"]
+        allowed_urls = ["https://example.com", "https://trusted.com"]
+        disallowed_urls = ["https://malicious.com"]
+        assert validate_urls(urls, allowed_urls, disallowed_urls) is True
+
+    def test_empty_disallowed_urls(self):
+        """Test that empty disallowed_urls list returns True (allows everything)"""
+        urls = "https://example.com/file"
+        allowed_urls = ["https://example.com"]
+        disallowed_urls = []
+        assert validate_urls(urls, allowed_urls, disallowed_urls) is True
+
+    def test_disallowed_urls_none(self):
+        """Test that None disallowed_urls returns True (allows everything)"""
+        urls = "https://example.com/file"
+        allowed_urls = ["https://example.com"]
+        assert validate_urls(urls, allowed_urls, None) is True
+
+    def test_empty_allowed_urls_and_disallowed(self):
+        """Test that empty allowed_urls and disallowed_urls returns True (allows everything)"""
         urls = "https://any.com/file"
         allowed_urls = []
-        assert validate_urls(urls, allowed_urls) is True
+        disallowed_urls = []
+        assert validate_urls(urls, allowed_urls, disallowed_urls) is True
+
+    def test_empty_allowed_urls_but_disallowed(self):
+        """Test that empty allowed_urls but disallowed_urls returns False"""
+        urls = "https://bad.com/file"
+        allowed_urls = []
+        disallowed_urls = ["https://bad.com"]
+        assert validate_urls(urls, allowed_urls, disallowed_urls) is False
 
     def test_multiple_allowed_urls(self):
         """Test with multiple allowed URLs"""

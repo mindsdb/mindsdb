@@ -201,7 +201,8 @@ class Config:
             "ml_task_queue": {"type": "local"},
             "url_file_upload": {
                 "enabled": True,
-                "allowed_origins": []
+                "allowed_origins": [],
+                "disallowed_origins": []
             },
             "file_upload_domains": [],      # deprecated, use config[url_file_upload][allowed_origins] instead
             "web_crawling_allowed_sites": [],

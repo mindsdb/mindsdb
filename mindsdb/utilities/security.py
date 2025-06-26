@@ -52,7 +52,7 @@ def _split_url(url: str) -> tuple[str, str]:
     return parsed_url.scheme.lower(), parsed_url.netloc.lower()
 
 
-def validate_urls(urls: str | list[str], allowed_urls: list[str]) -> bool:
+def validate_urls(urls: str | list[str], allowed_urls: list[str], disallowed_urls: list[str] | None = None) -> bool:
     """
     Checks if the provided URL(s) is/are from an allowed host.
 
@@ -69,20 +69,29 @@ def validate_urls(urls: str | list[str], allowed_urls: list[str]) -> bool:
     Args:
         urls (str | list[str]): The URL(s) to check. Can be a single URL (str) or a list of URLs (list).
         allowed_urls (list[str]): The list of allowed URLs.
+        disallowed_urls (list[str]): The list of disallowed URLs. If provided, the function
+                                     will return False if the URL is in the disallowed list.
 
     Returns:
-        bool: True if the URL(s) is/are from an allowed host, False otherwise.
+        bool: True if the URL(s) is/are from an allowed host and not in the disallowed list, False otherwise.
     """
-    if len(allowed_urls) == 0:
-        return True
+    if disallowed_urls is None:
+        disallowed_urls = []
 
     allowed_origins = [_split_url(url) for url in allowed_urls]
+    disallowed_origins = [_split_url(url) for url in disallowed_urls]
 
     if isinstance(urls, str):
         urls = [urls]
 
-    # Check if all provided URLs are from the allowed sites
-    for url in urls:
-        if _split_url(url) not in allowed_origins:
-            return False
+    if allowed_origins:
+        for url in urls:
+            if _split_url(url) not in allowed_origins:
+                return False
+
+    if disallowed_origins:
+        for url in urls:
+            if _split_url(url) in disallowed_origins:
+                return False
+
     return True

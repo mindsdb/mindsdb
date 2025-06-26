@@ -623,7 +623,7 @@ class MetaColumnStatisticsTable(Table):
             columns = record.meta_columns
 
             for column in columns:
-                column_statistics = column.meta_column_statistics[0]
+                column_statistics = column.meta_column_statistics[0] if column.meta_column_statistics else None
 
                 item = {
                     "TABLE_SCHEMA": database_name,

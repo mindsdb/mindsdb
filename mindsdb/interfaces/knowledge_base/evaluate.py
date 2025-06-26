@@ -7,7 +7,7 @@ import pandas as pd
 import datetime as dt
 
 from mindsdb.api.executor.sql_query.result_set import ResultSet
-from mindsdb_sql_parser import Identifier, Select, Constant, Star, parse_sql
+from mindsdb_sql_parser import Identifier, Select, Constant, Star, parse_sql, BinaryOperation
 from mindsdb.utilities import log
 
 from mindsdb.interfaces.knowledge_base.llm_client import LLMClient
@@ -256,7 +256,13 @@ class EvaluateRerank(EvaluateBase):
 
             start_time = time.time()
             logger.debug(f"Querying [{i + 1}/{len(questions)}]: {question}")
-            df_answers = self.kb.select_query(Select(targets=[Identifier("chunk_content")], limit=Constant(self.TOP_K)))
+            df_answers = self.kb.select_query(
+                Select(
+                    targets=[Identifier("chunk_content")],
+                    where=BinaryOperation(op='=', args=[Identifier('content'), Constant(question)]),
+                    limit=Constant(self.TOP_K),
+                )
+            )
             query_time = time.time() - start_time
 
             proposed_responses = list(df_answers["chunk_content"])
@@ -462,7 +468,11 @@ class EvaluateDocID(EvaluateBase):
             start_time = time.time()
             logger.debug(f"Querying [{i + 1}/{len(questions)}]: {question}")
             df_answers = self.kb.select_query(
-                Select(targets=[Identifier("chunk_content"), Identifier("id")], limit=Constant(self.TOP_K))
+                Select(
+                    targets=[Identifier("chunk_content"), Identifier("id")],
+                    where=BinaryOperation(op='=', args=[Identifier('content'), Constant(question)]),
+                    limit=Constant(self.TOP_K)
+                )
             )
             query_time = time.time() - start_time
 

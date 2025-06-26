@@ -249,8 +249,19 @@ class SQLAgent:
                         # If it's a knowledge base and we have knowledge base restrictions
                         self.check_knowledge_base_permission(node)
                     else:
-                        # Regular table check
-                        self.check_table_permission(node)
+                        try:
+                            # Regular table check
+                            self.check_table_permission(node)
+                        except ValueError as origin_exc:
+                            # was it badly quoted by llm?
+                            if len(node.parts) == 1 and node.is_quoted[0] and "." in node.parts[0]:
+                                node2 = Identifier(node.parts[0])
+                                try:
+                                    _check_f(node2, is_table=True)
+                                    return node2
+                                except ValueError:
+                                    ...
+                            raise origin_exc
 
             query_traversal(ast_query, _check_f)
 

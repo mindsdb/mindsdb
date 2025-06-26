@@ -1,0 +1,121 @@
+---
+title: Querying Data Catalog for Integrations
+sidebarTitle: Querying Data Catalog
+---
+
+MindsDB exposes collected metadata from connected data sources via virtual tables in the `INFORMATION_SCHEMA` schema. These views allow users to inspect and query the Data Catalog using familiar SQL syntax.
+
+## Available Data Catalog Tables
+
+To filter results for a specific data integration, use `WHERE TABLE_SCHEMA = '<integration_name>'`.
+
+### `INFORMATION_SCHEMA.META_TABLES`
+
+Provides high-level metadata about available tables in a given integration.
+
+Here are the available columns:
+
+- `TABLE_NAME` (string): Name of the table.
+- `TABLE_TYPE` (string, optional): Type of table (e.g., `BASE TABLE`, `VIEW`).
+- `TABLE_SCHEMA` (string, optional): Schema name or integration name.
+- `TABLE_DESCRIPTION` (string, optional): Description of the table.
+- `ROW_COUNT` (integer, optional): Estimated row count.
+
+Here is how to query it foe a specific data integration:
+
+```sql
+SELECT * FROM INFORMATION_SCHEMA.META_TABLES 
+WHERE TABLE_SCHEMA = 'integration_name';
+```
+
+### `INFORMATION_SCHEMA.META_COLUMNS`
+
+Returns detailed column-level metadata for all tables in the specified integration.
+
+Here are the available columns:
+
+- `TABLE_NAME` (string): Name of the table.
+- `COLUMN_NAME` (string): Column name.
+- `DATA_TYPE` (string): Data type of the column.
+- `COLUMN_DESCRIPTION` (string, optional): Description of the column.
+- `IS_NULLABLE` (boolean, optional): Whether nulls are allowed.
+- `COLUMN_DEFAULT` (string, optional): Default value, if any.
+
+Here is how to query it foe a specific data integration:
+
+```sql
+SELECT * FROM INFORMATION_SCHEMA.META_COLUMNS 
+WHERE TABLE_SCHEMA = 'integration_name';
+```
+
+### `INFORMATION_SCHEMA.META_COLUMN_STATISTICS`
+
+Provides statistical insights about each column’s values and distribution.
+
+Here are the available columns:
+
+- `TABLE_NAME` (string): Name of the table.
+- `COLUMN_NAME` (string): Column name.
+- `MOST_COMMON_VALUES` (array of strings, optional)
+- `MOST_COMMON_FREQUENCIES` (array of integers, optional)
+- `NULL_PERCENTAGE` (float, optional)
+- `MINIMUM_VALUE` (string, optional)
+- `MAXIMUM_VALUE` (string, optional)
+- `DISTINCT_VALUES_COUNT` (integer, optional)
+
+Here is how to query it foe a specific data integration:
+
+```sql
+SELECT * FROM INFORMATION_SCHEMA.META_COLUMN_STATISTICS 
+WHERE TABLE_SCHEMA = 'integration_name';
+```
+
+### `INFORMATION_SCHEMA.META_KEY_COLUMN_USAGE`
+
+Describes the primary key columns for tables in the integration.
+
+Here are the available columns:
+
+- `TABLE_NAME` (string): Name of the table.
+- `COLUMN_NAME` (string): Column name.
+- `ORDINAL_POSITION` (integer, optional)
+- `CONSTRAINT_NAME` (string, optional)
+
+Here is how to query it foe a specific data integration:
+
+```sql
+SELECT * FROM INFORMATION_SCHEMA.META_KEY_COLUMN_USAGE 
+WHERE TABLE_SCHEMA = 'integration_name';
+```
+
+### `INFORMATION_SCHEMA.META_TABLE_CONSTRAINTS`
+
+Lists table-level constraints, including primary and foreign keys.
+
+Here are the available columns:
+
+- `TABLE_NAME` (string): Name of the table.
+- `CONSTRAINT_NAME` (string, optional)
+- `CONSTRAINT_TYPE` (string): e.g., PRIMARY KEY, FOREIGN KEY
+
+Here is how to query it foe a specific data integration:
+
+```sql
+SELECT * FROM INFORMATION_SCHEMA.META_TABLE_CONSTRAINTS 
+WHERE TABLE_SCHEMA = 'integration_name';
+```
+
+### `INFORMATION_SCHEMA.META_HANDLER_INFO`
+
+Returns a textual summary of the integration implementation, including supported SQL features and capabilities.
+
+Here are the available columns:
+
+- `HANDLER_INFO` (string): Description.
+
+Here is how to query it foe a specific data integration:
+
+```sql
+SELECT * FROM INFORMATION_SCHEMA.META_HANDLER_INFO 
+WHERE TABLE_SCHEMA = 'integration_name';
+```

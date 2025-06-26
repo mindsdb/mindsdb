@@ -257,14 +257,35 @@ class MindsDBAgent:
         try:
             logger.info(f"Using streaming API for query: {query[:100]}...")
 
-            # Start with history if provided, otherwise empty list
-            messages = history or []
+            # Format history into the expected format
+            formatted_messages = []
+            if history:
+                for msg in history:
+                    # Convert Message object to dict if needed
+                    msg_dict = msg.dict() if hasattr(msg, "dict") else msg
+                    role = msg_dict.get("role", "user")
+
+                    # Extract text from parts
+                    text = ""
+                    for part in msg_dict.get("parts", []):
+                        if part.get("type") == "text":
+                            text = part.get("text", "")
+                            break
+
+                    if text:
+                        if role == "user":
+                            formatted_messages.append({"question": text, "answer": None})
+                        elif role == "assistant" and formatted_messages:
+                            # Add the answer to the last question
+                            formatted_messages[-1]["answer"] = text
 
             # Add the current query to the messages
-            messages.append({"question": query, "answer": None})
+            formatted_messages.append({"question": query, "answer": None})
+
+            logger.debug(f"Formatted messages for agent: {formatted_messages}")
 
             # Use the streaming_invoke method to get real streaming responses
-            streaming_response = self.streaming_invoke(messages)
+            streaming_response = self.streaming_invoke(formatted_messages)
 
             # Yield all chunks directly from the streaming response
             for chunk in streaming_response:

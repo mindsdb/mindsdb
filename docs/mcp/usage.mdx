@@ -11,9 +11,7 @@ Follow the steps below to use MindsDB as an MCP server.
 
 1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
 
-2. Set the `MINDSDB_MCP_ACCESS_TOKEN` environment variable to enable user authentication for accessing MindsDB's MCP Server.
-
-3. [Connect your data source](/mindsdb_sql/sql/create/database) and/or [upload files](/mindsdb_sql/sql/create/file) to MindsDB in order to ask questions over your data.
+2. [Connect your data source](/mindsdb_sql/sql/create/database) and/or [upload files](/mindsdb_sql/sql/create/file) to MindsDB in order to ask questions over your data.
 
     <Accordion title="Sample Data">
     You can use our sample dataset that stores the sales manager data.
@@ -31,11 +29,19 @@ Follow the steps below to use MindsDB as an MCP server.
     ```
     </Accordion>
 
-4. Run MindsDB enabling its MCP API on port 47337 by default.
+3. Start MindsDB MCP server, either with or without authentication.
 
-    ```bash
-    docker run --name mindsdb_container_name -e MINDSDB_APIS='mcp' -e MINDSDB_MCP_ACCESS_TOKEN=abc123 -p 47337:47337 mindsdb/mindsdb
-    ```
+    * Start MindsDB MCP server without authentication to connect it to [Cursor](/mcp/cursor_usage).
+
+        ```bash
+        docker run --name mindsdb_container -e MINDSDB_APIS=http,mysql,mcp,a2a -p 47334:47334 -p 47335:47335 -p 47337:47337 -p 47338:47338 mindsdb/mindsdb
+        ```
+
+    * Start MindsDB MCP server with authentication to connect it to [OpenAI](/mcp/openai) or [Anthropic](/mcp/anthropic).
+
+        ```bash
+        docker run --name mindsdb_container -e MINDSDB_MCP_ACCESS_TOKEN=abc123 -e MINDSDB_APIS=http,mysql,mcp,a2a -p 47334:47334 -p 47335:47335 -p 47337:47337 -p 47338:47338 mindsdb/mindsdb
+        ```
 
     The following environment variables are set in the Docker container:
 

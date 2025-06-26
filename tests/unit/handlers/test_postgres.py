@@ -9,6 +9,7 @@ from unittest.mock import patch, MagicMock
 import psycopg
 from psycopg.pq import ExecStatus
 from psycopg.postgres import types as pg_types
+import numpy as np
 import pandas as pd
 from pandas import DataFrame
 from pandas.api import types as pd_types
@@ -23,6 +24,7 @@ class ColumnDescription:
     def __init__(self, **kwargs):
         self.name = kwargs.get("name")
         self.type_code = kwargs.get("type_code")
+        self.type_display = kwargs.get("type_display")
 
 
 # map between regtype name and type id
@@ -670,7 +672,6 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertEquals(response.mysql_types, excepted_mysql_types)
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[description[i].name][0]
-            # self.assertEqual(type(result_value), type(input_value), f'type mistmatch: {result_value} != {input_value}')
             self.assertEqual(result_value, input_value, f"value mistmatch: {result_value} != {input_value}")
         # endregion
 
@@ -747,7 +748,6 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertEquals(response.mysql_types, excepted_mysql_types)
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[description[i].name][0]
-            # self.assertEqual(type(result_value), type(input_value), f'type mistmatch: {result_value} != {input_value}')
             self.assertEqual(result_value, input_value, f"value mistmatch: {result_value} != {input_value}")
         # endregion
 
@@ -769,29 +769,34 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertTrue(response.data_frame.iloc[1, 1] is pd.NA)
         # endregion
 
-        # region test arrays
-        """Test data obtained from:
+        # region test arrays and vector
+        """Note: for vector type need to install pgvector extension
+           Test data obtained from:
 
             CREATE TABLE test_array_types (
                 int_arr1 integer[],
                 int_arr2 integer[][],
-                text_arr1 text[]
+                text_arr1 text[],
+                embedding vector(3)
             );
 
             INSERT INTO test_array_types (
                 int_arr1,
                 int_arr2,
-                text_arr1
+                text_arr1,
+                embedding
             ) VALUES (
                 '{1,null,3}',
                 '{{1,2,3},{4,null,6}}',
-                '{"test1", null, "test3"}'
+                '{"test1", null, "test3"}',
+                '[1.1, 2.2, 3.3]'
             );
         """
         input_row = (
             [1, None, 3],  # int_arr1
             [[1, 2, 3], [4, None, 6]],  # int_arr2
             ["test1", None, "test3"],  # text_arr1
+            np.array([1.1, 2.2, 3.3], dtype="float32"),
         )
         mock_cursor.fetchall.return_value = [input_row]
 
@@ -799,6 +804,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ColumnDescription(name="int_arr1", type_code=type_name_to_array_oid["int4"]),
             ColumnDescription(name="int_arr2", type_code=type_name_to_array_oid["int4"]),
             ColumnDescription(name="text_arr1", type_code=type_name_to_array_oid["varchar"]),
+            ColumnDescription(name="embedding", type_code=16390, type_display="vector"),
         ]
         mock_cursor.description = description
 
@@ -806,6 +812,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.JSON,
             MYSQL_DATA_TYPE.JSON,
             MYSQL_DATA_TYPE.JSON,
+            MYSQL_DATA_TYPE.VECTOR,
         ]
 
         response: Response = self.handler.native_query(query_str)
@@ -813,8 +820,10 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[description[i].name][0]
             self.assertEqual(type(result_value), type(input_value), f"type mistmatch: {result_value} != {input_value}")
-            self.assertEqual(result_value, input_value, f"value mistmatch: {result_value} != {input_value}")
-
+            if isinstance(result_value, list):
+                self.assertEqual(result_value, input_value, f"value mistmatch: {result_value} != {input_value}")
+            else:
+                self.assertTrue(np.all(result_value == input_value))
         # endregion
 
 

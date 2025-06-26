@@ -1,5 +1,6 @@
 import json
 import math
+import re
 import time
 from typing import List
 
@@ -46,20 +47,14 @@ def calc_entropy(values: List[float]) -> float:
 def sanitize_json_response(response: str) -> str:
     """Remove markdown code block formatting from JSON response."""
     # Remove leading/trailing whitespace
-    response = response.strip()
+    # Try to find the first JSON object using regex (this assumes a flat or nested dict)
+    json_match = re.search(r"\{.*?\}", response, re.DOTALL)
+    if not json_match:
+        raise ValueError("No JSON object found in the response.")
 
-    # Remove ```json at the beginning
-    if response.startswith("```json"):
-        response = response[7:]  # Remove '```json'
-    elif response.startswith("```"):
-        response = response[3:]  # Remove '```'
+    json_str = json_match.group(0)
 
-    # Remove trailing ```
-    if response.endswith("```"):
-        response = response[:-3]
-
-    # Remove any remaining leading/trailing whitespace
-    return response.strip()
+    return json_str.strip()
 
 
 class EvaluateBase:
@@ -255,7 +250,7 @@ class EvaluateRerank(EvaluateBase):
             {"role": "system", "content": GENERATE_QA_SYSTEM_PROMPT},
             {"role": "user", "content": f"\n\nText:\n{text}\n\n"},
         ]
-        answer = self.llm_client.completion(messages)
+        answer = self.llm_client.completion(messages, json_output=True)
 
         # Sanitize the response by removing markdown code block formatting like ```json
         sanitized_answer = sanitize_json_response(answer)
@@ -464,7 +459,7 @@ class EvaluateDocID(EvaluateBase):
             {"role": "system", "content": GENERATE_QA_SYSTEM_PROMPT},
             {"role": "user", "content": f"\n\nText:\n{text}\n\n"},
         ]
-        answer = self.llm_client.completion(messages)
+        answer = self.llm_client.completion(messages, json_output=True)
 
         # Sanitize the response by removing markdown code block formatting like ```json
         sanitized_answer = sanitize_json_response(answer)

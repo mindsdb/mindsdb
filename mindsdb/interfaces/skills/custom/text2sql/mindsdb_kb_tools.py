@@ -106,6 +106,8 @@ class KnowledgeBaseInfoTool(BaseTool):
 
         for kb_name in kb_names:
             try:
+                self.db.check_knowledge_base_permission(Identifier(kb_name))
+
                 # Get knowledge base schema
                 schema_result = self.db.run_no_throw(str(Describe(kb_name, type="knowledge_base")))
 

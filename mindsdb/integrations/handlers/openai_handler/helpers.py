@@ -4,7 +4,6 @@ import time
 import math
 
 import openai
-from openai import OpenAI
 
 import tiktoken
 
@@ -181,17 +180,16 @@ def count_tokens(messages: List[Dict], encoder: tiktoken.core.Encoding, model_na
         )
 
 
-def get_available_models(api_key: Text, api_base: Text) -> List[Text]:
+def get_available_models(client) -> List[Text]:
     """
     Returns a list of available openai models for the given API key.
 
     Args:
-        api_key (Text): OpenAI API key
-        api_base (Text): OpenAI API base URL
+        client: openai sdk client
 
     Returns:
         List[Text]: List of available models
     """
-    res = OpenAI(api_key=api_key, base_url=api_base).models.list()
+    res = client.models.list()
 
     return [models.id for models in res.data]

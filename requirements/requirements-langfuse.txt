@@ -1,0 +1,1 @@
+langfuse==2.53.3  # Latest as of November 4, 2024

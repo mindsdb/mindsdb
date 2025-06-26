@@ -1,0 +1,65 @@
+---
+title: Inside Minds
+sidebarTitle: Inside Minds
+icon: "network-wired"
+---
+
+Minds are advanced AI systems designed to answer questions across connected data sources, providing comprehensive insights while reducing the time and effort needed for manual data analysis.
+
+Minds function similarly to **large language models (LLMs) but go beyond** by answering queries using any connected data. This is achieved through:
+
+* **parametric search** to retrieve the most relevant data.
+* **semantic search** to understand context and generate meaningful responses.
+* **AI/ML models** to analyze data and deliver precise answers.
+
+With Minds, one can seamlessly integrate AI-powered enterprise knowledge into applications. By creating a Mind, connecting data sources, and making queries via Minds' OpenAI-compatible APIs, applications gain expert-like intelligence, orchestrating across multiple knowledge sources to provide well-reasoned answers.
+
+[Learn more about Minds here](https://mindsdb.com/minds).
+
+### System Architecture
+
+Minds are composed of several key components:
+
+* **large language model (LLM)**, which processes queries and determines the best approach to retrieving relevant data from connected data sources.
+* **federated query engine (MindsDB)**, which is our open-source engine that enables Minds to connect and unify data from multiple sources.
+* **orchestration tools**, which implement guardrails to refine LLM behavior.
+* **reasoning and decision-making tools**, which identify the most relevant data and construct an accurate response.
+
+<p align="center">
+  <img src="/assets/minds/MindsWorkflow.png"/>
+</p>
+
+### How It Works
+
+Here is an overview of how Minds operate, including the key steps for setting up and using them effectively.
+
+* **Datasources**
+
+Connect one or more of the [supported data sources](/minds/data_sources) to Minds Cloud.
+
+Minds access the connected data sources in real time to ensure up-to-date responses.
+
+To improve the answer quality, describe each data source to guide Minds in selecting the best information for each query. [Learn more about best practices for data descriptions](/minds/quickstart_best_practices).
+
+* **Minds**
+
+Create a Mind and connect one or more data sources to it.
+
+Configure a system prompt to customize Minds' behavior and response generation to improve the answer quality. [Learn more about best practices for system prompts](/minds/quickstart_best_practices).
+
+* **Chat**
+
+Chat with Minds to ask questions over the connected data and get comprehensive answers.
+
+The process followed by Minds is shown to users via Minds' thoughts and includes the following:
+
+1. The LLM processes the query, determining the relevant data sources and the best retrieval method.
+2. MindsDB fetches the required data from the connected sources.
+3. The LLM synthesizes an answer based on the retrieved data.
+4. A final evaluation step checks if the response is complete. If the answer is sufficient, it is sent to the user. If not, the process repeats until an optimal response is generated.
+
+* **Environments**
+
+Access Minds via [Minds Cloud](https://mdb.ai/) or integrate Minds into applications and workflows via [API endpoints](/minds/rest_api/overview) or [Python SDK](/minds/python_sdk/overview).
+
+**Follow the [Minds quickstart demo](/minds/quickstart) to try it out.**

@@ -81,27 +81,29 @@ class RayServeHandler(BaseMLEngine):
             resp = requests.post(args['predict_url'],
                                  json={'df': df.to_json(orient='records'), 'pred_args': pred_args},
                                  headers={'content-type': 'application/json; format=pandas-records'})
-        try:
-            if args.get('is_parquet', False):
+        content_type = resp.headers.get("Content-Type", "")
+        if "application/octet-stream" in content_type:
+            try:
                 buffer = io.BytesIO(resp.content)
                 table = pq.read_table(buffer)
                 response = table.to_pandas()
-            else:
-                response = resp.json()
-        except json.JSONDecodeError:
-            error = resp.text
-        except Exception:
-            error = 'Could not decode parquet.'
+            except Exception:
+                error = 'Could not decode parquet.'
         else:
-            if 'prediction' in response:
-                target = args['target']
-                if target != 'prediction':
-                    # rename prediction to target
-                    response[target] = response.pop('prediction')
-                return pd.DataFrame(response)
-            else:
-                # something wrong
-                error = response
+            try:
+                response = resp.json()
+            except json.JSONDecodeError:
+                error = resp.text
+
+        if 'prediction' in response:
+            target = args['target']
+            if target != 'prediction':
+                # rename prediction to target
+                response[target] = response.pop('prediction')
+            return pd.DataFrame(response)
+        else:
+            # something wrong
+            error = response
 
         raise RayServeException(f"Error: {error}")
 

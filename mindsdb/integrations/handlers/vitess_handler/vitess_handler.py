@@ -15,7 +15,6 @@ class VitessHandler(MysqlHandler):
         super().__init__(name, **kwargs)
 
 
-
 connection_args = OrderedDict(
     user={
         'type': ARG_TYPE.STR,

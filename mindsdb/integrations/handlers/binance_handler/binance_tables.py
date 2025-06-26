@@ -1,5 +1,4 @@
 from mindsdb.integrations.libs.api_handler import APITable
-from mindsdb.integrations.libs.response import HandlerResponse as Response
 from mindsdb.integrations.utilities.date_utils import interval_str_to_duration_ms, utc_date_str_to_timestamp_ms
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb_sql_parser import ast
@@ -21,7 +20,7 @@ class BinanceAggregatedTradesTable(APITable):
 
     def _get_batch_klines(self, executor: ThreadPoolExecutor, total_results: int, params: Dict) -> pd.DataFrame:
         """Gets aggregate trade data in batches and combines the results together.
-        
+
         Returns all results as a pandas DataFrame.
 
         Args:
@@ -70,7 +69,7 @@ class BinanceAggregatedTradesTable(APITable):
 
     def _get_kline_params_from_conditions(self, conditions: List) -> Dict:
         """Gets aggregate trade data API params from SQL WHERE conditions.
-        
+
         Returns params to use for Binance API call to klines.
 
         Args:
@@ -111,7 +110,7 @@ class BinanceAggregatedTradesTable(APITable):
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         """Selects data from the Binance API and returns it as a pandas DataFrame.
-        
+
         Returns dataframe representing the Binance API results.
 
         Args:

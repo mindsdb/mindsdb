@@ -104,6 +104,22 @@ def construct_model_from_args(args: Dict) -> Embeddings:
     return model
 
 
+def row_to_document(row: pd.Series) -> str:
+    """
+    Convert a row in the input dataframe into a document
+
+    Default implementation is to concatenate all the columns
+    in the form of
+    field1: value1\nfield2: value2\n...
+    """
+    fields = row.index.tolist()
+    values = row.values.tolist()
+    document = "\n".join(
+        [f"{field}: {value}" for field, value in zip(fields, values)]
+    )
+    return document
+
+
 class LangchainEmbeddingHandler(BaseMLEngine):
     """
     Bridge class to connect langchain.embeddings module to mindsDB
@@ -180,28 +196,13 @@ class LangchainEmbeddingHandler(BaseMLEngine):
             )
 
         # convert each row into a document
-        df_texts = df[input_columns].apply(self.row_to_document, axis=1)
+        df_texts = df[input_columns].apply(row_to_document, axis=1)
         embeddings = model.embed_documents(df_texts.tolist())
 
         # create a new dataframe with the embeddings
         df_embeddings = df.copy().assign(**{target: embeddings})
 
         return df_embeddings
-
-    def row_to_document(self, row: pd.Series) -> str:
-        """
-        Convert a row in the input dataframe into a document
-
-        Default implementation is to concatenate all the columns
-        in the form of
-        field1: value1\nfield2: value2\n...
-        """
-        fields = row.index.tolist()
-        values = row.values.tolist()
-        document = "\n".join(
-            [f"{field}: {value}" for field, value in zip(fields, values)]
-        )
-        return document
 
     def finetune(
         self, df: Union[DataFrame, None] = None, args: Union[Dict, None] = None

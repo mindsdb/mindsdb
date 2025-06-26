@@ -1,4 +1,5 @@
 import time
+from typing import Optional, List
 
 import duckdb
 from typing import Any
@@ -36,18 +37,27 @@ class DummyHandler(DatabaseHandler):
         """
         return HandlerStatusResponse(success=True)
 
-    def native_query(self, query: Any) -> HandlerResponse:
+    def native_query(self, query: Any, params: Optional[List] = None) -> HandlerResponse:
         """Receive raw query and act upon it somehow
 
         Args:
-            query (Any): query in native format (str for sql databases,
-                dict for mongo, etc)
+            query (Any): query in native format (str for sql databases, dict for mongo, etc)
+            params (Optional[List])
 
         Returns:
             HandlerResponse
         """
         con = duckdb.connect(self.db_path)
-        result_df = con.execute(query).fetchdf()
+        if params is not None:
+            query = query.replace('%s', '?')
+            cur = con.executemany(query, params)
+            if cur.rowcount >= 0:
+                result_df = cur.fetchdf()
+            else:
+                con.close()
+                return HandlerResponse(RESPONSE_TYPE.OK)
+        else:
+            result_df = con.execute(query).fetchdf()
         con.close()
         return HandlerResponse(RESPONSE_TYPE.TABLE, result_df)
 
@@ -62,8 +72,8 @@ class DummyHandler(DatabaseHandler):
             HandlerResponse
         """
         renderer = SqlalchemyRender('postgres')
-        query_str = renderer.get_string(query, with_failback=True)
-        return self.native_query(query_str)
+        query_str, params = renderer.get_exec_params(query, with_failback=True)
+        return self.native_query(query_str, params)
 
     def get_tables(self) -> HandlerResponse:
         """Get a list of all the tables in the database

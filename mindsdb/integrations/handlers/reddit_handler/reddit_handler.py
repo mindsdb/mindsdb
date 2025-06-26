@@ -1,6 +1,5 @@
 import praw
-import pandas as pd
-from datetime import datetime
+import os
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -14,8 +13,8 @@ from .reddit_tables import CommentTable, SubmissionTable
 
 logger = log.getLogger(__name__)
 
-class RedditHandler(APIHandler):
 
+class RedditHandler(APIHandler):
 
     def __init__(self, name=None, **kwargs):
         super().__init__(name)
@@ -56,7 +55,6 @@ class RedditHandler(APIHandler):
 
         self.is_connected = True
         return self.reddit
-
 
     def check_connection(self) -> StatusResponse:
         '''It evaluates if the connection with Reddit API is alive and healthy.
@@ -101,6 +99,3 @@ class RedditHandler(APIHandler):
             RESPONSE_TYPE.TABLE,
             data_frame=df
         )
-
-
-

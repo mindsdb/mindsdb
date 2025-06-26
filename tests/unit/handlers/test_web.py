@@ -1,12 +1,20 @@
+from urllib.parse import urljoin
+import concurrent.futures
+
+import pytest
 import unittest
+from unittest.mock import patch, MagicMock
+
+from requests import Response, Request
+from bs4 import BeautifulSoup
+
 from mindsdb.integrations.libs.api_handler_exceptions import TableAlreadyExists
 from mindsdb.integrations.handlers.web_handler.web_handler import WebHandler
 from mindsdb.integrations.handlers.web_handler.web_handler import CrawlerTable
 from mindsdb.integrations.handlers.web_handler import urlcrawl_helpers as helpers
-from unittest.mock import patch, MagicMock
-import concurrent.futures
-import pytest
-from bs4 import BeautifulSoup
+
+
+from mindsdb.integrations.utilities.sql_utils import (FilterCondition, FilterOperator)
 
 
 class TestWebsHandler(unittest.TestCase):
@@ -94,61 +102,129 @@ class TestWebHelpers(unittest.TestCase):
         mock_get_links.assert_called()
 
 
+def html_get(url, **kwargs):
+    # generate html page with 10 sub-links in the same domain
+    if not url.endswith('/'):
+        url = url + '/'
+    links = [
+        f"<a href='{urljoin(url, str(i))}'>link {i}</a>\n"
+        for i in range(10)
+    ]
+
+    html = f"""
+    <html>
+        <body>
+            Content for {url}
+            {"".join(links)}
+            <a href="https://www.google.com/" >different domain</a>
+        </body>
+    </html>
+    """
+    resp = Response()
+    resp._content = html.encode()
+    resp.request = Request()
+    resp.status_code = 200
+
+    return resp
+
+
 class TestWebHandler(unittest.TestCase):
 
-    @patch('mindsdb.integrations.handlers.web_handler.web_handler.extract_comparison_conditions')
-    def test_select_with_or_operator_raise_error(self, mock_extract_comparison_conditions):
-        mock_extract_comparison_conditions.return_value = [('or', 'url', 'example.com')]
+    @patch('requests.Session.get')
+    def test_web_cases(self, mock_get):
+
+        mock_get.side_effect = html_get
 
         crawler_table = CrawlerTable(handler=MagicMock())
-        mock_query = MagicMock()
-        mock_ast = MagicMock()
-        mock_ast.get_type.return_value = 'OR'
 
-        mock_query.where = mock_ast
-        with self.assertRaises(NotImplementedError) as context:
-            crawler_table.select(mock_query)
-        self.assertTrue('OR is not supported' in str(context.exception))
+        # filters
+        single_url = FilterCondition('url', FilterOperator.EQUAL, 'https://docs.mindsdb.com/')
+        two_urls = FilterCondition('url', FilterOperator.IN, ('https://docs.mindsdb.com/', 'https://docs.python.org/'))
 
-    @patch('mindsdb.integrations.handlers.web_handler.web_handler.extract_comparison_conditions')
-    def test_select_with_invalid_url_format(self, mock_extract_comparison_conditions):
-        mock_extract_comparison_conditions.return_value = [('WHERE', 'url', 'example.com')]
+        depth_0 = FilterCondition('crawl_depth', FilterOperator.EQUAL, 0)
+        depth_1 = FilterCondition('crawl_depth', FilterOperator.EQUAL, 1)
+        depth_2 = FilterCondition('crawl_depth', FilterOperator.EQUAL, 2)
 
-        crawler_table = CrawlerTable(handler=MagicMock())
-        mock_query = MagicMock()
-        mock_ast = MagicMock()
-        mock_ast.get_type.return_value = 'WHERE URL ("example.com")'
+        per_url_2 = FilterCondition('per_url_limit', FilterOperator.EQUAL, 2)
 
-        mock_query.where = mock_ast
-        with self.assertRaises(NotImplementedError) as context:
-            crawler_table.select(mock_query)
-        self.assertTrue('Invalid URL format.' in str(context.exception))
+        # ---- single url -----
 
-    @patch('mindsdb.integrations.handlers.web_handler.web_handler.extract_comparison_conditions')
-    def test_select_with_missing_url_(self, mock_extract_comparison_conditions):
-        mock_extract_comparison_conditions.return_value = [('WHERE', 'id', '1')]
+        # default limit 1
+        df = crawler_table.list(conditions=[single_url])
+        assert len(df) == 1
 
-        crawler_table = CrawlerTable(handler=MagicMock())
-        mock_query = MagicMock()
-        mock_ast = MagicMock()
-        mock_ast.get_type.return_value = 'WHERE ID ("1")'
+        # requested count of results
+        df = crawler_table.list(conditions=[single_url], limit=100)
+        assert len(df) == 100
 
-        mock_query.where = mock_ast
-        with self.assertRaises(NotImplementedError) as context:
-            crawler_table.select(mock_query)
-        self.assertTrue('You must specify what url you want to craw' in str(context.exception))
+        # ---- depth -----
 
-    @patch('mindsdb.integrations.handlers.web_handler.web_handler.extract_comparison_conditions')
-    def test_select_with_missing_limit(self, mock_extract_comparison_conditions):
-        mock_extract_comparison_conditions.return_value = [('=', 'url', 'https://docs.mindsdb.com')]
+        # only main url
+        df = crawler_table.list(conditions=[single_url, depth_0])
+        assert len(df) == 1
 
-        crawler_table = CrawlerTable(handler=MagicMock())
-        mock_query = MagicMock()
-        mock_ast = MagicMock()
-        mock_ast.get_type.return_value = 'URL = "https://docs.mindsdb.com"'
+        # main url and all links from it
+        df = crawler_table.list(conditions=[single_url, depth_1])
+        assert len(df) == 11
 
-        mock_query.where = mock_ast
-        mock_query.limit = None
-        with self.assertRaises(NotImplementedError) as context:
-            crawler_table.select(mock_query)
-        self.assertTrue('You must specify a LIMIT clause' in str(context.exception))
+        # main url, +10 from it, +10*10 from every nested
+        df = crawler_table.list(conditions=[single_url, depth_2])
+        assert len(df) == 111
+
+        # depth + limit
+        df = crawler_table.list(conditions=[single_url, depth_2], limit=5)
+        assert len(df) == 5
+
+        # ---- multiple url -----
+
+        # without limit: every url
+        df = crawler_table.list(conditions=[two_urls])
+        assert len(df) == 2
+
+        # with limit: as requested
+        df = crawler_table.list(conditions=[two_urls], limit=100)
+        assert len(df) == 100
+
+        # every url twice
+        df = crawler_table.list(conditions=[two_urls, per_url_2])
+        assert len(df) == 4
+
+        # every url twice, limited
+        df = crawler_table.list(conditions=[two_urls, per_url_2], limit=3)
+        assert len(df) == 3
+
+        # ---- multiple + depth -----
+
+        # one result per url
+        df = crawler_table.list(conditions=[two_urls, depth_0])
+        assert len(df) == 2
+
+        # crawl 2 levels both urls
+        df = crawler_table.list(conditions=[two_urls, depth_2])
+        assert len(df) == 2 * 111
+
+        # ---- multiple + depth + limit -----
+
+        # 2 levels, limited
+        df = crawler_table.list(conditions=[two_urls, depth_2], limit=100)
+        assert len(df) == 100
+
+        # ---- multiple + depth + per_url -----
+
+        # one result per url
+        df = crawler_table.list(conditions=[two_urls, depth_0, per_url_2])
+        assert len(df) == 2
+
+        # two pages per url
+        df = crawler_table.list(conditions=[two_urls, depth_2, per_url_2])
+        assert len(df) == 4
+
+        # ---- multiple + depth + per_url + limit
+
+        # one result per url
+        df = crawler_table.list(conditions=[two_urls, depth_0, per_url_2], limit=3)
+        assert len(df) == 2
+
+        # 4 results but limited
+        df = crawler_table.list(conditions=[two_urls, depth_2, per_url_2], limit=3)
+        assert len(df) == 3

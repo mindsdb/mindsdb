@@ -14,6 +14,7 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
     This client is used for accessing the Microsoft OneDrive specific endpoints of the Microsoft Graph API.
     Several common methods for submitting requests, fetching data, etc. are inherited from the base class.
     """
+
     def __init__(self, access_token: Text) -> None:
         super().__init__(access_token)
 
@@ -99,4 +100,4 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
         Returns:
             bytes: The content of the specified item.
         """
-        return self.fetch_data(f"me/drive/root:/{path}:/content")
+        return self.fetch_data_content(f"me/drive/root:/{path}:/content")

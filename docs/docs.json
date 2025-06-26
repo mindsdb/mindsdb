@@ -802,10 +802,10 @@
                         "group": "AI Agents",
                         "pages": [
                           "sdks/python/agents",
-                          "sdks/python/agents_skills",
-                          "mindsdb_sql/knowledge-bases"
+                          "sdks/python/agents_skills"
                         ]
-                      }
+                      },
+                      "sdks/python/knowledge-bases"
                     ]
                   },
                   {
@@ -1001,7 +1001,8 @@
                   "faqs/persist-predictions",
                   "faqs/mindsdb-with-php",
                   "faqs/disposable-email-doman-and-openai",
-                  "faqs/missing-required-cpu-features"
+                  "faqs/missing-required-cpu-features",
+                  "faqs/a2a-unavailable"
                 ]
               }
             ]

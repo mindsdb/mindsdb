@@ -182,12 +182,12 @@ class EvaluateBase:
             test_data = self.generate_test_data(gen_params)
 
             self.save_to_table(test_table, test_data, is_replace=True)
-        else:
-            test_data = self.read_from_table(test_table)
 
         if params.get("evaluate", True) is False:
             # no evaluate is required
             return pd.DataFrame()
+
+        test_data = self.read_from_table(test_table)
 
         scores = self.evaluate(test_data)
         scores["id"] = math.floor(time.time())  # unique ID for the evaluation run
@@ -534,6 +534,6 @@ class EvaluateDocID(EvaluateBase):
             "total": total_questions,
             "total_found": total_found,
             "retrieved_in_top_10": accurate_in_top_10,
-            "cumulative_recall": cumulative_recall,
+            "cumulative_recall": json.dumps(cumulative_recall),
             "avg_query_time": avg_query_time,
         }

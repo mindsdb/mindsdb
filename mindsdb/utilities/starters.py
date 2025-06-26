@@ -102,7 +102,7 @@ def start_a2a(*args, **kwargs):
     from mindsdb.utilities.config import Config
 
     config = Config()
-    a2a_config = config.get("a2a", {})
+    a2a_config = config.get("api", {}).get("a2a", {})
 
     # Pass configuration to the A2A main function
     main(a2a_config, *args, **kwargs)

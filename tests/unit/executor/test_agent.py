@@ -156,8 +156,8 @@ class TestAgent(BaseExecutorDummyML):
         ret = self.run_sql("select * from my_agent where question = 'hi'")
 
         # check model params
-        assert mock_openai.call_args_list[-1][1]['api_key'] == '-key-'
-        assert mock_openai().chat.completions.create.call_args_list[-1][1]['model'] == 'gpt-3.5-turbo'
+        assert mock_openai.call_args_list[-1][1]["api_key"] == "-key-"
+        assert mock_openai().chat.completions.create.call_args_list[-1][1]["model"] == "gpt-3.5-turbo"
 
         assert agent_response in ret.answer[0]
 
@@ -202,8 +202,8 @@ class TestAgent(BaseExecutorDummyML):
         ret = self.run_sql("select * from my_agent where question = 'hi'")
 
         # check model params
-        assert mock_openai.call_args_list[-1][1]['api_key'] == '-secret-'
-        assert mock_openai().chat.completions.create.call_args_list[-1][1]['model'] == 'gpt-42'
+        assert mock_openai.call_args_list[-1][1]["api_key"] == "-secret-"
+        assert mock_openai().chat.completions.create.call_args_list[-1][1]["model"] == "gpt-42"
 
         assert agent_response in ret.answer[0]
 

@@ -130,6 +130,8 @@ class EvaluateBase:
         integration_name = table_name.parts[0]
         table_name = Identifier(parts=table_name.parts[1:])
         dn = self.session.datahub.get(integration_name)
+        if dn is None:
+            raise ValueError(f"Can't find database: {integration_name}")
         return dn, table_name
 
     def save_to_table(self, table_name: Identifier, df: pd.DataFrame, is_replace=False):

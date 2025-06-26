@@ -123,8 +123,9 @@ class File(Resource):
                 return http_error(400, "URL file upload is disabled.")
 
             allowed_origins = config["url_file_upload"]["allowed_origins"]
+            disallowed_origins = config["url_file_upload"]["disallowed_origins"]
 
-            if validate_urls(url, allowed_origins) is False:
+            if validate_urls(url, allowed_origins, disallowed_origins) is False:
                 return http_error(
                     400,
                     "Invalid URL",

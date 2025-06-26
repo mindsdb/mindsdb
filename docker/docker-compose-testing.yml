@@ -5,6 +5,8 @@ version: "3.2"
 services:
 
   mysql:
+    security_opt:
+      - "no-new-privileges:true"
     image: mysql:8.0
     restart: always
     environment:

@@ -795,6 +795,77 @@ class TestAgent(BaseExecutorDummyML):
         # result of sql_db_query
         assert "Jupiter" in mock_openai.agent_calls[3]
 
+    @patch("openai.OpenAI")
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_agent_data(self, mock_litellm_embedding, mock_openai):
+        set_litellm_embedding(mock_litellm_embedding, [[0.1] * 1536] * 3)
+        self.run_sql("""
+            create knowledge base kb1
+            using
+                embedding_model = {
+                    "provider": "bedrock",
+                    "model_name": "titan"
+                }
+        """)
+        df = pd.DataFrame([["1000", "Moon"], ["1001", "Jupiter"]], columns=["id", "planet_name"])
+        self.save_file("file1", df)
+        self.save_file("file2", df)
+
+        self.run_sql("""
+            CREATE AGENT my_agent
+            USING
+              model = "gpt-3.5-turbo",
+              openai_api_key='--',
+              data = {
+                 "knowledge_bases": ["kb1"],
+                 "tables": ["files.file1", "files.file2"]
+              }
+         """)
+
+        # exposed
+        set_openai_completion(
+            mock_openai,
+            [
+                dedent("""
+                    Thought: Do I need to use a tool? Yes
+                    Action: kb_info_tool
+                    Action Input: kb1
+                """),
+                dedent("""
+                    Thought: Do I need to use a tool? Yes
+                    Action: sql_db_schema
+                    Action Input: files.file1
+                """),
+                "Hi!",
+            ],
+        )
+        self.run_sql("select * from my_agent where question = 'test'")
+
+        assert "Schema Information" in mock_openai.agent_calls[1]
+        assert "planet_name" in mock_openai.agent_calls[2]  # column
+
+        # not exposed
+        set_openai_completion(
+            mock_openai,
+            [
+                dedent("""
+                    Thought: Do I need to use a tool? Yes
+                    Action: kb_info_tool
+                    Action Input: kb3
+                """),
+                dedent("""
+                    Thought: Do I need to use a tool? Yes
+                    Action: sql_db_schema
+                    Action Input: files.file3
+                """),
+                "Hi!",
+            ],
+        )
+        self.run_sql("select * from my_agent where question = 'test'")
+
+        assert "kb3 not found" in mock_openai.agent_calls[1]
+        assert "file3 not found" in mock_openai.agent_calls[2]
+
 
 class TestKB(BaseExecutorDummyML):
     def _create_kb(

@@ -363,6 +363,19 @@
                     ]
                   }
                 ]
+              },
+              {
+                "group": "Data Catalog",
+                "pages": [
+                  "data_catalog/overview",
+                  {
+                    "group": "Data Catalog for Integrations",
+                    "pages": [
+                      "data_catalog/integrations/overview",
+                      "data_catalog/integrations/query"
+                    ]
+                  }
+                ]
               }
             ]
           },
@@ -394,6 +407,7 @@
                       "mindsdb_sql/sql/create/view",
                       "mindsdb_sql/sql/drop/view",
                       "mindsdb_sql/sql/api/select-view",
+                      "mindsdb_sql/sql/api/alter-view",
                       "mindsdb_sql/sql/create/file",
                       "mindsdb_sql/sql/drop/file",
                       "mindsdb_sql/sql/api/select-files"
@@ -802,10 +816,10 @@
                         "group": "AI Agents",
                         "pages": [
                           "sdks/python/agents",
-                          "sdks/python/agents_skills",
-                          "mindsdb_sql/knowledge-bases"
+                          "sdks/python/agents_skills"
                         ]
-                      }
+                      },
+                      "sdks/python/knowledge-bases"
                     ]
                   },
                   {

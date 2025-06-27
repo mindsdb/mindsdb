@@ -80,6 +80,15 @@ def set_litellm_embedding(mock_litellm_embedding, response):
     mock_litellm_embedding.side_effect = resp_f
 
 
+def get_dataset_planets():
+    data = [
+        ["1000", "Moon"],
+        ["1001", "Jupiter"],
+        ["1002", "Venus"],
+    ]
+    return pd.DataFrame(data, columns=["id", "planet_name"])
+
+
 class TestAgent(BaseExecutorDummyML):
     @pytest.mark.slow
     def test_mindsdb_provider(self):
@@ -622,6 +631,14 @@ class TestAgent(BaseExecutorDummyML):
         ret = self.run_sql("select * from default_retrieval_agent where question = 'test question'")
         assert agent_response in ret.answer[0]
 
+    @staticmethod
+    def _action(name, action_input=""):
+        return dedent(f"""
+                    Thought: Do I need to use a tool? Yes
+                    Action: {name}
+                    Action Input: {action_input}
+                """)
+
     @patch("openai.OpenAI")
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_agent_permissions(self, mock_litellm_embedding, mock_openai):
@@ -629,22 +646,13 @@ class TestAgent(BaseExecutorDummyML):
 
         kb_sql = """
             create knowledge base %s
-            using
-                embedding_model = {
-                    "provider": "bedrock",
-                    "model_name": "titan"
-                }
+            using embedding_model = {"provider": "bedrock", "model_name": "titan"}
         """
         self.run_sql(kb_sql % "kb_show1")
         self.run_sql(kb_sql % "kb_show2")
         self.run_sql(kb_sql % "kb_hide")
 
-        data = [
-            ["1000", "Moon"],
-            ["1001", "Jupiter"],
-            ["1002", "Venus"],
-        ]
-        df = pd.DataFrame(data, columns=["id", "planet_name"])
+        df = get_dataset_planets()
 
         self.save_file("show1", df)
         self.save_file("show2", df)
@@ -669,16 +677,8 @@ class TestAgent(BaseExecutorDummyML):
         set_openai_completion(
             mock_openai,
             [
-                dedent("""
-                    Thought: Do I need to use a tool? Yes
-                    Action: kb_info_tool
-                    Action Input: kb_hide
-                """),
-                dedent("""
-                    Thought: Do I need to use a tool? Yes
-                    Action: kb_query_tool
-                    Action Input: select * from kb_hide where content='Moon'
-                """),
+                self._action("kb_info_tool", "kb_hide"),
+                self._action("kb_query_tool", "select * from kb_hide where content='Moon'"),
                 "Hi!",
             ],
         )
@@ -696,21 +696,9 @@ class TestAgent(BaseExecutorDummyML):
         set_openai_completion(
             mock_openai,
             [
-                dedent("""
-                    Thought: Do I need to use a tool? Yes
-                    Action: kb_list_tool
-                    Action Input:
-                """),
-                dedent("""
-                    Thought: Do I need to use a tool? Yes
-                    Action: kb_info_tool
-                    Action Input: kb_show1
-                """),
-                dedent("""
-                    Thought: Do I need to use a tool? Yes
-                    Action: kb_query_tool
-                    Action Input: select * from kb_show1 where content='Moon' limit 1
-                """),
+                self._action("kb_list_tool"),
+                self._action("kb_info_tool", "kb_show1"),
+                self._action("kb_query_tool", "select * from kb_show1 where content='Moon' limit 1"),
                 "Hi!",
             ],
         )
@@ -734,16 +722,8 @@ class TestAgent(BaseExecutorDummyML):
         set_openai_completion(
             mock_openai,
             [
-                dedent("""
-                    Thought: Do I need to use a tool? Yes
-                    Action: sql_db_schema
-                    Action Input: files.hide
-                """),
-                dedent("""
-                    Thought: Do I need to use a tool? Yes
-                    Action: sql_db_query
-                    Action Input: select * from files.hide
-                """),
+                self._action("sql_db_schema", "files.hide"),
+                self._action("sql_db_query", "select * from files.hide"),
                 "Hi!",
             ],
         )
@@ -760,22 +740,9 @@ class TestAgent(BaseExecutorDummyML):
         set_openai_completion(
             mock_openai,
             [
-                # first step, use kb
-                dedent("""
-                    Thought: Do I need to use a tool? Yes
-                    Action: sql_db_list_tables
-                    Action Input: 
-                """),
-                dedent("""
-                    Thought: Do I need to use a tool? Yes
-                    Action: sql_db_schema
-                    Action Input: files.show1
-                """),
-                dedent("""
-                    Thought: Do I need to use a tool? Yes
-                    Action: sql_db_query
-                    Action Input: select * from files.show1 where id = '1001'
-                """),
+                self._action("sql_db_list_tables"),
+                self._action("sql_db_schema", "files.show1"),
+                self._action("sql_db_query", "select * from files.show1 where id = '1001'"),
                 "Hi!",
             ],
         )
@@ -801,13 +768,10 @@ class TestAgent(BaseExecutorDummyML):
         set_litellm_embedding(mock_litellm_embedding, [[0.1] * 1536] * 3)
         self.run_sql("""
             create knowledge base kb1
-            using
-                embedding_model = {
-                    "provider": "bedrock",
-                    "model_name": "titan"
-                }
+            using embedding_model = {"provider": "bedrock", "model_name": "titan"}
         """)
-        df = pd.DataFrame([["1000", "Moon"], ["1001", "Jupiter"]], columns=["id", "planet_name"])
+        df = get_dataset_planets()
+
         self.save_file("file1", df)
         self.save_file("file2", df)
 
@@ -826,16 +790,8 @@ class TestAgent(BaseExecutorDummyML):
         set_openai_completion(
             mock_openai,
             [
-                dedent("""
-                    Thought: Do I need to use a tool? Yes
-                    Action: kb_info_tool
-                    Action Input: kb1
-                """),
-                dedent("""
-                    Thought: Do I need to use a tool? Yes
-                    Action: sql_db_schema
-                    Action Input: files.file1
-                """),
+                self._action("kb_info_tool", "kb1"),
+                self._action("sql_db_schema", "files.file1"),
                 "Hi!",
             ],
         )
@@ -848,16 +804,8 @@ class TestAgent(BaseExecutorDummyML):
         set_openai_completion(
             mock_openai,
             [
-                dedent("""
-                    Thought: Do I need to use a tool? Yes
-                    Action: kb_info_tool
-                    Action Input: kb3
-                """),
-                dedent("""
-                    Thought: Do I need to use a tool? Yes
-                    Action: sql_db_schema
-                    Action Input: files.file3
-                """),
+                self._action("kb_info_tool", "kb3"),
+                self._action("sql_db_schema", "files.file3"),
                 "Hi!",
             ],
         )
@@ -865,6 +813,47 @@ class TestAgent(BaseExecutorDummyML):
 
         assert "kb3 not found" in mock_openai.agent_calls[1]
         assert "file3 not found" in mock_openai.agent_calls[2]
+
+    @patch("openai.OpenAI")
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_agent_accept_wrong_quoting(self, mock_litellm_embedding, mock_openai):
+        set_litellm_embedding(mock_litellm_embedding, [[0.1] * 1536] * 3)
+        self.run_sql("""
+            create knowledge base kb1
+            using embedding_model = {"provider": "bedrock", "model_name": "titan"}
+        """)
+        df = get_dataset_planets()
+
+        self.save_file("file1", df)
+
+        self.run_sql("""
+            CREATE AGENT my_agent
+            USING
+              model = "gpt-3.5-turbo",
+              openai_api_key='--',
+              data = {
+                 "knowledge_bases": ["kb1"],
+                 "tables": ["files.file1"]
+              }
+         """)
+        self.run_sql("""
+            insert into kb1
+            select id, planet_name content from files.file1
+        """)
+
+        # exposed
+        set_openai_completion(
+            mock_openai,
+            [
+                self._action("kb_query_tool", "SELECT * FROM `mindsdb.kb1` WHERE id = '1001'"),
+                self._action("sql_db_query", "SELECT * FROM `files.file1` WHERE id = '1001';"),
+                "Hi!",
+            ],
+        )
+        self.run_sql("select * from my_agent where question = 'test'")
+
+        assert "Jupiter" in mock_openai.agent_calls[1]
+        assert "Jupiter" in mock_openai.agent_calls[2]
 
 
 class TestKB(BaseExecutorDummyML):

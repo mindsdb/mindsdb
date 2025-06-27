@@ -440,7 +440,7 @@ if __name__ == "__main__":
     mysql_api_config = config.get("api", {}).get("mysql", {})
     mcp_api_config = config.get("api", {}).get("mcp", {})
     litellm_api_config = config.get("api", {}).get("litellm", {})
-    a2a_api_config = config.get("a2a", {})
+    a2a_api_config = config.get("api", {}).get("a2a", {})
     trunc_processes_struct = {
         TrunkProcessEnum.HTTP: TrunkProcessData(
             name=TrunkProcessEnum.HTTP.value,

@@ -20,6 +20,7 @@ class BasePreprocessingConfig(BaseModel):
     """Base configuration for preprocessing"""
     chunk_size: int = Field(default=DEFAULT_CHUNK_SIZE, description="Size of document chunks")
     chunk_overlap: int = Field(default=DEFAULT_CHUNK_OVERLAP, description="Overlap between chunks")
+    doc_id_column_name: str = Field(default="_original_doc_id", description="Name of doc_id columns in metadata")
 
 
 class ContextualConfig(BasePreprocessingConfig):
@@ -38,7 +39,7 @@ class ContextualConfig(BasePreprocessingConfig):
     )
 
 
-class TextChunkingConfig(BaseModel):
+class TextChunkingConfig(BasePreprocessingConfig):
     """Configuration for text chunking preprocessor using Pydantic"""
     chunk_size: int = Field(
         default=1000,

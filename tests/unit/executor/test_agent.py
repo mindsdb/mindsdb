@@ -1260,6 +1260,7 @@ class TestKB(BaseExecutorDummyML):
            select * from kb_alg where
             content = 'green'
             and content not IN ('square', 'triangle')
+            and content is not null
            limit 3
         """)
 
@@ -1301,6 +1302,7 @@ class TestKB(BaseExecutorDummyML):
            select * from kb_alg where
                (content like 'green' and size='big') 
             or (content like 'white' and size='small') 
+            or (content is null)
            limit 3
         """)
         for content in ret["chunk_content"]:

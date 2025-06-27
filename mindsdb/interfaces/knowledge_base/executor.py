@@ -12,6 +12,7 @@ from mindsdb_sql_parser.ast import (
     Tuple,
     ASTNode,
     BetweenOperation,
+    NullConstant,
 )
 import pandas as pd
 
@@ -205,6 +206,12 @@ class KnowledgeBaseQueryExecutor:
             content_condition2.op = "="
             return self.call_kb([content_condition2] + other_conditions)
 
+        elif content_condition.op == "IS" and isinstance(content_condition.args[1], NullConstant):
+            # return empty dataset, call to get column names
+            return self.call_kb([], limit=1)[:0]
+        elif content_condition.op == "IS NOT" and isinstance(content_condition.args[1], NullConstant):
+            # execute without conditions
+            return self.call_kb([])
         else:
             raise NotImplementedError(
                 f'Operator "{content_condition.op}" is not supported for condition: {content_condition}'

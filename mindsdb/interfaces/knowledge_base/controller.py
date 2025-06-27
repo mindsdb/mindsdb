@@ -774,6 +774,9 @@ class KnowledgeBaseTable:
     def call_litellm_embedding(session, model_params, messages):
         args = copy.deepcopy(model_params)
 
+        if "model_name" not in args:
+            raise ValueError("'model_name' must be provided for embedding model")
+
         llm_model = args.pop("model_name")
         engine = args.pop("provider")
 
@@ -1081,7 +1084,10 @@ class KnowledgeBaseController:
         except PredictorRecordNotFound:
             pass
 
-        if params.get("provider", None) not in ("openai", "azure_openai"):
+        if "provider" not in params:
+            raise ValueError("'provider' parameter is required for embedding model")
+
+        if params["provider"] not in ("openai", "azure_openai"):
             # try use litellm
             KnowledgeBaseTable.call_litellm_embedding(self.session, params, ["test"])
             return

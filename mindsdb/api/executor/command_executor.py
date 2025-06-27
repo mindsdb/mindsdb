@@ -6,6 +6,7 @@ from functools import reduce
 
 import pandas as pd
 from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser.ast.mindsdb import AlterDatabase
 from mindsdb_sql_parser.ast import (
     Alter,
     ASTNode,
@@ -35,6 +36,8 @@ from mindsdb_sql_parser.ast import (
     Tuple,
     Function,
     Variable,
+    Intersect,
+    Except,
 )
 
 # typed models
@@ -191,6 +194,8 @@ class ExecuteCommands:
             return self.answer_drop_tables(statement, database_name)
         elif statement_type is DropDatasource or statement_type is DropDatabase:
             return self.answer_drop_database(statement)
+        elif statement_type is AlterDatabase:
+            return self.answer_alter_database(statement)
         elif statement_type is Describe:
             # NOTE in sql 'describe table' is same as 'show columns'
             obj_type = statement.type
@@ -577,9 +582,6 @@ class ExecuteCommands:
                 return ret
             query = SQLQuery(statement, session=self.session, database=database_name)
             return self.answer_select(query)
-        elif statement_type is Union:
-            query = SQLQuery(statement, session=self.session, database=database_name)
-            return self.answer_select(query)
         elif statement_type is Explain:
             return self.answer_show_columns(statement.target, database_name=database_name)
         elif statement_type is CreateTable:
@@ -624,6 +626,9 @@ class ExecuteCommands:
             return self.answer_create_kb_index(statement, database_name)
         elif statement_type is EvaluateKnowledgeBase:
             return self.answer_evaluate_kb(statement, database_name)
+        elif statement_type in (Union, Intersect, Except):
+            query = SQLQuery(statement, session=self.session, database=database_name)
+            return self.answer_select(query)
         else:
             logger.warning(f"Unknown SQL statement: {sql}")
             raise NotSupportedYet(f"Unknown SQL statement: {sql}")
@@ -1193,6 +1198,13 @@ class ExecuteCommands:
         except EntityNotExistsError:
             if statement.if_exists is not True:
                 raise
+        return ExecuteAnswer()
+
+    def answer_alter_database(self, statement):
+        if len(statement.name.parts) != 1:
+            raise Exception("Database name should contain only 1 part.")
+        db_name = statement.name.parts[0]
+        self.session.database_controller.update(db_name, data=statement.params)
         return ExecuteAnswer()
 
     def answer_drop_tables(self, statement, database_name):

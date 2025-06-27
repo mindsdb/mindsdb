@@ -3,13 +3,13 @@
 
 name: Update Release Notes
 
+permissions:
+    contents: write
+
 on:
   release:
     types:
       - published
-
-permissions:
-    contents: write
 
 jobs:
   get-release-notes:

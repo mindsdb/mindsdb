@@ -433,16 +433,15 @@ class APIHandler(BaseHandler):
         Args:
             name (str): the handler name
         """
-
         self._tables = {}
 
     def _register_table(self, table_name: str, table_class: Any):
         """
         Register the data resource. For e.g if you are using Twitter API it registers the `tweets` resource from `/api/v2/tweets`.
         """
-        if table_name in self._tables:
+        if table_name.lower() in self._tables:
             raise TableAlreadyExists(f"Table with name {table_name} already exists for this handler")
-        self._tables[table_name] = table_class
+        self._tables[table_name.lower()] = table_class
 
     def _get_table(self, name: Identifier):
         """
@@ -450,15 +449,18 @@ class APIHandler(BaseHandler):
         Args:
             name (Identifier): the table name
         """
-        name = name.parts[-1]
-        if name not in self._tables:
-            raise TableNotFound(f"Table not found: {name}")
-        return self._tables[name]
+        name = name.parts[-1].lower()
+        if name in self._tables:
+            return self._tables[name]
+        raise TableNotFound(f"Table not found: {name}")
 
     def query(self, query: ASTNode):
         if isinstance(query, Select):
+            # If the list method exists, it should be overridden in the child class.
+            # The APIResource class could be used as a base class by overriding the select method, but not the list method.
             table = self._get_table(query.from_table)
-            if not hasattr(table, "list"):
+            list_method = getattr(table, "list", None)
+            if not list_method or (list_method and list_method.__func__ is APIResource.list):
                 # for back compatibility, targets wasn't passed in previous version
                 query.targets = [Star()]
             result = self._get_table(query.from_table).select(query)
@@ -514,6 +516,21 @@ class MetaAPIHandler(APIHandler):
 
     This class is used when the handler is also needed to store information in the data catalog.
     """
+
+    def meta_get_handler_info(self, **kwargs) -> str:
+        """
+        Retrieves information about the design and implementation of the API handler.
+        This should include, but not be limited to, the following:
+        - The type of SQL queries and operations that the handler supports.
+        - etc.
+
+        Args:
+            kwargs: Additional keyword arguments that may be used in generating the handler information.
+
+        Returns:
+            str: A string containing information about the API handler's design and implementation.
+        """
+        pass
 
     def meta_get_tables(self, table_names: Optional[List[str]] = None, **kwargs) -> Response:
         """

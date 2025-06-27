@@ -1,0 +1,94 @@
+---
+title: Insert Into Knowledge Base
+sidebarTitle: Insert Into Knowledge Base
+---
+
+**PUT `/api/projects/{project_name}/knowledge_bases/{knowledge_base_name}`**
+
+This API endpoint inserts data into a knowledge base using the `PUT` method.
+
+<Tip>
+Learn more about knowledge bases following [this doc page](/mindsdb_sql/knowledge-bases).
+</Tip>
+
+### Path Parameters
+
+<ParamField body='project_name' type='string' required>
+Defines the project where the knowledge bases are located. Note that the default project name is `mindsdb`.
+</ParamField>
+
+<ParamField body='knowledge_base_name' type='string' required>
+Defines the knowledge base name.
+</ParamField>
+
+### Body
+
+<ParamField body='query' type='string'>
+Defines the SQL query used to fetch data to be inserted into the knowledge base.
+</ParamField>
+
+<ParamField body='rows' type='string'>
+Defines raw data to be inserted into the knowledge base.
+</ParamField>
+
+<ParamField body='files' type='string'>
+Defines the list of files to be inserted into the knowledge base.
+</ParamField>
+
+<ParamField body='urls' type='string'>
+Defines the list of URLs to be crawled and their content inserted into the knowledge base. For example, `"urls": ["https://docs.mindsdb.com/mindsdb_sql/knowledge-bases"]`.
+</ParamField>
+
+<ParamField body='limit' type='string'>
+Defines the limit of pages to be crawled. For example, `"limit": 10`.
+</ParamField>
+
+<ParamField body='crawl_depth' type='string'>
+Defines the crawl depth limit for URLs. For example, `"crawl_depth": 2`.
+</ParamField>
+
+<ParamField body='filters' type='string'>
+Defines the list of domains to be filtered. For example, `"filters": { "allowed_domains": ["example.com"] }`.
+</ParamField>
+
+<Tip>
+Learn more about the [web crawler here](/integrations/app-integrations/web-crawler).
+</Tip>
+
+### Response
+
+None.
+
+<RequestExample>
+
+```shell Shell
+curl -X PUT http://127.0.0.1:47334/api/projects/mindsdb/knowledge_bases/my_kb \
+  -H "Content-Type: application/json" \
+  -d '{
+    "knowledge_base": {
+      "rows": [
+        {
+          "order_id": "123",
+          "product": "Widget A",
+          "notes": "Great product, would buy again"
+        },
+        {
+          "order_id": "124",
+          "product": "Widget B",
+          "notes": "Poor quality"
+        }
+      ],
+      "query": "SELECT * FROM sample_data.orders"
+    }
+}'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Response
+200 OK
+```
+
+</ResponseExample>

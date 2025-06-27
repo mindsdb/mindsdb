@@ -69,7 +69,7 @@ class DatabendHandler(DatabaseHandler):
         self.is_connected = True
 
         return self.connection
-    
+
     def disconnect(self):
         """
         Close any existing connections.
@@ -105,7 +105,7 @@ class DatabendHandler(DatabaseHandler):
                 self.is_connected = False
 
         return response
-    
+
     def native_query(self, query: str) -> StatusResponse:
         """
         Receive raw query and act upon it somehow.
@@ -146,7 +146,7 @@ class DatabendHandler(DatabaseHandler):
             self.disconnect()
 
         return response
-    
+
     def query(self, query: ASTNode) -> StatusResponse:
         """
         Receive query as AST (abstract syntax tree) and act upon it somehow.
@@ -178,7 +178,7 @@ class DatabendHandler(DatabaseHandler):
             result.data_frame = df.rename(columns={f'Tables_in_{self.connection_data["database"]}': 'table_name'})
 
         return result
-    
+
     def get_columns(self, table_name: str) -> StatusResponse:
         """
         Returns a list of entity columns.

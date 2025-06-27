@@ -8,14 +8,14 @@ class VerticaHandlerTest(unittest.TestCase):
     def setUpClass(cls):
         cls.kwargs = {
             "connection_data": {
-                "host":'127.0.0.1',
-                "port":5433,
-                "user":'dbadmin',
-                "password":'',
-                "database":'VMart',
-                "schema_name":'public'
+                "host": '127.0.0.1',
+                "port": 5433,
+                "user": 'dbadmin',
+                "password": '',
+                "database": 'VMart',
+                "schema_name": 'public'
             }
-    
+
         }
         cls.handler = VerticaHandler('test_vertica_handler', cls.kwargs)
 
@@ -24,21 +24,21 @@ class VerticaHandlerTest(unittest.TestCase):
 
     def test_1_connect(self):
         assert self.handler.connect()
-    
+
     def test_2_create_table(self):
         query = "CREATE Table TEST(id Number(1),Name Varchar(33))"
         result = self.handler.query(query)
-        assert result.type is not RESPONSE_TYPE.ERROR 
+        assert result.type is not RESPONSE_TYPE.ERROR
 
     def test_3_insert(self):
         query = "INSERT INTO TEST (1,'lOVe yOU)"
         result = self.handler.query(query)
-        assert result.type is not RESPONSE_TYPE.ERROR 
+        assert result.type is not RESPONSE_TYPE.ERROR
 
     def test_4_native_query_select(self):
         query = "SELECT * FROM TEST;"
         result = self.handler.query(query)
-        assert result.type is RESPONSE_TYPE.TABLE 
+        assert result.type is RESPONSE_TYPE.TABLE
 
     def test_5_get_tables(self):
         tables = self.handler.get_tables()

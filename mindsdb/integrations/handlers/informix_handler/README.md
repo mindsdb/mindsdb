@@ -1,11 +1,17 @@
 # IBM Informix Handler
 
-This is the implementation of the IBM Informix handler for MindsDB.
+This is the implementation of the IBM Informix handler for MindsDB. The `IfxPy` library is not currently being published to PyPI. As a workaround, you need to install it directly from the GitHub repository:
+
+```
+pip install git+https://github.com/OpenInformix/IfxPy#subdirectory=IfxPy
+```
 
 ## IBM Informix
+
 IBM Informix is a product family within IBM's Information Management division that is centered on several relational database management system (RDBMS) offerings.The Informix server supports the object–relational model and supports (through extensions) data types that are not a part of the SQL standard. The most widely used of these are the JSON, BSON, time series and spatial extensions, which provide both data type support and language extensions that permit high performance domain specific queries and efficient storage for data sets based on semi-structured, time series, and spatial data. 
 
 ## Implementation
+
 This handler was implemented using the `IfxPy/IfxPyDbi`, a Python library that allows you to use Python code to run SQL commands on DB2 Database.
 
 The required arguments to establish a connection are,

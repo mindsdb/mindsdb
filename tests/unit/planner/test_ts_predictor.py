@@ -12,63 +12,61 @@ from mindsdb.api.executor.planner import plan_query
 from mindsdb.api.executor.planner.query_plan import QueryPlan
 from mindsdb.api.executor.planner.step_result import Result
 from mindsdb.api.executor.planner.steps import (
-    JoinStep, SaveToTable,
-    ProjectStep, InsertToTable,
-    MapReduceStep, MultipleSteps,
-    UpdateToTable, LimitOffsetStep,
+    JoinStep,
+    SaveToTable,
+    ProjectStep,
+    InsertToTable,
+    MapReduceStep,
+    MultipleSteps,
+    UpdateToTable,
+    LimitOffsetStep,
     FetchDataframeStep,
     ApplyTimeseriesPredictorStep,
-    SubSelectStep
+    SubSelectStep,
 )
 
 
 class TestJoinTimeseriesPredictor:
     def test_join_predictor_timeseries(self):
         predictor_window = 10
-        group_by_column = 'vendor_id'
+        group_by_column = "vendor_id"
         query = Select(
             targets=[Star()],
             from_table=Join(
-                left=Identifier('mysql.data.ny_output', alias=Identifier('ta')),
-                right=Identifier('mindsdb.tp3', alias=Identifier('tb')),
-                join_type='left join'
+                left=Identifier("mysql.data.ny_output", alias=Identifier("ta")),
+                right=Identifier("mindsdb.tp3", alias=Identifier("tb")),
+                join_type="left join",
             ),
         )
 
         expected_plan = QueryPlan(
             steps=[
                 FetchDataframeStep(
-                    integration='mysql',
+                    integration="mysql",
                     query=Select(
                         targets=[Identifier(parts=[group_by_column], alias=Identifier(group_by_column))],
-                        from_table=Identifier('data.ny_output', alias=Identifier('ta')),
+                        from_table=Identifier("data.ny_output", alias=Identifier("ta")),
                         distinct=True,
-                    )
+                    ),
                 ),
                 MapReduceStep(
                     values=Result(0),
-                    reduce='union',
+                    reduce="union",
                     step=FetchDataframeStep(
-                        integration='mysql',
+                        integration="mysql",
                         query=parse_sql(
                             "SELECT * FROM data.ny_output AS ta\
                                                                 WHERE pickup_hour is not null and vendor_id = '$var[vendor_id]' ORDER BY pickup_hour DESC"
-                        )
+                        ),
                     ),
                 ),
                 ApplyTimeseriesPredictorStep(
-                    namespace='mindsdb',
-                    predictor=Identifier('tp3', alias=Identifier('tb')),
-                    dataframe=Result(1)
+                    namespace="mindsdb", predictor=Identifier("tp3", alias=Identifier("tb")), dataframe=Result(1)
                 ),
                 JoinStep(
                     left=Result(1),
                     right=Result(2),
-                    query=Join(
-                        right=Identifier('result_2'),
-                        left=Identifier('result_1'),
-                        join_type=JoinType.LEFT_JOIN
-                    )
+                    query=Join(right=Identifier("result_2"), left=Identifier("result_1"), join_type=JoinType.LEFT_JOIN),
                 ),
                 ProjectStep(dataframe=Result(3), columns=[Star()]),
             ],
@@ -76,14 +74,16 @@ class TestJoinTimeseriesPredictor:
 
         plan = plan_query(
             query,
-            integrations=['mysql'],
-            predictor_namespace='mindsdb',
+            integrations=["mysql"],
+            predictor_namespace="mindsdb",
             predictor_metadata={
-                'tp3': {'timeseries': True,
-                        'order_by_column': 'pickup_hour',
-                        'group_by_columns': [group_by_column],
-                        'window': predictor_window}
-            }
+                "tp3": {
+                    "timeseries": True,
+                    "order_by_column": "pickup_hour",
+                    "group_by_columns": [group_by_column],
+                    "window": predictor_window,
+                }
+            },
         )
 
         for i in range(len(plan.steps)):
@@ -91,47 +91,37 @@ class TestJoinTimeseriesPredictor:
 
     def test_join_predictor_timeseries_other_ml(self):
         predictor_window = 10
-        group_by_column = 'vendor_id'
-        query = parse_sql(
-            'select * from mysql.data.ny_output ta'
-            ' left join mlflow.tp3 tb'
-        )
+        group_by_column = "vendor_id"
+        query = parse_sql("select * from mysql.data.ny_output ta left join mlflow.tp3 tb")
 
         expected_plan = QueryPlan(
             steps=[
                 FetchDataframeStep(
-                    integration='mysql',
+                    integration="mysql",
                     query=Select(
-                        targets=[
-                            Identifier(parts=[group_by_column], alias=Identifier(group_by_column))],
-                        from_table=Identifier('data.ny_output', alias=Identifier('ta')),
+                        targets=[Identifier(parts=[group_by_column], alias=Identifier(group_by_column))],
+                        from_table=Identifier("data.ny_output", alias=Identifier("ta")),
                         distinct=True,
-                    )
+                    ),
                 ),
                 MapReduceStep(
                     values=Result(0),
-                    reduce='union',
+                    reduce="union",
                     step=FetchDataframeStep(
-                        integration='mysql',
+                        integration="mysql",
                         query=parse_sql(
                             "SELECT * FROM data.ny_output AS ta\
                                                                    WHERE pickup_hour is not null and vendor_id = '$var[vendor_id]' ORDER BY pickup_hour DESC"
-                        )
+                        ),
                     ),
                 ),
                 ApplyTimeseriesPredictorStep(
-                    namespace='mlflow',
-                    predictor=Identifier('tp3', alias=Identifier('tb')),
-                    dataframe=Result(1)
+                    namespace="mlflow", predictor=Identifier("tp3", alias=Identifier("tb")), dataframe=Result(1)
                 ),
                 JoinStep(
                     left=Result(1),
                     right=Result(2),
-                    query=Join(
-                        right=Identifier('result_2'),
-                        left=Identifier('result_1'),
-                        join_type=JoinType.LEFT_JOIN
-                    )
+                    query=Join(right=Identifier("result_2"), left=Identifier("result_1"), join_type=JoinType.LEFT_JOIN),
                 ),
                 ProjectStep(dataframe=Result(3), columns=[Star()]),
             ],
@@ -139,15 +129,17 @@ class TestJoinTimeseriesPredictor:
 
         plan = plan_query(
             query,
-            integrations=['mysql', 'mlflow'],
+            integrations=["mysql", "mlflow"],
             predictor_metadata=[
-                {'timeseries': True,
-                 'name': 'tp3',
-                 'integration_name': 'mlflow',
-                 'order_by_column': 'pickup_hour',
-                 'group_by_columns': [group_by_column],
-                 'window': predictor_window}
-            ]
+                {
+                    "timeseries": True,
+                    "name": "tp3",
+                    "integration_name": "mlflow",
+                    "order_by_column": "pickup_hour",
+                    "group_by_columns": [group_by_column],
+                    "window": predictor_window,
+                }
+            ],
         )
 
         for i in range(len(plan.steps)):
@@ -155,69 +147,70 @@ class TestJoinTimeseriesPredictor:
 
     def test_join_predictor_timeseries_select_table_columns(self):
         predictor_window = 10
-        group_by_column = 'vendor_id'
+        group_by_column = "vendor_id"
         query = Select(
-            targets=[Identifier('ta.target', alias=Identifier('y_true')),
-                     Identifier('tb.target', alias=Identifier('y_pred'))],
+            targets=[
+                Identifier("ta.target", alias=Identifier("y_true")),
+                Identifier("tb.target", alias=Identifier("y_pred")),
+            ],
             from_table=Join(
-                left=Identifier('mysql.data.ny_output', alias=Identifier('ta')),
-                right=Identifier('mindsdb.tp3', alias=Identifier('tb')),
-                join_type='left join'
+                left=Identifier("mysql.data.ny_output", alias=Identifier("ta")),
+                right=Identifier("mindsdb.tp3", alias=Identifier("tb")),
+                join_type="left join",
             ),
         )
 
         expected_plan = QueryPlan(
             steps=[
                 FetchDataframeStep(
-                    integration='mysql',
+                    integration="mysql",
                     query=Select(
                         targets=[Identifier(parts=[group_by_column], alias=Identifier(group_by_column))],
-                        from_table=Identifier('data.ny_output', alias=Identifier('ta')),
+                        from_table=Identifier("data.ny_output", alias=Identifier("ta")),
                         distinct=True,
-                    )
+                    ),
                 ),
                 MapReduceStep(
                     values=Result(0),
-                    reduce='union',
+                    reduce="union",
                     step=FetchDataframeStep(
-                        integration='mysql',
+                        integration="mysql",
                         query=parse_sql(
                             "SELECT * FROM data.ny_output AS ta\
                                                                 WHERE pickup_hour is not null and vendor_id = '$var[vendor_id]' ORDER BY pickup_hour DESC"
-                        )
+                        ),
                     ),
                 ),
                 ApplyTimeseriesPredictorStep(
-                    namespace='mindsdb',
-                    predictor=Identifier('tp3', alias=Identifier('tb')),
-                    dataframe=Result(1)
+                    namespace="mindsdb", predictor=Identifier("tp3", alias=Identifier("tb")), dataframe=Result(1)
                 ),
                 JoinStep(
                     left=Result(1),
                     right=Result(2),
-                    query=Join(
-                        right=Identifier('result_2'),
-                        left=Identifier('result_1'),
-                        join_type=JoinType.LEFT_JOIN
-                    )
+                    query=Join(right=Identifier("result_2"), left=Identifier("result_1"), join_type=JoinType.LEFT_JOIN),
                 ),
                 ProjectStep(
-                    dataframe=Result(3), columns=[Identifier('ta.target', alias=Identifier('y_true')),
-                                                  Identifier('tb.target', alias=Identifier('y_pred'))]
+                    dataframe=Result(3),
+                    columns=[
+                        Identifier("ta.target", alias=Identifier("y_true")),
+                        Identifier("tb.target", alias=Identifier("y_pred")),
+                    ],
                 ),
             ],
         )
 
         plan = plan_query(
             query,
-            integrations=['mysql'],
-            predictor_namespace='mindsdb',
+            integrations=["mysql"],
+            predictor_namespace="mindsdb",
             predictor_metadata={
-                'tp3': {'timeseries': True,
-                        'order_by_column': 'pickup_hour',
-                        'group_by_columns': [group_by_column],
-                        'window': predictor_window}
-            }
+                "tp3": {
+                    "timeseries": True,
+                    "order_by_column": "pickup_hour",
+                    "group_by_columns": [group_by_column],
+                    "window": predictor_window,
+                }
+            },
         )
 
         for i in range(len(plan.steps)):
@@ -225,13 +218,13 @@ class TestJoinTimeseriesPredictor:
 
     def test_join_predictor_timeseries_query_with_limit(self):
         predictor_window = 10
-        group_by_column = 'vendor_id'
+        group_by_column = "vendor_id"
         query = Select(
             targets=[Star()],
             from_table=Join(
-                left=Identifier('mysql.data.ny_output', alias=Identifier('ta')),
-                right=Identifier('mindsdb.tp3', alias=Identifier('tb')),
-                join_type='left join'
+                left=Identifier("mysql.data.ny_output", alias=Identifier("ta")),
+                right=Identifier("mindsdb.tp3", alias=Identifier("tb")),
+                join_type="left join",
             ),
             limit=Constant(1000),
         )
@@ -239,38 +232,31 @@ class TestJoinTimeseriesPredictor:
         expected_plan = QueryPlan(
             steps=[
                 FetchDataframeStep(
-                    integration='mysql',
+                    integration="mysql",
                     query=Select(
-                        targets=[
-                            Identifier(parts=[group_by_column], alias=Identifier(group_by_column))],
-                        from_table=Identifier('data.ny_output', alias=Identifier('ta')),
+                        targets=[Identifier(parts=[group_by_column], alias=Identifier(group_by_column))],
+                        from_table=Identifier("data.ny_output", alias=Identifier("ta")),
                         distinct=True,
-                    )
+                    ),
                 ),
                 MapReduceStep(
                     values=Result(0),
-                    reduce='union',
+                    reduce="union",
                     step=FetchDataframeStep(
-                        integration='mysql',
+                        integration="mysql",
                         query=parse_sql(
                             "SELECT * FROM data.ny_output AS ta\
                                                                WHERE pickup_hour is not null and vendor_id = '$var[vendor_id]' ORDER BY pickup_hour DESC"
-                        )
+                        ),
                     ),
                 ),
                 ApplyTimeseriesPredictorStep(
-                    namespace='mindsdb',
-                    predictor=Identifier('tp3', alias=Identifier('tb')),
-                    dataframe=Result(1)
+                    namespace="mindsdb", predictor=Identifier("tp3", alias=Identifier("tb")), dataframe=Result(1)
                 ),
                 JoinStep(
                     left=Result(1),
                     right=Result(2),
-                    query=Join(
-                        right=Identifier('result_2'),
-                        left=Identifier('result_1'),
-                        join_type=JoinType.LEFT_JOIN
-                    )
+                    query=Join(right=Identifier("result_2"), left=Identifier("result_1"), join_type=JoinType.LEFT_JOIN),
                 ),
                 LimitOffsetStep(dataframe=Result(3), limit=query.limit.value),
                 ProjectStep(dataframe=Result(4), columns=[Star()]),
@@ -279,14 +265,16 @@ class TestJoinTimeseriesPredictor:
 
         plan = plan_query(
             query,
-            integrations=['mysql'],
-            predictor_namespace='mindsdb',
+            integrations=["mysql"],
+            predictor_namespace="mindsdb",
             predictor_metadata={
-                'tp3': {'timeseries': True,
-                        'order_by_column': 'pickup_hour',
-                        'group_by_columns': [group_by_column],
-                        'window': predictor_window}
-            }
+                "tp3": {
+                    "timeseries": True,
+                    "order_by_column": "pickup_hour",
+                    "group_by_columns": [group_by_column],
+                    "window": predictor_window,
+                }
+            },
         )
 
         for i in range(len(plan.steps)):
@@ -294,54 +282,47 @@ class TestJoinTimeseriesPredictor:
 
     def test_join_predictor_timeseries_filter_by_group_by_column(self):
         predictor_window = 10
-        group_by_column = 'vendor_id'
+        group_by_column = "vendor_id"
         query = Select(
             targets=[Star()],
             from_table=Join(
-                left=Identifier('mysql.data.ny_output', alias=Identifier('ta')),
-                right=Identifier('mindsdb.tp3', alias=Identifier('tb')),
-                join_type='left join'
+                left=Identifier("mysql.data.ny_output", alias=Identifier("ta")),
+                right=Identifier("mindsdb.tp3", alias=Identifier("tb")),
+                join_type="left join",
             ),
-            where=BinaryOperation('=', args=[Identifier('ta.vendor_id'), Constant(1)]),
+            where=BinaryOperation("=", args=[Identifier("ta.vendor_id"), Constant(1)]),
         )
 
         expected_plan = QueryPlan(
             steps=[
                 FetchDataframeStep(
-                    integration='mysql',
+                    integration="mysql",
                     query=Select(
-                        targets=[
-                            Identifier(parts=[group_by_column], alias=Identifier(group_by_column))],
-                        from_table=Identifier('data.ny_output', alias=Identifier('ta')),
-                        where=BinaryOperation('=', args=[Identifier('vendor_id'), Constant(1)]),
+                        targets=[Identifier(parts=[group_by_column], alias=Identifier(group_by_column))],
+                        from_table=Identifier("data.ny_output", alias=Identifier("ta")),
+                        where=BinaryOperation("=", args=[Identifier("vendor_id"), Constant(1)]),
                         distinct=True,
-                    )
+                    ),
                 ),
                 MapReduceStep(
                     values=Result(0),
-                    reduce='union',
+                    reduce="union",
                     step=FetchDataframeStep(
-                        integration='mysql',
+                        integration="mysql",
                         query=parse_sql(
                             "SELECT * FROM data.ny_output AS ta\
                                                                  WHERE vendor_id = 1 AND pickup_hour is not null and vendor_id = '$var[vendor_id]' \
                                                                  ORDER BY pickup_hour DESC"
-                        )
+                        ),
                     ),
                 ),
                 ApplyTimeseriesPredictorStep(
-                    namespace='mindsdb',
-                    predictor=Identifier('tp3', alias=Identifier('tb')),
-                    dataframe=Result(1)
+                    namespace="mindsdb", predictor=Identifier("tp3", alias=Identifier("tb")), dataframe=Result(1)
                 ),
                 JoinStep(
                     left=Result(1),
                     right=Result(2),
-                    query=Join(
-                        right=Identifier('result_2'),
-                        left=Identifier('result_1'),
-                        join_type=JoinType.LEFT_JOIN
-                    )
+                    query=Join(right=Identifier("result_2"), left=Identifier("result_1"), join_type=JoinType.LEFT_JOIN),
                 ),
                 ProjectStep(dataframe=Result(3), columns=[Star()]),
             ],
@@ -349,14 +330,16 @@ class TestJoinTimeseriesPredictor:
 
         plan = plan_query(
             query,
-            integrations=['mysql'],
-            predictor_namespace='mindsdb',
+            integrations=["mysql"],
+            predictor_namespace="mindsdb",
             predictor_metadata={
-                'tp3': {'timeseries': True,
-                        'order_by_column': 'pickup_hour',
-                        'group_by_columns': [group_by_column],
-                        'window': predictor_window}
-            }
+                "tp3": {
+                    "timeseries": True,
+                    "order_by_column": "pickup_hour",
+                    "group_by_columns": [group_by_column],
+                    "window": predictor_window,
+                }
+            },
         )
 
         for i in range(len(plan.steps)):
@@ -364,61 +347,57 @@ class TestJoinTimeseriesPredictor:
 
     def test_join_predictor_timeseries_latest(self):
         predictor_window = 5
-        group_by_column = 'vendor_id'
+        group_by_column = "vendor_id"
         query = Select(
             targets=[Star()],
             from_table=Join(
-                left=Identifier('mysql.data.ny_output', alias=Identifier('ta')),
-                right=Identifier('mindsdb.tp3', alias=Identifier('tb')),
+                left=Identifier("mysql.data.ny_output", alias=Identifier("ta")),
+                right=Identifier("mindsdb.tp3", alias=Identifier("tb")),
                 join_type=JoinType.LEFT_JOIN,
-                implicit=True
+                implicit=True,
             ),
             where=BinaryOperation(
-                'and', args=[
-                    BinaryOperation('>', args=[Identifier('ta.pickup_hour'), Latest()]),
-                    BinaryOperation('=', args=[Identifier('ta.vendor_id'), Constant(1)]),
-                ]
+                "and",
+                args=[
+                    BinaryOperation(">", args=[Identifier("ta.pickup_hour"), Latest()]),
+                    BinaryOperation("=", args=[Identifier("ta.vendor_id"), Constant(1)]),
+                ],
             ),
         )
 
         expected_plan = QueryPlan(
             steps=[
                 FetchDataframeStep(
-                    integration='mysql',
+                    integration="mysql",
                     query=Select(
-                        targets=[
-                            Identifier(parts=[group_by_column], alias=Identifier(group_by_column))],
-                        from_table=Identifier('data.ny_output', alias=Identifier('ta')),
-                        where=BinaryOperation('=', args=[Identifier('vendor_id'), Constant(1)]),
+                        targets=[Identifier(parts=[group_by_column], alias=Identifier(group_by_column))],
+                        from_table=Identifier("data.ny_output", alias=Identifier("ta")),
+                        where=BinaryOperation("=", args=[Identifier("vendor_id"), Constant(1)]),
                         distinct=True,
-                    )
+                    ),
                 ),
                 MapReduceStep(
                     values=Result(0),
-                    reduce='union',
+                    reduce="union",
                     step=FetchDataframeStep(
-                        integration='mysql',
+                        integration="mysql",
                         query=parse_sql(
                             f"SELECT * FROM data.ny_output AS ta\
                                     WHERE vendor_id = 1 AND pickup_hour is not null and vendor_id = '$var[vendor_id]'\
                                     ORDER BY pickup_hour DESC LIMIT {predictor_window}"
-                        )
+                        ),
                     ),
                 ),
                 ApplyTimeseriesPredictorStep(
-                    output_time_filter=BinaryOperation('>', args=[Identifier('pickup_hour'), Latest()]),
-                    namespace='mindsdb',
-                    predictor=Identifier('tp3', alias=Identifier('tb')),
+                    output_time_filter=BinaryOperation(">", args=[Identifier("pickup_hour"), Latest()]),
+                    namespace="mindsdb",
+                    predictor=Identifier("tp3", alias=Identifier("tb")),
                     dataframe=Result(1),
                 ),
                 JoinStep(
                     left=Result(1),
                     right=Result(2),
-                    query=Join(
-                        right=Identifier('result_2'),
-                        left=Identifier('result_1'),
-                        join_type=JoinType.LEFT_JOIN
-                    )
+                    query=Join(right=Identifier("result_2"), left=Identifier("result_1"), join_type=JoinType.LEFT_JOIN),
                 ),
                 ProjectStep(dataframe=Result(3), columns=[Star()]),
             ],
@@ -426,14 +405,16 @@ class TestJoinTimeseriesPredictor:
 
         plan = plan_query(
             query,
-            integrations=['mysql'],
-            predictor_namespace='mindsdb',
+            integrations=["mysql"],
+            predictor_namespace="mindsdb",
             predictor_metadata={
-                'tp3': {'timeseries': True,
-                        'order_by_column': 'pickup_hour',
-                        'group_by_columns': [group_by_column],
-                        'window': predictor_window}
-            }
+                "tp3": {
+                    "timeseries": True,
+                    "order_by_column": "pickup_hour",
+                    "group_by_columns": [group_by_column],
+                    "window": predictor_window,
+                }
+            },
         )
 
         for i in range(len(plan.steps)):
@@ -441,7 +422,7 @@ class TestJoinTimeseriesPredictor:
 
     def test_join_predictor_timeseries_between(self):
         predictor_window = 5
-        group_by_column = 'vendor_id'
+        group_by_column = "vendor_id"
         query = parse_sql(
             "SELECT * FROM mysql.data.ny_output AS ta\
                                                     left join mindsdb.tp3 AS tb\
@@ -451,20 +432,20 @@ class TestJoinTimeseriesPredictor:
         expected_plan = QueryPlan(
             steps=[
                 FetchDataframeStep(
-                    integration='mysql',
+                    integration="mysql",
                     query=parse_sql(
                         "SELECT DISTINCT vendor_id AS vendor_id FROM data.ny_output AS ta\
                                                                            WHERE vendor_id = 1"
-                    )
+                    ),
                 ),
                 MapReduceStep(
                     values=Result(0),
-                    reduce='union',
+                    reduce="union",
                     step=MultipleSteps(
-                        reduce='union',
+                        reduce="union",
                         steps=[
                             FetchDataframeStep(
-                                integration='mysql',
+                                integration="mysql",
                                 query=parse_sql(
                                     f"SELECT * FROM data.ny_output AS ta \
                                           WHERE pickup_hour < 1 AND vendor_id = 1 and pickup_hour is not null \
@@ -473,33 +454,28 @@ class TestJoinTimeseriesPredictor:
                                 ),
                             ),
                             FetchDataframeStep(
-                                integration='mysql',
+                                integration="mysql",
                                 query=parse_sql(
                                     "SELECT * FROM data.ny_output AS ta\
                                                                                WHERE pickup_hour BETWEEN 1 AND 10 AND vendor_id = 1 and pickup_hour is not null \
                                                                                 AND vendor_id = '$var[vendor_id]' ORDER BY pickup_hour DESC"
                                 ),
                             ),
-
-                        ]
-                    )
+                        ],
+                    ),
                 ),
                 ApplyTimeseriesPredictorStep(
                     output_time_filter=BetweenOperation(
-                        args=[Identifier('pickup_hour'), Constant(1), Constant(10)],
+                        args=[Identifier("pickup_hour"), Constant(1), Constant(10)],
                     ),
-                    namespace='mindsdb',
-                    predictor=Identifier('tp3', alias=Identifier('tb')),
+                    namespace="mindsdb",
+                    predictor=Identifier("tp3", alias=Identifier("tb")),
                     dataframe=Result(1),
                 ),
                 JoinStep(
                     left=Result(1),
                     right=Result(2),
-                    query=Join(
-                        right=Identifier('result_2'),
-                        left=Identifier('result_1'),
-                        join_type=JoinType.LEFT_JOIN
-                    )
+                    query=Join(right=Identifier("result_2"), left=Identifier("result_1"), join_type=JoinType.LEFT_JOIN),
                 ),
                 ProjectStep(dataframe=Result(3), columns=[Star()]),
             ],
@@ -507,14 +483,16 @@ class TestJoinTimeseriesPredictor:
 
         plan = plan_query(
             query,
-            integrations=['mysql'],
-            predictor_namespace='mindsdb',
+            integrations=["mysql"],
+            predictor_namespace="mindsdb",
             predictor_metadata={
-                'tp3': {'timeseries': True,
-                        'order_by_column': 'pickup_hour',
-                        'group_by_columns': [group_by_column],
-                        'window': predictor_window}
-            }
+                "tp3": {
+                    "timeseries": True,
+                    "order_by_column": "pickup_hour",
+                    "group_by_columns": [group_by_column],
+                    "window": predictor_window,
+                }
+            },
         )
 
         for i in range(len(plan.steps)):
@@ -522,7 +500,7 @@ class TestJoinTimeseriesPredictor:
 
     def test_join_predictor_timeseries_concrete_date_greater(self):
         predictor_window = 10
-        group_by_column = 'vendor_id'
+        group_by_column = "vendor_id"
 
         sql = "select * from mysql.data.ny_output as ta left join mindsdb.tp3 as tb where ta.pickup_hour > 10 and ta.vendor_id = 1"
 
@@ -531,23 +509,22 @@ class TestJoinTimeseriesPredictor:
         expected_plan = QueryPlan(
             steps=[
                 FetchDataframeStep(
-                    integration='mysql',
+                    integration="mysql",
                     query=Select(
-                        targets=[
-                            Identifier(parts=[group_by_column], alias=Identifier(group_by_column))],
-                        from_table=Identifier('data.ny_output', alias=Identifier('ta')),
-                        where=BinaryOperation('=', args=[Identifier('vendor_id'), Constant(1)]),
+                        targets=[Identifier(parts=[group_by_column], alias=Identifier(group_by_column))],
+                        from_table=Identifier("data.ny_output", alias=Identifier("ta")),
+                        where=BinaryOperation("=", args=[Identifier("vendor_id"), Constant(1)]),
                         distinct=True,
-                    )
+                    ),
                 ),
                 MapReduceStep(
                     values=Result(0),
-                    reduce='union',
+                    reduce="union",
                     step=MultipleSteps(
-                        reduce='union',
+                        reduce="union",
                         steps=[
                             FetchDataframeStep(
-                                integration='mysql',
+                                integration="mysql",
                                 query=parse_sql(
                                     f"SELECT * FROM data.ny_output AS ta \
                                           WHERE pickup_hour <= 10 AND vendor_id = 1 and pickup_hour is not null \
@@ -555,31 +532,26 @@ class TestJoinTimeseriesPredictor:
                                 ),
                             ),
                             FetchDataframeStep(
-                                integration='mysql',
+                                integration="mysql",
                                 query=parse_sql(
                                     "SELECT * FROM data.ny_output AS ta \
                                                                               WHERE pickup_hour > 10 AND vendor_id = 1 and pickup_hour is not null \
                                                                               AND vendor_id = '$var[vendor_id]' ORDER BY pickup_hour DESC"
                                 ),
                             ),
-
-                        ]
-                    )
+                        ],
+                    ),
                 ),
                 ApplyTimeseriesPredictorStep(
-                    output_time_filter=BinaryOperation('>', args=[Identifier('pickup_hour'), Constant(10)]),
-                    namespace='mindsdb',
-                    predictor=Identifier('tp3', alias=Identifier('tb')),
-                    dataframe=Result(1)
+                    output_time_filter=BinaryOperation(">", args=[Identifier("pickup_hour"), Constant(10)]),
+                    namespace="mindsdb",
+                    predictor=Identifier("tp3", alias=Identifier("tb")),
+                    dataframe=Result(1),
                 ),
                 JoinStep(
                     left=Result(1),
                     right=Result(2),
-                    query=Join(
-                        right=Identifier('result_2'),
-                        left=Identifier('result_1'),
-                        join_type=JoinType.LEFT_JOIN
-                    )
+                    query=Join(right=Identifier("result_2"), left=Identifier("result_1"), join_type=JoinType.LEFT_JOIN),
                 ),
                 ProjectStep(dataframe=Result(3), columns=[Star()]),
             ],
@@ -587,14 +559,16 @@ class TestJoinTimeseriesPredictor:
 
         plan = plan_query(
             query,
-            integrations=['mysql'],
-            predictor_namespace='mindsdb',
+            integrations=["mysql"],
+            predictor_namespace="mindsdb",
             predictor_metadata={
-                'tp3': {'timeseries': True,
-                        'order_by_column': 'pickup_hour',
-                        'group_by_columns': [group_by_column],
-                        'window': predictor_window}
-            }
+                "tp3": {
+                    "timeseries": True,
+                    "order_by_column": "pickup_hour",
+                    "group_by_columns": [group_by_column],
+                    "window": predictor_window,
+                }
+            },
         )
 
         for i in range(len(plan.steps)):
@@ -611,23 +585,23 @@ class TestJoinTimeseriesPredictor:
         expected_plan = QueryPlan(
             steps=[
                 FetchDataframeStep(
-                    integration='mysql',
+                    integration="mysql",
                     query=parse_sql(
-                        '''
+                        """
                                                  select distinct vendor_id as vendor_id, type as type
                                                  from data.ny_output as ta
                                                  where vendor_id = 1 and type = 2
-                                               '''
-                    )
+                                               """
+                    ),
                 ),
                 MapReduceStep(
                     values=Result(0),
-                    reduce='union',
+                    reduce="union",
                     step=MultipleSteps(
-                        reduce='union',
+                        reduce="union",
                         steps=[
                             FetchDataframeStep(
-                                integration='mysql',
+                                integration="mysql",
                                 query=parse_sql(
                                     f"SELECT * FROM data.ny_output AS ta \
                                   WHERE pickup_hour <= 10 AND vendor_id = 1 and type = 2 and pickup_hour is not null \
@@ -636,7 +610,7 @@ class TestJoinTimeseriesPredictor:
                                 ),
                             ),
                             FetchDataframeStep(
-                                integration='mysql',
+                                integration="mysql",
                                 query=parse_sql(
                                     "SELECT * FROM data.ny_output AS ta \
                                                                       WHERE pickup_hour > 10 AND vendor_id = 1 and type = 2 and pickup_hour is not null \
@@ -644,24 +618,19 @@ class TestJoinTimeseriesPredictor:
                                                                       ORDER BY pickup_hour DESC"
                                 ),
                             ),
-
-                        ]
-                    )
+                        ],
+                    ),
                 ),
                 ApplyTimeseriesPredictorStep(
-                    output_time_filter=BinaryOperation('>', args=[Identifier('pickup_hour'), Constant(10)]),
-                    namespace='mindsdb',
-                    predictor=Identifier('tp3', alias=Identifier('tb')),
-                    dataframe=Result(1)
+                    output_time_filter=BinaryOperation(">", args=[Identifier("pickup_hour"), Constant(10)]),
+                    namespace="mindsdb",
+                    predictor=Identifier("tp3", alias=Identifier("tb")),
+                    dataframe=Result(1),
                 ),
                 JoinStep(
                     left=Result(1),
                     right=Result(2),
-                    query=Join(
-                        right=Identifier('result_2'),
-                        left=Identifier('result_1'),
-                        join_type=JoinType.LEFT_JOIN
-                    )
+                    query=Join(right=Identifier("result_2"), left=Identifier("result_1"), join_type=JoinType.LEFT_JOIN),
                 ),
                 ProjectStep(dataframe=Result(3), columns=[Star()]),
             ],
@@ -669,14 +638,16 @@ class TestJoinTimeseriesPredictor:
 
         plan = plan_query(
             query,
-            integrations=['mysql'],
-            predictor_namespace='mindsdb',
+            integrations=["mysql"],
+            predictor_namespace="mindsdb",
             predictor_metadata={
-                'tp3': {'timeseries': True,
-                        'order_by_column': 'pickup_hour',
-                        'group_by_columns': ['vendor_id', 'type'],
-                        'window': predictor_window}
-            }
+                "tp3": {
+                    "timeseries": True,
+                    "order_by_column": "pickup_hour",
+                    "group_by_columns": ["vendor_id", "type"],
+                    "window": predictor_window,
+                }
+            },
         )
 
         for i in range(len(plan.steps)):
@@ -684,7 +655,7 @@ class TestJoinTimeseriesPredictor:
 
     def test_join_predictor_timeseries_concrete_date_greater_or_equal(self):
         predictor_window = 10
-        group_by_column = 'vendor_id'
+        group_by_column = "vendor_id"
 
         sql = "select * from mysql.data.ny_output as ta left join mindsdb.tp3 as tb where ta.pickup_hour >= 10 and ta.vendor_id = 1"
 
@@ -693,23 +664,22 @@ class TestJoinTimeseriesPredictor:
         expected_plan = QueryPlan(
             steps=[
                 FetchDataframeStep(
-                    integration='mysql',
+                    integration="mysql",
                     query=Select(
-                        targets=[
-                            Identifier(parts=[group_by_column], alias=Identifier(group_by_column))],
-                        from_table=Identifier('data.ny_output', alias=Identifier('ta')),
-                        where=BinaryOperation('=', args=[Identifier('vendor_id'), Constant(1)]),
+                        targets=[Identifier(parts=[group_by_column], alias=Identifier(group_by_column))],
+                        from_table=Identifier("data.ny_output", alias=Identifier("ta")),
+                        where=BinaryOperation("=", args=[Identifier("vendor_id"), Constant(1)]),
                         distinct=True,
-                    )
+                    ),
                 ),
                 MapReduceStep(
                     values=Result(0),
-                    reduce='union',
+                    reduce="union",
                     step=MultipleSteps(
-                        reduce='union',
+                        reduce="union",
                         steps=[
                             FetchDataframeStep(
-                                integration='mysql',
+                                integration="mysql",
                                 query=parse_sql(
                                     f"SELECT * FROM data.ny_output AS ta\
                                            WHERE pickup_hour < 10 AND vendor_id = 1 AND pickup_hour is not null and\
@@ -717,31 +687,26 @@ class TestJoinTimeseriesPredictor:
                                 ),
                             ),
                             FetchDataframeStep(
-                                integration='mysql',
+                                integration="mysql",
                                 query=parse_sql(
                                     "SELECT * FROM data.ny_output AS ta\
                                                                                WHERE pickup_hour >= 10 AND vendor_id = 1 AND pickup_hour is not null and\
                                                                                vendor_id = '$var[vendor_id]' ORDER BY pickup_hour DESC"
                                 ),
                             ),
-
-                        ]
-                    )
+                        ],
+                    ),
                 ),
                 ApplyTimeseriesPredictorStep(
-                    output_time_filter=BinaryOperation('>=', args=[Identifier('pickup_hour'), Constant(10)]),
-                    namespace='mindsdb',
-                    predictor=Identifier('tp3', alias=Identifier('tb')),
-                    dataframe=Result(1)
+                    output_time_filter=BinaryOperation(">=", args=[Identifier("pickup_hour"), Constant(10)]),
+                    namespace="mindsdb",
+                    predictor=Identifier("tp3", alias=Identifier("tb")),
+                    dataframe=Result(1),
                 ),
                 JoinStep(
                     left=Result(1),
                     right=Result(2),
-                    query=Join(
-                        right=Identifier('result_2'),
-                        left=Identifier('result_1'),
-                        join_type=JoinType.LEFT_JOIN
-                    )
+                    query=Join(right=Identifier("result_2"), left=Identifier("result_1"), join_type=JoinType.LEFT_JOIN),
                 ),
                 ProjectStep(dataframe=Result(3), columns=[Star()]),
             ],
@@ -749,14 +714,16 @@ class TestJoinTimeseriesPredictor:
 
         plan = plan_query(
             query,
-            integrations=['mysql'],
-            predictor_namespace='mindsdb',
+            integrations=["mysql"],
+            predictor_namespace="mindsdb",
             predictor_metadata={
-                'tp3': {'timeseries': True,
-                        'order_by_column': 'pickup_hour',
-                        'group_by_columns': [group_by_column],
-                        'window': predictor_window}
-            }
+                "tp3": {
+                    "timeseries": True,
+                    "order_by_column": "pickup_hour",
+                    "group_by_columns": [group_by_column],
+                    "window": predictor_window,
+                }
+            },
         )
 
         for i in range(len(plan.steps)):
@@ -764,7 +731,7 @@ class TestJoinTimeseriesPredictor:
 
     def test_join_predictor_timeseries_concrete_date_less(self):
         predictor_window = 10
-        group_by_column = 'vendor_id'
+        group_by_column = "vendor_id"
 
         sql = "select * from mysql.data.ny_output as ta join mindsdb.tp3 as tb where ta.pickup_hour < 10 and ta.vendor_id = 1"
 
@@ -773,20 +740,19 @@ class TestJoinTimeseriesPredictor:
         expected_plan = QueryPlan(
             steps=[
                 FetchDataframeStep(
-                    integration='mysql',
+                    integration="mysql",
                     query=Select(
-                        targets=[
-                            Identifier(parts=[group_by_column], alias=Identifier(group_by_column))],
-                        from_table=Identifier('data.ny_output', alias=Identifier('ta')),
-                        where=BinaryOperation('=', args=[Identifier('vendor_id'), Constant(1)]),
+                        targets=[Identifier(parts=[group_by_column], alias=Identifier(group_by_column))],
+                        from_table=Identifier("data.ny_output", alias=Identifier("ta")),
+                        where=BinaryOperation("=", args=[Identifier("vendor_id"), Constant(1)]),
                         distinct=True,
-                    )
+                    ),
                 ),
                 MapReduceStep(
                     values=Result(0),
-                    reduce='union',
+                    reduce="union",
                     step=FetchDataframeStep(
-                        integration='mysql',
+                        integration="mysql",
                         query=parse_sql(
                             "SELECT * FROM data.ny_output AS ta \
                                                               WHERE pickup_hour < 10 AND vendor_id = 1 AND pickup_hour is not null and\
@@ -796,19 +762,15 @@ class TestJoinTimeseriesPredictor:
                     ),
                 ),
                 ApplyTimeseriesPredictorStep(
-                    output_time_filter=BinaryOperation('<', args=[Identifier('pickup_hour'), Constant(10)]),
-                    namespace='mindsdb',
-                    predictor=Identifier('tp3', alias=Identifier('tb')),
+                    output_time_filter=BinaryOperation("<", args=[Identifier("pickup_hour"), Constant(10)]),
+                    namespace="mindsdb",
+                    predictor=Identifier("tp3", alias=Identifier("tb")),
                     dataframe=Result(1),
                 ),
                 JoinStep(
                     left=Result(1),
                     right=Result(2),
-                    query=Join(
-                        right=Identifier('result_2'),
-                        left=Identifier('result_1'),
-                        join_type=JoinType.JOIN
-                    )
+                    query=Join(right=Identifier("result_2"), left=Identifier("result_1"), join_type=JoinType.JOIN),
                 ),
                 ProjectStep(dataframe=Result(3), columns=[Star()]),
             ],
@@ -816,14 +778,16 @@ class TestJoinTimeseriesPredictor:
 
         plan = plan_query(
             query,
-            integrations=['mysql'],
-            predictor_namespace='mindsdb',
+            integrations=["mysql"],
+            predictor_namespace="mindsdb",
             predictor_metadata={
-                'tp3': {'timeseries': True,
-                        'order_by_column': 'pickup_hour',
-                        'group_by_columns': [group_by_column],
-                        'window': predictor_window}
-            }
+                "tp3": {
+                    "timeseries": True,
+                    "order_by_column": "pickup_hour",
+                    "group_by_columns": [group_by_column],
+                    "window": predictor_window,
+                }
+            },
         )
 
         for i in range(len(plan.steps)):
@@ -831,7 +795,7 @@ class TestJoinTimeseriesPredictor:
 
     def test_join_predictor_timeseries_concrete_date_less_or_equal(self):
         predictor_window = 10
-        group_by_column = 'vendor_id'
+        group_by_column = "vendor_id"
 
         sql = "select * from mysql.data.ny_output as ta left join mindsdb.tp3 as tb where ta.pickup_hour <= 10 and ta.vendor_id = 1"
 
@@ -840,20 +804,19 @@ class TestJoinTimeseriesPredictor:
         expected_plan = QueryPlan(
             steps=[
                 FetchDataframeStep(
-                    integration='mysql',
+                    integration="mysql",
                     query=Select(
-                        targets=[
-                            Identifier(parts=[group_by_column], alias=Identifier(group_by_column))],
-                        from_table=Identifier('data.ny_output', alias=Identifier('ta')),
-                        where=BinaryOperation('=', args=[Identifier('vendor_id'), Constant(1)]),
+                        targets=[Identifier(parts=[group_by_column], alias=Identifier(group_by_column))],
+                        from_table=Identifier("data.ny_output", alias=Identifier("ta")),
+                        where=BinaryOperation("=", args=[Identifier("vendor_id"), Constant(1)]),
                         distinct=True,
-                    )
+                    ),
                 ),
                 MapReduceStep(
                     values=Result(0),
-                    reduce='union',
+                    reduce="union",
                     step=FetchDataframeStep(
-                        integration='mysql',
+                        integration="mysql",
                         query=parse_sql(
                             "SELECT * FROM data.ny_output AS ta\
                                                               WHERE pickup_hour <= 10 AND vendor_id = 1 AND pickup_hour is not null and\
@@ -863,19 +826,15 @@ class TestJoinTimeseriesPredictor:
                     ),
                 ),
                 ApplyTimeseriesPredictorStep(
-                    output_time_filter=BinaryOperation('<=', args=[Identifier('pickup_hour'), Constant(10)]),
-                    namespace='mindsdb',
-                    predictor=Identifier('tp3', alias=Identifier('tb')),
+                    output_time_filter=BinaryOperation("<=", args=[Identifier("pickup_hour"), Constant(10)]),
+                    namespace="mindsdb",
+                    predictor=Identifier("tp3", alias=Identifier("tb")),
                     dataframe=Result(1),
                 ),
                 JoinStep(
                     left=Result(1),
                     right=Result(2),
-                    query=Join(
-                        left=Identifier('result_1'),
-                        right=Identifier('result_2'),
-                        join_type=JoinType.LEFT_JOIN
-                    )
+                    query=Join(left=Identifier("result_1"), right=Identifier("result_2"), join_type=JoinType.LEFT_JOIN),
                 ),
                 ProjectStep(dataframe=Result(3), columns=[Star()]),
             ],
@@ -883,14 +842,16 @@ class TestJoinTimeseriesPredictor:
 
         plan = plan_query(
             query,
-            integrations=['mysql'],
-            predictor_namespace='mindsdb',
+            integrations=["mysql"],
+            predictor_namespace="mindsdb",
             predictor_metadata={
-                'tp3': {'timeseries': True,
-                        'order_by_column': 'pickup_hour',
-                        'group_by_columns': [group_by_column],
-                        'window': predictor_window}
-            }
+                "tp3": {
+                    "timeseries": True,
+                    "order_by_column": "pickup_hour",
+                    "group_by_columns": [group_by_column],
+                    "window": predictor_window,
+                }
+            },
         )
 
         for i in range(len(plan.steps)):
@@ -898,7 +859,7 @@ class TestJoinTimeseriesPredictor:
 
     def test_join_predictor_timeseries_concrete_date_equal(self):
         predictor_window = 10
-        group_by_column = 'vendor_id'
+        group_by_column = "vendor_id"
 
         sql = """
             select * from
@@ -914,20 +875,19 @@ class TestJoinTimeseriesPredictor:
         expected_plan = QueryPlan(
             steps=[
                 FetchDataframeStep(
-                    integration='mysql',
+                    integration="mysql",
                     query=Select(
-                        targets=[
-                            Identifier(parts=[group_by_column], alias=Identifier(group_by_column))],
-                        from_table=Identifier('data.ny_output', alias=Identifier('ta')),
-                        where=BinaryOperation('=', args=[Identifier('vendor_id'), Constant(1)]),
+                        targets=[Identifier(parts=[group_by_column], alias=Identifier(group_by_column))],
+                        from_table=Identifier("data.ny_output", alias=Identifier("ta")),
+                        where=BinaryOperation("=", args=[Identifier("vendor_id"), Constant(1)]),
                         distinct=True,
-                    )
+                    ),
                 ),
                 MapReduceStep(
                     values=Result(0),
-                    reduce='union',
+                    reduce="union",
                     step=FetchDataframeStep(
-                        integration='mysql',
+                        integration="mysql",
                         query=parse_sql(
                             """
                                                         SELECT * FROM data.ny_output AS ta
@@ -939,19 +899,15 @@ class TestJoinTimeseriesPredictor:
                     ),
                 ),
                 ApplyTimeseriesPredictorStep(
-                    output_time_filter=BinaryOperation('>', args=[Identifier('pickup_hour'), Constant(10)]),
-                    namespace='mindsdb',
-                    predictor=Identifier('tp3', alias=Identifier('tb')),
+                    output_time_filter=BinaryOperation(">", args=[Identifier("pickup_hour"), Constant(10)]),
+                    namespace="mindsdb",
+                    predictor=Identifier("tp3", alias=Identifier("tb")),
                     dataframe=Result(1),
                 ),
                 JoinStep(
                     left=Result(1),
                     right=Result(2),
-                    query=Join(
-                        right=Identifier('result_2'),
-                        left=Identifier('result_1'),
-                        join_type=JoinType.JOIN
-                    )
+                    query=Join(right=Identifier("result_2"), left=Identifier("result_1"), join_type=JoinType.JOIN),
                 ),
                 ProjectStep(dataframe=Result(3), columns=[Star()]),
             ],
@@ -959,14 +915,16 @@ class TestJoinTimeseriesPredictor:
 
         plan = plan_query(
             query,
-            integrations=['mysql'],
-            predictor_namespace='mindsdb',
+            integrations=["mysql"],
+            predictor_namespace="mindsdb",
             predictor_metadata={
-                'tp3': {'timeseries': True,
-                        'order_by_column': 'pickup_hour',
-                        'group_by_columns': [group_by_column],
-                        'window': predictor_window}
-            }
+                "tp3": {
+                    "timeseries": True,
+                    "order_by_column": "pickup_hour",
+                    "group_by_columns": [group_by_column],
+                    "window": predictor_window,
+                }
+            },
         )
 
         for i in range(len(plan.steps)):
@@ -974,114 +932,103 @@ class TestJoinTimeseriesPredictor:
 
     def test_join_predictor_timeseries_error_on_nested_where(self):
         query = Select(
-            targets=[Identifier('pred.time'), Identifier('pred.price')],
+            targets=[Identifier("pred.time"), Identifier("pred.price")],
             from_table=Join(
-                left=Identifier('int.tab1'),
-                right=Identifier('mindsdb.pred'),
-                join_type=None,
-                implicit=True
+                left=Identifier("int.tab1"), right=Identifier("mindsdb.pred"), join_type=None, implicit=True
             ),
             where=BinaryOperation(
-                'and', args=[
+                "and",
+                args=[
                     BinaryOperation(
-                        'and', args=[BinaryOperation('>', args=[Identifier('tab1.time'), Latest()]),
-                                     BinaryOperation('>', args=[Identifier('tab1.time'), Latest()]), ]
+                        "and",
+                        args=[
+                            BinaryOperation(">", args=[Identifier("tab1.time"), Latest()]),
+                            BinaryOperation(">", args=[Identifier("tab1.time"), Latest()]),
+                        ],
                     ),
-                    BinaryOperation('=', args=[Identifier('tab1.asset'), Constant('bitcoin')]),
-                ]
+                    BinaryOperation("=", args=[Identifier("tab1.asset"), Constant("bitcoin")]),
+                ],
             ),
         )
 
         with pytest.raises(PlanningException):
             plan_query(
                 query,
-                integrations=['int'],
-                predictor_namespace='mindsdb',
+                integrations=["int"],
+                predictor_namespace="mindsdb",
                 predictor_metadata={
-                    'pred': {'timeseries': True,
-                             'order_by_column': 'time',
-                             'group_by_columns': ['asset'],
-                             'window': 5}
-                }
+                    "pred": {"timeseries": True, "order_by_column": "time", "group_by_columns": ["asset"], "window": 5}
+                },
             )
 
     def test_join_predictor_timeseries_error_on_invalid_column_in_where(self):
         query = Select(
-            targets=[Identifier('pred.time'), Identifier('pred.price')],
+            targets=[Identifier("pred.time"), Identifier("pred.price")],
             from_table=Join(
-                left=Identifier('int.tab1'),
-                right=Identifier('mindsdb.pred'),
-                join_type=None,
-                implicit=True
+                left=Identifier("int.tab1"), right=Identifier("mindsdb.pred"), join_type=None, implicit=True
             ),
             where=BinaryOperation(
-                'and', args=[
-                    BinaryOperation('>', args=[Identifier('tab1.time'), Latest()]),
-                    BinaryOperation('=', args=[Identifier('tab1.whatver'), Constant(0)]),
-                ]
+                "and",
+                args=[
+                    BinaryOperation(">", args=[Identifier("tab1.time"), Latest()]),
+                    BinaryOperation("=", args=[Identifier("tab1.whatver"), Constant(0)]),
+                ],
             ),
         )
 
         with pytest.raises(PlanningException):
             plan_query(
                 query,
-                integrations=['int'],
-                predictor_namespace='mindsdb',
+                integrations=["int"],
+                predictor_namespace="mindsdb",
                 predictor_metadata={
-                    'pred': {'timeseries': True,
-                             'order_by_column': 'time',
-                             'group_by_columns': ['asset'],
-                             'window': 5}
-                }
+                    "pred": {"timeseries": True, "order_by_column": "time", "group_by_columns": ["asset"], "window": 5}
+                },
             )
 
     def test_join_predictor_timeseries_default_namespace_predictor(self):
         predictor_window = 10
-        group_by_column = 'vendor_id'
+        group_by_column = "vendor_id"
         query = Select(
             targets=[Star()],
             from_table=Join(
-                left=Identifier('tp3', alias=Identifier('tb')),
-                right=Identifier('mysql.data.ny_output', alias=Identifier('ta')),
-                join_type=JoinType.LEFT_JOIN
+                left=Identifier("tp3", alias=Identifier("tb")),
+                right=Identifier("mysql.data.ny_output", alias=Identifier("ta")),
+                join_type=JoinType.LEFT_JOIN,
             ),
         )
 
         expected_plan = QueryPlan(
-            default_namespace='mindsdb',
+            default_namespace="mindsdb",
             steps=[
                 FetchDataframeStep(
-                    integration='mysql',
+                    integration="mysql",
                     query=Select(
                         targets=[Identifier(parts=[group_by_column], alias=Identifier(group_by_column))],
-                        from_table=Identifier('data.ny_output', alias=Identifier('ta')),
+                        from_table=Identifier("data.ny_output", alias=Identifier("ta")),
                         distinct=True,
-                    )
+                    ),
                 ),
                 MapReduceStep(
                     values=Result(0),
-                    reduce='union',
+                    reduce="union",
                     step=FetchDataframeStep(
-                        integration='mysql',
+                        integration="mysql",
                         query=parse_sql(
                             "SELECT * FROM data.ny_output AS ta\
                                                                 WHERE pickup_hour is not null and vendor_id = '$var[vendor_id]' ORDER BY pickup_hour DESC"
-                        )
+                        ),
                     ),
                 ),
                 ApplyTimeseriesPredictorStep(
-                    namespace='mindsdb',
-                    predictor=Identifier('tp3', alias=Identifier('tb')),
+                    namespace="mindsdb",
+                    predictor=Identifier("tp3", alias=Identifier("tb")),
                     dataframe=Result(1),
                 ),
                 JoinStep(
                     left=Result(2),
                     right=Result(1),
-                    query=Join(
-                        left=Identifier('result_2'),
-                        right=Identifier('result_1'),
-                        join_type=JoinType.LEFT_JOIN
-                    )
+                    query=Join(left=Identifier("result_2"), right=Identifier("result_1"), join_type=JoinType.LEFT_JOIN),
                 ),
                 ProjectStep(dataframe=Result(3), columns=[Star()]),
             ],
@@ -1089,15 +1036,17 @@ class TestJoinTimeseriesPredictor:
 
         plan = plan_query(
             query,
-            integrations=['mysql'],
-            predictor_namespace='mindsdb',
-            default_namespace='mindsdb',
+            integrations=["mysql"],
+            predictor_namespace="mindsdb",
+            default_namespace="mindsdb",
             predictor_metadata={
-                'tp3': {'timeseries': True,
-                        'order_by_column': 'pickup_hour',
-                        'group_by_columns': [group_by_column],
-                        'window': predictor_window}
-            }
+                "tp3": {
+                    "timeseries": True,
+                    "order_by_column": "pickup_hour",
+                    "group_by_columns": [group_by_column],
+                    "window": predictor_window,
+                }
+            },
         )
 
         for i in range(len(plan.steps)):
@@ -1105,51 +1054,47 @@ class TestJoinTimeseriesPredictor:
 
     def test_join_predictor_timeseries_default_namespace_integration(self):
         predictor_window = 10
-        group_by_column = 'vendor_id'
+        group_by_column = "vendor_id"
         query = Select(
             targets=[Star()],
             from_table=Join(
-                left=Identifier('data.ny_output', alias=Identifier('ta')),
-                right=Identifier('mindsdb.tp3', alias=Identifier('tb')),
-                join_type=JoinType.JOIN
+                left=Identifier("data.ny_output", alias=Identifier("ta")),
+                right=Identifier("mindsdb.tp3", alias=Identifier("tb")),
+                join_type=JoinType.JOIN,
             ),
         )
 
         expected_plan = QueryPlan(
-            default_namespace='mysql',
+            default_namespace="mysql",
             steps=[
                 FetchDataframeStep(
-                    integration='mysql',
+                    integration="mysql",
                     query=Select(
                         targets=[Identifier(parts=[group_by_column], alias=Identifier(group_by_column))],
-                        from_table=Identifier('data.ny_output', alias=Identifier('ta')),
+                        from_table=Identifier("data.ny_output", alias=Identifier("ta")),
                         distinct=True,
-                    )
+                    ),
                 ),
                 MapReduceStep(
                     values=Result(0),
-                    reduce='union',
+                    reduce="union",
                     step=FetchDataframeStep(
-                        integration='mysql',
+                        integration="mysql",
                         query=parse_sql(
                             "SELECT * FROM data.ny_output AS ta\
                                                                 WHERE pickup_hour is not null and vendor_id = '$var[vendor_id]' ORDER BY pickup_hour DESC"
-                        )
+                        ),
                     ),
                 ),
                 ApplyTimeseriesPredictorStep(
-                    namespace='mindsdb',
-                    predictor=Identifier('tp3', alias=Identifier('tb')),
+                    namespace="mindsdb",
+                    predictor=Identifier("tp3", alias=Identifier("tb")),
                     dataframe=Result(1),
                 ),
                 JoinStep(
                     left=Result(1),
                     right=Result(2),
-                    query=Join(
-                        left=Identifier('result_1'),
-                        right=Identifier('result_2'),
-                        join_type=JoinType.JOIN
-                    )
+                    query=Join(left=Identifier("result_1"), right=Identifier("result_2"), join_type=JoinType.JOIN),
                 ),
                 ProjectStep(dataframe=Result(3), columns=[Star()]),
             ],
@@ -1157,15 +1102,17 @@ class TestJoinTimeseriesPredictor:
 
         plan = plan_query(
             query,
-            integrations=['mysql'],
-            predictor_namespace='mindsdb',
-            default_namespace='mysql',
+            integrations=["mysql"],
+            predictor_namespace="mindsdb",
+            default_namespace="mysql",
             predictor_metadata={
-                'tp3': {'timeseries': True,
-                        'order_by_column': 'pickup_hour',
-                        'group_by_columns': [group_by_column],
-                        'window': predictor_window}
-            }
+                "tp3": {
+                    "timeseries": True,
+                    "order_by_column": "pickup_hour",
+                    "group_by_columns": [group_by_column],
+                    "window": predictor_window,
+                }
+            },
         )
 
         for i in range(len(plan.steps)):
@@ -1179,11 +1126,12 @@ class TestJoinTimeseriesPredictor:
 
         plan_query(
             query,
-            integrations=['ds', 'int'],
-            predictor_namespace='mindsdb',
+            integrations=["ds", "int"],
+            predictor_namespace="mindsdb",
             predictor_metadata={
-                'pr': {'timeseries': True, 'window': 3, 'order_by_column': 'f1', 'group_by_columns': ['f2']}},
-            default_namespace='mindsdb'
+                "pr": {"timeseries": True, "window": 3, "order_by_column": "f1", "group_by_columns": ["f2"]}
+            },
+            default_namespace="mindsdb",
         )
 
         assert query.to_tree() == query_tree
@@ -1194,30 +1142,26 @@ class TestJoinTimeseriesPredictor:
 
         predictor_window = 3
         expected_plan = QueryPlan(
-            default_namespace='ds',
+            default_namespace="ds",
             steps=[
                 FetchDataframeStep(
-                    integration='ds',
+                    integration="ds",
                     query=parse_sql(
                         f"SELECT * FROM data.ny_output AS ta\
                      WHERE f1 is not null\
                      ORDER BY f1 DESC LIMIT {predictor_window}"
-                    )
+                    ),
                 ),
                 ApplyTimeseriesPredictorStep(
-                    namespace='mindsdb',
-                    predictor=Identifier('pr', alias=Identifier('tb')),
+                    namespace="mindsdb",
+                    predictor=Identifier("pr", alias=Identifier("tb")),
                     dataframe=Result(0),
-                    output_time_filter=BinaryOperation('>', args=[Identifier('f1'), Latest()]),
+                    output_time_filter=BinaryOperation(">", args=[Identifier("f1"), Latest()]),
                 ),
                 JoinStep(
                     left=Result(0),
                     right=Result(1),
-                    query=Join(
-                        left=Identifier('result_0'),
-                        right=Identifier('result_1'),
-                        join_type=JoinType.JOIN
-                    )
+                    query=Join(left=Identifier("result_0"), right=Identifier("result_1"), join_type=JoinType.JOIN),
                 ),
                 ProjectStep(dataframe=Result(2), columns=[Star()]),
             ],
@@ -1225,12 +1169,12 @@ class TestJoinTimeseriesPredictor:
 
         plan = plan_query(
             query,
-            integrations=['ds', 'int'],
-            predictor_namespace='mindsdb',
+            integrations=["ds", "int"],
+            predictor_namespace="mindsdb",
             predictor_metadata={
-                'pr': {'timeseries': True, 'window': predictor_window, 'order_by_column': 'f1',
-                       'group_by_columns': []}},
-            default_namespace='mindsdb'
+                "pr": {"timeseries": True, "window": predictor_window, "order_by_column": "f1", "group_by_columns": []}
+            },
+            default_namespace="mindsdb",
         )
 
         for i in range(len(plan.steps)):
@@ -1253,48 +1197,43 @@ class TestJoinTimeseriesPredictor:
         self._test_timeseries_with_between_operator(sql)
 
     def _test_timeseries_with_between_operator(self, sql):
-
         query = parse_sql(sql)
 
         predictor_window = 3
         expected_plan = QueryPlan(
-            default_namespace='ds',
+            default_namespace="ds",
             steps=[
                 FetchDataframeStep(
-                    integration='ds',
+                    integration="ds",
                     query=parse_sql(
                         "SELECT DISTINCT f2 AS f2 FROM data.ny_output as ta\
                                                                             WHERE f2 BETWEEN '2020-11-01' AND '2020-12-01'"
-                    )
+                    ),
                 ),
                 MapReduceStep(
                     values=Result(0),
-                    reduce='union',
+                    reduce="union",
                     step=FetchDataframeStep(
-                        integration='ds',
+                        integration="ds",
                         query=parse_sql(
                             f"SELECT * FROM data.ny_output as ta \
                                                    WHERE f2 BETWEEN '2020-11-01' AND '2020-12-01' \
                                                    AND f1 IS NOT NULL \
                                                    AND f2 = '$var[f2]' \
                                                    ORDER BY f1 DESC LIMIT {predictor_window}"
-                        )
+                        ),
                     ),
                 ),
                 ApplyTimeseriesPredictorStep(
-                    output_time_filter=BinaryOperation('>', args=[Identifier('f1'), Latest()]),
-                    namespace='mindsdb',
-                    predictor=Identifier('pr', alias=Identifier('tb')),
-                    dataframe=Result(1)
+                    output_time_filter=BinaryOperation(">", args=[Identifier("f1"), Latest()]),
+                    namespace="mindsdb",
+                    predictor=Identifier("pr", alias=Identifier("tb")),
+                    dataframe=Result(1),
                 ),
                 JoinStep(
                     left=Result(1),
                     right=Result(2),
-                    query=Join(
-                        right=Identifier('result_2'),
-                        left=Identifier('result_1'),
-                        join_type=JoinType.LEFT_JOIN
-                    )
+                    query=Join(right=Identifier("result_2"), left=Identifier("result_1"), join_type=JoinType.LEFT_JOIN),
                 ),
                 ProjectStep(dataframe=Result(3), columns=[Star()]),
             ],
@@ -1302,12 +1241,17 @@ class TestJoinTimeseriesPredictor:
 
         plan = plan_query(
             query,
-            integrations=['ds', 'int'],
-            predictor_namespace='mindsdb',
+            integrations=["ds", "int"],
+            predictor_namespace="mindsdb",
             predictor_metadata={
-                'pr': {'timeseries': True, 'window': predictor_window, 'order_by_column': 'f1',
-                       'group_by_columns': ['f2']}},
-            default_namespace='mindsdb'
+                "pr": {
+                    "timeseries": True,
+                    "window": predictor_window,
+                    "order_by_column": "f1",
+                    "group_by_columns": ["f2"],
+                }
+            },
+            default_namespace="mindsdb",
         )
 
         for i in range(len(plan.steps)):
@@ -1321,41 +1265,37 @@ class TestJoinTimeseriesPredictor:
 
         predictor_window = 3
         expected_plan = QueryPlan(
-            default_namespace='ds',
+            default_namespace="ds",
             steps=[
                 FetchDataframeStep(
-                    integration='ds',
+                    integration="ds",
                     query=parse_sql(
                         "SELECT DISTINCT F2 AS F2, f3 AS f3 FROM data.ny_output as ta\
                                                                             WHERE f2 > '2020-11-01'"
-                    )
+                    ),
                 ),
                 MapReduceStep(
                     values=Result(0),
-                    reduce='union',
+                    reduce="union",
                     step=FetchDataframeStep(
-                        integration='ds',
+                        integration="ds",
                         query=parse_sql(
                             "SELECT * FROM data.ny_output AS ta\
                                                                WHERE f2 > '2020-11-01' AND F1 IS NOT NULL AND F2 = '$var[F2]' AND f3 = '$var[f3]'\
                                                                ORDER BY F1 DESC LIMIT 3"
-                        )
+                        ),
                     ),
                 ),
                 ApplyTimeseriesPredictorStep(
-                    output_time_filter=BinaryOperation('>', args=[Identifier('f1'), Latest()]),
-                    namespace='mindsdb',
-                    predictor=Identifier('pr', alias=Identifier('tb')),
-                    dataframe=Result(1)
+                    output_time_filter=BinaryOperation(">", args=[Identifier("f1"), Latest()]),
+                    namespace="mindsdb",
+                    predictor=Identifier("pr", alias=Identifier("tb")),
+                    dataframe=Result(1),
                 ),
                 JoinStep(
                     left=Result(1),
                     right=Result(2),
-                    query=Join(
-                        right=Identifier('result_2'),
-                        left=Identifier('result_1'),
-                        join_type=JoinType.LEFT_JOIN
-                    )
+                    query=Join(right=Identifier("result_2"), left=Identifier("result_1"), join_type=JoinType.LEFT_JOIN),
                 ),
                 ProjectStep(dataframe=Result(3), columns=[Star()]),
             ],
@@ -1363,14 +1303,17 @@ class TestJoinTimeseriesPredictor:
 
         plan = plan_query(
             query,
-            integrations=['ds', 'int'],
-            predictor_namespace='mindsdb',
+            integrations=["ds", "int"],
+            predictor_namespace="mindsdb",
             predictor_metadata={
-                'pr': {'timeseries': True,
-                       'window': predictor_window,
-                       'order_by_column': 'F1',
-                       'group_by_columns': ['F2', 'f3']}},
-            default_namespace='mindsdb'
+                "pr": {
+                    "timeseries": True,
+                    "window": predictor_window,
+                    "order_by_column": "F1",
+                    "group_by_columns": ["F2", "f3"],
+                }
+            },
+            default_namespace="mindsdb",
         )
 
         for i in range(len(plan.steps)):
@@ -1379,13 +1322,13 @@ class TestJoinTimeseriesPredictor:
     def test_timeseries_no_group(self):
         predictor_window = 3
         expected_plan = QueryPlan(
-            default_namespace='ds',
+            default_namespace="ds",
             steps=[
                 MultipleSteps(
-                    reduce='union',
+                    reduce="union",
                     steps=[
                         FetchDataframeStep(
-                            integration='files',
+                            integration="files",
                             query=parse_sql(
                                 f"select * from schem.sweat as ta \
                                              WHERE date <= '2015-12-31' AND date IS NOT NULL \
@@ -1393,52 +1336,48 @@ class TestJoinTimeseriesPredictor:
                             ),
                         ),
                         FetchDataframeStep(
-                            integration='files',
+                            integration="files",
                             query=parse_sql(
                                 "select * from schem.sweat as ta \
                                              WHERE date > '2015-12-31' AND date IS NOT NULL \
                                              ORDER BY date DESC"
                             ),
                         ),
-                    ]
+                    ],
                 ),
                 ApplyTimeseriesPredictorStep(
-                    output_time_filter=BinaryOperation('>', args=[Identifier('date'), Constant('2015-12-31')]),
-                    namespace='mindsdb',
-                    predictor=Identifier('tp3', alias=Identifier('tb')),
-                    dataframe=Result(0)
+                    output_time_filter=BinaryOperation(">", args=[Identifier("date"), Constant("2015-12-31")]),
+                    namespace="mindsdb",
+                    predictor=Identifier("tp3", alias=Identifier("tb")),
+                    dataframe=Result(0),
                 ),
                 JoinStep(
                     left=Result(0),
                     right=Result(1),
-                    query=Join(
-                        right=Identifier('result_1'),
-                        left=Identifier('result_0'),
-                        join_type=JoinType.JOIN
-                    )
+                    query=Join(right=Identifier("result_1"), left=Identifier("result_0"), join_type=JoinType.JOIN),
                 ),
             ],
         )
 
         # different way to join predictor
 
-        sql = '''select * from files.schem.sweat as ta
+        sql = """select * from files.schem.sweat as ta
                   join mindsdb.tp3 as tb
                  where ta.date > '2015-12-31'
-            '''
+            """
         self._test_timeseries_no_group(sql, expected_plan)
 
-        sql = '''select * from (
+        sql = """select * from (
                     select * from files.schem.sweat as ta
                     where ta.date > '2015-12-31'
                  )
                  join mindsdb.tp3 as tb
-            '''
+            """
         self._test_timeseries_no_group(sql, expected_plan)
 
         # create table no integration
 
-        sql = '''
+        sql = """
             create or replace table files.model_name (
                 select * from (
                            select * from schem.sweat as ta
@@ -1446,12 +1385,12 @@ class TestJoinTimeseriesPredictor:
                 )
                 join mindsdb.tp3 as tb
             )
-            '''
+            """
         expected_plan2 = copy.deepcopy(expected_plan)
         expected_plan2.add_step(
             SaveToTable(
-                table=Identifier('files.model_name'),
-                dataframe=expected_plan2.steps[-1],
+                table=Identifier("files.model_name"),
+                dataframe=Result(expected_plan2.steps[-1].step_num),
                 is_replace=True,
             )
         )
@@ -1459,7 +1398,7 @@ class TestJoinTimeseriesPredictor:
 
         # create table with integration
 
-        sql = '''
+        sql = """
             create or replace table int1.model_name (
                 select * from (
                            select * from files.schem.sweat as ta
@@ -1467,12 +1406,12 @@ class TestJoinTimeseriesPredictor:
                 )
                 join mindsdb.tp3 as tb
             )
-            '''
+            """
         expected_plan2 = copy.deepcopy(expected_plan)
         expected_plan2.add_step(
             SaveToTable(
-                table=Identifier('int1.model_name'),
-                dataframe=expected_plan2.steps[-1],
+                table=Identifier("int1.model_name"),
+                dataframe=Result(expected_plan2.steps[-1].step_num),
                 is_replace=True,
             )
         )
@@ -1482,12 +1421,12 @@ class TestJoinTimeseriesPredictor:
         expected_plan2 = copy.deepcopy(expected_plan)
         expected_plan2.add_step(
             InsertToTable(
-                table=Identifier('int1.model_name'),
-                dataframe=expected_plan2.steps[-1],
+                table=Identifier("int1.model_name"),
+                dataframe=Result(expected_plan2.steps[-1].step_num),
             )
         )
 
-        sql = '''
+        sql = """
             insert into int1.model_name (
                 select * from (
                            select * from files.schem.sweat as ta
@@ -1495,17 +1434,17 @@ class TestJoinTimeseriesPredictor:
                 )
                 join mindsdb.tp3 as tb
             )
-            '''
+            """
         self._test_timeseries_no_group(sql, expected_plan2)
 
-        sql = '''
+        sql = """
             insert into int1.model_name
             select * from (
                            select * from files.schem.sweat as ta
                            where ta.date > '2015-12-31'
                 )
                 join mindsdb.tp3 as tb
-            '''
+            """
 
         self._test_timeseries_no_group(sql, expected_plan2)
 
@@ -1514,25 +1453,20 @@ class TestJoinTimeseriesPredictor:
         expected_plan2 = copy.deepcopy(expected_plan)
         expected_plan2.add_step(
             UpdateToTable(
-                table=Identifier('int1.tbl1'),
+                table=Identifier("int1.tbl1"),
                 dataframe=expected_plan2.steps[-1],
                 update_command=Update(
-                    table=Identifier('int1.tbl1'),
+                    table=Identifier("int1.tbl1"),
                     update_columns={
-                        'a': Identifier('df.a'),
-                        'b': Identifier('df.b'),
+                        "a": Identifier("df.a"),
+                        "b": Identifier("df.b"),
                     },
-                    where=BinaryOperation(
-                        op='=', args=[
-                            Identifier('c'),
-                            Identifier('df.c')
-                        ]
-                    )
-                )
+                    where=BinaryOperation(op="=", args=[Identifier("c"), Identifier("df.c")]),
+                ),
             )
         )
 
-        sql = '''
+        sql = """
             update
                 int1.tbl1
             set
@@ -1549,7 +1483,7 @@ class TestJoinTimeseriesPredictor:
                 as df
             where
                 c = df.c
-        '''
+        """
         self._test_timeseries_no_group(sql, expected_plan2)
 
     def _test_timeseries_no_group(self, sql, expected_plan):
@@ -1558,63 +1492,63 @@ class TestJoinTimeseriesPredictor:
 
         plan = plan_query(
             query,
-            integrations=['files', 'int1'],
-            predictor_namespace='mindsdb',
+            integrations=["files", "int1"],
+            predictor_namespace="mindsdb",
             predictor_metadata={
-                'tp3': {
-                    'timeseries': True,
-                    'window': predictor_window,
-                    'order_by_column': 'date',
-                    'group_by_columns': []
+                "tp3": {
+                    "timeseries": True,
+                    "window": predictor_window,
+                    "order_by_column": "date",
+                    "group_by_columns": [],
                 }
             },
-            default_namespace='mindsdb'
+            default_namespace="mindsdb",
         )
 
         assert plan.steps == expected_plan.steps
 
     def test_several_groups(self):
-
-        sql = '''
+        sql = """
              SELECT tb.saledate as date, tb.MA as forecast
               FROM mindsdb.pr as tb
               JOIN ds.HR_MA as t
              WHERE t.saledate > LATEST AND t.type = 'house' AND t.bedrooms = 2
              LIMIT 4
              USING param1 = 1, param2 = 'a';
-        '''
+        """
         predictor_window = 3
         query = parse_sql(sql)
 
         plan = plan_query(
             query,
-            integrations=['ds', 'int'],
-            predictor_namespace='mindsdb',
+            integrations=["ds", "int"],
+            predictor_namespace="mindsdb",
             predictor_metadata={
-                'pr': {
-                    'timeseries': True,
-                    'window': predictor_window,
-                    'order_by_column': 'saledate',
-                    'group_by_columns': ['type', 'bedrooms']}
+                "pr": {
+                    "timeseries": True,
+                    "window": predictor_window,
+                    "order_by_column": "saledate",
+                    "group_by_columns": ["type", "bedrooms"],
+                }
             },
-            default_namespace='mindsdb'
+            default_namespace="mindsdb",
         )
 
         expected_plan = QueryPlan(
-            default_namespace='ds',
+            default_namespace="ds",
             steps=[
                 FetchDataframeStep(
-                    integration='ds',
+                    integration="ds",
                     query=parse_sql(
                         "SELECT DISTINCT type AS type, bedrooms AS bedrooms FROM HR_MA as t\
                                                                             WHERE type = 'house' AND bedrooms = 2"
-                    )
+                    ),
                 ),
                 MapReduceStep(
                     values=Result(0),
-                    reduce='union',
+                    reduce="union",
                     step=FetchDataframeStep(
-                        integration='ds',
+                        integration="ds",
                         query=parse_sql(
                             f"SELECT * FROM HR_MA as t \
                                                    WHERE type = 'house' AND bedrooms = 2 \
@@ -1622,35 +1556,29 @@ class TestJoinTimeseriesPredictor:
                                                    AND type = '$var[type]' \
                                                    AND bedrooms = '$var[bedrooms]' \
                                                    ORDER BY saledate DESC LIMIT {predictor_window}"
-                        )
+                        ),
                     ),
                 ),
                 ApplyTimeseriesPredictorStep(
-                    output_time_filter=BinaryOperation('>', args=[Identifier('saledate'), Latest()]),
-                    namespace='mindsdb',
-                    predictor=Identifier('pr', alias=Identifier('tb')),
+                    output_time_filter=BinaryOperation(">", args=[Identifier("saledate"), Latest()]),
+                    namespace="mindsdb",
+                    predictor=Identifier("pr", alias=Identifier("tb")),
                     dataframe=Result(1),
-                    params={'param1': 1, 'param2': 'a'},
+                    params={"param1": 1, "param2": "a"},
                 ),
                 JoinStep(
                     left=Result(2),
                     right=Result(1),
-                    query=Join(
-                        right=Identifier('result_1'),
-                        left=Identifier('result_2'),
-                        join_type=JoinType.JOIN
-                    )
+                    query=Join(right=Identifier("result_1"), left=Identifier("result_2"), join_type=JoinType.JOIN),
                 ),
-                LimitOffsetStep(
-                    step_num=4,
-                    dataframe=Result(3),
-                    limit=4
-                ),
+                LimitOffsetStep(step_num=4, dataframe=Result(3), limit=4),
                 ProjectStep(
                     dataframe=Result(4),
-                    columns=[Identifier(parts=['tb', 'saledate'], alias=Identifier('date')),
-                             Identifier(parts=['tb', 'MA'], alias=Identifier('forecast'))]
-                )
+                    columns=[
+                        Identifier(parts=["tb", "saledate"], alias=Identifier("date")),
+                        Identifier(parts=["tb", "MA"], alias=Identifier("forecast")),
+                    ],
+                ),
             ],
         )
 
@@ -1658,8 +1586,7 @@ class TestJoinTimeseriesPredictor:
             assert plan.steps[i] == expected_plan.steps[i]
 
     def test_dbt_latest(self):
-
-        sql = '''
+        sql = """
           select * from (
              SELECT
                *
@@ -1668,67 +1595,61 @@ class TestJoinTimeseriesPredictor:
         ) as t1
            JOIN mindsdb.pr as tb
           WHERE t1.saledate > LATEST
-        '''
+        """
         predictor_window = 3
         query = parse_sql(sql)
 
         plan = plan_query(
             query,
-            integrations=['ds', 'int'],
-            predictor_namespace='mindsdb',
+            integrations=["ds", "int"],
+            predictor_namespace="mindsdb",
             predictor_metadata={
-                'pr': {
-                    'timeseries': True,
-                    'window': predictor_window,
-                    'order_by_column': 'saledate',
-                    'group_by_columns': ['type']}
+                "pr": {
+                    "timeseries": True,
+                    "window": predictor_window,
+                    "order_by_column": "saledate",
+                    "group_by_columns": ["type"],
+                }
             },
-            default_namespace='mindsdb'
+            default_namespace="mindsdb",
         )
 
         expected_plan = QueryPlan(
-            default_namespace='ds',
+            default_namespace="ds",
             steps=[
                 FetchDataframeStep(
-                    integration='ds',
+                    integration="ds",
                     query=parse_sql(
                         "SELECT DISTINCT type AS type FROM HR_MA as t\
                                                                             WHERE type = 'house'"
-                    )
+                    ),
                 ),
                 MapReduceStep(
                     values=Result(0),
-                    reduce='union',
+                    reduce="union",
                     step=FetchDataframeStep(
-                        integration='ds',
+                        integration="ds",
                         query=parse_sql(
                             f"SELECT * FROM HR_MA as t \
                                                    WHERE type = 'house' \
                                                    AND saledate IS NOT NULL \
                                                    AND type = '$var[type]' \
                                                    ORDER BY saledate DESC LIMIT {predictor_window}"
-                        )
+                        ),
                     ),
                 ),
                 ApplyTimeseriesPredictorStep(
-                    output_time_filter=BinaryOperation('>', args=[Identifier('saledate'), Latest()]),
-                    namespace='mindsdb',
-                    predictor=Identifier('pr', alias=Identifier('tb')),
-                    dataframe=Result(1)
+                    output_time_filter=BinaryOperation(">", args=[Identifier("saledate"), Latest()]),
+                    namespace="mindsdb",
+                    predictor=Identifier("pr", alias=Identifier("tb")),
+                    dataframe=Result(1),
                 ),
                 JoinStep(
                     left=Result(1),
                     right=Result(2),
-                    query=Join(
-                        right=Identifier('result_2'),
-                        left=Identifier('result_1'),
-                        join_type=JoinType.JOIN
-                    )
+                    query=Join(right=Identifier("result_2"), left=Identifier("result_1"), join_type=JoinType.JOIN),
                 ),
-                ProjectStep(
-                    dataframe=Result(3),
-                    columns=[Star()]
-                )
+                ProjectStep(dataframe=Result(3), columns=[Star()]),
             ],
         )
 
@@ -1739,77 +1660,79 @@ class TestJoinTimeseriesPredictor:
 
     def test_join_native_query(self):
         query = parse_sql(
-            '''
+            """
                         SELECT *
                         FROM int1 (select * from tab) as t
                         JOIN pred as m
                         WHERE t.date > LATEST
-                    '''
+                    """
         )
 
-        group_by_column = 'type'
+        group_by_column = "type"
 
         plan = plan_query(
             query,
-            integrations=['int1'],
-            default_namespace='proj',
-            predictor_metadata=[{
-                'name': 'pred',
-                'integration_name': 'proj',
-                'timeseries': True,
-                'window': 10, 'horizon': 10, 'order_by_column': 'date', 'group_by_columns': [group_by_column]
-            }]
+            integrations=["int1"],
+            default_namespace="proj",
+            predictor_metadata=[
+                {
+                    "name": "pred",
+                    "integration_name": "proj",
+                    "timeseries": True,
+                    "window": 10,
+                    "horizon": 10,
+                    "order_by_column": "date",
+                    "group_by_columns": [group_by_column],
+                }
+            ],
         )
 
         expected_plan = QueryPlan(
             steps=[
                 FetchDataframeStep(
-                    integration='int1',
+                    integration="int1",
                     query=Select(
-                        targets=[Identifier('type', alias=Identifier('type'))],
+                        targets=[Identifier("type", alias=Identifier("type"))],
                         from_table=NativeQuery(
-                            query='select * from tab', integration=Identifier('int1'), alias=Identifier('t')
+                            query="select * from tab", integration=Identifier("int1"), alias=Identifier("t")
                         ),
-                        distinct=True
-                    )
+                        distinct=True,
+                    ),
                 ),
                 MapReduceStep(
                     values=Result(0),
-                    reduce='union',
+                    reduce="union",
                     step=FetchDataframeStep(
-                        integration='int1',
+                        integration="int1",
                         query=Select(
                             targets=[Star()],
                             from_table=NativeQuery(
-                                query='select * from tab', integration=Identifier('int1'), alias=Identifier('t')
+                                query="select * from tab", integration=Identifier("int1"), alias=Identifier("t")
                             ),
                             distinct=False,
                             limit=Constant(10),
-                            order_by=[OrderBy(field=Identifier('date'), direction='DESC')],
+                            order_by=[OrderBy(field=Identifier("date"), direction="DESC")],
                             where=BinaryOperation(
-                                'and', args=[
-                                    BinaryOperation('is not', args=[Identifier('date'), NullConstant()]),
-                                    BinaryOperation('=', args=[Identifier('type'), Constant('$var[type]')]),
-                                ]
-                            )
-                        )
+                                "and",
+                                args=[
+                                    BinaryOperation("is not", args=[Identifier("date"), NullConstant()]),
+                                    BinaryOperation("=", args=[Identifier("type"), Constant("$var[type]")]),
+                                ],
+                            ),
+                        ),
                     ),
                 ),
                 ApplyTimeseriesPredictorStep(
-                    namespace='proj',
-                    predictor=Identifier('pred', alias=Identifier('m')),
+                    namespace="proj",
+                    predictor=Identifier("pred", alias=Identifier("m")),
                     dataframe=Result(1),
-                    output_time_filter=BinaryOperation('>', args=[Identifier('date'), Latest()]),
+                    output_time_filter=BinaryOperation(">", args=[Identifier("date"), Latest()]),
                 ),
                 JoinStep(
                     left=Result(1),
                     right=Result(2),
-                    query=Join(
-                        left=Identifier('result_1'),
-                        right=Identifier('result_2'),
-                        join_type=JoinType.JOIN
-                    )
-                )
+                    query=Join(left=Identifier("result_1"), right=Identifier("result_2"), join_type=JoinType.JOIN),
+                ),
             ]
         )
 
@@ -1818,7 +1741,7 @@ class TestJoinTimeseriesPredictor:
 
     def test_ts_with_cte(self):
         query = parse_sql(
-            '''
+            """
             WITH tab AS (
                 select * from int1.tbl1 a
             )
@@ -1826,59 +1749,51 @@ class TestJoinTimeseriesPredictor:
             FROM tab as t
             JOIN pred as m
             WHERE t.date > LATEST
-            '''
+            """
         )
 
         plan = plan_query(
             query,
-            integrations=['int1'],
-            default_namespace='proj',
-            predictor_metadata=[{
-                'name': 'pred',
-                'integration_name': 'proj',
-                'timeseries': True,
-                'window': 20, 'horizon': 10, 'order_by_column': 'date', 'group_by_columns': ['vendor_id']
-            }]
+            integrations=["int1"],
+            default_namespace="proj",
+            predictor_metadata=[
+                {
+                    "name": "pred",
+                    "integration_name": "proj",
+                    "timeseries": True,
+                    "window": 20,
+                    "horizon": 10,
+                    "order_by_column": "date",
+                    "group_by_columns": ["vendor_id"],
+                }
+            ],
         )
 
-        sub_select_query = parse_sql("SELECT * from t WHERE date IS NOT NULL AND vendor_id = '$var[vendor_id]' ORDER BY date DESC LIMIT 20")
+        sub_select_query = parse_sql(
+            "SELECT * from t WHERE date IS NOT NULL AND vendor_id = '$var[vendor_id]' ORDER BY date DESC LIMIT 20"
+        )
         sub_select_query.from_table = None
 
         expected_plan = QueryPlan(
             steps=[
-                FetchDataframeStep(
-                    integration='int1',
-                    query=parse_sql('select * from tbl1 a')
-                ),
-                SubSelectStep(
-                    dataframe=Result(0),
-                    query=parse_sql("select distinct vendor_id"),
-                    table_name='t'
-                ),
+                FetchDataframeStep(integration="int1", query=parse_sql("select * from tbl1 a")),
+                SubSelectStep(dataframe=Result(0), query=parse_sql("select distinct vendor_id"), table_name="t"),
                 MapReduceStep(
                     values=Result(1),
-                    reduce='union',
-                    step=SubSelectStep(
-                        dataframe=Result(0),
-                        query=sub_select_query,
-                        table_name='t'
-                    ),
+                    reduce="union",
+                    step=SubSelectStep(dataframe=Result(0), query=sub_select_query, table_name="t"),
                 ),
                 ApplyTimeseriesPredictorStep(
-                    namespace='proj',
-                    predictor=Identifier('pred', alias=Identifier('m')),
+                    namespace="proj",
+                    predictor=Identifier("pred", alias=Identifier("m")),
                     dataframe=Result(2),
-                    output_time_filter=BinaryOperation('>', args=[Identifier('date'), Latest()]),
+                    output_time_filter=BinaryOperation(">", args=[Identifier("date"), Latest()]),
                 ),
                 JoinStep(
                     left=Result(2),
                     right=Result(3),
-                    query=Join(
-                        left=Identifier('result_2'),
-                        right=Identifier('result_3'),
-                        join_type=JoinType.JOIN
-                    )
-                )
+                    query=Join(left=Identifier("result_2"), right=Identifier("result_3"), join_type=JoinType.JOIN),
+                ),
             ]
         )
 

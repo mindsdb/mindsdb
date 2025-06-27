@@ -59,7 +59,7 @@ class TestPlanJoinTables:
                         join_type=JoinType.INNER_JOIN
                     )
                 ),
-                QueryStep(parse_sql("select tab1.column1, tab2.column1, tab2.column2"), from_table=Result(2)),
+                QueryStep(parse_sql("select tab1.column1, tab2.column1, tab2.column2"), from_table=Result(2), strict_where=False),
             ],
         )
 
@@ -106,7 +106,7 @@ class TestPlanJoinTables:
                         join_type=JoinType.INNER_JOIN
                     )
                 ),
-                QueryStep(subquery, from_table=Result(2)),
+                QueryStep(subquery, from_table=Result(2), strict_where=False),
             ],
         )
 
@@ -166,7 +166,7 @@ class TestPlanJoinTables:
                         join_type=JoinType.INNER_JOIN
                     )
                 ),
-                QueryStep(subquery, from_table=Result(2)),
+                QueryStep(subquery, from_table=Result(2), strict_where=False),
             ],
         )
         assert plan.steps == expected_plan.steps
@@ -221,7 +221,7 @@ class TestPlanJoinTables:
                         join_type=JoinType.INNER_JOIN
                     )
                 ),
-                QueryStep(subquery, from_table=Result(2)),
+                QueryStep(subquery, from_table=Result(2), strict_where=False),
             ],
         )
 
@@ -273,7 +273,7 @@ class TestPlanJoinTables:
                         join_type=JoinType.INNER_JOIN
                     )
                 ),
-                QueryStep(subquery, from_table=Result(2)),
+                QueryStep(subquery, from_table=Result(2), strict_where=False),
             ],
         )
 
@@ -490,7 +490,7 @@ class TestPlanJoinTables:
                         join_type=JoinType.LEFT_JOIN
                     )
                 ),
-                QueryStep(subquery, from_table=Result(7)),
+                QueryStep(subquery, from_table=Result(7), strict_where=False),
             ]
         )
 
@@ -670,7 +670,7 @@ class TestPlanJoinTables:
                         join_type=JoinType.JOIN
                     )
                 ),
-                QueryStep(parse_sql('SELECT t1.`id`, t2.*'), from_table=Result(3)),
+                QueryStep(parse_sql('SELECT t1.`id`, t2.*'), from_table=Result(3), strict_where=False),
             ]
         )
 

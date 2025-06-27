@@ -18,13 +18,15 @@ class Context:
             'user_id': None,
             'company_id': None,
             'session_id': "",
+            'task_id': None,
             'user_class': 0,
             'profiling': {
                 'level': 0,
                 'enabled': False,
                 'pointer': None,
                 'tree': None
-            }
+            },
+            'email_confirmed': 0,
         })
 
     def __getattr__(self, name: str) -> Any:
@@ -51,6 +53,15 @@ class Context:
 
     def load(self, storage: dict) -> None:
         self._storage.set(storage)
+
+    def get_metadata(self, **kwargs) -> dict:
+        return {
+            'user_id': self.user_id or "",
+            'company_id': self.company_id or "",
+            'session_id': self.session_id,
+            'user_class': self.user_class,
+            **kwargs
+        }
 
 
 _context_var = ContextVar('mindsdb.context')

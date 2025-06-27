@@ -22,15 +22,18 @@ This handler uses `pinecone-client` python library connect to a pinecone environ
 The required arguments to establish a connection are:
 
 * `api_key`: the API key that can be found in your pinecone account
-* `environment`: the environment name corresponding to the `api_key`
 
-These optional arguments are used with `CREATE` statements:
+These optional arguments are used with `CREATE TABLE` statements:
 
 * `dimension`: dimensions of the vectors to be stored in the index (default=8)
 * `metric`: distance metric to be used for similarity search (default='cosine')
-* `pods`: number of pods for the index to use, including replicas (default=1)
-* `replicas`: the number of replicas. replicas duplicate your index. they provide higher availability and throughput (default=1)
-* `pod_type`: the type of pod to use, refer to pinecone documentation (default='p1')
+* `spec`: the spec of the index to be created. This is a dictionary that can contain the following keys:
+  * `cloud`: the cloud provider to use (default='aws')
+  * `region`: the region to use (default='us-east-1')
+
+<Note>
+Only the creation of serverless indexes is supported at the moment when running `CREATE TABLE` statements.
+</Note>
 
 ## Limitations
 
@@ -48,8 +51,7 @@ In order to make use of this handler and connect to an environment, use the foll
 CREATE DATABASE pinecone_dev
 WITH ENGINE = "pinecone",
 PARAMETERS = {
-   "api_key": "...",
-   "environment": "..."
+   "api_key": "..."
 };
 ```
 
@@ -79,7 +81,7 @@ Optionally, you can filter based on metadata too:
 
 ```sql
 SELECT * from pinecone_dev.temp
-WHERE id = "abc" AND temp.metadata.hello < 100
+WHERE id = "abc" AND metadata.hello < 100
 ```
 
 You can delete records using `id` or `metadata` like so:
@@ -93,7 +95,7 @@ Note that deletion through metadata is not supported in starter tier
 
 ```sql
 DELETE FROM pinecone_dev.temp
-WHERE temp.metadata.tbd = true
+WHERE metadata.tbd = true
 ```
 
 You can insert data into a new collection like so:

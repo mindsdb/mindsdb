@@ -166,7 +166,7 @@ class FirebirdHandler(DatabaseHandler):
         """
 
         query = """
-            SELECT RDB$RELATION_NAME 
+            SELECT RDB$RELATION_NAME
             FROM RDB$RELATIONS
             WHERE (RDB$SYSTEM_FLAG <> 1 OR RDB$SYSTEM_FLAG IS NULL) AND RDB$VIEW_BLR IS NULL
             ORDER BY RDB$RELATION_NAME;

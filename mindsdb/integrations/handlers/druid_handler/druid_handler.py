@@ -105,8 +105,8 @@ class DruidHandler(DatabaseHandler):
         need_to_close = self.is_connected is False
 
         try:
-            conn=self.connect()
-            conn.cursor().execute('select 1')  # raise exception if provided wrong credentials 
+            conn = self.connect()
+            conn.cursor().execute('select 1')  # raise exception if provided wrong credentials
 
             response.success = True
         except Exception as e:

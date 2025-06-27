@@ -151,7 +151,7 @@ def get_all_website_links(url) -> dict:
             # Parse HTML content with BeautifulSoup
             soup = BeautifulSoup(content_html, "html.parser")
             content_text = get_readable_text_from_soup(soup)
-            for a_tag in soup.findAll("a"):
+            for a_tag in soup.find_all("a"):
                 href = a_tag.attrs.get("href")
                 if href == "" or href is None:
                     continue
@@ -220,8 +220,6 @@ def get_all_website_links_recursively(url, reviewed_urls, limit=None, crawl_dept
     if limit is not None:
         if len(reviewed_urls) >= limit:
             return reviewed_urls
-    if crawl_depth == current_depth:
-        return reviewed_urls
 
     if not filters:
         matches_filter = True
@@ -240,6 +238,9 @@ def get_all_website_links_recursively(url, reviewed_urls, limit=None, crawl_dept
                 "text_content": "",
                 "error": str(error_message),
             }
+
+    if crawl_depth is not None and crawl_depth == current_depth:
+        return reviewed_urls
 
     to_rev_url_list = []
 

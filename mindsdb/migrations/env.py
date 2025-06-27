@@ -1,5 +1,9 @@
 from alembic import context
 from sqlalchemy import engine_from_config, pool
+import os
+
+from mindsdb.interfaces.storage import db
+from mindsdb.utilities.config import config as app_config
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -10,23 +14,16 @@ config = context.config
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 
-
-import os
-
-from mindsdb.interfaces.storage import db
-from mindsdb.utilities.config import Config
-
 # initialize
 
 if "MINDSDB_CONFIG_PATH" not in os.environ:
     os.environ["MINDSDB_CONFIG_PATH"] = "absent"
-Config()
 
 db.init()
 
 target_metadata = db.Base.metadata
 
-config.set_main_option("sqlalchemy.url", os.environ["MINDSDB_DB_CON"])
+config.set_main_option("sqlalchemy.url", app_config["storage_db"])
 
 
 # other values from the config, defined by the needs of env.py,

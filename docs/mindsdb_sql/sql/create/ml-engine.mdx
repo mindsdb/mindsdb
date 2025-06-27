@@ -3,15 +3,15 @@ title: Configure an ML Engine
 sidebarTitle: Configure an ML Engine
 ---
 
-You can create machine learning (ML) engines based on the ML handlers available in MindsDB. If you can't find the ML handler of your interest, you can always contribute by [building a new ML handler](/contribute/ml-handlers/).
+MindsDB integrates with numerous AI and ML frameworks that are made available via the AI/ML engines. The AI/ML engines are used to create models based on the particular AI/ML framework.
 
 ## Description
 
-The `CREATE ML_ENGINE` command creates an ML engine that uses one of the available ML handlers.
+The `CREATE ML_ENGINE` command creates an ML engine that uses one of the available AI/ML handlers.
 
 ## Syntax
 
-Before creating an ML engine, make sure that the ML handler of your interest is available by querying for the ML handlers.
+Before creating an AI/ML engine, make sure that the AI/ML handler of your interest is available by querying for the ML handlers.
 
 ```sql
 SELECT *
@@ -21,12 +21,12 @@ SHOW HANDLERS;
 ```
 
 <Info>
-If you can’t find the ML handler of your interest, you can contribute by [building a new ML handler](https://docs.mindsdb.com/contribute/ml_handlers).
+If you can’t find the AI/ML handler of your interest, you can contribute by [building a new AI/ML handler](/contribute/ml-handlers).
 
-Please note that in the process of contributing new ML engines, ML engines and/or their tests will only run correctly if all dependencies listed in the `requirements.txt` file are installed beforehand.
+Please note that in the process of contributing new AI.ML engines, ML engines and/or their tests will only run correctly if all dependencies listed in the `requirements.txt` file are installed beforehand.
 </Info>
 
-If you find the ML handler of your interest, then you can create an ML engine using this command:
+If you find the AI/ML handler of your interest, then you can create an AI/ML engine using this command:
 
 ```sql
 CREATE ML_ENGINE [IF NOT EXISTS] ml_engine_name
@@ -40,7 +40,7 @@ Please replace `ml_engine_name`, `handler_name`, and optionally, `argument_key` 
 Please do not use the same `ml_engine_name` as the `handler_name` to avoid issue while dropping the ML engine.
 </Note>
 
-To verify that your ML engine was successfully created, run the command below:
+To verify that your AI/ML engine was successfully created, run the command below:
 
 ```sql
 SELECT *
@@ -57,7 +57,7 @@ DROP ML_ENGINE ml_engine_name;
 
 ## Example
 
-Let's check what ML handlers are currently available:
+Let's check what AI/ML handlers are currently available:
 
 ```sql
 SHOW HANDLERS;
@@ -87,7 +87,7 @@ On execution, we get:
 +-------------------+--------------------+-------------------------------------------------------+---------+-----------------------------------------------------------------------------------------------------------------------------------------------------+----------------+-----------------------------------------------------------------------------+
 ```
 
-Here we create an ML engine using the OpenAI handler and providing an OpenAI API key in the `USING` clause.
+Here we create an AI/ML engine using the OpenAI handler and providing an OpenAI API key in the `USING` clause.
 
 ```sql
 CREATE ML_ENGINE my_openai_engine
@@ -121,7 +121,7 @@ On execution, we get:
 +-------------------+------------+------------------------------------------------------+
 ```
 
-Please note that the `USING` clause is optional, as it depends on the ML handler whether it requires some arguments or not. Here, we created an OpenAI engine and provided own API key.
+Please note that the `USING` clause is optional, as it depends on the AI/ML handler whether it requires some arguments or not. Here, we created an OpenAI engine and provided own API key.
 
 After creating your ML engine, you can create a model like this:
 

@@ -5,6 +5,9 @@ from pydantic import BaseModel, Field
 from langchain_core.tools import BaseTool
 
 
+from mindsdb.interfaces.agents.mindsdb_database_agent import extract_essential
+
+
 class _MindsDBSQLParserToolInput(BaseModel):
     tool_input: str = Field("", description="A SQL query to validate.")
 
@@ -26,6 +29,7 @@ class MindsDBSQLParserTool(BaseTool):
 
     def _run(self, query: str):
         """Validate the SQL query."""
+        query = extract_essential(query)
         clean_query = self._clean_query(query)
         for query in self._query_options(clean_query):
             try:

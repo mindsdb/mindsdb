@@ -23,7 +23,7 @@ Defines the knowledge base name.
 
 ### Body
 
-<ParamField body='query' type='string' required>
+<ParamField body='query' type='string'>
 Defines the SQL query used to fetch data to be inserted into the knowledge base.
 </ParamField>
 
@@ -31,23 +31,23 @@ Defines the SQL query used to fetch data to be inserted into the knowledge base.
 Defines raw data to be inserted into the knowledge base.
 </ParamField>
 
-<ParamField body='files' type='string' required>
+<ParamField body='files' type='string'>
 Defines the list of files to be inserted into the knowledge base.
 </ParamField>
 
-<ParamField body='urls' type='string' required>
+<ParamField body='urls' type='string'>
 Defines the list of URLs to be crawled and their content inserted into the knowledge base. For example, `"urls": ["https://docs.mindsdb.com/mindsdb_sql/knowledge-bases"]`.
 </ParamField>
 
-<ParamField body='limit' type='string' required>
+<ParamField body='limit' type='string'>
 Defines the limit of pages to be crawled. For example, `"limit": 10`.
 </ParamField>
 
-<ParamField body='crawl_depth' type='string' required>
+<ParamField body='crawl_depth' type='string'>
 Defines the crawl depth limit for URLs. For example, `"crawl_depth": 2`.
 </ParamField>
 
-<ParamField body='filters' type='string' required>
+<ParamField body='filters' type='string'>
 Defines the list of domains to be filtered. For example, `"filters": { "allowed_domains": ["example.com"] }`.
 </ParamField>
 

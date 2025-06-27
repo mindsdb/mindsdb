@@ -661,7 +661,7 @@ class KnowledgeBaseTable:
                     elif isinstance(value, dict):
                         metadata.update(value)
                         continue
-                    else:
+                    elif value is not None:
                         value = str(value)
                     metadata[col] = value
                 return metadata

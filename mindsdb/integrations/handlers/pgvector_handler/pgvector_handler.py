@@ -201,7 +201,10 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
                 values = list(repr(i) for i in item["value"])
                 item["value"] = "({})".format(", ".join(values))
             else:
-                item["value"] = repr(item["value"])
+                if item["value"] is None:
+                    item["value"] = "null"
+                else:
+                    item["value"] = repr(item["value"])
             where_clauses.append(f"{key} {item['op']} {item['value']}")
 
         if len(where_clauses) > 1:

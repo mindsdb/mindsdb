@@ -42,7 +42,6 @@ Base = declarative_base(cls=Base)
 
 session, engine = None, None
 
-
 def init(connection_str: str = None):
     global Base, session, engine
     if connection_str is None:

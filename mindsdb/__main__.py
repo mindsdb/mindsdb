@@ -43,6 +43,7 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.auth import register_oauth_client, get_aws_meta_data
 from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
 
+
 try:
     import torch.multiprocessing as mp
 except Exception:

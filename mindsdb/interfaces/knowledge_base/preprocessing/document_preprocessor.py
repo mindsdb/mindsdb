@@ -25,6 +25,8 @@ from langchain_core.documents import Document as LangchainDocument
 
 logger = log.getLogger(__name__)
 
+_DEFAULT_CONTENT_COLUMN_NAME = "content"
+
 
 class DocumentPreprocessor:
     """Base class for document preprocessing"""
@@ -90,14 +92,18 @@ class DocumentPreprocessor:
         start_char: Optional[int] = None,
         end_char: Optional[int] = None,
         provided_id: str = None,
+        content_column: str = None,
     ) -> str:
         """Generate human-readable deterministic ID for a chunk
-        Format: <doc_id>:<chunk_number>of<total_chunks>:<start_char>to<end_char>
+        Format: <doc_id>:<content_column>:<chunk_number>of<total_chunks>:<start_char>to<end_char>
         """
         if provided_id is None:
             raise ValueError("Document ID must be provided for chunk ID generation")
 
-        chunk_id = f"{provided_id}:{chunk_index + 1}of{total_chunks}:{start_char}to{end_char}"
+        if content_column is None:
+            raise ValueError("Content column must be provided for chunk ID generation")
+
+        chunk_id = f"{provided_id}:{content_column}:{chunk_index + 1}of{total_chunks}:{start_char}to{end_char}"
         logger.debug(f"Generated chunk ID: {chunk_id}")
         return chunk_id
 
@@ -254,8 +260,15 @@ Please give a short succinct context to situate this chunk within the overall do
             if doc.metadata:
                 metadata.update(doc.metadata)
 
+            # Get content_column from metadata or use default
+            content_column = metadata.get('content_column')
+            if content_column is None:
+                # If content_column is not in metadata, use the default column name
+                content_column = _DEFAULT_CONTENT_COLUMN_NAME
+                logger.debug(f"No content_column found in metadata, using default: {_DEFAULT_CONTENT_COLUMN_NAME}")
+
             chunk_id = self._generate_chunk_id(
-                chunk_index=chunk_index, provided_id=doc.id
+                chunk_index=chunk_index, provided_id=doc.id, content_column=content_column
             )
             processed_chunks.append(
                 ProcessedChunk(
@@ -324,13 +337,23 @@ class TextChunkingPreprocessor(DocumentPreprocessor):
                 metadata["start_char"] = start_char
                 metadata["end_char"] = end_char
 
-                # Generate chunk ID with total chunks
+                # Get content_column from metadata or use default
+                content_column = None
+                if doc.metadata:
+                    content_column = doc.metadata.get('content_column')
+
+                if content_column is None:
+                    # If content_column is not in metadata, use the default column name
+                    content_column = _DEFAULT_CONTENT_COLUMN_NAME
+                    logger.debug(f"No content_column found in metadata, using default: {_DEFAULT_CONTENT_COLUMN_NAME}")
+
                 chunk_id = self._generate_chunk_id(
                     chunk_index=i,
                     total_chunks=total_chunks,
                     start_char=start_char,
                     end_char=end_char,
-                    provided_id=doc.id
+                    provided_id=doc.id,
+                    content_column=content_column
                 )
 
                 processed_chunks.append(
@@ -354,18 +377,21 @@ class PreprocessorFactory:
     ) -> DocumentPreprocessor:
         """
         Create appropriate preprocessor based on configuration
-        : param config: Preprocessing configuration
-        : return: Configured preprocessor instance
-        : raises ValueError: If unknown preprocessor type specified
+        :param config: Preprocessing configuration
+        :return: Configured preprocessor instance
+        :raises ValueError: If unknown preprocessor type specified
         """
         if config is None:
+            # Default to text chunking if no config provided
             return TextChunkingPreprocessor()
 
-        if config.type == PreprocessorType.CONTEXTUAL:
-            return ContextualPreprocessor(
-                config.contextual_config or ContextualConfig()
-            )
-        elif config.type == PreprocessorType.TEXT_CHUNKING:
+        if config.type == PreprocessorType.TEXT_CHUNKING:
             return TextChunkingPreprocessor(config.text_chunking_config)
-
-        raise ValueError(f"Unknown preprocessor type: {config.type}")
+        elif config.type == PreprocessorType.CONTEXTUAL:
+            return ContextualPreprocessor(config.contextual_config)
+        elif config.type == PreprocessorType.JSON_CHUNKING:
+            # Import here to avoid circular imports
+            from mindsdb.interfaces.knowledge_base.preprocessing.json_chunker import JSONChunkingPreprocessor
+            return JSONChunkingPreprocessor(config.json_chunking_config)
+        else:
+            raise ValueError(f"Unknown preprocessor type: {config.type}")

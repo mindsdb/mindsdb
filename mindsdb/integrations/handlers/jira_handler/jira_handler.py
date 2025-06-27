@@ -1,75 +1,150 @@
+from typing import Any, Dict
+
+from atlassian import Jira
+from requests.exceptions import HTTPError
+
+from mindsdb.integrations.handlers.jira_handler.jira_tables import JiraProjectsTable, JiraIssuesTable, JiraUsersTable, JiraGroupsTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
+    HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
+    RESPONSE_TYPE,
 )
 from mindsdb.utilities import log
-from mindsdb.integrations.libs.api_handler_generator import APIResourceGenerator
 
 
 logger = log.getLogger(__name__)
 
 
 class JiraHandler(APIHandler):
+    """
+    This handler handles the connection and execution of SQL statements on Jira.
+    """
 
-    def __init__(self, name=None, **kwargs):
+    def __init__(self, name: str, connection_data: Dict, **kwargs: Any) -> None:
         """
-        Initialize the handler.
+        Initializes the handler.
+
         Args:
-            name (str): name of particular handler instance
-            connection_data (dict): parameters for connecting to the database
-            **kwargs: arbitrary keyword arguments.
+            name (Text): The name of the handler instance.
+            connection_data (Dict): The connection data required to connect to the Jira API.
+            kwargs: Arbitrary keyword arguments.
         """
         super().__init__(name)
-        self.connection_data = kwargs.get("connection_data", {})
+        self.connection_data = connection_data
+        self.kwargs = kwargs
 
         self.connection = None
         self.is_connected = False
 
-        # todo store parsed data in files
+        self._register_table("projects", JiraProjectsTable(self))
+        self._register_table("issues", JiraIssuesTable(self))
+        self._register_table("groups", JiraGroupsTable(self))
+        self._register_table("users", JiraUsersTable(self))
 
-        self.api_resource_generator = APIResourceGenerator(
-            "https://developer.atlassian.com/cloud/jira/platform/swagger-v3.v3.json",
-            self.connection_data,
-            url_base='/rest/api/3/',
-            options={
-                'offset_param': ['startAt', 'offset'],
-                'total_column': ['totalEntryCount', 'total'],
-                'check_connection_table': 'myself'
-            }
-        )
-
-        resource_tables = self.api_resource_generator.generate_api_resources(self)
-
-        for table_name, resource in resource_tables.items():
-            self._register_table(table_name, resource)
-
-    def __del__(self):
-        if self.is_connected is True:
-            self.disconnect()
-
-    def connect(self):
+    def connect(self) -> Jira:
         """
-        Set up the connection required by the handler.
+        Establishes a connection to the Jira API.
+
+        Raises:
+            ValueError: If the required connection parameters are not provided.
+            AuthenticationError: If an authentication error occurs while connecting to the Salesforce API.
+
         Returns:
-            HandlerStatusResponse
+            atlassian.jira.Jira: A connection object to the Jira API.
         """
-        return
+        if self.is_connected is True:
+            return self.connection
+
+        is_cloud = self.connection_data.get("cloud", True)
+
+        if is_cloud:
+            # Jira Cloud supports API token authentication.
+            if not all(key in self.connection_data for key in ['username', 'api_token', 'url']):
+                raise ValueError("Required parameters (username, api_token, url) must be provided.")
+
+            config = {
+                "username": self.connection_data['username'],
+                "password": self.connection_data['api_token'],
+                "url": self.connection_data['url'],
+            }
+        else:
+            # Jira Server supports personal access token authentication or open access.
+            if 'url' not in self.connection_data:
+                raise ValueError("Required parameter 'url' must be provided.")
+
+            config = {
+                "url": self.connection_data['url'],
+                "cloud": False
+            }
+
+            if 'personal_access_token' in self.connection_data:
+                config['session'] = ({"Authorization": f"Bearer {self.connection_data['personal_access_token']}"})
+
+        try:
+            self.connection = Jira(**config)
+            self.is_connected = True
+            return self.connection
+        except Exception as unknown_error:
+            logger.error(f"Unknown error connecting to Jira, {unknown_error}!")
+            raise
 
     def check_connection(self) -> StatusResponse:
         """
-        Check connection to the handler.
-        Returns:
-            HandlerStatusResponse
-        """
+        Checks the status of the connection to the Salesforce API.
 
+        Returns:
+            StatusResponse: An object containing the success status and an error message if an error occurs.
+        """
         response = StatusResponse(False)
 
         try:
-            self.api_resource_generator.check_connection()
+            connection = self.connect()
+            connection.myself()
             response.success = True
-        except Exception as e:
-            logger.error(f"Error connecting to Jira API: {e}!")
-            response.error_message = e
+        except (HTTPError, ValueError) as known_error:
+            logger.error(f'Connection check to Jira failed, {known_error}!')
+            response.error_message = str(known_error)
+        except Exception as unknown_error:
+            logger.error(f'Connection check to Jira failed due to an unknown error, {unknown_error}!')
+            response.error_message = str(unknown_error)
 
         self.is_connected = response.success
+
+        return response
+
+    def native_query(self, query: str) -> Response:
+        """
+        Executes a native JQL query on Jira and returns the result.
+
+        Args:
+            query (Text): The JQL query to be executed.
+
+        Returns:
+            Response: A response object containing the result of the query or an error message.
+        """
+        connection = self.connect()
+
+        try:
+            results = connection.jql(query)
+            df = JiraIssuesTable(self).normalize(results['issues'])
+            response = Response(
+                RESPONSE_TYPE.TABLE,
+                df
+            )
+        except HTTPError as http_error:
+            logger.error(f'Error running query: {query} on Jira, {http_error}!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_code=0,
+                error_message=str(http_error)
+            )
+        except Exception as unknown_error:
+            logger.error(f'Error running query: {query} on Jira, {unknown_error}!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_code=0,
+                error_message=str(unknown_error)
+            )
+
         return response

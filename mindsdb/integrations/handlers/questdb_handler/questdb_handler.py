@@ -5,7 +5,6 @@ from questdb.ingress import Sender
 
 from mindsdb.integrations.handlers.postgres_handler import Handler as PostgresHandler
 from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
@@ -17,7 +16,7 @@ logger = log.getLogger(__name__)
 
 class QuestDBHandler(PostgresHandler):
     """
-    This handler handles connection and execution of the QuestDB statements. 
+    This handler handles connection and execution of the QuestDB statements.
     TODO: check the dialect for questdb
     """
     name = 'questdb'

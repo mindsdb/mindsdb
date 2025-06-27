@@ -49,7 +49,6 @@ class CommentTable(APITable):
         self.filter_columns(result, query)
         return result
 
-
     def get_columns(self):
         '''Get the list of column names for the comment table.
 
@@ -79,6 +78,7 @@ class CommentTable(APITable):
                     columns.append(target.value)
         if len(columns) > 0:
             result = result[columns]
+
 
 class SubmissionTable(APITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
@@ -143,7 +143,6 @@ class SubmissionTable(APITable):
         self.filter_columns(result, query)
         return result
 
-
     def get_columns(self):
         '''Get the list of column names for the submission table.
 
@@ -188,7 +187,7 @@ class SubmissionTable(APITable):
                 result[col] = None
 
             result = result[columns]
-        
+
         if query is not None and query.limit is not None:
             return result.head(query.limit.value)
 

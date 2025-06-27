@@ -36,11 +36,11 @@ connection_args = OrderedDict(
 )
 
 connection_args_example = OrderedDict(
-    username = "demo_user",
-    password =  "demo_password",
-    host = "127.0.0.1",
-    port = 8981,
-    server_path = "solr",
-    collection = "gettingstarted",
-    use_ssl = False,
+    username="demo_user",
+    password="demo_password",
+    host="127.0.0.1",
+    port=8981,
+    server_path="solr",
+    collection="gettingstarted",
+    use_ssl=False,
 )

@@ -2,7 +2,7 @@ from mindsdb.utilities import log
 from google.cloud.aiplatform import init, TabularDataset, Model, Endpoint
 import pandas as pd
 
-from mindsdb.integrations.utilities.handlers.auth_utilities import GoogleServiceAccountOAuth2Manager
+from mindsdb.integrations.utilities.handlers.auth_utilities.google import GoogleServiceAccountOAuth2Manager
 
 logger = log.getLogger(__name__)
 

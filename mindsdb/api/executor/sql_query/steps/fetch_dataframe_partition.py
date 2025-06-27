@@ -8,7 +8,7 @@ from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.interfaces.query_context.context_controller import RunningQuery
 from mindsdb.api.executor.sql_query.result_set import ResultSet
 from mindsdb.utilities import log
-from mindsdb.utilities.config import Config
+from mindsdb.utilities.config import config
 from mindsdb.utilities.partitioning import get_max_thread_count, split_data_frame
 from mindsdb.api.executor.sql_query.steps.fetch_dataframe import get_table_alias, get_fill_param_fnc
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
@@ -57,23 +57,21 @@ class FetchDataframePartitionCall(BaseStepCall):
         # get query record
         run_query = self.sql_query.run_query
         if run_query is None:
-            raise RuntimeError('Error with partitioning of the query')
+            raise RuntimeError("Error with partitioning of the query")
         run_query.set_params(step.params)
 
-        self.table_alias = get_table_alias(step.query.from_table, self.context.get('database'))
+        self.table_alias = get_table_alias(step.query.from_table, self.context.get("database"))
         self.current_step_num = step.step_num
         self.substeps = step.steps
 
-        config = Config()
-
         # ml task queue enabled?
         use_threads, thread_count = False, None
-        if config['ml_task_queue']['type'] == 'redis':
+        if config["ml_task_queue"]["type"] == "redis":
             use_threads = True
 
         # use threads?
-        if 'threads' in step.params:
-            threads = step.params['threads']
+        if "threads" in step.params:
+            threads = step.params["threads"]
             if isinstance(threads, int):
                 thread_count = threads
                 use_threads = True
@@ -83,7 +81,7 @@ class FetchDataframePartitionCall(BaseStepCall):
                 # disable even with ml task queue
                 use_threads = False
 
-        on_error = step.params.get('error', 'raise')
+        on_error = step.params.get("error", "raise")
         if use_threads:
             return self.fetch_threads(run_query, query, thread_count=thread_count, on_error=on_error)
         else:
@@ -91,35 +89,20 @@ class FetchDataframePartitionCall(BaseStepCall):
 
     def fetch_iterate(self, run_query: RunningQuery, query: ASTNode, on_error: str = None) -> ResultSet:
         """
-         Process batches one by one in circle
+        Process batches one by one in circle
         """
 
         results = []
-        while True:
 
-            # fetch batch
-            query2 = run_query.get_partition_query(self.current_step_num, query)
-            response = self.dn.query(
-                query=query2,
-                session=self.session
-            )
-            df = response.data_frame
-
-            if df is None or len(df) == 0:
-                break
-
-            # executing of sub steps can modify dataframe columns, lets memorise max tracking value
-            max_track_value = run_query.get_max_track_value(df)
+        for df in run_query.get_partitions(self.dn, self, query):
             try:
                 sub_data = self.exec_sub_steps(df)
                 results.append(sub_data)
             except Exception as e:
-                if on_error == 'skip':
+                if on_error == "skip":
                     logger.error(e)
                 else:
                     raise e
-
-            run_query.set_progress(df, max_track_value)
 
         return self.concat_results(results)
 
@@ -135,7 +118,7 @@ class FetchDataframePartitionCall(BaseStepCall):
 
         data = ResultSet()
         if len(df_list) > 0:
-            data.from_df_cols(pd.concat(df_list), col_names)
+            data = ResultSet.from_df_cols(pd.concat(df_list), col_names)
 
         return data
 
@@ -147,15 +130,12 @@ class FetchDataframePartitionCall(BaseStepCall):
         - substep are executed using result of previos step (like it is all fetched data is available)
         - the final result is returned and used outside to concatenate with results of other's batches
         """
-
-        input_data = ResultSet()
-
-        input_data.from_df(
-            df,
-            table_name=self.table_alias[1],
-            table_alias=self.table_alias[2],
-            database=self.table_alias[0]
+        input_data = ResultSet.from_df(
+            df, table_name=self.table_alias[1], table_alias=self.table_alias[2], database=self.table_alias[0]
         )
+
+        if len(self.substeps) == 0:
+            return input_data
 
         # execute with modified previous results
         steps_data2 = self.steps_data.copy()
@@ -167,8 +147,9 @@ class FetchDataframePartitionCall(BaseStepCall):
             steps_data2[substep.step_num] = sub_data
         return sub_data
 
-    def fetch_threads(self, run_query: RunningQuery, query: ASTNode,
-                      thread_count: int = None, on_error: str = None) -> ResultSet:
+    def fetch_threads(
+        self, run_query: RunningQuery, query: ASTNode, thread_count: int = None, on_error: str = None
+    ) -> ResultSet:
         """
         Process batches in threads
         - spawn required count of threads
@@ -190,24 +171,7 @@ class FetchDataframePartitionCall(BaseStepCall):
         results = []
 
         with ContextThreadPoolExecutor(max_workers=thread_count) as executor:
-
-            while True:
-                # fetch batch
-                query2 = run_query.get_partition_query(self.current_step_num, query)
-                response = self.dn.query(
-                    query=query2,
-                    session=self.session
-                )
-                df = response.data_frame
-
-                if df is None or len(df) == 0:
-                    # TODO detect circles: data handler ignores condition and output is repeated
-
-                    # exit & stop workers
-                    break
-
-                max_track_value = run_query.get_max_track_value(df)
-
+            for df in run_query.get_partitions(self.dn, self, query):
                 # split into chunks and send to workers
                 futures = []
                 for df2 in split_data_frame(df, partition_size):
@@ -217,17 +181,13 @@ class FetchDataframePartitionCall(BaseStepCall):
                     try:
                         results.append(future.result())
                     except Exception as e:
-                        if on_error == 'skip':
+                        if on_error == "skip":
                             logger.error(e)
                         else:
                             executor.shutdown()
                             raise e
                 if self.sql_query.stop_event is not None and self.sql_query.stop_event.is_set():
                     executor.shutdown()
-                    raise RuntimeError('Query is interrupted')
-                # TODO
-                #  1. get next batch without updating track_value:
-                #    it allows to keep queue_in filled with data between fetching batches
-                run_query.set_progress(df, max_track_value)
+                    raise RuntimeError("Query is interrupted")
 
         return self.concat_results(results)

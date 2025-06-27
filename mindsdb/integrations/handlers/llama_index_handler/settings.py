@@ -2,6 +2,7 @@ from typing import List, Optional
 from pydantic import BaseModel, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
+
 class LlamaIndexConfig(BaseSettings):
     """
     Model for LlamaIndexHandler settings.
@@ -12,13 +13,14 @@ class LlamaIndexConfig(BaseSettings):
         default_reader (str): Default reader. Note this is custom data frame reader.
         supported_reader (List[str]): Supported readers.
     """
-    DEFAULT_INDEX_CLASS : str = "VectorStoreIndex"
-    SUPPORTED_INDEXES : List[str] = ["VectorStoreIndex"]
+    DEFAULT_INDEX_CLASS: str = "VectorStoreIndex"
+    SUPPORTED_INDEXES: List[str] = ["VectorStoreIndex"]
     DEFAULT_READER: str = "DFReader"
-    SUPPORTED_READERS : List[str] = ["DFReader", "SimpleWebPageReader"]
+    SUPPORTED_READERS: List[str] = ["DFReader", "SimpleWebPageReader"]
 
 
 llama_index_config = LlamaIndexConfig()
+
 
 class LlamaIndexModel(BaseModel):
     """
@@ -45,7 +47,7 @@ class LlamaIndexModel(BaseModel):
     def validate_reader(cls, value):
         if value not in llama_index_config.SUPPORTED_READERS:
             raise ValueError(f"Reader {value} is not supported.")
-        
+
         return value
 
     @field_validator('index_class')
@@ -53,13 +55,12 @@ class LlamaIndexModel(BaseModel):
     def validate_index_class(cls, value):
         if value not in llama_index_config.SUPPORTED_INDEXES:
             raise ValueError(f"Index class {value} is not supported.")
-        
+
         return value
-    
+
     @model_validator(mode='after')
     def validate_mode(self):
         if self.mode == "conversational" and not all([self.user_column, self.assistant_column]):
-            raise ValueError(f"Conversational mode requires user_column and assistant_column parameter")
-        
-        return self
+            raise ValueError("Conversational mode requires user_column and assistant_column parameter")
 
+        return self

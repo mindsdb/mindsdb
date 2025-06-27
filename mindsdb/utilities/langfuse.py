@@ -1,11 +1,12 @@
 import os
 import typing
+from typing import TYPE_CHECKING
 
 from mindsdb.utilities import log
-from langfuse import Langfuse
-from langfuse.client import StatefulSpanClient
-from langfuse.callback import CallbackHandler
-from langfuse.api.resources.commons.errors.not_found_error import NotFoundError as TraceNotFoundError
+
+if TYPE_CHECKING:
+    from langfuse.callback import CallbackHandler
+    from langfuse.client import StatefulSpanClient
 
 logger = log.getLogger(__name__)
 
@@ -98,6 +99,12 @@ class LangfuseClientWrapper:
         logger.debug(f"LANGFUSE_TIMEOUT: {LANGFUSE_TIMEOUT}")
         logger.debug(f"LANGFUSE_SAMPLE_RATE: {LANGFUSE_SAMPLE_RATE * 100}%")
 
+        try:
+            from langfuse import Langfuse
+        except ImportError:
+            logger.error("Langfuse is not installed. Please install it with `pip install langfuse`.")
+            return
+
         self.client = Langfuse(
             public_key=public_key,
             secret_key=secret_key,
@@ -164,7 +171,7 @@ class LangfuseClientWrapper:
 
     def start_span(self,
                    name: str,
-                   input: typing.Optional[typing.Any] = None) -> typing.Optional[StatefulSpanClient]:
+                   input: typing.Optional[typing.Any] = None) -> typing.Optional['StatefulSpanClient']:
         """
         Create span. If Langfuse is disabled, nothing will be done.
 
@@ -180,7 +187,7 @@ class LangfuseClientWrapper:
         return self.trace.span(name=name, input=input)
 
     def end_span_stream(self,
-                        span: typing.Optional[StatefulSpanClient] = None) -> None:
+                        span: typing.Optional['StatefulSpanClient'] = None) -> None:
         """
         End span. If Langfuse is disabled, nothing will happen.
         Args:
@@ -195,7 +202,7 @@ class LangfuseClientWrapper:
         self.trace.update()
 
     def end_span(self,
-                 span: typing.Optional[StatefulSpanClient] = None,
+                 span: typing.Optional['StatefulSpanClient'] = None,
                  output: typing.Optional[typing.Any] = None) -> None:
         """
         End trace. If Langfuse is disabled, nothing will be done.
@@ -227,7 +234,7 @@ class LangfuseClientWrapper:
         except Exception as e:
             logger.error(f'Something went wrong while processing Langfuse trace {self.trace.id}: {str(e)}')
 
-    def get_langchain_handler(self) -> typing.Optional[CallbackHandler]:
+    def get_langchain_handler(self) -> typing.Optional['CallbackHandler']:
         """
         Get Langchain handler. If Langfuse is disabled, returns None.
         """
@@ -257,8 +264,10 @@ class LangfuseClientWrapper:
         self.tags.append(self.release)
 
     def _get_tool_usage(self) -> typing.Dict:
-        """ Retrieves tool usage information from a langfuse trace.
-        Note: assumes trace marks an action with string `AgentAction` """
+        """Retrieves tool usage information from a langfuse trace.
+        Note: assumes trace marks an action with string `AgentAction`
+        """
+        from langfuse.api.resources.commons.errors.not_found_error import NotFoundError as TraceNotFoundError
 
         tool_usage = {}
 

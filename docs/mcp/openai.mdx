@@ -1,0 +1,52 @@
+---
+title: MindsDB's MCP Server with OpenAI's Remote MCP
+sidebarTitle: OpenAI
+---
+
+This tutorial walks you through the usage of MindsDB's MCP Server with [OpenAI's Remote MCP](https://platform.openai.com/docs/guides/tools-remote-mcp).
+
+## Setup
+
+Follow the steps below to connect MindsDB's MCP Server to OpenAI.
+
+1. Start MindsDB's MCP Server following [this guide](/mcp/usage).
+
+2. Expose the local instance of MindsDB via [ngrok](https://ngrok.com/) or similar tools.
+
+3. Get the OpenAI API key and download the `openai` package.
+
+## Chat with Data
+
+Here is how to connect MindsDB's MCP Server to OpenAI.
+
+```python
+import openai
+
+client = openai.OpenAI(
+    api_key = 'openai-api-key'
+)
+
+response = client.responses.create(
+    model = "o3",
+    tools = [
+        {
+            "type": "mcp",
+            "server_label": "mdb",
+            "server_url": "https://5a52-88-203-84-191.ngrok-free.app/sse",
+            "headers": { "Authorization": "Bearer $MINDSDB_MCP_ACCESS_TOKEN" },
+            "require_approval": "never",
+        }
+    ],
+    input = "What tools do you have available?"
+)
+
+print(response)
+```
+
+Here is the output:
+
+```bash
+Response(id='resp_68305d877eac81918e05a35beb23c40f054f254057b1b9a9', created_at=1748000135.0, error=None, incomplete_details=None, instructions=None, metadata={}, model='o3-2025-04-16', object='response', output=[McpListTools(id='mcpl_68305d87913c8191ade2e249dc9a7cce054f254057b1b9a9', server_label='mdb', tools=[McpListToolsTool(input_schema={'properties': {'query': {'title': 'Query', 'type': 'string'}, 'context': {'anyOf': [{'type': 'object'}, {'type': 'null'}], 'default': None, 'title': 'Context'}}, 'required': ['query'], 'title': 'queryArguments', 'type': 'object'}, name='query', annotations=None, description='\n    Execute a SQL query against MindsDB\n\n    Args:\n        query: The SQL query to execute\n        context: Optional context parameters for the query\n\n    Returns:\n        Dict containing the query results or error information\n    '), McpListToolsTool(input_schema={'properties': {}, 'title': 'list_databasesArguments', 'type': 'object'}, name='list_databases', annotations=None, description='\n    List all databases in MindsDB along with their tables\n\n    Returns:\n        Dict containing the list of databases and their tables\n    ')], type='mcp_list_tools', error=None), ResponseReasoningItem(id='rs_68305d8c00c08191964ba4e0b011f98a054f254057b1b9a9', summary=[], type='reasoning', encrypted_content=None, status=None), ResponseOutputMessage(id='msg_68305d8ee2cc8191966e94f464677dab054f254057b1b9a9', content=[ResponseOutputText(annotations=[], text='I currently have access to two kinds of tools:\n\n1. Image Input  \n   • I can receive an image along with your message and analyze the visible content (objects, text, layout, etc.) to help answer questions or perform tasks related to the image.\n\n2. MindsDB SQL Tools  \n   • mcp_mdb.list_databases – Lists the databases and tables that are registered in the MindsDB environment.  \n   • mcp_mdb.query – Lets me run SQL queries against those databases and return the results to you.\n\nLet me know if you’d like me to use either of these tools!', type='output_text')], role='assistant', status='completed', type='message')], parallel_tool_calls=True, temperature=1.0, tool_choice='auto', tools=[Mcp(server_label='mdb', server_url='https://5a52-88-203-84-191.ngrok-free.app/<redacted>', type='mcp', allowed_tools=None, headers={'Authorization': '<redacted>'}, require_approval='always')], top_p=1.0, background=False, max_output_tokens=None, previous_response_id=None, reasoning=Reasoning(effort='medium', generate_summary=None, summary=None), service_tier='default', status='completed', text=ResponseTextConfig(format=ResponseFormatText(type='text')), truncation='disabled', usage=ResponseUsage(input_tokens=136, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=192, output_tokens_details=OutputTokensDetails(reasoning_tokens=64), total_tokens=328), user=None, store=True)
+```
+
+Follow the [Remote MCP docs from OpenAI](https://platform.openai.com/docs/guides/tools-remote-mcp) to learn more.

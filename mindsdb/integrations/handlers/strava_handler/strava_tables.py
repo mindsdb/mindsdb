@@ -8,11 +8,9 @@ from mindsdb.utilities import log
 
 from mindsdb_sql_parser import ast
 
-import requests
-import pandas as pd
-import json
 
 logger = log.getLogger(__name__)
+
 
 class StravaAllClubsTable(APITable):
     """Strava List all Clubs Table implementation"""
@@ -32,7 +30,6 @@ class StravaAllClubsTable(APITable):
         ValueError
             If the query contains an unsupported condition
         """
-        conditions = extract_comparison_conditions(query.where)
 
         order_by_conditions = {}
 
@@ -42,7 +39,7 @@ class StravaAllClubsTable(APITable):
 
             for an_order in query.order_by:
                 if an_order.field.parts[0] != "id":
-                    next    
+                    next
                 if an_order.field.parts[1] in self.get_columns():
                     order_by_conditions["columns"].append(an_order.field.parts[1])
 
@@ -65,7 +62,6 @@ class StravaAllClubsTable(APITable):
                 selected_columns.append(target.parts[-1])
             else:
                 raise ValueError(f"Unknown query target {type(target)}")
-
 
         if len(strava_clubs_df) == 0:
             strava_clubs_df = pd.DataFrame([], columns=selected_columns)
@@ -93,24 +89,24 @@ class StravaAllClubsTable(APITable):
             List of columns
         """
         return [
-        'id',
-        'name',
-        'sport_type',
-        'city',
-        'state',
-        'country',
-        'member_count',
+            'id',
+            'name',
+            'sport_type',
+            'city',
+            'state',
+            'country',
+            'member_count',
         ]
 
     def call_strava_allclubs_api(self):
         """Pulls all the records from the given and returns it select()
-    
+
         Returns
         -------
         pd.DataFrame of all the records of the "List Athlete Clubs" API end point
         """
 
-        clubs = self.handler.connect().get_athlete_clubs() 
+        clubs = self.handler.connect().get_athlete_clubs()
 
         club_cols = self.get_columns()
         data = []
@@ -153,7 +149,7 @@ class StravaClubActivitesTable(APITable):
 
             for an_order in query.order_by:
                 if an_order.field.parts[0] != "id":
-                    next    
+                    next
                 if an_order.field.parts[1] in self.get_columns():
                     order_by_conditions["columns"].append(an_order.field.parts[1])
 
@@ -165,7 +161,7 @@ class StravaClubActivitesTable(APITable):
                     raise ValueError(
                         f"Order by unknown column {an_order.field.parts[1]}"
                     )
-        
+
         for a_where in conditions:
             if a_where[1] == "strava_club_id":
                 if a_where[0] != "=":
@@ -173,7 +169,6 @@ class StravaClubActivitesTable(APITable):
                 clubs_kwargs["type"] = a_where[2]
             else:
                 raise ValueError(f"Unsupported where argument {a_where[1]}")
-
 
         strava_club_activities_df = self.call_strava_clubactivities_api(a_where[2])
 
@@ -186,7 +181,6 @@ class StravaClubActivitesTable(APITable):
                 selected_columns.append(target.parts[-1])
             else:
                 raise ValueError(f"Unknown query target {type(target)}")
-
 
         if len(strava_club_activities_df) == 0:
             strava_club_activities_df = pd.DataFrame([], columns=selected_columns)
@@ -214,18 +208,18 @@ class StravaClubActivitesTable(APITable):
             List of columns
         """
         return [
-        'name',
-        'distance',
-        'moving_time',	
-        'elapsed_time',
-        'total_elevation_gain',
-        'sport_type',
-        'athlete.firstname',
+            'name',
+            'distance',
+            'moving_time',
+            'elapsed_time',
+            'total_elevation_gain',
+            'sport_type',
+            'athlete.firstname',
         ]
 
-    def call_strava_clubactivities_api(self,club_id):
+    def call_strava_clubactivities_api(self, club_id):
         """Pulls all the records from the given and returns it select()
-    
+
         Returns
         -------
         pd.DataFrame of all the records of the "getClubActivitiesById" API end point
@@ -243,5 +237,3 @@ class StravaClubActivitesTable(APITable):
         all_strava_club_activities_df = pd.DataFrame(data, columns=club_cols)
 
         return all_strava_club_activities_df
-
-

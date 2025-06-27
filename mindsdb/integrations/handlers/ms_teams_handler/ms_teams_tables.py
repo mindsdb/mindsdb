@@ -15,6 +15,7 @@ class TeamsTable(APIResource):
     """
     The table abstraction for the 'teams' resource of the Microsoft Graph API.
     """
+
     def list(
         self,
         conditions: List[FilterCondition] = None,
@@ -67,6 +68,7 @@ class ChannelsTable(APIResource):
     """
     The table abstraction for the 'channels' resource of the Microsoft Graph API.
     """
+
     def list(
         self,
         conditions: List[FilterCondition] = None,
@@ -146,6 +148,7 @@ class ChannelMessagesTable(APIResource):
     """
     The table abstraction for the 'channel messages' resource of the Microsoft Graph API.
     """
+
     def list(
         self,
         conditions: List[FilterCondition] = None,
@@ -206,7 +209,7 @@ class ChannelMessagesTable(APIResource):
 
         if not group_id or not channel_id:
             raise ValueError("The 'channelIdentity_teamId' and 'channelIdentity_channelId' columns are required.")
-        
+
         messages = client.get_channel_messages(group_id, channel_id, message_ids)
 
         messages_df = pd.json_normalize(messages, sep="_")
@@ -247,12 +250,13 @@ class ChannelMessagesTable(APIResource):
             "channelIdentity_teamId",
             "channelIdentity_channelId",
         ]
-    
+
 
 class ChatsTable(APIResource):
     """
     The table abstraction for the 'chats' resource of the Microsoft Graph API.
     """
+
     def list(
         self,
         conditions: List[FilterCondition] = None,
@@ -312,12 +316,13 @@ class ChatsTable(APIResource):
             "webUrl",
             "isHiddenForAllMembers"
         ]
-    
+
 
 class ChatMessagesTable(APIResource):
     """
     The table abstraction for the 'chat messages' resource of the Microsoft Graph API.
     """
+
     def list(
         self,
         conditions: List[FilterCondition] = None,
@@ -367,7 +372,7 @@ class ChatMessagesTable(APIResource):
 
         if not chat_id:
             raise ValueError("The 'chatId' column is required.")
-        
+
         messages = client.get_chat_messages(chat_id, message_ids)
 
         messages_df = pd.json_normalize(messages, sep="_")

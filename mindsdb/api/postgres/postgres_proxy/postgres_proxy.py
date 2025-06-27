@@ -276,8 +276,7 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
             resp = SQLAnswer(
                 resp_type=RESPONSE_TYPE.TABLE,
                 state_track=executor.state_track,
-                columns=executor.to_postgres_columns(executor.columns),
-                data=executor.data,
+                result_set=executor.data,
                 status=executor.server_status
             )
         return resp
@@ -351,8 +350,8 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
         return strip_null_byte(sql).strip(';')
 
     def return_table(self, sql_answer: SQLAnswer, row_descs=True):
-        fields = self.to_postgres_fields(sql_answer.columns)
-        rows = self.to_postgres_rows(sql_answer.data)
+        fields = self.to_postgres_fields(sql_answer.result_set.columns)
+        rows = self.to_postgres_rows(sql_answer.result_set)
         if row_descs:
             self.send(RowDescriptions(fields=fields))
         self.send(DataRow(rows=rows))
@@ -376,8 +375,8 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
     def respond_from_sql_answer(self, sql, sql_answer: SQLAnswer, row_descs=True) -> bool:
         # TODO Add command complete passthrough for Complex Queries that exceed row limit in one go
         rows = 0
-        if sql_answer.data:
-            rows = len(sql_answer.data)
+        if sql_answer.result_set:
+            rows = len(sql_answer.result_set)
         if RESPONSE_TYPE.OK == sql_answer.type:
             return self.return_ok(sql, rows=rows)
         elif RESPONSE_TYPE.TABLE == sql_answer.type:

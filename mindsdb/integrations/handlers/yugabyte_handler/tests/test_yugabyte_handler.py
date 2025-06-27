@@ -35,7 +35,7 @@ class YugabyteHandlerTest(unittest.TestCase):
     def test_4_get_tables(self):
         tables = self.handler.get_tables()
         assert tables.type is not RESPONSE_TYPE.ERROR
- 
+
     def test_5_select_query(self):
         query = "SELECT * FROM PREM;"
         result = self.handler.native_query(query)
@@ -44,6 +44,6 @@ class YugabyteHandlerTest(unittest.TestCase):
     def test_6_check_connection(self):
         self.handler.check_connection()
 
-        
+
 if __name__ == '__main__':
     unittest.main()

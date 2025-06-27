@@ -1,14 +1,14 @@
 import ast
 from typing import Dict, Optional, List
 
+
+from litellm import completion, batch_completion, embedding, acompletion
 import pandas as pd
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities import log
 
 from mindsdb.integrations.handlers.litellm_handler.settings import CompletionParameters
-
-from litellm import completion, batch_completion
 
 
 logger = log.getLogger(__name__)
@@ -28,9 +28,30 @@ class LiteLLMHandler(BaseMLEngine):
     @staticmethod
     def create_validation(target, args=None, **kwargs):
         if "using" not in args:
-            raise Exception(
-                "Litellm engine requires a USING clause. See settings.py for more info on supported args."
+            raise Exception("Litellm engine requires a USING clause. See settings.py for more info on supported args.")
+
+    @staticmethod
+    def embeddings(model: str, messages: List[str], args: dict) -> List[list]:
+        response = embedding(model=model, input=messages, **args)
+        return [rec["embedding"] for rec in response.data]
+
+    @staticmethod
+    async def acompletion(model: str, messages: List[dict], args: dict):
+        if model.startswith("snowflake/") and "snowflake_account_id" in args:
+            args["api_base"] = (
+                f"https://{args['snowflake_account_id']}.snowflakecomputing.com/api/v2/cortex/inference:complete"
             )
+
+        return await acompletion(model=model, messages=messages, stream=False, **args)
+
+    @staticmethod
+    def completion(model: str, messages: List[dict], args: dict):
+        if model.startswith("snowflake/") and "snowflake_account_id" in args:
+            args["api_base"] = (
+                f"https://{args['snowflake_account_id']}.snowflakecomputing.com/api/v2/cortex/inference:complete"
+            )
+
+        return completion(model=model, messages=messages, stream=False, **args)
 
     def create(
         self,
@@ -70,9 +91,9 @@ class LiteLLMHandler(BaseMLEngine):
         self._build_messages(args, df)
 
         # remove prompt_template from args
-        args.pop('prompt_template', None)
+        args.pop("prompt_template", None)
 
-        if len(args['messages']) > 1:
+        if len(args["messages"]) > 1:
             # if more than one message, use batch completion
             responses = batch_completion(**args)
             return pd.DataFrame({"result": [response.choices[0].message.content for response in responses]})
@@ -103,36 +124,39 @@ class LiteLLMHandler(BaseMLEngine):
 
         if "prompt_template" in prompt_kwargs:
             # if prompt_template is passed in predict query, use it
-            logger.info("Using 'prompt_template' passed in SELECT Predict query. "
-                        "Note this will overwrite a 'prompt_template' passed in create MODEL query.")
-
-            args['prompt_template'] = prompt_kwargs.pop('prompt_template')
-
-        if 'mock_response' in prompt_kwargs:
-            # used for testing to save on real completion api calls
-            args['mock_response']: str = prompt_kwargs.pop('mock_response')
-
-        if 'messages' in prompt_kwargs and len(prompt_kwargs) > 1:
-            # if user passes in messages, no other args can be passed in
-            raise Exception(
-                "If 'messages' is passed in SELECT Predict query, no other args can be passed in."
+            logger.info(
+                "Using 'prompt_template' passed in SELECT Predict query. "
+                "Note this will overwrite a 'prompt_template' passed in create MODEL query."
             )
 
+            args["prompt_template"] = prompt_kwargs.pop("prompt_template")
+
+        if "mock_response" in prompt_kwargs:
+            # used for testing to save on real completion api calls
+            args["mock_response"]: str = prompt_kwargs.pop("mock_response")
+
+        if "messages" in prompt_kwargs and len(prompt_kwargs) > 1:
+            # if user passes in messages, no other args can be passed in
+            raise Exception("If 'messages' is passed in SELECT Predict query, no other args can be passed in.")
+
         # if user passes in messages, use those instead
-        if 'messages' in prompt_kwargs:
+        if "messages" in prompt_kwargs:
             logger.info("Using messages passed in SELECT Predict query. 'prompt_template' will be ignored.")
 
-            args['messages']: List = ast.literal_eval(df['messages'].iloc[0])
+            args["messages"]: List = ast.literal_eval(df["messages"].iloc[0])
 
         else:
             # if user passes in prompt_template, use that to create messages
             if len(prompt_kwargs) == 1:
-                args['messages'] = self._prompt_to_messages(args['prompt_template'], **prompt_kwargs) \
-                    if args['prompt_template'] else self._prompt_to_messages(df.iloc[0][0])
+                args["messages"] = (
+                    self._prompt_to_messages(args["prompt_template"], **prompt_kwargs)
+                    if args["prompt_template"]
+                    else self._prompt_to_messages(df.iloc[0][0])
+                )
 
             elif len(prompt_kwargs) > 1:
                 try:
-                    args['messages'] = self._prompt_to_messages(args['prompt_template'], **prompt_kwargs)
+                    args["messages"] = self._prompt_to_messages(args["prompt_template"], **prompt_kwargs)
                 except KeyError as e:
                     raise Exception(
                         f"{e}: Please pass in either a prompt_template on create MODEL or "

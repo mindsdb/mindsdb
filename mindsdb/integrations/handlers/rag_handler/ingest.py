@@ -64,7 +64,7 @@ class RAGIngestor:
 
     def split_documents(self, chunk_size, chunk_overlap) -> list:
         # Load documents and split in chunks
-        logger.info(f"Loading documents from input data")
+        logger.info("Loading documents from input data")
 
         documents = []
 
@@ -146,7 +146,7 @@ class RAGIngestor:
             self.embeddings_model_name, self.args.use_gpu
         )
 
-        logger.info(f"Creating vectorstore from documents")
+        logger.info("Creating vectorstore from documents")
 
         if not validate_documents(documents):
             raise ValueError("Invalid documents")

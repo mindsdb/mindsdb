@@ -22,7 +22,7 @@ from email.message import EmailMessage
 
 from base64 import urlsafe_b64encode, urlsafe_b64decode
 
-from mindsdb.integrations.utilities.handlers.auth_utilities import GoogleUserOAuth2Manager
+from mindsdb.integrations.utilities.handlers.auth_utilities.google import GoogleUserOAuth2Manager
 from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import AuthException
 
 DEFAULT_SCOPES = [
@@ -59,20 +59,17 @@ class EmailsTable(APITable):
         conditions = extract_comparison_conditions(query.where)
 
         params = {}
-        include_attachments = False
         for op, arg1, arg2 in conditions:
 
             if op == 'or':
-                raise NotImplementedError(f'OR is not supported')
+                raise NotImplementedError('OR is not supported')
 
-            if arg1 in ['query', 'label_ids', 'include_spam_trash', 'include_attachments']:
+            if arg1 in ['query', 'label_ids', 'include_spam_trash']:
                 if op == '=':
                     if arg1 == 'query':
                         params['q'] = arg2
                     elif arg1 == 'label_ids':
                         params['labelIds'] = arg2.split(',')
-                    elif arg1 == 'include_attachments':
-                        include_attachments = arg2 == 'true'
                     else:
                         params['includeSpamTrash'] = arg2
                 else:
@@ -88,9 +85,6 @@ class EmailsTable(APITable):
             method_name='list_messages',
             params=params
         )
-        attachments = []
-        if include_attachments:
-            attachments = self.handler.get_attachments(result)
         # filter targets
         columns = []
         for target in query.targets:
@@ -172,7 +166,7 @@ class EmailsTable(APITable):
         for row in query.values:
             params = dict(zip(columns, row))
 
-            if not 'to_email' in params:
+            if 'to_email' not in params:
                 raise ValueError('"to_email" parameter is required to send an email')
 
             message = EmailMessage()
@@ -213,7 +207,7 @@ class EmailsTable(APITable):
         conditions = extract_comparison_conditions(query.where)
         for op, arg1, arg2 in conditions:
             if op == 'or':
-                raise NotImplementedError(f'OR is not supported')
+                raise NotImplementedError('OR is not supported')
             if arg1 == 'message_id':
                 if op == '=':
                     self.handler.call_gmail_api('delete_message', {'id': arg2})
@@ -235,7 +229,7 @@ class EmailsTable(APITable):
         conditions = extract_comparison_conditions(query.where)
         for op, arg1, arg2 in conditions:
             if op == 'or':
-                raise NotImplementedError(f'OR is not supported')
+                raise NotImplementedError('OR is not supported')
             if arg1 == 'id':
                 if op == '=':
                     params['id'] = arg2
@@ -434,7 +428,6 @@ class GmailHandler(APIHandler):
             for attachment in attachments:
                 attachment_id = attachment['attachmentId']
                 filename = attachment['filename']
-                mimeType = attachment['mimeType']
                 attachment_data = self.service.users().messages().attachments().get(
                     userId='me', messageId=email['id'], id=attachment_id).execute()
                 file_data = attachment_data['data']

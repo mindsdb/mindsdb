@@ -1,37 +1,32 @@
 ---
-title: MindsDB Mongo-QL
+title: Overview
 sidebarTitle: Overview
+icon: "rectangle-code"
 ---
 
-MindsDB offers a tailored Mongo-QL syntax that enables seamless interaction with a wide range of objects, including collections, databases, and models. Moreover, you have the flexibility to connect MindsDB with MongoDB Compass and MongoDB Shell, facilitating streamlined integration.
+MindsDB provides MongoQL API, enabling its integration into MongoDB environments.
 
-<Note>
-After connecting to MindsDB from Mongo, switch to the default project by executing `> use mindsdb`.
-</Note>
+Follow these steps to get started:
 
-### Connect to MindsDB
-
-This section contains guides on how to connect MindsDB to MongoDB clients.
-
-<CardGroup cols={4}>
-
-    <Card title="MongoDB Compass" icon="link" href="/connect/mongo-compass"></Card>
-    <Card title="MongoDB Shell" icon="link" href="/connect/mongo-shell"></Card>
-
-</CardGroup>
-
-### Mongo-QL Syntax
-
-This section contains guides on how to work with collections, databases, and models.
-
-<CardGroup cols={4}>
-
-    <Card title="Collection Structure" icon="link" href="/sdks/mongo/collection-structure"></Card>
-    <Card title="ML Engines" icon="link" href="/sdks/mongo/ml_engine"></Card>
-    <Card title="Connect Databases" icon="link" href="/sdks/mongo/database"></Card>
-    <Card title="Create Models" icon="link" href="/sdks/mongo/insert"></Card>
-    <Card title="Describe Models" icon="link" href="/sdks/mongo/models/describe"></Card>
-    <Card title="Make Predictions" icon="link" href="/sdks/mongo/find"></Card>
-    <Card title="Delete Models" icon="link" href="/sdks/mongo/delete"></Card>
-
-</CardGroup>
+<Steps>
+  <Step title="Set up the development environment">
+    For MongoDB, use [MongoDB Compass](/sdks/mongo/connect/mongo-compass) or [MongoDB Shell](/sdks/mongo/connect/mongo-shell).
+  </Step>
+  <Step title="Connect a data source">
+    Connect a data source in [MongoDB](/sdks/mongo/databases/insertOne).<br></br>
+    Explore all available [data sources here](/integrations/data-overview).
+  </Step>
+  <Step title="Configure an AI engine">
+    Configure an AI engine in [MongoDB](/sdks/mongo/ml_engines/insertOne).<br></br>
+    Explore all available [AI engines here](/integrations/ai-overview).
+  </Step>
+  <Step title="Create and deploy an AI/ML model">
+    Create and deploy an AI/ML model in [MongoDB](/sdks/mongo/models/insertOne).
+  </Step>
+  <Step title="Query for predictions">
+    Query for predictions in [MongoDB](/sdks/mongo/models/get-batch-predictions).
+  </Step>
+  <Step title="Automate customized workflows">
+    Automate tasks by scheduling jobs in [MongoDB](/sdks/mongo/jobs/insertOne).
+  </Step>
+</Steps>

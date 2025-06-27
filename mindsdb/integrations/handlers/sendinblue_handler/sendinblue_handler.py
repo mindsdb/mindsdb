@@ -11,6 +11,7 @@ from mindsdb_sql_parser import parse_sql
 
 logger = log.getLogger(__name__)
 
+
 class SendinblueHandler(APIHandler):
     """
     The Sendinblue handler implementation.
@@ -72,7 +73,7 @@ class SendinblueHandler(APIHandler):
             api_instance.get_account()
             response.success = True
         except Exception as e:
-            logger.error(f'Error connecting to Sendinblue!')
+            logger.error('Error connecting to Sendinblue!')
             response.error_message = str(e)
 
         self.is_connected = response.success

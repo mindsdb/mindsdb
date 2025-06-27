@@ -1,7 +1,7 @@
 from typing import Optional
 
 import pandas as pd
-from impala import dbapi as db , sqlalchemy as SA
+from impala import dbapi as db, sqlalchemy as SA
 
 from mindsdb_sql_parser import parse_sql
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
@@ -29,7 +29,6 @@ class ImpalaHandler(DatabaseHandler):
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         super().__init__(name)
 
-        
         self.parser = parse_sql
         self.dialect = 'impala'
         self.kwargs = kwargs
@@ -38,20 +37,18 @@ class ImpalaHandler(DatabaseHandler):
         self.connection = None
         self.is_connected = False
 
-
-
     def connect(self):
         if self.is_connected is True:
             return self.connection
 
         config = {
             'host': self.connection_data.get('host'),
-            'port': self.connection_data.get('port',21050),
+            'port': self.connection_data.get('port', 21050),
             'user': self.connection_data.get('user'),
             'password': self.connection_data.get('password'),
             'database': self.connection_data.get('database'),
-            
-            
+
+
         }
 
         connection = db.connect(**config)
@@ -67,7 +64,7 @@ class ImpalaHandler(DatabaseHandler):
         return
 
     def check_connection(self) -> StatusResponse:
-       
+
         result = StatusResponse(False)
         need_to_close = self.is_connected is False
 
@@ -100,7 +97,7 @@ class ImpalaHandler(DatabaseHandler):
                 cur.execute(query)
                 result = cur.fetchall()
                 if cur.has_result_set:
-                    
+
                     response = Response(
                         RESPONSE_TYPE.TABLE,
                         pd.DataFrame(
@@ -137,7 +134,7 @@ class ImpalaHandler(DatabaseHandler):
         Get a list with all of the tabels in Impala
         """
         q = "SHOW TABLES;"
-        result= self.native_query(q)
+        result = self.native_query(q)
         df = result.data_frame.rename(columns={'name': 'TABLE_NAME'})
         result.data_frame = df
 
@@ -149,8 +146,8 @@ class ImpalaHandler(DatabaseHandler):
         """
         q = f"DESCRIBE {table_name};"
 
-        result= self.native_query(q)
-        df = result.data_frame.iloc[:,0:2].rename(columns={'name': 'COLUMN_NAME', 'type': 'Data_Type'})
+        result = self.native_query(q)
+        df = result.data_frame.iloc[:, 0:2].rename(columns={'name': 'COLUMN_NAME', 'type': 'Data_Type'})
         result.data_frame = df
 
         return result

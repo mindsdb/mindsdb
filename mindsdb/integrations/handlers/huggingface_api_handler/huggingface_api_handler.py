@@ -1,20 +1,13 @@
 import json
-import os
 from typing import Optional, Dict
-
 import pandas as pd
-
 from huggingface_hub import HfApi
 from huggingface_hub import hf_hub_download
-
 from hugging_py_face import NLP, ComputerVision, AudioProcessing, get_in_df_supported_tasks
 
-from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.base import BaseMLEngine
-
-from .exceptions import UnsupportedTaskException, InsufficientParametersException
-
 from mindsdb.integrations.utilities.handler_utils import get_api_key
+from .exceptions import UnsupportedTaskException, InsufficientParametersException
 
 
 class HuggingFaceInferenceAPIHandler(BaseMLEngine):

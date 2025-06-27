@@ -1,5 +1,5 @@
 import pandas as pd
-from mindsdb.integrations.libs.api_handler import  APITable
+from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb_sql_parser import ast
 
@@ -15,8 +15,8 @@ class BalanceTable(APITable):
         get_columns(): Get the list of column names for the balance table.
 
     '''
-    
-    def select(self, query: ast.Select) :
+
+    def select(self, query: ast.Select):
         '''Select data from the balance table and return it as a pandas DataFrame.
 
         Args:
@@ -34,21 +34,21 @@ class BalanceTable(APITable):
                     params[i[1]] = i[2]
                 else:
                     raise Exception("Only equals to '=' is Supported with 'last_updated_datetime'")
-                
+
         result = self.handler.call_plaid_api(method_name='get_balance', params=params)
 
         self.filter_columns(query=query, result=result)
         return result
-    
+
     def get_columns(self):
         '''Get the list of column names for the balance table.
-          
+
         Returns:
             list: A list of column names for the balance table.
 
         '''
         return [
-            'account_id', 
+            'account_id',
             'account_name',
             'account_mask',
             'account_type',
@@ -58,11 +58,11 @@ class BalanceTable(APITable):
             'balance_unofficial_currency_code',
             'balance_available',
             'balance_current',
-            'balance_limit' 
+            'balance_limit'
         ]
 
     def filter_columns(self, result: pd.DataFrame, query: ast.Select = None):
-        
+
         columns = []
         if query is not None:
             for target in query.targets:
@@ -103,7 +103,7 @@ class TransactionTable(BalanceTable):
 
     '''
 
-    def select(self, query: ast.Select) :
+    def select(self, query: ast.Select):
         '''Select data from the transaction table and return it as a pandas DataFrame.
 
         Args:
@@ -155,5 +155,3 @@ class TransactionTable(BalanceTable):
             'payment_channel',
             'pending',
         ]
-
-    

@@ -1,7 +1,6 @@
 import pandas as pd
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb_sql_parser import ast
-from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 
 
 class AccountsTable(APITable):
@@ -77,8 +76,6 @@ class PurchasesTable(APITable):
                 flat_data[f"{prefix}{key}"] = value
         return flat_data
 
-
-
     def select(self, query: ast.Select) -> pd.DataFrame:
         qbo = self.handler.connect()
         purchases_data = qbo.purchases.get()
@@ -123,6 +120,7 @@ class PurchasesTable(APITable):
                     columns.append(target.value)
         if len(columns) > 0:
             result = result[columns]
+
 
 class BillPaymentsTable(APITable):
     def flatten_dict(self, data: dict, prefix: str = ""):
@@ -174,7 +172,7 @@ class BillPaymentsTable(APITable):
             'domain',
             'sparse',
         ]
-        
+
     def filter_columns(self, result: pd.DataFrame, query: ast.Select = None):
         columns = []
         if query is not None:
@@ -187,8 +185,9 @@ class BillPaymentsTable(APITable):
         if len(columns) > 0:
             result = result[columns]
 
+
 class VendorsTable(APITable):
-    
+
     def flatten_dict(self, data: dict, prefix: str = ""):
         flat_data = {}
         for key, value in data.items():
@@ -198,7 +197,7 @@ class VendorsTable(APITable):
             else:
                 flat_data[f"{prefix}{key}"] = value
         return flat_data
-    
+
     def select(self, query: ast.Select) -> pd.DataFrame:
         qbo = self.handler.connect()
         vendors_data = qbo.vendors.get()
@@ -206,7 +205,7 @@ class VendorsTable(APITable):
         result = pd.DataFrame(flattened_vendors_data)
         self.filter_columns(result, query)
         return result
-    
+
     def get_columns(self):
         return [
             'Balance',
@@ -223,7 +222,7 @@ class VendorsTable(APITable):
             'domain',
             'sparse'
         ]
-    
+
     def filter_columns(self, result: pd.DataFrame, query: ast.Select = None):
         columns = []
         if query is not None:
@@ -316,8 +315,9 @@ class BillsTable(APITable):
         if len(columns) > 0:
             result = result[columns]
 
+
 class EmployeesTable(APITable):
-    
+
     def flatten_dict(self, data: dict, prefix: str = ""):
         flat_data = {}
         for key, value in data.items():

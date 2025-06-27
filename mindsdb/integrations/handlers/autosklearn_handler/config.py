@@ -1,6 +1,5 @@
 import sys
 from dataclasses import dataclass
-from autosklearn.metrics import *
 from autosklearn.metrics import Scorer
 
 

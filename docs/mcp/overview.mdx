@@ -3,61 +3,44 @@ title: Model Context Protocol (MCP)
 sidebarTitle: Overview
 ---
 
-The Model Context Protocol (MCP) is a protocol designed to enable real-time communication between MCP clients, including LLMs, AI agents, and AI apps, and MCP servers, such as MindsDB.
+The **Model Context Protocol (MCP)** facilitates real-time communication between MCP clients, such as LLMs, AI agents, and AI applications, and MCP servers like MindsDB.
 
-**MindsDB** is an MCP server that enables your MCP applications to answer questions over large-scale federated data—spanning databases, data warehouses, and SaaS applications.
+**MindsDB is an MCP server** that enables intelligent applications to query and reason over federated data from databases, data warehouses, and applications.
 
 ## Key Features
 
-- **Unified Data Gateway**  
-  MindsDB acts as a unified data gateway that handles complex data operations, freeing AI apps and agents from the need to manage individual data sources or write complex logic. MindsDB enables "one-step" querying across multiple sources with full auditability.
+* **Unified Data Gateway**
 
-- **Superior User Experience**  
-  MindsDB delivers a polished, secure, and user-friendly experience on top of MCP integrations. Our turnkey solution includes robust security controls, monitoring, governance, and native integrations to ensure compatibility with non-MCP solutions and applications.
+  MindsDB abstracts the complexity of dealing with disparate data sources. It enables AI apps and agents to run powerful, federated queries across structured and unstructured data systems.
 
-- **Advanced AI Workflows**  
-  MindsDB orchestrates complex AI workflows, such as joining data from multiple sources and coordinating across various models and data systems in a single query. These composite workflows are challenging to implement using MCP alone.
+* **Seamless User Experience**
 
-## Getting Started
+  MindsDB enhances MCP implementations with security, monitoring, and governance. It includes built-in integrations to ensure compatibility with traditional and non-MCP applications.
 
-MindsDB MCP API runs on port 47337 by default.
+* **Advanced AI Workflows**
 
-To enable the MCP API, you can use the [`MINDSDB_APIS` environment variable](/setup/environment-vars#mindsdb-apis):
-
-```bash
-export MINDSDB_APIS='mysql,mcp'
-```
-
-Start MindsDB in a Docker container enabling the MCP API port:
-
-```bash
-docker run --name mindsdb_container -e MINDSDB_APIS='mysql,mcp' -p 47335:47335 -p 47337:47337 mindsdb/mindsdb
-```
-
-Or, specify it when starting MindsDB locally with Python:
-
-```bash
-python -m mindsdb --api mysql,mcp
-```
+  MindsDB supports composite AI operations like multi-source joins and orchestration of different models or services within a single query, which go beyond the native capabilities of most LLMs using MCP alone.
 
 ## Protocol Overview
 
-MCP provides a bidirectional communication channel that allows MCP clients, such as LLMs, AI agents or apps, to run queries over federated data provided by MCP servers, such as MindsDB.
+MCP establishes a bidirectional communication channel between clients and servers, enabling LLMs, agents, or apps to execute queries over federated data infrastructures.
 
 <p align="center">
-  <img src="/assets/mcp.png" />
+  <img src="/assets/mcp.png" alt="MCP Protocol Flow Diagram" />
 </p>
 
-Here, federated data is data that is stored in different databases, applications, and/or cloud providers.
+Federated data refers to data distributed across multiple systems, formats, or platforms, whether on-premises or in the cloud.
 
-MindsDB MCP API allows you to query federated data as if it were a single database.
+With MindsDB as your MCP server, you can treat this distributed data as a **single virtual database**.
 
 ## How It Works
 
-Once you have MindsDB running, you can connect all your data sources and query them as if they were a single database. Then you can plug those databases to your AI applications/clients that use the MCP API.
+Here's a simplified overview of the MCP data flow:
 
-1. The client connects to the MCP API.
-2. The client sends a query to the MCP API.
-3. The MCP API sends the query to the federated data source.
-4. The federated data source returns the results to the MCP API.
-5. The MCP API returns the results to the client.
+1. The client connects to the MCP server.
+2. A query is issued from the client to the MCP server.
+3. MindsDB routes the query to the appropriate federated data sources.
+4. The data sources return results to MindsDB.
+5. MindsDB returns unified results back to the client.
+
+This enables AI-native applications to deliver rich, real-time insights over complex enterprise data with minimal integration effort.

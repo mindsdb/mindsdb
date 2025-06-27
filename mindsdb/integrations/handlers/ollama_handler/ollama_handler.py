@@ -63,7 +63,7 @@ class OllamaHandler(BaseMLEngine):
             responses = _model_check()
             if 200 not in responses.values():
                 raise Exception(f"Ollama model `{args['model_name']}` is not working correctly. Please try pulling this model manually, check it works correctly and try again.")  # noqa
-        
+
         supported_modes = {k: True if v == 200 else False for k, v in responses.items()}
 
         # check if a mode has been provided and if it is valid
@@ -71,7 +71,7 @@ class OllamaHandler(BaseMLEngine):
         if 'mode' in args:
             if args['mode'] not in runnable_modes:
                 raise Exception(f"Mode `{args['mode']}` is not supported by the model `{args['model_name']}`.")
-        
+
         # if a mode has not been provided, check if the model supports only one mode
         # if it does, set it as the default mode
         # if it supports multiple modes, set the default mode to 'generate'
@@ -168,4 +168,4 @@ class OllamaHandler(BaseMLEngine):
                     'modelfile',
                     'parameters',
                     'ollama_base_template',
-                ])
+            ])

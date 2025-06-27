@@ -11,27 +11,23 @@ Note that the trailing whitespaces on column names are erased upon uploading a f
 
 
 1. Access the MindsDB Editor.
-2. Navigate to `Add data` section by clicking the `Add data` button located in
-   the top right corner.
+2. Open the `Add` menu and choose `Upload file`.
 
    <p align="center">
-     <img src="/assets/sql/add-file-to-mindsdb-cloud-3.png" />
+     <img src="/assets/sql/upload_file1.png" />
    </p>
 
-3. Choose the `Files` tab.
+3. Select a file, provide its name, and click on `Save & Continue`.
 
    <p align="center">
-     <img src="/assets/sql/add-file-to-mindsdb-cloud.png" />
+     <img src="/assets/sql/upload_file2.png" />
    </p>
 
-4. Choose the `Import File` option.
-5. Upload a file (here it is `house_sales.csv`), name a table used to store the
-   file data (here it is `house_sales`), and click the `Save and Continue`
-   button.
+4. Now you can query the file.
 
-   <p align="center">
-     <img src="/assets/sql/add-file-to-mindsdb-cloud-2.png" />
-   </p>
+   ```sql
+   SELECT * FROM files.file_name;
+   ```
 
 ### Configuring URL File Upload for Specific Domains
 

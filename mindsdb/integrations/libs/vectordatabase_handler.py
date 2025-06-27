@@ -553,3 +553,9 @@ class VectorStoreHandler(BaseHandler):
             df(pd.DataFrame): Hybrid search result, sorted by hybrid search rank
         '''
         raise NotImplementedError(f'Hybrid search not supported for VectorStoreHandler {self.name}')
+
+    def create_index(self, *args, **kwargs):
+        """
+        Create an index on the specified table.
+        """
+        raise NotImplementedError(f'create_index not supported for VectorStoreHandler {self.name}')

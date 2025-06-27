@@ -14,24 +14,22 @@ from sqlalchemy.sql import functions as sa_fnc
 from mindsdb_sql_parser import ast
 
 
-RESERVED_WORDS = {
-    "collation"
-}
+RESERVED_WORDS = {"collation"}
 
 sa_type_names = [
-    key for key, val in sa.types.__dict__.items() if hasattr(val, '__module__')
-    and val.__module__ in ('sqlalchemy.sql.sqltypes', 'sqlalchemy.sql.type_api')
+    key
+    for key, val in sa.types.__dict__.items()
+    if hasattr(val, "__module__") and val.__module__ in ("sqlalchemy.sql.sqltypes", "sqlalchemy.sql.type_api")
 ]
 
 types_map = {}
 for type_name in sa_type_names:
     types_map[type_name.upper()] = getattr(sa.types, type_name)
-types_map['BOOL'] = types_map['BOOLEAN']
-types_map['DEC'] = types_map['DECIMAL']
+types_map["BOOL"] = types_map["BOOLEAN"]
+types_map["DEC"] = types_map["DECIMAL"]
 
 
-class RenderError(Exception):
-    ...
+class RenderError(Exception): ...
 
 
 # https://github.com/sqlalchemy/sqlalchemy/discussions/9483?sort=old#discussioncomment-5312979
@@ -43,13 +41,13 @@ class INTERVAL(ColumnElement):
 
 @compiles(INTERVAL)
 def _compile_interval(element, compiler, **kw):
-    items = element.info.split(' ', maxsplit=1)
-    if compiler.dialect.name == 'oracle' and len(items) == 2:
+    items = element.info.split(" ", maxsplit=1)
+    if compiler.dialect.name == "oracle" and len(items) == 2:
         # replace to singular names (remove leading S if exists)
-        if items[1].upper().endswith('S'):
+        if items[1].upper().endswith("S"):
             items[1] = items[1][:-1]
 
-    if compiler.dialect.driver in ['snowflake']:
+    if compiler.dialect.driver in ["snowflake"]:
         # quote all
         args = " ".join(map(str, items))
         args = f"'{args}'"
@@ -62,8 +60,9 @@ def _compile_interval(element, compiler, **kw):
 
 class AttributedStr(str):
     """
-       Custom str-like object to pass it to `_requires_quotes` method with `is_quoted` flag
+    Custom str-like object to pass it to `_requires_quotes` method with `is_quoted` flag
     """
+
     def __new__(cls, string, is_quoted: bool):
         obj = str.__new__(cls, string)
         obj.is_quoted = is_quoted
@@ -75,23 +74,22 @@ class AttributedStr(str):
 
 
 def get_is_quoted(identifier: ast.Identifier):
-    quoted = getattr(identifier, 'is_quoted', [])
+    quoted = getattr(identifier, "is_quoted", [])
     # len can be different
     quoted = quoted + [None] * (len(identifier.parts) - len(quoted))
     return quoted
 
 
 class SqlalchemyRender:
-
     def __init__(self, dialect_name):
         dialects = {
-            'mysql': mysql,
-            'postgresql': postgresql,
-            'postgres': postgresql,
-            'sqlite': sqlite,
-            'mssql': mssql,
-            'oracle': oracle,
-            'Snowflake': oracle,
+            "mysql": mysql,
+            "postgresql": postgresql,
+            "postgres": postgresql,
+            "sqlite": sqlite,
+            "mssql": mssql,
+            "oracle": oracle,
+            "Snowflake": oracle,
         }
 
         if isinstance(dialect_name, str):
@@ -100,9 +98,9 @@ class SqlalchemyRender:
             dialect = dialect_name
 
         # override dialect's preparer
-        if hasattr(dialect, 'preparer'):
-            class Preparer(dialect.preparer):
+        if hasattr(dialect, "preparer"):
 
+            class Preparer(dialect.preparer):
                 def _requires_quotes(self, value: str) -> bool:
                     # check force-quote flag
                     if isinstance(value, AttributedStr):
@@ -117,6 +115,7 @@ class SqlalchemyRender:
                         #  Override sqlalchemy behavior: don't require to quote mixed- or upper-case
                         # or (lc_value != value)
                     )
+
             dialect.preparer = Preparer
 
         # remove double percent signs
@@ -126,11 +125,11 @@ class SqlalchemyRender:
 
         self.selects_stack = []
 
-        if dialect_name == 'mssql':
+        if dialect_name == "mssql":
             # update version to MS_2008_VERSION for supports_multivalues_insert
             self.dialect.server_version_info = (10,)
             self.dialect._setup_version_attributes()
-        elif dialect_name == 'mysql':
+        elif dialect_name == "mysql":
             # update version for support float cast
             self.dialect.server_version_info = (8, 0, 17)
 
@@ -142,7 +141,7 @@ class SqlalchemyRender:
         quoted = get_is_quoted(identifier)
         for i, is_quoted in zip(identifier.parts, quoted):
             if isinstance(i, ast.Star):
-                part = '*'
+                part = "*"
             elif is_quoted or i.lower() in RESERVED_WORDS:
                 # quote anyway
                 part = self.dialect.identifier_preparer.quote_identifier(i)
@@ -151,45 +150,48 @@ class SqlalchemyRender:
                 part = self.dialect.identifier_preparer.quote(i)
 
             parts2.append(part)
-        text = '.'.join(parts2)
-        if identifier.is_outer and self.dialect.name == 'oracle':
-            text += '(+)'
+        text = ".".join(parts2)
+        if identifier.is_outer and self.dialect.name == "oracle":
+            text += "(+)"
         return sa.column(text, is_literal=True)
 
     def get_alias(self, alias):
         if alias is None or len(alias.parts) == 0:
             return None
         if len(alias.parts) > 1:
-            raise NotImplementedError(f'Multiple alias {alias.parts}')
+            raise NotImplementedError(f"Multiple alias {alias.parts}")
 
         if self.selects_stack:
-            self.selects_stack[-1]['aliases'].append(alias)
+            self.selects_stack[-1]["aliases"].append(alias)
 
         is_quoted = get_is_quoted(alias)[0]
         return AttributedStr(alias.parts[0], is_quoted)
 
-    def to_expression(self, t):
+    def make_unique_alias(self, name):
+        if self.selects_stack:
+            aliases = self.selects_stack[-1]["aliases"]
+            for i in range(10):
+                name2 = f"{name}_{i}"
+                if name2 not in aliases:
+                    aliases.append(name2)
+                    return name2
 
+    def to_expression(self, t):
         # simple type
-        if (
-                isinstance(t, str)
-                or isinstance(t, int)
-                or isinstance(t, float)
-                or t is None
-        ):
+        if isinstance(t, str) or isinstance(t, int) or isinstance(t, float) or t is None:
             t = ast.Constant(t)
 
         if isinstance(t, ast.Star):
-            col = sa.text('*')
+            col = sa.text("*")
         elif isinstance(t, ast.Last):
-            col = self.to_column(ast.Identifier(parts=['last']))
+            col = self.to_column(ast.Identifier(parts=["last"]))
         elif isinstance(t, ast.Constant):
             col = sa.literal(t.value)
             if t.alias:
                 alias = self.get_alias(t.alias)
             else:
                 if t.value is None:
-                    alias = 'NULL'
+                    alias = "NULL"
                 else:
                     alias = str(t.value)
             col = col.label(alias)
@@ -199,13 +201,13 @@ class SqlalchemyRender:
             if len(t.parts) == 1:
                 if isinstance(t.parts[0], str):
                     name = t.parts[0].upper()
-                    if name == 'CURRENT_DATE':
+                    if name == "CURRENT_DATE":
                         col = sa_fnc.current_date()
-                    elif name == 'CURRENT_TIME':
+                    elif name == "CURRENT_TIME":
                         col = sa_fnc.current_time()
-                    elif name == 'CURRENT_TIMESTAMP':
+                    elif name == "CURRENT_TIMESTAMP":
                         col = sa_fnc.current_timestamp()
-                    elif name == 'CURRENT_USER':
+                    elif name == "CURRENT_USER":
                         col = sa_fnc.current_user()
             if col is None:
                 col = self.to_column(t)
@@ -223,12 +225,9 @@ class SqlalchemyRender:
                 alias = self.get_alias(t.alias)
                 col = col.label(alias)
             else:
-                alias = str(t.op)
-                if self.selects_stack:
-                    aliases = self.selects_stack[-1]['aliases']
-                    if alias not in aliases:
-                        aliases.append(alias)
-                        col = col.label(alias)
+                alias = self.make_unique_alias(str(t.op))
+                if alias:
+                    col = col.label(alias)
 
         elif isinstance(t, ast.BinaryOperation):
             ops = {
@@ -261,11 +260,11 @@ class SqlalchemyRender:
             arg1 = self.to_expression(t.args[1])
 
             op = t.op.lower()
-            if op in ('in', 'not in'):
+            if op in ("in", "not in"):
                 if t.args[1].parentheses:
                     arg1 = [arg1]
                 if isinstance(arg1, sa.sql.selectable.ColumnClause):
-                    raise NotImplementedError(f'Required list argument for: {op}')
+                    raise NotImplementedError(f"Required list argument for: {op}")
 
             sa_op = ops.get(op)
 
@@ -275,7 +274,7 @@ class SqlalchemyRender:
                     col = arg1.reverse_operate(sa_op, arg0)
                 elif isinstance(arg1, sa.TextClause):
                     # both args are text, return text
-                    col = sa.text(f'{arg0.compile(dialect=self.dialect)} {op} {arg1.compile(dialect=self.dialect)}')
+                    col = sa.text(f"{arg0.compile(dialect=self.dialect)} {op} {arg1.compile(dialect=self.dialect)}")
                 else:
                     col = arg0.operate(sa_op, arg1)
 
@@ -320,53 +319,44 @@ class SqlalchemyRender:
 
             partition = None
             if t.partition is not None:
-                partition = [
-                    self.to_expression(i)
-                    for i in t.partition
-                ]
+                partition = [self.to_expression(i) for i in t.partition]
 
             order_by = None
             if t.order_by is not None:
                 order_by = []
                 for f in t.order_by:
                     col0 = self.to_expression(f.field)
-                    if f.direction == 'DESC':
+                    if f.direction == "DESC":
                         col0 = col0.desc()
                     order_by.append(col0)
 
             rows, range_ = None, None
             if t.modifier is not None:
                 words = t.modifier.lower().split()
-                if words[1] == 'between' and words[4] == 'and':
+                if words[1] == "between" and words[4] == "and":
                     # frame options
                     # rows/groups BETWEEN <> <> AND <> <>
                     # https://docs.sqlalchemy.org/en/20/core/sqlelement.html#sqlalchemy.sql.expression.over
                     items = []
                     for word1, word2 in (words[2:4], words[5:7]):
-                        if word1 == 'unbounded':
+                        if word1 == "unbounded":
                             items.append(None)
-                        elif (word1, word2) == ('current', 'row'):
+                        elif (word1, word2) == ("current", "row"):
                             items.append(0)
                         elif word1.isdigits():
                             val = int(word1)
-                            if word2 == 'preceding':
+                            if word2 == "preceding":
                                 val = -val
-                            elif word2 != 'following':
+                            elif word2 != "following":
                                 continue
                             items.append(val)
                     if len(items) == 2:
-                        if words[0] == 'rows':
+                        if words[0] == "rows":
                             rows = tuple(items)
-                        elif words[0] == 'range':
+                        elif words[0] == "range":
                             range_ = tuple(items)
 
-            col = sa.over(
-                func,
-                partition_by=partition,
-                order_by=order_by,
-                range_=range_,
-                rows=rows
-            )
+            col = sa.over(func, partition_by=partition, order_by=order_by, range_=range_, rows=rows)
 
             if t.alias:
                 col = col.label(self.get_alias(t.alias))
@@ -380,15 +370,16 @@ class SqlalchemyRender:
             if t.alias:
                 alias = self.get_alias(t.alias)
                 col = col.label(alias)
+            else:
+                alias = self.make_unique_alias("cast")
+                if alias:
+                    col = col.label(alias)
         elif isinstance(t, ast.Parameter):
             col = sa.column(t.value, is_literal=True)
             if t.alias:
                 raise RenderError()
         elif isinstance(t, ast.Tuple):
-            col = [
-                self.to_expression(i)
-                for i in t.items
-            ]
+            col = [self.to_expression(i) for i in t.items]
         elif isinstance(t, ast.Variable):
             col = sa.column(t.to_string(), is_literal=True)
         elif isinstance(t, ast.Latest):
@@ -403,16 +394,14 @@ class SqlalchemyRender:
             col = self.prepare_case(t)
         else:
             # some other complex object?
-            raise NotImplementedError(f'Column {t}')
+            raise NotImplementedError(f"Column {t}")
 
         return col
 
     def prepare_case(self, t: ast.Case):
         conditions = []
         for condition, result in t.rules:
-            conditions.append(
-                (self.to_expression(condition), self.to_expression(result))
-            )
+            conditions.append((self.to_expression(condition), self.to_expression(result)))
         default = None
         if t.default is not None:
             default = self.to_expression(t.default)
@@ -434,10 +423,7 @@ class SqlalchemyRender:
 
             fnc = op(arg, from_arg)
         else:
-            args = [
-                self.to_expression(i)
-                for i in t.args
-            ]
+            args = [self.to_expression(i) for i in t.args]
             if t.distinct:
                 # set first argument to distinct
                 args[0] = args[0].distinct()
@@ -451,10 +437,10 @@ class SqlalchemyRender:
             return typename
 
         typename = typename.upper()
-        if re.match(r'^INT[\d]+$', typename):
-            typename = 'BIGINT'
-        if re.match(r'^FLOAT[\d]+$', typename):
-            typename = 'FLOAT'
+        if re.match(r"^INT[\d]+$", typename):
+            typename = "BIGINT"
+        if re.match(r"^FLOAT[\d]+$", typename):
+            typename = "FLOAT"
 
         return types_map[typename]
 
@@ -462,7 +448,7 @@ class SqlalchemyRender:
         # join tree to table list
 
         if isinstance(join.right, ast.Join):
-            raise NotImplementedError('Wrong join AST')
+            raise NotImplementedError("Wrong join AST")
 
         items = []
 
@@ -471,17 +457,12 @@ class SqlalchemyRender:
             items.extend(self.prepare_join(join.left))
         else:
             # this is first table
-            items.append(dict(
-                table=join.left
-            ))
+            items.append(dict(table=join.left))
 
         # all properties set to right table
-        items.append(dict(
-            table=join.right,
-            join_type=join.join_type,
-            is_implicit=join.implicit,
-            condition=join.condition
-        ))
+        items.append(
+            dict(table=join.right, join_type=join.join_type, is_implicit=join.implicit, condition=join.condition)
+        )
 
         return items
 
@@ -493,7 +474,7 @@ class SqlalchemyRender:
 
             if len(parts) > 2:
                 # TODO tests is failing
-                raise NotImplementedError(f'Path to long: {table_name.parts}')
+                raise NotImplementedError(f"Path to long: {table_name.parts}")
 
             if len(parts) == 2:
                 schema = AttributedStr(parts[-2], quoted[-2])
@@ -523,7 +504,7 @@ class SqlalchemyRender:
 
         else:
             # TODO tests are failing
-            raise NotImplementedError(f'Table {node.__name__}')
+            raise NotImplementedError(f"Table {node.__name__}")
 
         return table
 
@@ -533,7 +514,7 @@ class SqlalchemyRender:
 
         cols = []
 
-        self.selects_stack.append({'aliases': []})
+        self.selects_stack.append({"aliases": []})
 
         for t in node.targets:
             col = self.to_expression(t)
@@ -544,7 +525,7 @@ class SqlalchemyRender:
         if node.cte is not None:
             for cte in node.cte:
                 if cte.columns is not None and len(cte.columns) > 0:
-                    raise NotImplementedError('CTE columns')
+                    raise NotImplementedError("CTE columns")
 
                 stmt = self.prepare_select(cte.query)
                 alias = cte.name
@@ -563,45 +544,41 @@ class SqlalchemyRender:
             if isinstance(from_table, ast.Join):
                 join_list = self.prepare_join(from_table)
                 # first table
-                table = self.to_table(join_list[0]['table'])
+                table = self.to_table(join_list[0]["table"])
                 query = query.select_from(table)
 
                 # other tables
                 has_explicit_join = False
                 for item in join_list[1:]:
-                    join_type = item['join_type']
-                    table = self.to_table(item['table'], is_lateral=('LATERAL' in join_type))
-                    if item['is_implicit']:
+                    join_type = item["join_type"]
+                    table = self.to_table(item["table"], is_lateral=("LATERAL" in join_type))
+                    if item["is_implicit"]:
                         # add to from clause
                         if has_explicit_join:
                             # sqlalchemy doesn't support implicit join after explicit
                             # convert it to explicit
-                            query = query.join(table, sa.text('1=1'))
+                            query = query.join(table, sa.text("1=1"))
                         else:
                             query = query.select_from(table)
                     else:
                         has_explicit_join = True
-                        if item['condition'] is None:
+                        if item["condition"] is None:
                             # otherwise, sqlalchemy raises "Don't know how to join to ..."
-                            condition = sa.text('1=1')
+                            condition = sa.text("1=1")
                         else:
-                            condition = self.to_expression(item['condition'])
+                            condition = self.to_expression(item["condition"])
 
-                        if 'ASOF' in join_type:
-                            raise NotImplementedError(f'Unsupported join type: {join_type}')
-                        method = 'join'
+                        if "ASOF" in join_type:
+                            raise NotImplementedError(f"Unsupported join type: {join_type}")
+                        method = "join"
                         is_full = False
-                        if join_type == 'LEFT JOIN':
-                            method = 'outerjoin'
-                        if join_type == 'FULL JOIN':
+                        if join_type == "LEFT JOIN":
+                            method = "outerjoin"
+                        if join_type == "FULL JOIN":
                             is_full = True
 
                         # perform join
-                        query = getattr(query, method)(
-                            table,
-                            condition,
-                            full=is_full
-                        )
+                        query = getattr(query, method)(table, condition, full=is_full)
             elif isinstance(from_table, (ast.Union, ast.Intersect, ast.Except)):
                 alias = None
                 if from_table.alias:
@@ -624,18 +601,13 @@ class SqlalchemyRender:
                 table = sa.text(from_table.query).columns().subquery(alias)
                 query = query.select_from(table)
             else:
-                raise NotImplementedError(f'Select from {from_table}')
+                raise NotImplementedError(f"Select from {from_table}")
 
         if node.where is not None:
-            query = query.filter(
-                self.to_expression(node.where)
-            )
+            query = query.filter(self.to_expression(node.where))
 
         if node.group_by is not None:
-            cols = [
-                self.to_expression(i)
-                for i in node.group_by
-            ]
+            cols = [self.to_expression(i) for i in node.group_by]
             query = query.group_by(*cols)
 
         if node.having is not None:
@@ -645,13 +617,13 @@ class SqlalchemyRender:
             order_by = []
             for f in node.order_by:
                 col0 = self.to_expression(f.field)
-                if f.direction.upper() == 'DESC':
+                if f.direction.upper() == "DESC":
                     col0 = col0.desc()
-                elif f.direction.upper() == 'ASC':
+                elif f.direction.upper() == "ASC":
                     col0 = col0.asc()
-                if f.nulls.upper() == 'NULLS FIRST':
+                if f.nulls.upper() == "NULLS FIRST":
                     col0 = sa.nullsfirst(col0)
-                elif f.nulls.upper() == 'NULLS LAST':
+                elif f.nulls.upper() == "NULLS LAST":
                     col0 = sa.nullslast(col0)
                 order_by.append(col0)
 
@@ -664,10 +636,10 @@ class SqlalchemyRender:
             query = query.offset(node.offset.value)
 
         if node.mode is not None:
-            if node.mode == 'FOR UPDATE':
+            if node.mode == "FOR UPDATE":
                 query = query.with_for_update()
             else:
-                raise NotImplementedError(f'Select mode: {node.mode}')
+                raise NotImplementedError(f"Select mode: {node.mode}")
 
         self.selects_stack.pop()
 
@@ -695,49 +667,34 @@ class SqlalchemyRender:
                 if isinstance(col.default, str):
                     default = sa.text(col.default)
 
-            if isinstance(col.type, str) and col.type.lower() == 'serial':
+            if isinstance(col.type, str) and col.type.lower() == "serial":
                 col.is_primary_key = True
-                col.type = 'INT'
+                col.type = "INT"
 
             kwargs = {
-                'primary_key': col.is_primary_key,
-                'server_default': default,
+                "primary_key": col.is_primary_key,
+                "server_default": default,
             }
             if col.nullable is not None:
-                kwargs['nullable'] = col.nullable
+                kwargs["nullable"] = col.nullable
 
-            columns.append(
-                sa.Column(
-                    col.name,
-                    self.get_type(col.type),
-                    **kwargs
-                )
-            )
+            columns.append(sa.Column(col.name, self.get_type(col.type), **kwargs))
 
         schema, table_name = self.get_table_name(ast_query.name)
 
         metadata = sa.MetaData()
-        table = sa.Table(
-            table_name,
-            metadata,
-            schema=schema,
-            *columns
-        )
+        table = sa.Table(table_name, metadata, schema=schema, *columns)
 
         return CreateTable(table)
 
     def prepare_drop_table(self, ast_query):
         if len(ast_query.tables) != 1:
-            raise NotImplementedError('Only one table is supported')
+            raise NotImplementedError("Only one table is supported")
 
         schema, table_name = self.get_table_name(ast_query.tables[0])
 
         metadata = sa.MetaData()
-        table = sa.Table(
-            table_name,
-            metadata,
-            schema=schema
-        )
+        table = sa.Table(table_name, metadata, schema=schema)
         return DropTable(table, if_exists=ast_query.if_exists)
 
     def prepare_insert(self, ast_query, with_params=False):
@@ -748,7 +705,7 @@ class SqlalchemyRender:
         columns = []
 
         if ast_query.columns is None:
-            raise NotImplementedError('Columns is required in insert query')
+            raise NotImplementedError("Columns is required in insert query")
         for col in ast_query.columns:
             columns.append(
                 sa.Column(
@@ -758,7 +715,7 @@ class SqlalchemyRender:
             )
             # check doubles
             if col.name in names:
-                raise RenderError(f'Columns name double: {col.name}')
+                raise RenderError(f"Columns name double: {col.name}")
             names.append(col.name)
 
         table = sa.table(table_name, schema=schema, *columns)
@@ -767,19 +724,14 @@ class SqlalchemyRender:
             values = []
 
             if ast_query.is_plain and with_params:
-
                 for i in range(len(ast_query.columns)):
-                    values.append(sa.column('%s', is_literal=True))
+                    values.append(sa.column("%s", is_literal=True))
 
                 values = [values]
                 params = ast_query.values
             else:
-
                 for row in ast_query.values:
-                    row = [
-                        self.to_expression(val)
-                        for val in row
-                    ]
+                    row = [self.to_expression(val) for val in row]
                     values.append(row)
 
             stmt = table.insert().values(values)
@@ -792,7 +744,7 @@ class SqlalchemyRender:
 
     def prepare_update(self, ast_query):
         if ast_query.from_select is not None:
-            raise NotImplementedError('Render of update with sub-select is not implemented')
+            raise NotImplementedError("Render of update with sub-select is not implemented")
 
         schema, table_name = self.get_table_name(ast_query.table)
 
@@ -846,7 +798,7 @@ class SqlalchemyRender:
         elif isinstance(ast_query, ast.DropTables):
             stmt = self.prepare_drop_table(ast_query)
         else:
-            raise NotImplementedError(f'Unknown statement: {ast_query.__class__.__name__}')
+            raise NotImplementedError(f"Unknown statement: {ast_query.__class__.__name__}")
         return stmt, params
 
     def get_string(self, ast_query, with_failback=True):
@@ -885,32 +837,28 @@ class SqlalchemyRender:
                 raise e
 
             sql_query = str(ast_query)
-            if self.dialect.name == 'postgresql':
-                sql_query = sql_query.replace('`', '')
+            if self.dialect.name == "postgresql":
+                sql_query = sql_query.replace("`", "")
             return sql_query, None
 
 
 def render_dml_query(statement, dialect):
-
     class LiteralCompiler(dialect.statement_compiler):
-
         def render_literal_value(self, value, type_):
-
             if isinstance(value, (str, dt.date, dt.datetime, dt.timedelta)):
                 return "'{}'".format(str(value).replace("'", "''"))
 
             return super(LiteralCompiler, self).render_literal_value(value, type_)
 
-    return str(LiteralCompiler(dialect, statement, compile_kwargs={'literal_binds': True}))
+    return str(LiteralCompiler(dialect, statement, compile_kwargs={"literal_binds": True}))
 
 
 def render_ddl_query(statement, dialect):
     class LiteralCompiler(dialect.ddl_compiler):
-
         def render_literal_value(self, value, type_):
             if isinstance(value, (str, dt.date, dt.datetime, dt.timedelta)):
                 return "'{}'".format(str(value).replace("'", "''"))
 
             return super(LiteralCompiler, self).render_literal_value(value, type_)
 
-    return str(LiteralCompiler(dialect, statement, compile_kwargs={'literal_binds': True}))
+    return str(LiteralCompiler(dialect, statement, compile_kwargs={"literal_binds": True}))

@@ -57,7 +57,7 @@ class ProductsTable(APITable):
         products_df = select_statement_executor.execute_query()
 
         return products_df
-    
+
     def insert(self, query: ast.Insert) -> None:
         """Inserts data into the Shopify "POST /products" API endpoint.
 
@@ -78,12 +78,12 @@ class ProductsTable(APITable):
         insert_statement_parser = INSERTQueryParser(
             query,
             supported_columns=['title', 'body_html', 'vendor', 'product_type', 'tags', 'status'],
-            mandatory_columns=['title' ],
+            mandatory_columns=['title'],
             all_mandatory=False
         )
         product_data = insert_statement_parser.parse_query()
         self.create_products(product_data)
-    
+
     def delete(self, query: ast.Delete) -> None:
         """
         Deletes data from the Shopify "DELETE /products" API endpoint.
@@ -407,7 +407,7 @@ class OrdersTable(APITable):
         ----------
         query : ast.Insert
             Given SQL INSERT query
-        
+
         Returns
         -------
         None
@@ -420,33 +420,32 @@ class OrdersTable(APITable):
         insert_statement_parser = INSERTQueryParser(
             query,
             supported_columns=['address1_ba', 'address2_ba', 'city_ba', 'company_ba', 'country_ba',
-                               'country_code_ba', 'first_name_ba', 'last_name_ba', 'latitude_ba', 
-                               'longitude_ba', 'name_ba', 'phone_ba', 'province_ba', 'province_code_ba', 
-                               'zip_ba', 
+                               'country_code_ba', 'first_name_ba', 'last_name_ba', 'latitude_ba',
+                               'longitude_ba', 'name_ba', 'phone_ba', 'province_ba', 'province_code_ba',
+                               'zip_ba',
                                'address1_sa', 'address2_sa', 'city_sa', 'company_sa',
-                               'country_sa', 'country_code_sa', 'first_name_sa', 'last_name_sa', 
-                               'latitude_sa', 'longitude_sa', 'name_sa', 'phone_sa', 'province_sa', 
-                               'province_code_sa', 'zip_sa', 
+                               'country_sa', 'country_code_sa', 'first_name_sa', 'last_name_sa',
+                               'latitude_sa', 'longitude_sa', 'name_sa', 'phone_sa', 'province_sa',
+                               'province_code_sa', 'zip_sa',
                                'amount_dc', 'code_dc', 'type_dc',
-                               'gift_card_li', 'grams_li',  'price_li', 'quantity_li', 'title_li', 
-                               'vendor_li', 'fulfillment_status_li', 'sku_li', 'variant_title_li', 
+                               'gift_card_li', 'grams_li', 'price_li', 'quantity_li', 'title_li',
+                               'vendor_li', 'fulfillment_status_li', 'sku_li', 'variant_title_li',
                                'name_li', 'value_li',
                                'price_tl', 'rate_tl', 'title_tl', 'channel_liable_tl',
                                'name_na', 'value_na',
-                               'code_sl', 'price_sl', 'discounted_price_sl', 'source_sl', 
-                               'title_sl', 
-                               'carrier_identifier_sl', 'requested_fulfillment_service_id_sl', 
+                               'code_sl', 'price_sl', 'discounted_price_sl', 'source_sl',
+                               'title_sl',
+                               'carrier_identifier_sl', 'requested_fulfillment_service_id_sl',
                                'is_removed_sl',
-                               'buyer_accepts_marketing', 'currency', 'email', 'financial_status', 
-                               'fulfillment_status', 'note', 'phone', 'po_number', 'processed_at', 
-                               'referring_site', 'source_name', 'source_identifier', 'source_url', 
+                               'buyer_accepts_marketing', 'currency', 'email', 'financial_status',
+                               'fulfillment_status', 'note', 'phone', 'po_number', 'processed_at',
+                               'referring_site', 'source_name', 'source_identifier', 'source_url',
                                'tags', 'taxes_included', 'test', 'total_tax', 'total_weight'],
             mandatory_columns=['price_li', 'title_li'],
             all_mandatory=False
         )
         order_data = insert_statement_parser.parse_query()
         self.create_orders(order_data)
-
 
     def update(self, query: ast.Update) -> None:
         """Updates data in the Shopify "PUT /orders" API endpoint.
@@ -525,15 +524,15 @@ class OrdersTable(APITable):
         shopify.ShopifyResource.activate_session(api_session)
         # separate columns by API object
         line_items_columns = {'gift_card_li', 'grams_li', 'price_li', 'quantity_li', 'title_li',
-                             'vendor_li', 'fulfillment_status_li', 'sku_li', 'variant_title_li'}
+                              'vendor_li', 'fulfillment_status_li', 'sku_li', 'variant_title_li'}
         billing_address_columns = {'address1_ba', 'address2_ba', 'city_ba', 'company_ba',
-                                   'country_ba', 'country_code_ba', 'first_name_ba', 'last_name_ba', 
+                                   'country_ba', 'country_code_ba', 'first_name_ba', 'last_name_ba',
                                    'latitude_ba', 'longitude_ba', 'name_ba', 'phone_ba',
                                    'province_ba', 'province_code_ba', 'zip_ba'}
         shipping_address_columns = {'address1_sa', 'address2_sa', 'city_sa', 'company_sa',
-                                   'country_sa', 'country_code_sa', 'first_name_sa', 'last_name_sa',
-                                   'latitude_sa', 'longitude_sa', 'name_sa', 'phone_sa',
-                                   'province_sa', 'province_code_sa', 'zip_sa'}
+                                    'country_sa', 'country_code_sa', 'first_name_sa', 'last_name_sa',
+                                    'latitude_sa', 'longitude_sa', 'name_sa', 'phone_sa',
+                                    'province_sa', 'province_code_sa', 'zip_sa'}
         discount_codes_columns = {'amount_dc', 'code_dc', 'type_dc'}
         tax_lines_columns = {'price_tl', 'rate_tl', 'title_tl', 'channel_liable_tl'}
         note_attributes_columns = {'name_na', 'value_na'}
@@ -541,15 +540,15 @@ class OrdersTable(APITable):
                                   'source_sl', 'title_sl', 'carrier_identifier_sl',
                                   'requested_fulfillment_service_id_sl', 'is_removed_sl'}
         line_items_properties_columns = {'name_li', 'value_li'}
-        all_columns = (line_items_columns | billing_address_columns | shipping_address_columns |
-                       discount_codes_columns | tax_lines_columns | note_attributes_columns |
-                       shipping_lines_columns | line_items_properties_columns)
+        all_columns = (line_items_columns | billing_address_columns | shipping_address_columns
+                       | discount_codes_columns | tax_lines_columns | note_attributes_columns
+                       | shipping_lines_columns | line_items_properties_columns)
         modified_order_data = []
 
         for order in order_data:
             # separate values by object
             order_data_trimmed = {key: val for key, val in order.items()
-                                if key not in all_columns}
+                                  if key not in all_columns}
             line_items_data = OrdersTable._extract_data_helper(order, line_items_columns)
             billing_address_data = OrdersTable._extract_data_helper(order, billing_address_columns)
             shipping_address_data = OrdersTable._extract_data_helper(order, shipping_address_columns)
@@ -603,6 +602,7 @@ class OrdersTable(APITable):
         shopify.ShopifyResource.activate_session(api_session)
         orders = shopify.Order.find(**kwargs)
         return [order.to_dict() for order in orders]
+
 
 class InventoryLevelTable(APITable):
     """The Shopify Inventory Table implementation"""
@@ -687,6 +687,7 @@ class InventoryLevelTable(APITable):
         inventories = shopify.InventoryLevel.find(**kwargs)
         return [inventory.to_dict() for inventory in inventories]
 
+
 class LocationTable(APITable):
     """The Shopify Location Table implementation"""
 
@@ -737,6 +738,7 @@ class LocationTable(APITable):
         shopify.ShopifyResource.activate_session(api_session)
         locations = shopify.Location.find(**kwargs)
         return [location.to_dict() for location in locations]
+
 
 class CustomerReviews(APITable):
     """The Shopify Customer Reviews Table implementation"""
@@ -794,6 +796,7 @@ class CustomerReviews(APITable):
         json_response = requests.get(url, headers=headers).json()
         return [review for review in json_response['reviews']] if 'reviews' in json_response else []
 
+
 class CarrierServiceTable(APITable):
     """The Shopify carrier service Table implementation. Example carrier services like usps, dhl etc."""
 
@@ -831,11 +834,11 @@ class CarrierServiceTable(APITable):
             where_conditions,
             order_by_conditions
         )
-        
+
         carrier_service_df = select_statement_executor.execute_query()
 
         return carrier_service_df
-    
+
     def insert(self, query: ast.Insert) -> None:
         """Inserts data into the Shopify "POST /carrier_services" API endpoint.
 
@@ -895,7 +898,6 @@ class CarrierServiceTable(APITable):
         carrier_service_ids = carrier_services_df['id'].tolist()
         self.delete_carrier_services(carrier_service_ids)
 
-
     def update(self, query: ast.Update) -> None:
         """Updates data from the Shopify "PUT /carrier_services" API endpoint.
 
@@ -925,8 +927,6 @@ class CarrierServiceTable(APITable):
         carrier_service_ids = carrier_services_df['id'].tolist()
         self.update_carrier_service(carrier_service_ids, values_to_update)
 
-
-
     def get_columns(self) -> List[Text]:
         return ["id", "name", "active", "service_discovery", "carrier_service_type", "admin_graphql_api_id"]
 
@@ -935,7 +935,7 @@ class CarrierServiceTable(APITable):
         shopify.ShopifyResource.activate_session(api_session)
         services = shopify.CarrierService.find()
         return [service.to_dict() for service in services]
-    
+
     def create_carrier_service(self, carrier_service_data: List[Dict[Text, Any]]) -> None:
         api_session = self.handler.connect()
         shopify.ShopifyResource.activate_session(api_session)
@@ -966,7 +966,6 @@ class CarrierServiceTable(APITable):
             setattr(carrier_service, key, value)
         carrier_service.save()
         logger.info(f'Carrier Service {carrier_service_id} updated')
-
 
 
 class ShippingZoneTable(APITable):
@@ -1000,7 +999,6 @@ class ShippingZoneTable(APITable):
 
         shipping_zone_df = pd.json_normalize(self.get_shipping_zone(), record_path="countries", meta=["id", "name"], record_prefix="countries_")
 
-
         select_statement_executor = SELECTQueryExecutor(
             shipping_zone_df,
             selected_columns,
@@ -1008,7 +1006,7 @@ class ShippingZoneTable(APITable):
             order_by_conditions,
             result_limit
         )
-        
+
         shipping_zone_df = select_statement_executor.execute_query()
 
         return shipping_zone_df
@@ -1029,12 +1027,13 @@ class ShippingZoneTable(APITable):
         zones = shopify.ShippingZone.find()
         return [self.clean_response(zone.to_dict()) for zone in zones]
 
+
 class SalesChannelTable(APITable):
     """The Shopify Sales Channel Table implementation"""
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         """Pulls data from the Shopify "GET /publication API endpoint, as Channel API endpoint is deprecated
-        
+
 
         Parameters
         ----------
@@ -1071,13 +1070,11 @@ class SalesChannelTable(APITable):
         sales_channel_df = select_statement_executor.execute_query()
         return sales_channel_df
 
-
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_sales_channel(limit=1)).columns.tolist()
-    
 
     def get_sales_channel(self, **kwargs) -> List[Dict]:
         api_session = self.handler.connect()
         shopify.ShopifyResource.activate_session(api_session)
         sales_channels = shopify.Publication.find(**kwargs)
-        return  [sales_channel.to_dict() for  sales_channel in sales_channels]
+        return [sales_channel.to_dict() for sales_channel in sales_channels]

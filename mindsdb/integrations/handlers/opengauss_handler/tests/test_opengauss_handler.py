@@ -1,5 +1,4 @@
 import unittest
-import pandas as pd
 from mindsdb.integrations.handlers.opengauss_handler.opengauss_handler import OpenGaussHandler
 
 
@@ -42,4 +41,4 @@ class OpenGaussHandlerTest(unittest.TestCase):
 
     def test_7_select_query(self):
         query = "SELECT * FROM dt_test WHERE 'id'='a'"
-        result = self.handler.native_query(query)
+        self.handler.native_query(query)

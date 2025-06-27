@@ -22,6 +22,7 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+
 def extract_llm_params(args):
     """extract llm params from input query args"""
 

@@ -1,7 +1,6 @@
 from typing import List
 
 from mindsdb.integrations.libs.api_handler import APITable
-from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb.utilities import log
 
 from mindsdb_sql_parser import ast
@@ -61,21 +60,21 @@ class YoutubeCommentsTable(APITable):
 
         if not video_id and not channel_id:
             raise ValueError("Either video_id or channel_id has to be present in where clause.")
-            
+
         comments_df = self.get_comments(video_id=video_id, channel_id=channel_id)
 
         select_statement_executor = SELECTQueryExecutor(
-            comments_df, 
-            selected_columns, 
-            [where_condition for where_condition in where_conditions if where_condition[1] not in ['video_id', 'channel_id']], 
-            order_by_conditions, 
+            comments_df,
+            selected_columns,
+            [where_condition for where_condition in where_conditions if where_condition[1] not in ['video_id', 'channel_id']],
+            order_by_conditions,
             result_limit if query.limit else None
         )
 
         comments_df = select_statement_executor.execute_query()
 
         return comments_df
-    
+
     def insert(self, query: ast.Insert) -> None:
         """Inserts data into the YouTube POST /commentThreads API endpoint.
 
@@ -93,7 +92,7 @@ class YoutubeCommentsTable(APITable):
         ValueError
             If the query contains an unsupported condition
         """
-        
+
         insert_query_parser = INSERTQueryParser(query, self.get_columns())
 
         values_to_insert = insert_query_parser.parse_query()
@@ -101,13 +100,13 @@ class YoutubeCommentsTable(APITable):
         for value in values_to_insert:
             if not value.get('comment_id'):
                 if not value.get('comment'):
-                    raise ValueError(f"comment is mandatory for inserting a top-level comment.")
+                    raise ValueError("comment is mandatory for inserting a top-level comment.")
                 else:
                     self.insert_comment(video_id=value['video_id'], text=value['comment'])
 
             else:
                 if not value.get('reply'):
-                    raise ValueError(f"reply is mandatory for inserting a reply.")
+                    raise ValueError("reply is mandatory for inserting a reply.")
                 else:
                     self.insert_comment(comment_id=value['comment_id'], text=value['reply'])
 
@@ -178,7 +177,7 @@ class YoutubeCommentsTable(APITable):
                 replies = []
                 if 'replies' in comment:
                     for reply in comment["replies"]["comments"]:
-                        replies.append( 
+                        replies.append(
                             {
                                 "reply_author": reply["snippet"]["authorDisplayName"],
                                 "user_id": reply["snippet"]["authorChannelId"]["value"],
@@ -225,7 +224,7 @@ class YoutubeCommentsTable(APITable):
 
         youtube_comments_df = pd.json_normalize(data, 'replies', ['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment', "published_at", "updated_at"], record_prefix='replies.')
         youtube_comments_df = youtube_comments_df.rename(columns={'replies.user_id': 'reply_user_id', 'replies.reply_author': 'reply_author', 'replies.reply': 'reply'})
-        
+
         # check if DataFrame is empty
         if youtube_comments_df.empty:
             return youtube_comments_df
@@ -262,10 +261,10 @@ class YoutubeChannelsTable(APITable):
         channel_df = self.get_channel_details(channel_id)
 
         select_statement_executor = SELECTQueryExecutor(
-            channel_df, 
-            selected_columns, 
-            [where_condition for where_condition in where_conditions if where_condition[1] == 'channel_id'], 
-            order_by_conditions, 
+            channel_df,
+            selected_columns,
+            [where_condition for where_condition in where_conditions if where_condition[1] == 'channel_id'],
+            order_by_conditions,
             result_limit if query.limit else None
         )
 
@@ -325,7 +324,7 @@ class YoutubeVideosTable(APITable):
                     video_id = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for video_id column.")
-                
+
             elif arg1 == "channel_id":
                 if op == "=":
                     channel_id = arg2
@@ -334,24 +333,24 @@ class YoutubeVideosTable(APITable):
 
         if not video_id and not channel_id:
             raise ValueError("Either video_id or channel_id has to be present in where clause.")
-        
+
         if video_id:
             video_df = self.get_videos_by_video_ids([video_id])
         else:
             video_df = self.get_videos_by_channel_id(channel_id)
 
         select_statement_executor = SELECTQueryExecutor(
-            video_df, 
-            selected_columns, 
-            [where_condition for where_condition in where_conditions if where_condition[1] not in ['video_id', 'channel_id']], 
-            order_by_conditions, 
+            video_df,
+            selected_columns,
+            [where_condition for where_condition in where_conditions if where_condition[1] not in ['video_id', 'channel_id']],
+            order_by_conditions,
             result_limit if query.limit else None
         )
 
         video_df = select_statement_executor.execute_query()
 
         return video_df
-    
+
     def get_videos_by_channel_id(self, channel_id):
         video_ids = []
         resource = (
@@ -389,7 +388,7 @@ class YoutubeVideosTable(APITable):
         # loop over 50 video ids at a time
         # an invalid request error is caused otherwise
         for i in range(0, len(video_ids), 50):
-            resource = self.handler.connect().videos().list(part="statistics,snippet,contentDetails", id=",".join(video_ids[i:i+50])).execute()
+            resource = self.handler.connect().videos().list(part="statistics,snippet,contentDetails", id=",".join(video_ids[i:i + 50])).execute()
             for item in resource["items"]:
                 data.append(
                     {
@@ -418,15 +417,15 @@ class YoutubeVideosTable(APITable):
         except Exception as e:
             logger.error(f"Encountered an error while fetching transcripts for video ${video_id}: ${e}"),
             return "Transcript not available for this video"
-        
+
     def parse_duration(self, video_id, duration):
         try:
-            parsed_duration = re.search(f"PT(\d+H)?(\d+M)?(\d+S)", duration).groups()
+            parsed_duration = re.search(r"PT(\d+H)?(\d+M)?(\d+S)", duration).groups()
             duration_str = ""
             for d in parsed_duration:
                 if d:
                     duration_str += f"{d[:-1]}:"
-            
+
             return duration_str.strip(":")
         except Exception as e:
             logger.error(f"Encountered an error while parsing duration for video ${video_id}: ${e}"),

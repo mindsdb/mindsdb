@@ -21,7 +21,7 @@ from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES
 
 
 class ProjectDataNode(DataNode):
-    type = 'project'
+    type = "project"
 
     def __init__(self, project, integration_controller, information_schema):
         self.project = project
@@ -34,17 +34,13 @@ class ProjectDataNode(DataNode):
     def get_tables(self):
         tables = self.project.get_tables()
         table_types = {
-            'table': 'BASE TABLE',
-            'model': 'MODEL',
-            'view': 'VIEW'
+            "table": "BASE TABLE",
+            "model": "MODEL",
+            "view": "VIEW",
+            "agent": "AGENT",
+            "knowledge_base": "KNOWLEDGE BASE",
         }
-        tables = [
-            {
-                'TABLE_NAME': key,
-                'TABLE_TYPE': table_types.get(val['type'])
-            }
-            for key, val in tables.items()
-        ]
+        tables = [{"TABLE_NAME": key, "TABLE_TYPE": table_types.get(val["type"])} for key, val in tables.items()]
         result = [TablesRow.from_dict(row) for row in tables]
         return result
 
@@ -88,15 +84,18 @@ class ProjectDataNode(DataNode):
         model_metadata = self.project.get_model(model_name)
         if model_metadata is None:
             raise Exception(f"Can't find model '{model_name}'")
-        model_metadata = model_metadata['metadata']
-        if model_metadata['update_status'] == 'available':
+        model_metadata = model_metadata["metadata"]
+        if model_metadata["update_status"] == "available":
             raise Exception(f"model '{model_name}' is obsolete and needs to be updated. Run 'RETRAIN {model_name};'")
-        ml_handler = self.integration_controller.get_ml_handler(model_metadata['engine_name'])
-        if params is not None and 'partition_size' in params:
+        ml_handler = self.integration_controller.get_ml_handler(model_metadata["engine_name"])
+        if params is not None and "partition_size" in params:
+
             def callback(chunk):
-                return ml_handler.predict(model_name, chunk, project_name=self.project.name,
-                                          version=version, params=params)
-            return pd.concat(process_dataframe_in_partitions(df, callback, params['partition_size']))
+                return ml_handler.predict(
+                    model_name, chunk, project_name=self.project.name, version=version, params=params
+                )
+
+            return pd.concat(process_dataframe_in_partitions(df, callback, params["partition_size"]))
 
         return ml_handler.predict(model_name, df, project_name=self.project.name, version=version, params=params)
 
@@ -127,19 +126,13 @@ class ProjectDataNode(DataNode):
         elif isinstance(query, Select):
             # region is it query to 'models'?
             query_table = query.from_table.parts[0].lower()
-            if query_table in ('models', 'jobs', 'mdb_triggers', 'chatbots', 'skills', 'agents'):
+            if query_table in ("models", "jobs", "mdb_triggers", "chatbots", "skills", "agents"):
                 new_query = deepcopy(query)
-                project_filter = BinaryOperation('=', args=[
-                    Identifier('project'),
-                    Constant(self.project.name)
-                ])
+                project_filter = BinaryOperation("=", args=[Identifier("project"), Constant(self.project.name)])
                 if new_query.where is None:
                     new_query.where = project_filter
                 else:
-                    new_query.where = BinaryOperation('and', args=[
-                        new_query.where,
-                        project_filter
-                    ])
+                    new_query.where = BinaryOperation("and", args=[new_query.where, project_filter])
                 return self.information_schema.query(new_query)
             # endregion
 
@@ -149,43 +142,31 @@ class ProjectDataNode(DataNode):
                 # this is the view
                 df = self.project.query_view(query, session)
 
-                columns_info = [{
-                    'name': k,
-                    'type': v
-                } for k, v in df.dtypes.items()]
+                columns_info = [{"name": k, "type": v} for k, v in df.dtypes.items()]
 
-                return DataHubResponse(
-                    data_frame=df,
-                    columns=columns_info
-                )
+                return DataHubResponse(data_frame=df, columns=columns_info)
 
             kb_table = session.kb_controller.get_table(query_table, self.project.id)
             if kb_table:
                 # this is the knowledge db
                 df = kb_table.select_query(query)
-                columns_info = [
-                    {
-                        'name': k,
-                        'type': v
-                    }
-                    for k, v in df.dtypes.items()
-                ]
+                columns_info = [{"name": k, "type": v} for k, v in df.dtypes.items()]
 
-                return DataHubResponse(
-                    data_frame=df,
-                    columns=columns_info
-                )
+                return DataHubResponse(data_frame=df, columns=columns_info)
 
-            raise EntityNotExistsError(f"Can't select from {query_table} in project")
+            raise EntityNotExistsError(f"Table '{query_table}' not found in database", self.project.name)
         else:
             raise NotImplementedError(f"Query not supported {query}")
 
-    def create_table(self, table_name: Identifier, result_set=None, is_replace=False, params=None, **kwargs) -> DataHubResponse:
+    def create_table(
+        self, table_name: Identifier, result_set=None, is_replace=False, params=None, **kwargs
+    ) -> DataHubResponse:
         # is_create - create table
         # is_replace - drop table if exists
         # is_create==False and is_replace==False: just insert
 
         from mindsdb.api.executor.controllers.session_controller import SessionController
+
         session = SessionController()
 
         table_name = table_name.parts[-1]

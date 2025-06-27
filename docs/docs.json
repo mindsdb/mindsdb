@@ -363,6 +363,19 @@
                     ]
                   }
                 ]
+              },
+              {
+                "group": "Data Catalog",
+                "pages": [
+                  "data_catalog/overview",
+                  {
+                    "group": "Data Catalog for Integrations",
+                    "pages": [
+                      "data_catalog/integrations/overview",
+                      "data_catalog/integrations/query"
+                    ]
+                  }
+                ]
               }
             ]
           },
@@ -394,6 +407,7 @@
                       "mindsdb_sql/sql/create/view",
                       "mindsdb_sql/sql/drop/view",
                       "mindsdb_sql/sql/api/select-view",
+                      "mindsdb_sql/sql/api/alter-view",
                       "mindsdb_sql/sql/create/file",
                       "mindsdb_sql/sql/drop/file",
                       "mindsdb_sql/sql/api/select-files"
@@ -418,7 +432,8 @@
                     "pages": [
                       "mindsdb_sql/functions/custom_functions",
                       "mindsdb_sql/functions/llm_function",
-                      "mindsdb_sql/functions/to_markdown_function"
+                      "mindsdb_sql/functions/to_markdown_function",
+                      "mindsdb_sql/functions/from_env"
                     ]
                   },
                   {
@@ -801,10 +816,10 @@
                         "group": "AI Agents",
                         "pages": [
                           "sdks/python/agents",
-                          "sdks/python/agents_skills",
-                          "sdks/python/agents_knowledge_bases"
+                          "sdks/python/agents_skills"
                         ]
-                      }
+                      },
+                      "sdks/python/knowledge-bases"
                     ]
                   },
                   {
@@ -1000,7 +1015,8 @@
                   "faqs/persist-predictions",
                   "faqs/mindsdb-with-php",
                   "faqs/disposable-email-doman-and-openai",
-                  "faqs/missing-required-cpu-features"
+                  "faqs/missing-required-cpu-features",
+                  "faqs/a2a-unavailable"
                 ]
               }
             ]

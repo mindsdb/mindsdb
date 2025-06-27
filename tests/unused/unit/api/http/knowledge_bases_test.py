@@ -950,24 +950,20 @@ def test_document_loader_sql_error_handling(client):
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
     assert create_response.status_code == HTTPStatus.CREATED
 
+    # This will not use the document loader.
     update_request = {
         'knowledge_base': {
             'query': 'INVALID SQL QUERY'
         }
     }
 
-    with patch('mindsdb.interfaces.knowledge_base.preprocessing.document_loader.DocumentLoader') as mock_loader_class:
-        mock_loader = MagicMock()
-        mock_loader_class.return_value = mock_loader
-        mock_loader.load_query_result.side_effect = ValueError('Invalid SQL query')
+    update_response = client.put(
+        '/api/projects/mindsdb/knowledge_bases/test_kb_sql_errors',
+        json=update_request,
+        follow_redirects=True
+    )
 
-        update_response = client.put(
-            '/api/projects/mindsdb/knowledge_bases/test_kb_sql_errors',
-            json=update_request,
-            follow_redirects=True
-        )
-
-        assert update_response.status_code == HTTPStatus.BAD_REQUEST
+    assert update_response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_preprocessing_update(client):

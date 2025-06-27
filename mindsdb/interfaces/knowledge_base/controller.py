@@ -1,12 +1,15 @@
 import os
 import copy
 from typing import Dict, List, Optional
+import json
+import decimal
 
 import pandas as pd
 import numpy as np
 
 from mindsdb_sql_parser.ast import BinaryOperation, Constant, Identifier, Select, Update, Delete, Star
 from mindsdb_sql_parser.ast.mindsdb import CreatePredictor
+from mindsdb_sql_parser import parse_sql
 
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 
@@ -29,6 +32,7 @@ from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.variables.variables_controller import variables_controller
 from mindsdb.interfaces.knowledge_base.preprocessing.models import PreprocessingConfig, Document
 from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor import PreprocessorFactory
+from mindsdb.interfaces.knowledge_base.evaluate import EvaluateBase
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
@@ -52,7 +56,12 @@ def get_model_params(model_params: dict, default_config_key: str):
     combined_model_params = copy.deepcopy(config.get(default_config_key, {}))
 
     if model_params:
+        if not isinstance(model_params, dict):
+            raise ValueError("Model parameters must be passed as a JSON object")
+
         combined_model_params.update(model_params)
+
+    combined_model_params.pop("use_default_llm", None)
 
     return combined_model_params
 
@@ -106,6 +115,15 @@ def safe_pandas_is_datetime(value: str) -> bool:
         return result
     except ValueError:
         return False
+
+
+def to_json(obj):
+    if obj is None:
+        return None
+    try:
+        return json.dumps(obj)
+    except TypeError:
+        return obj
 
 
 class KnowledgeBaseTable:
@@ -175,10 +193,11 @@ class KnowledgeBaseTable:
         conditions = []
         query_text = None
         relevance_threshold = None
+        reranking_enabled_flag = True
         query_conditions = db_handler.extract_conditions(query.where)
         if query_conditions is not None:
             for item in query_conditions:
-                if item.column == "relevance_threshold" and item.op.value == "=":
+                if item.column == "relevance" and item.op.value == FilterOperator.GREATER_THAN_OR_EQUAL.value:
                     try:
                         relevance_threshold = float(item.value)
                         # Validate range: must be between 0 and 1
@@ -189,6 +208,15 @@ class KnowledgeBaseTable:
                         error_msg = f"Invalid relevance_threshold value: {item.value}. {str(e)}"
                         logger.error(error_msg)
                         raise ValueError(error_msg)
+                elif item.column == "reranking":
+                    reranking_enabled_flag = item.value
+                    # cast to boolean
+                    if isinstance(reranking_enabled_flag, str):
+                        reranking_enabled_flag = reranking_enabled_flag.lower() not in ("false")
+                elif item.column == "relevance" and item.op.value != FilterOperator.GREATER_THAN_OR_EQUAL.value:
+                    raise ValueError(
+                        f"Invalid operator for relevance: {item.op.value}. Only GREATER_THAN_OR_EQUAL is allowed."
+                    )
                 elif item.column == TableField.CONTENT.value:
                     query_text = item.value
 
@@ -222,8 +250,7 @@ class KnowledgeBaseTable:
         logger.debug(f"Query returned {len(df)} rows")
         logger.debug(f"Columns in response: {df.columns.tolist()}")
         # Check if we have a rerank_model configured in KB params
-
-        df = self.add_relevance(df, query_text, relevance_threshold)
+        df = self.add_relevance(df, query_text, relevance_threshold, reranking_enabled_flag)
 
         if (
             query.group_by is not None
@@ -234,15 +261,22 @@ class KnowledgeBaseTable:
             or not isinstance(query.targets[0], Star)
         ):
             query_copy.where = None
+            if "metadata" in df.columns:
+                df["metadata"] = df["metadata"].apply(to_json)
+
             df = query_df(df, query_copy, session=self.session)
 
         return df
 
-    def add_relevance(self, df, query_text, relevance_threshold=None):
+    def score_documents(self, query_text, documents, reranking_model_params):
+        reranker = get_reranking_model_from_params(reranking_model_params)
+        return reranker.get_scores(query_text, documents)
+
+    def add_relevance(self, df, query_text, relevance_threshold=None, reranking_enabled_flag=True):
         relevance_column = TableField.RELEVANCE.value
 
         reranking_model_params = get_model_params(self._kb.params.get("reranking_model"), "default_reranking_model")
-        if reranking_model_params and query_text and len(df) > 0:
+        if reranking_model_params and query_text and len(df) > 0 and reranking_enabled_flag:
             # Use reranker for relevance score
             try:
                 logger.info(f"Using knowledge reranking model from params: {reranking_model_params}")
@@ -331,23 +365,30 @@ class KnowledgeBaseTable:
 
     def insert_query_result(self, query: str, project_name: str):
         """Process and insert SQL query results"""
-        if not self.document_loader:
-            raise ValueError("Document loader not configured")
+        ast_query = parse_sql(query)
 
-        documents = list(self.document_loader.load_query_result(query, project_name))
-        if documents:
-            self.insert_documents(documents)
+        command_executor = ExecuteCommands(self.session)
+        response = command_executor.execute_command(ast_query, project_name)
+
+        if response.error_code is not None:
+            raise ValueError(f"Error executing query: {response.error_message}")
+
+        if response.data is None:
+            raise ValueError("Query returned no data")
+
+        records = response.data.records
+        df = pd.DataFrame(records)
+
+        self.insert(df)
 
     def insert_rows(self, rows: List[Dict]):
         """Process and insert raw data rows"""
         if not rows:
             return
 
-        documents = [
-            Document(content=row.get("content", ""), id=row.get("id"), metadata=row.get("metadata", {})) for row in rows
-        ]
+        df = pd.DataFrame(rows)
 
-        self.insert_documents(documents)
+        self.insert(df)
 
     def insert_documents(self, documents: List[Document]):
         """Process and insert documents with preprocessing if configured"""
@@ -601,14 +642,15 @@ class KnowledgeBaseTable:
                 metadata = {}
                 for col in metadata_columns:
                     value = row[col]
+                    value_type = type(value)
                     # Convert numpy/pandas types to Python native types
                     if safe_pandas_is_datetime(value) or isinstance(value, pd.Timestamp):
                         value = str(value)
-                    elif pd.api.types.is_integer_dtype(value):
+                    elif pd.api.types.is_integer_dtype(value_type):
                         value = int(value)
-                    elif pd.api.types.is_float_dtype(value):
+                    elif pd.api.types.is_float_dtype(value_type) or isinstance(value, decimal.Decimal):
                         value = float(value)
-                    elif pd.api.types.is_bool_dtype(value):
+                    elif pd.api.types.is_bool_dtype(value_type):
                         value = bool(value)
                     elif isinstance(value, dict):
                         metadata.update(value)
@@ -861,6 +903,7 @@ class KnowledgeBaseController:
         params: dict,
         preprocessing_config: Optional[dict] = None,
         if_not_exists: bool = False,
+        keyword_search_enabled: bool = False,
         # embedding_model: Identifier = None, # Legacy: Allow MindsDB models to be passed as embedding_model.
     ) -> db.KnowledgeBase:
         """
@@ -915,10 +958,7 @@ class KnowledgeBaseController:
         #         # it is params for model
         #         embedding_params.update(params["embedding_model"])
 
-        if "embedding_model" in params:
-            if not isinstance(params["embedding_model"], dict):
-                raise ValueError("embedding_model should be JSON object with model parameters.")
-            embedding_params.update(params["embedding_model"])
+        embedding_params = get_model_params(params.get("embedding_model", {}), "default_embedding_model")
 
         # if model_name is None:  # Legacy
         model_name = self._create_embedding_model(
@@ -935,7 +975,16 @@ class KnowledgeBaseController:
             model_record = db.Predictor.query.get(model["id"])
             embedding_model_id = model_record.id
 
-        reranking_model_params = get_model_params(params.get("reranking_model", {}), "default_reranking_model")
+        # if params.get("reranking_model", {}) is bool and False we evaluate it to empty dictionary
+        reranking_model_params = params.get("reranking_model", {})
+
+        if isinstance(reranking_model_params, bool) and not reranking_model_params:
+            params["reranking_model"] = {}
+        # if params.get("reranking_model", {}) is string and false in any case we evaluate it to empty dictionary
+        if isinstance(reranking_model_params, str) and reranking_model_params.lower() == "false":
+            params["reranking_model"] = {}
+
+        reranking_model_params = get_model_params(reranking_model_params, "default_reranking_model")
         if reranking_model_params:
             # Get reranking model from params.
             # This is called here to check validaity of the parameters.
@@ -968,7 +1017,10 @@ class KnowledgeBaseController:
             vector_db_name, vector_table_name = storage.parts
 
         # create table in vectordb before creating KB
-        self.session.datahub.get(vector_db_name).integration_handler.create_table(vector_table_name)
+        vector_store_handler = self.session.datahub.get(vector_db_name).integration_handler
+        vector_store_handler.create_table(vector_table_name)
+        if keyword_search_enabled:
+            vector_store_handler.add_full_text_index(vector_table_name, TableField.CONTENT.value)
         vector_database_id = self.session.integration_controller.get(vector_db_name)["id"]
 
         # Store sparse vector settings in params if specified
@@ -1028,7 +1080,7 @@ class KnowledgeBaseController:
         except PredictorRecordNotFound:
             pass
 
-        if params.get("provider", None) not in ("openai", "azure"):
+        if params.get("provider", None) not in ("openai", "azure_openai"):
             # try use litellm
             KnowledgeBaseTable.call_litellm_embedding(self.session, params, ["test"])
             return
@@ -1163,22 +1215,10 @@ class KnowledgeBaseController:
         project_names = {i.id: i.name for i in project_controller.get_list()}
 
         for record in query:
-            vector_database = record.vector_database
-            embedding_model = record.embedding_model
+            kb = record.as_dict(with_secrets=self.session.show_secrets)
+            kb["project_name"] = project_names[record.project_id]
 
-            data.append(
-                {
-                    "id": record.id,
-                    "name": record.name,
-                    "project_id": record.project_id,
-                    "project_name": project_names[record.project_id],
-                    "embedding_model": embedding_model.name if embedding_model is not None else None,
-                    "vector_database": None if vector_database is None else vector_database.name,
-                    "vector_database_table": record.vector_database_table,
-                    "query_id": record.query_id,
-                    "params": record.params,
-                }
-            )
+            data.append(kb)
 
         return data
 
@@ -1192,3 +1232,18 @@ class KnowledgeBaseController:
         Update a knowledge base record
         """
         raise NotImplementedError()
+
+    def evaluate(self, table_name: str, project_name: str, params: dict = None) -> pd.DataFrame:
+        """
+        Run evaluate and/or create test data for evaluation
+        :param table_name: name of KB
+        :param project_name: project of KB
+        :param params: evaluation parameters
+        :return: evaluation results
+        """
+        project_id = self.session.database_controller.get_project(project_name).id
+        kb_table = self.get_table(table_name, project_id)
+
+        scores = EvaluateBase.run(self.session, kb_table, params)
+
+        return scores

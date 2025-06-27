@@ -1,5 +1,5 @@
 from typing import Optional
-from datetime import datetime 
+from datetime import datetime
 import pandas as pd
 from pydruid.db import connect
 
@@ -86,7 +86,6 @@ class DruidHandler(DatabaseHandler):
         """
         Close any existing connections.
         """
-
         if self.is_connected is False:
             return
 
@@ -106,8 +105,7 @@ class DruidHandler(DatabaseHandler):
 
         try:
             conn = self.connect()
-            conn.cursor().execute('select 1')  # raise exception if provided wrong credentials
-
+            conn.cursor().execute('select 1')
             response.success = True
         except Exception as e:
             logger.error(f'Error connecting to Druid, {e}!')
@@ -165,21 +163,19 @@ class DruidHandler(DatabaseHandler):
         """
         Receive query as AST (abstract syntax tree) and act upon it somehow.
         Args:
-            query (ASTNode): sql query represented as AST. May be any kind
-                of query: SELECT, INTSERT, DELETE, etc
+            query (ASTNode): sql query represented as AST.
         Returns:
             HandlerResponse
         """
         if query.where:
             try:
-                dt = datetime.strptime(query.where.args[-1].value
-, "%Y-%m-%dT%H:%M:%S.%fZ")
-                formatted_timestamp = dt.strftime("%Y-%m-%d %H:%M:%S")
-                query.where.args[-1].value=formatted_timestamp 
-                
-            except:
-                pass
-            
+                val = query.where.args[-1].value
+                if isinstance(val, str):
+                    dt = datetime.strptime(val, "%Y-%m-%dT%H:%M:%S.%fZ")
+                    query.where.args[-1].value = dt.strftime("%Y-%m-%d %H:%M:%S")
+            except Exception as e:
+                logger.warning(f"Failed to parse timestamp in query.where: {e}")
+
         renderer = SqlalchemyRender(DruidDialect)
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
@@ -190,7 +186,6 @@ class DruidHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-
         query = """
             SELECT *
             FROM INFORMATION_SCHEMA.TABLES
@@ -211,7 +206,6 @@ class DruidHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-
         query = f"""
             SELECT *
             FROM INFORMATION_SCHEMA.COLUMNS
@@ -224,3 +218,4 @@ class DruidHandler(DatabaseHandler):
         result.data_frame = df.rename(columns={'COLUMN_NAME': 'column_name', 'DATA_TYPE': 'data_type'})
 
         return result
+        

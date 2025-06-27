@@ -28,6 +28,10 @@ from .base import BaseHandler
 LOG = log.getLogger(__name__)
 
 
+class VectorHandlerException(Exception):
+    ...
+
+
 class TableField(Enum):
     """
     Enum for table fields.
@@ -385,13 +389,17 @@ class VectorStoreHandler(BaseHandler):
         limit = query.limit.value if query.limit is not None else None
 
         # dispatch select
-        return self.select(
-            table_name,
-            columns=columns,
-            conditions=conditions,
-            offset=offset,
-            limit=limit,
-        )
+        try:
+            return self.select(
+                table_name,
+                columns=columns,
+                conditions=conditions,
+                offset=offset,
+                limit=limit,
+            )
+        except Exception as e:
+            handler_engine = self.__class__.name
+            raise VectorHandlerException(f"Error in {handler_engine} database: {e}")
 
     def _dispatch(self, query: ASTNode) -> HandlerResponse:
         """

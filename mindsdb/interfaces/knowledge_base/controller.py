@@ -909,6 +909,7 @@ class KnowledgeBaseController:
         params: dict,
         preprocessing_config: Optional[dict] = None,
         if_not_exists: bool = False,
+        keyword_search_enabled: bool = False,
         # embedding_model: Identifier = None, # Legacy: Allow MindsDB models to be passed as embedding_model.
     ) -> db.KnowledgeBase:
         """
@@ -1022,7 +1023,10 @@ class KnowledgeBaseController:
             vector_db_name, vector_table_name = storage.parts
 
         # create table in vectordb before creating KB
-        self.session.datahub.get(vector_db_name).integration_handler.create_table(vector_table_name)
+        vector_store_handler = self.session.datahub.get(vector_db_name).integration_handler
+        vector_store_handler.create_table(vector_table_name)
+        if keyword_search_enabled:
+            vector_store_handler.add_full_text_index(vector_table_name, TableField.CONTENT.value)
         vector_database_id = self.session.integration_controller.get(vector_db_name)["id"]
 
         # Store sparse vector settings in params if specified

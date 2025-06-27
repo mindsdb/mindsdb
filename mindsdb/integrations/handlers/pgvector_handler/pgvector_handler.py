@@ -140,6 +140,20 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
 
         return self.connection
 
+    def add_full_text_index(self, table_name: str, column_name: str) -> Response:
+        """
+        Add a full text index to the specified column of the table.
+        Args:
+            table_name (str): Name of the table to add the index to.
+            column_name (str): Name of the column to add the index to.
+        Returns:
+            Response: Response object indicating success or failure.
+        """
+        table_name = self._check_table(table_name)
+        query = f"CREATE INDEX IF NOT EXISTS {table_name}_{column_name}_fts_idx ON {table_name} USING gin(to_tsvector('english', {column_name}))"
+        self.raw_query(query)
+        return Response(RESPONSE_TYPE.OK)
+
     @staticmethod
     def _translate_conditions(conditions: List[FilterCondition]) -> Tuple[List[dict], dict]:
         """

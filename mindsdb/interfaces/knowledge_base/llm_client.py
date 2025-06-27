@@ -36,8 +36,11 @@ class LLMClient:
             )
         elif self.provider == "openai":
             openai_api_key = params.get("api_key") or os.getenv("OPENAI_API_KEY")
+            kwargs = {"api_key": openai_api_key, "max_retries": 2}
             base_url = params.get("base_url")
-            self.client = OpenAI(api_key=openai_api_key, base_url=base_url, max_retries=2)
+            if base_url:
+                kwargs["base_url"] = base_url
+            self.client = OpenAI(**kwargs)
 
         else:
             # try to use litellm

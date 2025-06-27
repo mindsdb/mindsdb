@@ -643,6 +643,32 @@ class TestSelect(BaseExecutorDummyML):
             self.run_sql("select $$")
         assert "check the manual that corresponds to your server version for the right syntax" in str(exc_info.value)
 
+    def test_alter_database(self):
+        self.run_sql("""
+            create database test_db using engine='dummy_data', parameters={"key": 1};
+        """)
+        res = self.run_sql("""
+            select * from information_schema.databases where name = 'test_db';
+        """)
+        assert res["NAME"][0] == "test_db"
+        assert res["CONNECTION_DATA"][0] == '{"key": 1}'
+
+        self.run_sql("""
+            alter database test_db parameters={"key": 2};
+        """)
+
+        # is not possible to update name of database
+        with pytest.raises(Exception):
+            res = self.run_sql("""
+                alter database test_db name=db_test;
+            """)
+
+        res = self.run_sql("""
+            select * from information_schema.databases where name = 'test_db';
+        """)
+        assert res["NAME"][0] == "test_db"
+        assert res["CONNECTION_DATA"][0] == '{"key": 2}'
+
 
 class TestDML(BaseExecutorDummyML):
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")

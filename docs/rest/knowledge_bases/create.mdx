@@ -23,27 +23,27 @@ Defines the project where the knowledge bases are located. Note that the default
 Name of the knowledge base.
 </ParamField>
 
-<ParamField body='storage' type='string' required>
+<ParamField body='storage' type='string'>
 Underlying vector database that stores the embeddings.
 </ParamField>
 
-<ParamField body='embedding_model' type='string' required>
+<ParamField body='embedding_model' type='string'>
 Defines the embedding model used to embed data in vector representation.
 </ParamField>
 
-<ParamField body='reranking_model' type='string' required>
+<ParamField body='reranking_model' type='string'>
 Defines the reranking model used to rerank the search results by relevance.
 </ParamField>
 
-<ParamField body='content_columns' type='string' required>
+<ParamField body='content_columns' type='string'>
 Defines the columns that store content to be embedded.
 </ParamField>
 
-<ParamField body='metadata_columns' type='string' required>
+<ParamField body='metadata_columns' type='string'>
 Defines the columns that are considered metadata.
 </ParamField>
 
-<ParamField body='id_column' type='string' required>
+<ParamField body='id_column' type='string'>
 Defines the column that uniquely identifies each row from the data inserted into the knowledge base.
 </ParamField>
 

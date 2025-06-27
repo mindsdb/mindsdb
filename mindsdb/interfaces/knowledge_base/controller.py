@@ -1,11 +1,12 @@
 import os
 import copy
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any, Text
 import json
 import decimal
 
 import pandas as pd
 import numpy as np
+from pydantic import BaseModel
 
 from mindsdb_sql_parser.ast import BinaryOperation, Constant, Identifier, Select, Update, Delete, Star
 from mindsdb_sql_parser.ast.mindsdb import CreatePredictor
@@ -47,6 +48,20 @@ from mindsdb.integrations.utilities.rag.rerankers.base_reranker import BaseLLMRe
 logger = log.getLogger(__name__)
 
 KB_TO_VECTORDB_COLUMNS = {"id": "original_doc_id", "chunk_id": "id", "chunk_content": "content"}
+
+
+class KnowledgeBaseInputParams(BaseModel):
+    metadata_columns: List[str] | None = None
+    content_columns: List[str] | None = None
+    id_column: str | None = None
+    kb_no_upsert: bool = False
+    embedding_model: Dict[Text, Any] | None = None
+    is_sparse: bool = False
+    vector_size: int | None = None
+    reranking_model: Dict[Text, Any] | None = None
+
+    class Config:
+        extra = 'forbid'
 
 
 def get_model_params(model_params: dict, default_config_key: str):
@@ -915,6 +930,10 @@ class KnowledgeBaseController:
         # fill variables
         params = variables_controller.fill_parameters(params)
 
+
+        KnowledgeBaseInputParams(**params)
+
+
         # Validate preprocessing config first if provided
         if preprocessing_config is not None:
             PreprocessingConfig(**preprocessing_config)  # Validate before storing
@@ -939,24 +958,6 @@ class KnowledgeBaseController:
             if if_not_exists:
                 return kb
             raise EntityExistsError("Knowledge base already exists", name)
-
-        embedding_params = copy.deepcopy(config.get("default_embedding_model", {}))
-
-        # Legacy
-        # model_name = None
-        # model_project = project
-        # if embedding_model:
-        #     model_name = embedding_model.parts[-1]
-        #     if len(embedding_model.parts) > 1:
-        #         model_project = self.session.database_controller.get_project(embedding_model.parts[-2])
-
-        # elif "embedding_model" in params:
-        #     if isinstance(params["embedding_model"], str):
-        #         # it is model name
-        #         model_name = params["embedding_model"]
-        #     else:
-        #         # it is params for model
-        #         embedding_params.update(params["embedding_model"])
 
         embedding_params = get_model_params(params.get("embedding_model", {}), "default_embedding_model")
 

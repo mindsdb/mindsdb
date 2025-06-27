@@ -277,17 +277,20 @@ class SlackMessagesTable(APIResource):
         try:
             # If the limit is greater than 999, paginate the results until the limit is reached.
             if limit and limit > 999:
+                params["limit"] = 999
                 response = client.conversations_history(**params)
                 messages = response['messages']
 
-                # Paginate the results until the limit is reached.
-                while response['response_metadata']['next_cursor']:
-                    response = client.conversations_history(cursor=response['response_metadata']['next_cursor'])
+                # Paginate the results until the limit is reached. response_metadata may be None.
+                while response.get('response_metadata', {}).get('next_cursor'):
+                    response = client.conversations_history(
+                        cursor=response["response_metadata"]["next_cursor"], **params
+                    )
                     messages.extend(response['messages'])
                     if len(messages) >= limit:
                         break
 
-                    messages = messages[:limit]
+                messages = messages[:limit]
             # Otherwise, use the provided limit or a default limit of 999.
             else:
                 params['limit'] = limit if limit else 999

@@ -559,6 +559,14 @@ class KnowledgeBaseTable:
         if df.empty:
             logger.warning("No valid content found in any content columns")
             return
+        elif params.get("metadata_columns") is None:
+            # update list of used columns, use first row
+            metadata_columns = df["metadata"][0].keys()
+            inserted_metadata = set(self._kb.params.get("inserted_metadata", []))
+            inserted_metadata.update(metadata_columns)
+            self._kb.params["inserted_metadata"] = list(inserted_metadata)
+            flag_modified(self._kb, "params")
+            db.session.commit()
 
         # add embeddings and send to vector db
         df_emb = self._df_to_embeddings(df)
@@ -637,13 +645,6 @@ class KnowledgeBaseTable:
         else:
             # all the rest columns
             metadata_columns = list(set(columns).difference(content_columns))
-
-            # update list of used columns
-            inserted_metadata = set(self._kb.params.get("inserted_metadata", []))
-            inserted_metadata.update(metadata_columns)
-            self._kb.params["inserted_metadata"] = list(inserted_metadata)
-            flag_modified(self._kb, "params")
-            db.session.commit()
 
         # Add content columns directly (don't combine them)
         for col in content_columns:

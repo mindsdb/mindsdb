@@ -1,7 +1,5 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
-
-version = "1.0"
-description = "Simple scikit-learn based handler for classification and regression"
+from .__about__ import __version__ as version, __description__ as description
 
 try:
     from .sklearn_handler import SklearnHandler as Handler
@@ -14,7 +12,8 @@ title = "Sklearn"
 name = "sklearn"
 type = HANDLER_TYPE.ML
 permanent = False
+icon_path = "icon.svg"
 
 __all__ = [
-    'Handler', 'version', 'name', 'type', 'title', 'description', 'import_error'
+    'Handler', 'version', 'name', 'type', 'title', 'description', 'import_error', 'icon_path'
 ]

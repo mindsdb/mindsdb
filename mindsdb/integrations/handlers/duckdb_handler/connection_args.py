@@ -16,9 +16,7 @@ connection_args = OrderedDict(
     },
     read_only={
         "type": ARG_TYPE.BOOL,
-        "description": (
-            "A flag that specifies if the connection should be made in read-only mode."
-        ),
+        "description": ("A flag that specifies if the connection should be made in read-only mode."),
     },
 )
 

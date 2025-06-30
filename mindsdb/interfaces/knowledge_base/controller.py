@@ -269,8 +269,8 @@ class KnowledgeBaseTable:
                 limit = 100
             query.limit = Constant(limit)
 
-        metadata_columns = self._get_metadata_columns()
-        df = db_handler.dispatch_select(query, conditions, allowed_metadata_columns=metadata_columns)
+        allowed_metadata_columns = self._get_allowed_metadata_columns()
+        df = db_handler.dispatch_select(query, conditions, allowed_metadata_columns=allowed_metadata_columns)
         df = self.addapt_result_columns(df)
 
         logger.debug(f"Query returned {len(df)} rows")
@@ -280,11 +280,18 @@ class KnowledgeBaseTable:
 
         return df
 
-    def _get_metadata_columns(self):
+    def _get_allowed_metadata_columns(self) -> List[str] | None:
+        # Return list of KB columns to restrict querying, if None: no restrictions
+
+        if self._kb.params.get("version", 0) < 2:
+            # disable for old version KBs
+            return None
+
         user_columns = self._kb.params.get("metadata_columns", [])
         dynamic_columns = self._kb.params.get("inserted_metadata", [])
 
-        return list(set(user_columns) | set(dynamic_columns))
+        columns = set(user_columns) | set(dynamic_columns)
+        return [col.lower() for col in columns]
 
     def score_documents(self, query_text, documents, reranking_model_params):
         reranker = get_reranking_model_from_params(reranking_model_params)

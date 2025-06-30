@@ -35,7 +35,7 @@ from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor impor
 from mindsdb.interfaces.knowledge_base.evaluate import EvaluateBase
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
-from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, KeywordSearchArgs
 from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
 
@@ -195,6 +195,8 @@ class KnowledgeBaseTable:
 
         # extract values from conditions and prepare for vectordb
         conditions = []
+        keyword_search_conditions = []
+        keyword_search_cols_and_values = []
         query_text = None
         relevance_threshold = None
         reranking_enabled_flag = True
@@ -232,8 +234,17 @@ class KnowledgeBaseTable:
                             op=FilterOperator.EQUAL,
                         )
                     )
+                    keyword_search_cols_and_values.append((TableField.CONTENT.value, item.value))
                 else:
                     conditions.append(item)
+                    keyword_search_conditions.append(item) # keyword search conditions do not use embeddings
+
+        if len(keyword_search_cols_and_values) > 1:
+            raise ValueError(
+                "Multiple content columns found in query conditions. "
+                "Only one content column is allowed for keyword search."
+            )
+        keyword_column_name, keyword_query = keyword_search_cols_and_values[0]
 
         logger.debug(f"Extracted query text: {query_text}")
 
@@ -249,6 +260,16 @@ class KnowledgeBaseTable:
             query.limit = Constant(limit)
 
         df = db_handler.dispatch_select(query, conditions)
+        keyword_search_enabled = True
+        # check if db_handler has a search by keyword method dispach_keyword_select
+        if hasattr(db_handler, "dispatch_keyword_select") and query_text is not None: # todo replace with inheritance check
+            # If query_text is present, use it for keyword search
+            logger.debug(f"Performing keyword search with query text: {query_text}")
+            keyword_search_args = KeywordSearchArgs(
+                query=query_text,
+                column=keyword_column_name
+            )
+            df_keyword_select = db_handler.dispatch_keyword_select(query, keyword_search_conditions, keyword_search_args)
         df = self.addapt_result_columns(df)
 
         logger.debug(f"Query returned {len(df)} rows")

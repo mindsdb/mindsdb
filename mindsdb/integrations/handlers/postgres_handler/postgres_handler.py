@@ -557,6 +557,23 @@ class PostgresHandler(MetaDatabaseHandler):
 
             conn.close()
 
+    def add_full_text_index(self, table_name: str, column_name: str) -> Response:
+        """
+        Adds a full-text index to a specified column of a PostgreSQL table.
+
+        Args:
+            table_name (str): The name of the table where the index will be added.
+            column_name (str): The name of the column to which the full-text index will be applied.
+
+        Returns:
+            Response: A response object indicating the success or failure of the operation.
+        """
+        query = f"""
+            CREATE INDEX IF NOT EXISTS idx_{table_name}_{column_name}_fts
+            ON {table_name} USING gin(to_tsvector('english', {column_name}));
+        """
+        return self.native_query(query)
+
     def meta_get_tables(self, table_names: Optional[list] = None) -> Response:
         """
         Retrieves metadata information about the tables in the PostgreSQL database to be stored in the data catalog.

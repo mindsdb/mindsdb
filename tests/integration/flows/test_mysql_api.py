@@ -1,15 +1,16 @@
+import os
 import time
 import json
 import tempfile
-# import datetime
-# from decimal import Decimal
+import datetime
+from decimal import Decimal
 
 import pytest
 import requests
 import mysql.connector
 import pandas as pd
 
-# from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import DATA_C_TYPE_MAP, MYSQL_DATA_TYPE
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import DATA_C_TYPE_MAP, MYSQL_DATA_TYPE
 
 from tests.integration.conftest import MYSQL_API_ROOT, HTTP_API_ROOT
 
@@ -131,7 +132,7 @@ class BaseStuff:
         )
 
 
-@pytest.mark.parametrize("use_binary", (False, True), indirect=True)
+@pytest.mark.parametrize("use_binary", [False, True], indirect=True)
 class TestMySqlApi(BaseStuff):
     @pytest.fixture
     def use_binary(self, request):
@@ -146,209 +147,225 @@ class TestMySqlApi(BaseStuff):
                 "user": "demo_user",
                 "password": "demo_password",
                 "database": "demo",
-                "schema": "demo_data",
+                "schema": "demo",
             },
         }
         self.create_database("test_demo_postgres", db_details)
         self.validate_database_creation("test_demo_postgres")
 
-    # NOTE unhide this after test data created in test db
-    # @pytest.mark.parametrize("table_name", ('types_test_data', 'types_test_data_with_nulls'))
-    # def test_response_types(self, use_binary, table_name):
-    #     """Test that data conversion is correct. Postgres used as source database.
-    #     Used two tables: with and without nulls in rows. This is because pd.DataFrame cast data
-    #     with and without nulls in rows differently.
+    @pytest.mark.parametrize("table_name", ["types_test_data", "types_test_data_with_nulls"])
+    def test_response_types(self, use_binary, table_name):
+        """Test that data conversion is correct. Postgres used as source database.
+        Used two tables: with and without nulls in rows. This is because pd.DataFrame cast data
+        with and without nulls in rows differently.
 
-    #     Note:
-    #         - for 'data with nulls' big 'bigint' values returned wrong. This is because
-    #         pd.DataFrame cast 'bigint' values with nulls to 'float', therefore precision is lost.
-    #         - we cast datatypes in binary protocol only as signed, therefore precision for unsigned
-    #         may be lost
-    #         - sometimes dt_date returned as datetime instead of date. Most likely reason is mysql.connector.
+        Note:
+            - for 'data with nulls' big 'bigint' values returned wrong. This is because
+            pd.DataFrame cast 'bigint' values with nulls to 'float', therefore precision is lost.
+            - we cast datatypes in binary protocol only as signed, therefore precision for unsigned
+            may be lost
+            - sometimes dt_date returned as datetime instead of date. Most likely reason is mysql.connector.
 
-    #     Test tables created using:
+        Test tables created using:
 
-    #     create table types_test_data (
-    #         t_char CHAR(10),
-    #         t_varchar VARCHAR(100),
-    #         t_text TEXT,
-    #         t_bytea BYTEA,
-    #         t_json JSON,
-    #         t_jsonb JSONB,
-    #         t_xml XML,
-    #         t_uuid UUID,
-    #         n_smallint SMALLINT,
-    #         n_integer INTEGER,
-    #         n_bigint BIGINT,
-    #         n_decimal DECIMAL(10,2),
-    #         n_numeric NUMERIC(10,4),
-    #         n_real REAL,
-    #         n_double_precision DOUBLE PRECISION,
-    #         n_smallserial SMALLSERIAL,
-    #         n_serial SERIAL,
-    #         n_bigserial BIGSERIAL,
-    #         n_money MONEY,
-    #         n_int2 INT2,        -- alt for SMALLINT
-    #         n_int4 INT4,        -- alt for INTEGER
-    #         n_int8 INT8,        -- alt for BIGINT
-    #         n_float4 FLOAT4,    -- alt for REAL
-    #         n_float8 FLOAT8,    -- alt for DOUBLE precision
-    #         dt_date DATE,
-    #         dt_time TIME,
-    #         dt_time_tz TIME WITH TIME ZONE,
-    #         dt_timestamp TIMESTAMP,
-    #         dt_timestamp_tz TIMESTAMP WITH TIME ZONE,
-    #         dt_interval INTERVAL,
-    #         dt_timestamptz TIMESTAMPTZ,
-    #         dt_timetz TIMETZ
-    #     );
+        create table types_test_data (
+            t_char CHAR(10),
+            t_varchar VARCHAR(100),
+            t_text TEXT,
+            t_bytea BYTEA,
+            t_json JSON,
+            t_jsonb JSONB,
+            t_xml XML,
+            t_uuid UUID,
+            n_smallint SMALLINT,
+            n_integer INTEGER,
+            n_bigint BIGINT,
+            n_decimal DECIMAL(10,2),
+            n_numeric NUMERIC(10,4),
+            n_real REAL,
+            n_double_precision DOUBLE PRECISION,
+            n_smallserial SMALLSERIAL,
+            n_serial SERIAL,
+            n_bigserial BIGSERIAL,
+            n_money MONEY,
+            n_int2 INT2,        -- alt for SMALLINT
+            n_int4 INT4,        -- alt for INTEGER
+            n_int8 INT8,        -- alt for BIGINT
+            n_float4 FLOAT4,    -- alt for REAL
+            n_float8 FLOAT8,    -- alt for DOUBLE precision
+            dt_date DATE,
+            dt_time TIME,
+            dt_time_tz TIME WITH TIME ZONE,
+            dt_timestamp TIMESTAMP,
+            dt_timestamp_tz TIMESTAMP WITH TIME ZONE,
+            dt_interval INTERVAL,
+            dt_timestamptz TIMESTAMPTZ,
+            dt_timetz TIMETZ
+        );
 
-    #     insert into types_test_data values (
-    #         -- text
-    #         'Test',
-    #         'Test',
-    #         'Test',
-    #         E'\\x44656D6F2062696E61727920646174612E',
-    #         '{"name": "test"}',
-    #         '{"name": "test"}',
-    #         '<root><element>test</element><nested><value>123</value></nested></root>',
-    #         'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
-    #         -- numeric
-    #         32767,                  -- n_smallint (max value)
-    #         2147483647,             -- n_integer (max value)
-    #         999,    -- n_bigint (max value) !!! 9223372036854775807
-    #         1234.56,                -- n_decimal
-    #         12345.6789,             -- n_numeric
-    #         3.14159,                -- n_real
-    #         2.7182818284590452,     -- n_double_precision
-    #         1, 1, 1, -- serials
-    #         10500.25,           -- n_money ?
-    #         255,                 -- n_int2 (min value)
-    #         42,                     -- n_int4
-    #         123456789,              -- n_int8
-    #         0.00123,                -- n_float4
-    #         9.8765432109876,        -- n_float8
-    #         -- datetime
-    #         '2023-10-15',                                -- t_date
-    #         '14:30:45',                                  -- t_time
-    #         '14:30:45+03:00',                            -- t_time_tz
-    #         '2023-10-15 14:30:45',                       -- t_timestamp
-    #         '2023-10-15 14:30:45+03:00',                 -- t_timestamp_tz
-    #         '2 years 3 months 15 days 12 hours 30 minutes 15 seconds', -- t_interval
-    #         '2023-10-15 14:30:45+03:00',                 -- t_timestamptz
-    #         '14:30:45+03:00'                             -- t_timetz
-    #     );
+        insert into types_test_data values (
+            -- text
+            'Test',
+            'Test',
+            'Test',
+            E'\\x44656D6F2062696E61727920646174612E',
+            '{"name": "test"}',
+            '{"name": "test"}',
+            '<root><element>test</element><nested><value>123</value></nested></root>',
+            'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+            -- numeric
+            32767,                  -- n_smallint (max value)
+            2147483647,             -- n_integer (max value)
+            9223372036854775807,    -- n_bigint (max value)
+            1234.56,                -- n_decimal
+            12345.6789,             -- n_numeric
+            3.14159,                -- n_real
+            2.7182818284590452,     -- n_double_precision
+            1, 1, 1, -- serials
+            10500.25,           -- n_money ?
+            255,                 -- n_int2 (min value)
+            42,                     -- n_int4
+            123456789,              -- n_int8
+            0.00123,                -- n_float4
+            9.8765432109876,        -- n_float8
+            -- datetime
+            '2023-10-15',                                -- t_date
+            '14:30:45',                                  -- t_time
+            '14:30:45+03:00',                            -- t_time_tz
+            '2023-10-15 14:30:45',                       -- t_timestamp
+            '2023-10-15 14:30:45+03:00',                 -- t_timestamp_tz
+            '2 years 3 months 15 days 12 hours 30 minutes 15 seconds', -- t_interval
+            '2023-10-15 14:30:45+03:00',                 -- t_timestamptz
+            '14:30:45+03:00'                             -- t_timetz
+        );
 
-    #     create table types_test_data_with_nulls (...);
-    #     insert into types_test_data_with_nulls values (same as above);
-    #     insert into types_test_data_with_nulls DEFAULT VALUES; -- insert nulls for each column, except serials
-    #     """
-    #     # Test for response types
-    #     res, description = self.query(f"""
-    #         SELECT
-    #             -- text types
-    #             t_char, t_varchar, t_text, t_bytea, t_json, t_jsonb, t_xml, t_uuid,
-    #             -- numeric types
-    #             n_smallint, n_integer, n_bigint, n_decimal, n_numeric, n_real,
-    #             n_double_precision, n_smallserial, n_serial, n_bigserial, n_money,
-    #             -- datetime types
-    #             dt_date,
-    #             dt_time,
-    #             dt_time_tz,
-    #             dt_timestamp,
-    #             dt_timestamp_tz,
-    #             dt_interval,
-    #             dt_timestamptz,
-    #             dt_timetz
-    #         FROM test_demo_postgres.{table_name};
-    #     """, with_description=True)
-    #     expected_types = {
-    #         # text types
-    #         't_char': DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.TEXT],
-    #         't_varchar': DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.VARCHAR],
-    #         't_text': DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.TEXT],
-    #         't_bytea': DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.BINARY],
-    #         # text types: fallbacks to varchar
-    #         't_json': DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.VARCHAR],
-    #         't_jsonb': DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.VARCHAR],
-    #         't_xml': DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.VARCHAR],
-    #         't_uuid': DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.VARCHAR],
-    #         # numeric types
-    #         'n_smallint': DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.SMALLINT],
-    #         'n_integer': DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.INT],
-    #         'n_bigint': DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.BIGINT],
-    #         'n_decimal': DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.DECIMAL],
-    #         'n_numeric': DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.DECIMAL],
-    #         'n_real': DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.FLOAT],
-    #         'n_double_precision': DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.DOUBLE],
-    #         'n_smallserial': DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.SMALLINT],
-    #         'n_serial': DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.INT],
-    #         'n_bigserial': DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.BIGINT],
-    #         'n_money': DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.TEXT],
-    #         # datetime types
-    #         'dt_date': DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.DATE],
-    #         'dt_time': DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.TIME],
-    #         'dt_time_tz': DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.TIME],
-    #         'dt_timestamp': DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.DATETIME],
-    #         'dt_timestamp_tz': DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.DATETIME],
-    #         'dt_interval': DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.VARCHAR],
-    #         'dt_timestamptz': DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.DATETIME],
-    #         'dt_timetz': DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.TIME]
-    #     }
-    #     expected_values = {
-    #         't_char': 'Test      ',
-    #         't_varchar': 'Test',
-    #         't_text': 'Test',
-    #         't_bytea': b'Demo binary data.' if self.use_binary else 'Demo binary data.',
-    #         't_json': '{"name": "test"}',
-    #         't_jsonb': '{"name": "test"}',
-    #         't_xml': '<root><element>test</element><nested><value>123</value></nested></root>',
-    #         't_uuid': 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
-    #         # numeric types
-    #         'n_smallint': 32767,
-    #         'n_integer': 2147483647,
-    #         'n_bigint': 999,
-    #         'n_decimal': Decimal('1234.56'),
-    #         'n_numeric': Decimal('12345.6789'),
-    #         'n_real': 3.14159,
-    #         'n_double_precision': 2.7182818284590452,
-    #         'n_smallserial': 1,
-    #         'n_serial': 1,
-    #         'n_bigserial': 1,
-    #         'n_money': '$10,500.25',
-    #         # datetime types
-    #         'dt_date': datetime.date(2023, 10, 15),
-    #         'dt_time': datetime.timedelta(seconds=52245),
-    #         'dt_time_tz': datetime.timedelta(seconds=52245 - (3 * 60 * 60)),
-    #         'dt_timestamp': datetime.datetime(2023, 10, 15, 14, 30, 45),
-    #         'dt_timestamp_tz': datetime.datetime(2023, 10, 15, 11, 30, 45),
-    #         'dt_interval': '835 days 12:30:15',
-    #         'dt_timestamptz': datetime.datetime(2023, 10, 15, 11, 30, 45),
-    #         'dt_timetz': datetime.timedelta(seconds=52245 - (3 * 60 * 60))
-    #     }
-    #     description_dict = {
-    #         row[0]: {
-    #             'type_code': row[1],
-    #             'flags': row[-2]
-    #         }
-    #         for row in description}
-    #     row = res[0]
-    #     for column_name, expected_type in expected_types.items():
-    #         column_description = description_dict[column_name]
+        create table types_test_data_with_nulls (...);
+        insert into types_test_data_with_nulls values (same as above);
+        insert into types_test_data_with_nulls DEFAULT VALUES; -- insert nulls for each column, except serials
+        """
+        # Test for response types
+        res, description = self.query(
+            f"""
+            SELECT
+                -- text types
+                t_char, t_varchar, t_text, t_bytea, t_json, t_jsonb, t_xml, t_uuid,
+                -- numeric types
+                n_smallint, n_integer, n_bigint, n_decimal, n_numeric, n_real,
+                n_double_precision, n_smallserial, n_serial, n_bigserial, n_money,
+                -- datetime types
+                dt_date,
+                dt_time,
+                dt_time_tz,
+                dt_timestamp,
+                dt_timestamp_tz,
+                dt_interval,
+                dt_timestamptz,
+                dt_timetz
+            FROM test_demo_postgres.{table_name} order by n_integer NULLS last;
+        """,
+            with_description=True,
+        )
+        expected_types = {
+            # text types
+            "t_char": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.TEXT],
+            "t_varchar": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.VARCHAR],
+            "t_text": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.TEXT],
+            "t_bytea": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.BINARY],
+            # text types: fallbacks to varchar
+            "t_xml": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.VARCHAR],
+            "t_uuid": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.VARCHAR],
+            # json types
+            "t_json": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.JSON],
+            "t_jsonb": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.JSON],
+            # numeric types
+            "n_smallint": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.SMALLINT],
+            "n_integer": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.INT],
+            "n_bigint": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.BIGINT],
+            "n_decimal": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.DECIMAL],
+            "n_numeric": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.DECIMAL],
+            "n_real": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.FLOAT],
+            "n_double_precision": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.DOUBLE],
+            "n_smallserial": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.SMALLINT],
+            "n_serial": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.INT],
+            "n_bigserial": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.BIGINT],
+            "n_money": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.TEXT],
+            # datetime types
+            "dt_date": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.DATE],
+            "dt_time": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.TIME],
+            "dt_time_tz": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.TIME],
+            "dt_timestamp": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.DATETIME],
+            "dt_timestamp_tz": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.DATETIME],
+            "dt_interval": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.VARCHAR],
+            "dt_timestamptz": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.DATETIME],
+            "dt_timetz": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.TIME],
+        }
+        expected_values = {
+            "t_char": "Test      ",
+            "t_varchar": "Test",
+            "t_text": "Test",
+            "t_bytea": "Demo binary data.",
+            "t_json": '{"name": "test"}',
+            "t_jsonb": '{"name": "test"}',
+            "t_xml": "<root><element>test</element><nested><value>123</value></nested></root>",
+            "t_uuid": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+            # numeric types
+            "n_smallint": 32767,
+            "n_integer": 2147483647,
+            "n_bigint": 9223372036854775807,
+            "n_decimal": Decimal("1234.56"),
+            "n_numeric": Decimal("12345.6789"),
+            "n_real": 3.14159,
+            "n_double_precision": 2.7182818284590452,
+            "n_smallserial": 1,
+            "n_serial": 1,
+            "n_bigserial": 1,
+            "n_money": "$10,500.25",
+            # datetime types
+            "dt_date": datetime.date(2023, 10, 15),
+            "dt_time": datetime.timedelta(seconds=52245),
+            "dt_time_tz": datetime.timedelta(seconds=52245 - (3 * 60 * 60)),
+            "dt_timestamp": datetime.datetime(2023, 10, 15, 14, 30, 45),
+            "dt_timestamp_tz": datetime.datetime(2023, 10, 15, 11, 30, 45),
+            "dt_interval": "835 days 12:30:15",
+            "dt_timestamptz": datetime.datetime(2023, 10, 15, 11, 30, 45),
+            "dt_timetz": datetime.timedelta(seconds=52245 - (3 * 60 * 60)),
+        }
+        description_dict = {row[0]: {"type_code": row[1], "flags": row[-2]} for row in description}
+        row = res[0]
+        for column_name, expected_type in expected_types.items():
+            column_description = description_dict[column_name]
 
-    #         if column_name == 'dt_date' and isinstance(row[column_name], datetime.datetime):
-    #             # NOTE sometime mysql.connector returns datetime instead of date for dt_date. This is suspicious, but ok
-    #             assert row[column_name].hour == 0
-    #             assert row[column_name].minute == 0
-    #             assert row[column_name].second == 0
-    #             row[column_name] = row[column_name].date()
+            if column_name == "t_bytea" and isinstance(row[column_name], (bytearray, bytes)):
+                row[column_name] = row[column_name].decode()
+            elif column_name == "dt_date" and isinstance(row[column_name], datetime.datetime):
+                # NOTE sometime mysql.connector returns datetime instead of date for dt_date. This is suspicious, but ok
+                assert row[column_name].hour == 0
+                assert row[column_name].minute == 0
+                assert row[column_name].second == 0
+                row[column_name] = row[column_name].date()
+            elif column_name in ("t_json", "t_jsonb") and self.use_binary:
+                # NOTE 'binary' protocol returns json as bytearray.
+                # by some reason, if use pytest then result is bytes instead of bytearray, but that is ok
+                row[column_name] = row[column_name].decode()
 
-    #         if isinstance(expected_values[column_name], float):
-    #             assert abs(row[column_name] - expected_values[column_name]) < 1e-5, f"Expected value {expected_values[column_name]} for column {column_name}, but got {row[column_name]}, use_binary={self.use_binary}, table_name={table_name}"
-    #         else:
-    #             assert row[column_name] == expected_values[column_name], f"Expected value {expected_values[column_name]} for column {column_name}, but got {row[column_name]}, use_binary={self.use_binary}, table_name={table_name}"
-    #         assert column_description['type_code'] == expected_type.code, f"Expected type {expected_type.code} for column {column_name}, but got {column_description['type_code']}, use_binary={self.use_binary}, table_name={table_name}"
-    #         assert column_description['flags'] == sum(expected_type.flags), f"Expected flags {sum(expected_type.flags)} for column {column_name}, but got {column_description['flags']}, use_binary={self.use_binary}, table_name={table_name}"
+            if isinstance(expected_values[column_name], float):
+                assert abs(row[column_name] - expected_values[column_name]) < 1e-5, (
+                    f"Expected value {expected_values[column_name]} for column {column_name}, but got {row[column_name]}, use_binary={self.use_binary}, table_name={table_name}"
+                )
+            else:
+                assert row[column_name] == expected_values[column_name], (
+                    f"Expected value {expected_values[column_name]} for column {column_name}, but got {row[column_name]}, use_binary={self.use_binary}, table_name={table_name}"
+                )
+            assert column_description["type_code"] == expected_type.code, (
+                f"Expected type {expected_type.code} for column {column_name}, but got {column_description['type_code']}, use_binary={self.use_binary}, table_name={table_name}"
+            )
+
+            if os.uname().sysname == "Darwin":
+                # It seems that flags on macos may be modified by mysql.connector on the client side.
+                continue
+            assert column_description["flags"] == sum(expected_type.flags), (
+                f"Expected flags {sum(expected_type.flags)} for column {column_name}, but got {column_description['flags']}, use_binary={self.use_binary}, table_name={table_name}"
+            )
 
     def test_create_mariadb_datasources(self, use_binary):
         db_details = {

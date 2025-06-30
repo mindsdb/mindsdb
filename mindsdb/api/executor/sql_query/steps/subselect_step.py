@@ -122,6 +122,7 @@ class QueryStepCall(BaseStepCall):
                     "user": self.session.username,
                     "version": "8.0.17",
                     "current_schema": "public",
+                    "schema": "public",
                     "connection_id": self.context.get("connection_id"),
                 }
                 if function_name in functions_results:

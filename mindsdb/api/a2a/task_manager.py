@@ -63,7 +63,8 @@ class AgentTaskManager(InMemoryTaskManager):
 
         # Create and store the task first to ensure it exists
         try:
-            await self.upsert_task(task_send_params)
+            task = await self.upsert_task(task_send_params)
+            logger.info(f"Task created/updated with history length: {len(task.history) if task.history else 0}")
         except Exception as e:
             logger.error(f"Error creating task: {str(e)}")
             yield SendTaskStreamingResponse(
@@ -74,10 +75,27 @@ class AgentTaskManager(InMemoryTaskManager):
 
         agent = self._create_agent(agent_name)
 
+        # Get the history from the task
+        history = task.history if task and task.history else []
+        logger.info(f"Using history with length {len(history)} for request")
+
+        # Log the history for debugging
+        logger.info(f"Conversation history for task {task_send_params.id}:")
+        for idx, msg in enumerate(history):
+            # Convert Message object to dict if needed
+            msg_dict = msg.dict() if hasattr(msg, "dict") else msg
+            role = msg_dict.get("role", "unknown")
+            text = ""
+            for part in msg_dict.get("parts", []):
+                if part.get("type") == "text":
+                    text = part.get("text", "")
+                    break
+            logger.info(f"Message {idx + 1} ({role}): {text[:100]}...")
+
         if not streaming:
             # If streaming is disabled, use invoke and return a single response
             try:
-                result = agent.invoke(query, task_send_params.sessionId)
+                result = agent.invoke(query, task_send_params.sessionId, history=history)
 
                 # Use the parts from the agent response if available, or create them
                 if "parts" in result:
@@ -134,7 +152,7 @@ class AgentTaskManager(InMemoryTaskManager):
             # Track the chunks we've seen to avoid duplicates
             seen_chunks = set()
 
-            async for item in agent.stream(query, task_send_params.sessionId):
+            async for item in agent.stream(query, task_send_params.sessionId, history=history):
                 # Ensure item has the required fields or provide defaults
                 is_task_complete = item.get("is_task_complete", False)
 
@@ -356,13 +374,26 @@ class AgentTaskManager(InMemoryTaskManager):
                 message = task_send_params.message
                 message_dict = message.dict() if hasattr(message, "dict") else message
 
+                # Get history from request if available
+                history = []
+                if hasattr(task_send_params, "history") and task_send_params.history:
+                    # Convert each history item to dict if needed and ensure proper role
+                    for item in task_send_params.history:
+                        item_dict = item.dict() if hasattr(item, "dict") else item
+                        # Ensure the role is properly set
+                        if "role" not in item_dict:
+                            item_dict["role"] = "assistant" if "answer" in item_dict else "user"
+                        history.append(item_dict)
+
+                # Add current message to history
+                history.append(message_dict)
+
                 # Create a new task
                 task = Task(
                     id=task_send_params.id,
                     sessionId=task_send_params.sessionId,
-                    messages=[message_dict],
                     status=TaskStatus(state=TaskState.SUBMITTED),
-                    history=[message_dict],
+                    history=history,
                     artifacts=[],
                 )
                 self.tasks[task_send_params.id] = task
@@ -372,6 +403,22 @@ class AgentTaskManager(InMemoryTaskManager):
                 message_dict = message.dict() if hasattr(message, "dict") else message
 
                 # Update the existing task
+                if task.history is None:
+                    task.history = []
+
+                # If we have new history from the request, use it
+                if hasattr(task_send_params, "history") and task_send_params.history:
+                    # Convert each history item to dict if needed and ensure proper role
+                    history = []
+                    for item in task_send_params.history:
+                        item_dict = item.dict() if hasattr(item, "dict") else item
+                        # Ensure the role is properly set
+                        if "role" not in item_dict:
+                            item_dict["role"] = "assistant" if "answer" in item_dict else "user"
+                        history.append(item_dict)
+                    task.history = history
+
+                # Add current message to history
                 task.history.append(message_dict)
             return task
 
@@ -459,6 +506,17 @@ class AgentTaskManager(InMemoryTaskManager):
                 self.tasks[task_id] = task
 
             task.status = status
+
+            # Store assistant's response in history if we have a message
+            if status.message and status.message.role == "agent":
+                if task.history is None:
+                    task.history = []
+                # Convert message to dict if needed
+                message_dict = status.message.dict() if hasattr(status.message, "dict") else status.message
+                # Ensure role is set to assistant
+                message_dict["role"] = "assistant"
+                task.history.append(message_dict)
+
             if artifacts is not None:
                 for artifact in artifacts:
                     if artifact.append and len(task.artifacts) > 0:
@@ -505,12 +563,16 @@ class AgentTaskManager(InMemoryTaskManager):
         agent = self._create_agent(agent_name)
 
         try:
+            # Get the history from the task
+            task = self.tasks.get(task_send_params.id)
+            history = task.history if task and task.history else []
+
             # Always use streaming internally, but handle the response differently based on the streaming parameter
             all_parts = []
             final_metadata = {}
 
             # Create a streaming generator
-            stream_gen = agent.stream(query, task_send_params.sessionId)
+            stream_gen = agent.stream(query, task_send_params.sessionId, history=history)
 
             if streaming:
                 # For streaming mode, we'll use the streaming endpoint instead

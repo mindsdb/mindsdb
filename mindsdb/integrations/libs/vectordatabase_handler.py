@@ -314,9 +314,9 @@ class VectorStoreHandler(BaseHandler):
         df[id_col] = df[id_col].apply(str)
 
         # set updated_at
-        self.set_metadata_cur_time(df, '_updated_at')
+        self.set_metadata_cur_time(df, "_updated_at")
 
-        if hasattr(self, 'upsert'):
+        if hasattr(self, "upsert"):
             self.upsert(table_name, df)
             return
 
@@ -324,9 +324,7 @@ class VectorStoreHandler(BaseHandler):
         df_existed = self.select(
             table_name,
             columns=[id_col, metadata_col],
-            conditions=[
-                FilterCondition(column=id_col, op=FilterOperator.IN, value=list(df[id_col]))
-            ]
+            conditions=[FilterCondition(column=id_col, op=FilterOperator.IN, value=list(df[id_col]))],
         )
         existed_ids = list(df_existed[id_col])
 
@@ -336,15 +334,12 @@ class VectorStoreHandler(BaseHandler):
 
         if not df_update.empty:
             # get values of existed `created_at` and return them to metadata
-            created_dates = {
-                row[id_col]: row[metadata_col].get('_created_at')
-                for _, row in df_existed.iterrows()
-            }
+            created_dates = {row[id_col]: row[metadata_col].get("_created_at") for _, row in df_existed.iterrows()}
 
             def keep_created_at(row):
                 val = created_dates.get(row[id_col])
                 if val:
-                    row[metadata_col]['_created_at'] = val
+                    row[metadata_col]["_created_at"] = val
                 return row
 
             df_update.apply(keep_created_at, axis=1)
@@ -358,7 +353,7 @@ class VectorStoreHandler(BaseHandler):
                 self.insert(table_name, df_update)
         if not df_insert.empty:
             # set created_at
-            self.set_metadata_cur_time(df_insert, '_created_at')
+            self.set_metadata_cur_time(df_insert, "_created_at")
 
             self.insert(table_name, df_insert)
 

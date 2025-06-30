@@ -262,7 +262,7 @@ def test_metadata_preservation():
     doc = Document(content=content, metadata=metadata, id=doc_id)
     chunks = preprocessor.process_documents([doc])
     # Verify metadata is preserved and includes source
-    assert chunks[0].metadata["source"] == "TextChunkingPreprocessor"
+    assert chunks[0].metadata["_source"] == "TextChunkingPreprocessor"
     assert chunks[0].metadata["key"] == "value"
     assert chunks[0].metadata["content_column"] == "test_column"
 

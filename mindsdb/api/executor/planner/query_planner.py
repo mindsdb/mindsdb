@@ -715,15 +715,43 @@ class QueryPlanner:
             )
 
     def plan_update(self, query):
+        integration_name = query.table.parts[0]
+        from_select_alias = query.from_select_alias
+
+        if not query.from_select:
+            query_info = self.get_query_info(query)
+            if len(query_info["user_functions"]) > 0:
+                targets = []
+                for key, value in query.update_columns.items():
+                        target = copy.deepcopy(value)
+                        target.alias = Identifier(parts=[key])
+                        targets.append(target)
+
+                table = query.table
+                select_query = Select(
+                    targets=targets,
+                    from_table=query.table,
+                    where=query.where,
+                )
+
+                query.from_select = select_query
+                query.where = None
+                query.update_columns = None
+                integration_name = None
+
+                from_select_alias = Identifier(parts=['update_' + table.parts[-1]])
+
         last_step = None
         if query.from_select is not None:
-            integration_name = query.table.parts[0]
             last_step = self.plan_select(query.from_select, integration=integration_name)
 
         # plan sub-select first
         update_command = copy.deepcopy(query)
         # clear subselect
         update_command.from_select = None
+        
+        if from_select_alias is not None:
+            update_command.from_select_alias = from_select_alias
 
         table = query.table
         self.plan.add_step(UpdateToTable(table=table, dataframe=last_step, update_command=update_command))

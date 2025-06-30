@@ -53,17 +53,15 @@ def get_model_params(model_params: dict, default_config_key: str):
     """
     Get model parameters by combining default config with user provided parameters.
     """
-    # If the default config key is for reranking and the switch to use the default LLM is enabled,
-    # switch to the default LLM model.
-    if default_config_key == "default_reranking_model" and config.get("default_reranking_model").get(
-        "use_default_llm", False
-    ):
-        default_config_key = "default_llm_model"
-
     combined_model_params = copy.deepcopy(config.get(default_config_key, {}))
 
     if model_params:
+        if not isinstance(model_params, dict):
+            raise ValueError("Model parameters must be passed as a JSON object")
+
         combined_model_params.update(model_params)
+
+    combined_model_params.pop("use_default_llm", None)
 
     return combined_model_params
 
@@ -104,8 +102,6 @@ def get_reranking_model_from_params(reranking_model_params: dict):
     if "api_key" not in params_copy:
         params_copy["api_key"] = get_api_key(provider, params_copy, strict=False)
     params_copy["model"] = params_copy.pop("model_name", None)
-
-    params_copy.pop("use_default_llm", None)
 
     return BaseLLMReranker(**params_copy)
 
@@ -907,6 +903,7 @@ class KnowledgeBaseController:
         params: dict,
         preprocessing_config: Optional[dict] = None,
         if_not_exists: bool = False,
+        keyword_search_enabled: bool = False,
         # embedding_model: Identifier = None, # Legacy: Allow MindsDB models to be passed as embedding_model.
     ) -> db.KnowledgeBase:
         """
@@ -961,10 +958,7 @@ class KnowledgeBaseController:
         #         # it is params for model
         #         embedding_params.update(params["embedding_model"])
 
-        if "embedding_model" in params:
-            if not isinstance(params["embedding_model"], dict):
-                raise ValueError("embedding_model should be JSON object with model parameters.")
-            embedding_params.update(params["embedding_model"])
+        embedding_params = get_model_params(params.get("embedding_model", {}), "default_embedding_model")
 
         # if model_name is None:  # Legacy
         model_name = self._create_embedding_model(
@@ -1023,7 +1017,10 @@ class KnowledgeBaseController:
             vector_db_name, vector_table_name = storage.parts
 
         # create table in vectordb before creating KB
-        self.session.datahub.get(vector_db_name).integration_handler.create_table(vector_table_name)
+        vector_store_handler = self.session.datahub.get(vector_db_name).integration_handler
+        vector_store_handler.create_table(vector_table_name)
+        if keyword_search_enabled:
+            vector_store_handler.add_full_text_index(vector_table_name, TableField.CONTENT.value)
         vector_database_id = self.session.integration_controller.get(vector_db_name)["id"]
 
         # Store sparse vector settings in params if specified

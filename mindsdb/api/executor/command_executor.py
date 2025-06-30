@@ -36,6 +36,8 @@ from mindsdb_sql_parser.ast import (
     Tuple,
     Function,
     Variable,
+    Intersect,
+    Except,
 )
 
 # typed models
@@ -580,9 +582,6 @@ class ExecuteCommands:
                 return ret
             query = SQLQuery(statement, session=self.session, database=database_name)
             return self.answer_select(query)
-        elif statement_type is Union:
-            query = SQLQuery(statement, session=self.session, database=database_name)
-            return self.answer_select(query)
         elif statement_type is Explain:
             return self.answer_show_columns(statement.target, database_name=database_name)
         elif statement_type is CreateTable:
@@ -627,6 +626,9 @@ class ExecuteCommands:
             return self.answer_create_kb_index(statement, database_name)
         elif statement_type is EvaluateKnowledgeBase:
             return self.answer_evaluate_kb(statement, database_name)
+        elif statement_type in (Union, Intersect, Except):
+            query = SQLQuery(statement, session=self.session, database=database_name)
+            return self.answer_select(query)
         else:
             logger.warning(f"Unknown SQL statement: {sql}")
             raise NotSupportedYet(f"Unknown SQL statement: {sql}")

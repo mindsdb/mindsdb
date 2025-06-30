@@ -12,5 +12,5 @@ When accessing the Respond tab, users may encounter an error saying that the A2A
 To resolve this, start MindsDB with the A2A API enabled.
 
 ```bash
-docker run --name mindsdb_container -e MINDSDB_APIS=http,mysql,a2a -p 47334:47334 -p 47335:47335 -p 47337:47337 -p 47338:47338 mindsdb/mindsdb
+docker run --name mindsdb_container -e MINDSDB_APIS=http,mysql,mcp,a2a -p 47334:47334 -p 47335:47335 -p 47337:47337 -p 47338:47338 mindsdb/mindsdb
 ```

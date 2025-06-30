@@ -31,17 +31,10 @@ _DEFAULT_CONTENT_COLUMN_NAME = "content"
 class DocumentPreprocessor:
     """Base class for document preprocessing"""
 
-    RESERVED_METADATA_FIELDS = {
-        "content",
-        "id",
-        "embeddings",
-        "original_doc_id",
-        "chunk_index",
-    }
-
     def __init__(self):
         """Initialize preprocessor"""
         self.splitter = None  # Will be set by child classes
+        self.config = None
 
     def process_documents(self, documents: List[Document]) -> List[ProcessedChunk]:
         """Base implementation - should be overridden by child classes
@@ -57,15 +50,10 @@ class DocumentPreprocessor:
             raise ValueError("Splitter not configured")
 
         # Convert to langchain Document for splitting
-        langchain_doc = LangchainDocument(
-            page_content=doc.content, metadata=doc.metadata or {}
-        )
+        langchain_doc = LangchainDocument(page_content=doc.content, metadata=doc.metadata or {})
         # Split and convert back to our Document type
         split_docs = self.splitter.split_documents([langchain_doc])
-        return [
-            Document(content=split_doc.page_content, metadata=split_doc.metadata)
-            for split_doc in split_docs
-        ]
+        return [Document(content=split_doc.page_content, metadata=split_doc.metadata) for split_doc in split_docs]
 
     def _get_source(self) -> str:
         """Get the source identifier for this preprocessor"""
@@ -118,14 +106,14 @@ class DocumentPreprocessor:
 
         # Always preserve original document ID
         if doc_id is not None:
-            metadata["original_doc_id"] = doc_id
+            metadata[self.config.doc_id_column_name] = doc_id
 
         # Add chunk index only for multi-chunk cases
         if chunk_index is not None:
-            metadata["chunk_index"] = chunk_index
+            metadata["_chunk_index"] = chunk_index
 
         # Always set source
-        metadata["source"] = self._get_source()
+        metadata["_source"] = self._get_source()
 
         return metadata
 
@@ -148,9 +136,7 @@ Please give a short succinct context to situate this chunk within the overall do
         super().__init__()
         self.config = config
         self.splitter = FileSplitter(
-            FileSplitterConfig(
-                chunk_size=config.chunk_size, chunk_overlap=config.chunk_overlap
-            )
+            FileSplitterConfig(chunk_size=config.chunk_size, chunk_overlap=config.chunk_overlap)
         )
         self.llm = create_chat_model(
             {
@@ -162,28 +148,22 @@ Please give a short succinct context to situate this chunk within the overall do
         self.context_template = config.context_template or self.DEFAULT_CONTEXT_TEMPLATE
         self.summarize = self.config.summarize
 
-    def _prepare_prompts(
-        self, chunk_contents: list[str], full_documents: list[str]
-    ) -> list[str]:
+    def _prepare_prompts(self, chunk_contents: list[str], full_documents: list[str]) -> list[str]:
         prompts = [
-            self.context_template.replace("{{WHOLE_DOCUMENT}}", full_document)
-            for full_document in full_documents
+            self.context_template.replace("{{WHOLE_DOCUMENT}}", full_document) for full_document in full_documents
         ]
         prompts = [
-            prompt.replace("{{CHUNK_CONTENT}}", chunk_content)
-            for prompt, chunk_content in zip(prompts, chunk_contents)
+            prompt.replace("{{CHUNK_CONTENT}}", chunk_content) for prompt, chunk_content in zip(prompts, chunk_contents)
         ]
 
         return prompts
 
-    def _generate_context(
-        self, chunk_contents: list[str], full_documents: list[str]
-    ) -> list[str]:
+    def _generate_context(self, chunk_contents: list[str], full_documents: list[str]) -> list[str]:
         """Generate contextual description for a chunk using LLM"""
         prompts = self._prepare_prompts(chunk_contents, full_documents)
 
         # Check if LLM supports async
-        if hasattr(self.llm, 'abatch'):
+        if hasattr(self.llm, "abatch"):
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
@@ -211,7 +191,6 @@ Please give a short succinct context to situate this chunk within the overall do
         processed_chunks = []
 
         for doc_index, doc in enumerate(documents):
-
             # Document ID must be provided by this point
             if doc.id is None:
                 raise ValueError("Document ID must be provided before preprocessing")
@@ -247,12 +226,8 @@ Please give a short succinct context to situate this chunk within the overall do
         chunk_contents = [chunk_doc.content for chunk_doc in chunks_list]
         contexts = self._generate_context(chunk_contents, doc_contents)
 
-        for context, chunk_doc, chunk_index, doc_index in zip(
-            contexts, chunks_list, chunk_index_list, doc_index_list
-        ):
-            processed_content = (
-                context if self.summarize else f"{context}\n\n{chunk_doc.content}"
-            )
+        for context, chunk_doc, chunk_index, doc_index in zip(contexts, chunks_list, chunk_index_list, doc_index_list):
+            processed_content = context if self.summarize else f"{context}\n\n{chunk_doc.content}"
             doc = documents[doc_index]
 
             # Initialize metadata
@@ -261,7 +236,7 @@ Please give a short succinct context to situate this chunk within the overall do
                 metadata.update(doc.metadata)
 
             # Get content_column from metadata or use default
-            content_column = metadata.get('content_column')
+            content_column = metadata.get("_content_column")
             if content_column is None:
                 # If content_column is not in metadata, use the default column name
                 content_column = _DEFAULT_CONTENT_COLUMN_NAME
@@ -305,7 +280,6 @@ class TextChunkingPreprocessor(DocumentPreprocessor):
         processed_chunks = []
 
         for doc in documents:
-
             # Document ID must be provided by this point
             if doc.id is None:
                 raise ValueError("Document ID must be provided before preprocessing")
@@ -334,13 +308,13 @@ class TextChunkingPreprocessor(DocumentPreprocessor):
                     metadata.update(doc.metadata)
 
                 # Add position metadata
-                metadata["start_char"] = start_char
-                metadata["end_char"] = end_char
+                metadata["_start_char"] = start_char
+                metadata["_end_char"] = end_char
 
                 # Get content_column from metadata or use default
                 content_column = None
                 if doc.metadata:
-                    content_column = doc.metadata.get('content_column')
+                    content_column = doc.metadata.get("_content_column")
 
                 if content_column is None:
                     # If content_column is not in metadata, use the default column name
@@ -353,7 +327,7 @@ class TextChunkingPreprocessor(DocumentPreprocessor):
                     start_char=start_char,
                     end_char=end_char,
                     provided_id=doc.id,
-                    content_column=content_column
+                    content_column=content_column,
                 )
 
                 processed_chunks.append(
@@ -392,6 +366,7 @@ class PreprocessorFactory:
         elif config.type == PreprocessorType.JSON_CHUNKING:
             # Import here to avoid circular imports
             from mindsdb.interfaces.knowledge_base.preprocessing.json_chunker import JSONChunkingPreprocessor
+
             return JSONChunkingPreprocessor(config.json_chunking_config)
         else:
             raise ValueError(f"Unknown preprocessor type: {config.type}")

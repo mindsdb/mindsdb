@@ -331,7 +331,7 @@ def test_source_metadata(content, metadata, expected_source):
     doc_id = generate_document_id(content, "test_column")
     doc = Document(content=content, metadata=metadata, id=doc_id)
     chunks = preprocessor.process_documents([doc])
-    assert chunks[0].metadata["source"] == expected_source
+    assert chunks[0].metadata["_source"] == expected_source
 
 
 class TestContextualPreprocessor:

@@ -1,7 +1,8 @@
 import os
+from typing import Any
+from textwrap import dedent
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
-from typing import Optional, Dict, Any
 from dataclasses import dataclass
 
 import uvicorn
@@ -47,10 +48,25 @@ mcp = FastMCP(
 LISTING_QUERY = "SHOW DATABASES"
 
 
-@mcp.tool()
-def query(query: str, context: Optional[Dict] = None) -> Dict[str, Any]:
-    """
-    Execute a SQL query against MindsDB
+query_tool_description = dedent("""\
+    Executes a SQL query against MindsDB.
+
+    A database must be specified either in the `context` parameter or directly in the query string (e.g., `SELECT * FROM my_database.my_table`). Queries like `SELECT * FROM my_table` will fail without a `context`.
+
+    Args:
+        query (str): The SQL query to execute.
+        context (dict, optional): The default database context. For example, `{"db": "my_postgres"}`.
+
+    Returns:
+        A dictionary describing the result.
+        - For a successful query with no data to return (e.g., an `UPDATE` statement), the response is `{"type": "ok"}`.
+        - If the query returns tabular data, the response is a dictionary containing `data` (a list of rows) and `column_names` (a list of column names). For example: `{"type": "table", "data": [[1, "a"], [2, "b"]], "column_names": ["column_a", "column_b"]}`.
+        - In case of an error, a response is `{"type": "error", "error_message": "the error message"}`.
+""")
+
+@mcp.tool(name="query", description=query_tool_description)
+def query(query: str, context: dict | None = None) -> dict[str, Any]:
+    """Execute a SQL query against MindsDB
 
     Args:
         query: The SQL query to execute
@@ -99,13 +115,20 @@ def query(query: str, context: Optional[Dict] = None) -> Dict[str, Any]:
         }
 
 
-@mcp.tool()
-def list_databases() -> Dict[str, Any]:
+list_databases_tool_description = (
+    "Returns a list of all database connections currently available in MindsDB. "
+    + "The tool takes no parameters and responds with a list of database names, "
+    + "for example: [\"my_postgres\", \"my_mysql\", \"test_db\"]."
+)
+
+
+@mcp.tool(name="list_databases", description=list_databases_tool_description)
+def list_databases() -> list[str]:
     """
-    List all databases in MindsDB along with their tables
+    List all databases in MindsDB
 
     Returns:
-        Dict containing the list of databases and their tables
+       list[str]: list of databases
     """
 
     mysql_proxy = FakeMysqlProxy()
@@ -124,6 +147,7 @@ def list_databases() -> Dict[str, Any]:
 
         elif result.type == SQL_RESPONSE_TYPE.TABLE:
             data = result.result_set.to_lists(json_types=True)
+            data = [val[0] for val in data]
             return data
 
     except Exception as e:

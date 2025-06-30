@@ -1,6 +1,8 @@
-import unittest
 import pytest
+import unittest
 import datetime
+from array import array
+from decimal import Decimal
 from collections import OrderedDict
 from unittest.mock import patch, MagicMock
 
@@ -637,6 +639,34 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertTrue(response.data_frame.iloc[1, 0] is pd.NA)
         self.assertTrue(response.data_frame.iloc[1, 1] is pd.NA)
         # endregion
+
+        # region test vector and json type
+        """Data obtained using:
+            CREATE TABLE test_vector_type (
+                t_embedding VECTOR(3, FLOAT32),
+                t_json json
+            ) TABLESPACE USERS;
+
+            INSERT INTO test_vector_type VALUES (
+                TO_VECTOR('[1.1, 2.2, 3.3]', 3, FLOAT32),
+                JSON_OBJECT(
+                    'category' VALUE 'electronics',
+                    'price' VALUE 299.99
+                )
+            );
+        """
+        input_row = (array("f", [1.1, 2.2, 3.3]), {"category": "electronics", "price": Decimal("299.99")})
+        mock_cursor.fetchall.return_value = [input_row]
+        mock_cursor.description = [
+            ("T_EMBEDDING", oracledb.DB_TYPE_VECTOR, None, None, None, None, True),
+            ("T_JSON", oracledb.DB_TYPE_JSON, None, None, None, None, True),
+        ]
+        response: Response = self.handler.native_query(query_str)
+        excepted_mysql_types = [MYSQL_DATA_TYPE.VECTOR, MYSQL_DATA_TYPE.JSON]
+        for i, input_value in enumerate(input_row):
+            result_value = response.data_frame[response.data_frame.columns[i]][0]
+            self.assertEqual(result_value, input_value)
+        # endreion
 
 
 if __name__ == "__main__":

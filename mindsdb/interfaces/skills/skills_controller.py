@@ -6,9 +6,11 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
-from mindsdb.interfaces.data_catalog.data_catalog_loader import DataCatalogLoader
 from mindsdb.utilities.config import config
+from mindsdb.utilities import log
 
+
+logger = log.getLogger(__name__)
 
 default_project = config.get("default_project")
 
@@ -94,13 +96,6 @@ class SkillsController:
 
         if skill is not None:
             raise ValueError(f"Skill with name already exists: {name}")
-
-        # Load metadata to data catalog (if enabled) if the skill is Text-to-SQL.
-        if config.get("data_catalog", {}).get("enabled", False) and type == "sql":
-            data_catalog_loader = DataCatalogLoader(
-                database_name=params["database"], table_names=params["tables"] if "tables" in params else None
-            )
-            data_catalog_loader.load_metadata()
 
         new_skill = db.Skills(
             name=name,

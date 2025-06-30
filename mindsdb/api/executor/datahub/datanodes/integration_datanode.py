@@ -245,12 +245,14 @@ class IntegrationDataNode(DataNode):
             if query is not None:
                 failed_sql_query = query.to_string()
 
-            raise Exception(format_db_error_message(
-                db_name=self.integration_handler.name,
-                db_type=self.integration_handler.__class__.name,
-                db_error_msg=result.error_message,
-                failed_query=failed_sql_query
-            ))
+            raise Exception(
+                format_db_error_message(
+                    db_name=self.integration_handler.name,
+                    db_type=self.integration_handler.__class__.name,
+                    db_error_msg=result.error_message,
+                    failed_query=failed_sql_query,
+                )
+            )
 
         if result.type == RESPONSE_TYPE.OK:
             return DataHubResponse(affected_rows=result.affected_rows)

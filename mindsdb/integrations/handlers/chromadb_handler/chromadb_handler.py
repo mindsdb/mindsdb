@@ -91,9 +91,7 @@ class ChromaDBHandler(VectorStoreHandler):
                 self.persist_directory = config.persist_directory
             elif not self.handler_storage.is_temporal:
                 # get full persistence directory from handler storage
-                self.persist_directory = self.handler_storage.folder_get(
-                    config.persist_directory
-                )
+                self.persist_directory = self.handler_storage.folder_get(config.persist_directory)
                 self._use_handler_storage = True
 
         return config
@@ -141,7 +139,7 @@ class ChromaDBHandler(VectorStoreHandler):
     def disconnect(self):
         """Close the database connection."""
         if self.is_connected:
-            if hasattr(self._client, 'close'):
+            if hasattr(self._client, "close"):
                 self._client.close()  # Some ChromaDB clients have a close method
             self._client = None
             self.is_connected = False
@@ -182,9 +180,7 @@ class ChromaDBHandler(VectorStoreHandler):
 
         return mapping[operator]
 
-    def _translate_metadata_condition(
-        self, conditions: List[FilterCondition]
-    ) -> Optional[dict]:
+    def _translate_metadata_condition(self, conditions: List[FilterCondition]) -> Optional[dict]:
         """
         Translate a list of FilterCondition objects a dict that can be used by ChromaDB.
         E.g.,
@@ -212,9 +208,7 @@ class ChromaDBHandler(VectorStoreHandler):
         if conditions is None:
             return None
         metadata_conditions = [
-            condition
-            for condition in conditions
-            if condition.column.startswith(TableField.METADATA.value)
+            condition for condition in conditions if condition.column.startswith(TableField.METADATA.value)
         ]
         if len(metadata_conditions) == 0:
             return None
@@ -224,19 +218,11 @@ class ChromaDBHandler(VectorStoreHandler):
         for condition in metadata_conditions:
             metadata_key = condition.column.split(".")[-1]
 
-            chroma_db_conditions.append(
-                {
-                    metadata_key: {
-                        self._get_chromadb_operator(condition.op): condition.value
-                    }
-                }
-            )
+            chroma_db_conditions.append({metadata_key: {self._get_chromadb_operator(condition.op): condition.value}})
 
         # we combine all metadata conditions into a single dict
         metadata_condition = (
-            {"$and": chroma_db_conditions}
-            if len(chroma_db_conditions) > 1
-            else chroma_db_conditions[0]
+            {"$and": chroma_db_conditions} if len(chroma_db_conditions) > 1 else chroma_db_conditions[0]
         )
         return metadata_condition
 
@@ -248,7 +234,6 @@ class ChromaDBHandler(VectorStoreHandler):
         offset: int = None,
         limit: int = None,
     ) -> pd.DataFrame:
-
         collection = self._client.get_collection(table_name)
         filters = self._translate_metadata_condition(conditions)
 
@@ -258,38 +243,43 @@ class ChromaDBHandler(VectorStoreHandler):
         vector_filter = (
             []
             if conditions is None
-            else [
-                condition
-                for condition in conditions
-                if condition.column == TableField.EMBEDDINGS.value
-            ]
+            else [condition for condition in conditions if condition.column == TableField.EMBEDDINGS.value]
         )
 
         if len(vector_filter) > 0:
             vector_filter = vector_filter[0]
         else:
             vector_filter = None
-        id_filters = []
+        ids_include = []
+        ids_exclude = []
+
         if conditions is not None:
             for condition in conditions:
                 if condition.column != TableField.ID.value:
                     continue
                 if condition.op == FilterOperator.EQUAL:
-                    id_filters.append(condition.value)
+                    ids_include.append(condition.value)
                 elif condition.op == FilterOperator.IN:
-                    id_filters.extend(condition.value)
+                    ids_include.extend(condition.value)
+                elif condition.op == FilterOperator.NOT_EQUAL:
+                    ids_exclude.append(condition.value)
+                elif condition.op == FilterOperator.NOT_IN:
+                    ids_exclude.extend(condition.value)
 
         if vector_filter is not None:
             # similarity search
             query_payload = {
                 "where": filters,
-                "query_embeddings": vector_filter.value
-                if vector_filter is not None
-                else None,
+                "query_embeddings": vector_filter.value if vector_filter is not None else None,
                 "include": include + ["distances"],
             }
+
             if limit is not None:
-                query_payload["n_results"] = limit
+                if len(ids_include) == 0 and len(ids_exclude) == 0:
+                    query_payload["n_results"] = limit
+                else:
+                    # get more results if we have filters by id
+                    query_payload["n_results"] = limit * 10
 
             result = collection.query(**query_payload)
             ids = result["ids"][0]
@@ -301,7 +291,7 @@ class ChromaDBHandler(VectorStoreHandler):
         else:
             # general get query
             result = collection.get(
-                ids=id_filters or None,
+                ids=ids_include or None,
                 where=filters,
                 limit=limit,
                 offset=offset,
@@ -337,13 +327,21 @@ class ChromaDBHandler(VectorStoreHandler):
                         break
 
         df = pd.DataFrame(payload)
+        if ids_exclude or ids_include:
+            if ids_exclude:
+                df = df[~df[TableField.ID.value].isin(ids_exclude)]
+            if ids_include:
+                df = df[df[TableField.ID.value].isin(ids_include)]
+            if limit is not None:
+                df = df[:limit]
+
         if distance_filter is not None:
             op_map = {
-                '<': '__lt__',
-                '<=': '__le__',
-                '>': '__gt__',
-                '>=': '__ge__',
-                '=': '__eq__',
+                "<": "__lt__",
+                "<=": "__le__",
+                ">": "__gt__",
+                ">=": "__ge__",
+                "=": "__eq__",
             }
             op = op_map.get(distance_filter.op.value)
             if op:
@@ -393,7 +391,7 @@ class ChromaDBHandler(VectorStoreHandler):
         else:
             # Convert IDs to strings and remove any duplicates
             df[TableField.ID.value] = df[TableField.ID.value].astype(str)
-            df = df.drop_duplicates(subset=[TableField.ID.value], keep='last')
+            df = df.drop_duplicates(subset=[TableField.ID.value], keep="last")
 
         return df
 
@@ -413,7 +411,7 @@ class ChromaDBHandler(VectorStoreHandler):
             df = df.dropna(subset=[TableField.METADATA.value])
 
         # Convert embeddings from string to list if they are strings
-        if TableField.EMBEDDINGS.value in df.columns and df[TableField.EMBEDDINGS.value].dtype == 'object':
+        if TableField.EMBEDDINGS.value in df.columns and df[TableField.EMBEDDINGS.value].dtype == "object":
             df[TableField.EMBEDDINGS.value] = df[TableField.EMBEDDINGS.value].apply(
                 lambda x: ast.literal_eval(x) if isinstance(x, str) else x
             )
@@ -429,7 +427,7 @@ class ChromaDBHandler(VectorStoreHandler):
                 ids=data_dict[TableField.ID.value],
                 documents=data_dict[TableField.CONTENT.value],
                 embeddings=data_dict.get(TableField.EMBEDDINGS.value, None),
-                metadatas=data_dict.get(TableField.METADATA.value, None)
+                metadatas=data_dict.get(TableField.METADATA.value, None),
             )
             self._sync()
         except Exception as e:
@@ -467,16 +465,10 @@ class ChromaDBHandler(VectorStoreHandler):
         )
         self._sync()
 
-    def delete(
-        self, table_name: str, conditions: List[FilterCondition] = None
-    ):
+    def delete(self, table_name: str, conditions: List[FilterCondition] = None):
         filters = self._translate_metadata_condition(conditions)
         # get id filters
-        id_filters = [
-            condition.value
-            for condition in conditions
-            if condition.column == TableField.ID.value
-        ] or None
+        id_filters = [condition.value for condition in conditions if condition.column == TableField.ID.value] or None
 
         if filters is None and id_filters is None:
             raise Exception("Delete query must have at least one condition!")
@@ -488,8 +480,9 @@ class ChromaDBHandler(VectorStoreHandler):
         """
         Create a collection with the given name in the ChromaDB database.
         """
-        self._client.create_collection(table_name, get_or_create=if_not_exists,
-                                       metadata=self.create_collection_metadata)
+        self._client.create_collection(
+            table_name, get_or_create=if_not_exists, metadata=self.create_collection_metadata
+        )
         self._sync()
 
     def drop_table(self, table_name: str, if_exists=True):

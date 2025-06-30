@@ -47,14 +47,25 @@ def calc_entropy(values: List[float]) -> float:
 def sanitize_json_response(response: str) -> str:
     """Remove markdown code block formatting from JSON response."""
     # Remove leading/trailing whitespace
-    # Try to find the first JSON object using regex (this assumes a flat or nested dict)
-    json_match = re.search(r"\{.*?\}", response, re.DOTALL)
-    if not json_match:
+    response = response.strip()
+
+    # Find the first opening brace
+    start_idx = response.find("{")
+    if start_idx == -1:
         raise ValueError("No JSON object found in the response.")
 
-    json_str = json_match.group(0)
+    # Find the matching closing brace by counting braces
+    brace_count = 0
+    for i, char in enumerate(response[start_idx:], start_idx):
+        if char == "{":
+            brace_count += 1
+        elif char == "}":
+            brace_count -= 1
+            if brace_count == 0:
+                # Found the matching closing brace
+                return response[start_idx : i + 1]
 
-    return json_str.strip()
+    raise ValueError("No matching closing brace found for JSON object.")
 
 
 class EvaluateBase:

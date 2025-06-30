@@ -199,12 +199,8 @@ class Config:
             },
             "cache": {"type": "local"},
             "ml_task_queue": {"type": "local"},
-            "url_file_upload": {
-                "enabled": True,
-                "allowed_origins": [],
-                "disallowed_origins": []
-            },
-            "file_upload_domains": [],      # deprecated, use config[url_file_upload][allowed_origins] instead
+            "url_file_upload": {"enabled": True, "allowed_origins": [], "disallowed_origins": []},
+            "file_upload_domains": [],  # deprecated, use config[url_file_upload][allowed_origins] instead
             "web_crawling_allowed_sites": [],
             "cloud": False,
             "jobs": {"disable": False},
@@ -559,8 +555,8 @@ class Config:
             if isinstance(allowed_origins, list) and len(allowed_origins) == 0:
                 self._config["url_file_upload"]["allowed_origins"] = file_upload_domains
             logger.warning(
-                "Config option \"file_upload_domains\" is deprecated, "
-                "use config[\"url_file_upload\"][\"allowed_origins\"] instead."
+                'Config option "file_upload_domains" is deprecated, '
+                'use config["url_file_upload"]["allowed_origins"] instead.'
             )
 
         for env_name in ("MINDSDB_HTTP_SERVER_TYPE", "MINDSDB_DEFAULT_SERVER"):

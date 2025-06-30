@@ -130,7 +130,7 @@ class File(Resource):
                     400,
                     "Invalid URL",
                     "URL is not allowed for security reasons. Allowed hosts are: "
-                    f"{', '.join(allowed_origins) if allowed_origins else 'not specified'}."
+                    f"{', '.join(allowed_origins) if allowed_origins else 'not specified'}.",
                 )
 
             data["file"] = clear_filename(data["name"])

@@ -27,9 +27,9 @@ def clear_filename(filename: str) -> str:
 
     if not filename:
         return filename
-    badchars = '\\/:*?\"<>|'
+    badchars = '\\/:*?"<>|'
     for c in badchars:
-        filename = filename.replace(c, '')
+        filename = filename.replace(c, "")
     return filename
 
 

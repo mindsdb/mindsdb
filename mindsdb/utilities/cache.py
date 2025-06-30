@@ -100,7 +100,7 @@ class BaseCache(ABC):
         if serializer is None:
             serializer_module = self.config["cache"].get('serializer')
             if serializer_module == 'pickle':
-                import pickle as s_module
+                import json as s_module
             else:
                 import dill as s_module
             self.serializer = s_module

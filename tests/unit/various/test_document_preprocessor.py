@@ -5,13 +5,17 @@ from mindsdb.interfaces.knowledge_base.preprocessing.models import (
     TextChunkingConfig,
     ContextualConfig,
 )
+
 # Mock all langchain imports to avoid pydantic version conflicts
-with patch.dict('sys.modules', {
-    'mindsdb.interfaces.agents.langchain_agent': Mock(),
-    'mindsdb.interfaces.agents.mindsdb_chat_model': Mock(),
-    'mindsdb.interfaces.agents.constants': Mock(),
-    'langchain_openai': Mock(),
-}):
+with patch.dict(
+    "sys.modules",
+    {
+        "mindsdb.interfaces.agents.langchain_agent": Mock(),
+        "mindsdb.interfaces.agents.mindsdb_chat_model": Mock(),
+        "mindsdb.interfaces.agents.constants": Mock(),
+        "langchain_openai": Mock(),
+    },
+):
     from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor import (
         DocumentPreprocessor,
         TextChunkingPreprocessor,
@@ -23,6 +27,7 @@ class TestDocumentPreprocessor:
     def test_deterministic_id_generation(self):
         """Test that ID generation is deterministic for same content"""
         from mindsdb.interfaces.knowledge_base.utils import generate_document_id
+
         # Same content should generate same ID
         content = "test content"
         content_column = "test_column"
@@ -52,28 +57,20 @@ class TestDocumentPreprocessor:
             start_char=0,
             end_char=100,
             provided_id=provided_id,
-            content_column=content_column
+            content_column=content_column,
         )
-        assert chunk_id == f'test_id:{content_column}:1of3:0to100'
+        assert chunk_id == f"test_id:{content_column}:1of3:0to100"
 
         # Test error when no document ID provided
         with pytest.raises(ValueError, match="Document ID must be provided"):
             preprocessor._generate_chunk_id(
-                chunk_index=0,
-                total_chunks=3,
-                start_char=0,
-                end_char=100,
-                content_column=content_column
+                chunk_index=0, total_chunks=3, start_char=0, end_char=100, content_column=content_column
             )
 
         # Test error when no content column provided
         with pytest.raises(ValueError, match="Content column must be provided"):
             preprocessor._generate_chunk_id(
-                chunk_index=0,
-                total_chunks=3,
-                start_char=0,
-                end_char=100,
-                provided_id=provided_id
+                chunk_index=0, total_chunks=3, start_char=0, end_char=100, provided_id=provided_id
             )
 
     def test_split_document_without_splitter(self):
@@ -86,6 +83,7 @@ class TestDocumentPreprocessor:
     def test_chunk_overlap(self):
         """Test chunk overlap"""
         from mindsdb.interfaces.knowledge_base.utils import generate_document_id
+
         config = TextChunkingConfig(chunk_size=10, chunk_overlap=5)
         preprocessor = TextChunkingPreprocessor(config)
         long_content = " ".join(["word"] * 50)
@@ -98,11 +96,15 @@ class TestDocumentPreprocessor:
         for i in range(len(chunks) - 1):
             overlap_length = config.chunk_overlap
             # Compare content without worrying about whitespace positioning
-            assert chunks[i].content.strip()[-overlap_length:].strip() == chunks[i + 1].content.strip()[:overlap_length].strip()
+            assert (
+                chunks[i].content.strip()[-overlap_length:].strip()
+                == chunks[i + 1].content.strip()[:overlap_length].strip()
+            )
 
     def test_standard_chunking_strategy(self):
         """Test standard chunking strategy with different overlap values"""
         from mindsdb.interfaces.knowledge_base.utils import generate_document_id
+
         content = " ".join(["word"] * 30)
         doc_id = generate_document_id(content, "test_column")
         doc = Document(content=content, id=doc_id)
@@ -133,9 +135,9 @@ class TestDocumentPreprocessor:
                 current_chunk = chunks_medium_overlap[i].content.strip()
                 next_chunk = chunks_medium_overlap[i + 1].content.strip()
                 # Get the last overlap_length words of current chunk
-                current_end = ' '.join(current_chunk.split()[-config_medium_overlap.chunk_overlap:])
+                current_end = " ".join(current_chunk.split()[-config_medium_overlap.chunk_overlap :])
                 # Get the first overlap_length words of next chunk
-                next_start = ' '.join(next_chunk.split()[:config_medium_overlap.chunk_overlap])
+                next_start = " ".join(next_chunk.split()[: config_medium_overlap.chunk_overlap])
                 # Compare the overlap content (allowing for whitespace differences)
                 assert current_end.strip() == next_start.strip()
 
@@ -214,6 +216,7 @@ class TestDocumentPreprocessor:
 def test_document_id_generation():
     """Test the new document ID generation logic"""
     from mindsdb.interfaces.knowledge_base.utils import generate_document_id
+
     preprocessor = TextChunkingPreprocessor()
 
     # Test consistent base ID across different columns
@@ -242,15 +245,16 @@ def test_document_id_generation():
     chunks = preprocessor.process_documents([doc])
     for chunk in chunks:
         # Format should be: <doc_id>:<chunk_number>of<total_chunks>:<start_char>to<end_char>
-        parts = chunk.id.split(':')
+        parts = chunk.id.split(":")
         assert len(parts) == 4
-        assert 'of' in parts[2]
-        assert 'to' in parts[3]
+        assert "of" in parts[2]
+        assert "to" in parts[3]
 
 
 def test_metadata_preservation():
     """Test that metadata is preserved during processing"""
     from mindsdb.interfaces.knowledge_base.utils import generate_document_id
+
     preprocessor = TextChunkingPreprocessor()
     metadata = {"key": "value", "content_column": "test_column"}
     content = "Test content"
@@ -266,6 +270,7 @@ def test_metadata_preservation():
 def test_content_column_handling():
     """Test handling of content column in metadata"""
     from mindsdb.interfaces.knowledge_base.utils import generate_document_id
+
     preprocessor = TextChunkingPreprocessor()
     content = "Test content"
     metadata = {"content_column": "test_column"}
@@ -289,6 +294,7 @@ def test_provided_id_handling():
 def test_empty_content_handling():
     """Test handling of empty content"""
     from mindsdb.interfaces.knowledge_base.utils import generate_document_id
+
     preprocessor = TextChunkingPreprocessor()
     content = ""
     doc_id = generate_document_id(content, "test_column")
@@ -300,6 +306,7 @@ def test_empty_content_handling():
 def test_whitespace_content_handling():
     """Test handling of whitespace-only content"""
     from mindsdb.interfaces.knowledge_base.utils import generate_document_id
+
     preprocessor = TextChunkingPreprocessor()
     content = "   \n   \t   "
     doc_id = generate_document_id(content, "test_column")
@@ -319,6 +326,7 @@ def test_whitespace_content_handling():
 def test_source_metadata(content, metadata, expected_source):
     """Test source metadata is correctly set"""
     from mindsdb.interfaces.knowledge_base.utils import generate_document_id
+
     preprocessor = TextChunkingPreprocessor()
     doc_id = generate_document_id(content, "test_column")
     doc = Document(content=content, metadata=metadata, id=doc_id)
@@ -332,11 +340,7 @@ class TestContextualPreprocessor:
         # Create a pre-defined chunk with the correct metadata
         chunk = Mock(metadata={"source": "ContextualPreprocessor"})
         # Mock the entire process_documents method
-        with patch.object(
-            ContextualPreprocessor,
-            'process_documents',
-            return_value=[chunk]
-        ):
+        with patch.object(ContextualPreprocessor, "process_documents", return_value=[chunk]):
             doc = Document(content="Test content")
             chunks = preprocessor_sync.process_documents([doc])
             assert chunks[0].metadata["source"] == "ContextualPreprocessor"
@@ -351,11 +355,7 @@ class TestContextualPreprocessor:
         # Create pre-defined chunks
         chunks = [Mock(content="Test context") for _ in range(3)]
         # Mock the entire process_documents method
-        with patch.object(
-            ContextualPreprocessor,
-            'process_documents',
-            return_value=chunks
-        ):
+        with patch.object(ContextualPreprocessor, "process_documents", return_value=chunks):
             docs = [Document(content=sample_document, id=f"{i}") for i in range(3)]
             result = preprocessor_sync.process_documents(docs)
             assert len(result) > 0
@@ -365,11 +365,7 @@ class TestContextualPreprocessor:
         # Create pre-defined chunks
         chunks = [Mock(content="Test context") for _ in range(3)]
         # Mock the entire process_documents method
-        with patch.object(
-            ContextualPreprocessor,
-            'process_documents',
-            return_value=chunks
-        ):
+        with patch.object(ContextualPreprocessor, "process_documents", return_value=chunks):
             docs = [Document(content=sample_document, id=f"{i}") for i in range(3)]
             result = preprocessor_async.process_documents(docs)
             assert len(result) > 0
@@ -380,11 +376,7 @@ class TestContextualPreprocessor:
         # Create pre-defined chunks
         chunks = [Mock(content="Test context") for _ in range(3)]
         # Mock the entire process_documents method
-        with patch.object(
-            ContextualPreprocessor,
-            'process_documents',
-            return_value=chunks
-        ):
+        with patch.object(ContextualPreprocessor, "process_documents", return_value=chunks):
             docs = [Document(content=sample_document, id=f"{i}") for i in range(3)]
             result = preprocessor_sync.process_documents(docs)
             assert len(result) > 0
@@ -399,6 +391,7 @@ class TestContextualPreprocessor:
             class MockResponse:
                 def __init__(self, content):
                     self.content = content
+
             # Create a mock with async support
             mock_llm = Mock()
             # Add an async batch method that returns appropriate responses
@@ -424,6 +417,7 @@ class TestContextualPreprocessor:
             class MockResponse:
                 def __init__(self, content):
                     self.content = content
+
             # Regular batch method
             mock_llm.batch = Mock(return_value=[MockResponse("Test context") for _ in range(10)])
             # Async batch method

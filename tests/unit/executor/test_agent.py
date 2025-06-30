@@ -68,13 +68,37 @@ def set_openai_completion(mock_openai, response):
     mock_openai().chat.completions.create.side_effect = resp_f
 
 
-def set_litellm_embedding(mock_litellm_embedding, response):
-    if not isinstance(response, list):
-        response = [response]
+def dummy_embeddings(string):
+    # Imitates embedding generation: create vectors which are similar for similar words in inputs
 
-    def resp_f(*args, **kwargs):
+    embeds = [0] * 25**2
+    base = 25
+
+    string = string.lower().replace(",", " ").replace(".", " ")
+    for word in string.split():
+        # encode letters to numbers
+        values = []
+        for letter in word:
+            val = ord(letter) - 97
+            val = min(max(val, 0), 122)
+            values.append(val)
+
+        # first two values are position in vector
+        pos = values[0] * base + values[1]
+
+        # the next 4: are value of the vector
+        values = values[2:6]
+        emb = sum([val / base ** (i + 1) for i, val in enumerate(values)])
+
+        embeds[pos] += emb
+
+    return embeds
+
+
+def set_litellm_embedding(mock_litellm_embedding):
+    def resp_f(input, *args, **kwargs):
         mock_response = MagicMock()
-        mock_response.data = [{"embedding": emb} for emb in response]
+        mock_response.data = [{"embedding": dummy_embeddings(s)} for s in input]
         return mock_response
 
     mock_litellm_embedding.side_effect = resp_f
@@ -501,7 +525,7 @@ class TestAgent(BaseExecutorDummyML):
     @patch("litellm.embedding")
     @patch("openai.OpenAI")
     def test_agent_retrieval(self, mock_openai, mock_litellm_embedding):
-        set_litellm_embedding(mock_litellm_embedding, [[0.1] * 1536])
+        set_litellm_embedding(mock_litellm_embedding)
         self.run_sql("""
             create knowledge base kb_review
             using
@@ -625,7 +649,7 @@ class TestAgent(BaseExecutorDummyML):
     @patch("openai.OpenAI")
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_agent_permissions(self, mock_litellm_embedding, mock_openai):
-        set_litellm_embedding(mock_litellm_embedding, [[0.1] * 1536] * 3)
+        set_litellm_embedding(mock_litellm_embedding)
 
         kb_sql = """
             create knowledge base %s
@@ -798,7 +822,7 @@ class TestAgent(BaseExecutorDummyML):
     @patch("openai.OpenAI")
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_agent_data(self, mock_litellm_embedding, mock_openai):
-        set_litellm_embedding(mock_litellm_embedding, [[0.1] * 1536] * 3)
+        set_litellm_embedding(mock_litellm_embedding)
         self.run_sql("""
             create knowledge base kb1
             using
@@ -915,7 +939,7 @@ class TestKB(BaseExecutorDummyML):
     def test_kb(self, mock_litellm_embedding):
         self._create_kb("kb_review")
 
-        set_litellm_embedding(mock_litellm_embedding, [[0.1] * 1536])
+        set_litellm_embedding(mock_litellm_embedding)
         self.run_sql("insert into kb_review (content) values ('review')")
 
         # selectable
@@ -945,20 +969,20 @@ class TestKB(BaseExecutorDummyML):
         # ---  case 1: kb with default columns settings ---
         self._create_kb("kb_review")
 
-        set_litellm_embedding(mock_litellm_embedding, [[0.1] * 1536])
+        set_litellm_embedding(mock_litellm_embedding)
 
         self.run_sql("""
             insert into kb_review
             select review as content, id from files.reviews
         """)
 
-        ret = self.run_sql("select * from kb_review where original_doc_id = 123")
+        ret = self.run_sql("select * from kb_review where _original_doc_id = 123")
         assert len(ret) == 1
         assert ret["chunk_content"][0] == record["review"]
 
         # delete by metadata
-        self.run_sql("delete from kb_review where original_doc_id = 123")
-        ret = self.run_sql("select * from kb_review where original_doc_id = 123")
+        self.run_sql("delete from kb_review where _original_doc_id = 123")
+        ret = self.run_sql("select * from kb_review where _original_doc_id = 123")
         assert len(ret) == 0
 
         # insert without id
@@ -968,7 +992,7 @@ class TestKB(BaseExecutorDummyML):
         """)
 
         # id column wasn't used
-        ret = self.run_sql("select * from kb_review where original_doc_id = 123")
+        ret = self.run_sql("select * from kb_review where _original_doc_id = 123")
         assert len(ret) == 0
 
         # product/url in metadata
@@ -984,7 +1008,7 @@ class TestKB(BaseExecutorDummyML):
             "kb_review", content_columns=["review", "product"], id_column="url", metadata_columns=["specs", "id"]
         )
 
-        set_litellm_embedding(mock_litellm_embedding, [[0.1] * 1536, [0.2] * 1536])
+        set_litellm_embedding(mock_litellm_embedding)
         self.run_sql("""
             insert into kb_review
             select * from files.reviews
@@ -1008,7 +1032,7 @@ class TestKB(BaseExecutorDummyML):
         # ---  case 3: content is defined, id is id, the rest goes to metadata ---
         self._create_kb("kb_review", content_columns=["review"])
 
-        set_litellm_embedding(mock_litellm_embedding, [[0.1] * 1536])
+        set_litellm_embedding(mock_litellm_embedding)
         self.run_sql("""
             insert into kb_review
             select * from files.reviews
@@ -1018,7 +1042,7 @@ class TestKB(BaseExecutorDummyML):
                 select chunk_content,
                  metadata->>'specs' as specs, metadata->>'product' as product, metadata->>'url' as url
                 from kb_review 
-                where original_doc_id = 123 -- id is id
+                where _original_doc_id = 123 -- id is id
         """)
         assert len(ret) == 1
         # review in content
@@ -1046,7 +1070,7 @@ class TestKB(BaseExecutorDummyML):
 
         self._create_kb("kb_ral")
 
-        set_litellm_embedding(mock_litellm_embedding, [[0.1] * 1536, [0.2] * 1536, [0.3] * 1536, [0.4] * 1536])
+        set_litellm_embedding(mock_litellm_embedding)
         self.run_sql("""
             insert into kb_ral
             select ral id, english content from files.ral
@@ -1111,7 +1135,7 @@ class TestKB(BaseExecutorDummyML):
             self._create_kb("kb_part", content_columns=["english"])
 
             # load kb
-            set_litellm_embedding(mock_litellm_embedding, [[0.1] * 1536] * len(df))
+            set_litellm_embedding(mock_litellm_embedding)
             ret = self.run_sql(insert_sql)
             # inserts returns query
             query_id = ret["ID"][0]
@@ -1201,3 +1225,101 @@ class TestKB(BaseExecutorDummyML):
                 insert into kb_part SELECT id, english FROM pg.ral
                 using batch_size=20, track_column=id, threads = 3
             """)
+
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_kb_algebra(self, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding)
+
+        lines, i = [], 0
+        for color in ("white", "red", "green"):
+            for size in ("big", "middle", "small"):
+                for shape in ("square", "triangle", "circle"):
+                    i += 1
+                    lines.append([i, i, f"{color} {size} {shape}", color, size, shape])
+        df = pd.DataFrame(lines, columns=["id", "num", "content", "color", "size", "shape"])
+
+        self.save_file("items", df)
+
+        self.run_sql("""
+            create knowledge base kb_alg
+            using
+                embedding_model = {
+                    "provider": "bedrock",
+                    "model_name": "titan"
+                }
+        """)
+
+        self.run_sql("""
+        insert into kb_alg
+            select * from files.items
+        """)
+
+        # --- search value excluding others
+
+        ret = self.run_sql("""
+           select * from kb_alg where
+            content = 'green'
+            and content not IN ('square', 'triangle')
+            and content is not null
+           limit 3
+        """)
+
+        # check 3 most relative records
+        for content in ret["chunk_content"]:
+            assert "green" in content
+            assert "square" not in content
+            assert "triangle" not in content
+
+        # --- search value excluding other and metadata
+
+        ret = self.run_sql("""
+           select * from kb_alg where
+            content = 'green'
+            and content != 'square'
+            and shape != 'triangle'
+           limit 3
+        """)
+
+        for content in ret["chunk_content"]:
+            assert "green" in content
+            assert "square" not in content
+            assert "triangle" not in content
+
+        # -- searching value in list with excluding
+
+        ret = self.run_sql("""
+           select * from kb_alg where
+            content in ('green', 'white')
+            and content not like 'green'
+           limit 3
+        """)
+        for content in ret["chunk_content"]:
+            assert "white" in content
+
+        # -- using OR
+
+        ret = self.run_sql("""
+           select * from kb_alg where
+               (content like 'green' and size='big') 
+            or (content like 'white' and size='small') 
+            or (content is null)
+           limit 3
+        """)
+        for content in ret["chunk_content"]:
+            if "green" in content:
+                assert "big" in content
+            else:
+                assert "small" in content
+
+        # -- using between and less than
+
+        ret = self.run_sql("""
+           select * from kb_alg where
+            content like 'white' and num between 3 and 6 and num < 5
+           limit 3
+        """)
+        assert len(ret) == 2
+
+        for _, item in ret.iterrows():
+            assert "white" in item["chunk_content"]
+            assert item["metadata"]["num"] in (3, 4)

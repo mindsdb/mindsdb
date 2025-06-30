@@ -47,8 +47,6 @@ from mindsdb.integrations.utilities.rag.rerankers.base_reranker import BaseLLMRe
 
 logger = log.getLogger(__name__)
 
-KB_TO_VECTORDB_COLUMNS = {"id": "original_doc_id", "chunk_id": "id", "chunk_content": "content"}
-
 
 def get_model_params(model_params: dict, default_config_key: str):
     """
@@ -141,23 +139,29 @@ class KnowledgeBaseTable:
         self.document_loader = None
         self.model_params = None
 
+        self.kb_to_vector_columns = {"id": "_original_doc_id", "chunk_id": "id", "chunk_content": "content"}
+        if self._kb.params.get("version", 0) < 2:
+            self.kb_to_vector_columns["id"] = "original_doc_id"
+
     def configure_preprocessing(self, config: Optional[dict] = None):
         """Configure preprocessing for the knowledge base table"""
         logger.debug(f"Configuring preprocessing with config: {config}")
         self.document_preprocessor = None  # Reset existing preprocessor
-        if config is not None:
-            # Ensure content_column is set for JSON chunking if not already specified
-            if config.get("type") == "json_chunking" and config.get("json_chunking_config"):
-                if "content_column" not in config["json_chunking_config"]:
-                    config["json_chunking_config"]["content_column"] = "content"
+        if config is None:
+            config = {}
 
-            preprocessing_config = PreprocessingConfig(**config)
-            self.document_preprocessor = PreprocessorFactory.create_preprocessor(preprocessing_config)
-            logger.debug(f"Created preprocessor of type: {type(self.document_preprocessor)}")
-        else:
-            # Always create a default preprocessor if none specified
-            self.document_preprocessor = PreprocessorFactory.create_preprocessor()
-            logger.debug("Created default preprocessor")
+        # Ensure content_column is set for JSON chunking if not already specified
+        if config.get("type") == "json_chunking" and config.get("json_chunking_config"):
+            if "content_column" not in config["json_chunking_config"]:
+                config["json_chunking_config"]["content_column"] = "content"
+
+        preprocessing_config = PreprocessingConfig(**config)
+        self.document_preprocessor = PreprocessorFactory.create_preprocessor(preprocessing_config)
+
+        # set doc_id column name
+        self.document_preprocessor.config.doc_id_column_name = self.kb_to_vector_columns["id"]
+
+        logger.debug(f"Created preprocessor of type: {type(self.document_preprocessor)}")
 
     def select_query(self, query: Select) -> pd.DataFrame:
         """
@@ -329,12 +333,12 @@ class KnowledgeBaseTable:
         if conditions is None:
             return
         for condition in conditions:
-            if condition.column in KB_TO_VECTORDB_COLUMNS:
-                condition.column = KB_TO_VECTORDB_COLUMNS[condition.column]
+            if condition.column in self.kb_to_vector_columns:
+                condition.column = self.kb_to_vector_columns[condition.column]
 
     def addapt_result_columns(self, df):
         col_update = {}
-        for kb_col, vec_col in KB_TO_VECTORDB_COLUMNS.items():
+        for kb_col, vec_col in self.kb_to_vector_columns.items():
             if vec_col in df.columns:
                 col_update[vec_col] = kb_col
 
@@ -343,7 +347,7 @@ class KnowledgeBaseTable:
         columns = list(df.columns)
         # update id, get from metadata
         df[TableField.ID.value] = df[TableField.METADATA.value].apply(
-            lambda m: None if m is None else m.get("original_doc_id")
+            lambda m: None if m is None else m.get(self.kb_to_vector_columns["id"])
         )
 
         # id on first place
@@ -530,8 +534,8 @@ class KnowledgeBaseTable:
 
                     metadata = {
                         **base_metadata,
-                        "original_row_index": str(idx),  # provide link to original row index
-                        "content_column": col,
+                        "_original_row_index": str(idx),  # provide link to original row index
+                        "_content_column": col,
                     }
 
                     raw_documents.append(Document(content=content_str, id=doc_id, metadata=metadata))
@@ -898,6 +902,8 @@ class KnowledgeBaseController:
     manages knowledge bases
     """
 
+    KB_VERSION = 2
+
     def __init__(self, session) -> None:
         self.session = session
 
@@ -1036,6 +1042,7 @@ class KnowledgeBaseController:
             if vector_size is not None:
                 params["vector_config"]["vector_size"] = vector_size
 
+        params["version"] = self.KB_VERSION
         kb = db.KnowledgeBase(
             name=name,
             project_id=project_id,

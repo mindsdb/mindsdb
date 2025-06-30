@@ -476,7 +476,7 @@ class PostgresHandler(MetaDatabaseHandler):
         config = self._make_connection_args()
         config["autocommit"] = True
 
-        conn = psycopg.connect(connect_timeout=10, **config)
+        conn = psycopg.connect(**config)
 
         # create db trigger
         trigger_name = f"mdb_notify_{table_name}"

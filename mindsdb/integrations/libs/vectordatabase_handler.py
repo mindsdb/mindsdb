@@ -28,6 +28,9 @@ from .base import BaseHandler
 LOG = log.getLogger(__name__)
 
 
+class VectorHandlerException(Exception): ...
+
+
 class TableField(Enum):
     """
     Enum for table fields.
@@ -43,9 +46,9 @@ class TableField(Enum):
 
 
 class DistanceFunction(Enum):
-    SQUARED_EUCLIDEAN_DISTANCE = '<->',
-    NEGATIVE_DOT_PRODUCT = '<#>',
-    COSINE_DISTANCE = '<=>'
+    SQUARED_EUCLIDEAN_DISTANCE = ("<->",)
+    NEGATIVE_DOT_PRODUCT = ("<#>",)
+    COSINE_DISTANCE = "<=>"
 
 
 class VectorStoreHandler(BaseHandler):
@@ -118,9 +121,7 @@ class VectorStoreHandler(BaseHandler):
                         right_hand = [item.value for item in node.args[1].items]
                     else:
                         raise Exception(f"Unsupported right hand side: {node.args[1]}")
-                    conditions.append(
-                        FilterCondition(column=left_hand, op=op, value=right_hand)
-                    )
+                    conditions.append(FilterCondition(column=left_hand, op=op, value=right_hand))
 
             query_traversal(where_statement, _extract_comparison_conditions)
 
@@ -135,9 +136,7 @@ class VectorStoreHandler(BaseHandler):
         # try to treat conditions that are not in TableField as metadata conditions
         for condition in conditions:
             if not self._is_condition_allowed(condition):
-                condition.column = (
-                    TableField.METADATA.value + "." + condition.column
-                )
+                condition.column = TableField.METADATA.value + "." + condition.column
 
     def _is_columns_allowed(self, columns: List[str]) -> bool:
         """
@@ -184,17 +183,12 @@ class VectorStoreHandler(BaseHandler):
         columns = [column.name for column in query.columns]
 
         if not self._is_columns_allowed(columns):
-            raise Exception(
-                f"Columns {columns} not allowed."
-                f"Allowed columns are {[col['name'] for col in self.SCHEMA]}"
-            )
+            raise Exception(f"Columns {columns} not allowed.Allowed columns are {[col['name'] for col in self.SCHEMA]}")
 
         # get content column if it is present
         if TableField.CONTENT.value in columns:
             content_col_index = columns.index("content")
-            content = [
-                self._value_or_self(row[content_col_index]) for row in query.values
-            ]
+            content = [self._value_or_self(row[content_col_index]) for row in query.values]
         else:
             content = None
 
@@ -209,19 +203,13 @@ class VectorStoreHandler(BaseHandler):
         # get embeddings column if it is present
         if TableField.EMBEDDINGS.value in columns:
             embeddings_col_index = columns.index("embeddings")
-            embeddings = [
-                ast.literal_eval(self._value_or_self(row[embeddings_col_index]))
-                for row in query.values
-            ]
+            embeddings = [ast.literal_eval(self._value_or_self(row[embeddings_col_index])) for row in query.values]
         else:
             raise Exception("Embeddings column is required!")
 
         if TableField.METADATA.value in columns:
             metadata_col_index = columns.index("metadata")
-            metadata = [
-                ast.literal_eval(self._value_or_self(row[metadata_col_index]))
-                for row in query.values
-            ]
+            metadata = [ast.literal_eval(self._value_or_self(row[metadata_col_index])) for row in query.values]
         else:
             metadata = None
 
@@ -309,7 +297,7 @@ class VectorStoreHandler(BaseHandler):
         # id is string TODO is it ok?
         df[id_col] = df[id_col].apply(str)
 
-        if hasattr(self, 'upsert'):
+        if hasattr(self, "upsert"):
             self.upsert(table_name, df)
             return
 
@@ -317,9 +305,7 @@ class VectorStoreHandler(BaseHandler):
         res = self.select(
             table_name,
             columns=[id_col],
-            conditions=[
-                FilterCondition(column=id_col, op=FilterOperator.IN, value=list(df[id_col]))
-            ]
+            conditions=[FilterCondition(column=id_col, op=FilterOperator.IN, value=list(df[id_col]))],
         )
         existed_ids = list(res[id_col])
 
@@ -332,11 +318,7 @@ class VectorStoreHandler(BaseHandler):
                 self.update(table_name, df_update, [id_col])
             except NotImplementedError:
                 # not implemented? do it with delete and insert
-                conditions = [FilterCondition(
-                    column=id_col,
-                    op=FilterOperator.IN,
-                    value=list(df[id_col])
-                )]
+                conditions = [FilterCondition(column=id_col, op=FilterOperator.IN, value=list(df[id_col]))]
                 self.delete(table_name, conditions)
                 self.insert(table_name, df_update)
         if not df_insert.empty:
@@ -369,10 +351,7 @@ class VectorStoreHandler(BaseHandler):
             columns = [col.parts[-1] for col in query.targets]
 
         if not self._is_columns_allowed(columns):
-            raise Exception(
-                f"Columns {columns} not allowed."
-                f"Allowed columns are {[col['name'] for col in self.SCHEMA]}"
-            )
+            raise Exception(f"Columns {columns} not allowed.Allowed columns are {[col['name'] for col in self.SCHEMA]}")
 
         # check if columns are allowed
         if conditions is None:
@@ -385,13 +364,17 @@ class VectorStoreHandler(BaseHandler):
         limit = query.limit.value if query.limit is not None else None
 
         # dispatch select
-        return self.select(
-            table_name,
-            columns=columns,
-            conditions=conditions,
-            offset=offset,
-            limit=limit,
-        )
+        try:
+            return self.select(
+                table_name,
+                columns=columns,
+                conditions=conditions,
+                offset=offset,
+                limit=limit,
+            )
+        except Exception as e:
+            handler_engine = self.__class__.name
+            raise VectorHandlerException(f"Error in {handler_engine} database: {e}")
 
     def _dispatch(self, query: ASTNode) -> HandlerResponse:
         """
@@ -408,10 +391,7 @@ class VectorStoreHandler(BaseHandler):
         if type(query) in dispatch_router:
             resp = dispatch_router[type(query)](query)
             if resp is not None:
-                return HandlerResponse(
-                    resp_type=RESPONSE_TYPE.TABLE,
-                    data_frame=resp
-                )
+                return HandlerResponse(resp_type=RESPONSE_TYPE.TABLE, data_frame=resp)
             else:
                 return HandlerResponse(resp_type=RESPONSE_TYPE.OK)
 
@@ -455,9 +435,7 @@ class VectorStoreHandler(BaseHandler):
         """
         raise NotImplementedError()
 
-    def insert(
-        self, table_name: str, data: pd.DataFrame
-    ) -> HandlerResponse:
+    def insert(self, table_name: str, data: pd.DataFrame) -> HandlerResponse:
         """Insert data into table
 
         Args:
@@ -470,9 +448,7 @@ class VectorStoreHandler(BaseHandler):
         """
         raise NotImplementedError()
 
-    def update(
-        self, table_name: str, data: pd.DataFrame, key_columns: List[str] = None
-    ):
+    def update(self, table_name: str, data: pd.DataFrame, key_columns: List[str] = None):
         """Update data in table
 
         Args:
@@ -485,9 +461,7 @@ class VectorStoreHandler(BaseHandler):
         """
         raise NotImplementedError()
 
-    def delete(
-        self, table_name: str, conditions: List[FilterCondition] = None
-    ) -> HandlerResponse:
+    def delete(self, table_name: str, conditions: List[FilterCondition] = None) -> HandlerResponse:
         """Delete data from table
 
         Args:
@@ -535,9 +509,9 @@ class VectorStoreHandler(BaseHandler):
         query: str = None,
         metadata: Dict[str, str] = None,
         distance_function=DistanceFunction.COSINE_DISTANCE,
-        **kwargs
+        **kwargs,
     ) -> pd.DataFrame:
-        '''
+        """
         Executes a hybrid search, combining semantic search and one or both of keyword/metadata search.
 
         For insight on the query construction, see: https://docs.pgvecto.rs/use-case/hybrid-search.html#advanced-search-merge-the-results-of-full-text-search-and-vector-search.
@@ -551,11 +525,11 @@ class VectorStoreHandler(BaseHandler):
 
         Returns:
             df(pd.DataFrame): Hybrid search result, sorted by hybrid search rank
-        '''
-        raise NotImplementedError(f'Hybrid search not supported for VectorStoreHandler {self.name}')
+        """
+        raise NotImplementedError(f"Hybrid search not supported for VectorStoreHandler {self.name}")
 
     def create_index(self, *args, **kwargs):
         """
         Create an index on the specified table.
         """
-        raise NotImplementedError(f'create_index not supported for VectorStoreHandler {self.name}')
+        raise NotImplementedError(f"create_index not supported for VectorStoreHandler {self.name}")

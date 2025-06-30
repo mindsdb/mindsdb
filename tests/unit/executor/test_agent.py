@@ -841,7 +841,7 @@ class TestAgent(BaseExecutorDummyML):
     @patch("openai.OpenAI")
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
     def test_agent_accept_wrong_quoting(self, mock_litellm_embedding, mock_openai):
-        set_litellm_embedding(mock_litellm_embedding, [[0.1] * 1536] * 3)
+        set_litellm_embedding(mock_litellm_embedding)
         self.run_sql("""
             create knowledge base kb1
             using embedding_model = {"provider": "bedrock", "model_name": "titan"}

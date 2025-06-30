@@ -209,7 +209,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
             return PgVectorHandler._construct_where_clause(filter_conditions)
 
         where_clauses = []
-        keyword_query_ocndition = f"to_tsvector('english', {content_column_name}) @@ websearch_to_tsquery('english', {keyword_query})"
+        keyword_query_ocndition = f"""to_tsvector('english', {content_column_name}) @@ websearch_to_tsquery('english', '{keyword_query}')"""
         for key, value in filter_conditions.items():
             if key == "embeddings":
                 continue
@@ -261,7 +261,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
         query = f"""
             SELECT
                 {', '.join(columns)},
-                ts_rank_cd(to_tsvector('english', {content_column_name}), websearch_to_tsquery('english', {query})) as bm25_score
+                ts_rank_cd(to_tsvector('english', {content_column_name}), websearch_to_tsquery('english', '{query}')) as distance
             FROM
                 {table_name}
             {where_clause if where_clause else ''}
@@ -385,8 +385,8 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
 
         if columns is None:
             columns = ["id", "content", "embeddings", "metadata"]
-
-        query = self._build_keyword_bm25_query(table_name, keyword_search_args.query, columns, conditions, limit, offset)
+        content_column_name = keyword_search_args.column
+        query = self._build_keyword_bm25_query(table_name, keyword_search_args.query, columns, content_column_name, conditions, limit, offset)
 
         result = self.raw_query(query)
 

@@ -269,8 +269,27 @@ class KnowledgeBaseTable:
                 query=query_text,
                 column=keyword_column_name
             )
-            df_keyword_select = db_handler.dispatch_keyword_select(query, keyword_search_conditions, keyword_search_args)
+            keyword_query_obj = copy.deepcopy(query)
+
+            keyword_query_obj.targets = [
+                Identifier(TableField.ID.value),
+                Identifier(TableField.CONTENT.value),
+                Identifier(TableField.METADATA.value),
+            ]
+
+            df_keyword_select = db_handler.dispatch_keyword_select(keyword_query_obj, keyword_search_conditions, keyword_search_args)
         df = self.addapt_result_columns(df)
+        df_keyword_select = self.addapt_result_columns(df_keyword_select)
+        logger.debug(f"Keyword search returned {len(df_keyword_select)} rows")
+        logger.debug(f"Columns in keyword search response: {df_keyword_select.columns.tolist()}")
+        # ensure df and df_keyword_select have exactly the same columns
+        if not df_keyword_select.empty:
+            if set(df.columns) != set(df_keyword_select.columns):
+                raise ValueError(
+                    f"Keyword search returned different columns: {df_keyword_select.columns} "
+                    f"than expected: {df.columns}"
+                )
+            df = pd.concat([df, df_keyword_select], ignore_index=True)
 
         logger.debug(f"Query returned {len(df)} rows")
         logger.debug(f"Columns in response: {df.columns.tolist()}")

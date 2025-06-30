@@ -110,7 +110,7 @@ class File(Resource):
                 url = urlparse(url)
                 if not (url.scheme and url.netloc):
                     raise ValueError()
-                url = url.to_string()
+                url = url.geturl()
             except Exception:
                 return http_error(
                     400,
@@ -120,7 +120,7 @@ class File(Resource):
 
             url_file_upload_enabled = config["url_file_upload"]["enabled"]
             if url_file_upload_enabled is False:
-                return http_error(400, "URL file upload is disabled.")
+                return http_error(400, "URL file upload is disabled.", "URL file upload is disabled.")
 
             allowed_origins = config["url_file_upload"]["allowed_origins"]
             disallowed_origins = config["url_file_upload"]["disallowed_origins"]

@@ -1323,3 +1323,46 @@ class TestKB(BaseExecutorDummyML):
         for _, item in ret.iterrows():
             assert "white" in item["chunk_content"]
             assert item["metadata"]["num"] in (3, 4)
+
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_select_allowed_columns(self, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding)
+
+        # -- no metadata are specified, generated from inserts --
+        self._create_kb("kb1")
+
+        self.run_sql("insert into kb1 (id, content, col1) values (1, 'cont1', 'val1')")
+        self.run_sql("insert into kb1 (id, content, col2) values (2, 'cont2', 'val2')")
+
+        # existed value
+        ret = self.run_sql("select * from kb1 where col1='val1'")
+        assert len(ret) == 1 and ret["chunk_content"][0] == "cont1"
+
+        # not existed value
+        ret = self.run_sql("select * from kb1 where col1='not exist'")
+        assert len(ret) == 0
+
+        # not existed column
+        with pytest.raises(ValueError):
+            self.run_sql("select * from kb1 where col3='val2'")
+
+        # -- metadata are specified --
+        self._create_kb(
+            "kb2",
+            metadata_columns=["col1", "col2", "col3"],
+        )
+
+        self.run_sql("insert into kb2 (id, content, col1) values (1, 'cont1', 'val1')")
+        self.run_sql("insert into kb2 (id, content, col2) values (2, 'cont2', 'val2')")
+
+        # existed value
+        ret = self.run_sql("select * from kb2 where col1='val1'")
+        assert len(ret) == 1 and ret["chunk_content"][0] == "cont1"
+
+        # not existed value
+        ret = self.run_sql("select * from kb2 where col3='cont1'")
+        assert len(ret) == 0
+
+        # not existed column
+        with pytest.raises(ValueError):
+            self.run_sql("select * from kb2 where cont10='val2'")

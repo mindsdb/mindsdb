@@ -1,7 +1,9 @@
 from typing import List, Union
-
 import pandas as pd
-
+import json
+from decimal import Decimal
+import datetime
+import uuid
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.interfaces.data_catalog.base_data_catalog import BaseDataCatalog
 from mindsdb.interfaces.storage import db
@@ -206,10 +208,6 @@ class DataCatalogLoader(BaseDataCatalog):
                 distinct_values_count = int(val) if pd.notna(val) else None
                 min_val = row.get("minimum_value")
                 max_val = row.get("maximum_value")
-                if min_val is not None and not isinstance(min_val, (str, int, float)):
-                    min_val = str(min_val)
-                if max_val is not None and not isinstance(max_val, (str, int, float)):
-                    max_val = str(max_val)
 
                 # Convert the most_common_frequencies to a list of strings.
                 most_common_frequencies = [str(val) for val in row.get("most_common_frequencies") or []]
@@ -220,8 +218,8 @@ class DataCatalogLoader(BaseDataCatalog):
                     most_common_frequencies=most_common_frequencies,
                     null_percentage=row.get("null_percentage"),
                     distinct_values_count=distinct_values_count,
-                    minimum_value=min_val,
-                    maximum_value=max_val,
+                    minimum_value=self.to_str(min_val),
+                    maximum_value=self.to_str(max_val),
                 )
                 column_statistics.append(record)
 
@@ -379,3 +377,21 @@ class DataCatalogLoader(BaseDataCatalog):
             db.session.delete(table)
         db.session.commit()
         self.logger.info(f"Metadata for {self.database_name} removed successfully.")
+
+    def to_str(self, val) -> str:
+        """
+        Convert a value to a string.
+        """
+        if val is None:
+            return None
+        if isinstance(val, (int, float, str, bool)):
+            return str(val)
+        if isinstance(val, Decimal):
+            return str(val)
+        if isinstance(val, (datetime.datetime, datetime.date)):
+            return val.isoformat()
+        if isinstance(val, uuid.UUID):
+            return str(val)
+        if isinstance(val, (list, dict, set, tuple)):
+            return json.dumps(val, default=str)
+        return str(val)

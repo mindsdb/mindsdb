@@ -749,7 +749,7 @@ class QueryPlanner:
         update_command = copy.deepcopy(query)
         # clear subselect
         update_command.from_select = None
-        
+
         if from_select_alias is not None:
             update_command.from_select_alias = from_select_alias
 

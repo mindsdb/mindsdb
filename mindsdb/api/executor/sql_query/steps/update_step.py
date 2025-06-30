@@ -116,6 +116,7 @@ class UpdateToTableCall(BaseStepCall):
                 raise WrongArgumentError(f'Field {param_name} not found in input data. Input fields: {data_header}')
 
         # perform update
+        affected_rows = 0
         for row in result_data.get_records():
             # run update from every row from input data
 
@@ -124,4 +125,5 @@ class UpdateToTableCall(BaseStepCall):
                 param.value = row[param_name]
 
             response = dn.query(query=update_query, session=self.session)
-        return ResultSet(affected_rows=response.affected_rows)
+            affected_rows += response.affected_rows
+        return ResultSet(affected_rows=affected_rows)

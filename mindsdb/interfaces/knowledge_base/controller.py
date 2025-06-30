@@ -6,6 +6,7 @@ import decimal
 
 import pandas as pd
 import numpy as np
+from sqlalchemy.orm.attributes import flag_modified
 
 from mindsdb_sql_parser.ast import BinaryOperation, Constant, Identifier, Select, Update, Delete, Star
 from mindsdb_sql_parser.ast.mindsdb import CreatePredictor
@@ -268,7 +269,8 @@ class KnowledgeBaseTable:
                 limit = 100
             query.limit = Constant(limit)
 
-        df = db_handler.dispatch_select(query, conditions)
+        allowed_metadata_columns = self._get_allowed_metadata_columns()
+        df = db_handler.dispatch_select(query, conditions, allowed_metadata_columns=allowed_metadata_columns)
         df = self.addapt_result_columns(df)
 
         logger.debug(f"Query returned {len(df)} rows")
@@ -277,6 +279,19 @@ class KnowledgeBaseTable:
         df = self.add_relevance(df, query_text, relevance_threshold, disable_reranking)
 
         return df
+
+    def _get_allowed_metadata_columns(self) -> List[str] | None:
+        # Return list of KB columns to restrict querying, if None: no restrictions
+
+        if self._kb.params.get("version", 0) < 2:
+            # disable for old version KBs
+            return None
+
+        user_columns = self._kb.params.get("metadata_columns", [])
+        dynamic_columns = self._kb.params.get("inserted_metadata", [])
+
+        columns = set(user_columns) | set(dynamic_columns)
+        return [col.lower() for col in columns]
 
     def score_documents(self, query_text, documents, reranking_model_params):
         reranker = get_reranking_model_from_params(reranking_model_params)
@@ -630,16 +645,22 @@ class KnowledgeBaseTable:
             metadata_columns = [column_map.get(col.lower(), col) for col in metadata_columns]
             logger.debug(f"Mapped metadata columns: {metadata_columns}")
 
-        if content_columns is not None:
-            content_columns = list(set(content_columns).intersection(columns))
-            if len(content_columns) == 0:
-                raise ValueError(f"Content columns {params.get('content_columns')} not found in dataset: {columns}")
+        content_columns = list(set(content_columns).intersection(columns))
+        if len(content_columns) == 0:
+            raise ValueError(f"Content columns {params.get('content_columns')} not found in dataset: {columns}")
 
-            if metadata_columns is not None:
-                metadata_columns = list(set(metadata_columns).intersection(columns))
-            else:
-                # all the rest columns
-                metadata_columns = list(set(columns).difference(content_columns))
+        if metadata_columns is not None:
+            metadata_columns = list(set(metadata_columns).intersection(columns))
+        else:
+            # all the rest columns
+            metadata_columns = list(set(columns).difference(content_columns))
+
+            # update list of used columns
+            inserted_metadata = set(self._kb.params.get("inserted_metadata", []))
+            inserted_metadata.update(metadata_columns)
+            self._kb.params["inserted_metadata"] = list(inserted_metadata)
+            flag_modified(self._kb, "params")
+            db.session.commit()
 
         # Add content columns directly (don't combine them)
         for col in content_columns:

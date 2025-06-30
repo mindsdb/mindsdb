@@ -130,13 +130,23 @@ class VectorStoreHandler(BaseHandler):
 
         return conditions
 
-    def _convert_metadata_filters(self, conditions):
+    def _convert_metadata_filters(self, conditions, allowed_metadata_columns=None):
         if conditions is None:
             return
         # try to treat conditions that are not in TableField as metadata conditions
         for condition in conditions:
-            if not self._is_condition_allowed(condition):
-                condition.column = TableField.METADATA.value + "." + condition.column
+            if self._is_metadata_condition(condition):
+                # check restriction
+                if allowed_metadata_columns is not None:
+                    # system columns are underscored, skip them
+                    if condition.column.lower() not in allowed_metadata_columns and not condition.column.startswith(
+                        "_"
+                    ):
+                        raise ValueError(f"Column is not found: {condition.column}")
+
+                # convert if required
+                if not condition.column.startswith(TableField.METADATA.value):
+                    condition.column = TableField.METADATA.value + "." + condition.column
 
     def _is_columns_allowed(self, columns: List[str]) -> bool:
         """
@@ -145,16 +155,11 @@ class VectorStoreHandler(BaseHandler):
         allowed_columns = set([col["name"] for col in self.SCHEMA])
         return set(columns).issubset(allowed_columns)
 
-    def _is_condition_allowed(self, condition: FilterCondition) -> bool:
+    def _is_metadata_condition(self, condition: FilterCondition) -> bool:
         allowed_field_values = set([field.value for field in TableField])
         if condition.column in allowed_field_values:
-            return True
-        else:
-            # check if column is a metadata column
-            if condition.column.startswith(TableField.METADATA.value):
-                return True
-            else:
-                return False
+            return False
+        return True
 
     def _dispatch_create_table(self, query: CreateTable):
         """
@@ -338,7 +343,9 @@ class VectorStoreHandler(BaseHandler):
         # dispatch delete
         return self.delete(table_name, conditions=conditions)
 
-    def dispatch_select(self, query: Select, conditions: List[FilterCondition] = None):
+    def dispatch_select(
+        self, query: Select, conditions: List[FilterCondition] = None, allowed_metadata_columns: List[str] = None
+    ):
         """
         Dispatch select query to the appropriate method.
         """
@@ -357,7 +364,7 @@ class VectorStoreHandler(BaseHandler):
         if conditions is None:
             where_statement = query.where
             conditions = self.extract_conditions(where_statement)
-        self._convert_metadata_filters(conditions)
+        self._convert_metadata_filters(conditions, allowed_metadata_columns=allowed_metadata_columns)
 
         # get offset and limit
         offset = query.offset.value if query.offset is not None else None

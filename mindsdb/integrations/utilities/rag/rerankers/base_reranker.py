@@ -100,7 +100,7 @@ class BaseLLMReranker(BaseModel, ABC):
             if self.api_key is not None:
                 kwargs["api_key"] = self.api_key
 
-            return await self.client.acompletion(model=f"{self.provider}/{self.model}", messages=messages, args=kwargs)
+            return await self.client.acompletion(self.provider, model=self.model, messages=messages, args=kwargs)
 
     async def _rank(self, query_document_pairs: List[Tuple[str, str]], rerank_callback=None) -> List[Tuple[str, float]]:
         ranked_results = []

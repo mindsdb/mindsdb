@@ -3,6 +3,7 @@ import shutil
 import tarfile
 import tempfile
 import zipfile
+from urllib.parse import urlparse
 
 import multipart
 import requests
@@ -13,7 +14,7 @@ from flask_restx import Resource
 from mindsdb.api.http.namespaces.configs.files import ns_conf
 from mindsdb.api.http.utils import http_error
 from mindsdb.metrics.metrics import api_endpoint_metrics
-from mindsdb.utilities.config import Config
+from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
 from mindsdb.utilities.security import is_private_url, clear_filename, validate_urls
@@ -105,31 +106,55 @@ class File(Resource):
 
         if data.get("source_type") == "url":
             url = data["source"]
-            config = Config()
-            allowed_urls = config.get("file_upload_domains", [])
-            if allowed_urls and not validate_urls(url, allowed_urls):
-                return http_error(400, "Invalid File URL source.", f"Allowed hosts are: {', '.join(allowed_urls)}.")
+            try:
+                url = urlparse(url)
+                if not (url.scheme and url.netloc):
+                    raise ValueError()
+                url = url.geturl()
+            except Exception:
+                return http_error(
+                    400,
+                    "Invalid URL",
+                    f"The URL is not valid: {data['source']}",
+                )
+
+            url_file_upload_enabled = config["url_file_upload"]["enabled"]
+            if url_file_upload_enabled is False:
+                return http_error(400, "URL file upload is disabled.", "URL file upload is disabled.")
+
+            allowed_origins = config["url_file_upload"]["allowed_origins"]
+            disallowed_origins = config["url_file_upload"]["disallowed_origins"]
+
+            if validate_urls(url, allowed_origins, disallowed_origins) is False:
+                return http_error(
+                    400,
+                    "Invalid URL",
+                    "URL is not allowed for security reasons. Allowed hosts are: "
+                    f"{', '.join(allowed_origins) if allowed_origins else 'not specified'}.",
+                )
+
             data["file"] = clear_filename(data["name"])
             is_cloud = config.get("cloud", False)
-            if is_cloud and is_private_url(url):
-                return http_error(400, f"URL is private: {url}")
+            if is_cloud:
+                if is_private_url(url):
+                    return http_error(400, f"URL is private: {url}")
 
-            if is_cloud is True and ctx.user_class != 1:
-                info = requests.head(url)
-                file_size = info.headers.get("Content-Length")
-                try:
-                    file_size = int(file_size)
-                except Exception:
-                    pass
+                if ctx.user_class != 1:
+                    info = requests.head(url, timeout=30)
+                    file_size = info.headers.get("Content-Length")
+                    try:
+                        file_size = int(file_size)
+                    except Exception:
+                        pass
 
-                if file_size is None:
-                    return http_error(
-                        400,
-                        "Error getting file info",
-                        "Сan't determine remote file size",
-                    )
-                if file_size > MAX_FILE_SIZE:
-                    return http_error(400, "File is too big", f"Upload limit for file is {MAX_FILE_SIZE >> 20} MB")
+                    if file_size is None:
+                        return http_error(
+                            400,
+                            "Error getting file info",
+                            "Сan't determine remote file size",
+                        )
+                    if file_size > MAX_FILE_SIZE:
+                        return http_error(400, "File is too big", f"Upload limit for file is {MAX_FILE_SIZE >> 20} MB")
             with requests.get(url, stream=True) as r:
                 if r.status_code != 200:
                     return http_error(400, "Error getting file", f"Got status code: {r.status_code}")

@@ -2,6 +2,7 @@ from io import BytesIO
 import os
 from typing import Union
 from urllib.parse import urlparse
+import xml.etree.ElementTree as ET
 
 from aipdf import ocr
 import mimetypes
@@ -26,6 +27,10 @@ class ToMarkdown:
 
         if file_extension == '.pdf':
             return self._pdf_to_markdown(file_content, **kwargs)
+
+        elif file_extension in ('.xml', '.nessus'):
+            return self._xml_to_markdown(file_content, **kwargs)
+
         else:
             raise ValueError(f"Unsupported file type: {file_extension}.")
 
@@ -68,7 +73,7 @@ class ToMarkdown:
         else:
             return os.path.splitext(file_path_or_url)[1]
 
-    def _pdf_to_markdown(self, file_content: Union[requests.Response, bytes], **kwargs) -> str:
+    def _pdf_to_markdown(self, file_content: Union[requests.Response, BytesIO], **kwargs) -> str:
         """
         Converts a PDF file to markdown.
         """
@@ -77,3 +82,35 @@ class ToMarkdown:
 
         markdown_pages = ocr(file_content, **kwargs)
         return "\n\n---\n\n".join(markdown_pages)
+
+    def _xml_to_markdown(self, file_content: Union[requests.Response, BytesIO], **kwargs) -> str:
+        """
+        Converts an XML (or Nessus) file to markdown.
+        """        
+        def parse_element(element: ET.Element, depth: int = 0) -> str:
+            """
+            Recursively parses an XML element and converts it to markdown.
+            """
+            markdown = []
+            heading = '#' * (depth + 1)
+
+            markdown.append(f"{heading} {element.tag}")
+
+            for key, val in element.attrib.items():
+                markdown.append(f"- **{key}**: {val}")
+
+            text = (element.text or '').strip()
+            if text:
+                markdown.append(f"\n{text}\n")
+
+            for child in element:
+                markdown.append(parse_element(child, depth + 1))
+
+            return "\n".join(markdown)
+        
+        if isinstance(file_content, requests.Response):
+            file_content = BytesIO(file_content.content)
+
+        root = ET.fromstring(file_content)
+        markdown_content = parse_element(root)
+        return markdown_content

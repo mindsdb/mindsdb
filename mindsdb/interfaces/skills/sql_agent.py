@@ -249,8 +249,19 @@ class SQLAgent:
                         # If it's a knowledge base and we have knowledge base restrictions
                         self.check_knowledge_base_permission(node)
                     else:
-                        # Regular table check
-                        self.check_table_permission(node)
+                        try:
+                            # Regular table check
+                            self.check_table_permission(node)
+                        except ValueError as origin_exc:
+                            # was it badly quoted by llm?
+                            if len(node.parts) == 1 and node.is_quoted[0] and "." in node.parts[0]:
+                                node2 = Identifier(node.parts[0])
+                                try:
+                                    _check_f(node2, is_table=True)
+                                    return node2
+                                except ValueError:
+                                    ...
+                            raise origin_exc
 
             query_traversal(ast_query, _check_f)
 
@@ -450,13 +461,14 @@ class SQLAgent:
                 if len(parts) == 1:
                     raise ValueError(f"Invalid table name: {name}. Expected format is 'database.table'.")
 
-                database_table_map[parts[0]] = database_table_map.get(parts[0], []) + [parts[1]]
+                database_table_map.setdefault(parts[0], []).append(parts[1])
 
             data_catalog_str = ""
             for database_name, table_names in database_table_map.items():
                 data_catalog_reader = DataCatalogReader(database_name=database_name, table_names=table_names)
 
-                data_catalog_str += data_catalog_reader.read_metadata_as_string()
+                result = data_catalog_reader.read_metadata_as_string()
+                data_catalog_str += str(result or "")
 
             return data_catalog_str
 

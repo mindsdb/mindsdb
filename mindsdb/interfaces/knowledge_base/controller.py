@@ -11,6 +11,7 @@ from mindsdb_sql_parser.ast import BinaryOperation, Constant, Identifier, Select
 from mindsdb_sql_parser.ast.mindsdb import CreatePredictor
 from mindsdb_sql_parser import parse_sql
 
+from mindsdb.integrations.libs.keyword_search_base import KeywordSearchBase
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 
 import mindsdb.interfaces.storage.db as db
@@ -200,6 +201,7 @@ class KnowledgeBaseTable:
         query_text = None
         relevance_threshold = None
         reranking_enabled_flag = True
+        hybrid_search_enabled_flag = False
         query_conditions = db_handler.extract_conditions(query.where)
         if query_conditions is not None:
             for item in query_conditions:
@@ -219,6 +221,11 @@ class KnowledgeBaseTable:
                     # cast to boolean
                     if isinstance(reranking_enabled_flag, str):
                         reranking_enabled_flag = reranking_enabled_flag.lower() not in ("false")
+                elif item.column == "hybrid_search":
+                    hybrid_search_enabled_flag = item.value
+                    # cast to boolean
+                    if isinstance(hybrid_search_enabled_flag, str):
+                        hybrid_search_enabled_flag = hybrid_search_enabled_flag.lower() not in ("false")
                 elif item.column == "relevance" and item.op.value != FilterOperator.GREATER_THAN_OR_EQUAL.value:
                     raise ValueError(
                         f"Invalid operator for relevance: {item.op.value}. Only GREATER_THAN_OR_EQUAL is allowed."
@@ -260,9 +267,8 @@ class KnowledgeBaseTable:
             query.limit = Constant(limit)
 
         df = db_handler.dispatch_select(query, conditions)
-        keyword_search_enabled = True
-        # check if db_handler has a search by keyword method dispach_keyword_select
-        if hasattr(db_handler, "dispatch_keyword_select") and query_text is not None: # todo replace with inheritance check
+        # check if db_handler inherits from KeywordSearchBase
+        if hybrid_search_enabled_flag and isinstance(db_handler, KeywordSearchBase):
             # If query_text is present, use it for keyword search
             logger.debug(f"Performing keyword search with query text: {query_text}")
             keyword_search_args = KeywordSearchArgs(

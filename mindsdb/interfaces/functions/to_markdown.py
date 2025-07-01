@@ -111,6 +111,6 @@ class ToMarkdown:
         if isinstance(file_content, requests.Response):
             file_content = BytesIO(file_content.content)
 
-        root = ET.fromstring(file_content)
+        root = ET.fromstring(file_content.read().decode("utf-8"))
         markdown_content = parse_element(root)
         return markdown_content

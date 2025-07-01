@@ -20,6 +20,7 @@ from mindsdb.integrations.utilities.utils import get_class_name
 from mindsdb.metrics import metrics
 from mindsdb.utilities import log
 from mindsdb.utilities.profiler import profiler
+from mindsdb.utilities.exception import format_db_error_message
 from mindsdb.api.executor.datahub.datanodes.system_tables import infer_mysql_type
 
 logger = log.getLogger(__name__)
@@ -240,7 +241,19 @@ class IntegrationDataNode(DataNode):
             raise DBHandlerException(msg) from e
 
         if result.type == RESPONSE_TYPE.ERROR:
-            raise Exception(f"Error in {self.integration_name}: {result.error_message}")
+            failed_sql_query = native_query
+            if query is not None:
+                failed_sql_query = query.to_string()
+
+            raise Exception(
+                format_db_error_message(
+                    db_name=self.integration_handler.name,
+                    db_type=self.integration_handler.__class__.name,
+                    db_error_msg=result.error_message,
+                    failed_query=failed_sql_query,
+                )
+            )
+
         if result.type == RESPONSE_TYPE.OK:
             return DataHubResponse(affected_rows=result.affected_rows)
 

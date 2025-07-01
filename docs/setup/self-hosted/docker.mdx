@@ -26,6 +26,10 @@ Before proceeding, ensure you have installed Docker, following the [official Doc
 
 This setup of MindsDB uses one of the available Docker images, as listed above.
 
+<Note>
+When running MindsDB in one container and the integration you want to connect to it (such as Ollama or PGVector) in another container, then use `http://host.docker.internal` instead of `localhost` when connecting this integration to MindsDB.
+</Note>
+
 Follow the steps to set up MindsDB in a Docker container.
 
 ### Install MindsDB

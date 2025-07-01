@@ -533,7 +533,9 @@
               {
                 "group": "Agents",
                 "pages": [
-                  "mindsdb_sql/agents/agent"
+                  "mindsdb_sql/agents/agent",
+                  "mindsdb_sql/agents/agent_syntax",
+                  "mindsdb_sql/agents/agent_gui"
                 ]
               },
               {

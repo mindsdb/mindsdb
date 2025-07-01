@@ -50,22 +50,20 @@ def sanitize_json_response(response: str) -> str:
     response = response.strip()
 
     # Find the first opening brace
-    start_idx = response.find("{")
-    if start_idx == -1:
+    # Remove markdown code block markers if present
+    response = re.sub(r"^```(?:json)?\s*", "", response, flags=re.MULTILINE)
+    response = re.sub(r"\s*```$", "", response, flags=re.MULTILINE)
+    response = response.strip()
+
+    # Find JSON object using regex - matches from first { to its corresponding }
+    # This pattern matches balanced braces
+    json_pattern = r"\{(?:[^{}]|{(?:[^{}]|{[^{}]*})*})*\}"
+    match = re.search(json_pattern, response, re.DOTALL)
+
+    if not match:
         raise ValueError("No JSON object found in the response.")
 
-    # Find the matching closing brace by counting braces
-    brace_count = 0
-    for i, char in enumerate(response[start_idx:], start_idx):
-        if char == "{":
-            brace_count += 1
-        elif char == "}":
-            brace_count -= 1
-            if brace_count == 0:
-                # Found the matching closing brace
-                return response[start_idx : i + 1]
-
-    raise ValueError("No matching closing brace found for JSON object.")
+    return match.group(0)
 
 
 class EvaluateBase:

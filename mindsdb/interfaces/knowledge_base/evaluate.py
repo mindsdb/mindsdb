@@ -45,25 +45,46 @@ def calc_entropy(values: List[float]) -> float:
 
 
 def sanitize_json_response(response: str) -> str:
-    """Remove markdown code block formatting from JSON response."""
+    """Remove markdown code block formatting from JSON response and extract valid JSON."""
+    if not response or not response.strip():
+        raise ValueError("Empty response provided.")
+
     # Remove leading/trailing whitespace
     response = response.strip()
 
-    # Find the first opening brace
     # Remove markdown code block markers if present
-    response = re.sub(r"^```(?:json)?\s*", "", response, flags=re.MULTILINE)
+    response = re.sub(r"^```(?:json|JSON)?\s*", "", response, flags=re.MULTILINE)
     response = re.sub(r"\s*```$", "", response, flags=re.MULTILINE)
     response = response.strip()
 
-    # Find JSON object using regex - matches from first { to its corresponding }
-    # This pattern matches balanced braces
-    json_pattern = r"\{(?:[^{}]|{(?:[^{}]|{[^{}]*})*})*\}"
-    match = re.search(json_pattern, response, re.DOTALL)
-
-    if not match:
+    # Find the first opening brace
+    start_idx = response.find("{")
+    if start_idx == -1:
         raise ValueError("No JSON object found in the response.")
 
-    return match.group(0)
+    # Try to parse JSON starting from first { with increasing end positions
+    # This handles nested objects and strings with braces correctly
+    for end_idx in range(len(response), start_idx, -1):  # Start from end and work backwards
+        candidate = response[start_idx:end_idx]
+        try:
+            parsed = json.loads(candidate)
+            # Ensure it's a dictionary (object) not just any valid JSON
+            if isinstance(parsed, dict):
+                return candidate
+        except json.JSONDecodeError:
+            continue
+
+    # Fallback: try smaller substrings if the above fails
+    for end_idx in range(start_idx + 2, len(response) + 1):
+        candidate = response[start_idx:end_idx]
+        try:
+            parsed = json.loads(candidate)
+            if isinstance(parsed, dict):
+                return candidate
+        except json.JSONDecodeError:
+            continue
+
+    raise ValueError("No valid JSON object found in the response.")
 
 
 class EvaluateBase:

@@ -138,9 +138,7 @@ class BaseLLMReranker(BaseModel, ABC):
                     )
 
                     if can_stop_early:
-                        log.info(
-                            f"Early stopping after finding {self.num_docs_to_keep} documents with high confidence"
-                        )
+                        log.info(f"Early stopping after finding {self.num_docs_to_keep} documents with high confidence")
                         return ranked_results
                 except Exception as e:
                     # Don't let early stopping errors stop the whole process

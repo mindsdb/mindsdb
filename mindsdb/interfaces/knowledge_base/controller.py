@@ -303,32 +303,25 @@ class KnowledgeBaseTable:
         reranking_model_params = get_model_params(self._kb.params.get("reranking_model"), "default_reranking_model")
         if reranking_model_params and query_text and len(df) > 0 and not disable_reranking:
             # Use reranker for relevance score
-            try:
-                logger.info(f"Using knowledge reranking model from params: {reranking_model_params}")
-                # Apply custom filtering threshold if provided
-                if relevance_threshold is not None:
-                    reranking_model_params["filtering_threshold"] = relevance_threshold
-                    logger.info(f"Using custom filtering threshold: {relevance_threshold}")
 
-                reranker = get_reranking_model_from_params(reranking_model_params)
-                # Get documents to rerank
-                documents = df["chunk_content"].tolist()
-                # Use the get_scores method with disable_events=True
-                scores = reranker.get_scores(query_text, documents)
-                # Add scores as the relevance column
-                df[relevance_column] = scores
+            logger.info(f"Using knowledge reranking model from params: {reranking_model_params}")
+            # Apply custom filtering threshold if provided
+            if relevance_threshold is not None:
+                reranking_model_params["filtering_threshold"] = relevance_threshold
+                logger.info(f"Using custom filtering threshold: {relevance_threshold}")
 
-                # Filter by threshold
-                scores_array = np.array(scores)
-                df = df[scores_array > reranker.filtering_threshold]
-                logger.debug(f"Applied reranking with params: {reranking_model_params}")
-            except Exception as e:
-                logger.error(f"Error during reranking: {str(e)}")
-                # Fallback to distance-based relevance
-                if "distance" in df.columns:
-                    df[relevance_column] = 1 / (1 + df["distance"])
-                else:
-                    logger.info("No distance or reranker available")
+            reranker = get_reranking_model_from_params(reranking_model_params)
+            # Get documents to rerank
+            documents = df["chunk_content"].tolist()
+            # Use the get_scores method with disable_events=True
+            scores = reranker.get_scores(query_text, documents)
+            # Add scores as the relevance column
+            df[relevance_column] = scores
+
+            # Filter by threshold
+            scores_array = np.array(scores)
+            df = df[scores_array > reranker.filtering_threshold]
+            logger.debug(f"Applied reranking with params: {reranking_model_params}")
 
         elif "distance" in df.columns:
             # Calculate relevance from distance
@@ -793,15 +786,10 @@ class KnowledgeBaseTable:
         llm_model = args.pop("model_name")
         engine = args.pop("provider")
 
-        llm_model = f"{engine}/{llm_model}"
-
-        if "base_url" in args:
-            args["api_base"] = args.pop("base_url")
-
         module = session.integration_controller.get_handler_module("litellm")
         if module is None or module.Handler is None:
             raise ValueError(f'Unable to use "{engine}" provider. Litellm handler is not installed')
-        return module.Handler.embeddings(llm_model, messages, args)
+        return module.Handler.embeddings(engine, llm_model, messages, args)
 
     def build_rag_pipeline(self, retrieval_config: dict):
         """

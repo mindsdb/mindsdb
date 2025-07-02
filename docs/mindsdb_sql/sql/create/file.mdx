@@ -31,16 +31,18 @@ Note that the trailing whitespaces on column names are erased upon uploading a f
 
 ### Configuring URL File Upload for Specific Domains
 
-The File Uploader can be configured to interact only with specific domains by using the `file_upload_domains` setting in the `config.json` file. 
-This feature allows you to restrict the handler to upoad and process files only from the domains you specify, enhancing security and control over web interactions.
+The File Uploader can be configured to control file uploads via URLs using the `url_file_upload` settings in the `config.json` file.
+This feature allows you to enable/disable URL file uploads entirely and specify allowed or disallowed origins, enhancing security and control over web interactions.
 
-To configure this, simply list the allowed domains under the `file_upload_domains` key in `config.json`. For example:
-
+To configure this, simply change the `url_file_upload` settings in `config.json` with `enabled`, `allowed_origins`, and `disallowed_origins` parameters. For example:
 ```json
-"file_upload_domains": [
-   "s3.amazonaws.com",
-    "drive.google.com"
-]
+{
+   "url_file_upload": {
+      "enabled": true,
+      "allowed_origins": ["https://example.com"],
+      "disallowed_origins": ["http://example.com"]
+    }
+}
 ```
 
 ## What's Next?

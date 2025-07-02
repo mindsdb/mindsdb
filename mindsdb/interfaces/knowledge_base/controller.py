@@ -299,6 +299,9 @@ class KnowledgeBaseTable:
                         f"than expected: {df.columns}"
                     )
                 df = pd.concat([df, df_keyword_select], ignore_index=True)
+                # if chunk_id column exists remove duplicates based on chunk_id
+                if "chunk_id" in df.columns:
+                    df = df.drop_duplicates(subset=["chunk_id"])
 
         # Check if we have a rerank_model configured in KB params
         df = self.add_relevance(df, query_text, relevance_threshold, reranking_enabled_flag)

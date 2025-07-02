@@ -61,7 +61,7 @@ class KnowledgeBaseInputParams(BaseModel):
     reranking_model: Dict[Text, Any] | None = None
 
     class Config:
-        extra = 'forbid'
+        extra = "forbid"
 
 
 def get_model_params(model_params: dict, default_config_key: str):
@@ -961,9 +961,9 @@ class KnowledgeBaseController:
         except ValidationError as e:
             problems = []
             for error in e.errors():
-                parameter = '.'.join([str(i) for i in error['loc']])
-                param_type = error['type']
-                if param_type == 'extra_forbidden':
+                parameter = ".".join([str(i) for i in error["loc"]])
+                param_type = error["type"]
+                if param_type == "extra_forbidden":
                     msg = f"Parameter '{parameter}' is not allowed"
                 else:
                     msg = f"Error in '{parameter}' (type: {param_type}): {error['msg']}. Input: {repr(error['input'])}"
@@ -1031,7 +1031,7 @@ class KnowledgeBaseController:
             # This is called here to check validaity of the parameters.
             try:
                 reranker = get_reranking_model_from_params(reranking_model_params)
-                reranker.get_scores('test', ['test'])
+                reranker.get_scores("test", ["test"])
             except (ValueError, RuntimeError) as e:
                 raise RuntimeError(f"Problem with reranker config: {e}")
 

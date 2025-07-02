@@ -37,27 +37,21 @@ Follow the steps to set up MindsDB in a Docker container.
 Run this command to create a Docker container with MindsDB:
 
 ```bash
-docker run --name mindsdb_container -e MINDSDB_APIS=http,mysql -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+docker run --name mindsdb_container \
+-e MINDSDB_A2A_HOST=<if-using-remote-host> \
+-e MINDSDB_APIS=http,mysql,mcp,a2a \
+-p 47334:47334 -p 47335:47335 -p 47337:47337 -p 47338:47338 \
+mindsdb/mindsdb
 ```
 
 Where:
 
 -   `docker run` is a native Docker command used to spin up a container.
 -   `--name mindsdb_container` defines a name for the container.
--   `-p 47334:47334` publishes port 47334 to access MindsDB GUI and HTTP API.
--   `-p 47335:47335` publishes port 47335 to access MindsDB MySQL API. This is optional and can be omitted if you don't need to use the MySQL API.
+-   `-e MINDSDB_A2A_HOST=<if-using-remote-host>` defines the host where MindsDB is running. Note that this is required for the A2A API only when running MindsDB on a remote host.
+-   `-e MINDSDB_APIS=http,mysql,mcp,a2a` defines the APIs to be exposed by the MindsDB instance. All available APIs include `http`, `mysql`, `mongodb`, `postgres`, `mcp`, and `a2a`.
+-   `-p 47334:47334 -p 47335:47335 -p 47337:47337 -p 47338:47338` defines the ports where the APIs are exposed.
 -   `mindsdb/mindsdb` is a Docker image provided by MindsDB. You can choose a different one from the list above.
-
-<Tip>
-By default, MindsDB starts only the HTTP API. You can define which APIs to start by passing the `MINDSDB_APIS` environment variable with a comma-separated list when running the container as shown below. To expose the ports for the APIs, you need to add the respective ports to the command with the `-p` flag.
-
-```bash
-docker run -e MINDSDB_APIS="http,mysql,mongodb,postgres" \
--p 47334:47334 -p 47335:47335 -p 47336:47336 -p 55432:55432 mindsdb/mindsdb
-```
-
-You can find more information on the environment variables supported by MindsDB [here](/setup/environment-vars)
-</Tip>
 
 Once the container is created, you can use the following commands:
 

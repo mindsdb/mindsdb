@@ -116,7 +116,10 @@ def get_reranking_model_from_params(reranking_model_params: dict):
 
     if "api_key" not in params_copy:
         params_copy["api_key"] = get_api_key(provider, params_copy, strict=False)
-    params_copy["model"] = params_copy.pop("model_name", None)
+
+    if "model_name" not in params_copy:
+        raise ValueError("'model_name' must be provided for reranking model")
+    params_copy["model"] = params_copy.pop("model_name")
 
     return BaseLLMReranker(**params_copy)
 
@@ -1013,7 +1016,11 @@ class KnowledgeBaseController:
         if reranking_model_params:
             # Get reranking model from params.
             # This is called here to check validaity of the parameters.
-            get_reranking_model_from_params(reranking_model_params)
+            try:
+                reranker = get_reranking_model_from_params(reranking_model_params)
+                reranker.get_scores('test', ['test'])
+            except (ValueError, RuntimeError) as e:
+                raise RuntimeError(f"Problem with reranker config: {e}")
 
         # search for the vector database table
         if storage is None:
@@ -1111,13 +1118,21 @@ class KnowledgeBaseController:
 
         if params["provider"] not in ("openai", "azure_openai"):
             # try use litellm
-            KnowledgeBaseTable.call_litellm_embedding(self.session, params, ["test"])
+            try:
+                KnowledgeBaseTable.call_litellm_embedding(self.session, params, ["test"])
+            except Exception as e:
+                raise RuntimeError(f"Problem with embedding model config: {e}")
             return
 
         if "provider" in params:
             engine = params.pop("provider").lower()
 
-        api_key = get_api_key(engine, params, strict=False) or params.pop("api_key")
+        api_key = get_api_key(engine, params, strict=False)
+        if api_key is None:
+            if "api_key" in params:
+                params.pop("api_key")
+            else:
+                raise ValueError("'api_key' parameter is required for embedding model")
 
         if engine == "azure_openai":
             engine = "openai"

@@ -267,6 +267,10 @@ class KnowledgeBaseTable:
             query.limit = Constant(limit)
 
         df = db_handler.dispatch_select(query, conditions)
+        df = self.addapt_result_columns(df)
+        logger.debug(f"Query returned {len(df)} rows")
+        logger.debug(f"Columns in response: {df.columns.tolist()}")
+
         # check if db_handler inherits from KeywordSearchBase
         if hybrid_search_enabled_flag and isinstance(db_handler, KeywordSearchBase):
             # If query_text is present, use it for keyword search
@@ -284,21 +288,18 @@ class KnowledgeBaseTable:
             ]
 
             df_keyword_select = db_handler.dispatch_keyword_select(keyword_query_obj, keyword_search_conditions, keyword_search_args)
-        df = self.addapt_result_columns(df)
-        df_keyword_select = self.addapt_result_columns(df_keyword_select)
-        logger.debug(f"Keyword search returned {len(df_keyword_select)} rows")
-        logger.debug(f"Columns in keyword search response: {df_keyword_select.columns.tolist()}")
-        # ensure df and df_keyword_select have exactly the same columns
-        if not df_keyword_select.empty:
-            if set(df.columns) != set(df_keyword_select.columns):
-                raise ValueError(
-                    f"Keyword search returned different columns: {df_keyword_select.columns} "
-                    f"than expected: {df.columns}"
-                )
-            df = pd.concat([df, df_keyword_select], ignore_index=True)
+            df_keyword_select = self.addapt_result_columns(df_keyword_select)
+            logger.debug(f"Keyword search returned {len(df_keyword_select)} rows")
+            logger.debug(f"Columns in keyword search response: {df_keyword_select.columns.tolist()}")
+            # ensure df and df_keyword_select have exactly the same columns
+            if not df_keyword_select.empty:
+                if set(df.columns) != set(df_keyword_select.columns):
+                    raise ValueError(
+                        f"Keyword search returned different columns: {df_keyword_select.columns} "
+                        f"than expected: {df.columns}"
+                    )
+                df = pd.concat([df, df_keyword_select], ignore_index=True)
 
-        logger.debug(f"Query returned {len(df)} rows")
-        logger.debug(f"Columns in response: {df.columns.tolist()}")
         # Check if we have a rerank_model configured in KB params
         df = self.add_relevance(df, query_text, relevance_threshold, reranking_enabled_flag)
 

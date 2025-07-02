@@ -9,6 +9,7 @@ from mindsdb.interfaces.jobs.jobs_controller import JobsController
 from mindsdb.interfaces.skills.skills_controller import SkillsController
 from mindsdb.interfaces.database.views import ViewController
 from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.interfaces.query_context.context_controller import query_context_controller
 
 from mindsdb.api.executor.datahub.datanodes.system_tables import Table
 
@@ -25,18 +26,17 @@ def to_json(obj):
 def get_project_name(query: ASTNode = None):
     project_name = None
     if (
-            isinstance(query, Select)
-            and type(query.where) is BinaryOperation
-            and query.where.op == '='
-            and query.where.args[0].parts == ['project']
-            and isinstance(query.where.args[1], Constant)
+        isinstance(query, Select)
+        and type(query.where) is BinaryOperation
+        and query.where.op == "="
+        and query.where.args[0].parts == ["project"]
+        and isinstance(query.where.args[1], Constant)
     ):
         project_name = query.where.args[1].value
     return project_name
 
 
 class MdbTable(Table):
-
     visible: bool = True
 
 
@@ -74,27 +74,29 @@ class ModelsTable(MdbTable):
                 table_name = row["name"]
                 table_meta = row["metadata"]
 
-                data.append([
-                    table_name,
-                    table_meta["engine"],
-                    project_name,
-                    table_meta["active"],
-                    table_meta["version"],
-                    table_meta["status"],
-                    table_meta["accuracy"],
-                    table_meta["predict"],
-                    table_meta["update_status"],
-                    table_meta["mindsdb_version"],
-                    table_meta["error"],
-                    table_meta["select_data_query"],
-                    to_json(table_meta["training_options"]),
-                    table_meta["current_training_phase"],
-                    table_meta["total_training_phases"],
-                    table_meta["training_phase_name"],
-                    table_meta["label"],
-                    row["created_at"],
-                    table_meta["training_time"],
-                ])
+                data.append(
+                    [
+                        table_name,
+                        table_meta["engine"],
+                        project_name,
+                        table_meta["active"],
+                        table_meta["version"],
+                        table_meta["status"],
+                        table_meta["accuracy"],
+                        table_meta["predict"],
+                        table_meta["update_status"],
+                        table_meta["mindsdb_version"],
+                        table_meta["error"],
+                        table_meta["select_data_query"],
+                        to_json(table_meta["training_options"]),
+                        table_meta["current_training_phase"],
+                        table_meta["total_training_phases"],
+                        table_meta["training_phase_name"],
+                        table_meta["label"],
+                        row["created_at"],
+                        table_meta["training_time"],
+                    ]
+                )
             # TODO optimise here
             # if target_table is not None and target_table != project_name:
             #     continue
@@ -109,12 +111,8 @@ class DatabasesTable(MdbTable):
 
     @classmethod
     def get_data(cls, session, inf_schema, **kwargs):
-
         project = inf_schema.database_controller.get_list(with_secrets=session.show_secrets)
-        data = [
-            [x["name"], x["type"], x["engine"], to_json(x.get("connection_data"))]
-            for x in project
-        ]
+        data = [[x["name"], x["type"], x["engine"], to_json(x.get("connection_data"))] for x in project]
 
         df = pd.DataFrame(data, columns=cls.columns)
         return df
@@ -122,17 +120,12 @@ class DatabasesTable(MdbTable):
 
 class MLEnginesTable(MdbTable):
     name = "ML_ENGINES"
-    columns = [
-        "NAME", "HANDLER", "CONNECTION_DATA"
-    ]
+    columns = ["NAME", "HANDLER", "CONNECTION_DATA"]
 
     @classmethod
     def get_data(cls, session, inf_schema, **kwargs):
-
         integrations = inf_schema.integration_controller.get_all(show_secrets=session.show_secrets)
-        ml_integrations = {
-            key: val for key, val in integrations.items() if val["type"] == "ml"
-        }
+        ml_integrations = {key: val for key, val in integrations.items() if val["type"] == "ml"}
 
         data = []
         for _key, val in ml_integrations.items():
@@ -157,7 +150,6 @@ class HandlersTable(MdbTable):
 
     @classmethod
     def get_data(cls, inf_schema, **kwargs):
-
         handlers = inf_schema.integration_controller.get_handlers_import_status()
 
         data = []
@@ -271,7 +263,7 @@ class TriggersTable(MdbTable):
         data = triggers_controller.get_list(project_name)
 
         columns = cls.mindsdb_columns
-        if inf_schema.session.api_type == 'sql':
+        if inf_schema.session.api_type == "sql":
             columns = columns + cls.columns
         columns_lower = [col.lower() for col in columns]
 
@@ -282,7 +274,7 @@ class TriggersTable(MdbTable):
 
 
 class ChatbotsTable(MdbTable):
-    name = 'CHATBOTS'
+    name = "CHATBOTS"
     columns = [
         "NAME",
         "PROJECT",
@@ -318,42 +310,78 @@ class ChatbotsTable(MdbTable):
         # to list of lists
         data = []
         for row in chatbot_data:
-            row['params'] = to_json(row['params'])
+            row["params"] = to_json(row["params"])
             data.append([row[k] for k in columns_lower])
 
         return pd.DataFrame(data, columns=columns)
 
 
 class KBTable(MdbTable):
-    name = 'KNOWLEDGE_BASES'
-    columns = ["NAME", "PROJECT", "MODEL", "STORAGE", "PARAMS"]
+    name = "KNOWLEDGE_BASES"
+    columns = [
+        "NAME",
+        "PROJECT",
+        "EMBEDDING_MODEL",
+        "RERANKING_MODEL",
+        "STORAGE",
+        "METADATA_COLUMNS",
+        "CONTENT_COLUMNS",
+        "ID_COLUMN",
+        "PARAMS",
+        "INSERT_STARTED_AT",
+        "INSERT_FINISHED_AT",
+        "PROCESSED_ROWS",
+        "ERROR",
+        "QUERY_ID",
+    ]
 
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
         project_name = get_project_name(query)
 
         from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseController
+
         controller = KnowledgeBaseController(inf_schema.session)
         kb_list = controller.list(project_name)
+
+        # shouldn't be a lot of queries, we can fetch them all
+        queries_data = {item["id"]: item for item in query_context_controller.list_queries()}
 
         data = []
 
         for kb in kb_list:
-            vector_database_name = kb['vector_database'] or ''
+            query_item = {}
+            query_id = kb["query_id"]
+            if query_id is not None:
+                if query_id in queries_data:
+                    query_item = queries_data.get(query_id)
+                else:
+                    query_id = None
 
-            data.append((
-                kb['name'],
-                kb['project_name'],
-                kb['embedding_model'],
-                vector_database_name + '.' + kb['vector_database_table'],
-                to_json(kb['params']),
-            ))
+            data.append(
+                (
+                    kb["name"],
+                    kb["project_name"],
+                    to_json(kb["embedding_model"]),
+                    to_json(kb["reranking_model"]),
+                    kb["vector_database"] + "." + kb["vector_database_table"],
+                    to_json(kb["metadata_columns"]),
+                    to_json(kb["content_columns"]),
+                    kb["id_column"],
+                    to_json(kb["params"]),
+                    query_item.get("started_at"),
+                    query_item.get("finished_at"),
+                    query_item.get("processed_rows"),
+                    query_item.get("error"),
+                    query_id,
+                )
+            )
 
         return pd.DataFrame(data, columns=cls.columns)
 
 
 class SkillsTable(MdbTable):
-    name = 'SKILLS'
+    name = "SKILLS"
     columns = ["NAME", "PROJECT", "TYPE", "PARAMS"]
 
     @classmethod
@@ -373,14 +401,8 @@ class SkillsTable(MdbTable):
 
 
 class AgentsTable(MdbTable):
-    name = 'AGENTS'
-    columns = [
-        "NAME",
-        "PROJECT",
-        "MODEL_NAME",
-        "SKILLS",
-        "PARAMS"
-    ]
+    name = "AGENTS"
+    columns = ["NAME", "PROJECT", "MODEL_NAME", "SKILLS", "PARAMS"]
 
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
@@ -390,10 +412,7 @@ class AgentsTable(MdbTable):
         all_agents = agents_controller.get_agents(project_name)
 
         project_controller = ProjectController()
-        project_names = {
-            i.id: i.name
-            for i in project_controller.get_list()
-        }
+        project_names = {i.id: i.name for i in project_controller.get_list()}
 
         # NAME, PROJECT, MODEL, SKILLS, PARAMS
         data = [
@@ -402,7 +421,7 @@ class AgentsTable(MdbTable):
                 project_names[a.project_id],
                 a.model_name,
                 [rel.skill.name for rel in a.skills_relationships],
-                to_json(a.params)
+                to_json(a.params),
             )
             for a in all_agents
         ]
@@ -410,12 +429,11 @@ class AgentsTable(MdbTable):
 
 
 class ViewsTable(MdbTable):
-    name = 'VIEWS'
+    name = "VIEWS"
     columns = ["NAME", "PROJECT", "QUERY"]
 
     @classmethod
     def get_data(cls, query: ASTNode = None, **kwargs):
-
         project_name = get_project_name(query)
 
         data = ViewController().list(project_name)
@@ -423,6 +441,38 @@ class ViewsTable(MdbTable):
         columns_lower = [col.lower() for col in cls.columns]
 
         # to list of lists
+        data = [[row[k] for k in columns_lower] for row in data]
+
+        return pd.DataFrame(data, columns=cls.columns)
+
+
+class QueriesTable(MdbTable):
+    name = "QUERIES"
+    columns = [
+        "ID",
+        "STARTED_AT",
+        "FINISHED_AT",
+        "PROCESSED_ROWS",
+        "ERROR",
+        "SQL",
+        "DATABASE",
+        "PARAMETERS",
+        "CONTEXT",
+        "UPDATED_AT",
+    ]
+
+    @classmethod
+    def get_data(cls, **kwargs):
+        """
+        Returns all queries in progres or recently completed
+        Only queries marked as is_resumable by planner are stored in this table
+        :param kwargs:
+        :return:
+        """
+
+        data = query_context_controller.list_queries()
+        columns_lower = [col.lower() for col in cls.columns]
+
         data = [[row[k] for k in columns_lower] for row in data]
 
         return pd.DataFrame(data, columns=cls.columns)

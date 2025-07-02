@@ -6,6 +6,7 @@ from mindsdb.utilities import log
 
 from mindsdb.interfaces.triggers.trigger_task import TriggerTask
 from mindsdb.interfaces.chatbot.chatbot_task import ChatBotTask
+from mindsdb.interfaces.query_context.query_task import QueryTask
 
 logger = log.getLogger(__name__)
 
@@ -28,6 +29,7 @@ class TaskThread(threading.Thread):
         ctx.company_id = task_record.company_id
         if task_record.user_class is not None:
             ctx.user_class = task_record.user_class
+        ctx.task_id = task_record.id
 
         self.object_type = task_record.object_type
         self.object_id = task_record.object_id
@@ -42,6 +44,10 @@ class TaskThread(threading.Thread):
             elif self.object_type == 'chatbot':
                 bot = ChatBotTask(self.task_id, self.object_id)
                 bot.run(self._stop_event)
+
+            elif self.object_type == 'query':
+                query = QueryTask(self.task_id, self.object_id)
+                query.run(self._stop_event)
 
         except Exception:
             logger.error(traceback.format_exc())

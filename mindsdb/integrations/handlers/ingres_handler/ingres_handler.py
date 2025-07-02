@@ -17,6 +17,7 @@ from mindsdb.integrations.libs.response import (
 
 logger = log.getLogger(__name__)
 
+
 class IngresHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the Ingres statements.

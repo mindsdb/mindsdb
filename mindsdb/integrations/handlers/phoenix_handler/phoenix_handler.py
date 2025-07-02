@@ -20,6 +20,7 @@ from mindsdb.integrations.libs.response import (
 
 logger = log.getLogger(__name__)
 
+
 class PhoenixHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the Apache Phoenix statements.

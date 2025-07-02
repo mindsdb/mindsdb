@@ -11,9 +11,9 @@ except Exception as e:
 title = 'Mendeley'
 name = 'mendeley'
 type = HANDLER_TYPE.DATA
-icon_path= 'icon.svg'
+icon_path = 'icon.svg'
 permanent = False
 
 __all__ = [
-    'Handler', 'version', 'name', 'type', 'title', 'description', 'import_error','icon_path'
+    'Handler', 'version', 'name', 'type', 'title', 'description', 'import_error', 'icon_path'
 ]

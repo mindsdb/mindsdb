@@ -6,13 +6,14 @@ from duckdb import InvalidInputException
 import numpy as np
 
 from mindsdb_sql_parser import parse_sql
-from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb.integrations.utilities.query_traversal import query_traversal
-from mindsdb_sql_parser.ast import ASTNode, Select, Identifier, Function, Constant
-from mindsdb.utilities.functions import resolve_table_identifier, resolve_model_identifier
+from mindsdb_sql_parser.ast import ASTNode, Select, Identifier, Function, Constant, BinaryOperation
 
+from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.utilities import log
+from mindsdb.utilities.exception import format_db_error_message
+from mindsdb.utilities.functions import resolve_table_identifier, resolve_model_identifier
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
 logger = log.getLogger(__name__)
 
@@ -64,27 +65,56 @@ def query_df_with_type_infer_fallback(query_str: str, dataframes: dict, user_fun
         pandas.columns
     """
 
-    with duckdb.connect(database=":memory:") as con:
-        if user_functions:
-            user_functions.register(con)
+    try:
+        with duckdb.connect(database=":memory:") as con:
+            if user_functions:
+                user_functions.register(con)
 
-        for name, value in dataframes.items():
-            con.register(name, value)
+            for name, value in dataframes.items():
+                con.register(name, value)
 
-        exception = None
-        for sample_size in [1000, 10000, 1000000]:
-            try:
-                con.execute(f"set global pandas_analyze_sample={sample_size};")
-                result_df = con.execute(query_str).fetchdf()
-            except InvalidInputException as e:
-                exception = e
+            exception = None
+            for sample_size in [1000, 10000, 1000000]:
+                try:
+                    con.execute(f"set global pandas_analyze_sample={sample_size};")
+                    result_df = con.execute(query_str).fetchdf()
+                except InvalidInputException as e:
+                    exception = e
+                else:
+                    break
             else:
-                break
-        else:
-            raise exception
-        description = con.description
+                raise exception
+            description = con.description
+    except Exception as e:
+        raise Exception(format_db_error_message(
+            db_type="DuckDB",
+            db_error_msg=str(e),
+            failed_query=query_str,
+            is_external=False
+        )) from e
 
     return result_df, description
+
+
+_duckdb_functions_list = None
+
+
+def get_duckdb_functions_list() -> list[str] | None:
+    """Returns a list of all functions and operations supported by DuckDB.
+
+    Returns:
+        list[str] | None: List of supported functions and operations, or None if unable to retrieve the list.
+    """
+    global _duckdb_functions_list
+    if _duckdb_functions_list is None:
+        try:
+            df, _ = query_df_with_type_infer_fallback('pragma functions', dataframes={})
+            df.columns = [name.lower() for name in df.columns]
+            _duckdb_functions_list = df['name'].drop_duplicates().str.lower().to_list()
+        except Exception as e:
+            logger.warning('Unable to get functions list')
+            pass
+    return _duckdb_functions_list
 
 
 def query_df(df, query, session=None):
@@ -100,8 +130,10 @@ def query_df(df, query, session=None):
 
     if isinstance(query, str):
         query_ast = parse_sql(query)
+        query_str = query
     else:
         query_ast = copy.deepcopy(query)
+        query_str = str(query)
 
     if isinstance(query_ast, Select) is False or isinstance(query_ast.from_table, Identifier) is False:
         raise Exception("Only 'SELECT from TABLE' statements supported for internal query")
@@ -125,6 +157,7 @@ def query_df(df, query, session=None):
                 return node
         if isinstance(node, Function):
             fnc_name = node.op.lower()
+
             if fnc_name == "database" and len(node.args) == 0:
                 if session is not None:
                     cur_db = session.database
@@ -141,6 +174,34 @@ def query_df(df, query, session=None):
             else:
                 if user_functions is not None:
                     user_functions.check_function(node)
+
+            duckdb_functions_list = get_duckdb_functions_list() or []
+            custom_functions_list = [] if user_functions is None else list(user_functions.functions.keys())
+            all_functions_list = duckdb_functions_list + custom_functions_list
+            if len(all_functions_list) > 0 and fnc_name not in all_functions_list:
+                raise Exception(format_db_error_message(
+                    db_type="DuckDB",
+                    db_error_msg=(
+                        f"Unknown function: '{fnc_name}'. This function is not recognized during internal query processing.\n"
+                        "Please use DuckDB-supported functions instead."
+                    ),
+                    failed_query=query_str,
+                    is_external=False
+                ))
+        elif isinstance(node, BinaryOperation):
+            op_name = node.op.lower()
+
+            duckdb_functions_list = get_duckdb_functions_list()
+            if duckdb_functions_list is not None and op_name not in duckdb_functions_list:
+                raise Exception(format_db_error_message(
+                    db_type="DuckDB",
+                    db_error_msg=(
+                        f"Unknown operation: '{op_name}'. This operation is not recognized during internal query processing.\n"
+                        "Please use DuckDB-supported operations instead."
+                    ),
+                    failed_query=query_str,
+                    is_external=False
+                ))
 
     query_traversal(query_ast, adapt_query)
 

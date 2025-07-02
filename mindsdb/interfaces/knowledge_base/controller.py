@@ -6,7 +6,7 @@ import decimal
 
 import pandas as pd
 import numpy as np
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from sqlalchemy.orm.attributes import flag_modified
 
 from mindsdb_sql_parser.ast import BinaryOperation, Constant, Identifier, Select, Update, Delete, Star
@@ -956,9 +956,23 @@ class KnowledgeBaseController:
         # fill variables
         params = variables_controller.fill_parameters(params)
 
+        try:
+            KnowledgeBaseInputParams.model_validate(params)
+        except ValidationError as e:
+            problems = []
+            for error in e.errors():
+                parameter = '.'.join([str(i) for i in error['loc']])
+                param_type = error['type']
+                if param_type == 'extra_forbidden':
+                    msg = f"Parameter '{parameter}' is not allowed"
+                else:
+                    msg = f"Error in '{parameter}' (type: {param_type}): {error['msg']}. Input: {repr(error['input'])}"
+                problems.append(msg)
 
-        KnowledgeBaseInputParams(**params)
-
+            msg = "\n".join(problems)
+            if len(problems) > 1:
+                msg = "\n" + msg
+            raise ValueError(f"Problem with knowledge base params: {msg}")
 
         # Validate preprocessing config first if provided
         if preprocessing_config is not None:

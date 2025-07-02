@@ -300,31 +300,7 @@ class IntegrationController:
             integration_type = handler_meta.get("type")
 
         if show_secrets is False and handler_meta is not None:
-            connection_args = handler_meta.get("connection_args", None)
-            if isinstance(connection_args, dict):
-                if integration_type == HANDLER_TYPE.DATA:
-                    for key, value in connection_args.items():
-                        if key in data and value.get("secret", False) is True:
-                            data[key] = "******"
-                elif integration_type == HANDLER_TYPE.ML:
-                    creation_args = connection_args.get("creation_args")
-                    if isinstance(creation_args, dict):
-                        for key, value in creation_args.items():
-                            if key in data and value.get("secret", False) is True:
-                                data[key] = "******"
-                else:
-                    raise ValueError(f"Unexpected handler type: {integration_type}")
-            else:
-                # region obsolete, del in future
-                if "password" in data:
-                    data["password"] = None
-                if (
-                    data.get("type") == "redis"
-                    and isinstance(data.get("connection"), dict)
-                    and "password" in data["connection"]
-                ):
-                    data["connection"] = None
-                # endregion
+            logger.warning(f"show_secrets parameter has been deprecated. Value of {show_secrets} will be unused.")
 
         class_type, permanent = None, False
         if handler_meta is not None:

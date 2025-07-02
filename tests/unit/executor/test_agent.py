@@ -183,10 +183,14 @@ class TestAgent(BaseExecutorDummyML):
             USING
              provider='openai',
              model = "gpt-3.5-turbo",
-             openai_api_key='--',
+             openai_api_key='-key-',
              prompt_template="Answer the user input in a helpful way"
          """)
         ret = self.run_sql("select * from my_agent where question = 'hi'")
+
+        # check model params
+        assert mock_openai.call_args_list[-1][1]["api_key"] == "-key-"
+        assert mock_openai().chat.completions.create.call_args_list[-1][1]["model"] == "gpt-3.5-turbo"
 
         assert agent_response in ret.answer[0]
 
@@ -212,6 +216,29 @@ class TestAgent(BaseExecutorDummyML):
             where t.q = ''
         """)
         assert len(ret) == 0
+
+    @patch("openai.OpenAI")
+    def test_openai_params_as_dict(self, mock_openai):
+        agent_response = "how can I assist you today?"
+        set_openai_completion(mock_openai, agent_response)
+
+        self.run_sql("""
+            CREATE AGENT my_agent
+            USING
+             model = {
+                "provider": 'openai',
+                "model_name": "gpt-42",
+                "api_key": '-secret-'
+             },
+             prompt_template="Answer the user input in a helpful way"
+         """)
+        ret = self.run_sql("select * from my_agent where question = 'hi'")
+
+        # check model params
+        assert mock_openai.call_args_list[-1][1]["api_key"] == "-secret-"
+        assert mock_openai().chat.completions.create.call_args_list[-1][1]["model"] == "gpt-42"
+
+        assert agent_response in ret.answer[0]
 
     @patch("mindsdb.utilities.config.Config.get")
     @patch("openai.OpenAI")

@@ -160,7 +160,7 @@ class AgentsController:
         Parameters:
             name (str): The name of the new agent
             project_name (str): The containing project
-            model_name (str): The name of the existing ML model the agent will use
+            model_name (str | dict): The name of the existing ML model the agent will use
             skills (List[Union[str, dict]]): List of existing skill names to add to the new agent, or list of dicts
                  with one of keys is "name", and other is additional parameters for relationship agent<>skill
             provider (str): The provider of the model
@@ -191,11 +191,16 @@ class AgentsController:
         if agent is not None:
             raise ValueError(f"Agent with name already exists: {name}")
 
-        if model_name is not None:
-            _, provider = self.check_model_provider(model_name, provider)
-
         # No need to copy params since we're not preserving the original reference
         params = params or {}
+
+        if isinstance(model_name, dict):
+            # move into params
+            params["model"] = model_name
+            model_name = None
+
+        if model_name is not None:
+            _, provider = self.check_model_provider(model_name, provider)
 
         if model_name is None:
             logger.warning("'model_name' param is not provided. Using default global llm model at runtime.")
@@ -558,12 +563,18 @@ class AgentsController:
         agent.deleted_at = datetime.datetime.now()
         db.session.commit()
 
-    def get_agent_llm_params(self, model_params: dict):
+    def get_agent_llm_params(self, agent_params: dict):
         """
         Get agent LLM parameters by combining default config with user provided parameters.
         Similar to how knowledge bases handle default parameters.
         """
         combined_model_params = copy.deepcopy(config.get("default_llm", {}))
+
+        if "model" in agent_params:
+            model_params = agent_params["model"]
+        else:
+            # params for LLM can be arbitrary
+            model_params = agent_params
 
         if model_params:
             combined_model_params.update(model_params)
@@ -605,9 +616,9 @@ class AgentsController:
             db.session.commit()
 
         # Get agent parameters and combine with default LLM parameters at runtime
-        agent_params = self.get_agent_llm_params(agent.params)
+        llm_params = self.get_agent_llm_params(agent.params)
 
-        lang_agent = LangchainAgent(agent, model, params=agent_params)
+        lang_agent = LangchainAgent(agent, model, llm_params=llm_params)
         return lang_agent.get_completion(messages)
 
     def _get_completion_stream(
@@ -645,7 +656,7 @@ class AgentsController:
             db.session.commit()
 
         # Get agent parameters and combine with default LLM parameters at runtime
-        agent_params = self.get_agent_llm_params(agent.params)
+        llm_params = self.get_agent_llm_params(agent.params)
 
-        lang_agent = LangchainAgent(agent, model=model, params=agent_params)
+        lang_agent = LangchainAgent(agent, model=model, llm_params=llm_params)
         return lang_agent.get_completion(messages, stream=True)

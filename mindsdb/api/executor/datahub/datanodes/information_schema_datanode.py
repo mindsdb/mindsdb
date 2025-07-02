@@ -177,7 +177,7 @@ class InformationSchemaDataNode(DataNode):
         if table_name not in self.tables:
             raise exc.TableNotExistError(f"Table information_schema.{table_name} does not exists")
         table_columns_names = self.tables[table_name].columns
-        df = pd.DataFrame([[table_columns_names]], columns=[INF_SCHEMA_COLUMNS_NAMES.COLUMN_NAME])
+        df = pd.DataFrame(pd.Series(table_columns_names, name=INF_SCHEMA_COLUMNS_NAMES.COLUMN_NAME))
         for column_name in astuple(INF_SCHEMA_COLUMNS_NAMES):
             if column_name == INF_SCHEMA_COLUMNS_NAMES.COLUMN_NAME:
                 continue

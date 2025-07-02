@@ -36,7 +36,8 @@ class GetLeaf(Resource):
         if isinstance(with_schemas, str):
             with_schemas = with_schemas.lower() in ('1', 'true')
         else:
-            with_schemas = False
+            # 默认显示所有schema，特别是对于Redshift等数据仓库
+            with_schemas = True
         db_name = db_name.lower()
         databases = ca.database_controller.get_dict()
         if db_name not in databases:

@@ -112,8 +112,7 @@ def get_duckdb_functions_list() -> list[str] | None:
             df.columns = [name.lower() for name in df.columns]
             _duckdb_functions_list = df['name'].drop_duplicates().str.lower().to_list()
         except Exception as e:
-            logger.warning('Unable to get functions list')
-            pass
+            logger.warning(f'Unable to get DuckDB functions list: {e}')
     return _duckdb_functions_list
 
 

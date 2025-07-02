@@ -1,4 +1,5 @@
 import json
+import os
 from concurrent.futures import as_completed, TimeoutError
 from typing import Dict, Iterable, List, Optional
 from uuid import uuid4
@@ -174,6 +175,15 @@ def create_chat_model(args: Dict):
     if args["provider"] == "nvidia_nim":
         return ChatNVIDIA(**model_kwargs)
     if args["provider"] == "google":
+        # Configure proxy for Google Gemini if available
+        proxy_url = os.getenv('HTTP_PROXY') or os.getenv('HTTPS_PROXY') or os.getenv('ALL_PROXY')
+        if proxy_url:
+            logger.info(f"Configuring ChatGoogleGenerativeAI with proxy: {proxy_url}")
+            # Force REST transport for proxy support
+            model_kwargs['transport'] = 'rest'
+            # Set proxy environment variables for requests library
+            os.environ['HTTP_PROXY'] = proxy_url
+            os.environ['HTTPS_PROXY'] = proxy_url
         return ChatGoogleGenerativeAI(**model_kwargs)
     if args["provider"] == "writer":
         return ChatWriter(**model_kwargs)
@@ -232,6 +242,9 @@ class LangchainAgent:
         self.agent = agent
         self.model = model
 
+        # Configure proxy for Google Gemini if available
+        self._configure_proxy()
+
         self.run_completion_span: Optional[object] = None
         self.llm: Optional[object] = None
         self.embedding_model: Optional[object] = None
@@ -245,6 +258,29 @@ class LangchainAgent:
 
         # Back compatibility for old models
         self.provider = self.args.get("provider", get_llm_provider(self.args))
+
+    def _configure_proxy(self):
+        """Configure proxy settings for LangChain Google Gemini"""
+        proxy_url = os.getenv('HTTP_PROXY') or os.getenv('HTTPS_PROXY') or os.getenv('ALL_PROXY')
+        if proxy_url:
+            logger.info(f"Configuring LangChain Agent with proxy: {proxy_url}")
+            # Set proxy environment variables for all HTTP requests
+            os.environ['HTTP_PROXY'] = proxy_url
+            os.environ['HTTPS_PROXY'] = proxy_url
+            os.environ['ALL_PROXY'] = proxy_url
+
+            # Try to configure gRPC proxy as well
+            os.environ['GRPC_PROXY'] = proxy_url
+
+            # Force REST transport for Google Gemini
+            try:
+                import google.generativeai as genai
+                genai.configure(transport='rest')
+                logger.info("Successfully configured Google Gemini to use REST transport")
+            except Exception as e:
+                logger.warning(f"Could not configure Google Gemini transport: {e}")
+        else:
+            logger.info("No proxy configuration found in environment variables")
 
     def _initialize_args(self, params: dict = None) -> dict:
         """

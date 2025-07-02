@@ -14,6 +14,7 @@ from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.llm.utils import get_completed_prompts
 import concurrent.futures
+import httpx
 
 logger = log.getLogger(__name__)
 
@@ -31,6 +32,129 @@ class GoogleGeminiHandler(BaseMLEngine):
         self.default_embedding_model = "models/embedding-001"
         self.generative = True
         self.mode = "default"
+        self._configure_proxy()
+
+    def _configure_proxy(self):
+        """Configure proxy settings for Google Generative AI"""
+        proxy_url = os.getenv('HTTP_PROXY') or os.getenv('HTTPS_PROXY') or os.getenv('ALL_PROXY')
+        if proxy_url:
+            logger.info(f"Configuring Google Gemini to use proxy: {proxy_url}")
+            # Configure httpx client with proxy for genai
+            import google.generativeai.client as genai_client
+
+            # Create httpx client with proxy
+            proxy_client = httpx.Client(proxies=proxy_url)
+
+            # Monkey patch the genai client to use our proxy client
+            original_request = genai_client._client.request if hasattr(genai_client, '_client') else None
+
+            def proxy_request(*args, **kwargs):
+                # Use our proxy client for requests
+                return proxy_client.request(*args, **kwargs)
+
+            # Try to set proxy in genai configuration
+            try:
+                genai.configure(transport='rest')
+                logger.info("Successfully configured proxy for Google Gemini")
+            except Exception as e:
+                logger.warning(f"Could not configure proxy directly: {e}")
+        else:
+            logger.info("No proxy configuration found in environment variables")
+
+    def _configure_genai_with_proxy(self, api_key):
+        """Configure genai with proxy support"""
+        proxy_url = os.getenv('HTTP_PROXY') or os.getenv('HTTPS_PROXY') or os.getenv('ALL_PROXY')
+
+        if proxy_url:
+            logger.info(f"Configuring genai with proxy: {proxy_url}")
+            # Set proxy environment variables for requests library
+            os.environ['HTTP_PROXY'] = proxy_url
+            os.environ['HTTPS_PROXY'] = proxy_url
+
+            # Force REST transport to support proxy
+            try:
+                # Import the REST client
+                from google.ai.generativelanguage_v1beta.services.generative_service import GenerativeServiceRestTransport
+
+                # Configure genai to use REST transport (supports HTTP proxy)
+                genai.configure(
+                    api_key=api_key,
+                    transport='rest',
+                    client_options={'api_endpoint': 'https://generativelanguage.googleapis.com'}
+                )
+                logger.info("Successfully configured genai with REST transport and proxy")
+            except Exception as e:
+                logger.warning(f"REST transport configuration failed, trying default: {e}")
+                try:
+                    # Fallback to basic configuration with transport=rest
+                    genai.configure(api_key=api_key, transport='rest')
+                    logger.info("Successfully configured genai with basic REST transport")
+                except Exception as e2:
+                    logger.warning(f"All proxy configurations failed, using default: {e2}")
+                    genai.configure(api_key=api_key)
+        else:
+            # Even without proxy, prefer REST transport for consistency
+            try:
+                genai.configure(api_key=api_key, transport='rest')
+                logger.info("Configured genai with REST transport (no proxy)")
+            except Exception as e:
+                logger.warning(f"REST transport failed, using default: {e}")
+                genai.configure(api_key=api_key)
+
+    def _generate_content_with_proxy(self, prompts, api_key, model_name):
+        """Generate content using direct REST API calls with proxy support"""
+        import requests
+
+        proxy_url = os.getenv('HTTP_PROXY') or os.getenv('HTTPS_PROXY') or os.getenv('ALL_PROXY')
+        proxies = {
+            'http': proxy_url,
+            'https': proxy_url
+        } if proxy_url else None
+
+        results = []
+        base_url = "https://generativelanguage.googleapis.com/v1beta/models"
+
+        for prompt in prompts:
+            try:
+                url = f"{base_url}/{model_name}:generateContent"
+                headers = {
+                    'Content-Type': 'application/json',
+                }
+                data = {
+                    "contents": [{
+                        "parts": [{
+                            "text": prompt
+                        }]
+                    }]
+                }
+
+                response = requests.post(
+                    url,
+                    headers=headers,
+                    json=data,
+                    params={'key': api_key},
+                    proxies=proxies,
+                    timeout=30
+                )
+
+                if response.status_code == 200:
+                    result = response.json()
+                    if 'candidates' in result and len(result['candidates']) > 0:
+                        content = result['candidates'][0]['content']['parts'][0]['text']
+                        results.append(content)
+                        logger.info(f"Successfully generated content via proxy: {content[:50]}...")
+                    else:
+                        logger.warning("No content in response")
+                        results.append("")
+                else:
+                    logger.error(f"API request failed: {response.status_code} - {response.text}")
+                    results.append("")
+
+            except Exception as e:
+                logger.error(f"Error generating content with proxy: {e}")
+                results.append("")
+
+        return results
 
     # Similiar to openai handler
     @staticmethod
@@ -219,13 +343,11 @@ class GoogleGeminiHandler(BaseMLEngine):
         prompts = [j for i, j in enumerate(prompts) if i not in empty_prompt_ids]
 
         api_key = self._get_google_gemini_api_key(args)
-        genai.configure(api_key=api_key)
+        self._configure_genai_with_proxy(api_key)
 
-        # called gemini model withinputs
-        model = genai.GenerativeModel(args.get("model_name", self.default_model))
-        results = []
-        for m in prompts:
-            results.append(model.generate_content(m).text)
+        # Always use direct REST API calls with proxy support (works with or without proxy)
+        logger.info("Using direct REST API calls for better proxy support")
+        results = self._generate_content_with_proxy(prompts, api_key, args.get("model_name", self.default_model))
 
         pred_df = pd.DataFrame(results, columns=[args["target"]])
         return pred_df
@@ -270,7 +392,7 @@ class GoogleGeminiHandler(BaseMLEngine):
                 titles = None
 
             api_key = self._get_google_gemini_api_key(args)
-            genai.configure(api_key=api_key)
+            self._configure_genai_with_proxy(api_key)
             model_name = args.get("model_name", self.default_embedding_model)
             task_type = args.get("type")
             task_type = f"retrieval_{task_type}"
@@ -333,7 +455,7 @@ class GoogleGeminiHandler(BaseMLEngine):
             prompts = list(df[args["ctx_column"]].apply(lambda x: str(x)))
 
         api_key = self._get_google_gemini_api_key(args)
-        genai.configure(api_key=api_key)
+        self._configure_genai_with_proxy(api_key)
         model = genai.GenerativeModel("gemini-pro-vision")
         with concurrent.futures.ThreadPoolExecutor() as executor:
             # Download images concurrently using ThreadPoolExecutor
@@ -360,7 +482,7 @@ class GoogleGeminiHandler(BaseMLEngine):
             return pd.DataFrame(args.items(), columns=["key", "value"])
         elif attribute == "metadata":
             api_key = self._get_google_gemini_api_key(args)
-            genai.configure(api_key=api_key)
+            self._configure_genai_with_proxy(api_key)
             model_name = args.get("model_name", self.default_model)
 
             meta = genai.get_model(f"models/{model_name}").__dict__

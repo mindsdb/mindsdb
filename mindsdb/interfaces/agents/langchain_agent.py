@@ -228,7 +228,7 @@ def process_chunk(chunk):
 
 
 class LangchainAgent:
-    def __init__(self, agent: db.Agents, model: dict = None, params: dict = None):
+    def __init__(self, agent: db.Agents, model: dict = None, llm_params: dict = None):
         self.agent = agent
         self.model = model
 
@@ -241,12 +241,12 @@ class LangchainAgent:
         self.mdb_langfuse_callback_handler: Optional[object] = None  # custom (see langfuse_callback_handler.py)
 
         self.langfuse_client_wrapper = LangfuseClientWrapper()
-        self.args = self._initialize_args(params)
+        self.args = self._initialize_args(llm_params)
 
         # Back compatibility for old models
         self.provider = self.args.get("provider", get_llm_provider(self.args))
 
-    def _initialize_args(self, params: dict = None) -> dict:
+    def _initialize_args(self, llm_params: dict = None) -> dict:
         """
         Initialize the arguments for agent execution.
 
@@ -254,14 +254,16 @@ class LangchainAgent:
         The params are already merged with defaults by AgentsController.get_agent_llm_params.
 
         Args:
-            params: Parameters for agent execution (already merged with defaults)
+            llm_params: Parameters for agent execution (already merged with defaults)
 
         Returns:
             dict: Final parameters for agent execution
         """
         # Use the parameters passed to the method (already merged with defaults by AgentsController)
         # No fallback needed as AgentsController.get_agent_llm_params already handles this
-        args = params.copy() if params else {}
+        args = self.agent.params.copy()
+        if llm_params:
+            args.update(llm_params)
 
         # Set model name and provider if given in create agent otherwise use global llm defaults
         # AgentsController.get_agent_llm_params

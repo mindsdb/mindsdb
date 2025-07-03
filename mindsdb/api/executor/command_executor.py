@@ -1556,9 +1556,9 @@ class ExecuteCommands:
         if is_full:
             targets.extend(
                 [
-                    Constant("COLLATION", alias=Identifier("Collation")),
-                    Constant("PRIVILEGES", alias=Identifier("Privileges")),
-                    Constant("COMMENT", alias=Identifier("Comment")),
+                    Constant(None, alias=Identifier("Collation")),
+                    Constant("select", alias=Identifier("Privileges")),
+                    Constant(None, alias=Identifier("Comment")),
                 ]
             )
         new_statement = Select(

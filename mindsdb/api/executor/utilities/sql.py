@@ -187,20 +187,6 @@ def query_df(df, query, session=None):
                     failed_query=query_str,
                     is_external=False
                 ))
-        elif isinstance(node, BinaryOperation):
-            op_name = node.op.lower()
-
-            duckdb_functions_list = get_duckdb_functions_list()
-            if duckdb_functions_list is not None and op_name not in duckdb_functions_list:
-                raise Exception(format_db_error_message(
-                    db_type="DuckDB",
-                    db_error_msg=(
-                        f"Unknown operation: '{op_name}'. This operation is not recognized during internal query processing.\n"
-                        "Please use DuckDB-supported operations instead."
-                    ),
-                    failed_query=query_str,
-                    is_external=False
-                ))
 
     query_traversal(query_ast, adapt_query)
 

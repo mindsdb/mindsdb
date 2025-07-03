@@ -179,16 +179,19 @@ class KnowledgeBaseTable:
         df = executor.run(query)
 
         if (
-            query.group_by is not None
-            or query.order_by is not None
-            or query.having is not None
-            or query.distinct is True
-            or len(query.targets) != 1
-            or not isinstance(query.targets[0], Star)
+            query_copy.group_by is not None
+            or query_copy.order_by is not None
+            or query_copy.having is not None
+            or query_copy.distinct is True
+            or len(query_copy.targets) != 1
+            or not isinstance(query_copy.targets[0], Star)
         ):
             query_copy.where = None
             if "metadata" in df.columns:
                 df["metadata"] = df["metadata"].apply(to_json)
+
+            if query_copy.from_table is None:
+                query_copy.from_table = Identifier(parts=[self._kb.name])
 
             df = query_df(df, query_copy, session=self.session)
 

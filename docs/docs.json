@@ -315,7 +315,6 @@
                     "group": "Connect MindsDB to SQL Clients",
                     "pages": [
                       "mindsdb_sql/connect/mindsdb_editor",
-                      "mindsdb_sql/connect/postgres-client",
                       "mindsdb_sql/connect/mysql-client",
                       "mindsdb_sql/connect/dbeaver",
                       "mindsdb_sql/connect/connect-mariadb-skysql",
@@ -1542,10 +1541,6 @@
     {
       "source": "/connect/mindsdb_editor",
       "destination": "/mindsdb_sql/connect/mindsdb_editor"
-    },
-    {
-      "source": "/connect/postgres-client",
-      "destination": "/mindsdb_sql/connect/postgres-client"
     },
     {
       "source": "/connect/mysql-client",

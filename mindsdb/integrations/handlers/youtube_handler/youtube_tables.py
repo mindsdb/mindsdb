@@ -117,8 +117,8 @@ class YoutubeCommentsTable(APITable):
                 'snippet': {
                     'parentId': comment_id,
                     'textOriginal': text
-                    }
                 }
+            }
 
             self.handler.connect().comments().insert(
                 part='snippet',
@@ -130,13 +130,13 @@ class YoutubeCommentsTable(APITable):
             request_body = {
                 'snippet': {
                     'topLevelComment': {
-                            'snippet': {
-                                'videoId': video_id,
-                                'textOriginal': text
-                                }
-                            }
+                        'snippet': {
+                            'videoId': video_id,
+                            'textOriginal': text
                         }
                     }
+                }
+            }
 
             self.handler.connect().commentThreads().insert(
                 part='snippet',

@@ -121,7 +121,7 @@ class TestSalesforceHandler(BaseHandlerTestSetup, unittest.TestCase):
             password="demo_password",
             client_id="3MVG9lKcPoNINVBIPJjdw1J9LLM82HnZz9Yh7ZJnY",
             client_secret="5A52C1A1E21DF9012IODC9ISNXXAADDA9",
-            include_tables=["Account", "Contact"]
+            include_tables=["Account", "Contact"],
         )
         handler = SalesforceHandler("salesforce", connection_data=connection_data)
 
@@ -158,7 +158,7 @@ class TestSalesforceHandler(BaseHandlerTestSetup, unittest.TestCase):
             password="demo_password",
             client_id="3MVG9lKcPoNINVBIPJjdw1J9LLM82HnZz9Yh7ZJnY",
             client_secret="5A52C1A1E21DF9012IODC9ISNXXAADDA9",
-            tables=["Lead", "Opportunity"]
+            tables=["Lead", "Opportunity"],
         )
         handler = SalesforceHandler("salesforce", connection_data=connection_data)
 
@@ -196,7 +196,7 @@ class TestSalesforceHandler(BaseHandlerTestSetup, unittest.TestCase):
             client_id="3MVG9lKcPoNINVBIPJjdw1J9LLM82HnZz9Yh7ZJnY",
             client_secret="5A52C1A1E21DF9012IODC9ISNXXAADDA9",
             include_tables=["Account", "Contact", "Lead"],
-            exclude_tables=["Lead"]
+            exclude_tables=["Lead"],
         )
         handler = SalesforceHandler("salesforce", connection_data=connection_data)
 
@@ -235,7 +235,7 @@ class TestSalesforceHandler(BaseHandlerTestSetup, unittest.TestCase):
             username="demo@example.com",
             password="demo_password",
             client_id="3MVG9lKcPoNINVBIPJjdw1J9LLM82HnZz9Yh7ZJnY",
-            client_secret="5A52C1A1E21DF9012IODC9ISNXXAADDA9"
+            client_secret="5A52C1A1E21DF9012IODC9ISNXXAADDA9",
         )
         handler = SalesforceHandler("salesforce", connection_data=connection_data)
 
@@ -246,7 +246,7 @@ class TestSalesforceHandler(BaseHandlerTestSetup, unittest.TestCase):
                 {"name": "Account", "queryable": True},
                 {"name": "Contact", "queryable": True},
                 {"name": "AccountHistory", "queryable": True},  # Should be filtered out by hard-coded rules
-                {"name": "CustomObject__c", "queryable": True}
+                {"name": "CustomObject__c", "queryable": True},
             ]
         }
 
@@ -275,7 +275,7 @@ class TestSalesforceHandler(BaseHandlerTestSetup, unittest.TestCase):
             password="demo_password",
             client_id="3MVG9lKcPoNINVBIPJjdw1J9LLM82HnZz9Yh7ZJnY",
             client_secret="5A52C1A1E21DF9012IODC9ISNXXAADDA9",
-            include_tables=["Account", "NonExistentTable", "Contact"]
+            include_tables=["Account", "NonExistentTable", "Contact"],
         )
         handler = SalesforceHandler("salesforce", connection_data=connection_data)
 

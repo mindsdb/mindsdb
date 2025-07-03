@@ -214,10 +214,10 @@ class SalesforceHandler(MetaAPIHandler):
     def _discover_all_tables_with_filtering(self, exclude_tables: List[str]) -> List[str]:
         """
         Fallback method: discover all tables with hard-coded filtering.
-        
+
         Args:
             exclude_tables: List of table names to exclude
-            
+
         Returns:
             List[str]: Filtered table names
         """

@@ -186,7 +186,7 @@ class EvaluateBase:
             to_table = params["save_to"]
             if isinstance(to_table, str):
                 to_table = Identifier(to_table)
-            self.save_to_table(to_table, scores)
+            self.save_to_table(to_table, scores.copy())
 
         return scores
 

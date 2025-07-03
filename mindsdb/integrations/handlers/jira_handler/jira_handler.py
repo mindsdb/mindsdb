@@ -55,14 +55,14 @@ class JiraHandler(APIHandler):
         """
         if self.is_connected is True:
             return self.connection
-        
+
         is_cloud = self.connection_data.get("cloud", True)
 
         if is_cloud:
             # Jira Cloud supports API token authentication.
             if not all(key in self.connection_data for key in ['username', 'api_token', 'url']):
                 raise ValueError("Required parameters (username, api_token, url) must be provided.")
-            
+
             config = {
                 "username": self.connection_data['username'],
                 "password": self.connection_data['api_token'],
@@ -72,7 +72,7 @@ class JiraHandler(APIHandler):
             # Jira Server supports personal access token authentication or open access.
             if 'url' not in self.connection_data:
                 raise ValueError("Required parameter 'url' must be provided.")
-            
+
             config = {
                 "url": self.connection_data['url'],
                 "cloud": False

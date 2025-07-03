@@ -1,16 +1,17 @@
 import unittest
 from unittest.mock import patch
-from mindsdb.integrations.handlers.discord_handler.discord_handler import DiscordHandler
 
 from mindsdb_sql_parser import ast
 from mindsdb_sql_parser.ast import BinaryOperation, Identifier, Constant
 from mindsdb_sql_parser.ast.select.star import Star
+from mindsdb.integrations.handlers.discord_handler.discord_handler import DiscordHandler
+
 
 class DiscordHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.handler = DiscordHandler(
-            name = 'discord_datasource', connection_data = {'token': 'test-discord-token'}
+            name='discord_datasource', connection_data={'token': 'test-discord-token'}
         )
 
     def test_0_check_connection(self):
@@ -28,7 +29,7 @@ class DiscordHandlerTest(unittest.TestCase):
             ),
         )
 
-        messages = self.handler._tables['messages'].select(query)
+        self.handler._tables['messages'].select(query)
         mock_get.assert_called_with(
             'https://discord.com/api/v10/channels/1234567890/messages',
             headers={
@@ -54,6 +55,7 @@ class DiscordHandlerTest(unittest.TestCase):
             },
             json={'content': 'Test message'},
         )
+
 
 if __name__ == '__main__':
     unittest.main()

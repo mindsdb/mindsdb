@@ -83,6 +83,7 @@ class WebHandler(APIHandler):
     """
     Web handler, handling crawling content from websites.
     """
+
     def __init__(self, name=None, **kwargs):
         super().__init__(name)
         crawler = CrawlerTable(self)

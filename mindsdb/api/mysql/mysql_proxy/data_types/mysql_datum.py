@@ -8,6 +8,7 @@
  * permission of MindsDB Inc
  *******************************************************
 """
+
 import struct
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
@@ -25,16 +26,16 @@ NULL_VALUE_INT = ord(NULL_VALUE)
 
 
 class Datum:
-    __slots__ = ['value', 'var_type', 'var_len']
+    __slots__ = ["value", "var_type", "var_len"]
 
     def __init__(self, var_type, value=None, var_len=None):
         # TODO other types: float, timestamp
         self.value = b""
 
         if var_len is None:
-            idx = var_type.find('<')
-            var_len = var_type[idx + 1: -1]
-            var_type = var_type[: idx]
+            idx = var_type.find("<")
+            var_len = var_type[idx + 1 : -1]
+            var_type = var_type[:idx]
         self.var_type = var_type
         self.var_len = var_len
 
@@ -128,7 +129,7 @@ class Datum:
         return self.get_serializer()(self.value)
 
     def get_serializer(self):
-        if self.var_type == "string":
+        if self.var_type in ("string", "byte"):
             if self.var_len == "lenenc":
                 if isinstance(self.value, bytes):
                     return self.serialize_bytes
@@ -140,15 +141,13 @@ class Datum:
             if self.var_len == "packet":
                 return lambda v: v.get_packet_string()
             else:
-                return lambda v: struct.pack(self.var_len + "s", bytes(v, "utf-8"))[
-                    :int(self.var_len)
-                ]
+                return lambda v: struct.pack(self.var_len + "s", bytes(v, "utf-8"))[: int(self.var_len)]
 
         if self.var_type == "int":
             if self.var_len == "lenenc":
                 return self.serialize_int
             else:
-                return lambda v: struct.pack("Q", v)[:int(self.var_len)]
+                return lambda v: struct.pack("Q", v)[: int(self.var_len)]
 
     @classmethod
     def serialize_str_eof(cls, value):
@@ -157,9 +156,7 @@ class Datum:
         if length == 0:
             return b""
         else:
-            return struct.pack(
-                "{len}s".format(len=var_len), bytes(value, "utf-8")
-            )[:length]
+            return struct.pack("{len}s".format(len=var_len), bytes(value, "utf-8"))[:length]
 
     # def serialize_obj(self, value):
     #     return self.serialize_str(str(value))
@@ -170,7 +167,6 @@ class Datum:
 
     @classmethod
     def serialize_bytes(cls, value):
-
         val_len = len(value)
 
         if val_len == 0:
@@ -181,23 +177,11 @@ class Datum:
 
         byte_count = -(val_len.bit_length() // (-8))
         if byte_count <= 2:
-            return (
-                TWO_BYTE_ENC
-                + struct.pack("H", val_len)
-                + value
-            )
+            return TWO_BYTE_ENC + struct.pack("H", val_len) + value
         if byte_count <= 3:
-            return (
-                THREE_BYTE_ENC
-                + struct.pack("i", val_len)[:3]
-                + value
-            )
+            return THREE_BYTE_ENC + struct.pack("i", val_len)[:3] + value
         if byte_count <= 8:
-            return (
-                THREE_BYTE_ENC
-                + struct.pack("Q", val_len)
-                + value
-            )
+            return THREE_BYTE_ENC + struct.pack("Q", val_len) + value
 
 
 def test():

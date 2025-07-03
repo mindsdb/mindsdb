@@ -1,10 +1,9 @@
-from typing import Any, Optional
+from typing import Optional
 
 import jaydebeapi as jdbcconnector
 from mindsdb_sql_parser import parse_sql
 from mindsdb_sql_parser.ast.base import ASTNode
 import pandas as pd
-import pyodbc
 import pyodbc
 import numpy as np
 
@@ -33,7 +32,7 @@ class AltibaseHandler(DatabaseHandler):
             connection_data (dict): parameters for connecting to the database
         """
         super().__init__(name)
-        
+
         self.parser = parse_sql
 
         self.connection_args = connection_data
@@ -87,7 +86,7 @@ class AltibaseHandler(DatabaseHandler):
             self.is_connected = True
         except Exception as e:
             logger.error(f"Error while connecting to {self.database}, {e}")
-        
+
         return self.connection
 
     def connect_with_jdbc(self):
@@ -103,11 +102,11 @@ class AltibaseHandler(DatabaseHandler):
         jdbc_url = f"jdbc:Altibase://{self.host}:{self.port}/{self.database}"
 
         try:
-            if self.user and self.password and jar_location: 
+            if self.user and self.password and jar_location:
                 connection = jdbcconnector.connect(jclassname=jdbc_class, url=jdbc_url, driver_args=[self.user, self.password], jars=str(jar_location).split(","))
-            elif self.user and self.password: 
+            elif self.user and self.password:
                 connection = jdbcconnector.connect(jclassname=jdbc_class, url=jdbc_url, driver_args=[self.user, self.password])
-            elif jar_location: 
+            elif jar_location:
                 connection = jdbcconnector.connect(jclassname=jdbc_class, url=jdbc_url, jars=jar_location.split(","))
             else:
                 connection = jdbcconnector.connect(jclassname=jdbc_class, url=jdbc_url)
@@ -117,7 +116,7 @@ class AltibaseHandler(DatabaseHandler):
         except Exception as e:
             logger.error(f"Error while connecting to {self.database}, {e}")
             raise e
-        
+
         return self.connection
 
     def disconnect(self):
@@ -131,7 +130,7 @@ class AltibaseHandler(DatabaseHandler):
             except Exception as e:
                 logger.error(f"Error while disconnecting to {self.database}, {e}")
                 return False
-        return True 
+        return True
 
     def check_connection(self) -> StatusResponse:
         """ Check connection to the handler
@@ -168,7 +167,7 @@ class AltibaseHandler(DatabaseHandler):
             try:
                 cur.execute(query)
                 if cur.description:
-                    result = cur.fetchall() 
+                    result = cur.fetchall()
 
                     if self.dsn:
                         if len(result) > 0:
@@ -218,13 +217,13 @@ class AltibaseHandler(DatabaseHandler):
             HandlerResponse
         """
         query = '''
-            SELECT 
-                TABLE_NAME, 
-                TABLE_ID, 
-                TABLE_TYPE 
-            FROM 
-                system_.sys_tables_ 
-            WHERE 
+            SELECT
+                TABLE_NAME,
+                TABLE_ID,
+                TABLE_TYPE
+            FROM
+                system_.sys_tables_
+            WHERE
                 user_id = USER_ID();
             '''
 
@@ -238,16 +237,16 @@ class AltibaseHandler(DatabaseHandler):
             HandlerResponse
         """
         query = f"""
-            SELECT 
-                COLUMN_NAME, 
-                DATA_TYPE 
-            FROM 
-                system_.sys_columns_ ct 
-            inner join 
-                system_.sys_tables_ tt 
-                on ct.table_id=tt.table_id 
-            where 
+            SELECT
+                COLUMN_NAME,
+                DATA_TYPE
+            FROM
+                system_.sys_columns_ ct
+            inner join
+                system_.sys_tables_ tt
+                on ct.table_id=tt.table_id
+            where
                 tt.table_name = '{table_name.capitalize()}';
             """
-        
+
         return self.native_query(query)

@@ -1,4 +1,5 @@
 import unittest
+import pytest
 from collections import OrderedDict
 from unittest.mock import patch, MagicMock
 from google.api_core.exceptions import BadRequest
@@ -7,23 +8,28 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
 )
-from mindsdb.integrations.handlers.bigquery_handler.bigquery_handler import BigQueryHandler
+
+try:
+    from mindsdb.integrations.handlers.bigquery_handler.bigquery_handler import BigQueryHandler
+except ImportError:
+    pytestmark = pytest.mark.skip("Bigquery handler not installed")
 
 
 class TestBigQueryHandler(unittest.TestCase):
-
     dummy_connection_data = OrderedDict(
-        project_id='tough-future-332513',
-        dataset='example_ds',
-        service_account_keys='example_keys',
+        project_id="tough-future-332513",
+        dataset="example_ds",
+        service_account_keys="example_keys",
     )
 
     def setUp(self):
-        self.patcher_get_oauth2_credentials = patch('mindsdb.integrations.utilities.handlers.auth_utilities.GoogleServiceAccountOAuth2Manager.get_oauth2_credentials')
-        self.patcher_client = patch('mindsdb.integrations.handlers.bigquery_handler.bigquery_handler.Client')
+        self.patcher_get_oauth2_credentials = patch(
+            "mindsdb.integrations.utilities.handlers.auth_utilities.google.GoogleServiceAccountOAuth2Manager.get_oauth2_credentials"
+        )
+        self.patcher_client = patch("mindsdb.integrations.handlers.bigquery_handler.bigquery_handler.Client")
         self.mock_get_oauth2_credentials = self.patcher_get_oauth2_credentials.start()
         self.mock_connect = self.patcher_client.start()
-        self.handler = BigQueryHandler('bigquery', connection_data=self.dummy_connection_data)
+        self.handler = BigQueryHandler("bigquery", connection_data=self.dummy_connection_data)
 
     def tearDown(self):
         self.patcher_get_oauth2_credentials.stop()
@@ -73,7 +79,9 @@ class TestBigQueryHandler(unittest.TestCase):
 
         query_str = "SELECT * FROM table"
 
-        with patch('mindsdb.integrations.handlers.bigquery_handler.bigquery_handler.QueryJobConfig') as mock_query_job_config:
+        with patch(
+            "mindsdb.integrations.handlers.bigquery_handler.bigquery_handler.QueryJobConfig"
+        ) as mock_query_job_config:
             mock_query_job_config_instance = mock_query_job_config.return_value
             data = self.handler.native_query(query_str)
             mock_conn.query.assert_called_once_with(query_str, job_config=mock_query_job_config_instance)
@@ -90,7 +98,7 @@ class TestBigQueryHandler(unittest.TestCase):
 
         expected_query = f"""
             SELECT table_name, table_schema, table_type
-            FROM `{self.dummy_connection_data['project_id']}.{self.dummy_connection_data['dataset']}.INFORMATION_SCHEMA.TABLES`
+            FROM `{self.dummy_connection_data["project_id"]}.{self.dummy_connection_data["dataset"]}.INFORMATION_SCHEMA.TABLES`
             WHERE table_type IN ('BASE TABLE', 'VIEW')
         """
 
@@ -102,17 +110,17 @@ class TestBigQueryHandler(unittest.TestCase):
         """
         self.handler.native_query = MagicMock()
 
-        table_name = 'mock_table'
+        table_name = "mock_table"
         self.handler.get_columns(table_name)
 
         expected_query = f"""
             SELECT column_name AS Field, data_type as Type
-            FROM `{self.dummy_connection_data['project_id']}.{self.dummy_connection_data['dataset']}.INFORMATION_SCHEMA.COLUMNS`
+            FROM `{self.dummy_connection_data["project_id"]}.{self.dummy_connection_data["dataset"]}.INFORMATION_SCHEMA.COLUMNS`
             WHERE table_name = '{table_name}'
         """
 
         self.handler.native_query.assert_called_once_with(expected_query)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

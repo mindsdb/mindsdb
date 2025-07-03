@@ -1,0 +1,171 @@
+---
+title: Assistants API
+sidebarTitle: Assistants API
+---
+
+Once the Mind is created, you can chat with the Mind using the OpenAI-compatible Assistants API. Therefore to follow this code, if you haven’t already, install the OpenAI SDK by running `pip install openai`, and use the Minds API key and name of the Mind you created.
+
+The following code lets you have conversations with the Mind, create threads, messages, and runs.
+
+```python
+from openai import OpenAI
+
+your_minds_api_key = <YOUR API KEY>
+mind_name = <NAME YOU GAVE TO YOUR MIND>
+
+# point the Openai SDK to the Minds Cloud
+client = OpenAI(
+    api_key=your_minds_api_key,
+    base_url='https://mdb.ai/'
+)
+
+# print the message before making the API request
+print('Answering the question may take up to 30 seconds...')
+
+thread = client.beta.threads.create()
+
+message = client.beta.threads.messages.create(
+    thread_id=thread.id,
+    role="user",
+    content="How many 2-bedroom houses are on the market?"
+)
+
+# run the message on the mind that you created
+run = client.beta.threads.runs.create_and_poll(
+    thread_id=thread.id,
+    assistant_id=mind_name
+)
+
+if run.status == 'completed':
+    messages = client.beta.threads.messages.list(
+      thread_id=thread.id
+    )
+    print(messages.data[1].role + ': ' + messages.data[1].content[0].text.value)
+    print(messages.data[0].role + ': ' + messages.data[0].content[0].text.value)
+else:
+    print(run.status)
+
+client.beta.threads.delete(thread.id)
+```
+
+Here is the output:
+
+```
+Answering the question may take up to 30 seconds...
+user: How many 2-bedroom houses are on the market?
+assistant: There are 99 two-bedroom houses that were once on the market according to the data in the database.
+```
+
+### Stream Mind's Thoughts
+
+This feature enables you to stream the thoughts of the Mind, which includes all the steps the Mind takes to answer the question.
+
+```python
+from openai import OpenAI
+
+your_minds_api_key = <YOUR API KEY>
+mind_name = <NAME YOU GAVE TO YOUR MIND>
+
+# point the Openai SDK to the Minds Cloud
+client = OpenAI(
+    api_key=your_minds_api_key,
+    base_url='https://mdb.ai/'
+)
+
+# create an EventHandler class to define how to handle the events in the response stream
+from typing_extensions import override
+from openai import AssistantEventHandler
+ 
+class EventHandler(AssistantEventHandler):    
+  @override
+  def on_text_created(self, text) -> None:
+    print(f"\nassistant > ", end="", flush=True)
+      
+  @override
+  def on_text_delta(self, delta, snapshot):
+    print(delta.value, end="", flush=True)
+      
+  def on_tool_call_created(self, tool_call):
+    print(f"\nassistant > {tool_call.type}\n", flush=True)
+  
+  def on_tool_call_delta(self, delta, snapshot):
+    if delta.type == 'code_interpreter':
+      if delta.code_interpreter.input:
+        print(delta.code_interpreter.input, end="", flush=True)
+      if delta.code_interpreter.outputs:
+        print(f"\n\noutput >", flush=True)
+        for output in delta.code_interpreter.outputs:
+          if output.type == "logs":
+            print(f"\n{output.logs}", flush=True)
+
+# create a conversation thread
+thread = client.beta.threads.create()
+
+# chat with the Mind you created
+while True:
+    user_input = input("Enter your message (type 'exit' to quit): ")
+    if user_input.lower() == 'exit':
+        break
+
+    print('Answering the question may take up to 30 seconds...')
+
+    message = client.beta.threads.messages.create(
+        thread_id=thread.id,
+        role='user',
+        content=user_input
+    )
+
+    # stream the response
+    with client.beta.threads.runs.stream(
+      thread_id=thread.id,
+      assistant_id=mind.name,
+      event_handler=EventHandler(),
+    ) as stream:
+      stream.until_done()
+
+client.beta.threads.delete(thread.id)
+```
+
+Here is the output:
+
+```
+Answering the question may take up to 30 seconds...
+
+assistant > I understand your request. I'm working on a detailed response for you.Thought: Do I need to use a tool? Yes
+Action: sql_db_list_tables
+Action Input: ""unique_data_source_name.house_salesTo determine how many three-bedroom houses were sold in 2008, I need to examine the schema of the `house_sales` table to identify the relevant columns for bedrooms and sale date. 
+
+Action: sql_db_schema
+Action Input: unique_data_source_name.house_salesTable named `house_sales`
+
+/* Sample with first 3 rows from table unique_data_source_name.house_sales:
+saledate        ma      type    bedrooms        created_at
+2007-09-30      441854  house   2       2007-02-02 15:41:51.922127
+2007-12-31      441854  house   2       2007-02-23 22:36:08.540248
+2008-03-31      441854  house   2       2007-02-25 19:23:52.585358
+*/
+Column data types: `saledate` : `date`, `ma` : `integer`,       `type` : `text`,        `bedrooms` : `integer`, `created_at` : `timestamp without time zone`
+To find out how many three-bedroom houses were sold in 2008, I will query the `house_sales` table using the `bedrooms` and `saledate` columns. 
+
+Let's proceed with the query to get the count of three-bedroom houses sold in 2008.
+
+Action: mindsdb_sql_parser_tool
+Action Input: 
+```sql
+SELECT COUNT(*) 
+FROM unique_data_source_name.house_sales 
+WHERE bedrooms = 3 
+AND saledate::DATE BETWEEN '2008-01-01' AND '2008-12-31'
+```valid query: SELECT count(*) FROM unique_data_source_name.house_sales WHERE bedrooms = 3 AND CAST(saledate AS DATE) BETWEEN '2008-01-01' AND '2008-12-31'To find the number of three-bedroom houses sold in 2008, I will execute the validated query.
+
+Action: sql_db_query
+Action Input: 
+```sql
+SELECT COUNT(*) 
+FROM unique_data_source_name.house_sales 
+WHERE bedrooms = 3 
+AND saledate::DATE BETWEEN '2008-01-01' AND '2008-12-31'
+```Output columns: 'count'
+Result: 8
+The number of three-bedroom houses sold in 2008 was 8.
+```

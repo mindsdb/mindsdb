@@ -4,15 +4,27 @@ from dataclasses import dataclass, field
 
 from mindsdb_sql_parser import ast
 from mindsdb_sql_parser.ast import (
-    Select, Identifier, BetweenOperation, Join, Star, BinaryOperation, Constant,
-    NativeQuery, Parameter
+    Select,
+    Identifier,
+    BetweenOperation,
+    Join,
+    Star,
+    BinaryOperation,
+    Constant,
+    NativeQuery,
+    Parameter,
 )
 
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 
 from mindsdb.api.executor.planner.exceptions import PlanningException
 from mindsdb.api.executor.planner.steps import (
-    FetchDataframeStep, JoinStep, ApplyPredictorStep, SubSelectStep, QueryStep, MapReduceStep
+    FetchDataframeStep,
+    JoinStep,
+    ApplyPredictorStep,
+    SubSelectStep,
+    QueryStep,
+    MapReduceStep,
 )
 from mindsdb.api.executor.planner.utils import filters_to_bin_op
 from mindsdb.api.executor.planner.plan_join_ts import PlanJoinTSPredictorQuery
@@ -31,18 +43,16 @@ class TableInfo:
 
 
 class PlanJoin:
-
     def __init__(self, planner):
         self.planner = planner
 
     def is_timeseries(self, query):
-
         join = query.from_table
         l_predictor = self.planner.get_predictor(join.left) if isinstance(join.left, Identifier) else None
         r_predictor = self.planner.get_predictor(join.right) if isinstance(join.right, Identifier) else None
-        if l_predictor and l_predictor.get('timeseries'):
+        if l_predictor and l_predictor.get("timeseries"):
             return True
-        if r_predictor and r_predictor.get('timeseries'):
+        if r_predictor and r_predictor.get("timeseries"):
             return True
 
     def check_single_integration(self, query):
@@ -52,16 +62,14 @@ class PlanJoin:
 
         # one integration and not mindsdb objects in query
         if (
-                len(query_info['mdb_entities']) == 0
-                and len(query_info['integrations']) == 1
-                and 'files' not in query_info['integrations']
-                and 'views' not in query_info['integrations']
+            len(query_info["mdb_entities"]) == 0
+            and len(query_info["integrations"]) == 1
+            and "files" not in query_info["integrations"]
+            and "views" not in query_info["integrations"]
         ):
-
-            int_name = list(query_info['integrations'])[0]
+            int_name = list(query_info["integrations"])[0]
             # if is sql database
-            if self.planner.integrations.get(int_name, {}).get('class_type') != 'api':
-
+            if self.planner.integrations.get(int_name, {}).get("class_type") != "api":
                 # send to this integration
                 return int_name
         return None
@@ -77,7 +85,10 @@ class PlanJoin:
         if integration_to_send:
             self.planner.prepare_integration_select(integration_to_send, query)
 
-            last_step = self.planner.plan.add_step(FetchDataframeStep(integration=integration_to_send, query=query))
+            fetch_params = self.planner.get_fetch_params(query.using)
+            last_step = self.planner.plan.add_step(
+                FetchDataframeStep(integration=integration_to_send, query=query, params=fetch_params)
+            )
             return last_step
         elif self.is_timeseries(query):
             return PlanJoinTSPredictorQuery(self.planner).plan(query, integration)
@@ -86,7 +97,6 @@ class PlanJoin:
 
 
 class PlanJoinTablesQuery:
-
     def __init__(self, planner):
         self.planner = planner
 
@@ -105,15 +115,15 @@ class PlanJoinTablesQuery:
         join_step = self.plan_join_tables(query)
 
         if (
-                query.group_by is not None
-                or query.order_by is not None
-                or query.having is not None
-                or query.distinct is True
-                or query.where is not None
-                or query.limit is not None
-                or query.offset is not None
-                or len(query.targets) != 1
-                or not isinstance(query.targets[0], Star)
+            query.group_by is not None
+            or query.order_by is not None
+            or query.having is not None
+            or query.distinct is True
+            or query.where is not None
+            or query.limit is not None
+            or query.offset is not None
+            or len(query.targets) != 1
+            or not isinstance(query.targets[0], Star)
         ):
             query2 = copy.deepcopy(query)
             query2.from_table = None
@@ -147,10 +157,10 @@ class PlanJoinTablesQuery:
             else:
                 integration = self.planner.default_namespace
 
-        if integration is None and not hasattr(table, 'sub_select'):
-            raise PlanningException(f'Integration not found for: {table}')
+        if integration is None and not hasattr(table, "sub_select"):
+            raise PlanningException(f"Database not found for: {table}")
 
-        sub_select = getattr(table, 'sub_select', None)
+        sub_select = getattr(table, "sub_select", None)
 
         return TableInfo(integration, table, aliases, conditions=[], sub_select=sub_select)
 
@@ -190,7 +200,7 @@ class PlanJoinTablesQuery:
 
             sequence2 = self.get_join_sequence(node.right, condition=node.condition)
             if len(sequence2) != 1:
-                raise PlanningException('Unexpected join nesting behavior')
+                raise PlanningException("Unexpected join nesting behavior")
 
             # put next table
             sequence.append(sequence2[0])
@@ -203,7 +213,6 @@ class PlanJoinTablesQuery:
         return sequence
 
     def check_node_condition(self, node):
-
         col_idx = 0
         if len(node.args) == 2:
             if not isinstance(node.args[col_idx], Identifier):
@@ -230,7 +239,7 @@ class PlanJoinTablesQuery:
 
         table_info = self.get_table_for_column(arg1)
         if table_info is None:
-            raise PlanningException(f'Table not found for identifier: {arg1.to_string()}')
+            raise PlanningException(f"Table not found for identifier: {arg1.to_string()}")
 
         # keep only column name
         arg1.parts = [arg1.parts[-1]]
@@ -253,28 +262,26 @@ class PlanJoinTablesQuery:
 
         query_traversal(query.where, _check_node_condition)
 
-        self.query_context['binary_ops'] = binary_ops
+        self.query_context["binary_ops"] = binary_ops
 
     def check_use_limit(self, query_in, join_sequence):
         # use limit for first table?
         # if only models
         use_limit = False
         if query_in.having is None or query_in.group_by is None and query_in.limit is not None:
-
             join = None
             use_limit = True
             for item in join_sequence:
                 if isinstance(item, TableInfo):
                     if item.predictor_info is None and item.sub_select is None:
                         if join is not None:
-                            if join.join_type.upper() != 'LEFT JOIN':
+                            if join.join_type.upper() != "LEFT JOIN":
                                 use_limit = False
                 elif isinstance(item, Join):
                     join = item
-        self.query_context['use_limit'] = use_limit
+        self.query_context["use_limit"] = use_limit
 
     def plan_join_tables(self, query_in):
-
         # plan all nested selects in 'where'
         find_selects = self.planner.get_nested_selects_plan_fnc(self.planner.default_namespace, force=True)
         query_in.targets = query_traversal(query_in.targets, find_selects)
@@ -285,7 +292,7 @@ class PlanJoinTablesQuery:
         # replace sub selects, with identifiers with links to original selects
         def replace_subselects(node, **args):
             if isinstance(node, Select) or isinstance(node, NativeQuery) or isinstance(node, ast.Data):
-                name = f't_{id(node)}'
+                name = f"t_{id(node)}"
                 node2 = Identifier(name, alias=node.alias)
 
                 # save in attribute
@@ -306,7 +313,7 @@ class PlanJoinTablesQuery:
                 if len(node.parts) > 1:
                     table_info = self.get_table_for_column(node)
                     if table_info is None:
-                        raise PlanningException(f'Table not found for identifier: {node.to_string()}')
+                        raise PlanningException(f"Table not found for identifier: {node.to_string()}")
 
                     # # replace identifies name
                     col_parts = list(table_info.aliases[-1])
@@ -329,7 +336,6 @@ class PlanJoinTablesQuery:
         self.step_stack = []
         for item in join_sequence:
             if isinstance(item, TableInfo):
-
                 if item.sub_select is not None:
                     self.process_subselect(item)
                 elif item.predictor_info is not None:
@@ -345,8 +351,8 @@ class PlanJoinTablesQuery:
                 new_join = copy.deepcopy(item)
 
                 # TODO
-                new_join.left = Identifier('tab1')
-                new_join.right = Identifier('tab2')
+                new_join.left = Identifier("tab1")
+                new_join.right = Identifier("tab2")
                 new_join.implicit = False
 
                 step = self.add_plan_step(JoinStep(left=step_left.result, right=step_right.result, query=new_join))
@@ -369,12 +375,11 @@ class PlanJoinTablesQuery:
         # apply table alias
         query2 = Select(targets=[Star()], where=where)
         if item.table.alias is None:
-            raise PlanningException(f'Subselect in join have to be aliased: {item.sub_select.to_string()}')
+            raise PlanningException(f"Subselect in join have to be aliased: {item.sub_select.to_string()}")
         table_name = item.table.alias.parts[-1]
 
         add_absent_cols = False
-        if hasattr(item.sub_select, 'from_table') and \
-                isinstance(item.sub_select.from_table, ast.Data):
+        if hasattr(item.sub_select, "from_table") and isinstance(item.sub_select.from_table, ast.Data):
             add_absent_cols = True
 
         step2 = SubSelectStep(query2, step.result, table_name=table_name, add_absent_cols=add_absent_cols)
@@ -387,13 +392,13 @@ class PlanJoinTablesQuery:
         query2 = Select(from_table=table, targets=[Star()])
         # parts = tuple(map(str.lower, table_name.parts))
         conditions = item.conditions
-        if 'or' in self.query_context['binary_ops']:
+        if "or" in self.query_context["binary_ops"]:
             # not use conditions
             conditions = []
 
         conditions += self.get_filters_from_join_conditions(item)
 
-        if self.query_context['use_limit']:
+        if self.query_context["use_limit"]:
             order_by = None
             if query_in.order_by is not None:
                 order_by = []
@@ -416,10 +421,10 @@ class PlanJoinTablesQuery:
                 # copy order
                 query2.order_by = order_by
 
-            self.query_context['use_limit'] = False
+            self.query_context["use_limit"] = False
         for cond in conditions:
             if query2.where is not None:
-                query2.where = BinaryOperation('and', args=[query2.where, cond])
+                query2.where = BinaryOperation("and", args=[query2.where, cond])
             else:
                 query2.where = cond
 
@@ -430,7 +435,6 @@ class PlanJoinTablesQuery:
         self.step_stack.append(step)
 
     def join_condition_to_columns_map(self, model_table):
-
         columns_map = {}
 
         def _check_conditions(node, **kwargs):
@@ -461,7 +465,6 @@ class PlanJoinTablesQuery:
         return columns_map
 
     def get_filters_from_join_conditions(self, fetch_table):
-
         binary_ops = set()
         conditions = []
         data_conditions = []
@@ -470,7 +473,7 @@ class PlanJoinTablesQuery:
             if not isinstance(node, BinaryOperation):
                 return
 
-            if node.op != '=':
+            if node.op != "=":
                 binary_ops.add(node.op.lower())
                 return
 
@@ -492,7 +495,7 @@ class PlanJoinTablesQuery:
 
         query_traversal(fetch_table.join_condition, _check_conditions)
 
-        binary_ops.discard('and')
+        binary_ops.discard("and")
         if len(binary_ops) > 0:
             # other operations exists, skip
             return []
@@ -514,25 +517,19 @@ class PlanJoinTablesQuery:
             subselect_step = SubSelectStep(query2, fetch_step.result)
             subselect_step = self.add_plan_step(subselect_step)
 
-            conditions.append(BinaryOperation(
-                op='in',
-                args=[
-                    arg1,
-                    Parameter(subselect_step.result)
-                ]
-            ))
+            conditions.append(BinaryOperation(op="in", args=[arg1, Parameter(subselect_step.result)]))
 
         return conditions
 
     def process_predictor(self, item, query_in):
         if len(self.step_stack) == 0:
             raise NotImplementedError("Predictor can't be first element of join syntax")
-        if item.predictor_info.get('timeseries'):
+        if item.predictor_info.get("timeseries"):
             raise NotImplementedError("TS predictor is not supported here yet")
         data_step = self.step_stack[-1]
         row_dict = None
 
-        predict_target = item.predictor_info.get('to_predict')
+        predict_target = item.predictor_info.get("to_predict")
         if isinstance(predict_target, list) and len(predict_target) > 0:
             predict_target = predict_target[0]
         if predict_target is not None:
@@ -545,7 +542,7 @@ class PlanJoinTablesQuery:
         if item.conditions:
             row_dict = {}
             for i, el in enumerate(item.conditions):
-                if isinstance(el.args[0], Identifier) and el.op == '=':
+                if isinstance(el.args[0], Identifier) and el.op == "=":
                     col_name = el.args[0].parts[-1]
                     if col_name.lower() == predict_target:
                         # don't add predict target to parameters
@@ -563,15 +560,15 @@ class PlanJoinTablesQuery:
         if query_in.using is not None:
             model_params = {}
             for param, value in query_in.using.items():
-                if '.' in param:
-                    alias = param.split('.')[0]
+                if "." in param:
+                    alias = param.split(".")[0]
                     if (alias,) in item.aliases:
-                        new_param = '.'.join(param.split('.')[1:])
+                        new_param = ".".join(param.split(".")[1:])
                         model_params[new_param.lower()] = value
                 else:
                     model_params[param.lower()] = value
 
-            partition_size = model_params.pop('partition_size', None)
+            partition_size = model_params.pop("partition_size", None)
 
         predictor_step = ApplyPredictorStep(
             namespace=item.integration,
@@ -582,9 +579,7 @@ class PlanJoinTablesQuery:
             columns_map=columns_map,
         )
 
-        self.step_stack.append(
-            self.add_plan_step(predictor_step, partition_size=partition_size)
-        )
+        self.step_stack.append(self.add_plan_step(predictor_step, partition_size=partition_size))
 
     def add_plan_step(self, step, partition_size=None):
         """
@@ -608,12 +603,7 @@ class PlanJoinTablesQuery:
         elif partition_size is not None:
             # create partition
 
-            self.partition = MapReduceStep(
-                values=step.dataframe,
-                reduce='union',
-                step=[],
-                partition=partition_size
-            )
+            self.partition = MapReduceStep(values=step.dataframe, reduce="union", step=[], partition=partition_size)
             self.planner.plan.add_step(self.partition)
 
             self.add_step_to_partition(step)
@@ -626,7 +616,7 @@ class PlanJoinTablesQuery:
         return self.planner.plan.add_step(step)
 
     def add_step_to_partition(self, step):
-        step.step_num = f'{self.partition.step_num}_{len(self.partition.step)}'
+        step.step_num = f"{self.partition.step_num}_{len(self.partition.step)}"
         self.partition.step.append(step)
 
     def close_partition(self):

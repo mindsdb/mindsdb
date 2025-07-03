@@ -100,7 +100,8 @@ class DockerHubRepoImagesSummaryTable(APITable):
             "active",
             "inactive"
         ]
-      
+
+
 class DockerHubOrgSettingsTable(APITable):
     """The DockerHub Repo Org Settings Table implementation"""
 
@@ -185,6 +186,7 @@ class DockerHubOrgSettingsTable(APITable):
             "restricted_images_allow_official_images",
             "restricted_images_allow_verified_publishers"
         ]
+
 
 class DockerHubRepoImagesTable(APITable):
     """The DockerHub Repo Images Table implementation"""
@@ -273,13 +275,13 @@ class DockerHubRepoImagesTable(APITable):
         """
 
         return ["namespace",
-            "repository",
-            "digest",
-            "tags",
-            "last_pushed",
-            "last_pulled",
-            "status"
-            ]
+                "repository",
+                "digest",
+                "tags",
+                "last_pushed",
+                "last_pulled",
+                "status"
+                ]
 
 
 class DockerHubRepoTagTable(APITable):
@@ -346,22 +348,22 @@ class DockerHubRepoTagTable(APITable):
 
         content = response["content"]
 
-        repo_tag_summary_df = pd.json_normalize({"creator": content["creator"], 
-            "id": content["id"], 
-            "images": content["images"], 
-            "last_updated": content["last_updated"], 
-            "last_updater": content["last_updater"], 
-            "last_updater_username": content["last_updater_username"], 
-            "name": content["name"], 
-            "repository": content["repository"], 
-            "full_size": content["full_size"], 
-            "v2": content["v2"], 
-            "tag_status": content["tag_status"], 
-            "tag_last_pulled": content["tag_last_pulled"], 
-            "tag_last_pushed": content["tag_last_pushed"], 
-            "media_type": content["media_type"], 
-            "content_type": content["media_type"]
-        })
+        repo_tag_summary_df = pd.json_normalize({"creator": content["creator"],
+                                                 "id": content["id"],
+                                                 "images": content["images"],
+                                                 "last_updated": content["last_updated"],
+                                                 "last_updater": content["last_updater"],
+                                                 "last_updater_username": content["last_updater_username"],
+                                                 "name": content["name"],
+                                                 "repository": content["repository"],
+                                                 "full_size": content["full_size"],
+                                                 "v2": content["v2"],
+                                                 "tag_status": content["tag_status"],
+                                                 "tag_last_pulled": content["tag_last_pulled"],
+                                                 "tag_last_pushed": content["tag_last_pushed"],
+                                                 "media_type": content["media_type"],
+                                                 "content_type": content["media_type"]
+                                                 })
 
         select_statement_executor = SELECTQueryExecutor(
             repo_tag_summary_df,
@@ -388,22 +390,23 @@ class DockerHubRepoTagTable(APITable):
             List of columns
         """
 
-        return ["creator", 
-                "id", 
-                "images", 
-                "last_updated", 
-                "last_updater", 
-                "last_updater_username", 
-                "name", 
-                "repository", 
-                "full_size", 
-                "v2", 
-                "tag_status", 
-                "tag_last_pulled", 
-                "tag_last_pushed", 
-                "media_type", 
+        return ["creator",
+                "id",
+                "images",
+                "last_updated",
+                "last_updater",
+                "last_updater_username",
+                "name",
+                "repository",
+                "full_size",
+                "v2",
+                "tag_status",
+                "tag_last_pulled",
+                "tag_last_pushed",
+                "media_type",
                 "content_type"
-            ]
+                ]
+
 
 class DockerHubRepoTagsTable(APITable):
     """The DockerHub Repo Tags Table implementation"""
@@ -491,19 +494,19 @@ class DockerHubRepoTagsTable(APITable):
             List of columns
         """
 
-        return ["creator", 
-                "id", 
-                "images", 
-                "last_updated", 
-                "last_updater", 
-                "last_updater_username", 
-                "name", 
-                "repository", 
-                "full_size", 
-                "v2", 
-                "tag_status", 
-                "tag_last_pulled", 
-                "tag_last_pushed", 
-                "media_type", 
+        return ["creator",
+                "id",
+                "images",
+                "last_updated",
+                "last_updater",
+                "last_updater_username",
+                "name",
+                "repository",
+                "full_size",
+                "v2",
+                "tag_status",
+                "tag_last_pulled",
+                "tag_last_pushed",
+                "media_type",
                 "content_type"
-            ]
+                ]

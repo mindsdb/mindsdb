@@ -16,6 +16,7 @@ _BASE_BINANCE_US_URL = 'https://api.binance.us'
 
 logger = log.getLogger(__name__)
 
+
 class BinanceHandler(APIHandler):
     """A class for handling connections and interactions with the Binance API.
 

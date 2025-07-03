@@ -7,12 +7,12 @@ class ImpalaHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
-            'user':'<UID>',
-            'password':'<P455w0rd>',
-            'host':'127.0.0.1',
-            'port':21050,
-            'database':'temp'
-    
+            'user': '<UID>',
+            'password': '<P455w0rd>',
+            'host': '127.0.0.1',
+            'port': 21050,
+            'database': 'temp'
+
         }
         cls.handler = ImpalaHandler('test_impala_handler', **cls.kwargs)
 
@@ -21,25 +21,25 @@ class ImpalaHandlerTest(unittest.TestCase):
 
     def test_1_connect(self):
         assert self.handler.connect()
-    
+
     def test_2_create_table(self):
         query = "CREATE Table Car(Name Varchar, Price Integer);"
         result = self.handler.query(query)
-        assert result.type is not RESPONSE_TYPE.ERROR 
+        assert result.type is not RESPONSE_TYPE.ERROR
 
     def test_3_insert(self):
         query = "INSERT INTO Car ('Tata SUV', 860000)"
         result = self.handler.query(query)
-        assert result.type is not RESPONSE_TYPE.ERROR 
+        assert result.type is not RESPONSE_TYPE.ERROR
 
     def test_4_native_query_select(self):
         query = "SELECT * FROM Car;"
         result = self.handler.query(query)
-        assert result.type is RESPONSE_TYPE.TABLE 
+        assert result.type is RESPONSE_TYPE.TABLE
 
     def test_5_get_tables(self):
         tables = self.handler.get_tables()
-        assert tables.type is  RESPONSE_TYPE.TABLE
+        assert tables.type is RESPONSE_TYPE.TABLE
 
     def test_6_get_columns(self):
         columns = self.handler.get_columns('Car')

@@ -34,7 +34,7 @@ SUPPORTED_VECTOR_STORES = ("chromadb", "faiss")
 
 SUPPORTED_LLMS = ("writer", "openai")
 
-## Default parameters for RAG Handler
+# Default parameters for RAG Handler
 
 # this is the default prompt template for qa
 DEFAULT_QA_PROMPT_TEMPLATE = """

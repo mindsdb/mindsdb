@@ -34,5 +34,6 @@ class SolrHandlerTest(unittest.TestCase):
         result = self.handler.query(query)
         assert result['type'] is RESPONSE_TYPE.TABLE
 
+
 if __name__ == '__main__':
     unittest.main()

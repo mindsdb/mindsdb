@@ -44,8 +44,8 @@ connection_args = OrderedDict(
     driver_args={
         'type': ARG_TYPE.STR,
         'description': """
-            The extra arguments which can be specified to the driver. 
-            Specify this in the format: "arg1=value1,arg2=value2. 
+            The extra arguments which can be specified to the driver.
+            Specify this in the format: "arg1=value1,arg2=value2.
             More information on the supported paramters can be found at: https://doc.nuodb.com/nuodb/latest/deployment-models/physical-or-vmware-environments-with-nuodb-admin/reference-information/connection-properties/'
         """
     }

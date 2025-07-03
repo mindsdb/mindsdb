@@ -108,7 +108,7 @@ AI: {response}'''
         self.model_storage.json_set('args', args)
 
     @staticmethod
-    def create_validation(_, args: Dict=None, **kwargs):
+    def create_validation(_, args: Dict = None, **kwargs):
         if 'using' not in args:
             raise Exception("LangChain engine requires a USING clause! Refer to its documentation for more details.")
         else:
@@ -117,7 +117,7 @@ AI: {response}'''
             if not args.get('mode') == 'retrieval':
                 raise ValueError('Please provide a `prompt_template` for this engine.')
 
-    def predict(self, df: pd.DataFrame, args: Dict=None) -> pd.DataFrame:
+    def predict(self, df: pd.DataFrame, args: Dict = None) -> pd.DataFrame:
         """
         Dispatch is performed depending on the underlying model type. Currently, only the default text completion
         is supported.
@@ -125,7 +125,7 @@ AI: {response}'''
         pred_args = args['predict_params'] if args else {}
         args = self.model_storage.json_get('args')
         if 'prompt_template' not in args and 'prompt_template' not in pred_args:
-            raise ValueError(f"This model expects a `prompt_template`, please provide one.")
+            raise ValueError("This model expects a `prompt_template`, please provide one.")
         # Back compatibility for old models
         args['provider'] = args.get('provider', get_llm_provider(args))
         args['embedding_model_provider'] = args.get('embedding_model', get_embedding_model_provider(args))
@@ -155,7 +155,7 @@ AI: {response}'''
 
         return pd.DataFrame([resp.content], columns=[assistant_column])
 
-    def create_agent(self, df: pd.DataFrame, args: Dict=None, pred_args: Dict=None) -> AgentExecutor:
+    def create_agent(self, df: pd.DataFrame, args: Dict = None, pred_args: Dict = None) -> AgentExecutor:
         pred_args = pred_args if pred_args else {}
 
         # Set up tools.

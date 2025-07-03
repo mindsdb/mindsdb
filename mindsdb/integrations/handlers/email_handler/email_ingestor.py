@@ -15,6 +15,7 @@ class EmailIngestor:
     Parses emails into a DataFrame.
     Does some preprocessing on the raw HTML to extract meaningful text.
     """
+
     def __init__(self, email_client: EmailClient, search_options: EmailSearchOptions):
         self.email_client = email_client
         self.search_options = search_options
@@ -83,4 +84,3 @@ class EmailIngestor:
             df['datetime'] = pd.to_datetime(df['datetime'], utc=True, format="%a, %d %b %Y %H:%M:%S %z", errors='coerce')
 
         return df
-

@@ -1,5 +1,3 @@
-from typing import List
-
 import pandas as pd
 
 from mindsdb.integrations.libs.api_handler import APITable
@@ -198,4 +196,3 @@ class UsersTable(APITable):
             'active',
             'type',
         ]
-

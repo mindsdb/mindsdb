@@ -1,5 +1,8 @@
 name: Build and deploy to dev
 
+permissions:
+  contents: read
+
 on:
   pull_request_target:
     types: [opened, reopened, synchronize, labeled]
@@ -118,8 +121,8 @@ jobs:
       matrix:
         deploy-env: ${{ fromJson(needs.get-deploy-labels.outputs.deploy-envs) }}
     concurrency:
-      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-tests
-      cancel-in-progress: true
+      group: deploy-${{ matrix.deploy-env }}
+      cancel-in-progress: false
     uses: ./.github/workflows/test_on_deploy.yml
     with:
       git-sha: ${{ github.event.pull_request.head.sha }}

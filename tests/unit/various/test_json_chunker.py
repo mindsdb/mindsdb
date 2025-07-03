@@ -6,10 +6,7 @@ import pandas as pd
 from mindsdb.interfaces.knowledge_base.preprocessing.models import (
     Document,
 )
-from mindsdb.interfaces.knowledge_base.preprocessing.json_chunker import (
-    JSONChunkingConfig,
-    JSONChunkingPreprocessor
-)
+from mindsdb.interfaces.knowledge_base.preprocessing.json_chunker import JSONChunkingConfig, JSONChunkingPreprocessor
 
 
 class TestJSONChunker:
@@ -23,30 +20,20 @@ class TestJSONChunker:
                 "id": 1,
                 "name": "John Doe",
                 "skills": ["Python", "SQL", "Machine Learning"],
-                "contact": {
-                    "email": "john@example.com",
-                    "phone": "123-456-7890"
-                }
+                "contact": {"email": "john@example.com", "phone": "123-456-7890"},
             },
             {
                 "id": 2,
                 "name": "Jane Smith",
                 "skills": ["Java", "C++", "Data Science"],
-                "contact": {
-                    "email": "jane@example.com",
-                    "phone": "987-654-3210"
-                }
-            }
+                "contact": {"email": "jane@example.com", "phone": "987-654-3210"},
+            },
         ]
 
         # Create documents
         documents = []
         for i, item in enumerate(json_data):
-            doc = Document(
-                id=f"doc_{i}",
-                content=json.dumps(item),
-                metadata={"source": "test"}
-            )
+            doc = Document(id=f"doc_{i}", content=json.dumps(item), metadata={"source": "test"})
             documents.append(doc)
 
         # Create preprocessor with default config
@@ -61,8 +48,8 @@ class TestJSONChunker:
         assert "Jane Smith" in chunks[1].content
 
         # Check metadata
-        assert chunks[0].metadata["original_doc_id"] == "doc_0"
-        assert chunks[1].metadata["original_doc_id"] == "doc_1"
+        assert chunks[0].metadata["_original_doc_id"] == "doc_0"
+        assert chunks[1].metadata["_original_doc_id"] == "doc_1"
 
         # Check chunk IDs
         assert chunks[0].id.startswith("doc_0:")
@@ -76,32 +63,16 @@ class TestJSONChunker:
             "name": "John Doe",
             "contact": {
                 "email": "john@example.com",
-                "address": {
-                    "street": "123 Main St",
-                    "city": "Anytown",
-                    "zip": "12345"
-                }
+                "address": {"street": "123 Main St", "city": "Anytown", "zip": "12345"},
             },
             "experience": [
-                {
-                    "company": "ABC Corp",
-                    "position": "Developer",
-                    "years": 3
-                },
-                {
-                    "company": "XYZ Inc",
-                    "position": "Senior Developer",
-                    "years": 2
-                }
-            ]
+                {"company": "ABC Corp", "position": "Developer", "years": 3},
+                {"company": "XYZ Inc", "position": "Senior Developer", "years": 2},
+            ],
         }
 
         # Create document
-        doc = Document(
-            id="doc_1",
-            content=json.dumps(json_data),
-            metadata={"source": "test"}
-        )
+        doc = Document(id="doc_1", content=json.dumps(json_data), metadata={"source": "test"})
 
         # Create preprocessor with flatten_nested=True
         config = JSONChunkingConfig(flatten_nested=True)
@@ -124,8 +95,8 @@ class TestJSONChunker:
 
         # Check results
         assert len(chunks) == 1
-        assert "\"contact\": {" in chunks[0].content
-        assert "\"address\": {" in chunks[0].content
+        assert '"contact": {' in chunks[0].content
+        assert '"address": {' in chunks[0].content
 
     def test_chunk_by_field(self):
         """Test chunking by field instead of object"""
@@ -134,19 +105,12 @@ class TestJSONChunker:
             "id": 1,
             "name": "John Doe",
             "skills": ["Python", "SQL", "Machine Learning"],
-            "contact": {
-                "email": "john@example.com",
-                "phone": "123-456-7890"
-            },
-            "summary": "Experienced software developer with 5+ years of experience"
+            "contact": {"email": "john@example.com", "phone": "123-456-7890"},
+            "summary": "Experienced software developer with 5+ years of experience",
         }
 
         # Create document
-        doc = Document(
-            id="doc_1",
-            content=json.dumps(json_data),
-            metadata={"source": "test"}
-        )
+        doc = Document(id="doc_1", content=json.dumps(json_data), metadata={"source": "test"})
 
         # Create preprocessor with chunk_by_object=False
         config = JSONChunkingConfig(chunk_by_object=False)
@@ -182,19 +146,12 @@ class TestJSONChunker:
             "id": 1,
             "name": "John Doe",
             "skills": ["Python", "SQL", "Machine Learning"],
-            "contact": {
-                "email": "john@example.com",
-                "phone": "123-456-7890"
-            },
-            "summary": "Experienced software developer with 5+ years of experience"
+            "contact": {"email": "john@example.com", "phone": "123-456-7890"},
+            "summary": "Experienced software developer with 5+ years of experience",
         }
 
         # Create document
-        doc = Document(
-            id="doc_1",
-            content=json.dumps(json_data),
-            metadata={"source": "test"}
-        )
+        doc = Document(id="doc_1", content=json.dumps(json_data), metadata={"source": "test"})
 
         # Test exclude_fields
         config = JSONChunkingConfig(exclude_fields=["id", "contact"])
@@ -231,26 +188,16 @@ class TestJSONChunker:
             "payments": 99.51,
             "kwhUsed": 592,
             "balancesByCompany": [
-                {
-                    "previousBalance": 59.39,
-                    "payments": 59.39,
-                    "currentCharges": 52.49,
-                    "amountDue": 52.49
-                },
-                {
-                    "previousBalance": 40.12,
-                    "payments": 40.12,
-                    "currentCharges": 34.28,
-                    "amountDue": 34.28
-                }
-            ]
+                {"previousBalance": 59.39, "payments": 59.39, "currentCharges": 52.49, "amountDue": 52.49},
+                {"previousBalance": 40.12, "payments": 40.12, "currentCharges": 34.28, "amountDue": 34.28},
+            ],
         }
 
         # Create document
         doc = Document(
             id="utility_bill_1",
             content=json.dumps(utility_bill),
-            metadata={"source": "test", "document_type": "utility_bill"}
+            metadata={"source": "test", "document_type": "utility_bill"},
         )
 
         # Test 1: Default chunking (chunk by object, flatten nested)
@@ -291,9 +238,7 @@ class TestJSONChunker:
         assert '"currentCharges": 34.28' in chunks[0].content
 
         # Test 4: Include only specific fields
-        config = JSONChunkingConfig(
-            include_fields=["accountNumber", "dueDate", "amountDue"]
-        )
+        config = JSONChunkingConfig(include_fields=["accountNumber", "dueDate", "amountDue"])
         preprocessor = JSONChunkingPreprocessor(config)
         chunks = preprocessor.process_documents([doc])
 
@@ -307,10 +252,7 @@ class TestJSONChunker:
         assert "balancesByCompany" not in chunks[0].content
 
         # Test 5: Include nested fields
-        config = JSONChunkingConfig(
-            include_fields=["accountNumber", "balancesByCompany"],
-            flatten_nested=False
-        )
+        config = JSONChunkingConfig(include_fields=["accountNumber", "balancesByCompany"], flatten_nested=False)
         preprocessor = JSONChunkingPreprocessor(config)
         chunks = preprocessor.process_documents([doc])
 
@@ -323,9 +265,7 @@ class TestJSONChunker:
         assert "billingPeriod" not in chunks[0].content
 
         # Test 6: Extract metadata fields
-        config = JSONChunkingConfig(
-            metadata_fields=["accountNumber", "dueDate", "amountDue"]
-        )
+        config = JSONChunkingConfig(metadata_fields=["accountNumber", "dueDate", "amountDue"])
         preprocessor = JSONChunkingPreprocessor(config)
         chunks = preprocessor.process_documents([doc])
 
@@ -337,11 +277,7 @@ class TestJSONChunker:
     def test_error_handling(self):
         """Test handling of invalid JSON data"""
         # Create an invalid JSON document
-        doc = Document(
-            id="doc_error",
-            content="This is not valid JSON",
-            metadata={"source": "test"}
-        )
+        doc = Document(id="doc_error", content="This is not valid JSON", metadata={"source": "test"})
 
         # Create preprocessor
         preprocessor = JSONChunkingPreprocessor()
@@ -360,24 +296,15 @@ class TestJSONChunker:
         json_data = {
             "id": 1,
             "name": "John Doe",
-            "contact": {
-                "email": "john@example.com",
-                "phone": "123-456-7890"
-            },
-            "skills": ["Python", "SQL", "Machine Learning"]
+            "contact": {"email": "john@example.com", "phone": "123-456-7890"},
+            "skills": ["Python", "SQL", "Machine Learning"],
         }
 
         # Create document
-        doc = Document(
-            id="doc_1",
-            content=json.dumps(json_data),
-            metadata={"source": "test"}
-        )
+        doc = Document(id="doc_1", content=json.dumps(json_data), metadata={"source": "test"})
 
         # Create preprocessor with metadata_fields
-        config = JSONChunkingConfig(
-            metadata_fields=["name", "contact.email", "skills"]
-        )
+        config = JSONChunkingConfig(metadata_fields=["name", "contact.email", "skills"])
         preprocessor = JSONChunkingPreprocessor(config)
 
         # Process document
@@ -400,18 +327,11 @@ class TestJSONChunker:
             "name": "John Doe",
             "age": 30,
             "is_active": True,
-            "contact": {
-                "email": "john@example.com",
-                "phone": "123-456-7890"
-            }
+            "contact": {"email": "john@example.com", "phone": "123-456-7890"},
         }
 
         # Create document
-        doc = Document(
-            id="doc_1",
-            content=json.dumps(json_data),
-            metadata={"source": "test"}
-        )
+        doc = Document(id="doc_1", content=json.dumps(json_data), metadata={"source": "test"})
 
         # Create preprocessor with extract_all_primitives=True
         config = JSONChunkingConfig(extract_all_primitives=True)
@@ -438,17 +358,10 @@ class TestJSONChunker:
     def test_to_dataframe(self):
         """Test conversion to DataFrame"""
         # Create a simple JSON object
-        json_data = {
-            "id": 1,
-            "name": "John Doe"
-        }
+        json_data = {"id": 1, "name": "John Doe"}
 
         # Create document
-        doc = Document(
-            id="doc_1",
-            content=json.dumps(json_data),
-            metadata={"source": "test"}
-        )
+        doc = Document(id="doc_1", content=json.dumps(json_data), metadata={"source": "test"})
 
         # Create preprocessor
         preprocessor = JSONChunkingPreprocessor()
@@ -474,17 +387,11 @@ class TestJSONChunker:
             "skills": {
                 "soft_skills": None,
                 "human_languages": ["English", "French"],
-                "technical_skills": ["Operations Management", "Strategic Planning"]
+                "technical_skills": ["Operations Management", "Strategic Planning"],
             },
             "summary": "Product Management leader with 13+ years of experience",
-            "metadata": {
-                "user_id": "2024_67eee2750c5f19.58992827",
-                "timestamp": "2025-04-28T13:26:34.474653Z"
-            },
-            "contact_information": {
-                "name": "John Doe",
-                "email": "john@example.com"
-            }
+            "metadata": {"user_id": "2024_67eee2750c5f19.58992827", "timestamp": "2025-04-28T13:26:34.474653Z"},
+            "contact_information": {"name": "John Doe", "email": "john@example.com"},
         }
 
         # Create a document with the CV data
@@ -497,12 +404,12 @@ class TestJSONChunker:
                 "contact_information.name",  # Nested field using dot notation
                 "contact_information.email",
                 "metadata.user_id",
-                "summary"
+                "summary",
             ],
             # Other useful configuration options
             chunk_by_object=True,  # Process the whole object as one chunk
-            flatten_nested=True,   # Flatten nested structures for better text representation
-            extract_all_primitives=False  # Don't extract all primitive values, just the ones specified
+            flatten_nested=True,  # Flatten nested structures for better text representation
+            extract_all_primitives=False,  # Don't extract all primitive values, just the ones specified
         )
 
         # Create the JSON chunker with the config
@@ -524,15 +431,7 @@ class TestJSONChunker:
     def test_extract_all_primitives(self):
         """Test that all primitive values are extracted when extract_all_primitives=True"""
         # Simple JSON data
-        data = {
-            "name": "John Doe",
-            "age": 30,
-            "is_active": True,
-            "nested": {
-                "key1": "value1",
-                "key2": 42
-            }
-        }
+        data = {"name": "John Doe", "age": 30, "is_active": True, "nested": {"key1": "value1", "key2": 42}}
 
         # Create a document
         doc = Document(id="test_primitives", content=json.dumps(data))
@@ -540,8 +439,8 @@ class TestJSONChunker:
         # Configure the JSON chunker to extract all primitive values
         config = JSONChunkingConfig(
             extract_all_primitives=True,  # Extract all primitive values
-            chunk_by_object=True,         # Process the whole object as one chunk
-            flatten_nested=True           # Flatten nested structures
+            chunk_by_object=True,  # Process the whole object as one chunk
+            flatten_nested=True,  # Flatten nested structures
         )
 
         # Create the JSON chunker with the config
@@ -564,15 +463,7 @@ class TestJSONChunker:
     def test_default_metadata_extraction(self):
         """Test that top-level primitive fields are extracted by default when metadata_fields is empty"""
         # Simple JSON data with top-level primitives
-        data = {
-            "name": "John Doe",
-            "age": 30,
-            "is_active": True,
-            "nested": {
-                "key1": "value1",
-                "key2": 42
-            }
-        }
+        data = {"name": "John Doe", "age": 30, "is_active": True, "nested": {"key1": "value1", "key2": 42}}
 
         # Create a document
         doc = Document(id="test_default", content=json.dumps(data))
@@ -581,7 +472,7 @@ class TestJSONChunker:
         config = JSONChunkingConfig(
             # metadata_fields is empty by default
             chunk_by_object=True,  # Process the whole object as one chunk
-            flatten_nested=False   # Don't flatten nested structures
+            flatten_nested=False,  # Don't flatten nested structures
         )
 
         # Create the JSON chunker with the config
@@ -607,19 +498,9 @@ class TestJSONChunker:
         """Test that all primitive fields are extracted when metadata_fields is empty and there are no top-level primitives"""
         # Complex JSON data with no top-level primitives
         data = {
-            "contact_information": {
-                "name": "John Doe",
-                "email": "john@example.com",
-                "phone": "123-456-7890"
-            },
-            "skills": {
-                "technical": ["Python", "SQL", "Machine Learning"],
-                "languages": ["English", "Spanish"]
-            },
-            "metadata": {
-                "user_id": "user123",
-                "timestamp": "2025-05-12T15:50:12+03:00"
-            }
+            "contact_information": {"name": "John Doe", "email": "john@example.com", "phone": "123-456-7890"},
+            "skills": {"technical": ["Python", "SQL", "Machine Learning"], "languages": ["English", "Spanish"]},
+            "metadata": {"user_id": "user123", "timestamp": "2025-05-12T15:50:12+03:00"},
         }
 
         # Create a document
@@ -629,7 +510,7 @@ class TestJSONChunker:
         config = JSONChunkingConfig(
             # metadata_fields is empty by default
             chunk_by_object=True,  # Process the whole object as one chunk
-            flatten_nested=True    # Flatten nested structures
+            flatten_nested=True,  # Flatten nested structures
         )
 
         # Create the JSON chunker with the config

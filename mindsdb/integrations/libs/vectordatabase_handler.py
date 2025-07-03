@@ -2,6 +2,7 @@ import ast
 import hashlib
 from enum import Enum
 from typing import Dict, List, Optional
+import datetime as dt
 
 import pandas as pd
 from mindsdb_sql_parser.ast import (
@@ -130,13 +131,23 @@ class VectorStoreHandler(BaseHandler):
 
         return conditions
 
-    def _convert_metadata_filters(self, conditions):
+    def _convert_metadata_filters(self, conditions, allowed_metadata_columns=None):
         if conditions is None:
             return
         # try to treat conditions that are not in TableField as metadata conditions
         for condition in conditions:
-            if not self._is_condition_allowed(condition):
-                condition.column = TableField.METADATA.value + "." + condition.column
+            if self._is_metadata_condition(condition):
+                # check restriction
+                if allowed_metadata_columns is not None:
+                    # system columns are underscored, skip them
+                    if condition.column.lower() not in allowed_metadata_columns and not condition.column.startswith(
+                        "_"
+                    ):
+                        raise ValueError(f"Column is not found: {condition.column}")
+
+                # convert if required
+                if not condition.column.startswith(TableField.METADATA.value):
+                    condition.column = TableField.METADATA.value + "." + condition.column
 
     def _is_columns_allowed(self, columns: List[str]) -> bool:
         """
@@ -145,16 +156,11 @@ class VectorStoreHandler(BaseHandler):
         allowed_columns = set([col["name"] for col in self.SCHEMA])
         return set(columns).issubset(allowed_columns)
 
-    def _is_condition_allowed(self, condition: FilterCondition) -> bool:
+    def _is_metadata_condition(self, condition: FilterCondition) -> bool:
         allowed_field_values = set([field.value for field in TableField])
         if condition.column in allowed_field_values:
-            return True
-        else:
-            # check if column is a metadata column
-            if condition.column.startswith(TableField.METADATA.value):
-                return True
-            else:
-                return False
+            return False
+        return True
 
     def _dispatch_create_table(self, query: CreateTable):
         """
@@ -265,6 +271,15 @@ class VectorStoreHandler(BaseHandler):
 
         return self.do_upsert(table_name, df)
 
+    def set_metadata_cur_time(self, df, col_name):
+        metadata_col = TableField.METADATA.value
+        cur_date = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        def set_time(meta):
+            meta[col_name] = cur_date
+
+        df[metadata_col].apply(set_time)
+
     def do_upsert(self, table_name, df):
         """Upsert data into table, handling document updates and deletions.
 
@@ -277,6 +292,7 @@ class VectorStoreHandler(BaseHandler):
         2. Updated documents: Delete old chunks and insert new ones
         """
         id_col = TableField.ID.value
+        metadata_col = TableField.METADATA.value
         content_col = TableField.CONTENT.value
 
         def gen_hash(v):
@@ -297,23 +313,37 @@ class VectorStoreHandler(BaseHandler):
         # id is string TODO is it ok?
         df[id_col] = df[id_col].apply(str)
 
+        # set updated_at
+        self.set_metadata_cur_time(df, "_updated_at")
+
         if hasattr(self, "upsert"):
             self.upsert(table_name, df)
             return
 
         # find existing ids
-        res = self.select(
+        df_existed = self.select(
             table_name,
-            columns=[id_col],
+            columns=[id_col, metadata_col],
             conditions=[FilterCondition(column=id_col, op=FilterOperator.IN, value=list(df[id_col]))],
         )
-        existed_ids = list(res[id_col])
+        existed_ids = list(df_existed[id_col])
 
         # update existed
         df_update = df[df[id_col].isin(existed_ids)]
         df_insert = df[~df[id_col].isin(existed_ids)]
 
         if not df_update.empty:
+            # get values of existed `created_at` and return them to metadata
+            created_dates = {row[id_col]: row[metadata_col].get("_created_at") for _, row in df_existed.iterrows()}
+
+            def keep_created_at(row):
+                val = created_dates.get(row[id_col])
+                if val:
+                    row[metadata_col]["_created_at"] = val
+                return row
+
+            df_update.apply(keep_created_at, axis=1)
+
             try:
                 self.update(table_name, df_update, [id_col])
             except NotImplementedError:
@@ -322,6 +352,9 @@ class VectorStoreHandler(BaseHandler):
                 self.delete(table_name, conditions)
                 self.insert(table_name, df_update)
         if not df_insert.empty:
+            # set created_at
+            self.set_metadata_cur_time(df_insert, "_created_at")
+
             self.insert(table_name, df_insert)
 
     def dispatch_delete(self, query: Delete, conditions: List[FilterCondition] = None):
@@ -338,7 +371,9 @@ class VectorStoreHandler(BaseHandler):
         # dispatch delete
         return self.delete(table_name, conditions=conditions)
 
-    def dispatch_select(self, query: Select, conditions: List[FilterCondition] = None):
+    def dispatch_select(
+        self, query: Select, conditions: List[FilterCondition] = None, allowed_metadata_columns: List[str] = None
+    ):
         """
         Dispatch select query to the appropriate method.
         """
@@ -357,7 +392,7 @@ class VectorStoreHandler(BaseHandler):
         if conditions is None:
             where_statement = query.where
             conditions = self.extract_conditions(where_statement)
-        self._convert_metadata_filters(conditions)
+        self._convert_metadata_filters(conditions, allowed_metadata_columns=allowed_metadata_columns)
 
         # get offset and limit
         offset = query.offset.value if query.offset is not None else None

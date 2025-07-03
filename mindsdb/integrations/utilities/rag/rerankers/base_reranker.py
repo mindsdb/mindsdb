@@ -33,7 +33,7 @@ class BaseLLMReranker(BaseModel, ABC):
     client: Optional[AsyncOpenAI | BaseMLEngine] = None
     _semaphore: Optional[asyncio.Semaphore] = None
     max_concurrent_requests: int = 20
-    max_retries: int = 3
+    max_retries: int = 2
     retry_delay: float = 1.0
     request_timeout: float = 20.0  # Timeout for API requests
     early_stop: bool = True  # Whether to enable early stopping
@@ -100,7 +100,7 @@ class BaseLLMReranker(BaseModel, ABC):
             if self.api_key is not None:
                 kwargs["api_key"] = self.api_key
 
-            return await self.client.acompletion(model=f"{self.provider}/{self.model}", messages=messages, args=kwargs)
+            return await self.client.acompletion(self.provider, model=self.model, messages=messages, args=kwargs)
 
     async def _rank(self, query_document_pairs: List[Tuple[str, str]], rerank_callback=None) -> List[Tuple[str, float]]:
         ranked_results = []
@@ -109,47 +109,41 @@ class BaseLLMReranker(BaseModel, ABC):
         batch_size = min(self.max_concurrent_requests * 2, len(query_document_pairs))
         for i in range(0, len(query_document_pairs), batch_size):
             batch = query_document_pairs[i : i + batch_size]
-            try:
-                results = await asyncio.gather(
-                    *[
-                        self._backoff_wrapper(query=query, document=document, rerank_callback=rerank_callback)
-                        for (query, document) in batch
-                    ],
-                    return_exceptions=True,
-                )
 
-                for idx, result in enumerate(results):
-                    if isinstance(result, Exception):
-                        log.error(f"Error processing document {i + idx}: {str(result)}")
-                        ranked_results.append((batch[idx][1], 0.0))
-                        continue
+            results = await asyncio.gather(
+                *[
+                    self._backoff_wrapper(query=query, document=document, rerank_callback=rerank_callback)
+                    for (query, document) in batch
+                ],
+                return_exceptions=True,
+            )
 
-                    score = result["relevance_score"]
+            for idx, result in enumerate(results):
+                if isinstance(result, Exception):
+                    log.error(f"Error processing document {i + idx}: {str(result)}")
+                    raise RuntimeError(f"Error during reranking: {result}")
 
-                    ranked_results.append((batch[idx][1], score))
+                score = result["relevance_score"]
 
-                    # Check if we should stop early
-                    try:
-                        high_scoring_docs = [r for r in ranked_results if r[1] >= self.filtering_threshold]
-                        can_stop_early = (
-                            self.early_stop  # Early stopping is enabled
-                            and self.num_docs_to_keep  # We have a target number of docs
-                            and len(high_scoring_docs) >= self.num_docs_to_keep  # Found enough good docs
-                            and score >= self.early_stop_threshold  # Current doc is good enough
-                        )
+                ranked_results.append((batch[idx][1], score))
 
-                        if can_stop_early:
-                            log.info(
-                                f"Early stopping after finding {self.num_docs_to_keep} documents with high confidence"
-                            )
-                            return ranked_results
-                    except Exception as e:
-                        # Don't let early stopping errors stop the whole process
-                        log.warning(f"Error in early stopping check: {str(e)}")
+                # Check if we should stop early
+                try:
+                    high_scoring_docs = [r for r in ranked_results if r[1] >= self.filtering_threshold]
+                    can_stop_early = (
+                        self.early_stop  # Early stopping is enabled
+                        and self.num_docs_to_keep  # We have a target number of docs
+                        and len(high_scoring_docs) >= self.num_docs_to_keep  # Found enough good docs
+                        and score >= self.early_stop_threshold  # Current doc is good enough
+                    )
 
-            except Exception as e:
-                log.error(f"Batch processing error: {str(e)}")
-                continue
+                    if can_stop_early:
+                        log.info(f"Early stopping after finding {self.num_docs_to_keep} documents with high confidence")
+                        return ranked_results
+                except Exception as e:
+                    # Don't let early stopping errors stop the whole process
+                    log.warning(f"Error in early stopping check: {str(e)}")
+
         return ranked_results
 
     async def _backoff_wrapper(self, query: str, document: str, rerank_callback=None) -> Any:

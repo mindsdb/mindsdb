@@ -1,0 +1,138 @@
+---
+title: Get Knowledge Base
+sidebarTitle: Get Knowledge Base
+---
+
+**GET `/api/projects/{project_name}/knowledge_bases/{knowledge_base_name}`**
+
+This API endpoint lists details about a knowledge base using the `GET` method.
+
+<Tip>
+Learn more about knowledge bases following [this doc page](/mindsdb_sql/knowledge-bases).
+</Tip>
+
+### Path Parameters
+
+<ParamField body='project_name' type='string' required>
+Defines the project where the knowledge bases are located. Note that the default project name is `mindsdb`.
+</ParamField>
+
+<ParamField body='knowledge_base_name' type='string' required>
+Defines the knowledge base name to get its details.
+</ParamField>
+
+### Body
+
+None.
+
+### Response
+
+<ResponseField name="id" type="string" required>  
+Unique identifier for the knowledge base.
+</ResponseField>
+
+<ResponseField name="name" type="string" required>  
+The name assigned to the knowledge base.
+</ResponseField>
+
+<ResponseField name="project_id" type="string" required>  
+The ID of the project where the knowledge base resides.
+</ResponseField>
+
+<ResponseField name="project_name" type="string" required>  
+The name of the project where the knowledge base resides.
+</ResponseField>
+
+<ResponseField name="vector_database" type="string" required>  
+The vector store used for storing vector embeddings.
+</ResponseField>
+
+<ResponseField name="vector_database_table" type="string" required>  
+The name of the collection or table within the vector database.
+</ResponseField>
+
+<ResponseField name="updated_at" type="string" required>  
+Timestamp indicating when the knowledge base was last updated.
+</ResponseField>
+
+<ResponseField name="created_at" type="string" required>  
+Timestamp indicating when the knowledge base was created.
+</ResponseField>
+
+<ResponseField name="query_id" type="string" required="false">  
+Optional field for linking specific queries to this knowledge base.
+</ResponseField>
+
+<ResponseField name="embedding_model" type="string" required="false">  
+The embedding model used to convert content into vector representations.
+</ResponseField>
+
+<ResponseField name="reranking_model" type="string" required="false">  
+Optional model used to rerank search results based on relevance.
+</ResponseField>
+
+<ResponseField name="metadata_columns" type="list" required="false">  
+Optional list of columns used for metadata-based filtering or enrichment.
+</ResponseField>
+
+<ResponseField name="content_columns" type="list" required="false">  
+Optional list of columns treated as the main content for embedding and retrieval.
+</ResponseField>
+
+<ResponseField name="id_column" type="string" required="false">  
+The name of the column that uniquely identifies each content row.
+</ResponseField>
+
+<ResponseField name="params" type="object" required="false">  
+A nested object that contains additional configuration parameters.
+</ResponseField>
+
+<ResponseField name="params.created_embedding_model" type="string" required="false">  
+The name of the embedding model associated with this knowledge base at creation time.
+</ResponseField>
+
+<RequestExample>
+
+```shell Shell
+curl -X GET http://127.0.0.1:47334/api/projects/mindsdb/knowledge_bases/my_kb
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Response
+{
+  "id": 2,
+  "name": "my_kb",
+  "project_id": 1,
+  "vector_database": "my_kb_chromadb",
+  "vector_database_table": "default_collection",
+  "updated_at": "2025-06-26 10:24:06.311655",
+  "created_at": "2025-06-26 10:24:06.311654",
+  "query_id": null,
+  "embedding_model": {
+    "provider": "openai",
+    "model_name": "text-embedding-3-small",
+    "api_key": "******"
+  },
+  "reranking_model": {
+    "provider": "openai",
+    "model_name": "gpt-4o",
+    "api_key": "******"
+  },
+  "metadata_columns": [
+    "product"
+  ],
+  "content_columns": [
+    "notes"
+  ],
+  "id_column": "order_id",
+  "params": {
+    "created_embedding_model": "kb_embedding_my_kb"
+  }
+}
+
+```
+
+</ResponseExample>

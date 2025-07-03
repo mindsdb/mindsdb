@@ -684,10 +684,10 @@ class MetaColumns(Base):
         if self.default_value:
             column_info += f"\n{pad}- Default Value: {self.default_value}"
 
-        if self.meta_column_statistics:
+        stats = self.meta_column_statistics or []
+        if stats and callable(getattr(stats[0], "as_string", None)):
             column_info += f"\n\n{pad}- Column Statistics:"
-            column_info += f"\n{self.meta_column_statistics[0].as_string(indent + 4)}"
-
+            column_info += f"\n{stats[0].as_string(indent + 4)}"
         return column_info
 
 
@@ -708,18 +708,20 @@ class MetaColumnStatistics(Base):
         inner_pad = " " * (indent + 4)
 
         column_statistics = ""
+        most_common_values = self.most_common_values or []
+        most_common_frequencies = self.most_common_frequencies or []
 
-        if any(self.most_common_values) and any(self.most_common_frequencies):
+        if most_common_values and most_common_frequencies:
             column_statistics += f"{pad}- Top 10 Most Common Values and Frequencies:"
-            for i in range(min(10, len(self.most_common_values))):
-                freq = self.most_common_frequencies[i]
+            for i in range(min(10, len(most_common_values))):
+                freq = most_common_frequencies[i]
                 try:
                     percent = float(freq) * 100
                     freq_str = f"{percent:.2f}%"
                 except (ValueError, TypeError):
                     freq_str = str(freq)
 
-                column_statistics += f"\n{inner_pad}- {self.most_common_values[i]}: {freq_str}"
+                column_statistics += f"\n{inner_pad}- {most_common_values[i]}: {freq_str}"
             column_statistics += "\n"
 
         if self.null_percentage:

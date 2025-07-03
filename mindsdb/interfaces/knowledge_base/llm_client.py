@@ -70,9 +70,5 @@ class LLMClient:
             kwargs = params.copy()
             model = kwargs.pop("model_name")
 
-            base_url = params.pop("base_url", None)
-            if base_url is not None:
-                kwargs["api_base"] = base_url
-
-            response = self.client.completion(model=f"{self.provider}/{model}", messages=messages, args=kwargs)
+            response = self.client.completion(self.provider, model=model, messages=messages, args=kwargs)
             return response.choices[0].message.content

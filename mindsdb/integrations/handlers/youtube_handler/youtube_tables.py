@@ -128,9 +128,8 @@ class YoutubeCommentsTable(APITable):
         # else if video_id is provided, define the request body for a top-level comment and insert it
         elif video_id:
             request_body = {
-                'snippet':
-                    {
-                        'topLevelComment': {
+                'snippet': {
+                    'topLevelComment': {
                             'snippet': {
                                 'videoId': video_id,
                                 'textOriginal': text

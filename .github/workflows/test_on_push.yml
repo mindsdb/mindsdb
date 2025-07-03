@@ -1,5 +1,8 @@
 name: Test on Push
 
+permissions:
+    contents: read
+
 on:
   pull_request:
     branches: [main]
@@ -14,9 +17,6 @@ defaults:
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
-
-env:
-  UV_LINK_MODE: "symlink"
 
 jobs:
   # Sets an output var to indicate if all changes are in docs files
@@ -124,13 +124,12 @@ jobs:
         run: |
           # Install dev requirements and build our pip package
           uv pip install -r requirements/requirements-dev.txt
-          uv pip install setuptools==75.8.2
           python setup.py sdist
 
           # Install from the pip package
           # If we install from source, we don't know if the pip package is installable.
           cd dist
-          uv pip install *.tar.gz
+          uv pip install *.tar.gz --prerelease=allow
 
   unit_tests:
     name: Run Unit Tests
@@ -155,7 +154,7 @@ jobs:
         run: |
           uv pip install -r requirements/requirements-test.txt
           # TODO: for now some tests rely on lightwood
-          uv pip install . \
+          uv pip install . --prerelease=allow \
             .[lightwood] \
             .[clickhouse] \
             .[snowflake] \
@@ -171,7 +170,7 @@ jobs:
             .[mysql] \
             .[chromadb]
           uv pip freeze
-          git clone https://github.com/mindsdb/mindsdb_sql_parser.git parser_tests
+          git clone --branch v$(uv pip show mindsdb_sql_parser | grep Version | cut -d ' ' -f 2) https://github.com/mindsdb/mindsdb_sql_parser.git parser_tests
       - name: Install mssql dependencies
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
@@ -191,12 +190,4 @@ jobs:
       - name: Run unit tests
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
-          if [ "$RUNNER_OS" == "Linux" ]; then
-            # We have to run executor tests separately because they do weird things that break everything else
-            env PYTHONPATH=./ pytest -xs tests/unit/executor
-
-            env PYTHONPATH=./:parser_tests/tests pytest -xs tests/unit/render/
-            env PYTHONPATH=./ pytest -xs --ignore=tests/unit/handlers --ignore=tests/unit/executor --ignore=tests/unit/render tests/unit/
-          fi
-          
-          python -m unittest discover -s tests/unit/handlers
+          make unit_tests_slow

@@ -63,11 +63,19 @@ class MCPQueryTool(BaseTool):
         return loop.run_until_complete(self._arun(query))
 
 
+# todo move instantiation to agent controller
 class MCPLangchainAgent(LangchainAgent):
     """Extension of LangchainAgent that delegates to MCP server"""
 
-    def __init__(self, agent: db.Agents, model: dict = None, mcp_host: str = "127.0.0.1", mcp_port: int = 47337):
-        super().__init__(agent, model)
+    def __init__(
+        self,
+        agent: db.Agents,
+        model: dict = None,
+        llm_params: dict = None,
+        mcp_host: str = "127.0.0.1",
+        mcp_port: int = 47337,
+    ):
+        super().__init__(agent, model, llm_params)
         self.mcp_host = mcp_host
         self.mcp_port = mcp_port
         self.exit_stack = AsyncExitStack()
@@ -85,7 +93,7 @@ class MCPLangchainAgent(LangchainAgent):
                 server_params = StdioServerParameters(
                     command="python",
                     args=["-m", "mindsdb", "--api=mcp"],
-                    env={"MCP_HOST": self.mcp_host, "MCP_PORT": str(self.mcp_port)}
+                    env={"MCP_HOST": self.mcp_host, "MCP_PORT": str(self.mcp_port)},
                 )
 
                 logger.info(f"Connecting to MCP server at {self.mcp_host}:{self.mcp_port}")
@@ -99,7 +107,9 @@ class MCPLangchainAgent(LangchainAgent):
 
                 # Test the connection by listing tools
                 tools_response = await self.session.list_tools()
-                logger.info(f"Successfully connected to MCP server. Available tools: {[tool.name for tool in tools_response.tools]}")
+                logger.info(
+                    f"Successfully connected to MCP server. Available tools: {[tool.name for tool in tools_response.tools]}"
+                )
 
             except Exception as e:
                 logger.error(f"Failed to connect to MCP server: {str(e)}")
@@ -141,7 +151,7 @@ class MCPLangchainAgent(LangchainAgent):
         response = super().get_completion(messages, stream)
 
         # Ensure response is a string (not a DataFrame)
-        if hasattr(response, 'to_string'):  # It's a DataFrame
+        if hasattr(response, "to_string"):  # It's a DataFrame
             return response.to_string()
 
         return response
@@ -167,7 +177,7 @@ class LiteLLMAgentWrapper:
         formatted_messages = [
             {
                 "question": msg["content"] if msg["role"] == "user" else "",
-                "answer": msg["content"] if msg["role"] == "assistant" else ""
+                "answer": msg["content"] if msg["role"] == "assistant" else "",
             }
             for msg in messages
         ]
@@ -177,23 +187,16 @@ class LiteLLMAgentWrapper:
 
         # Ensure response is a string
         if not isinstance(response, str):
-            if hasattr(response, 'to_string'):  # It's a DataFrame
+            if hasattr(response, "to_string"):  # It's a DataFrame
                 response = response.to_string()
             else:
                 response = str(response)
 
         # Format response in LiteLLM expected format
         return {
-            "choices": [
-                {
-                    "message": {
-                        "role": "assistant",
-                        "content": response
-                    }
-                }
-            ],
+            "choices": [{"message": {"role": "assistant", "content": response}}],
             "model": self.agent.args["model_name"],
-            "object": "chat.completion"
+            "object": "chat.completion",
         }
 
     async def acompletion_stream(self, messages: List[Dict[str, str]], **kwargs) -> Iterator[Dict[str, Any]]:
@@ -202,7 +205,7 @@ class LiteLLMAgentWrapper:
         formatted_messages = [
             {
                 "question": msg["content"] if msg["role"] == "user" else "",
-                "answer": msg["content"] if msg["role"] == "assistant" else ""
+                "answer": msg["content"] if msg["role"] == "assistant" else "",
             }
             for msg in messages
         ]
@@ -217,7 +220,7 @@ class LiteLLMAgentWrapper:
                     yield {
                         "choices": [{"delta": {"role": "assistant", "content": content}}],
                         "model": model_name,
-                        "object": "chat.completion.chunk"
+                        "object": "chat.completion.chunk",
                     }
                 # Allow async context switch
                 await asyncio.sleep(0)
@@ -230,7 +233,9 @@ class LiteLLMAgentWrapper:
         await self.agent.cleanup()
 
 
-def create_mcp_agent(agent_name: str, project_name: str, mcp_host: str = "127.0.0.1", mcp_port: int = 47337) -> LiteLLMAgentWrapper:
+def create_mcp_agent(
+    agent_name: str, project_name: str, mcp_host: str = "127.0.0.1", mcp_port: int = 47337
+) -> LiteLLMAgentWrapper:
     """Create an MCP agent and wrap it for LiteLLM compatibility"""
     from mindsdb.interfaces.agents.agents_controller import AgentsController
     from mindsdb.interfaces.storage import db
@@ -245,8 +250,11 @@ def create_mcp_agent(agent_name: str, project_name: str, mcp_host: str = "127.0.
     if agent_db is None:
         raise ValueError(f"Agent {agent_name} not found in project {project_name}")
 
-    # Create MCP agent
-    mcp_agent = MCPLangchainAgent(agent_db, mcp_host=mcp_host, mcp_port=mcp_port)
+    # Get merged parameters (defaults + agent params)
+    llm_params = agent_controller.get_agent_llm_params(agent_db.params)
+
+    # Create MCP agent with merged parameters
+    mcp_agent = MCPLangchainAgent(agent_db, llm_params=llm_params, mcp_host=mcp_host, mcp_port=mcp_port)
 
     # Wrap for LiteLLM compatibility
     return LiteLLMAgentWrapper(mcp_agent)

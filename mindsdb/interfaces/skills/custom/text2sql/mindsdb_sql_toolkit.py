@@ -10,25 +10,27 @@ from mindsdb.interfaces.skills.custom.text2sql.mindsdb_sql_tool import MindsDBSQ
 from mindsdb.interfaces.skills.custom.text2sql.mindsdb_kb_tools import (
     KnowledgeBaseListTool,
     KnowledgeBaseInfoTool,
-    KnowledgeBaseQueryTool
+    KnowledgeBaseQueryTool,
 )
 
 
 class MindsDBSQLToolkit(SQLDatabaseToolkit):
+    include_knowledge_base_tools: bool = True
 
-    def get_tools(self, prefix='') -> List[BaseTool]:
-
+    def get_tools(self, prefix="") -> List[BaseTool]:
         current_date_time = datetime.now().strftime("%Y-%m-%d %H:%M")
 
         """Get the tools in the toolkit."""
         list_sql_database_tool = ListSQLDatabaseTool(
-            name=f'sql_db_list_tables{prefix}',
+            name=f"sql_db_list_tables{prefix}",
             db=self.db,
-            description=dedent("""\n
+            description=dedent(
+                """\n
                 Input is an empty string, output is a comma-separated list of tables in the database. Each table name is escaped using backticks.
                 Each table name in the list may be in one of two formats: database_name.`table_name` or database_name.schema_name.`table_name`.
                 Table names in response to the user must be escaped using backticks.
-            """)
+            """
+            ),
         )
 
         info_sql_database_tool_description = (
@@ -45,11 +47,11 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
             "    $START$ table1 table2 table3 $STOP$\n"
         )
         info_sql_database_tool = InfoSQLDatabaseTool(
-            name=f'sql_db_schema{prefix}',
-            db=self.db, description=info_sql_database_tool_description
+            name=f"sql_db_schema{prefix}", db=self.db, description=info_sql_database_tool_description
         )
 
-        query_sql_database_tool_description = dedent(f"""\
+        query_sql_database_tool_description = dedent(
+            f"""\
             Input: A detailed and well-structured SQL query. The query must be enclosed between the symbols $START$ and $STOP$.
             Output: Database result or error message. For errors, rewrite and retry the query. For 'Unknown column' errors, use '{info_sql_database_tool.name}' to check table fields.
             This system is a highly intelligent and reliable PostgreSQL SQL skill designed to work with databases.
@@ -93,11 +95,11 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
                - When asked about yourself or your maker, state that you are a Data-Mind, created by MindsDB to help answer data questions.
                - When asked about your purpose or how you can help, explore the available data sources and then explain that you can answer questions based on the connected data. Provide a few relevant example questions that you could answer for the user about their data.
             Adhere to these guidelines for all queries and responses. Ask for clarification if needed.
-        """)
+        """
+        )
 
         query_sql_database_tool = QuerySQLDataBaseTool(
-            name=f'sql_db_query{prefix}',
-            db=self.db, description=query_sql_database_tool_description
+            name=f"sql_db_query{prefix}", db=self.db, description=query_sql_database_tool_description
         )
 
         mindsdb_sql_parser_tool_description = (
@@ -108,15 +110,24 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
             f"ALWAYS run this tool before executing a query with {query_sql_database_tool.name}. "
         )
         mindsdb_sql_parser_tool = MindsDBSQLParserTool(
-            name=f'mindsdb_sql_parser_tool{prefix}',
-            description=mindsdb_sql_parser_tool_description
+            name=f"mindsdb_sql_parser_tool{prefix}", description=mindsdb_sql_parser_tool_description
         )
+
+        sql_tools = [
+            query_sql_database_tool,
+            info_sql_database_tool,
+            list_sql_database_tool,
+            mindsdb_sql_parser_tool,
+        ]
+        if not self.include_knowledge_base_tools:
+            return sql_tools
 
         # Knowledge base tools
         kb_list_tool = KnowledgeBaseListTool(
-            name=f'kb_list_tool{prefix}',
+            name=f"kb_list_tool{prefix}",
             db=self.db,
-            description=dedent("""\
+            description=dedent(
+                """\
                 Lists all available knowledge bases that can be queried.
                 Input: No input required, just call the tool directly.
                 Output: A table of all available knowledge bases with their names and creation dates.
@@ -125,13 +136,15 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
                 Each knowledge base name is escaped using backticks.
 
                 Example usage: kb_list_tool()
-            """)
+            """
+            ),
         )
 
         kb_info_tool = KnowledgeBaseInfoTool(
-            name=f'kb_info_tool{prefix}',
+            name=f"kb_info_tool{prefix}",
             db=self.db,
-            description=dedent(f"""\
+            description=dedent(
+                f"""\
                 Gets detailed information about specific knowledge bases including their structure and metadata fields.
 
                 Input: A knowledge base name as a simple string.
@@ -143,13 +156,15 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
                 Example usage: kb_info_tool("kb_name")
 
                 Make sure the knowledge base exists by calling {kb_list_tool.name} first.
-            """)
+            """
+            ),
         )
 
         kb_query_tool = KnowledgeBaseQueryTool(
-            name=f'kb_query_tool{prefix}',
+            name=f"kb_query_tool{prefix}",
             db=self.db,
-            description=dedent(f"""\
+            description=dedent(
+                f"""\
                 Queries knowledge bases using SQL syntax to retrieve relevant information.
 
                 Input: A SQL query string that targets a knowledge base.
@@ -192,15 +207,12 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
                 - Always include a semicolon at the end of your SQL query
 
                 For factual questions, use this tool to retrieve information rather than relying on the model's knowledge.
-            """)
+            """
+            ),
         )
 
         # Return standard SQL tools and knowledge base tools
-        return [
-            query_sql_database_tool,
-            info_sql_database_tool,
-            list_sql_database_tool,
-            mindsdb_sql_parser_tool,
+        return sql_tools + [
             kb_list_tool,
             kb_info_tool,
             kb_query_tool,

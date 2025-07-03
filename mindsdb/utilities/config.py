@@ -199,7 +199,8 @@ class Config:
             },
             "cache": {"type": "local"},
             "ml_task_queue": {"type": "local"},
-            "file_upload_domains": [],
+            "url_file_upload": {"enabled": True, "allowed_origins": [], "disallowed_origins": []},
+            "file_upload_domains": [],  # deprecated, use config[url_file_upload][allowed_origins] instead
             "web_crawling_allowed_sites": [],
             "cloud": False,
             "jobs": {"disable": False},
@@ -210,11 +211,15 @@ class Config:
             "default_reranking_model": {},
             "a2a": {
                 "host": "localhost",
-                "port": 10002,
+                "port": 47338,
                 "mindsdb_host": "localhost",
                 "mindsdb_port": 47334,
                 "agent_name": "my_agent",
                 "project_name": "mindsdb",
+                "enabled": False,
+            },
+            "data_catalog": {
+                "enabled": False,
             },
         }
         # endregion
@@ -359,6 +364,8 @@ class Config:
             self._env_config["default_reranking_model"] = {
                 "api_key": os.environ["MINDSDB_DEFAULT_RERANKING_MODEL_API_KEY"]
             }
+        if os.environ.get("MINDSDB_DATA_CATALOG_ENABLED", "").lower() in ("1", "true"):
+            self._env_config["data_catalog"] = {"enabled": True}
 
         # region vars: a2a configuration
         a2a_config = {}
@@ -374,6 +381,13 @@ class Config:
             a2a_config["agent_name"] = os.environ.get("MINDSDB_AGENT_NAME")
         if os.environ.get("MINDSDB_PROJECT_NAME"):
             a2a_config["project_name"] = os.environ.get("MINDSDB_PROJECT_NAME")
+        if os.environ.get("MINDSDB_A2A_ENABLED") is not None:
+            a2a_config["enabled"] = os.environ.get("MINDSDB_A2A_ENABLED").lower() in (
+                "true",
+                "1",
+                "yes",
+                "y",
+            )
 
         if a2a_config:
             self._env_config["a2a"] = a2a_config
@@ -387,11 +401,17 @@ class Config:
             bool: True if config was loaded or updated
         """
 
-        if self.auto_config_mtime != self.auto_config_path.stat().st_mtime:
+        if (
+            self.auto_config_path.is_file()
+            and self.auto_config_path.read_text() != ""
+            and self.auto_config_mtime != self.auto_config_path.stat().st_mtime
+        ):
             try:
                 self._auto_config = json.loads(self.auto_config_path.read_text())
             except json.JSONDecodeError as e:
-                raise ValueError(f"The 'auto' configuration file ({self.auto_config_path}) contains invalid JSON: {e}")
+                raise ValueError(
+                    f"The 'auto' configuration file ({self.auto_config_path}) contains invalid JSON: {e}\nFile content: {self.auto_config_path.read_text()}"
+                )
             self.auto_config_mtime = self.auto_config_path.stat().st_mtime
             return True
         return False
@@ -477,7 +497,7 @@ class Config:
         # Ensure A2A port is never 0, which would prevent the A2A API from starting
         if "a2a" in new_config and isinstance(new_config["a2a"], dict):
             if "port" in new_config["a2a"] and (new_config["a2a"]["port"] == 0 or new_config["a2a"]["port"] is None):
-                new_config["a2a"]["port"] = 10002  # Use the default port value
+                new_config["a2a"]["port"] = 47338  # Use the default port value
 
         # region create dirs
         for key, value in new_config["paths"].items():
@@ -527,6 +547,16 @@ class Config:
             logger.warning(
                 "Env variable 'MINDSDB_DEFAULT_SERVER' is going to be deprecated soon. "
                 "Use 'MINDSDB_HTTP_SERVER_TYPE' instead."
+            )
+
+        file_upload_domains = self._config.get("file_upload_domains")
+        if isinstance(file_upload_domains, list) and len(file_upload_domains) > 0:
+            allowed_origins = self._config["url_file_upload"]["allowed_origins"]
+            if isinstance(allowed_origins, list) and len(allowed_origins) == 0:
+                self._config["url_file_upload"]["allowed_origins"] = file_upload_domains
+            logger.warning(
+                'Config option "file_upload_domains" is deprecated, '
+                'use config["url_file_upload"]["allowed_origins"] instead.'
             )
 
         for env_name in ("MINDSDB_HTTP_SERVER_TYPE", "MINDSDB_DEFAULT_SERVER"):

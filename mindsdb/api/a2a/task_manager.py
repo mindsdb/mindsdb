@@ -1,5 +1,5 @@
 from typing import AsyncIterable
-from .common.types import (
+from mindsdb.api.a2a.common.types import (
     SendTaskRequest,
     TaskSendParams,
     Message,
@@ -16,8 +16,8 @@ from .common.types import (
     SendTaskStreamingResponse,
     InvalidRequestError,
 )
-from .common.server.task_manager import InMemoryTaskManager
-from .agent import MindsDBAgent
+from mindsdb.api.a2a.common.server.task_manager import InMemoryTaskManager
+from mindsdb.api.a2a.agent import MindsDBAgent
 
 from typing import Union
 import logging
@@ -27,7 +27,6 @@ logger = logging.getLogger(__name__)
 
 
 class AgentTaskManager(InMemoryTaskManager):
-
     def __init__(
         self,
         project_name: str,
@@ -46,9 +45,7 @@ class AgentTaskManager(InMemoryTaskManager):
     def _create_agent(self, agent_name: str = None) -> MindsDBAgent:
         """Create a new MindsDBAgent instance for the given agent name."""
         if not agent_name:
-            raise ValueError(
-                "Agent name is required but was not provided in the request"
-            )
+            raise ValueError("Agent name is required but was not provided in the request")
 
         return MindsDBAgent(
             agent_name=agent_name,
@@ -57,9 +54,7 @@ class AgentTaskManager(InMemoryTaskManager):
             port=self.mindsdb_port,
         )
 
-    async def _stream_generator(
-        self, request: SendTaskStreamingRequest
-    ) -> AsyncIterable[SendTaskStreamingResponse]:
+    async def _stream_generator(self, request: SendTaskStreamingRequest) -> AsyncIterable[SendTaskStreamingResponse]:
         task_send_params: TaskSendParams = request.params
         query = self._get_user_query(task_send_params)
         params = self._get_task_params(task_send_params)
@@ -68,7 +63,8 @@ class AgentTaskManager(InMemoryTaskManager):
 
         # Create and store the task first to ensure it exists
         try:
-            await self.upsert_task(task_send_params)
+            task = await self.upsert_task(task_send_params)
+            logger.info(f"Task created/updated with history length: {len(task.history) if task.history else 0}")
         except Exception as e:
             logger.error(f"Error creating task: {str(e)}")
             yield SendTaskStreamingResponse(
@@ -79,10 +75,27 @@ class AgentTaskManager(InMemoryTaskManager):
 
         agent = self._create_agent(agent_name)
 
+        # Get the history from the task
+        history = task.history if task and task.history else []
+        logger.info(f"Using history with length {len(history)} for request")
+
+        # Log the history for debugging
+        logger.info(f"Conversation history for task {task_send_params.id}:")
+        for idx, msg in enumerate(history):
+            # Convert Message object to dict if needed
+            msg_dict = msg.dict() if hasattr(msg, "dict") else msg
+            role = msg_dict.get("role", "unknown")
+            text = ""
+            for part in msg_dict.get("parts", []):
+                if part.get("type") == "text":
+                    text = part.get("text", "")
+                    break
+            logger.info(f"Message {idx + 1} ({role}): {text[:100]}...")
+
         if not streaming:
             # If streaming is disabled, use invoke and return a single response
             try:
-                result = agent.invoke(query, task_send_params.sessionId)
+                result = agent.invoke(query, task_send_params.sessionId, history=history)
 
                 # Use the parts from the agent response if available, or create them
                 if "parts" in result:
@@ -112,9 +125,7 @@ class AgentTaskManager(InMemoryTaskManager):
                 # Yield the artifact update
                 yield SendTaskStreamingResponse(
                     id=request.id,
-                    result=TaskArtifactUpdateEvent(
-                        id=task_send_params.id, artifact=artifact
-                    ),
+                    result=TaskArtifactUpdateEvent(id=task_send_params.id, artifact=artifact),
                 )
 
                 # Yield the final status update
@@ -141,7 +152,7 @@ class AgentTaskManager(InMemoryTaskManager):
             # Track the chunks we've seen to avoid duplicates
             seen_chunks = set()
 
-            async for item in agent.stream(query, task_send_params.sessionId):
+            async for item in agent.stream(query, task_send_params.sessionId, history=history):
                 # Ensure item has the required fields or provide defaults
                 is_task_complete = item.get("is_task_complete", False)
 
@@ -169,9 +180,7 @@ class AgentTaskManager(InMemoryTaskManager):
                             # Include SQL queries
                             tool_input = action.get("tool_input", "")
                             if "$START$" in tool_input and "$STOP$" in tool_input:
-                                sql = tool_input.replace("$START$", "").replace(
-                                    "$STOP$", ""
-                                )
+                                sql = tool_input.replace("$START$", "").replace("$STOP$", "")
                                 parts.append(
                                     {
                                         "type": "text",
@@ -227,17 +236,13 @@ class AgentTaskManager(InMemoryTaskManager):
                             if "metadata" in part:
                                 new_part["metadata"] = part["metadata"]
                             else:
-                                new_part["metadata"] = {
-                                    "thought_type": part.get("type", "text")
-                                }
+                                new_part["metadata"] = {"thought_type": part.get("type", "text")}
 
                             parts.append(new_part)
 
                     # Try to determine the type from parts for the thought dictionary
                     for part in item["parts"]:
-                        if part.get("type") == "text" and part.get(
-                            "text", ""
-                        ).startswith("$START$"):
+                        if part.get("type") == "text" and part.get("text", "").startswith("$START$"):
                             thought_dict["type"] = "sql"
                             thought_dict["query"] = part.get("text")
                         else:
@@ -300,9 +305,7 @@ class AgentTaskManager(InMemoryTaskManager):
                             status=task_status,
                             final=False,
                         )
-                        yield SendTaskStreamingResponse(
-                            id=request.id, result=task_update_event
-                        )
+                        yield SendTaskStreamingResponse(id=request.id, result=task_update_event)
 
                 # If this is the final chunk, send a completion message
                 if is_task_complete:
@@ -311,13 +314,9 @@ class AgentTaskManager(InMemoryTaskManager):
                     task_status = TaskStatus(state=task_state)
                     yield SendTaskStreamingResponse(
                         id=request.id,
-                        result=TaskArtifactUpdateEvent(
-                            id=task_send_params.id, artifact=artifact
-                        ),
+                        result=TaskArtifactUpdateEvent(id=task_send_params.id, artifact=artifact),
                     )
-                    await self._update_store(
-                        task_send_params.id, task_status, [artifact]
-                    )
+                    await self._update_store(task_send_params.id, task_status, [artifact])
                     yield SendTaskStreamingResponse(
                         id=request.id,
                         result=TaskStatusUpdateEvent(
@@ -338,9 +337,7 @@ class AgentTaskManager(InMemoryTaskManager):
             artifact = Artifact(parts=parts, index=0, append=False)
             yield SendTaskStreamingResponse(
                 id=request.id,
-                result=TaskArtifactUpdateEvent(
-                    id=task_send_params.id, artifact=artifact
-                ),
+                result=TaskArtifactUpdateEvent(id=task_send_params.id, artifact=artifact),
             )
 
             # Then mark the task as completed with an error
@@ -377,13 +374,26 @@ class AgentTaskManager(InMemoryTaskManager):
                 message = task_send_params.message
                 message_dict = message.dict() if hasattr(message, "dict") else message
 
+                # Get history from request if available
+                history = []
+                if hasattr(task_send_params, "history") and task_send_params.history:
+                    # Convert each history item to dict if needed and ensure proper role
+                    for item in task_send_params.history:
+                        item_dict = item.dict() if hasattr(item, "dict") else item
+                        # Ensure the role is properly set
+                        if "role" not in item_dict:
+                            item_dict["role"] = "assistant" if "answer" in item_dict else "user"
+                        history.append(item_dict)
+
+                # Add current message to history
+                history.append(message_dict)
+
                 # Create a new task
                 task = Task(
                     id=task_send_params.id,
                     sessionId=task_send_params.sessionId,
-                    messages=[message_dict],
                     status=TaskStatus(state=TaskState.SUBMITTED),
-                    history=[message_dict],
+                    history=history,
                     artifacts=[],
                 )
                 self.tasks[task_send_params.id] = task
@@ -393,6 +403,22 @@ class AgentTaskManager(InMemoryTaskManager):
                 message_dict = message.dict() if hasattr(message, "dict") else message
 
                 # Update the existing task
+                if task.history is None:
+                    task.history = []
+
+                # If we have new history from the request, use it
+                if hasattr(task_send_params, "history") and task_send_params.history:
+                    # Convert each history item to dict if needed and ensure proper role
+                    history = []
+                    for item in task_send_params.history:
+                        item_dict = item.dict() if hasattr(item, "dict") else item
+                        # Ensure the role is properly set
+                        if "role" not in item_dict:
+                            item_dict["role"] = "assistant" if "answer" in item_dict else "user"
+                        history.append(item_dict)
+                    task.history = history
+
+                # Add current message to history
                 task.history.append(message_dict)
             return task
 
@@ -415,10 +441,7 @@ class AgentTaskManager(InMemoryTaskManager):
             )
 
         # Check if the message has metadata
-        if (
-            not hasattr(request.params.message, "metadata")
-            or not request.params.message.metadata
-        ):
+        if not hasattr(request.params.message, "metadata") or not request.params.message.metadata:
             return JSONRPCResponse(
                 id=request.id,
                 error=InvalidRequestError(message="Missing metadata in message"),
@@ -462,14 +485,10 @@ class AgentTaskManager(InMemoryTaskManager):
             logger.error(f"Error in on_send_task_subscribe: {str(e)}")
             yield SendTaskStreamingResponse(
                 id=request.id,
-                error=InternalError(
-                    message=f"Error processing streaming request: {str(e)}"
-                ),
+                error=InternalError(message=f"Error processing streaming request: {str(e)}"),
             )
 
-    async def _update_store(
-        self, task_id: str, status: TaskStatus, artifacts: list[Artifact]
-    ) -> Task:
+    async def _update_store(self, task_id: str, status: TaskStatus, artifacts: list[Artifact]) -> Task:
         async with self.lock:
             try:
                 task = self.tasks[task_id]
@@ -487,6 +506,17 @@ class AgentTaskManager(InMemoryTaskManager):
                 self.tasks[task_id] = task
 
             task.status = status
+
+            # Store assistant's response in history if we have a message
+            if status.message and status.message.role == "agent":
+                if task.history is None:
+                    task.history = []
+                # Convert message to dict if needed
+                message_dict = status.message.dict() if hasattr(status.message, "dict") else status.message
+                # Ensure role is set to assistant
+                message_dict["role"] = "assistant"
+                task.history.append(message_dict)
+
             if artifacts is not None:
                 for artifact in artifacts:
                     if artifact.append and len(task.artifacts) > 0:
@@ -533,20 +563,22 @@ class AgentTaskManager(InMemoryTaskManager):
         agent = self._create_agent(agent_name)
 
         try:
+            # Get the history from the task
+            task = self.tasks.get(task_send_params.id)
+            history = task.history if task and task.history else []
+
             # Always use streaming internally, but handle the response differently based on the streaming parameter
             all_parts = []
             final_metadata = {}
 
             # Create a streaming generator
-            stream_gen = agent.stream(query, task_send_params.sessionId)
+            stream_gen = agent.stream(query, task_send_params.sessionId, history=history)
 
             if streaming:
                 # For streaming mode, we'll use the streaming endpoint instead
                 # Just create a minimal response to acknowledge the request
                 task_state = TaskState.WORKING
-                task = await self._update_store(
-                    task_send_params.id, TaskStatus(state=task_state), []
-                )
+                task = await self._update_store(task_send_params.id, TaskStatus(state=task_state), [])
                 return SendTaskResponse(id=request.id, result=task)
             else:
                 # For non-streaming mode, collect all chunks into a single response
@@ -571,9 +603,7 @@ class AgentTaskManager(InMemoryTaskManager):
                     task_send_params.id,
                     TaskStatus(
                         state=task_state,
-                        message=Message(
-                            role="agent", parts=all_parts, metadata=final_metadata
-                        ),
+                        message=Message(role="agent", parts=all_parts, metadata=final_metadata),
                     ),
                     [Artifact(parts=all_parts)],
                 )
@@ -586,9 +616,7 @@ class AgentTaskManager(InMemoryTaskManager):
             task_state = TaskState.FAILED
             task = await self._update_store(
                 task_send_params.id,
-                TaskStatus(
-                    state=task_state, message=Message(role="agent", parts=parts)
-                ),
+                TaskStatus(state=task_state, message=Message(role="agent", parts=parts)),
                 [Artifact(parts=parts)],
             )
             return SendTaskResponse(id=request.id, result=task)

@@ -2,29 +2,22 @@ from collections import defaultdict
 
 import pandas as pd
 
-from mindsdb_sql_parser.ast import (
-    Identifier, Select, Star, Constant, Parameter, Function, Variable, BinaryOperation
-)
+from mindsdb_sql_parser.ast import Identifier, Select, Star, Constant, Parameter, Function, Variable, BinaryOperation
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import SERVER_VARIABLES
-
 from mindsdb.api.executor.planner.step_result import Result
 from mindsdb.api.executor.planner.steps import SubSelectStep, QueryStep
-from mindsdb.integrations.utilities.query_traversal import query_traversal
-
 from mindsdb.api.executor.sql_query.result_set import ResultSet, Column
 from mindsdb.api.executor.utilities.sql import query_df
-
-from mindsdb.interfaces.query_context.context_controller import query_context_controller
-
 from mindsdb.api.executor.exceptions import KeyColumnDoesNotExist
+from mindsdb.integrations.utilities.query_traversal import query_traversal
+from mindsdb.interfaces.query_context.context_controller import query_context_controller
 
 from .base import BaseStepCall
 from .fetch_dataframe import get_fill_param_fnc
 
 
 class SubSelectStepCall(BaseStepCall):
-
     bind = SubSelectStep
 
     def call(self, step):
@@ -32,12 +25,12 @@ class SubSelectStepCall(BaseStepCall):
 
         table_name = step.table_name
         if table_name is None:
-            table_name = 'df_table'
+            table_name = "df_table"
         else:
             table_name = table_name
 
         query = step.query
-        query.from_table = Identifier('df_table')
+        query.from_table = Identifier("df_table")
 
         if step.add_absent_cols and isinstance(query, Select):
             query_cols = set()
@@ -64,6 +57,7 @@ class SubSelectStepCall(BaseStepCall):
                 if isinstance(node, Parameter) and isinstance(node.value, Result):
                     prev_result = self.steps_data[node.value.step_num]
                     return Constant(prev_result.get_column_values(col_idx=0)[0])
+
             query_traversal(query, inject_values)
 
         df = result.to_df()
@@ -76,7 +70,6 @@ class SubSelectStepCall(BaseStepCall):
 
 
 class QueryStepCall(BaseStepCall):
-
     bind = QueryStep
 
     def call(self, step: QueryStep):
@@ -103,6 +96,15 @@ class QueryStepCall(BaseStepCall):
             if col.table_name != col.table_alias:
                 tbl_idx[col.table_alias].append(name)
 
+        lower_col_idx = {}
+        for key, value in col_idx.items():
+            if isinstance(key, int):
+                key = str(key)
+            if isinstance(key, str):
+                lower_col_idx[key.lower()] = value
+                continue
+            lower_col_idx[tuple(str(x).lower() for x in key)] = value
+
         # get aliases of first level
         aliases = []
         for col in query.targets:
@@ -120,7 +122,8 @@ class QueryStepCall(BaseStepCall):
                     "user": self.session.username,
                     "version": "8.0.17",
                     "current_schema": "public",
-                    "connection_id": self.context.get('connection_id')
+                    "schema": "public",
+                    "connection_id": self.context.get("connection_id"),
                 }
                 if function_name in functions_results:
                     return Constant(functions_results[function_name], alias=Identifier(parts=[function_name]))
@@ -144,14 +147,11 @@ class QueryStepCall(BaseStepCall):
                     else:
                         # replace with all columns from table
                         table_name = node.parts[-2]
-                        return [
-                            Identifier(parts=[col])
-                            for col in tbl_idx.get(table_name, [])
-                        ]
+                        return [Identifier(parts=[col]) for col in tbl_idx.get(table_name, [])]
 
                 if node.parts[-1].lower() == "session_user":
                     return Constant(self.session.username, alias=node)
-                if node.parts[-1].lower() == '$$':
+                if node.parts[-1].lower() == "$$":
                     # NOTE: sinve version 9.0 mysql client sends query 'select $$'.
                     # Connection can be continued only if answer is parse error.
                     raise ValueError(
@@ -159,23 +159,31 @@ class QueryStepCall(BaseStepCall):
                         "version for the right syntax to use near '$$' at line 1"
                     )
 
-                if len(node.parts) == 1:
-                    key = col_name
-                    if key in aliases:
-                        # key is defined as alias
-                        return
-                else:
-                    table_name = node.parts[-2]
-                    key = (table_name, col_name)
+                match node.parts, node.is_quoted:
+                    case [column_name], [column_quoted]:
+                        if column_name in aliases:
+                            # key is defined as alias
+                            return
 
-                if key not in col_idx:
-                    if len(node.parts) == 1:
-                        # it can be local alias of a query
-                        return
+                        key = column_name if column_quoted else column_name.lower()
 
-                    raise KeyColumnDoesNotExist(f'Table not found for column: {key}')
+                        if key not in col_idx and key not in lower_col_idx:
+                            # it can be local alias of a query, like:
+                            # SELECT t1.a + t2.a col1, min(t1.a) c
+                            # FROM dummy_data.tbl1 as t1
+                            # JOIN pg.tbl2 as t2 on t1.c=t2.c
+                            # group by col1
+                            # order by c -- <--- "с" is alias
+                            return
+                    case [*_, table_name, column_name], [*_, column_quoted]:
+                        key = (table_name, column_name) if column_quoted else (table_name.lower(), column_name.lower())
 
-                new_name = col_idx[key]
+                search_idx = col_idx if column_quoted else lower_col_idx
+
+                if key not in search_idx:
+                    raise KeyColumnDoesNotExist(f"Table not found for column: {key}")
+
+                new_name = search_idx[key]
                 return Identifier(parts=[new_name], alias=node.alias)
 
         # fill params
@@ -196,14 +204,14 @@ class QueryStepCall(BaseStepCall):
                             if key not in col_idx:
                                 # exclude
                                 node.args = [Constant(0), Constant(0)]
-                                node.op = '='
+                                node.op = "="
 
             query_traversal(query.where, remove_not_used_conditions)
 
         query_traversal(query, check_fields)
         query.where = query_context_controller.remove_lasts(query.where)
 
-        query.from_table = Identifier('df_table')
+        query.from_table = Identifier("df_table")
         res = query_df(df, query, session=self.session)
 
         return ResultSet.from_df_cols(df=res, columns_dict=col_names, strict=False)

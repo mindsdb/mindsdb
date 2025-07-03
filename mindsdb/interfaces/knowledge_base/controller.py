@@ -975,7 +975,7 @@ class KnowledgeBaseController:
             msg = "\n".join(problems)
             if len(problems) > 1:
                 msg = "\n" + msg
-            raise ValueError(f"Problem with knowledge base params: {msg}")
+            raise ValueError(f"Problem with knowledge base parameters: {msg}")
 
         # Validate preprocessing config first if provided
         if preprocessing_config is not None:

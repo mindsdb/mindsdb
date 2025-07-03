@@ -66,7 +66,7 @@ class YoutubeCommentsTable(APITable):
         select_statement_executor = SELECTQueryExecutor(
             comments_df,
             selected_columns,
-            [where_condition for where_condition in where_conditions if where_condition[1] not in ["video_id", "channel_id"]],
+            [where_condition for where_condition in where_conditions if where_condition[1] not in ['video_id', 'channel_id']],
             order_by_conditions,
             result_limit if query.limit else None
         )
@@ -114,33 +114,33 @@ class YoutubeCommentsTable(APITable):
         # if comment_id is provided, define the request body for a reply and insert it
         if comment_id:
             request_body = {
-                "snippet": {
-                    "parentId": comment_id,
-                    "textOriginal": text
+                'snippet': {
+                    'parentId': comment_id,
+                    'textOriginal': text
                     }
                 }
 
             self.handler.connect().comments().insert(
-                part="snippet",
+                part='snippet',
                 body=request_body
             ).execute()
 
         # else if video_id is provided, define the request body for a top-level comment and insert it
         elif video_id:
             request_body = {
-                "snippet":
+                'snippet':
                     {
-                        "topLevelComment": {
-                            "snippet": {
-                                "videoId": video_id,
-                                "textOriginal": text
+                        'topLevelComment': {
+                            'snippet': {
+                                'videoId': video_id,
+                                'textOriginal': text
                                 }
                             }
                         }
                     }
 
             self.handler.connect().commentThreads().insert(
-                part="snippet",
+                part='snippet',
                 body=request_body
             ).execute()
 
@@ -151,7 +151,7 @@ class YoutubeCommentsTable(APITable):
         List[str]
             List of columns
         """
-        return ['comment_id','channel_id','video_id','user_id','display_name','comment','published_at','updated_at','reply_user_id','reply_author','reply']
+        return ['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment', 'published_at', 'updated_at', 'reply_user_id', 'reply_author', 'reply']
 
     def get_comments(self, video_id: str, channel_id: str):
         """Pulls all the records from the given youtube api end point and returns it select()
@@ -223,7 +223,7 @@ class YoutubeCommentsTable(APITable):
             else:
                 break
 
-        youtube_comments_df = pd.json_normalize(data, 'replies', ['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment', 'published_at', 'updated_at'], record_prefix="replies.")
+        youtube_comments_df = pd.json_normalize(data, 'replies', ['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment', 'published_at', 'updated_at'], record_prefix='replies.')
         youtube_comments_df = youtube_comments_df.rename(columns={'replies.user_id': 'reply_user_id', 'replies.reply_author': 'reply_author', 'replies.reply': 'reply'})
 
         # check if DataFrame is empty
@@ -439,12 +439,8 @@ class YoutubeVideosTable(APITable):
         # loop over 50 video ids at a time
         # an invalid request error is caused otherwise
         for i in range(0, len(video_ids), 50):
-            resource = (
-                self.handler.connect()
-                .videos()
-                .list(part="statistics,snippet,contentDetails", id=",".join(video_ids[i : i + 50]))
-                .execute()
-            )
+            resource = self.handler.connect().videos().list(part="statistics,snippet,contentDetails", id=",".join(video_ids[i : i + 50])).execute()
+
             for item in resource["items"]:
                 data.append(
                     {

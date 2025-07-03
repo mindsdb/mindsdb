@@ -253,10 +253,10 @@ Note that if you define `default_embedding_model` in the configuration file, you
 The embedding model specification includes:
 
 * `provider`
-It is a required parameter. It defines the model provider. Currently, the supported providers include OpenAI (`openai`) and OpenAI via Azure (`azure_openai`).
+It is a required parameter. It defines the model provider.
 
 * `model_name`
-It is a required parameter. It defines the embedding model name as specified by the provider. Users can choose one of the [OpenAI embedding models](https://platform.openai.com/docs/guides/embeddings/embedding-models#embedding-models).
+It is a required parameter. It defines the embedding model name as specified by the provider.
 
 * `api_key`
 The API key is required to access the embedding model assigned to a knowledge base. Users can provide it either in this `api_key` parameter, or in the `OPENAI_API_KEY` environment variable for `"provider": "openai"` and `AZURE_OPENAI_API_KEY` environment variable for `"provider": "azure_openai"`.

@@ -78,8 +78,7 @@ def learn_process(data_integration_ref: dict, problem_definition: dict, fetch_da
                     query_ast = parse_sql(fetch_data_query)
                     sqlquery = SQLQuery(query_ast, session=sql_session)
 
-                result = sqlquery.fetch(view='dataframe')
-                training_data_df = result['result']
+                training_data_df = sqlquery.fetched_data.to_df()
 
             training_data_columns_count, training_data_rows_count = 0, 0
             if training_data_df is not None:

@@ -56,9 +56,10 @@ ENV UV_LINK_MODE=copy \
 
 # Install all requirements for mindsdb and all the default handlers
 # Installs everything into a venv in /mindsdb so that everything is isolated
+# TODO: Remove --prerelease=allow once writer release new version
 RUN --mount=type=cache,target=/root/.cache \
     uv venv /venv \
-    && uv pip install pip "."
+    && uv pip install pip "." --prerelease=allow
 
 
 
@@ -87,7 +88,10 @@ EXPOSE 47334/tcp
 EXPOSE 47335/tcp
 EXPOSE 47336/tcp
 # Expose MCP port
-EXPOSE 47337/tcp  
+EXPOSE 47337/tcp
+# Expose A2A port
+EXPOSE 47338/tcp
+
 
 
 
@@ -115,7 +119,7 @@ RUN --mount=type=cache,target=/root/.cache uv pip install -r requirements/requir
 
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
-ENTRYPOINT [ "bash", "-c", "watchfiles --filter python 'python -Im mindsdb --config=/root/mindsdb_config.json --api=http'" ]
+ENTRYPOINT [ "bash", "-c", "watchfiles --filter python 'python -Im mindsdb --config=/root/mindsdb_config.json --api=http,a2a,mcp' mindsdb" ]
 
 
 
@@ -123,4 +127,4 @@ ENTRYPOINT [ "bash", "-c", "watchfiles --filter python 'python -Im mindsdb --con
 # Make sure the regular image is the default
 FROM extras
 
-ENTRYPOINT [ "bash", "-c", "python -Im mindsdb --config=/root/mindsdb_config.json --api=http" ]
+ENTRYPOINT [ "bash", "-c", "python -Im mindsdb --config=/root/mindsdb_config.json --api=http,a2a,mcp" ]

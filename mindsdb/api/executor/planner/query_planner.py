@@ -4,41 +4,72 @@ import pandas as pd
 
 from mindsdb_sql_parser import ast
 from mindsdb_sql_parser.ast import (
-    Select, Identifier, Join, Star, BinaryOperation, Constant, Union, CreateTable,
-    Function, Insert, Except, Intersect, Update, NativeQuery, Parameter, Delete
+    Select,
+    Identifier,
+    Join,
+    Star,
+    BinaryOperation,
+    Constant,
+    Union,
+    CreateTable,
+    Function,
+    Insert,
+    Except,
+    Intersect,
+    Update,
+    NativeQuery,
+    Parameter,
+    Delete,
 )
 
 from mindsdb.api.executor.planner.exceptions import PlanningException
 from mindsdb.api.executor.planner import utils
 from mindsdb.api.executor.planner.query_plan import QueryPlan
 from mindsdb.api.executor.planner.steps import (
-    FetchDataframeStep, ProjectStep, ApplyPredictorStep,
-    ApplyPredictorRowStep, UnionStep, GetPredictorColumns, SaveToTable,
-    InsertToTable, UpdateToTable, SubSelectStep, QueryStep,
-    DeleteStep, DataStep, CreateTableStep
+    PlanStep,
+    FetchDataframeStep,
+    ProjectStep,
+    ApplyPredictorStep,
+    ApplyPredictorRowStep,
+    UnionStep,
+    GetPredictorColumns,
+    SaveToTable,
+    InsertToTable,
+    UpdateToTable,
+    SubSelectStep,
+    QueryStep,
+    JoinStep,
+    DeleteStep,
+    DataStep,
+    CreateTableStep,
+    FetchDataframeStepPartition,
 )
 from mindsdb.api.executor.planner.utils import (
     disambiguate_predictor_column_identifier,
-    get_deepest_select,
     recursively_extract_column_values,
-    query_traversal, filters_to_bin_op
+    query_traversal,
+    filters_to_bin_op,
 )
 from mindsdb.api.executor.planner.plan_join import PlanJoin
 from mindsdb.api.executor.planner.query_prepare import PreparedStatementPlanner
 from mindsdb.utilities.config import config
 
 
-default_project = config.get('default_project')
+default_project = config.get("default_project")
+
+# This includes built-in MindsDB SQL functions and functions to be executed via DuckDB consistently.
+MINDSDB_SQL_FUNCTIONS = {"llm", "to_markdown", "hash"}
 
 
 class QueryPlanner:
-
-    def __init__(self,
-                 query=None,
-                 integrations: list = None,
-                 predictor_namespace=None,
-                 predictor_metadata: list = None,
-                 default_namespace: str = None):
+    def __init__(
+        self,
+        query=None,
+        integrations: list = None,
+        predictor_namespace=None,
+        predictor_metadata: list = None,
+        default_namespace: str = None,
+    ):
         self.query = query
         self.plan = QueryPlan()
 
@@ -47,14 +78,14 @@ class QueryPlanner:
         if integrations is not None:
             for integration in integrations:
                 if isinstance(integration, dict):
-                    integration_name = integration['name'].lower()
+                    integration_name = integration["name"].lower()
                     # it is project of system database
-                    if integration['type'] != 'data':
+                    if integration["type"] != "data":
                         _projects.add(integration_name)
                         continue
                 else:
                     integration_name = integration.lower()
-                    integration = {'name': integration}
+                    integration = {"name": integration}
                 self.integrations[integration_name] = integration
 
         # allow to select from mindsdb namespace
@@ -71,24 +102,24 @@ class QueryPlanner:
         if isinstance(predictor_metadata, list):
             # convert to dict
             for predictor in predictor_metadata:
-                if 'integration_name' in predictor:
-                    integration_name = predictor['integration_name']
+                if "integration_name" in predictor:
+                    integration_name = predictor["integration_name"]
                 else:
                     integration_name = self.predictor_namespace
-                    predictor['integration_name'] = integration_name
-                idx = f'{integration_name}.{predictor["name"]}'.lower()
+                    predictor["integration_name"] = integration_name
+                idx = f"{integration_name}.{predictor['name']}".lower()
                 self.predictor_info[idx] = predictor
                 _projects.add(integration_name.lower())
         elif isinstance(predictor_metadata, dict):
             # legacy behaviour
             for name, predictor in predictor_metadata.items():
-                if '.' not in name:
-                    if 'integration_name' in predictor:
-                        integration_name = predictor['integration_name']
+                if "." not in name:
+                    if "integration_name" in predictor:
+                        integration_name = predictor["integration_name"]
                     else:
                         integration_name = self.predictor_namespace
-                        predictor['integration_name'] = integration_name
-                    name = f'{integration_name}.{name}'.lower()
+                        predictor["integration_name"] = integration_name
+                    name = f"{integration_name}.{name}".lower()
                     _projects.add(integration_name.lower())
 
                 self.predictor_info[name] = predictor
@@ -127,11 +158,11 @@ class QueryPlanner:
         if namespace is not None:
             idx_ar.insert(0, namespace)
 
-        idx = '.'.join(idx_ar).lower()
+        idx = ".".join(idx_ar).lower()
         info = self.predictor_info.get(idx)
         if info is not None:
-            info['version'] = version
-            info['name'] = name
+            info["version"] = version
+            info["name"] = name
         return info
 
     def prepare_integration_select(self, database, query):
@@ -147,7 +178,7 @@ class QueryPlanner:
             if len(node.parts) > 1 and node.parts[0].lower() == database:
                 node.parts.pop(0)
 
-            if not hasattr(parent_query, 'from_table'):
+            if not hasattr(parent_query, "from_table"):
                 return
 
             table = parent_query.from_table
@@ -166,7 +197,11 @@ class QueryPlanner:
 
         query_traversal(query, _prepare_integration_select)
 
-    def get_integration_select_step(self, select):
+    def get_integration_select_step(self, select: Select, params: dict = None) -> PlanStep:
+        """
+        Generate planner step to execute query over integration or over results of previous step (if it is CTE)
+        """
+
         if isinstance(select.from_table, NativeQuery):
             integration_name = select.from_table.integration.parts[-1]
         else:
@@ -187,13 +222,28 @@ class QueryPlanner:
         # remove predictor params
         if fetch_df_select.using is not None:
             fetch_df_select.using = None
+        fetch_params = self.get_fetch_params(params)
+        return FetchDataframeStep(integration=integration_name, query=fetch_df_select, params=fetch_params)
 
-        return FetchDataframeStep(integration=integration_name, query=fetch_df_select)
+    def get_fetch_params(self, params):
+        # extracts parameters for fetching
+
+        if params:
+            fetch_params = params.copy()
+            # remove partition parameters
+            for key in ("batch_size", "track_column"):
+                if key in params:
+                    del params[key]
+            if "track_column" in fetch_params and isinstance(fetch_params["track_column"], Identifier):
+                fetch_params["track_column"] = fetch_params["track_column"].parts[-1]
+        else:
+            fetch_params = None
+        return fetch_params
 
     def plan_integration_select(self, select):
         """Plan for a select query that can be fully executed in an integration"""
 
-        return self.plan.add_step(self.get_integration_select_step(select))
+        return self.plan.add_step(self.get_integration_select_step(select, params=select.using))
 
     def resolve_database_table(self, node: Identifier):
         # resolves integration name and table name
@@ -205,12 +255,18 @@ class QueryPlanner:
 
         database = self.default_namespace
 
+        err_msg_suffix = ""
         if len(parts) > 1:
             if parts[0].lower() in self.databases:
                 database = parts.pop(0).lower()
+            else:
+                err_msg_suffix = f"'{parts[0].lower()}' is not valid database name."
 
         if database is None:
-            raise PlanningException(f'Integration not found for: {node}')
+            raise PlanningException(
+                f"Invalid or missing database name for identifier '{node}'. {err_msg_suffix}\n"
+                "Query must include a valid database name prefix in format: 'database_name.table_name' or 'database_name.schema_name.table_name'"
+            )
 
         return database, Identifier(parts=parts, alias=alias)
 
@@ -224,7 +280,7 @@ class QueryPlanner:
 
         def find_objects(node, is_table, **kwargs):
             if isinstance(node, Function):
-                if node.namespace is not None or node.op.lower() in ('llm',):
+                if node.namespace is not None or node.op.lower() in MINDSDB_SQL_FUNCTIONS:
                     user_functions.append(node)
 
             if is_table:
@@ -247,21 +303,14 @@ class QueryPlanner:
 
         # cte names are not mdb objects
         if isinstance(query, Select) and query.cte:
-            cte_names = [
-                cte.name.parts[-1]
-                for cte in query.cte
-            ]
-            mdb_entities = [
-                item
-                for item in mdb_entities
-                if '.'.join(item.parts) not in cte_names
-            ]
+            cte_names = [cte.name.parts[-1] for cte in query.cte]
+            mdb_entities = [item for item in mdb_entities if ".".join(item.parts) not in cte_names]
 
         return {
-            'mdb_entities': mdb_entities,
-            'integrations': integrations,
-            'predictors': predictors,
-            'user_functions': user_functions
+            "mdb_entities": mdb_entities,
+            "integrations": integrations,
+            "predictors": predictors,
+            "user_functions": user_functions,
         }
 
     def get_nested_selects_plan_fnc(self, main_integration, force=False):
@@ -270,9 +319,9 @@ class QueryPlanner:
             if isinstance(node, Select):
                 query_info2 = self.get_query_info(node)
                 if force or (
-                        len(query_info2['integrations']) > 1
-                        or main_integration not in query_info2['integrations']
-                        or len(query_info2['mdb_entities']) > 0
+                    len(query_info2["integrations"]) > 1
+                    or main_integration not in query_info2["integrations"]
+                    or len(query_info2["mdb_entities"]) > 0
                 ):
                     # need to execute in planner
 
@@ -304,7 +353,7 @@ class QueryPlanner:
 
         # find subselects
         main_integration, _ = self.resolve_database_table(query.from_table)
-        is_api_db = self.integrations.get(main_integration, {}).get('class_type') == 'api'
+        is_api_db = self.integrations.get(main_integration, {}).get("class_type") == "api"
 
         find_selects = self.get_nested_selects_plan_fnc(main_integration, force=is_api_db)
         query.targets = query_traversal(query.targets, find_selects)
@@ -313,12 +362,12 @@ class QueryPlanner:
         # get info of updated query
         query_info = self.get_query_info(query)
 
-        if len(query_info['predictors']) >= 1:
+        if len(query_info["predictors"]) >= 1:
             # select from predictor
             return self.plan_select_from_predictor(query)
         elif is_api_db:
             return self.plan_api_db_select(query)
-        elif len(query_info['user_functions']) > 0:
+        elif len(query_info["user_functions"]) > 0:
             return self.plan_integration_select_with_functions(query)
         else:
             # fallback to integration
@@ -350,7 +399,7 @@ class QueryPlanner:
                 # clear
                 skipped_conditions.append(node)
                 node.args = [Constant(0), Constant(0)]
-                node.op = '='
+                node.op = "="
 
         query_traversal(query2.where, replace_functions)
 
@@ -395,7 +444,6 @@ class QueryPlanner:
         return self.plan_sub_select(query, prev_step)
 
     def plan_nested_select(self, select):
-
         # query_info = self.get_query_info(select)
         # # get all predictors
         #
@@ -414,12 +462,6 @@ class QueryPlanner:
 
         return self.plan_mdb_nested_select(select)
 
-    def plan_integration_nested_select(self, select, integration_name):
-        fetch_df_select = copy.deepcopy(select)
-        deepest_select = get_deepest_select(fetch_df_select)
-        self.prepare_integration_select(integration_name, deepest_select)
-        return self.plan.add_step(FetchDataframeStep(integration=integration_name, query=fetch_df_select))
-
     def plan_mdb_nested_select(self, select):
         # plan nested select
 
@@ -435,11 +477,11 @@ class QueryPlanner:
         new_identifier = copy.deepcopy(identifier)
 
         info = self.get_predictor(identifier)
-        namespace = info['integration_name']
+        namespace = info["integration_name"]
 
-        parts = [namespace, info['name']]
-        if info['version'] is not None:
-            parts.append(info['version'])
+        parts = [namespace, info["name"]]
+        if info["version"] is not None:
+            parts.append(info["version"])
         new_identifier.parts = parts
 
         return namespace, new_identifier
@@ -447,33 +489,31 @@ class QueryPlanner:
     def plan_select_from_predictor(self, select):
         predictor_namespace, predictor = self.get_predictor_namespace_and_name_from_identifier(select.from_table)
 
-        if select.where == BinaryOperation('=', args=[Constant(1), Constant(0)]):
+        if select.where == BinaryOperation("=", args=[Constant(1), Constant(0)]):
             # Hardcoded mysql way of getting predictor columns
             predictor_identifier = utils.get_predictor_name_identifier(predictor)
             predictor_step = self.plan.add_step(
-                GetPredictorColumns(
-                    namespace=predictor_namespace,
-                    predictor=predictor_identifier
-                )
+                GetPredictorColumns(namespace=predictor_namespace, predictor=predictor_identifier)
             )
         else:
             new_query_targets = []
             for target in select.targets:
                 if isinstance(target, Identifier):
-                    new_query_targets.append(
-                        disambiguate_predictor_column_identifier(target, predictor))
+                    new_query_targets.append(disambiguate_predictor_column_identifier(target, predictor))
                 elif type(target) in (Star, Constant, Function):
                     new_query_targets.append(target)
                 else:
-                    raise PlanningException(f'Unknown select target {type(target)}')
+                    raise PlanningException(f"Unknown select target {type(target)}")
 
             if select.group_by or select.having:
-                raise PlanningException('Unsupported operation when querying predictor. Only WHERE is allowed and required.')
+                raise PlanningException(
+                    "Unsupported operation when querying predictor. Only WHERE is allowed and required."
+                )
 
             row_dict = {}
             where_clause = select.where
             if not where_clause:
-                raise PlanningException('WHERE clause required when selecting from predictor')
+                raise PlanningException("WHERE clause required when selecting from predictor")
 
             predictor_identifier = utils.get_predictor_name_identifier(predictor)
             recursively_extract_column_values(where_clause, row_dict, predictor_identifier)
@@ -483,10 +523,7 @@ class QueryPlanner:
                 params = select.using
             predictor_step = self.plan.add_step(
                 ApplyPredictorRowStep(
-                    namespace=predictor_namespace,
-                    predictor=predictor_identifier,
-                    row_dict=row_dict,
-                    params=params
+                    namespace=predictor_namespace, predictor=predictor_identifier, row_dict=row_dict, params=params
                 )
             )
         project_step = self.plan_project(select, predictor_step.result)
@@ -517,7 +554,7 @@ class QueryPlanner:
 
                 binary_ops.append(op)
 
-                if op in ['and', 'or']:
+                if op in ["and", "or"]:
                     return
 
                 arg1, arg2 = node.args
@@ -527,12 +564,7 @@ class QueryPlanner:
                 if isinstance(arg1, Identifier) and isinstance(arg2, (Constant, Parameter)) and len(arg1.parts) > 1:
                     model = Identifier(parts=arg1.parts[:-1])
 
-                    if (
-                        self.is_predictor(model)
-                        or (
-                            len(model.parts) == 1 and model.parts[0] == predictor_alias
-                        )
-                    ):
+                    if self.is_predictor(model) or (len(model.parts) == 1 and model.parts[0] == predictor_alias):
                         model_filters.append(node)
                         return
                 table_filters.append(node)
@@ -545,7 +577,7 @@ class QueryPlanner:
         # split conditions
         query_traversal(int_select.where, split_filters)
 
-        if len(model_filters) > 0 and 'or' not in binary_ops:
+        if len(model_filters) > 0 and "or" not in binary_ops:
             int_select.where = filters_to_bin_op(table_filters)
 
         integration_select_step = self.plan_integration_select(int_select)
@@ -559,21 +591,23 @@ class QueryPlanner:
         if model_filters:
             row_dict = {}
             for el in model_filters:
-                if isinstance(el.args[0], Identifier) and el.op == '=':
+                if isinstance(el.args[0], Identifier) and el.op == "=":
                     if isinstance(el.args[1], (Constant, Parameter)):
                         row_dict[el.args[0].parts[-1]] = el.args[1].value
 
-        last_step = self.plan.add_step(ApplyPredictorStep(
-            namespace=predictor_namespace,
-            dataframe=integration_select_step.result,
-            predictor=predictor_identifier,
-            params=params,
-            row_dict=row_dict
-        ))
+        last_step = self.plan.add_step(
+            ApplyPredictorStep(
+                namespace=predictor_namespace,
+                dataframe=integration_select_step.result,
+                predictor=predictor_identifier,
+                params=params,
+                row_dict=row_dict,
+            )
+        )
 
         return {
-            'predictor': last_step,
-            'data': integration_select_step,
+            "predictor": last_step,
+            "data": integration_select_step,
         }
 
     # def plan_group(self, query, last_step):
@@ -607,25 +641,31 @@ class QueryPlanner:
             return last_step
 
         for target in query.targets:
-            if isinstance(target, Identifier) \
-                    or isinstance(target, Star) \
-                    or isinstance(target, Function) \
-                    or isinstance(target, Constant) \
-                    or isinstance(target, BinaryOperation):
+            if (
+                isinstance(target, Identifier)
+                or isinstance(target, Star)
+                or isinstance(target, Function)
+                or isinstance(target, Constant)
+                or isinstance(target, BinaryOperation)
+            ):
                 out_identifiers.append(target)
             else:
                 new_identifier = Identifier(str(target.to_string(alias=False)), alias=target.alias)
                 out_identifiers.append(new_identifier)
-        return self.plan.add_step(ProjectStep(dataframe=dataframe, columns=out_identifiers, ignore_doubles=ignore_doubles))
+        return self.plan.add_step(
+            ProjectStep(dataframe=dataframe, columns=out_identifiers, ignore_doubles=ignore_doubles)
+        )
 
     def plan_create_table(self, query: CreateTable):
         if query.from_select is None:
             if query.columns is not None:
-                self.plan.add_step(CreateTableStep(
-                    table=query.name,
-                    columns=query.columns,
-                    is_replace=query.is_replace,
-                ))
+                self.plan.add_step(
+                    CreateTableStep(
+                        table=query.name,
+                        columns=query.columns,
+                        is_replace=query.is_replace,
+                    )
+                )
                 return
 
             raise PlanningException(f'Not implemented "create table": {query.to_string()}')
@@ -635,11 +675,13 @@ class QueryPlanner:
         last_step = self.plan_select(query.from_select, integration=integration_name)
 
         # create table step
-        self.plan.add_step(SaveToTable(
-            table=query.name,
-            dataframe=last_step,
-            is_replace=query.is_replace,
-        ))
+        self.plan.add_step(
+            SaveToTable(
+                table=query.name,
+                dataframe=last_step.result,
+                is_replace=query.is_replace,
+            )
+        )
 
     def plan_insert(self, query):
         table = query.table
@@ -649,15 +691,28 @@ class QueryPlanner:
             # plan sub-select first
             last_step = self.plan_select(query.from_select, integration=integration_name)
 
-            self.plan.add_step(InsertToTable(
-                table=table,
-                dataframe=last_step,
-            ))
+            # possible knowledge base parameters
+            select = query.from_select
+            params = {}
+            if isinstance(select, Select) and select.using is not None:
+                for k, v in select.using.items():
+                    if k.startswith("kb_"):
+                        params[k] = v
+
+            self.plan.add_step(
+                InsertToTable(
+                    table=table,
+                    dataframe=last_step.result,
+                    params=params,
+                )
+            )
         else:
-            self.plan.add_step(InsertToTable(
-                table=table,
-                query=query,
-            ))
+            self.plan.add_step(
+                InsertToTable(
+                    table=table,
+                    query=query,
+                )
+            )
 
     def plan_update(self, query):
         last_step = None
@@ -671,31 +726,22 @@ class QueryPlanner:
         update_command.from_select = None
 
         table = query.table
-        self.plan.add_step(UpdateToTable(
-            table=table,
-            dataframe=last_step,
-            update_command=update_command
-        ))
+        self.plan.add_step(UpdateToTable(table=table, dataframe=last_step, update_command=update_command))
 
     def plan_delete(self, query: Delete):
-
         # find subselects
         main_integration, _ = self.resolve_database_table(query.table)
 
-        is_api_db = self.integrations.get(main_integration, {}).get('class_type') == 'api'
+        is_api_db = self.integrations.get(main_integration, {}).get("class_type") == "api"
 
         find_selects = self.get_nested_selects_plan_fnc(main_integration, force=is_api_db)
         query_traversal(query.where, find_selects)
 
         self.prepare_integration_select(main_integration, query.where)
 
-        return self.plan.add_step(DeleteStep(
-            table=query.table,
-            where=query.where
-        ))
+        return self.plan.add_step(DeleteStep(table=query.table, where=query.where))
 
     def plan_cte(self, query):
-
         for cte in query.cte:
             step = self.plan_select(cte.query)
             name = cte.name.parts[-1]
@@ -708,17 +754,15 @@ class QueryPlanner:
 
         # one integration and not mindsdb objects in query
         if (
-                len(query_info['mdb_entities']) == 0
-                and len(query_info['integrations']) == 1
-                and 'files' not in query_info['integrations']
-                and 'views' not in query_info['integrations']
-                and len(query_info['user_functions']) == 0
+            len(query_info["mdb_entities"]) == 0
+            and len(query_info["integrations"]) == 1
+            and "files" not in query_info["integrations"]
+            and "views" not in query_info["integrations"]
+            and len(query_info["user_functions"]) == 0
         ):
-
-            int_name = list(query_info['integrations'])[0]
+            int_name = list(query_info["integrations"])[0]
             # if is sql database
-            if self.integrations.get(int_name, {}).get('class_type') != 'api':
-
+            if self.integrations.get(int_name, {}).get("class_type") != "api":
                 # send to this integration
                 self.prepare_integration_select(int_name, query)
 
@@ -726,7 +770,6 @@ class QueryPlanner:
                 return last_step
 
     def plan_select(self, query, integration=None):
-
         if isinstance(query, (Union, Except, Intersect)):
             return self.plan_union(query, integration=integration)
 
@@ -755,9 +798,9 @@ class QueryPlanner:
         elif from_table is None:
             # one line select
             step = QueryStep(query, from_table=pd.DataFrame([None]))
-            self.plan.add_step(step)
+            return self.plan.add_step(step)
         else:
-            raise PlanningException(f'Unsupported from_table {type(from_table)}')
+            raise PlanningException(f"Unsupported from_table {type(from_table)}")
 
     def plan_sub_select(self, query, prev_step, add_absent_cols=False):
         if (
@@ -788,13 +831,15 @@ class QueryPlanner:
     def plan_union(self, query, integration=None):
         step1 = self.plan_select(query.left, integration=integration)
         step2 = self.plan_select(query.right, integration=integration)
-        operation = 'union'
+        operation = "union"
         if isinstance(query, Except):
-            operation = 'except'
+            operation = "except"
         elif isinstance(query, Intersect):
-            operation = 'intersect'
+            operation = "intersect"
 
-        return self.plan.add_step(UnionStep(left=step1.result, right=step2.result, unique=query.unique, operation=operation))
+        return self.plan.add_step(
+            UnionStep(left=step1.result, right=step2.result, unique=query.unique, operation=operation)
+        )
 
     # method for compatibility
     def from_query(self, query=None):
@@ -816,9 +861,89 @@ class QueryPlanner:
         elif isinstance(query, Delete):
             self.plan_delete(query)
         else:
-            raise PlanningException(f'Unsupported query type {type(query)}')
+            raise PlanningException(f"Unsupported query type {type(query)}")
 
-        return self.plan
+        plan = self.handle_partitioning(self.plan)
+
+        return plan
+
+    def handle_partitioning(self, plan: QueryPlan) -> QueryPlan:
+        """
+        If plan has fetching in partitions:
+          try to rebuild plan to send fetched chunk of data through the following steps, if it is possible
+        """
+
+        # handle fetchdataframe partitioning
+        steps_in = plan.steps
+        steps_out = []
+
+        step = None
+        partition_step = None
+        for step in steps_in:
+            if isinstance(step, FetchDataframeStep) and step.params is not None:
+                batch_size = step.params.get("batch_size")
+                if batch_size is not None:
+                    # found batched fetch
+                    partition_step = FetchDataframeStepPartition(
+                        step_num=step.step_num,
+                        integration=step.integration,
+                        query=step.query,
+                        raw_query=step.raw_query,
+                        params=step.params,
+                    )
+                    steps_out.append(partition_step)
+                    # mark plan
+                    plan.is_resumable = True
+                    continue
+                else:
+                    step.params = None
+
+            if partition_step is not None:
+                # check and add step into partition
+
+                can_be_partitioned = False
+                if isinstance(step, (JoinStep, ApplyPredictorStep, InsertToTable)):
+                    can_be_partitioned = True
+                elif isinstance(step, QueryStep):
+                    query = step.query
+                    if (
+                        query.group_by is None
+                        and query.order_by is None
+                        and query.distinct is False
+                        and query.limit is None
+                        and query.offset is None
+                    ):
+                        no_identifiers = [
+                            target for target in step.query.targets if not isinstance(target, (Star, Identifier))
+                        ]
+                        if len(no_identifiers) == 0:
+                            can_be_partitioned = True
+
+                if not can_be_partitioned:
+                    if len(partition_step.steps) == 0:
+                        # Nothing can be partitioned, failback to old plan
+                        plan.is_resumable = False
+                        return plan
+                    partition_step = None
+                else:
+                    partition_step.steps.append(step)
+                    continue
+
+            steps_out.append(step)
+
+        if plan.is_resumable and isinstance(step, InsertToTable):
+            plan.is_async = True
+        else:
+            # special case: register insert from select (it is the same as mark resumable)
+            if (
+                len(steps_in) == 2
+                and isinstance(steps_in[0], FetchDataframeStep)
+                and isinstance(steps_in[1], InsertToTable)
+            ):
+                plan.is_resumable = True
+
+        plan.steps = steps_out
+        return plan
 
     def prepare_steps(self, query):
         statement_planner = PreparedStatementPlanner(self)

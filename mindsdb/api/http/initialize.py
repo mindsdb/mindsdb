@@ -4,8 +4,10 @@ import mimetypes
 import threading
 import traceback
 import webbrowser
+
 from pathlib import Path
 from http import HTTPStatus
+
 
 import requests
 from flask import Flask, url_for, make_response, request, send_from_directory
@@ -50,10 +52,29 @@ from mindsdb.utilities.json_encoder import CustomJSONProvider
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
 from mindsdb.utilities.otel import trace  # noqa: F401
-from opentelemetry.instrumentation.flask import FlaskInstrumentor  # noqa: F401
-from opentelemetry.instrumentation.requests import RequestsInstrumentor  # noqa: F401
 
 logger = log.getLogger(__name__)
+
+
+class _NoOpFlaskInstrumentor:
+    def instrument_app(self, app):
+        pass
+
+
+class _NoOpRequestsInstrumentor:
+    def instrument(self):
+        pass
+
+
+try:
+    from opentelemetry.instrumentation.flask import FlaskInstrumentor
+    from opentelemetry.instrumentation.requests import RequestsInstrumentor
+except ImportError:
+    logger.debug(
+        "OpenTelemetry is not avaiable. Please run `pip install -r requirements/requirements-opentelemetry.txt` to use it."
+    )
+    FlaskInstrumentor = _NoOpFlaskInstrumentor
+    RequestsInstrumentor = _NoOpRequestsInstrumentor
 
 
 class Swagger_Api(Api):
@@ -61,6 +82,7 @@ class Swagger_Api(Api):
     This is a modification of the base Flask Restplus Api class due to the issue described here
     https://github.com/noirbizarre/flask-restplus/issues/223
     """
+
     @property
     def specs_url(self):
         return url_for(self.endpoint("specs"), _external=False)
@@ -75,7 +97,10 @@ def custom_output_json(data, code, headers=None):
 def get_last_compatible_gui_version() -> Version:
     logger.debug("Getting last compatible frontend..")
     try:
-        res = requests.get('https://mindsdb-web-builds.s3.amazonaws.com/compatible-config.json', timeout=5)
+        res = requests.get(
+            "https://mindsdb-web-builds.s3.amazonaws.com/compatible-config.json",
+            timeout=5,
+        )
     except (ConnectionError, requests.exceptions.ConnectionError) as e:
         logger.error(f"Is no connection. {e}")
         return False
@@ -101,13 +126,16 @@ def get_last_compatible_gui_version() -> Version:
         gui_versions = {}
         max_mindsdb_lv = None
         max_gui_lv = None
-        for el in versions['mindsdb']:
-            if el['mindsdb_version'] is None:
-                gui_lv = parse_version(el['gui_version'])
+        for el in versions["mindsdb"]:
+            if el["mindsdb_version"] is None:
+                gui_lv = parse_version(el["gui_version"])
             else:
-                mindsdb_lv = parse_version(el['mindsdb_version'])
-                gui_lv = parse_version(el['gui_version'])
-                if mindsdb_lv.base_version not in gui_versions or gui_lv > gui_versions[mindsdb_lv.base_version]:
+                mindsdb_lv = parse_version(el["mindsdb_version"])
+                gui_lv = parse_version(el["gui_version"])
+                if (
+                    mindsdb_lv.base_version not in gui_versions
+                    or gui_lv > gui_versions[mindsdb_lv.base_version]
+                ):
                     gui_versions[mindsdb_lv.base_version] = gui_lv
                 if max_mindsdb_lv is None or max_mindsdb_lv < mindsdb_lv:
                     max_mindsdb_lv = mindsdb_lv
@@ -122,7 +150,11 @@ def get_last_compatible_gui_version() -> Version:
         elif current_mindsdb_lv > all_mindsdb_lv[-1]:
             gui_version_lv = max_gui_lv
         else:
-            lower_versions = {key: value for key, value in gui_versions.items() if parse_version(key) < current_mindsdb_lv}
+            lower_versions = {
+                key: value
+                for key, value in gui_versions.items()
+                if parse_version(key) < current_mindsdb_lv
+            }
             if len(lower_versions) == 0:
                 gui_version_lv = gui_versions[all_mindsdb_lv[0].base_version]
             else:
@@ -139,12 +171,12 @@ def get_last_compatible_gui_version() -> Version:
 def get_current_gui_version() -> Version:
     logger.debug("Getting current frontend version..")
     config = Config()
-    static_path = Path(config['paths']['static'])
-    version_txt_path = static_path.joinpath('version.txt')
+    static_path = Path(config["paths"]["static"])
+    version_txt_path = static_path.joinpath("version.txt")
 
     current_gui_version = None
     if version_txt_path.is_file():
-        with open(version_txt_path, 'rt') as f:
+        with open(version_txt_path, "rt") as f:
             current_gui_version = f.readline()
 
     current_gui_lv = (
@@ -160,7 +192,7 @@ def initialize_static():
     config = Config()
     last_gui_version_lv = get_last_compatible_gui_version()
     current_gui_version_lv = get_current_gui_version()
-    required_gui_version = config['gui'].get('version')
+    required_gui_version = config["gui"].get("version")
 
     if required_gui_version is not None:
         required_gui_version_lv = parse_version(required_gui_version)
@@ -176,7 +208,10 @@ def initialize_static():
             return False
 
         # ignore versions like '23.9.2.2'
-        if current_gui_version_lv is not None and len(current_gui_version_lv.release) < 3:
+        if (
+            current_gui_version_lv is not None
+            and len(current_gui_version_lv.release) < 3
+        ):
             if current_gui_version_lv == last_gui_version_lv:
                 return True
         logger.debug("Updating gui..")
@@ -187,37 +222,40 @@ def initialize_static():
 
 
 def initialize_app(config, no_studio):
-    static_root = config['paths']['static']
+    static_root = config["paths"]["static"]
     logger.debug(f"Static route: {static_root}")
-    gui_exists = Path(static_root).joinpath('index.html').is_file()
+    gui_exists = Path(static_root).joinpath("index.html").is_file()
     logger.debug(f"Does GUI already exist.. {'YES' if gui_exists else 'NO'}")
     init_static_thread = None
-    if (
-        no_studio is False
-        and (
-            config['gui']['autoupdate'] is True
-            or gui_exists is False
-        )
+    if no_studio is False and (
+        config["gui"]["autoupdate"] is True or gui_exists is False
     ):
-        init_static_thread = threading.Thread(target=initialize_static, name='initialize_static')
+        init_static_thread = threading.Thread(
+            target=initialize_static, name="initialize_static"
+        )
         init_static_thread.start()
+
+    # Wait for static initialization.
+    if not no_studio and init_static_thread is not None:
+        init_static_thread.join()
 
     app, api = initialize_flask(config, init_static_thread, no_studio)
     Compress(app)
+
     initialize_interfaces(app)
 
     if os.path.isabs(static_root) is False:
         static_root = os.path.join(os.getcwd(), static_root)
     static_root = Path(static_root)
 
-    @app.route('/', defaults={'path': ''}, methods=['GET'])
-    @app.route('/<path:path>', methods=['GET'])
+    @app.route("/", defaults={"path": ""}, methods=["GET"])
+    @app.route("/<path:path>", methods=["GET"])
     def root_index(path):
-        if path.startswith('api/'):
+        if path.startswith("api/"):
             return http_error(
                 HTTPStatus.NOT_FOUND,
-                'Not found',
-                'The endpoint you are trying to access does not exist on the server.'
+                "Not found",
+                "The endpoint you are trying to access does not exist on the server.",
             )
 
         # Normalize the path.
@@ -227,14 +265,14 @@ def initialize_app(config, no_studio):
         if not full_path.startswith(str(static_root)):
             return http_error(
                 HTTPStatus.FORBIDDEN,
-                'Forbidden',
-                'You are not allowed to access the requested resource.'
+                "Forbidden",
+                "You are not allowed to access the requested resource.",
             )
 
         if os.path.isfile(full_path):
             return send_from_directory(static_root, path)
         else:
-            return send_from_directory(static_root, 'index.html')
+            return send_from_directory(static_root, "index.html")
 
     protected_namespaces = [
         tab_ns,
@@ -253,7 +291,7 @@ def initialize_app(config, no_studio):
         skills_ns,
         agents_ns,
         jobs_ns,
-        knowledge_bases_ns
+        knowledge_bases_ns,
     ]
 
     for ns in protected_namespaces:
@@ -268,20 +306,20 @@ def initialize_app(config, no_studio):
         # pass through HTTP errors
         # NOTE flask_restx require 'message', also it modyfies 'application/problem+json' to 'application/json'
         if isinstance(e, HTTPException):
-            return ({
-                'title': e.name,
-                'detail': e.description,
-                'message': e.description
-            }, e.code, {
-                'Content-Type': 'application/problem+json'
-            })
-        return ({
-            'title': getattr(type(e), "__name__") or "Unknown error",
-            'detail': str(e),
-            'message': str(e)
-        }, 500, {
-            'Content-Type': 'application/problem+json'
-        })
+            return (
+                {"title": e.name, "detail": e.description, "message": e.description},
+                e.code,
+                {"Content-Type": "application/problem+json"},
+            )
+        return (
+            {
+                "title": getattr(type(e), "__name__") or "Unknown error",
+                "detail": str(e),
+                "message": str(e),
+            },
+            500,
+            {"Content-Type": "application/problem+json"},
+        )
 
     @app.teardown_appcontext
     def remove_session(*args, **kwargs):
@@ -295,31 +333,34 @@ def initialize_app(config, no_studio):
 
         # region routes where auth is required
         if (
-            config['auth']['http_auth_enabled'] is True
-            and any(request.path.startswith(f'/api{ns.path}') for ns in protected_namespaces)
+            config["auth"]["http_auth_enabled"] is True
+            and any(
+                request.path.startswith(f"/api{ns.path}") for ns in protected_namespaces
+            )
             and check_auth() is False
         ):
             return http_error(
-                HTTPStatus.UNAUTHORIZED, 'Unauthorized',
-                'Authorization is required to complete the request'
+                HTTPStatus.UNAUTHORIZED,
+                "Unauthorized",
+                "Authorization is required to complete the request",
             )
         # endregion
 
-        company_id = request.headers.get('company-id')
-        user_class = request.headers.get('user-class')
+        company_id = request.headers.get("company-id")
+        user_class = request.headers.get("user-class")
 
         try:
-            email_confirmed = int(request.headers.get('email-confirmed', 1))
+            email_confirmed = int(request.headers.get("email-confirmed", 1))
         except Exception:
             email_confirmed = 1
 
         try:
-            user_id = int(request.headers.get('user-id', 0))
+            user_id = int(request.headers.get("user-id", 0))
         except Exception:
             user_id = 0
 
         try:
-            session_id = request.cookies.get('session')
+            session_id = request.cookies.get("session")
         except Exception:
             session_id = "unknown"
 
@@ -349,10 +390,6 @@ def initialize_app(config, no_studio):
         ctx.user_class = user_class
         ctx.email_confirmed = email_confirmed
 
-    # Wait for static initialization.
-    if not no_studio and init_static_thread is not None:
-        init_static_thread.join()
-
     logger.debug("Done initializing app.")
     return app
 
@@ -360,13 +397,13 @@ def initialize_app(config, no_studio):
 def initialize_flask(config, init_static_thread, no_studio):
     logger.debug("Initializing flask..")
     # region required for windows https://github.com/mindsdb/mindsdb/issues/2526
-    mimetypes.add_type('text/css', '.css')
-    mimetypes.add_type('text/javascript', '.js')
+    mimetypes.add_type("text/css", ".css")
+    mimetypes.add_type("text/javascript", ".js")
     # endregion
 
     kwargs = {}
     if no_studio is not True:
-        static_path = os.path.join(config['paths']['static'], 'static/')
+        static_path = os.path.join(config["paths"]["static"], "static/")
         if os.path.isabs(static_path) is False:
             static_path = os.path.join(os.getcwd(), static_path)
         kwargs["static_url_path"] = "/static"
@@ -376,39 +413,35 @@ def initialize_flask(config, init_static_thread, no_studio):
     app = Flask(__name__, **kwargs)
     init_metrics(app)
 
-    # Instrument Flask app for OpenTelemetry
+    # Instrument Flask app and requests using either real or no-op instrumentors
     FlaskInstrumentor().instrument_app(app)
     RequestsInstrumentor().instrument()
 
-    app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', secrets.token_hex(32))
-    app.config['SESSION_COOKIE_NAME'] = 'session'
-    app.config['PERMANENT_SESSION_LIFETIME'] = config['auth']['http_permanent_session_lifetime']
-    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 60
-    app.config['SWAGGER_HOST'] = 'http://localhost:8000/mindsdb'
+    app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", secrets.token_hex(32))
+    app.config["SESSION_COOKIE_NAME"] = "session"
+    app.config["PERMANENT_SESSION_LIFETIME"] = config["auth"][
+        "http_permanent_session_lifetime"
+    ]
+    app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 60
+    app.config["SWAGGER_HOST"] = "http://localhost:8000/mindsdb"
     app.json = CustomJSONProvider()
 
-    authorizations = {
-        'apikey': {
-            'type': 'session',
-            'in': 'query',
-            'name': 'session'
-        }
-    }
+    authorizations = {"apikey": {"type": "session", "in": "query", "name": "session"}}
 
     logger.debug("Creating swagger API..")
     api = Swagger_Api(
         app,
         authorizations=authorizations,
-        security=['apikey'],
-        url_prefix=':8000',
-        prefix='/api',
-        doc='/doc/'
+        security=["apikey"],
+        url_prefix=":8000",
+        prefix="/api",
+        doc="/doc/",
     )
 
-    api.representations['application/json'] = custom_output_json
+    api.representations["application/json"] = custom_output_json
 
-    port = config['api']['http']['port']
-    host = config['api']['http']['host']
+    port = config["api"]["http"]["port"]
+    host = config["api"]["http"]["host"]
 
     # NOTE rewrite it, that hotfix to see GUI link
     if not no_studio:
@@ -421,9 +454,9 @@ def initialize_flask(config, init_static_thread, no_studio):
         pid = os.getpid()
         thread = threading.Thread(
             target=_open_webbrowser,
-            args=(url, pid, port, init_static_thread, config['paths']['static']),
+            args=(url, pid, port, init_static_thread, config["paths"]["static"]),
             daemon=True,
-            name='open_webbrowser'
+            name="open_webbrowser",
         )
         thread.start()
 

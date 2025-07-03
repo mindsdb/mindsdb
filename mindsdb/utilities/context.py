@@ -18,6 +18,7 @@ class Context:
             'user_id': None,
             'company_id': None,
             'session_id': "",
+            'task_id': None,
             'user_class': 0,
             'profiling': {
                 'level': 0,
@@ -53,7 +54,7 @@ class Context:
     def load(self, storage: dict) -> None:
         self._storage.set(storage)
 
-    def metadata(self, **kwargs) -> dict:
+    def get_metadata(self, **kwargs) -> dict:
         return {
             'user_id': self.user_id or "",
             'company_id': self.company_id or "",

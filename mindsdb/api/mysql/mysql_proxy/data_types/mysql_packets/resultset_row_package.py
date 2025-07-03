@@ -15,24 +15,26 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import NULL_VALUE
 
 
 class ResultsetRowPacket(Packet):
-    '''
+    """
     Implementation based on:
     https://dev.mysql.com/doc/internals/en/com-query-response.html#packet-ProtocolText::ResultsetRow
     https://mariadb.com/kb/en/resultset-row/
-    '''
+    """
 
     def setup(self):
-        data = self._kwargs.get('data', {})
+        data = self._kwargs.get("data", {})
         self.value = []
         for val in data:
             if val is None:
                 self.value.append(NULL_VALUE)
+            elif isinstance(val, bytes):
+                self.value.append(Datum("byte<lenenc>", val))
             else:
-                self.value.append(Datum('string<lenenc>', str(val)))
+                self.value.append(Datum("string<lenenc>", str(val)))
 
     @property
     def body(self):
-        string = b''
+        string = b""
         for x in self.value:
             if x is NULL_VALUE:
                 string += x
@@ -45,9 +47,8 @@ class ResultsetRowPacket(Packet):
     @staticmethod
     def test():
         import pprint
-        pprint.pprint(
-            str(ResultsetRowPacket().get_packet_string())
-        )
+
+        pprint.pprint(str(ResultsetRowPacket().get_packet_string()))
 
 
 if __name__ == "__main__":

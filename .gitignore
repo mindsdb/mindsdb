@@ -29,6 +29,7 @@ docker/dist/*
 MindsDB.egg-info/*
 /build
 train_finetune.lock
+parser_tests
 
 # Autokeras generated files
 auto_model
@@ -60,3 +61,6 @@ xgboost
 
 # Docs
 node_modules
+
+mindsdb/**/pyproject.toml
+mindsdb/**/uv.lock

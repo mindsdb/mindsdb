@@ -5,7 +5,7 @@ from typing import Dict, List
 
 class FrappeClient(object):
     """Client to interact with the Frappe API.
-    
+
     Attributes:
         domain (str): Path to Frappe domain to use (e.g. https://mindsdbfrappe.com).
         access_token (str): Frappe authorization token to use for all API requests.
@@ -25,7 +25,7 @@ class FrappeClient(object):
 
     def get_document(self, doctype: str, name: str) -> Dict:
         """Gets a document matching the given doctype from Frappe.
-        
+
         See https://frappeframework.com/docs/v14/user/en/api/rest#listing-documents
         Args:
             doctype (str): The document type to retrieve.
@@ -40,7 +40,7 @@ class FrappeClient(object):
 
     def get_documents(self, doctype: str, limit: int = None, fields: List[str] = None, filters: List[List] = None) -> List[Dict]:
         """Gets all documents matching the given doctype from Frappe.
-        
+
         See https://frappeframework.com/docs/v14/user/en/api/rest#listing-documents
         Args:
             doctype (str): The document type to retrieve.
@@ -83,7 +83,7 @@ class FrappeClient(object):
             data: Dict):
         """Creates a new document of the given doctype.
         See https://frappeframework.com/docs/v14/user/en/api/rest#listing-documents
-        
+
         Args:
             doctype (str): Type of the document to create.
             data (Dict): Document object.
@@ -99,7 +99,7 @@ class FrappeClient(object):
 
     def ping(self) -> bool:
         """Sends a basic request to the Frappe API to see if it succeeds.
-        
+
         Returns whether or not the connection to the Frappe API is valid.
         See https://frappeframework.com/docs/v14/user/en/api/rest#1-token-based-authentication
         """

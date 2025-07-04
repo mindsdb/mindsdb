@@ -139,7 +139,7 @@ class A2AServer:
             async def event_generator(result):
                 async for item in result:
                     t0 = time.time()
-                    logger.info(f"[A2AServer] STEP2 serializing item at {t0}: {str(item)[:120]}")
+                    logger.debug(f"[A2AServer] STEP2 serializing item at {t0}: {str(item)[:120]}")
                     try:
                         if hasattr(item, "model_dump_json"):
                             data = item.model_dump_json(exclude_none=True)

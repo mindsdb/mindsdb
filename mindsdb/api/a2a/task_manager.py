@@ -339,9 +339,9 @@ class AgentTaskManager(InMemoryTaskManager):
 
         # We can't await an async generator directly, so we need to use it as is
         try:
-            logger.info(f"[TaskManager] Entering streaming path at {time.time()}")
+            logger.debug(f"[TaskManager] Entering streaming path at {time.time()}")
             async for response in self._stream_generator(request):
-                logger.info(f"[TaskManager] Yielding streaming response at {time.time()} with: {str(response)[:120]}")
+                logger.debug(f"[TaskManager] Yielding streaming response at {time.time()} with: {str(response)[:120]}")
                 yield response
         except Exception as e:
             # If an error occurs, yield an error response

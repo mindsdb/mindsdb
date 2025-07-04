@@ -1,11 +1,12 @@
 import os
 import copy
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any, Text
 import json
 import decimal
 
 import pandas as pd
 import numpy as np
+from pydantic import BaseModel, ValidationError
 from sqlalchemy.orm.attributes import flag_modified
 
 from mindsdb_sql_parser.ast import BinaryOperation, Constant, Identifier, Select, Update, Delete, Star
@@ -47,6 +48,20 @@ from mindsdb.utilities import log
 from mindsdb.integrations.utilities.rag.rerankers.base_reranker import BaseLLMReranker
 
 logger = log.getLogger(__name__)
+
+
+class KnowledgeBaseInputParams(BaseModel):
+    metadata_columns: List[str] | None = None
+    content_columns: List[str] | None = None
+    id_column: str | None = None
+    kb_no_upsert: bool = False
+    embedding_model: Dict[Text, Any] | None = None
+    is_sparse: bool = False
+    vector_size: int | None = None
+    reranking_model: Dict[Text, Any] | None = None
+
+    class Config:
+        extra = "forbid"
 
 
 def get_model_params(model_params: dict, default_config_key: str):
@@ -101,7 +116,10 @@ def get_reranking_model_from_params(reranking_model_params: dict):
 
     if "api_key" not in params_copy:
         params_copy["api_key"] = get_api_key(provider, params_copy, strict=False)
-    params_copy["model"] = params_copy.pop("model_name", None)
+
+    if "model_name" not in params_copy:
+        raise ValueError("'model_name' must be provided for reranking model")
+    params_copy["model"] = params_copy.pop("model_name")
 
     return BaseLLMReranker(**params_copy)
 
@@ -736,8 +754,7 @@ class KnowledgeBaseTable:
         if model_id is None:
             # call litellm handler
             messages = list(df[TableField.CONTENT.value])
-            embedding_params = copy.deepcopy(config.get("default_embedding_model", {}))
-            embedding_params.update(self._kb.params["embedding_model"])
+            embedding_params = get_model_params(self._kb.params.get("embedding_model", {}), "default_embedding_model")
             results = self.call_litellm_embedding(self.session, embedding_params, messages)
             results = [[val] for val in results]
             return pd.DataFrame(results, columns=[TableField.EMBEDDINGS.value])
@@ -782,6 +799,9 @@ class KnowledgeBaseTable:
     @staticmethod
     def call_litellm_embedding(session, model_params, messages):
         args = copy.deepcopy(model_params)
+
+        if "model_name" not in args:
+            raise ValueError("'model_name' must be provided for embedding model")
 
         llm_model = args.pop("model_name")
         engine = args.pop("provider")
@@ -936,6 +956,24 @@ class KnowledgeBaseController:
         # fill variables
         params = variables_controller.fill_parameters(params)
 
+        try:
+            KnowledgeBaseInputParams.model_validate(params)
+        except ValidationError as e:
+            problems = []
+            for error in e.errors():
+                parameter = ".".join([str(i) for i in error["loc"]])
+                param_type = error["type"]
+                if param_type == "extra_forbidden":
+                    msg = f"Parameter '{parameter}' is not allowed"
+                else:
+                    msg = f"Error in '{parameter}' (type: {param_type}): {error['msg']}. Input: {repr(error['input'])}"
+                problems.append(msg)
+
+            msg = "\n".join(problems)
+            if len(problems) > 1:
+                msg = "\n" + msg
+            raise ValueError(f"Problem with knowledge base params: {msg}")
+
         # Validate preprocessing config first if provided
         if preprocessing_config is not None:
             PreprocessingConfig(**preprocessing_config)  # Validate before storing
@@ -960,24 +998,6 @@ class KnowledgeBaseController:
             if if_not_exists:
                 return kb
             raise EntityExistsError("Knowledge base already exists", name)
-
-        embedding_params = copy.deepcopy(config.get("default_embedding_model", {}))
-
-        # Legacy
-        # model_name = None
-        # model_project = project
-        # if embedding_model:
-        #     model_name = embedding_model.parts[-1]
-        #     if len(embedding_model.parts) > 1:
-        #         model_project = self.session.database_controller.get_project(embedding_model.parts[-2])
-
-        # elif "embedding_model" in params:
-        #     if isinstance(params["embedding_model"], str):
-        #         # it is model name
-        #         model_name = params["embedding_model"]
-        #     else:
-        #         # it is params for model
-        #         embedding_params.update(params["embedding_model"])
 
         embedding_params = get_model_params(params.get("embedding_model", {}), "default_embedding_model")
 
@@ -1009,7 +1029,11 @@ class KnowledgeBaseController:
         if reranking_model_params:
             # Get reranking model from params.
             # This is called here to check validaity of the parameters.
-            get_reranking_model_from_params(reranking_model_params)
+            try:
+                reranker = get_reranking_model_from_params(reranking_model_params)
+                reranker.get_scores("test", ["test"])
+            except (ValueError, RuntimeError) as e:
+                raise RuntimeError(f"Problem with reranker config: {e}")
 
         # search for the vector database table
         if storage is None:
@@ -1102,15 +1126,26 @@ class KnowledgeBaseController:
         except PredictorRecordNotFound:
             pass
 
-        if params.get("provider", None) not in ("openai", "azure_openai"):
+        if "provider" not in params:
+            raise ValueError("'provider' parameter is required for embedding model")
+
+        if params["provider"] not in ("openai", "azure_openai"):
             # try use litellm
-            KnowledgeBaseTable.call_litellm_embedding(self.session, params, ["test"])
+            try:
+                KnowledgeBaseTable.call_litellm_embedding(self.session, params, ["test"])
+            except Exception as e:
+                raise RuntimeError(f"Problem with embedding model config: {e}")
             return
 
         if "provider" in params:
             engine = params.pop("provider").lower()
 
-        api_key = get_api_key(engine, params, strict=False) or params.pop("api_key")
+        api_key = get_api_key(engine, params, strict=False)
+        if api_key is None:
+            if "api_key" in params:
+                params.pop("api_key")
+            else:
+                raise ValueError("'api_key' parameter is required for embedding model")
 
         if engine == "azure_openai":
             engine = "openai"

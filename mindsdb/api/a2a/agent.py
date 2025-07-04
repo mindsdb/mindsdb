@@ -104,6 +104,8 @@ class MindsDBAgent:
                         except Exception as e:
                             logger.error(f"Failed to parse SSE JSON payload: {e}; line: {payload}")
                     # Ignore comments or control lines
+                # Signal the end of the stream
+                yield {"is_task_complete": True}
 
     async def stream(
         self,

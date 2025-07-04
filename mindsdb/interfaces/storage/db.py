@@ -448,18 +448,32 @@ class Agents(Base):
     deleted_at = Column(DateTime)
 
     def as_dict(self) -> Dict:
-        return {
+        skills = []
+        skills_extra_parameters = {}
+        for rel in self.skills_relationships:
+            skill = rel.skill
+            # Skip auto-generated SQL skills
+            if skill.params.get("description", "").startswith("Auto-generated SQL skill for agent"):
+                continue
+            skills.append(skill.as_dict())
+            skills_extra_parameters[skill.name] = rel.parameters or {}
+
+        agent_dict = {
             "id": self.id,
             "name": self.name,
             "project_id": self.project_id,
             "model_name": self.model_name,
-            "skills": [rel.skill.as_dict() for rel in self.skills_relationships],
-            "skills_extra_parameters": {rel.skill.name: (rel.parameters or {}) for rel in self.skills_relationships},
             "provider": self.provider,
             "params": self.params,
             "updated_at": self.updated_at,
             "created_at": self.created_at,
         }
+
+        if skills:
+            agent_dict["skills"] = skills
+            agent_dict["skills_extra_parameters"] = skills_extra_parameters
+
+        return agent_dict
 
 
 class KnowledgeBase(Base):

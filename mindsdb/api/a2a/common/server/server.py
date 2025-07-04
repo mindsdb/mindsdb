@@ -140,10 +140,14 @@ class A2AServer:
                 async for item in result:
                     t0 = time.time()
                     logger.info(f"[A2AServer] STEP2 serializing item at {t0}: {str(item)[:120]}")
-                    if hasattr(item, "model_dump_json"):
-                        data = item.model_dump_json(exclude_none=True)
-                    else:
-                        data = json.dumps(item)
+                    try:
+                        if hasattr(item, "model_dump_json"):
+                            data = item.model_dump_json(exclude_none=True)
+                        else:
+                            data = json.dumps(item)
+                    except Exception as e:
+                        logger.error(f"Serialization error in SSE stream: {e}")
+                        data = json.dumps({"error": f"Serialization error: {str(e)}"})
                     yield {"data": data}
 
             return EventSourceResponse(event_generator(result), headers={"Content-Type": "text/event-stream"})

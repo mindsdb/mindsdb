@@ -449,10 +449,6 @@ class AgentTaskManager(InMemoryTaskManager):
             else:
                 # For non-streaming mode, collect all chunks into a single response
                 async for chunk in stream_gen:
-                    # Clean up: Remove verbose debug logs, keep only errors and essential info
-                    if isinstance(chunk, dict) and "artifact" in chunk:
-                        logger.info("[TaskManager] [STREAM_GEN] Artifact received")
-                    logger.info(f"[TaskManager] [STREAM_GEN] Yielding at {time.time()} with: {str(chunk)[:120]}")
                     # Extract parts if they exist
                     if "parts" in chunk and chunk["parts"]:
                         all_parts.extend(chunk["parts"])

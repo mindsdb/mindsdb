@@ -94,8 +94,16 @@ class MindsDBAgent:
             async with client.stream("POST", url, json={"messages": to_serializable(messages)}) as response:
                 response.raise_for_status()
                 async for line in response.aiter_lines():
-                    if line.strip():
-                        yield line
+                    if not line.strip():
+                        continue
+                    # Only process actual SSE data lines
+                    if line.startswith("data:"):
+                        payload = line[len("data:") :].strip()
+                        try:
+                            yield json.loads(payload)
+                        except Exception as e:
+                            logger.error(f"Failed to parse SSE JSON payload: {e}; line: {payload}")
+                    # Ignore comments or control lines
 
     async def stream(
         self,

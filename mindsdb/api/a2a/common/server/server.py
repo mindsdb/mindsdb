@@ -150,7 +150,15 @@ class A2AServer:
                         data = json.dumps({"error": f"Serialization error: {str(e)}"})
                     yield {"data": data}
 
-            return EventSourceResponse(event_generator(result), headers={"Content-Type": "text/event-stream"})
+            # Add robust SSE headers for compatibility
+            sse_headers = {
+                "Content-Type": "text/event-stream",
+                "Cache-Control": "no-cache, no-transform",
+                "X-Accel-Buffering": "no",
+                "Connection": "keep-alive",
+                "Transfer-Encoding": "chunked",
+            }
+            return EventSourceResponse(event_generator(result), headers=sse_headers)
         elif isinstance(result, JSONRPCResponse):
             return JSONResponse(result.model_dump(exclude_none=True))
         elif isinstance(result, dict):

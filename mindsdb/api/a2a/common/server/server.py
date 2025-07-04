@@ -135,34 +135,18 @@ class A2AServer:
 
     def _create_response(self, result: Any) -> JSONResponse | EventSourceResponse:
         if isinstance(result, AsyncIterable):
-
-            async def event_generator(result) -> AsyncIterable[dict[str, str]]:
+            # Step 2: Yield actual serialized event as JSON, with timing logs
+            async def event_generator(result):
                 async for item in result:
-                    # Send the data event with immediate flush directive
-                    yield {
-                        "data": item.model_dump_json(exclude_none=True),
-                        "event": "message",
-                        "id": str(id(item)),  # Add a unique ID for each event
-                    }
-                    # Add an empty comment event to force flush
-                    yield {
-                        "comment": " ",  # Empty comment event to force flush
-                    }
+                    t0 = time.time()
+                    logger.info(f"[A2AServer] STEP2 serializing item at {t0}: {str(item)[:120]}")
+                    if hasattr(item, "model_dump_json"):
+                        data = item.model_dump_json(exclude_none=True)
+                    else:
+                        data = json.dumps(item)
+                    yield {"data": data}
 
-            # Create EventSourceResponse with complete headers for browser compatibility
-            return EventSourceResponse(
-                event_generator(result),
-                # Complete set of headers needed for browser streaming
-                headers={
-                    "Cache-Control": "no-cache, no-transform",
-                    "X-Accel-Buffering": "no",
-                    "Connection": "keep-alive",
-                    "Content-Type": "text/event-stream",
-                    "Transfer-Encoding": "chunked",
-                },
-                # Explicitly set media_type
-                media_type="text/event-stream",
-            )
+            return EventSourceResponse(event_generator(result), headers={"Content-Type": "text/event-stream"})
         elif isinstance(result, JSONRPCResponse):
             return JSONResponse(result.model_dump(exclude_none=True))
         else:

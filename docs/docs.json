@@ -315,7 +315,6 @@
                     "group": "Connect MindsDB to SQL Clients",
                     "pages": [
                       "mindsdb_sql/connect/mindsdb_editor",
-                      "mindsdb_sql/connect/postgres-client",
                       "mindsdb_sql/connect/mysql-client",
                       "mindsdb_sql/connect/dbeaver",
                       "mindsdb_sql/connect/connect-mariadb-skysql",
@@ -533,7 +532,9 @@
               {
                 "group": "Agents",
                 "pages": [
-                  "mindsdb_sql/agents/agent"
+                  "mindsdb_sql/agents/agent",
+                  "mindsdb_sql/agents/agent_syntax",
+                  "mindsdb_sql/agents/agent_gui"
                 ]
               },
               {
@@ -590,8 +591,15 @@
                 "group": "MCP API",
                 "pages": [
                   "mcp/overview",
-                  "mcp/tools",
-                  "mcp/cursor_usage"
+                  "mcp/usage",
+                  {
+                    "group": "MCP Clients",
+                    "pages": [
+                      "mcp/openai",
+                      "mcp/anthropic",
+                      "mcp/cursor_usage"
+                    ]
+                  }
                 ]
               }
             ]
@@ -719,6 +727,17 @@
                           "rest/agents/get-chatbot",
                           "rest/agents/update-chatbot",
                           "rest/agents/delete-chatbot"
+                        ]
+                      },
+                      {
+                        "group": "Knowledge Bases",
+                        "pages": [
+                          "rest/knowledge_bases/create",
+                          "rest/knowledge_bases/insert",
+                          "rest/knowledge_bases/query",
+                          "rest/knowledge_bases/list",
+                          "rest/knowledge_bases/get",
+                          "rest/knowledge_bases/delete"
                         ]
                       }
                     ]
@@ -1524,10 +1543,6 @@
     {
       "source": "/connect/mindsdb_editor",
       "destination": "/mindsdb_sql/connect/mindsdb_editor"
-    },
-    {
-      "source": "/connect/postgres-client",
-      "destination": "/mindsdb_sql/connect/postgres-client"
     },
     {
       "source": "/connect/mysql-client",

@@ -148,7 +148,13 @@ class A2AServer:
                     except Exception as e:
                         logger.error(f"Serialization error in SSE stream: {e}")
                         data = json.dumps({"error": f"Serialization error: {str(e)}"})
-                    yield {"data": data}
+                    message_id += 1  # Increment message ID
+                    yield {
+                        "event": "message",  # Default event type
+                        "id": str(message_id),  # Convert ID to string
+                        "data": data,
+                    }
+                    yield "\n\n"  # Flush comment to signal end of message
 
             # Add robust SSE headers for compatibility
             sse_headers = {

@@ -136,19 +136,13 @@ class MindsDBAgent:
             logger.debug(f"Formatted messages for agent: {formatted_messages}")
             streaming_response = self.streaming_invoke(formatted_messages, timeout=timeout)
             async for chunk in streaming_response:
+                # Only wrap once, and extract content cleanly
                 content_value = chunk.get("text") or chunk.get("output") or json.dumps(chunk)
-                chunk = {"is_task_complete": False, "content": content_value}
-                chunk["metadata"] = {}
-                if "parts" not in chunk:
-                    if "content" in chunk:
-                        chunk["parts"] = [{"type": "text", "text": chunk["content"]}]
-                    elif "output" in chunk:
-                        chunk["parts"] = [{"type": "text", "text": chunk["output"]}]
-                    elif "actions" in chunk or "steps" in chunk or "messages" in chunk:
-                        chunk["parts"] = []
-                    else:
-                        continue
-                yield chunk
+                wrapped_chunk = {"is_task_complete": False, "content": content_value, "metadata": {}}
+                if "parts" not in wrapped_chunk:
+                    if "content" in wrapped_chunk:
+                        pass  # keep as is
+                yield wrapped_chunk
         except Exception as e:
             logger.error(f"Error in streaming: {str(e)}")
             yield {

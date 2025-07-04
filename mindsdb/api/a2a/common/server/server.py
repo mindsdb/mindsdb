@@ -153,6 +153,9 @@ class A2AServer:
             return EventSourceResponse(event_generator(result), headers={"Content-Type": "text/event-stream"})
         elif isinstance(result, JSONRPCResponse):
             return JSONResponse(result.model_dump(exclude_none=True))
+        elif isinstance(result, dict):
+            logger.warning("Falling back to JSONResponse for result type: dict")
+            return JSONResponse(result)
         else:
             logger.error(f"Unexpected result type: {type(result)}")
             raise ValueError(f"Unexpected result type: {type(result)}")

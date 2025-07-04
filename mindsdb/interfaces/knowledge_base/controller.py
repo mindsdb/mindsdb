@@ -270,7 +270,7 @@ class KnowledgeBaseTable:
         logger.debug(f"Query returned {len(df)} rows")
         logger.debug(f"Columns in response: {df.columns.tolist()}")
 
-        if hybrid_search_enabled_flag and not isinstance(db_handler, VectorStoreHandler):
+        if hybrid_search_enabled_flag and not isinstance(db_handler, KeywordSearchBase):
             raise ValueError(
                 f"Hybrid search is enabled but the db_handler {type(db_handler)} does not support it. "
             )
@@ -290,7 +290,7 @@ class KnowledgeBaseTable:
                 Identifier(TableField.METADATA.value),
             ]
 
-            df_keyword_select = db_handler.dispatch_keyword_select(keyword_query_obj, keyword_search_conditions, keyword_search_args)
+            df_keyword_select = db_handler.dispatch_select(keyword_query_obj, keyword_search_conditions, keyword_search_args)
             df_keyword_select = self.addapt_result_columns(df_keyword_select)
             logger.debug(f"Keyword search returned {len(df_keyword_select)} rows")
             logger.debug(f"Columns in keyword search response: {df_keyword_select.columns.tolist()}")

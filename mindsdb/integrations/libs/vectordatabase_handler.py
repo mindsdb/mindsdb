@@ -356,80 +356,59 @@ class VectorStoreHandler(BaseHandler):
         # dispatch delete
         return self.delete(table_name, conditions=conditions)
 
-    def dispatch_select(self, query: Select, conditions: List[FilterCondition] = None):
+    def dispatch_select(
+            self,
+            query: Select,
+            conditions: Optional[List[FilterCondition]] = None,
+            keyword_search_args: Optional[KeywordSearchArgs] = None,
+    ):
         """
-        Dispatch select query to the appropriate method.
+        Dispatches a select query to the appropriate method, handling both
+        standard selections and keyword searches based on the provided arguments.
         """
-        # parse key arguments
+        # 1. Parse common query arguments
         table_name = query.from_table.parts[-1]
-        # if targets are star, select all columns
+
+        # If targets are a star (*), select all schema columns
         if isinstance(query.targets[0], Star):
             columns = [col["name"] for col in self.SCHEMA]
         else:
             columns = [col.parts[-1] for col in query.targets]
 
+        # 2. Validate columns
         if not self._is_columns_allowed(columns):
-            raise Exception(
-                f"Columns {columns} not allowed."
-                f"Allowed columns are {[col['name'] for col in self.SCHEMA]}"
-            )
+            allowed_cols = [col["name"] for col in self.SCHEMA]
+            raise Exception(f"Columns {columns} not allowed. Allowed columns are {allowed_cols}")
 
-        # check if columns are allowed
+        # 3. Extract and process conditions
         if conditions is None:
-            where_statement = query.where
-            conditions = self.extract_conditions(where_statement)
+            conditions = self.extract_conditions(query.where)
         self._convert_metadata_filters(conditions)
 
-        # get offset and limit
+        # 4. Get offset and limit
         offset = query.offset.value if query.offset is not None else None
         limit = query.limit.value if query.limit is not None else None
 
-        # dispatch select
-        return self.select(
-            table_name,
-            columns=columns,
-            conditions=conditions,
-            offset=offset,
-            limit=limit,
-        )
-
-    def dispatch_keyword_select(self, query: Select, conditions: List[FilterCondition] = None, keyword_search_args: KeywordSearchArgs = None):
-        """
-        Dispatch select query for keyword search.
-        This is a placeholder method that can be overridden by subclasses.
-        """
-        table_name = query.from_table.parts[-1]
-        # if targets are star, select all columns
-        if isinstance(query.targets[0], Star):
-            columns = [col["name"] for col in self.SCHEMA]
+        # 5. Conditionally dispatch to the correct select method
+        if keyword_search_args:
+            # It's a keyword search
+            return self.keyword_select(
+                table_name,
+                columns=columns,
+                conditions=conditions,
+                offset=offset,
+                limit=limit,
+                keyword_search_args=keyword_search_args,
+            )
         else:
-            columns = [col.parts[-1] for col in query.targets]
-
-        if not self._is_columns_allowed(columns):
-            raise Exception(
-                f"Columns {columns} not allowed."
-                f"Allowed columns are {[col['name'] for col in self.SCHEMA]}"
+            # It's a standard select
+            return self.select(
+                table_name,
+                columns=columns,
+                conditions=conditions,
+                offset=offset,
+                limit=limit,
             )
-
-        # check if columns are allowed
-        if conditions is None:
-            where_statement = query.where
-            conditions = self.extract_conditions(where_statement)
-        self._convert_metadata_filters(conditions)
-
-        # get offset and limit
-        offset = query.offset.value if query.offset is not None else None
-        limit = query.limit.value if query.limit is not None else None
-        # dispatch select
-        return self.keyword_select(
-            table_name,
-            columns=columns,
-            conditions=conditions,
-            offset=offset,
-            limit=limit,
-            keyword_search_args=keyword_search_args,
-        )
-
 
 
     def _dispatch(self, query: ASTNode) -> HandlerResponse:

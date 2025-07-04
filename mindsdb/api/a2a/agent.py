@@ -107,20 +107,23 @@ class MindsDBAgent:
         try:
             logger.info(f"Using streaming API for query: {query[:100]}...")
             formatted_messages = []
+            HISTORY_LIMIT = 20
             if history:
-                for msg in history:
+                # Only keep the last HISTORY_LIMIT messages for efficiency
+                for msg in history[-HISTORY_LIMIT:]:
                     msg_dict = msg.dict() if hasattr(msg, "dict") else msg
                     role = msg_dict.get("role", "user")
                     text = ""
                     for part in msg_dict.get("parts", []):
                         if part.get("type") == "text":
-                            text = part.get("text", "")
+                            text = part["text"]
                             break
                     if text:
                         if role == "user":
                             formatted_messages.append({"question": text, "answer": None})
-                        elif role == "assistant" and formatted_messages:
-                            formatted_messages[-1]["answer"] = text
+                        else:
+                            if formatted_messages:
+                                formatted_messages[-1]["answer"] = text
             formatted_messages.append({"question": query, "answer": None})
             logger.debug(f"Formatted messages for agent: {formatted_messages}")
             streaming_response = self.streaming_invoke(formatted_messages)

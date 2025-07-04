@@ -34,7 +34,7 @@ class ToMarkdown:
         else:
             raise ValueError(f"Unsupported file type: {file_extension}.")
 
-    def _get_file_content(self, file_path_or_url: str) -> str:
+    def _get_file_content(self, file_path_or_url: str) -> BytesIO:
         """
         Retrieves the content of a file.
         """
@@ -42,7 +42,7 @@ class ToMarkdown:
         if parsed_url.scheme in ('http', 'https'):
             response = requests.get(file_path_or_url)
             if response.status_code == 200:
-                return response
+                return BytesIO(response.content)
             else:
                 raise RuntimeError(f'Unable to retrieve file from URL: {file_path_or_url}')
         else:
@@ -77,9 +77,6 @@ class ToMarkdown:
         """
         Converts a PDF file to markdown.
         """
-        if isinstance(file_content, requests.Response):
-            file_content = BytesIO(file_content.content)
-
         markdown_pages = ocr(file_content, **kwargs)
         return "\n\n---\n\n".join(markdown_pages)
 
@@ -107,9 +104,6 @@ class ToMarkdown:
                 markdown.append(parse_element(child, depth + 1))
 
             return "\n".join(markdown)
-        
-        if isinstance(file_content, requests.Response):
-            file_content = BytesIO(file_content.content)
 
         root = ET.fromstring(file_content.read().decode("utf-8"))
         markdown_content = parse_element(root)

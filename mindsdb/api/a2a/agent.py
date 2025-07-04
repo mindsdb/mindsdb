@@ -134,7 +134,8 @@ class MindsDBAgent:
             logger.debug(f"Formatted messages for agent: {formatted_messages}")
             streaming_response = self.streaming_invoke(formatted_messages, timeout=timeout)
             async for chunk in streaming_response:
-                chunk = {"is_task_complete": False, "content": chunk}
+                content_value = chunk.get("text") or chunk.get("output") or json.dumps(chunk)
+                chunk = {"is_task_complete": False, "content": content_value}
                 chunk["metadata"] = {}
                 if "parts" not in chunk:
                     if "content" in chunk:

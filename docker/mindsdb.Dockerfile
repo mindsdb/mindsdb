@@ -86,7 +86,6 @@ ENV PATH=/venv/bin:$PATH
 
 EXPOSE 47334/tcp
 EXPOSE 47335/tcp
-EXPOSE 47336/tcp
 # Expose MCP port
 EXPOSE 47337/tcp
 # Expose A2A port

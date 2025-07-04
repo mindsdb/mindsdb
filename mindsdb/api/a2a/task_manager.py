@@ -182,7 +182,7 @@ class AgentTaskManager(InMemoryTaskManager):
 
         # If streaming is enabled (default), use the streaming implementation
         try:
-            logger.info(f"[TaskManager] Entering agent.stream() at {time.time()}")
+            logger.debug(f"[TaskManager] Entering agent.stream() at {time.time()}")
             # Transform to agent-compatible format
             agent_messages = to_question_format(
                 [

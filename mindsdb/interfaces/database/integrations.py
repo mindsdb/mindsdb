@@ -210,20 +210,32 @@ class IntegrationController:
         integration_record.data = data
         db.session.commit()
 
-    def delete(self, name):
-        if name in ("files", "lightwood"):
+    def delete(self, name: str, exact_case: bool = False) -> None:
+        """Delete an integration by name.
+
+        Args:
+            name (str): The name of the integration to delete.
+            exact_case (bool, optional): If True, the integration name is case-sensitive. Defaults to False.
+
+        Raises:
+            Exception: If the integration cannot be deleted (system, permanent, demo, in use, or has active models).
+
+        Returns:
+            None
+        """
+        if name == "files":
             raise Exception("Unable to drop: is system database")
 
         self.handlers_cache.delete(name)
 
         # check permanent integration
-        if name in self.handler_modules:
+        if name.lower() in self.handler_modules:
             handler = self.handler_modules[name]
 
             if getattr(handler, "permanent", False) is True:
                 raise Exception("Unable to drop permanent integration")
 
-        integration_record = self._get_integration_record(name)
+        integration_record = self._get_integration_record(name, case_sensitive=exact_case)
         if isinstance(integration_record.data, dict) and integration_record.data.get("is_demo") is True:
             raise Exception("Unable to drop demo object")
 

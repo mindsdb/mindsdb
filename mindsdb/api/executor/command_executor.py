@@ -1196,12 +1196,28 @@ class ExecuteCommands:
 
         return ExecuteAnswer()
 
-    def answer_drop_database(self, statement):
-        if len(statement.name.parts) != 1:
-            raise Exception("Database name should contain only 1 part.")
-        db_name = statement.name.parts[0]
+    def answer_drop_database(self, statement: DropDatabase | DropDatasource) -> ExecuteAnswer:
+        """Drop a database (project or integration) by name.
+
+        Args:
+            statement (DropDatabase | DropDatasource): The parsed DROP DATABASE or DROP DATASOURCE statement.
+
+        Raises:
+            Exception: If the database name format is invalid.
+            EntityNotExistsError: If the database does not exist and 'IF EXISTS' is not specified in the statement.
+
+        Returns:
+            ExecuteAnswer: The result of the drop database operation.
+        """
+        match statement.name.parts, statement.name.is_quoted:
+            case [db_name], [is_quoted]:
+                if not is_quoted:
+                    db_name = db_name.lower()
+            case _:
+                raise Exception("Database name should contain only 1 part.")
+
         try:
-            self.session.database_controller.delete(db_name)
+            self.session.database_controller.delete(db_name, exact_case=is_quoted)
         except EntityNotExistsError:
             if statement.if_exists is not True:
                 raise

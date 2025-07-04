@@ -18,18 +18,30 @@ class DatabaseController:
         self.logs_db_controller = LogDBController()
         self.information_schema_controller = None
 
-    def delete(self, name: str):
+    def delete(self, name: str, exact_case: bool = False) -> None:
+        """Delete a database (project or integration) by name.
+
+        Args:
+            name (str): The name of the database to delete.
+            exact_case (bool, optional): If True, the database name is case-sensitive. Defaults to False.
+
+        Raises:
+            EntityNotExistsError: If the database does not exist.
+            Exception: If the database cannot be deleted.
+
+        Returns:
+            None
+        """
         databases = self.get_dict()
-        name = name.lower()
-        if name not in databases:
+        if name.lower() not in databases:
             raise EntityNotExistsError("Database does not exists", name)
-        db_type = databases[name]["type"]
+        db_type = databases[name.lower()]["type"]
         if db_type == "project":
-            project = self.get_project(name)
+            project = self.get_project(name, exact_case)
             project.delete()
             return
         elif db_type == "data":
-            self.integration_controller.delete(name)
+            self.integration_controller.delete(name, exact_case)
             return
         else:
             raise Exception(f"Database with type '{db_type}' cannot be deleted")

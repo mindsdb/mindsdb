@@ -535,9 +535,9 @@ class Config:
         Args:
             data (dict): data to update in `auto` config.
             overwrite (bool): if True, overwrite existing keys, otherwise merge them.
-                - False (default): Merge recursively. Existing nested dictionaries are preserved 
+                - False (default): Merge recursively. Existing nested dictionaries are preserved
                 and only the specified keys in `data` are updated.
-                - True: Overwrite completely. Existing keys are replaced entirely with values 
+                - True: Overwrite completely. Existing keys are replaced entirely with values
                 from `data`, discarding any nested structure not present in `data`.
         """
         self.ensure_auto_config_is_relevant()

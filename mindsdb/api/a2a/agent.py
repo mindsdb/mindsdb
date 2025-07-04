@@ -4,7 +4,7 @@ import requests
 import logging
 import httpx
 from mindsdb.api.a2a.utils import to_serializable
-
+from mindsdb.api.a2a.constants import DEFAULT_STREAM_TIMEOUT
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +87,7 @@ class MindsDBAgent:
                 "parts": [{"type": "text", "text": error_msg}],
             }
 
-    async def streaming_invoke(self, messages, timeout=60):
+    async def streaming_invoke(self, messages, timeout=DEFAULT_STREAM_TIMEOUT):
         url = f"{self.base_url}/api/projects/{self.project_name}/agents/{self.agent_name}/completions/stream"
         logger.info(f"Sending streaming request to MindsDB agent: {self.agent_name}")
         async with httpx.AsyncClient(timeout=timeout) as client:
@@ -102,6 +102,7 @@ class MindsDBAgent:
         query: str,
         session_id: str,
         history: List[dict] | None = None,
+        timeout: int = DEFAULT_STREAM_TIMEOUT,
     ) -> AsyncIterable[Dict[str, Any]]:
         """Stream responses from the MindsDB agent (uses streaming API endpoint)."""
         try:
@@ -123,7 +124,7 @@ class MindsDBAgent:
                             formatted_messages[-1]["answer"] = text
             formatted_messages.append({"question": query, "answer": None})
             logger.debug(f"Formatted messages for agent: {formatted_messages}")
-            streaming_response = self.streaming_invoke(formatted_messages)
+            streaming_response = self.streaming_invoke(formatted_messages, timeout=timeout)
             async for chunk in streaming_response:
                 chunk = {"is_task_complete": False, "content": chunk}
                 chunk["metadata"] = {}

@@ -230,6 +230,10 @@ USING
 
 **Option 2.** Define the default embedding model in the [MindsDB configuration file](/setup/custom-config).
 
+<Tip>
+You can define the default models in the Settings of the MindsDB Editor GUI.
+</Tip>
+
 <Note>
 Note that if you define `default_embedding_model` in the configuration file, you do not need to provide the `embedding_model` parameter when creating a knowledge base. If provide both, then the values from the `embedding_model` parameter are used.
 </Note>
@@ -267,7 +271,17 @@ It is an optional parameter. It is a required parameter when using the `azure_op
 
 The reranking model is an optional component of the knowledge base. It stores specifications of the reranking model to be used.
 
-Users can define the reranking model choosing one of the following options.
+Users can disable reranking features of knowledge bases by setting this parameter to `false`.
+
+```sql
+CREATE KNOWLEDGE_BASE my_kb
+USING
+    ...
+    reranking_model = false,
+    ...
+```
+
+Users can enable reranking features of knowledge bases by defining the reranking model choosing one of the following options.
 
 **Option 1.** Use the `reranking_model` parameter to define the specification.
 
@@ -290,12 +304,16 @@ USING
 
 **Option 2.** Define the default reranking model in the [MindsDB configuration file](/setup/custom-config).
 
+<Tip>
+You can define the default models in the Settings of the MindsDB Editor GUI.
+</Tip>
+
 <Note>
-Note that if you define `default_llm` in the configuration file, you do not need to provide the `reranking_model` parameter when creating a knowledge base. If provide both, then the values from the `reranking_model` parameter are used.
+Note that if you define [`default_reranking_model` in the configuration file](/setup/custom-config#default-reranking-model), you do not need to provide the `reranking_model` parameter when creating a knowledge base. If provide both, then the values from the `reranking_model` parameter are used.
 </Note>
 
 ```bash
-"default_llm": {
+"default_reranking_model": {
 
   "provider": "azure_openai",
   "model_name" : "gpt-4o",
@@ -310,10 +328,10 @@ Note that if you define `default_llm` in the configuration file, you do not need
 The reranking model specification includes:
 
 * `provider`
-It is a required parameter. It defines the model provider. Currently, the supported providers include OpenAI (`openai`) and OpenAI via Azure (`azure_openai`).
+It is a required parameter. It defines the model provider as listed in [supported LLMs](/mindsdb_sql/knowledge-bases#supported-llms).
 
 * `model_name`
-It is a required parameter. It defines the embedding model name as specified by the provider. Users can choose one of the [OpenAI chat models](https://platform.openai.com/docs/models).
+It is a required parameter. It defines the embedding model name as specified by the provider.
 
 * `api_key`
 The API key is required to access the embedding model assigned to a knowledge base. Users can provide it either in this `api_key` parameter, or in the `OPENAI_API_KEY` environment variable for `"provider": "openai"` and `AZURE_OPENAI_API_KEY` environment variable for `"provider": "azure_openai"`.
@@ -690,7 +708,9 @@ The parameters include the following:
 
 * `batch_size` defines the number of rows fetched per iteration to optimize data extraction from the source. It defaults to 1000.
 
-* `threads` defines threads for running partitions. Note that if the [ML task queue](/setup/custom-config#overview-of-config-parameters) is enabled, threads are used automatically. The available values for include a number of threads to be used, for example, `threads = 10`, or a boolean value that defines whether to enable threads, setting `threads = true`, or disable threads, setting `threads = false`.
+* `threads` defines threads for running partitions. Note that if the [ML task queue](/setup/custom-config#overview-of-config-parameters) is enabled, threads are used automatically. The available values for `threads` are:
+    - a number of threads to be used, for example, `threads = 10`,
+    - a boolean value that defines whether to enable threads, setting `threads = true`, or disable threads, setting `threads = false`.
 
 * `track_column` defines the column used for sorting data before partitioning.
 
@@ -1045,7 +1065,7 @@ USING
     llm = {
         'provider': 'openai',
         'api_key':'sk-xxx',
-        'model':'gpt-4'
+        'model_name':'gpt-4'
     },
     save_to = my_datasource.my_result_table; 
 ```

@@ -74,16 +74,6 @@ def sanitize_json_response(response: str) -> str:
         except json.JSONDecodeError:
             continue
 
-    # Fallback: try smaller substrings if the above fails
-    for end_idx in range(start_idx + 2, len(response) + 1):
-        candidate = response[start_idx:end_idx]
-        try:
-            parsed = json.loads(candidate)
-            if isinstance(parsed, dict):
-                return candidate
-        except json.JSONDecodeError:
-            continue
-
     raise ValueError("No valid JSON object found in the response.")
 
 

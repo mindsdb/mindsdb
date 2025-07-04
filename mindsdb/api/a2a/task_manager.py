@@ -211,7 +211,7 @@ class AgentTaskManager(InMemoryTaskManager):
             }
             error_result = {
                 "id": request.id,
-                "result": {
+                "error": {
                     "id": task_send_params.id,
                     "artifact": artifact,
                 },

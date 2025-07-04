@@ -251,7 +251,6 @@ class KnowledgeBaseTable:
                 "Multiple content columns found in query conditions. "
                 "Only one content column is allowed for keyword search."
             )
-        keyword_column_name, keyword_query = keyword_search_cols_and_values[0]
 
         logger.debug(f"Extracted query text: {query_text}")
 
@@ -271,13 +270,17 @@ class KnowledgeBaseTable:
         logger.debug(f"Query returned {len(df)} rows")
         logger.debug(f"Columns in response: {df.columns.tolist()}")
 
+        if hybrid_search_enabled_flag and not isinstance(db_handler, VectorStoreHandler):
+            raise ValueError(
+                f"Hybrid search is enabled but the db_handler {type(db_handler)} does not support it. "
+            )
         # check if db_handler inherits from KeywordSearchBase
         if hybrid_search_enabled_flag and isinstance(db_handler, KeywordSearchBase):
             # If query_text is present, use it for keyword search
             logger.debug(f"Performing keyword search with query text: {query_text}")
             keyword_search_args = KeywordSearchArgs(
                 query=query_text,
-                column=keyword_column_name
+                column=TableField.CONTENT.value
             )
             keyword_query_obj = copy.deepcopy(query)
 

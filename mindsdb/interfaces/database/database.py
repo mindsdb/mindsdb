@@ -98,8 +98,17 @@ class DatabaseController:
     def exists(self, db_name: str) -> bool:
         return db_name.lower() in self.get_dict()
 
-    def get_project(self, name: str):
-        return self.project_controller.get(name=name)
+    def get_project(self, name: str, exact_case: bool = False) -> "Project":
+        """Get a project by name.
+
+        Args:
+            name (str): The name of the project to retrieve.
+            exact_case (bool, optional): If True, the project name is case-sensitive. Defaults to False.
+
+        Returns:
+            Project: The project instance matching the given name.
+        """
+        return self.project_controller.get(name=name, exact_case=exact_case)
 
     def get_system_db(self, name: str):
         if name == "log":

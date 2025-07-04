@@ -52,21 +52,38 @@ class ViewController:
         rec.query = query
         db.session.commit()
 
-    def delete(self, name, project_name):
-        name = name.lower()
+    def delete(self, name: str, project_name: str, exact_case: bool = False) -> None:
+        """Remove a view with the specified name from the given project.
+
+        Args:
+            name (str): The name of the view to remove.
+            project_name (str): The name of the project containing the view.
+            exact_case (bool, optional): If True, the view name is case-sensitive. Defaults to False.
+
+        Raises:
+            EntityNotExistsError: If the view does not exist.
+
+        Returns:
+            None
+        """
         project_record = get_project_record(project_name)
 
-        rec = db.session.query(db.View).filter(
-            func.lower(db.View.name) == name,
+        query = db.session.query(db.View).filter(
             db.View.company_id == ctx.company_id,
             db.View.project_id == project_record.id
-        ).first()
-        if rec is None:
+        )
+        if exact_case:
+            query = query.filter(db.View.name == name)
+        else:
+            query = query.filter(func.lower(db.View.name) == func.lower(name))
+
+        record = query.first()
+        if record is None:
             raise EntityNotExistsError('View not found', name)
-        db.session.delete(rec)
+        db.session.delete(record)
         db.session.commit()
 
-        query_context_controller.drop_query_context('view', rec.id)
+        query_context_controller.drop_query_context('view', record.id)
 
     def list(self, project_name):
 

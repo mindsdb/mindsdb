@@ -1158,34 +1158,41 @@ class ExecuteCommands:
         self.session.integration_controller.delete(name)
         return ExecuteAnswer()
 
-    def answer_create_database(self, statement: ASTNode):
-        """create new handler (datasource/integration in old terms)
+    def answer_create_database(self, statement: CreateDatabase) -> ExecuteAnswer:
+        """Create new integration or project
+
         Args:
-            statement (ASTNode): data for creating database/project
+            statement (CreateDatabase): data for creating database/project
+
+        Returns:
+            ExecuteAnswer: 'ok' answer
         """
 
-        if len(statement.name.parts) != 1:
-            raise Exception("Database name should contain only 1 part.")
+        match statement.name.parts, statement.name.is_quoted:
+            case [database_name], [False]:
+                pass
+            case [database_name], [True] if database_name.islower():
+                pass
+            case [database_name], [True]:
+                raise ValueError(f'Invalid name "{database_name}": only lowercase names are allowed')
+            case _:
+                raise ValueError(
+                    f'Invalid name "{".".join(statement.name.parts)}": name must not contain dots or multiple parts'
+                )
+        database_name = database_name.lower()
 
-        database_name = statement.name.parts[0]
-        engine = statement.engine
-        if engine is None:
-            engine = "mindsdb"
-        engine = engine.lower()
+        engine = (statement.engine or "mindsdb").lower()
+
         connection_args = statement.parameters
 
-        if engine == "mindsdb":
-            try:
+        try:
+            if engine == "mindsdb":
                 ProjectController().add(database_name)
-            except EntityExistsError:
-                if statement.if_not_exists is False:
-                    raise
-        else:
-            try:
+            else:
                 self._create_integration(database_name, engine, connection_args)
-            except EntityExistsError:
-                if getattr(statement, "if_not_exists", False) is False:
-                    raise
+        except EntityExistsError:
+            if statement.if_not_exists is False:
+                raise
 
         return ExecuteAnswer()
 
@@ -1240,11 +1247,11 @@ class ExecuteCommands:
 
         return ExecuteAnswer()
 
-    def answer_create_or_alter_view(self, statement: ASTNode, database_name: str) -> ExecuteAnswer:
+    def answer_create_or_alter_view(self, statement: CreateView | AlterView, database_name: str) -> ExecuteAnswer:
         """Process CREATE and ALTER VIEW commands
 
         Args:
-            statement (ASTNode): data for creating or altering view
+            statement (CreateView | AlterView): data for creating or altering view
             database_name (str): name of the current database
 
         Returns:
@@ -1252,23 +1259,20 @@ class ExecuteCommands:
         """
         project_name = database_name
 
-        if isinstance(statement.name, str):
-            parts = statement.name.split(".")
-        elif isinstance(statement.name, Identifier):
-            parts = statement.name.parts
-        else:
-            raise ValueError(f"Unknown type of view name: {statement.name}")
-
-        match parts:
-            case [project_name, view_name]:
+        match statement.name.parts, statement.name.is_quoted:
+            case [project_name, view_name], [_, view_name_quoted]:
                 pass
-            case [view_name]:
+            case [view_name], [view_name_quoted]:
                 pass
             case _:
                 raise ValueError(
                     'View name should be in the form "project_name.view_name" '
                     f'or "view_name", got {statement.name.parts}'
                 )
+
+        if view_name_quoted and not view_name.islower():
+            raise ValueError(f'Invalid name "{view_name}": only lowercase names are allowed')
+        view_name = view_name.lower()
 
         query_str = statement.query_str
 
@@ -1309,19 +1313,33 @@ class ExecuteCommands:
 
         return ExecuteAnswer()
 
-    def answer_drop_view(self, statement, database_name):
-        names = statement.names
+    def answer_drop_view(self, statement: DropView, database_name: str) -> ExecuteAnswer:
+        """Drop one or more views from the specified database/project.
 
-        for name in names:
-            view_name = name.parts[-1]
-            if len(name.parts) > 1:
-                db_name = name.parts[0]
-            else:
-                db_name = database_name
-            project = self.session.database_controller.get_project(db_name)
+        Args:
+            statement (DropView): The parsed DROP VIEW statement containing view names and options.
+            database_name (str): The name of the database (project) from which to drop the views.
+
+        Raises:
+            EntityNotExistsError: If a view does not exist and 'IF EXISTS' is not specified in the statement.
+            ValueError: If the view name format is invalid.
+
+        Returns:
+            ExecuteAnswer: The result of the drop view operation.
+        """
+        for name in statement.names:
+            match name.parts, name.is_quoted:
+                case [view_name], [view_name_quoted]:
+                    db_name_quoted = False
+                case [database_name, view_name], [db_name_quoted, view_name_quoted]:
+                    pass
+                case _:
+                    raise ValueError(f'Invalid view name: {name}')
+
+            project = self.session.database_controller.get_project(database_name, db_name_quoted)
 
             try:
-                project.drop_view(view_name)
+                project.drop_view(view_name, exact_case=view_name_quoted)
             except EntityNotExistsError:
                 if statement.if_exists is not True:
                     raise

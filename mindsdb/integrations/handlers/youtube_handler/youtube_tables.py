@@ -304,6 +304,7 @@ class YoutubeChannelsTable(APITable):
 
 
 class YoutubeVideosTable(APITable):
+
     """Youtube Video info  by video id Table implementation"""
 
     def select(self, query: ast.Select) -> pd.DataFrame:

@@ -1,5 +1,5 @@
 from typing import Optional
-
+from datetime import datetime
 import pandas as pd
 from pydruid.db import connect
 
@@ -14,7 +14,7 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 
 logger = log.getLogger(__name__)
@@ -25,7 +25,7 @@ class DruidHandler(DatabaseHandler):
     This handler handles connection and execution of the Apache Druid statements.
     """
 
-    name = 'druid'
+    name = "druid"
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         """
@@ -37,18 +37,18 @@ class DruidHandler(DatabaseHandler):
         """
         super().__init__(name)
         self.parser = parse_sql
-        self.dialect = 'druid'
+        self.dialect = "druid"
 
-        optional_parameters = ['user', 'password']
+        optional_parameters = ["user", "password"]
         for parameter in optional_parameters:
             if parameter not in connection_data:
                 connection_data[parameter] = None
 
-        if 'path' not in connection_data:
-            connection_data['path'] = '/druid/v2/sql/'
+        if "path" not in connection_data:
+            connection_data["path"] = "/druid/v2/sql/"
 
-        if 'scheme' not in connection_data:
-            connection_data['scheme'] = 'http'
+        if "scheme" not in connection_data:
+            connection_data["scheme"] = "http"
 
         self.connection_data = connection_data
         self.kwargs = kwargs
@@ -71,12 +71,12 @@ class DruidHandler(DatabaseHandler):
             return self.connection
 
         self.connection = connect(
-            host=self.connection_data['host'],
-            port=self.connection_data['port'],
-            path=self.connection_data['path'],
-            scheme=self.connection_data['scheme'],
-            user=self.connection_data['user'],
-            password=self.connection_data['password']
+            host=self.connection_data["host"],
+            port=self.connection_data["port"],
+            path=self.connection_data["path"],
+            scheme=self.connection_data["scheme"],
+            user=self.connection_data["user"],
+            password=self.connection_data["password"],
         )
         self.is_connected = True
 
@@ -86,7 +86,6 @@ class DruidHandler(DatabaseHandler):
         """
         Close any existing connections.
         """
-
         if self.is_connected is False:
             return
 
@@ -106,11 +105,10 @@ class DruidHandler(DatabaseHandler):
 
         try:
             conn = self.connect()
-            conn.cursor().execute('select 1')  # raise exception if provided wrong credentials
-
+            conn.cursor().execute("select 1")
             response.success = True
         except Exception as e:
-            logger.error(f'Error connecting to Druid, {e}!')
+            logger.error(f"Error connecting to Druid, {e}!")
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -139,21 +137,14 @@ class DruidHandler(DatabaseHandler):
             result = cursor.fetchall()
             if result:
                 response = Response(
-                    RESPONSE_TYPE.TABLE,
-                    data_frame=pd.DataFrame(
-                        result,
-                        columns=[x[0] for x in cursor.description]
-                    )
+                    RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(result, columns=[x[0] for x in cursor.description])
                 )
             else:
                 connection.commit()
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
-            logger.error(f'Error running query: {query} on Pinot!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
-            )
+            logger.error(f"Error running query: {query} on D!")
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         cursor.close()
         if need_to_close is True:
@@ -165,11 +156,19 @@ class DruidHandler(DatabaseHandler):
         """
         Receive query as AST (abstract syntax tree) and act upon it somehow.
         Args:
-            query (ASTNode): sql query represented as AST. May be any kind
-                of query: SELECT, INTSERT, DELETE, etc
+            query (ASTNode): sql query represented as AST.
         Returns:
             HandlerResponse
         """
+        if query.where:
+            try:
+                val = query.where.args[-1].value
+                if isinstance(val, str):
+                    dt = datetime.strptime(val, "%Y-%m-%dT%H:%M:%S.%fZ")
+                    query.where.args[-1].value = dt.strftime("%Y-%m-%d %H:%M:%S")
+            except Exception as e:
+                logger.warning(f"Failed to parse timestamp in query.where: {e}")
+
         renderer = SqlalchemyRender(DruidDialect)
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
@@ -180,7 +179,6 @@ class DruidHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-
         query = """
             SELECT *
             FROM INFORMATION_SCHEMA.TABLES
@@ -188,8 +186,8 @@ class DruidHandler(DatabaseHandler):
         result = self.native_query(query)
         df = result.data_frame
 
-        df = df[['TABLE_NAME', 'TABLE_TYPE']]
-        result.data_frame = df.rename(columns={'TABLE_NAME': 'table_name', 'TABLE_TYPE': 'table_type'})
+        df = df[["TABLE_NAME", "TABLE_TYPE"]]
+        result.data_frame = df.rename(columns={"TABLE_NAME": "table_name", "TABLE_TYPE": "table_type"})
 
         return result
 
@@ -201,7 +199,6 @@ class DruidHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-
         query = f"""
             SELECT *
             FROM INFORMATION_SCHEMA.COLUMNS
@@ -210,7 +207,7 @@ class DruidHandler(DatabaseHandler):
         result = self.native_query(query)
         df = result.data_frame
 
-        df = df[['COLUMN_NAME', 'DATA_TYPE']]
-        result.data_frame = df.rename(columns={'COLUMN_NAME': 'column_name', 'DATA_TYPE': 'data_type'})
+        df = df[["COLUMN_NAME", "DATA_TYPE"]]
+        result.data_frame = df.rename(columns={"COLUMN_NAME": "column_name", "DATA_TYPE": "data_type"})
 
         return result

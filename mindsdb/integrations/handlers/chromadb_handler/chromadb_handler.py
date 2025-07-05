@@ -266,6 +266,9 @@ class ChromaDBHandler(VectorStoreHandler):
                 elif condition.op == FilterOperator.NOT_IN:
                     ids_exclude.extend(condition.value)
 
+        if id_filters == []:
+            id_filters = None
+
         if vector_filter is not None:
             # similarity search
             query_payload = {

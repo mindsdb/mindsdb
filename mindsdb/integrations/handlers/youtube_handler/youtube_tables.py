@@ -317,7 +317,7 @@ class YoutubeVideosTable(APITable):
             result_limit,
         ) = select_statement_parser.parse_query()
 
-        video_id, channel_id = None, None
+        video_id, channel_id, search_query = None, None, None
         for op, arg1, arg2 in where_conditions:
             if arg1 == "video_id":
                 if op == "=":
@@ -331,18 +331,26 @@ class YoutubeVideosTable(APITable):
                 else:
                     raise NotImplementedError("Only '=' operator is supported for channel_id column.")
 
-        if not video_id and not channel_id:
-            raise ValueError("Either video_id or channel_id has to be present in where clause.")
+            elif arg1 == "query":
+                if op == "=":
+                    search_query = arg2
+                else:
+                    raise NotImplementedError("Only '=' operator is supported for query column.")
+
+        if not video_id and not channel_id and not search_query:
+            raise ValueError("At least one of video_id, channel_id, or query must be present in the WHERE clause.")
 
         if video_id:
             video_df = self.get_videos_by_video_ids([video_id])
+        elif channel_id:
+            video_df = self.get_videos_by_channel_id(channel_id, result_limit)
         else:
-            video_df = self.get_videos_by_channel_id(channel_id)
+            video_df = self.get_videos_by_search_query(search_query, result_limit)
 
         select_statement_executor = SELECTQueryExecutor(
             video_df,
             selected_columns,
-            [where_condition for where_condition in where_conditions if where_condition[1] not in ['video_id', 'channel_id']],
+            [where_condition for where_condition in where_conditions if where_condition[1] not in ["video_id", "channel_id", "query"]],
             order_by_conditions,
             result_limit if query.limit else None
         )
@@ -351,18 +359,56 @@ class YoutubeVideosTable(APITable):
 
         return video_df
 
-    def get_videos_by_channel_id(self, channel_id):
+    def get_videos_by_search_query(self, search_query, limit=10):
         video_ids = []
         resource = (
             self.handler.connect()
             .search()
-            .list(part="snippet", channelId=channel_id, type="video")
+            .list(part="snippet", q=search_query, type="video", maxResults=min(50, limit))
         )
-        while resource:
+        total_fetched = 0
+
+        while resource and total_fetched < limit:
             response = resource.execute()
             for item in response["items"]:
                 video_ids.append(item["id"]["videoId"])
-            if "nextPageToken" in response:
+                total_fetched += 1
+                if total_fetched >= limit:
+                    break
+
+            if "nextPageToken" in response and total_fetched < limit:
+                resource = (
+                    self.handler.connect()
+                    .search()
+                    .list(
+                        part="snippet",
+                        q=search_query,
+                        type="video",
+                        maxResults=min(50, limit - total_fetched),
+                        pageToken=response["nextPageToken"],
+                    )
+                )
+            else:
+                break
+
+        return self.get_videos_by_video_ids(video_ids)
+
+    def get_videos_by_channel_id(self, channel_id, limit=10):
+        video_ids = []
+        resource = (
+            self.handler.connect()
+            .search()
+            .list(part="snippet", channelId=channel_id, type="video", maxResults=min(50, limit))
+        )
+        total_fetched = 0
+        while resource and total_fetched < limit:
+            response = resource.execute()
+            for item in response["items"]:
+                video_ids.append(item["id"]["videoId"])
+                total_fetched += 1
+                if total_fetched >= limit:
+                    break
+            if "nextPageToken" in response and total_fetched < limit:
                 resource = (
                     self.handler.connect()
                     .search()
@@ -370,6 +416,7 @@ class YoutubeVideosTable(APITable):
                         part="snippet",
                         channelId=channel_id,
                         type="video",
+                        maxResults=min(50, limit - total_fetched),
                         pageToken=response["nextPageToken"],
                     )
                 )
@@ -388,7 +435,8 @@ class YoutubeVideosTable(APITable):
         # loop over 50 video ids at a time
         # an invalid request error is caused otherwise
         for i in range(0, len(video_ids), 50):
-            resource = self.handler.connect().videos().list(part="statistics,snippet,contentDetails", id=",".join(video_ids[i:i + 50])).execute()
+            resource = self.handler.connect().videos().list(part="statistics,snippet,contentDetails", id=",".join(video_ids[i : i + 50])).execute()
+
             for item in resource["items"]:
                 data.append(
                     {

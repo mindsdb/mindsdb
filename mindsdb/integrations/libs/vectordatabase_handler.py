@@ -372,11 +372,11 @@ class VectorStoreHandler(BaseHandler):
         return self.delete(table_name, conditions=conditions)
 
     def dispatch_select(
-            self,
-            query: Select,
-            conditions: Optional[List[FilterCondition]] = None,
-            allowed_metadata_columns: List[str] = None,
-            keyword_search_args: Optional[KeywordSearchArgs] = None
+        self,
+        query: Select,
+        conditions: Optional[List[FilterCondition]] = None,
+        allowed_metadata_columns: List[str] = None,
+        keyword_search_args: Optional[KeywordSearchArgs] = None,
     ):
         """
         Dispatches a select query to the appropriate method, handling both

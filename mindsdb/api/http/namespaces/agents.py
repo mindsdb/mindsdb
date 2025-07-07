@@ -31,17 +31,17 @@ def create_agent(project_name, name, agent):
             'Missing "name" field for agent'
         )
 
-    if 'model_name' not in agent:
-        return http_error(
-            HTTPStatus.BAD_REQUEST,
-            'Missing field',
-            'Missing "model_name" field for agent'
-        )
-
-    model_name = agent['model_name']
+    model_name = agent.get('model_name')
     provider = agent.get('provider')
-    params = agent.get('params', {})
     skills = agent.get('skills', [])
+    
+    params = {}
+    if 'data' in agent:
+        params['data'] = agent['data']
+    if 'model' in agent:
+        params['model'] = agent['model']
+    if 'prompt_template' in agent:
+        params['prompt_template'] = agent['prompt_template']
 
     agents_controller = AgentsController()
 

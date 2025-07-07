@@ -235,7 +235,9 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
         if not keyword_query or not content_column_name:
             return PgVectorHandler._construct_where_clause(filter_conditions)
 
-        keyword_query_condition = f"""to_tsvector('english', {content_column_name}) @@ websearch_to_tsquery('english', '{keyword_query}')"""
+        keyword_query_condition = (
+            f"""to_tsvector('english', {content_column_name}) @@ websearch_to_tsquery('english', '{keyword_query}')"""
+        )
         if filter_conditions is None:
             return ""
 
@@ -261,9 +263,6 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
             return f"WHERE {where_clauses[0]}"
         else:
             return ""
-
-
-
 
     @staticmethod
     def _construct_full_after_from_clause(
@@ -291,16 +290,15 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
         # given filter conditions, construct where clause
         where_clause = self._construct_where_clause_with_keywords(filter_conditions, query, content_column_name)
 
-
         query = f"""
             SELECT
-                {', '.join(columns)},
+                {", ".join(columns)},
                 ts_rank_cd(to_tsvector('english', {content_column_name}), websearch_to_tsquery('english', '{query}')) as distance
             FROM
                 {table_name}
-            {where_clause if where_clause else ''}
-            {f'LIMIT {limit}' if limit else ''}
-            {f'OFFSET {offset}' if offset else ''};"""
+            {where_clause if where_clause else ""}
+            {f"LIMIT {limit}" if limit else ""}
+            {f"OFFSET {offset}" if offset else ""};"""
 
         return query
 
@@ -411,7 +409,9 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
         if columns is None:
             columns = ["id", "content", "embeddings", "metadata"]
         content_column_name = keyword_search_args.column
-        query = self._build_keyword_bm25_query(table_name, keyword_search_args.query, columns, content_column_name, conditions, limit, offset)
+        query = self._build_keyword_bm25_query(
+            table_name, keyword_search_args.query, columns, content_column_name, conditions, limit, offset
+        )
 
         result = self.raw_query(query)
 
@@ -420,7 +420,6 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
             result["embeddings"] = result["embeddings"].astype(str)
 
         return result
-
 
     def hybrid_search(
         self,

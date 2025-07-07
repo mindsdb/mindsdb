@@ -31,17 +31,16 @@ def create_agent(project_name, name, agent):
     provider = agent.get('provider')
     skills = agent.get('skills', [])
     
-    params = {}
-    if 'data' in agent:
+    params = agent.get("params", {})    
+    if agent.get('data'):
         params['data'] = agent['data']
-    if 'model' in agent:
+    if agent.get('model'):
         params['model'] = agent['model']
-    if 'prompt_template' in agent:
+    if agent.get('prompt_template'):
         params['prompt_template'] = agent['prompt_template']
 
     model_name = agent["model_name"]
     provider = agent.get("provider")
-    params = agent.get("params", {})
     skills = agent.get("skills", [])
 
     agents_controller = AgentsController()
@@ -185,11 +184,11 @@ class AgentResource(Resource):
             skills_to_rewrite = agent.get('skills', [])
             provider = agent.get('provider')
             params = agent.get('params', {})
-            if "data" in agent:
+            if agent.get('data'):
                 params['data'] = agent['data']
-            if "model" in agent:
+            if agent.get('model'):
                 params['model'] = agent['model']
-            if "prompt_template" in agent:
+            if agent.get('prompt_template'):
                 params['prompt_template'] = agent['prompt_template']
 
             # Check if any of the skills to be added is of type 'retrieval'

@@ -11,6 +11,7 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE,
 )
 from mindsdb.integrations.handlers.salesforce_handler.salesforce_tables import create_table_class
+from mindsdb.integrations.handlers.salesforce_handler.constants import SOQL_INSTRUCTIONS
 from mindsdb.utilities import log
 
 
@@ -315,8 +316,7 @@ class SalesforceHandler(MetaAPIHandler):
         Returns:
             str: A string containing information about the API handler's design and implementation.
         """
-        # TODO: Relationships? Aliases?
-        return "When filtering on a Date or DateTime field, the value MUST be an unquoted literal in YYYY-MM-DD or YYYY-MM-DDThh:mm:ssZ format. For example, CloseDate >= 2025-05-28 is correct; CloseDate >= '2025-05-28' is incorrect."
+        return SOQL_INSTRUCTIONS
 
     def meta_get_tables(self, table_names: Optional[List[str]] = None) -> Response:
         """

@@ -177,14 +177,7 @@ class ExecuteCommands:
         if statement_type is CreateDatabase:
             return self.answer_create_database(statement)
         elif statement_type is CreateMLEngine:
-            name = statement.name.parts[-1]
-
-            return self.answer_create_ml_engine(
-                name,
-                handler=statement.handler,
-                params=statement.params,
-                if_not_exists=getattr(statement, "if_not_exists", False),
-            )
+            return self.answer_create_ml_engine(statement)
         elif statement_type is DropMLEngine:
             return self.answer_drop_ml_engine(statement)
         elif statement_type is DropPredictor:
@@ -1105,7 +1098,30 @@ class ExecuteCommands:
             handler = self.session.integration_controller.get_data_handler(name, connect=False)
             handler.handler_storage.import_files(storage)
 
-    def answer_create_ml_engine(self, name: str, handler: str, params: dict = None, if_not_exists=False):
+    def answer_create_ml_engine(self, statement: CreateMLEngine) -> ExecuteAnswer:
+        """Handles the `CREATE ML_ENGINE` command, which creates a new ML integration (engine) in the system.
+
+        Args:
+            statement (CreateMLEngine): The AST object representing the CREATE ML_ENGINE command.
+
+        Returns:
+            ExecuteAnswer: The result of the ML engine creation operation.
+
+        Raises:
+            ValueError: If the ml_engine name format is invalid.
+        """
+        match statement.name.parts, statement.name.is_quoted:
+            case [name], [is_quoted]:
+                if is_quoted and not name.islower():
+                    raise ValueError('Invalid ml_engine name format: name must be lowercase.')
+                name = name.lower()
+            case _:
+                raise ValueError('Invalid ml_engine name format: expected a single-part name.')
+
+        handler = statement.handler
+        params = statement.params
+        if_not_exists = getattr(statement, "if_not_exists", False)
+
         integrations = self.session.integration_controller.get_all()
         if name in integrations:
             if not if_not_exists:
@@ -1147,8 +1163,26 @@ class ExecuteCommands:
 
         return ExecuteAnswer()
 
-    def answer_drop_ml_engine(self, statement: ASTNode):
-        name = statement.name.parts[-1]
+    def answer_drop_ml_engine(self, statement: DropMLEngine) -> ExecuteAnswer:
+        """Handles the `DROP ML_ENGINE` command, which removes an ML integration (engine) from the system.
+
+        Args:
+            statement (DropMLEngine): The AST object representing the DROP ML_ENGINE command.
+
+        Raises:
+            EntityNotExistsError: If the integration does not exist and IF EXISTS is not specified.
+            ValueError: If the integration name is provided in an invalid format.
+
+        Returns:
+            ExecuteAnswer: The result of the ML engine deletion operation.
+        """
+        match statement.name.parts, statement.name.is_quoted:
+            case [name], [is_quoted]:
+                if not is_quoted:
+                    name = name.lower()
+            case _:
+                raise ValueError('Invalid integration name format: expected a single-part name.')
+
         integrations = self.session.integration_controller.get_all()
         if name not in integrations:
             if not statement.if_exists:
@@ -1527,7 +1561,7 @@ class ExecuteCommands:
             ml_handler = self.session.integration_controller.get_ml_handler(ml_integration_name)
         except EntityNotExistsError:
             # not exist, try to create it with same name as handler
-            self.answer_create_ml_engine(ml_integration_name, handler=ml_integration_name)
+            self.answer_create_ml_engine(CreateMLEngine(name=Identifier(ml_integration_name), handler=ml_integration_name))
 
             ml_handler = self.session.integration_controller.get_ml_handler(ml_integration_name)
 

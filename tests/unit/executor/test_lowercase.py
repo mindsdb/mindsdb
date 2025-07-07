@@ -1,9 +1,16 @@
+from unittest.mock import patch
+
 import pytest
 import pandas as pd
-from unittest.mock import patch
+
 from tests.unit.executor_test_base import BaseExecutorMockPredictor
 
+
 class TestLowercase(BaseExecutorMockPredictor):
+    def setup_method(self, method):
+        super().setup_method()
+        self.set_executor(mock_lightwood=True, mock_model_controller=True, import_dummy_ml=True)
+
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_view_name_lowercase(self, mock_handler):
         df = pd.DataFrame([
@@ -102,3 +109,29 @@ class TestLowercase(BaseExecutorMockPredictor):
                 self.execute(f"""
                     DROP DATABASE {another_name}
                 """)
+
+    def test_ml_engine_name_lowercase(self):
+        with pytest.raises(Exception):
+            self.execute("""
+                CREATE ML_ENGINE `MyMlEngine` FROM dummy_ml
+            """)
+
+        for engine_name in ['mymlengine', 'MyMlEngine', 'MYMLENGINE']:
+            another_name = 'myMLEngine'
+            self.execute(f"""
+                CREATE ML_ENGINE {engine_name} FROM dummy_ml
+            """)
+
+            res = self.execute(f"""
+                SELECT * FROM INFORMATION_SCHEMA.ML_ENGINES WHERE name = '{engine_name.lower()}'
+            """)
+            assert res.data.to_df()['HANDLER'][0] == 'dummy_ml'
+
+            with pytest.raises(Exception):
+                self.execute(f"""
+                    DROP ML_ENGINE `{another_name}`
+                """)
+
+            self.execute(f"""
+                DROP ML_ENGINE {another_name}
+            """)

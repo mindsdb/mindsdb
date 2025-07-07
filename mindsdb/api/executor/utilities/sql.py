@@ -107,14 +107,17 @@ def get_duckdb_functions_and_kw_list() -> list[str] | None:
     global _duckdb_functions_and_kw_list
     if _duckdb_functions_and_kw_list is None:
         try:
-            df, _ = query_df_with_type_infer_fallback("""
+            df, _ = query_df_with_type_infer_fallback(
+                """
                 select distinct name
                 from (
                     select function_name as name from duckdb_functions()
                     union all
                     select keyword_name as name from duckdb_keywords()
                 ) ta;
-            """, dataframes={})
+            """,
+                dataframes={},
+            )
             df.columns = [name.lower() for name in df.columns]
             _duckdb_functions_and_kw_list = df["name"].drop_duplicates().str.lower().to_list()
         except Exception as e:

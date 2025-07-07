@@ -242,19 +242,26 @@ class AgentsController:
                 "Use 'data' parameter with 'tables' and 'knowledge_bases' keys instead."
             )
 
-        if "data" not in params:
-            raise ValueError(
-                "Parameter 'data' is required. It should be a dictionary with keys 'tables' and/or 'knowledge_bases'."
-            )
-
-        include_knowledge_bases = params["data"].get("knowledge_bases")
-        include_tables = params["data"].get("tables")
+        include_tables = None
+        include_knowledge_bases = None
+        if "data" in params:
+            include_knowledge_bases = params["data"].get("knowledge_bases")
+            include_tables = params["data"].get("tables")
 
         # Convert string parameters to lists if needed
         if isinstance(include_tables, str):
             include_tables = [t.strip() for t in include_tables.split(",")]
         if isinstance(include_knowledge_bases, str):
             include_knowledge_bases = [kb.strip() for kb in include_knowledge_bases.split(",")]
+
+        # If no skills are provided, we need to ensure that data sources are specified
+        # Skills will not be mentioned in the error message because this is old behavior
+        # used only via Minds
+        if not skills and not include_tables and not include_knowledge_bases:
+            raise ValueError(
+                "The parameter 'data' is required to create an agent without skills. "
+                "Use the 'data' parameter with 'tables' and 'knowledge_bases' keys to specify data sources."
+            )
 
         # Auto-create SQL skill if no skills are provided but include_tables or include_knowledge_bases params are provided
         if not skills and (include_tables or include_knowledge_bases):
@@ -265,7 +272,7 @@ class AgentsController:
                 "description": f"Auto-generated SQL skill for agent {name}",
             }
 
-            # Add restrictions if provided
+            # Add restrictions provided
             if include_tables:
                 skill_params["include_tables"] = include_tables
             if include_knowledge_bases:

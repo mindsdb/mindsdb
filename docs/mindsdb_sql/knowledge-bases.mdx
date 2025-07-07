@@ -78,7 +78,7 @@ We start by creating a knowledge base and inserting data. Next we can run semant
     ```
   </Step>
   <Step title="Get the most relevant search results">
-    Query the knowledge base using semantic search and define the `relevance_threshold` parameter to receive only the best matching data for your use case.
+    Query the knowledge base using semantic search and define the `relevance` parameter to receive only the best matching data for your use case.
 
     ```sql
     SELECT *
@@ -198,39 +198,11 @@ When choosing `bedrock` as the model provider, users should define the following
 
 #### `provider = 'snowflake'`
 
-When choosing `snowflake` as the model provider, users should define the following model parameters.
+When choosing `snowflake` as the model provider, users should choose one of the available models from [Snowflake Cortex AI](https://www.snowflake.com/en/product/features/cortex/) and define the following model parameters.
 
 * `model_name` stores the name of the model available via Snowflake Cortex AI.
-* `api_key` stores the Snowflake API key.
+* `api_key` stores the Snowflake Cortex AI API key.
 * `snowflake_account_id` stores the Snowflake account ID.
-
-#### `provider = 'ollama'`
-
-When choosing `ollama` as the model provider, users should define the following model parameters.
-
-* `model_name` stores the name of the model available via Ollama.
-* `base_url` stores the base URL for accessing you Ollama instance.
-
-Example:
-
-```sql
-CREATE KNOWLEDGE_BASE my_kb
-        USING
-        ...
-        embedding_model = {
-            "provider": "ollama",
-            "model_name": "mxbai-embed-large",
-            "base_url": "http://localhost:11434"
-        },
-        reranking_model = {
-            "provider": "ollama",
-            "model_name": "deepseek-r1:1.5b",
-            "base_url": "http://localhost:11434"
-        };
-```
-
-Learn more about the [Ollama integration with MindsDB here](/integrations/ai-engines/ollama).
-
 
 ### `embedding_model`
 
@@ -258,6 +230,10 @@ USING
 
 **Option 2.** Define the default embedding model in the [MindsDB configuration file](/setup/custom-config).
 
+<Tip>
+You can define the default models in the Settings of the MindsDB Editor GUI.
+</Tip>
+
 <Note>
 Note that if you define `default_embedding_model` in the configuration file, you do not need to provide the `embedding_model` parameter when creating a knowledge base. If provide both, then the values from the `embedding_model` parameter are used.
 </Note>
@@ -277,10 +253,10 @@ Note that if you define `default_embedding_model` in the configuration file, you
 The embedding model specification includes:
 
 * `provider`
-It is a required parameter. It defines the model provider. Currently, the supported providers include OpenAI (`openai`) and OpenAI via Azure (`azure_openai`).
+It is a required parameter. It defines the model provider.
 
 * `model_name`
-It is a required parameter. It defines the embedding model name as specified by the provider. Users can choose one of the [OpenAI embedding models](https://platform.openai.com/docs/guides/embeddings/embedding-models#embedding-models).
+It is a required parameter. It defines the embedding model name as specified by the provider.
 
 * `api_key`
 The API key is required to access the embedding model assigned to a knowledge base. Users can provide it either in this `api_key` parameter, or in the `OPENAI_API_KEY` environment variable for `"provider": "openai"` and `AZURE_OPENAI_API_KEY` environment variable for `"provider": "azure_openai"`.
@@ -295,7 +271,17 @@ It is an optional parameter. It is a required parameter when using the `azure_op
 
 The reranking model is an optional component of the knowledge base. It stores specifications of the reranking model to be used.
 
-Users can define the reranking model choosing one of the following options.
+Users can disable reranking features of knowledge bases by setting this parameter to `false`.
+
+```sql
+CREATE KNOWLEDGE_BASE my_kb
+USING
+    ...
+    reranking_model = false,
+    ...
+```
+
+Users can enable reranking features of knowledge bases by defining the reranking model choosing one of the following options.
 
 **Option 1.** Use the `reranking_model` parameter to define the specification.
 
@@ -318,12 +304,16 @@ USING
 
 **Option 2.** Define the default reranking model in the [MindsDB configuration file](/setup/custom-config).
 
+<Tip>
+You can define the default models in the Settings of the MindsDB Editor GUI.
+</Tip>
+
 <Note>
-Note that if you define `default_llm` in the configuration file, you do not need to provide the `reranking_model` parameter when creating a knowledge base. If provide both, then the values from the `reranking_model` parameter are used.
+Note that if you define [`default_reranking_model` in the configuration file](/setup/custom-config#default-reranking-model), you do not need to provide the `reranking_model` parameter when creating a knowledge base. If provide both, then the values from the `reranking_model` parameter are used.
 </Note>
 
 ```bash
-"default_llm": {
+"default_reranking_model": {
 
   "provider": "azure_openai",
   "model_name" : "gpt-4o",
@@ -338,10 +328,10 @@ Note that if you define `default_llm` in the configuration file, you do not need
 The reranking model specification includes:
 
 * `provider`
-It is a required parameter. It defines the model provider. Currently, the supported providers include OpenAI (`openai`) and OpenAI via Azure (`azure_openai`).
+It is a required parameter. It defines the model provider as listed in [supported LLMs](/mindsdb_sql/knowledge-bases#supported-llms).
 
 * `model_name`
-It is a required parameter. It defines the embedding model name as specified by the provider. Users can choose one of the [OpenAI chat models](https://platform.openai.com/docs/models).
+It is a required parameter. It defines the embedding model name as specified by the provider.
 
 * `api_key`
 The API key is required to access the embedding model assigned to a knowledge base. Users can provide it either in this `api_key` parameter, or in the `OPENAI_API_KEY` environment variable for `"provider": "openai"` and `AZURE_OPENAI_API_KEY` environment variable for `"provider": "azure_openai"`.
@@ -718,7 +708,9 @@ The parameters include the following:
 
 * `batch_size` defines the number of rows fetched per iteration to optimize data extraction from the source. It defaults to 1000.
 
-* `threads` defines threads for running partitions. Note that if the [ML task queue](/setup/custom-config#overview-of-config-parameters) is enabled, threads are used automatically. The available values for include a number of threads to be used, for example, `threads = 10`, or a boolean value that defines whether to enable threads, setting `threads = true`, or disable threads, setting `threads = false`.
+* `threads` defines threads for running partitions. Note that if the [ML task queue](/setup/custom-config#overview-of-config-parameters) is enabled, threads are used automatically. The available values for `threads` are:
+    - a number of threads to be used, for example, `threads = 10`,
+    - a boolean value that defines whether to enable threads, setting `threads = true`, or disable threads, setting `threads = false`.
 
 * `track_column` defines the column used for sorting data before partitioning.
 
@@ -915,14 +907,14 @@ It stores the general metadata and the metadata defined in the `metadata_columns
 It stores the calculated distance between the chunk's content and the search phrase.
 
 `relevance`
-It stores the calculated relevance of the chunk as compared to the search phrase.
+It stores the calculated relevance of the chunk as compared to the search phrase. Its values are between 0 and 1.
 
 <Note>
-Note that the calculation method of `relevance_threshold` differs as follows:
+Note that the calculation method of `relevance` differs as follows:
 
-- When the ranking model is provided, the default `relevance_threshold` is 0, unless defined otherwise in the `WHERE` clause.
-- When the reranking model is not provided and the `relevance_threshold` is not defined in the query, then no relevance filtering is applied and the output includes all rows matched based on the similarity and metadata search.
-- When the reranking model is not provided but the `relevance_threshold` is defined in the query, then the relevance is calculated based on the `distance` column (`1/(1+ distance)`) and the `relevance_threshold` value is compared with this relevance value to filter the output.
+- When the ranking model is provided, the default `relevance` is equal or greater than 0, unless defined otherwise in the `WHERE` clause.
+- When the reranking model is not provided and the `relevance` is not defined in the query, then no relevance filtering is applied and the output includes all rows matched based on the similarity and metadata search.
+- When the reranking model is not provided but the `relevance` is defined in the query, then the relevance is calculated based on the `distance` column (`1/(1+ distance)`) and the `relevance` value is compared with this relevance value to filter the output.
 </Note>
 
 ### Semantic Search
@@ -950,34 +942,34 @@ Here is the output:
 <Note>
 When querying a knowledge base, the default values include the following:
 
-* `relevance_threshold` <br></br>
-If not provided, its default value is 0, ensuring there is no filtering of rows based on their relevance.
+* `relevance` <br></br>
+If not provided, its default value is equal to or greater than 0, ensuring there is no filtering of rows based on their relevance.
 
 * `LIMIT` <br></br>
 If not provided, its default value is 10, returning a maximum of 10 rows.
 </Note>
 
 <Tip>
-Note that when specifying both `relevance_threshold` and `LIMIT` as follows:
+Note that when specifying both `relevance` and `LIMIT` as follows:
 
 ```sql
 SELECT *
 FROM my_kb
 WHERE content = 'color'
-AND relevance_threshold = 0.5
+AND relevance >= 0.5
 LIMIT 20;
 ```
 
-The query extracts 20 rows (as defined in the `LIMIT` clause) that match the defined `content`. Next, these set of rows is filtered out to match the defined `relevance_threshold`.
+The query extracts 20 rows (as defined in the `LIMIT` clause) that match the defined `content`. Next, these set of rows is filtered out to match the defined `relevance`.
 </Tip>
 
-Users can limit the `relevance_threshold` in order to get only the most relevant results.
+Users can limit the `relevance` in order to get only the most relevant results.
 
 ```sql
 SELECT *
 FROM my_kb
 WHERE content = 'color'
-AND relevance_threshold = 0.5;
+AND relevance >= 0.5;
 ```
 
 Here is the output:
@@ -990,7 +982,7 @@ Here is the output:
 +-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
 ```
 
-By providing the `relevance_threshold` filter, the output is limited to only data with relevance score of the provided value or higher. The available value of `relevance_threshold` are between 0 and 1, and its default value is 0.
+By providing the `relevance` filter, the output is limited to only data with relevance score of the provided value. The available values of `relevance` are between 0 and 1, and its default value covers all available relevance values ensuring no filtering based on the relevance score.
 
 Users can limit the number of rows returned.
 
@@ -1041,7 +1033,7 @@ SELECT *
 FROM my_kb
 WHERE product = 'Wireless Mouse'
 AND content = 'color'
-AND relevance_threshold = 0.5;
+AND relevance >= 0.5;
 ```
 
 Here is the output:
@@ -1066,14 +1058,14 @@ USING
     test_table = my_datasource.my_test_table,
     version = 'doc_id',
     generate_data = {
-        'from_sql': 'SELECT content FROM my_datasource.my_table',
+        'from_sql': 'SELECT id, content FROM my_datasource.my_table',
         'count': 100
     }, 
     evaluate = false,
     llm = {
         'provider': 'openai',
         'api_key':'sk-xxx',
-        'model':'gpt-4'
+        'model_name':'gpt-4'
     },
     save_to = my_datasource.my_result_table; 
 ```
@@ -1103,8 +1095,16 @@ This is an optional parameter used to configure the test data generation, which 
 Available values are as follows:
 
 * A dictionary containing the following values:
-    * `from_sql` defines the SQL query that fetches the test data. For example, `'from_sql': 'SELECT content FROM my_datasource.my_table'`. If not defined, it fetches test data from the knowledge base on which the `EVALUATE` command is executed: `SELECT chunk_content, id FROM my_kb`.
+    * `from_sql` defines the SQL query that fetches the test data. For example, `'from_sql': 'SELECT id, content FROM my_datasource.my_table'`. If not defined, it fetches test data from the knowledge base on which the `EVALUATE` command is executed: `SELECT chunk_content, id FROM my_kb`.
     * `count` defines the size of the test dataset. For example, `'count': 100`. Its default value is 20.
+
+    <Note>
+    When providing the `from_sql` parameter, it requires specific column names as follows:
+
+    * With `version = 'doc_id'`, the `from_sql` parameter should contain a query that returns the `id` and `content` columns, like this: `'from_sql': 'SELECT id_column_name AS id, content_column_names AS content FROM my_datasource.my_table'`
+
+    * With `version = 'llm_relevancy'`, the `from_sql` parameter should contain a query that returns the `content` column, like this: `'from_sql': 'SELECT content_column_names AS content FROM my_datasource.my_table'`
+    </Note>
 
 * A value of `true`, such as `generate_data = true`, which implies that default values for `from_sql` and `count` will be used.
 
@@ -1300,7 +1300,7 @@ SELECT *
 FROM my_kb
 WHERE product = 'Wireless Mouse'
 AND content = 'color'
-AND relevance_threshold = 0.5;
+AND relevance > 0.5;
 ```
 
 ### Financial Data
@@ -1383,13 +1383,13 @@ This query returns 20 rows, as the user-defined `LIMIT` is set to 20.
   <img src="/assets/sql/kb_retrieval_example2.png" />
 </p>
 
-* Query with defined `LIMIT` and `relevance_threshold`
+* Query with defined `LIMIT` and `relevance`
 
 ```sql
 SELECT *
 FROM my_kb
 WHERE content = 'investors'
-AND relevance_threshold = 0.8
+AND relevance >= 0.8
 LIMIT 20;
 ```
 

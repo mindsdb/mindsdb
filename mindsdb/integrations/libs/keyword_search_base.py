@@ -1,8 +1,4 @@
-from mindsdb_sql_parser.ast import (
-    Select,
-    Star,
-
-)
+from mindsdb_sql_parser.ast import Select
 from typing import List
 import pandas as pd
 
@@ -18,7 +14,9 @@ class KeywordSearchBase:
     def __init__(self, *args, **kwargs):
         pass
 
-    def dispatch_keyword_select(self, query: Select, conditions: List[FilterCondition] = None, keyword_search_args: KeywordSearchArgs = None):
+    def dispatch_keyword_select(
+        self, query: Select, conditions: List[FilterCondition] = None, keyword_search_args: KeywordSearchArgs = None
+    ):
         """Dispatches a keyword search select query to the appropriate method."""
         raise NotImplementedError()
 

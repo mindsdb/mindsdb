@@ -18,7 +18,11 @@ class MockVectorStoreHandler(KeywordSearchBase, VectorStoreHandler):
         self._keyword_data = keyword_search_data if keyword_search_data is not None else pd.DataFrame()
 
     def dispatch_select(
-        self, query, conditions: list[FilterCondition], keyword_search_args: KeywordSearchArgs = None, allowed_metadata_columns = None
+        self,
+        query,
+        conditions: list[FilterCondition],
+        keyword_search_args: KeywordSearchArgs = None,
+        allowed_metadata_columns=None,
     ) -> pd.DataFrame:
         # Return the predefined keyword search data.
         if keyword_search_args:

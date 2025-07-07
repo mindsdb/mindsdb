@@ -1,4 +1,3 @@
-from mindsdb.integrations.libs.vectordatabase_handler import VectorStoreHandler
 from mindsdb.integrations.utilities.sql_utils import KeywordSearchArgs, FilterCondition
 import pytest
 from unittest.mock import patch, MagicMock
@@ -10,7 +9,7 @@ from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseTable
 from mindsdb.integrations.libs.keyword_search_base import KeywordSearchBase
 
 
-class MockVectorStoreHandler(KeywordSearchBase, VectorStoreHandler):
+class MockVectorStoreHandler(KeywordSearchBase):
     """A mock VectorStoreHandler that returns predefined data for testing."""
 
     def __init__(self, vector_search_data: pd.DataFrame, keyword_search_data: pd.DataFrame = None):

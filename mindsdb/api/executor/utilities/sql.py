@@ -6,7 +6,7 @@ from duckdb import InvalidInputException
 import numpy as np
 
 from mindsdb_sql_parser import parse_sql
-from mindsdb_sql_parser.ast import ASTNode, Select, Identifier, Function, Constant, BinaryOperation
+from mindsdb_sql_parser.ast import ASTNode, Select, Identifier, Function, Constant
 
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.utilities import log

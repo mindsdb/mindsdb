@@ -110,8 +110,18 @@ def get_duckdb_functions_and_kw_list() -> list[str] | None:
     """
     global _duckdb_functions_and_kw_list
     window_functions_list = [
-        "cume_dist", "dense_rank", "first_value", "lag", "last_value", "lead",
-        "nth_value", "ntile", "percent_rank", "rank_dense", "rank", "row_number"
+        "cume_dist",
+        "dense_rank",
+        "first_value",
+        "lag",
+        "last_value",
+        "lead",
+        "nth_value",
+        "ntile",
+        "percent_rank",
+        "rank_dense",
+        "rank",
+        "row_number",
     ]
     if _duckdb_functions_and_kw_list is None:
         try:

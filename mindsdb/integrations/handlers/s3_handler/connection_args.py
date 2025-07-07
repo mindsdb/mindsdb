@@ -35,6 +35,12 @@ connection_args = OrderedDict(
         'secret': True,
         'required': False,
         'label': 'AWS Session Token'
+    },
+    endpoint_url={
+        'type': ARG_TYPE.STR,
+        'description': 'The custom endpoint URL for S3-compatible services.',
+        'required': False,
+        'label': 'Custom Endpoint URL'
     }
 )
 
@@ -44,4 +50,5 @@ connection_args_example = OrderedDict(
     aws_session_token='FQoGZXIvYXdzEHcaDmJjJj...',
     region_name='us-east-2',
     bucket='my-bucket',
+    endpoint_url='https://custom-s3-endpoint.com'
 )

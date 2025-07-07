@@ -78,6 +78,79 @@ FROM s3_datasource.files LIMIT 10
 This table will return all objects regardless of the file format, however, only the supported file formats mentioned above can be queried.
 </Tip>
 
+## Custom Endpoint Support
+
+The S3 handler now supports custom endpoints, allowing you to connect to any S3-compatible service like MinIO, Ceph, or Wasabi.
+
+### Configuration
+
+To use a custom endpoint, add the `endpoint_url` parameter to your configuration:
+
+```json
+{
+    "aws_access_key_id": "your_access_key",
+    "aws_secret_access_key": "your_secret_key",
+    "bucket": "your_bucket",
+    "endpoint_url": "http://your-endpoint:9000"
+}
+```
+
+### Features
+
+- Connect to any S3-compatible service
+- Use HTTP or HTTPS endpoints
+- Automatic path-style addressing for custom endpoints
+- Compatible with MinIO and other S3-compatible services
+- Same interface as AWS S3
+
+### Example: MinIO Setup
+
+1. Start MinIO server(make sure you have docker desktop running):
+```bash
+docker run -p 9000:9000 -p 9001:9001 \
+  --name minio \
+  -e "MINIO_ROOT_USER=minioadmin" \
+  -e "MINIO_ROOT_PASSWORD=minioadmin" \
+  -v minio_data:/data \
+  minio/minio server /data --console-address ":9001"
+```
+![alt text](image.png)
+
+2. Go to port http://localhost:9001/login and login
+![alt text](image-1.png)
+
+3. Create a bucket in MinIO
+![alt text](image-2.png)
+![alt text](image-4.png)
+
+3. Connect using the handler:
+```sql
+CREATE DATABASE minio_datasource
+WITH
+    engine = 's3',
+    parameters = {
+      "aws_access_key_id": "minioadmin",
+      "aws_secret_access_key": "minioadmin",
+      "bucket": "test-bucket",
+      "endpoint_url": "http://localhost:9000"
+    };
+```
+![alt text](image-3.png)
+
+### Usage with Custom Endpoints
+
+```sql
+-- Read from custom endpoint
+SELECT * FROM minio_datasource.`test.csv`;
+
+-- Write to custom endpoint
+INSERT INTO minio_datasource.`output.csv`
+SELECT * FROM source_table;
+
+-- List files in custom endpoint
+SELECT * FROM minio_datasource.files;
+```
+
 ## Troubleshooting Guide
 
 <Warning>

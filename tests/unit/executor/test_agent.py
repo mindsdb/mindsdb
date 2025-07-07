@@ -183,10 +183,14 @@ class TestAgent(BaseExecutorDummyML):
             USING
              provider='openai',
              model = "gpt-3.5-turbo",
-             openai_api_key='--',
+             openai_api_key='-key-',
              prompt_template="Answer the user input in a helpful way"
          """)
         ret = self.run_sql("select * from my_agent where question = 'hi'")
+
+        # check model params
+        assert mock_openai.call_args_list[-1][1]["api_key"] == "-key-"
+        assert mock_openai().chat.completions.create.call_args_list[-1][1]["model"] == "gpt-3.5-turbo"
 
         assert agent_response in ret.answer[0]
 
@@ -212,6 +216,29 @@ class TestAgent(BaseExecutorDummyML):
             where t.q = ''
         """)
         assert len(ret) == 0
+
+    @patch("openai.OpenAI")
+    def test_openai_params_as_dict(self, mock_openai):
+        agent_response = "how can I assist you today?"
+        set_openai_completion(mock_openai, agent_response)
+
+        self.run_sql("""
+            CREATE AGENT my_agent
+            USING
+             model = {
+                "provider": 'openai',
+                "model_name": "gpt-42",
+                "api_key": '-secret-'
+             },
+             prompt_template="Answer the user input in a helpful way"
+         """)
+        ret = self.run_sql("select * from my_agent where question = 'hi'")
+
+        # check model params
+        assert mock_openai.call_args_list[-1][1]["api_key"] == "-secret-"
+        assert mock_openai().chat.completions.create.call_args_list[-1][1]["model"] == "gpt-42"
+
+        assert agent_response in ret.answer[0]
 
     @patch("mindsdb.utilities.config.Config.get")
     @patch("openai.OpenAI")
@@ -1355,3 +1382,102 @@ class TestKB(BaseExecutorDummyML):
         # not existed column
         with pytest.raises(ValueError):
             self.run_sql("select * from kb2 where cont10='val2'")
+
+    @patch("mindsdb.interfaces.knowledge_base.llm_client.OpenAI")
+    @patch("mindsdb.integrations.utilities.rag.rerankers.base_reranker.AsyncOpenAI")
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_evaluate(self, mock_litellm_embedding, mock_async_openai, mock_openai):
+        set_litellm_embedding(mock_litellm_embedding)
+
+        question, answer = "2+2", "4"
+        agent_response = f"""
+            {{"query": "{question}", "reference_answer": "{answer}"}}
+        """
+        mock_completion = MagicMock()
+        mock_completion.choices = [MagicMock()]
+        mock_completion.choices[0].message.content = agent_response
+        mock_openai().chat.completions.create.return_value = mock_completion
+
+        mock_completion = MagicMock()
+        mock_completion.choices = [MagicMock()]
+        mock_completion.choices[0].message.content = "yes"
+        mock_async_openai().chat.completions.create = AsyncMock(return_value=mock_completion)
+
+        df = self._get_ral_table()
+        df = df.rename(columns={"english": "content", "ral": "id"})
+        self.save_file("ral", df)
+
+        self._create_kb("kb1", reranking_model={"provider": "openai", "model_name": "gpt-3", "api_key": "-"})
+        self.run_sql("insert into kb1 SELECT id, content FROM files.ral")
+
+        # --- case 1: use table as source, reranker llm, no evaluate
+
+        ret = self.run_sql("""
+            Evaluate knowledge base kb1
+            using
+              test_table = files.eval_test,
+              generate_data = {   
+                 'from_sql': 'select content, id from files.ral', 
+                 'count': 3 
+              }, 
+              evaluate=false
+        """)
+
+        # reranker model is used
+        assert mock_openai().chat.completions.create.call_args_list[0][1]["model"] == "gpt-3"
+
+        # no response
+        assert len(ret) == 0
+
+        # check test data
+        df_test = self.run_sql("select * from files.eval_test")
+        assert len(df_test) == 3
+        assert df_test["question"][0] == question
+        assert df_test["answer"][0] == answer
+
+        # --- case 2: use kb as source, custom llm, evaluate
+        mock_openai.reset_mock()
+        self.run_sql("drop table files.eval_test")
+
+        ret = self.run_sql("""
+            Evaluate knowledge base kb1
+            using
+              test_table = files.eval_test,
+              generate_data = true,
+              llm={'provider': 'openai', 'api_key':'-', 'model_name':'gpt-4'},
+              save_to = files.eval_res 
+        """)
+
+        # custom model is used
+        assert mock_openai().chat.completions.create.call_args_list[0][1]["model"] == "gpt-4"
+
+        # eval resul in response
+        assert len(ret) == 1
+
+        # check test data
+        df_test = self.run_sql("select * from files.eval_test")
+        assert len(df_test) > 0
+        assert df_test["question"][0] == question
+        assert df_test["answer"][0] == answer
+
+        # check result
+        df_res = self.run_sql("select * from files.eval_res")
+        assert len(df_res) == 1
+        assert df_res["total"][0] == len(df_test)
+        # compare with eval response
+        assert df_res["total"][0] == ret["total"][0]
+        assert df_res["total_found"][0] == ret["total_found"][0]
+
+        # --- case 3: evaluate without generation and saving
+
+        ret = self.run_sql("""
+            Evaluate knowledge base kb1
+            using
+              test_table = files.eval_test
+        """)
+
+        # eval resul in response
+        assert len(ret) == 1
+        # compare with table
+        assert df_res["total"][0] == ret["total"][0]
+        assert df_res["total_found"][0] == ret["total_found"][0]

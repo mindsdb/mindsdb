@@ -28,6 +28,13 @@ def _merge_configs(original_config: dict, override_config: dict) -> dict:
     return original_config
 
 
+def _overwrite_configs(original_config: dict, override_config: dict) -> dict:
+    """Overwrite original config with override config."""
+    for key in list(override_config.keys()):
+        original_config[key] = override_config[key]
+    return original_config
+
+
 def create_data_dir(path: Path) -> None:
     """Create a directory and checks that it is writable.
 
@@ -522,11 +529,23 @@ class Config:
         self.ensure_auto_config_is_relevant()
         return self._config
 
-    def update(self, data: dict) -> None:
-        """Update calues in `auto` config"""
+    def update(self, data: dict, overwrite: bool = False) -> None:
+        """
+        Update values in `auto` config.
+        Args:
+            data (dict): data to update in `auto` config.
+            overwrite (bool): if True, overwrite existing keys, otherwise merge them.
+                - False (default): Merge recursively. Existing nested dictionaries are preserved
+                and only the specified keys in `data` are updated.
+                - True: Overwrite completely. Existing keys are replaced entirely with values
+                from `data`, discarding any nested structure not present in `data`.
+        """
         self.ensure_auto_config_is_relevant()
 
-        _merge_configs(self._auto_config, data)
+        if overwrite:
+            _overwrite_configs(self._auto_config, data)
+        else:
+            _merge_configs(self._auto_config, data)
 
         self.auto_config_path.write_text(json.dumps(self._auto_config, indent=4))
 

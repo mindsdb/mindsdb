@@ -253,10 +253,10 @@ Note that if you define `default_embedding_model` in the configuration file, you
 The embedding model specification includes:
 
 * `provider`
-It is a required parameter. It defines the model provider. Currently, the supported providers include OpenAI (`openai`) and OpenAI via Azure (`azure_openai`).
+It is a required parameter. It defines the model provider.
 
 * `model_name`
-It is a required parameter. It defines the embedding model name as specified by the provider. Users can choose one of the [OpenAI embedding models](https://platform.openai.com/docs/guides/embeddings/embedding-models#embedding-models).
+It is a required parameter. It defines the embedding model name as specified by the provider.
 
 * `api_key`
 The API key is required to access the embedding model assigned to a knowledge base. Users can provide it either in this `api_key` parameter, or in the `OPENAI_API_KEY` environment variable for `"provider": "openai"` and `AZURE_OPENAI_API_KEY` environment variable for `"provider": "azure_openai"`.
@@ -1058,7 +1058,7 @@ USING
     test_table = my_datasource.my_test_table,
     version = 'doc_id',
     generate_data = {
-        'from_sql': 'SELECT content FROM my_datasource.my_table',
+        'from_sql': 'SELECT id, content FROM my_datasource.my_table',
         'count': 100
     }, 
     evaluate = false,
@@ -1095,8 +1095,16 @@ This is an optional parameter used to configure the test data generation, which 
 Available values are as follows:
 
 * A dictionary containing the following values:
-    * `from_sql` defines the SQL query that fetches the test data. For example, `'from_sql': 'SELECT content FROM my_datasource.my_table'`. If not defined, it fetches test data from the knowledge base on which the `EVALUATE` command is executed: `SELECT chunk_content, id FROM my_kb`.
+    * `from_sql` defines the SQL query that fetches the test data. For example, `'from_sql': 'SELECT id, content FROM my_datasource.my_table'`. If not defined, it fetches test data from the knowledge base on which the `EVALUATE` command is executed: `SELECT chunk_content, id FROM my_kb`.
     * `count` defines the size of the test dataset. For example, `'count': 100`. Its default value is 20.
+
+    <Note>
+    When providing the `from_sql` parameter, it requires specific column names as follows:
+
+    * With `version = 'doc_id'`, the `from_sql` parameter should contain a query that returns the `id` and `content` columns, like this: `'from_sql': 'SELECT id_column_name AS id, content_column_names AS content FROM my_datasource.my_table'`
+
+    * With `version = 'llm_relevancy'`, the `from_sql` parameter should contain a query that returns the `content` column, like this: `'from_sql': 'SELECT content_column_names AS content FROM my_datasource.my_table'`
+    </Note>
 
 * A value of `true`, such as `generate_data = true`, which implies that default values for `from_sql` and `count` will be used.
 

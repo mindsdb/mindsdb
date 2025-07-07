@@ -53,6 +53,15 @@ class GetConfig(Resource):
                         HTTPStatus.BAD_REQUEST, "Wrong arguments", f"Unknown argumens: {unknown_arguments}"
                     )
 
+        overwrite_arguments = {"default_llm", "default_embedding_model", "default_reranking_model"}
+        overwrite_data = {k: data[k] for k in overwrite_arguments if k in data}
+        merge_data = {k: data[k] for k in data if k not in overwrite_arguments}
+
+        if len(overwrite_data) > 0:
+            Config().update(overwrite_data, overwrite=True)
+        if len(merge_data) > 0:
+            Config().update(merge_data)
+
         Config().update(data)
 
         return "", 200

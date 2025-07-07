@@ -181,12 +181,6 @@ class AgentResource(Resource):
 
         agent = request.json['agent']
         name = agent.get('name', None)
-        model_name = agent.get('model_name', None)
-        skills_to_add = agent.get('skills_to_add', [])
-        skills_to_remove = agent.get('skills_to_remove', [])
-        skills_to_rewrite = agent.get('skills', [])
-        provider = agent.get('provider')
-        params = agent.get('params', None)
 
         # Agent must not exist with new name.
         if name is not None and name != agent_name:
@@ -204,9 +198,18 @@ class AgentResource(Resource):
 
         # Update
         try:
-            # Prepare the params dictionary
-            if params is None:
-                params = {}
+            model_name = agent.get('model_name', None)
+            skills_to_add = agent.get('skills_to_add', [])
+            skills_to_remove = agent.get('skills_to_remove', [])
+            skills_to_rewrite = agent.get('skills', [])
+            provider = agent.get('provider')
+            params = {}
+            if "data" in agent:
+                params['data'] = agent['data']
+            if "model" in agent:
+                params['model'] = agent['model']
+            if "prompt_template" in agent:
+                params['prompt_template'] = agent['prompt_template']
 
             # Check if any of the skills to be added is of type 'retrieval'
             session = SessionController()

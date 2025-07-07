@@ -59,6 +59,7 @@ class FilterCondition:
             )
         """
 
+
 class KeywordSearchArgs:
     def __init__(self, column: str, query: str):
         """

@@ -184,7 +184,7 @@ class AgentResource(Resource):
             skills_to_remove = agent.get('skills_to_remove', [])
             skills_to_rewrite = agent.get('skills', [])
             provider = agent.get('provider')
-            params = {}
+            params = agent.get('params', {})
             if "data" in agent:
                 params['data'] = agent['data']
             if "model" in agent:

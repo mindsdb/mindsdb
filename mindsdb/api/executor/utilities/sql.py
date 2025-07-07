@@ -98,13 +98,21 @@ _duckdb_functions_and_kw_list = None
 
 def get_duckdb_functions_and_kw_list() -> list[str] | None:
     """Returns a list of all functions and keywords supported by DuckDB.
-    Some functions are not present in the duckdb_functions, because they are just syntax-sugar (like 'if()').
-    That is why need to fetch duckdb_keywords in addition to duckdb_functions.
+    The list is merge of:
+     - list of duckdb's functions: 'select * from duckdb_functions()' or 'pragma functions'
+     - ist of keywords, because of some functions are just sintax-sugar
+       and not present in the duckdb_functions (like 'if()').
+     - hardcoded list of window_functions, because there are no way to get if from duckdb,
+       and they are not present in the duckdb_functions()
 
     Returns:
         list[str] | None: List of supported functions and keywords, or None if unable to retrieve the list.
     """
     global _duckdb_functions_and_kw_list
+    window_functions_list = [
+        "cume_dist", "dense_rank", "first_value", "lag", "last_value", "lead",
+        "nth_value", "ntile", "percent_rank", "rank_dense", "rank", "row_number"
+    ]
     if _duckdb_functions_and_kw_list is None:
         try:
             df, _ = query_df_with_type_infer_fallback(
@@ -119,9 +127,10 @@ def get_duckdb_functions_and_kw_list() -> list[str] | None:
                 dataframes={},
             )
             df.columns = [name.lower() for name in df.columns]
-            _duckdb_functions_and_kw_list = df["name"].drop_duplicates().str.lower().to_list()
+            _duckdb_functions_and_kw_list = df["name"].drop_duplicates().str.lower().to_list() + window_functions_list
         except Exception as e:
             logger.warning(f"Unable to get DuckDB functions list: {e}")
+
     return _duckdb_functions_and_kw_list
 
 

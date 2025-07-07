@@ -237,9 +237,13 @@ class AgentsController:
                 "Use 'data' parameter with 'tables' and 'knowledge_bases' keys instead."
             )
 
-        if "data" in params:
-            include_knowledge_bases = params["data"].get("knowledge_bases")
-            include_tables = params["data"].get("tables")
+        if "data" not in params:
+            raise ValueError(
+                "Parameter 'data' is required. It should be a dictionary with keys 'tables' and/or 'knowledge_bases'."
+            )
+
+        include_knowledge_bases = params["data"].get("knowledge_bases")
+        include_tables = params["data"].get("tables")
 
         # Convert string parameters to lists if needed
         if isinstance(include_tables, str):

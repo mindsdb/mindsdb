@@ -290,7 +290,7 @@ class KnowledgeBaseTable:
                     keyword_search_cols_and_values.append((TableField.CONTENT.value, item.value))
                 else:
                     conditions.append(item)
-                    keyword_search_conditions.append(item) # keyword search conditions do not use embeddings
+                    keyword_search_conditions.append(item)  # keyword search conditions do not use embeddings
 
         if len(keyword_search_cols_and_values) > 1:
             raise ValueError(
@@ -318,17 +318,12 @@ class KnowledgeBaseTable:
         logger.debug(f"Columns in response: {df.columns.tolist()}")
 
         if hybrid_search_enabled_flag and not isinstance(db_handler, KeywordSearchBase):
-            raise ValueError(
-                f"Hybrid search is enabled but the db_handler {type(db_handler)} does not support it. "
-            )
+            raise ValueError(f"Hybrid search is enabled but the db_handler {type(db_handler)} does not support it. ")
         # check if db_handler inherits from KeywordSearchBase
         if hybrid_search_enabled_flag and isinstance(db_handler, KeywordSearchBase):
             # If query_text is present, use it for keyword search
             logger.debug(f"Performing keyword search with query text: {query_text}")
-            keyword_search_args = KeywordSearchArgs(
-                query=query_text,
-                column=TableField.CONTENT.value
-            )
+            keyword_search_args = KeywordSearchArgs(query=query_text, column=TableField.CONTENT.value)
             keyword_query_obj = copy.deepcopy(query)
 
             keyword_query_obj.targets = [
@@ -337,7 +332,9 @@ class KnowledgeBaseTable:
                 Identifier(TableField.METADATA.value),
             ]
 
-            df_keyword_select = db_handler.dispatch_select(keyword_query_obj, keyword_search_conditions, keyword_search_args=keyword_search_args)
+            df_keyword_select = db_handler.dispatch_select(
+                keyword_query_obj, keyword_search_conditions, keyword_search_args=keyword_search_args
+            )
             df_keyword_select = self.addapt_result_columns(df_keyword_select)
             logger.debug(f"Keyword search returned {len(df_keyword_select)} rows")
             logger.debug(f"Columns in keyword search response: {df_keyword_select.columns.tolist()}")

@@ -40,7 +40,7 @@ def format_db_error_message(
     db_type: str | None = None,
     db_error_msg: str | None = None,
     failed_query: str | None = None,
-    is_external: bool = True
+    is_external: bool = True,
 ) -> str:
     """Format the error message for the database query.
 
@@ -62,8 +62,7 @@ def format_db_error_message(
         )
     else:
         error_message = (
-            "An error occurred while processing an internally generated query "
-            "derived from your original SQL statement."
+            "An error occurred while processing an internally generated query derived from your original SQL statement."
         )
     if db_name is not None or db_type is not None:
         error_message += "\n\nDatabase Details:"

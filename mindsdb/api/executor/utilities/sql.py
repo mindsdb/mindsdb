@@ -86,12 +86,9 @@ def query_df_with_type_infer_fallback(query_str: str, dataframes: dict, user_fun
                 raise exception
             description = con.description
     except Exception as e:
-        raise Exception(format_db_error_message(
-            db_type="DuckDB",
-            db_error_msg=str(e),
-            failed_query=query_str,
-            is_external=False
-        )) from e
+        raise Exception(
+            format_db_error_message(db_type="DuckDB", db_error_msg=str(e), failed_query=query_str, is_external=False)
+        ) from e
 
     return result_df, description
 
@@ -108,11 +105,11 @@ def get_duckdb_functions_list() -> list[str] | None:
     global _duckdb_functions_list
     if _duckdb_functions_list is None:
         try:
-            df, _ = query_df_with_type_infer_fallback('pragma functions', dataframes={})
+            df, _ = query_df_with_type_infer_fallback("pragma functions", dataframes={})
             df.columns = [name.lower() for name in df.columns]
-            _duckdb_functions_list = df['name'].drop_duplicates().str.lower().to_list()
+            _duckdb_functions_list = df["name"].drop_duplicates().str.lower().to_list()
         except Exception as e:
-            logger.warning(f'Unable to get DuckDB functions list: {e}')
+            logger.warning(f"Unable to get DuckDB functions list: {e}")
     return _duckdb_functions_list
 
 
@@ -178,15 +175,17 @@ def query_df(df, query, session=None):
             custom_functions_list = [] if user_functions is None else list(user_functions.functions.keys())
             all_functions_list = duckdb_functions_list + custom_functions_list
             if len(all_functions_list) > 0 and fnc_name not in all_functions_list:
-                raise Exception(format_db_error_message(
-                    db_type="DuckDB",
-                    db_error_msg=(
-                        f"Unknown function: '{fnc_name}'. This function is not recognized during internal query processing.\n"
-                        "Please use DuckDB-supported functions instead."
-                    ),
-                    failed_query=query_str,
-                    is_external=False
-                ))
+                raise Exception(
+                    format_db_error_message(
+                        db_type="DuckDB",
+                        db_error_msg=(
+                            f"Unknown function: '{fnc_name}'. This function is not recognized during internal query processing.\n"
+                            "Please use DuckDB-supported functions instead."
+                        ),
+                        failed_query=query_str,
+                        is_external=False,
+                    )
+                )
 
     query_traversal(query_ast, adapt_query)
 

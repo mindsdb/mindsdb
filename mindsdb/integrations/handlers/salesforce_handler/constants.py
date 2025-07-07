@@ -2,7 +2,7 @@
 Constants for Salesforce handler.
 """
 
-SOQL_INSTRUCTIONS = """This handler executes SOQL (Salesforce Object Query Language), NOT SQL. Follow these rules strictly:
+SOQL_INSTRUCTIONS = """This handler executes SOQL (Salesforce Object Query Language), NOT SQL! Follow these rules strictly:
 
 **BASIC STRUCTURE:**
 - NO "SELECT *" - must explicitly list all fields

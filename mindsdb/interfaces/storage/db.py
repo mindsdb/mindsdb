@@ -458,20 +458,35 @@ class Agents(Base):
             skills.append(skill.as_dict())
             skills_extra_parameters[skill.name] = rel.parameters or {}
 
+        params = self.params.copy()
+        data = params.pop("data", {})
+        model = params.pop("model", {})
+        prompt_template = params.pop("prompt_template", None)
+
         agent_dict = {
             "id": self.id,
             "name": self.name,
             "project_id": self.project_id,
-            "model_name": self.model_name,
-            "provider": self.provider,
-            "params": self.params,
             "updated_at": self.updated_at,
             "created_at": self.created_at,
         }
 
+        if self.model_name:
+            agent_dict["model_name"] = self.model_name
+
+        if self.provider:
+            agent_dict["provider"] = self.provider
+
         if skills:
             agent_dict["skills"] = skills
             agent_dict["skills_extra_parameters"] = skills_extra_parameters
+
+        if data:
+            agent_dict["data"] = data
+        if model:
+            agent_dict["model"] = model
+        if prompt_template:
+            agent_dict["prompt_template"] = prompt_template
 
         return agent_dict
 

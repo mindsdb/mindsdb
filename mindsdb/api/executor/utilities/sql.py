@@ -93,24 +93,33 @@ def query_df_with_type_infer_fallback(query_str: str, dataframes: dict, user_fun
     return result_df, description
 
 
-_duckdb_functions_list = None
+_duckdb_functions_and_kw_list = None
 
 
-def get_duckdb_functions_list() -> list[str] | None:
-    """Returns a list of all functions and operations supported by DuckDB.
+def get_duckdb_functions_and_kw_list() -> list[str] | None:
+    """Returns a list of all functions and keywords supported by DuckDB.
+    Some functions are not present in the duckdb_functions, because they are just syntax-sugar (like 'if()').
+    That is why need to fetch duckdb_keywords in addition to duckdb_functions.
 
     Returns:
-        list[str] | None: List of supported functions and operations, or None if unable to retrieve the list.
+        list[str] | None: List of supported functions and keywords, or None if unable to retrieve the list.
     """
-    global _duckdb_functions_list
-    if _duckdb_functions_list is None:
+    global _duckdb_functions_and_kw_list
+    if _duckdb_functions_and_kw_list is None:
         try:
-            df, _ = query_df_with_type_infer_fallback("pragma functions", dataframes={})
+            df, _ = query_df_with_type_infer_fallback("""
+                select distinct name
+                from (
+                    select function_name as name from duckdb_functions()
+                    union all
+                    select keyword_name as name from duckdb_keywords()
+                ) ta;
+            """, dataframes={})
             df.columns = [name.lower() for name in df.columns]
-            _duckdb_functions_list = df["name"].drop_duplicates().str.lower().to_list()
+            _duckdb_functions_and_kw_list = df["name"].drop_duplicates().str.lower().to_list()
         except Exception as e:
             logger.warning(f"Unable to get DuckDB functions list: {e}")
-    return _duckdb_functions_list
+    return _duckdb_functions_and_kw_list
 
 
 def query_df(df, query, session=None):
@@ -171,9 +180,9 @@ def query_df(df, query, session=None):
                 if user_functions is not None:
                     user_functions.check_function(node)
 
-            duckdb_functions_list = get_duckdb_functions_list() or []
+            duckdb_functions_and_kw_list = get_duckdb_functions_and_kw_list() or []
             custom_functions_list = [] if user_functions is None else list(user_functions.functions.keys())
-            all_functions_list = duckdb_functions_list + custom_functions_list
+            all_functions_list = duckdb_functions_and_kw_list + custom_functions_list
             if len(all_functions_list) > 0 and fnc_name not in all_functions_list:
                 raise Exception(
                     format_db_error_message(

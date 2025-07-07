@@ -225,6 +225,7 @@ class AgentsController:
 
         depreciated_params = [
             "database",
+            "knowledge_base_database",
             "include_tables",
             "ignore_tables",
             "include_knowledge_bases",

@@ -182,7 +182,6 @@ class ExecuteCommands:
             return self.answer_drop_ml_engine(statement)
         elif statement_type is DropPredictor:
             return self.answer_drop_model(statement, database_name)
-
         elif statement_type is DropTables:
             return self.answer_drop_tables(statement, database_name)
         elif statement_type is DropDatasource or statement_type is DropDatabase:
@@ -921,6 +920,7 @@ class ExecuteCommands:
     def _get_model_info(self, identifier, except_absent=True, database_name=None):
         if len(identifier.parts) == 1:
             identifier.parts = [database_name, identifier.parts[0]]
+            identifier.is_quoted = [False] + identifier.is_quoted
 
         database_name, model_name, model_version = resolve_model_identifier(identifier)
         if database_name is None:
@@ -1538,13 +1538,18 @@ class ExecuteCommands:
 
     @mark_process("learn")
     def answer_create_predictor(self, statement: CreatePredictor, database_name):
-        integration_name = database_name
+        match statement.name.parts, statement.name.is_quoted:
+            case [integration_name, model_name], [_, model_name_quoted]: ...
+            case [model_name], [model_name_quoted]:
+                integration_name = database_name
+            case _:
+                raise ValueError(f'Invalid model name: {statement.name}')
 
-        # allow creation in non-active projects, e.g. 'create mode proj.model' works whether `proj` is active or not
-        if len(statement.name.parts) > 1:
-            integration_name = statement.name.parts[0]
-        model_name = statement.name.parts[-1]
+        if model_name_quoted and not model_name.islower():
+            raise ValueError(f'Invalid model name: {statement.name}')
+
         statement.name.parts = [integration_name.lower(), model_name]
+        statement.name.is_quoted = [False, False]
 
         ml_integration_name = "lightwood"  # default
         if statement.using is not None:
@@ -1574,7 +1579,6 @@ class ExecuteCommands:
 
         try:
             df = self.session.model_controller.create_model(statement, ml_handler)
-
             return ExecuteAnswer(data=ResultSet.from_df(df))
         except EntityExistsError:
             if getattr(statement, "if_not_exists", False) is True:
@@ -1989,22 +1993,24 @@ class ExecuteCommands:
         self.session.model_controller.set_model_active_version(project_name, model_name, version)
         return ExecuteAnswer()
 
-    def answer_drop_model(self, statement, database_name):
-        model_parts = statement.name.parts
-        version = None
+    def answer_drop_model(self, statement: DropPredictor, database_name: str) -> ExecuteAnswer:
+        """Handles the DROP MODEL (or DROP PREDICTOR) command, which removes a model
+        or a specific model version from a project.
 
-        # with version?
-        if model_parts[-1].isdigit():
-            version = int(model_parts[-1])
-            model_parts = model_parts[:-1]
+        Args:
+            statement (DropPredictor): The AST object representing the DROP MODEL or DROP PREDICTOR command.
+            database_name (str): The name of the current database/project.
 
-        if len(model_parts) == 2:
-            project_name, model_name = model_parts
-        elif len(model_parts) == 1:
-            model_name = model_parts[0]
+        Raises:
+            EntityNotExistsError: If the model or version does not exist and IF EXISTS is not specified.
+            ValueError: If the model name format is invalid.
+
+        Returns:
+            ExecuteAnswer: The result of the model deletion operation.
+        """
+        project_name, model_name, version = resolve_model_identifier(statement.name)
+        if project_name is None:
             project_name = database_name
-        else:
-            raise ExecutorException(f"Unknown model: {statement.name}")
 
         if version is not None:
             # delete version

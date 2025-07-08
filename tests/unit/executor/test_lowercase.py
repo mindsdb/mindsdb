@@ -135,3 +135,56 @@ class TestLowercase(BaseExecutorMockPredictor):
             self.execute(f"""
                 DROP ML_ENGINE {another_name}
             """)
+
+    def test_model_name_lowercase(self):
+        self.execute("""
+            CREATE ML_ENGINE myengine FROM dummy_ml
+        """)
+        df = pd.DataFrame([
+            {"a": 1, "b": "one"},
+            {"a": 2, "b": "two"},
+        ])
+        self.set_data('tasks', df)
+
+        with pytest.raises(Exception):
+            self.execute("""
+                CREATE MODEL `MyModel` PREDICT a USING engine='myengine', join_learn_process=true
+            """)
+
+        for model_name in ['mymodel', 'MyModel', 'MYMODEL']:
+            another_name = 'myMODEL'
+            self.execute(f"""
+                CREATE MODEL {model_name} PREDICT a USING engine='myengine', join_learn_process=true
+            """)
+
+            res = self.execute(f"""
+                SELECT * FROM INFORMATION_SCHEMA.MODELS WHERE name = '{model_name.lower()}'
+            """)
+            assert res.data.to_df()['ENGINE'][0] == 'dummy_ml'
+
+            with pytest.raises(Exception):
+                self.execute(f"""
+                    RETRAIN MODEL `{another_name}` using join_learn_process=true
+                """)
+
+            self.execute(f"""
+                RETRAIN MODEL {another_name} using join_learn_process=true
+            """)
+
+            with pytest.raises(Exception):
+                self.execute(f"""
+                    FINETUNE MODEL `{another_name}` FROM dummy_data (select * from tasks) using join_learn_process=true
+                """)
+
+            self.execute(f"""
+                FINETUNE MODEL {another_name} FROM dummy_data (select * from tasks) using join_learn_process=true
+            """)
+
+            with pytest.raises(Exception):
+                self.execute(f"""
+                    DROP MODEL `{another_name}`
+                """)
+
+            self.execute(f"""
+                DROP MODEL {another_name}
+            """)

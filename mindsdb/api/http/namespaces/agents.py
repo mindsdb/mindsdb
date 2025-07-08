@@ -39,10 +39,6 @@ def create_agent(project_name, name, agent):
     if agent.get('prompt_template'):
         params['prompt_template'] = agent['prompt_template']
 
-    model_name = agent["model_name"]
-    provider = agent.get("provider")
-    skills = agent.get("skills", [])
-
     agents_controller = AgentsController()
 
     try:

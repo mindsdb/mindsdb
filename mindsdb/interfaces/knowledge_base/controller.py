@@ -244,7 +244,6 @@ class KnowledgeBaseTable:
         keyword_search_cols_and_values = []
         query_text = None
         relevance_threshold = None
-        reranking_enabled_flag = True
         hybrid_search_enabled_flag = False
         query_conditions = db_handler.extract_conditions(query.where)
         if query_conditions is not None:
@@ -261,10 +260,8 @@ class KnowledgeBaseTable:
                         logger.error(error_msg)
                         raise ValueError(error_msg)
                 elif item.column == "reranking":
-                    reranking_enabled_flag = item.value
-                    # cast to boolean
-                    if isinstance(reranking_enabled_flag, str):
-                        reranking_enabled_flag = reranking_enabled_flag.lower() not in ("false")
+                    if item.value is False or (isinstance(item.value, str) and item.value.lower() == "false"):
+                        disable_reranking = True
                 elif item.column == "hybrid_search":
                     hybrid_search_enabled_flag = item.value
                     # cast to boolean

@@ -391,7 +391,17 @@
               {
                 "group": "Data Unification",
                 "pages": [
-                  "mindsdb_sql/knowledge-bases",
+                  {
+                    "group": "Knowledge Bases",
+                    "pages": [
+                      "mindsdb_sql/knowledge_bases/overview",
+                      "mindsdb_sql/knowledge_bases/create",
+                      "mindsdb_sql/knowledge_bases/insert_data",
+                      "mindsdb_sql/knowledge_bases/query",
+                      "mindsdb_sql/knowledge_bases/evaluate",
+                      "mindsdb_sql/knowledge_bases/examples"
+                    ]
+                  },
                   {
                     "group": "Tables, Views, and Files",
                     "pages": [
@@ -1903,6 +1913,10 @@
     {
       "source": "/mindsdb_sql/agents/knowledge-bases",
       "destination": "/mindsdb_sql/knowledge-bases"
+    },
+    {
+      "source": "/mindsdb_sql/knowledge-bases",
+      "destination": "/mindsdb_sql/knowledge_bases/overview"
     },
     {
       "source": "/what-is-mindsdb",

@@ -334,12 +334,21 @@ class VectorStoreHandler(BaseHandler):
 
         if not df_update.empty:
             # get values of existed `created_at` and return them to metadata
-            created_dates = {row[id_col]: row[metadata_col].get("_created_at") for _, row in df_existed.iterrows()}
+            origin_id_col = "_original_doc_id"
+
+            created_dates, ids = {}, {}
+            for _, row in df_existed.iterrows():
+                chunk_id = row[id_col]
+                created_dates[chunk_id] = row[metadata_col].get("_created_at")
+                ids[chunk_id] = row[metadata_col].get(origin_id_col)
 
             def keep_created_at(row):
                 val = created_dates.get(row[id_col])
                 if val:
                     row[metadata_col]["_created_at"] = val
+                # keep id column
+                if origin_id_col not in row[metadata_col]:
+                    row[metadata_col][origin_id_col] = ids.get(row[id_col])
                 return row
 
             df_update.apply(keep_created_at, axis=1)

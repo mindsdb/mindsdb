@@ -516,6 +516,9 @@ class KnowledgeBaseTable:
 
             query.update_columns[emb_col] = Constant(self._content_to_embeddings(content))
 
+        if "metadata" not in query.update_columns:
+            query.update_columns["metadata"] = Constant({})
+
         # TODO search content in where clause?
 
         # set table name

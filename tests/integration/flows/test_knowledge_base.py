@@ -378,7 +378,7 @@ class TestKB(KBTestBase):
     def test_with_reranking(self, storage, embedding_model, reranking_model):
         # --- reranking ---
         self.create_kb(
-            "test_kb_crm_meta",
+            "test_kb_crm_rerank",
             storage,
             embedding_model,
             reranking_model,
@@ -390,7 +390,7 @@ class TestKB(KBTestBase):
         )
 
         self.run_sql("""
-            INSERT INTO test_kb_crm_meta (
+            INSERT INTO test_kb_crm_rerank (
                 SELECT * FROM example_db.demo.crm_demo order by pk limit 50 
             );
         """)
@@ -398,7 +398,7 @@ class TestKB(KBTestBase):
         threshold = 0.5
         ret = self.run_sql(f"""
             SELECT *
-            FROM test_kb_crm_meta
+            FROM test_kb_crm_rerank
             WHERE status = "solving" AND content = "noise" AND relevance>={threshold}
         """)
         assert set(ret.metadata.apply(lambda x: x.get("status"))) == {"solving"}
@@ -410,7 +410,7 @@ class TestKB(KBTestBase):
         # --- evaluate ---
 
         ret = self.run_sql("""
-            Evaluate knowledge base test_kb_crm_meta
+            Evaluate knowledge base test_kb_crm_rerank
             using
               test_table = files.test_eval_kb_crm_test,
               generate_data = {   

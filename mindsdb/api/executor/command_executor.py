@@ -1403,7 +1403,15 @@ class ExecuteCommands:
                 "Please pass the model parameters as a JSON object in the embedding_model field."
             )
 
-        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
+        project_name = database_name
+        match statement.name.parts, statement.name.is_quoted:
+            case [project_name, kb_name], [_, kb_name_quoted]: ...
+            case [kb_name], [kb_name_quoted]: ...
+            case _:
+                raise ValueError(f'Wrong knowledge base name: {statement.name}')
+        
+        if kb_name_quoted and not kb_name.islower():
+            raise ValueError(f'The knowledge base name must be in lowercase: {kb_name}')
 
         if statement.storage is not None:
             if len(statement.storage.parts) != 2:
@@ -1414,8 +1422,6 @@ class ExecuteCommands:
         if statement.from_query is not None:
             # TODO: implement this
             raise ExecutorException("Create a knowledge base from a select is not supported yet")
-
-        kb_name = statement.name.parts[-1]
 
         # create the knowledge base
         _ = self.session.kb_controller.add(
@@ -1429,13 +1435,19 @@ class ExecuteCommands:
 
         return ExecuteAnswer()
 
-    def answer_drop_kb(self, statement: DropKnowledgeBase, database_name: str):
-        name = statement.name.parts[-1]
-        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
+    def answer_drop_kb(self, statement: DropKnowledgeBase, database_name: str) -> ExecuteAnswer:
+        project_name = database_name
+        match statement.name.parts, statement.name.is_quoted:
+            case [project_name, kb_name], [_, kb_name_quoted]: ...
+            case [kb_name], [kb_name_quoted]: ...
+            case _:
+                raise ValueError(f'Wrong knowledge base name: {statement.name}')
+        if not kb_name_quoted:
+            kb_name = kb_name.lower()
 
         # delete the knowledge base
         self.session.kb_controller.delete(
-            name=name,
+            name=kb_name,
             project_name=project_name,
             if_exists=statement.if_exists,
         )

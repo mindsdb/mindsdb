@@ -4,6 +4,7 @@ import pytest
 import pandas as pd
 
 from tests.unit.executor_test_base import BaseExecutorMockPredictor
+from tests.unit.executor.test_agent import set_litellm_embedding
 
 
 class TestLowercase(BaseExecutorMockPredictor):
@@ -187,4 +188,43 @@ class TestLowercase(BaseExecutorMockPredictor):
 
             self.execute(f"""
                 DROP MODEL {another_name}
+            """)
+
+    @patch("litellm.embedding")
+    @patch("openai.OpenAI")
+    def test_knowledgebase_name_lowercase(self, mock_openai, mock_litellm_embedding):
+        set_litellm_embedding(mock_litellm_embedding)
+
+        kb_params = """
+            using embedding_model = {
+                "provider": "dummy_provider",
+                "model_name": "dummy_model",
+                "api_key": "dummy_key"
+            }
+        """
+
+        with pytest.raises(Exception):
+            self.run_sql(f"""
+                create knowledge base `MyKB` {kb_params}
+            """)
+
+        for kb_name in ['mykb', 'MyKB', 'MYKB']:
+            another_name = 'myKB'
+
+            self.execute(f"""
+                CREATE KNOWLEDGE BASE {kb_name} {kb_params}
+            """)
+
+            res = self.execute(f"""
+                SELECT * FROM INFORMATION_SCHEMA.KNOWLEDGE_BASES WHERE name = '{kb_name.lower()}'
+            """)
+            assert res.data.to_df()['NAME'][0] == 'mykb'
+
+            with pytest.raises(Exception):
+                self.execute(f"""
+                    DROP KNOWLEDGE BASE `{another_name}`
+                """)
+
+            self.execute(f"""
+                DROP KNOWLEDGE BASE {another_name}
             """)

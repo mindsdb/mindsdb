@@ -487,6 +487,8 @@ class Agents(Base):
             agent_dict["model"] = model
         if prompt_template:
             agent_dict["prompt_template"] = prompt_template
+        if params:
+            agent_dict["params"] = params
 
         return agent_dict
 

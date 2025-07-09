@@ -18,7 +18,7 @@ variables_controller = VariablesController(restricted=False)
 
 
 def get_configurations():
-    storages = [{"engine": "chromadb"}]
+    storages = [{"engine": "chromadb", "persist_directory": "default_collection"}]
 
     if "PGVECTOR_PASSWORD" in os.environ:
         pgvector_local = {
@@ -109,16 +109,18 @@ class KBTestBase:
 
         name = f"test_vectordb_{kb_name}"
 
-        if engine == "chromadb":
-            connection_args["persist_directory"] = kb_name
+        # TODO update database parameters. for now keep existing connection
+        # try:
+        #     self.con.databases.drop(name)
+        # except RuntimeError as e:
+        #     if "Database does not exists" not in str(e):
+        #         raise e
 
         try:
-            self.con.databases.drop(name)
-        except RuntimeError as e:
-            if "Database does not exists" not in str(e):
-                raise e
+            self.con.databases.create(name, engine=engine, connection_args=connection_args)
+        except RuntimeError:
+            ...
 
-        self.con.databases.create(name, engine=engine, connection_args=connection_args)
         return name
 
     def run_sql(self, sql):
@@ -133,6 +135,8 @@ class KBTestBase:
         try:
             kb = self.con.knowledge_bases.get(name)
 
+            self.con.knowledge_bases.drop(name)
+
             # remove storage table
             table = kb.storage
             try:
@@ -140,13 +144,6 @@ class KBTestBase:
             except RuntimeError:
                 ...
 
-            # remove connection
-            try:
-                self.con.databases.drop(table.db.name)
-            except RuntimeError:
-                ...
-
-            self.con.knowledge_bases.drop(name)
         except Exception:
             ...
 
@@ -397,7 +394,6 @@ class TestKB(KBTestBase):
         assert len(ret) == 5
 
         # -- Content + metadata search with limit and re-ranking threshold
-        # TODO chroma shows max relevance = 0.69, but postgres = 0.81
         ret = self.run_sql("""
             SELECT *
             FROM test_kb_crm_meta

@@ -6,7 +6,6 @@ from openai import OpenAI, AzureOpenAI
 
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.utilities.config import config
-from litellm import supports_response_schema
 
 
 class LLMClient:
@@ -60,17 +59,7 @@ class LLMClient:
         Call LLM completion and get response
         """
         params = self.params
-        supports_json_output = supports_response_schema(
-            model=params["model_name"], custom_llm_provider=params["provider"]
-        )
-        if json_output:
-            if not supports_json_output:
-                pass
-            else:
-                params["response_format"] = {"type": "json_object"}
-        else:
-            params["response_format"] = None
-
+        params["json_output"] = json_output
         if self.provider in ("azure_openai", "openai"):
             response = self.client.chat.completions.create(
                 model=params["model_name"],

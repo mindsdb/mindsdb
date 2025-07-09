@@ -15,14 +15,11 @@ ENV_VAR_PREFIX = "MDB_"
 
 
 class VariablesController:
-
-    def __init__(self) -> None:
-        self._storage = get_json_storage(
-            resource_id=0,
-            resource_group=RESOURCE_GROUP.SYSTEM
-        )
-        self._store_key = 'variables'
+    def __init__(self, restricted=True) -> None:
+        self._storage = get_json_storage(resource_id=0, resource_group=RESOURCE_GROUP.SYSTEM)
+        self._store_key = "variables"
         self._data = None
+        self._restricted = restricted
 
     def _get_data(self) -> dict:
         if self._data is None:
@@ -47,14 +44,14 @@ class VariablesController:
         # available names are restricted by ENV_VAR_PREFIX to don't provide access to arbitrary venv variable
 
         var_name = name.value
-        if not var_name.startswith(ENV_VAR_PREFIX):
+        if self._restricted and not var_name.startswith(ENV_VAR_PREFIX):
             raise ValueError(f"Can access only to variable names starting with {ENV_VAR_PREFIX}")
         if var_name not in os.environ:
             raise ValueError(f"Environment variable {var_name} is not defined")
         return os.environ[var_name]
 
     def _get_function(self, name: str) -> Callable:
-        if name == 'from_env':
+        if name == "from_env":
             return self._from_env
         raise ValueError(f"Function {name} is not found")
 
@@ -81,16 +78,13 @@ class VariablesController:
 
         if isinstance(var, Variable):
             return self.get_value(var.value.lower())
+        if isinstance(var, Function):
+            fnc = self._get_function(var.op)
+            return fnc(*var.args)
         elif isinstance(var, dict):
-            return {
-                key: self.fill_parameters(value)
-                for key, value in var.items()
-            }
+            return {key: self.fill_parameters(value) for key, value in var.items()}
         elif isinstance(var, list):
-            return [
-                self.fill_parameters(value)
-                for value in var
-            ]
+            return [self.fill_parameters(value) for value in var]
         return var
 
 

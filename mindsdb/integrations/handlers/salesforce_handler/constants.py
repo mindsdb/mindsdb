@@ -2,7 +2,9 @@
 Constants for Salesforce handler.
 """
 
-SOQL_INSTRUCTIONS = """This handler executes SOQL (Salesforce Object Query Language), NOT SQL! Follow these rules strictly:
+
+def get_soql_instructions(integration_name):
+    return f"""This handler executes SOQL (Salesforce Object Query Language), NOT SQL! Follow these rules strictly:
 
 **BASIC STRUCTURE:**
 - NO "SELECT *" - must explicitly list all fields
@@ -191,4 +193,16 @@ SOQL_INSTRUCTIONS = """This handler executes SOQL (Salesforce Object Query Langu
 - Date functions: SELECT Id, Name FROM Account WHERE CALENDAR_YEAR(CreatedDate) = 2025
 - Null checks: SELECT Id, Name FROM Account WHERE ParentId = null
 - Multi-select picklist: SELECT Id, Name FROM Account WHERE Services__c INCLUDES ('Consulting;Support')
-- Sorting and limiting: SELECT Id, Name FROM Account ORDER BY Name ASC LIMIT 50"""
+- Sorting and limiting: SELECT Id, Name FROM Account ORDER BY Name ASC LIMIT 50
+
+***EXECUTION INSTRUCTIONS. IMPORTANT!***
+After generating the core SOQL (and nothing else), always make sure you wrap it exactly as:
+
+    SELECT * 
+      FROM {integration_name}(
+        /* your generated SOQL goes here, without a trailing semicolon */
+      )
+
+Return only that wrapper call.
+
+"""

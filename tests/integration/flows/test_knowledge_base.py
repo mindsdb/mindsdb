@@ -31,22 +31,34 @@ def get_configurations():
     if openai_api_key is not None:
         embedding_model = {"provider": "openai", "model_name": "text-embedding-ada-002", "api_key": openai_api_key}
         for storage in storages:
-            yield storage, embedding_model
+            name = f"{storage['engine']}-{embedding_model['provider']}"
+            yield pytest.param(storage, embedding_model, id=name)
 
 
 def get_rerank_configurations():
     # configurations with reranking model
 
-    for storage, embedding_model in get_configurations():
+    configurations = []
+    for params in get_configurations():
+        if isinstance(params, list):
+            storage, embedding_model = params
+        else:
+            # is pytest.param
+            storage, embedding_model = params.values
+
         if embedding_model["provider"] == "openai":
             reranking_model = embedding_model.copy()
             reranking_model["model_name"] = "gpt-4"
-            yield storage, embedding_model, reranking_model
+            configurations.append([storage, embedding_model, reranking_model])
 
         gemini_api_key = os.environ.get("GEMINI_API_KEY")
         if gemini_api_key is not None:
             reranking_model = {"provider": "gemini", "model_name": "gemini-2.0-flash", "api_key": gemini_api_key}
-            yield storage, embedding_model, reranking_model
+            configurations.append([storage, embedding_model, reranking_model])
+
+    for storage, embedding_model, reranking_model in configurations:
+        name = f"{storage['engine']}-{embedding_model['provider']}-{reranking_model['provider']}"
+        yield pytest.param(storage, embedding_model, reranking_model, id=name)
 
 
 class KBTestBase:

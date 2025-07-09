@@ -377,13 +377,6 @@ class AgentCompletions(Resource):
                 HTTPStatus.NOT_FOUND, "Project not found", f"Project with name {project_name} does not exist"
             )
 
-        # Add OpenAI API key to agent params if not already present.
-        if not existing_agent.params:
-            existing_agent.params = {}
-        existing_agent.params["openai_api_key"] = existing_agent.params.get(
-            "openai_api_key", os.getenv("OPENAI_API_KEY")
-        )
-
         # set mode to `retrieval` if agent has a skill of type `retrieval` and mode is not set
         if "mode" not in existing_agent.params and any(
             rel.skill.type == "retrieval" for rel in existing_agent.skills_relationships

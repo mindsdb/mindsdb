@@ -5,16 +5,21 @@ import os
 
 import pytest
 import mindsdb_sdk
-from mindsdb_sql_parser.ast import Constant, Function
 
 from mindsdb.utilities import log
 from tests.integration.conftest import HTTP_API_ROOT
-from mindsdb.interfaces.variables.variables_controller import VariablesController
 
 
 logger = log.getLogger(__name__)
 
-variables_controller = VariablesController(restricted=False)
+
+class HiddenVar(str):
+    """
+    Doesn't show value of var in console
+    """
+
+    def __repr__(self):
+        return "..."
 
 
 def get_configurations():
@@ -35,7 +40,7 @@ def get_configurations():
         embedding_model = {
             "provider": "openai",
             "model_name": "text-embedding-ada-002",
-            "api_key": Function("from_env", [Constant("OPENAI_API_KEY")]),
+            "api_key": HiddenVar(os.environ["OPENAI_API_KEY"]),
         }
         for storage in storages:
             name = f"{storage['engine']}-{embedding_model['provider']}"
@@ -62,7 +67,7 @@ def get_rerank_configurations():
             reranking_model = {
                 "provider": "gemini",
                 "model_name": "gemini-2.0-flash",
-                "api_key": Function("from_env", [Constant("GEMINI_API_KEY")]),
+                "api_key": HiddenVar(os.environ["GEMINI_API_KEY"]),
             }
             configurations.append([storage, embedding_model, reranking_model])
 
@@ -179,9 +184,7 @@ class KBTestBase:
 class TestKB(KBTestBase):
     @pytest.mark.parametrize("storage, embedding_model", get_configurations())
     def test_base_syntax(self, storage, embedding_model):
-        emb_model = variables_controller.fill_parameters(embedding_model)
-
-        self.create_kb("test_kb_crm", storage, emb_model)
+        self.create_kb("test_kb_crm", storage, embedding_model)
 
         # -------------- insert --------
         logger.debug("insert from table")
@@ -311,7 +314,6 @@ class TestKB(KBTestBase):
     @pytest.mark.parametrize("storage, embedding_model", get_configurations())
     def test_no_reranking(self, storage, embedding_model):
         # --- Test data ingestion ---
-        emb_model = variables_controller.fill_parameters(embedding_model)
 
         def to_date(s):
             return dt.datetime.strptime(s, "%Y-%m-%d %H:%M:%S.%f")
@@ -320,7 +322,7 @@ class TestKB(KBTestBase):
         self.create_kb(
             "test_kb_crm_meta",
             storage,
-            emb_model,
+            embedding_model,
             params={
                 "metadata_columns": ["status", "category"],
                 "content_columns": ["message_body"],
@@ -405,15 +407,12 @@ class TestKB(KBTestBase):
 
     @pytest.mark.parametrize("storage, embedding_model, reranking_model", get_rerank_configurations())
     def test_with_reranking(self, storage, embedding_model, reranking_model):
-        emb_model = variables_controller.fill_parameters(embedding_model)
-        rerank_model = variables_controller.fill_parameters(reranking_model)
-
         # --- reranking ---
         self.create_kb(
             "test_kb_crm_rerank",
             storage,
-            emb_model,
-            rerank_model,
+            embedding_model,
+            reranking_model,
             params={
                 "metadata_columns": ["status", "category"],
                 "content_columns": ["message_body"],

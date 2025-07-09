@@ -9,7 +9,6 @@ import mindsdb_sdk
 from mindsdb.utilities import log
 from tests.integration.conftest import HTTP_API_ROOT
 
-
 logger = log.getLogger(__name__)
 
 
@@ -93,11 +92,14 @@ class KBTestBase:
         )
         return name
 
-    def create_vector_db(self, connection_args):
+    def create_vector_db(self, connection_args, kb_name):
         connection_args = connection_args.copy()
         engine = connection_args.pop("engine")
 
-        name = f"test_vectordb_{engine}"
+        name = f"test_vectordb_{kb_name}"
+
+        if engine == "chromadb":
+            connection_args["persist_directory"] = kb_name
 
         try:
             self.con.databases.drop(name)
@@ -127,6 +129,12 @@ class KBTestBase:
             except RuntimeError:
                 ...
 
+            # remove connection
+            try:
+                self.con.databases.drop(table.db.name)
+            except RuntimeError:
+                ...
+
             self.con.knowledge_bases.drop(name)
         except Exception:
             ...
@@ -151,9 +159,8 @@ class KBTestBase:
                 param_items.append(f"{k}={json.dumps(v)}")
             param_str = ",".join(param_items)
 
-        if storage["engine"] != "chromadb":
-            db_name = self.create_vector_db(storage)
-            param_str += f", storage = {db_name}.tbl_{name}"
+        db_name = self.create_vector_db(storage, name)
+        param_str += f", storage = {db_name}.tbl_{name}"
 
         self.run_sql(f"""
             create knowledge base {name}

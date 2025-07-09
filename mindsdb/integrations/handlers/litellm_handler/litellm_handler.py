@@ -3,6 +3,7 @@ from typing import Dict, Optional, List
 
 
 from litellm import completion, batch_completion, embedding, acompletion, supports_response_schema
+
 import pandas as pd
 
 from mindsdb.integrations.libs.base import BaseMLEngine
@@ -32,16 +33,6 @@ class LiteLLMHandler(BaseMLEngine):
 
     @classmethod
     def prepare_arguments(cls, provider, model_name, args):
-        json_output = args.pop("json_output", False)
-
-        supports_json_output = supports_response_schema(
-            model=model_name, custom_llm_provider=provider
-        )
-
-        if json_output and supports_json_output:
-            args["response_format"] = {"type": "json_object"}
-        else:
-            args["response_format"] = None
 
         if provider == "snowflake" and "snowflake_account_id" in args:
             args["api_base"] = (
@@ -69,6 +60,16 @@ class LiteLLMHandler(BaseMLEngine):
     @classmethod
     def completion(cls, provider: str, model: str, messages: List[dict], args: dict):
         model, args = cls.prepare_arguments(provider, model, args)
+        json_output = args.pop("json_output", False)
+
+        supports_json_output = supports_response_schema(
+            model=model, custom_llm_provider=provider
+        )
+
+        if json_output and supports_json_output:
+            args["response_format"] = {"type": "json_object"}
+        else:
+            args["response_format"] = None
         return completion(model=model, messages=messages, stream=False, **args)
 
     def create(

@@ -459,9 +459,6 @@ class Agents(Base):
             skills_extra_parameters[skill.name] = rel.parameters or {}
 
         params = self.params.copy()
-        data = params.pop("data", {})
-        model = params.pop("model", {})
-        prompt_template = params.pop("prompt_template", None)
 
         agent_dict = {
             "id": self.id,
@@ -477,18 +474,24 @@ class Agents(Base):
         if self.provider:
             agent_dict["provider"] = self.provider
 
+        # Since skills were depreciated, they are only used with Minds
+        # Minds expects the parameters to be provided as is without breaking them down
         if skills:
             agent_dict["skills"] = skills
             agent_dict["skills_extra_parameters"] = skills_extra_parameters
-
-        if data:
-            agent_dict["data"] = data
-        if model:
-            agent_dict["model"] = model
-        if prompt_template:
-            agent_dict["prompt_template"] = prompt_template
-        if params:
             agent_dict["params"] = params
+        else:
+            data = params.pop("data", {})
+            model = params.pop("model", {})
+            prompt_template = params.pop("prompt_template", None)
+            if data:
+                agent_dict["data"] = data
+            if model:
+                agent_dict["model"] = model
+            if prompt_template:
+                agent_dict["prompt_template"] = prompt_template
+            if params:
+                agent_dict["params"] = params
 
         return agent_dict
 

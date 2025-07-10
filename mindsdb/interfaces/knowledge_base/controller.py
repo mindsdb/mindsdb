@@ -1187,7 +1187,7 @@ class KnowledgeBaseController:
             raise ValueError("'provider' parameter is required for embedding model")
 
         # check available providers
-        avail_providers = ("openai", "azure_openai", "bedrock")
+        avail_providers = ("openai", "azure_openai", "bedrock", "gemini", "google")
         if params["provider"] not in avail_providers:
             raise ValueError(
                 f"Wrong embedding provider: {params['provider']}. Available providers: {', '.join(avail_providers)}"

@@ -116,6 +116,8 @@ def get_dataset_planets():
 class TestAgent(BaseExecutorDummyML):
     @pytest.mark.slow
     def test_mindsdb_provider(self):
+        from mindsdb.api.executor.exceptions import ExecutorException
+
         agent_response = "how can I help you"
         # model
         self.run_sql(
@@ -132,13 +134,23 @@ class TestAgent(BaseExecutorDummyML):
 
         self.run_sql("CREATE ML_ENGINE langchain FROM langchain")
 
-        self.run_sql("""
-            CREATE AGENT my_agent
+        agent_params = """
             USING
-             provider='mindsdb',
-             model = "base_model", -- <
-             prompt_template="Answer the user input in a helpful way"
-         """)
+                provider='mindsdb',
+                model = "base_model", -- <
+                prompt_template="Answer the user input in a helpful way"
+        """
+        self.run_sql(f"""
+            CREATE AGENT my_agent {agent_params}
+        """)
+        with pytest.raises(ExecutorException):
+            self.run_sql(f"""
+                CREATE AGENT my_agent {agent_params}
+            """)
+        self.run_sql(f"""
+            CREATE AGENT IF NOT EXISTS my_agent {agent_params}
+        """)
+
         ret = self.run_sql("select * from my_agent where question = 'hi'")
 
         assert agent_response in ret.answer[0]

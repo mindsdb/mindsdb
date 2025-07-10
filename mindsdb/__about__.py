@@ -8,3 +8,4 @@ __github__ = "https://github.com/mindsdb/mindsdb"
 __pypi__ = "https://pypi.org/project/mindsdb/"
 __license__ = "Elastic License 2.0"
 __copyright__ = "Copyright(c) 2018 MindsDB, Inc"
+

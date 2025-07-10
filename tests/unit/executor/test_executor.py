@@ -92,15 +92,16 @@ class Test(BaseExecutorMockPredictor):
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_integration_select(self, mock_handler):
-        data = [[1, "x"], [1, "y"]]
+        data = [[1, "x"], [2, "y"], [3, "z"]]
         df = pd.DataFrame(data, columns=["a", "b"])
         self.set_handler(mock_handler, name="pg", tables={"tasks": df})
 
         ret = self.execute("select * from pg.tasks")
         assert ret.data.to_lists() == data
-
-        # check sql in query method
         assert mock_handler().query.call_args[0][0].to_string() == "SELECT * FROM tasks"
+
+        ret = self.execute("table pg.tasks order by a desc limit 2 offset 1")
+        assert ret.data.to_lists() == [[2, "y"], [1, "x"]]
 
     def test_predictor_1_row(self):
         predicted_value = 3.14

@@ -38,6 +38,7 @@ from mindsdb_sql_parser.ast import (
     Variable,
     Intersect,
     Except,
+    Table
 )
 
 # typed models
@@ -582,6 +583,8 @@ class ExecuteCommands:
                 return ret
             query = SQLQuery(statement, session=self.session, database=database_name)
             return self.answer_select(query)
+        elif statement_type is Table:
+            return self.answer_table(statement, database_name=database_name)
         elif statement_type is Explain:
             return self.answer_show_columns(statement.target, database_name=database_name)
         elif statement_type is CreateTable:
@@ -1894,6 +1897,31 @@ class ExecuteCommands:
     def answer_create_table(self, statement, database_name):
         SQLQuery(statement, session=self.session, execute=True, database=database_name)
         return ExecuteAnswer()
+
+    def answer_table(self, statement: Table, database_name: str = None) -> ExecuteAnswer:
+        """Execute a TABLE statement by converting it to a SELECT * query on the specified table.
+
+        Args:
+            statement (Table): The TABLE AST node containing the table name and optional limit, order_by, and offset.
+            database_name (str, optional): The name of the database to execute the query against. Defaults to the current session database.
+
+        Returns:
+            ExecuteAnswer: The result of executing the SELECT * query on the specified table, wrapped in an ExecuteAnswer object.
+        """
+        args = {
+            "targets": [Star()],
+            "from_table": statement.name,
+        }
+        if statement.limit is not None:
+            args['limit'] = statement.limit
+        if statement.order_by is not None:
+            args['order_by'] = statement.order_by
+        if statement.offset is not None:
+            args['offset'] = statement.offset
+        select = Select(**args)
+
+        query = SQLQuery(select, session=self.session, database=database_name)
+        return self.answer_select(query)
 
     def answer_select(self, query):
         data = query.fetched_data

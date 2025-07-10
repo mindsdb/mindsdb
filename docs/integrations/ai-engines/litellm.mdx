@@ -1,0 +1,68 @@
+---
+title: LiteLLM
+sidebarTitle: LiteLLM
+---
+
+This documentation describes the integration of MindsDB with [LiteLLM](https://www.litellm.ai/), a framework that simplifies access to models of various providers.
+
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
+2. To use LiteLLM within MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Obtain the API key of the model provider, if required.
+
+## Setup
+
+Create an AI engine from the [LiteLLM handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/litellm_handler).
+
+```sql
+CREATE ML_ENGINE litellm
+FROM litellm;
+```
+
+Create a model using `litellm` as an engine.
+
+```sql
+CREATE MODEL litellm_model
+PREDICT target_column
+USING
+    engine = "litellm_engine",
+    model = "gpt-4",
+    base_url = "https://api.openai.com/v1",
+    api_key = "sk-xxx",
+    prompt_template = "answer questions in three bullet points: {{question}}";
+```
+
+The parameters include:
+
+* `engine` is the LiteLLM engine created based on the LiteLLM handler with the [`CREATE ML_ENGINE`](https://docs.mindsdb.com/mindsdb_sql/sql/create/ml-engine) statement.
+
+* `model` is the one of the models supported by LiteLLM. See the [complete list of the supported providers and models here](https://docs.litellm.ai/docs/providers).
+
+* `base_url` is an optional parameter that stores the base URL for accessing models.
+
+* `api_key` stores the API key of the provider whose model is used.
+
+* `prompt_template` stores the instructions to the model.
+
+## Usage
+
+Here is how to create and use models through LiteLLM in MindsDB.
+
+```sql
+CREATE ML_ENGINE litellm
+FROM litellm;
+
+CREATE MODEL chat_model
+PREDICT result
+USING
+    engine = "litellm",
+    model = "gpt-4o",
+    api_key = "sk-xxx";
+
+SELECT *
+FROM chat_model
+WHERE question = "what is ai?";
+```

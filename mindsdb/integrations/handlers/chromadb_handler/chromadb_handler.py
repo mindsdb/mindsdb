@@ -105,7 +105,12 @@ class ChromaDBHandler(VectorStoreHandler):
 
         # decide the client type to be used, either persistent or httpclient
         if client_config["persist_directory"] is not None:
-            return chromadb.PersistentClient(path=client_config["persist_directory"])
+            # Create Settings object to ensure migrations are applied
+            settings = chromadb.config.Settings(
+                migrations="apply",  # Ensure migrations are applied
+                allow_reset=True,  # Allow reset for testing
+            )
+            return chromadb.PersistentClient(path=client_config["persist_directory"], settings=settings)
         else:
             return chromadb.HttpClient(
                 host=client_config["chroma_server_host"],

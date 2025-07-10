@@ -59,6 +59,7 @@ class ChromaDBHandler(VectorStoreHandler):
         self._client = None
         self.persist_directory = None
         self.is_connected = False
+        self._use_handler_storage = False
 
         config = self.validate_connection_parameters(name, **kwargs)
 
@@ -71,8 +72,6 @@ class ChromaDBHandler(VectorStoreHandler):
         self.create_collection_metadata = {
             "hnsw:space": config.distance,
         }
-
-        self._use_handler_storage = False
 
         self.connect()
 

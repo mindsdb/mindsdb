@@ -17,6 +17,7 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
     VectorStoreHandler,
     DistanceFunction,
     TableField,
+    FilterOperator,
 )
 from mindsdb.integrations.libs.keyword_search_base import KeywordSearchBase
 from mindsdb.integrations.utilities.sql_utils import KeywordSearchArgs
@@ -181,9 +182,17 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
                 key += f" ->> '{parts[-1]}'"
 
             type_cast = None
-            if isinstance(condition.value, int):
+            value = condition.value
+            if (
+                isinstance(value, list)
+                and len(value) > 0
+                and condition.op in (FilterOperator.IN, FilterOperator.NOT_IN)
+            ):
+                value = condition.value[0]
+
+            if isinstance(value, int):
                 type_cast = "int"
-            elif isinstance(condition.value, float):
+            elif isinstance(value, float):
                 type_cast = "float"
             if type_cast is not None:
                 key = f"({key})::{type_cast}"

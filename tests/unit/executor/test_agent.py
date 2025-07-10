@@ -117,6 +117,7 @@ class TestAgent(BaseExecutorDummyML):
     @pytest.mark.slow
     def test_mindsdb_provider(self):
         from mindsdb.api.executor.exceptions import ExecutorException
+
         agent_response = "how can I help you"
         # model
         self.run_sql(

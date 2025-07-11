@@ -1,23 +1,26 @@
 ---
-title: Agents
+title: How Agents Work
 sidebarTitle: Overview
 ---
 
 Agents enable conversation with data, including structured and unstructured data connected to MindsDB.
 
-## How Agents Work
-
-Connect your data to MindsDB by [connecting databases or applications](/integrations/data-overview) or [uploading files](/mindsdb_sql/sql/create/file). Users can opt for using [knowledge bases](/mindsdb_sql/knowledge-bases) to store and retrieve data efficiently.
+Connect your data to MindsDB by [connecting databases or applications](/integrations/data-overview) or [uploading files](/mindsdb_sql/sql/create/file). Users can opt for using [knowledge bases](/mindsdb_sql/knowledge_bases/overview) to store and retrieve data efficiently.
 
 Create an agent, passing the connected data and defining the underlying model.
 
 ```sql
 CREATE AGENT my_agent
 USING
-    model = 'gemini-2.0-flash',
-    google_api_key = 'xyz123',
-    include_knowledge_bases= ['mindsdb.sales_kb', 'mindsdb.orders_kb'],
-    include_tables=['postgres_conn.customers', 'mysql_conn.products'],
+    model = {
+        "provider": "openai",
+        "model_name" : "gpt-4o",
+        "api_key": "sk-abc123"
+    },
+    data = {
+         "knowledge_bases": ["mindsdb.sales_kb", "mindsdb.orders_kb"],
+         "tables": ["postgres_conn.customers", "mysql_conn.products"]
+    },
     prompt_template='
         mindsdb.sales_kb stores sales analytics data
         mindsdb.orders_kb stores order data
@@ -34,273 +37,6 @@ FROM my_agent
 WHERE question = 'What is the average number of orders per customers?';
 ```
 
-## `CREATE AGENT` Syntax
-
-Here is the syntax for creating an agent:
-
-```sql
-CREATE AGENT my_agent
-USING
-    model = 'model-name',
-    <provider>_api_key= 'abc123',
-    include_knowledge_bases = ['project_name.kb_name', ...],
-    include_tables = ['datasource_conn_name.table_name', ...],
-    prompt_template = 'describe data';
-```
-
-It creates an agent that uses the defined model and has access to the connected data.
-
-```sql
-SHOW AGENTS
-WHERE name = 'my_agent';
-```
-
-### `model`
-
-This parameter defines the underlying language model.
-
-The available models and providers include the following.
-
-<AccordionGroup>
-
-<Accordion title="Anthropic">
-Available models:
-- claude-3-opus-20240229
-- claude-3-sonnet-20240229
-- claude-3-haiku-20240307
-- claude-2.1
-- claude-2.0
-- claude-instant-1.2
-</Accordion>
-
-<Accordion title="Google">
-Available models:
-- gemini-2.5-pro-preview-03-25
-- gemini-2.0-flash
-- gemini-2.0-flash-lite
-- gemini-1.5-flash
-- gemini-1.5-flash-8b
-- gemini-1.5-pro
-</Accordion>
-
-<Accordion title="Ollama">
-Available models:
-- gemma
-- llama2
-- mistral
-- mixtral
-- llava
-- neural-chat
-- codellama
-- dolphin-mixtral
-- qwen
-- llama2-uncensored
-- mistral-openorca
-- deepseek-coder
-- nous-hermes2
-- phi
-- orca-mini
-- dolphin-mistral
-- wizard-vicuna-uncensored
-- vicuna
-- tinydolphin
-- llama2-chinese
-- openhermes
-- zephyr
-- nomic-embed-text
-- tinyllama
-- openchat
-- wizardcoder
-- phind-codellama
-- starcoder
-- yi
-- orca2
-- falcon
-- starcoder2
-- wizard-math
-- dolphin-phi
-- nous-hermes
-- starling-lm
-- stable-code
-- medllama2
-- bakllava
-- codeup
-- wizardlm-uncensored
-- solar
-- everythinglm
-- sqlcoder
-- nous-hermes2-mixtral
-- stable-beluga
-- yarn-mistral
-- samantha-mistral
-- stablelm2
-- meditron
-- stablelm-zephyr
-- magicoder
-- yarn-llama2
-- wizard-vicuna
-- llama-pro
-- deepseek-llm
-- codebooga
-- mistrallite
-- dolphincoder
-- nexusraven
-- open-orca-platypus2
-- all-minilm
-- goliath
-- notux
-- alfred
-- megadolphin
-- xwinlm
-- wizardlm
-- duckdb-nsql
-- notus
-</Accordion>
-
-<Accordion title="OpenAI">
-Available models:
-- gpt-3.5-turbo
-- gpt-3.5-turbo-16k
-- gpt-3.5-turbo-instruct
-- gpt-4
-- gpt-4-32k
-- gpt-4-1106-preview
-- gpt-4-0125-preview
-- gpt-4o
-- o3-mini
-- o1-mini
-</Accordion>
-
-<Accordion title="Nvidia NIM">
-Available models:
-- microsoft/phi-3-mini-4k-instruct
-- mistralai/mistral-7b-instruct-v0.2
-- writer/palmyra-med-70b
-- mistralai/mistral-large
-- mistralai/codestral-22b-instruct-v0.1
-- nvidia/llama3-chatqa-1.5-70b
-- upstage/solar-10.7b-instruct
-- google/gemma-2-9b-it
-- adept/fuyu-8b
-- google/gemma-2b
-- databricks/dbrx-instruct
-- meta/llama-3_1-8b-instruct
-- microsoft/phi-3-medium-128k-instruct
-- 01-ai/yi-large
-- nvidia/neva-22b
-- meta/llama-3_1-70b-instruct
-- google/codegemma-7b
-- google/recurrentgemma-2b
-- google/gemma-2-27b-it
-- deepseek-ai/deepseek-coder-6.7b-instruct
-- mediatek/breeze-7b-instruct
-- microsoft/kosmos-2
-- microsoft/phi-3-mini-128k-instruct
-- nvidia/llama3-chatqa-1.5-8b
-- writer/palmyra-med-70b-32k
-- google/deplot
-- meta/llama-3_1-405b-instruct
-- aisingapore/sea-lion-7b-instruct
-- liuhaotian/llava-v1.6-mistral-7b
-- microsoft/phi-3-small-8k-instruct
-- meta/codellama-70b
-- liuhaotian/llava-v1.6-34b
-- nv-mistralai/mistral-nemo-12b-instruct
-- microsoft/phi-3-medium-4k-instruct
-- seallms/seallm-7b-v2.5
-- mistralai/mixtral-8x7b-instruct-v0.1
-- mistralai/mistral-7b-instruct-v0.3
-- google/paligemma
-- google/gemma-7b
-- mistralai/mixtral-8x22b-instruct-v0.1
-- google/codegemma-1.1-7b
-- nvidia/nemotron-4-340b-instruct
-- meta/llama3-70b-instruct
-- microsoft/phi-3-small-128k-instruct
-- ibm/granite-8b-code-instruct
-- meta/llama3-8b-instruct
-- snowflake/arctic
-- microsoft/phi-3-vision-128k-instruct
-- meta/llama2-70b
-- ibm/granite-34b-code-instruct
-</Accordion>
-
-<Accordion title="Writer">
-Available models:
-- palmyra-x5
-- palmyra-x4
-</Accordion>
-
-</AccordionGroup>
-
-### `<provider>_api_key`
-
-This parameter stores the API key for accessing models. Include the provider of the model in the parameter name, such as `anthropic_api_key`, `google_api_key`, `openai_api_key`.
-
-For example, use `google_api_key` when using `gemini-2.0-flash` for a model, and analogically, use `openai_api_key` when using `gpt-4o` for a model.
-
-### `include_knowledge_bases`
-
-This parameter stores the list of knowledge bases accessible by the agent for data retrieval.
-
-Learn more about [knowledge bases here](/mindsdb_sql/knowledge-bases).
-
-### `include_tables`
-
-This parameter stores the list of data sources accessible by the agent.
-
-Learn more about available [data integrations here](/integrations/data-overview).
-
-### `prompt_template`
-
-This parameter stores instructions for the agent.
-
-It is recommended to provide data description of the data sources listed in the `include_knowledge_bases` and `include_tables` to help the agent locate relevant data for answering questions.
-
-## `SELECT FROM AGENT` Syntax
-
-Query an agent to generate responses to questions.
-
-```sql
-SELECT answer
-FROM my_agent 
-WHERE question = 'What is the average number of orders per customers?';
-```
-
-### Chat Interface
-
-MindsDB provides a chat interface that enables users to chat with their data.
-
-<Note>
-To access the chat interface and converse with agents, users need to enable the A2A API that is used to communicate between the chat interface and the agent.
-
-```bash
-docker run --name mindsdb_container -e MINDSDB_A2A_HOST=<if-using-remote-host> -e MINDSDB_APIS=http,mysql,mcp,a2a -p 47334:47334 -p 47335:47335 -p 47337:47337 -p 47338:47338 mindsdb/mindsdb
-```
-
-Note that the `MINDSDB_A2A_HOST` variable is required when running MindsDB on a remote host, such as AWS. If you run MindsDB on `127.0.0.1`, the `MINDSDB_A2A_HOST` variable is not required.
-</Note>
-
-<p align="center">
-  <img src="/assets/mindsdb_gui_respond.png" />
-</p>
-
-Select an agent from the list of existing agents, or create one if none exists yet.
-
-<p align="center">
-  <img src="/assets/mindsdb_gui_respond_agents.png" />
-</p>
-
-Now the chat interface is connected to this agent via [Agent2Agent Protocol](https://google.github.io/A2A/) and users can chat with the data connected to this agent.
-
-<p align="center">
-  <img src="/assets/mindsdb_gui_respond_chat.png" />
-</p>
-
-## `DROP AGENT` Syntax
-
-Here is the syntax for deleting an agent:
-
-```sql
-DROP AGENT my_agent;
-```
+<Tip>
+Follow [this doc page to learn more about the usage of agents](/mindsdb_sql/agents/agent_syntax).
+</Tip>

@@ -3,13 +3,11 @@ title: MindsDB and DBeaver
 sidebarTitle: DBeaver
 ---
 
-DBeaver is a database tool that allows you to connect to and work with
-various database engines. You can download it [here](https://dbeaver.io/).
+DBeaver is a database tool that allows you to connect to and work with various database engines. You can download it [here](https://dbeaver.io/).
 
 ## Data Setup
 
-First, create a new database connection in DBeaver by clicking the icon, as
-shown below.
+First, create a new database connection in DBeaver by clicking the icon, as shown below.
 
 <p align="center">
   <img src="/assets/sql/dbeaver_1.png" />
@@ -31,28 +29,23 @@ Now it's time to fill in the connection details.
   <img src="/assets/sql/dbeaver_3.png" />
 </p>
 
-There are three options, as below.
-
-<Tabs>
-  <Tab title="Local MindsDB">
-    You can connect to your local MindsDB. To do that, please use the connection details below:
+Use the following parameters:
     
-    ```
-    Hostname: `127.0.0.1`
-    Port: `47334`
-    Username: `mindsdb`
-    Password: <leave it empty>
-    Database: <leave it empty>
-    ```
-  </Tab>
-</Tabs>
+* `127.0.0.1` or `localhost` for the host name. If you run MindsDB in cloud, specify the host name accordingly.
+
+* `47335` for the port, which is the port of the MySQL API exposed by MindsDB. Learn more about [available APIs here](/setup/environment-vars#mindsdb-apis).
+
+* `mindsdb` for the database name.
+
+* `mindsdb` for the user name, unless specified differently in the [`config.json` file](/setup/custom-config#auth).
+
+* `<empty>` for the password, unless specified differently in the [`config.json` file](/setup/custom-config#auth).
 
 Now we are ready to test the connection.
 
 ## Testing the Connection
 
-Click on the `Test Connection...` button to check if all the provided data
-allows you to connect to MindsDB.
+Click on the `Test Connection...` button to check if all the provided data allows you to connect to MindsDB.
 
 On success, you should see the message, as below.
 
@@ -62,8 +55,7 @@ On success, you should see the message, as below.
 
 ## Let's Run Some Queries
 
-To finally make sure that our MindsDB database connection works, let's run some
-queries.
+To finally make sure that our MindsDB database connection works, let's run some queries.
 
 ```sql
 SHOW FULL DATABASES;

@@ -5,6 +5,68 @@ sidebarTitle: Query KB
 
 Knowledge Bases support two primary querying approaches: semantic search and metadata filtering, each of which offers different filtering capabilities, including filtering by the relevance score to ensure only data most relevant to the query is returned.
 
+* **Semantic Search** 
+
+    Semantic search enables users to query Knowledge Bases using natural language. When searching semantically, you reference the content column in your SQL statement. MindsDB will interpret the input as a semantic query and use vector-based similarity to find relevant results.
+
+    ```sql
+    SELECT * FROM my_kb
+    WHERE content = 'what document types store reviews?';
+    ```
+
+    <Accordion title="Supported Filtering Operators">
+    Only specific operators are allowed when filtering semantically using the content column.
+
+    * Standard vector search: `content = ‘xxx’`, `content LIKE ‘xxx’`
+    * Exclusions from search: `id != xxx`, `id <> xxx`, `content NOT LIKE ‘zzz’`
+    * Nested queries: `id NOT IN (SELECT DISTINCT id FROM my_kb WHERE content = ‘xxx’)`
+    * Multiple queries: `content IN (‘xxx’, ‘yyy’)` which is equivalent to `content = ‘xxx’ OR content = ‘yyy’`, `content NOT IN (‘zzz’, ‘aaa’)`
+    * Logical operators: `content = ‘xxx’ OR content = ‘yyy’` which is a union of results for both conditions, `content = ‘xxx’ AND content = ‘yyy’` which is an intersection of results for both conditions
+    </Accordion>
+
+* **Metadata Filtering** 
+
+    It allows users to query Knowledge Bases based on the available metadata fields. These fields can be used in the `WHERE` clause of a SQL statement.
+
+    ```sql
+    SELECT * FROM my_kb
+    WHERE document_type = ‘cover letter’
+    AND document_author = 'bot';
+    ```
+
+    <Accordion title="Supported Filtering Operators">
+    You can apply a variety of filtering conditions to metadata columns, such as equality checks, range filters, or pattern matches.
+
+    * Equality checks: `=`, `<>`, `!=`
+    * Range filters: `>`, `<`, `>=`, `<=`, `BETWEEN ... AND ...`
+    * Pattern matching: `LIKE`, `NOT LIKE`, `IN`, `NOT IN`
+    * Logical operators: `AND`, `OR`, `NOT`
+    </Accordion>
+
+* **Relevance Filtering** 
+
+    Every semantic search result is assigned a relevance score, which indicates how closely a given entry matches your query. You can filter results by this score to ensure only the most relevant entries are returned.
+
+    <Accordion title="Finetune Filtering using Relevance Score">
+    Here is how to fine-tune the filtering of data.
+
+    * Start by querying the knowledge base without a WHERE clause on the relevance column. This will show you a range of relevance scores returned by your query.
+
+    * Determine a cutoff relevance value that fits your use case. For example, `relevance > 0.75`.
+
+    * Re-run your query with the condition on `relevance` to restrict results to those above your chosen threshold. The results set contains only data with relevance greater than 0.75.
+
+        ```sql
+        SELECT * FROM my_kb
+        WHERE content = what document types store reviews?’
+        AND relevance > 0.75;
+        ```
+    </Accordion>
+
+<Tip>
+See more [examples here](/mindsdb_sql/knowledge_bases/query#examples).
+</Tip>
+
 ## `SELECT FROM KB` Syntax
 
 Knowledge bases provide an abstraction that enables users to see the stored data.
@@ -28,26 +90,24 @@ Here is the sample output:
 +-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
 ```
 
-### Data Stored in Knowledge Base
-
 The following columns are stored in the knowledge base.
 
-`id`
+* `id`
 It stores values from the column defined in the `id_column` parameter when creating the knowledge base. These are the source data IDs.
 
-`chunk_id`
+* `chunk_id`
 Knowledge bases chunk the inserted data in order to fit the defined chunk size. If the chunking is performed, the following chunk ID format is used: `<id>:<chunk_number>of<total_chunks>:<start_char_number>to<end_char_number>`.
 
-`chunk_content`
+* `chunk_content`
 It stores values from the column(s) defined in the `content_columns` parameter when creating the knowledge base.
 
-`metadata`
+* `metadata`
 It stores the general metadata and the metadata defined in the `metadata_columns` parameter when creating the knowledge base.
 
-`distance`
+* `distance`
 It stores the calculated distance between the chunk's content and the search phrase.
 
-`relevance`
+* `relevance`
 It stores the calculated relevance of the chunk as compared to the search phrase. Its values are between 0 and 1.
 
 <Note>
@@ -210,3 +270,104 @@ Here is the output:
 | A1B      | Wireless Mouse   | Request color: black   | Request color: black   | 0.5106591666649376 |
 +----------+------------------+------------------------+------------------------+--------------------+
 ```
+
+## Examples
+
+We have a knowledge base that stores data about movies.
+
+```sql
++----------+-----------------------------------+-------------------------------------------------------------------------+
+| id       | content                           | metadata                                                                |
++----------+-----------------------------------+-------------------------------------------------------------------------+
+| movie_id | "A bank security expert plots..." | {"genre":"Crime","rating":6.3,"expanded_genres":"Comedy, Crime, Drama"} |
++----------+-----------------------------------+-------------------------------------------------------------------------+
+```
+
+It uses the `movie_id` column to uniquely identify each entry. The `content` column stores the description of the movie, and the metadata includes `genre`, `rating`, and `expanded_genre` columns.
+
+Let's see the query examples.
+
+* Selecting high-rated action movies with heist themes and no romance.
+
+    ```sql
+    SELECT * FROM movies_kb 
+    WHERE content LIKE 'heist bank robbery space alien planet'
+    AND genre != 'Romance' 
+    AND expanded_genres NOT LIKE '%Romance%'
+    AND rating > 7.0;
+    ```
+
+    This query includes a semantic search filtering condition - `content LIKE 'heist bank robbery space alien planet'` - and multiple metadata filtering conditions - `genre != 'Romance' AND expanded_genres NOT LIKE '%Romance%' AND rating > 7.0`.
+
+* Selecting action-comedies with car chase scenes.
+
+    ```sql
+    SELECT * FROM movies_kb 
+    WHERE content LIKE 'car chase driving speed race'
+    AND expanded_genres LIKE '%Action%'
+    AND expanded_genres LIKE '%Comedy%'
+    AND rating > 6.5;
+    ```
+
+    This query includes a semantic search filtering condition - `content LIKE 'car chase driving speed race'` - and multiple metadata filtering conditions - `expanded_genres LIKE '%Action%' AND expanded_genres LIKE '%Comedy%' AND rating > 6.5`.
+
+* Selecting historical dramas without war themes.
+
+    ```sql
+    SELECT * FROM movies_kb 
+    WHERE content LIKE 'historical period past century era'
+    AND content NOT LIKE 'war battle soldier military'
+    AND content NOT LIKE 'fight combat weapon'
+    AND expanded_genres LIKE '%Drama%'
+    AND rating > 3.5;
+    ```
+
+    This query includes multiple semantic search filtering conditions - `content LIKE 'historical period past century era' AND content NOT LIKE 'war battle soldier military' AND content NOT LIKE 'fight combat weapon'` - and multiple metadata filtering conditions - `expanded_genres LIKE '%Drama%' AND rating > 3.5`.
+
+* Selecting multi-genre movies with different ratings.
+
+    ```sql
+    SELECT * FROM movies_kb 
+    WHERE (content LIKE 'detective mystery investigation' AND (genre = 'Mystery' OR expanded_genres LIKE '%Thriller%'))
+    OR (content LIKE 'romance love relationship' AND (genre = 'Romance' OR expanded_genres LIKE '%Romance%'))
+    AND rating > 7.0;
+    ```
+
+    This query includes nested semantic search filtering conditions - `(content LIKE 'detective mystery investigation' AND (genre = 'Mystery' OR expanded_genres LIKE '%Thriller%'))` - and a metadata filtering condition - `rating > 7.0`.
+
+* Selecting adventure movies excluding some genres.
+
+    ```sql
+    SELECT * FROM movies_kb 
+    WHERE content LIKE 'adventure journey quest treasure'
+    AND genre NOT IN ('Horror', 'Romance', 'Family')
+    AND rating > 6.5;
+    ```
+
+    This query includes multiple semantic search filtering conditions - `content LIKE 'adventure journey quest treasure'` - and multiple metadata filtering conditions - `genre NOT IN ('Horror', 'Romance', 'Family') AND rating > 6.5`.
+
+* Selecting comedy movies in specific rating range.
+
+    ```sql
+    SELECT * FROM movies_kb 
+    WHERE content LIKE 'comedy funny humor laugh'
+    AND rating BETWEEN 7.0 AND 9.0
+    AND expanded_genres LIKE '%Comedy%';
+    ```
+
+    This query includes multiple semantic search filtering conditions - `content LIKE 'comedy funny humor laugh'` - and multiple metadata filtering conditions - `rating BETWEEN 7.0 AND 9.0 AND expanded_genres LIKE '%Comedy%'`.
+
+* Selecting different thriller subgenres.
+
+    ```sql
+    SELECT * FROM movies_kb 
+    WHERE content LIKE 'detective investigation mystery' AND rating > 7.0
+    UNION
+    SELECT * FROM movies_kb 
+    WHERE content LIKE 'heist robbery theft steal' AND rating > 7.0
+    UNION
+    SELECT * FROM movies_kb 
+    WHERE content LIKE 'spy secret agent undercover' AND rating > 7.0;
+    ```
+
+    This query combines the results of three queries using the `UNION` operator.

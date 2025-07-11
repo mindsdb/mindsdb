@@ -375,6 +375,8 @@ class YoutubeVideosTable(APITable):
 
         if video_id:
             video_df = self.get_videos_by_video_ids([video_id])
+        elif channel_id and search_query:
+            video_df = self.get_videos_by_search_query_in_channel(search_query, channel_id, result_limit)
         elif channel_id:
             video_df = self.get_videos_by_channel_id(channel_id, result_limit)
         else:
@@ -420,6 +422,42 @@ class YoutubeVideosTable(APITable):
                     .list(
                         part="snippet",
                         q=search_query,
+                        type="video",
+                        maxResults=min(50, limit - total_fetched),
+                        pageToken=response["nextPageToken"],
+                    )
+                )
+            else:
+                break
+
+        return self.get_videos_by_video_ids(video_ids)
+
+    def get_videos_by_search_query_in_channel(self, search_query, channel_id, limit=10):
+        """Search for videos within a specific channel"""
+        video_ids = []
+        resource = (
+            self.handler.connect()
+            .search()
+            .list(part="snippet", q=search_query, channelId=channel_id, type="video", maxResults=min(50, limit))
+        )
+        total_fetched = 0
+
+        while resource and total_fetched < limit:
+            response = resource.execute()
+            for item in response["items"]:
+                video_ids.append(item["id"]["videoId"])
+                total_fetched += 1
+                if total_fetched >= limit:
+                    break
+
+            if "nextPageToken" in response and total_fetched < limit:
+                resource = (
+                    self.handler.connect()
+                    .search()
+                    .list(
+                        part="snippet",
+                        q=search_query,
+                        channelId=channel_id,
                         type="video",
                         maxResults=min(50, limit - total_fetched),
                         pageToken=response["nextPageToken"],

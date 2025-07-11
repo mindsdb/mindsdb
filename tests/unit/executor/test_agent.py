@@ -423,7 +423,7 @@ class TestAgent(BaseExecutorDummyML):
         # Verify the agent has the default parameters and include_tables
         agent_params = json.loads(agent_info["PARAMS"].iloc[0])
         assert "data" in agent_params
-        assert agent_params["data"]['tables'] == ["test.table1", "test.table2"]
+        assert agent_params["data"]["tables"] == ["test.table1", "test.table2"]
 
         # Mock the OpenAI client for the agent execution
         with (

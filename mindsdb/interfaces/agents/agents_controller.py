@@ -254,15 +254,6 @@ class AgentsController:
         if isinstance(include_knowledge_bases, str):
             include_knowledge_bases = [kb.strip() for kb in include_knowledge_bases.split(",")]
 
-        # If no skills are provided, we need to ensure that data sources are specified
-        # Skills will not be mentioned in the error message because this is old behavior
-        # used only via Minds
-        if not skills and not include_tables and not include_knowledge_bases:
-            raise ValueError(
-                "The parameter 'data' is required to create an agent without skills. "
-                "Use the 'data' parameter with 'tables' and 'knowledge_bases' keys to specify data sources."
-            )
-
         # Auto-create SQL skill if no skills are provided but include_tables or include_knowledge_bases params are provided
         if not skills and (include_tables or include_knowledge_bases):
             # Create a default SQL skill

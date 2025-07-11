@@ -7,7 +7,7 @@ from mindsdb_sql_parser import ast
 from mindsdb.integrations.utilities.handlers.query_utilities import (
     SELECTQueryParser,
     SELECTQueryExecutor,
-    INSERTQueryParser
+    INSERTQueryParser,
 )
 
 import pandas as pd
@@ -66,9 +66,13 @@ class YoutubeCommentsTable(APITable):
         select_statement_executor = SELECTQueryExecutor(
             comments_df,
             selected_columns,
-            [where_condition for where_condition in where_conditions if where_condition[1] not in ['video_id', 'channel_id']],
+            [
+                where_condition
+                for where_condition in where_conditions
+                if where_condition[1] not in ["video_id", "channel_id"]
+            ],
             order_by_conditions,
-            result_limit if query.limit else None
+            result_limit if query.limit else None,
         )
 
         comments_df = select_statement_executor.execute_query()
@@ -98,50 +102,30 @@ class YoutubeCommentsTable(APITable):
         values_to_insert = insert_query_parser.parse_query()
 
         for value in values_to_insert:
-            if not value.get('comment_id'):
-                if not value.get('comment'):
+            if not value.get("comment_id"):
+                if not value.get("comment"):
                     raise ValueError("comment is mandatory for inserting a top-level comment.")
                 else:
-                    self.insert_comment(video_id=value['video_id'], text=value['comment'])
+                    self.insert_comment(video_id=value["video_id"], text=value["comment"])
 
             else:
-                if not value.get('reply'):
+                if not value.get("reply"):
                     raise ValueError("reply is mandatory for inserting a reply.")
                 else:
-                    self.insert_comment(comment_id=value['comment_id'], text=value['reply'])
+                    self.insert_comment(comment_id=value["comment_id"], text=value["reply"])
 
     def insert_comment(self, text, video_id: str = None, comment_id: str = None):
         # if comment_id is provided, define the request body for a reply and insert it
         if comment_id:
-            request_body = {
-                'snippet': {
-                    'parentId': comment_id,
-                    'textOriginal': text
-                }
-            }
+            request_body = {"snippet": {"parentId": comment_id, "textOriginal": text}}
 
-            self.handler.connect().comments().insert(
-                part='snippet',
-                body=request_body
-            ).execute()
+            self.handler.connect().comments().insert(part="snippet", body=request_body).execute()
 
         # else if video_id is provided, define the request body for a top-level comment and insert it
         elif video_id:
-            request_body = {
-                'snippet': {
-                    'topLevelComment': {
-                        'snippet': {
-                            'videoId': video_id,
-                            'textOriginal': text
-                        }
-                    }
-                }
-            }
+            request_body = {"snippet": {"topLevelComment": {"snippet": {"videoId": video_id, "textOriginal": text}}}}
 
-            self.handler.connect().commentThreads().insert(
-                part='snippet',
-                body=request_body
-            ).execute()
+            self.handler.connect().commentThreads().insert(part="snippet", body=request_body).execute()
 
     def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses
@@ -150,7 +134,19 @@ class YoutubeCommentsTable(APITable):
         List[str]
             List of columns
         """
-        return ['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment', "published_at", "updated_at", 'reply_user_id', 'reply_author', 'reply']
+        return [
+            "comment_id",
+            "channel_id",
+            "video_id",
+            "user_id",
+            "display_name",
+            "comment",
+            "published_at",
+            "updated_at",
+            "reply_user_id",
+            "reply_author",
+            "reply",
+        ]
 
     def get_comments(self, video_id: str, channel_id: str):
         """Pulls all the records from the given youtube api end point and returns it select()
@@ -166,7 +162,12 @@ class YoutubeCommentsTable(APITable):
         resource = (
             self.handler.connect()
             .commentThreads()
-            .list(part="snippet, replies", videoId=video_id, allThreadsRelatedToChannelId=channel_id, textFormat="plainText")
+            .list(
+                part="snippet, replies",
+                videoId=video_id,
+                allThreadsRelatedToChannelId=channel_id,
+                textFormat="plainText",
+            )
         )
 
         data = []
@@ -175,7 +176,7 @@ class YoutubeCommentsTable(APITable):
 
             for comment in comments["items"]:
                 replies = []
-                if 'replies' in comment:
+                if "replies" in comment:
                     for reply in comment["replies"]["comments"]:
                         replies.append(
                             {
@@ -222,18 +223,51 @@ class YoutubeCommentsTable(APITable):
             else:
                 break
 
-        youtube_comments_df = pd.json_normalize(data, 'replies', ['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment', "published_at", "updated_at"], record_prefix='replies.')
-        youtube_comments_df = youtube_comments_df.rename(columns={'replies.user_id': 'reply_user_id', 'replies.reply_author': 'reply_author', 'replies.reply': 'reply'})
+        youtube_comments_df = pd.json_normalize(
+            data,
+            "replies",
+            [
+                "comment_id",
+                "channel_id",
+                "video_id",
+                "user_id",
+                "display_name",
+                "comment",
+                "published_at",
+                "updated_at",
+            ],
+            record_prefix="replies.",
+        )
+        youtube_comments_df = youtube_comments_df.rename(
+            columns={
+                "replies.user_id": "reply_user_id",
+                "replies.reply_author": "reply_author",
+                "replies.reply": "reply",
+            }
+        )
 
         # check if DataFrame is empty
         if youtube_comments_df.empty:
             return youtube_comments_df
         else:
-            return youtube_comments_df[['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment', "published_at", "updated_at", 'reply_user_id', 'reply_author', 'reply']]
+            return youtube_comments_df[
+                [
+                    "comment_id",
+                    "channel_id",
+                    "video_id",
+                    "user_id",
+                    "display_name",
+                    "comment",
+                    "published_at",
+                    "updated_at",
+                    "reply_user_id",
+                    "reply_author",
+                    "reply",
+                ]
+            ]
 
 
 class YoutubeChannelsTable(APITable):
-
     """Youtube Channel Info  by channel id Table implementation"""
 
     def select(self, query: ast.Select) -> pd.DataFrame:
@@ -263,9 +297,9 @@ class YoutubeChannelsTable(APITable):
         select_statement_executor = SELECTQueryExecutor(
             channel_df,
             selected_columns,
-            [where_condition for where_condition in where_conditions if where_condition[1] == 'channel_id'],
+            [where_condition for where_condition in where_conditions if where_condition[1] == "channel_id"],
             order_by_conditions,
-            result_limit if query.limit else None
+            result_limit if query.limit else None,
         )
 
         channel_df = select_statement_executor.execute_query()
@@ -304,7 +338,6 @@ class YoutubeChannelsTable(APITable):
 
 
 class YoutubeVideosTable(APITable):
-
     """Youtube Video info  by video id Table implementation"""
 
     def select(self, query: ast.Select) -> pd.DataFrame:
@@ -350,9 +383,13 @@ class YoutubeVideosTable(APITable):
         select_statement_executor = SELECTQueryExecutor(
             video_df,
             selected_columns,
-            [where_condition for where_condition in where_conditions if where_condition[1] not in ["video_id", "channel_id", "query"]],
+            [
+                where_condition
+                for where_condition in where_conditions
+                if where_condition[1] not in ["video_id", "channel_id", "query"]
+            ],
             order_by_conditions,
-            result_limit if query.limit else None
+            result_limit if query.limit else None,
         )
 
         video_df = select_statement_executor.execute_query()
@@ -435,7 +472,12 @@ class YoutubeVideosTable(APITable):
         # loop over 50 video ids at a time
         # an invalid request error is caused otherwise
         for i in range(0, len(video_ids), 50):
-            resource = self.handler.connect().videos().list(part="statistics,snippet,contentDetails", id=",".join(video_ids[i : i + 50])).execute()
+            resource = (
+                self.handler.connect()
+                .videos()
+                .list(part="statistics,snippet,contentDetails", id=",".join(video_ids[i : i + 50]))
+                .execute()
+            )
 
             for item in resource["items"]:
                 data.append(
@@ -463,7 +505,7 @@ class YoutubeVideosTable(APITable):
             return json_formatted_transcript
 
         except Exception as e:
-            logger.error(f"Encountered an error while fetching transcripts for video ${video_id}: ${e}"),
+            (logger.error(f"Encountered an error while fetching transcripts for video ${video_id}: ${e}"),)
             return "Transcript not available for this video"
 
     def parse_duration(self, video_id, duration):
@@ -476,7 +518,7 @@ class YoutubeVideosTable(APITable):
 
             return duration_str.strip(":")
         except Exception as e:
-            logger.error(f"Encountered an error while parsing duration for video ${video_id}: ${e}"),
+            (logger.error(f"Encountered an error while parsing duration for video ${video_id}: ${e}"),)
             return "Duration not available for this video"
 
     def get_columns(self) -> List[str]:

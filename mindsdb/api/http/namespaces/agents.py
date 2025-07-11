@@ -27,17 +27,17 @@ def create_agent(project_name, name, agent):
     if name is None:
         return http_error(HTTPStatus.BAD_REQUEST, "Missing field", 'Missing "name" field for agent')
 
-    model_name = agent.get('model_name')
-    provider = agent.get('provider')
-    skills = agent.get('skills', [])
-    
-    params = agent.get("params", {})    
-    if agent.get('data'):
-        params['data'] = agent['data']
-    if agent.get('model'):
-        params['model'] = agent['model']
-    if agent.get('prompt_template'):
-        params['prompt_template'] = agent['prompt_template']
+    model_name = agent.get("model_name")
+    provider = agent.get("provider")
+    skills = agent.get("skills", [])
+
+    params = agent.get("params", {})
+    if agent.get("data"):
+        params["data"] = agent["data"]
+    if agent.get("model"):
+        params["model"] = agent["model"]
+    if agent.get("prompt_template"):
+        params["prompt_template"] = agent["prompt_template"]
 
     agents_controller = AgentsController()
 
@@ -155,8 +155,8 @@ class AgentResource(Resource):
                 "Creation of an agent using the PUT method is not allowed.",
             )
 
-        agent = request.json['agent']
-        name = agent.get('name', None)
+        agent = request.json["agent"]
+        name = agent.get("name", None)
 
         # Agent must not exist with new name.
         if name is not None and name != agent_name:
@@ -174,18 +174,18 @@ class AgentResource(Resource):
 
         # Update
         try:
-            model_name = agent.get('model_name', None)
-            skills_to_add = agent.get('skills_to_add', [])
-            skills_to_remove = agent.get('skills_to_remove', [])
-            skills_to_rewrite = agent.get('skills', [])
-            provider = agent.get('provider')
-            params = agent.get('params', {})
-            if agent.get('data'):
-                params['data'] = agent['data']
-            if agent.get('model'):
-                params['model'] = agent['model']
-            if agent.get('prompt_template'):
-                params['prompt_template'] = agent['prompt_template']
+            model_name = agent.get("model_name", None)
+            skills_to_add = agent.get("skills_to_add", [])
+            skills_to_remove = agent.get("skills_to_remove", [])
+            skills_to_rewrite = agent.get("skills", [])
+            provider = agent.get("provider")
+            params = agent.get("params", {})
+            if agent.get("data"):
+                params["data"] = agent["data"]
+            if agent.get("model"):
+                params["model"] = agent["model"]
+            if agent.get("prompt_template"):
+                params["prompt_template"] = agent["prompt_template"]
 
             # Check if any of the skills to be added is of type 'retrieval'
             session = SessionController()

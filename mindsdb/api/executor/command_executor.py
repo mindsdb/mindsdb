@@ -154,6 +154,34 @@ def _get_show_where(
     return None
 
 
+def match_one_part_name(identifier: Identifier, ensure_lower_case: bool = False) -> str:
+    match identifier.parts, identifier.is_quoted:
+        case [name], [is_quoted]: ...
+        case _:
+            raise ValueError(f"Only single-part names are allowed: {identifier}")
+    if not is_quoted:
+        name = name.lower()
+    if ensure_lower_case and not name.islower():
+        raise ValueError(f"The name must be in lowercase: {identifier}")
+    return name
+
+
+def match_two_part_name(identifier: Identifier, ensure_lower_case: bool = False, default_db_name: str | None = None) -> tuple[str, str]:
+    db_name = None
+    match identifier.parts, identifier.is_quoted:
+        case [name], [is_quoted]: ...
+        case [db_name, name], [_, is_quoted]: ...
+        case _:
+            raise ValueError(f"Only single-part or two-part names are allowed: {identifier}")
+    if not is_quoted:
+        name = name.lower()
+    if ensure_lower_case and not name.islower():
+        raise ValueError(f"The name must be in lowercase: {identifier}")
+    if db_name is None:
+        db_name = default_db_name
+    return db_name, name
+
+
 class ExecuteCommands:
     def __init__(self, session, context=None):
         if context is None:
@@ -652,10 +680,9 @@ class ExecuteCommands:
 
     def answer_create_trigger(self, statement, database_name):
         triggers_controller = TriggersController()
-
-        name = statement.name
-        trigger_name = statement.name.parts[-1]
-        project_name = name.parts[-2] if len(name.parts) > 1 else database_name
+        project_name, trigger_name = match_two_part_name(
+            statement.name, ensure_lower_case=True, default_db_name=database_name
+        )
 
         triggers_controller.add(
             trigger_name,
@@ -679,10 +706,7 @@ class ExecuteCommands:
 
     def answer_create_job(self, statement: CreateJob, database_name):
         jobs_controller = JobsController()
-
-        name = statement.name
-        job_name = name.parts[-1]
-        project_name = name.parts[-2] if len(name.parts) > 1 else database_name
+        project_name, job_name = match_two_part_name(statement.name, ensure_lower_case=True, default_db_name=database_name)
 
         try:
             jobs_controller.create(job_name, project_name, statement)
@@ -694,10 +718,8 @@ class ExecuteCommands:
 
     def answer_drop_job(self, statement, database_name):
         jobs_controller = JobsController()
+        project_name, job_name = match_two_part_name(statement.name, default_db_name=database_name)
 
-        name = statement.name
-        job_name = name.parts[-1]
-        project_name = name.parts[-2] if len(name.parts) > 1 else database_name
         try:
             jobs_controller.delete(job_name, project_name)
         except EntityNotExistsError:
@@ -710,9 +732,8 @@ class ExecuteCommands:
 
     def answer_create_chatbot(self, statement, database_name):
         chatbot_controller = ChatBotController()
+        project_name, name = match_two_part_name(statement.name, ensure_lower_case=True, default_db_name=database_name)
 
-        name = statement.name
-        project_name = name.parts[-2] if len(name.parts) > 1 else database_name
         is_running = statement.params.pop("is_running", True)
 
         database = self.session.integration_controller.get(statement.database.parts[-1])
@@ -904,14 +925,12 @@ class ExecuteCommands:
         return ExecuteAnswer(data=ResultSet.from_df(df, table_name=""))
 
     def answer_create_kb_index(self, statement, database_name):
-        table_name = statement.name.parts[-1]
-        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
+        project_name, table_name = match_two_part_name(statement.name, default_db_name=database_name)
         self.session.kb_controller.create_index(table_name=table_name, project_name=project_name)
         return ExecuteAnswer()
 
     def answer_evaluate_kb(self, statement: EvaluateKnowledgeBase, database_name):
-        table_name = statement.name.parts[-1]
-        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
+        project_name, table_name = match_two_part_name(statement.name, default_db_name=database_name)
         scores = self.session.kb_controller.evaluate(
             table_name=table_name, project_name=project_name, params=statement.params
         )
@@ -1110,13 +1129,7 @@ class ExecuteCommands:
         Raises:
             ValueError: If the ml_engine name format is invalid.
         """
-        match statement.name.parts, statement.name.is_quoted:
-            case [name], [is_quoted]:
-                if is_quoted and not name.islower():
-                    raise ValueError('Invalid ml_engine name format: name must be lowercase.')
-                name = name.lower()
-            case _:
-                raise ValueError('Invalid ml_engine name format: expected a single-part name.')
+        name = match_one_part_name(statement.name, ensure_lower_case=True)
 
         handler = statement.handler
         params = statement.params
@@ -1176,12 +1189,7 @@ class ExecuteCommands:
         Returns:
             ExecuteAnswer: The result of the ML engine deletion operation.
         """
-        match statement.name.parts, statement.name.is_quoted:
-            case [name], [is_quoted]:
-                if not is_quoted:
-                    name = name.lower()
-            case _:
-                raise ValueError('Invalid integration name format: expected a single-part name.')
+        name = match_one_part_name(statement.name)
 
         integrations = self.session.integration_controller.get_all()
         if name not in integrations:
@@ -1201,19 +1209,7 @@ class ExecuteCommands:
         Returns:
             ExecuteAnswer: 'ok' answer
         """
-
-        match statement.name.parts, statement.name.is_quoted:
-            case [database_name], [False]:
-                pass
-            case [database_name], [True] if database_name.islower():
-                pass
-            case [database_name], [True]:
-                raise ValueError(f'Invalid name "{database_name}": only lowercase names are allowed')
-            case _:
-                raise ValueError(
-                    f'Invalid name "{".".join(statement.name.parts)}": name must not contain dots or multiple parts'
-                )
-        database_name = database_name.lower()
+        database_name = match_one_part_name(statement.name, ensure_lower_case=True)
 
         engine = (statement.engine or "mindsdb").lower()
 
@@ -1243,25 +1239,18 @@ class ExecuteCommands:
         Returns:
             ExecuteAnswer: The result of the drop database operation.
         """
-        match statement.name.parts, statement.name.is_quoted:
-            case [db_name], [is_quoted]:
-                if not is_quoted:
-                    db_name = db_name.lower()
-            case _:
-                raise Exception("Database name should contain only 1 part.")
+        db_name = match_one_part_name(statement.name)
 
         try:
-            self.session.database_controller.delete(db_name, exact_case=is_quoted)
+            self.session.database_controller.delete(db_name, exact_case=statement.name.is_quoted[0])
         except EntityNotExistsError:
             if statement.if_exists is not True:
                 raise
         return ExecuteAnswer()
 
-    def answer_alter_database(self, statement):
-        if len(statement.name.parts) != 1:
-            raise Exception("Database name should contain only 1 part.")
-        db_name = statement.name.parts[0]
-        self.session.database_controller.update(db_name, data=statement.params)
+    def answer_alter_database(self, statement: AlterDatabase) -> ExecuteAnswer:
+        db_name = match_one_part_name(statement.name)
+        self.session.database_controller.update(db_name, data=statement.params, exact_case=statement.name.is_quoted[0])
         return ExecuteAnswer()
 
     def answer_drop_tables(self, statement, database_name):
@@ -1403,15 +1392,9 @@ class ExecuteCommands:
                 "Please pass the model parameters as a JSON object in the embedding_model field."
             )
 
-        project_name = database_name
-        match statement.name.parts, statement.name.is_quoted:
-            case [project_name, kb_name], [_, kb_name_quoted]: ...
-            case [kb_name], [kb_name_quoted]: ...
-            case _:
-                raise ValueError(f'Wrong knowledge base name: {statement.name}')
-        
-        if kb_name_quoted and not kb_name.islower():
-            raise ValueError(f'The knowledge base name must be in lowercase: {kb_name}')
+        project_name, kb_name = match_two_part_name(
+            statement.name, ensure_lower_case=True, default_db_name=database_name
+        )
 
         if statement.storage is not None:
             if len(statement.storage.parts) != 2:
@@ -1436,14 +1419,7 @@ class ExecuteCommands:
         return ExecuteAnswer()
 
     def answer_drop_kb(self, statement: DropKnowledgeBase, database_name: str) -> ExecuteAnswer:
-        project_name = database_name
-        match statement.name.parts, statement.name.is_quoted:
-            case [project_name, kb_name], [_, kb_name_quoted]: ...
-            case [kb_name], [kb_name_quoted]: ...
-            case _:
-                raise ValueError(f'Wrong knowledge base name: {statement.name}')
-        if not kb_name_quoted:
-            kb_name = kb_name.lower()
+        project_name, kb_name = match_two_part_name(statement.name, default_db_name=database_name)
 
         # delete the knowledge base
         self.session.kb_controller.delete(
@@ -1455,8 +1431,7 @@ class ExecuteCommands:
         return ExecuteAnswer()
 
     def answer_create_skill(self, statement, database_name):
-        name = statement.name.parts[-1]
-        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
+        project_name, name = match_two_part_name(statement.name, ensure_lower_case=True, default_db_name=database_name)
 
         try:
             _ = self.session.skills_controller.add_skill(name, project_name, statement.type, statement.params)
@@ -1467,11 +1442,10 @@ class ExecuteCommands:
         return ExecuteAnswer()
 
     def answer_drop_skill(self, statement, database_name):
-        name = statement.name.parts[-1]
-        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
+        project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
 
         try:
-            self.session.skills_controller.delete_skill(name, project_name)
+            self.session.skills_controller.delete_skill(name, project_name, exact_case=True)
         except ValueError as e:
             # Project does not exist or skill does not exist.
             raise ExecutorException(str(e))
@@ -1479,8 +1453,7 @@ class ExecuteCommands:
         return ExecuteAnswer()
 
     def answer_update_skill(self, statement, database_name):
-        name = statement.name.parts[-1]
-        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
+        project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
 
         type = statement.params.pop("type", None)
         try:
@@ -1494,8 +1467,7 @@ class ExecuteCommands:
         return ExecuteAnswer()
 
     def answer_create_agent(self, statement, database_name):
-        name = statement.name.parts[-1]
-        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
+        project_name, name = match_two_part_name(statement.name, ensure_lower_case=True, default_db_name=database_name)
 
         skills = statement.params.pop("skills", [])
         provider = statement.params.pop("provider", None)
@@ -1514,9 +1486,8 @@ class ExecuteCommands:
 
         return ExecuteAnswer()
 
-    def answer_drop_agent(self, statement, database_name):
-        name = statement.name.parts[-1]
-        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
+    def answer_drop_agent(self, statement: DropAgent, database_name: str):
+        project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
 
         try:
             self.session.agents_controller.delete_agent(name, project_name)
@@ -1526,9 +1497,8 @@ class ExecuteCommands:
 
         return ExecuteAnswer()
 
-    def answer_update_agent(self, statement, database_name):
-        name = statement.name.parts[-1]
-        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
+    def answer_update_agent(self, statement: UpdateAgent, database_name: str):
+        project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
 
         model = statement.params.pop("model", None)
         skills_to_add = statement.params.pop("skills_to_add", [])
@@ -1549,16 +1519,10 @@ class ExecuteCommands:
         return ExecuteAnswer()
 
     @mark_process("learn")
-    def answer_create_predictor(self, statement: CreatePredictor, database_name):
-        match statement.name.parts, statement.name.is_quoted:
-            case [integration_name, model_name], [_, model_name_quoted]: ...
-            case [model_name], [model_name_quoted]:
-                integration_name = database_name
-            case _:
-                raise ValueError(f'Invalid model name: {statement.name}')
-
-        if model_name_quoted and not model_name.islower():
-            raise ValueError(f'Invalid model name: {statement.name}')
+    def answer_create_predictor(self, statement: CreatePredictor, database_name: str):
+        integration_name, model_name = match_two_part_name(
+            statement.name, ensure_lower_case=True, default_db_name=database_name
+        )
 
         statement.name.parts = [integration_name.lower(), model_name]
         statement.name.is_quoted = [False, False]

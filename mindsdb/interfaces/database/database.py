@@ -93,9 +93,9 @@ class DatabaseController:
 
         return result
 
-    def get_dict(self, filter_type: Optional[str] = None):
+    def get_dict(self, filter_type: Optional[str] = None, lowercase: bool = True):
         return OrderedDict(
-            (x["name"].lower(), {"type": x["type"], "engine": x["engine"], "id": x["id"]})
+            (x["name"].lower() if lowercase else x["name"], {"type": x["type"], "engine": x["engine"], "id": x["id"]})
             for x in self.get_list(filter_type=filter_type)
         )
 
@@ -133,19 +133,21 @@ class DatabaseController:
         else:
             raise Exception(f"Database '{name}' does not exists")
 
-    def update(self, name: str, data: dict):
+    def update(self, name: str, data: dict, exact_case: bool = False):
         """
         Updates the database with the given name using the provided data.
 
         Parameters:
             name (str): The name of the database to update.
             data (dict): The data to update the database with.
+            exact_case (bool): if True, then name is case-sesitive
 
         Raises:
             EntityNotExistsError: If the database does not exist.
         """
-        databases = self.get_dict()
-        name = name.lower()
+        databases = self.get_dict(lowercase=(not exact_case))
+        if not exact_case:
+            name = name.lower()
         if name not in databases:
             raise EntityNotExistsError("Database does not exist.", name)
 
@@ -154,6 +156,8 @@ class DatabaseController:
             # Only the name of the project can be updated.
             if {"name"} != set(data):
                 raise ValueError("Only the 'name' field can be updated for projects.")
+            if not data['name'].islower():
+                raise ValueError("New name must be in lower case.")
             self.project_controller.update(name=name, new_name=str(data["name"]))
             return
 

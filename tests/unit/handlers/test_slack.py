@@ -755,10 +755,12 @@ class TestSlackMessagesTable(SlackAPIResourceTestSetup, unittest.TestCase):
 
         self.assertEqual(self.mock_connect.return_value.conversations_history.call_count, 2)
         self.mock_connect.return_value.conversations_history.assert_any_call(
-            channel=MOCK_RESPONSE_CONV_INFO_1["channel"]["id"],
+            channel=MOCK_RESPONSE_CONV_INFO_1["channel"]["id"], limit=999
         )
         self.mock_connect.return_value.conversations_history.assert_any_call(
-            cursor=MOCK_RESPONSE_CONV_HISTORY_1["response_metadata"]["next_cursor"]
+            cursor=MOCK_RESPONSE_CONV_HISTORY_1["response_metadata"]["next_cursor"],
+            channel=MOCK_RESPONSE_CONV_INFO_1["channel"]["id"],
+            limit=999,
         )
 
         assert isinstance(response, pd.DataFrame)

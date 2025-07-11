@@ -72,7 +72,8 @@
               {
                 "group": "Overview",
                 "pages": [
-                  "mindsdb-connect"
+                  "mindsdb-connect",
+                  "mindsdb-fqe"
                 ]
               },
               {

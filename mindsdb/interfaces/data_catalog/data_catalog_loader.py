@@ -208,14 +208,20 @@ class DataCatalogLoader(BaseDataCatalog):
                 # Convert the most_common_frequencies to a list of strings.
                 most_common_frequencies = [str(val) for val in row.get("most_common_frequencies") or []]
 
+                # Convert minimum_value and maximum_value to strings to handle Timestamp objects and other non-string types
+                min_val = row.get("minimum_value")
+                max_val = row.get("maximum_value")
+                minimum_value = str(min_val) if min_val is not None and pd.notna(min_val) else None
+                maximum_value = str(max_val) if max_val is not None and pd.notna(max_val) else None
+
                 record = db.MetaColumnStatistics(
                     column_id=column_id,
                     most_common_values=row.get("most_common_values"),
                     most_common_frequencies=most_common_frequencies,
                     null_percentage=row.get("null_percentage"),
                     distinct_values_count=distinct_values_count,
-                    minimum_value=row.get("minimum_value"),
-                    maximum_value=row.get("maximum_value"),
+                    minimum_value=minimum_value,
+                    maximum_value=maximum_value,
                 )
                 column_statistics.append(record)
 

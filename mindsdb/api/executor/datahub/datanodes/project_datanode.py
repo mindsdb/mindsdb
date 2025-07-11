@@ -124,8 +124,15 @@ class ProjectDataNode(DataNode):
             raise NotImplementedError(f"Can't delete object: {query_table}")
 
         elif isinstance(query, Select):
+            match query.from_table.parts, query.from_table.is_quoted:
+                case [query_table], [is_quoted] if is_quoted is False:
+                    query_table = query_table.lower()
+                case [query_table], [is_quoted] if is_quoted is True:
+                    pass
+                case _:
+                    raise ValueError('Tabe name should contain only one part')
+
             # region is it query to 'models'?
-            query_table = query.from_table.parts[0].lower()
             if query_table in ("models", "jobs", "mdb_triggers", "chatbots", "skills", "agents"):
                 new_query = deepcopy(query)
                 project_filter = BinaryOperation("=", args=[Identifier("project"), Constant(self.project.name)])
@@ -137,8 +144,7 @@ class ProjectDataNode(DataNode):
             # endregion
 
             # other table from project
-
-            if self.project.get_view(query_table):
+            if self.project.get_view(query_table, exact_case=is_quoted):
                 # this is the view
                 df = self.project.query_view(query, session)
 

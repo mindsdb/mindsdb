@@ -11,6 +11,7 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE,
 )
 from mindsdb.integrations.handlers.salesforce_handler.salesforce_tables import create_table_class
+from mindsdb.integrations.handlers.salesforce_handler.constants import get_soql_instructions
 from mindsdb.utilities import log
 
 
@@ -72,7 +73,7 @@ class SalesforceHandler(MetaAPIHandler):
 
             resource_tables = self._get_resource_names()
             for resource_name in resource_tables:
-                table_class = create_table_class(resource_name)
+                table_class = create_table_class(resource_name.lower())
                 self._register_table(resource_name, table_class(self))
 
             return self.connection
@@ -156,90 +157,151 @@ class SalesforceHandler(MetaAPIHandler):
 
     def _get_resource_names(self) -> List[str]:
         """
-        Retrieves the names of the Salesforce resources, with more aggressive filtering to remove tables.
+        Retrieves the names of the Salesforce resources with optimized pre-filtering.
         Returns:
             List[str]: A list of filtered resource names.
         """
         if not self.resource_names:
-            all_resources = [
-                resource["name"]
-                for resource in self.connection.sobjects.describe()["sobjects"]
-                if resource.get("queryable", False)
-            ]
+            # Check for user-specified table filtering first
+            include_tables = self.connection_data.get("include_tables") or self.connection_data.get("tables")
+            exclude_tables = self.connection_data.get("exclude_tables", [])
 
-            # Define patterns for tables to be filtered out.
-            # Expanded suffixes and prefixes and exact matches
-            ignore_suffixes = ("Share", "History", "Feed", "ChangeEvent", "Tag", "Permission", "Setup", "Consent")
-            ignore_prefixes = (
-                "Apex",
-                "CommPlatform",
-                "Lightning",
-                "Flow",
-                "Transaction",
-                "AI",
-                "Aura",
-                "ContentWorkspace",
-                "Collaboration",
-                "Datacloud",
-            )
-            ignore_exact = {
-                "EntityDefinition",
-                "FieldDefinition",
-                "RecordType",
-                "CaseStatus",
-                "UserRole",
-                "UserLicense",
-                "UserPermissionAccess",
-                "UserRecordAccess",
-                "Folder",
-                "Group",
-                "Note",
-                "ProcessDefinition",
-                "ProcessInstance",
-                "ContentFolder",
-                "ContentDocumentSubscription",
-                "DashboardComponent",
-                "Report",
-                "Dashboard",
-                "Topic",
-                "TopicAssignment",
-                "Period",
-                "Partner",
-                "PackageLicense",
-                "ColorDefinition",
-                "DataUsePurpose",
-                "DataUseLegalBasis",
-            }
+            if include_tables:
+                # OPTIMIZATION: Skip expensive global describe() call
+                # Only validate the specified tables
+                logger.info(f"Using pre-filtered table list: {include_tables}")
+                self.resource_names = self._validate_specified_tables(include_tables, exclude_tables)
+            else:
+                # Fallback to full discovery with hard-coded filtering
+                logger.info("No table filter specified, performing full discovery...")
+                self.resource_names = self._discover_all_tables_with_filtering(exclude_tables)
 
-            ignore_substrings = (
-                "CleanInfo",
-                "Template",
-                "Rule",
-                "Definition",
-                "Status",
-                "Policy",
-                "Setting",
-                "Access",
-                "Config",
-                "Subscription",
-                "DataType",
-                "MilestoneType",
-                "Entitlement",
-                "Auth",
-            )
-
-            filtered = []
-            for r in all_resources:
-                if (
-                    not r.endswith(ignore_suffixes)
-                    and not r.startswith(ignore_prefixes)
-                    and not any(sub in r for sub in ignore_substrings)
-                    and r not in ignore_exact
-                ):
-                    filtered.append(r)
-
-            self.resource_names = [r for r in filtered]
         return self.resource_names
+
+    def _validate_specified_tables(self, include_tables: List[str], exclude_tables: List[str]) -> List[str]:
+        """
+        Validate user-specified tables without expensive global describe() call.
+
+        Args:
+            include_tables: List of table names to include
+            exclude_tables: List of table names to exclude
+
+        Returns:
+            List[str]: Validated and filtered table names
+        """
+        validated_tables = []
+
+        for table_name in include_tables:
+            # Skip if explicitly excluded
+            if table_name in exclude_tables:
+                logger.info(f"Skipping excluded table: {table_name}")
+                continue
+
+            try:
+                # Quick validation: check if table exists and is queryable
+                # This is much faster than global describe()
+                metadata = getattr(self.connection.sobjects, table_name).describe()
+                if metadata.get("queryable", False):
+                    validated_tables.append(table_name)
+                    logger.debug(f"Validated table: {table_name}")
+                else:
+                    logger.warning(f"Table {table_name} is not queryable, skipping")
+            except Exception as e:
+                logger.warning(f"Table {table_name} not found or accessible: {e}")
+
+        logger.info(f"Validated {len(validated_tables)} tables from include_tables")
+        return validated_tables
+
+    def _discover_all_tables_with_filtering(self, exclude_tables: List[str]) -> List[str]:
+        """
+        Fallback method: discover all tables with hard-coded filtering.
+
+        Args:
+            exclude_tables: List of table names to exclude
+
+        Returns:
+            List[str]: Filtered table names
+        """
+        # This is the original expensive approach - only used when no include_tables specified
+        all_resources = [
+            resource["name"]
+            for resource in self.connection.sobjects.describe()["sobjects"]
+            if resource.get("queryable", False)
+        ]
+
+        # Apply hard-coded filtering (existing logic)
+        ignore_suffixes = ("Share", "History", "Feed", "ChangeEvent", "Tag", "Permission", "Setup", "Consent")
+        ignore_prefixes = (
+            "Apex",
+            "CommPlatform",
+            "Lightning",
+            "Flow",
+            "Transaction",
+            "AI",
+            "Aura",
+            "ContentWorkspace",
+            "Collaboration",
+            "Datacloud",
+        )
+        ignore_exact = {
+            "EntityDefinition",
+            "FieldDefinition",
+            "RecordType",
+            "CaseStatus",
+            "UserRole",
+            "UserLicense",
+            "UserPermissionAccess",
+            "UserRecordAccess",
+            "Folder",
+            "Group",
+            "Note",
+            "ProcessDefinition",
+            "ProcessInstance",
+            "ContentFolder",
+            "ContentDocumentSubscription",
+            "DashboardComponent",
+            "Report",
+            "Dashboard",
+            "Topic",
+            "TopicAssignment",
+            "Period",
+            "Partner",
+            "PackageLicense",
+            "ColorDefinition",
+            "DataUsePurpose",
+            "DataUseLegalBasis",
+        }
+
+        ignore_substrings = (
+            "CleanInfo",
+            "Template",
+            "Rule",
+            "Definition",
+            "Status",
+            "Policy",
+            "Setting",
+            "Access",
+            "Config",
+            "Subscription",
+            "DataType",
+            "MilestoneType",
+            "Entitlement",
+            "Auth",
+        )
+
+        # Apply hard-coded filtering
+        filtered = []
+        for r in all_resources:
+            if (
+                not r.endswith(ignore_suffixes)
+                and not r.startswith(ignore_prefixes)
+                and not any(sub in r for sub in ignore_substrings)
+                and r not in ignore_exact
+                and r not in exclude_tables  # Apply user exclusions
+            ):
+                filtered.append(r)
+
+        return filtered
 
     def meta_get_handler_info(self, **kwargs) -> str:
         """
@@ -254,8 +316,7 @@ class SalesforceHandler(MetaAPIHandler):
         Returns:
             str: A string containing information about the API handler's design and implementation.
         """
-        # TODO: Relationships? Aliases?
-        return "When filtering on a Date or DateTime field, the value MUST be an unquoted literal in YYYY-MM-DD or YYYY-MM-DDThh:mm:ssZ format. For example, CloseDate >= 2025-05-28 is correct; CloseDate >= '2025-05-28' is incorrect."
+        return get_soql_instructions(self.name)
 
     def meta_get_tables(self, table_names: Optional[List[str]] = None) -> Response:
         """

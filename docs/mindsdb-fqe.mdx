@@ -1,0 +1,51 @@
+---
+title: MindsDB as a Federated Query Engine
+sidebarTitle: MindsDB Query Engine
+icon: "engine"
+---
+
+MindsDB supports federated querying, enabling users to access and analyze data across a wide variety of structured and unstructured data sources using SQL.
+
+<p align="center">
+  <img src="/assets/mindsdb-fqe.png" />
+</p>
+
+## How Query Pushdown Works in MindsDB
+
+MindsDB acts as a federated query engine by translating and pushing down SQL queries to the native engines of connected data sources. Rather than retrieving data and processing queries within MindsDB, it delegates computation to the underlying data sources. This “pushdown” approach ensures:
+
+* High performance: Queries leverage the indexing and processing capabilities of the native engines.
+
+* Low resource usage: MindsDB avoids executing resource-heavy and high-latency operations within the query engine, preventing bottlenecks in CPU, memory, or network.
+
+## Query Translation Limits
+
+Each connected data source has its own SQL dialect, features, and constraints. While MindsDB SQL provides a unified interface, not all SQL expressions or data types can be translated across every database engine. In cases where a native data type or expression is not supported by the underlying engine:
+
+* The query is passed from MindsDB to the data source in its current form, with unsupported data types handled as strings.
+
+* If the data source does not support the syntax, it may return an error.
+
+* Errors originating from the underlying data source are passed through to the user to provide the most accurate context.
+
+## Cross-Database Join Limits
+
+MindsDB allows joining tables across disparate data sources. However, cross-database joins introduce complexity:
+
+* Pushdown can occur partially, not for all joined data sources.
+
+* Join conditions for a particular data source must be executable by its underlying database engine.
+
+## Recap
+
+MindsDB’s federated query engine enables seamless integration with diverse data systems, but effective use requires understanding the limitations of SQL translation and pushdown:
+
+* Pushdown is preferred to optimize performance and avoid resource strain.
+
+* Not all SQL constructs are translatable, especially for vector stores or non-relational systems.
+
+* Errors may occur when a connected data source cannot parse the generated query.
+
+* Workarounds include query decomposition, using simpler expressions, and avoiding unsupported joins or vector logic.
+
+Understanding these nuances helps users debug query errors more effectively and make full use of MindsDB’s federated query capabilities.

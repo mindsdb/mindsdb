@@ -193,4 +193,7 @@ jobs:
       - name: Run unit tests
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            sudo apt-get update && sudo apt-get install -y sqlite3
+          fi
           make unit_tests_slow

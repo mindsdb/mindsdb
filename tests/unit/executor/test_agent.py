@@ -578,7 +578,7 @@ class TestAgent(BaseExecutorDummyML):
             create knowledge base kb_review
             using
                 embedding_model = {
-                    "provider": "dummy_provider",
+                    "provider": "bedrock",
                     "model_name": "dummy_model",
                     "api_key": "dummy_key"
                 }
@@ -933,7 +933,7 @@ class TestKB(BaseExecutorDummyML):
 
         if embedding_model is None:
             embedding_model = {
-                "provider": "dummy_provider",
+                "provider": "bedrock",
                 "model_name": "dummy_model",
                 "api_key": "dummy_key",
             }

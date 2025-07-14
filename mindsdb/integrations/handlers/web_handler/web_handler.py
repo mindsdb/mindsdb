@@ -38,7 +38,7 @@ class CrawlerTable(APIResource):
             if condition.column == "per_url_limit" and condition.op == FilterOperator.EQUAL:
                 per_url_limit = condition.value
                 condition.applied = True
-            if condition.column == "user_agent" and condition.op == FilterOperator.EQUAL:
+            if condition.column.lower() == "user_agent" and condition.op == FilterOperator.EQUAL:
                 headers["User-Agent"] = condition.value
                 condition.applied = True
 

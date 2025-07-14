@@ -1,0 +1,33 @@
+---
+title: Variables
+sidebarTitle: Variables
+---
+
+MindsDB supports the usage of variables. Users can save values of API keys or other frequently used values and pass them as variables when creating knowledge bases, agents, or other MindsDB object.
+
+## Usage
+
+Here is how to create variables in MindsDB.
+
+* Create variables using `SET` and save values either using the [`from_env()` function](/mindsdb_sql/functions/from_env) or directly.
+
+```sql
+SET @my_env_var  = from_env("MDB_MY_ENV_VAR")
+
+SET @my_value  = "123456"
+```
+
+* Use variables to pass parameters when creating objects in MindsDB.
+
+Here is an example for [knowledge bases](/mindsdb_sql/knowledge_bases/overview).
+
+```sql
+CREATE KNOWLEDGE_BASE my_kb
+USING
+    embedding_model = {
+       "provider": "openai",
+       "model_name" : "text-embedding-3-large",
+       "api_key": @my_env_var
+    },
+    ...;
+```

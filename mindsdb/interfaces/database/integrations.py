@@ -161,7 +161,7 @@ class IntegrationController:
         db.session.commit()
         return integration_record.id
 
-    def add(self, name, engine, connection_args):
+    def add(self, name: str, engine, connection_args):
         logger.debug(
             "%s: add method calling name=%s, engine=%s, connection_args=%s, company_id=%s",
             self.__class__.__name__,
@@ -171,6 +171,9 @@ class IntegrationController:
             ctx.company_id,
         )
         handler_meta = self.get_handler_meta(engine)
+
+        if not name.islower():
+            raise ValueError(f'The name must be in lower case: {name}')
 
         accept_connection_args = handler_meta.get("connection_args")
         logger.debug("%s: accept_connection_args - %s", self.__class__.__name__, accept_connection_args)

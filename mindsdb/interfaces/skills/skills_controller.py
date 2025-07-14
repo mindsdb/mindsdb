@@ -98,6 +98,9 @@ class SkillsController:
             project_name = default_project
         project = self.project_controller.get(name=project_name)
 
+        if not name.islower():
+            raise ValueError(f"The name must be in lower case: {name}")
+
         skill = self.get_skill(name, project_name)
 
         if skill is not None:

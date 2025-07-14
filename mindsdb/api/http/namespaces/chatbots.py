@@ -22,6 +22,9 @@ def create_chatbot(project_name, name, chatbot):
             'Missing "name" field for chatbot'
         )
 
+    if not name.islower():
+        return http_error(HTTPStatus.BAD_REQUEST, "Wrong name", f"The name must be in lower case: {name}")
+
     model_name = chatbot.get('model_name', None)
     agent_name = chatbot.get('agent_name', None)
     if model_name is None and agent_name is None:
@@ -268,14 +271,17 @@ class ChatBotResource(Resource):
                     f'Agent with name {agent_name} not found')
 
         # Chatbot must not exist with new name.
-        if name is not None and name != chatbot_name:
-            chatbot_with_new_name = chatbot_controller.get_chatbot(name, project_name=project_name)
-            if chatbot_with_new_name is not None:
-                return http_error(
-                    HTTPStatus.CONFLICT,
-                    'Chatbot already exists',
-                    f'Chatbot with name {name} already exists. Please choose a different one.'
-                )
+        if name is not None:
+            if name != chatbot_name:
+                chatbot_with_new_name = chatbot_controller.get_chatbot(name, project_name=project_name)
+                if chatbot_with_new_name is not None:
+                    return http_error(
+                        HTTPStatus.CONFLICT,
+                        'Chatbot already exists',
+                        f'Chatbot with name {name} already exists. Please choose a different one.'
+                    )
+            if not name.islower():
+                return http_error(HTTPStatus.BAD_REQUEST, "Wrong name", f"The name must be in lower case: {name}")
 
         if existing_chatbot is None:
             # Create

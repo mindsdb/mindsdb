@@ -461,12 +461,15 @@ class AgentsController:
         ):
             raise ValueError("It is forbidden to change properties of the demo object")
 
-        if name is not None and name != agent_name:
-            # Check to see if updated name already exists
-            agent_with_new_name = self.get_agent(name, project_name=project_name)
-            if agent_with_new_name is not None:
-                raise EntityExistsError(f"Agent with updated name already exists: {name}")
-            existing_agent.name = name
+        if name is not None:
+            if name != agent_name:
+                # Check to see if updated name already exists
+                agent_with_new_name = self.get_agent(name, project_name=project_name)
+                if agent_with_new_name is not None:
+                    raise EntityExistsError(f"Agent with updated name already exists: {name}")
+                existing_agent.name = name
+            if not name.islower():
+                raise ValueError(f"The name mustbe in lower case: {name}")
 
         if model_name or provider:
             # check model and provider

@@ -158,7 +158,7 @@ class PlanJoinTablesQuery:
                 integration = self.planner.default_namespace
 
         if integration is None and not hasattr(table, "sub_select"):
-            raise PlanningException(f"Integration not found for: {table}")
+            raise PlanningException(f"Database not found for: {table}")
 
         sub_select = getattr(table, "sub_select", None)
 

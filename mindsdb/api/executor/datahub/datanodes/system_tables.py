@@ -1,4 +1,4 @@
-from typing import Optional, Literal
+from typing import Optional, List, Literal
 from dataclasses import dataclass, fields
 
 import pandas as pd
@@ -8,6 +8,7 @@ from mindsdb.utilities import log
 from mindsdb.utilities.config import config
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES
+from mindsdb.interfaces.data_catalog.data_catalog_reader import DataCatalogReader
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE, MYSQL_DATA_TYPE_COLUMNS_DEFAULT
 from mindsdb.api.executor.datahub.classes.tables_row import TABLES_ROW_TYPE, TablesRow
 
@@ -500,6 +501,318 @@ class CollationsTable(Table):
             ["utf8_general_ci", "utf8", 33, "Yes", "Yes", 1, "PAD SPACE"],
             ["latin1_swedish_ci", "latin1", 8, "Yes", "Yes", 1, "PAD SPACE"],
         ]
+
+        df = pd.DataFrame(data, columns=cls.columns)
+        return df
+
+
+# Data Catalog tables
+# TODO: Should these be placed in a separate schema?
+
+
+def _get_records_from_data_catalog(databases: List, tables: Optional[List[str]] = None) -> List:
+    """Get records from the data catalog based on the specified databases and tables."""
+    # TODO: Should we allow to query all databases?
+    if not databases:
+        raise ValueError("At least one database must be specified in the query.")
+
+    records = []
+    for database in databases:
+        data_catalog_reader = DataCatalogReader(database_name=database, table_names=tables)
+        records.extend(data_catalog_reader.read_metadata_as_records())
+
+    return records
+
+
+# TODO: Combine with existing 'TablesTable'?
+class MetaTablesTable(Table):
+    name = "META_TABLES"
+
+    columns = ["TABLE_CATALOG", "TABLE_SCHEMA", "TABLE_NAME", "TABLE_TYPE", "TABLE_DESCRIPTION", "ROW_COUNT"]
+
+    @classmethod
+    def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
+        databases, _ = _get_scope(query)
+
+        records = _get_records_from_data_catalog(databases)
+
+        data = []
+        for record in records:
+            item = {
+                "TABLE_CATALOG": "def",
+                "TABLE_SCHEMA": record.integration.name,
+                "TABLE_NAME": record.name,
+                "TABLE_TYPE": record.type,
+                "TABLE_DESCRIPTION": record.description or "",
+                "ROW_COUNT": record.row_count,
+            }
+            data.append(item)
+
+        df = pd.DataFrame(data, columns=cls.columns)
+        return df
+
+
+# TODO: Combine with existing 'ColumnsTable'?
+class MetaColumnsTable(Table):
+    name = "META_COLUMNS"
+
+    columns = [
+        "TABLE_CATALOG",
+        "TABLE_SCHEMA",
+        "TABLE_NAME",
+        "COLUMN_NAME",
+        "DATA_TYPE",
+        "COLUMN_DESCRIPTION",
+        "COLUMN_DEFAULT",
+        "IS_NULLABLE",
+    ]
+
+    @classmethod
+    def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
+        databases, tables = _get_scope(query)
+
+        records = _get_records_from_data_catalog(databases, tables)
+
+        data = []
+        for record in records:
+            database_name = record.integration.name
+            table_name = record.name
+            columns = record.meta_columns
+
+            for column in columns:
+                item = {
+                    "TABLE_CATALOG": "def",
+                    "TABLE_SCHEMA": database_name,
+                    "TABLE_NAME": table_name,
+                    "COLUMN_NAME": column.name,
+                    "DATA_TYPE": column.data_type,
+                    "COLUMN_DESCRIPTION": column.description or "",
+                    "COLUMN_DEFAULT": column.default_value,
+                    "IS_NULLABLE": "YES" if column.is_nullable else "NO",
+                }
+                data.append(item)
+
+        df = pd.DataFrame(data, columns=cls.columns)
+        return df
+
+
+class MetaColumnStatisticsTable(Table):
+    name = "META_COLUMN_STATISTICS"
+    columns = [
+        "TABLE_SCHEMA",
+        "TABLE_NAME",
+        "COLUMN_NAME",
+        "MOST_COMMON_VALS",
+        "MOST_COMMON_FREQS",
+        "NULL_FRAC",
+        "N_DISTINCT",
+        "MIN_VALUE",
+        "MAX_VALUE",
+    ]
+
+    @classmethod
+    def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
+        databases, tables = _get_scope(query)
+
+        records = _get_records_from_data_catalog(databases, tables)
+
+        data = []
+        for record in records:
+            database_name = record.integration.name
+            table_name = record.name
+            columns = record.meta_columns
+
+            for column in columns:
+                column_statistics = column.meta_column_statistics[0] if column.meta_column_statistics else None
+
+                item = {
+                    "TABLE_SCHEMA": database_name,
+                    "TABLE_NAME": table_name,
+                    "COLUMN_NAME": column.name,
+                }
+
+                if column_statistics:
+                    item.update(
+                        {
+                            "MOST_COMMON_VALS": column_statistics.most_common_values,
+                            "MOST_COMMON_FREQS": column_statistics.most_common_frequencies,
+                            "NULL_FRAC": column_statistics.null_percentage,
+                            "N_DISTINCT": column_statistics.distinct_values_count,
+                            "MIN_VALUE": column_statistics.minimum_value,
+                            "MAX_VALUE": column_statistics.maximum_value,
+                        }
+                    )
+
+                data.append(item)
+
+        df = pd.DataFrame(data, columns=cls.columns)
+        return df
+
+
+class MetaTableConstraintsTable(Table):
+    name = "META_TABLE_CONSTRAINTS"
+    columns = [
+        "CONSTRAINT_CATALOG",
+        "CONSTRAINT_SCHEMA",
+        "CONSTRAINT_NAME",
+        "TABLE_SCHEMA",
+        "TABLE_NAME",
+        "CONSTRAINT_TYPE",
+        "ENFORCED",
+    ]
+
+    @classmethod
+    def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
+        databases, tables = _get_scope(query)
+
+        records = _get_records_from_data_catalog(databases, tables)
+
+        data = []
+        for record in records:
+            database_name = record.integration.name
+            table_name = record.name
+            primary_keys = record.meta_primary_keys
+            foreign_keys_children = record.meta_foreign_keys_children
+            foreign_keys_parents = record.meta_foreign_keys_parents
+
+            for pk in primary_keys:
+                item = {
+                    "CONSTRAINT_CATALOG": "def",
+                    "CONSTRAINT_SCHEMA": database_name,
+                    "CONSTRAINT_NAME": pk.constraint_name,
+                    "TABLE_SCHEMA": database_name,
+                    "TABLE_NAME": table_name,
+                    "CONSTRAINT_TYPE": "PRIMARY KEY",
+                }
+                data.append(item)
+
+            for fk in foreign_keys_children:
+                item = {
+                    "CONSTRAINT_CATALOG": "def",
+                    "CONSTRAINT_SCHEMA": database_name,
+                    "CONSTRAINT_NAME": fk.constraint_name,
+                    "TABLE_SCHEMA": database_name,
+                    "TABLE_NAME": table_name,
+                    "CONSTRAINT_TYPE": "FOREIGN KEY",
+                }
+                data.append(item)
+
+            for fk in foreign_keys_parents:
+                item = {
+                    "CONSTRAINT_CATALOG": "def",
+                    "CONSTRAINT_SCHEMA": database_name,
+                    "CONSTRAINT_NAME": fk.constraint_name,
+                    "TABLE_SCHEMA": database_name,
+                    "TABLE_NAME": table_name,
+                    "CONSTRAINT_TYPE": "FOREIGN KEY",
+                }
+                data.append(item)
+
+        df = pd.DataFrame(data, columns=cls.columns)
+        return df
+
+
+class MetaColumnUsageTable(Table):
+    name = "META_KEY_COLUMN_USAGE"
+    columns = [
+        "CONSTRAINT_CATALOG",
+        "CONSTRAINT_SCHEMA",
+        "CONSTRAINT_NAME",
+        "TABLE_CATALOG",
+        "TABLE_SCHEMA",
+        "TABLE_NAME",
+        "COLUMN_NAME",
+        "ORDINAL_POSITION",
+        "POSITION_IN_UNIQUE_CONSTRAINT",
+        "REFERENCED_TABLE_SCHEMA",
+        "REFERENCED_TABLE_NAME",
+        "REFERENCED_COLUMN_NAME",
+    ]
+
+    @classmethod
+    def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
+        databases, tables = _get_scope(query)
+
+        records = _get_records_from_data_catalog(databases, tables)
+
+        data = []
+        for record in records:
+            database_name = record.integration.name
+            table_name = record.name
+            primary_keys = record.meta_primary_keys
+            foreign_keys_children = record.meta_foreign_keys_children
+            foreign_keys_parents = record.meta_foreign_keys_parents
+
+            for pk in primary_keys:
+                column = pk.meta_columns
+
+                item = {
+                    "CONSTRAINT_CATALOG": "def",
+                    "CONSTRAINT_SCHEMA": database_name,
+                    "CONSTRAINT_NAME": pk.constraint_name,
+                    "TABLE_CATALOG": "def",
+                    "TABLE_SCHEMA": database_name,
+                    "TABLE_NAME": table_name,
+                    "COLUMN_NAME": column.name,
+                    "ORDINAL_POSITION": pk.ordinal_position,
+                    "POSITION_IN_UNIQUE_CONSTRAINT": None,
+                    "REFERENCED_TABLE_SCHEMA": None,
+                    "REFERENCED_TABLE_NAME": None,
+                    "REFERENCED_COLUMN_NAME": None,
+                }
+                data.append(item)
+
+            for fk in foreign_keys_children:
+                item = {
+                    "CONSTRAINT_CATALOG": "def",
+                    "CONSTRAINT_SCHEMA": database_name,
+                    "CONSTRAINT_NAME": fk.constraint_name,
+                    "TABLE_CATALOG": "def",
+                    "TABLE_SCHEMA": database_name,
+                    "TABLE_NAME": table_name,
+                    "COLUMN_NAME": fk.child_column.name,
+                    "ORDINAL_POSITION": None,
+                    "POSITION_IN_UNIQUE_CONSTRAINT": None,
+                    "REFERENCED_TABLE_SCHEMA": fk.parent_table.integration.name if fk.parent_table else None,
+                    "REFERENCED_TABLE_NAME": fk.parent_table.name if fk.parent_table else None,
+                    "REFERENCED_COLUMN_NAME": fk.parent_column.name if fk.parent_column else None,
+                }
+                data.append(item)
+
+            for fk in foreign_keys_parents:
+                item = {
+                    "CONSTRAINT_CATALOG": "def",
+                    "CONSTRAINT_SCHEMA": database_name,
+                    "CONSTRAINT_NAME": fk.constraint_name,
+                    "TABLE_CATALOG": "def",
+                    "TABLE_SCHEMA": database_name,
+                    "TABLE_NAME": table_name,
+                    "COLUMN_NAME": fk.child_column.name,
+                    "ORDINAL_POSITION": None,
+                    "POSITION_IN_UNIQUE_CONSTRAINT": None,
+                    "REFERENCED_TABLE_SCHEMA": fk.child_table.integration.name if fk.child_table else None,
+                    "REFERENCED_TABLE_NAME": fk.child_table.name if fk.child_table else None,
+                    "REFERENCED_COLUMN_NAME": fk.parent_column.name if fk.child_column else None,
+                }
+                data.append(item)
+
+        df = pd.DataFrame(data, columns=cls.columns)
+        return df
+
+
+class MetaHandlerInfoTable(Table):
+    name = "META_HANDLER_INFO"
+    columns = ["HANDLER_INFO", "TABLE_SCHEMA"]
+
+    @classmethod
+    def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
+        databases, tables = _get_scope(query)
+
+        data = []
+        for database in databases:
+            data_catalog_reader = DataCatalogReader(database_name=database, table_names=tables)
+            handler_info = data_catalog_reader.get_handler_info()
+            data.append({"HANDLER_INFO": str(handler_info), "TABLE_SCHEMA": database})
 
         df = pd.DataFrame(data, columns=cls.columns)
         return df

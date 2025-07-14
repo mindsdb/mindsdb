@@ -193,7 +193,6 @@ jobs:
       - name: Run unit tests
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
-          if [[ "$RUNNER_OS" == "Linux" ]]; then
-            sudo apt-get update && sudo apt-get install -y sqlite3
-          fi
+          which python
+          python -c "import sqlite3; print(sqlite3.version_info); print(sqlite3.sqlite_version_info)"
           make unit_tests_slow

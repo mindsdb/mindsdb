@@ -6,7 +6,12 @@ import pandas as pd
 from slack_sdk.errors import SlackApiError
 
 from mindsdb.integrations.libs.api_handler import APIResource
-from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions, FilterCondition, FilterOperator, SortColumn
+from mindsdb.integrations.utilities.sql_utils import (
+    extract_comparison_conditions,
+    FilterCondition,
+    FilterOperator,
+    SortColumn,
+)
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -17,12 +22,7 @@ class SlackConversationsTable(APIResource):
     This is the table abstraction for interacting with conversations via the Slack API.
     """
 
-    def list(
-        self,
-        conditions: List[FilterCondition] = None,
-        limit: int = None,
-        **kwargs: Any
-    ) -> pd.DataFrame:
+    def list(self, conditions: List[FilterCondition] = None, limit: int = None, **kwargs: Any) -> pd.DataFrame:
         """
         Retrieves a list of Slack conversations based on the specified conditions.
         If no channel ID(s) are provided, all channels are retrieved as follows:
@@ -53,7 +53,7 @@ class SlackConversationsTable(APIResource):
             op = condition.op
 
             # Handle the column 'id'.
-            if condition.column == 'id':
+            if condition.column == "id":
                 if op not in [FilterOperator.EQUAL, FilterOperator.IN]:
                     raise ValueError(f"Unsupported operator '{op}' for column 'id'")
 
@@ -66,9 +66,7 @@ class SlackConversationsTable(APIResource):
 
                 if op == FilterOperator.IN:
                     try:
-                        channels = self._get_channels(
-                            value if isinstance(value, list) else [value]
-                        )
+                        channels = self._get_channels(value if isinstance(value, list) else [value])
                         condition.applied = True
                     except ValueError:
                         raise
@@ -78,8 +76,8 @@ class SlackConversationsTable(APIResource):
             channels = self._get_all_channels(limit)
 
         for channel in channels:
-            channel['created_at'] = dt.datetime.fromtimestamp(channel['created'])
-            channel['updated_at'] = dt.datetime.fromtimestamp(channel['updated'] / 1000)
+            channel["created_at"] = dt.datetime.fromtimestamp(channel["created"])
+            channel["updated_at"] = dt.datetime.fromtimestamp(channel["updated"] / 1000)
 
         return pd.DataFrame(channels, columns=self.get_columns())
 
@@ -104,7 +102,7 @@ class SlackConversationsTable(APIResource):
             logger.error(f"Error getting channel '{channel_id}': {slack_error.response['error']}")
             raise ValueError(f"Channel '{channel_id}' not found")
 
-        return response['channel']
+        return response["channel"]
 
     def _get_channels(self, channel_ids: List[Text]) -> List[Dict]:
         """
@@ -148,12 +146,12 @@ class SlackConversationsTable(APIResource):
             # If the limit is greater than 1000, paginate the results until the limit is reached.
             if limit and limit > 1000:
                 response = client.conversations_list()
-                channels = response['channels']
+                channels = response["channels"]
 
                 # Paginate the results until the limit is reached.
-                while response['response_metadata']['next_cursor']:
-                    response = client.conversations_list(cursor=response['response_metadata']['next_cursor'])
-                    channels.extend(response['channels'])
+                while response["response_metadata"]["next_cursor"]:
+                    response = client.conversations_list(cursor=response["response_metadata"]["next_cursor"])
+                    channels.extend(response["channels"])
                     if len(channels) >= limit:
                         break
 
@@ -161,7 +159,7 @@ class SlackConversationsTable(APIResource):
             # Otherwise, use the provided limit or a default limit of 1000.
             else:
                 response = client.conversations_list(limit=limit if limit else 1000)
-                channels = response['channels']
+                channels = response["channels"]
         except SlackApiError as slack_error:
             logger.error(f"Error getting channels: {slack_error.response['error']}")
             raise
@@ -176,21 +174,21 @@ class SlackConversationsTable(APIResource):
             List[str]: The list of columns.
         """
         return [
-            'id',
-            'name',
-            'is_channel',
-            'is_group',
-            'is_im',
-            'is_mpim',
-            'is_private',
-            'is_archived',
-            'is_general',
-            'is_shared',
-            'is_ext_shared',
-            'is_org_shared',
-            'creator',
-            'created_at',
-            'updated_at',
+            "id",
+            "name",
+            "is_channel",
+            "is_group",
+            "is_im",
+            "is_mpim",
+            "is_private",
+            "is_archived",
+            "is_general",
+            "is_shared",
+            "is_ext_shared",
+            "is_org_shared",
+            "creator",
+            "created_at",
+            "updated_at",
         ]
 
 
@@ -200,11 +198,7 @@ class SlackMessagesTable(APIResource):
     """
 
     def list(
-        self,
-        conditions: List[FilterCondition] = None,
-        limit: int = None,
-        sort: List[SortColumn] = None,
-        **kwargs: Any
+        self, conditions: List[FilterCondition] = None, limit: int = None, sort: List[SortColumn] = None, **kwargs: Any
     ) -> pd.DataFrame:
         """
         Retrieves a list of messages from Slack conversations based on the specified conditions.
@@ -245,32 +239,32 @@ class SlackMessagesTable(APIResource):
             op = condition.op
 
             # Handle the column 'channel_id'.
-            if condition.column == 'channel_id':
+            if condition.column == "channel_id":
                 if op != FilterOperator.EQUAL:
                     raise ValueError(f"Unsupported operator '{op}' for column 'channel_id'")
 
                 # Check if the provided channel exists.
                 try:
                     channel = SlackConversationsTable(self.handler).get_channel(value)
-                    params['channel'] = value
+                    params["channel"] = value
                     condition.applied = True
                 except SlackApiError:
                     raise ValueError(f"Channel '{value}' not found")
 
             # Handle the column 'created_at'.
-            elif condition.column == 'created_at' and value is not None:
+            elif condition.column == "created_at" and value is not None:
                 date = dt.datetime.fromisoformat(value).replace(tzinfo=dt.timezone.utc)
                 if op == FilterOperator.GREATER_THAN:
-                    params['oldest'] = date.timestamp() + 1
+                    params["oldest"] = date.timestamp() + 1
                 elif op == FilterOperator.GREATER_THAN_OR_EQUAL:
-                    params['oldest'] = date.timestamp()
+                    params["oldest"] = date.timestamp()
                 elif op == FilterOperator.LESS_THAN_OR_EQUAL:
-                    params['latest'] = date.timestamp()
+                    params["latest"] = date.timestamp()
                 else:
                     continue
                 condition.applied = True
 
-        if 'channel' not in params:
+        if "channel" not in params:
             raise ValueError("To retrieve data from Slack, you need to provide the 'channel_id' parameter.")
 
         # Retrieve the messages from the Slack API.
@@ -279,45 +273,41 @@ class SlackMessagesTable(APIResource):
             if limit and limit > 999:
                 params["limit"] = 999
                 response = client.conversations_history(**params)
-                messages = response['messages']
+                messages = response["messages"]
 
                 # Paginate the results until the limit is reached. response_metadata may be None.
-                while response.get('response_metadata', {}).get('next_cursor'):
+                while response.get("response_metadata", {}).get("next_cursor"):
                     response = client.conversations_history(
                         cursor=response["response_metadata"]["next_cursor"], **params
                     )
-                    messages.extend(response['messages'])
+                    messages.extend(response["messages"])
                     if len(messages) >= limit:
                         break
 
                 messages = messages[:limit]
             # Otherwise, use the provided limit or a default limit of 999.
             else:
-                params['limit'] = limit if limit else 999
+                params["limit"] = limit if limit else 999
                 response = client.conversations_history(**params)
-                messages = response['messages']
+                messages = response["messages"]
         except SlackApiError as slack_error:
             logger.error(f"Error getting messages: {slack_error.response['error']}")
             raise
 
         result = pd.DataFrame(messages, columns=self.get_columns())
 
-        result = result[result['text'].notnull()]
+        result = result[result["text"].notnull()]
 
         # Add the channel ID and name to the result.
-        result['channel_id'] = params['channel']
-        result['channel_name'] = channel['name'] if 'name' in channel else None
+        result["channel_id"] = params["channel"]
+        result["channel_name"] = channel["name"] if "name" in channel else None
 
         # Translate the time stamp into a 'created_at' field.
-        result['created_at'] = pd.to_datetime(result['ts'].astype(float), unit='s').dt.strftime('%Y-%m-%d %H:%M:%S')
+        result["created_at"] = pd.to_datetime(result["ts"].astype(float), unit="s").dt.strftime("%Y-%m-%d %H:%M:%S")
 
         # Sort the messages by the specified columns.
         if sort:
-            result.sort_values(
-                by=[col.column for col in sort],
-                ascending=[col.ascending for col in sort],
-                inplace=True
-            )
+            result.sort_values(by=[col.column for col in sort], ascending=[col.ascending for col in sort], inplace=True)
 
         return result
 
@@ -340,16 +330,17 @@ class SlackMessagesTable(APIResource):
             params = dict(zip(columns, row))
 
             # Check if required parameters are provided.
-            if 'channel_id' not in params or 'text' not in params:
-                raise ValueError("To insert data into Slack, you need to provide the 'channel_id' and 'text' parameters.")
+            if "channel_id" not in params or "text" not in params:
+                raise ValueError(
+                    "To insert data into Slack, you need to provide the 'channel_id' and 'text' parameters."
+                )
 
             try:
-                client.chat_postMessage(
-                    channel=params['channel_id'],
-                    text=params['text']
-                )
+                client.chat_postMessage(channel=params["channel_id"], text=params["text"])
             except SlackApiError as slack_error:
-                logger.error(f"Error posting message to Slack channel '{params['channel_id']}': {slack_error.response['error']}")
+                logger.error(
+                    f"Error posting message to Slack channel '{params['channel_id']}': {slack_error.response['error']}"
+                )
                 raise
 
     def update(self, query: Update):
@@ -376,18 +367,18 @@ class SlackMessagesTable(APIResource):
         # Extract the parameters from the conditions.
         for op, arg1, arg2 in conditions:
             # Handle the column 'channel_id'.
-            if arg1 == 'channel_id':
+            if arg1 == "channel_id":
                 # Check if the provided channel exists.
                 try:
                     SlackConversationsTable(self.handler).get_channel(arg2)
-                    params['channel'] = arg2
+                    params["channel"] = arg2
                 except SlackApiError as slack_error:
                     logger.error(f"Error getting channel '{arg2}': {slack_error.response['error']}")
                     raise ValueError(f"Channel '{arg2}' not found")
 
             # Handle the column'ts'.
-            elif arg1 == 'ts':
-                if op == '=':
+            elif arg1 == "ts":
+                if op == "=":
                     params[arg1] = str(arg2)
                 else:
                     raise ValueError(f"Unsupported operator '{op}' for column '{arg1}'")
@@ -397,23 +388,23 @@ class SlackMessagesTable(APIResource):
 
         # Extract the update columns and values.
         for col, val in query.update_columns.items():
-            if col == 'text':
+            if col == "text":
                 params[col] = str(val).strip("'")
             else:
                 raise ValueError(f"Unsupported column '{col}'")
 
         # Check if required parameters are provided.
-        if 'channel' not in params or 'ts' not in params or 'text' not in params:
-            raise ValueError("To update a message in Slack, you need to provide the 'channel', 'ts', and 'text' parameters.")
+        if "channel" not in params or "ts" not in params or "text" not in params:
+            raise ValueError(
+                "To update a message in Slack, you need to provide the 'channel', 'ts', and 'text' parameters."
+            )
 
         try:
-            client.chat_update(
-                channel=params['channel'],
-                ts=params['ts'],
-                text=params['text'].strip()
-            )
+            client.chat_update(channel=params["channel"], ts=params["ts"], text=params["text"].strip())
         except SlackApiError as slack_error:
-            logger.error(f"Error updating message in Slack channel '{params['channel']}' with timestamp '{params['ts']}': {slack_error.response['error']}")
+            logger.error(
+                f"Error updating message in Slack channel '{params['channel']}' with timestamp '{params['ts']}': {slack_error.response['error']}"
+            )
             raise
 
     def delete(self, query: Delete):
@@ -439,37 +430,36 @@ class SlackMessagesTable(APIResource):
         params = {}
         for op, arg1, arg2 in conditions:
             # Handle the column 'channel_id'.
-            if arg1 == 'channel_id':
+            if arg1 == "channel_id":
                 # Check if the provided channel exists.
                 try:
                     SlackConversationsTable(self.handler).get_channel(arg2)
-                    params['channel'] = arg2
+                    params["channel"] = arg2
                 except SlackApiError as slack_error:
                     logger.error(f"Error getting channel '{arg2}': {slack_error.response['error']}")
                     raise ValueError(f"Channel '{arg2}' not found")
 
             # Handle the columns 'ts'.
-            elif arg1 == 'ts':
-                if op == '=':
-                    params['ts'] = float(arg2)
+            elif arg1 == "ts":
+                if op == "=":
+                    params["ts"] = float(arg2)
                 else:
-                    raise NotImplementedError(f'Unknown op: {op}')
+                    raise NotImplementedError(f"Unknown op: {op}")
 
             else:
                 raise ValueError(f"Unsupported column '{arg1}'")
 
         # Check if required parameters are provided.
-        if 'channel' not in params or 'ts' not in params:
+        if "channel" not in params or "ts" not in params:
             raise ValueError("To delete a message from Slack, you need to provide the 'channel' and 'ts' parameters.")
 
         try:
-            client.chat_delete(
-                channel=params['channel'],
-                ts=params['ts']
-            )
+            client.chat_delete(channel=params["channel"], ts=params["ts"])
 
         except SlackApiError as slack_error:
-            logger.error(f"Error deleting message in Slack channel '{params['channel']}' with timestamp '{params['ts']}': {slack_error.response['error']}")
+            logger.error(
+                f"Error deleting message in Slack channel '{params['channel']}' with timestamp '{params['ts']}': {slack_error.response['error']}"
+            )
             raise
 
     def get_columns(self) -> List[Text]:
@@ -480,23 +470,23 @@ class SlackMessagesTable(APIResource):
             List[str]: The list of columns.
         """
         return [
-            'channel_id',
-            'channel',
-            'client_msg_id',
-            'type',
-            'subtype',
-            'ts',
-            'created_at',
-            'user',
-            'text',
-            'attachments',
-            'files',
-            'reactions',
-            'thread_ts',
-            'reply_count',
-            'reply_users_count',
-            'latest_reply',
-            'reply_users'
+            "channel_id",
+            "channel",
+            "client_msg_id",
+            "type",
+            "subtype",
+            "ts",
+            "created_at",
+            "user",
+            "text",
+            "attachments",
+            "files",
+            "reactions",
+            "thread_ts",
+            "reply_count",
+            "reply_users_count",
+            "latest_reply",
+            "reply_users",
         ]
 
 
@@ -506,11 +496,7 @@ class SlackThreadsTable(APIResource):
     """
 
     def list(
-        self,
-        conditions: List[FilterCondition] = None,
-        limit: int = None,
-        sort: List[SortColumn] = None,
-        **kwargs: Any
+        self, conditions: List[FilterCondition] = None, limit: int = None, sort: List[SortColumn] = None, **kwargs: Any
     ) -> pd.DataFrame:
         """
         Retrieves a list of messages in a thread based on the specified conditions.
@@ -551,68 +537,66 @@ class SlackThreadsTable(APIResource):
             op = condition.op
 
             # Handle the column 'channel_id'.
-            if condition.column == 'channel_id':
+            if condition.column == "channel_id":
                 if op != FilterOperator.EQUAL:
                     raise ValueError(f"Unsupported operator '{op}' for column 'channel_id'")
 
                 # Check if the provided channel exists.
                 try:
                     channel = SlackConversationsTable(self.handler).get_channel(value)
-                    params['channel'] = value
+                    params["channel"] = value
                     condition.applied = True
                 except SlackApiError as slack_error:
                     logger.error(f"Error getting channel '{value}': {slack_error.response['error']}")
                     raise ValueError(f"Channel '{value}' not found")
 
             # Handle the column 'thread_ts'.
-            elif condition.column == 'thread_ts':
+            elif condition.column == "thread_ts":
                 if op != FilterOperator.EQUAL:
                     raise ValueError(f"Unsupported operator '{op}' for column 'thread_ts'")
 
-                params['ts'] = value
+                params["ts"] = value
 
-        if 'channel' not in params or 'ts' not in params:
-            raise ValueError("To retrieve data from Slack, you need to provide the 'channel_id' and 'thread_ts' parameters.")
+        if "channel" not in params or "ts" not in params:
+            raise ValueError(
+                "To retrieve data from Slack, you need to provide the 'channel_id' and 'thread_ts' parameters."
+            )
 
         # Retrieve the messages from the Slack API.
         try:
             # If the limit is greater than 1000, paginate the results until the limit is reached.
             if limit and limit > 1000:
                 response = client.conversations_replies(**params)
-                messages = response['messages']
+                messages = response["messages"]
 
                 # Paginate the results until the limit is reached.
-                while response['response_metadata']['next_cursor']:
-                    response = client.conversations_replies(cursor=response['response_metadata']['next_cursor'])
-                    messages.extend(response['messages'])
+                while response["response_metadata"]["next_cursor"]:
+                    response = client.conversations_replies(cursor=response["response_metadata"]["next_cursor"])
+                    messages.extend(response["messages"])
                     if len(messages) >= limit:
                         break
 
                     messages = messages[:limit]
             # Otherwise, use the provided limit or a default limit of 1000.
             else:
-                params['limit'] = limit if limit else 1000
+                params["limit"] = limit if limit else 1000
                 response = client.conversations_replies(**params)
-                messages = response['messages']
+                messages = response["messages"]
         except SlackApiError as slack_error:
             logger.error(f"Error getting messages: {slack_error.response['error']}")
             raise
 
         result = pd.DataFrame(messages, columns=self.get_columns())
 
-        result = result[result['text'].notnull()]
+        result = result[result["text"].notnull()]
 
         # Add the channel ID and name to the result.
-        result['channel_id'] = params['channel']
-        result['channel_name'] = channel['name'] if 'name' in channel else None
+        result["channel_id"] = params["channel"]
+        result["channel_name"] = channel["name"] if "name" in channel else None
 
         # Sort the messages by the specified columns.
         if sort:
-            result.sort_values(
-                by=[col.column for col in sort],
-                ascending=[col.ascending for col in sort],
-                inplace=True
-            )
+            result.sort_values(by=[col.column for col in sort], ascending=[col.ascending for col in sort], inplace=True)
 
         return result
 
@@ -634,17 +618,19 @@ class SlackThreadsTable(APIResource):
             params = dict(zip(columns, row))
 
             # Check if required parameters are provided.
-            if 'channel_id' not in params or 'text' not in params or 'thread_ts' not in params:
-                raise ValueError("To insert data into Slack, you need to provide the 'channel_id', 'text', and 'thread_ts' parameters.")
+            if "channel_id" not in params or "text" not in params or "thread_ts" not in params:
+                raise ValueError(
+                    "To insert data into Slack, you need to provide the 'channel_id', 'text', and 'thread_ts' parameters."
+                )
 
             try:
                 client.chat_postMessage(
-                    channel=params['channel_id'],
-                    text=params['text'],
-                    thread_ts=params['thread_ts']
+                    channel=params["channel_id"], text=params["text"], thread_ts=params["thread_ts"]
                 )
             except SlackApiError as slack_error:
-                logger.error(f"Error posting message to Slack channel '{params['channel_id']}': {slack_error.response['error']}")
+                logger.error(
+                    f"Error posting message to Slack channel '{params['channel_id']}': {slack_error.response['error']}"
+                )
                 raise
 
     def get_columns(self) -> List[Text]:
@@ -667,7 +653,7 @@ class SlackThreadsTable(APIResource):
             "reply_count",
             "reply_users_count",
             "latest_reply",
-            "reply_users"
+            "reply_users",
         ]
 
 
@@ -676,12 +662,7 @@ class SlackUsersTable(APIResource):
     This is the table abstraction for interacting with users in Slack.
     """
 
-    def list(
-        self,
-        conditions: List[FilterCondition] = None,
-        limit: int = None,
-        **kwargs: Any
-    ) -> pd.DataFrame:
+    def list(self, conditions: List[FilterCondition] = None, limit: int = None, **kwargs: Any) -> pd.DataFrame:
         """
         Retrieves a list of users based on the specified conditions.
         Users are retrieved as follows:
@@ -707,12 +688,12 @@ class SlackUsersTable(APIResource):
             # If the limit is greater than 1000, paginate the results until the limit is reached.
             if limit and limit > 1000:
                 response = client.users_list()
-                users = response['members']
+                users = response["members"]
 
                 # Paginate the results until the limit is reached.
-                while response['response_metadata']['next_cursor']:
-                    response = client.users_list(cursor=response['response_metadata']['next_cursor'])
-                    users.extend(response['members'])
+                while response["response_metadata"]["next_cursor"]:
+                    response = client.users_list(cursor=response["response_metadata"]["next_cursor"])
+                    users.extend(response["members"])
                     if len(users) >= limit:
                         break
 
@@ -720,7 +701,7 @@ class SlackUsersTable(APIResource):
             # Otherwise, use the provided limit or a default limit of 1000.
             else:
                 response = client.users_list(limit=limit if limit else 1000)
-                users = response['members']
+                users = response["members"]
         except SlackApiError as slack_error:
             logger.error(f"Error getting users: {slack_error.response['error']}")
             raise
@@ -734,8 +715,4 @@ class SlackUsersTable(APIResource):
         Returns:
             List[Text]: The list of columns.
         """
-        return [
-            'id',
-            'name',
-            'real_name'
-        ]
+        return ["id", "name", "real_name"]

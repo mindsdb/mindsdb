@@ -1,4 +1,5 @@
 import gc
+
 gc.disable()
 import os
 import sys
@@ -105,9 +106,7 @@ class TrunkProcessData:
         self._restarts_time.append(current_time_seconds)
         if self.max_restart_interval_seconds > 0:
             self._restarts_time = [
-                x
-                for x in self._restarts_time
-                if x >= (current_time_seconds - self.max_restart_interval_seconds)
+                x for x in self._restarts_time if x >= (current_time_seconds - self.max_restart_interval_seconds)
             ]
         if len(self._restarts_time) > self.max_restart_count:
             return False
@@ -124,16 +123,11 @@ class TrunkProcessData:
         if config.is_cloud:
             return False
         if sys.platform in ("linux", "darwin"):
-            return (
-                self.restart_on_failure
-                and self.process.exitcode == -signal.SIGKILL.value
-            )
+            return self.restart_on_failure and self.process.exitcode == -signal.SIGKILL.value
         else:
             if self.max_restart_count == 0:
                 # to prevent infinity restarts, max_restart_count should be > 0
-                logger.warning(
-                    "In the current OS, it is not possible to use `max_restart_count=0`"
-                )
+                logger.warning("In the current OS, it is not possible to use `max_restart_count=0`")
                 return False
             return self.restart_on_failure
 
@@ -174,24 +168,18 @@ def set_error_model_status_by_pids(unexisting_pids: List[int]):
         db.session.query(db.Predictor)
         .filter(
             db.Predictor.deleted_at.is_(None),
-            db.Predictor.status.not_in(
-                [db.PREDICTOR_STATUS.COMPLETE, db.PREDICTOR_STATUS.ERROR]
-            ),
+            db.Predictor.status.not_in([db.PREDICTOR_STATUS.COMPLETE, db.PREDICTOR_STATUS.ERROR]),
         )
         .all()
     )
     for predictor_record in predictor_records:
-        predictor_process_id = (predictor_record.training_metadata or {}).get(
-            "process_id"
-        )
+        predictor_process_id = (predictor_record.training_metadata or {}).get("process_id")
         if predictor_process_id in unexisting_pids:
             predictor_record.status = db.PREDICTOR_STATUS.ERROR
             if isinstance(predictor_record.data, dict) is False:
                 predictor_record.data = {}
             if "error" not in predictor_record.data:
-                predictor_record.data["error"] = (
-                    "The training process was terminated for unknown reasons"
-                )
+                predictor_record.data["error"] = "The training process was terminated for unknown reasons"
                 flag_modified(predictor_record, "data")
             db.session.commit()
 
@@ -204,9 +192,7 @@ def set_error_model_status_for_unfinished():
         db.session.query(db.Predictor)
         .filter(
             db.Predictor.deleted_at.is_(None),
-            db.Predictor.status.not_in(
-                [db.PREDICTOR_STATUS.COMPLETE, db.PREDICTOR_STATUS.ERROR]
-            ),
+            db.Predictor.status.not_in([db.PREDICTOR_STATUS.COMPLETE, db.PREDICTOR_STATUS.ERROR]),
         )
         .all()
     )
@@ -234,11 +220,7 @@ def create_permanent_integrations():
     NOTE: this is intentional to avoid importing integration_controller
     """
     integration_name = "files"
-    existing = (
-        db.session.query(db.Integration)
-        .filter_by(name=integration_name, company_id=None)
-        .first()
-    )
+    existing = db.session.query(db.Integration).filter_by(name=integration_name, company_id=None).first()
     if existing is None:
         integration_record = db.Integration(
             name=integration_name,
@@ -250,9 +232,7 @@ def create_permanent_integrations():
         try:
             db.session.commit()
         except Exception as e:
-            logger.error(
-                f"Failed to commit permanent integration {integration_name}: {e}"
-            )
+            logger.error(f"Failed to commit permanent integration {integration_name}: {e}")
             db.session.rollback()
 
 
@@ -278,9 +258,7 @@ def validate_default_project() -> None:
             func.lower(db.Project.name) == func.lower(new_default_project_name),
         ).first()
         if existing_project is None:
-            logger.critical(
-                f"A project with the name '{new_default_project_name}' does not exist"
-            )
+            logger.critical(f"A project with the name '{new_default_project_name}' does not exist")
             sys.exit(1)
 
         existing_project.metadata_ = {"is_default": True}
@@ -293,9 +271,7 @@ def validate_default_project() -> None:
             func.lower(db.Project.name) == func.lower(new_default_project_name),
         ).first()
         if existing_project is not None:
-            logger.critical(
-                f"A project with the name '{new_default_project_name}' already exists"
-            )
+            logger.critical(f"A project with the name '{new_default_project_name}' already exists")
             sys.exit(1)
         current_default_project.name = new_default_project_name
         db.session.commit()
@@ -317,9 +293,7 @@ def start_process(trunc_process_data: TrunkProcessData) -> None:
         )
         trunc_process_data.process.start()
     except Exception as e:
-        logger.error(
-            f"Failed to start {trunc_process_data.name} API with exception {e}\n{traceback.format_exc()}"
-        )
+        logger.error(f"Failed to start {trunc_process_data.name} API with exception {e}\n{traceback.format_exc()}")
         close_api_gracefully(trunc_processes_struct)
         raise e
 
@@ -329,8 +303,7 @@ if __name__ == "__main__":
     # warn if less than 1Gb of free RAM
     if psutil.virtual_memory().available < (1 << 30):
         logger.warning(
-            "The system is running low on memory. "
-            + "This may impact the stability and performance of the program."
+            "The system is running low on memory. " + "This may impact the stability and performance of the program."
         )
 
     ctx.set_default()
@@ -402,7 +375,7 @@ if __name__ == "__main__":
     apis = os.getenv("MINDSDB_APIS") or config.cmd_args.api
 
     if apis is None:  # If "--api" option is not specified, start the default APIs
-        api_arr = [TrunkProcessEnum.HTTP, TrunkProcessEnum.MYSQL]
+        api_arr = [TrunkProcessEnum.HTTP, TrunkProcessEnum.MYSQL, TrunkProcessEnum.MCP, TrunkProcessEnum.A2A]
     elif apis == "":  # If "--api=" (blank) is specified, don't start any APIs
         api_arr = []
     else:  # The user has provided a list of APIs to start
@@ -440,94 +413,86 @@ if __name__ == "__main__":
     mysql_api_config = config.get("api", {}).get("mysql", {})
     mcp_api_config = config.get("api", {}).get("mcp", {})
     litellm_api_config = config.get("api", {}).get("litellm", {})
-    a2a_api_config = config.get("a2a", {})
+    a2a_api_config = config.get("api", {}).get("a2a", {})
     trunc_processes_struct = {
         TrunkProcessEnum.HTTP: TrunkProcessData(
             name=TrunkProcessEnum.HTTP.value,
             entrypoint=start_http,
-            port=http_api_config['port'],
+            port=http_api_config["port"],
             args=(config.cmd_args.verbose, config.cmd_args.no_studio),
-            restart_on_failure=http_api_config.get('restart_on_failure', False),
-            max_restart_count=http_api_config.get('max_restart_count', TrunkProcessData.max_restart_count),
+            restart_on_failure=http_api_config.get("restart_on_failure", False),
+            max_restart_count=http_api_config.get("max_restart_count", TrunkProcessData.max_restart_count),
             max_restart_interval_seconds=http_api_config.get(
-                'max_restart_interval_seconds', TrunkProcessData.max_restart_interval_seconds
-            )
+                "max_restart_interval_seconds", TrunkProcessData.max_restart_interval_seconds
+            ),
         ),
         TrunkProcessEnum.MYSQL: TrunkProcessData(
             name=TrunkProcessEnum.MYSQL.value,
             entrypoint=start_mysql,
-            port=mysql_api_config['port'],
+            port=mysql_api_config["port"],
             args=(config.cmd_args.verbose,),
-            restart_on_failure=mysql_api_config.get('restart_on_failure', False),
-            max_restart_count=mysql_api_config.get('max_restart_count', TrunkProcessData.max_restart_count),
+            restart_on_failure=mysql_api_config.get("restart_on_failure", False),
+            max_restart_count=mysql_api_config.get("max_restart_count", TrunkProcessData.max_restart_count),
             max_restart_interval_seconds=mysql_api_config.get(
-                'max_restart_interval_seconds', TrunkProcessData.max_restart_interval_seconds
-            )
+                "max_restart_interval_seconds", TrunkProcessData.max_restart_interval_seconds
+            ),
         ),
         TrunkProcessEnum.MONGODB: TrunkProcessData(
             name=TrunkProcessEnum.MONGODB.value,
             entrypoint=start_mongo,
-            port=config['api']['mongodb']['port'],
-            args=(config.cmd_args.verbose,)
+            port=config["api"]["mongodb"]["port"],
+            args=(config.cmd_args.verbose,),
         ),
         TrunkProcessEnum.POSTGRES: TrunkProcessData(
             name=TrunkProcessEnum.POSTGRES.value,
             entrypoint=start_postgres,
-            port=config['api']['postgres']['port'],
-            args=(config.cmd_args.verbose,)
+            port=config["api"]["postgres"]["port"],
+            args=(config.cmd_args.verbose,),
         ),
         TrunkProcessEnum.JOBS: TrunkProcessData(
-            name=TrunkProcessEnum.JOBS.value,
-            entrypoint=start_scheduler,
-            args=(config.cmd_args.verbose,)
+            name=TrunkProcessEnum.JOBS.value, entrypoint=start_scheduler, args=(config.cmd_args.verbose,)
         ),
         TrunkProcessEnum.TASKS: TrunkProcessData(
-            name=TrunkProcessEnum.TASKS.value,
-            entrypoint=start_tasks,
-            args=(config.cmd_args.verbose,)
+            name=TrunkProcessEnum.TASKS.value, entrypoint=start_tasks, args=(config.cmd_args.verbose,)
         ),
         TrunkProcessEnum.ML_TASK_QUEUE: TrunkProcessData(
-            name=TrunkProcessEnum.ML_TASK_QUEUE.value,
-            entrypoint=start_ml_task_queue,
-            args=(config.cmd_args.verbose,)
+            name=TrunkProcessEnum.ML_TASK_QUEUE.value, entrypoint=start_ml_task_queue, args=(config.cmd_args.verbose,)
         ),
         TrunkProcessEnum.MCP: TrunkProcessData(
             name=TrunkProcessEnum.MCP.value,
             entrypoint=start_mcp,
-            port=mcp_api_config.get('port', 47337),
+            port=mcp_api_config.get("port", 47337),
             args=(config.cmd_args.verbose,),
-            need_to_run=mcp_api_config.get('need_to_run', False),
-            restart_on_failure=mcp_api_config.get('restart_on_failure', False),
-            max_restart_count=mcp_api_config.get('max_restart_count', TrunkProcessData.max_restart_count),
+            need_to_run=mcp_api_config.get("need_to_run", False),
+            restart_on_failure=mcp_api_config.get("restart_on_failure", False),
+            max_restart_count=mcp_api_config.get("max_restart_count", TrunkProcessData.max_restart_count),
             max_restart_interval_seconds=mcp_api_config.get(
-                'max_restart_interval_seconds', TrunkProcessData.max_restart_interval_seconds
-            )
+                "max_restart_interval_seconds", TrunkProcessData.max_restart_interval_seconds
+            ),
         ),
         TrunkProcessEnum.LITELLM: TrunkProcessData(
             name=TrunkProcessEnum.LITELLM.value,
             entrypoint=start_litellm,
-            port=litellm_api_config.get('port', 8000),
+            port=litellm_api_config.get("port", 8000),
             args=(config.cmd_args.verbose,),
-            restart_on_failure=litellm_api_config.get('restart_on_failure', False),
-            max_restart_count=litellm_api_config.get('max_restart_count', TrunkProcessData.max_restart_count),
+            restart_on_failure=litellm_api_config.get("restart_on_failure", False),
+            max_restart_count=litellm_api_config.get("max_restart_count", TrunkProcessData.max_restart_count),
             max_restart_interval_seconds=litellm_api_config.get(
-                'max_restart_interval_seconds', TrunkProcessData.max_restart_interval_seconds
-            )
+                "max_restart_interval_seconds", TrunkProcessData.max_restart_interval_seconds
+            ),
         ),
         TrunkProcessEnum.A2A: TrunkProcessData(
             name=TrunkProcessEnum.A2A.value,
             entrypoint=start_a2a,
-            port=a2a_api_config.get('port', 8001),
+            port=a2a_api_config.get("port", 8001),
             args=(config.cmd_args.verbose,),
-            need_to_run=a2a_api_config.get('enabled', False),
-            restart_on_failure=a2a_api_config.get('restart_on_failure', True),
-            max_restart_count=a2a_api_config.get(
-                'max_restart_count', TrunkProcessData.max_restart_count
-            ),
+            need_to_run=a2a_api_config.get("enabled", False),
+            restart_on_failure=a2a_api_config.get("restart_on_failure", True),
+            max_restart_count=a2a_api_config.get("max_restart_count", TrunkProcessData.max_restart_count),
             max_restart_interval_seconds=a2a_api_config.get(
-                'max_restart_interval_seconds', TrunkProcessData.max_restart_interval_seconds
-            )
-        )
+                "max_restart_interval_seconds", TrunkProcessData.max_restart_interval_seconds
+            ),
+        ),
     }
 
     for api_enum in api_arr:
@@ -546,10 +511,7 @@ if __name__ == "__main__":
         trunc_processes_struct[TrunkProcessEnum.ML_TASK_QUEUE].need_to_run = True
 
     for trunc_process_data in trunc_processes_struct.values():
-        if (
-            trunc_process_data.started is True
-            or trunc_process_data.need_to_run is False
-        ):
+        if trunc_process_data.started is True or trunc_process_data.need_to_run is False:
             continue
         start_process(trunc_process_data)
 
@@ -572,8 +534,7 @@ if __name__ == "__main__":
                 trunc_process_data.port,
             )
             for trunc_process_data in trunc_processes_struct.values()
-            if trunc_process_data.port is not None
-            and trunc_process_data.need_to_run is True
+            if trunc_process_data.port is not None and trunc_process_data.need_to_run is True
         ]
         for future in asyncio.as_completed(futures):
             api_name, port, started = await future
@@ -596,9 +557,7 @@ if __name__ == "__main__":
             finally:
                 if trunc_process_data.should_restart:
                     if trunc_process_data.request_restart_attempt():
-                        logger.warning(
-                            f"{trunc_process_data.name} API: stopped unexpectedly, restarting"
-                        )
+                        logger.warning(f"{trunc_process_data.name} API: stopped unexpectedly, restarting")
                         trunc_process_data.process = None
                         if trunc_process_data.name == TrunkProcessEnum.HTTP.value:
                             # do not open GUI on HTTP API restart

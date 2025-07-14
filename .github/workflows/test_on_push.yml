@@ -18,9 +18,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
-env:
-  UV_PYTHON_PREFERENCE: "only-system"
-
 jobs:
   # Sets an output var to indicate if all changes are in docs files
   # This output is used to skip running code checks on docs changes
@@ -152,6 +149,7 @@ jobs:
         with:
           enable-cache: true
           python-version: ${{ matrix.python-version }}
+          version: "0.7.19"
       - name: Install dependencies
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |

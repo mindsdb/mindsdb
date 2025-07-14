@@ -191,5 +191,4 @@ jobs:
       - name: Run unit tests
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
-          which python
           make unit_tests_slow

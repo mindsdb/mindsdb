@@ -84,7 +84,7 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     TYPES,
 )
 
-from .exceptions import (
+from mindsdb.api.executor.exceptions import (
     ExecutorException,
     BadDbError,
     NotSupportedYet,
@@ -1428,6 +1428,9 @@ class ExecuteCommands:
                 provider=provider,
                 params=statement.params,
             )
+        except EntityExistsError as e:
+            if statement.if_not_exists is not True:
+                raise ExecutorException(str(e))
         except ValueError as e:
             # Project does not exist or agent already exists.
             raise ExecutorException(str(e))
@@ -1556,9 +1559,9 @@ class ExecuteCommands:
         if is_full:
             targets.extend(
                 [
-                    Constant("COLLATION", alias=Identifier("Collation")),
-                    Constant("PRIVILEGES", alias=Identifier("Privileges")),
-                    Constant("COMMENT", alias=Identifier("Comment")),
+                    Constant(None, alias=Identifier("Collation")),
+                    Constant("select", alias=Identifier("Privileges")),
+                    Constant(None, alias=Identifier("Comment")),
                 ]
             )
         new_statement = Select(

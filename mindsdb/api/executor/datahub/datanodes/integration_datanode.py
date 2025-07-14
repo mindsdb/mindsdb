@@ -1,6 +1,5 @@
 import time
 import inspect
-from textwrap import dedent
 from dataclasses import astuple
 from typing import Iterable, List
 
@@ -21,6 +20,7 @@ from mindsdb.integrations.utilities.utils import get_class_name
 from mindsdb.metrics import metrics
 from mindsdb.utilities import log
 from mindsdb.utilities.profiler import profiler
+from mindsdb.utilities.exception import format_db_error_message
 from mindsdb.api.executor.datahub.datanodes.system_tables import infer_mysql_type
 
 logger = log.getLogger(__name__)
@@ -164,7 +164,11 @@ class IntegrationDataNode(DataNode):
             df = result_set.to_df()
 
             result: HandlerResponse = self.integration_handler.insert(table_name.parts[-1], df)
-            return DataHubResponse(affected_rows=result.affected_rows)
+            if result is not None:
+                affected_rows = result.affected_rows
+            else:
+                affected_rows = None
+            return DataHubResponse(affected_rows=affected_rows)
 
         insert_columns = [Identifier(parts=[x.alias]) for x in result_set.columns]
 
@@ -244,18 +248,16 @@ class IntegrationDataNode(DataNode):
             failed_sql_query = native_query
             if query is not None:
                 failed_sql_query = query.to_string()
+
             raise Exception(
-                dedent(f"""\
-                Failed to execute external database query during query processing.
-                
-                Database Details:
-                - Name: {self.integration_handler.name}
-                - Type: {self.integration_handler.__class__.name}
-                
-                Error: {result.error_message}
-                Failed Query: {failed_sql_query}
-            """)
+                format_db_error_message(
+                    db_name=self.integration_handler.name,
+                    db_type=self.integration_handler.__class__.name,
+                    db_error_msg=result.error_message,
+                    failed_query=failed_sql_query,
+                )
             )
+
         if result.type == RESPONSE_TYPE.OK:
             return DataHubResponse(affected_rows=result.affected_rows)
 

@@ -151,15 +151,18 @@ Please give a short succinct context to situate this chunk within the overall do
     def _prepare_prompts(self, chunk_contents: list[str], full_documents: list[str]) -> list[str]:
         def tag_replacer(match):
             tag = match.group(0)
-            if tag.lower() not in ['<document>', '</document>', '<chunk>', '</chunk>']:
+            if tag.lower() not in ["<document>", "</document>", "<chunk>", "</chunk>"]:
                 return tag
             return html.escape(tag)
+
         tag_pattern = r"</?document>|</?chunk>"
         prompts = []
         for chunk_content, full_document in zip(chunk_contents, full_documents):
             chunk_content = re.sub(tag_pattern, tag_replacer, chunk_content, flags=re.IGNORECASE)
             full_document = re.sub(tag_pattern, tag_replacer, full_document, flags=re.IGNORECASE)
-            prompts.append(self.DEFAULT_CONTEXT_TEMPLATE.format(WHOLE_DOCUMENT=full_document, CHUNK_CONTENT=chunk_content))
+            prompts.append(
+                self.DEFAULT_CONTEXT_TEMPLATE.format(WHOLE_DOCUMENT=full_document, CHUNK_CONTENT=chunk_content)
+            )
 
         return prompts
 

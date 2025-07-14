@@ -1,5 +1,8 @@
 name: Build and deploy release
 
+permissions:
+  contents: read
+
 on:
   release:
     types: [published]
@@ -113,6 +116,17 @@ jobs:
           push-cache: true
           cache-only: true
 
+  # Call our deployment workflow
+  # deploy:
+  #   name: Deploy to Prod
+  #   needs: [build]
+  #   uses: ./.github/workflows/deploy.yml
+  #   with:
+  #     deploy-envs: '["prod"]'
+  #     image-tag: ${{ github.event.release.tag_name }}
+  #     prod: true
+  #   secrets: inherit
+    
   # Trigger private repo to deploy the docker desktop extension
   trigger_dd_extension_release:
     name: Deploy Docker Desktop Extension
@@ -134,52 +148,65 @@ jobs:
           workflow_file_name: bump-mindsdb-version.yml
           ref: main
           client_payload: '{"image-tag": "${{ env.CI_REF_NAME }}"}'
+  
+  # Run integration tests
+  # TODO: Run these against the deployed environment
+  # run_tests:
+  #   name: Run Integration Tests
+  #   needs: [deploy]
+  #   concurrency:
+  #     group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-tests
+  #     cancel-in-progress: true
+  #   uses: ./.github/workflows/test_on_deploy.yml
+  #   with:
+  #     deploy-env: prod
+  #   secrets: inherit
 
-  slack_message:
-    if: always()
-    name: Notify Slack
-    needs: [run_tests]
-    runs-on: mdb-dev
-    steps:
-      - name: Notify of failing tests
-        if: ${{ needs.run_tests.result != 'success' && needs.run_tests.result != 'cancelled' }}
-        uses: slackapi/slack-github-action@v1.26.0
-        with:
-          channel-id: ${{ secrets.SLACK_ENG_CHANNEL_ID }}
-          payload: |
-            {
-              "attachments": [
-                {
-                  "color": "#FF4444",
-                  "blocks": [
-                    {
-                      "type": "header",
-                      "text": {
-                        "type": "plain_text",
-                        "text": "TEST RUN FAILED ON RELEASE",
-                        "emoji": true
-                      }
-                    },
-                    {
-                      "type": "section",
-                      "text": {
-                        "type": "mrkdwn",
-                        "text": " "
-                      },
-                      "fields": [
-                        {
-                          "type": "mrkdwn",
-                          "text": "*Commit*\n<${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>"
-                        },
-                        {
-                          "type": "mrkdwn",
-                          "text": "*Workflow Run*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>"
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
-            }
-        env:
-          SLACK_BOT_TOKEN: ${{ secrets.GH_ACTIONS_SLACK_BOT_TOKEN }}
+  # slack_message:
+  #   if: failure() && !cancelled()
+  #   name: Notify Slack
+  #   # Every previous job needs to be in here, because failure() will only return true if the job that failed is in 'needs'
+  #   needs: [check-version, deploy_to_pypi, build, build-cache, deploy, trigger_dd_extension_release, run_tests]
+  #   runs-on: mdb-dev
+  #   steps:
+  #     - name: Notify of failing tests
+  #       uses: slackapi/slack-github-action@v1.26.0
+  #       with:
+  #         channel-id: ${{ secrets.SLACK_ENG_CHANNEL_ID }}
+  #         payload: |
+  #           {
+  #             "attachments": [
+  #               {
+  #                 "color": "#FF4444",
+  #                 "blocks": [
+  #                   {
+  #                     "type": "header",
+  #                     "text": {
+  #                       "type": "plain_text",
+  #                       "text": "TEST RUN FAILED ON RELEASE",
+  #                       "emoji": true
+  #                     }
+  #                   },
+  #                   {
+  #                     "type": "section",
+  #                     "text": {
+  #                       "type": "mrkdwn",
+  #                       "text": " "
+  #                     },
+  #                     "fields": [
+  #                       {
+  #                         "type": "mrkdwn",
+  #                         "text": "*Commit*\n<${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>"
+  #                       },
+  #                       {
+  #                         "type": "mrkdwn",
+  #                         "text": "*Workflow Run*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>"
+  #                       }
+  #                     ]
+  #                   }
+  #                 ]
+  #               }
+  #             ]
+  #           }
+  #       env:
+  #         SLACK_BOT_TOKEN: ${{ secrets.GH_ACTIONS_SLACK_BOT_TOKEN }}

@@ -1,6 +1,7 @@
-import json
+import struct
 import datetime
 from typing import Any
+from array import array
 
 import numpy as np
 from numpy import dtype as np_dtype
@@ -9,10 +10,18 @@ from pandas.api import types as pd_types
 
 from mindsdb.api.executor.sql_query.result_set import ResultSet, get_mysql_data_type_from_series, Column
 from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype as lightwood_dtype
-from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE, DATA_C_TYPE_MAP, CTypeProperties
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
+    MYSQL_DATA_TYPE,
+    DATA_C_TYPE_MAP,
+    CTypeProperties,
+    CHARSET_NUMBERS,
+)
 from mindsdb.utilities import log
+from mindsdb.utilities.json_encoder import CustomJSONEncoder
 
 logger = log.getLogger(__name__)
+
+json_encoder = CustomJSONEncoder()
 
 
 def column_to_mysql_column_dict(column: Column, database_name: str | None = None) -> dict[str, str | int]:
@@ -52,8 +61,12 @@ def column_to_mysql_column_dict(column: Column, database_name: str | None = None
     # endregion
 
     if isinstance(column.type, MYSQL_DATA_TYPE) is False:
-        logger.warning(f'Unexpected column type: {column.type}. Use TEXT as fallback.')
+        logger.warning(f"Unexpected column type: {column.type}. Use TEXT as fallback.")
         column.type = MYSQL_DATA_TYPE.TEXT
+
+    charset = CHARSET_NUMBERS["utf8_unicode_ci"]
+    if column.type in (MYSQL_DATA_TYPE.JSON, MYSQL_DATA_TYPE.VECTOR):
+        charset = CHARSET_NUMBERS["binary"]
 
     type_properties: CTypeProperties = DATA_C_TYPE_MAP[column.type]
 
@@ -66,6 +79,7 @@ def column_to_mysql_column_dict(column: Column, database_name: str | None = None
         "size": type_properties.size,
         "flags": type_properties.flags,
         "type": type_properties.code,
+        "charset": charset,
     }
     return result
 
@@ -82,7 +96,7 @@ def _dump_bool(var: Any) -> int | None:
     """
     if pd.isna(var):
         return None
-    return '1' if var else '0'
+    return "1" if var else "0"
 
 
 def _dump_str(var: Any) -> str | None:
@@ -94,18 +108,19 @@ def _dump_str(var: Any) -> str | None:
     Returns:
         str | None: The string representation of the value or None if the value is None
     """
-    if pd.isna(var):
-        return None
     if isinstance(var, bytes):
         try:
-            return var.decode('utf-8')
+            return var.decode("utf-8")
         except Exception:
             return str(var)[2:-1]
-    if isinstance(var, dict):
+    if isinstance(var, (dict, list)):
         try:
-            return json.dumps(var)
+            return json_encoder.encode(var)
         except Exception:
             return str(var)
+    if isinstance(var, list) is False and pd.isna(var):
+        # pd.isna returns array of bools for list, so we need to check if it is not a list
+        return None
     return str(var)
 
 
@@ -142,7 +157,7 @@ def _dump_date(var: datetime.date | str | None) -> str | None:
         return var
     elif pd.isna(var):
         return None
-    logger.warning(f'Unexpected value type for DATE: {type(var)}, {var}')
+    logger.warning(f"Unexpected value type for DATE: {type(var)}, {var}")
     return _dump_str(var)
 
 
@@ -157,18 +172,18 @@ def _dump_datetime(var: datetime.datetime | str | None) -> str | None:
         str | None: The string representation of the datetime value or None if the value is None
     """
     if isinstance(var, datetime.date):  # it is also datetime.datetime
-        if hasattr(var, 'tzinfo') and var.tzinfo is not None:
+        if hasattr(var, "tzinfo") and var.tzinfo is not None:
             return var.astimezone(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
         return var.strftime("%Y-%m-%d %H:%M:%S")
     elif isinstance(var, pd.Timestamp):
         if var.tzinfo is not None:
-            return var.tz_convert('UTC').strftime("%Y-%m-%d %H:%M:%S")
+            return var.tz_convert("UTC").strftime("%Y-%m-%d %H:%M:%S")
         return var.strftime("%Y-%m-%d %H:%M:%S")
     elif isinstance(var, str):
         return var
     elif pd.isna(var):
         return None
-    logger.warning(f'Unexpected value type for DATETIME: {type(var)}, {var}')
+    logger.warning(f"Unexpected value type for DATETIME: {type(var)}, {var}")
     return _dump_str(var)
 
 
@@ -198,14 +213,32 @@ def _dump_time(var: datetime.time | str | None) -> str | None:
         return var.strftime("%H:%M:%S")
     elif isinstance(var, pd.Timestamp):
         if var.tzinfo is not None:
-            return var.tz_convert('UTC').strftime("%H:%M:%S")
+            return var.tz_convert("UTC").strftime("%H:%M:%S")
         return var.strftime("%H:%M:%S")
     elif isinstance(var, str):
         return var
     elif pd.isna(var):
         return None
-    logger.warning(f'Unexpected value type for TIME: {type(var)}, {var}')
+    logger.warning(f"Unexpected value type for TIME: {type(var)}, {var}")
     return _dump_str(var)
+
+
+def _dump_vector(value: Any) -> bytes | None:
+    """Convert array or list of floats to a bytes.
+
+    Args:
+        value (Any): The value to dump
+
+    Returns:
+        bytes | None: The bytes representation of the vector value or None if the value is None
+    """
+    if isinstance(value, (array, list, np.ndarray)):
+        return b"".join([struct.pack("<f", el) for el in value])
+    elif pd.isna(value):
+        return None
+    err_msg = f"Unexpected value type for VECTOR: {type(value)}, {value}"
+    logger.error(err_msg)
+    raise ValueError(err_msg)
 
 
 def _handle_series_as_date(series: pd.Series) -> pd.Series:
@@ -219,10 +252,10 @@ def _handle_series_as_date(series: pd.Series) -> pd.Series:
         pd.Series: The series with the date values as strings
     """
     if pd_types.is_datetime64_any_dtype(series.dtype):
-        return series.dt.strftime('%Y-%m-%d')
+        return series.dt.strftime("%Y-%m-%d")
     elif pd_types.is_object_dtype(series.dtype):
         return series.apply(_dump_date)
-    logger.info(f'Unexpected dtype: {series.dtype} for column with type DATE')
+    logger.info(f"Unexpected dtype: {series.dtype} for column with type DATE")
     return series.apply(_dump_str)
 
 
@@ -237,10 +270,10 @@ def _handle_series_as_datetime(series: pd.Series) -> pd.Series:
         pd.Series: The series with the datetime values as strings
     """
     if pd_types.is_datetime64_any_dtype(series.dtype):
-        return series.dt.strftime('%Y-%m-%d %H:%M:%S')
+        return series.dt.strftime("%Y-%m-%d %H:%M:%S")
     elif pd_types.is_object_dtype(series.dtype):
         return series.apply(_dump_datetime)
-    logger.info(f'Unexpected dtype: {series.dtype} for column with type DATETIME')
+    logger.info(f"Unexpected dtype: {series.dtype} for column with type DATETIME")
     return series.apply(_dump_str)
 
 
@@ -255,14 +288,14 @@ def _handle_series_as_time(series: pd.Series) -> pd.Series:
         pd.Series: The series with the time values as strings
     """
     if pd_types.is_timedelta64_ns_dtype(series.dtype):
-        base_time = pd.Timestamp('2000-01-01')
-        series = ((base_time + series).dt.strftime('%H:%M:%S'))
+        base_time = pd.Timestamp("2000-01-01")
+        series = (base_time + series).dt.strftime("%H:%M:%S")
     elif pd_types.is_datetime64_dtype(series.dtype):
-        series = series.dt.strftime('%H:%M:%S')
+        series = series.dt.strftime("%H:%M:%S")
     elif pd_types.is_object_dtype(series.dtype):
         series = series.apply(_dump_time)
     else:
-        logger.info(f'Unexpected dtype: {series.dtype} for column with type TIME')
+        logger.info(f"Unexpected dtype: {series.dtype} for column with type TIME")
         series = series.apply(_dump_str)
     return series
 
@@ -278,14 +311,29 @@ def _handle_series_as_int(series: pd.Series) -> pd.Series:
         pd.Series: The series with the int values as strings
     """
     if pd_types.is_integer_dtype(series.dtype):
-        if series.dtype == 'Int64':
+        if series.dtype == "Int64":
             # NOTE: 'apply' converts values to python floats
             return series.astype(object).apply(_dump_str)
         return series.apply(_dump_str)
     return series.apply(_dump_int_or_str)
 
 
-def dump_result_set_to_mysql(result_set: ResultSet, infer_column_size: bool = False) -> tuple[pd.DataFrame, list[dict[str, str | int]]]:
+def _handle_series_as_vector(series: pd.Series) -> pd.Series:
+    """Convert values in a series to a bytes representation of a vector.
+    NOTE: MySQL's VECTOR type require exactly 4 bytes per float.
+
+    Args:
+        series (pd.Series): The series to handle
+
+    Returns:
+        pd.Series: The series with the vector values as bytes
+    """
+    return series.apply(_dump_vector)
+
+
+def dump_result_set_to_mysql(
+    result_set: ResultSet, infer_column_size: bool = False
+) -> tuple[pd.DataFrame, list[dict[str, str | int]]]:
     """
     Dumps the ResultSet to a format that can be used to send as MySQL response packet.
     NOTE: This method modifies the original DataFrame and columns.
@@ -319,10 +367,16 @@ def dump_result_set_to_mysql(result_set: ResultSet, infer_column_size: bool = Fa
             case MYSQL_DATA_TYPE.TIME:
                 series = _handle_series_as_time(series)
             case (
-                MYSQL_DATA_TYPE.INT | MYSQL_DATA_TYPE.TINYINT | MYSQL_DATA_TYPE.SMALLINT
-                | MYSQL_DATA_TYPE.MEDIUMINT | MYSQL_DATA_TYPE.BIGINT | MYSQL_DATA_TYPE.YEAR
+                MYSQL_DATA_TYPE.INT
+                | MYSQL_DATA_TYPE.TINYINT
+                | MYSQL_DATA_TYPE.SMALLINT
+                | MYSQL_DATA_TYPE.MEDIUMINT
+                | MYSQL_DATA_TYPE.BIGINT
+                | MYSQL_DATA_TYPE.YEAR
             ):
                 series = _handle_series_as_int(series)
+            case MYSQL_DATA_TYPE.VECTOR:
+                series = _handle_series_as_vector(series)
             case _:
                 series = series.apply(_dump_str)
 
@@ -330,22 +384,19 @@ def dump_result_set_to_mysql(result_set: ResultSet, infer_column_size: bool = Fa
         # we may split this operation for dt and other types for optimisation
         df[i] = series.replace([np.NaN, pd.NA, pd.NaT], None)
 
-    columns_dicts = [
-        column_to_mysql_column_dict(column)
-        for column in result_set.columns
-    ]
+    columns_dicts = [column_to_mysql_column_dict(column) for column in result_set.columns]
 
-    if infer_column_size and any(column_info.get('size') is None for column_info in columns_dicts):
+    if infer_column_size and any(column_info.get("size") is None for column_info in columns_dicts):
         if len(df) == 0:
             for column_info in columns_dicts:
-                if column_info['size'] is None:
-                    column_info['size'] = 1
+                if column_info["size"] is None:
+                    column_info["size"] = 1
         else:
             sample = df.head(100)
             for i, column_info in enumerate(columns_dicts):
                 try:
-                    column_info['size'] = sample[sample.columns[i]].astype(str).str.len().max()
+                    column_info["size"] = sample[sample.columns[i]].astype(str).str.len().max()
                 except Exception:
-                    column_info['size'] = 1
+                    column_info["size"] = 1
 
     return df, columns_dicts

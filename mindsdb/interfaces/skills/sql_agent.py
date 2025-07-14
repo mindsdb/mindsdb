@@ -3,7 +3,9 @@ import csv
 import inspect
 import traceback
 from io import StringIO
-from typing import Iterable, List, Optional, Any
+from typing import Iterable, List, Optional, Any, Tuple
+from collections import defaultdict
+import fnmatch
 
 import pandas as pd
 from mindsdb_sql_parser import parse_sql
@@ -75,10 +77,82 @@ def split_table_name(table_name: str) -> List[str]:
     if current:
         result.append(current.strip("`"))
 
-    # ensure we split the table name
-    result = [r.split(".") for r in result][0]
-
     return result
+
+
+class TablesCollection:
+    """
+    Collection of identifiers.
+    Supports wildcard in tables name.
+    """
+
+    def __init__(self, items: List[Identifier | str] = None, default_db=None):
+        if items is None:
+            items = []
+
+        self.items = items
+        self._dbs = defaultdict(set)
+        self._schemas = defaultdict(dict)
+        self._no_db_tables = set()
+        self.has_wildcard = False
+        self.databases = set()
+        self._default_db = default_db
+
+        for name in items:
+            if not isinstance(name, Identifier):
+                name = Identifier(name)
+            db, schema, tbl = self._get_paths(name)
+            if db is None:
+                self._no_db_tables.add(tbl)
+            elif schema is None:
+                self._dbs[db].add(tbl)
+            else:
+                if schema not in self._schemas[db]:
+                    self._schemas[db][schema] = set()
+                self._schemas[db][schema].add(tbl)
+
+            if "*" in tbl:
+                self.has_wildcard = True
+            self.databases.add(db)
+
+    def _get_paths(self, table: Identifier) -> Tuple:
+        # split identifier to db, schema, table name
+        schema = None
+        db = None
+
+        match [x.lower() for x in table.parts]:
+            case [tbl]:
+                pass
+            case [db, tbl]:
+                pass
+            case [db, schema, tbl]:
+                pass
+            case _:
+                raise NotImplementedError
+        return db, schema, tbl.lower()
+
+    def match(self, table: Identifier) -> bool:
+        # Check if input table matches to tables in collection
+
+        db, schema, tbl = self._get_paths(table)
+        if db is None:
+            if tbl in self._no_db_tables:
+                return True
+            if self._default_db is not None:
+                return self.match(Identifier(parts=[self._default_db, tbl]))
+
+        if schema is not None:
+            if any([fnmatch.fnmatch(tbl, pattern) for pattern in self._schemas[db].get(schema, [])]):
+                return True
+
+        # table might be specified without schema
+        return any([fnmatch.fnmatch(tbl, pattern) for pattern in self._dbs[db]])
+
+    def __bool__(self):
+        return len(self.items) > 0
+
+    def __repr__(self):
+        return f"Tables({self.items})"
 
 
 class SQLAgent:
@@ -117,21 +191,23 @@ class SQLAgent:
         self._command_executor = command_executor
         self._mindsdb_db_struct = databases_struct
         self.knowledge_base_database = knowledge_base_database  # This is a project name, not a database connection
+        self._databases = databases
         self._sample_rows_in_table_info = int(sample_rows_in_table_info)
 
-        self._tables_to_include = include_tables
-        self._tables_to_ignore = []
-        self._knowledge_bases_to_include = include_knowledge_bases
-        self._knowledge_bases_to_ignore = []
-        self._databases = databases
-        if not self._tables_to_include:
+        self._tables_to_include = TablesCollection(include_tables)
+        if self._tables_to_include:
             # ignore_tables and include_tables should not be used together.
             # include_tables takes priority if it's set.
-            self._tables_to_ignore = ignore_tables or []
-        if not self._knowledge_bases_to_include:
+            ignore_tables = []
+        self._tables_to_ignore = TablesCollection(ignore_tables)
+
+        self._knowledge_bases_to_include = TablesCollection(include_knowledge_bases, default_db=knowledge_base_database)
+        if self._knowledge_bases_to_include:
             # ignore_knowledge_bases and include_knowledge_bases should not be used together.
             # include_knowledge_bases takes priority if it's set.
-            self._knowledge_bases_to_ignore = ignore_knowledge_bases or []
+            ignore_knowledge_bases = []
+        self._knowledge_bases_to_ignore = TablesCollection(ignore_knowledge_bases, default_db=knowledge_base_database)
+
         self._cache = cache
 
         from mindsdb.interfaces.skills.skill_tool import SkillToolController
@@ -159,45 +235,53 @@ class SQLAgent:
         if not isinstance(ast_query, (Select, Show, Describe, Explain)):
             raise ValueError(f"Query is not allowed: {ast_query.to_string()}")
 
+        kb_names = self.get_all_knowledge_base_names()
+
         # Check tables
         if self._tables_to_include:
-            tables_parts = [split_table_name(x) for x in self._tables_to_include]
-            no_schema_parts = []
-            for t in tables_parts:
-                if len(t) == 3:
-                    no_schema_parts.append([t[0], t[2]])
-            tables_parts += no_schema_parts
 
             def _check_f(node, is_table=None, **kwargs):
                 if is_table and isinstance(node, Identifier):
                     table_name = ".".join(node.parts)
 
-                    # Get the list of available knowledge bases
-                    kb_names = self.get_usable_knowledge_base_names()
-
                     # Check if this table is a knowledge base
-                    is_kb = table_name in kb_names
-
-                    # If it's a knowledge base and we have knowledge base restrictions
-                    if is_kb and self._knowledge_bases_to_include:
-                        kb_parts = [split_table_name(x) for x in self._knowledge_bases_to_include]
-                        if node.parts not in kb_parts:
-                            raise ValueError(
-                                f"Knowledge base {table_name} not found. Available knowledge bases: {', '.join(self._knowledge_bases_to_include)}"
-                            )
-                    # Regular table check
-                    elif not is_kb and self._tables_to_include and node.parts not in tables_parts:
-                        raise ValueError(
-                            f"Table {table_name} not found. Available tables: {', '.join(self._tables_to_include)}"
-                        )
-                    # Check if it's a restricted knowledge base
-                    elif is_kb and table_name in self._knowledge_bases_to_ignore:
-                        raise ValueError(f"Knowledge base {table_name} is not allowed.")
-                    # Check if it's a restricted table
-                    elif not is_kb and table_name in self._tables_to_ignore:
-                        raise ValueError(f"Table {table_name} is not allowed.")
+                    if table_name in kb_names or node.parts[-1] in kb_names:
+                        # If it's a knowledge base and we have knowledge base restrictions
+                        self.check_knowledge_base_permission(node)
+                    else:
+                        try:
+                            # Regular table check
+                            self.check_table_permission(node)
+                        except ValueError as origin_exc:
+                            # was it badly quoted by llm?
+                            if len(node.parts) == 1 and node.is_quoted[0] and "." in node.parts[0]:
+                                node2 = Identifier(node.parts[0])
+                                try:
+                                    _check_f(node2, is_table=True)
+                                    return node2
+                                except ValueError:
+                                    ...
+                            raise origin_exc
 
             query_traversal(ast_query, _check_f)
+
+    def check_knowledge_base_permission(self, node):
+        if self._knowledge_bases_to_include and not self._knowledge_bases_to_include.match(node):
+            raise ValueError(
+                f"Knowledge base {str(node)} not found. Available knowledge bases: {', '.join(self._knowledge_bases_to_include.items)}"
+            )
+        # Check if it's a restricted knowledge base
+        if self._knowledge_bases_to_ignore and self._knowledge_bases_to_ignore.match(node):
+            raise ValueError(f"Knowledge base {str(node)} is not allowed.")
+
+    def check_table_permission(self, node):
+        if self._tables_to_include and not self._tables_to_include.match(node):
+            raise ValueError(
+                f"Table {str(node)} not found. Available tables: {', '.join(self._tables_to_include.items)}"
+            )
+        # Check if it's a restricted table
+        if self._tables_to_ignore and self._tables_to_ignore.match(node):
+            raise ValueError(f"Table {str(node)} is not allowed.")
 
     def get_usable_table_names(self) -> Iterable[str]:
         """Get a list of tables that the agent has access to.
@@ -213,50 +297,35 @@ class SQLAgent:
             if cached_tables:
                 return cached_tables
 
-        if self._tables_to_include:
-            return self._tables_to_include
+        if not self._tables_to_include:
+            # no tables allowed
+            return []
+        if not self._tables_to_include.has_wildcard:
+            return self._tables_to_include.items
 
         result_tables = []
 
-        for db_name in self._mindsdb_db_struct:
+        for db_name in self._tables_to_include.databases:
             handler = self._command_executor.session.integration_controller.get_data_handler(db_name)
 
-            schemas_names = list(self._mindsdb_db_struct[db_name].keys())
-            if len(schemas_names) > 1 and None in schemas_names:
-                raise Exception("default schema and named schemas can not be used in same filter")
-
-            if None in schemas_names:
-                # get tables only from default schema
-                response = handler.get_tables()
-                tables_in_default_schema = list(response.data_frame.table_name)
-                schema_tables_restrictions = self._mindsdb_db_struct[db_name][None]  # None - is default schema
-                if schema_tables_restrictions is None:
-                    for table_name in tables_in_default_schema:
-                        result_tables.append([db_name, table_name])
-                else:
-                    for table_name in schema_tables_restrictions:
-                        if table_name in tables_in_default_schema:
-                            result_tables.append([db_name, table_name])
+            if "all" in inspect.signature(handler.get_tables).parameters:
+                response = handler.get_tables(all=True)
             else:
-                if "all" in inspect.signature(handler.get_tables).parameters:
-                    response = handler.get_tables(all=True)
-                else:
-                    response = handler.get_tables()
-                response_schema_names = list(response.data_frame.table_schema.unique())
-                schemas_intersection = set(schemas_names) & set(response_schema_names)
-                if len(schemas_intersection) == 0:
-                    raise Exception("There are no allowed schemas in ds")
+                response = handler.get_tables()
+            df = response.data_frame
+            col_name = "table_name"
+            if col_name not in df.columns:
+                # get first column if not found
+                col_name = df.columns[0]
 
-                for schema_name in schemas_intersection:
-                    schema_sub_df = response.data_frame[response.data_frame["table_schema"] == schema_name]
-                    if self._mindsdb_db_struct[db_name][schema_name] is None:
-                        # all tables from schema allowed
-                        for row in schema_sub_df:
-                            result_tables.append([db_name, schema_name, row["table_name"]])
-                    else:
-                        for table_name in self._mindsdb_db_struct[db_name][schema_name]:
-                            if table_name in schema_sub_df["table_name"].values:
-                                result_tables.append([db_name, schema_name, table_name])
+            for _, row in df.iterrows():
+                if "table_schema" in row:
+                    parts = [db_name, row["table_schema"], row[col_name]]
+                else:
+                    parts = [db_name, row[col_name]]
+                if self._tables_to_include.match(Identifier(parts=parts)):
+                    if not self._tables_to_ignore.match(Identifier(parts=parts)):
+                        result_tables.append(parts)
 
         result_tables = [".".join(x) for x in result_tables]
         if self._cache:
@@ -269,7 +338,28 @@ class SQLAgent:
         Returns:
             Iterable[str]: list with knowledge base names
         """
-        cache_key = f"{ctx.company_id}_{self.knowledge_base_database}_knowledge_bases"
+
+        if not self._knowledge_bases_to_include and not self._knowledge_bases_to_ignore:
+            # white or black list have to be set
+            return []
+
+        # Filter knowledge bases based on ignore list
+        kb_names = []
+        for kb_name in self.get_all_knowledge_base_names():
+            kb = Identifier(parts=[self.knowledge_base_database, kb_name])
+            if self._knowledge_bases_to_include and not self._knowledge_bases_to_include.match(kb):
+                continue
+            if not self._knowledge_bases_to_ignore.match(kb):
+                kb_names.append(kb_name)
+        return kb_names
+
+    def get_all_knowledge_base_names(self) -> Iterable[str]:
+        """Get a list of all knowledge bases
+
+        Returns:
+            Iterable[str]: list with knowledge base names
+        """
+        # cache_key = f"{ctx.company_id}_{self.knowledge_base_database}_knowledge_bases"
 
         # todo we need to fix the cache, file cache can potentially store out of data information
         # # first check cache and return if found
@@ -278,58 +368,18 @@ class SQLAgent:
         #     if cached_kbs:
         #        return cached_kbs
 
-        if self._knowledge_bases_to_include:
-            return self._knowledge_bases_to_include
-
         try:
             # Query to get all knowledge bases
-            query = f"SHOW KNOWLEDGE_BASES FROM {self.knowledge_base_database};"
-            try:
-                result = self._call_engine(query, database=self.knowledge_base_database)
-            except Exception as e:
-                # If the direct query fails, try a different approach
-                # This handles the case where knowledge_base_database is not a valid integration
-                logger.warning(f"Error querying knowledge bases from {self.knowledge_base_database}: {str(e)}")
-                # Try to get knowledge bases directly from the project database
-                try:
-                    # Get knowledge bases from the project database
-                    kb_controller = self._command_executor.session.kb_controller
-                    kb_names = [kb["name"] for kb in kb_controller.list()]
-
-                    # Filter knowledge bases based on include list
-                    if self._knowledge_bases_to_include:
-                        kb_names = [kb_name for kb_name in kb_names if kb_name in self._knowledge_bases_to_include]
-                        if not kb_names:
-                            logger.warning(
-                                f"No knowledge bases found in the include list: {self._knowledge_bases_to_include}"
-                            )
-                            return []
-
-                        return kb_names
-
-                    # Filter knowledge bases based on ignore list
-                    kb_names = [kb_name for kb_name in kb_names if kb_name not in self._knowledge_bases_to_ignore]
-
-                    if self._cache:
-                        self._cache.set(cache_key, set(kb_names))
-
-                    return kb_names
-                except Exception as inner_e:
-                    logger.error(f"Error getting knowledge bases from kb_controller: {str(inner_e)}")
-                    return []
-
-            if not result:
-                return []
+            ast_query = Show(category="Knowledge Bases")
+            result = self._command_executor.execute_command(ast_query, database_name=self.knowledge_base_database)
 
             # Filter knowledge bases based on ignore list
             kb_names = []
-            for row in result:
-                kb_name = row["name"]
-                if kb_name not in self._knowledge_bases_to_ignore:
-                    kb_names.append(kb_name)
+            for row in result.data.records:
+                kb_names.append(row["NAME"])
 
-            if self._cache:
-                self._cache.set(cache_key, set(kb_names))
+            # if self._cache:
+            #     self._cache.set(cache_key, set(kb_names))
 
             return kb_names
         except Exception as e:
@@ -369,7 +419,7 @@ class SQLAgent:
             table_identifier = tables_idx.get(tuple(table_parts))
 
             if table_identifier is None:
-                raise ValueError(f"Table {table} not found in the database")
+                raise ValueError(f"Table {table_name} not found in the database")
             tables.append(table_identifier)
 
         return tables
@@ -401,15 +451,29 @@ class SQLAgent:
         appended to each table description. This can increase performance as demonstrated in the paper.
         """
         if config.get("data_catalog", {}).get("enabled", False):
-            datasource = next(iter(self._mindsdb_db_struct), None)
-            data_catalog_reader_instance = DataCatalogReader(
-                database_name=datasource, table_names=self._tables_to_include
-            )
-            return data_catalog_reader_instance.read_metadata_as_string()
+            database_table_map = {}
+            for name in table_names or self.get_usable_table_names():
+                name = name.replace("`", "")
+
+                parts = name.split(".", 1)
+                # TODO: Will there be situations where parts has more than 2 elements? Like a schema?
+                # This is unlikely given that we default to a single schema per database.
+                if len(parts) == 1:
+                    raise ValueError(f"Invalid table name: {name}. Expected format is 'database.table'.")
+
+                database_table_map.setdefault(parts[0], []).append(parts[1])
+
+            data_catalog_str = ""
+            for database_name, table_names in database_table_map.items():
+                data_catalog_reader = DataCatalogReader(database_name=database_name, table_names=table_names)
+
+                result = data_catalog_reader.read_metadata_as_string()
+                data_catalog_str += str(result or "")
+
+            return data_catalog_str
+
         else:
-            """
-            TODO: Improve old logic without data catalog
-            """
+            # TODO: Improve old logic without data catalog
             all_tables = []
             for name in self.get_usable_table_names():
                 # remove backticks
@@ -417,12 +481,12 @@ class SQLAgent:
 
                 split = name.split(".")
                 if len(split) > 1:
-                    all_tables.append(Identifier(parts=[split[0], split[1]]))
+                    all_tables.append(Identifier(parts=[split[0], split[-1]]))
                 else:
                     all_tables.append(Identifier(name))
 
-            # if table_names is not None:
-            #     all_tables = self._resolve_table_names(table_names, all_tables)
+            if table_names is not None:
+                all_tables = self._resolve_table_names(table_names, all_tables)
 
             tables_info = []
             for table in all_tables:

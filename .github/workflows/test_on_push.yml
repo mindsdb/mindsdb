@@ -1,5 +1,8 @@
 name: Test on Push
 
+permissions:
+    contents: read
+
 on:
   pull_request:
     branches: [main]
@@ -146,6 +149,7 @@ jobs:
         with:
           enable-cache: true
           python-version: ${{ matrix.python-version }}
+          version: "0.7.19"
       - name: Install dependencies
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
@@ -167,7 +171,7 @@ jobs:
             .[mysql] \
             .[chromadb]
           uv pip freeze
-          git clone https://github.com/mindsdb/mindsdb_sql_parser.git parser_tests
+          git clone --branch v$(uv pip show mindsdb_sql_parser | grep Version | cut -d ' ' -f 2) https://github.com/mindsdb/mindsdb_sql_parser.git parser_tests
       - name: Install mssql dependencies
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |

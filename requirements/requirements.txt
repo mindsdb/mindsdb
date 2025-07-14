@@ -16,11 +16,11 @@ redis >=5.0.0, < 6.0.0
 walrus==0.9.3
 flask-compress >= 1.0.0
 appdirs >= 1.0.0
-mindsdb-sql-parser ~= 0.10.0
-pydantic ~= 2.7.0
+mindsdb-sql-parser ~= 0.10.1
+pydantic == 2.9.2
 mindsdb-evaluator == 0.0.17
 duckdb ~= 1.2.1
-requests == 2.32.3
+requests == 2.32.4
 dateparser==1.2.0
 dill == 0.3.6
 numpy
@@ -47,12 +47,11 @@ prometheus-client==0.20.0
 sentry-sdk[flask] == 2.14.0
 openai<2.0.0,>=1.58.1
 pyaml==23.12.0
-mcp==1.6.0
+mcp~=1.10.1
 anyio>=4.5          # for MCP server, should match 'mcp' requirements
 starlette>=0.27     # for MCP server, should match 'mcp' requirements
 fastapi>=0.110.0, <1.0.0  # Required for LiteLLM server
 uvicorn>=0.30.0, <1.0.0   # Required for LiteLLM server
-transformers >= 4.42.4 # Required for Langchain agent to calculate tokens
 
 # files reading
 pymupdf==1.25.2
@@ -71,4 +70,4 @@ typing-extensions==4.13.2
 python-dotenv==1.1.0
 jwcrypto==1.5.6
 pyjwt==2.10.1
-pydantic_core==2.18.4
+pydantic_core>=2.23.2

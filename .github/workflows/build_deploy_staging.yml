@@ -1,5 +1,8 @@
 name: Build and deploy to staging
 
+permissions:
+  contents: read
+
 on:
   # Using pull_request instead of push on main because we want access to the pull request's details via 'github.event'
   # But it means we need to check below if this PR was merged and not just closed
@@ -70,17 +73,18 @@ jobs:
     name: Run Integration Tests
     needs: [deploy]
     concurrency:
-      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-tests
-      cancel-in-progress: true
+      group: deploy-staging
+      cancel-in-progress: false
     uses: ./.github/workflows/test_on_deploy.yml
     with:
       deploy-env: staging
     secrets: inherit
   
   slack_message:
-    if: always()
+    if: failure() && !cancelled()
     name: Notify Slack
-    needs: [run_tests]
+    # Every previous job needs to be in here, because failure() will only return true if the job that failed is in 'needs'
+    needs: [build, build-cache, deploy, run_tests]
     runs-on: mdb-dev
     steps:
       - name: Notify of failing tests
@@ -125,3 +129,4 @@ jobs:
             }
         env:
           SLACK_BOT_TOKEN: ${{ secrets.GH_ACTIONS_SLACK_BOT_TOKEN }}
+

@@ -1,4 +1,6 @@
 import copy
+from array import array
+from typing import Any
 from dataclasses import dataclass, field, MISSING
 
 import numpy as np
@@ -47,6 +49,12 @@ def get_mysql_data_type_from_series(series: pd.Series, do_infer: bool = False) -
     if pd_types.is_numeric_dtype(dtype):
         return MYSQL_DATA_TYPE.FLOAT
     return MYSQL_DATA_TYPE.TEXT
+
+
+def _dump_vector(value: Any) -> Any:
+    if isinstance(value, array):
+        return value.tolist()
+    return value
 
 
 @dataclass(kw_only=True, slots=True)
@@ -383,7 +391,10 @@ class ResultSet:
             for name, dtype in df.dtypes.to_dict().items():
                 if pd.api.types.is_datetime64_any_dtype(dtype):
                     df[name] = df[name].dt.strftime("%Y-%m-%d %H:%M:%S.%f")
-            df = df.replace({np.nan: None})
+            for i, column in enumerate(self.columns):
+                if column.type == MYSQL_DATA_TYPE.VECTOR:
+                    df[i] = df[i].apply(_dump_vector)
+            df.replace({np.nan: None}, inplace=True)
             return df.to_records(index=False).tolist()
 
         # slower but keep timestamp type

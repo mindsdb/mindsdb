@@ -6,6 +6,8 @@ from mindsdb_sql_parser.ast import (
     Parameter,
     BinaryOperation,
     Tuple,
+    Union,
+    Intersect,
 )
 
 from mindsdb.api.executor.planner.steps import FetchDataframeStep
@@ -92,7 +94,10 @@ class FetchDataframeStepCall(BaseStepCall):
             response: DataHubResponse = dn.query(native_query=step.raw_query, session=self.session)
             df = response.data_frame
         else:
-            table_alias = get_table_alias(step.query.from_table, self.context.get("database"))
+            if isinstance(step.query, (Union, Intersect)):
+                table_alias = ["", "", ""]
+            else:
+                table_alias = get_table_alias(step.query.from_table, self.context.get("database"))
 
             # TODO for information_schema we have 'database' = 'mindsdb'
 

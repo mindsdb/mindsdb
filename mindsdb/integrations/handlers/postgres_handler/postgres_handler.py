@@ -60,6 +60,7 @@ def _map_type(internal_type_name: str | None) -> MYSQL_DATA_TYPE:
         ("time", "time without time zone", "time with time zone"): MYSQL_DATA_TYPE.TIME,
         ("boolean",): MYSQL_DATA_TYPE.BOOL,
         ("bytea",): MYSQL_DATA_TYPE.BINARY,
+        ("json", "jsonb"): MYSQL_DATA_TYPE.JSON,
     }
 
     for db_types_list, mysql_data_type in types_map.items():
@@ -83,10 +84,28 @@ def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
     description: list[PGColumn] = cursor.description
     mysql_types: list[MYSQL_DATA_TYPE] = []
     for column in description:
+        if column.type_display == "vector":
+            # 'vector' is type of pgvector extension, added here as text to not import pgvector
+            # NOTE: data returned as numpy array
+            mysql_types.append(MYSQL_DATA_TYPE.VECTOR)
+            continue
         pg_type_info: TypeInfo = pg_types.get(column.type_code)
         if pg_type_info is None:
-            logger.warning(f"Postgres handler: unknown type: {column.type_code}")
-        regtype: str = pg_type_info.regtype if pg_type_info is not None else None
+            # postgres may return 'polymorphic type', which are not present in the pg_types
+            # list of 'polymorphic type' can be obtained:
+            # SELECT oid, typname, typcategory FROM pg_type WHERE typcategory = 'P' ORDER BY oid;
+            if column.type_code in (2277, 5078):
+                # anyarray, anycompatiblearray
+                regtype = "json"
+            else:
+                logger.warning(f"Postgres handler: unknown type: {column.type_code}")
+                mysql_types.append(MYSQL_DATA_TYPE.TEXT)
+                continue
+        elif pg_type_info.array_oid == column.type_code:
+            # it is any array, handle is as json
+            regtype: str = "json"
+        else:
+            regtype: str = pg_type_info.regtype if pg_type_info is not None else None
         mysql_type = _map_type(regtype)
         mysql_types.append(mysql_type)
 
@@ -457,7 +476,7 @@ class PostgresHandler(MetaDatabaseHandler):
         config = self._make_connection_args()
         config["autocommit"] = True
 
-        conn = psycopg.connect(connect_timeout=10, **config)
+        conn = psycopg.connect(**config)
 
         # create db trigger
         trigger_name = f"mdb_notify_{table_name}"
@@ -690,8 +709,6 @@ class PostgresHandler(MetaDatabaseHandler):
             WHERE
                 tc.constraint_type = 'PRIMARY KEY'
                 AND tc.table_schema = current_schema()
-            ORDER BY
-                tc.table_name, kcu.ordinal_position
         """
 
         if table_names is not None and len(table_names) > 0:

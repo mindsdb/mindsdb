@@ -1,3 +1,4 @@
+import os
 import time
 import json
 import tempfile
@@ -271,10 +272,11 @@ class TestMySqlApi(BaseStuff):
             "t_text": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.TEXT],
             "t_bytea": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.BINARY],
             # text types: fallbacks to varchar
-            "t_json": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.VARCHAR],
-            "t_jsonb": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.VARCHAR],
             "t_xml": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.VARCHAR],
             "t_uuid": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.VARCHAR],
+            # json types
+            "t_json": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.JSON],
+            "t_jsonb": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.JSON],
             # numeric types
             "n_smallint": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.SMALLINT],
             "n_integer": DATA_C_TYPE_MAP[MYSQL_DATA_TYPE.INT],
@@ -301,7 +303,7 @@ class TestMySqlApi(BaseStuff):
             "t_char": "Test      ",
             "t_varchar": "Test",
             "t_text": "Test",
-            "t_bytea": b"Demo binary data." if self.use_binary else "Demo binary data.",
+            "t_bytea": "Demo binary data.",
             "t_json": '{"name": "test"}',
             "t_jsonb": '{"name": "test"}',
             "t_xml": "<root><element>test</element><nested><value>123</value></nested></root>",
@@ -333,12 +335,18 @@ class TestMySqlApi(BaseStuff):
         for column_name, expected_type in expected_types.items():
             column_description = description_dict[column_name]
 
-            if column_name == "dt_date" and isinstance(row[column_name], datetime.datetime):
+            if column_name == "t_bytea" and isinstance(row[column_name], (bytearray, bytes)):
+                row[column_name] = row[column_name].decode()
+            elif column_name == "dt_date" and isinstance(row[column_name], datetime.datetime):
                 # NOTE sometime mysql.connector returns datetime instead of date for dt_date. This is suspicious, but ok
                 assert row[column_name].hour == 0
                 assert row[column_name].minute == 0
                 assert row[column_name].second == 0
                 row[column_name] = row[column_name].date()
+            elif column_name in ("t_json", "t_jsonb") and self.use_binary:
+                # NOTE 'binary' protocol returns json as bytearray.
+                # by some reason, if use pytest then result is bytes instead of bytearray, but that is ok
+                row[column_name] = row[column_name].decode()
 
             if isinstance(expected_values[column_name], float):
                 assert abs(row[column_name] - expected_values[column_name]) < 1e-5, (
@@ -351,6 +359,10 @@ class TestMySqlApi(BaseStuff):
             assert column_description["type_code"] == expected_type.code, (
                 f"Expected type {expected_type.code} for column {column_name}, but got {column_description['type_code']}, use_binary={self.use_binary}, table_name={table_name}"
             )
+
+            if os.uname().sysname == "Darwin":
+                # It seems that flags on macos may be modified by mysql.connector on the client side.
+                continue
             assert column_description["flags"] == sum(expected_type.flags), (
                 f"Expected flags {sum(expected_type.flags)} for column {column_name}, but got {column_description['flags']}, use_binary={self.use_binary}, table_name={table_name}"
             )

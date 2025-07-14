@@ -70,9 +70,9 @@ class SalesforceHandler(MetaAPIHandler):
             )
             self.is_connected = True
 
-            # Register Salesforce tables.
-            for resource_name in self._get_resource_names():
-                table_class = create_table_class(resource_name)
+            resource_tables = self._get_resource_names()
+            for resource_name in resource_tables:
+                table_class = create_table_class(resource_name.lower())
                 self._register_table(resource_name, table_class(self))
 
             return self.connection
@@ -154,22 +154,108 @@ class SalesforceHandler(MetaAPIHandler):
 
         return response
 
-    def _get_resource_names(self) -> None:
+    def _get_resource_names(self) -> List[str]:
         """
-        Retrieves the names of the Salesforce resources.
-
+        Retrieves the names of the Salesforce resources, with more aggressive filtering to remove tables.
         Returns:
-            None
+            List[str]: A list of filtered resource names.
         """
         if not self.resource_names:
-            # Fetch the queryable list of Salesforce resources (sobjects).
-            self.resource_names = [
+            all_resources = [
                 resource["name"]
                 for resource in self.connection.sobjects.describe()["sobjects"]
                 if resource.get("queryable", False)
             ]
 
+            # Define patterns for tables to be filtered out.
+            # Expanded suffixes and prefixes and exact matches
+            ignore_suffixes = ("Share", "History", "Feed", "ChangeEvent", "Tag", "Permission", "Setup", "Consent")
+            ignore_prefixes = (
+                "Apex",
+                "CommPlatform",
+                "Lightning",
+                "Flow",
+                "Transaction",
+                "AI",
+                "Aura",
+                "ContentWorkspace",
+                "Collaboration",
+                "Datacloud",
+            )
+            ignore_exact = {
+                "EntityDefinition",
+                "FieldDefinition",
+                "RecordType",
+                "CaseStatus",
+                "UserRole",
+                "UserLicense",
+                "UserPermissionAccess",
+                "UserRecordAccess",
+                "Folder",
+                "Group",
+                "Note",
+                "ProcessDefinition",
+                "ProcessInstance",
+                "ContentFolder",
+                "ContentDocumentSubscription",
+                "DashboardComponent",
+                "Report",
+                "Dashboard",
+                "Topic",
+                "TopicAssignment",
+                "Period",
+                "Partner",
+                "PackageLicense",
+                "ColorDefinition",
+                "DataUsePurpose",
+                "DataUseLegalBasis",
+            }
+
+            ignore_substrings = (
+                "CleanInfo",
+                "Template",
+                "Rule",
+                "Definition",
+                "Status",
+                "Policy",
+                "Setting",
+                "Access",
+                "Config",
+                "Subscription",
+                "DataType",
+                "MilestoneType",
+                "Entitlement",
+                "Auth",
+            )
+
+            filtered = []
+            for r in all_resources:
+                if (
+                    not r.endswith(ignore_suffixes)
+                    and not r.startswith(ignore_prefixes)
+                    and not any(sub in r for sub in ignore_substrings)
+                    and r not in ignore_exact
+                ):
+                    filtered.append(r)
+
+            self.resource_names = [r for r in filtered]
         return self.resource_names
+
+    def meta_get_handler_info(self, **kwargs) -> str:
+        """
+        Retrieves information about the design and implementation of the API handler.
+        This should include, but not be limited to, the following:
+        - The type of SQL queries and operations that the handler supports.
+        - etc.
+
+        Args:
+            kwargs: Additional keyword arguments that may be used in generating the handler information.
+
+        Returns:
+            str: A string containing information about the API handler's design and implementation.
+        """
+        # TODO: Relationships? Aliases?
+        return "When filtering on a Date or DateTime field, the value MUST be an unquoted literal in YYYY-MM-DD or YYYY-MM-DDThh:mm:ssZ format. For example, CloseDate >= 2025-05-28 is correct; CloseDate >= '2025-05-28' is incorrect."
 
     def meta_get_tables(self, table_names: Optional[List[str]] = None) -> Response:
         """
@@ -185,10 +271,11 @@ class SalesforceHandler(MetaAPIHandler):
 
         # Retrieve the metadata for all Salesforce resources.
         main_metadata = connection.sobjects.describe()
-
         if table_names:
             # Filter the metadata for the specified tables.
-            main_metadata = [resource for resource in main_metadata["sobjects"] if resource["name"] in table_names]
+            main_metadata = [
+                resource for resource in main_metadata["sobjects"] if resource["name"].lower() in table_names
+            ]
         else:
             main_metadata = main_metadata["sobjects"]
 

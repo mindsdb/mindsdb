@@ -7,7 +7,7 @@ import pandas as pd
 import datetime as dt
 
 from mindsdb.api.executor.sql_query.result_set import ResultSet
-from mindsdb_sql_parser import Identifier, Select, Constant, Star, parse_sql
+from mindsdb_sql_parser import Identifier, Select, Constant, Star, parse_sql, BinaryOperation
 from mindsdb.utilities import log
 
 from mindsdb.interfaces.knowledge_base.llm_client import LLMClient
@@ -90,7 +90,7 @@ class EvaluateBase:
             df = response.data_frame
 
             if "content" not in df.columns:
-                raise ValueError("`content` column isn't found in source data")
+                raise ValueError(f"`content` column isn't found in provided sql: {gen_params['from_sql']}")
 
             df.rename(columns={"content": "chunk_content"}, inplace=True)
         else:
@@ -130,6 +130,8 @@ class EvaluateBase:
         integration_name = table_name.parts[0]
         table_name = Identifier(parts=table_name.parts[1:])
         dn = self.session.datahub.get(integration_name)
+        if dn is None:
+            raise ValueError(f"Can't find database: {integration_name}")
         return dn, table_name
 
     def save_to_table(self, table_name: Identifier, df: pd.DataFrame, is_replace=False):
@@ -168,12 +170,12 @@ class EvaluateBase:
             test_data = self.generate_test_data(gen_params)
 
             self.save_to_table(test_table, test_data, is_replace=True)
-        else:
-            test_data = self.read_from_table(test_table)
 
         if params.get("evaluate", True) is False:
             # no evaluate is required
             return pd.DataFrame()
+
+        test_data = self.read_from_table(test_table)
 
         scores = self.evaluate(test_data)
         scores["name"] = self.name
@@ -184,7 +186,7 @@ class EvaluateBase:
             to_table = params["save_to"]
             if isinstance(to_table, str):
                 to_table = Identifier(to_table)
-            self.save_to_table(to_table, scores)
+            self.save_to_table(to_table, scores.copy())
 
         return scores
 
@@ -256,7 +258,13 @@ class EvaluateRerank(EvaluateBase):
 
             start_time = time.time()
             logger.debug(f"Querying [{i + 1}/{len(questions)}]: {question}")
-            df_answers = self.kb.select_query(Select(targets=[Identifier("chunk_content")], limit=Constant(self.TOP_K)))
+            df_answers = self.kb.select_query(
+                Select(
+                    targets=[Identifier("chunk_content")],
+                    where=BinaryOperation(op="=", args=[Identifier("content"), Constant(question)]),
+                    limit=Constant(self.TOP_K),
+                )
+            )
             query_time = time.time() - start_time
 
             proposed_responses = list(df_answers["chunk_content"])
@@ -410,7 +418,7 @@ class EvaluateDocID(EvaluateBase):
     Checks if ID in response from KB is matched with doc ID in test dataset
     """
 
-    TOP_K = 100
+    TOP_K = 20
 
     def generate(self, sampled_df: pd.DataFrame) -> pd.DataFrame:
         if "id" not in sampled_df.columns:
@@ -462,7 +470,11 @@ class EvaluateDocID(EvaluateBase):
             start_time = time.time()
             logger.debug(f"Querying [{i + 1}/{len(questions)}]: {question}")
             df_answers = self.kb.select_query(
-                Select(targets=[Identifier("chunk_content"), Identifier("id")], limit=Constant(self.TOP_K))
+                Select(
+                    targets=[Identifier("chunk_content"), Identifier("id")],
+                    where=BinaryOperation(op="=", args=[Identifier("content"), Constant(question)]),
+                    limit=Constant(self.TOP_K),
+                )
             )
             query_time = time.time() - start_time
 
@@ -492,8 +504,6 @@ class EvaluateDocID(EvaluateBase):
         total_questions = len(stats)
         total_found = sum([1 for stat in stats if stat["doc_found"]])
 
-        total_accurately_retrieved = sum([1 for stat in stats if stat["doc_found"]])
-
         accurate_in_top_10 = sum([1 for stat in stats if stat["doc_found"] and stat["doc_position"] < 10])
 
         # calculate recall curve by position
@@ -512,8 +522,7 @@ class EvaluateDocID(EvaluateBase):
         return {
             "total": total_questions,
             "total_found": total_found,
-            "retrieved_in_top_k": total_accurately_retrieved,
             "retrieved_in_top_10": accurate_in_top_10,
-            "cumulative_recall": cumulative_recall,
+            "cumulative_recall": json.dumps(cumulative_recall),
             "avg_query_time": avg_query_time,
         }

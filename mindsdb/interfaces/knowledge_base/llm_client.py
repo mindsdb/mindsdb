@@ -36,8 +36,11 @@ class LLMClient:
             )
         elif self.provider == "openai":
             openai_api_key = params.get("api_key") or os.getenv("OPENAI_API_KEY")
+            kwargs = {"api_key": openai_api_key, "max_retries": 2}
             base_url = params.get("base_url")
-            self.client = OpenAI(api_key=openai_api_key, base_url=base_url, max_retries=2)
+            if base_url:
+                kwargs["base_url"] = base_url
+            self.client = OpenAI(**kwargs)
 
         else:
             # try to use litellm
@@ -67,9 +70,5 @@ class LLMClient:
             kwargs = params.copy()
             model = kwargs.pop("model_name")
 
-            base_url = params.pop("base_url", None)
-            if base_url is not None:
-                kwargs["api_base"] = base_url
-
-            response = self.client.completion(model=f"{self.provider}/{model}", messages=messages, args=kwargs)
+            response = self.client.completion(self.provider, model=model, messages=messages, args=kwargs)
             return response.choices[0].message.content

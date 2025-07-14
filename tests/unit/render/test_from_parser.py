@@ -38,6 +38,10 @@ def parse_sql2(sql, dialect="mindsdb"):
     if "FULL OUTER JOIN" not in sql:
         sql2 = sql2.replace("FULL OUTER JOIN", "FULL JOIN")
 
+    for clause in ["union", "intersect", "except"]:
+        if f"{clause} distinct" in sql.lower() and f"{clause} distinct" not in sql2.lower():
+            sql2 = sql2.lower().replace(clause, f"{clause} distinct")
+
     if "RIGHT JOIN" in sql:
         # TODO skip now, but fix later
         return query

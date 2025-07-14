@@ -34,6 +34,8 @@ class BaseDataCatalog:
         integration = session.integration_controller.get(database_name)
         self.integration_id = integration["id"]
         self.integration_engine = integration["engine"]
+        # TODO: Handle situations where a schema is provided along with the database name, e.g., 'schema.table'.
+        # TODO: Handle situations where a file path is provided with integrations like S3, e.g., 'dir/file.csv'.
         self.table_names = table_names
 
         self.logger = logger

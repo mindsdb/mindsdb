@@ -154,7 +154,7 @@ class ProjectDataNode(DataNode):
 
                 return DataHubResponse(data_frame=df, columns=columns_info)
 
-            raise EntityNotExistsError(f"Can't select from {query_table} in project")
+            raise EntityNotExistsError(f"Table '{query_table}' not found in database", self.project.name)
         else:
             raise NotImplementedError(f"Query not supported {query}")
 

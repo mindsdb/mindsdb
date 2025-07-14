@@ -58,6 +58,8 @@ from mindsdb.interfaces.agents.constants import (
     TRACE_ID_COLUMN,
     DEFAULT_AGENT_SYSTEM_PROMPT,
     WRITER_CHAT_MODELS,
+    MINDSDB_PREFIX,
+    EXPLICIT_FORMAT_INSTRUCTIONS,
 )
 from mindsdb.interfaces.skills.skill_tool import skill_tool, SkillData
 from langchain_anthropic import ChatAnthropic
@@ -226,7 +228,7 @@ def process_chunk(chunk):
 
 
 class LangchainAgent:
-    def __init__(self, agent: db.Agents, model: dict = None):
+    def __init__(self, agent: db.Agents, model: dict = None, llm_params: dict = None):
         self.agent = agent
         self.model = model
 
@@ -239,16 +241,37 @@ class LangchainAgent:
         self.mdb_langfuse_callback_handler: Optional[object] = None  # custom (see langfuse_callback_handler.py)
 
         self.langfuse_client_wrapper = LangfuseClientWrapper()
-        self.args = self._initialize_args()
+        self.args = self._initialize_args(llm_params)
 
         # Back compatibility for old models
         self.provider = self.args.get("provider", get_llm_provider(self.args))
 
-    def _initialize_args(self) -> dict:
-        """Initialize the arguments based on the agent's parameters."""
+    def _initialize_args(self, llm_params: dict = None) -> dict:
+        """
+        Initialize the arguments for agent execution.
+
+        Takes the parameters passed during execution and sets necessary defaults.
+        The params are already merged with defaults by AgentsController.get_agent_llm_params.
+
+        Args:
+            llm_params: Parameters for agent execution (already merged with defaults)
+
+        Returns:
+            dict: Final parameters for agent execution
+        """
+        # Use the parameters passed to the method (already merged with defaults by AgentsController)
+        # No fallback needed as AgentsController.get_agent_llm_params already handles this
         args = self.agent.params.copy()
-        args["model_name"] = self.agent.model_name
-        args["provider"] = self.agent.provider
+        if llm_params:
+            args.update(llm_params)
+
+        # Set model name and provider if given in create agent otherwise use global llm defaults
+        # AgentsController.get_agent_llm_params
+        if self.agent.model_name is not None:
+            args["model_name"] = self.agent.model_name
+        if self.agent.provider is not None:
+            args["provider"] = self.agent.provider
+
         args["embedding_model_provider"] = args.get("embedding_model", get_embedding_model_provider(args))
 
         # agent is using current langchain model
@@ -261,7 +284,9 @@ class LangchainAgent:
                 # only update prompt_template if it is set on the model
                 args["prompt_template"] = prompt_template
 
+        # Set default prompt template if not provided
         if args.get("prompt_template") is None:
+            # Default prompt template depends on agent mode
             if args.get("mode") == "retrieval":
                 args["prompt_template"] = DEFAULT_RAG_PROMPT_TEMPLATE
                 logger.info(f"Using default retrieval prompt template: {DEFAULT_RAG_PROMPT_TEMPLATE[:50]}...")
@@ -325,7 +350,7 @@ class LangchainAgent:
         self.provider = args.get("provider", get_llm_provider(args))
 
         df = df.reset_index(drop=True)
-        agent = self.create_agent(df, args)
+        agent = self.create_agent(df)
         # Use last message as prompt, remove other questions.
         user_column = args.get("user_column", USER_COLUMN)
         df.iloc[:-1, df.columns.get_loc(user_column)] = None
@@ -355,14 +380,17 @@ class LangchainAgent:
         self.provider = args.get("provider", get_llm_provider(args))
 
         df = df.reset_index(drop=True)
-        agent = self.create_agent(df, args)
+        agent = self.create_agent(df)
         # Use last message as prompt, remove other questions.
         user_column = args.get("user_column", USER_COLUMN)
         df.iloc[:-1, df.columns.get_loc(user_column)] = None
         return self.stream_agent(df, agent, args)
 
-    def create_agent(self, df: pd.DataFrame, args: Dict = None) -> AgentExecutor:
+    def create_agent(self, df: pd.DataFrame) -> AgentExecutor:
         # Set up tools.
+
+        args = self.args
+
         llm = create_chat_model(args)
         self.llm = llm
 
@@ -402,7 +430,12 @@ class LangchainAgent:
             llm,
             agent=agent_type,
             # Use custom output parser to handle flaky LLMs that don't ALWAYS conform to output format.
-            agent_kwargs={"output_parser": SafeOutputParser()},
+            agent_kwargs={
+                "output_parser": SafeOutputParser(),
+                "prefix": MINDSDB_PREFIX,  # Override default "Assistant is a large language model..." text
+                "format_instructions": EXPLICIT_FORMAT_INSTRUCTIONS,  # More explicit tool calling instructions
+                "ai_prefix": "AI",
+            },
             # Calls the agent's LLM Chain one final time to generate a final answer based on the previous steps
             early_stopping_method="generate",
             handle_parsing_errors=self._handle_parsing_errors,

@@ -36,6 +36,8 @@ from mindsdb_sql_parser.ast import (
     Tuple,
     Function,
     Variable,
+    Intersect,
+    Except,
 )
 
 # typed models
@@ -82,7 +84,7 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     TYPES,
 )
 
-from .exceptions import (
+from mindsdb.api.executor.exceptions import (
     ExecutorException,
     BadDbError,
     NotSupportedYet,
@@ -580,9 +582,6 @@ class ExecuteCommands:
                 return ret
             query = SQLQuery(statement, session=self.session, database=database_name)
             return self.answer_select(query)
-        elif statement_type is Union:
-            query = SQLQuery(statement, session=self.session, database=database_name)
-            return self.answer_select(query)
         elif statement_type is Explain:
             return self.answer_show_columns(statement.target, database_name=database_name)
         elif statement_type is CreateTable:
@@ -627,6 +626,9 @@ class ExecuteCommands:
             return self.answer_create_kb_index(statement, database_name)
         elif statement_type is EvaluateKnowledgeBase:
             return self.answer_evaluate_kb(statement, database_name)
+        elif statement_type in (Union, Intersect, Except):
+            query = SQLQuery(statement, session=self.session, database=database_name)
+            return self.answer_select(query)
         else:
             logger.warning(f"Unknown SQL statement: {sql}")
             raise NotSupportedYet(f"Unknown SQL statement: {sql}")
@@ -1426,6 +1428,9 @@ class ExecuteCommands:
                 provider=provider,
                 params=statement.params,
             )
+        except EntityExistsError as e:
+            if statement.if_not_exists is not True:
+                raise ExecutorException(str(e))
         except ValueError as e:
             # Project does not exist or agent already exists.
             raise ExecutorException(str(e))
@@ -1554,9 +1559,9 @@ class ExecuteCommands:
         if is_full:
             targets.extend(
                 [
-                    Constant("COLLATION", alias=Identifier("Collation")),
-                    Constant("PRIVILEGES", alias=Identifier("Privileges")),
-                    Constant("COMMENT", alias=Identifier("Comment")),
+                    Constant(None, alias=Identifier("Collation")),
+                    Constant("select", alias=Identifier("Privileges")),
+                    Constant(None, alias=Identifier("Comment")),
                 ]
             )
         new_statement = Select(

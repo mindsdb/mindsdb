@@ -1,5 +1,6 @@
 import datetime
-from typing import Dict, Iterator, List, Union, Tuple, Optional
+from typing import Dict, Iterator, List, Union, Tuple, Optional, Any
+import copy
 
 from langchain_core.tools import BaseTool
 from sqlalchemy.orm.attributes import flag_modified
@@ -9,19 +10,22 @@ import pandas as pd
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.storage.db import Predictor
 from mindsdb.utilities.context import context as ctx
+from mindsdb.interfaces.data_catalog.data_catalog_loader import DataCatalogLoader
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.skills.skills_controller import SkillsController
 from mindsdb.utilities.config import config
+from mindsdb.utilities import log
+
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
-from .constants import ASSISTANT_COLUMN, SUPPORTED_PROVIDERS, PROVIDER_TO_MODELS
+from .constants import ASSISTANT_COLUMN, SUPPORTED_PROVIDERS, PROVIDER_TO_MODELS, DEFAULT_TEXT2SQL_DATABASE
 from .langchain_agent import get_llm_provider
 
-default_project = config.get("default_project")
+logger = log.getLogger(__name__)
 
-DEFAULT_TEXT2SQL_DATABASE = "mindsdb"
+default_project = config.get("default_project")
 
 
 class AgentsController:
@@ -49,7 +53,7 @@ class AgentsController:
         """
         Checks if a model exists, and gets the provider of the model.
 
-        The provider is either the provider of the model, or the provider given as an argument.
+        The provider is either the provider of the model or the provider given as an argument.
 
         Parameters:
             model_name (str): The name of the model
@@ -60,6 +64,10 @@ class AgentsController:
             provider (str): The provider of the model
         """
         model = None
+
+        # Handle the case when model_name is None (using default LLM)
+        if model_name is None:
+            return model, provider
 
         try:
             model_name_no_version, model_version = Predictor.get_name_and_version(model_name)
@@ -140,11 +148,11 @@ class AgentsController:
     def add_agent(
         self,
         name: str,
-        project_name: str,
-        model_name: str,
-        skills: List[Union[str, dict]],
+        project_name: str = None,
+        model_name: str = None,
+        skills: List[Union[str, dict]] = None,
         provider: str = None,
-        params: Dict[str, str] = {},
+        params: Dict[str, Any] = None,
     ) -> db.Agents:
         """
         Adds an agent to the database.
@@ -152,7 +160,7 @@ class AgentsController:
         Parameters:
             name (str): The name of the new agent
             project_name (str): The containing project
-            model_name (str): The name of the existing ML model the agent will use
+            model_name (str | dict): The name of the existing ML model the agent will use
             skills (List[Union[str, dict]]): List of existing skill names to add to the new agent, or list of dicts
                  with one of keys is "name", and other is additional parameters for relationship agent<>skill
             provider (str): The provider of the model
@@ -164,12 +172,15 @@ class AgentsController:
                 include_knowledge_bases: List of knowledge bases to include for text2sql skills
                 ignore_knowledge_bases: List of knowledge bases to ignore for text2sql skills
                 <provider>_api_key: API key for the provider (e.g., openai_api_key)
+                data: Dict, data sources for an agent, keys:
+                  - knowledge_bases: List of KBs to use (alternative to `include_knowledge_bases`)
+                  - tables: list of tables to use (alternative to `include_tables`)
 
         Returns:
             agent (db.Agents): The created agent
 
         Raises:
-            ValueError: Agent with given name already exists, or skill/model with given name does not exist.
+            EntityExistsError: Agent with given name already exists, or skill/model with given name does not exist.
         """
         if project_name is None:
             project_name = default_project
@@ -178,16 +189,33 @@ class AgentsController:
         agent = self.get_agent(name, project_name)
 
         if agent is not None:
-            raise ValueError(f"Agent with name already exists: {name}")
+            raise EntityExistsError("Agent already exists", name)
 
-        _, provider = self.check_model_provider(model_name, provider)
+        # No need to copy params since we're not preserving the original reference
+        params = params or {}
+
+        if isinstance(model_name, dict):
+            # move into params
+            params["model"] = model_name
+            model_name = None
+
+        if model_name is not None:
+            _, provider = self.check_model_provider(model_name, provider)
+
+        if model_name is None:
+            logger.warning("'model_name' param is not provided. Using default global llm model at runtime.")
+
+        # If model_name is not provided, we use default global llm model at runtime
+        # Default parameters will be applied at runtime via get_agent_llm_params
+        # This allows global default updates to apply to all agents immediately
 
         # Extract API key if provided in the format <provider>_api_key
-        provider_api_key_param = f"{provider.lower()}_api_key"
-        if provider_api_key_param in params:
-            # Keep the API key in params for the agent to use
-            # It will be picked up by get_api_key() in handler_utils.py
-            pass
+        if provider is not None:
+            provider_api_key_param = f"{provider.lower()}_api_key"
+            if provider_api_key_param in params:
+                # Keep the API key in params for the agent to use
+                # It will be picked up by get_api_key() in handler_utils.py
+                pass
 
         # Handle generic api_key parameter if provided
         if "api_key" in params:
@@ -209,6 +237,12 @@ class AgentsController:
 
         if "database" in params or need_params:
             params["database"] = database
+
+        if "data" in params:
+            if include_knowledge_bases is None:
+                include_knowledge_bases = params["data"].get("knowledge_bases")
+            if include_tables is None:
+                include_tables = params["data"].get("tables")
 
         if "knowledge_base_database" in params or include_knowledge_bases or ignore_knowledge_bases:
             params["knowledge_base_database"] = knowledge_base_database
@@ -306,12 +340,37 @@ class AgentsController:
                 db.session.rollback()
                 raise ValueError(f"Skill with name does not exist: {skill_name}")
 
-            # Add table restrictions if this is a text2sql skill
-            if existing_skill.type == "sql" and (include_tables or ignore_tables):
-                parameters["tables"] = include_tables or ignore_tables
-
-            # Add knowledge base restrictions if this is a text2sql skill
             if existing_skill.type == "sql":
+                # Run Data Catalog loader if enabled
+                if config.get("data_catalog", {}).get("enabled", False):
+                    if include_tables:
+                        database_table_map = {}
+                        for table in include_tables:
+                            parts = table.split(".", 1)
+                            database_table_map[parts[0]] = database_table_map.get(parts[0], []) + [parts[1]]
+
+                        for database_name, table_names in database_table_map.items():
+                            data_catalog_loader = DataCatalogLoader(
+                                database_name=database_name, table_names=table_names
+                            )
+                            data_catalog_loader.load_metadata()
+
+                    elif "database" in existing_skill.params:
+                        data_catalog_loader = DataCatalogLoader(
+                            database_name=existing_skill.params["database"],
+                            table_names=parameters["tables"] if "tables" in parameters else None,
+                        )
+                        data_catalog_loader.load_metadata()
+
+                    else:
+                        raise ValueError(
+                            "Data Catalog loading is enabled, but the provided parameters are insufficient to load metadata. "
+                        )
+
+                # Add table restrictions if this is a text2sql skill
+                if include_tables or ignore_tables:
+                    parameters["tables"] = include_tables or ignore_tables
+
                 # Pass database parameter if provided
                 if database and "database" not in parameters:
                     parameters["database"] = database
@@ -504,6 +563,24 @@ class AgentsController:
         agent.deleted_at = datetime.datetime.now()
         db.session.commit()
 
+    def get_agent_llm_params(self, agent_params: dict):
+        """
+        Get agent LLM parameters by combining default config with user provided parameters.
+        Similar to how knowledge bases handle default parameters.
+        """
+        combined_model_params = copy.deepcopy(config.get("default_llm", {}))
+
+        if "model" in agent_params:
+            model_params = agent_params["model"]
+        else:
+            # params for LLM can be arbitrary
+            model_params = agent_params
+
+        if model_params:
+            combined_model_params.update(model_params)
+
+        return combined_model_params
+
     def get_completion(
         self,
         agent: db.Agents,
@@ -538,7 +615,10 @@ class AgentsController:
             agent.provider = provider
             db.session.commit()
 
-        lang_agent = LangchainAgent(agent, model)
+        # Get agent parameters and combine with default LLM parameters at runtime
+        llm_params = self.get_agent_llm_params(agent.params)
+
+        lang_agent = LangchainAgent(agent, model, llm_params=llm_params)
         return lang_agent.get_completion(messages)
 
     def _get_completion_stream(
@@ -575,5 +655,8 @@ class AgentsController:
             agent.provider = provider
             db.session.commit()
 
-        lang_agent = LangchainAgent(agent, model=model)
+        # Get agent parameters and combine with default LLM parameters at runtime
+        llm_params = self.get_agent_llm_params(agent.params)
+
+        lang_agent = LangchainAgent(agent, model=model, llm_params=llm_params)
         return lang_agent.get_completion(messages, stream=True)

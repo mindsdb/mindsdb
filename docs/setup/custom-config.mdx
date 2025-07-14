@@ -45,11 +45,11 @@ Start MindsDB locally with your custom configuration by providing a path to the 
 python -m mindsdb --config=/path-to-the-extended-config-file/config.json
 ```
 
-<AccordionGroup>
-
-<Accordion title="Overview of Config Parameters">
+### Available Config Parameters
 
 Below are all of the custom configuration parameters that should be set according to your requirements and saved into the `config.json` file.
+
+#### `permanent_storage`
 
 ```bash
 {
@@ -68,6 +68,8 @@ The `location` specifies the storage type.
 * `s3`: Stores files in an Amazon S3 bucket. This option requires the `bucket` parameter that specifies the name of the S3 bucket where files will be stored.
 
 If this parameter is not set, the path is determined by the `MINDSDB_STORAGE_DIR` environment variable. MindsDB defaults to creating a `mindsdb` folder in the operating system user's home directory.
+
+#### `paths`
 
 ```bash
     "paths": {
@@ -97,6 +99,8 @@ If the `['cache']['type']` is set to `'local'`, then the `cache` parameter defin
 
 The `locks` parameter is used to store lock files to prevent race conditions when the `content` folder is shared among multiple applications. This directory helps ensure that file access is managed properly using `fcntl` locks. Note that this is not applicable for Windows OS.
 
+#### `auth`
+
 ```bash
     "auth":{
         "http_auth_enabled": true,
@@ -116,6 +120,8 @@ In local instances of MindsDB, users can enable simple HTTP authentication based
 
 2. The default lifetime of a session is set to 31 days. It can be modified by providing a value in seconds to the `http_permanent_session_lifetime` parameter. Alternatively, users can set one of the environment variables - `MINDSDB_HTTP_PERMANENT_SESSION_LIFETIME` or `FLASK_PERMANENT_SESSION_LIFETIME` - to store this value.
 
+#### `gui`
+
 ```bash
     "gui": {
         "autoupdate": true
@@ -125,6 +131,8 @@ In local instances of MindsDB, users can enable simple HTTP authentication based
 The `gui` parameter controls the behavior of the MindsDB graphical user interface (GUI) updates.
 
 The `autoupdate` parameter defines whether MindsDB automatically checks for and updates the GUI to the latest version when the application starts. If set to `true`, MindsDB will attempt to fetch the latest available version of the GUI. If set to `False`, MindsDB will not try to update the GUI on startup.
+
+#### `api`
 
 ```bash
     "api": {
@@ -229,11 +237,14 @@ The `type` parameter specifies the type of caching mechanism to use for storing 
 
 The `connection` parameter is required only if the `type` parameter is set to `redis`. It stores the Redis connection string.
 
+#### `logging`
+
 ```bash
     "logging": {
         "handlers": {
             "console": {
                 "enabled": true,
+                "formatter": "default", # optional, available values include default and json
                 "level": "INFO" # optional (alternatively, it can be defined in the MINDSDB_CONSOLE_LOG_LEVEL environment variable)
             },
             "file": {
@@ -253,8 +264,20 @@ The `logging` parameter defines the details of output logging, including the log
 
 The `handler` parameter provides handlers used for logging into streams and files.
 
-* `console`: If the `enabled` parameter is set to `true`, then the logging output is saved into a stream. Users can define the logging level in the `level` parameter or in the `MINDSDB_CONSOLE_LOG_LEVEL` environment variable - one of `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`.
-* `file`: If the `enabled` parameter is set to `true`, then the logging output is saved into a file. Users can define the logging level in the `level` parameter or in the `MINDSDB_FILE_LOG_LEVEL` environment variable - one of `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. Additionally, the `filename` parameter stores the name of the file that contains logs, and the `maxBytes` and `backupCount` parameters determine the rollover process of the file - that is, if the file reached the size of `maxBytes`, then the file is closed and a new file is opened, where the number of files is defined by the `backupCount` parameter.
+* `console`: This parameter defines the setup for saving logs into a stream.
+
+    * If the `enabled` parameter is set to `true`, then the logging output is saved into a stream.
+    * Users can define the `formatter` parameter that configures the format of the logs, where the available values include `default` and `json`.
+    * Users can also define the logging level in the `level` parameter or in the `MINDSDB_CONSOLE_LOG_LEVEL` environment variable - one of `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`.
+
+* `file`: This parameter defines the setup for saving logs into a file.
+
+    * If the `enabled` parameter is set to `true`, then the logging output is saved into a file.
+    * Users can define the logging level in the `level` parameter or in the `MINDSDB_FILE_LOG_LEVEL` environment variable - one of `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`.
+    * Additionally, the `filename` parameter stores the name of the file that contains logs.
+    * And the `maxBytes` and `backupCount` parameters determine the rollover process of the file - that is, if the file reached the size of `maxBytes`, then the file is closed and a new file is opened, where the number of files is defined by the `backupCount` parameter.
+
+#### `ml_task_queue`
 
 ```bash
     "ml_task_queue": {
@@ -276,13 +299,25 @@ The `type` parameter defines the type of task queue to use.
     - Using a Redis queue requires additional configuration such as the `host`, `port`, `db`, `username`, and `password` parameters.
     - To use the Redis queue, start MindsDB with the following command to initiate a queue consumer process: `python3 -m mindsdb --ml_task_queue_consumer`. This process will monitor the queue and fetch tasks for execution only when sufficient resources are available.
 
+#### `url_file_upload`
+
 ```bash
-    "file_upload_domains": [],
+   "url_file_upload": {
+           "enabled": true,
+           "allowed_origins": ["https://example.com"],
+           "disallowed_origins": ["http://example.com"]
+    }
 ```
 
-The `file_upload_domains` parameter restricts file uploads to trusted sources by specifying a list of allowed domains. This ensures that users can only upload files from the defined sources, such as S3 or Google Drive (`"file_upload_domains": ["https://s3.amazonaws.com", "https://drive.google.com"]`).
+The `url_file_upload` parameter restricts file uploads to trusted sources by specifying a list of allowed domains. This ensures that users can only upload files from the defined sources, such as S3 or Google Drive.
 
-If this parameter is left empty (`[]`), users can upload files from any URL without restriction.
+The `enabled` flag turns this feature on (`true`) or off (`false`).
+
+The `allowed_origins` parameter lists allowed domains. If left empty, then any domain is allowed.
+
+The `disallowed_origins` parameter lists domains that are not allowed. If left empty, then there are no restricted domains.
+
+#### `web_crawling_allowed_sites`
 
 ```bash
     "web_crawling_allowed_sites": [],
@@ -292,7 +327,7 @@ The `web_crawling_allowed_sites` parameter restricts web crawling operations to 
 
 If left empty (`[]`), the application allows access to all URLs by default (marked with a wildcard in the open-source version).
 
-The `default_llm` parameter specifies the default LLM that will be used with [knowledge bases](/mindsdb_sql/knowledge-bases), the [`LLM()` function](/mindsdb_sql/functions/llm_function), the [`TO_MARKDOWN()` function](/mindsdb_sql/functions/to_markdown_function), and [agents](/mindsdb_sql/agents/agent).
+#### `default_llm`
 
 ```bash
     "default_llm": {
@@ -305,9 +340,9 @@ The `default_llm` parameter specifies the default LLM that will be used with [kn
     }
 ```
 
-Learn more about the parameters following the [documentation of the `reranking_model` of knowledge bases](/mindsdb_sql/knowledge-bases#reranking-model).
+The `default_llm` parameter specifies the default LLM that will be used with the [`LLM()` function](/mindsdb_sql/functions/llm_function), the [`TO_MARKDOWN()` function](/mindsdb_sql/functions/to_markdown_function), and as a default model for [agents](/mindsdb_sql/agents/agent).
 
-The `default_embedding_model` parameter specifies the default embedding model used with knowledge bases.
+#### `default_embedding_model`
 
 ```bash
     "default_embedding_model": {
@@ -320,10 +355,36 @@ The `default_embedding_model` parameter specifies the default embedding model us
 }
 ```
 
-Learn more about the parameters following the [documentation of the `embedding_model` of knowledge bases](/mindsdb_sql/knowledge-bases#embedding-model).
-</Accordion>
+The `default_embedding_model` parameter specifies the default embedding model used with knowledge bases. Learn more about the parameters following the [documentation of the `embedding_model` of knowledge bases](/mindsdb_sql/knowledge_bases/create#embedding-model).
 
-<Accordion title="Example of Extended Config File">
+#### `default_reranking_model`
+
+```bash
+    "default_reranking_model": {
+        "provider": "azure_openai",
+        "model_name" : "gpt-4o",
+        "api_key": "sk-abc123",
+        "base_url": "https://ai-6689.openai.azure.com/",
+        "api_version": "2024-02-01",
+        "method": "multi-class"
+    }
+```
+
+The `default_reranking_model` parameter specifies the default reranking model used with knowledge bases. Learn more about the parameters following the [documentation of the `reranking_model` of knowledge bases](/mindsdb_sql/knowledge_bases/create#reranking-model).
+
+#### `data_catalog`
+
+```bash
+{
+    "data_catalog": {
+        "enabled": true
+    }
+}
+```
+
+This parameter enables the [data catalog](/data_catalog/overview).
+
+### Example
 
 First, create a `config.json` file.
 
@@ -374,6 +435,7 @@ First, create a `config.json` file.
         "handlers": {
             "console": {
                 "enabled": true,
+                "formatter": "default",
                 "level": "INFO"
             },
             "file": {
@@ -388,7 +450,11 @@ First, create a `config.json` file.
     "ml_task_queue": {
         "type": "local"
     },
-    "file_upload_domains": [],
+    "url_file_upload": {
+           "enabled": true,
+           "allowed_origins": ["https://example.com"],
+           "disallowed_origins": ["http://example.com"]
+    }
     "web_crawling_allowed_sites": []
 }
 ```
@@ -398,9 +464,6 @@ Next, start MindsDB providing this `config.json` file.
 ```bash
 python -m mindsdb --config=/path-to-the-extended-config-file/config.json
 ```
-</Accordion>
-
-</AccordionGroup>
 
 ## Modifying Config Values
 

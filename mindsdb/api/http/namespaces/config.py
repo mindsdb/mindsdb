@@ -32,6 +32,8 @@ class GetConfig(Resource):
             value = config.get(key)
             if value is not None:
                 resp[key] = value
+        if "a2a" in config["api"]:
+            resp["a2a"] = config["api"]["a2a"]
         return resp
 
     @ns_conf.doc("put_config")
@@ -52,6 +54,15 @@ class GetConfig(Resource):
                     return http_error(
                         HTTPStatus.BAD_REQUEST, "Wrong arguments", f"Unknown argumens: {unknown_arguments}"
                     )
+
+        overwrite_arguments = {"default_llm", "default_embedding_model", "default_reranking_model"}
+        overwrite_data = {k: data[k] for k in overwrite_arguments if k in data}
+        merge_data = {k: data[k] for k in data if k not in overwrite_arguments}
+
+        if len(overwrite_data) > 0:
+            Config().update(overwrite_data, overwrite=True)
+        if len(merge_data) > 0:
+            Config().update(merge_data)
 
         Config().update(data)
 

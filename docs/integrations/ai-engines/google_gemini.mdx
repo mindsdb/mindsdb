@@ -32,8 +32,8 @@ CREATE MODEL google_gemini_model
 PREDICT target_column
 USING
       engine = 'google_gemini_engine',  -- engine name as created via CREATE ML_ENGINE
-      column = 'input_column',          -- column name that stores user input
-      model = 'gemini-pro';             -- model name to be used
+      question_column = 'input_column',          -- column name that stores user input
+      model_name = 'gemini-2.0-flash';             -- model name to be used
 ```
 
 ## Usage
@@ -47,8 +47,8 @@ CREATE MODEL google_gemini_model
 PREDICT answer
 USING
       engine = 'google_gemini_engine',
-      column = 'question',
-      model = 'gemini-pro';
+      question_column = 'question',
+      model_name = 'gemini-2.0-flash';
 ```
 
 Query the model to get predictions.

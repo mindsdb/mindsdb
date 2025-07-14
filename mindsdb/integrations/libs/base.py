@@ -1,4 +1,5 @@
 import ast
+import concurrent.futures
 import inspect
 import textwrap
 from _ast import AnnAssign, AugAssign
@@ -8,7 +9,7 @@ import pandas as pd
 from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb.utilities import log
 
-from mindsdb.integrations.libs.response import HandlerResponse, HandlerStatusResponse
+from mindsdb.integrations.libs.response import HandlerResponse, HandlerStatusResponse, RESPONSE_TYPE
 
 logger = log.getLogger(__name__)
 
@@ -156,6 +157,7 @@ class MetaDatabaseHandler(DatabaseHandler):
     def meta_get_column_statistics(self, table_names: Optional[List[str]]) -> HandlerResponse:
         """
         Returns metadata statisical information about the columns in the tables to be stored in the data catalog.
+        Either this method should be overridden in the handler or `meta_get_column_statistics_for_table` should be implemented.
 
         Returns:
             HandlerResponse: The response should consist of the following columns:
@@ -168,7 +170,74 @@ class MetaDatabaseHandler(DatabaseHandler):
             - MAXIMUM_VALUE (str): Maximum value in the column (optional).
             - DISTINCT_VALUES_COUNT (int): Count of distinct values in the column (optional).
         """
-        raise NotImplementedError()
+        method = getattr(self, "meta_get_column_statistics_for_table")
+        if method.__func__ is not MetaDatabaseHandler.meta_get_column_statistics_for_table:
+            meta_columns = self.meta_get_columns(table_names)
+            grouped_columns = (
+                meta_columns.data_frame.groupby("table_name")
+                .agg(
+                    {
+                        "column_name": list,
+                    }
+                )
+                .reset_index()
+            )
+
+            executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
+            futures = []
+
+            results = []
+            with executor:
+                for _, row in grouped_columns.iterrows():
+                    table_name = row["table_name"]
+                    columns = row["column_name"]
+                    futures.append(executor.submit(self.meta_get_column_statistics_for_table, table_name, columns))
+
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    result = future.result(timeout=120)
+                    if result.resp_type == RESPONSE_TYPE.TABLE:
+                        results.append(result.data_frame)
+                    else:
+                        logger.error(
+                            f"Error retrieving column statistics for table {table_name}: {result.error_message}"
+                        )
+                except Exception as e:
+                    logger.error(f"Exception occurred while retrieving column statistics for table {table_name}: {e}")
+
+            if not results:
+                logger.warning("No column statistics could be retrieved for the specified tables.")
+                return HandlerResponse(RESPONSE_TYPE.ERROR, error_message="No column statistics could be retrieved.")
+            return HandlerResponse(
+                RESPONSE_TYPE.TABLE, pd.concat(results, ignore_index=True) if results else pd.DataFrame()
+            )
+
+        else:
+            raise NotImplementedError()
+
+    def meta_get_column_statistics_for_table(
+        self, table_name: str, column_names: Optional[List[str]] = None
+    ) -> HandlerResponse:
+        """
+        Returns metadata statistical information about the columns in a specific table to be stored in the data catalog.
+        Either this method should be implemented in the handler or `meta_get_column_statistics` should be overridden.
+
+        Args:
+            table_name (str): Name of the table.
+            column_names (Optional[List[str]]): List of column names to retrieve statistics for. If None, statistics for all columns will be returned.
+
+        Returns:
+            HandlerResponse: The response should consist of the following columns:
+            - TABLE_NAME (str): Name of the table.
+            - COLUMN_NAME (str): Name of the column.
+            - MOST_COMMON_VALUES (List[str]): Most common values in the column (optional).
+            - MOST_COMMON_FREQUENCIES (List[str]): Frequencies of the most common values in the column (optional).
+            - NULL_PERCENTAGE: Percentage of NULL values in the column (optional).
+            - MINIMUM_VALUE (str): Minimum value in the column (optional).
+            - MAXIMUM_VALUE (str): Maximum value in the column (optional).
+            - DISTINCT_VALUES_COUNT (int): Count of distinct values in the column (optional).
+        """
+        pass
 
     def meta_get_primary_keys(self, table_names: Optional[List[str]]) -> HandlerResponse:
         """
@@ -196,6 +265,21 @@ class MetaDatabaseHandler(DatabaseHandler):
             - CONSTRAINT_NAME (str): Name of the foreign key constraint (optional).
         """
         raise NotImplementedError()
+
+    def meta_get_handler_info(self, **kwargs) -> str:
+        """
+        Retrieves information about the design and implementation of the database handler.
+        This should include, but not be limited to, the following:
+        - The type of SQL queries and operations that the handler supports.
+        - etc.
+
+        Args:
+            kwargs: Additional keyword arguments that may be used in generating the handler information.
+
+        Returns:
+            str: A string containing information about the database handler's design and implementation.
+        """
+        pass
 
 
 class ArgProbeMixin:

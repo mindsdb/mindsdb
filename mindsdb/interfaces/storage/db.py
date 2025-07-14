@@ -1,10 +1,11 @@
 import json
 import datetime
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import numpy as np
 from sqlalchemy import (
     JSON,
+    BigInteger,
     Boolean,
     Column,
     DateTime,
@@ -493,17 +494,33 @@ class KnowledgeBase(Base):
 
     __table_args__ = (UniqueConstraint("name", "project_id", name="unique_knowledge_base_name_project_id"),)
 
-    def as_dict(self) -> Dict:
+    def as_dict(self, with_secrets: Optional[bool] = True) -> Dict:
+        params = self.params.copy()
+        embedding_model = params.pop("embedding_model", None)
+        reranking_model = params.pop("reranking_model", None)
+
+        if not with_secrets:
+            if embedding_model and "api_key" in embedding_model:
+                embedding_model["api_key"] = "******"
+
+            if reranking_model and "api_key" in reranking_model:
+                reranking_model["api_key"] = "******"
+
         return {
             "id": self.id,
             "name": self.name,
             "project_id": self.project_id,
-            "embedding_model": None if self.embedding_model is None else self.embedding_model.name,
             "vector_database": None if self.vector_database is None else self.vector_database.name,
             "vector_database_table": self.vector_database_table,
             "updated_at": self.updated_at,
             "created_at": self.created_at,
-            "params": self.params,
+            "query_id": self.query_id,
+            "embedding_model": embedding_model,
+            "reranking_model": reranking_model,
+            "metadata_columns": params.pop("metadata_columns", None),
+            "content_columns": params.pop("content_columns", None),
+            "id_column": params.pop("id_column", None),
+            "params": params,
         }
 
 
@@ -589,7 +606,7 @@ class MetaTables(Base):
     schema: str = Column(String, nullable=True)
     description: str = Column(String, nullable=True)
     type: str = Column(String, nullable=True)
-    row_count: int = Column(Integer, nullable=True)
+    row_count: int = Column(BigInteger, nullable=True)
 
     meta_columns: Mapped[List["MetaColumns"]] = relationship("MetaColumns", back_populates="meta_tables")
     meta_primary_keys: Mapped[List["MetaPrimaryKeys"]] = relationship("MetaPrimaryKeys", back_populates="meta_tables")
@@ -667,10 +684,10 @@ class MetaColumns(Base):
         if self.default_value:
             column_info += f"\n{pad}- Default Value: {self.default_value}"
 
-        if self.meta_column_statistics:
+        stats = self.meta_column_statistics or []
+        if stats and callable(getattr(stats[0], "as_string", None)):
             column_info += f"\n\n{pad}- Column Statistics:"
-            column_info += f"\n{self.meta_column_statistics[0].as_string(indent + 4)}"
-
+            column_info += f"\n{stats[0].as_string(indent + 4)}"
         return column_info
 
 
@@ -682,7 +699,7 @@ class MetaColumnStatistics(Base):
     most_common_values: str = Column(Array, nullable=True)
     most_common_frequencies: str = Column(Array, nullable=True)
     null_percentage: float = Column(Numeric(5, 2), nullable=True)
-    distinct_values_count: int = Column(Integer, nullable=True)
+    distinct_values_count: int = Column(BigInteger, nullable=True)
     minimum_value: str = Column(String, nullable=True)
     maximum_value: str = Column(String, nullable=True)
 
@@ -691,18 +708,20 @@ class MetaColumnStatistics(Base):
         inner_pad = " " * (indent + 4)
 
         column_statistics = ""
+        most_common_values = self.most_common_values or []
+        most_common_frequencies = self.most_common_frequencies or []
 
-        if any(self.most_common_values) and any(self.most_common_frequencies):
+        if most_common_values and most_common_frequencies:
             column_statistics += f"{pad}- Top 10 Most Common Values and Frequencies:"
-            for i in range(min(10, len(self.most_common_values))):
-                freq = self.most_common_frequencies[i]
+            for i in range(min(10, len(most_common_values))):
+                freq = most_common_frequencies[i]
                 try:
                     percent = float(freq) * 100
                     freq_str = f"{percent:.2f}%"
                 except (ValueError, TypeError):
                     freq_str = str(freq)
 
-                column_statistics += f"\n{inner_pad}- {self.most_common_values[i]}: {freq_str}"
+                column_statistics += f"\n{inner_pad}- {most_common_values[i]}: {freq_str}"
             column_statistics += "\n"
 
         if self.null_percentage:

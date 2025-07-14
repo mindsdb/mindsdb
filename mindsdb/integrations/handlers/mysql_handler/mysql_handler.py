@@ -31,9 +31,7 @@ def _map_type(mysql_type_text: str) -> MYSQL_DATA_TYPE:
     try:
         return MYSQL_DATA_TYPE(mysql_type_text.upper())
     except Exception:
-        logger.warning(
-            f"MySQL handler: unknown type: {mysql_type_text}, use TEXT as fallback."
-        )
+        logger.warning(f"MySQL handler: unknown type: {mysql_type_text}, use TEXT as fallback.")
         return MYSQL_DATA_TYPE.TEXT
 
 
@@ -65,22 +63,23 @@ def _make_table_response(result: list[dict], cursor: mysql.connector.cursor.MySQ
             mysql_types.append(reverse_c_type_map[type_int])
             continue
 
-        if type_int != C_TYPES.MYSQL_TYPE_BLOB:
-            raise ValueError(f'Unknown MySQL type id={type_int} in column {col[0]}')
-
-        # region determine text/blob type by flags
-        # Unfortunately, there is no way to determine particular type of text/blob column by flags.
-        # Subtype have to be determined by 8-s element of description tuple, but mysql.conector
-        # return the same value for all text types (TINYTEXT, TEXT, MEDIUMTEXT, LONGTEXT), and for
-        # all blob types (TINYBLOB, BLOB, MEDIUMBLOB, LONGBLOB).
-        if col[7] == 16:  # and col[8] == 45
-            mysql_types.append(MYSQL_DATA_TYPE.TEXT)
-        elif col[7] == 144:  # and col[8] == 63
-            mysql_types.append(MYSQL_DATA_TYPE.BLOB)
+        if type_int == C_TYPES.MYSQL_TYPE_BLOB:
+            # region determine text/blob type by flags
+            # Unfortunately, there is no way to determine particular type of text/blob column by flags.
+            # Subtype have to be determined by 8-s element of description tuple, but mysql.conector
+            # return the same value for all text types (TINYTEXT, TEXT, MEDIUMTEXT, LONGTEXT), and for
+            # all blob types (TINYBLOB, BLOB, MEDIUMBLOB, LONGBLOB).
+            if col[7] == 16:  # and col[8] == 45
+                mysql_types.append(MYSQL_DATA_TYPE.TEXT)
+            elif col[7] == 144:  # and col[8] == 63
+                mysql_types.append(MYSQL_DATA_TYPE.BLOB)
+            else:
+                logger.debug(f"MySQL handler: unknown type code {col[7]}, use TEXT as fallback.")
+                mysql_types.append(MYSQL_DATA_TYPE.TEXT)
+            # endregion
         else:
-            logger.debug(f'MySQL handler: unknown type code {col[7]}, use TEXT as fallback.')
+            logger.warning(f"MySQL handler: unknown type id={type_int} in column {col[0]}, use TEXT as fallback.")
             mysql_types.append(MYSQL_DATA_TYPE.TEXT)
-        # endregion
 
     # region cast int and bool to nullable types
     serieses = []
@@ -88,22 +87,20 @@ def _make_table_response(result: list[dict], cursor: mysql.connector.cursor.MySQ
         expected_dtype = None
         column_name = description[i][0]
         if mysql_type in (
-            MYSQL_DATA_TYPE.SMALLINT, MYSQL_DATA_TYPE.INT, MYSQL_DATA_TYPE.MEDIUMINT,
-            MYSQL_DATA_TYPE.BIGINT, MYSQL_DATA_TYPE.TINYINT
+            MYSQL_DATA_TYPE.SMALLINT,
+            MYSQL_DATA_TYPE.INT,
+            MYSQL_DATA_TYPE.MEDIUMINT,
+            MYSQL_DATA_TYPE.BIGINT,
+            MYSQL_DATA_TYPE.TINYINT,
         ):
-            expected_dtype = 'Int64'
+            expected_dtype = "Int64"
         elif mysql_type in (MYSQL_DATA_TYPE.BOOL, MYSQL_DATA_TYPE.BOOLEAN):
-            expected_dtype = 'boolean'
+            expected_dtype = "boolean"
         serieses.append(pd.Series([row[column_name] for row in result], dtype=expected_dtype, name=description[i][0]))
     df = pd.concat(serieses, axis=1, copy=False)
     # endregion
 
-    response = Response(
-        RESPONSE_TYPE.TABLE,
-        df,
-        affected_rows=cursor.rowcount,
-        mysql_types=mysql_types
-    )
+    response = Response(RESPONSE_TYPE.TABLE, df, affected_rows=cursor.rowcount, mysql_types=mysql_types)
     return response
 
 
@@ -182,6 +179,9 @@ class MySQLHandler(DatabaseHandler):
                 config["ssl_cert"] = ssl_cert
             if ssl_key is not None:
                 config["ssl_key"] = ssl_key
+        elif ssl is False:
+            config["ssl_disabled"] = True
+
         if "collation" not in config:
             config["collation"] = "utf8mb4_general_ci"
         if "use_pure" not in config:
@@ -219,9 +219,7 @@ class MySQLHandler(DatabaseHandler):
             connection = self.connect()
             result.success = connection.is_connected()
         except mysql.connector.Error as e:
-            logger.error(
-                f'Error connecting to MySQL {self.connection_data["database"]}, {e}!'
-            )
+            logger.error(f"Error connecting to MySQL {self.connection_data['database']}, {e}!")
             result.error_message = str(e)
 
         if result.success and need_to_close:
@@ -252,9 +250,7 @@ class MySQLHandler(DatabaseHandler):
                 else:
                     response = Response(RESPONSE_TYPE.OK, affected_rows=cur.rowcount)
         except mysql.connector.Error as e:
-            logger.error(
-                f'Error running query: {query} on {self.connection_data["database"]}!'
-            )
+            logger.error(f"Error running query: {query} on {self.connection_data['database']}!")
             response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
             if connection is not None and connection.is_connected():
                 connection.rollback()

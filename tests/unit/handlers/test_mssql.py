@@ -1,33 +1,33 @@
 from collections import OrderedDict
 import unittest
+import pytest
 from decimal import Decimal
 from unittest.mock import patch, MagicMock
 from uuid import UUID
 import datetime
 
-from pymssql import OperationalError
+try:
+    from pymssql import OperationalError
+    from mindsdb.integrations.handlers.mssql_handler.mssql_handler import SqlServerHandler
+except ImportError:
+    pytestmark = pytest.mark.skip("MSSQL handler not installed")
+
 from pandas import DataFrame
 
 from base_handler_test import BaseDatabaseHandlerTest
-from mindsdb.integrations.handlers.mssql_handler.mssql_handler import SqlServerHandler
-from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response,
-    INF_SCHEMA_COLUMNS_NAMES_SET,
-    RESPONSE_TYPE
-)
+from mindsdb.integrations.libs.response import HandlerResponse as Response, INF_SCHEMA_COLUMNS_NAMES_SET, RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 
 class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
-
     @property
     def dummy_connection_data(self):
         return OrderedDict(
-            host='127.0.0.1',
+            host="127.0.0.1",
             port=1433,
-            user='example_user',
-            password='example_pass',
-            database='example_db',
+            user="example_user",
+            password="example_pass",
+            database="example_db",
         )
 
     @property
@@ -41,7 +41,7 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                 table_schema,
                 table_name,
                 table_type
-            FROM {self.dummy_connection_data['database']}.INFORMATION_SCHEMA.TABLES
+            FROM {self.dummy_connection_data["database"]}.INFORMATION_SCHEMA.TABLES
             WHERE TABLE_TYPE in ('BASE TABLE', 'VIEW');
         """
 
@@ -58,10 +58,10 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         """
 
     def create_handler(self):
-        return SqlServerHandler('mssql', connection_data=self.dummy_connection_data)
+        return SqlServerHandler("mssql", connection_data=self.dummy_connection_data)
 
     def create_patcher(self):
-        return patch('pymssql.connect')
+        return patch("pymssql.connect")
 
     def test_native_query_with_results(self):
         """
@@ -76,14 +76,11 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.handler.connect = MagicMock(return_value=mock_conn)
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
 
-        mock_cursor.fetchall.return_value = [
-            {'id': 1, 'name': 'test1'},
-            {'id': 2, 'name': 'test2'}
-        ]
+        mock_cursor.fetchall.return_value = [{"id": 1, "name": "test1"}, {"id": 2, "name": "test2"}]
 
         mock_cursor.description = [
-            ('id', None, None, None, None, None, None),
-            ('name', None, None, None, None, None, None)
+            ("id", None, None, None, None, None, None),
+            ("name", None, None, None, None, None, None),
         ]
 
         query_str = "SELECT * FROM test_table"
@@ -96,7 +93,7 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertFalse(data.error_code)
         self.assertEqual(data.type, RESPONSE_TYPE.TABLE)
         self.assertIsInstance(data.data_frame, DataFrame)
-        expected_columns = ['id', 'name']
+        expected_columns = ["id", "name"]
         self.assertEqual(list(data.data_frame.columns), expected_columns)
 
         mock_conn.commit.assert_called_once()
@@ -188,12 +185,12 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         self.handler.native_query.assert_called_once()
         call_args = self.handler.native_query.call_args[0][0]
-        database = self.handler.connection_args['database']
+        database = self.handler.connection_args["database"]
 
-        self.assertIn(f'{database}.INFORMATION_SCHEMA.TABLES', call_args)
-        self.assertIn('table_schema', call_args)
-        self.assertIn('table_name', call_args)
-        self.assertIn('table_type', call_args)
+        self.assertIn(f"{database}.INFORMATION_SCHEMA.TABLES", call_args)
+        self.assertIn("table_schema", call_args)
+        self.assertIn("table_name", call_args)
+        self.assertIn("table_type", call_args)
         self.assertEqual(response, expected_response)
 
     def test_get_columns(self):
@@ -201,8 +198,7 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         Tests that get_columns calls native_query with the correct SQL
         """
         expected_response = Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=DataFrame([], columns=list(INF_SCHEMA_COLUMNS_NAMES_SET))
+            RESPONSE_TYPE.TABLE, data_frame=DataFrame([], columns=list(INF_SCHEMA_COLUMNS_NAMES_SET))
         )
         self.handler.native_query = MagicMock(return_value=expected_response)
 
@@ -239,15 +235,15 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         Tests that connect method raises ValueError when required connection parameters are missing
         """
         invalid_connection_args = self.dummy_connection_data.copy()
-        del invalid_connection_args['host']
-        handler = SqlServerHandler('mssql', connection_data=invalid_connection_args)
+        del invalid_connection_args["host"]
+        handler = SqlServerHandler("mssql", connection_data=invalid_connection_args)
 
         with self.assertRaises(ValueError):
             handler.connect()
 
         invalid_connection_args = self.dummy_connection_data.copy()
-        del invalid_connection_args['user']
-        handler = SqlServerHandler('mssql', connection_data=invalid_connection_args)
+        del invalid_connection_args["user"]
+        handler = SqlServerHandler("mssql", connection_data=invalid_connection_args)
 
         with self.assertRaises(ValueError):
             handler.connect()
@@ -256,18 +252,18 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         """
         Tests that connect method passes optional parameters to the connection
         """
-        self.handler.connection_args['server'] = 'my_server'
+        self.handler.connection_args["server"] = "my_server"
         self.handler.connect()
 
         call_kwargs = self.mock_connect.call_args[1]
-        self.assertEqual(call_kwargs['server'], 'my_server')
+        self.assertEqual(call_kwargs["server"], "my_server")
         self.tearDown()
         self.setUp()
-        self.handler.connection_args['port'] = 1433
+        self.handler.connection_args["port"] = 1433
         self.handler.connect()
 
         call_kwargs = self.mock_connect.call_args[1]
-        self.assertEqual(call_kwargs['port'], 1433)
+        self.assertEqual(call_kwargs["port"], 1433)
 
     def test_disconnect(self):
         """
@@ -299,7 +295,7 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
 
         response = self.handler.check_connection()
-        mock_cursor.execute.assert_called_once_with('select 1;')
+        mock_cursor.execute.assert_called_once_with("select 1;")
 
         self.assertTrue(response.success)
         self.assertIsNone(response.error_message)
@@ -311,8 +307,7 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertEqual(response.error_message, "Connection error")
 
     def test_types_casting(self):
-        """Test that types are casted correctly
-        """
+        """Test that types are casted correctly"""
         query_str = "SELECT * FROM test_table"
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
@@ -368,28 +363,34 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         );
         """
         input_row = {
-            'n_bit': True, 'n_tinyint': 255, 'n_smallint': 32767, 'n_int': 2147483647,
-            'n_bigint': 9223372036854775807, 'n_decimal': Decimal('1234.56'),
-            'n_decimal_p': Decimal('12345678901234567890123456789012345678'),
-            'n_numeric': Decimal('1234.5678'), 'n_money': Decimal('123456.7890'),
-            'n_smallmoney': Decimal('214748.3647'), 'n_float': 3.14159265358979,
-            'n_real': 3.141592025756836
+            "n_bit": True,
+            "n_tinyint": 255,
+            "n_smallint": 32767,
+            "n_int": 2147483647,
+            "n_bigint": 9223372036854775807,
+            "n_decimal": Decimal("1234.56"),
+            "n_decimal_p": Decimal("12345678901234567890123456789012345678"),
+            "n_numeric": Decimal("1234.5678"),
+            "n_money": Decimal("123456.7890"),
+            "n_smallmoney": Decimal("214748.3647"),
+            "n_float": 3.14159265358979,
+            "n_real": 3.141592025756836,
         }
         mock_cursor.fetchall.return_value = [input_row]
 
         mock_cursor.description = [
-            ('n_bit', 3, None, None, None, None, None),
-            ('n_tinyint', 3, None, None, None, None, None),
-            ('n_smallint', 3, None, None, None, None, None),
-            ('n_int', 3, None, None, None, None, None),
-            ('n_bigint', 3, None, None, None, None, None),
-            ('n_decimal', 5, None, None, None, None, None),
-            ('n_decimal_p', 5, None, None, None, None, None),
-            ('n_numeric', 5, None, None, None, None, None),
-            ('n_money', 5, None, None, None, None, None),
-            ('n_smallmoney', 5, None, None, None, None, None),
-            ('n_float', 3, None, None, None, None, None),
-            ('n_real', 3, None, None, None, None, None)
+            ("n_bit", 3, None, None, None, None, None),
+            ("n_tinyint", 3, None, None, None, None, None),
+            ("n_smallint", 3, None, None, None, None, None),
+            ("n_int", 3, None, None, None, None, None),
+            ("n_bigint", 3, None, None, None, None, None),
+            ("n_decimal", 5, None, None, None, None, None),
+            ("n_decimal_p", 5, None, None, None, None, None),
+            ("n_numeric", 5, None, None, None, None, None),
+            ("n_money", 5, None, None, None, None, None),
+            ("n_smallmoney", 5, None, None, None, None, None),
+            ("n_float", 3, None, None, None, None, None),
+            ("n_real", 3, None, None, None, None, None),
         ]
 
         response: Response = self.handler.native_query(query_str)
@@ -405,9 +406,9 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.DECIMAL,
             MYSQL_DATA_TYPE.DECIMAL,
             MYSQL_DATA_TYPE.FLOAT,
-            MYSQL_DATA_TYPE.FLOAT
+            MYSQL_DATA_TYPE.FLOAT,
         ]
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         for columns_name, input_value in input_row.items():
             result_value = response.data_frame[columns_name][0]
             self.assertEqual(result_value, input_value)
@@ -456,32 +457,32 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         );
         """
         input_row = {
-            't_char': 'Test      ',
-            't_nchar': 'Test      ',
-            't_varchar': 'Test',
-            't_nvarchar': 'Test',
-            't_text': 'Test',
-            't_ntext': 'Test',
-            't_binary': b'Hello\x00\x00\x00\x00\x00',
-            't_varbinary': b'Hello',
-            't_image': b'Hello',
-            't_xml': '<root><element>TestXML</element><nested><value>123</value></nested></root>',
-            't_uniqueidentifier': UUID('497b4fec-4659-431d-a146-39e76740c8a9')
+            "t_char": "Test      ",
+            "t_nchar": "Test      ",
+            "t_varchar": "Test",
+            "t_nvarchar": "Test",
+            "t_text": "Test",
+            "t_ntext": "Test",
+            "t_binary": b"Hello\x00\x00\x00\x00\x00",
+            "t_varbinary": b"Hello",
+            "t_image": b"Hello",
+            "t_xml": "<root><element>TestXML</element><nested><value>123</value></nested></root>",
+            "t_uniqueidentifier": UUID("497b4fec-4659-431d-a146-39e76740c8a9"),
         }
         mock_cursor.fetchall.return_value = [input_row]
 
         mock_cursor.description = [
-            ('t_char', 1, None, None, None, None, None),
-            ('t_nchar', 1, None, None, None, None, None),
-            ('t_varchar', 1, None, None, None, None, None),
-            ('t_nvarchar', 1, None, None, None, None, None),
-            ('t_text', 1, None, None, None, None, None),
-            ('t_ntext', 1, None, None, None, None, None),
-            ('t_binary', 2, None, None, None, None, None),
-            ('t_varbinary', 2, None, None, None, None, None),
-            ('t_image', 2, None, None, None, None, None),
-            ('t_xml', 1, None, None, None, None, None),
-            ('t_uniqueidentifier', 2, None, None, None, None, None)
+            ("t_char", 1, None, None, None, None, None),
+            ("t_nchar", 1, None, None, None, None, None),
+            ("t_varchar", 1, None, None, None, None, None),
+            ("t_nvarchar", 1, None, None, None, None, None),
+            ("t_text", 1, None, None, None, None, None),
+            ("t_ntext", 1, None, None, None, None, None),
+            ("t_binary", 2, None, None, None, None, None),
+            ("t_varbinary", 2, None, None, None, None, None),
+            ("t_image", 2, None, None, None, None, None),
+            ("t_xml", 1, None, None, None, None, None),
+            ("t_uniqueidentifier", 2, None, None, None, None, None),
         ]
 
         response: Response = self.handler.native_query(query_str)
@@ -496,9 +497,9 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.BINARY,
             MYSQL_DATA_TYPE.BINARY,
             MYSQL_DATA_TYPE.TEXT,
-            MYSQL_DATA_TYPE.BINARY
+            MYSQL_DATA_TYPE.BINARY,
         ]
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         for columns_name, input_value in input_row.items():
             result_value = response.data_frame[columns_name][0]
             self.assertEqual(result_value, input_value)
@@ -541,28 +542,30 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         );
         """
         input_row = {
-            'd_date': datetime.date(2025, 4, 22),
-            'd_time': datetime.time(12, 30, 45, 123456),
-            'd_time_p': datetime.time(12, 30, 45, 123456),
-            'd_smalldatetime': datetime.datetime(2025, 4, 22, 12, 30),
-            'd_datetime': datetime.datetime(2025, 4, 22, 12, 30, 45, 123456),
-            'd_datetime2': datetime.datetime(2025, 4, 22, 12, 30, 45, 123456),
-            'd_datetime2_p': datetime.datetime(2025, 4, 22, 12, 30, 45, 123456),
-            'd_datetimeoffset': datetime.datetime(2025, 4, 22, 12, 30, 45, 123456, tzinfo=datetime.timezone.utc),
-            'd_datetimeoffset_p': datetime.datetime(2025, 4, 22, 12, 30, 45, 123456, tzinfo=datetime.timezone(datetime.timedelta(hours=-7)))
+            "d_date": datetime.date(2025, 4, 22),
+            "d_time": datetime.time(12, 30, 45, 123456),
+            "d_time_p": datetime.time(12, 30, 45, 123456),
+            "d_smalldatetime": datetime.datetime(2025, 4, 22, 12, 30),
+            "d_datetime": datetime.datetime(2025, 4, 22, 12, 30, 45, 123456),
+            "d_datetime2": datetime.datetime(2025, 4, 22, 12, 30, 45, 123456),
+            "d_datetime2_p": datetime.datetime(2025, 4, 22, 12, 30, 45, 123456),
+            "d_datetimeoffset": datetime.datetime(2025, 4, 22, 12, 30, 45, 123456, tzinfo=datetime.timezone.utc),
+            "d_datetimeoffset_p": datetime.datetime(
+                2025, 4, 22, 12, 30, 45, 123456, tzinfo=datetime.timezone(datetime.timedelta(hours=-7))
+            ),
         }
         mock_cursor.fetchall.return_value = [input_row]
 
         mock_cursor.description = [
-            ('d_date', 2, None, None, None, None, None),
-            ('d_time', 2, None, None, None, None, None),
-            ('d_time_p', 2, None, None, None, None, None),
-            ('d_smalldatetime', 4, None, None, None, None, None),
-            ('d_datetime', 4, None, None, None, None, None),
-            ('d_datetime2', 2, None, None, None, None, None),
-            ('d_datetime2_p', 2, None, None, None, None, None),
-            ('d_datetimeoffset', 2, None, None, None, None, None),
-            ('d_datetimeoffset_p', 2, None, None, None, None, None)
+            ("d_date", 2, None, None, None, None, None),
+            ("d_time", 2, None, None, None, None, None),
+            ("d_time_p", 2, None, None, None, None, None),
+            ("d_smalldatetime", 4, None, None, None, None, None),
+            ("d_datetime", 4, None, None, None, None, None),
+            ("d_datetime2", 2, None, None, None, None, None),
+            ("d_datetime2_p", 2, None, None, None, None, None),
+            ("d_datetimeoffset", 2, None, None, None, None, None),
+            ("d_datetimeoffset_p", 2, None, None, None, None, None),
         ]
 
         response: Response = self.handler.native_query(query_str)
@@ -576,17 +579,17 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.DATETIME,
             MYSQL_DATA_TYPE.DATETIME,
             MYSQL_DATA_TYPE.DATETIME,
-            MYSQL_DATA_TYPE.DATETIME
+            MYSQL_DATA_TYPE.DATETIME,
         ]
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         for columns_name, input_value in input_row.items():
             result_value = response.data_frame[columns_name][0]
-            if columns_name == 'd_datetimeoffset_p':
-                self.assertEqual(result_value.strftime("%Y-%m-%d %H:%M:%S"), '2025-04-22 19:30:45')
+            if columns_name == "d_datetimeoffset_p":
+                self.assertEqual(result_value.strftime("%Y-%m-%d %H:%M:%S"), "2025-04-22 19:30:45")
                 continue
             self.assertEqual(result_value, input_value)
         # endregion
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

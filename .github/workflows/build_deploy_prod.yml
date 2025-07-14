@@ -163,13 +163,13 @@ jobs:
   #   secrets: inherit
 
   # slack_message:
-  #   if: always()
+  #   if: failure() && !cancelled()
   #   name: Notify Slack
-  #   # needs: [run_tests]
+  #   # Every previous job needs to be in here, because failure() will only return true if the job that failed is in 'needs'
+  #   needs: [check-version, deploy_to_pypi, build, build-cache, deploy, trigger_dd_extension_release, run_tests]
   #   runs-on: mdb-dev
   #   steps:
   #     - name: Notify of failing tests
-  #       if: ${{ needs.run_tests.result != 'success' && needs.run_tests.result != 'cancelled' }}
   #       uses: slackapi/slack-github-action@v1.26.0
   #       with:
   #         channel-id: ${{ secrets.SLACK_ENG_CHANNEL_ID }}

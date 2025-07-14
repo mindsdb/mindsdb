@@ -72,7 +72,7 @@ class SalesforceHandler(MetaAPIHandler):
 
             resource_tables = self._get_resource_names()
             for resource_name in resource_tables:
-                table_class = create_table_class(resource_name)
+                table_class = create_table_class(resource_name.lower())
                 self._register_table(resource_name, table_class(self))
 
             return self.connection

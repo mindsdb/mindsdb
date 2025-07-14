@@ -1386,7 +1386,7 @@ class TestKB(BaseExecutorDummyML):
     @patch("mindsdb.interfaces.knowledge_base.llm_client.OpenAI")
     @patch("mindsdb.integrations.utilities.rag.rerankers.base_reranker.AsyncOpenAI")
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-    def disable_test_evaluate(self, mock_litellm_embedding, mock_async_openai, mock_openai):
+    def test_evaluate(self, mock_litellm_embedding, mock_async_openai, mock_openai):
         set_litellm_embedding(mock_litellm_embedding)
 
         question, answer = "2+2", "4"

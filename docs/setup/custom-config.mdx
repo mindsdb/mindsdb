@@ -193,6 +193,10 @@ Currently, the supported APIs are:
 * `mysql`: Configures the MySQL API. It requires the `host` and `port` parameters and additionally the `database` and `ssl` parameters.
 * `a2a`: Configures the A2A API. It requires the `host` and `port` parameters. Alternatively, use the `MINDSDB_A2A_HOST` environment variable.
 
+<AccordionGroup>
+
+<Accordion title="HTTP API">
+
 Connection parameters for the HTTP API include:
 
 * `host`: Specifies the IP address or hostname where the API should run. For example, `"127.0.0.1"` indicates the API will run locally.
@@ -200,22 +204,27 @@ Connection parameters for the HTTP API include:
 * `restart_on_failure`: If it is set to `true` (and `max_restart_count` is not reached), the restart of MindsDB will be attempted after the MindsDB process was killed - with code 9 on Linux and MacOS, or for any reason on Windows.
 * `max_restart_count`: This defines how many times the restart attempts can be made. Note that 0 stands for no limit.
 * `max_restart_interval_seconds`: This defines the time limit during which there can be no more than `max_restart_count` restart attempts. Note that 0 stands for no time limit, which means there would be a maximum of `max_restart_count` restart attempts allowed.
+
+    <Note>
+    Here is a usage example of the restart features:
+
+    Assume the following values:
+    - max_restart_count = 2
+    - max_restart_interval_seconds = 30 seconds
+
+    Assume the following scenario:
+    - MindsDB fails at 1000s of its work - the restart attempt succeeds as there were no restarts in the past 30 seconds.
+    - MindsDB fails at 1010s of its work - the restart attempt succeeds as there was only 1 restart (at 1000s) in the past 30 seconds.
+    - MindsDB fails at 1020s of its work - the restart attempt fails as there were already max_restart_count=2 restarts (at 1000s and 1010s) in the past 30 seconds.
+    - MindsDB fails at 1031s of its work - the restart attempt succeeds as there was only 1 restart (at 1010s) in the past 30 seconds.
+    </Note>
+
 * `type` within `server`: This specifies the server type used by MindsDB. It is `waitress` by default. Other values include `flask` and `gunicorn`. Alternatively, you can set the `MINDSDB_DEFAULT_SERVER` environment variable to define the server.
 * `config` within `server`: This stores the selected server configuration. Any options that are supported by the selected server (taht is, waitress, flask, or gunicorn) can be set there, except for `host` and `port` that are defined under `config['api']['http']`.
 
-<Note>
-Here is a usage example of the restart features:
+</Accordion>
 
-Assume the following values:
-- max_restart_count = 2
-- max_restart_interval_seconds = 30 seconds
-
-Assume the following scenario:
-- MindsDB fails at 1000s of its work - the restart attempt succeeds as there were no restarts in the past 30 seconds.
-- MindsDB fails at 1010s of its work - the restart attempt succeeds as there was only 1 restart (at 1000s) in the past 30 seconds.
-- MindsDB fails at 1020s of its work - the restart attempt fails as there were already max_restart_count=2 restarts (at 1000s and 1010s) in the past 30 seconds.
-- MindsDB fails at 1031s of its work - the restart attempt succeeds as there was only 1 restart (at 1010s) in the past 30 seconds.
-</Note>
+<Accordion title="MySQL API">
 
 Connection parameters for the MySQL API include:
 
@@ -227,13 +236,26 @@ Connection parameters for the MySQL API include:
 * `max_restart_count`: This defines how many times the restart attempts can be made. Note that 0 stands for no limit.
 * `max_restart_interval_seconds`: This defines the time limit during which there can be no more than `max_restart_count` restart attempts. Note that 0 stands for no time limit, which means there would be a maximum of `max_restart_count` restart attempts allowed.
 
+</Accordion>
+
+<Accordion title="A2A API">
+
 Connection parameters for the A2A API include:
 
 * `host`: It stores the hostname where the A2A service runs. Note that if you start MindsDB with its A2A API enabled then the A2A host is the same as the host of MindsDB.
+
+    <Note>
+    When proving the value for `host`, do not include the protocol. For example, use `127.0.0.1` instead of `http://127.0.0.1/`.
+    </Note>
+
 * `port`: It stores the port where the A2A service runs. Note that MindsDB exposes its A2A API at port 47338.
 * `mindsdb_host`: It stores the hostname where MindsDB runs, which is localhost by default. Note that if you start MindsDB with its A2A API enabled then the A2A host is the same as the host of MindsDB.
 * `mindsdb_port`: It stores the port where MindsDB HTTP API runs. It is usually 47334.
 * `enabled`: It defines whether the A2A API is enabled (True) or not (False).
+
+</Accordion>
+
+</AccordionGroup>
 
 #### `cache`
 

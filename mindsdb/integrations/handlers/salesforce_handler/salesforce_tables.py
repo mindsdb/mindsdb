@@ -165,7 +165,7 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
             client = self.handler.connect()
 
             resource_metadata = next(
-                (resource for resource in main_metadata if resource["name"] == resource_name),
+                (resource for resource in main_metadata if resource["name"].lower() == resource_name),
             )
 
             # Get row count if Id column is aggregatable.
@@ -203,6 +203,8 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
                         "column_name": field["name"],
                         "data_type": field["type"],
                         "is_nullable": field.get("nillable", False),
+                        "default_value": field.get("defaultValue", ""),
+                        "description": field.get("inlineHelpText", ""),
                     }
                 )
 

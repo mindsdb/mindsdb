@@ -72,7 +72,8 @@
               {
                 "group": "Overview",
                 "pages": [
-                  "mindsdb-connect"
+                  "mindsdb-connect",
+                  "mindsdb-fqe"
                 ]
               },
               {
@@ -227,6 +228,7 @@
                           "integrations/ai-engines/huggingface",
                           "integrations/ai-engines/huggingface_inference_api",
                           "integrations/ai-engines/langchain",
+                          "integrations/ai-engines/litellm",
                           "integrations/ai-engines/llamaindex",
                           "integrations/ai-engines/monkeylearn",
                           "integrations/ai-engines/ollama",
@@ -391,7 +393,17 @@
               {
                 "group": "Data Unification",
                 "pages": [
-                  "mindsdb_sql/knowledge-bases",
+                  {
+                    "group": "Knowledge Bases",
+                    "pages": [
+                      "mindsdb_sql/knowledge_bases/overview",
+                      "mindsdb_sql/knowledge_bases/create",
+                      "mindsdb_sql/knowledge_bases/insert_data",
+                      "mindsdb_sql/knowledge_bases/query",
+                      "mindsdb_sql/knowledge_bases/evaluate",
+                      "mindsdb_sql/knowledge_bases/examples"
+                    ]
+                  },
                   {
                     "group": "Tables, Views, and Files",
                     "pages": [
@@ -532,7 +544,9 @@
               {
                 "group": "Agents",
                 "pages": [
-                  "mindsdb_sql/agents/agent"
+                  "mindsdb_sql/agents/agent",
+                  "mindsdb_sql/agents/agent_syntax",
+                  "mindsdb_sql/agents/agent_gui"
                 ]
               },
               {
@@ -1901,6 +1915,10 @@
     {
       "source": "/mindsdb_sql/agents/knowledge-bases",
       "destination": "/mindsdb_sql/knowledge-bases"
+    },
+    {
+      "source": "/mindsdb_sql/knowledge-bases",
+      "destination": "/mindsdb_sql/knowledge_bases/overview"
     },
     {
       "source": "/what-is-mindsdb",

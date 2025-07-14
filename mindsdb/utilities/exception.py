@@ -40,6 +40,7 @@ def format_db_error_message(
     db_type: str | None = None,
     db_error_msg: str | None = None,
     failed_query: str | None = None,
+    is_external: bool = True,
 ) -> str:
     """Format the error message for the database query.
 
@@ -48,11 +49,21 @@ def format_db_error_message(
         db_type (str | None): The type of the database.
         db_error_msg (str | None): The error message.
         failed_query (str | None): The failed query.
+        is_external (bool): True if error appeared in external database, False if in internal duckdb
 
     Returns:
         str: The formatted error message.
     """
     error_message = "Failed to execute external database query during query processing."
+    if is_external:
+        error_message = (
+            "An error occurred while executing a derived query on the external "
+            "database during processing of your original SQL query."
+        )
+    else:
+        error_message = (
+            "An error occurred while processing an internally generated query derived from your original SQL statement."
+        )
     if db_name is not None or db_type is not None:
         error_message += "\n\nDatabase Details:"
         if db_name is not None:

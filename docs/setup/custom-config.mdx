@@ -244,6 +244,7 @@ The `connection` parameter is required only if the `type` parameter is set to `r
         "handlers": {
             "console": {
                 "enabled": true,
+                "formatter": "default", # optional, available values include default and json
                 "level": "INFO" # optional (alternatively, it can be defined in the MINDSDB_CONSOLE_LOG_LEVEL environment variable)
             },
             "file": {
@@ -263,8 +264,18 @@ The `logging` parameter defines the details of output logging, including the log
 
 The `handler` parameter provides handlers used for logging into streams and files.
 
-* `console`: If the `enabled` parameter is set to `true`, then the logging output is saved into a stream. Users can define the logging level in the `level` parameter or in the `MINDSDB_CONSOLE_LOG_LEVEL` environment variable - one of `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`.
-* `file`: If the `enabled` parameter is set to `true`, then the logging output is saved into a file. Users can define the logging level in the `level` parameter or in the `MINDSDB_FILE_LOG_LEVEL` environment variable - one of `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. Additionally, the `filename` parameter stores the name of the file that contains logs, and the `maxBytes` and `backupCount` parameters determine the rollover process of the file - that is, if the file reached the size of `maxBytes`, then the file is closed and a new file is opened, where the number of files is defined by the `backupCount` parameter.
+* `console`: This parameter defines the setup for saving logs into a stream.
+
+    * If the `enabled` parameter is set to `true`, then the logging output is saved into a stream.
+    * Users can define the `formatter` parameter that configures the format of the logs, where the available values include `default` and `json`.
+    * Users can also define the logging level in the `level` parameter or in the `MINDSDB_CONSOLE_LOG_LEVEL` environment variable - one of `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`.
+
+* `file`: This parameter defines the setup for saving logs into a file.
+
+    * If the `enabled` parameter is set to `true`, then the logging output is saved into a file.
+    * Users can define the logging level in the `level` parameter or in the `MINDSDB_FILE_LOG_LEVEL` environment variable - one of `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`.
+    * Additionally, the `filename` parameter stores the name of the file that contains logs.
+    * And the `maxBytes` and `backupCount` parameters determine the rollover process of the file - that is, if the file reached the size of `maxBytes`, then the file is closed and a new file is opened, where the number of files is defined by the `backupCount` parameter.
 
 #### `ml_task_queue`
 
@@ -288,15 +299,23 @@ The `type` parameter defines the type of task queue to use.
     - Using a Redis queue requires additional configuration such as the `host`, `port`, `db`, `username`, and `password` parameters.
     - To use the Redis queue, start MindsDB with the following command to initiate a queue consumer process: `python3 -m mindsdb --ml_task_queue_consumer`. This process will monitor the queue and fetch tasks for execution only when sufficient resources are available.
 
-#### `file_upload_domains`
+#### `url_file_upload`
 
 ```bash
-    "file_upload_domains": [],
+   "url_file_upload": {
+           "enabled": true,
+           "allowed_origins": ["https://example.com"],
+           "disallowed_origins": ["http://example.com"]
+    }
 ```
 
-The `file_upload_domains` parameter restricts file uploads to trusted sources by specifying a list of allowed domains. This ensures that users can only upload files from the defined sources, such as S3 or Google Drive (`"file_upload_domains": ["https://s3.amazonaws.com", "https://drive.google.com"]`).
+The `url_file_upload` parameter restricts file uploads to trusted sources by specifying a list of allowed domains. This ensures that users can only upload files from the defined sources, such as S3 or Google Drive.
 
-If this parameter is left empty (`[]`), users can upload files from any URL without restriction.
+The `enabled` flag turns this feature on (`true`) or off (`false`).
+
+The `allowed_origins` parameter lists allowed domains. If left empty, then any domain is allowed.
+
+The `disallowed_origins` parameter lists domains that are not allowed. If left empty, then there are no restricted domains.
 
 #### `web_crawling_allowed_sites`
 
@@ -336,7 +355,7 @@ The `default_llm` parameter specifies the default LLM that will be used with the
 }
 ```
 
-The `default_embedding_model` parameter specifies the default embedding model used with knowledge bases. Learn more about the parameters following the [documentation of the `embedding_model` of knowledge bases](/mindsdb_sql/knowledge-bases#embedding-model).
+The `default_embedding_model` parameter specifies the default embedding model used with knowledge bases. Learn more about the parameters following the [documentation of the `embedding_model` of knowledge bases](/mindsdb_sql/knowledge_bases/create#embedding-model).
 
 #### `default_reranking_model`
 
@@ -351,7 +370,7 @@ The `default_embedding_model` parameter specifies the default embedding model us
     }
 ```
 
-The `default_reranking_model` parameter specifies the default reranking model used with knowledge bases. Learn more about the parameters following the [documentation of the `reranking_model` of knowledge bases](/mindsdb_sql/knowledge-bases#reranking-model).
+The `default_reranking_model` parameter specifies the default reranking model used with knowledge bases. Learn more about the parameters following the [documentation of the `reranking_model` of knowledge bases](/mindsdb_sql/knowledge_bases/create#reranking-model).
 
 #### `data_catalog`
 
@@ -416,6 +435,7 @@ First, create a `config.json` file.
         "handlers": {
             "console": {
                 "enabled": true,
+                "formatter": "default",
                 "level": "INFO"
             },
             "file": {
@@ -430,7 +450,11 @@ First, create a `config.json` file.
     "ml_task_queue": {
         "type": "local"
     },
-    "file_upload_domains": [],
+    "url_file_upload": {
+           "enabled": true,
+           "allowed_origins": ["https://example.com"],
+           "disallowed_origins": ["http://example.com"]
+    }
     "web_crawling_allowed_sites": []
 }
 ```

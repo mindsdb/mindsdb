@@ -14,9 +14,5 @@ def increment_otel_query_request_counter(metadata: dict) -> None:
 
 trace = None
 if OTEL_ENABLED:
-    try:
-        from mindsdb.utilities.otel.prepare import trace
-        from mindsdb.utilities.otel.metric_handlers import increment_otel_query_request_counter
-    except Exception:
-        pass
-
+    from mindsdb.utilities.otel.prepare import trace
+    from mindsdb.utilities.otel.metric_handlers import increment_otel_query_request_counter

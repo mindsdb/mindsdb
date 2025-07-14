@@ -194,5 +194,5 @@ jobs:
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
           which python
-          python -c "import sqlite3; conn = sqlite3.connect(':memory:'); conn.execute("""create virtual table fts5test using fts5 (data);"""); conn.execute("""insert into fts5test (data); values ('this is a test of full-text search');"""); conn.execute("""select * from fts5test where data match 'full';""").fetchall()"
+          python -c "import sqlite3; conn = sqlite3.connect(':memory:'); conn.execute('create virtual table fts5test using fts5 (data);'); conn.execute('insert into fts5test (data); values (\'this is a test of full-text search\');'); conn.execute('select * from fts5test where data match \'full\';').fetchall()"
           make unit_tests_slow

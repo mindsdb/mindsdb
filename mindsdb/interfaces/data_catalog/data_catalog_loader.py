@@ -1,9 +1,7 @@
 from typing import List, Union
 import pandas as pd
 import json
-from decimal import Decimal
 import datetime
-import uuid
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.interfaces.data_catalog.base_data_catalog import BaseDataCatalog
 from mindsdb.interfaces.storage import db
@@ -384,14 +382,8 @@ class DataCatalogLoader(BaseDataCatalog):
         """
         if val is None:
             return None
-        if isinstance(val, (int, float, str, bool)):
-            return str(val)
-        if isinstance(val, Decimal):
-            return str(val)
         if isinstance(val, (datetime.datetime, datetime.date)):
             return val.isoformat()
-        if isinstance(val, uuid.UUID):
-            return str(val)
         if isinstance(val, (list, dict, set, tuple)):
             return json.dumps(val, default=str)
         return str(val)

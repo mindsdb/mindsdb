@@ -2,14 +2,17 @@ from http import HTTPStatus
 from unittest.mock import patch
 
 import pandas as pd
+import pytest
 
 from tests.unit.api.http.conftest import create_demo_db, create_dummy_ml
 
 
 def test_prepare(client):
     create_demo_db(client)
+
     create_dummy_ml(client)
-    # Create model to use in all tests.
+    # Create model to use in depreciated tests.
+    # The skill-based approach is only used via Minds.
     create_query = """
         CREATE MODEL mindsdb.test_model
         FROM example_db (SELECT location as answer, sqft FROM demo_data.home_rentals limit 10)
@@ -20,7 +23,8 @@ def test_prepare(client):
     response = client.post("/api/projects/mindsdb/models", json=train_data, follow_redirects=True)
     assert response.status_code == HTTPStatus.CREATED
 
-    # Create skills to use in all tests.
+    # Create skills to use in depreciated tests.
+    # The skill-based approach is only used via Minds.
     create_request = {"skill": {"name": "test_skill", "type": "Knowledge Base", "params": {"k1": "v1"}}}
 
     create_response = client.post("/api/projects/mindsdb/skills", json=create_request, follow_redirects=True)
@@ -32,10 +36,13 @@ def test_prepare(client):
     assert create_response.status_code == HTTPStatus.CREATED
 
 
-def test_post_agent(client):
+@pytest.mark.deprecated(
+    "MindsDB models are no longer used with agents. However, Minds still uses models, so this test is kept for now"
+)
+def test_post_agent_depreciated(client):
     create_request = {
         "agent": {
-            "name": "test_post_agent",
+            "name": "test_post_agent_depreciated",
             "model_name": "test_model",
             "params": {"k1": "v1"},
             "provider": "mindsdb",
@@ -49,7 +56,7 @@ def test_post_agent(client):
     created_agent = create_response.get_json()
 
     expected_agent = {
-        "name": "test_post_agent",
+        "name": "test_post_agent_depreciated",
         "model_name": "test_model",
         "provider": "mindsdb",
         "params": {"k1": "v1"},
@@ -66,26 +73,53 @@ def test_post_agent(client):
     assert created_agent["skills"][0]["agent_ids"] == [created_agent["id"]]
 
 
+def test_post_agent(client):
+    create_request = {
+        "agent": {
+            "name": "test_post_agent",
+            "model": {"model_name": "gpt-3.5-turbo", "provider": "openai", "api_key": "sk-..."},
+            "data": {"tables": ["example_db.customers"]},
+            "prompt_template": "example_db.customers stores customers data",
+        }
+    }
+
+    create_response = client.post("/api/projects/mindsdb/agents", json=create_request, follow_redirects=True)
+    assert create_response.status_code == HTTPStatus.CREATED
+
+    created_agent = create_response.get_json()
+
+    expected_agent = {
+        "name": "test_post_agent",
+        "model": {"model_name": "gpt-3.5-turbo", "provider": "openai", "api_key": "sk-..."},
+        "data": {"tables": ["example_db.customers"]},
+        "id": created_agent["id"],
+        "project_id": created_agent["project_id"],
+        "created_at": created_agent["created_at"],
+        "updated_at": created_agent["updated_at"],
+        "prompt_template": "example_db.customers stores customers data",
+    }
+
+    assert created_agent == expected_agent
+
+
 def test_post_agent_no_agent(client):
     create_request = {
         "name": "test_post_agent_no_agent",
-        "model_name": "test_model",
-        "params": {"k1": "v1"},
-        "skills": ["test_skill"],
+        "model": {"model_name": "gpt-3.5-turbo", "provider": "openai", "api_key": "sk-..."},
+        "data": {"tables": ["example_db.customers"]},
+        "prompt_template": "example_db.customers stores customers data",
     }
     create_response = client.post("/api/projects/mindsdb/agents", json=create_request, follow_redirects=True)
     assert create_response.status_code == HTTPStatus.BAD_REQUEST
 
 
 def test_post_agent_no_name(client):
-    create_request = {"agent": {"model_name": "test_model", "params": {"k1": "v1"}, "skills": ["test_skill"]}}
-    create_response = client.post("/api/projects/mindsdb/agents", json=create_request, follow_redirects=True)
-    assert create_response.status_code == HTTPStatus.BAD_REQUEST
-
-
-def test_post_agent_no_model_name(client):
     create_request = {
-        "agent": {"name": "test_post_agent_no_model_name", "params": {"k1": "v1"}, "skills": ["test_skill"]}
+        "agent": {
+            "model": {"model_name": "gpt-3.5-turbo", "provider": "openai", "api_key": "sk-..."},
+            "data": {"tables": ["example_db.customers"]},
+            "prompt_template": "example_db.customers stores customers data",
+        }
     }
     create_response = client.post("/api/projects/mindsdb/agents", json=create_request, follow_redirects=True)
     assert create_response.status_code == HTTPStatus.BAD_REQUEST
@@ -95,16 +129,18 @@ def test_post_agent_project_not_found(client):
     create_request = {
         "agent": {
             "name": "test_post_agent_no_model_name",
-            "model_name": "test_model",
-            "params": {"k1": "v1"},
-            "provider": "mindsdb",
-            "skills": ["test_skill"],
+            "model": {"model_name": "gpt-3.5-turbo", "provider": "openai", "api_key": "sk-..."},
+            "data": {"tables": ["example_db.customers"]},
+            "prompt_template": "example_db.customers stores customers data",
         }
     }
     create_response = client.post("/api/projects/womp/agents", json=create_request, follow_redirects=True)
     assert create_response.status_code == HTTPStatus.NOT_FOUND
 
 
+@pytest.mark.deprecated(
+    "MindsDB models are no longer used with agents. However, Minds still uses models, so this test is kept for now"
+)
 def test_post_agent_model_not_found(client):
     create_request = {
         "agent": {
@@ -119,6 +155,9 @@ def test_post_agent_model_not_found(client):
     assert create_response.status_code == HTTPStatus.NOT_FOUND
 
 
+@pytest.mark.deprecated(
+    "MindsDB models are no longer used with agents. However, Minds still uses skills, so this test is kept for now"
+)
 def test_post_agent_skill_not_found(client):
     create_request = {
         "agent": {
@@ -137,9 +176,9 @@ def test_get_agents(client):
     create_request = {
         "agent": {
             "name": "test_get_agents",
-            "model_name": "test_model",
-            "params": {"k1": "v1"},
-            "skills": ["test_skill"],
+            "model": {"model_name": "gpt-3.5-turbo", "provider": "openai", "api_key": "sk-..."},
+            "data": {"tables": ["example_db.customers"]},
+            "prompt_template": "example_db.customers stores customers data",
         }
     }
 
@@ -160,10 +199,9 @@ def test_get_agent(client):
     create_request = {
         "agent": {
             "name": "test_get_agent",
-            "model_name": "test_model",
-            "params": {"k1": "v1"},
-            "provider": "mindsdb",
-            "skills": ["test_skill"],
+            "model": {"model_name": "gpt-3.5-turbo", "provider": "openai", "api_key": "sk-..."},
+            "data": {"tables": ["example_db.customers"]},
+            "prompt_template": "example_db.customers stores customers data",
         }
     }
 
@@ -175,12 +213,10 @@ def test_get_agent(client):
 
     expected_agent = {
         "name": "test_get_agent",
-        "model_name": "test_model",
-        "params": {"k1": "v1"},
-        "skills": agent["skills"],
-        "skills_extra_parameters": agent["skills_extra_parameters"],
+        "model": {"model_name": "gpt-3.5-turbo", "provider": "openai", "api_key": "sk-..."},
+        "data": {"tables": ["example_db.customers"]},
+        "prompt_template": "example_db.customers stores customers data",
         "id": agent["id"],
-        "provider": "mindsdb",
         "project_id": agent["project_id"],
         "created_at": agent["created_at"],
         "updated_at": agent["updated_at"],
@@ -231,10 +267,13 @@ def test_get_agent_project_not_found(client):
 #     assert created_agent == expected_agent
 
 
-def test_put_agent_update(client):
+@pytest.mark.deprecated(
+    "MindsDB models are no longer used with agents. However, Minds still uses models, so this test is kept for now"
+)
+def test_put_agent_update_depreciated(client):
     create_request = {
         "agent": {
-            "name": "test_put_agent_update",
+            "name": "test_put_agent_update_depreciated",
             "model_name": "test_model",
             "params": {"k1": "v1", "k2": "v2"},
             "provider": "mindsdb",
@@ -254,12 +293,12 @@ def test_put_agent_update(client):
     }
 
     update_response = client.put(
-        "/api/projects/mindsdb/agents/test_put_agent_update", json=update_request, follow_redirects=True
+        "/api/projects/mindsdb/agents/test_put_agent_update_depreciated", json=update_request, follow_redirects=True
     )
     updated_agent = update_response.get_json()
 
     expected_agent = {
-        "name": "test_put_agent_update",
+        "name": "test_put_agent_update_depreciated",
         "model_name": "test_model",
         "params": {"k1": "v1.1", "k3": "v3"},
         "provider": "mindsdb",
@@ -278,12 +317,61 @@ def test_put_agent_update(client):
     assert skill["name"] == "test_skill_2"
 
 
+@pytest.mark.deprecated(
+    "MindsDB models are no longer used with agents. However, Minds still uses models, so this test is kept for now"
+)
+def test_put_agent_update(client):
+    create_request = {
+        "agent": {
+            "name": "test_put_agent_update",
+            "model": {"model_name": "gpt-3.5-turbo", "provider": "openai", "api_key": "sk-..."},
+            "data": {"tables": ["example_db.customers"]},
+            "prompt_template": "example_db.customers stores customers data",
+        }
+    }
+
+    response = client.post("/api/projects/mindsdb/agents", json=create_request, follow_redirects=True)
+    assert response.status_code == HTTPStatus.CREATED
+
+    update_request = {
+        "agent": {
+            "params": {"k1": "v1.1", "k2": None, "k3": "v3"},
+            "data": {
+                "tables": ["example_db.customers", "example_db.orders"],
+                "knowledge_bases": ["example_kb"],
+            },
+        }
+    }
+
+    update_response = client.put(
+        "/api/projects/mindsdb/agents/test_put_agent_update", json=update_request, follow_redirects=True
+    )
+    updated_agent = update_response.get_json()
+
+    expected_agent = {
+        "name": "test_put_agent_update",
+        "params": {"k1": "v1.1", "k3": "v3"},
+        "id": updated_agent["id"],
+        "project_id": updated_agent["project_id"],
+        "created_at": updated_agent["created_at"],
+        "updated_at": updated_agent["updated_at"],
+        "data": {
+            "tables": ["example_db.customers", "example_db.orders"],
+            "knowledge_bases": ["example_kb"],
+        },
+        "model": {"model_name": "gpt-3.5-turbo", "provider": "openai", "api_key": "sk-..."},
+        "prompt_template": "example_db.customers stores customers data",
+    }
+
+    assert updated_agent == expected_agent
+
+
 def test_put_agent_no_agent(client):
     create_request = {
         "name": "test_put_agent_no_agent",
-        "model_name": "test_model",
-        "params": {"k1": "v1", "k2": "v2"},
-        "skills": ["test_skill"],
+        "model": {"model_name": "gpt-3.5-turbo", "provider": "openai", "api_key": "sk-..."},
+        "data": {"tables": ["example_db.customers"]},
+        "prompt_template": "example_db.customers stores customers data",
     }
 
     response = client.put(
@@ -315,10 +403,9 @@ def test_delete_agent(client):
     create_request = {
         "agent": {
             "name": "test_delete_agent",
-            "model_name": "test_model",
-            "params": {"k1": "v1", "k2": "v2"},
-            "provider": "mindsdb",
-            "skills": ["test_skill"],
+            "model": {"model_name": "gpt-3.5-turbo", "provider": "openai", "api_key": "sk-..."},
+            "data": {"tables": ["example_db.customers"]},
+            "prompt_template": "example_db.customers stores customers data",
         }
     }
 

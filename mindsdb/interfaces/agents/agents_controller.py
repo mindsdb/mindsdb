@@ -180,7 +180,7 @@ class AgentsController:
             agent (db.Agents): The created agent
 
         Raises:
-            ValueError: Agent with given name already exists, or skill/model with given name does not exist.
+            EntityExistsError: Agent with given name already exists, or skill/model with given name does not exist.
         """
         if project_name is None:
             project_name = default_project
@@ -189,7 +189,7 @@ class AgentsController:
         agent = self.get_agent(name, project_name)
 
         if agent is not None:
-            raise ValueError(f"Agent with name already exists: {name}")
+            raise EntityExistsError("Agent already exists", name)
 
         # No need to copy params since we're not preserving the original reference
         params = params or {}

@@ -1,7 +1,7 @@
 from typing import List, Union
-
 import pandas as pd
-
+import json
+import datetime
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.interfaces.data_catalog.base_data_catalog import BaseDataCatalog
 from mindsdb.interfaces.storage import db
@@ -204,6 +204,8 @@ class DataCatalogLoader(BaseDataCatalog):
                 # Convert the distinct_values_count to an integer if it is not NaN, otherwise set it to None.
                 val = row.get("distinct_values_count")
                 distinct_values_count = int(val) if pd.notna(val) else None
+                min_val = row.get("minimum_value")
+                max_val = row.get("maximum_value")
 
                 # Convert the most_common_frequencies to a list of strings.
                 most_common_frequencies = [str(val) for val in row.get("most_common_frequencies") or []]
@@ -214,8 +216,8 @@ class DataCatalogLoader(BaseDataCatalog):
                     most_common_frequencies=most_common_frequencies,
                     null_percentage=row.get("null_percentage"),
                     distinct_values_count=distinct_values_count,
-                    minimum_value=row.get("minimum_value"),
-                    maximum_value=row.get("maximum_value"),
+                    minimum_value=self.to_str(min_val),
+                    maximum_value=self.to_str(max_val),
                 )
                 column_statistics.append(record)
 
@@ -373,3 +375,15 @@ class DataCatalogLoader(BaseDataCatalog):
             db.session.delete(table)
         db.session.commit()
         self.logger.info(f"Metadata for {self.database_name} removed successfully.")
+
+    def to_str(self, val) -> str:
+        """
+        Convert a value to a string.
+        """
+        if val is None:
+            return None
+        if isinstance(val, (datetime.datetime, datetime.date)):
+            return val.isoformat()
+        if isinstance(val, (list, dict, set, tuple)):
+            return json.dumps(val, default=str)
+        return str(val)

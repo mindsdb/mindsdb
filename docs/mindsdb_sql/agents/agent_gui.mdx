@@ -1,0 +1,34 @@
+---
+title: How to Chat with Agents
+sidebarTitle: Chat Interface
+---
+
+Agents enable conversation with data, including structured and unstructured data connected to MindsDB.
+
+MindsDB provides a chat interface that enables users to chat with their data.
+
+<Note>
+To access the chat interface and converse with agents, users need to enable the A2A API that is used to communicate between the chat interface and the agent.
+
+```bash
+docker run --name mindsdb_container -e MINDSDB_A2A_HOST=<if-using-remote-host> -e MINDSDB_APIS=http,mysql,mcp,a2a -p 47334:47334 -p 47335:47335 -p 47337:47337 -p 47338:47338 mindsdb/mindsdb
+```
+
+Note that the `MINDSDB_A2A_HOST` variable is required when running MindsDB on a remote host, such as AWS. If you run MindsDB on `127.0.0.1`, the `MINDSDB_A2A_HOST` variable is not required.
+</Note>
+
+<p align="center">
+  <img src="/assets/mindsdb_gui_respond.png" />
+</p>
+
+Select an agent from the list of existing agents, or create one if none exists yet.
+
+<p align="center">
+  <img src="/assets/mindsdb_gui_respond_agents.png" />
+</p>
+
+Now the chat interface is connected to this agent via [Agent2Agent Protocol](https://google.github.io/A2A/) and users can chat with the data connected to this agent.
+
+<p align="center">
+  <img src="/assets/mindsdb_gui_respond_chat.png" />
+</p>

@@ -362,9 +362,7 @@ class Project:
 
                     columns = [ASSISTANT_COLUMN, USER_COLUMN]
             case "KNOWLEDGE_BASE":
-                from mindsdb.interfaces.knowledge_base.controller import KB_TO_VECTORDB_COLUMNS
-
-                columns = list(KB_TO_VECTORDB_COLUMNS.keys()) + ["metadata", "relevance", "distance"]
+                columns = ["id", "chunk_id", "chunk_content", "metadata", "relevance", "distance"]
             case "TABLE":
                 # like 'mindsdb.models'
                 pass

@@ -164,9 +164,18 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
             """
             client = self.handler.connect()
 
-            resource_metadata = next(
-                (resource for resource in main_metadata if resource["name"] == resource_name),
-            )
+            try:
+                resource_metadata = next(
+                    (resource for resource in main_metadata if resource["name"].lower() == resource_name),
+                )
+            except Exception as e:
+                logger.warning(f"Failed to get resource metadata for {resource_name}: {e}")
+                return {
+                    "table_name": table_name,
+                    "table_type": "BASE TABLE",
+                    "table_description": "",
+                    "row_count": None,
+                }
 
             # Get row count if Id column is aggregatable.
             row_count = None

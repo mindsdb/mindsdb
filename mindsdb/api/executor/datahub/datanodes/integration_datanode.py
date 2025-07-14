@@ -164,7 +164,11 @@ class IntegrationDataNode(DataNode):
             df = result_set.to_df()
 
             result: HandlerResponse = self.integration_handler.insert(table_name.parts[-1], df)
-            return DataHubResponse(affected_rows=result.affected_rows)
+            if result is not None:
+                affected_rows = result.affected_rows
+            else:
+                affected_rows = None
+            return DataHubResponse(affected_rows=affected_rows)
 
         insert_columns = [Identifier(parts=[x.alias]) for x in result_set.columns]
 

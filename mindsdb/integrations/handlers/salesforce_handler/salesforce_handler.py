@@ -72,7 +72,7 @@ class SalesforceHandler(MetaAPIHandler):
 
             resource_tables = self._get_resource_names()
             for resource_name in resource_tables:
-                table_class = create_table_class(resource_name)
+                table_class = create_table_class(resource_name.lower())
                 self._register_table(resource_name, table_class(self))
 
             return self.connection
@@ -271,10 +271,11 @@ class SalesforceHandler(MetaAPIHandler):
 
         # Retrieve the metadata for all Salesforce resources.
         main_metadata = connection.sobjects.describe()
-
         if table_names:
             # Filter the metadata for the specified tables.
-            main_metadata = [resource for resource in main_metadata["sobjects"] if resource["name"] in table_names]
+            main_metadata = [
+                resource for resource in main_metadata["sobjects"] if resource["name"].lower() in table_names
+            ]
         else:
             main_metadata = main_metadata["sobjects"]
 

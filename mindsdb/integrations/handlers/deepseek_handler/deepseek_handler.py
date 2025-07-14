@@ -7,12 +7,10 @@ from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.integrations.libs.base import BaseMLEngine
 from openai import OpenAI, NotFoundError, AuthenticationError
 import pandas as pd
-from .constants import (
-    DEEPSEEK_API_BASE,
-    DEFAULT_MODEL
-)
+from .constants import DEEPSEEK_API_BASE, DEFAULT_MODEL
 from typing import Dict, Optional, Text, Any
 from mindsdb.utilities import log
+
 logger = log.getLogger(__name__)
 
 
@@ -21,7 +19,7 @@ class DeepSeekHandler(BaseMLEngine):
     This handler handles connection and inference with the Deepseek API.
     """
 
-    name = 'deepseek'
+    name = "deepseek"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -31,27 +29,24 @@ class DeepSeekHandler(BaseMLEngine):
 
     def create_engine(self, connection_args: Dict) -> None:
         connection_args = {k.lower(): v for k, v in connection_args.items()}
-        api_key = connection_args.get('deepseek_api_key')
+        api_key = connection_args.get("deepseek_api_key")
         if api_key is not None:
-            org = connection_args.get('api_organization')
-            api_base = connection_args.get('api_base') or os.environ.get('DEEPSEEK_API_BASE', DEEPSEEK_API_BASE)
-            self.engine_storage.json_set('args', {
-                'api_base': api_base,
-                'api_organization': org
-            })
+            org = connection_args.get("api_organization")
+            api_base = connection_args.get("api_base") or os.environ.get("DEEPSEEK_API_BASE", DEEPSEEK_API_BASE)
+            self.engine_storage.json_set("args", {"api_base": api_base, "api_organization": org})
             client = self._get_client(api_key=api_key, base_url=api_base, org=org)
             DeepSeekHandler._check_client_connection(client)
 
     @staticmethod
     def _check_client_connection(client: OpenAI) -> None:
         try:
-            client.models.retrieve('test')
+            client.models.retrieve("test")
         except NotFoundError:
             pass
         except AuthenticationError as e:
-            if e.body['code'] == 'invalid_api_key':
-                raise Exception('Invalid api key')
-            raise Exception(f'Something went wrong: {e}')
+            if e.body["code"] == "invalid_api_key":
+                raise Exception("Invalid api key")
+            raise Exception(f"Something went wrong: {e}")
 
     @staticmethod
     def _get_client(api_key: Text, base_url: Text, org: Optional[Text] = None) -> OpenAI:
@@ -62,20 +57,16 @@ class DeepSeekHandler(BaseMLEngine):
         args["target"] = target
         self.model_storage.json_set("args", args)
 
-    def predict(
-        self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None
-    ) -> pd.DataFrame:
+    def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> pd.DataFrame:
         model_args = self.model_storage.json_get("args")
-        engine_args = self.engine_storage.json_get('args') or {}
+        engine_args = self.engine_storage.json_get("args") or {}
 
         pred_args = args["predict_params"] if args else {}
         df = df.reset_index(drop=True)
 
         # same as opeani handler for getting prompt template
         if pred_args.get("prompt_template", False):
-            base_template = pred_args[
-                "prompt_template"
-            ]  # override with predict-time template if available
+            base_template = pred_args["prompt_template"]  # override with predict-time template if available
         elif model_args.get("prompt_template", False):
             base_template = model_args["prompt_template"]
         else:
@@ -87,23 +78,17 @@ class DeepSeekHandler(BaseMLEngine):
         # Disclaimer: The following code has been adapted from the OpenAI handler.
         elif model_args.get("context_column", False):
             empty_prompt_ids = np.where(
-                df[[model_args["context_column"], model_args["question_column"]]]
-                .isna()
-                .all(axis=1)
-                .values
+                df[[model_args["context_column"], model_args["question_column"]]].isna().all(axis=1).values
             )[0]
             contexts = list(df[model_args["context_column"]].apply(lambda x: str(x)))
             questions = list(df[model_args["question_column"]].apply(lambda x: str(x)))
             prompts = [
-                f"Give only answer for: \nContext: {c}\nQuestion: {q}\nAnswer: "
-                for c, q in zip(contexts, questions)
+                f"Give only answer for: \nContext: {c}\nQuestion: {q}\nAnswer: " for c, q in zip(contexts, questions)
             ]
 
         # Disclaimer: The following code has been adapted from the OpenAI handler.
         elif model_args.get("json_struct", False):
-            empty_prompt_ids = np.where(
-                df[[model_args["question_column"]]].isna().all(axis=1).values
-            )[0]
+            empty_prompt_ids = np.where(df[[model_args["question_column"]]].isna().all(axis=1).values)[0]
             prompts = []
             for i in df.index:
                 if "json_struct" in df.columns:
@@ -119,7 +104,7 @@ class DeepSeekHandler(BaseMLEngine):
 
                 p = textwrap.dedent(
                     f"""\
-                    Using text starting after 'The text is:', give exactly {len(model_args['json_struct'])} answers to the questions:
+                    Using text starting after 'The text is:', give exactly {len(model_args["json_struct"])} answers to the questions:
                     {{{{json_struct}}}}
 
                     Answers should be in the same order as the questions.
@@ -128,7 +113,7 @@ class DeepSeekHandler(BaseMLEngine):
                     Answers should be as short as possible, ideally 1-2 words (unless otherwise specified).
 
                     The text is:
-                    {{{{{model_args['question_column']}}}}}
+                    {{{{{model_args["question_column"]}}}}}
                 """
                 )
                 p = p.replace("{{json_struct}}", json_struct)
@@ -141,15 +126,13 @@ class DeepSeekHandler(BaseMLEngine):
             empty_prompt_ids = []
             prompts = list(df[model_args["user_column"]])
         else:
-            empty_prompt_ids = np.where(
-                df[[model_args["question_column"]]].isna().all(axis=1).values
-            )[0]
+            empty_prompt_ids = np.where(df[[model_args["question_column"]]].isna().all(axis=1).values)[0]
             prompts = list(df[model_args["question_column"]].apply(lambda x: str(x)))
 
         # remove prompts without signal from completion queue
         prompts = [j for i, j in enumerate(prompts) if i not in empty_prompt_ids]
 
-        api_base = engine_args.get('api_base', DEEPSEEK_API_BASE)
+        api_base = engine_args.get("api_base", DEEPSEEK_API_BASE)
         api_key = get_api_key(self.name, model_args, engine_storage=self.engine_storage)
 
         client = self._get_client(api_key=api_key, base_url=api_base)

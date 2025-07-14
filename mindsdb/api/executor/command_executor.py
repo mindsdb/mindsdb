@@ -84,7 +84,7 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     TYPES,
 )
 
-from .exceptions import (
+from mindsdb.api.executor.exceptions import (
     ExecutorException,
     BadDbError,
     NotSupportedYet,
@@ -1428,6 +1428,9 @@ class ExecuteCommands:
                 provider=provider,
                 params=statement.params,
             )
+        except EntityExistsError as e:
+            if statement.if_not_exists is not True:
+                raise ExecutorException(str(e))
         except ValueError as e:
             # Project does not exist or agent already exists.
             raise ExecutorException(str(e))

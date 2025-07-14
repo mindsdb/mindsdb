@@ -33,6 +33,19 @@ SHOW AGENTS
 WHERE name = 'my_agent';
 ```
 
+<Note>
+Note that you can insert all tables from a connected data source and all knowledge bases from a project using the `*` syntax.
+
+```sql
+    ...
+    data = {
+         "knowledge_bases": ["project_name.*", ...],
+         "tables": ["datasource_conn_name.*", ...]
+    },
+    ...
+```
+</Note>
+
 ### `model`
 
 This parameter defines the underlying language model, including:

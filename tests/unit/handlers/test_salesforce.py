@@ -94,21 +94,26 @@ class TestSalesforceHandler(BaseHandlerTestSetup, unittest.TestCase):
         Test that the `get_columns` method returns a list of columns for a given table.
         """
         mock_columns = ["Id", "Name", "Email"]
-        mock_table = "contact"
-
+        mock_table = "Contact"
+        
         # Create a mock for the Contact object that will be accessed via getattr
         contact_mock = MagicMock()
         contact_mock.describe.return_value = {"fields": [{"name": column} for column in mock_columns]}
-
+        
         # Create the main sobjects mock
         sobjects_mock = MagicMock()
-        sobjects_mock.describe.return_value = {"sobjects": [{"name": mock_table.title(), "queryable": True}]}
-
-        # Set the Contact attribute directly on the sobjects mock
-        setattr(sobjects_mock, mock_table.title(), contact_mock)
-
-        self.mock_connect.return_value = MagicMock(sobjects=sobjects_mock)
-
+        sobjects_mock.describe.return_value = {"sobjects": [{"name": mock_table, "queryable": True}]}
+        
+        # Set the contact attribute (lowercase) on the sobjects mock since the handler uses resource_name.lower()
+        setattr(sobjects_mock, mock_table.lower(), contact_mock)
+        
+        # Create the client mock
+        client_mock = MagicMock()
+        client_mock.sobjects = sobjects_mock
+        
+        # Make sure the mock_connect always returns the same client mock
+        self.mock_connect.return_value = client_mock
+        
         self.handler.connect()
         response = self.handler.get_columns(mock_table)
 

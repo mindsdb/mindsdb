@@ -188,7 +188,21 @@ class OracleHandler(DatabaseHandler):
             raise ValueError("Required parameters (user, password) must be provided.")
 
         if self.connection_data.get("thick_mode", False):
-            oracledb.init_oracle_client()
+            try:
+                lib_dir = self.connection_data.get("oracle_client_path")
+                if lib_dir:
+                    logger.debug(f"Initializing Oracle client in thick mode with lib_dir: {lib_dir}")
+                    oracledb.init_oracle_client(lib_dir=lib_dir)
+                else:
+                    logger.debug("Initializing Oracle client in thick mode with system default paths.")
+                    oracledb.init_oracle_client()
+            except Exception as e:
+                logger.error(
+                    f"Failed to initialize Oracle client in thick mode. "
+                    f"Ensure Oracle Instant Client is installed. Error: {e}"
+                    )
+                logger.error("See: https://python-oracledb.readthedocs.io/en/latest/user_guide/initialization.html")
+                raise
 
         config = {
             "user": self.connection_data["user"],

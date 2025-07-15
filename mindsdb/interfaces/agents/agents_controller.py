@@ -145,9 +145,17 @@ class AgentsController:
 
         return all_agents.all()
 
-    def _create_default_sql_skill(self, name, project_name, database: str = None, include_tables: List[str] = None,
-                                  ignore_tables: List[str]=None, knowledge_base_database: str = None,
-                                  include_knowledge_bases:List[str]=None, ignore_knowledge_bases:List[str]=None):
+    def _create_default_sql_skill(
+        self,
+        name,
+        project_name,
+        database: str = None,
+        include_tables: List[str] = None,
+        ignore_tables: List[str] = None,
+        knowledge_base_database: str = None,
+        include_knowledge_bases: List[str] = None,
+        ignore_knowledge_bases: List[str] = None,
+    ):
         # Create a default SQL skill
         skill_name = f"{name}_sql_skill"
         skill_params = {
@@ -322,10 +330,14 @@ class AgentsController:
         # Auto-create SQL skill if no skills are provided but include_tables or include_knowledge_bases params are provided
         if not skills and (include_tables or include_knowledge_bases):
             skill = self._create_default_sql_skill(
-                name, project_name,
-                database=database, include_tables=include_tables, ignore_tables=ignore_tables,
-                knowledge_base_database=knowledge_base_database, include_knowledge_bases=include_knowledge_bases,
-                ignore_knowledge_bases=ignore_knowledge_bases
+                name,
+                project_name,
+                database=database,
+                include_tables=include_tables,
+                ignore_tables=ignore_tables,
+                knowledge_base_database=knowledge_base_database,
+                include_knowledge_bases=include_knowledge_bases,
+                ignore_knowledge_bases=ignore_knowledge_bases,
             )
             skills = [skill]
 
@@ -496,15 +508,20 @@ class AgentsController:
 
         if "data" in params:
             if len(skills_to_add) > 0 or len(skills_to_remove) > 0:
-                raise ValueError("'data' parameter cannot be used with 'skills_to_remove' or 'skills_to_add' parameters")
+                raise ValueError(
+                    "'data' parameter cannot be used with 'skills_to_remove' or 'skills_to_add' parameters"
+                )
 
             include_knowledge_bases = params["data"].get("knowledge_bases")
             include_tables = params["data"].get("tables")
 
             skill = self._create_default_sql_skill(
-                agent_name, project_name,
-                database=params.get("database"), include_tables=include_tables,
-                knowledge_base_database=params.get("knowledge_base_database"), include_knowledge_bases=include_knowledge_bases,
+                agent_name,
+                project_name,
+                database=params.get("database"),
+                include_tables=include_tables,
+                knowledge_base_database=params.get("knowledge_base_database"),
+                include_knowledge_bases=include_knowledge_bases,
             )
             skills_to_rewrite = [{"name": skill}]
 

@@ -47,7 +47,6 @@ COPY --from=deps /mindsdb .
 # - pick a Python,
 # - and finally declare `/mindsdb` as the target dir.
 ENV UV_LINK_MODE=copy \
-    # UV_COMPILE_BYTECODE=1 \
     UV_PYTHON_DOWNLOADS=never \
     UV_PYTHON=python3.10 \
     UV_PROJECT_ENVIRONMENT=/mindsdb \

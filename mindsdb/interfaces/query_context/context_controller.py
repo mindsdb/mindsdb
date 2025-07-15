@@ -41,7 +41,7 @@ class RunningQuery:
         :param query: AST query to execute
         :return: generator with query results
         """
-        if dn.has_support_stream():
+        if hasattr(dn, 'has_support_stream') and dn.has_support_stream():
             query2 = self.get_partition_query(step_call.current_step_num, query, stream=True)
 
             for df in dn.query_stream(query2, fetch_size=self.batch_size):

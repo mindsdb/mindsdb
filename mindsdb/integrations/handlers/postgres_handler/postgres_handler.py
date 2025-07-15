@@ -636,7 +636,6 @@ class PostgresHandler(MetaDatabaseHandler):
         """
         table_filter = ""
         if table_names is not None and len(table_names) > 0:
-            # Quote table names to prevent injection (same as other meta functions)
             quoted_names = [f"'{t}'" for t in table_names]
             table_filter = f" AND ps.tablename IN ({','.join(quoted_names)})"
 

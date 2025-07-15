@@ -774,26 +774,36 @@ class TestAgent(BaseExecutorDummyML):
 
     @patch("openai.OpenAI")
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-    def test_agent_data(self, mock_litellm_embedding, mock_openai):
+    def test_agent_new_syntax(self, mock_litellm_embedding, mock_openai):
         set_litellm_embedding(mock_litellm_embedding)
-        self.run_sql("""
-            create knowledge base kb1
-            using embedding_model = {"provider": "bedrock", "model_name": "titan"}
-        """)
-        df = get_dataset_planets()
 
-        self.save_file("file1", df)
-        self.save_file("file2", df)
+        df = get_dataset_planets()
+        # create 2 files and KBs
+        for i in (1, 2):
+            self.run_sql(f"""
+                create knowledge base kb{i}
+                using embedding_model = {{"provider": "bedrock", "model_name": "titan"}}
+            """)
+            self.save_file(f"file{i}", df)
+
+            self.run_sql(f"""
+                insert into kb{i}
+                select id, planet_name content from files.file{i} where id != 1000
+            """)
 
         self.run_sql("""
             CREATE AGENT my_agent
             USING
-              model = "gpt-3.5-turbo",
-              openai_api_key='--',
+              model = {
+                "provider": 'openai',
+                "model_name": "gpt-42",
+                "api_key": '-secret-'
+              },
               data = {
                  "knowledge_bases": ["kb1"],
-                 "tables": ["files.file1", "files.file2"]
-              }
+                 "tables": ["files.file1"]
+              },
+              prompt_template='important user instruction №42'
          """)
 
         # exposed
@@ -806,23 +816,83 @@ class TestAgent(BaseExecutorDummyML):
             ],
         )
         self.run_sql("select * from my_agent where question = 'test'")
-
-        assert "Schema Information" in mock_openai.agent_calls[1]
-        assert "planet_name" in mock_openai.agent_calls[2]  # column
+        assert "Jupiter" in mock_openai.agent_calls[1]
+        assert "Jupiter" in mock_openai.agent_calls[2]  # column
 
         # not exposed
         set_openai_completion(
             mock_openai,
             [
-                self._action("kb_info_tool", "kb3"),
-                self._action("sql_db_schema", "files.file3"),
+                self._action("kb_info_tool", "kb2"),
+                self._action("sql_db_schema", "files.file2"),
+                "Hi!",
+            ],
+        )
+        ret = self.run_sql("select * from my_agent where question = 'test'")
+        assert "kb2 not found" in mock_openai.agent_calls[1]
+        assert "file2 not found" in mock_openai.agent_calls[2]
+
+        # check model params
+        assert mock_openai.call_args_list[-1][1]["api_key"] == "-secret-"
+        assert mock_openai().chat.completions.create.call_args_list[-1][1]["model"] == "gpt-42"
+
+        # check agent response
+        assert "Hi!" in ret.answer[0]
+
+        # check prompt template
+        assert "important user instruction №42" in mock_openai.agent_calls[0]
+
+        # --- ALTER AGENT ---
+        self.run_sql("""
+            UPDATE AGENT my_agent
+            SET
+              model = {
+                "provider": 'openai',
+                "model_name": "gpt-18",
+                "api_key": '-almost secret-'
+              },
+              data = {
+                 "knowledge_bases": ["kb2"],
+                 "tables": ["files.file2"]
+              },
+              prompt_template='important system prompt №37'
+        """)
+
+        # check exposed
+        set_openai_completion(
+            mock_openai,
+            [
+                self._action("kb_info_tool", "kb2"),
+                self._action("sql_db_schema", "files.file2"),
                 "Hi!",
             ],
         )
         self.run_sql("select * from my_agent where question = 'test'")
+        assert "Jupiter" in mock_openai.agent_calls[1]
+        assert "Jupiter" in mock_openai.agent_calls[2]  # column
 
-        assert "kb3 not found" in mock_openai.agent_calls[1]
-        assert "file3 not found" in mock_openai.agent_calls[2]
+        # not exposed
+        set_openai_completion(
+            mock_openai,
+            [
+                self._action("kb_info_tool", "kb1"),
+                self._action("sql_db_schema", "files.file1"),
+                "Hi!",
+            ],
+        )
+        ret = self.run_sql("select * from my_agent where question = 'test'")
+        assert "kb1 not found" in mock_openai.agent_calls[1]
+        assert "file1 not found" in mock_openai.agent_calls[2]
+
+        # check model params
+        assert mock_openai.call_args_list[-1][1]["api_key"] == "-almost secret-"
+        assert mock_openai().chat.completions.create.call_args_list[-1][1]["model"] == "gpt-18"
+
+        # check agent response
+        assert "Hi!" in ret.answer[0]
+
+        # check prompt template
+        assert "important system prompt №37" in mock_openai.agent_calls[0]
 
     @patch("openai.OpenAI")
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")

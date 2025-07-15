@@ -16,6 +16,7 @@ import jaydebeapi as jd
 
 logger = log.getLogger(__name__)
 
+
 class MaxDBHandler(DatabaseHandler):
     """
        This handler handles connection and execution of the SAP MaxDB  statements.

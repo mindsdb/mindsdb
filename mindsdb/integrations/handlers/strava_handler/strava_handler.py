@@ -7,15 +7,13 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.utilities import log
 from mindsdb_sql_parser import parse_sql
 
-import requests
-import pandas as pd
-import json
 from collections import OrderedDict
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 from stravalib.client import Client
 
 logger = log.getLogger(__name__)
+
 
 class StravaHandler(APIHandler):
     """Strava handler implementation"""
@@ -39,7 +37,7 @@ class StravaHandler(APIHandler):
 
         strava_all_clubs_data = StravaAllClubsTable(self)
         self._register_table("all_clubs", strava_all_clubs_data)
-        
+
         strava_club_activites_data = StravaClubActivitesTable(self)
         self._register_table("club_activities", strava_club_activites_data)
 
@@ -54,7 +52,6 @@ class StravaHandler(APIHandler):
             return self.connection
 
         client = Client()
-        url = client.authorization_url(client_id=self.connection_data['strava_client_id'], redirect_uri='http://127.0.0.1:5000/authorization')
         client.access_token = self.connection_data['strava_access_token']
         self.connection = client
 
@@ -68,7 +65,6 @@ class StravaHandler(APIHandler):
             Status confirmation
         """
         response = StatusResponse(False)
-        need_to_close = self.is_connected is False
 
         try:
             self.connect()
@@ -108,6 +104,6 @@ connection_args = OrderedDict(
 )
 
 connection_args_example = OrderedDict(
-    strava_client_id ='<your-strava-client_id>',
-    strava_access_token ='<your-strava-api-token>'
+    strava_client_id='<your-strava-client_id>',
+    strava_access_token='<your-strava-api-token>'
 )

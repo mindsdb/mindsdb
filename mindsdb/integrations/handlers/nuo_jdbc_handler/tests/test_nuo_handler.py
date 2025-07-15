@@ -2,6 +2,7 @@ import unittest
 from mindsdb.integrations.handlers.nuo_jdbc_handler.nuo_jdbc_handler import NuoHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
+
 class NuoHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -20,7 +21,7 @@ class NuoHandlerTest(unittest.TestCase):
 
     def test_0_connect(self):
         self.handler.connect()
-    
+
     def test_1_check_connection(self):
         self.handler.check_connection()
 
@@ -35,7 +36,7 @@ class NuoHandlerTest(unittest.TestCase):
     def test_4_select(self):
         res = self.handler.query('SELECT * FROM HOCKEY')
         assert res.type is RESPONSE_TYPE.TABLE
-    
+
     def test_5_get_tables(self):
         res = self.handler.get_tables()
         assert res.type is RESPONSE_TYPE.TABLE
@@ -43,8 +44,7 @@ class NuoHandlerTest(unittest.TestCase):
     def test_6_get_columns(self):
         res = self.handler.get_columns("HOCKEY")
         assert res.type is RESPONSE_TYPE.TABLE
-    
 
-        
+
 if __name__ == '__main__':
     unittest.main()

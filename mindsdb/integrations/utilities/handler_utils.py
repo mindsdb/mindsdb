@@ -39,17 +39,36 @@ def get_api_key(
     if "using" in create_args and f"{api_name.lower()}_api_key" in create_args["using"]:
         return create_args["using"][f"{api_name.lower()}_api_key"]
 
+    # 1.5 - Check for generic api_key in using
+    if "using" in create_args and "api_key" in create_args["using"]:
+        return create_args["using"]["api_key"]
+
     # 2
     if f"{api_name.lower()}_api_key" in create_args:
         return create_args[f"{api_name.lower()}_api_key"]
 
-    # 3
+    # 2.5 - Check for generic api_key
+    if "api_key" in create_args:
+        return create_args["api_key"]
+
+    # 3 - Check in params dictionary if it exists (for agents)
+    if "params" in create_args and create_args["params"] is not None:
+        if f"{api_name.lower()}_api_key" in create_args["params"]:
+            return create_args["params"][f"{api_name.lower()}_api_key"]
+        # 3.5 - Check for generic api_key in params
+        if "api_key" in create_args["params"]:
+            return create_args["params"]["api_key"]
+
+    # 4
     if engine_storage is not None:
         connection_args = engine_storage.get_connection_args()
         if f"{api_name.lower()}_api_key" in connection_args:
             return connection_args[f"{api_name.lower()}_api_key"]
+        # 4.5 - Check for generic api_key in connection_args
+        if "api_key" in connection_args:
+            return connection_args["api_key"]
 
-    # 4
+    # 5
     api_key = os.getenv(f"{api_name.lower()}_api_key")
     if api_key is not None:
         return api_key
@@ -57,14 +76,26 @@ def get_api_key(
     if api_key is not None:
         return api_key
 
-    # 5
+    # 6
     config = Config()
     api_cfg = config.get(api_name, {})
     if f"{api_name.lower()}_api_key" in api_cfg:
         return api_cfg[f"{api_name.lower()}_api_key"]
 
+    # 7
+    if "api_keys" in create_args and api_name in create_args["api_keys"]:
+        return create_args["api_keys"][api_name]
+
     if strict:
-        raise Exception(
-            f"Missing API key '{api_name.lower()}_api_key'. Either re-create this ML_ENGINE specifying the '{api_name.lower()}_api_key' parameter, or re-create this model and pass the API key with `USING` syntax."
-        )  # noqa
+        provider_upper = api_name.upper()
+        api_key_env_var = f"{provider_upper}_API_KEY"
+        api_key_arg = f"{api_name.lower()}_api_key"
+        error_message = (
+            f"API key for {api_name} not found. Please provide it using one of the following methods:\n"
+            f"1. Set the {api_key_env_var} environment variable\n"
+            f"2. Provide it as '{api_key_arg}' parameter or 'api_key' parameter when creating an agent using the CREATE AGENT syntax\n"
+            f"   Example: CREATE AGENT my_agent USING model='gpt-4', provider='{api_name}', {api_key_arg}='your-api-key';\n"
+            f"   Or: CREATE AGENT my_agent USING model='gpt-4', provider='{api_name}', api_key='your-api-key';\n"
+        )
+        raise Exception(error_message)
     return None

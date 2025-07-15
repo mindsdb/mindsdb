@@ -15,6 +15,7 @@ from mindsdb_sql_parser import parse_sql
 
 logger = log.getLogger(__name__)
 
+
 class FrappeHandler(APIHandler):
     """A class for handling connections and interactions with the Frappe API.
 
@@ -36,9 +37,9 @@ class FrappeHandler(APIHandler):
         self.is_connected = False
 
         args = kwargs.get('connection_data', {})
-        if not 'access_token' in args:
+        if 'access_token' not in args:
             raise ValueError('"access_token" parameter required for authentication')
-        if not 'domain' in args:
+        if 'domain' not in args:
             raise ValueError('"domain" parameter required to connect to your Frappe instance')
         self.access_token = args['access_token']
         self.domain = args['domain']
@@ -52,8 +53,8 @@ class FrappeHandler(APIHandler):
             'register_sales_invoice': 'have to be used by assistant to register a sales invoice. Input is JSON object serialized as a string. Due date have to be passed in format: "yyyy-mm-dd".',
             'check_company_exists': 'useful to check the company is exist. Input is company',
             'check_expense_type': 'useful to check the expense_type is exist. Input is expense_type',
-            'check_customer':  'useful to check the customer is exist. Input is customer',
-            'check_item_code':  'have to be used to check the item code. Input is item_code',
+            'check_customer': 'useful to check the customer is exist. Input is customer',
+            'check_item_code': 'have to be used to check the item code. Input is item_code',
         }
         return {
             'tools': tools,
@@ -96,7 +97,7 @@ class FrappeHandler(APIHandler):
             self.client.post_document('Sales Invoice', invoice)
         except Exception as e:
             return f"Error: {e}"
-        return f"Success"
+        return "Success"
 
     def check_item_code(self, item_code):
         self.connect()

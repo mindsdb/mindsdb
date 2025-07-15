@@ -19,38 +19,39 @@ Before proceeding, ensure the following prerequisites are met:
 
 This handler is implemented using the `chromadb` Python library.
 
-The required arguments to establish a connection are:
-* `host`: the host name or IP address of the ChromaDB instance.
-* `port`: the TCP/IP port of the ChromaDB instance.
-
-OR
-
-* `persist_directory`: the directory to use for persisting data.
-
-<Tip>
-The `host` and `port` arguments should be provided if you want to connect to a remote ChromaDB instance. Otherwise, the `persist_directory` argument should be provided. This will create an in-memory ChromaDB instance.
-</Tip> 
-
-To connect to a remote ChromaDB instance, the following CREATE DATABASE can be used:
+To connect to a remote ChromaDB instance, use the following statement:
 
 ```sql
 CREATE DATABASE chromadb_datasource
 WITH ENGINE = 'chromadb'
 PARAMETERS = {
     "host": "YOUR_HOST",
-    "port": YOUR_PORT
+    "port": YOUR_PORT,
+    "distance": "l2/cosine/ip" -- optional, default is cosine
 }
 ```
 
-Alternateively, to connect to an in-memory ChromaDB instance, the following CREATE DATABASE can be used:
+The required parameters are:
+
+* `host`: The host name or IP address of the ChromaDB instance.
+* `port`: The TCP/IP port of the ChromaDB instance.
+* `distance`: It defines how the distance between vectors is calculated. Available method include l2, cosine, and ip, as [explained here](https://docs.trychroma.com/docs/collections/configure).
+
+To connect to an in-memory ChromaDB instance, use the following statement:
 
 ```sql
 CREATE DATABASE chromadb_datasource
 WITH ENGINE = "chromadb",
 PARAMETERS = {
-    "persist_directory": "YOUR_PERSIST_DIRECTORY"
+    "persist_directory": "YOUR_PERSIST_DIRECTORY",
+    "distance": "l2/cosine/ip" -- optional
 }
 ```
+
+The required parameters are:
+
+* `persist_directory`: The directory to use for persisting data.
+* `distance`: It defines how the distance between vectors is calculated. Available method include l2, cosine, and ip, as [explained here](https://docs.trychroma.com/docs/collections/configure).
 
 ## Usage
 

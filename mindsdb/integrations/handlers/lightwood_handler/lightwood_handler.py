@@ -1,6 +1,5 @@
 import copy
 import json
-import sys
 from datetime import datetime
 from functools import lru_cache
 from typing import Dict, Optional
@@ -20,8 +19,6 @@ from mindsdb.interfaces.storage.json import get_json_storage
 from mindsdb.utilities.functions import cast_row_types
 
 from .functions import run_finetune, run_learn
-
-IS_PY36 = sys.version_info[1] <= 6
 
 
 class NumpyJSONEncoder(json.JSONEncoder):

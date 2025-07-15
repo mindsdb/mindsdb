@@ -37,6 +37,7 @@ class RESOURCE_GROUP:
     PREDICTOR = 'predictor'
     INTEGRATION = 'integration'
     TAB = 'tab'
+    SYSTEM = 'system'
 
 
 RESOURCE_GROUP = RESOURCE_GROUP()

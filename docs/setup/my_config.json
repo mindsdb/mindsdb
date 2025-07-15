@@ -71,6 +71,10 @@
         "username": "username",
         "password": "password"
     },
-    "file_upload_domains": [],
+    "url_file_upload": {
+           "enabled": false,
+           "allowed_origins": [],
+           "disallowed_origins": []
+    },
     "web_crawling_allowed_sites": []
 }

@@ -8,7 +8,9 @@
  * permission of MindsDB Inc
  *******************************************************
 """
+
 import enum
+from dataclasses import dataclass, field
 
 # CAPABILITIES
 # As defined in : https://dev.mysql.com/doc/dev/mysql-server/8.0.0/group__group__cs__capabilities__flags.html
@@ -57,20 +59,26 @@ CAPABILITIES = CAPABILITIES()
 # SERVER STATUS
 class SERVER_STATUS(object):
     __slots__ = ()
-    SERVER_STATUS_IN_TRANS = 1                  # A transaction is currently active
-    SERVER_STATUS_AUTOCOMMIT = 2                # Autocommit mode is set
-    SERVER_MORE_RESULTS_EXISTS = 8              # more results exists (more packet follow)
+    SERVER_STATUS_IN_TRANS = 1  # A transaction is currently active
+    SERVER_STATUS_AUTOCOMMIT = 2  # Autocommit mode is set
+    SERVER_MORE_RESULTS_EXISTS = 8  # more results exists (more packet follow)
     SERVER_QUERY_NO_GOOD_INDEX_USED = 16
     SERVER_QUERY_NO_INDEX_USED = 32
-    SERVER_STATUS_CURSOR_EXISTS = 64            # when using COM_STMT_FETCH, indicate that current cursor still has result (deprecated)
-    SERVER_STATUS_LAST_ROW_SENT = 128           # when using COM_STMT_FETCH, indicate that current cursor has finished to send results (deprecated)
-    SERVER_STATUS_DB_DROPPED = 1 << 8           # database has been dropped
-    SERVER_STATUS_NO_BACKSLASH_ESCAPES = 1 << 9     # current escape mode is "no backslash escape"
-    SERVER_STATUS_METADATA_CHANGED = 1 << 10    # A DDL change did have an impact on an existing PREPARE (an automatic reprepare has been executed)
+    SERVER_STATUS_CURSOR_EXISTS = (
+        64  # when using COM_STMT_FETCH, indicate that current cursor still has result (deprecated)
+    )
+    SERVER_STATUS_LAST_ROW_SENT = (
+        128  # when using COM_STMT_FETCH, indicate that current cursor has finished to send results (deprecated)
+    )
+    SERVER_STATUS_DB_DROPPED = 1 << 8  # database has been dropped
+    SERVER_STATUS_NO_BACKSLASH_ESCAPES = 1 << 9  # current escape mode is "no backslash escape"
+    SERVER_STATUS_METADATA_CHANGED = (
+        1 << 10
+    )  # A DDL change did have an impact on an existing PREPARE (an automatic reprepare has been executed)
     SERVER_QUERY_WAS_SLOW = 1 << 11
-    SERVER_PS_OUT_PARAMs = 1 << 12              # this resultset contain stored procedure output parameter
-    SERVER_STATUS_IN_TRANS_READONLY = 1 << 13   # current transaction is a read-only transaction
-    SERVER_SESSION_STATE_CHANGED = 1 << 14      # session state change. see Session change type for more information
+    SERVER_PS_OUT_PARAMs = 1 << 12  # this resultset contain stored procedure output parameter
+    SERVER_STATUS_IN_TRANS_READONLY = 1 << 13  # current transaction is a read-only transaction
+    SERVER_SESSION_STATE_CHANGED = 1 << 14  # session state change. see Session change type for more information
 
 
 SERVER_STATUS = SERVER_STATUS()
@@ -79,23 +87,24 @@ SERVER_STATUS = SERVER_STATUS()
 # COMMANDS
 class COMMANDS(object):
     __slots__ = ()
-    COM_CHANGE_USER = int('0x11', 0)
-    COM_DEBUG = int('0x0D', 0)
-    COM_INIT_DB = int('0x02', 0)
-    COM_PING = int('0x0e', 0)
-    COM_PROCESS_KILL = int('0xC', 0)
-    COM_QUERY = int('0x03', 0)
-    COM_QUIT = int('0x01', 0)
-    COM_RESET_CONNECTION = int('0x1f', 0)
-    COM_SET_OPTION = int('0x1b', 0)
-    COM_SHUTDOWN = int('0x0a', 0)
-    COM_SLEEP = int('0x00', 0)
-    COM_STATISTICS = int('0x09', 0)
-    COM_STMT_PREPARE = int('0x16', 0)
-    COM_STMT_EXECUTE = int('0x17', 0)
-    COM_STMT_FETCH = int('0x1c', 0)
-    COM_STMT_CLOSE = int('0x19', 0)
-    COM_FIELD_LIST = int('0x04', 0)  # deprecated
+    COM_CHANGE_USER = int("0x11", 0)
+    COM_DEBUG = int("0x0D", 0)
+    COM_INIT_DB = int("0x02", 0)
+    COM_PING = int("0x0e", 0)
+    COM_PROCESS_KILL = int("0xC", 0)
+    COM_QUERY = int("0x03", 0)
+    COM_QUIT = int("0x01", 0)
+    COM_RESET_CONNECTION = int("0x1f", 0)
+    COM_SET_OPTION = int("0x1b", 0)
+    COM_SHUTDOWN = int("0x0a", 0)
+    COM_SLEEP = int("0x00", 0)
+    COM_STATISTICS = int("0x09", 0)
+    COM_STMT_PREPARE = int("0x16", 0)
+    COM_STMT_EXECUTE = int("0x17", 0)
+    COM_STMT_FETCH = int("0x1c", 0)
+    COM_STMT_RESET = int("0x1a", 0)
+    COM_STMT_CLOSE = int("0x19", 0)
+    COM_FIELD_LIST = int("0x04", 0)  # deprecated
 
 
 COMMANDS = COMMANDS()
@@ -127,10 +136,10 @@ class TYPES(object):
     MYSQL_TYPE_DATETIME2 = 18
     MYSQL_TYPE_TIME2 = 19
     MYSQL_TYPE_TYPED_ARRAY = 20
-    MYSQL_TYPE_VECTOR = 242,
-    MYSQL_TYPE_INVALID = 243,
-    MYSQL_TYPE_BOOL = 244,
-    MYSQL_TYPE_JSON = 245,
+    MYSQL_TYPE_VECTOR = 242
+    MYSQL_TYPE_INVALID = 243
+    MYSQL_TYPE_BOOL = 244
+    MYSQL_TYPE_JSON = 245
     MYSQL_TYPE_NEWDECIMAL = 246
     MYSQL_TYPE_ENUM = 247
     MYSQL_TYPE_SET = 248
@@ -148,90 +157,215 @@ TYPES = TYPES()
 
 
 class MYSQL_DATA_TYPE(enum.Enum):
-    TINYINT = 'TINYINT'
-    SMALLINT = 'SMALLINT'
-    MEDIUMINT = 'MEDIUMINT'
-    INT = 'INT'
-    BIGINT = 'BIGINT'
-    FLOAT = 'FLOAT'
-    DOUBLE = 'DOUBLE'
-    DECIMAL = 'DECIMAL'
-    YEAR = 'YEAR'
-    TIME = 'TIME'
-    DATE = 'DATE'
-    DATETIME = 'DATETIME'
-    TIMESTAMP = 'TIMESTAMP'
-    CHAR = 'CHAR'
-    BINARY = 'BINARY'
-    VARCHAR = 'VARCHAR'
-    VARBINARY = 'VARBINARY'
-    TINYBLOB = 'TINYBLOB'
-    TINYTEXT = 'TINYTEXT'
-    BLOB = 'BLOB'
-    TEXT = 'TEXT'
-    MEDIUMBLOB = 'MEDIUMBLOB'
-    MEDIUMTEXT = 'MEDIUMTEXT'
-    LONGBLOB = 'LONGBLOB'
-    LONGTEXT = 'LONGTEXT'
-    BIT = 'BIT'
-    BOOL = 'BOOL'
-    BOOLEAN = 'BOOLEAN'
+    TINYINT = "TINYINT"
+    SMALLINT = "SMALLINT"
+    MEDIUMINT = "MEDIUMINT"
+    INT = "INT"
+    BIGINT = "BIGINT"
+    FLOAT = "FLOAT"
+    DOUBLE = "DOUBLE"
+    DECIMAL = "DECIMAL"
+    YEAR = "YEAR"
+    TIME = "TIME"
+    DATE = "DATE"
+    DATETIME = "DATETIME"
+    TIMESTAMP = "TIMESTAMP"
+    CHAR = "CHAR"
+    BINARY = "BINARY"
+    VARCHAR = "VARCHAR"
+    VARBINARY = "VARBINARY"
+    TINYBLOB = "TINYBLOB"
+    TINYTEXT = "TINYTEXT"
+    BLOB = "BLOB"
+    TEXT = "TEXT"
+    MEDIUMBLOB = "MEDIUMBLOB"
+    MEDIUMTEXT = "MEDIUMTEXT"
+    LONGBLOB = "LONGBLOB"
+    LONGTEXT = "LONGTEXT"
+    BIT = "BIT"
+    BOOL = "BOOL"
+    BOOLEAN = "BOOLEAN"
+    JSON = "JSON"
+    VECTOR = "VECTOR"
 
 
-# Map between data types and C types
-# https://dev.mysql.com/doc/c-api/8.0/en/c-api-prepared-statement-type-codes.html
-DATA_C_TYPE_MAP = {
-    MYSQL_DATA_TYPE.TINYINT: C_TYPES.MYSQL_TYPE_TINY,
-    MYSQL_DATA_TYPE.SMALLINT: C_TYPES.MYSQL_TYPE_SHORT,
-    MYSQL_DATA_TYPE.MEDIUMINT: C_TYPES.MYSQL_TYPE_INT24,
-    MYSQL_DATA_TYPE.INT: C_TYPES.MYSQL_TYPE_LONG,
-    MYSQL_DATA_TYPE.BIGINT: C_TYPES.MYSQL_TYPE_LONGLONG,
-    MYSQL_DATA_TYPE.FLOAT: C_TYPES.MYSQL_TYPE_FLOAT,
-    MYSQL_DATA_TYPE.DOUBLE: C_TYPES.MYSQL_TYPE_DOUBLE,
-    MYSQL_DATA_TYPE.DECIMAL: C_TYPES.MYSQL_TYPE_NEWDECIMAL,
-    MYSQL_DATA_TYPE.YEAR: C_TYPES.MYSQL_TYPE_SHORT,
-    MYSQL_DATA_TYPE.TIME: C_TYPES.MYSQL_TYPE_TIME,
-    MYSQL_DATA_TYPE.DATE: C_TYPES.MYSQL_TYPE_DATE,
-    MYSQL_DATA_TYPE.DATETIME: C_TYPES.MYSQL_TYPE_DATETIME,
-    MYSQL_DATA_TYPE.TIMESTAMP: C_TYPES.MYSQL_TYPE_TIMESTAMP,
-    MYSQL_DATA_TYPE.CHAR: C_TYPES.MYSQL_TYPE_STRING,
-    MYSQL_DATA_TYPE.BINARY: C_TYPES.MYSQL_TYPE_STRING,
-    MYSQL_DATA_TYPE.VARCHAR: C_TYPES.MYSQL_TYPE_VAR_STRING,
-    MYSQL_DATA_TYPE.VARBINARY: C_TYPES.MYSQL_TYPE_VAR_STRING,
-    MYSQL_DATA_TYPE.TINYBLOB: C_TYPES.MYSQL_TYPE_TINY_BLOB,
-    MYSQL_DATA_TYPE.TINYTEXT: C_TYPES.MYSQL_TYPE_TINY_BLOB,
-    MYSQL_DATA_TYPE.BLOB: C_TYPES.MYSQL_TYPE_BLOB,
-    MYSQL_DATA_TYPE.TEXT: C_TYPES.MYSQL_TYPE_BLOB,
-    MYSQL_DATA_TYPE.MEDIUMBLOB: C_TYPES.MYSQL_TYPE_MEDIUM_BLOB,
-    MYSQL_DATA_TYPE.MEDIUMTEXT: C_TYPES.MYSQL_TYPE_MEDIUM_BLOB,
-    MYSQL_DATA_TYPE.LONGBLOB: C_TYPES.MYSQL_TYPE_LONG_BLOB,
-    MYSQL_DATA_TYPE.LONGTEXT: C_TYPES.MYSQL_TYPE_LONG_BLOB,
-    MYSQL_DATA_TYPE.BIT: C_TYPES.MYSQL_TYPE_BIT,
-    MYSQL_DATA_TYPE.BOOL: C_TYPES.MYSQL_TYPE_TINY,
-    MYSQL_DATA_TYPE.BOOLEAN: C_TYPES.MYSQL_TYPE_TINY
+# Default values for attributes of MySQL data types as they appear in information_schema.columns
+# These values match the MySQL v8.0.37 defaults and are used to properly represent column metadata
+MYSQL_DATA_TYPE_COLUMNS_DEFAULT = {
+    MYSQL_DATA_TYPE.TINYINT: {"NUMERIC_PRECISION": 3, "NUMERIC_SCALE": 0},
+    MYSQL_DATA_TYPE.SMALLINT: {"NUMERIC_PRECISION": 5, "NUMERIC_SCALE": 0},
+    MYSQL_DATA_TYPE.MEDIUMINT: {"NUMERIC_PRECISION": 7, "NUMERIC_SCALE": 0},
+    MYSQL_DATA_TYPE.INT: {"NUMERIC_PRECISION": 10, "NUMERIC_SCALE": 0},
+    MYSQL_DATA_TYPE.BIGINT: {"NUMERIC_PRECISION": 19, "NUMERIC_SCALE": 0},
+    MYSQL_DATA_TYPE.FLOAT: {"NUMERIC_PRECISION": 12},
+    MYSQL_DATA_TYPE.DOUBLE: {"NUMERIC_PRECISION": 22},
+    MYSQL_DATA_TYPE.DECIMAL: {"NUMERIC_PRECISION": 10, "NUMERIC_SCALE": 0, "COLUMN_TYPE": "decimal(10,0)"},
+    MYSQL_DATA_TYPE.YEAR: {
+        # every column is null
+    },
+    MYSQL_DATA_TYPE.TIME: {"DATETIME_PRECISION": 0},
+    MYSQL_DATA_TYPE.DATE: {
+        # every column is null
+    },
+    MYSQL_DATA_TYPE.DATETIME: {"DATETIME_PRECISION": 0},
+    MYSQL_DATA_TYPE.TIMESTAMP: {"DATETIME_PRECISION": 0},
+    MYSQL_DATA_TYPE.CHAR: {
+        "CHARACTER_MAXIMUM_LENGTH": 1,
+        "CHARACTER_OCTET_LENGTH": 4,
+        "CHARACTER_SET_NAME": "utf8",
+        "COLLATION_NAME": "utf8_bin",
+        "COLUMN_TYPE": "char(1)",
+    },
+    MYSQL_DATA_TYPE.BINARY: {"CHARACTER_MAXIMUM_LENGTH": 1, "CHARACTER_OCTET_LENGTH": 1, "COLUMN_TYPE": "binary(1)"},
+    MYSQL_DATA_TYPE.VARCHAR: {
+        "CHARACTER_MAXIMUM_LENGTH": 1024,  # NOTE mandatory for field creation
+        "CHARACTER_OCTET_LENGTH": 4096,  # NOTE mandatory for field creation
+        "CHARACTER_SET_NAME": "utf8",
+        "COLLATION_NAME": "utf8_bin",
+        "COLUMN_TYPE": "varchar(1024)",
+    },
+    MYSQL_DATA_TYPE.VARBINARY: {
+        "CHARACTER_MAXIMUM_LENGTH": 1024,  # NOTE mandatory for field creation
+        "CHARACTER_OCTET_LENGTH": 1024,  # NOTE mandatory for field creation
+        "COLUMN_TYPE": "varbinary(1024)",
+    },
+    MYSQL_DATA_TYPE.TINYBLOB: {"CHARACTER_MAXIMUM_LENGTH": 255, "CHARACTER_OCTET_LENGTH": 255},
+    MYSQL_DATA_TYPE.TINYTEXT: {
+        "CHARACTER_MAXIMUM_LENGTH": 255,
+        "CHARACTER_OCTET_LENGTH": 255,
+        "CHARACTER_SET_NAME": "utf8",
+        "COLLATION_NAME": "utf8_bin",
+    },
+    MYSQL_DATA_TYPE.BLOB: {"CHARACTER_MAXIMUM_LENGTH": 65535, "CHARACTER_OCTET_LENGTH": 65535},
+    MYSQL_DATA_TYPE.TEXT: {
+        "CHARACTER_MAXIMUM_LENGTH": 65535,
+        "CHARACTER_OCTET_LENGTH": 65535,
+        "CHARACTER_SET_NAME": "utf8",
+        "COLLATION_NAME": "utf8_bin",
+    },
+    MYSQL_DATA_TYPE.MEDIUMBLOB: {"CHARACTER_MAXIMUM_LENGTH": 16777215, "CHARACTER_OCTET_LENGTH": 16777215},
+    MYSQL_DATA_TYPE.MEDIUMTEXT: {
+        "CHARACTER_MAXIMUM_LENGTH": 16777215,
+        "CHARACTER_OCTET_LENGTH": 16777215,
+        "CHARACTER_SET_NAME": "utf8",
+        "COLLATION_NAME": "utf8_bin",
+    },
+    MYSQL_DATA_TYPE.LONGBLOB: {
+        "CHARACTER_MAXIMUM_LENGTH": 4294967295,
+        "CHARACTER_OCTET_LENGTH": 4294967295,
+    },
+    MYSQL_DATA_TYPE.LONGTEXT: {
+        "CHARACTER_MAXIMUM_LENGTH": 4294967295,
+        "CHARACTER_OCTET_LENGTH": 4294967295,
+        "CHARACTER_SET_NAME": "utf8",
+        "COLLATION_NAME": "utf8_bin",
+    },
+    MYSQL_DATA_TYPE.BIT: {
+        "NUMERIC_PRECISION": 1,
+        "COLUMN_TYPE": "bit(1)",
+        # 'NUMERIC_SCALE': null
+    },
+    MYSQL_DATA_TYPE.BOOL: {
+        "DATA_TYPE": "tinyint",
+        "NUMERIC_PRECISION": 3,
+        "NUMERIC_SCALE": 0,
+        "COLUMN_TYPE": "tinyint(1)",
+    },
+    MYSQL_DATA_TYPE.BOOLEAN: {
+        "DATA_TYPE": "tinyint",
+        "NUMERIC_PRECISION": 3,
+        "NUMERIC_SCALE": 0,
+        "COLUMN_TYPE": "tinyint(1)",
+    },
 }
 
 
 class FIELD_FLAG(object):
     __slots__ = ()
-    NOT_NULL = 1                # field cannot be null
-    PRIMARY_KEY = 2             # field is a primary key
-    UNIQUE_KEY = 4              # field is unique
-    MULTIPLE_KEY = 8            # field is in a multiple key
-    BLOB = 16                   # is this field a Blob
-    UNSIGNED = 32               # is this field unsigned
-    ZEROFILL_FLAG = 64          # is this field a zerofill
-    BINARY_COLLATION = 128      # whether this field has a binary collation
-    ENUM = 256                  # Field is an enumeration
-    AUTO_INCREMENT = 512        # field auto-increment
-    TIMESTAMP = 1024            # field is a timestamp value
-    SET = 2048                  # field is a SET
-    NO_DEFAULT_VALUE_FLAG = 4096    # field doesn't have default value
-    ON_UPDATE_NOW_FLAG = 8192   # field is set to NOW on UPDATE
-    NUM_FLAG = 32768            # field is num
+    NOT_NULL = 1  # field cannot be null
+    PRIMARY_KEY = 2  # field is a primary key
+    UNIQUE_KEY = 4  # field is unique
+    MULTIPLE_KEY = 8  # field is in a multiple key
+    BLOB = 16  # is this field a Blob
+    UNSIGNED = 32  # is this field unsigned
+    ZEROFILL_FLAG = 64  # is this field a zerofill
+    BINARY_COLLATION = 128  # whether this field has a binary collation
+    ENUM = 256  # Field is an enumeration
+    AUTO_INCREMENT = 512  # field auto-increment
+    TIMESTAMP = 1024  # field is a timestamp value
+    SET = 2048  # field is a SET
+    NO_DEFAULT_VALUE_FLAG = 4096  # field doesn't have default value
+    ON_UPDATE_NOW_FLAG = 8192  # field is set to NOW on UPDATE
+    NUM_FLAG = 32768  # field is num
 
 
 FIELD_FLAG = FIELD_FLAG()
+
+
+@dataclass(frozen=True)
+class CTypeProperties:
+    """Properties that describe int-representation of mysql column.
+
+    Attributes:
+        code (int): Code of the mysql type.
+        size (int | None): Size of the column. If not specified, then size is variable (text/blob types).
+        flags (list[int]): Flags of the mysql type.
+    """
+
+    code: int
+    size: int | None = None
+    flags: list[int] = field(default_factory=list)
+
+
+# Map between data types and C types
+# Fields size and flags been taken from tcp dump of mysql-server response
+# https://dev.mysql.com/doc/c-api/8.0/en/c-api-prepared-statement-type-codes.html
+DATA_C_TYPE_MAP = {
+    MYSQL_DATA_TYPE.TINYINT: CTypeProperties(C_TYPES.MYSQL_TYPE_TINY, 4),
+    MYSQL_DATA_TYPE.SMALLINT: CTypeProperties(C_TYPES.MYSQL_TYPE_SHORT, 6),
+    MYSQL_DATA_TYPE.MEDIUMINT: CTypeProperties(C_TYPES.MYSQL_TYPE_INT24, 9),
+    MYSQL_DATA_TYPE.INT: CTypeProperties(C_TYPES.MYSQL_TYPE_LONG, 11),
+    MYSQL_DATA_TYPE.BIGINT: CTypeProperties(C_TYPES.MYSQL_TYPE_LONGLONG, 20),
+    MYSQL_DATA_TYPE.FLOAT: CTypeProperties(C_TYPES.MYSQL_TYPE_FLOAT, 12),
+    MYSQL_DATA_TYPE.DOUBLE: CTypeProperties(C_TYPES.MYSQL_TYPE_DOUBLE, 22),
+    MYSQL_DATA_TYPE.DECIMAL: CTypeProperties(C_TYPES.MYSQL_TYPE_NEWDECIMAL),
+    MYSQL_DATA_TYPE.YEAR: CTypeProperties(C_TYPES.MYSQL_TYPE_YEAR, 4, [FIELD_FLAG.UNSIGNED, FIELD_FLAG.ZEROFILL_FLAG]),
+    MYSQL_DATA_TYPE.TIME: CTypeProperties(C_TYPES.MYSQL_TYPE_TIME, 10, [FIELD_FLAG.BINARY_COLLATION]),
+    MYSQL_DATA_TYPE.DATE: CTypeProperties(C_TYPES.MYSQL_TYPE_DATE, 10, [FIELD_FLAG.BINARY_COLLATION]),
+    MYSQL_DATA_TYPE.DATETIME: CTypeProperties(C_TYPES.MYSQL_TYPE_DATETIME, 19, [FIELD_FLAG.BINARY_COLLATION]),
+    MYSQL_DATA_TYPE.TIMESTAMP: CTypeProperties(
+        C_TYPES.MYSQL_TYPE_TIMESTAMP, 19, [FIELD_FLAG.BINARY_COLLATION, FIELD_FLAG.TIMESTAMP]
+    ),
+    MYSQL_DATA_TYPE.CHAR: CTypeProperties(C_TYPES.MYSQL_TYPE_STRING),
+    MYSQL_DATA_TYPE.BINARY: CTypeProperties(C_TYPES.MYSQL_TYPE_STRING, flags=[FIELD_FLAG.BINARY_COLLATION]),
+    MYSQL_DATA_TYPE.VARCHAR: CTypeProperties(C_TYPES.MYSQL_TYPE_VAR_STRING),
+    MYSQL_DATA_TYPE.VARBINARY: CTypeProperties(C_TYPES.MYSQL_TYPE_VAR_STRING, flags=[FIELD_FLAG.BINARY_COLLATION]),
+    MYSQL_DATA_TYPE.TINYBLOB: CTypeProperties(
+        C_TYPES.MYSQL_TYPE_BLOB, flags=[FIELD_FLAG.BLOB, FIELD_FLAG.BINARY_COLLATION]
+    ),
+    MYSQL_DATA_TYPE.TINYTEXT: CTypeProperties(C_TYPES.MYSQL_TYPE_BLOB, flags=[FIELD_FLAG.BLOB]),
+    MYSQL_DATA_TYPE.BLOB: CTypeProperties(
+        C_TYPES.MYSQL_TYPE_BLOB, flags=[FIELD_FLAG.BLOB, FIELD_FLAG.BINARY_COLLATION]
+    ),
+    MYSQL_DATA_TYPE.TEXT: CTypeProperties(C_TYPES.MYSQL_TYPE_BLOB, flags=[FIELD_FLAG.BLOB]),
+    MYSQL_DATA_TYPE.MEDIUMBLOB: CTypeProperties(
+        C_TYPES.MYSQL_TYPE_BLOB, flags=[FIELD_FLAG.BLOB, FIELD_FLAG.BINARY_COLLATION]
+    ),
+    MYSQL_DATA_TYPE.MEDIUMTEXT: CTypeProperties(C_TYPES.MYSQL_TYPE_BLOB, flags=[FIELD_FLAG.BLOB]),
+    MYSQL_DATA_TYPE.LONGBLOB: CTypeProperties(
+        C_TYPES.MYSQL_TYPE_BLOB, flags=[FIELD_FLAG.BLOB, FIELD_FLAG.BINARY_COLLATION]
+    ),
+    MYSQL_DATA_TYPE.LONGTEXT: CTypeProperties(C_TYPES.MYSQL_TYPE_BLOB, flags=[FIELD_FLAG.BLOB]),
+    MYSQL_DATA_TYPE.BIT: CTypeProperties(C_TYPES.MYSQL_TYPE_BIT, 8, [FIELD_FLAG.UNSIGNED]),
+    MYSQL_DATA_TYPE.BOOL: CTypeProperties(C_TYPES.MYSQL_TYPE_TINY, 1),
+    MYSQL_DATA_TYPE.BOOLEAN: CTypeProperties(C_TYPES.MYSQL_TYPE_TINY, 1),
+    MYSQL_DATA_TYPE.JSON: CTypeProperties(
+        C_TYPES.MYSQL_TYPE_JSON, flags=[FIELD_FLAG.BLOB, FIELD_FLAG.BINARY_COLLATION]
+    ),
+    MYSQL_DATA_TYPE.VECTOR: CTypeProperties(
+        C_TYPES.MYSQL_TYPE_VECTOR, 4096, flags=[FIELD_FLAG.BLOB, FIELD_FLAG.BINARY_COLLATION]
+    ),
+}
 
 
 # HANDSHAKE
@@ -240,33 +374,35 @@ DEFAULT_COALLITION_ID = 83
 SERVER_STATUS_AUTOCOMMIT = 2
 
 # NOTE real mysql-server returns by default all (capabilities 0xffff, extended 0xc1ff)
-DEFAULT_CAPABILITIES = sum([
-    CAPABILITIES.CLIENT_LONG_PASSWORD,
-    CAPABILITIES.CLIENT_LONG_FLAG,
-    CAPABILITIES.CLIENT_CONNECT_WITH_DB,
-    CAPABILITIES.CLIENT_PROTOCOL_41,
-    CAPABILITIES.CLIENT_TRANSACTIONS,
-    CAPABILITIES.CLIENT_FOUND_ROWS,
-    CAPABILITIES.CLIENT_LOCAL_FILES,
-    CAPABILITIES.CLIENT_CONNECT_ATTRS,
-    CAPABILITIES.CLIENT_PLUGIN_AUTH,
-    CAPABILITIES.CLIENT_SSL,
-    CAPABILITIES.CLIENT_SECURE_CONNECTION,
-    CAPABILITIES.CLIENT_DEPRECATE_EOF,
-])
+DEFAULT_CAPABILITIES = sum(
+    [
+        CAPABILITIES.CLIENT_LONG_PASSWORD,
+        CAPABILITIES.CLIENT_LONG_FLAG,
+        CAPABILITIES.CLIENT_CONNECT_WITH_DB,
+        CAPABILITIES.CLIENT_PROTOCOL_41,
+        CAPABILITIES.CLIENT_TRANSACTIONS,
+        CAPABILITIES.CLIENT_FOUND_ROWS,
+        CAPABILITIES.CLIENT_LOCAL_FILES,
+        CAPABILITIES.CLIENT_CONNECT_ATTRS,
+        CAPABILITIES.CLIENT_PLUGIN_AUTH,
+        CAPABILITIES.CLIENT_SSL,
+        CAPABILITIES.CLIENT_SECURE_CONNECTION,
+        CAPABILITIES.CLIENT_DEPRECATE_EOF,
+    ]
+)
 
-DEFAULT_AUTH_METHOD = 'caching_sha2_password'   # [mysql_native_password|caching_sha2_password]
+DEFAULT_AUTH_METHOD = "caching_sha2_password"  # [mysql_native_password|caching_sha2_password]
 
 FILLER_FOR_WIRESHARK_DUMP = 21
 
 
 # Datum lenenc encoding
 
-NULL_VALUE = b'\xFB'
-ONE_BYTE_ENC = b'\xFA'
-TWO_BYTE_ENC = b'\xFC'
-THREE_BYTE_ENC = b'\xFD'
-EIGHT_BYTE_ENC = b'\xFE'
+NULL_VALUE = b"\xfb"
+ONE_BYTE_ENC = b"\xfa"
+TWO_BYTE_ENC = b"\xfc"
+THREE_BYTE_ENC = b"\xfd"
+EIGHT_BYTE_ENC = b"\xfe"
 
 
 # ERROR CODES
@@ -709,225 +845,225 @@ WARN = WARN()
 
 # noqa
 CHARSET_NUMBERS = {
-    "big5_chinese_ci":          1,
-    "latin2_czech_cs":          2,
-    "dec8_swedish_ci":          3,
-    "cp850_general_ci":         4,
-    "latin1_german1_ci":        5,
-    "hp8_english_ci":           6,
-    "koi8r_general_ci":         7,
-    "latin1_swedish_ci":        8,
-    "latin2_general_ci":        9,
-    "swe7_swedish_ci":          10,
-    "ascii_general_ci":         11,
-    "ujis_japanese_ci":         12,
-    "sjis_japanese_ci":         13,
-    "cp1251_bulgarian_ci":      14,
-    "latin1_danish_ci":         15,
-    "hebrew_general_ci":        16,
-    "tis620_thai_ci":           18,
-    "euckr_korean_ci":          19,
-    "latin7_estonian_cs":       20,
-    "latin2_hungarian_ci":      21,
-    "koi8u_general_ci":         22,
-    "cp1251_ukrainian_ci":      23,
-    "gb2312_chinese_ci":        24,
-    "greek_general_ci":         25,
-    "cp1250_general_ci":        26,
-    "latin2_croatian_ci":       27,
-    "gbk_chinese_ci":           28,
-    "cp1257_lithuanian_ci":     29,
-    "latin5_turkish_ci":        30,
-    "latin1_german2_ci":        31,
-    "armscii8_general_ci":      32,
-    "utf8_general_ci":          33,
-    "cp1250_czech_cs":          34,
-    "ucs2_general_ci":          35,
-    "cp866_general_ci":         36,
-    "keybcs2_general_ci":       37,
-    "macce_general_ci":         38,
-    "macroman_general_ci":      39,
-    "cp852_general_ci":         40,
-    "latin7_general_ci":        41,
-    "latin7_general_cs":        42,
-    "macce_bin":                43,
-    "cp1250_croatian_ci":       44,
-    "utf8mb4_general_ci":       45,
-    "utf8mb4_bin":              46,
-    "latin1_bin":               47,
-    "latin1_general_ci":        48,
-    "latin1_general_cs":        49,
-    "cp1251_bin":               50,
-    "cp1251_general_ci":        51,
-    "cp1251_general_cs":        52,
-    "macroman_bin":             53,
-    "utf16_general_ci":         54,
-    "utf16_bin":                55,
-    "utf16le_general_ci":       56,
-    "cp1256_general_ci":        57,
-    "cp1257_bin":               58,
-    "cp1257_general_ci":        59,
-    "utf32_general_ci":         60,
-    "utf32_bin":                61,
-    "utf16le_bin":              62,
-    "binary":                   63,
-    "armscii8_bin":             64,
-    "ascii_bin":                65,
-    "cp1250_bin":               66,
-    "cp1256_bin":               67,
-    "cp866_bin":                68,
-    "dec8_bin":                 69,
-    "greek_bin":                70,
-    "hebrew_bin":               71,
-    "hp8_bin":                  72,
-    "keybcs2_bin":              73,
-    "koi8r_bin":                74,
-    "koi8u_bin":                75,
-    "latin2_bin":               77,
-    "latin5_bin":               78,
-    "latin7_bin":               79,
-    "cp850_bin":                80,
-    "cp852_bin":                81,
-    "swe7_bin":                 82,
-    "utf8_bin":                 83,
-    "big5_bin":                 84,
-    "euckr_bin":                85,
-    "gb2312_bin":               86,
-    "gbk_bin":                  87,
-    "sjis_bin":                 88,
-    "tis620_bin":               89,
-    "ucs2_bin":                 90,
-    "ujis_bin":                 91,
-    "geostd8_general_ci":       92,
-    "geostd8_bin":              93,
-    "latin1_spanish_ci":        94,
-    "cp932_japanese_ci":        95,
-    "cp932_bin":                96,
-    "eucjpms_japanese_ci":      97,
-    "eucjpms_bin":              98,
-    "cp1250_polish_ci":         99,
-    "utf16_unicode_ci":         101,
-    "utf16_icelandic_ci":       102,
-    "utf16_latvian_ci":         103,
-    "utf16_romanian_ci":        104,
-    "utf16_slovenian_ci":       105,
-    "utf16_polish_ci":          106,
-    "utf16_estonian_ci":        107,
-    "utf16_spanish_ci":         108,
-    "utf16_swedish_ci":         109,
-    "utf16_turkish_ci":         110,
-    "utf16_czech_ci":           111,
-    "utf16_danish_ci":          112,
-    "utf16_lithuanian_ci":      113,
-    "utf16_slovak_ci":          114,
-    "utf16_spanish2_ci":        115,
-    "utf16_roman_ci":           116,
-    "utf16_persian_ci":         117,
-    "utf16_esperanto_ci":       118,
-    "utf16_hungarian_ci":       119,
-    "utf16_sinhala_ci":         120,
-    "utf16_german2_ci":         121,
-    "utf16_croatian_ci":        122,
-    "utf16_unicode_520_ci":     123,
-    "utf16_vietnamese_ci":      124,
-    "ucs2_unicode_ci":          128,
-    "ucs2_icelandic_ci":        129,
-    "ucs2_latvian_ci":          130,
-    "ucs2_romanian_ci":         131,
-    "ucs2_slovenian_ci":        132,
-    "ucs2_polish_ci":           133,
-    "ucs2_estonian_ci":         134,
-    "ucs2_spanish_ci":          135,
-    "ucs2_swedish_ci":          136,
-    "ucs2_turkish_ci":          137,
-    "ucs2_czech_ci":            138,
-    "ucs2_danish_ci":           139,
-    "ucs2_lithuanian_ci":       140,
-    "ucs2_slovak_ci":           141,
-    "ucs2_spanish2_ci":         142,
-    "ucs2_roman_ci":            143,
-    "ucs2_persian_ci":          144,
-    "ucs2_esperanto_ci":        145,
-    "ucs2_hungarian_ci":        146,
-    "ucs2_sinhala_ci":          147,
-    "ucs2_german2_ci":          148,
-    "ucs2_croatian_ci":         149,
-    "ucs2_unicode_520_ci":      150,
-    "ucs2_vietnamese_ci":       151,
+    "big5_chinese_ci": 1,
+    "latin2_czech_cs": 2,
+    "dec8_swedish_ci": 3,
+    "cp850_general_ci": 4,
+    "latin1_german1_ci": 5,
+    "hp8_english_ci": 6,
+    "koi8r_general_ci": 7,
+    "latin1_swedish_ci": 8,
+    "latin2_general_ci": 9,
+    "swe7_swedish_ci": 10,
+    "ascii_general_ci": 11,
+    "ujis_japanese_ci": 12,
+    "sjis_japanese_ci": 13,
+    "cp1251_bulgarian_ci": 14,
+    "latin1_danish_ci": 15,
+    "hebrew_general_ci": 16,
+    "tis620_thai_ci": 18,
+    "euckr_korean_ci": 19,
+    "latin7_estonian_cs": 20,
+    "latin2_hungarian_ci": 21,
+    "koi8u_general_ci": 22,
+    "cp1251_ukrainian_ci": 23,
+    "gb2312_chinese_ci": 24,
+    "greek_general_ci": 25,
+    "cp1250_general_ci": 26,
+    "latin2_croatian_ci": 27,
+    "gbk_chinese_ci": 28,
+    "cp1257_lithuanian_ci": 29,
+    "latin5_turkish_ci": 30,
+    "latin1_german2_ci": 31,
+    "armscii8_general_ci": 32,
+    "utf8_general_ci": 33,
+    "cp1250_czech_cs": 34,
+    "ucs2_general_ci": 35,
+    "cp866_general_ci": 36,
+    "keybcs2_general_ci": 37,
+    "macce_general_ci": 38,
+    "macroman_general_ci": 39,
+    "cp852_general_ci": 40,
+    "latin7_general_ci": 41,
+    "latin7_general_cs": 42,
+    "macce_bin": 43,
+    "cp1250_croatian_ci": 44,
+    "utf8mb4_general_ci": 45,
+    "utf8mb4_bin": 46,
+    "latin1_bin": 47,
+    "latin1_general_ci": 48,
+    "latin1_general_cs": 49,
+    "cp1251_bin": 50,
+    "cp1251_general_ci": 51,
+    "cp1251_general_cs": 52,
+    "macroman_bin": 53,
+    "utf16_general_ci": 54,
+    "utf16_bin": 55,
+    "utf16le_general_ci": 56,
+    "cp1256_general_ci": 57,
+    "cp1257_bin": 58,
+    "cp1257_general_ci": 59,
+    "utf32_general_ci": 60,
+    "utf32_bin": 61,
+    "utf16le_bin": 62,
+    "binary": 63,
+    "armscii8_bin": 64,
+    "ascii_bin": 65,
+    "cp1250_bin": 66,
+    "cp1256_bin": 67,
+    "cp866_bin": 68,
+    "dec8_bin": 69,
+    "greek_bin": 70,
+    "hebrew_bin": 71,
+    "hp8_bin": 72,
+    "keybcs2_bin": 73,
+    "koi8r_bin": 74,
+    "koi8u_bin": 75,
+    "latin2_bin": 77,
+    "latin5_bin": 78,
+    "latin7_bin": 79,
+    "cp850_bin": 80,
+    "cp852_bin": 81,
+    "swe7_bin": 82,
+    "utf8_bin": 83,
+    "big5_bin": 84,
+    "euckr_bin": 85,
+    "gb2312_bin": 86,
+    "gbk_bin": 87,
+    "sjis_bin": 88,
+    "tis620_bin": 89,
+    "ucs2_bin": 90,
+    "ujis_bin": 91,
+    "geostd8_general_ci": 92,
+    "geostd8_bin": 93,
+    "latin1_spanish_ci": 94,
+    "cp932_japanese_ci": 95,
+    "cp932_bin": 96,
+    "eucjpms_japanese_ci": 97,
+    "eucjpms_bin": 98,
+    "cp1250_polish_ci": 99,
+    "utf16_unicode_ci": 101,
+    "utf16_icelandic_ci": 102,
+    "utf16_latvian_ci": 103,
+    "utf16_romanian_ci": 104,
+    "utf16_slovenian_ci": 105,
+    "utf16_polish_ci": 106,
+    "utf16_estonian_ci": 107,
+    "utf16_spanish_ci": 108,
+    "utf16_swedish_ci": 109,
+    "utf16_turkish_ci": 110,
+    "utf16_czech_ci": 111,
+    "utf16_danish_ci": 112,
+    "utf16_lithuanian_ci": 113,
+    "utf16_slovak_ci": 114,
+    "utf16_spanish2_ci": 115,
+    "utf16_roman_ci": 116,
+    "utf16_persian_ci": 117,
+    "utf16_esperanto_ci": 118,
+    "utf16_hungarian_ci": 119,
+    "utf16_sinhala_ci": 120,
+    "utf16_german2_ci": 121,
+    "utf16_croatian_ci": 122,
+    "utf16_unicode_520_ci": 123,
+    "utf16_vietnamese_ci": 124,
+    "ucs2_unicode_ci": 128,
+    "ucs2_icelandic_ci": 129,
+    "ucs2_latvian_ci": 130,
+    "ucs2_romanian_ci": 131,
+    "ucs2_slovenian_ci": 132,
+    "ucs2_polish_ci": 133,
+    "ucs2_estonian_ci": 134,
+    "ucs2_spanish_ci": 135,
+    "ucs2_swedish_ci": 136,
+    "ucs2_turkish_ci": 137,
+    "ucs2_czech_ci": 138,
+    "ucs2_danish_ci": 139,
+    "ucs2_lithuanian_ci": 140,
+    "ucs2_slovak_ci": 141,
+    "ucs2_spanish2_ci": 142,
+    "ucs2_roman_ci": 143,
+    "ucs2_persian_ci": 144,
+    "ucs2_esperanto_ci": 145,
+    "ucs2_hungarian_ci": 146,
+    "ucs2_sinhala_ci": 147,
+    "ucs2_german2_ci": 148,
+    "ucs2_croatian_ci": 149,
+    "ucs2_unicode_520_ci": 150,
+    "ucs2_vietnamese_ci": 151,
     "ucs2_general_mysql500_ci": 159,
-    "utf32_unicode_ci":         160,
-    "utf32_icelandic_ci":       161,
-    "utf32_latvian_ci":         162,
-    "utf32_romanian_ci":        163,
-    "utf32_slovenian_ci":       164,
-    "utf32_polish_ci":          165,
-    "utf32_estonian_ci":        166,
-    "utf32_spanish_ci":         167,
-    "utf32_swedish_ci":         168,
-    "utf32_turkish_ci":         169,
-    "utf32_czech_ci":           170,
-    "utf32_danish_ci":          171,
-    "utf32_lithuanian_ci":      172,
-    "utf32_slovak_ci":          173,
-    "utf32_spanish2_ci":        174,
-    "utf32_roman_ci":           175,
-    "utf32_persian_ci":         176,
-    "utf32_esperanto_ci":       177,
-    "utf32_hungarian_ci":       178,
-    "utf32_sinhala_ci":         179,
-    "utf32_german2_ci":         180,
-    "utf32_croatian_ci":        181,
-    "utf32_unicode_520_ci":     182,
-    "utf32_vietnamese_ci":      183,
-    "utf8_unicode_ci":          192,
-    "utf8_icelandic_ci":        193,
-    "utf8_latvian_ci":          194,
-    "utf8_romanian_ci":         195,
-    "utf8_slovenian_ci":        196,
-    "utf8_polish_ci":           197,
-    "utf8_estonian_ci":         198,
-    "utf8_spanish_ci":          199,
-    "utf8_swedish_ci":          200,
-    "utf8_turkish_ci":          201,
-    "utf8_czech_ci":            202,
-    "utf8_danish_ci":           203,
-    "utf8_lithuanian_ci":       204,
-    "utf8_slovak_ci":           205,
-    "utf8_spanish2_ci":         206,
-    "utf8_roman_ci":            207,
-    "utf8_persian_ci":          208,
-    "utf8_esperanto_ci":        209,
-    "utf8_hungarian_ci":        210,
-    "utf8_sinhala_ci":          211,
-    "utf8_german2_ci":          212,
-    "utf8_croatian_ci":         213,
-    "utf8_unicode_520_ci":      214,
-    "utf8_vietnamese_ci":       215,
+    "utf32_unicode_ci": 160,
+    "utf32_icelandic_ci": 161,
+    "utf32_latvian_ci": 162,
+    "utf32_romanian_ci": 163,
+    "utf32_slovenian_ci": 164,
+    "utf32_polish_ci": 165,
+    "utf32_estonian_ci": 166,
+    "utf32_spanish_ci": 167,
+    "utf32_swedish_ci": 168,
+    "utf32_turkish_ci": 169,
+    "utf32_czech_ci": 170,
+    "utf32_danish_ci": 171,
+    "utf32_lithuanian_ci": 172,
+    "utf32_slovak_ci": 173,
+    "utf32_spanish2_ci": 174,
+    "utf32_roman_ci": 175,
+    "utf32_persian_ci": 176,
+    "utf32_esperanto_ci": 177,
+    "utf32_hungarian_ci": 178,
+    "utf32_sinhala_ci": 179,
+    "utf32_german2_ci": 180,
+    "utf32_croatian_ci": 181,
+    "utf32_unicode_520_ci": 182,
+    "utf32_vietnamese_ci": 183,
+    "utf8_unicode_ci": 192,
+    "utf8_icelandic_ci": 193,
+    "utf8_latvian_ci": 194,
+    "utf8_romanian_ci": 195,
+    "utf8_slovenian_ci": 196,
+    "utf8_polish_ci": 197,
+    "utf8_estonian_ci": 198,
+    "utf8_spanish_ci": 199,
+    "utf8_swedish_ci": 200,
+    "utf8_turkish_ci": 201,
+    "utf8_czech_ci": 202,
+    "utf8_danish_ci": 203,
+    "utf8_lithuanian_ci": 204,
+    "utf8_slovak_ci": 205,
+    "utf8_spanish2_ci": 206,
+    "utf8_roman_ci": 207,
+    "utf8_persian_ci": 208,
+    "utf8_esperanto_ci": 209,
+    "utf8_hungarian_ci": 210,
+    "utf8_sinhala_ci": 211,
+    "utf8_german2_ci": 212,
+    "utf8_croatian_ci": 213,
+    "utf8_unicode_520_ci": 214,
+    "utf8_vietnamese_ci": 215,
     "utf8_general_mysql500_ci": 223,
-    "utf8mb4_unicode_ci":       224,
-    "utf8mb4_icelandic_ci":     225,
-    "utf8mb4_latvian_ci":       226,
-    "utf8mb4_romanian_ci":      227,
-    "utf8mb4_slovenian_ci":     228,
-    "utf8mb4_polish_ci":        229,
-    "utf8mb4_estonian_ci":      230,
-    "utf8mb4_spanish_ci":       231,
-    "utf8mb4_swedish_ci":       232,
-    "utf8mb4_turkish_ci":       233,
-    "utf8mb4_czech_ci":         234,
-    "utf8mb4_danish_ci":        235,
-    "utf8mb4_lithuanian_ci":    236,
-    "utf8mb4_slovak_ci":        237,
-    "utf8mb4_spanish2_ci":      238,
-    "utf8mb4_roman_ci":         239,
-    "utf8mb4_persian_ci":       240,
-    "utf8mb4_esperanto_ci":     241,
-    "utf8mb4_hungarian_ci":     242,
-    "utf8mb4_sinhala_ci":       243,
-    "utf8mb4_german2_ci":       244,
-    "utf8mb4_croatian_ci":      245,
-    "utf8mb4_unicode_520_ci":   246,
-    "utf8mb4_vietnamese_ci":    247
+    "utf8mb4_unicode_ci": 224,
+    "utf8mb4_icelandic_ci": 225,
+    "utf8mb4_latvian_ci": 226,
+    "utf8mb4_romanian_ci": 227,
+    "utf8mb4_slovenian_ci": 228,
+    "utf8mb4_polish_ci": 229,
+    "utf8mb4_estonian_ci": 230,
+    "utf8mb4_spanish_ci": 231,
+    "utf8mb4_swedish_ci": 232,
+    "utf8mb4_turkish_ci": 233,
+    "utf8mb4_czech_ci": 234,
+    "utf8mb4_danish_ci": 235,
+    "utf8mb4_lithuanian_ci": 236,
+    "utf8mb4_slovak_ci": 237,
+    "utf8mb4_spanish2_ci": 238,
+    "utf8mb4_roman_ci": 239,
+    "utf8mb4_persian_ci": 240,
+    "utf8mb4_esperanto_ci": 241,
+    "utf8mb4_hungarian_ci": 242,
+    "utf8mb4_sinhala_ci": 243,
+    "utf8mb4_german2_ci": 244,
+    "utf8mb4_croatian_ci": 245,
+    "utf8mb4_unicode_520_ci": 246,
+    "utf8mb4_vietnamese_ci": 247,
 }
 
 
@@ -1020,53 +1156,55 @@ SQL_RESERVED_WORDS = [
     "USING",
     "VERBOSE",
     "WHEN",
-    "WHERE"
+    "WHERE",
 ]
 
 SERVER_VARIABLES = {
     # var_name: (value, type, charset)
-    '@@session.auto_increment_increment': (1, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS['binary']),
-    '@@auto_increment_increment': (1, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS['binary']),
-
-    '@@character_set_client': ('utf8', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
-    '@@character_set_connection': ('utf8', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
-    '@@character_set_results': ('utf8', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
-
-    '@@GLOBAL.character_set_server': ('latin1', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
-    '@@character_set_server': ('latin1', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
-
-    '@@GLOBAL.collation_server': ('latin1_swedish_ci', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
-    '@@collation_server': ('latin1_swedish_ci', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
-
-    '@@init_connect': ('', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),  # None or '' ?
-    '@@interactive_timeout': (28800, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS['binary']),
-    '@@license': ('GPL', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
-    '@@lower_case_table_names': (0, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS['binary']),
-    '@@max_allowed_packet': (16777216, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS['binary']),
-    '@@net_buffer_length': (16384, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS['binary']),
-    '@@net_write_timeout': (60, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS['binary']),
-    '@@query_cache_size': (16777216, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS['binary']),
-    '@@query_cache_type': ('OFF', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
-    '@@sql_mode': ('ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
+    "@@session.auto_increment_increment": (1, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS["binary"]),
+    "@@auto_increment_increment": (1, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS["binary"]),
+    "@@character_set_client": ("utf8", TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS["utf8_general_ci"]),
+    "@@character_set_connection": ("utf8", TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS["utf8_general_ci"]),
+    "@@character_set_results": ("utf8", TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS["utf8_general_ci"]),
+    "@@GLOBAL.character_set_server": ("latin1", TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS["utf8_general_ci"]),
+    "@@character_set_server": ("latin1", TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS["utf8_general_ci"]),
+    "@@GLOBAL.collation_server": ("latin1_swedish_ci", TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS["utf8_general_ci"]),
+    "@@collation_server": ("latin1_swedish_ci", TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS["utf8_general_ci"]),
+    "@@init_connect": ("", TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS["utf8_general_ci"]),  # None or '' ?
+    "@@interactive_timeout": (28800, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS["binary"]),
+    "@@license": ("GPL", TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS["utf8_general_ci"]),
+    "@@lower_case_table_names": (0, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS["binary"]),
+    "@@GLOBAL.lower_case_table_names": (0, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS["binary"]),
+    "@@max_allowed_packet": (16777216, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS["binary"]),
+    "@@net_buffer_length": (16384, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS["binary"]),
+    "@@net_write_timeout": (60, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS["binary"]),
+    "@@query_cache_size": (16777216, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS["binary"]),
+    "@@query_cache_type": ("OFF", TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS["utf8_general_ci"]),
+    "@@sql_mode": (
+        "ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION",
+        TYPES.MYSQL_TYPE_VAR_STRING,
+        CHARSET_NUMBERS["utf8_general_ci"],
+    ),
     # '@@system_time_zone': ('MSK', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
-    '@@system_time_zone': ('UTC', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
-    '@@time_zone': ('SYSTEM', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
-
-    '@@session.tx_isolation': ('REPEATABLE-READ', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
-    '@@tx_isolation': ('REPEATABLE-READ', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
-
-    '@@wait_timeout': (28800, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS['binary']),
-
-    '@@session.tx_read_only': ('0', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
-
-    '@@version_comment': ('(MindsDB)', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
-    '@@version': ('8.0.17', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
-
-    '@@collation_connection': ('utf8_general_ci', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
-    '@@performance_schema': (1, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS['binary']),
-
-    '@@GLOBAL.transaction_isolation': ('REPEATABLE-READ', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
-    '@@transaction_isolation': ('REPEATABLE-READ', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
+    "@@system_time_zone": ("UTC", TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS["utf8_general_ci"]),
+    "@@time_zone": ("SYSTEM", TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS["utf8_general_ci"]),
+    "@@session.tx_isolation": ("REPEATABLE-READ", TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS["utf8_general_ci"]),
+    "@@tx_isolation": ("REPEATABLE-READ", TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS["utf8_general_ci"]),
+    "@@wait_timeout": (28800, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS["binary"]),
+    "@@session.tx_read_only": ("0", TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS["utf8_general_ci"]),
+    "@@version_comment": ("(MindsDB)", TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS["utf8_general_ci"]),
+    "@@version": ("8.0.17", TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS["utf8_general_ci"]),
+    "@@collation_connection": ("utf8_general_ci", TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS["utf8_general_ci"]),
+    "@@performance_schema": (1, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS["binary"]),
+    "@@GLOBAL.transaction_isolation": (
+        "REPEATABLE-READ",
+        TYPES.MYSQL_TYPE_VAR_STRING,
+        CHARSET_NUMBERS["utf8_general_ci"],
+    ),
+    "@@transaction_isolation": ("REPEATABLE-READ", TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS["utf8_general_ci"]),
+    "@@event_scheduler": ("OFF", TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS["utf8_general_ci"]),
+    "@@default_storage_engine": ("InnoDB", TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS["utf8_general_ci"]),
+    "@@default_tmp_storage_engine": ("InnoDB", TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS["utf8_general_ci"]),
 }
 
 
@@ -1085,19 +1223,19 @@ SESSION_TRACK = SESSION_TRACK()
 ALL = vars()
 
 
-def VAR_NAME(val, prefix=''):
+def VAR_NAME(val, prefix=""):
     global ALL
 
     for key in ALL.keys():
         value = ALL[key]
-        if value == val and key != 'val':
-            if prefix == '' or (prefix != '' and prefix == key[:len(prefix)]):
+        if value == val and key != "val":
+            if prefix == "" or (prefix != "" and prefix == key[: len(prefix)]):
                 return key
     return None
 
 
 def getConstName(consts, value):
-    attrs = [x for x in dir(consts) if x.startswith('__') is False]
+    attrs = [x for x in dir(consts) if x.startswith("__") is False]
     constNames = {getattr(consts, x): x for x in attrs}
     if value in constNames:
         return constNames[value]

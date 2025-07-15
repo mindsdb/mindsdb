@@ -44,6 +44,5 @@ class DeleteStepCall(BaseStepCall):
 
         query_traversal(query.where, fill_params)
 
-        dn.query(query=query, session=self.session)
-
-        return ResultSet()
+        response = dn.query(query=query, session=self.session)
+        return ResultSet(affected_rows=response.affected_rows)

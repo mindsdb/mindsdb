@@ -2,6 +2,7 @@ import ast
 import hashlib
 from enum import Enum
 from typing import Dict, List, Optional
+import datetime as dt
 
 import pandas as pd
 from mindsdb_sql_parser.ast import (
@@ -20,12 +21,15 @@ from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.integrations.libs.response import RESPONSE_TYPE, HandlerResponse
 from mindsdb.utilities import log
-from mindsdb.integrations.utilities.sql_utils import conditions_to_filter, FilterCondition, FilterOperator
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, KeywordSearchArgs
 
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 from .base import BaseHandler
 
 LOG = log.getLogger(__name__)
+
+
+class VectorHandlerException(Exception): ...
 
 
 class TableField(Enum):
@@ -39,12 +43,13 @@ class TableField(Enum):
     METADATA = "metadata"
     SEARCH_VECTOR = "search_vector"
     DISTANCE = "distance"
+    RELEVANCE = "relevance"
 
 
 class DistanceFunction(Enum):
-    SQUARED_EUCLIDEAN_DISTANCE = '<->',
-    NEGATIVE_DOT_PRODUCT = '<#>',
-    COSINE_DISTANCE = '<=>'
+    SQUARED_EUCLIDEAN_DISTANCE = ("<->",)
+    NEGATIVE_DOT_PRODUCT = ("<#>",)
+    COSINE_DISTANCE = "<=>"
 
 
 class VectorStoreHandler(BaseHandler):
@@ -69,6 +74,10 @@ class VectorStoreHandler(BaseHandler):
             "name": TableField.METADATA.value,
             "data_type": "json",
         },
+        {
+            "name": TableField.DISTANCE.value,
+            "data_type": "float",
+        },
     ]
 
     def validate_connection_parameters(self, name, **kwargs):
@@ -89,7 +98,7 @@ class VectorStoreHandler(BaseHandler):
         else:
             return value
 
-    def _extract_conditions(self, where_statement) -> Optional[List[FilterCondition]]:
+    def extract_conditions(self, where_statement) -> Optional[List[FilterCondition]]:
         conditions = []
         # parse conditions
         if where_statement is not None:
@@ -110,32 +119,35 @@ class VectorStoreHandler(BaseHandler):
                             right_hand = node.args[1].value
                     elif isinstance(node.args[1], Tuple):
                         # Constant could be actually a list i.e. [1.2, 3.2]
-                        right_hand = [
-                            ast.literal_eval(item.value)
-                            if isinstance(item, Constant)
-                            and not isinstance(item.value, list)
-                            else item.value
-                            for item in node.args[1].items
-                        ]
+                        right_hand = [item.value for item in node.args[1].items]
                     else:
                         raise Exception(f"Unsupported right hand side: {node.args[1]}")
-                    conditions.append(
-                        FilterCondition(column=left_hand, op=op, value=right_hand)
-                    )
+                    conditions.append(FilterCondition(column=left_hand, op=op, value=right_hand))
 
             query_traversal(where_statement, _extract_comparison_conditions)
-
-            # try to treat conditions that are not in TableField as metadata conditions
-            for condition in conditions:
-                if not self._is_condition_allowed(condition):
-                    condition.column = (
-                        TableField.METADATA.value + "." + condition.column
-                    )
 
         else:
             conditions = None
 
         return conditions
+
+    def _convert_metadata_filters(self, conditions, allowed_metadata_columns=None):
+        if conditions is None:
+            return
+        # try to treat conditions that are not in TableField as metadata conditions
+        for condition in conditions:
+            if self._is_metadata_condition(condition):
+                # check restriction
+                if allowed_metadata_columns is not None:
+                    # system columns are underscored, skip them
+                    if condition.column.lower() not in allowed_metadata_columns and not condition.column.startswith(
+                        "_"
+                    ):
+                        raise ValueError(f"Column is not found: {condition.column}")
+
+                # convert if required
+                if not condition.column.startswith(TableField.METADATA.value):
+                    condition.column = TableField.METADATA.value + "." + condition.column
 
     def _is_columns_allowed(self, columns: List[str]) -> bool:
         """
@@ -144,16 +156,11 @@ class VectorStoreHandler(BaseHandler):
         allowed_columns = set([col["name"] for col in self.SCHEMA])
         return set(columns).issubset(allowed_columns)
 
-    def _is_condition_allowed(self, condition: FilterCondition) -> bool:
+    def _is_metadata_condition(self, condition: FilterCondition) -> bool:
         allowed_field_values = set([field.value for field in TableField])
         if condition.column in allowed_field_values:
-            return True
-        else:
-            # check if column is a metadata column
-            if condition.column.startswith(TableField.METADATA.value):
-                return True
-            else:
-                return False
+            return False
+        return True
 
     def _dispatch_create_table(self, query: CreateTable):
         """
@@ -182,17 +189,12 @@ class VectorStoreHandler(BaseHandler):
         columns = [column.name for column in query.columns]
 
         if not self._is_columns_allowed(columns):
-            raise Exception(
-                f"Columns {columns} not allowed."
-                f"Allowed columns are {[col['name'] for col in self.SCHEMA]}"
-            )
+            raise Exception(f"Columns {columns} not allowed.Allowed columns are {[col['name'] for col in self.SCHEMA]}")
 
         # get content column if it is present
         if TableField.CONTENT.value in columns:
             content_col_index = columns.index("content")
-            content = [
-                self._value_or_self(row[content_col_index]) for row in query.values
-            ]
+            content = [self._value_or_self(row[content_col_index]) for row in query.values]
         else:
             content = None
 
@@ -207,19 +209,13 @@ class VectorStoreHandler(BaseHandler):
         # get embeddings column if it is present
         if TableField.EMBEDDINGS.value in columns:
             embeddings_col_index = columns.index("embeddings")
-            embeddings = [
-                ast.literal_eval(self._value_or_self(row[embeddings_col_index]))
-                for row in query.values
-            ]
+            embeddings = [ast.literal_eval(self._value_or_self(row[embeddings_col_index])) for row in query.values]
         else:
             raise Exception("Embeddings column is required!")
 
         if TableField.METADATA.value in columns:
             metadata_col_index = columns.index("metadata")
-            metadata = [
-                ast.literal_eval(self._value_or_self(row[metadata_col_index]))
-                for row in query.values
-            ]
+            metadata = [ast.literal_eval(self._value_or_self(row[metadata_col_index])) for row in query.values]
         else:
             metadata = None
 
@@ -234,7 +230,7 @@ class VectorStoreHandler(BaseHandler):
 
         return self.do_upsert(table_name, pd.DataFrame(data))
 
-    def _dispatch_update(self, query: Update):
+    def dispatch_update(self, query: Update, conditions: List[FilterCondition] = None):
         """
         Dispatch update query to the appropriate method.
         """
@@ -253,8 +249,15 @@ class VectorStoreHandler(BaseHandler):
                     pass
             row[k] = v
 
-        filters = conditions_to_filter(query.where)
-        row.update(filters)
+        if conditions is None:
+            where_statement = query.where
+            conditions = self.extract_conditions(where_statement)
+
+        for condition in conditions:
+            if condition.op != FilterOperator.EQUAL:
+                raise NotImplementedError
+
+            row[condition.column] = condition.value
 
         # checks
         if TableField.EMBEDDINGS.value not in row:
@@ -268,10 +271,28 @@ class VectorStoreHandler(BaseHandler):
 
         return self.do_upsert(table_name, df)
 
-    def do_upsert(self, table_name, df):
-        # if handler supports it, call upsert method
+    def set_metadata_cur_time(self, df, col_name):
+        metadata_col = TableField.METADATA.value
+        cur_date = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+        def set_time(meta):
+            meta[col_name] = cur_date
+
+        df[metadata_col].apply(set_time)
+
+    def do_upsert(self, table_name, df):
+        """Upsert data into table, handling document updates and deletions.
+
+        Args:
+            table_name (str): Name of the table
+            df (pd.DataFrame): DataFrame containing the data to upsert
+
+        The function handles three cases:
+        1. New documents: Insert them
+        2. Updated documents: Delete old chunks and insert new ones
+        """
         id_col = TableField.ID.value
+        metadata_col = TableField.METADATA.value
         content_col = TableField.CONTENT.value
 
         def gen_hash(v):
@@ -292,86 +313,124 @@ class VectorStoreHandler(BaseHandler):
         # id is string TODO is it ok?
         df[id_col] = df[id_col].apply(str)
 
-        if hasattr(self, 'upsert'):
+        # set updated_at
+        self.set_metadata_cur_time(df, "_updated_at")
+
+        if hasattr(self, "upsert"):
             self.upsert(table_name, df)
             return
 
         # find existing ids
-        res = self.select(
+        df_existed = self.select(
             table_name,
-            columns=[id_col],
-            conditions=[
-                FilterCondition(column=id_col, op=FilterOperator.IN, value=list(df[id_col]))
-            ]
+            columns=[id_col, metadata_col],
+            conditions=[FilterCondition(column=id_col, op=FilterOperator.IN, value=list(df[id_col]))],
         )
-        existed_ids = list(res[id_col])
+        existed_ids = list(df_existed[id_col])
 
         # update existed
         df_update = df[df[id_col].isin(existed_ids)]
         df_insert = df[~df[id_col].isin(existed_ids)]
 
         if not df_update.empty:
+            # get values of existed `created_at` and return them to metadata
+            created_dates = {row[id_col]: row[metadata_col].get("_created_at") for _, row in df_existed.iterrows()}
+
+            def keep_created_at(row):
+                val = created_dates.get(row[id_col])
+                if val:
+                    row[metadata_col]["_created_at"] = val
+                return row
+
+            df_update.apply(keep_created_at, axis=1)
+
             try:
                 self.update(table_name, df_update, [id_col])
             except NotImplementedError:
                 # not implemented? do it with delete and insert
-                conditions = [FilterCondition(
-                    column=id_col,
-                    op=FilterOperator.IN,
-                    value=list(df[id_col])
-                )]
+                conditions = [FilterCondition(column=id_col, op=FilterOperator.IN, value=list(df[id_col]))]
                 self.delete(table_name, conditions)
                 self.insert(table_name, df_update)
         if not df_insert.empty:
+            # set created_at
+            self.set_metadata_cur_time(df_insert, "_created_at")
+
             self.insert(table_name, df_insert)
 
-    def dispatch_delete(self, query: Delete):
+    def dispatch_delete(self, query: Delete, conditions: List[FilterCondition] = None):
         """
         Dispatch delete query to the appropriate method.
         """
         # parse key arguments
         table_name = query.table.parts[-1]
-        where_statement = query.where
-        conditions = self._extract_conditions(where_statement)
+        if conditions is None:
+            where_statement = query.where
+            conditions = self.extract_conditions(where_statement)
+        self._convert_metadata_filters(conditions)
 
         # dispatch delete
         return self.delete(table_name, conditions=conditions)
 
-    def dispatch_select(self, query: Select, conditions: List[FilterCondition] = None):
+    def dispatch_select(
+        self,
+        query: Select,
+        conditions: Optional[List[FilterCondition]] = None,
+        allowed_metadata_columns: List[str] = None,
+        keyword_search_args: Optional[KeywordSearchArgs] = None,
+    ):
         """
-        Dispatch select query to the appropriate method.
+        Dispatches a select query to the appropriate method, handling both
+        standard selections and keyword searches based on the provided arguments.
         """
-        # parse key arguments
+        # 1. Parse common query arguments
         table_name = query.from_table.parts[-1]
-        # if targets are star, select all columns
+
+        # If targets are a star (*), select all schema columns
         if isinstance(query.targets[0], Star):
             columns = [col["name"] for col in self.SCHEMA]
         else:
             columns = [col.parts[-1] for col in query.targets]
 
+        # 2. Validate columns
         if not self._is_columns_allowed(columns):
-            raise Exception(
-                f"Columns {columns} not allowed."
-                f"Allowed columns are {[col['name'] for col in self.SCHEMA]}"
-            )
+            allowed_cols = [col["name"] for col in self.SCHEMA]
+            raise Exception(f"Columns {columns} not allowed. Allowed columns are {allowed_cols}")
 
-        # check if columns are allowed
-        where_statement = query.where
+        # 3. Extract and process conditions
         if conditions is None:
-            conditions = self._extract_conditions(where_statement)
+            where_statement = query.where
+            conditions = self.extract_conditions(where_statement)
+        self._convert_metadata_filters(conditions, allowed_metadata_columns=allowed_metadata_columns)
 
-        # get offset and limit
+        # 4. Get offset and limit
         offset = query.offset.value if query.offset is not None else None
         limit = query.limit.value if query.limit is not None else None
 
-        # dispatch select
-        return self.select(
-            table_name,
-            columns=columns,
-            conditions=conditions,
-            offset=offset,
-            limit=limit,
-        )
+        # 5. Conditionally dispatch to the correct select method
+        if keyword_search_args:
+            # It's a keyword search
+            return self.keyword_select(
+                table_name,
+                columns=columns,
+                conditions=conditions,
+                offset=offset,
+                limit=limit,
+                keyword_search_args=keyword_search_args,
+            )
+        else:
+            # It's a standard select
+            try:
+                return self.select(
+                    table_name,
+                    columns=columns,
+                    conditions=conditions,
+                    offset=offset,
+                    limit=limit,
+                )
+
+            except Exception as e:
+                handler_engine = self.__class__.name
+                raise VectorHandlerException(f"Error in {handler_engine} database: {e}")
 
     def _dispatch(self, query: ASTNode) -> HandlerResponse:
         """
@@ -381,17 +440,14 @@ class VectorStoreHandler(BaseHandler):
             CreateTable: self._dispatch_create_table,
             DropTables: self._dispatch_drop_table,
             Insert: self._dispatch_insert,
-            Update: self._dispatch_update,
+            Update: self.dispatch_update,
             Delete: self.dispatch_delete,
             Select: self.dispatch_select,
         }
         if type(query) in dispatch_router:
             resp = dispatch_router[type(query)](query)
             if resp is not None:
-                return HandlerResponse(
-                    resp_type=RESPONSE_TYPE.TABLE,
-                    data_frame=resp
-                )
+                return HandlerResponse(resp_type=RESPONSE_TYPE.TABLE, data_frame=resp)
             else:
                 return HandlerResponse(resp_type=RESPONSE_TYPE.OK)
 
@@ -435,9 +491,7 @@ class VectorStoreHandler(BaseHandler):
         """
         raise NotImplementedError()
 
-    def insert(
-        self, table_name: str, data: pd.DataFrame
-    ) -> HandlerResponse:
+    def insert(self, table_name: str, data: pd.DataFrame) -> HandlerResponse:
         """Insert data into table
 
         Args:
@@ -450,9 +504,7 @@ class VectorStoreHandler(BaseHandler):
         """
         raise NotImplementedError()
 
-    def update(
-        self, table_name: str, data: pd.DataFrame, key_columns: List[str] = None
-    ):
+    def update(self, table_name: str, data: pd.DataFrame, key_columns: List[str] = None):
         """Update data in table
 
         Args:
@@ -465,9 +517,7 @@ class VectorStoreHandler(BaseHandler):
         """
         raise NotImplementedError()
 
-    def delete(
-        self, table_name: str, conditions: List[FilterCondition] = None
-    ) -> HandlerResponse:
+    def delete(self, table_name: str, conditions: List[FilterCondition] = None) -> HandlerResponse:
         """Delete data from table
 
         Args:
@@ -515,9 +565,9 @@ class VectorStoreHandler(BaseHandler):
         query: str = None,
         metadata: Dict[str, str] = None,
         distance_function=DistanceFunction.COSINE_DISTANCE,
-        **kwargs
+        **kwargs,
     ) -> pd.DataFrame:
-        '''
+        """
         Executes a hybrid search, combining semantic search and one or both of keyword/metadata search.
 
         For insight on the query construction, see: https://docs.pgvecto.rs/use-case/hybrid-search.html#advanced-search-merge-the-results-of-full-text-search-and-vector-search.
@@ -531,5 +581,11 @@ class VectorStoreHandler(BaseHandler):
 
         Returns:
             df(pd.DataFrame): Hybrid search result, sorted by hybrid search rank
-        '''
-        raise NotImplementedError(f'Hybrid search not supported for VectorStoreHandler {self.name}')
+        """
+        raise NotImplementedError(f"Hybrid search not supported for VectorStoreHandler {self.name}")
+
+    def create_index(self, *args, **kwargs):
+        """
+        Create an index on the specified table.
+        """
+        raise NotImplementedError(f"create_index not supported for VectorStoreHandler {self.name}")

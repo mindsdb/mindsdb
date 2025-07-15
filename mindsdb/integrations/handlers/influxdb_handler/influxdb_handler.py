@@ -8,8 +8,8 @@ from mindsdb.utilities import log
 from mindsdb_sql_parser import parse_sql
 
 
-
 logger = log.getLogger(__name__)
+
 
 class InfluxDBHandler(APIHandler):
     """InfluxDB handler implementation"""
@@ -34,7 +34,6 @@ class InfluxDBHandler(APIHandler):
 
         influxdb_tables_data = InfluxDBTables(self)
         self._register_table("tables", influxdb_tables_data)
-        
 
     def connect(self):
         """Set up the connection required by the handler.
@@ -44,17 +43,15 @@ class InfluxDBHandler(APIHandler):
 
         Raises Expection if ping check fails
         """
-        
+
         if self.is_connected is True:
             return self.connection
-        
-        self.connection=InfluxDBClient3(host=self.connection_data['influxdb_url'],token=self.connection_data['influxdb_token'],org=self.connection_data.get('org'))
 
+        self.connection = InfluxDBClient3(host=self.connection_data['influxdb_url'], token=self.connection_data['influxdb_token'], org=self.connection_data.get('org'))
 
         self.is_connected = True
 
         return self.connection
-        
 
     def check_connection(self) -> StatusResponse:
         """Check connection to the handler.
@@ -90,16 +87,16 @@ class InfluxDBHandler(APIHandler):
         ast = parse_sql(query)
         return self.query(ast)
 
-    def call_influxdb_tables(self,query):
+    def call_influxdb_tables(self, query):
         """Pulls all the records from the given  InfluxDB table and returns it select()
-    
+
         Returns
         -------
-        pd.DataFrame of all the records of the particular InfluxDB 
+        pd.DataFrame of all the records of the particular InfluxDB
         """
-        influx_connection=self.connect()
+        influx_connection = self.connect()
         if query is None:
-            query='SELECT * FROM '+ f"{self.connection_data['influxdb_table_name']}"
-        
-        table=influx_connection.query(query=query,database=self.connection_data['influxdb_db_name'], language='sql')
+            query = 'SELECT * FROM ' + f"{self.connection_data['influxdb_table_name']}"
+
+        table = influx_connection.query(query=query, database=self.connection_data['influxdb_db_name'], language='sql')
         return table.to_pandas()

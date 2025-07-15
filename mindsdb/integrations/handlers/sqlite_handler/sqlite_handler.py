@@ -20,6 +20,7 @@ from mindsdb.integrations.libs.response import (
 
 logger = log.getLogger(__name__)
 
+
 class SQLiteHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the SQLite statements.

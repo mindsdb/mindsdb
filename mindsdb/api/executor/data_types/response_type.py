@@ -3,6 +3,7 @@ class RESPONSE_TYPE:
     OK = 'ok'
     TABLE = 'table'
     ERROR = 'error'
+    COLUMNS_TABLE = 'columns_table'  # for queries to information_schema.columns
 
 
 RESPONSE_TYPE = RESPONSE_TYPE()

@@ -76,7 +76,7 @@ class TestPlanUnion:
                         join_type=JoinType.INNER_JOIN
                     )
                 ),
-                QueryStep(parse_sql("select tab1.column1, pred.predicted as predicted"), from_table=Result(3)),
+                QueryStep(parse_sql("select tab1.column1, pred.predicted as predicted"), from_table=Result(3), strict_where=False),
                 # Union
                 UnionStep(left=Result(0), right=Result(4), unique=False),
             ],

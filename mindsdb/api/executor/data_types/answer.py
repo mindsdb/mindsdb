@@ -1,16 +1,13 @@
-from typing import List
+from dataclasses import dataclass
+from typing import List, Optional
+
 from mindsdb.api.executor.sql_query.result_set import ResultSet
 
 
+@dataclass(kw_only=True, slots=True)
 class ExecuteAnswer:
-    def __init__(
-        self,
-        data: ResultSet = None,
-        state_track: List[List] = None,
-        error_code: int = None,
-        error_message: str = None,
-    ):
-        self.data = data
-        self.state_track = state_track
-        self.error_code = error_code
-        self.error_message = error_message
+    data: Optional[ResultSet] = None
+    state_track: Optional[List[List]] = None
+    error_code: Optional[int] = None
+    error_message: Optional[str] = None
+    affected_rows: Optional[int] = None

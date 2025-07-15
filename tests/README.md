@@ -3,7 +3,7 @@
 Our tests are organized into several subdirectories, each focusing on different aspects of our application:
 
 * api: Contains tests related to the MindsDB's API endpoints.
-* integration_tests: Contains the integration tests
+* integration: Contains the integration tests
 * load: Contains the load tests
 * scripts: Scripts and utilitis used for tests
 * unit: This directory contains the unit tests:
@@ -63,7 +63,7 @@ pytest --cov=<code_dir> <test_dir> && coveralls
 For example, to run tests for the HTTP API, use the following command:
 
 ```
-pytest --cov=mindsdb/api/http tests/api/http && coveralls
+pytest --cov=mindsdb/api/http tests/unit/api/http && coveralls
 ```
 
 For the above command to be successful, you need to either have the `COVERALLS_REPO_TOKEN` environment variable set to your Coveralls token or have a `.coveralls.yml` file in the root directory of the repository with the token.

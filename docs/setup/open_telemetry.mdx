@@ -6,6 +6,13 @@ icon: "book"
 
 This guide explains how to configure and integrate OpenTelemetry (OTEL) using environment variables. It assumes you are familiar with OTEL concepts and provides details on environment variable configuration. The provided `docker-compose.yml` includes an OTEL Collector for local development, but you can use any collector of your choice.
 
+## Install required dependencies
+
+Install dependencies listed in `requirements/requirements-opentelemetry.txt`, or install `[opentelemetry]` extra installing mindsdb:
+
+```bash
+pip install mindsdb[opentelemetry]
+```
 
 ## Configuring OpenTelemetry with Environment Variables
 

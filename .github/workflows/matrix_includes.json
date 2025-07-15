@@ -2,11 +2,21 @@
   {
     "runs_on": "ubuntu-latest",
     "python-version": "3.10",
-    "runOnBranch": "refs/heads/main"
+    "runOnBranch": "always"
   },
   {
     "runs_on": "ubuntu-latest",
-    "python-version": "3.9",
-    "runOnBranch": "always"
+    "python-version": "3.11",
+    "runOnBranch": "main"
+  },
+  {
+     "runs_on": "windows-latest",
+     "python-version": 3.11,
+     "runOnBranch": "always"
+  },
+  {
+     "runs_on": "macos-latest",
+     "python-version": 3.11,
+     "runOnBranch": "always"
   }
 ]

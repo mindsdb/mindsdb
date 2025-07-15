@@ -11,6 +11,7 @@ from mindsdb_sql_parser import parse_sql
 
 logger = log.getLogger(__name__)
 
+
 class GitlabHandler(APIHandler):
     """The GitLab handler implementation"""
 
@@ -60,7 +61,7 @@ class GitlabHandler(APIHandler):
         try:
             self.connect()
             if self.connection_data.get("api_key", None):
-                logger.info(f"Authenticated as user")
+                logger.info("Authenticated as user")
             else:
                 logger.info("Proceeding without an API key")
 

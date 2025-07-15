@@ -43,7 +43,7 @@ class TestPlanJoinPredictor:
                         join_type=JoinType.INNER_JOIN
                     )
                 ),
-                QueryStep(parse_sql("select tab1.column1, pred.predicted"), from_table=Result(2)),
+                QueryStep(parse_sql("select tab1.column1, pred.predicted"), from_table=Result(2), strict_where=False),
             ],
         )
         plan = plan_query(query, integrations=['int'], predictor_namespace='mindsdb', predictor_metadata={'pred': {}})
@@ -85,7 +85,7 @@ class TestPlanJoinPredictor:
                         join_type=JoinType.INNER_JOIN
                     )
                 ),
-                QueryStep(parse_sql("select ta.column1, tb.predicted"), from_table=Result(2)),
+                QueryStep(parse_sql("select ta.column1, tb.predicted"), from_table=Result(2), strict_where=False),
             ],
         )
         plan = plan_query(query, integrations=['int'], predictor_namespace='mindsdb', predictor_metadata={'pred': {}})
@@ -131,7 +131,7 @@ class TestPlanJoinPredictor:
                         join_type=JoinType.INNER_JOIN
                     )
                 ),
-                QueryStep(subquery, from_table=Result(2)),
+                QueryStep(subquery, from_table=Result(2), strict_where=False),
             ],
         )
         plan = plan_query(query, integrations=['int'], predictor_namespace='mindsdb', predictor_metadata={'pred': {}})
@@ -197,7 +197,7 @@ class TestPlanJoinPredictor:
                         join_type=JoinType.INNER_JOIN
                     )
                 ),
-                QueryStep(subquery, from_table=Result(2)),
+                QueryStep(subquery, from_table=Result(2), strict_where=False),
             ],
         )
         plan = plan_query(query, integrations=['int'], predictor_namespace='mindsdb', predictor_metadata={'pred': {}})
@@ -244,7 +244,7 @@ class TestPlanJoinPredictor:
                         join_type=JoinType.INNER_JOIN
                     )
                 ),
-                QueryStep(parse_sql("select tab1.column1, pred.predicted"), from_table=Result(2)),
+                QueryStep(parse_sql("select tab1.column1, pred.predicted"), from_table=Result(2), strict_where=False),
             ],
         )
         plan = plan_query(
@@ -281,7 +281,7 @@ class TestPlanJoinPredictor:
                         join_type=JoinType.INNER_JOIN
                     )
                 ),
-                QueryStep(parse_sql("select tab1.column1, pred.predicted"), from_table=Result(2)),
+                QueryStep(parse_sql("select tab1.column1, pred.predicted"), from_table=Result(2), strict_where=False),
             ],
         )
         plan = plan_query(
@@ -323,7 +323,7 @@ class TestPlanJoinPredictor:
                         join_type=JoinType.JOIN
                     )
                 ),
-                QueryStep(Select(targets=[Star()], limit=Constant(10)), from_table=Result(2)),
+                QueryStep(Select(targets=[Star()], limit=Constant(10)), from_table=Result(2), strict_where=False),
                 SubSelectStep(
                     dataframe=Result(3), query=parse_sql('SELECT time limit 1'), table_name='Custom SQL Query'
                 ),
@@ -418,7 +418,7 @@ class TestPlanJoinPredictor:
                         join_type=JoinType.JOIN
                     )
                 ),
-                QueryStep(Select(targets=[Star()], limit=Constant(5)), from_table=Result(3))
+                QueryStep(Select(targets=[Star()], limit=Constant(5)), from_table=Result(3), strict_where=False)
             ],
         )
 
@@ -661,7 +661,7 @@ class TestPredictorVersion:
                         join_type=JoinType.JOIN
                     )
                 ),
-                QueryStep(subquery, from_table=Result(2))
+                QueryStep(subquery, from_table=Result(2), strict_where=False)
             ],
         )
 
@@ -748,7 +748,7 @@ class TestPredictorParams:
                         join_type=JoinType.JOIN
                     )
                 ),
-                QueryStep(subquery, from_table=Result(2)),
+                QueryStep(subquery, from_table=Result(2), strict_where=False),
             ],
         )
         plan = plan_query(query, integrations=['int'], predictor_namespace='mindsdb', predictor_metadata={'pred': {}})
@@ -802,7 +802,7 @@ class TestPredictorParams:
                         join_type=JoinType.JOIN
                     )
                 ),
-                QueryStep(subquery, from_table=Result(4)),
+                QueryStep(subquery, from_table=Result(4), strict_where=False),
             ],
         )
         plan = plan_query(query, integrations=['int'], predictor_namespace='mindsdb', predictor_metadata={'pred': {}})
@@ -881,7 +881,7 @@ class TestPredictorParams:
                         join_type=JoinType.JOIN
                     )
                 ),
-                QueryStep(subquery, from_table=Result(8)),
+                QueryStep(subquery, from_table=Result(8), strict_where=False),
             ],
         )
         plan = plan_query(query, integrations=['int'], predictor_namespace='mindsdb', predictor_metadata={'pred': {}})
@@ -940,7 +940,7 @@ class TestPredictorParams:
                         join_type=JoinType.JOIN
                     )
                 ),
-                QueryStep(subquery, from_table=Result(4)),
+                QueryStep(subquery, from_table=Result(4), strict_where=False),
             ],
         )
         plan = plan_query(query, integrations=['int'], predictor_namespace='mindsdb', predictor_metadata={'pred': {}})
@@ -1047,7 +1047,7 @@ class TestPredictorParams:
                     ],
                     partition=1000,
                 ),
-                QueryStep(parse_sql("select p1.*"), from_table=Result(1)),
+                QueryStep(parse_sql("select p1.*"), from_table=Result(1), strict_where=False),
             ],
         )
 

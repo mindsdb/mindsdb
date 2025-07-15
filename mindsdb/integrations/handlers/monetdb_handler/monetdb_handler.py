@@ -7,45 +7,45 @@ from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 
 import pandas as pd
 import pymonetdb as mdb
-from .utils.monet_get_id import *
-from sqlalchemy_monetdb.dialect import MonetDialect 
+from .utils.monet_get_id import schema_id, table_id
+from sqlalchemy_monetdb.dialect import MonetDialect
 
 logger = log.getLogger(__name__)
 
 
 class MonetDBHandler(DatabaseHandler):
-    name= 'monetdb'
+    name = "monetdb"
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
-        """ Initialize the handler
+        """Initialize the handler
         Args:
             name (str): name of particular handler instance
             connection_data (dict): parameters for connecting to the database
             **kwargs: arbitrary keyword arguments.
         """
         super().__init__(name)
-        
+
         self.kwargs = kwargs
         self.parser = parse_sql
-        self.database = connection_data['database']
-        self.user = connection_data['user']
-        self.password = connection_data['password']
-        self.schemaName = connection_data['schema_name'] if 'schema_name' in connection_data else None
-        self.host = connection_data['host']
-        self.port = connection_data['port']
-        
+        self.database = connection_data["database"]
+        self.user = connection_data["user"]
+        self.password = connection_data["password"]
+        self.schemaName = (
+            connection_data["schema_name"] if "schema_name" in connection_data else None
+        )
+        self.host = connection_data["host"]
+        self.port = connection_data["port"]
 
         self.connection = None
         self.is_connected = False
-          
-    
+
     def connect(self):
-        """ Set up any connections required by the handler
+        """Set up any connections required by the handler
         Should return output of check_connection() method after attempting
         connection. Should switch self.is_connected.
         Returns:
@@ -56,39 +56,35 @@ class MonetDBHandler(DatabaseHandler):
 
         try:
             self.connection = mdb.connect(
-                database=self.database, 
-                hostname=self.host, 
-                port=self.port, 
+                database=self.database,
+                hostname=self.host,
+                port=self.port,
                 username=self.user,
                 password=self.password,
             )
 
-  
-            self.is_connected= True
+            self.is_connected = True
         except Exception as e:
             logger.error(f"Error while connecting to {self.database}, {e}")
 
-
         return self.connection
 
-
     def disconnect(self):
-        """ Close any existing connections
+        """Close any existing connections
         Should switch self.is_connected.
         """
         if self.is_connected is False:
             return
         try:
             self.connection.close()
-            self.is_connected=False
+            self.is_connected = False
         except Exception as e:
             logger.error(f"Error while disconnecting to {self.database}, {e}")
 
-        return 
-
+        return
 
     def check_connection(self) -> StatusResponse:
-        """ Check connection to the handler
+        """Check connection to the handler
         Returns:
             HandlerStatusResponse
         """
@@ -99,7 +95,7 @@ class MonetDBHandler(DatabaseHandler):
             self.connect()
             responseCode.success = True
         except Exception as e:
-            logger.error(f'Error connecting to database {self.database}, {e}!')
+            logger.error(f"Error connecting to database {self.database}, {e}!")
             responseCode.error_message = str(e)
         finally:
             if responseCode.success is True and need_to_close:
@@ -108,7 +104,6 @@ class MonetDBHandler(DatabaseHandler):
                 self.is_connected = False
 
         return responseCode
-
 
     def native_query(self, query: str) -> StatusResponse:
         """Receive raw query and act upon it somehow.
@@ -120,38 +115,33 @@ class MonetDBHandler(DatabaseHandler):
         """
         need_to_close = self.is_connected is False
         conn = self.connect()
-        cur=conn.cursor() 
+        cur = conn.cursor()
         try:
             cur.execute(query)
-                   
-            if len(cur._rows)>0 :
-                result = cur.fetchall() 
+
+            if len(cur._rows) > 0:
+                result = cur.fetchall()
                 response = Response(
                     RESPONSE_TYPE.TABLE,
                     data_frame=pd.DataFrame(
-                        result,
-                        columns=[x[0] for x in cur.description]
-                    )
+                        result, columns=[x[0] for x in cur.description]
+                    ),
                 )
             else:
                 response = Response(RESPONSE_TYPE.OK)
             self.connection.commit()
         except Exception as e:
-            logger.error(f'Error running query: {query} on {self.database}!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
-            )
+            logger.error(f"Error running query: {query} on {self.database}!")
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
             self.connection.rollback()
 
-        cur.close()    
+        cur.close()
 
         if need_to_close is True:
             self.disconnect()
 
         return response
 
-    
     def query(self, query: ASTNode) -> StatusResponse:
         """Receive query as AST (abstract syntax tree) and act upon it somehow.
         Args:
@@ -159,25 +149,20 @@ class MonetDBHandler(DatabaseHandler):
                 of query: SELECT, INTSERT, DELETE, etc
         Returns: HandlerResponse
         """
-        
-
 
         renderer = SqlalchemyRender(MonetDialect)
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 
-
     def get_tables(self) -> StatusResponse:
-        """ Return list of entities
+        """Return list of entities
         Return list of entities that will be accesible as tables.
         Returns: HandlerResponse: shoud have same columns as information_schema.tables
                 (https://dev.mysql.com/doc/refman/8.0/en/information-schema-tables-table.html)
                 Column 'TABLE_NAME' is mandatory, other is optional.
         """
         self.connect()
-        schema = schema_id(connection=self.connection,schema_name=self.schemaName)
-
-
+        schema = schema_id(connection=self.connection, schema_name=self.schemaName)
 
         q = f"""
             SELECT name as TABLE_NAME
@@ -186,13 +171,11 @@ class MonetDBHandler(DatabaseHandler):
             AND type = 0
             AND schema_id = {schema}
         """
- 
 
         return self.query(q)
 
-    
     def get_columns(self, table_name: str) -> StatusResponse:
-        """ Returns a list of entity columns
+        """Returns a list of entity columns
         Args:
             table_name (str): name of one of tables returned by self.get_tables()
         Returns:
@@ -203,14 +186,14 @@ class MonetDBHandler(DatabaseHandler):
                 python data types (by default it str).
         """
         self.connect()
-        table=table_id(
+        table = table_id(
             connection=self.connection,
             table_name=table_name,
-            schema_name=self.schemaName
+            schema_name=self.schemaName,
         )
 
         q = f"""
-            SELECT  
+            SELECT
             name as COLUMN_NAME,
             type as DATA_TYPE
             FROM sys.columns

@@ -52,7 +52,7 @@ class RedshiftHandler(PostgresHandler):
         with connection.cursor() as cur:
             try:
                 cur.executemany(query, df.values.tolist())
-                response = Response(RESPONSE_TYPE.OK)
+                response = Response(RESPONSE_TYPE.OK, affected_rows=cur.rowcount)
 
                 connection.commit()
             except Exception as e:

@@ -5,8 +5,8 @@ from typing import Optional
 from functools import reduce
 
 import pandas as pd
-from mindsdb_evaluator.accuracy.general import evaluate_accuracy
 from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser.ast.mindsdb import AlterDatabase
 from mindsdb_sql_parser.ast import (
     Alter,
     ASTNode,
@@ -34,10 +34,15 @@ from mindsdb_sql_parser.ast import (
     Update,
     Use,
     Tuple,
+    Function,
+    Variable,
+    Intersect,
+    Except,
 )
 
 # typed models
 from mindsdb_sql_parser.ast.mindsdb import (
+    AlterView,
     CreateAgent,
     CreateAnomalyDetectionModel,
     CreateChatBot,
@@ -49,6 +54,8 @@ from mindsdb_sql_parser.ast.mindsdb import (
     CreateSkill,
     CreateTrigger,
     CreateView,
+    CreateKnowledgeBaseIndex,
+    EvaluateKnowledgeBase,
     DropAgent,
     DropChatBot,
     DropDatasource,
@@ -63,7 +70,7 @@ from mindsdb_sql_parser.ast.mindsdb import (
     RetrainPredictor,
     UpdateAgent,
     UpdateChatBot,
-    UpdateSkill
+    UpdateSkill,
 )
 
 import mindsdb.utilities.profiler as profiler
@@ -77,7 +84,7 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     TYPES,
 )
 
-from .exceptions import (
+from mindsdb.api.executor.exceptions import (
     ExecutorException,
     BadDbError,
     NotSupportedYet,
@@ -101,6 +108,7 @@ from mindsdb.interfaces.model.functions import (
 )
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
 from mindsdb.interfaces.triggers.triggers_controller import TriggersController
+from mindsdb.interfaces.variables.variables_controller import variables_controller
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.functions import mark_process, resolve_model_identifier, get_handler_install_message
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
@@ -137,18 +145,12 @@ def _get_show_where(
             )
         )
     if statement.like is not None and like_name is not None:
-        where.append(
-            BinaryOperation(
-                "like", args=[Identifier(like_name), Constant(statement.like)]
-            )
-        )
+        where.append(BinaryOperation("like", args=[Identifier(like_name), Constant(statement.like)]))
     if statement.where is not None:
         where.append(statement.where)
 
     if len(where) > 0:
-        return reduce(
-            lambda prev, next: BinaryOperation("and", args=[prev, next]), where
-        )
+        return reduce(lambda prev, next: BinaryOperation("and", args=[prev, next]), where)
     return None
 
 
@@ -164,49 +166,50 @@ class ExecuteCommands:
         self.datahub = session.datahub
 
     @profiler.profile()
-    def execute_command(self, statement, database_name: str = None) -> ExecuteAnswer:
-        sql = None
-        if isinstance(statement, ASTNode):
-            sql = statement.to_string()
-        sql_lower = sql.lower()
+    def execute_command(self, statement: ASTNode, database_name: str = None) -> ExecuteAnswer:
+        sql: str = statement.to_string()
+        sql_lower: str = sql.lower()
 
         if database_name is None:
             database_name = self.session.database
 
-        if type(statement) is CreateDatabase:
+        statement_type = type(statement)
+        if statement_type is CreateDatabase:
             return self.answer_create_database(statement)
-        elif type(statement) is CreateMLEngine:
+        elif statement_type is CreateMLEngine:
             name = statement.name.parts[-1]
 
             return self.answer_create_ml_engine(
                 name,
                 handler=statement.handler,
                 params=statement.params,
-                if_not_exists=getattr(statement, "if_not_exists", False)
+                if_not_exists=getattr(statement, "if_not_exists", False),
             )
-        elif type(statement) is DropMLEngine:
+        elif statement_type is DropMLEngine:
             return self.answer_drop_ml_engine(statement)
-        elif type(statement) is DropPredictor:
+        elif statement_type is DropPredictor:
             return self.answer_drop_model(statement, database_name)
 
-        elif type(statement) is DropTables:
+        elif statement_type is DropTables:
             return self.answer_drop_tables(statement, database_name)
-        elif type(statement) is DropDatasource or type(statement) is DropDatabase:
+        elif statement_type is DropDatasource or statement_type is DropDatabase:
             return self.answer_drop_database(statement)
-        elif type(statement) is Describe:
+        elif statement_type is AlterDatabase:
+            return self.answer_alter_database(statement)
+        elif statement_type is Describe:
             # NOTE in sql 'describe table' is same as 'show columns'
             obj_type = statement.type
 
-            if obj_type is None or obj_type.upper() in ('MODEL', 'PREDICTOR'):
+            if obj_type is None or obj_type.upper() in ("MODEL", "PREDICTOR"):
                 return self.answer_describe_predictor(statement.value, database_name)
             else:
                 return self.answer_describe_object(obj_type.upper(), statement.value, database_name)
 
-        elif type(statement) is RetrainPredictor:
+        elif statement_type is RetrainPredictor:
             return self.answer_retrain_predictor(statement, database_name)
-        elif type(statement) is FinetunePredictor:
+        elif statement_type is FinetunePredictor:
             return self.answer_finetune_predictor(statement, database_name)
-        elif type(statement) is Show:
+        elif statement_type is Show:
             sql_category = statement.category.lower()
             if hasattr(statement, "modes"):
                 if isinstance(statement.modes, list) is False:
@@ -232,9 +235,7 @@ class ExecuteCommands:
                 return self.answer_select(query)
             elif sql_category == "plugins":
                 if statement.where is not None or statement.like:
-                    raise ExecutorException(
-                        "'SHOW PLUGINS' query should be used without filters"
-                    )
+                    raise ExecutorException("'SHOW PLUGINS' query should be used without filters")
                 new_statement = Select(
                     targets=[Star()],
                     from_table=Identifier(parts=["information_schema", "PLUGINS"]),
@@ -260,10 +261,7 @@ class ExecuteCommands:
                 return self.answer_select(query)
             elif sql_category in ("tables", "full tables"):
                 schema = database_name or "mindsdb"
-                if (
-                    statement.from_table is not None
-                    and statement.in_table is not None
-                ):
+                if statement.from_table is not None and statement.in_table is not None:
                     raise ExecutorException(
                         "You have an error in your SQL syntax: 'from' and 'in' cannot be used together"
                     )
@@ -275,13 +273,13 @@ class ExecuteCommands:
                     schema = statement.in_table.parts[-1]
                     statement.in_table = None
 
-                table_types = [Constant(t) for t in ['MODEL', 'BASE TABLE', 'SYSTEM VIEW', 'VIEW']]
+                table_types = [Constant(t) for t in ["MODEL", "BASE TABLE", "SYSTEM VIEW", "VIEW"]]
                 where = BinaryOperation(
                     "and",
                     args=[
                         BinaryOperation("=", args=[Identifier("table_schema"), Constant(schema)]),
-                        BinaryOperation("in", args=[Identifier("table_type"), Tuple(table_types)])
-                    ]
+                        BinaryOperation("in", args=[Identifier("table_type"), Tuple(table_types)]),
+                    ],
                 )
 
                 new_statement = Select(
@@ -292,15 +290,11 @@ class ExecuteCommands:
                         )
                     ],
                     from_table=Identifier(parts=["information_schema", "TABLES"]),
-                    where=_get_show_where(
-                        statement, like_name=f"Tables_in_{schema}", initial=where
-                    ),
+                    where=_get_show_where(statement, like_name=f"Tables_in_{schema}", initial=where),
                 )
 
                 if "FULL" in statement.modes:
-                    new_statement.targets.append(
-                        Identifier(parts=["TABLE_TYPE"], alias=Identifier("Table_type"))
-                    )
+                    new_statement.targets.append(Identifier(parts=["TABLE_TYPE"], alias=Identifier("Table_type")))
 
                 query = SQLQuery(new_statement, session=self.session, database=database_name)
                 return self.answer_select(query)
@@ -325,9 +319,7 @@ class ExecuteCommands:
                     var_name = var_name.replace("@@", "")
                     if is_session and var_name.startswith("session.") is False:
                         continue
-                    if var_name.startswith("session.") or var_name.startswith(
-                        "GLOBAL."
-                    ):
+                    if var_name.startswith("session.") or var_name.startswith("GLOBAL."):
                         name = var_name.replace("session.", "").replace("GLOBAL.", "")
                         data[name] = var_data[0]
                     elif var_name not in data:
@@ -336,28 +328,20 @@ class ExecuteCommands:
                 df = pd.DataFrame(data.items(), columns=["Variable_name", "Value"])
                 df2 = query_df(df, new_statement)
 
-                return ExecuteAnswer(
-                    data=ResultSet().from_df(df2, table_name="session_variables")
-                )
+                return ExecuteAnswer(data=ResultSet.from_df(df2, table_name="session_variables"))
             elif sql_category == "search_path":
                 return ExecuteAnswer(
                     data=ResultSet(
-                        columns=[
-                            Column(name="search_path", table_name="search_path", type="str")
-                        ],
-                        values=[['"$user", public']]
+                        columns=[Column(name="search_path", table_name="search_path", type="str")],
+                        values=[['"$user", public']],
                     )
                 )
             elif "show status like 'ssl_version'" in sql_lower:
                 return ExecuteAnswer(
                     data=ResultSet(
                         columns=[
-                            Column(
-                                name="Value", table_name="session_variables", type="str"
-                            ),
-                            Column(
-                                name="Value", table_name="session_variables", type="str"
-                            ),
+                            Column(name="Value", table_name="session_variables", type="str"),
+                            Column(name="Value", table_name="session_variables", type="str"),
                         ],
                         values=[["Ssl_version", "TLSv1.1"]],
                     )
@@ -396,23 +380,17 @@ class ExecuteCommands:
             # FIXME if have answer on that request, then DataGrip show warning '[S0022] Column 'Non_unique' not found.'
             elif "show create table" in sql_lower:
                 # SHOW CREATE TABLE `MINDSDB`.`predictors`
-                table = sql[sql.rfind(".") + 1:].strip(" .;\n\t").replace("`", "")
+                table = sql[sql.rfind(".") + 1 :].strip(" .;\n\t").replace("`", "")
                 return self.answer_show_create_table(table)
             elif sql_category in ("character set", "charset"):
                 new_statement = Select(
                     targets=[
                         Identifier("CHARACTER_SET_NAME", alias=Identifier("Charset")),
-                        Identifier(
-                            "DEFAULT_COLLATE_NAME", alias=Identifier("Description")
-                        ),
-                        Identifier(
-                            "DESCRIPTION", alias=Identifier("Default collation")
-                        ),
+                        Identifier("DEFAULT_COLLATE_NAME", alias=Identifier("Description")),
+                        Identifier("DESCRIPTION", alias=Identifier("Default collation")),
                         Identifier("MAXLEN", alias=Identifier("Maxlen")),
                     ],
-                    from_table=Identifier(
-                        parts=["INFORMATION_SCHEMA", "CHARACTER_SETS"]
-                    ),
+                    from_table=Identifier(parts=["INFORMATION_SCHEMA", "CHARACTER_SETS"]),
                     where=_get_show_where(statement, like_name="CHARACTER_SET_NAME"),
                 )
                 query = SQLQuery(new_statement, session=self.session, database=database_name)
@@ -465,9 +443,18 @@ class ExecuteCommands:
                     database_name=database_name,
                 )
 
-            elif sql_category in ("agents", "jobs", "skills", "chatbots", "triggers", "views",
-                                  "knowledge_bases", "knowledge bases", "predictors", "models"):
-
+            elif sql_category in (
+                "agents",
+                "jobs",
+                "skills",
+                "chatbots",
+                "triggers",
+                "views",
+                "knowledge_bases",
+                "knowledge bases",
+                "predictors",
+                "models",
+            ):
                 if sql_category == "knowledge bases":
                     sql_category = "knowledge_bases"
 
@@ -478,25 +465,21 @@ class ExecuteCommands:
                 if statement.from_table is not None:
                     db_name = statement.from_table.parts[-1]
 
-                where = BinaryOperation(op='=', args=[Identifier('project'), Constant(db_name)])
+                where = BinaryOperation(op="=", args=[Identifier("project"), Constant(db_name)])
 
                 select_statement = Select(
                     targets=[Star()],
-                    from_table=Identifier(
-                        parts=["information_schema", sql_category]
-                    ),
+                    from_table=Identifier(parts=["information_schema", sql_category]),
                     where=_get_show_where(statement, like_name="name", initial=where),
                 )
                 query = SQLQuery(select_statement, session=self.session)
                 return self.answer_select(query)
 
             elif sql_category == "projects":
-                where = BinaryOperation(op='=', args=[Identifier('type'), Constant('project')])
+                where = BinaryOperation(op="=", args=[Identifier("type"), Constant("project")])
                 select_statement = Select(
-                    targets=[Identifier(parts=["NAME"], alias=Identifier('project'))],
-                    from_table=Identifier(
-                        parts=["information_schema", "DATABASES"]
-                    ),
+                    targets=[Identifier(parts=["NAME"], alias=Identifier("project"))],
+                    from_table=Identifier(parts=["information_schema", "DATABASES"]),
                     where=_get_show_where(statement, like_name="project", from_name="project", initial=where),
                 )
 
@@ -504,36 +487,38 @@ class ExecuteCommands:
                 return self.answer_select(query)
             else:
                 raise NotSupportedYet(f"Statement not implemented: {sql}")
-        elif type(statement) in (
+        elif statement_type in (
             StartTransaction,
             CommitTransaction,
             RollbackTransaction,
         ):
             return ExecuteAnswer()
-        elif type(statement) is Set:
+        elif statement_type is Set:
             category = (statement.category or "").lower()
-            if category == "" and isinstance(statement.name, Identifier):
-                param = statement.name.parts[0].lower()
+            if category == "":
+                if isinstance(statement.name, Identifier):
+                    param = statement.name.parts[0].lower()
 
-                value = None
-                if isinstance(statement.value, Constant):
-                    value = statement.value.value
+                    value = None
+                    if isinstance(statement.value, Constant):
+                        value = statement.value.value
 
-                if param == "profiling":
-                    self.session.profiling = value in (1, True)
-                    if self.session.profiling is True:
-                        profiler.enable()
-                    else:
-                        profiler.disable()
-                elif param == "predictor_cache":
-                    self.session.predictor_cache = value in (1, True)
-                elif param == "context":
-                    if value in (0, False, None):
-                        # drop context
-                        query_context_controller.drop_query_context(None)
-                elif param == "show_secrets":
-                    self.session.show_secrets = value in (1, True)
-
+                    if param == "profiling":
+                        self.session.profiling = value in (1, True)
+                        if self.session.profiling is True:
+                            profiler.enable()
+                        else:
+                            profiler.disable()
+                    elif param == "predictor_cache":
+                        self.session.predictor_cache = value in (1, True)
+                    elif param == "context":
+                        if value in (0, False, None):
+                            # drop context
+                            query_context_controller.drop_query_context(None)
+                    elif param == "show_secrets":
+                        self.session.show_secrets = value in (1, True)
+                elif isinstance(statement.name, Variable):
+                    variables_controller.set_variable(statement.name.value, statement.value)
                 return ExecuteAnswer()
             elif category == "autocommit":
                 return ExecuteAnswer()
@@ -561,88 +546,117 @@ class ExecuteCommands:
                 return self.answer_update_model_version(statement.value, database_name)
 
             else:
-                logger.warning(
-                    f"SQL statement is not processable, return OK package: {sql}"
-                )
+                logger.warning(f"SQL statement is not processable, return OK package: {sql}")
                 return ExecuteAnswer()
-        elif type(statement) is Use:
+        elif statement_type is Use:
             db_name = statement.value.parts[-1]
             self.change_default_db(db_name)
             return ExecuteAnswer()
-        elif type(statement) in (
+        elif statement_type in (
             CreatePredictor,
             CreateAnomalyDetectionModel,  # we may want to specialize these in the future
         ):
             return self.answer_create_predictor(statement, database_name)
-        elif type(statement) is CreateView:
-            return self.answer_create_view(statement, database_name)
-        elif type(statement) is DropView:
+        elif statement_type is CreateView:
+            return self.answer_create_or_alter_view(statement, database_name)
+        elif statement_type is AlterView:
+            return self.answer_create_or_alter_view(statement, database_name)
+        elif statement_type is DropView:
             return self.answer_drop_view(statement, database_name)
-        elif type(statement) is Delete:
-            SQLQuery(statement, session=self.session, execute=True, database=database_name)
+        elif statement_type is Delete:
+            query = SQLQuery(statement, session=self.session, database=database_name)
+            return ExecuteAnswer(affected_rows=query.fetched_data.affected_rows)
+        elif statement_type is Insert:
+            query = SQLQuery(statement, session=self.session, database=database_name)
+            if query.fetched_data.length() > 0:
+                return self.answer_select(query)
+            return ExecuteAnswer(affected_rows=query.fetched_data.affected_rows)
+        elif statement_type is Update:
+            query = SQLQuery(statement, session=self.session, database=database_name)
+            return ExecuteAnswer(affected_rows=query.fetched_data.affected_rows)
+        elif statement_type is Alter and ("disable keys" in sql_lower) or ("enable keys" in sql_lower):
             return ExecuteAnswer()
-
-        elif type(statement) is Insert:
-            SQLQuery(statement, session=self.session, execute=True, database=database_name)
-            return ExecuteAnswer()
-        elif type(statement) is Update:
-            SQLQuery(statement, session=self.session, execute=True, database=database_name)
-            return ExecuteAnswer()
-        elif (
-            type(statement) is Alter
-            and ("disable keys" in sql_lower)
-            or ("enable keys" in sql_lower)
-        ):
-            return ExecuteAnswer()
-        elif type(statement) is Select:
+        elif statement_type is Select:
+            ret = self.exec_service_function(statement, database_name)
+            if ret is not None:
+                return ret
             query = SQLQuery(statement, session=self.session, database=database_name)
             return self.answer_select(query)
-        elif type(statement) is Union:
-            query = SQLQuery(statement, session=self.session, database=database_name)
-            return self.answer_select(query)
-        elif type(statement) is Explain:
+        elif statement_type is Explain:
             return self.answer_show_columns(statement.target, database_name=database_name)
-        elif type(statement) is CreateTable:
+        elif statement_type is CreateTable:
             return self.answer_create_table(statement, database_name)
         # -- jobs --
-        elif type(statement) is CreateJob:
+        elif statement_type is CreateJob:
             return self.answer_create_job(statement, database_name)
-        elif type(statement) is DropJob:
+        elif statement_type is DropJob:
             return self.answer_drop_job(statement, database_name)
         # -- triggers --
-        elif type(statement) is CreateTrigger:
+        elif statement_type is CreateTrigger:
             return self.answer_create_trigger(statement, database_name)
-        elif type(statement) is DropTrigger:
+        elif statement_type is DropTrigger:
             return self.answer_drop_trigger(statement, database_name)
         # -- chatbots
-        elif type(statement) is CreateChatBot:
+        elif statement_type is CreateChatBot:
             return self.answer_create_chatbot(statement, database_name)
-        elif type(statement) is UpdateChatBot:
+        elif statement_type is UpdateChatBot:
             return self.answer_update_chatbot(statement, database_name)
-        elif type(statement) is DropChatBot:
+        elif statement_type is DropChatBot:
             return self.answer_drop_chatbot(statement, database_name)
-        elif type(statement) is CreateKnowledgeBase:
+        elif statement_type is CreateKnowledgeBase:
             return self.answer_create_kb(statement, database_name)
-        elif type(statement) is DropKnowledgeBase:
+        elif statement_type is DropKnowledgeBase:
             return self.answer_drop_kb(statement, database_name)
-        elif type(statement) is CreateSkill:
+        elif statement_type is CreateSkill:
             return self.answer_create_skill(statement, database_name)
-        elif type(statement) is DropSkill:
+        elif statement_type is DropSkill:
             return self.answer_drop_skill(statement, database_name)
-        elif type(statement) is UpdateSkill:
+        elif statement_type is UpdateSkill:
             return self.answer_update_skill(statement, database_name)
-        elif type(statement) is CreateAgent:
+        elif statement_type is CreateAgent:
             return self.answer_create_agent(statement, database_name)
-        elif type(statement) is DropAgent:
+        elif statement_type is DropAgent:
             return self.answer_drop_agent(statement, database_name)
-        elif type(statement) is UpdateAgent:
+        elif statement_type is UpdateAgent:
             return self.answer_update_agent(statement, database_name)
-        elif type(statement) is Evaluate:
+        elif statement_type is Evaluate:
             statement.data = parse_sql(statement.query_str)
             return self.answer_evaluate_metric(statement, database_name)
+        elif statement_type is CreateKnowledgeBaseIndex:
+            return self.answer_create_kb_index(statement, database_name)
+        elif statement_type is EvaluateKnowledgeBase:
+            return self.answer_evaluate_kb(statement, database_name)
+        elif statement_type in (Union, Intersect, Except):
+            query = SQLQuery(statement, session=self.session, database=database_name)
+            return self.answer_select(query)
         else:
             logger.warning(f"Unknown SQL statement: {sql}")
             raise NotSupportedYet(f"Unknown SQL statement: {sql}")
+
+    def exec_service_function(self, statement: Select, database_name: str) -> Optional[ExecuteAnswer]:
+        """
+        If input query is a single line select without FROM
+          and has function in targets that matches with one of the mindsdb service functions:
+          - execute this function and return response
+        Otherwise, return None to allow to continue execution query outside
+        """
+
+        if statement.from_table is not None or len(statement.targets) != 1:
+            return
+
+        target = statement.targets[0]
+        if not isinstance(target, Function):
+            return
+
+        command = target.op.lower()
+        args = [arg.value for arg in target.args if isinstance(arg, Constant)]
+        if command == "query_resume":
+            ret = SQLQuery(None, session=self.session, query_id=args[0])
+            return self.answer_select(ret)
+
+        elif command == "query_cancel":
+            query_context_controller.cancel_query(*args)
+            return ExecuteAnswer()
 
     def answer_create_trigger(self, statement, database_name):
         triggers_controller = TriggersController()
@@ -779,26 +793,19 @@ class ExecuteCommands:
         return ExecuteAnswer()
 
     def answer_evaluate_metric(self, statement, database_name):
+        # heavy import, so we do it here on-demand
+        from mindsdb_evaluator.accuracy.general import evaluate_accuracy
+
         try:
             sqlquery = SQLQuery(statement.data, session=self.session, database=database_name)
         except Exception as e:
-            raise Exception(
-                f'Nested query failed to execute with error: "{e}", please check and try again.'
-            )
-        result = sqlquery.fetch('dataframe')
-        df = result["result"]
-        df.columns = [
-            str(t.alias) if hasattr(t, "alias") else str(t.parts[-1])
-            for t in statement.data.targets
-        ]
+            raise Exception(f'Nested query failed to execute with error: "{e}", please check and try again.')
+        df = sqlquery.fetched_data.to_df()
+        df.columns = [str(t.alias) if hasattr(t, "alias") else str(t.parts[-1]) for t in statement.data.targets]
 
         for col in ["actual", "prediction"]:
-            assert (
-                col in df.columns
-            ), f"`{col}` column was not provided, please try again."
-            assert (
-                df[col].isna().sum() == 0
-            ), f"There are missing values in the `{col}` column, please try again."
+            assert col in df.columns, f"`{col}` column was not provided, please try again."
+            assert df[col].isna().sum() == 0, f"There are missing values in the `{col}` column, please try again."
 
         metric_name = statement.name.parts[-1]
         target_series = df.pop("prediction")
@@ -819,9 +826,17 @@ class ExecuteCommands:
         )
 
     def answer_describe_object(self, obj_type: str, obj_name: Identifier, database_name: str):
-
-        project_objects = ("AGENTS", "JOBS", "SKILLS", "CHATBOTS", "TRIGGERS", "VIEWS",
-                           "KNOWLEDGE_BASES", "PREDICTORS", "MODELS")
+        project_objects = (
+            "AGENTS",
+            "JOBS",
+            "SKILLS",
+            "CHATBOTS",
+            "TRIGGERS",
+            "VIEWS",
+            "KNOWLEDGE_BASES",
+            "PREDICTORS",
+            "MODELS",
+        )
 
         global_objects = ("DATABASES", "PROJECTS", "HANDLERS", "ML_ENGINES")
 
@@ -829,31 +844,31 @@ class ExecuteCommands:
 
         # is not plural?
         if obj_type not in all_objects:
-            if obj_type + 'S' in all_objects:
-                obj_type = obj_type + 'S'
-            elif obj_type + 'ES' in all_objects:
-                obj_type = obj_type + 'ES'
+            if obj_type + "S" in all_objects:
+                obj_type = obj_type + "S"
+            elif obj_type + "ES" in all_objects:
+                obj_type = obj_type + "ES"
             else:
-                raise WrongArgumentError(f'Unknown describe type: {obj_type}')
+                raise WrongArgumentError(f"Unknown describe type: {obj_type}")
 
-        name = obj_name.parts[-1]
-        where = BinaryOperation(op='=', args=[
-            Identifier('name'),
-            Constant(name)
-        ])
+        parts = obj_name.parts
+        if len(parts) > 2:
+            raise WrongArgumentError(
+                f"Invalid object name: {obj_name.to_string()}.\nOnly models support three-part namespaces."
+            )
+
+        name = parts[-1]
+        where = BinaryOperation(op="=", args=[Identifier("name"), Constant(name)])
 
         if obj_type in project_objects:
-            where = BinaryOperation(op='and', args=[
-                where,
-                BinaryOperation(op='=', args=[Identifier('project'), Constant(database_name)])
-            ])
+            database_name = parts[0] if len(parts) > 1 else database_name
+            where = BinaryOperation(
+                op="and", args=[where, BinaryOperation(op="=", args=[Identifier("project"), Constant(database_name)])]
+            )
 
         select_statement = Select(
             targets=[Star()],
-            from_table=Identifier(
-                parts=["information_schema", obj_type]
-            ),
-
+            from_table=Identifier(parts=["information_schema", obj_type]),
             where=where,
         )
         query = SQLQuery(select_statement, session=self.session)
@@ -874,7 +889,9 @@ class ExecuteCommands:
                 # model.?attrs
                 parts = value[:1]
                 attrs = value[1:]
-                model_info = self._get_model_info(Identifier(parts=parts), except_absent=False, database_name=database_name)
+                model_info = self._get_model_info(
+                    Identifier(parts=parts), except_absent=False, database_name=database_name
+                )
 
         if model_info is None:
             raise ExecutorException(f"Model not found: {obj_name}")
@@ -889,12 +906,24 @@ class ExecuteCommands:
             model_info["project_name"],
             model_info["model_record"].name,
             attribute=attrs,
-            version=model_info['model_record'].version
+            version=model_info["model_record"].version,
         )
 
-        return ExecuteAnswer(
-            data=ResultSet().from_df(df, table_name="")
+        return ExecuteAnswer(data=ResultSet.from_df(df, table_name=""))
+
+    def answer_create_kb_index(self, statement, database_name):
+        table_name = statement.name.parts[-1]
+        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
+        self.session.kb_controller.create_index(table_name=table_name, project_name=project_name)
+        return ExecuteAnswer()
+
+    def answer_evaluate_kb(self, statement: EvaluateKnowledgeBase, database_name):
+        table_name = statement.name.parts[-1]
+        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
+        scores = self.session.kb_controller.evaluate(
+            table_name=table_name, project_name=project_name, params=statement.params
         )
+        return ExecuteAnswer(data=ResultSet.from_df(scores))
 
     def _get_model_info(self, identifier, except_absent=True, database_name=None):
         if len(identifier.parts) == 1:
@@ -925,14 +954,16 @@ class ExecuteCommands:
         """Checks if there is already a predictor retraining or fine-tuning
         Do not allow to run retrain if there is another model in training process in less that 1h
         """
+        if ctx.company_id is None:
+            # bypass for tests
+            return
         is_cloud = self.session.config.get("cloud", False)
         if is_cloud and ctx.user_class == 0:
             models = get_model_records(active=None)
             shortest_training = None
             for model in models:
                 if (
-                    model.status
-                    in (PREDICTOR_STATUS.GENERATING, PREDICTOR_STATUS.TRAINING)
+                    model.status in (PREDICTOR_STATUS.GENERATING, PREDICTOR_STATUS.TRAINING)
                     and model.training_start_at is not None
                     and model.training_stop_at is None
                 ):
@@ -940,10 +971,7 @@ class ExecuteCommands:
                     if shortest_training is None or training_time < shortest_training:
                         shortest_training = training_time
 
-            if (
-                shortest_training is not None
-                and shortest_training < datetime.timedelta(hours=1)
-            ):
+            if shortest_training is not None and shortest_training < datetime.timedelta(hours=1):
                 raise ExecutorException(
                     f"Can't start {phase_name} process while any other predictor is in status 'training' or 'generating'"
                 )
@@ -954,13 +982,9 @@ class ExecuteCommands:
         if statement.query_str is None:
             if model_record.data_integration_ref is not None:
                 if model_record.data_integration_ref["type"] == "integration":
-                    integration = self.session.integration_controller.get_by_id(
-                        model_record.data_integration_ref["id"]
-                    )
+                    integration = self.session.integration_controller.get_by_id(model_record.data_integration_ref["id"])
                     if integration is None:
-                        raise EntityNotExistsError(
-                            "The database from which the model was trained no longer exists"
-                        )
+                        raise EntityNotExistsError("The database from which the model was trained no longer exists")
         elif statement.integration_name is None:
             # set to current project
             statement.integration_name = Identifier(database_name)
@@ -972,25 +996,19 @@ class ExecuteCommands:
 
             if "engine" in statement.using:
                 ml_integration_name = statement.using.pop("engine")
-                ml_handler = self.session.integration_controller.get_ml_handler(
-                    ml_integration_name
-                )
+                ml_handler = self.session.integration_controller.get_ml_handler(ml_integration_name)
 
         # use current ml handler
         if ml_handler is None:
             integration_record = get_predictor_integration(model_record)
             if integration_record is None:
                 raise EntityNotExistsError("ML engine model was trained with does not esxists")
-            ml_handler = self.session.integration_controller.get_ml_handler(
-                integration_record.name
-            )
+            ml_handler = self.session.integration_controller.get_ml_handler(integration_record.name)
 
         self._sync_predictor_check(phase_name="retrain")
         df = self.session.model_controller.retrain_model(statement, ml_handler)
 
-        return ExecuteAnswer(
-            data=ResultSet().from_df(df)
-        )
+        return ExecuteAnswer(data=ResultSet.from_df(df))
 
     @profiler.profile()
     @mark_process("learn")
@@ -1008,19 +1026,13 @@ class ExecuteCommands:
         # use current ml handler
         integration_record = get_predictor_integration(model_record)
         if integration_record is None:
-            raise Exception(
-                "The ML engine that the model was trained with does not exist."
-            )
-        ml_handler = self.session.integration_controller.get_ml_handler(
-            integration_record.name
-        )
+            raise Exception("The ML engine that the model was trained with does not exist.")
+        ml_handler = self.session.integration_controller.get_ml_handler(integration_record.name)
 
         self._sync_predictor_check(phase_name="finetune")
         df = self.session.model_controller.finetune_model(statement, ml_handler)
 
-        return ExecuteAnswer(
-            data=ResultSet().from_df(df)
-        )
+        return ExecuteAnswer(data=ResultSet.from_df(df))
 
     def _create_integration(self, name: str, engine: str, connection_args: dict):
         # we have connection checkers not for any db. So do nothing if fail
@@ -1037,7 +1049,9 @@ class ExecuteCommands:
                 raise ExecutorException(f"There is no engine '{engine}'")
 
             if handler_meta.get("import", {}).get("success") is not True:
-                raise ExecutorException(f"The '{engine}' handler isn't installed.\n" + get_handler_install_message(engine))
+                raise ExecutorException(
+                    f"The '{engine}' handler isn't installed.\n" + get_handler_install_message(engine)
+                )
 
             accept_connection_args = handler_meta.get("connection_args")
             if accept_connection_args is not None and connection_args is not None:
@@ -1055,25 +1069,17 @@ class ExecuteCommands:
                         if isinstance(arg_value, (str, dict)) is False:
                             raise ExecutorException(f"Unknown type of arg: '{arg_value}'")
                         if isinstance(arg_value, str) or "path" in arg_value:
-                            path = (
-                                arg_value
-                                if isinstance(arg_value, str)
-                                else arg_value["path"]
-                            )
+                            path = arg_value if isinstance(arg_value, str) else arg_value["path"]
                             if Path(path).is_file() is False:
                                 raise ExecutorException(f"File not found at: '{path}'")
                         elif "url" in arg_value:
                             path = download_file(arg_value["url"])
                         else:
-                            raise ExecutorException(
-                                f"Argument '{arg_name}' must be path or url to the file"
-                            )
+                            raise ExecutorException(f"Argument '{arg_name}' must be path or url to the file")
                         connection_args[arg_name] = path
 
             handler = self.session.integration_controller.create_tmp_handler(
-                name=name,
-                engine=engine,
-                connection_args=connection_args
+                name=name, engine=engine, connection_args=connection_args
             )
             status = handler.check_connection()
             if status.copy_storage:
@@ -1086,13 +1092,13 @@ class ExecuteCommands:
 
         integration = self.session.integration_controller.get(name)
         if integration is not None:
-            raise EntityExistsError('Database already exists', name)
+            raise EntityExistsError("Database already exists", name)
         try:
             integration = ProjectController().get(name=name)
         except EntityNotExistsError:
             pass
         if integration is not None:
-            raise EntityExistsError('Project exists with this name', name)
+            raise EntityExistsError("Project exists with this name", name)
 
         self.session.integration_controller.add(name, engine, connection_args)
         if storage:
@@ -1100,11 +1106,10 @@ class ExecuteCommands:
             handler.handler_storage.import_files(storage)
 
     def answer_create_ml_engine(self, name: str, handler: str, params: dict = None, if_not_exists=False):
-
         integrations = self.session.integration_controller.get_all()
         if name in integrations:
             if not if_not_exists:
-                raise EntityExistsError('Integration already exists', name)
+                raise EntityExistsError("Integration already exists", name)
             else:
                 return ExecuteAnswer()
 
@@ -1122,21 +1127,19 @@ class ExecuteCommands:
                 params_out[key] = value
 
         try:
-            self.session.integration_controller.add(
-                name=name, engine=handler, connection_args=params_out
-            )
+            self.session.integration_controller.add(name=name, engine=handler, connection_args=params_out)
         except Exception as e:
             msg = str(e)
             if type(e) in (ImportError, ModuleNotFoundError):
                 msg = dedent(
                     f"""\
-                    The '{handler_module_meta['name']}' handler cannot be used. Reason is:
-                        {handler_module_meta['import']['error_message']}
+                    The '{handler_module_meta["name"]}' handler cannot be used. Reason is:
+                        {handler_module_meta["import"]["error_message"]}
                 """
                 )
                 is_cloud = self.session.config.get("cloud", False)
-                if is_cloud is False and "No module named" in handler_module_meta['import']['error_message']:
-                    logger.info(get_handler_install_message(handler_module_meta['name']))
+                if is_cloud is False and "No module named" in handler_module_meta["import"]["error_message"]:
+                    logger.info(get_handler_install_message(handler_module_meta["name"]))
             ast_drop = DropMLEngine(name=Identifier(name))
             self.answer_drop_ml_engine(ast_drop)
             logger.info(msg)
@@ -1149,7 +1152,7 @@ class ExecuteCommands:
         integrations = self.session.integration_controller.get_all()
         if name not in integrations:
             if not statement.if_exists:
-                raise EntityNotExistsError('Integration does not exists', name)
+                raise EntityNotExistsError("Integration does not exists", name)
             else:
                 return ExecuteAnswer()
         self.session.integration_controller.delete(name)
@@ -1197,6 +1200,13 @@ class ExecuteCommands:
                 raise
         return ExecuteAnswer()
 
+    def answer_alter_database(self, statement):
+        if len(statement.name.parts) != 1:
+            raise Exception("Database name should contain only 1 part.")
+        db_name = statement.name.parts[0]
+        self.session.database_controller.update(db_name, data=statement.params)
+        return ExecuteAnswer()
+
     def answer_drop_tables(self, statement, database_name):
         """answer on 'drop table [if exists] {name}'
         Args:
@@ -1211,81 +1221,94 @@ class ExecuteCommands:
                 db_name = database_name
 
             dn = self.session.datahub[db_name]
+            if dn is None:
+                raise ExecutorException(f"Cannot delete a table from database '{db_name}': the database does not exist")
+
             if db_name is not None:
                 dn.drop_table(table, if_exists=statement.if_exists)
-
             elif db_name in self.session.database_controller.get_dict(filter_type="project"):
                 # TODO do we need feature: delete object from project via drop table?
 
                 project = self.session.database_controller.get_project(db_name)
-                project_tables = {
-                    key: val
-                    for key, val in project.get_tables().items()
-                    if val.get("deletable") is True
-                }
+                project_tables = {key: val for key, val in project.get_tables().items() if val.get("deletable") is True}
                 table_name = table.to_string()
 
                 if table_name in project_tables:
-                    self.session.model_controller.delete_model(
-                        table_name, project_name=db_name
-                    )
+                    self.session.model_controller.delete_model(table_name, project_name=db_name)
                 elif statement.if_exists is False:
-                    raise ExecutorException(
-                        f"Cannot delete a table from database '{db_name}': table does not exists"
-                    )
+                    raise ExecutorException(f"Cannot delete a table from database '{db_name}': table does not exists")
             else:
-                raise ExecutorException(
-                    f"Cannot delete a table from database '{db_name}'"
-                )
+                raise ExecutorException(f"Cannot delete a table from database '{db_name}'")
 
         return ExecuteAnswer()
 
-    def answer_create_view(self, statement, database_name):
+    def answer_create_or_alter_view(self, statement: ASTNode, database_name: str) -> ExecuteAnswer:
+        """Process CREATE and ALTER VIEW commands
+
+        Args:
+            statement (ASTNode): data for creating or altering view
+            database_name (str): name of the current database
+
+        Returns:
+            ExecuteAnswer: answer for the command
+        """
         project_name = database_name
-        # TEMP
-        if isinstance(statement.name, Identifier):
+
+        if isinstance(statement.name, str):
+            parts = statement.name.split(".")
+        elif isinstance(statement.name, Identifier):
             parts = statement.name.parts
         else:
-            parts = statement.name.split(".")
+            raise ValueError(f"Unknown type of view name: {statement.name}")
 
-        view_name = parts[-1]
-        if len(parts) == 2:
-            project_name = parts[0]
+        match parts:
+            case [project_name, view_name]:
+                pass
+            case [view_name]:
+                pass
+            case _:
+                raise ValueError(
+                    'View name should be in the form "project_name.view_name" '
+                    f'or "view_name", got {statement.name.parts}'
+                )
 
         query_str = statement.query_str
-        query = parse_sql(query_str)
 
         if isinstance(statement.from_table, Identifier):
             query = Select(
                 targets=[Star()],
-                from_table=NativeQuery(
-                    integration=statement.from_table, query=statement.query_str
-                ),
+                from_table=NativeQuery(integration=statement.from_table, query=statement.query_str),
             )
-            query_str = str(query)
+            query_str = query.to_string()
+        else:
+            query = parse_sql(query_str)
 
         if isinstance(query, Select):
             # check create view sql
             query.limit = Constant(1)
 
-            query_context_controller.set_context(
-                query_context_controller.IGNORE_CONTEXT
-            )
+            query_context_controller.set_context(query_context_controller.IGNORE_CONTEXT)
             try:
-                sqlquery = SQLQuery(query, session=self.session, database=database_name)
-                if sqlquery.fetch()["success"] is not True:
-                    raise ExecutorException("Wrong view query")
+                SQLQuery(query, session=self.session, database=database_name)
             finally:
-                query_context_controller.release_context(
-                    query_context_controller.IGNORE_CONTEXT
-                )
+                query_context_controller.release_context(query_context_controller.IGNORE_CONTEXT)
 
         project = self.session.database_controller.get_project(project_name)
-        try:
-            project.create_view(view_name, query=query_str)
-        except EntityExistsError:
-            if getattr(statement, "if_not_exists", False) is False:
-                raise
+
+        if isinstance(statement, CreateView):
+            try:
+                project.create_view(view_name, query=query_str)
+            except EntityExistsError:
+                if getattr(statement, "if_not_exists", False) is False:
+                    raise
+        elif isinstance(statement, AlterView):
+            try:
+                project.update_view(view_name, query=query_str)
+            except EntityNotExistsError:
+                raise ExecutorException(f"View {view_name} does not exist in {project_name}")
+        else:
+            raise ValueError(f"Unknown view DDL statement: {statement}")
+
         return ExecuteAnswer()
 
     def answer_drop_view(self, statement, database_name):
@@ -1308,24 +1331,23 @@ class ExecuteCommands:
         return ExecuteAnswer()
 
     def answer_create_kb(self, statement: CreateKnowledgeBase, database_name: str):
-        project_name = (
-            statement.name.parts[0]
-            if len(statement.name.parts) > 1
-            else database_name
-        )
+        if statement.model:
+            raise ExecutorException(
+                "Creating a knowledge base using pre-existing models is no longer supported.\n"
+                "Please pass the model parameters as a JSON object in the embedding_model field."
+            )
+
+        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
 
         if statement.storage is not None:
             if len(statement.storage.parts) != 2:
                 raise ExecutorException(
-                    f"Invalid vectordatabase table name: {statement.storage}"
-                    "Need the form 'database_name.table_name'"
+                    f"Invalid vectordatabase table name: {statement.storage}Need the form 'database_name.table_name'"
                 )
 
         if statement.from_query is not None:
             # TODO: implement this
-            raise ExecutorException(
-                "Create a knowledge base from a select is not supported yet"
-            )
+            raise ExecutorException("Create a knowledge base from a select is not supported yet")
 
         kb_name = statement.name.parts[-1]
 
@@ -1333,7 +1355,7 @@ class ExecuteCommands:
         _ = self.session.kb_controller.add(
             name=kb_name,
             project_name=project_name,
-            embedding_model=statement.model,
+            # embedding_model=statement.model,
             storage=statement.storage,
             params=statement.params,
             if_not_exists=statement.if_not_exists,
@@ -1343,11 +1365,7 @@ class ExecuteCommands:
 
     def answer_drop_kb(self, statement: DropKnowledgeBase, database_name: str):
         name = statement.name.parts[-1]
-        project_name = (
-            statement.name.parts[0]
-            if len(statement.name.parts) > 1
-            else database_name
-        )
+        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
 
         # delete the knowledge base
         self.session.kb_controller.delete(
@@ -1360,19 +1378,10 @@ class ExecuteCommands:
 
     def answer_create_skill(self, statement, database_name):
         name = statement.name.parts[-1]
-        project_name = (
-            statement.name.parts[0]
-            if len(statement.name.parts) > 1
-            else database_name
-        )
+        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
 
         try:
-            _ = self.session.skills_controller.add_skill(
-                name,
-                project_name,
-                statement.type,
-                statement.params
-            )
+            _ = self.session.skills_controller.add_skill(name, project_name, statement.type, statement.params)
         except ValueError as e:
             # Project does not exist or skill already exists.
             raise ExecutorException(str(e))
@@ -1381,11 +1390,7 @@ class ExecuteCommands:
 
     def answer_drop_skill(self, statement, database_name):
         name = statement.name.parts[-1]
-        project_name = (
-            statement.name.parts[0]
-            if len(statement.name.parts) > 1
-            else database_name
-        )
+        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
 
         try:
             self.session.skills_controller.delete_skill(name, project_name)
@@ -1397,19 +1402,12 @@ class ExecuteCommands:
 
     def answer_update_skill(self, statement, database_name):
         name = statement.name.parts[-1]
-        project_name = (
-            statement.name.parts[0]
-            if len(statement.name.parts) > 1
-            else database_name
-        )
+        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
 
-        type = statement.params.pop('type', None)
+        type = statement.params.pop("type", None)
         try:
             _ = self.session.skills_controller.update_skill(
-                name,
-                project_name=project_name,
-                type=type,
-                params=statement.params
+                name, project_name=project_name, type=type, params=statement.params
             )
         except ValueError as e:
             # Project does not exist or skill does not exist.
@@ -1419,14 +1417,10 @@ class ExecuteCommands:
 
     def answer_create_agent(self, statement, database_name):
         name = statement.name.parts[-1]
-        project_name = (
-            statement.name.parts[0]
-            if len(statement.name.parts) > 1
-            else database_name
-        )
+        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
 
-        skills = statement.params.pop('skills', [])
-        provider = statement.params.pop('provider', None)
+        skills = statement.params.pop("skills", [])
+        provider = statement.params.pop("provider", None)
         try:
             _ = self.session.agents_controller.add_agent(
                 name=name,
@@ -1434,8 +1428,11 @@ class ExecuteCommands:
                 model_name=statement.model,
                 skills=skills,
                 provider=provider,
-                params=statement.params
+                params=statement.params,
             )
+        except EntityExistsError as e:
+            if statement.if_not_exists is not True:
+                raise ExecutorException(str(e))
         except ValueError as e:
             # Project does not exist or agent already exists.
             raise ExecutorException(str(e))
@@ -1444,11 +1441,7 @@ class ExecuteCommands:
 
     def answer_drop_agent(self, statement, database_name):
         name = statement.name.parts[-1]
-        project_name = (
-            statement.name.parts[0]
-            if len(statement.name.parts) > 1
-            else database_name
-        )
+        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
 
         try:
             self.session.agents_controller.delete_agent(name, project_name)
@@ -1460,15 +1453,11 @@ class ExecuteCommands:
 
     def answer_update_agent(self, statement, database_name):
         name = statement.name.parts[-1]
-        project_name = (
-            statement.name.parts[0]
-            if len(statement.name.parts) > 1
-            else database_name
-        )
+        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
 
-        model = statement.params.pop('model', None)
-        skills_to_add = statement.params.pop('skills_to_add', [])
-        skills_to_remove = statement.params.pop('skills_to_remove', [])
+        model = statement.params.pop("model", None)
+        skills_to_add = statement.params.pop("skills_to_add", [])
+        skills_to_remove = statement.params.pop("skills_to_remove", [])
         try:
             _ = self.session.agents_controller.update_agent(
                 name,
@@ -1476,7 +1465,7 @@ class ExecuteCommands:
                 model_name=model,
                 skills_to_add=skills_to_add,
                 skills_to_remove=skills_to_remove,
-                params=statement.params
+                params=statement.params,
             )
         except (EntityExistsError, EntityNotExistsError, ValueError) as e:
             # Project does not exist or agent does not exist.
@@ -1506,31 +1495,24 @@ class ExecuteCommands:
             statement.integration_name = Identifier(database_name)
 
         try:
-            ml_handler = self.session.integration_controller.get_ml_handler(
-                ml_integration_name
-            )
+            ml_handler = self.session.integration_controller.get_ml_handler(ml_integration_name)
         except EntityNotExistsError:
             # not exist, try to create it with same name as handler
             self.answer_create_ml_engine(ml_integration_name, handler=ml_integration_name)
 
-            ml_handler = self.session.integration_controller.get_ml_handler(
-                ml_integration_name
-            )
+            ml_handler = self.session.integration_controller.get_ml_handler(ml_integration_name)
 
         if getattr(statement, "is_replace", False) is True:
             # try to delete
             try:
-                self.session.model_controller.delete_model(
-                    model_name,
-                    project_name=integration_name
-                )
+                self.session.model_controller.delete_model(model_name, project_name=integration_name)
             except EntityNotExistsError:
                 pass
 
         try:
             df = self.session.model_controller.create_model(statement, ml_handler)
 
-            return ExecuteAnswer(data=ResultSet().from_df(df))
+            return ExecuteAnswer(data=ResultSet.from_df(df))
         except EntityExistsError:
             if getattr(statement, "if_not_exists", False) is True:
                 return ExecuteAnswer()
@@ -1544,6 +1526,9 @@ class ExecuteCommands:
         is_full=False,
         database_name=None,
     ):
+        if isinstance(target, Identifier) is False:
+            raise TableNotExistError("The table name is required for the query.")
+
         if len(target.parts) > 1:
             db = target.parts[0]
         elif isinstance(database_name, str) and len(database_name) > 0:
@@ -1556,9 +1541,7 @@ class ExecuteCommands:
             "and",
             args=[
                 BinaryOperation("=", args=[Identifier("TABLE_SCHEMA"), Constant(db)]),
-                BinaryOperation(
-                    "=", args=[Identifier("TABLE_NAME"), Constant(table_name)]
-                ),
+                BinaryOperation("=", args=[Identifier("TABLE_NAME"), Constant(table_name)]),
             ],
         )
         if where is not None:
@@ -1578,9 +1561,9 @@ class ExecuteCommands:
         if is_full:
             targets.extend(
                 [
-                    Constant("COLLATION", alias=Identifier("Collation")),
-                    Constant("PRIVILEGES", alias=Identifier("Privileges")),
-                    Constant("COMMENT", alias=Identifier("Comment")),
+                    Constant(None, alias=Identifier("Collation")),
+                    Constant("select", alias=Identifier("Privileges")),
+                    Constant(None, alias=Identifier("Comment")),
                 ]
             )
         new_statement = Select(
@@ -1595,9 +1578,7 @@ class ExecuteCommands:
     def answer_show_create_table(self, table):
         columns = [
             Column(table_name="", name="Table", type=TYPES.MYSQL_TYPE_VAR_STRING),
-            Column(
-                table_name="", name="Create Table", type=TYPES.MYSQL_TYPE_VAR_STRING
-            ),
+            Column(table_name="", name="Create Table", type=TYPES.MYSQL_TYPE_VAR_STRING),
         ]
         return ExecuteAnswer(
             data=ResultSet(
@@ -1920,20 +1901,19 @@ class ExecuteCommands:
         return ExecuteAnswer()
 
     def answer_select(self, query):
-        data = query.fetch()
-
-        return ExecuteAnswer(data=data["result"])
+        data = query.fetched_data
+        return ExecuteAnswer(data=data)
 
     def answer_update_model_version(self, model_version, database_name):
         if not isinstance(model_version, Identifier):
-            raise ExecutorException(f'Please define version: {model_version}')
+            raise ExecutorException(f"Please define version: {model_version}")
 
         model_parts = model_version.parts
         version = model_parts[-1]
         if version.isdigit():
             version = int(version)
         else:
-            raise ExecutorException(f'Unknown version: {version}')
+            raise ExecutorException(f"Unknown version: {version}")
 
         if len(model_parts) == 3:
             project_name, model_name = model_parts[:2]
@@ -1941,13 +1921,12 @@ class ExecuteCommands:
             model_name = model_parts[0]
             project_name = database_name
         else:
-            raise ExecutorException(f'Unknown model: {model_version}')
+            raise ExecutorException(f"Unknown model: {model_version}")
 
         self.session.model_controller.set_model_active_version(project_name, model_name, version)
         return ExecuteAnswer()
 
     def answer_drop_model(self, statement, database_name):
-
         model_parts = statement.name.parts
         version = None
 
@@ -1962,7 +1941,7 @@ class ExecuteCommands:
             model_name = model_parts[0]
             project_name = database_name
         else:
-            raise ExecutorException(f'Unknown model: {statement.name}')
+            raise ExecutorException(f"Unknown model: {statement.name}")
 
         if version is not None:
             # delete version

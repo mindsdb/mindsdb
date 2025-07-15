@@ -3,34 +3,43 @@ title: PGVector
 sidebarTitle: PGVector
 ---
 
-
-
 This is the implementation of the PGVector for MindsDB.
 
-## PGVector
+PGVector is an open-source vector similarity search for Postgres. It supports the following:
 
-Open-source vector similarity search for Postgres
+- exact and approximate nearest neighbor search,
+- L2 distance, inner product, and cosine distance,
+- any language with a Postgres client,
+- ACID compliance, point-in-time recovery, JOINs, and all of the other great features of Postgres.
 
-Store your vectors with the rest of your data. 
+## Connection
 
-Supports:
+This handler uses `pgvector` Python library.
 
-exact and approximate nearest neighbor search
-L2 distance, inner product, and cosine distance
-any language with a Postgres client
-Plus ACID compliance, point-in-time recovery, JOINs, and all of the other great features of Postgres
+To connect to a PGVector instance, use the following statement:
 
-## Implementation
+```sql
+CREATE DATABASE pvec
+WITH
+    ENGINE = 'pgvector',
+    PARAMETERS = {
+    "host": "127.0.0.1",
+    "port": 5432,
+    "database": "postgres",
+    "user": "user",
+    "password": "password",
+    "distance": "cosine"
+    };
+```
 
-This handler uses `pgvector` python library to make use of the vector data type in postgres created from the pgvector extension
+The required arguments to establish a connection are the following:
 
-The required arguments to establish a connection are the same as a regular postgres connection:
-
-* `host`: the host name or IP address of the postgres instance
-* `port`: the port to use when connecting
-* `database`: the database to connect to
-* `user`: the user to connect as
-* `password`: the password to use when connecting
+* `host`: The host name or IP address of the postgres instance.
+* `port`: The port to use when connecting.
+* `database`: The database to connect to.
+* `user`: The user to connect as.
+* `password`: The password to use when connecting.
+* `distance`: It defines how the distance between vectors is calculated. Available methods include cosine (default), l1, l2, ip, hamming, jaccard. [Learn more here](https://github.com/pgvector/pgvector/blob/master/README.md).
 
 ## Usage
 

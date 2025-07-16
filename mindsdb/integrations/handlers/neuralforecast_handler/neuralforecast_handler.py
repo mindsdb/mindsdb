@@ -41,7 +41,7 @@ class NeuralForecastHandler(BaseMLEngine):
         time_settings = args["timeseries_settings"]
         using_args = args["using"]
         assert time_settings["is_timeseries"], "Specify time series settings in your query"
-        ###### store model args and time series settings in the model folder
+        # store model args and time series settings in the model folder
         model_args = {}
         model_args["target"] = target
         model_args["horizon"] = time_settings["horizon"]

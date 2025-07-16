@@ -5,3 +5,28 @@ requires = [
     "setuptools",
     "wheel",
 ]
+
+
+
+
+[tool.ruff]
+exclude = [
+  ".venv",
+  "build",
+  "tests/unused"
+]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+ignore = [
+    "E501",     # Line too long
+    "C901",     # Function is too complex
+    "E721"      # Do not compare types, use 'isinstance()': https://www.flake8rules.com/rules/E721.html      
+]
+
+[tool.ruff.lint.per-file-ignores]
+"mindsdb/__main__.py" = ["E402"]
+"mindsdb/api/http/start.py" = ["E402"]
+"mindsdb/api/mysql/mysql_proxy/libs/constants/mysql.py" = ["E241"]
+"mindsdb/integrations/handlers/lightwood_handler/tests/test_lightwood_handler.py" = ["E402"]

@@ -61,7 +61,7 @@ class RAGHandler(BaseMLEngine):
         ml_engine_args = self.engine_storage.get_connection_args()
 
         # for a model created with USING, only get api for that specific llm type
-        args.update({k:v for k, v in ml_engine_args.items() if args["llm_type"] in k})
+        args.update({k: v for k, v in ml_engine_args.items() if args["llm_type"] in k})
 
         input_args = build_llm_params(args)
 

@@ -23,7 +23,7 @@ variable "BRANCH" {
   default = "main"
 }
 variable "ECR_REPO" {
-  default = "454861456664.dkr.ecr.us-east-2.amazonaws.com"
+  default = "168681354662.dkr.ecr.us-east-1.amazonaws.com"
 }
 variable "PUSH_CACHE" {
   default = true
@@ -87,7 +87,7 @@ target "images" {
       },
       {
         name = "devel"
-        extras = ""
+        extras = ".[lightwood]"  # Required for running integration tests
         target = "dev"
       },
       {
@@ -109,12 +109,12 @@ target "images" {
       {
         # If you make any changes here, make them to cloud-cpu as well
         name = "cloud"
-        extras = ".[lightwood,huggingface,statsforecast-extra,neuralforecast-extra,timegpt,mssql,youtube,gmail,pgvector,writer,rag,github,snowflake,clickhouse,bigquery,elasticsearch,s3,dynamodb,databricks,oracle,teradata,hive,one_drive] darts datasetsforecast"
+        extras = ".[lightwood,huggingface,statsforecast-extra,neuralforecast-extra,timegpt,mssql,youtube,gmail,pgvector,writer,rag,github,snowflake,clickhouse,bigquery,elasticsearch,s3,dynamodb,databricks,oracle,teradata,hive,one_drive,opentelemetry,langfuse,jira,salesforce] darts datasetsforecast transformers"
         target = ""
       },
       {
         name = "cloud-cpu"
-        extras = ".[lightwood,huggingface_cpu,statsforecast-extra,neuralforecast-extra,timegpt,mssql,youtube,gmail,pgvector,writer,rag,github,snowflake,clickhouse,bigquery,elasticsearch,s3,dynamodb,databricks,oracle,teradata,hive,one_drive] darts datasetsforecast"
+        extras = ".[lightwood,huggingface_cpu,statsforecast-extra,neuralforecast-extra,timegpt,mssql,youtube,gmail,pgvector,writer,rag,github,snowflake,clickhouse,bigquery,elasticsearch,s3,dynamodb,databricks,oracle,teradata,hive,one_drive,opentelemetry,langfuse,jira,salesforce] darts datasetsforecast transformers"
         target = ""
       },
     ]

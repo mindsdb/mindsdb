@@ -1,0 +1,55 @@
+---
+title: MindsDB's MCP Server with Anthropic's MCP Connector
+sidebarTitle: Anthropic
+---
+
+This tutorial walks you through the usage of MindsDB's MCP Server with [Anthropic's MCP Connector](https://docs.anthropic.com/en/docs/agents-and-tools/mcp-connector).
+
+## Setup
+
+Follow the steps below to connect MindsDB's MCP Server to Anthropic.
+
+1. Start MindsDB's MCP Server following [this guide](/mcp/usage).
+
+2. Expose the local instance of MindsDB via [ngrok](https://ngrok.com/) or similar tools.
+
+3. Get the Anthropic API key and download the `anthropic` package.
+
+## Chat with Data
+
+Here is how to connect MindsDB's MCP Server to Anthropic.
+
+```python
+import anthropic
+
+client = anthropic.Anthropic(
+    api_key = "anthropic-api-key"
+)
+
+response = client.beta.messages.create(
+    model = "claude-sonnet-4-20250514",
+    max_tokens = 1000,
+    messages = [
+        {"role": "user", "content": "What tools do you have available?"}
+    ],
+    mcp_servers = [
+        {
+            "type": "url",
+            "url": "https://5a52-88-203-84-191.ngrok-free.app/sse",
+            "name": "mindsdb-mcp",
+            "authorization_token": "$MINDSDB_MCP_ACCESS_TOKEN"
+        }
+    ],
+    betas = ["mcp-client-2025-04-04"]
+)
+
+print(response)
+```
+
+Here is the output:
+
+```bash
+BetaMessage(id='msg_01SrYiUsK7Jb4a5BA2nszKsc', container=None, content=[BetaTextBlock(citations=None, text="I have access to two tools for working with MindsDB:\n\n1. **mindsdb-mcp_query** - Execute SQL queries against MindsDB\n   - Parameters:\n     - `query` (required): The SQL query to execute\n     - `context` (optional): Additional context parameters for the query\n   - Returns: Query results or error information\n\n2. **mindsdb-mcp_list_databases** - List all databases and their tables in MindsDB\n   - Parameters: None required\n   - Returns: A list of all databases and their associated tables\n\nThese tools allow me to help you explore your MindsDB instance, run SQL queries, and work with your data and ML models. Would you like me to start by showing you what databases are available, or do you have a specific query you'd like to run?", type='text')], model='claude-sonnet-4-20250514', role='assistant', stop_reason='end_turn', stop_sequence=None, type='message', usage=BetaUsage(cache_creation=None, cache_creation_input_tokens=0, cache_read_input_tokens=0, input_tokens=572, output_tokens=183, server_tool_use=None, service_tier='standard'))
+```
+
+Follow the [MCP Connector docs from Anthropic](https://docs.anthropic.com/en/docs/agents-and-tools/mcp-connector) to learn more.

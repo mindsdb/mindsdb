@@ -1,4 +1,3 @@
-import sys
 import copy
 import datetime as dt
 from copy import deepcopy
@@ -28,7 +27,6 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
-IS_PY36 = sys.version_info[1] <= 6
 
 default_project = config.get('default_project')
 

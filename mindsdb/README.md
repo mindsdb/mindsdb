@@ -1,235 +1,161 @@
-Welcome to the Quickstart Guide for using MindsDB. This README is designed to provide developers with an efficient and straightforward introduction to integrating and utilizing MindsDB in your projects. To start, follow the steps bellow:
+# MindsDB Core Implementation
+
+This directory (`/mindsdb`) contains the core implementation of MindsDB - an AI federated query engine that follows the "Connect, Unify, Respond" philosophy to help users work with data across disparate sources using natural language and SQL.
+
+## Architecture Overview
+![image](https://github.com/user-attachments/assets/2e050a75-fed6-4ba5-9e5a-0c59ac302509)
+
+As shown in the diagram, MindsDB's architecture is organized around its core mission of connecting to data, unifying it through various interfaces, and responding to queries via APIs. The implementation is structured around the following key components:
 
 
-## 1. Create a MindsDB Cloud Account or Install MindsDB Locally
-
-Create your [free MindsDB Cloud account](https://cloud.mindsdb.com/register) to
-start practicing right away using the MindsDB Cloud Editor.
-
-If you prefer a local MindsDB installation, follow the **Deployment** guides of
-MindsDB documentation. You can install MindsDB using
-[Docker](setup/self-hosted/docker/) or follow the standard installation using
-[pip](setup/self-hosted/pip/source/).
-
-## 2. Connect to MindsDB from a SQL Client
-
-You can use the MindsDB Editor or open your preferred SQL client, such
-as DBeaver or MySQL CLI, and connect to MindsDB.
-
-Learn more [here](/mindsdb-sql-overview).
-
-## 3. Connect a Database Using [`CREATE DATABASE`](/sql/create/databases/)
-
-We have a sample database that you can use right away. To connect a database to your MindsDB Cloud account, use the [`CREATE DATABASE`](/sql/create/databases/) statement, as below.
-
-```sql
-CREATE DATABASE example_data
-WITH ENGINE = "postgres",
-PARAMETERS = {
-  "user": "demo_user",
-  "password": "demo_password",
-  "host": "samples.mindsdb.com",
-  "port": "5432",
-  "database": "demo"
-};
 ```
 
-On execution, we get:
+├── API Layer (RESPOND)
+│   └── Exposes MindsDB functionality and handles responses
+├── Core Components (UNIFY)
+│   ├── Interfaces 
+│   │   ├── Views - Simplify and organize data scope over federated data
+│   │   ├── JOBs - Schedule and synchronize data operations
+│   │   ├── Knowledge Bases - Organize unstructured data
+│   │   └── ML Models - Transform data using AI/ML
+│   └── Utilities - Shared code across interfaces
+├── Integration Layer (CONNECT)
+│   │── Datasources - Connects to various data sources and services
 
-```sql
-Query OK, 0 rows affected (3.22 sec)
 ```
 
-## 4. Preview the Available Data Using [`SELECT`](/sql/api/select/)
+## Core Philosophy: Connect, Unify, Respond
 
-You can now preview the available data with a standard `SELECT` statement.
+MindsDB's architecture is built around three fundamental capabilities:
 
-```sql
-SELECT *
-FROM example_data.demo_data.home_rentals
-LIMIT 10;
-```
+### CONNECT (Integrations)
 
-On execution, we get:
+The Integration layer is responsible for connecting MindsDB to all types of data sources:
 
-```sql
-+-----------------+---------------------+------+----------+----------------+---------------+--------------+--------------+
-| number_of_rooms | number_of_bathrooms | sqft | location | days_on_market | initial_price | neighborhood | rental_price |
-+-----------------+---------------------+------+----------+----------------+---------------+--------------+--------------+
-| 0.0             | 1.0                 | 484  | great    | 10             | 2271          | south_side   | 2271         |
-| 1.0             | 1.0                 | 674  | good     | 1              | 2167          | downtown     | 2167         |
-| 1.0             | 1.0                 | 554  | poor     | 19             | 1883          | westbrae     | 1883         |
-| 0.0             | 1.0                 | 529  | great    | 3              | 2431          | south_side   | 2431         |
-| 3.0             | 2.0                 | 1219 | great    | 3              | 5510          | south_side   | 5510         |
-| 1.0             | 1.0                 | 398  | great    | 11             | 2272          | south_side   | 2272         |
-| 3.0             | 2.0                 | 1190 | poor     | 58             | 4463          | westbrae     | 4124         |
-| 1.0             | 1.0                 | 730  | good     | 0              | 2224          | downtown     | 2224         |
-| 0.0             | 1.0                 | 298  | great    | 9              | 2104          | south_side   | 2104         |
-| 2.0             | 1.0                 | 878  | great    | 8              | 3861          | south_side   | 3861         |
-+-----------------+---------------------+------+----------+----------------+---------------+--------------+--------------+
-```
+- **Database Integrations**: Connect to SQL, NoSQL, and time-series databases
+- **Vector Store Integrations**: Connect to vector databases for embeddings
+- **Application Integrations**: Connect to SaaS platforms and third-party services 
+- **File Integrations**: Connect to various file formats and storage systems
 
-You could also browse the databases of MindsDB using the command below.
+These integrations allow MindsDB to access data wherever it resides, forming the foundation for all other capabilities.
 
-```sql
-SHOW databases;
-```
+### UNIFY (Interfaces)
 
-On execution, we get:
+The Interfaces layer provides tools to unify and organize data from multiple sources:
 
-```sql
-+---------------------+
-| Database            |
-+---------------------+
-| information_schema  |
-| mindsdb             |
-| files               |
-| example_data        |
-+---------------------+
-```
+- **Views**: Simplify data access by creating unified views across different data sources
+- **JOBs**: Schedule data synchronization and transformation tasks for real-time data processing
+- **Knowledge Bases**: Index and organize unstructured data for efficient retrieval
+- **ML Models**: Apply AI/ML transformations to data for predictions and insights
 
-To learn more about MindsDB tables structure, check out
-[this guide](/sql/table-structure/).
+These interfaces allow working with heterogeneous data as if it were unified in a single system.
 
-## 5. Create a Model Using [`CREATE MODEL`](/sql/create/model/)
+### RESPOND (APIs)
 
-Now you are ready to create your first model. Use the
-[`CREATE MODEL`](/sql/create/model/) statement, as below.
+The API layer enables humans, applications, and AI agents to interact with the unified data:
 
-```sql
-CREATE MODEL mindsdb.home_rentals_model
-FROM example_data
-  (SELECT * FROM demo_data.home_rentals)
-PREDICT rental_price;
-```
+- **SQL API**: Process SQL queries against unified data sources
+- **HTTP API**: Enable programmatic access via RESTful endpoints
+- **SDK API**: Provide language-specific libraries for application integration
+- **MCP Server**: Support Model Context Protocol for AI agent interactions
 
-On execution, we get:
+These APIs provide multiple ways to query and interact with the unified data ecosystem.
 
-```sql
-Query OK, 0 rows affected (9.79 sec)
-```
+## Component Details
 
-## 6. Check the Status of a Model
+### Integrations (CONNECT)
 
-It may take a couple of minutes until the model is trained. You can monitor
-the status of your model by executing the following command:
+The `/integrations` directory contains handlers that connect MindsDB to external systems:
 
-```sql
-DESCRIBE home_rentals_model;
-```
+- **Data Handlers**: Enable connections to databases and data warehouses
+- **Vector Store Handlers**: Connect to vector databases for embedding storage
+- **App Handlers**: Integrate with third-party applications and services
+- **ML Handlers**: Connect to AI/ML frameworks and model providers
 
-On execution, we get:
+Each handler type follows a common pattern but specializes in its specific domain of integration.
 
-```sql
-+------------+
-| status     |
-+------------+
-| generating |
-+------------+
-```
+### Interfaces (UNIFY)
 
-After a short time, we get:
+The interfaces implemented in MindsDB serve to unify and organize data:
 
-```sql
-+----------+
-| status   |
-+----------+
-| training |
-+----------+
-```
+- **Views**: 
+  - Define simplified or aggregated views of data
+  - Create virtual tables spanning multiple data sources
+  - Provide standardized data access patterns
 
-And finally, we get:
+- **JOBs**:
+  - Schedule recurring operations on data
+  - Maintain synchronized copies of data
+  - Automate data transformations in near real-time
 
-```sql
-+----------+
-| status   |
-+----------+
-| complete |
-+----------+
-```
+- **Knowledge Bases**:
+  - Index and organize unstructured data
+  - Create searchable repositories of documents
+  - Enable semantic retrieval of information
 
-Alternatively, you can use the `SHOW MODELS` command as below.
+- **ML Models**:
+  - Apply machine learning to transform data
+  - Generate predictions and insights
+  - Process data using various AI techniques
 
-```sql
-SHOW MODELS
-[FROM project_name]
-[LIKE 'model_name']
-[WHERE column_name = value];
-```
+### Utilities
 
-Here is an example:
+The Utilities module contains shared code used across all interfaces:
 
-```sql
-SHOW MODELS
-FROM mindsdb
-LIKE 'home_rentals_model'
-WHERE status = 'complete';
-```
-> The status of the model must be `complete` before you can start making predictions.
+- **Type Inference**: Code for detecting data types automatically
+- **Data Preparation**: Functions for cleaning and preparing data
+- **Vector Operations**: Tools for handling embeddings and vectors
+- **Common Helpers**: Shared functions used throughout the codebase
 
-## 7. Make Predictions Using [`SELECT`](/sql/api/select/)
+### APIs (RESPOND)
 
-The [`SELECT`](/sql/api/select/) statement allows you to make predictions based
-on features, where features are the input variables, or input columns, that are
-used to make forecasts.
+The API layer provides ways to query and interact with the unified data:
 
-Let's predict what would be the rental price of a 1000 square feet house with
-two bathrooms.
+- **SQL Interface**: Processes SQL statements for all operations
+- **HTTP API**: Enables RESTful access to MindsDB functionality
+- **Python SDK**: Provides programmatic access from Python applications
+- **MCP Integration**: Implements Model Context Protocol for AI agents
 
-```sql
-SELECT rental_price
-FROM mindsdb.home_rentals_model
-WHERE number_of_bathrooms = 2
-AND sqft = 1000;
-```
+## Implementation Stack
 
-On execution, we get:
+MindsDB's core implementation leverages:
 
-```sql
-+--------------+
-| rental_price |
-+--------------+
-| 1130         |
-+--------------+
-```
+- **Python**: Primary programming language
+- **SQL Parser**: For processing SQL queries
+- **Vector Libraries**: For embedding handling
+- **HTTP/REST**: For API communications
+- **Various DB Connectors**: For database integrations
+- **Python SDKs**: For third-party service integration
 
-Here is how to make batch predictions:
+## Directory Structure
 
-```sql
-SELECT m.rental_price, m.rental_price_explain
-FROM mindsdb.home_rentals_model AS m
-JOIN example_data.demo_data.home_rentals AS d;
-```
+The `/mindsdb` directory contains:
 
-## 8. Automate the Workflow Using [`CREATE JOB`](/sql/create/jobs/)
+- **`/api`**: Implementation of the response layer
+- **`/interfaces`**: Implementation of unification tools
+- **`/utilities`**: Shared helper code
+- **`/integrations`**: Connection handlers for various sources
+  - `/handlers`: Base implementation of handlers
+  - `/data`: Data source connections
+  - `/app`: Application integrations
+  - `/ml`: ML/AI framework integrations
 
-Now, we can take this even further. MindsDB includes powerful automation features called Jobs which allow us to automate queries in MindsDB. This is very handy for production AI/ML systems which all require automation logic to help them to work.
+## Development Guidelines
 
-We use the `CREATE JOB` statement to create a Job.
+When working with the MindsDB codebase:
 
-Now, let's use a Job to set the model we've created to be retrained every two days, just like we might in production. You can [retrain](/sql/api/retrain/) the model to improve predictions every time when either new data or new MindsDB version is available. And, if you want to retrain your model considering only new data, then go for [finetuning](/sql/api/finetune/) it.
+1. **New Integrations (CONNECT)**: Extend appropriate handler classes for new data sources, applications, or ML frameworks
+2. **New Interfaces (UNIFY)**: Implement new tools for data unification in the interfaces layer
+3. **API Enhancements (RESPOND)**: Improve the ways users and systems can interact with MindsDB
 
-In the same job, we will create a table and insert these new predictions back into a database so the predictions are ready to be used by our hypothetical application.
+## Contributing
 
-```sql
-CREATE JOB retrain_model_and_save_predictions (
+Contributions to MindsDB are welcome and can focus on any of the three core capabilities:
 
-   RETRAIN mindsdb.home_rentals_model
-   FROM example_data
-         (SELECT * FROM demo_data.home_rentals)
-   USING
-         join_learn_process = true;
+- **CONNECT**: Add new integration handlers
+- **UNIFY**: Enhance data unification interfaces
+- **RESPOND**: Improve API capabilities and interactions
 
-   CREATE TABLE my_integration.rentals_{{START_DATETIME}} (
-         SELECT m.rental_price, m.rental_price_explain
-         FROM mindsdb.home_rentals_model AS m
-         JOIN example_data.demo_data.home_rentals AS d
-   )
+For detailed guidance, see the [contribution guide](https://github.com/mindsdb/mindsdb/blob/main/CONTRIBUTING.md).
 
-)
-END '2023-10-30 00:00:00'
-EVERY 2 days;
-```
-
-Please note that `my_integration` is your database connection name in MindsDB. Before executing this job, make sure to connect your database to MindsDB with a user who has write access to be able to create a table.
-
+For comprehensive documentation, visit [MindsDB Documentation](https://docs.mindsdb.com/).

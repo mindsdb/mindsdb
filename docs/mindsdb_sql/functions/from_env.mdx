@@ -1,0 +1,18 @@
+---
+title: The from_env() Function
+sidebarTitle: The from_env() Function
+---
+
+MindsDB provides the `from_env()` function that lets users pull values from the environment variables into MindsDB.
+
+## Usage
+
+Here is how to use the `from_env()` function.
+
+```sql
+from_env("MDB_MY_ENV_VAR")
+```
+
+Note that due to security concerns, **only the environment variables with name starting with `MDB_` can be extracted with the `from_env()` function**.
+
+Learn more about [MindsDB variables here](/mindsdb_sql/functions/variables).

@@ -1,5 +1,8 @@
 name: Build and deploy to dev
 
+permissions:
+  contents: read
+
 on:
   pull_request_target:
     types: [opened, reopened, synchronize, labeled]
@@ -7,6 +10,21 @@ on:
       - 'main'
 
 jobs:
+
+  changes:
+    name: Filter changed files
+    runs-on: mdb-dev
+    outputs:
+      not-docs: ${{ steps.filter.outputs.not-docs }}
+    steps:
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          predicate-quantifier: "every"
+          filters: |
+            not-docs:
+              - '!docs/**'  
+              - '!**/*.md'
 
   # Looks for labels like "deploy-to-<env>" attached to a PR so we can deploy to those envs
   get-deploy-labels:
@@ -33,7 +51,7 @@ jobs:
     name: Build Docker Images
     runs-on: mdb-dev
     needs: [get-deploy-labels]
-    if: needs.get-deploy-labels.outputs.deploy-envs != '[]'
+    if: ${{ needs.get-deploy-labels.outputs.deploy-envs != '[]' }}
     concurrency:
       group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-build
       cancel-in-progress: true
@@ -94,15 +112,29 @@ jobs:
       image-tag: ${{ github.event.pull_request.head.sha }}
     secrets: inherit
 
-  # Run integration tests
-  # TODO: Run these against the deployed environment
+  # Run integration tests against the deployed environment
   run_tests:
     name: Run Integration Tests
-    needs: [deploy]
+    needs: [deploy, get-deploy-labels]
+    strategy:
+      fail-fast: false
+      matrix:
+        deploy-env: ${{ fromJson(needs.get-deploy-labels.outputs.deploy-envs) }}
     concurrency:
-      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-tests
-      cancel-in-progress: true
+      group: deploy-${{ matrix.deploy-env }}
+      cancel-in-progress: false
     uses: ./.github/workflows/test_on_deploy.yml
     with:
       git-sha: ${{ github.event.pull_request.head.sha }}
+      deploy-env: ${{ matrix.deploy-env }}
     secrets: inherit
+
+  tests_completed:
+    needs: [run_tests, changes]
+    runs-on: mdb-dev
+    if: always()
+    steps:
+      - name: fail if tests failed or didnt run
+        if: ${{ needs.run_tests.result != 'success' && needs.changes.outputs.not-docs == 'true' }}
+        run: exit 1
+      - run: echo "Tests ran successfully"

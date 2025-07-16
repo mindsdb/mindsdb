@@ -1,10 +1,8 @@
 import re
 import os
 import datetime as dt
-import ast
 import time
 from collections import defaultdict
-import pytz
 import io
 import requests
 
@@ -28,6 +26,7 @@ from mindsdb.integrations.libs.response import (
 
 logger = log.getLogger(__name__)
 
+
 class TweetsTable(APITable):
 
     def select(self, query: ast.Select) -> Response:
@@ -39,7 +38,7 @@ class TweetsTable(APITable):
         for op, arg1, arg2 in conditions:
 
             if op == 'or':
-                raise NotImplementedError(f'OR is not supported')
+                raise NotImplementedError('OR is not supported')
             if arg1 == 'created_at':
                 date = parse_utc_date(arg2)
                 if op == '>':
@@ -169,7 +168,6 @@ class TweetsTable(APITable):
                 media = api_v1.media_upload(filename="img.{file_type}".format(file_type=file_type), file=img)
 
                 media_ids = [media.media_id]
-
 
             words = re.split('( )', text)
 

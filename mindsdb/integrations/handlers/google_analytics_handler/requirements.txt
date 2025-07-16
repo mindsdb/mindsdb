@@ -1,2 +1,3 @@
 google-api-python-client
 google-analytics-admin
+google-auth

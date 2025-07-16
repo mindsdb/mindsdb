@@ -99,7 +99,7 @@ class StatsForecastHandler(BaseMLEngine):
         time_settings = args["timeseries_settings"]
         using_args = args["using"]
         assert time_settings["is_timeseries"], "Specify time series settings in your query"
-        ###### store model args and time series settings in the model folder
+        # store model args and time series settings in the model folder
         model_args = {}
         model_args.update(using_args)
         model_args["target"] = target
@@ -130,7 +130,7 @@ class StatsForecastHandler(BaseMLEngine):
         sf = StatsForecast([model], freq=model_args["frequency"], df=training_df)
         fitted_models = sf.fit().fitted_
 
-        ###### persist changes to handler folder
+        # persist changes to handler folder
         self.model_storage.json_set("model_args", model_args)
         self.model_storage.file_set("training_df", dill.dumps(training_df))
         self.model_storage.file_set("fitted_models", dill.dumps(fitted_models))

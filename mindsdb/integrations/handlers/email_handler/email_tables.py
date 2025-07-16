@@ -1,5 +1,4 @@
 import datetime as dt
-import ast
 import pytz
 
 import pandas as pd

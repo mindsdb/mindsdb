@@ -1,0 +1,96 @@
+---
+title: Delete Threads
+sidebarTitle: Delete Threads
+---
+
+This API endpoint deletes a Thread and all associated Messages using the `DELETE` method.
+
+### Body
+
+None.
+
+### Response
+
+<ResponseField name="id" type="string" required>  
+
+Unique identifier for the deleted thread.
+
+</ResponseField>
+
+<ResponseField name="deleted" type="boolean" required>  
+
+Indicates whether the thread was successfully deleted.
+
+</ResponseField>
+
+<ResponseField name="object" type="string" required>  
+
+The type of the returned object, which will be `"thread.deleted"`.
+
+</ResponseField>
+
+### Authorization
+
+A valid API key must be passed in the `Authorization` header:
+
+```
+Authorization: Bearer MINDS_API_KEY
+```
+
+Generate your [API key here](https://mdb.ai/apiKeys).
+
+### Path Parameters
+
+<ParamField body='thread_id' type='string' required>
+
+Id of the Thread to be deleted.
+
+</ParamField>
+
+<RequestExample>
+
+```shell Shell
+curl -X DELETE "https://mdb.ai/threads/mdb_thread_d79c95547e5f4501a32df6f492ad5be9" \
+  -H "Authorization: Bearer MINDS_API_KEY"
+```
+
+```python Python
+from openai import OpenAI
+client = OpenAI(
+    api_key='MINDS_API_KEY',
+    base_url='https://mdb.ai/'
+)
+
+response = client.beta.threads.delete("thread_abc123")
+print(response)
+```
+
+```js Node
+import OpenAI from "openai";
+
+const openai = new OpenAI(
+    api_key='MINDS_API_KEY',
+    baseURL='https://mdb.ai/'
+);
+
+async function main() {
+  const response = await openai.beta.threads.del("thread_abc123");
+  console.log(response);
+}
+
+main();
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Response
+{
+    "id": "mdb_thread_d79c95547e5f4501a32df6f492ad5be9",
+    "deleted": true,
+    "object": "thread.deleted"
+}
+```
+
+</ResponseExample>

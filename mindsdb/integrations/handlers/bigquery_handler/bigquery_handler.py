@@ -1,26 +1,28 @@
-from typing import Text, Dict, Any
-from google.api_core.exceptions import BadRequest
-from sqlalchemy_bigquery.base import BigQueryDialect
 from google.cloud.bigquery import Client, QueryJobConfig
+from google.api_core.exceptions import BadRequest
+import pandas as pd
+from sqlalchemy_bigquery.base import BigQueryDialect
+from typing import Any, Dict, Optional, Text
 
 from mindsdb.utilities import log
 from mindsdb_sql_parser.ast.base import ASTNode
-from mindsdb.integrations.libs.base import DatabaseHandler
+from mindsdb.integrations.libs.base import MetaDatabaseHandler
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb.integrations.utilities.handlers.auth_utilities import GoogleServiceAccountOAuth2Manager
+from mindsdb.integrations.utilities.handlers.auth_utilities.google import GoogleServiceAccountOAuth2Manager
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 
 logger = log.getLogger(__name__)
 
 
-class BigQueryHandler(DatabaseHandler):
+class BigQueryHandler(MetaDatabaseHandler):
     """
     This handler handles connection and execution of Google BigQuery statements.
     """
+
     name = "bigquery"
 
     def __init__(self, name: Text, connection_data: Dict, **kwargs: Any):
@@ -49,19 +51,16 @@ class BigQueryHandler(DatabaseHandler):
             return self.connection
 
         # Mandatory connection parameters
-        if not all(key in self.connection_data for key in ['project_id', 'dataset']):
-            raise ValueError('Required parameters (project_id, dataset) must be provided.')
+        if not all(key in self.connection_data for key in ["project_id", "dataset"]):
+            raise ValueError("Required parameters (project_id, dataset) must be provided.")
 
         google_sa_oauth2_manager = GoogleServiceAccountOAuth2Manager(
-            credentials_file=self.connection_data.get('service_account_keys'),
-            credentials_json=self.connection_data.get('service_account_json')
+            credentials_file=self.connection_data.get("service_account_keys"),
+            credentials_json=self.connection_data.get("service_account_json"),
         )
         credentials = google_sa_oauth2_manager.get_oauth2_credentials()
 
-        client = Client(
-            project=self.connection_data["project_id"],
-            credentials=credentials
-        )
+        client = Client(project=self.connection_data["project_id"], credentials=credentials)
         self.is_connected = True
         self.connection = client
         return self.connection
@@ -86,14 +85,14 @@ class BigQueryHandler(DatabaseHandler):
 
         try:
             connection = self.connect()
-            connection.query('SELECT 1;')
+            connection.query("SELECT 1;")
 
             # Check if the dataset exists
-            connection.get_dataset(self.connection_data['dataset'])
+            connection.get_dataset(self.connection_data["dataset"])
 
             response.success = True
         except (BadRequest, ValueError) as e:
-            logger.error(f'Error connecting to BigQuery {self.connection_data["project_id"]}, {e}!')
+            logger.error(f"Error connecting to BigQuery {self.connection_data['project_id']}, {e}!")
             response.error_message = e
 
         if response.success is False and self.is_connected is True:
@@ -113,22 +112,18 @@ class BigQueryHandler(DatabaseHandler):
         """
         connection = self.connect()
         try:
-            job_config = QueryJobConfig(default_dataset=f"{self.connection_data['project_id']}.{self.connection_data['dataset']}")
+            job_config = QueryJobConfig(
+                default_dataset=f"{self.connection_data['project_id']}.{self.connection_data['dataset']}"
+            )
             query = connection.query(query, job_config=job_config)
             result = query.to_dataframe()
             if not result.empty:
-                response = Response(
-                    RESPONSE_TYPE.TABLE,
-                    result
-                )
+                response = Response(RESPONSE_TYPE.TABLE, result)
             else:
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
-            logger.error(f'Error running query: {query} on {self.connection_data["project_id"]}!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
-            )
+            logger.error(f"Error running query: {query} on {self.connection_data['project_id']}!")
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
         return response
 
     def query(self, query: ASTNode) -> Response:
@@ -154,7 +149,7 @@ class BigQueryHandler(DatabaseHandler):
         """
         query = f"""
             SELECT table_name, table_schema, table_type
-            FROM `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.TABLES`
+            FROM `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.INFORMATION_SCHEMA.TABLES`
             WHERE table_type IN ('BASE TABLE', 'VIEW')
         """
         result = self.native_query(query)
@@ -174,8 +169,204 @@ class BigQueryHandler(DatabaseHandler):
         """
         query = f"""
             SELECT column_name AS Field, data_type as Type
-            FROM `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.COLUMNS`
+            FROM `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.INFORMATION_SCHEMA.COLUMNS`
             WHERE table_name = '{table_name}'
         """
+        result = self.native_query(query)
+        return result
+
+    def meta_get_tables(self, table_names: Optional[list] = None) -> Response:
+        """
+        Retrieves table metadata for the specified tables (or all tables if no list is provided).
+
+        Args:
+            table_names (list): A list of table names for which to retrieve metadata information.
+
+        Returns:
+            Response: A response object containing the metadata information, formatted as per the `Response` class.
+        """
+        query = f"""
+            SELECT
+                t.table_name,
+                t.table_schema,
+                t.table_type,
+                st.row_count
+            FROM 
+                `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.INFORMATION_SCHEMA.TABLES` AS t
+            JOIN 
+                `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.__TABLES__` AS st
+            ON 
+                t.table_name = st.table_id
+            WHERE 
+                t.table_type IN ('BASE TABLE', 'VIEW')
+        """
+
+        if table_names is not None and len(table_names) > 0:
+            table_names = [f"'{t}'" for t in table_names]
+            query += f" AND t.table_name IN ({','.join(table_names)})"
+
+        result = self.native_query(query)
+        return result
+
+    def meta_get_columns(self, table_names: Optional[list] = None) -> Response:
+        """
+        Retrieves column metadata for the specified tables (or all tables if no list is provided).
+
+        Args:
+            table_names (list): A list of table names for which to retrieve column metadata.
+
+        Returns:
+            Response: A response object containing the column metadata.
+        """
+        query = f"""
+            SELECT 
+                table_name,
+                column_name,
+                data_type,
+                column_default,
+                CASE is_nullable
+                    WHEN 'YES' THEN TRUE
+                    ELSE FALSE
+                END AS is_nullable
+            FROM 
+                `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.INFORMATION_SCHEMA.COLUMNS`
+        """
+
+        if table_names is not None and len(table_names) > 0:
+            table_names = [f"'{t}'" for t in table_names]
+            query += f" WHERE table_name IN ({','.join(table_names)})"
+
+        result = self.native_query(query)
+        return result
+
+    def meta_get_column_statistics_for_table(self, table_name: str, columns: list) -> Response:
+        """
+        Retrieves statistics for the specified columns in a table.
+
+        Args:
+            table_name (str): The name of the table.
+            columns (list): A list of column names to retrieve statistics for.
+
+        Returns:
+            Response: A response object containing the column statistics.
+        """
+        # To avoid hitting BigQuery's query size limits, we will chunk the columns into batches.
+        # This is because the queries are combined using UNION ALL, which can lead to very large queries if there are many columns.
+        BATCH_SIZE = 20
+
+        def chunked(lst, n):
+            """
+            Yields successive n-sized chunks from lst.
+            """
+            for i in range(0, len(lst), n):
+                yield lst[i : i + n]
+
+        queries = []
+        for column_batch in chunked(columns, BATCH_SIZE):
+            batch_queries = []
+            for column in column_batch:
+                batch_queries.append(
+                    f"""
+                    SELECT
+                        '{table_name}' AS table_name,
+                        '{column}' AS column_name,
+                        SAFE_DIVIDE(COUNTIF({column} IS NULL), COUNT(*)) * 100 AS null_percentage,
+                        CAST(MIN(`{column}`) AS STRING) AS minimum_value,
+                        CAST(MAX(`{column}`) AS STRING) AS maximum_value,
+                        COUNT(DISTINCT {column}) AS distinct_values_count
+                    FROM
+                        `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.{table_name}`
+                    """
+                )
+
+            query = " UNION ALL ".join(batch_queries)
+            queries.append(query)
+
+        results = []
+        for query in queries:
+            try:
+                result = self.native_query(query)
+                if result.resp_type == RESPONSE_TYPE.TABLE:
+                    results.append(result.data_frame)
+                else:
+                    logger.error(f"Error retrieving column statistics for table {table_name}: {result.error_message}")
+            except Exception as e:
+                logger.error(f"Exception occurred while retrieving column statistics for table {table_name}: {e}")
+
+        if not results:
+            logger.warning(f"No column statistics could be retrieved for table {table_name}.")
+            return Response(
+                RESPONSE_TYPE.ERROR, error_message=f"No column statistics could be retrieved for table {table_name}."
+            )
+        return Response(RESPONSE_TYPE.TABLE, pd.concat(results, ignore_index=True) if results else pd.DataFrame())
+
+    def meta_get_primary_keys(self, table_names: Optional[list] = None) -> Response:
+        """
+        Retrieves primary key information for the specified tables (or all tables if no list is provided).
+
+        Args:
+            table_names (list): A list of table names for which to retrieve primary key information.
+
+        Returns:
+            Response: A response object containing the primary key information.
+        """
+        query = f"""
+            SELECT
+                tc.table_name,
+                kcu.column_name,
+                kcu.ordinal_position,
+                tc.constraint_name,
+            FROM
+                `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.INFORMATION_SCHEMA.TABLE_CONSTRAINTS` AS tc
+            JOIN
+                `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.INFORMATION_SCHEMA.KEY_COLUMN_USAGE` AS kcu
+            ON
+                tc.constraint_name = kcu.constraint_name
+            WHERE
+                tc.constraint_type = 'PRIMARY KEY'
+        """
+
+        if table_names is not None and len(table_names) > 0:
+            table_names = [f"'{t}'" for t in table_names]
+            query += f" AND tc.table_name IN ({','.join(table_names)})"
+
+        result = self.native_query(query)
+        return result
+
+    def meta_get_foreign_keys(self, table_names: Optional[list] = None) -> Response:
+        """
+        Retrieves foreign key information for the specified tables (or all tables if no list is provided).
+
+        Args:
+            table_names (list): A list of table names for which to retrieve foreign key information.
+
+        Returns:
+            Response: A response object containing the foreign key information.
+        """
+        query = f"""
+            SELECT
+                ccu.table_name AS parent_table_name,
+                ccu.column_name AS parent_column_name,
+                kcu.table_name AS child_table_name,
+                kcu.column_name AS child_column_name,
+                tc.constraint_name
+            FROM
+                `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.INFORMATION_SCHEMA.TABLE_CONSTRAINTS` AS tc
+            JOIN
+                `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.INFORMATION_SCHEMA.KEY_COLUMN_USAGE` AS kcu
+            ON
+                tc.constraint_name = kcu.constraint_name
+            JOIN
+                `{self.connection_data["project_id"]}.{self.connection_data["dataset"]}.INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE` AS ccu
+            ON
+                tc.constraint_name = ccu.constraint_name
+            WHERE
+                tc.constraint_type = 'FOREIGN KEY'
+        """
+
+        if table_names is not None and len(table_names) > 0:
+            table_names = [f"'{t}'" for t in table_names]
+            query += f" AND tc.table_name IN ({','.join(table_names)})"
+
         result = self.native_query(query)
         return result

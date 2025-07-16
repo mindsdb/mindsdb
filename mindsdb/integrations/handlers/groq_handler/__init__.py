@@ -1,10 +1,10 @@
+from .__about__ import __version__ as version
+from .__about__ import __description__ as description
 from mindsdb.integrations.libs.const import HANDLER_TYPE
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
-from .__about__ import __description__ as description
-from .__about__ import __version__ as version
 
 try:
     from .groq_handler import GroqHandler as Handler

@@ -1,0 +1,106 @@
+---
+title: Create Threads
+sidebarTitle: Create Threads
+---
+
+This API endpoint creates a Thread to contain Messages using the `POST` method.
+
+### Body
+
+None.
+
+### Response
+
+<ResponseField name="id" type="string" required>  
+
+Unique identifier for the thread.
+
+</ResponseField>
+
+<ResponseField name="created_at" type="integer" required>  
+
+Timestamp of when the thread was created.
+
+</ResponseField>
+
+<ResponseField name="metadata" type="object">  
+
+Optional metadata associated with the thread.
+
+</ResponseField>
+
+<ResponseField name="object" type="string" required>  
+
+The type of the object returned, which is `"thread"`.
+
+</ResponseField>
+
+<ResponseField name="tool_resources" type="object">  
+
+Information about any associated tool resources.
+
+</ResponseField>
+
+### Authorization
+
+A valid API key must be passed in the `Authorization` header:
+
+```
+Authorization: Bearer MINDS_API_KEY
+```
+
+Generate your [API key here](https://mdb.ai/apiKeys).
+
+### Path Parameters
+
+None.
+
+<RequestExample>
+
+```shell Shell
+curl -X POST "https://mdb.ai/threads" \
+  -H "Authorization: Bearer MINDS_API_KEY"
+```
+
+```python Python
+from openai import OpenAI
+client = OpenAI(
+    api_key='MINDS_API_KEY',
+    base_url='https://mdb.ai/'
+)
+
+thread = client.beta.threads.create()
+print(thread)
+```
+
+```js Node
+import OpenAI from "openai";
+
+const openai = new OpenAI(
+    api_key='MINDS_API_KEY',
+    baseURL='https://mdb.ai/'
+);
+
+async function main() {
+  const emptyThread = await openai.beta.threads.create();
+  console.log(emptyThread);
+}
+
+main();
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Response
+{
+    "id": "mdb_thread_d79c95547e5f4501a32df6f492ad5be9",
+    "created_at": 1718884196,
+    "metadata": null,
+    "object": "thread",
+    "tool_resources": null
+}
+```
+
+</ResponseExample>

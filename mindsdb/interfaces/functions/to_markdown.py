@@ -1,13 +1,11 @@
-import base64
 from io import BytesIO
 import os
 from typing import Union
 from urllib.parse import urlparse
+import xml.etree.ElementTree as ET
 
-import fitz  # PyMuPDF
-from markitdown import MarkItDown
+from aipdf import ocr
 import mimetypes
-from openai import OpenAI
 import requests
 
 
@@ -15,55 +13,41 @@ class ToMarkdown:
     """
     Extracts the content of documents of various formats in markdown format.
     """
-    def __init__(self, use_llm: bool, llm_client: OpenAI = None, llm_model: str = None):
+
+    def __init__(self):
         """
         Initializes the ToMarkdown class.
         """
-        # If use_llm is True, llm_client and llm_model must be provided.
-        if use_llm and (llm_client is None or llm_model is None):
-            raise ValueError('LLM client and model must be provided when use_llm is True.')
 
-        # If use_llm is False, set llm_client and llm_model to None even if they are provided.
-        if not use_llm:
-            llm_client = None
-            llm_model = None
-
-        # Only OpenAI is supported for now.
-        # TODO: Add support for other LLMs.
-        if llm_client is not None and not isinstance(llm_client, OpenAI):
-            raise ValueError('Only OpenAI models are supported at the moment.')
-
-        self.use_llm = use_llm
-        self.llm_client = llm_client
-        self.llm_model = llm_model
-
-    def call(self, file_path_or_url: str) -> str:
+    def call(self, file_path_or_url: str, **kwargs) -> str:
         """
         Converts a file to markdown.
         """
         file_extension = self._get_file_extension(file_path_or_url)
-        file = self._get_file_content(file_path_or_url)
+        file_content = self._get_file_content(file_path_or_url)
 
-        if file_extension == '.pdf':
-            return self._pdf_to_markdown(file)
-        elif file_extension in ['.jpg', '.jpeg', '.png', '.gif']:
-            return self._image_to_markdown(file)
+        if file_extension == ".pdf":
+            return self._pdf_to_markdown(file_content, **kwargs)
+
+        elif file_extension in (".xml", ".nessus"):
+            return self._xml_to_markdown(file_content, **kwargs)
+
         else:
-            return self._other_to_markdown(file)
+            raise ValueError(f"Unsupported file type: {file_extension}.")
 
-    def _get_file_content(self, file_path_or_url: str) -> str:
+    def _get_file_content(self, file_path_or_url: str) -> BytesIO:
         """
         Retrieves the content of a file.
         """
         parsed_url = urlparse(file_path_or_url)
-        if parsed_url.scheme in ('http', 'https'):
+        if parsed_url.scheme in ("http", "https"):
             response = requests.get(file_path_or_url)
             if response.status_code == 200:
-                return response
+                return BytesIO(response.content)
             else:
-                raise RuntimeError(f'Unable to retrieve file from URL: {file_path_or_url}')
+                raise RuntimeError(f"Unable to retrieve file from URL: {file_path_or_url}")
         else:
-            with open(file_path_or_url, 'rb') as file:
+            with open(file_path_or_url, "rb") as file:
                 return BytesIO(file.read())
 
     def _get_file_extension(self, file_path_or_url: str) -> str:
@@ -71,13 +55,13 @@ class ToMarkdown:
         Retrieves the file extension from a file path or URL.
         """
         parsed_url = urlparse(file_path_or_url)
-        if parsed_url.scheme in ('http', 'https'):
+        if parsed_url.scheme in ("http", "https"):
             try:
                 # Make a HEAD request to get headers without downloading the file.
                 response = requests.head(file_path_or_url, allow_redirects=True)
-                content_type = response.headers.get('Content-Type', '')
+                content_type = response.headers.get("Content-Type", "")
                 if content_type:
-                    ext = mimetypes.guess_extension(content_type.split(';')[0].strip())
+                    ext = mimetypes.guess_extension(content_type.split(";")[0].strip())
                     if ext:
                         return ext
 
@@ -86,109 +70,43 @@ class ToMarkdown:
                 if ext:
                     return ext
             except requests.RequestException:
-                raise RuntimeError(f'Unable to retrieve file extension from URL: {file_path_or_url}')
+                raise RuntimeError(f"Unable to retrieve file extension from URL: {file_path_or_url}")
         else:
             return os.path.splitext(file_path_or_url)[1]
 
-    def _pdf_to_markdown(self, file_content: Union[requests.Response, bytes]) -> str:
+    def _pdf_to_markdown(self, file_content: Union[requests.Response, BytesIO], **kwargs) -> str:
         """
         Converts a PDF file to markdown.
         """
-        if self.llm_client is None:
-            return self._pdf_to_markdown_no_llm(file_content)
-        else:
-            return self._pdf_to_markdown_llm(file_content)
+        markdown_pages = ocr(file_content, **kwargs)
+        return "\n\n---\n\n".join(markdown_pages)
 
-    def _pdf_to_markdown_llm(self, file_content: Union[requests.Response, BytesIO]) -> str:
+    def _xml_to_markdown(self, file_content: Union[requests.Response, BytesIO], **kwargs) -> str:
         """
-        Converts a PDF file to markdown using LLM.
-        The LLM is used mainly for the purpose of generating descriptions of any images in the PDF.
+        Converts an XML (or Nessus) file to markdown.
         """
-        if isinstance(file_content, requests.Response):
-            file_content = BytesIO(file_content.content)
 
-        document = fitz.open(stream=file_content, filetype="pdf")
+        def parse_element(element: ET.Element, depth: int = 0) -> str:
+            """
+            Recursively parses an XML element and converts it to markdown.
+            """
+            markdown = []
+            heading = "#" * (depth + 1)
 
-        markdown_content = []
-        for page_num in range(len(document)):
-            page = document.load_page(page_num)
+            markdown.append(f"{heading} {element.tag}")
 
-            # Get text blocks with coordinates.
-            page_content = []
-            blocks = page.get_text("blocks")
-            for block in blocks:
-                x0, y0, x1, y1, text, _, _ = block
-                if text.strip():  # Skip empty or whitespace blocks.
-                    page_content.append((y0, text.strip()))
+            for key, val in element.attrib.items():
+                markdown.append(f"- **{key}**: {val}")
 
-            # Extract images from the page.
-            image_list = page.get_images(full=True)
-            for img_index, img in enumerate(image_list):
-                xref = img[0]
-                base_image = document.extract_image(xref)
-                image_bytes = base_image["image"]
+            text = (element.text or "").strip()
+            if text:
+                markdown.append(f"\n{text}\n")
 
-                # Use actual image y-coordinate if available.
-                y0 = float(base_image.get("y", 0))
-                image_description = self._generate_image_description(image_bytes)
-                page_content.append((y0, f"![{image_description}](image_{page_num + 1}_{img_index + 1}.png)"))
+            for child in element:
+                markdown.append(parse_element(child, depth + 1))
 
-            # Sort the content by y0 coordinate
-            page_content.sort(key=lambda x: x[0])
+            return "\n".join(markdown)
 
-            # Add sorted content to the markdown
-            for _, text in page_content:
-                markdown_content.append(text)
-            markdown_content.append("\n")
-
-        document.close()
-
-        return "\n".join(markdown_content)
-
-    def _generate_image_description(self, image_bytes: bytes) -> str:
-        """
-        Generates a description of the image using LLM.
-        """
-        image_base64 = base64.b64encode(image_bytes).decode("utf-8")
-
-        response = self.llm_client.chat.completions.create(
-            model=self.llm_model,
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": "Describe this image"},
-                        {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_base64}"}},
-                    ],
-                }
-            ],
-        )
-        description = response.choices[0].message.content
-        return description
-
-    def _pdf_to_markdown_no_llm(self, file_content: Union[requests.Response, BytesIO]) -> str:
-        """
-        Converts a PDF file to markdown without using LLM.
-        """
-        md = MarkItDown(enable_plugins=True)
-        result = md.convert(file_content)
-        return result.markdown
-
-    def _image_to_markdown(self, file_content: Union[requests.Response, BytesIO]) -> str:
-        """
-        Converts images to markdown.
-        """
-        if not self.use_llm or self.llm_client is None:
-            raise ValueError('LLM client must be enabled to convert images to markdown.')
-
-        md = MarkItDown(llm_client=self.llm_client, llm_model=self.llm_model, enable_plugins=True)
-        result = md.convert(file_content)
-        return result.markdown
-
-    def _other_to_markdown(self, file_content: Union[requests.Response, BytesIO]) -> str:
-        """
-        Converts other file formats to markdown.
-        """
-        md = MarkItDown(enable_plugins=True)
-        result = md.convert(file_content)
-        return result.markdown
+        root = ET.fromstring(file_content.read().decode("utf-8"))
+        markdown_content = parse_element(root)
+        return markdown_content

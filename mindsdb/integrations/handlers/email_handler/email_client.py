@@ -70,7 +70,7 @@ class EmailClient:
     def send_email(self, to_addr: str, subject: str, body: str):
         '''
         Sends an email to the given address.
-        
+
         Parameters:
             to_addr (str): The email address to send the email to.
             subject (str): The subject of the email.

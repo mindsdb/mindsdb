@@ -13,11 +13,10 @@ import jaydebeapi as jdbcconnector
 
 logger = log.getLogger(__name__)
 
+
 class DerbyHandler(DatabaseHandler):
 
-
-    name= 'derby'
-
+    name = 'derby'
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         """ Initialize the handler
@@ -27,18 +26,17 @@ class DerbyHandler(DatabaseHandler):
             **kwargs: arbitrary keyword arguments.
         """
         super().__init__(name)
-        
+
         self.kwargs = kwargs
         self.parser = parse_sql
         self.database = connection_data['database']
         self.connection_config = connection_data
         self.host = connection_data['host']
         self.port = connection_data['port']
-        self.schema =  'APP'
+        self.schema = 'APP'
         self.connection = None
         self.is_connected = False
-          
-    
+
     def connect(self):
         """ Set up any connections required by the handler
         Should return output of check_connection() method after attempting
@@ -56,18 +54,18 @@ class DerbyHandler(DatabaseHandler):
 
         jdbc_url = "jdbc:derby://" + self.host + ":" + self.port + "/" + self.database + ";"
 
-        if not jdbc_class: 
+        if not jdbc_class:
             jdbc_class = "org.apache.derby.jdbc.ClientDriver"
 
-        if user: 
+        if user:
             self.schema = user
 
         try:
-            if user and password and jar_location: 
+            if user and password and jar_location:
                 self.connection = jdbcconnector.connect(jclassname=jdbc_class, url=jdbc_url, driver_args=[user, password], jars=jar_location.split(","))
-            elif user and password: 
+            elif user and password:
                 self.connection = jdbcconnector.connect(jclassname=jdbc_class, url=jdbc_url, driver_args=[user, password])
-            elif jar_location: 
+            elif jar_location:
                 self.connection = jdbcconnector.connect(jclassname=jdbc_class, url=jdbc_url, jars=jar_location.split(","))
             else:
                 self.connection = jdbcconnector.connect(jdbc_class, jdbc_url)
@@ -75,7 +73,6 @@ class DerbyHandler(DatabaseHandler):
             logger.error(f"Error while connecting to {self.database}, {e}")
 
         return self.connection
-
 
     def disconnect(self):
         """ Close any existing connections
@@ -85,12 +82,11 @@ class DerbyHandler(DatabaseHandler):
             return
         try:
             self.connection.close()
-            self.is_connected=False
+            self.is_connected = False
         except Exception as e:
             logger.error(f"Error while disconnecting to {self.database}, {e}")
 
-        return 
-
+        return
 
     def check_connection(self) -> StatusResponse:
         """ Check connection to the handler
@@ -114,7 +110,6 @@ class DerbyHandler(DatabaseHandler):
 
         return responseCode
 
-
     def native_query(self, query: str) -> StatusResponse:
         """Receive raw query and act upon it somehow.
         Args:
@@ -129,7 +124,7 @@ class DerbyHandler(DatabaseHandler):
             try:
                 cur.execute(query)
                 if cur.description:
-                    result = cur.fetchall() 
+                    result = cur.fetchall()
                     response = Response(
                         RESPONSE_TYPE.TABLE,
                         data_frame=pd.DataFrame(
@@ -153,7 +148,6 @@ class DerbyHandler(DatabaseHandler):
 
         return response
 
-    
     def query(self, query: ASTNode) -> StatusResponse:
         """Render and execute a SQL query.
 
@@ -173,7 +167,6 @@ class DerbyHandler(DatabaseHandler):
 
         return self.native_query(query_str)
 
-
     def get_tables(self) -> StatusResponse:
         """Get a list of all the tables in the database.
 
@@ -182,13 +175,12 @@ class DerbyHandler(DatabaseHandler):
         """
         query = f'''
         SELECT st.tablename FROM sys.systables st LEFT OUTER JOIN sys.sysschemas ss ON (st.schemaid = ss.schemaid) WHERE ss.schemaname ='{self.schema}' '''
-    
+
         result = self.native_query(query)
         df = result.data_frame
         result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
         return result
 
-    
     def get_columns(self, table_name: str) -> StatusResponse:
         """Get details about a table.
 

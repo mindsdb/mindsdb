@@ -10,6 +10,7 @@ from mindsdb_sql_parser import parse_sql
 from mindsdb.api.executor.planner.exceptions import PlanningException
 from mindsdb.api.executor.planner import plan_query
 from mindsdb.api.executor.planner.query_plan import QueryPlan
+from mindsdb.api.executor.planner.query_planner import MINDSDB_SQL_FUNCTIONS
 from mindsdb.api.executor.planner.step_result import Result
 from mindsdb.api.executor.planner.steps import (
     FetchDataframeStep,
@@ -962,3 +963,39 @@ class TestPlanIntegrationSelect:
         )
 
         assert plan.steps == expected_plan.steps
+
+    def test_select_with_mindsdb_functions(self):
+        for function in MINDSDB_SQL_FUNCTIONS:
+            query = parse_sql(
+                f'''
+                    select {function}(a) from int1.tab1
+                    order by x
+                    limit 2
+                '''
+            )
+
+            sub_query = parse_sql(f"select {function}(a) from tab1")
+            sub_query.from_table = None
+
+            expected_plan = QueryPlan(
+                predictor_namespace='mindsdb',
+                steps=[
+                    FetchDataframeStep(
+                        integration='int1',
+                        query=parse_sql('select * from tab1 order by x limit 2'),
+                    ),
+                    SubSelectStep(
+                        dataframe=Result(0),
+                        query=sub_query,
+                        table_name='tab1'
+                    ),
+                ],
+            )
+
+            plan = plan_query(
+                query,
+                integrations=[{'name': 'int1', 'class_type': 'sql', 'type': 'data'}],
+                predictor_metadata=[{'name': 'pred', 'integration_name': 'mindsdb'}]
+            )
+
+            assert plan.steps == expected_plan.steps

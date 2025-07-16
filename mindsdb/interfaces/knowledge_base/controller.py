@@ -60,6 +60,7 @@ class KnowledgeBaseInputParams(BaseModel):
     is_sparse: bool = False
     vector_size: int | None = None
     reranking_model: Dict[Text, Any] | None = None
+    preprocessing: Dict[Text, Any] | None = None
 
     class Config:
         extra = "forbid"

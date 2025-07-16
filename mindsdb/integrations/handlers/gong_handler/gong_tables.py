@@ -234,14 +234,14 @@ class GongAnalyticsTable(APIResource):
                 content = call.get('content', {})
                 interaction = call.get('interaction', {})
 
-                # sentiment from personInteractionStats
+                # Sentiment from personInteractionStats
                 person_stats = interaction.get('personInteractionStats', [])
                 sentiment_score = 0
                 if person_stats:
                     sentiments = [stat.get('sentiment', 0) for stat in person_stats if stat.get('sentiment') is not None]
                     sentiment_score = sum(sentiments) / len(sentiments) if sentiments else 0
 
-                # topics from AI analysis
+                # Topics from AI analysis
                 topics = content.get('topics', [])
                 topic_names = [topic.get('name', '') for topic in topics if isinstance(topic, dict)]
 

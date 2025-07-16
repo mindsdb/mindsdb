@@ -71,11 +71,11 @@ class MCPLangchainAgent(LangchainAgent):
         self,
         agent: db.Agents,
         model: dict = None,
-        params: dict = None,
+        llm_params: dict = None,
         mcp_host: str = "127.0.0.1",
         mcp_port: int = 47337,
     ):
-        super().__init__(agent, model, params)
+        super().__init__(agent, model, llm_params)
         self.mcp_host = mcp_host
         self.mcp_port = mcp_port
         self.exit_stack = AsyncExitStack()
@@ -251,10 +251,10 @@ def create_mcp_agent(
         raise ValueError(f"Agent {agent_name} not found in project {project_name}")
 
     # Get merged parameters (defaults + agent params)
-    merged_params = agent_controller.get_agent_llm_params(agent_db.params)
+    llm_params = agent_controller.get_agent_llm_params(agent_db.params)
 
     # Create MCP agent with merged parameters
-    mcp_agent = MCPLangchainAgent(agent_db, params=merged_params, mcp_host=mcp_host, mcp_port=mcp_port)
+    mcp_agent = MCPLangchainAgent(agent_db, llm_params=llm_params, mcp_host=mcp_host, mcp_port=mcp_port)
 
     # Wrap for LiteLLM compatibility
     return LiteLLMAgentWrapper(mcp_agent)

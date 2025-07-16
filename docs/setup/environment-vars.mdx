@@ -71,21 +71,22 @@ By default, MindsDB starts the http and mysql APIs. To define which APIs you wan
 
 - `http` (port 47334) - HTTP/REST API
 - `mysql` (port 47335) - MySQL API
-- `mongodb` (port 47336) - MongoDB API  
-- `postgres` (port 55432) - PostgreSQL API
 - `mcp` (port 47337) - Model Context Protocol API
+- `a2a` (port 47338) - Aget2Agent Protocol API
 
 To expose the ports for the APIs, you need to add the respective ports to the command with the `-p` flag.
+
+To use the A2A API when running MindsDB at a remote host, use the `MINDSDB_A2A_HOST` environemnt variable to specify the host. Alternatively, you can set it up in the [configuration file](/setup/custom-config#api).
 
 ### Example
 
 <CodeGroup>
     ```bash Docker
-    docker run --name mindsdb_container -e MINDSDB_MCP_ACCESS_TOKEN=abc123 -e MINDSDB_APIS=http,mysql,mongodb,postgres,mcp -p 47334:47334 -p 47335:47335 -p 47336:47336 -p 55432:55432 -p 47337:47337 mindsdb/mindsdb
+    docker run --name mindsdb_container -e MINDSDB_MCP_ACCESS_TOKEN=abc123 -e MINDSDB_APIS=http,mysql,mcp,a2a -p 47334:47334 -p 47335:47335 -p 47337:47337 -p 47338:47338 mindsdb/mindsdb
     ```
 
     ```bash Shell
-    export MINDSDB_APIS='http,mysql,mongodb,postgres,mcp'
+    export MINDSDB_APIS='http,mysql,mcp,a2a'
     ```
 </CodeGroup>
 

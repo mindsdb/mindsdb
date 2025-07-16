@@ -28,6 +28,13 @@ def _merge_configs(original_config: dict, override_config: dict) -> dict:
     return original_config
 
 
+def _overwrite_configs(original_config: dict, override_config: dict) -> dict:
+    """Overwrite original config with override config."""
+    for key in list(override_config.keys()):
+        original_config[key] = override_config[key]
+    return original_config
+
+
 def create_data_dir(path: Path) -> None:
     """Create a directory and checks that it is writable.
 
@@ -196,6 +203,15 @@ class Config:
                     "host": "0.0.0.0",  # API server binds to all interfaces by default
                     "port": "8000",
                 },
+                "a2a": {
+                    "host": api_host,
+                    "port": 47338,
+                    "mindsdb_host": "localhost",
+                    "mindsdb_port": 47334,
+                    "agent_name": "my_agent",
+                    "project_name": "mindsdb",
+                    "enabled": False,
+                },
             },
             "cache": {"type": "local"},
             "ml_task_queue": {"type": "local"},
@@ -209,15 +225,6 @@ class Config:
             "default_llm": {},
             "default_embedding_model": {},
             "default_reranking_model": {},
-            "a2a": {
-                "host": "localhost",
-                "port": 47338,
-                "mindsdb_host": "localhost",
-                "mindsdb_port": 47334,
-                "agent_name": "my_agent",
-                "project_name": "mindsdb",
-                "enabled": False,
-            },
             "data_catalog": {
                 "enabled": False,
             },
@@ -243,12 +250,11 @@ class Config:
         """Collect config values from env vars to self._env_config"""
         self._env_config = {
             "logging": {"handlers": {"console": {}, "file": {}}},
-            "api": {"http": {"server": {}}},
+            "api": {"http": {"server": {}}, "a2a": {}},
             "auth": {},
             "paths": {},
             "permanent_storage": {},
             "ml_task_queue": {},
-            "a2a": {},
         }
 
         # region storage root path
@@ -390,7 +396,7 @@ class Config:
             )
 
         if a2a_config:
-            self._env_config["a2a"] = a2a_config
+            self._env_config["api"]["a2a"] = a2a_config
         # endregion
 
     def fetch_auto_config(self) -> bool:
@@ -457,47 +463,36 @@ class Config:
         _merge_configs(new_config, self._env_config)
 
         # Apply command-line arguments for A2A
-        cmd_args_config = {}
+        a2a_config = {}
 
         # Check for A2A command-line arguments
         if hasattr(self.cmd_args, "a2a_host") and self.cmd_args.a2a_host is not None:
-            if "a2a" not in cmd_args_config:
-                cmd_args_config["a2a"] = {}
-            cmd_args_config["a2a"]["host"] = self.cmd_args.a2a_host
+            a2a_config["host"] = self.cmd_args.a2a_host
 
         if hasattr(self.cmd_args, "a2a_port") and self.cmd_args.a2a_port is not None:
-            if "a2a" not in cmd_args_config:
-                cmd_args_config["a2a"] = {}
-            cmd_args_config["a2a"]["port"] = self.cmd_args.a2a_port
+            a2a_config["port"] = self.cmd_args.a2a_port
 
         if hasattr(self.cmd_args, "mindsdb_host") and self.cmd_args.mindsdb_host is not None:
-            if "a2a" not in cmd_args_config:
-                cmd_args_config["a2a"] = {}
-            cmd_args_config["a2a"]["mindsdb_host"] = self.cmd_args.mindsdb_host
+            a2a_config["mindsdb_host"] = self.cmd_args.mindsdb_host
 
         if hasattr(self.cmd_args, "mindsdb_port") and self.cmd_args.mindsdb_port is not None:
-            if "a2a" not in cmd_args_config:
-                cmd_args_config["a2a"] = {}
-            cmd_args_config["a2a"]["mindsdb_port"] = self.cmd_args.mindsdb_port
+            a2a_config["mindsdb_port"] = self.cmd_args.mindsdb_port
 
         if hasattr(self.cmd_args, "agent_name") and self.cmd_args.agent_name is not None:
-            if "a2a" not in cmd_args_config:
-                cmd_args_config["a2a"] = {}
-            cmd_args_config["a2a"]["agent_name"] = self.cmd_args.agent_name
+            a2a_config["agent_name"] = self.cmd_args.agent_name
 
         if hasattr(self.cmd_args, "project_name") and self.cmd_args.project_name is not None:
-            if "a2a" not in cmd_args_config:
-                cmd_args_config["a2a"] = {}
-            cmd_args_config["a2a"]["project_name"] = self.cmd_args.project_name
+            a2a_config["project_name"] = self.cmd_args.project_name
 
         # Merge command-line args config with highest priority
-        if cmd_args_config:
-            _merge_configs(new_config, cmd_args_config)
+        if a2a_config:
+            _merge_configs(new_config, {"api": {"a2a": a2a_config}})
 
         # Ensure A2A port is never 0, which would prevent the A2A API from starting
-        if "a2a" in new_config and isinstance(new_config["a2a"], dict):
-            if "port" in new_config["a2a"] and (new_config["a2a"]["port"] == 0 or new_config["a2a"]["port"] is None):
-                new_config["a2a"]["port"] = 47338  # Use the default port value
+        a2a_config = new_config["api"].get("a2a")
+        if a2a_config is not None and isinstance(a2a_config, dict):
+            if "port" in a2a_config and (a2a_config["port"] == 0 or a2a_config["port"] is None):
+                a2a_config["port"] = 47338  # Use the default port value
 
         # region create dirs
         for key, value in new_config["paths"].items():
@@ -522,11 +517,23 @@ class Config:
         self.ensure_auto_config_is_relevant()
         return self._config
 
-    def update(self, data: dict) -> None:
-        """Update calues in `auto` config"""
+    def update(self, data: dict, overwrite: bool = False) -> None:
+        """
+        Update values in `auto` config.
+        Args:
+            data (dict): data to update in `auto` config.
+            overwrite (bool): if True, overwrite existing keys, otherwise merge them.
+                - False (default): Merge recursively. Existing nested dictionaries are preserved
+                and only the specified keys in `data` are updated.
+                - True: Overwrite completely. Existing keys are replaced entirely with values
+                from `data`, discarding any nested structure not present in `data`.
+        """
         self.ensure_auto_config_is_relevant()
 
-        _merge_configs(self._auto_config, data)
+        if overwrite:
+            _overwrite_configs(self._auto_config, data)
+        else:
+            _merge_configs(self._auto_config, data)
 
         self.auto_config_path.write_text(json.dumps(self._auto_config, indent=4))
 

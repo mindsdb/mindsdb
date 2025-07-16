@@ -54,12 +54,12 @@ class LLMClient:
 
             self.client = module.Handler
 
-    def completion(self, messages: List[dict]) -> str:
+    def completion(self, messages: List[dict], json_output: bool = False) -> str:
         """
         Call LLM completion and get response
         """
         params = self.params
-
+        params["json_output"] = json_output
         if self.provider in ("azure_openai", "openai"):
             response = self.client.chat.completions.create(
                 model=params["model_name"],
@@ -69,10 +69,6 @@ class LLMClient:
         else:
             kwargs = params.copy()
             model = kwargs.pop("model_name")
-
-            base_url = params.pop("base_url", None)
-            if base_url is not None:
-                kwargs["api_base"] = base_url
-
-            response = self.client.completion(model=f"{self.provider}/{model}", messages=messages, args=kwargs)
+            kwargs.pop("provider", None)
+            response = self.client.completion(self.provider, model=model, messages=messages, args=kwargs)
             return response.choices[0].message.content

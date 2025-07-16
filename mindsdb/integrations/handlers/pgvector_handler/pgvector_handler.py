@@ -17,7 +17,10 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
     VectorStoreHandler,
     DistanceFunction,
     TableField,
+    FilterOperator,
 )
+from mindsdb.integrations.libs.keyword_search_base import KeywordSearchBase
+from mindsdb.integrations.utilities.sql_utils import KeywordSearchArgs
 from mindsdb.utilities import log
 from mindsdb.utilities.profiler import profiler
 from mindsdb.utilities.context import context as ctx
@@ -26,7 +29,7 @@ logger = log.getLogger(__name__)
 
 
 # todo Issue #7316 add support for different indexes and search algorithms e.g. cosine similarity or L2 norm
-class PgVectorHandler(PostgresHandler, VectorStoreHandler):
+class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
     """This handler handles connection and execution of the PostgreSQL with pgvector extension statements."""
 
     name = "pgvector"
@@ -179,9 +182,17 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
                 key += f" ->> '{parts[-1]}'"
 
             type_cast = None
-            if isinstance(condition.value, int):
+            value = condition.value
+            if (
+                isinstance(value, list)
+                and len(value) > 0
+                and condition.op in (FilterOperator.IN, FilterOperator.NOT_IN)
+            ):
+                value = condition.value[0]
+
+            if isinstance(value, int):
                 type_cast = "int"
-            elif isinstance(condition.value, float):
+            elif isinstance(value, float):
                 type_cast = "float"
             if type_cast is not None:
                 key = f"({key})::{type_cast}"
@@ -229,12 +240,76 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
             return ""
 
     @staticmethod
+    def _construct_where_clause_with_keywords(filter_conditions=None, keyword_query=None, content_column_name=None):
+        if not keyword_query or not content_column_name:
+            return PgVectorHandler._construct_where_clause(filter_conditions)
+
+        keyword_query_condition = (
+            f"""to_tsvector('english', {content_column_name}) @@ websearch_to_tsquery('english', '{keyword_query}')"""
+        )
+        if filter_conditions is None:
+            return ""
+
+        where_clauses = []
+
+        for item in filter_conditions:
+            key = item["name"]
+
+            if item["op"].lower() in ("in", "not in"):
+                values = list(repr(i) for i in item["value"])
+                item["value"] = "({})".format(", ".join(values))
+            else:
+                if item["value"] is None:
+                    item["value"] = "null"
+                else:
+                    item["value"] = repr(item["value"])
+            where_clauses.append(f"{key} {item['op']} {item['value']}")
+
+        where_clauses.append(keyword_query_condition)
+        if len(where_clauses) > 1:
+            return f"WHERE {' AND '.join(where_clauses)}"
+        elif len(where_clauses) == 1:
+            return f"WHERE {where_clauses[0]}"
+        else:
+            return ""
+
+    @staticmethod
     def _construct_full_after_from_clause(
         where_clause: str,
         offset_clause: str,
         limit_clause: str,
     ) -> str:
         return f"{where_clause} {offset_clause} {limit_clause}"
+
+    def _build_keyword_bm25_query(
+        self,
+        table_name: str,
+        query: str,
+        columns: List[str] = None,
+        content_column_name: str = "content",
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        offset: int = None,
+    ):
+        if columns is None:
+            columns = ["id", "content", "metadata"]
+
+        filter_conditions, _ = self._translate_conditions(conditions)
+
+        # given filter conditions, construct where clause
+        where_clause = self._construct_where_clause_with_keywords(filter_conditions, query, content_column_name)
+
+        query = f"""
+            SELECT
+                {", ".join(columns)},
+                ts_rank_cd(to_tsvector('english', {content_column_name}), websearch_to_tsquery('english', '{query}')) as distance
+            FROM
+                {table_name}
+            {where_clause if where_clause else ""}
+            {f"LIMIT {limit}" if limit else ""}
+            {f"OFFSET {offset}" if offset else ""};"""
+
+        return query
 
     def _build_select_query(
         self,
@@ -320,6 +395,33 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
             columns = ["id", "content", "embeddings", "metadata"]
 
         query = self._build_select_query(table_name, columns, conditions, limit, offset)
+
+        result = self.raw_query(query)
+
+        # ensure embeddings are returned as string so they can be parsed by mindsdb
+        if "embeddings" in columns:
+            result["embeddings"] = result["embeddings"].astype(str)
+
+        return result
+
+    def keyword_select(
+        self,
+        table_name: str,
+        columns: List[str] = None,
+        conditions: List[FilterCondition] = None,
+        offset: int = None,
+        limit: int = None,
+        keyword_search_args: KeywordSearchArgs = None,
+    ) -> pd.DataFrame:
+        table_name = self._check_table(table_name)
+
+        if columns is None:
+            columns = ["id", "content", "embeddings", "metadata"]
+        content_column_name = keyword_search_args.column
+        query = self._build_keyword_bm25_query(
+            table_name, keyword_search_args.query, columns, content_column_name, conditions, limit, offset
+        )
+
         result = self.raw_query(query)
 
         # ensure embeddings are returned as string so they can be parsed by mindsdb

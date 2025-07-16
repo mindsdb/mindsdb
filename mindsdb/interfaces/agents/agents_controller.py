@@ -164,7 +164,6 @@ class AgentsController:
             skills (List[Union[str, dict]]): List of existing skill names to add to the new agent, or list of dicts
                  with one of keys is "name", and other is additional parameters for relationship agent<>skill
             provider (str): The provider of the model
-            <provider>_api_key: API key for the provider (e.g., openai_api_key)
             params (Dict[str, str]): Parameters to use when running the agent
                 data: Dict, data sources for an agent, keys:
                   - knowledge_bases: List of KBs to use
@@ -172,6 +171,7 @@ class AgentsController:
                 model: Dict, parameters for the model to use
                   - provider: The provider of the model (e.g., 'openai', 'google')
                   - Other model-specific parameters like 'api_key', 'model_name', etc.
+                <provider>_api_key: API key for the provider (e.g., openai_api_key)
 
                 # Deprecated parameters:
                 database: The database to use for text2sql skills (default is 'mindsdb')

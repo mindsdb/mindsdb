@@ -1,7 +1,6 @@
 import requests
-from typing import Any, Dict, List, Optional, Text
+from typing import Any, Dict, Text
 
-import pandas as pd
 from mindsdb_sql_parser import parse_sql
 
 from mindsdb.integrations.handlers.gong_handler.gong_tables import (
@@ -45,7 +44,11 @@ class GongHandler(APIHandler):
         self.connection = None
         self.is_connected = False
         self.base_url = connection_data.get("base_url", "https://api.gong.io")
-        self.api_key = connection_data.get("api_key")
+
+        # Support both bearer token and access key + secret key
+        self.bearer_token = connection_data.get("api_key")
+        self.access_key = connection_data.get("access_key")
+        self.secret_key = connection_data.get("secret_key")
 
         # Register core tables
         self._register_table("calls", GongCallsTable(self))
@@ -67,19 +70,34 @@ class GongHandler(APIHandler):
         if self.is_connected is True:
             return self.connection
 
-        if not self.api_key:
-            raise ValueError("API key is required to connect to Gong API.")
+        if self.access_key and self.secret_key:
+            auth_method = "basic"
+        elif self.bearer_token:
+            auth_method = "bearer"
+        else:
+            raise ValueError("Either bearer_token or (access_key + secret_key) is required to connect to Gong API.")
 
         try:
             self.connection = requests.Session()
-            self.connection.headers.update({
-                'Authorization': f'Bearer {self.api_key}',
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            })
-            self.is_connected = True
 
+            if auth_method == "basic":
+                # Basic authentication with access key + secret key
+                self.connection.auth = (self.access_key, self.secret_key)
+                self.connection.headers.update({
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                })
+            else:
+                # Bearer token authentication
+                self.connection.headers.update({
+                    'Authorization': f'Bearer {self.bearer_token}',
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                })
+
+            self.is_connected = True
             return self.connection
+
         except Exception as e:
             logger.error(f"Error connecting to Gong API: {e}")
             raise
@@ -104,7 +122,6 @@ class GongHandler(APIHandler):
             response.error_message = str(e)
 
         self.is_connected = response.success
-
         return response
 
     def native_query(self, query: Text) -> Response:
@@ -141,5 +158,4 @@ class GongHandler(APIHandler):
         url = f"{self.base_url}{endpoint}"
         response = self.connection.get(url, params=params)
         response.raise_for_status()
-        
-        return response.json() 
+        return response.json()

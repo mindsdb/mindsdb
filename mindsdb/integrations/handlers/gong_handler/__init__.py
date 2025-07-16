@@ -26,4 +26,4 @@ __all__ = [
     "icon_path",
     "connection_args_example",
     "connection_args",
-] 
+]

@@ -1,4 +1,4 @@
-from typing import Dict, List, Text, Optional
+from typing import List
 from datetime import datetime, timedelta
 import pandas as pd
 
@@ -64,7 +64,7 @@ class GongCallsTable(APIResource):
                 if col.column in ('date', 'duration'):
                     api_params['sortBy'] = col.column
                     api_params['sortOrder'] = 'asc' if col.ascending else 'desc'
-                    sort.applied = True
+                    col.applied = True
                     break
 
         try:
@@ -196,39 +196,74 @@ class GongAnalyticsTable(APIResource):
         if limit is None:
             limit = 20
 
-        api_params = {
-            'limit': limit,
-            'offset': 0
-        }
-
-        # Handle filtering
-        if conditions:
-            for condition in conditions:
-                if condition.column == 'call_id' and condition.op == FilterOperator.EQUAL:
-                    api_params['callId'] = condition.value
-                    condition.applied = True
-                elif condition.column == 'sentiment_score' and condition.op == FilterOperator.GREATER_THAN:
-                    api_params['minSentimentScore'] = condition.value
-                    condition.applied = True
-                elif condition.column == 'topic_score' and condition.op == FilterOperator.GREATER_THAN:
-                    api_params['minTopicScore'] = condition.value
-                    condition.applied = True
-
         try:
-            # Make API call to get analytics
-            response = self.handler.call_gong_api('/v2/analytics', api_params)
-            analytics_data = response.get('analytics', [])
+            session = self.handler.connect()
+
+            payload = {
+                'filter': {
+                    'fromDateTime': (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%dT%H:%M:%SZ'),
+                    'toDateTime': datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
+                },
+                'contentSelector': {
+                    'exposedFields': {
+                        'content': {
+                            'brief': True,
+                            'outline': True,
+                            'highlights': True,
+                            'callOutcome': True,
+                            'topics': True,
+                            'trackers': True
+                        },
+                        'interaction': {
+                            'personInteractionStats': True,
+                            'questions': True
+                        }
+                    }
+                }
+            }
+
+            response = session.post(f"{self.handler.base_url}/v2/calls/extensive", json=payload)
+            response.raise_for_status()
+            calls_response = response.json()
+
+            analytics_data = calls_response.get('calls', [])
 
             data = []
-            for analytics in analytics_data:
+            for call in analytics_data:
+                # Extract real analytics from extensive call data
+                content = call.get('content', {})
+                interaction = call.get('interaction', {})
+
+                # sentiment from personInteractionStats
+                person_stats = interaction.get('personInteractionStats', [])
+                sentiment_score = 0
+                if person_stats:
+                    sentiments = [stat.get('sentiment', 0) for stat in person_stats if stat.get('sentiment') is not None]
+                    sentiment_score = sum(sentiments) / len(sentiments) if sentiments else 0
+
+                # topics from AI analysis
+                topics = content.get('topics', [])
+                topic_names = [topic.get('name', '') for topic in topics if isinstance(topic, dict)]
+
+                # Key phrases from AI
+                trackers = content.get('trackers', [])
+                key_phrases = [tracker.get('name', '') for tracker in trackers if isinstance(tracker, dict)]
+
+                # Call outcome confidence
+                call_outcome = content.get('callOutcome', {})
+                confidence_score = call_outcome.get('confidence', 0) if isinstance(call_outcome, dict) else 0
+
+                # Topic scoring based on relevance
+                topic_score = sum([topic.get('score', 0) for topic in topics if isinstance(topic, dict)]) / len(topics) if topics else 0
+
                 item = {
-                    'call_id': analytics.get('callId'),
-                    'sentiment_score': analytics.get('sentimentScore'),
-                    'topic_score': analytics.get('topicScore'),
-                    'key_phrases': ','.join(analytics.get('keyPhrases', [])),
-                    'topics': ','.join(analytics.get('topics', [])),
-                    'emotions': ','.join(analytics.get('emotions', [])),
-                    'confidence_score': analytics.get('confidenceScore')
+                    'call_id': call.get('id'),
+                    'sentiment_score': round(sentiment_score, 3),
+                    'topic_score': round(topic_score, 3),
+                    'key_phrases': ', '.join(key_phrases[:5]),
+                    'topics': ', '.join(topic_names[:5]),
+                    'emotions': '',
+                    'confidence_score': round(confidence_score, 3)
                 }
                 data.append(item)
 
@@ -270,40 +305,41 @@ class GongTranscriptsTable(APIResource):
         if limit is None:
             limit = 20
 
-        api_params = {
-            'limit': limit,
-            'offset': 0
-        }
-
-        # Handle filtering
-        if conditions:
-            for condition in conditions:
-                if condition.column == 'call_id' and condition.op == FilterOperator.EQUAL:
-                    api_params['callId'] = condition.value
-                    condition.applied = True
-                elif condition.column == 'text' and condition.op == FilterOperator.LIKE:
-                    api_params['searchText'] = condition.value.replace('%', '')
-                    condition.applied = True
-                elif condition.column == 'speaker' and condition.op == FilterOperator.EQUAL:
-                    api_params['speaker'] = condition.value
-                    condition.applied = True
-
         try:
-            # Make API call to get transcripts
-            response = self.handler.call_gong_api('/v2/transcripts', api_params)
-            transcripts_data = response.get('transcripts', [])
+            # First get recent calls
+            calls_response = self.handler.call_gong_api('/v2/calls', {'limit': limit})
+            call_ids = [call.get('id') for call in calls_response.get('calls', []) if call.get('id')]
+
+            if not call_ids:
+                return pd.DataFrame()
+
+            # Get transcripts
+            session = self.handler.connect()
+            payload = {
+                'filter': {
+                    'callIds': call_ids
+                }
+            }
+            response = session.post(f"{self.handler.base_url}/v2/calls/transcript", json=payload)
+            response.raise_for_status()
+            transcript_response = response.json()
+            transcript_data = transcript_response.get('callTranscripts', [])
 
             data = []
-            for transcript in transcripts_data:
-                item = {
-                    'call_id': transcript.get('callId'),
-                    'speaker': transcript.get('speaker'),
-                    'timestamp': transcript.get('timestamp'),
-                    'text': transcript.get('text'),
-                    'confidence': transcript.get('confidence'),
-                    'segment_id': transcript.get('segmentId')
-                }
-                data.append(item)
+            for call_transcript in transcript_data:
+                call_id = call_transcript.get('callId')
+                transcript_segments = call_transcript.get('transcript', [])
+
+                for segment in transcript_segments:
+                    item = {
+                        'call_id': call_id,
+                        'speaker': segment.get('speakerId'),
+                        'timestamp': segment.get('startTime'),
+                        'text': segment.get('text'),
+                        'confidence': segment.get('confidence'),
+                        'segment_id': segment.get('segmentId')
+                    }
+                    data.append(item)
 
             return pd.DataFrame(data)
 
@@ -320,4 +356,4 @@ class GongTranscriptsTable(APIResource):
             'text',
             'confidence',
             'segment_id'
-        ] 
+        ]

@@ -696,6 +696,3 @@ class TextSplitEval:
         chunks = splitter.split_text(text)
 
         self.evaluate(text, chunks, chunk_overlap)
-
-t = TextSplitEval()
-t.eval_text_splitter()

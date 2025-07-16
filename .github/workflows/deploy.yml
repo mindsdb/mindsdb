@@ -22,6 +22,7 @@ on:
       MINDSDB_DB_CON:
         required: true
 
+
 jobs:
   migrate:
     if: github.actor != 'mindsdbadmin'

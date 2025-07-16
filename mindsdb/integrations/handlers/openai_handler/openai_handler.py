@@ -174,6 +174,7 @@ class OpenAIHandler(BaseMLEngine):
                 "max_tokens",
                 "temperature",
                 "openai_api_key",
+                "api_key",
                 "api_organization",
                 "api_base",
                 "api_version",
@@ -1119,4 +1120,9 @@ class OpenAIHandler(BaseMLEngine):
             return AzureOpenAI(
                 api_key=api_key, azure_endpoint=base_url, api_version=args.get("api_version"), organization=org
             )
-        return OpenAI(api_key=api_key, base_url=base_url, organization=org)
+        if api_key is None or api_key == "":
+            # If no API key is provided, OpenAI client will use the base URL and organization
+            # and OpenAI client will use environment variables
+            return OpenAI(base_url=base_url, organization=org)
+        else:
+            return OpenAI(api_key=api_key, base_url=base_url, organization=org)

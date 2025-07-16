@@ -2,8 +2,14 @@ from typing import List
 
 
 class TextSplitter:
-    def __init__(self, chunk_size: int = 1000, chunk_overlap: int = 200, separators: List[str] = None,
-                 k_range: float = 0.5, k_ratio: float = 1):
+    def __init__(
+        self,
+        chunk_size: int = 1000,
+        chunk_overlap: int = 200,
+        separators: List[str] = None,
+        k_range: float = 0.5,
+        k_ratio: float = 1,
+    ):
         """
         Split text into chunks. The logic:
          - Get a piece of text with chunk_size and try to find the separator at the end of the piece.
@@ -33,7 +39,6 @@ class TextSplitter:
         chunks = []
 
         while True:
-
             if len(text) < self.chunk_size:
                 chunks.append(text)
                 break
@@ -47,19 +52,18 @@ class TextSplitter:
     def get_next_chunk(self, text: str, k_range: float, k_ratio: float):
         # returns chunk with separator and shift for the next search iteration
 
-        chunk = text[:self.chunk_size]
+        chunk = text[: self.chunk_size]
         # positions = []
         for i, sep in enumerate(self.separators):
             pos = chunk.rfind(sep)
 
             vpos = self.chunk_size - pos
             if vpos < k_range * self.chunk_size / (i * k_ratio + 1):
-
                 shift = len(sep) + pos
-                if sep.strip(' ') == '':
+                if sep.strip(" ") == "":
                     # overlapping
                     sep2, _, shift2 = self.get_next_chunk(text, k_range * 1.5, 0)
-                    if sep2.strip(' ') != '':
+                    if sep2.strip(" ") != "":
                         # use shift of previous separator
                         if shift - shift2 < self.chunk_overlap:
                             shift = shift2

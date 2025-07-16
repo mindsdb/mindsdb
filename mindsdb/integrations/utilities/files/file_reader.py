@@ -329,17 +329,10 @@ class FileReader(FormatDetector):
 
         text = file_obj.read()
 
-        text_splitter = TextSplitter(
-            chunk_size=DEFAULT_CHUNK_SIZE, chunk_overlap=DEFAULT_CHUNK_OVERLAP
-        )
+        text_splitter = TextSplitter(chunk_size=DEFAULT_CHUNK_SIZE, chunk_overlap=DEFAULT_CHUNK_OVERLAP)
 
         docs = text_splitter.split_text(text)
-        return pd.DataFrame(
-            [
-                {"content": doc, "metadata": {"source_file": name, "file_format": "txt"}}
-                for doc in docs
-            ]
-        )
+        return pd.DataFrame([{"content": doc, "metadata": {"source_file": name, "file_format": "txt"}} for doc in docs])
 
     @staticmethod
     def read_pdf(file_obj: BytesIO, name: str | None = None, **kwargs) -> pd.DataFrame:
@@ -350,9 +343,7 @@ class FileReader(FormatDetector):
         with fitz.open(stream=file_obj.read()) as pdf:  # open pdf
             text = chr(12).join([page.get_text() for page in pdf])
 
-        text_splitter = TextSplitter(
-            chunk_size=DEFAULT_CHUNK_SIZE, chunk_overlap=DEFAULT_CHUNK_OVERLAP
-        )
+        text_splitter = TextSplitter(chunk_size=DEFAULT_CHUNK_SIZE, chunk_overlap=DEFAULT_CHUNK_OVERLAP)
 
         split_text = text_splitter.split_text(text)
 

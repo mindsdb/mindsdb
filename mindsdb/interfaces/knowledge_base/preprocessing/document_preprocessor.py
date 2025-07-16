@@ -50,10 +50,7 @@ class DocumentPreprocessor:
         metadata = doc.metadata or {}
         # Split and convert back to our Document type
         split_texts = self.splitter.split_text(doc.content)
-        return [
-            Document(content=text, metadata=metadata)
-            for text in split_texts
-        ]
+        return [Document(content=text, metadata=metadata) for text in split_texts]
 
     def _get_source(self) -> str:
         """Get the source identifier for this preprocessor"""

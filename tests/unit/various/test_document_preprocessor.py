@@ -656,10 +656,9 @@ class TestContextualPreprocessor:
 
 
 class TextSplitEval:
-
     def evaluate(self, text, chunks, chunk_size):
         lengths = [len(chunk) for chunk in chunks]
-        len_df = pd.DataFrame(lengths, columns=['length'])
+        len_df = pd.DataFrame(lengths, columns=["length"])
 
         text2 = text3 = text
         sep_stat = defaultdict(int)
@@ -668,8 +667,8 @@ class TextSplitEval:
             if pos == -1:
                 pos = text3.find(chunk)
                 if pos == -1:
-                    raise Exception('chunk is not from text:' + chunk)
-                print('----------------\noverlap: ', text3[pos: len(text3) - len(text2)])
+                    raise Exception("chunk is not from text:" + chunk)
+                print("----------------\noverlap: ", text3[pos : len(text3) - len(text2)])
                 text2 = text3
 
             else:
@@ -678,15 +677,15 @@ class TextSplitEval:
                 sep_stat[sep] += 1
 
             text3 = text2  # previous
-            text2 = text2[pos + len(chunk):]
+            text2 = text2[pos + len(chunk) :]
 
-        print('______________')
-        print('avg len:', len_df['length'].mean())
-        print('median len:', len_df['length'].median())
-        print('count:', len(len_df))
-        c_75 = len(len_df[len_df['length'] > chunk_size * 0.75])
-        print('count > 75%:', int(c_75 / len(len_df) * 100), '%')
-        print('separators using:', dict(sep_stat))
+        print("______________")
+        print("avg len:", len_df["length"].mean())
+        print("median len:", len_df["length"].median())
+        print("count:", len(len_df))
+        c_75 = len(len_df[len_df["length"] > chunk_size * 0.75])
+        print("count > 75%:", int(c_75 / len(len_df) * 100), "%")
+        print("separators using:", dict(sep_stat))
 
     def eval_text_splitter(self):
         chunk_size = 1000

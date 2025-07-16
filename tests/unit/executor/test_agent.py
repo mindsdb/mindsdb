@@ -1396,9 +1396,9 @@ class TestKB(BaseExecutorDummyML):
             self.run_sql("select * from kb2 where cont10='val2'")
 
     @patch("mindsdb.interfaces.knowledge_base.llm_client.OpenAI")
-    @patch("mindsdb.integrations.utilities.rag.rerankers.base_reranker.AsyncOpenAI")
+    @patch("mindsdb.integrations.utilities.rag.rerankers.base_reranker.BaseLLMReranker.get_scores")
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-    def test_evaluate(self, mock_litellm_embedding, mock_async_openai, mock_openai):
+    def test_evaluate(self, mock_litellm_embedding, mock_get_scores, mock_openai):
         set_litellm_embedding(mock_litellm_embedding)
 
         question, answer = "2+2", "4"
@@ -1410,10 +1410,8 @@ class TestKB(BaseExecutorDummyML):
         mock_completion.choices[0].message.content = agent_response
         mock_openai().chat.completions.create.return_value = mock_completion
 
-        mock_completion = MagicMock()
-        mock_completion.choices = [MagicMock()]
-        mock_completion.choices[0].message.content = "yes"
-        mock_async_openai().chat.completions.create = AsyncMock(return_value=mock_completion)
+        # reranking result
+        mock_get_scores.side_effect = lambda query, docs: [0.8 for _ in docs]
 
         df = self._get_ral_table()
         df = df.rename(columns={"english": "content", "ral": "id"})
@@ -1493,3 +1491,14 @@ class TestKB(BaseExecutorDummyML):
         # compare with table
         assert df_res["total"][0] == ret["total"][0]
         assert df_res["total_found"][0] == ret["total_found"][0]
+
+        # --- test reranking disabled ---
+        mock_get_scores.reset_mock()
+        df = self.run_sql("select * from kb1 where content='test'")
+        mock_get_scores.assert_called_once()
+        assert len(df) > 0
+
+        mock_get_scores.reset_mock()
+        df = self.run_sql("select * from kb1 where content='test' and reranking =false")
+        mock_get_scores.assert_not_called()
+        assert len(df) > 0

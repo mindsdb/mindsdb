@@ -15,13 +15,9 @@ ENV_VAR_PREFIX = "MDB_"
 
 
 class VariablesController:
-
     def __init__(self) -> None:
-        self._storage = get_json_storage(
-            resource_id=0,
-            resource_group=RESOURCE_GROUP.SYSTEM
-        )
-        self._store_key = 'variables'
+        self._storage = get_json_storage(resource_id=0, resource_group=RESOURCE_GROUP.SYSTEM)
+        self._store_key = "variables"
         self._data = None
 
     def _get_data(self) -> dict:
@@ -54,7 +50,7 @@ class VariablesController:
         return os.environ[var_name]
 
     def _get_function(self, name: str) -> Callable:
-        if name == 'from_env':
+        if name == "from_env":
             return self._from_env
         raise ValueError(f"Function {name} is not found")
 
@@ -81,16 +77,13 @@ class VariablesController:
 
         if isinstance(var, Variable):
             return self.get_value(var.value.lower())
+        if isinstance(var, Function):
+            fnc = self._get_function(var.op)
+            return fnc(*var.args)
         elif isinstance(var, dict):
-            return {
-                key: self.fill_parameters(value)
-                for key, value in var.items()
-            }
+            return {key: self.fill_parameters(value) for key, value in var.items()}
         elif isinstance(var, list):
-            return [
-                self.fill_parameters(value)
-                for value in var
-            ]
+            return [self.fill_parameters(value) for value in var]
         return var
 
 

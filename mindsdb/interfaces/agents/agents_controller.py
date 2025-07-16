@@ -380,9 +380,10 @@ class AgentsController:
                             data_catalog_loader.load_metadata()
 
                     elif "database" in existing_skill.params:
+                        valid_table_names = existing_skill.params.get("tables", parameters.get("tables"))
                         data_catalog_loader = DataCatalogLoader(
                             database_name=existing_skill.params["database"],
-                            table_names=parameters["tables"] if "tables" in parameters else None,
+                            table_names=valid_table_names,
                         )
                         data_catalog_loader.load_metadata()
 

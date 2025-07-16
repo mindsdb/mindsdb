@@ -1221,9 +1221,11 @@ class ExecuteCommands:
                 db_name = database_name
 
             dn = self.session.datahub[db_name]
+            if dn is None:
+                raise ExecutorException(f"Cannot delete a table from database '{db_name}': the database does not exist")
+
             if db_name is not None:
                 dn.drop_table(table, if_exists=statement.if_exists)
-
             elif db_name in self.session.database_controller.get_dict(filter_type="project"):
                 # TODO do we need feature: delete object from project via drop table?
 

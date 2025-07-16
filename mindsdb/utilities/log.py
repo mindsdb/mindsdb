@@ -43,6 +43,13 @@ class ColorFormatter(logging.Formatter):
         return log_fmt.format(record)
 
 
+FORMATTERS = {
+    "default": {"()": ColorFormatter},
+    "json": {"()": JsonFormatter},
+    "file": {"format": "%(asctime)s %(processName)15s %(levelname)-8s %(name)s: %(message)s"},
+}
+
+
 def get_console_handler_config_level() -> int:
     console_handler_config = app_config["logging"]["handlers"]["console"]
     return getattr(logging, console_handler_config["level"])
@@ -60,7 +67,7 @@ def get_mindsdb_log_level() -> int:
     return min(console_handler_config_level, file_handler_config_level)
 
 
-def configure_logging(process_name: str = None):
+def get_handlers_config(process_name: str) -> dict:
     handlers_config = {}
     console_handler_config = app_config["logging"]["handlers"]["console"]
     console_handler_config_level = getattr(logging, console_handler_config["level"])
@@ -89,16 +96,41 @@ def configure_logging(process_name: str = None):
             "maxBytes": file_handler_config["maxBytes"],  # 0.5 Mb
             "backupCount": file_handler_config["backupCount"],
         }
+    return handlers_config
 
+
+def get_uvicorn_logging_config(process_name: str) -> dict:
+    """Generate a logging configuration dictionary for Uvicorn using MindsDB's logging settings.
+
+    Args:
+        process_name (str): The name of the process to include in log file names and handlers.
+
+    Returns:
+        dict: A dictionary suitable for use with logging.config.dictConfig, configured for Uvicorn logging.
+    """
+    handlers_config = get_handlers_config(process_name)
+    mindsdb_log_level = get_mindsdb_log_level()
+    return {
+        "version": 1,
+        "formatters": FORMATTERS,
+        "handlers": handlers_config,
+        "loggers": {
+            "uvicorn": {
+                "handlers": list(handlers_config.keys()),
+                "level": mindsdb_log_level,
+                "propagate": False,
+            }
+        }
+    }
+
+
+def configure_logging(process_name: str = None):
+    handlers_config = get_handlers_config(process_name)
     mindsdb_log_level = get_mindsdb_log_level()
 
     logging_config = dict(
         version=1,
-        formatters={
-            "default": {"()": ColorFormatter},
-            "json": {"()": JsonFormatter},
-            "file": {"format": "%(asctime)s %(processName)15s %(levelname)-8s %(name)s: %(message)s"},
-        },
+        formatters=FORMATTERS,
         handlers=handlers_config,
         loggers={
             "": {  # root logger

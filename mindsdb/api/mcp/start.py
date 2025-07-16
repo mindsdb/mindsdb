@@ -15,6 +15,7 @@ from starlette.responses import Response
 from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE as SQL_RESPONSE_TYPE
 from mindsdb.utilities import log
+from mindsdb.utilities.log import get_uvicorn_logging_config
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage import db
 
@@ -173,6 +174,7 @@ async def run_sse_async() -> None:
         host=mcp.settings.host,
         port=mcp.settings.port,
         log_level=mcp.settings.log_level.lower(),
+        log_config=get_uvicorn_logging_config('uvicorn_mcp')
     )
     server = uvicorn.Server(config)
     await server.serve()

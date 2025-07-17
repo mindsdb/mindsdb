@@ -40,7 +40,6 @@ def get_configurations():
         embedding_model = {
             "provider": "openai",
             "model_name": "text-embedding-ada-002",
-            "api_key": HiddenVar(os.environ["OPENAI_API_KEY"]),
         }
         for storage in storages:
             name = f"{storage['engine']}-{embedding_model['provider']}"

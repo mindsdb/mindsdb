@@ -36,7 +36,7 @@ class GetLeaf(Resource):
         if isinstance(with_schemas, str):
             with_schemas = with_schemas.lower() in ('1', 'true')
         else:
-            # Default to showing all schemas, especially beneficial for data warehouses like Redshift
+            # Show all schemas by default for better UX
             with_schemas = True
         db_name = db_name.lower()
         databases = ca.database_controller.get_dict()

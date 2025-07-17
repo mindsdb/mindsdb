@@ -55,9 +55,14 @@ class BigQueryHandler(MetaDatabaseHandler):
         if not all(key in self.connection_data for key in ["project_id", "dataset"]):
             raise ValueError("Required parameters (project_id, dataset) must be provided.")
 
+        service_account_json = self.connection_data.get("service_account_json")
+        if isinstance(service_account_json, str):
+            # some editors may escape new line symbol, also replace windows-like newlines
+            service_account_json = service_account_json.replace('\\n','\n').replace('\r\n', '\n')
+
         google_sa_oauth2_manager = GoogleServiceAccountOAuth2Manager(
             credentials_file=self.connection_data.get("service_account_keys"),
-            credentials_json=self.connection_data.get("service_account_json"),
+            credentials_json=service_account_json,
         )
         credentials = google_sa_oauth2_manager.get_oauth2_credentials()
 
@@ -98,7 +103,7 @@ class BigQueryHandler(MetaDatabaseHandler):
         except NotFound:
             response.error_message = (
                 f"Error connecting to BigQuery {self.connection_data['project_id']}: "
-                f"dataset '{self.connection_data["dataset"]}' not found"
+                f"dataset '{self.connection_data['dataset']}' not found"
             )
 
         if response.success is False and self.is_connected is True:

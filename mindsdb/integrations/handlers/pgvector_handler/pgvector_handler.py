@@ -282,6 +282,8 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
 
             if where_clause:
                 where_clause = BinaryOperation(op="AND", args=[where_clause, keyword_query_condition])
+            else:
+                where_clause = keyword_query_condition
 
         distance = Function(
             "ts_rank_cd",

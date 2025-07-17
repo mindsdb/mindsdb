@@ -1,0 +1,326 @@
+---
+title: How to Insert Data into Knowledge Bases
+sidebarTitle: Insert Data into KB
+---
+
+Knowledge Bases organize data across data sources, including databases, files, documents, webpages. Users can insert data in partitions and specify the chunking startegy.
+
+## `INSERT INTO` Syntax
+
+Here is the syntax for inserting data into a knowledge base:
+
+```sql
+INSERT INTO my_kb
+SELECT order_id, product, notes
+FROM sample_data.orders;
+```
+
+Upon execution, it inserts data into a knowledge base, using the embedding model to embed it into vectors before inserting into an underlying vector database.
+
+<Tip>
+The status of the `INSERT INTO` is logged in the `information_schema.queries` table with the timestamp when it was ran, and can be queried as follows:
+
+```sql
+SELECT *
+FROM information_schema.queries;
+```
+</Tip>
+
+<Info>
+To speed up the initial loading of a knowledge base with data, run the `INSERT INTO` command with the `kb_no_upsert` flag. It is recommended to use this flag only when the knowledge base is empty, that is, only for the initial data insertion.
+
+```sql
+INSERT INTO my_kb
+SELECT *
+FROM table_name
+USING kb_no_upsert = true;
+```
+</Info>
+
+<Note>
+**Handling duplicate data while inserting into the knowledge base**
+
+Knowledge bases uniquely identify data rows using an ID column, which prevents from inserting duplicate data, as follows.
+
+* **Case 1: Inserting data into the knowledge base without the `id_column` defined.**
+
+    When users do not define the `id_column` during the creation of a knowledge base, MindsDB generates the ID for each row using a hash of the content columns, as [explained here](/mindsdb_sql/knowledge_bases/create#id-column).
+
+    **Example:**
+
+    If two rows have exactly the same content in the content columns, their hash (and thus their generated ID) will be the same.
+
+    Note that duplicate rows are skipped and not inserted.
+
+    Since both rows in the below table have the same content, only one row will be inserted.
+
+    | name  | age |
+    |-------|-----|
+    | Alice | 25  |
+    | Alice | 25  |
+
+* **Case 2: Inserting data into the knowledge base with the `id_column` defined.**
+
+    When users define the `id_column` during the creation of a knowledge base, then the knowledge base uses that column's values as the row ID.
+
+    **Example:**
+
+    If the `id_column` has duplicate values, the knowledge base skips the duplicate row(s) during the insert.
+
+    The second row in the below table has the same `id` as the first row, so only one of these rows is inserted.
+
+    | id  | name  | age |
+    |-----|-------|-----|
+    | 1   | Alice | 25  |
+    | 1   | Bob   | 30  |
+
+**Best practice**
+
+Ensure the `id_column` uniquely identifies each row to avoid unintentional data loss due to duplicate ID skipping.
+
+</Note>
+
+### Update Existing Data
+
+In order to update existing data in the knowledge base, insert data with the column ID that you want to update and the updated content.
+
+Here is an example of usage. A knowledge base stores the following data.
+
+```sql
++----------+-------------------+------------------------+
+| order_id | product           | notes                  |
++----------+-------------------+------------------------+
+| A1B      | Wireless Mouse    | Request color: black   |
+| 3XZ      | Bluetooth Speaker | Gift wrap requested    |
+| Q7P      | Laptop Stand      | Prefer aluminum finish |
++----------+-------------------+------------------------+
+```
+
+A user updated `Laptop Stand` to `Aluminum Laptop Stand`.
+
+```sql
++----------+-----------------------+------------------------+
+| order_id | product               | notes                  |
++----------+-----------------------+------------------------+
+| A1B      | Wireless Mouse        | Request color: black   |
+| 3XZ      | Bluetooth Speaker     | Gift wrap requested    |
+| Q7P      | Aluminum Laptop Stand | Prefer aluminum finish |
++----------+-----------------------+------------------------+
+```
+
+<Tip>
+Go to the *Complete Example* section below to find out how to access this sample data.
+</Tip>
+
+Here is how to propagate this change into the knowledge base.
+
+```sql
+INSERT INTO my_kb
+SELECT order_id, product, notes
+FROM sample_data.orders
+WHERE order_id = 'Q7P';
+```
+
+The knowledge base matches the ID value to the existing one and updates the data if required.
+
+### Insert Data using Partitions
+
+In order to optimize the performance of data insertion into the knowledge base, users can set up partitions and threads to insert batches of data in parallel. This also enables tracking the progress of data insertion process including cancelling and resuming it if required.
+
+Here is an example.
+
+```sql
+INSERT INTO my_kb
+SELECT order_id, product, notes
+FROM sample_data.orders
+USING
+    batch_size = 200,
+    track_column = order_id,
+    threads = 10,
+    error = 'skip';
+```
+
+The parameters include the following:
+
+* `batch_size` defines the number of rows fetched per iteration to optimize data extraction from the source. It defaults to 1000.
+
+* `threads` defines threads for running partitions. Note that if the [ML task queue](/setup/custom-config#overview-of-config-parameters) is enabled, threads are used automatically. The available values for `threads` are:
+    - a number of threads to be used, for example, `threads = 10`,
+    - a boolean value that defines whether to enable threads, setting `threads = true`, or disable threads, setting `threads = false`.
+
+* `track_column` defines the column used for sorting data before partitioning.
+
+* `error` defines the error processing options. The available values include `raise`, used to raise errors as they come, or `skip`, used to subside errors. It defaults to `raise` if not provided.
+
+After executing the `INSERT INTO` statement with the above parameters, users can view the data insertion progress by querying the `information_schema.queries` table.
+
+```sql
+SELECT * FROM information_schema.queries;
+```
+
+Users can cancel the data insertion process using the process ID from the `information_schema.queries` table.
+
+```sql
+SELECT query_cancel(1);
+```
+
+Note that canceling the query will not remove the already inserted data.
+
+Users can resume the data insertion process using the process ID from the `information_schema.queries` table.
+
+```sql
+SELECT query_resume(1);
+```
+
+### Chunking Data
+
+Upon inserting data into the knowledge base, the data chunking is performed in order to optimize the storage and search of data.
+
+Each chunk is identified by its chunk ID of the following format: `<id>:<chunk_number>of<total_chunks>:<start_char_number>to<end_char_number>`.
+
+#### Text
+
+Users can opt for defining the chunking parameters when creating a knowledge base.
+
+```sql
+CREATE KNOWLEDGE_BASE my_kb
+USING
+    ...
+    preprocessing = {
+        "text_chunking_config" : {
+            "chunk_size": 2000,
+            "chunk_overlap": 200
+        }
+    },
+    ...;
+```
+
+The `chunk_size` parameter defines the size of the chunk as the number of characters. And the `chunk_overlap` parameter defines the number of characters that should overlap between subsequent chunks.
+
+#### JSON
+
+Users can opt for defining the chunking parameters specifically for JSON data.
+
+```sql
+CREATE KNOWLEDGE_BASE my_kb
+USING
+    ...
+    preprocessing = {
+        "type": "json_chunking",
+        "json_chunking_config" : {
+            ...
+        }
+    },
+    ...;
+```
+
+When the `type` of chunking is set to `json_chunking`, users can configure it by setting the following parameter values in the `json_chunking_config` parameter:
+
+* `flatten_nested`  
+It is of the `bool` data type with the default value of `True`.  
+It defines whether to flatten nested JSON structures.
+
+* `include_metadata`  
+It is of the `bool` data type with the default value of `True`.  
+It defines whether to include original metadata in chunks.
+
+* `chunk_by_object`  
+It is of the `bool` data type with the default value of `True`.  
+It defines whether to chunk by top-level objects (`True`) or create a single document (`False`).
+
+* `exclude_fields`  
+It is of the `List[str]` data type with the default value of an empty list.  
+It defines the list of fields to exclude from chunking.
+
+* `include_fields`  
+It is of the `List[str]` data type with the default value of an empty list.  
+It defines the list of fields to include in chunking (if empty, all fields except excluded ones are included).
+
+* `metadata_fields`  
+It is of the `List[str]` data type with the default value of an empty list.  
+It defines the list of fields to extract into metadata for filtering (can include nested fields using dot notation). If empty, all primitive fields will be extracted (top-level fields if available, otherwise all primitive fields in the flattened structure).
+
+* `extract_all_primitives`  
+It is of the `bool` data type with the default value of `False`.  
+It defines whether to extract all primitive values (strings, numbers, booleans) into metadata.
+
+* `nested_delimiter`  
+It is of the `str` data type with the default value of `"."`.  
+It defines the delimiter for flattened nested field names.
+
+* `content_column`  
+It is of the `str` data type with the default value of `"content"`.  
+It defines the name of the content column for chunk ID generation.
+
+### Underlying Vector Store
+
+Each knowledge base has its underlying vector store that stores data inserted into the knowledge base in the form of embeddings.
+
+Users can query the underlying vector store as follows.
+
+* KB with the default ChromaDB vector store:
+
+```sql
+SELECT id, content, metadata, embeddings
+FROM <kb_name>_chromadb.storage_table;
+```
+
+* KB with user-defined vector store (either [PGVector](/integrations/vector-db-integrations/pgvector) or [ChromaDB](/integrations/vector-db-integrations/chromadb)):
+
+```sql
+SELECT id, content, metadata, embeddings
+FROM <vector_store_connection_name>.<table_name>;
+```
+
+### Example
+
+Here a sample knowledge base created in the previous **Example** section is inserted into.
+
+```sql
+INSERT INTO my_kb
+SELECT order_id, product, notes
+FROM sample_data.orders;
+```
+
+<Note>
+When inserting into a knowledge base where the `content_columns` parameter was not specified, the column storing content must be aliased `AS content` as below.
+
+```sql
+CREATE KNOWLEDGE_BASE my_kb
+USING
+    ...
+    id_column = 'order_id',
+    ...
+```
+
+```sql
+INSERT INTO my_kb
+SELECT order_id, notes AS content
+FROM sample_data.orders;
+```
+</Note>
+
+## `DELETE FROM` Syntax
+
+Here is the syntax for deleting from a knowledge base:
+
+```sql
+DELETE FROM my_kb
+WHERE id = 'A1B';
+```
+
+## `CREATE INDEX ON KNOWLEDGE_BASE` Syntax
+
+Users can create index on the knowledge base to speed up the search operations.
+
+```sql
+CREATE INDEX ON KNOWLEDGE_BASE my_kb;
+```
+
+<Warning>
+Note that this feature works only when PGVector is used as the [storage of the knowledge base](/mindsdb_sql/knowledge_bases/create#storage), as ChromaDB provides the index features by default.
+</Warning>
+
+Upon executing this statement, an index is created on the knowledge base's underlying vector store. This is essentially a database index created on the vector database.
+
+Note that having an index on the knowledge base may reduce the speed of the insert operations. Therefore, it is recommended to insert bulk data into the knowledge base before creating an index. The index improves performance of querying the knowledge base, while it may slow down subsequent data inserts.

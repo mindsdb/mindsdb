@@ -1,7 +1,7 @@
 from mindsdb.api.mongo.classes import Responder
 import mindsdb.api.mongo.functions as helpers
-from mindsdb_sql.parser.ast import Identifier
-from mindsdb_sql.parser.dialects.mindsdb import DropPredictor, DropJob, DropMLEngine
+from mindsdb_sql_parser.ast import Identifier
+from mindsdb_sql_parser.ast.mindsdb import DropPredictor, DropJob, DropMLEngine
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
 
 from mindsdb.api.mongo.classes.query_sql import run_sql_command

@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 from mindsdb.integrations.handlers.ckan_handler.ckan_handler import CkanHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
-from mindsdb_sql.parser import ast
+from mindsdb_sql_parser import ast
 
 
 class CkanHandlerTest(unittest.TestCase):

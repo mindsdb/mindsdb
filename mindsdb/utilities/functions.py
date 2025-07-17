@@ -1,16 +1,14 @@
-import argparse
-import datetime
-from functools import wraps
-import hashlib
-import base64
 import os
+import base64
+import hashlib
+import json
+import datetime
 import textwrap
-from cryptography.fernet import Fernet
+from functools import wraps
 from collections.abc import Callable
 
-import requests
-from mindsdb_sql import get_lexer_parser
-from mindsdb_sql.parser.ast import Identifier
+from cryptography.fernet import Fernet
+from mindsdb_sql_parser.ast import Identifier
 
 from mindsdb.utilities.fs import create_process_mark, delete_process_mark, set_process_mark
 from mindsdb.utilities import log
@@ -18,18 +16,6 @@ from mindsdb.utilities.config import Config
 
 
 logger = log.getLogger(__name__)
-
-
-def args_parse():
-    parser = argparse.ArgumentParser(description='CL argument for mindsdb server')
-    parser.add_argument('--api', type=str, default=None)
-    parser.add_argument('--config', type=str, default=None)
-    parser.add_argument('--install-handlers', type=str, default=None)
-    parser.add_argument('--verbose', action='store_true')
-    parser.add_argument('--no_studio', action='store_true')
-    parser.add_argument('-v', '--version', action='store_true')
-    parser.add_argument('--ml_task_queue_consumer', action='store_true', default=None)
-    return parser.parse_args()
 
 
 def get_handler_install_message(handler_name):
@@ -85,43 +71,10 @@ def mark_process(name: str, custom_mark: str = None) -> Callable:
     return mark_process_wrapper
 
 
-def get_versions_where_predictors_become_obsolete():
-    """ Get list of MindsDB versions in which predictors should be retrained
-        Returns:
-            list of str or False
-    """
-    versions_for_updating_predictors = []
-    try:
-        try:
-            res = requests.get(
-                'https://mindsdb-cloud-public-service-files.s3.us-east-2.amazonaws.com/version_for_updating_predictors.txt',
-                timeout=0.5
-            )
-        except (ConnectionError, requests.exceptions.ConnectionError) as e:
-            logger.error(f'Is no connection. {e}')
-            raise
-        except Exception as e:
-            logger.error(f'Is something wrong with getting version_for_updating_predictors.txt: {e}')
-            raise
-
-        if res.status_code != 200:
-            logger.error(f'Cant get version_for_updating_predictors.txt: returned status code = {res.status_code}')
-            raise
-
-        try:
-            versions_for_updating_predictors = res.text.replace(' \t\r', '').split('\n')
-        except Exception as e:
-            logger.error(f'Cant decode version_for_updating_predictors.txt: {e}')
-            raise
-    except Exception:
-        return False, versions_for_updating_predictors
-
-    versions_for_updating_predictors = [x for x in versions_for_updating_predictors if len(x) > 0]
-    return True, versions_for_updating_predictors
-
-
 def init_lexer_parsers():
-    get_lexer_parser('mindsdb')
+    from mindsdb_sql_parser.lexer import MindsDBLexer
+    from mindsdb_sql_parser.parser import MindsDBParser
+    return MindsDBLexer(), MindsDBParser()
 
 
 def resolve_table_identifier(identifier: Identifier, default_database: str = None) -> tuple:
@@ -207,3 +160,13 @@ def decrypt(encripted: bytes, key: str) -> bytes:
 
     cipher = Fernet(fernet_key)
     return cipher.decrypt(encripted)
+
+
+def encrypt_json(data: dict, key: str) -> bytes:
+    json_str = json.dumps(data)
+    return encrypt(json_str.encode(), key)
+
+
+def decrypt_json(encrypted_data: bytes, key: str) -> dict:
+    decrypted = decrypt(encrypted_data, key)
+    return json.loads(decrypted)

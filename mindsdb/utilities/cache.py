@@ -56,6 +56,7 @@ import os
 import time
 from abc import ABC
 from pathlib import Path
+import re
 import hashlib
 import typing as t
 
@@ -71,10 +72,13 @@ _CACHE_MAX_SIZE = 500
 
 
 def dataframe_checksum(df: pd.DataFrame):
-
-    return str_checksum(str(
-        df.set_axis(range(len(df.columns)), axis=1).to_records(index=False)
-    ))
+    original_columns = df.columns
+    df.columns = list(range(len(df.columns)))
+    result = hashlib.sha256(
+        str(df.values).encode()
+    ).hexdigest()
+    df.columns = original_columns
+    return result
 
 
 def json_checksum(obj: t.Union[dict, list]):
@@ -151,7 +155,9 @@ class FileCache(BaseCache):
                     pass
 
     def file_path(self, name):
-        return self.path / name
+        # Sanitize the key to avoid table (file) names with backticks and slashes.
+        sanitized_name = re.sub(r'[^\w\-.]', '_', name)
+        return self.path / sanitized_name
 
     def set_df(self, name, df):
         path = self.file_path(name)

@@ -8,20 +8,18 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
 from mindsdb.utilities import log
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 
-from collections import OrderedDict
 from mindsdb.utilities.config import Config
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 from googleapiclient.discovery import build
 
-from mindsdb.integrations.utilities.handlers.auth_utilities import GoogleUserOAuth2Manager
+from mindsdb.integrations.utilities.handlers.auth_utilities.google import GoogleUserOAuth2Manager
 
 DEFAULT_SCOPES = [
-	'https://www.googleapis.com/auth/youtube',
-	'https://www.googleapis.com/auth/youtube.force-ssl',
-	'https://www.googleapis.com/auth/youtubepartner'
+    'https://www.googleapis.com/auth/youtube',
+    'https://www.googleapis.com/auth/youtube.force-ssl',
+    'https://www.googleapis.com/auth/youtubepartner'
 ]
 
 logger = log.getLogger(__name__)
@@ -38,12 +36,10 @@ class YoutubeHandler(APIHandler):
             name of a handler instance
         """
         super().__init__(name)
-
-        connection_data = kwargs.get("connection_data", {})
+        self.connection_data = kwargs.get("connection_data", {})
+        self.kwargs = kwargs
 
         self.parser = parse_sql
-        self.connection_data = connection_data
-        self.kwargs = kwargs
         self.connection = None
         self.is_connected = False
 
@@ -85,7 +81,7 @@ class YoutubeHandler(APIHandler):
         """
         if self.is_connected is True:
             return self.connection
-        
+
         google_oauth2_manager = GoogleUserOAuth2Manager(self.handler_storage, self.scopes, self.credentials_file, self.credentials_url, self.connection_data.get('code'))
         creds = google_oauth2_manager.get_oauth2_credentials()
 
@@ -104,7 +100,6 @@ class YoutubeHandler(APIHandler):
             Status confirmation
         """
         response = StatusResponse(False)
-        need_to_close = self.is_connected is False
 
         try:
             self.connect()
@@ -129,36 +124,5 @@ class YoutubeHandler(APIHandler):
         StatusResponse
             Request status
         """
-        ast = parse_sql(query, dialect="mindsdb")
+        ast = parse_sql(query)
         return self.query(ast)
-
-
-connection_args = OrderedDict(
-    youtube_access_token={
-        "type": ARG_TYPE.STR,
-        "description": "API Key",
-        "label": "API Key",
-    },
-    credentials_url={
-        'type': ARG_TYPE.STR,
-        'description': 'URL to OAuth2 Credentials',
-        'label': 'URL to OAuth2 Credentials',
-    },
-    credentials_file={
-        'type': ARG_TYPE.STR,
-        'description': 'Location of OAuth2 Credentials',
-        'label': 'Location of OAuth2 Credentials',
-    },
-    credentials={
-        'type': ARG_TYPE.PATH,
-        'description': 'OAuth2 Credentials',
-        'label': 'Upload OAuth2 Credentials',
-    },
-    code={
-        'type': ARG_TYPE.STR,
-        'description': 'Authentication Code',
-        'label': 'Authentication Code',
-    }
-)
-
-connection_args_example = OrderedDict(youtube_api_token="<your-youtube-api-token>")

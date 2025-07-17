@@ -1,0 +1,235 @@
+---
+title: Clipdrop
+sidebarTitle: Clipdrop
+---
+
+Integrate state of the art image processing AI directly in your products.
+
+<Info>
+
+To use Clipdrop in MindsDB, you need to sign up for a Clipdrop account and obtain an API key. Learn more [here](https://clipdrop.co/apis).
+
+</Info>
+
+## Setup
+
+```sql
+CREATE ML_ENGINE clipdrop_engine
+FROM clipdrop
+USING
+  clipdrop_api_key = 'your_api_key';
+```
+
+## Usage
+
+### Remove Text from Image
+
+<video
+  width="100%" 
+  height="315"
+  src="https://static.clipdrop.co/web/apis/remove-text/remove-text-demo.mp4"
+  title="Video player"
+  style={{ objectFit: 'cover', borderRadius: '8px' }}
+  autoPlay
+  muted
+  loop
+  playsInline
+  controls={false}
+/>
+
+Create a model to automatically remove text from an image.
+
+```sql
+CREATE MODEL mindsdb.clipdrop_rt
+PREDICT image
+USING
+  engine = "clipdrop_engine",
+  task = "remove_text",
+  local_directory_path = "/Users/Sam/Downloads/test";
+```
+
+You can then make predictions with the model by providing an image URL:
+
+```sql
+SELECT *
+FROM mindsdb.clipdrop_rt
+WHERE image_url = "https://onlinejpgtools.com/images/examples-onlinejpgtools/calm-body-of-water-with-quote.jpg";
+```
+
+### Remove Background from Image
+
+<video
+  width="100%" 
+  height="315"
+  src="https://static.clipdrop.co/web/apis/remove-background/remove-background-demo.mp4"
+  title="Video player"
+  style={{ objectFit: 'cover', borderRadius: '8px' }}
+  autoPlay
+  muted
+  loop
+  playsInline
+  controls={false}
+/>
+
+Effortlessly strip away the background from any image using this task.
+
+```sql
+CREATE MODEL mindsdb.clipdrop_rb
+PREDICT image
+USING
+  engine = "clipdrop_engine",
+  task = "remove_background",
+  local_directory_path = "/Users/Sam/Downloads/test";
+```
+
+Provide an image URL to remove the background:
+
+```sql
+SELECT *
+FROM mindsdb.clipdrop_rb
+WHERE image_url = "https://static.clipdrop.co/web/apis/remove-background/input.jpg";
+```
+
+### Generate Image from Sketch
+
+<video
+  width="100%" 
+  height="315"
+  src="https://static.clipdrop.co/web/apis/sketch-to-image/sketch-to-image-1280-720.mp4"
+  title="Video player"
+  style={{ objectFit: 'cover', borderRadius: '8px' }}
+  autoPlay
+  muted
+  loop
+  playsInline
+  controls={false}
+/>
+
+Turn simple sketches into detailed images with AI.
+
+```sql
+CREATE MODEL mindsdb.clipdrop_s2i
+PREDICT image
+USING
+  engine = "clipdrop_engine",
+  task = "sketch_to_image",
+  local_directory_path = "/Users/Sam/Downloads/test";
+```
+
+Provide an image URL and a description of the desired transformation:
+
+```sql
+SELECT *
+FROM mindsdb.clipdrop_s2i
+WHERE image_url = 'https://img.freepik.com/free-vector/hand-drawn-cat-outline-illustration_23-2149266368.jpg'
+  AND text = 'brown cat';
+```
+
+### Generate Image from Text
+
+<video
+  width="100%" 
+  height="315"
+  src="https://storage.googleapis.com/clipdrop-static-assets/web/apis/text-to-image/text-to-image-1280-720.mp4"
+  title="Video player"
+  style={{ objectFit: 'cover', borderRadius: '8px' }}
+  autoPlay
+  muted
+  loop
+  playsInline
+  controls={false}
+/>
+
+Create unique images directly from text prompts.
+
+```sql
+CREATE MODEL mindsdb.clipdrop_t2i
+PREDICT image
+USING
+  engine = "clipdrop_engine",
+  task = "text_to_image",
+  local_directory_path = "/Users/Sam/Downloads/test";
+```
+
+For example:
+
+```sql
+SELECT *
+FROM mindsdb.clipdrop_t2i
+WHERE text = 'Imagine a software engineer';
+```
+
+### Re-imagine the Image
+
+<video
+  width="100%" 
+  height="315"
+  src="https://static.clipdrop.co/web/apis/reimagine/reimagine-1280-720.mp4"
+  title="Video player"
+  style={{ objectFit: 'cover', borderRadius: '8px' }}
+  autoPlay
+  muted
+  loop
+  playsInline
+  controls={false}
+/>
+
+Re-imagine any image in a different artistic style or form.
+
+```sql
+CREATE MODEL mindsdb.clipdrop_reimagine
+PREDICT image
+USING
+  engine = "clipdrop_engine",
+  task = "reimagine",
+  local_directory_path = "/Users/Sam/Downloads/test";
+```
+
+Run the model to transform an existing image:
+
+```sql
+SELECT *
+FROM mindsdb.clipdrop_reimagine
+WHERE image_url = "https://static.clipdrop.co/web/apis/remove-background/input.jpg";
+```
+
+### Replace Background in Image
+
+<video
+  width="100%" 
+  height="315"
+  src="https://storage.googleapis.com/clipdrop-static-assets/web/apis/homepage/replace-background.mp4"
+  title="Video player"
+  style={{ objectFit: 'cover', borderRadius: '8px' }}
+  autoPlay
+  muted
+  loop
+  playsInline
+  controls={false}
+/>
+
+Replace the background of any image with custom scenes or environments.
+
+```sql
+CREATE MODEL mindsdb.clipdrop_rbi
+PREDICT image
+USING
+  engine = "clipdrop_engine",
+  task = "replace_background",
+  local_directory_path = "/Users/Sam/Downloads/test";
+```
+
+Example query:
+
+```sql
+SELECT *
+FROM mindsdb.clipdrop_rbi
+WHERE image_url = "https://static.clipdrop.co/web/apis/remove-background/input.jpg"
+  AND text = "Empty road";
+```
+
+<Note>
+
+**Note:** The `local_directory_path` parameter specifies the path to the directory where the images are stored on your local machine.
+
+</Note>

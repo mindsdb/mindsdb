@@ -100,26 +100,25 @@ def parallel_get_all_website_links(urls) -> dict:
         return url_contents
 
     with concurrent.futures.ProcessPoolExecutor() as executor:
-        future_to_url = {
-            executor.submit(get_all_website_links, url): url for url in urls
-        }
+        future_to_url = {executor.submit(get_all_website_links, url): url for url in urls}
         for future in concurrent.futures.as_completed(future_to_url):
             url = future_to_url[future]
             try:
                 url_contents[url] = future.result()
             except Exception as exc:
-                logger.error(f'{url} generated an exception: {exc}')
+                logger.error(f"{url} generated an exception: {exc}")
                 # don't raise the exception, just log it, continue processing other urls
 
     return url_contents
 
 
-def get_all_website_links(url) -> dict:
+def get_all_website_links(url, headers: dict = None) -> dict:
     """
     Fetch all website links from a URL.
 
     Args:
         url (str): the URL to fetch links from
+        headers (dict): a dictionary of headers to use when fetching links
 
     Returns:
         A dictionary containing the URL, the extracted links, the HTML content, the text content, and any error that occurred.
@@ -132,9 +131,12 @@ def get_all_website_links(url) -> dict:
         session = requests.Session()
 
         # Add headers to mimic a real browser request
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36"
-        }
+        if headers is None:
+            headers = {}
+        if "User-Agent" not in headers:
+            headers["User-Agent"] = (
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.3"
+            )
 
         response = session.get(url, headers=headers)
         if "cookie" in response.request.headers:
@@ -151,13 +153,13 @@ def get_all_website_links(url) -> dict:
             # Parse HTML content with BeautifulSoup
             soup = BeautifulSoup(content_html, "html.parser")
             content_text = get_readable_text_from_soup(soup)
-            for a_tag in soup.findAll("a"):
+            for a_tag in soup.find_all("a"):
                 href = a_tag.attrs.get("href")
                 if href == "" or href is None:
                     continue
                 href = urljoin(url, href)
                 parsed_href = urlparse(href)
-                href = urlunparse((parsed_href.scheme, parsed_href.netloc, parsed_href.path, '', '', ''))
+                href = urlunparse((parsed_href.scheme, parsed_href.netloc, parsed_href.path, "", "", ""))
                 if not is_valid(href):
                     continue
                 if href in urls:
@@ -203,7 +205,15 @@ def get_readable_text_from_soup(soup) -> str:
     return html_converter.handle(str(soup))
 
 
-def get_all_website_links_recursively(url, reviewed_urls, limit=None, crawl_depth: int = 1, current_depth: int = 0, filters: List[str] = None):
+def get_all_website_links_recursively(
+    url,
+    reviewed_urls,
+    limit=None,
+    crawl_depth: int = 1,
+    current_depth: int = 0,
+    filters: List[str] = None,
+    headers=None,
+):
     """
     Recursively gathers all links from a given website up to a specified limit.
 
@@ -220,8 +230,6 @@ def get_all_website_links_recursively(url, reviewed_urls, limit=None, crawl_dept
     if limit is not None:
         if len(reviewed_urls) >= limit:
             return reviewed_urls
-    if crawl_depth == current_depth:
-        return reviewed_urls
 
     if not filters:
         matches_filter = True
@@ -229,7 +237,7 @@ def get_all_website_links_recursively(url, reviewed_urls, limit=None, crawl_dept
         matches_filter = any(re.match(f, url) is not None for f in filters)
     if url not in reviewed_urls and matches_filter:
         try:
-            reviewed_urls[url] = get_all_website_links(url)
+            reviewed_urls[url] = get_all_website_links(url, headers=headers)
         except Exception as e:
             error_message = traceback.format_exc().splitlines()[-1]
             logger.error("An exception occurred: %s", str(e))
@@ -240,6 +248,9 @@ def get_all_website_links_recursively(url, reviewed_urls, limit=None, crawl_dept
                 "text_content": "",
                 "error": str(error_message),
             }
+
+    if crawl_depth is not None and crawl_depth == current_depth:
+        return reviewed_urls
 
     to_rev_url_list = []
 
@@ -270,10 +281,14 @@ def get_all_website_links_recursively(url, reviewed_urls, limit=None, crawl_dept
         reviewed_urls.update(new_revised_urls)
 
         for new_url in new_revised_urls:
-            get_all_website_links_recursively(new_url, reviewed_urls, limit, crawl_depth=crawl_depth, current_depth=current_depth + 1, filters=filters)
+            get_all_website_links_recursively(
+                new_url, reviewed_urls, limit, crawl_depth=crawl_depth, current_depth=current_depth + 1, filters=filters
+            )
 
 
-def get_all_websites(urls, limit=1, html=False, crawl_depth: int = 1, filters: List[str] = None) -> pd.DataFrame:
+def get_all_websites(
+    urls, limit=1, html=False, crawl_depth: int = 1, filters: List[str] = None, headers: dict = None
+) -> pd.DataFrame:
     """
     Crawl a list of websites and return a DataFrame containing the results.
 
@@ -283,6 +298,7 @@ def get_all_websites(urls, limit=1, html=False, crawl_depth: int = 1, filters: L
         crawl_depth (int): Crawl depth for URLs.
         html (bool): a boolean indicating whether to include the HTML content in the results
         filters (List[str]): Crawl URLs that only match these regex patterns.
+        headers (dict): headers of request
 
     Returns:
         A DataFrame containing the results.
@@ -298,7 +314,9 @@ def get_all_websites(urls, limit=1, html=False, crawl_depth: int = 1, filters: L
         if urlparse(url).scheme == "":
             # Try HTTPS first
             url = "https://" + url
-        get_all_website_links_recursively(url, reviewed_urls, limit, crawl_depth=crawl_depth, filters=filters)
+        get_all_website_links_recursively(
+            url, reviewed_urls, limit, crawl_depth=crawl_depth, filters=filters, headers=headers
+        )
 
     # Use a ThreadPoolExecutor to run the helper function in parallel.
     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -310,9 +328,7 @@ def get_all_websites(urls, limit=1, html=False, crawl_depth: int = 1, filters: L
     columns_to_ignore = ["urls"]
     if html is False:
         columns_to_ignore += ["html_content"]
-    df = dict_to_dataframe(
-        reviewed_urls, columns_to_ignore=columns_to_ignore, index_name="url"
-    )
+    df = dict_to_dataframe(reviewed_urls, columns_to_ignore=columns_to_ignore, index_name="url")
 
     if not df.empty and df[df.error.isna()].empty:
         raise Exception(str(df.iloc[0].error))

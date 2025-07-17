@@ -112,9 +112,8 @@ CREATE VIEW btcusdt_recent AS (
 This view is going to be joined with the model to get forecasts:
 
 ```sql
-SELECT to_timestamp(cast(m.open_time as bigint)) AS open_time,
-       m.open_price,
-       m.open_price_explain
+SELECT m.open_time ,
+       m.open_price
 FROM btcusdt_recent AS d
 JOIN cryptocurrency_forecast_model AS m
 WHERE d.open_time > LATEST;

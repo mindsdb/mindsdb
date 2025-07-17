@@ -1,2 +1,3 @@
 google-api-python-client
 youtube-transcript-api
+-r mindsdb/integrations/utilities/handlers/auth_utilities/google/requirements.txt

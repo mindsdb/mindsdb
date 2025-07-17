@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import pandas as pd
 
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 
 from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
 
@@ -44,7 +44,7 @@ class Test(BaseExecutorMockPredictor):
            join mindsdb.task_model m
            where v.a = 2
            using p1='a', p2={'x':1, 'y':2}
-        ''', dialect='mindsdb'))
+        '''))
         assert ret.error_code is None
 
         # check predictor input
@@ -57,7 +57,7 @@ class Test(BaseExecutorMockPredictor):
         ret = self.command_executor.execute_command(parse_sql('''
             select * from mindsdb.task_model where a = 2
             using p1=1, p2=[1,2]
-        ''', dialect='mindsdb'))
+        '''))
 
         predict_args = self.mock_predict.call_args[1]['params']
         assert predict_args == {'p1': 1, 'p2': [1, 2]}

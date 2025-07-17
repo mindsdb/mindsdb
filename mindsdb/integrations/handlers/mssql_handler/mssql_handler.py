@@ -1,20 +1,124 @@
+from typing import Any
+import datetime
+
 import pymssql
 from pymssql import OperationalError
 import pandas as pd
+from pandas.api import types as pd_types
 
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.utilities import log
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
+
 
 logger = log.getLogger(__name__)
+
+
+def _map_type(mssql_type_text: str) -> MYSQL_DATA_TYPE:
+    """ Map MSSQL text types names to MySQL types as enum.
+
+    Args:
+        mssql_type_text (str): The name of the MSSQL type to map.
+
+    Returns:
+        MYSQL_DATA_TYPE: The MySQL type enum that corresponds to the MSSQL text type name.
+    """
+    internal_type_name = mssql_type_text.lower()
+    types_map = {
+        ('tinyint', 'smallint', 'int', 'bigint'): MYSQL_DATA_TYPE.INT,
+        ('bit',): MYSQL_DATA_TYPE.BOOL,
+        ('money', 'smallmoney', 'float', 'real'): MYSQL_DATA_TYPE.FLOAT,
+        ('decimal', 'numeric'): MYSQL_DATA_TYPE.DECIMAL,
+        ('date',): MYSQL_DATA_TYPE.DATE,
+        ('time',): MYSQL_DATA_TYPE.TIME,
+        ('datetime2', 'datetimeoffset', 'datetime', 'smalldatetime'): MYSQL_DATA_TYPE.DATETIME,
+        ('varchar', 'nvarchar'): MYSQL_DATA_TYPE.VARCHAR,
+        ('char', 'text', 'nchar', 'ntext'): MYSQL_DATA_TYPE.TEXT,
+        ('binary', 'varbinary', 'image'): MYSQL_DATA_TYPE.BINARY
+    }
+
+    for db_types_list, mysql_data_type in types_map.items():
+        if internal_type_name in db_types_list:
+            return mysql_data_type
+
+    logger.debug(f"MSSQL handler type mapping: unknown type: {internal_type_name}, use VARCHAR as fallback.")
+    return MYSQL_DATA_TYPE.VARCHAR
+
+
+def _make_table_response(result: list[dict[str, Any]], cursor: pymssql.Cursor) -> Response:
+    """Build response from result and cursor.
+
+    Args:
+        result (list[dict[str, Any]]): result of the query.
+        cursor (pymssql.Cursor): cursor object.
+
+    Returns:
+        Response: response object.
+    """
+    description: list[tuple[Any]] = cursor.description
+    mysql_types: list[MYSQL_DATA_TYPE] = []
+
+    data_frame = pd.DataFrame(
+        result,
+        columns=[x[0] for x in cursor.description]
+    )
+
+    for column in description:
+        column_name = column[0]
+        column_type = column[1]
+        column_dtype = data_frame[column_name].dtype
+        match column_type:
+            case pymssql.NUMBER:
+                if pd_types.is_integer_dtype(column_dtype):
+                    mysql_types.append(MYSQL_DATA_TYPE.INT)
+                elif pd_types.is_float_dtype(column_dtype):
+                    mysql_types.append(MYSQL_DATA_TYPE.FLOAT)
+                elif pd_types.is_bool_dtype(column_dtype):
+                    # it is 'bit' type
+                    mysql_types.append(MYSQL_DATA_TYPE.TINYINT)
+                else:
+                    mysql_types.append(MYSQL_DATA_TYPE.DOUBLE)
+            case pymssql.DECIMAL:
+                mysql_types.append(MYSQL_DATA_TYPE.DECIMAL)
+            case pymssql.STRING:
+                mysql_types.append(MYSQL_DATA_TYPE.TEXT)
+            case pymssql.DATETIME:
+                mysql_types.append(MYSQL_DATA_TYPE.DATETIME)
+            case pymssql.BINARY:
+                # DATE and TIME types returned as 'BINARY' type, and dataframe type is 'object', so it is not possible
+                # to infer correct mysql type for them
+                if pd_types.is_datetime64_any_dtype(column_dtype):
+                    # pymssql return datetimes as 'binary' type
+                    # if timezone is present, then it is datetime.timezone
+                    series = data_frame[column_name]
+                    if (
+                        series.dt.tz is not None
+                        and isinstance(series.dt.tz, datetime.timezone)
+                        and series.dt.tz != datetime.timezone.utc
+                    ):
+                        series = series.dt.tz_convert('UTC')
+                        data_frame[column_name] = series.dt.tz_localize(None)
+                    mysql_types.append(MYSQL_DATA_TYPE.DATETIME)
+                else:
+                    mysql_types.append(MYSQL_DATA_TYPE.BINARY)
+            case _:
+                logger.warning(f"Unknown type: {column_type}, use TEXT as fallback.")
+                mysql_types.append(MYSQL_DATA_TYPE.TEXT)
+
+    return Response(
+        RESPONSE_TYPE.TABLE,
+        data_frame=data_frame,
+        mysql_types=mysql_types
+    )
 
 
 class SqlServerHandler(DatabaseHandler):
@@ -136,15 +240,9 @@ class SqlServerHandler(DatabaseHandler):
                 cur.execute(query)
                 if cur.description:
                     result = cur.fetchall()
-                    response = Response(
-                        RESPONSE_TYPE.TABLE,
-                        data_frame=pd.DataFrame(
-                            result,
-                            columns=[x[0] for x in cur.description]
-                        )
-                    )
+                    response = _make_table_response(result, cur)
                 else:
-                    response = Response(RESPONSE_TYPE.OK)
+                    response = Response(RESPONSE_TYPE.OK, affected_rows=cur.rowcount)
                 connection.commit()
             except Exception as e:
                 logger.error(f'Error running query: {query} on {self.database}, {e}!')
@@ -208,11 +306,23 @@ class SqlServerHandler(DatabaseHandler):
 
         query = f"""
             SELECT
-                column_name as "Field",
-                data_type as "Type"
+                COLUMN_NAME,
+                DATA_TYPE,
+                ORDINAL_POSITION,
+                COLUMN_DEFAULT,
+                IS_NULLABLE,
+                CHARACTER_MAXIMUM_LENGTH,
+                CHARACTER_OCTET_LENGTH,
+                NUMERIC_PRECISION,
+                NUMERIC_SCALE,
+                DATETIME_PRECISION,
+                CHARACTER_SET_NAME,
+                COLLATION_NAME
             FROM
                 information_schema.columns
             WHERE
                 table_name = '{table_name}'
         """
-        return self.native_query(query)
+        result = self.native_query(query)
+        result.to_columns_table_response(map_type_fn=_map_type)
+        return result

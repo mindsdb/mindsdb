@@ -3,8 +3,8 @@ from typing import Text, List, Dict, Optional
 import boto3
 from boto3.dynamodb.types import TypeDeserializer
 from botocore.exceptions import ClientError
-from mindsdb_sql.parser.ast import Select, Insert, Join
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast import Select, Insert, Join
+from mindsdb_sql_parser.ast.base import ASTNode
 import pandas as pd
 
 from mindsdb.integrations.libs.base import DatabaseHandler

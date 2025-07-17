@@ -20,6 +20,8 @@ class TestModels(BaseExecutorDummyML):
         )
         self.wait_predictor('mindsdb', 'task_model')
 
+        self.run_sql("SELECT project FROM models WHERE name='task_model'")
+
     def test_replace_model(self):
         # create model
         self.run_sql(

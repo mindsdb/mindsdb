@@ -1,5 +1,5 @@
 import unittest
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 
 from mindsdb.api.executor.data_types.response_type import (
     RESPONSE_TYPE,

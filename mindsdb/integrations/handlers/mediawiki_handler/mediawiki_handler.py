@@ -7,9 +7,10 @@ from mindsdb.integrations.libs.response import (
 )
 
 from mindsdb.utilities import log
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 
 logger = log.getLogger(__name__)
+
 
 class MediaWikiHandler(APIHandler):
     """
@@ -65,7 +66,7 @@ class MediaWikiHandler(APIHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            logger.error(f'Error connecting to MediaWiki!')
+            logger.error('Error connecting to MediaWiki!')
             response.error_message = str(e)
 
         self.is_connected = response.success
@@ -83,5 +84,5 @@ class MediaWikiHandler(APIHandler):
         StatusResponse
             Request status
         """
-        ast = parse_sql(query, dialect="mindsdb")
+        ast = parse_sql(query)
         return self.query(ast)

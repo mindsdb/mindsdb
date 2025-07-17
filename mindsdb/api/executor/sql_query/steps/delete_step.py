@@ -1,14 +1,14 @@
 import copy
 
-from mindsdb_sql.parser.ast import (
+from mindsdb_sql_parser.ast import (
     Identifier,
     Constant,
     Delete,
     Parameter,
     Tuple,
 )
-from mindsdb_sql.planner.steps import DeleteStep
-from mindsdb_sql.planner.utils import query_traversal
+from mindsdb.integrations.utilities.query_traversal import query_traversal
+from mindsdb.api.executor.planner.steps import DeleteStep
 
 from mindsdb.api.executor.sql_query.result_set import ResultSet
 
@@ -44,6 +44,5 @@ class DeleteStepCall(BaseStepCall):
 
         query_traversal(query.where, fill_params)
 
-        dn.query(query=query, session=self.session)
-
-        return ResultSet()
+        response = dn.query(query=query, session=self.session)
+        return ResultSet(affected_rows=response.affected_rows)

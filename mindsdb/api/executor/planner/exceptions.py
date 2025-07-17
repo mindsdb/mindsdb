@@ -1,0 +1,3 @@
+
+class PlanningException(Exception):
+    pass

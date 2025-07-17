@@ -8,10 +8,11 @@ from mindsdb.integrations.libs.response import (
 )
 
 from mindsdb.utilities import log
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 from mindsdb.integrations.libs.api_handler_exceptions import InvalidNativeQuery, ConnectionFailed, MissingConnectionParams
 
 logger = log.getLogger(__name__)
+
 
 class ShopifyHandler(APIHandler):
     """
@@ -30,7 +31,7 @@ class ShopifyHandler(APIHandler):
         super().__init__(name)
 
         if kwargs.get("connection_data") is None:
-            raise MissingConnectionParams(f"Incomplete parameters passed to Shopify Handler")
+            raise MissingConnectionParams("Incomplete parameters passed to Shopify Handler")
 
         connection_data = kwargs.get("connection_data", {})
         self.connection_data = connection_data
@@ -78,7 +79,7 @@ class ShopifyHandler(APIHandler):
             return self.connection
 
         if self.kwargs.get("connection_data") is None:
-            raise MissingConnectionParams(f"Incomplete parameters passed to Shopify Handler")
+            raise MissingConnectionParams("Incomplete parameters passed to Shopify Handler")
 
         api_session = shopify.Session(self.connection_data['shop_url'], '2021-10', self.connection_data['access_token'])
 
@@ -106,8 +107,8 @@ class ShopifyHandler(APIHandler):
             shopify.Shop.current()
             response.success = True
         except Exception as e:
-            logger.error(f'Error connecting to Shopify!')
-            raise ConnectionFailed(f"Conenction to Shopify failed.")
+            logger.error('Error connecting to Shopify!')
+            raise ConnectionFailed("Conenction to Shopify failed.")
             response.error_message = str(e)
 
         if self.yotpo_app_key is not None and self.yotpo_access_token is not None:
@@ -137,7 +138,7 @@ class ShopifyHandler(APIHandler):
             Request status
         """
         try:
-            ast = parse_sql(query, dialect="mindsdb")
-        except Exception as e:
+            ast = parse_sql(query)
+        except Exception:
             raise InvalidNativeQuery(f"The query {query} is invalid.")
         return self.query(ast)

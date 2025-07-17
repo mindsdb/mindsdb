@@ -14,6 +14,7 @@ class ChromaHandlerConfig(BaseModel):
     host: str = None
     port: str = None
     password: str = None
+    distance: str = 'cosine'
 
     class Config:
         extra = "forbid"

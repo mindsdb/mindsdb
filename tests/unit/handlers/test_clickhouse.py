@@ -1,24 +1,28 @@
 from collections import OrderedDict
 import unittest
+import pytest
 from unittest.mock import patch, MagicMock
 
 from sqlalchemy.exc import SQLAlchemyError
 
 from base_handler_test import BaseDatabaseHandlerTest
-from mindsdb.integrations.handlers.clickhouse_handler.clickhouse_handler import ClickHouseHandler
+
+try:
+    from mindsdb.integrations.handlers.clickhouse_handler.clickhouse_handler import ClickHouseHandler
+except ImportError:
+    pytestmark = pytest.mark.skip("Clickhouse handler not installed")
 
 
 class TestClickHouseHandler(BaseDatabaseHandlerTest, unittest.TestCase):
-
     @property
     def dummy_connection_data(self):
         return OrderedDict(
-            host='127.0.0.1',
+            host="127.0.0.1",
             port=8123,
-            user='example_user',
-            password='example_pass',
-            database='example_db',
-            protocol='native'
+            user="example_user",
+            password="example_pass",
+            database="example_db",
+            protocol="native",
         )
 
     @property
@@ -34,10 +38,13 @@ class TestClickHouseHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         return f"DESCRIBE {self.mock_table}"
 
     def create_handler(self):
-        return ClickHouseHandler('clickhouse', connection_data=self.dummy_connection_data)
+        return ClickHouseHandler("clickhouse", connection_data=self.dummy_connection_data)
 
     def create_patcher(self):
-        return patch('mindsdb.integrations.handlers.clickhouse_handler.clickhouse_handler.create_engine', return_value=MagicMock())
+        return patch(
+            "mindsdb.integrations.handlers.clickhouse_handler.clickhouse_handler.create_engine",
+            return_value=MagicMock(),
+        )
 
     def test_initialization(self):
         """Test if the handler initializes with correct values and defaults."""
@@ -55,5 +62,5 @@ class TestClickHouseHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -2,14 +2,14 @@ import copy
 
 import numpy as np
 
-from mindsdb_sql.parser.ast import (
+from mindsdb_sql_parser.ast import (
     Identifier, BinaryOperation, Constant
 )
-from mindsdb_sql.planner.steps import (
+from mindsdb.api.executor.planner.steps import (
     JoinStep,
 )
-from mindsdb_sql.planner.utils import query_traversal
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.integrations.utilities.query_traversal import query_traversal
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.api.executor.sql_query.result_set import ResultSet
 from mindsdb.api.executor.utilities.sql import query_df_with_type_infer_fallback
@@ -90,18 +90,18 @@ class JoinStepCall(BaseStepCall):
         table_b, names_b = right_data.to_df_cols(prefix='B')
 
         query = f"""
-                       SELECT * FROM table_a {join_type} table_b
-                       ON {join_condition}
-                   """
+            SELECT * FROM table_a {join_type} table_b
+            ON {join_condition}
+        """
         resp_df, _description = query_df_with_type_infer_fallback(query, {
             'table_a': table_a,
             'table_b': table_b
         })
 
-        resp_df = resp_df.replace({np.nan: None})
+        resp_df.replace({np.nan: None}, inplace=True)
 
         names_a.update(names_b)
-        data = ResultSet().from_df_cols(resp_df, col_names=names_a)
+        data = ResultSet.from_df_cols(df=resp_df, columns_dict=names_a)
 
         for col in data.find_columns('__mindsdb_row_id'):
             data.del_column(col)

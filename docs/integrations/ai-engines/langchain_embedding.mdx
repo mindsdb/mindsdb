@@ -1,0 +1,84 @@
+---
+title: LangChain Embedding
+sidebarTitle: LangChain Embedding
+---
+
+This documentation describes the integration of MindsDB with [LangChain](https://www.langchain.com/), a framework for developing applications powered by language models.
+The integration allows for the deployment of LangChain models within MindsDB, providing the models with access to data from various data sources.
+
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
+2. To use LangChain within MindsDB, install the required dependencies following [this instruction](https://docs.mindsdb.com/setup/self-hosted/docker#install-dependencies).
+
+## Setup
+
+Create an [AI/ML engine](/mindsdb_sql/sql/create/ml-engine) from the [LangChain Embedding handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/langchain_embedding_handler).
+
+```sql
+CREATE ML_ENGINE embedding
+FROM langchain_embedding;
+```
+
+Create a model using `embedding` as an engine and providing your OpenAI API key.
+
+```sql
+CREATE MODEL embedding_model
+PREDICT embeddings
+USING
+      engine = "embedding",
+      class = "embedding_model_provider",
+      model = "embedding_model_name",
+      openai_api_key = "sk-xxx",
+      input_columns = ["column1", "column2", ...];
+```
+
+The following are the required and optional parameters:
+
+* `engine` is a required parameter. It defines the AI engine, as created with the `CREATE ML_ENGINE` statement, to be used.
+* `class` is a required parameter. It defines the model provider, such as `"OpenAI"` or `"HuggingFace"`.
+* `model` is a required parameter. It defined the embedding model, such as `text-embedding-3-small`.
+* `openai_api_key` is a required parameter when using OpenAI as a provider.
+* `input_columns` is an optional parameter. It defines the column(s) to be processed by the embedding model.
+
+## Usage
+
+The following usage examples utilize `embedding` to create a model with the `CREATE MODEL` statement.
+
+* Using the OpenAI models:
+
+```sql
+CREATE MODEL openai_embedding_model
+PREDICT embeddings
+USING
+      engine = "embedding",
+      class = "OpenAIEmbeddings",
+      model = "text-embedding-3-small",
+      openai_api_key = "sk-xxx",
+      input_columns = ["content"];
+```
+
+* Using the HuggingFace models:
+
+```sql
+CREATE MODEL hf_embedding_model
+PREDICT embedding
+USING
+      engine = 'embedding',
+      class = 'HuggingFaceEmbeddings',
+      model = "sentence-transformers/all-mpnet-base-v2";
+```
+
+Ensure that the model has been created successfully before using it. To do that, use the `DESCRIBE` command and look at the `status` column.
+
+```sql
+DESCRIBE openai_embedding_model;
+```
+
+<Tip>
+**Next Steps**
+
+Go to the [Use Cases](https://docs.mindsdb.com/use-cases/overview) section to see more examples.
+</Tip>

@@ -1,2 +1,2 @@
 pyodbc
-ingres_sa_dialect @ git+https://github.com/ActianCorp/ingres_sa_dialect
+sqlalchemy-ingres[all]

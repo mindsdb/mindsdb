@@ -57,4 +57,3 @@ class EmailConnectionDetails(BaseModel):
             }
         }
         extra = "forbid"
-

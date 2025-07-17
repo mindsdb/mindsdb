@@ -1,24 +1,22 @@
 import os
-import pandas as pd
 from qbosdk import QuickbooksOnlineSDK
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse,
-    HandlerResponse as Response,
-    RESPONSE_TYPE
+    HandlerStatusResponse as StatusResponse
 )
 from mindsdb.utilities.config import Config
 from mindsdb.utilities import log
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 from .quickbooks_table import AccountsTable, PurchasesTable, BillPaymentsTable, VendorsTable, BillsTable, EmployeesTable
 
 logger = log.getLogger(__name__)
+
 
 class QuickbooksHandler(APIHandler):
     """
         A class for handling connections and interactions with Quickbooks API.
     """
-    
+
     def __init__(self, name=None, **kwargs):
         super().__init__(name)
 
@@ -26,7 +24,7 @@ class QuickbooksHandler(APIHandler):
 
         self.connection_args = {}
         handler_config = Config().get('quickbooks_handler', {})
-        for k in ['client_id', 'client_secret', 'refresh_token', 'realm_id',  'environment']:
+        for k in ['client_id', 'client_secret', 'refresh_token', 'realm_id', 'environment']:
             if k in args:
                 self.connection_args[k] = args[k]
             elif f'QUICKBOOKS_{k.upper()}' in os.environ:
@@ -39,7 +37,7 @@ class QuickbooksHandler(APIHandler):
 
         accountso = AccountsTable(self)
         self._register_table('accountso', accountso)
-        purchases= PurchasesTable(self)
+        purchases = PurchasesTable(self)
         self._register_table('purchases', purchases)
         bills_payments = BillPaymentsTable(self)
         self._register_table('bills_payments', bills_payments)
@@ -47,7 +45,7 @@ class QuickbooksHandler(APIHandler):
         self._register_table('vendors', vendors)
         bills = BillsTable(self)
         self._register_table('bills', bills)
-        employees= EmployeesTable(self)
+        employees = EmployeesTable(self)
         self._register_table('employees', employees)
 
     def connect(self):
@@ -93,5 +91,5 @@ class QuickbooksHandler(APIHandler):
         StatusResponse
             Request status
         """
-        ast = parse_sql(query, dialect="mindsdb")
+        ast = parse_sql(query)
         return self.query(ast)

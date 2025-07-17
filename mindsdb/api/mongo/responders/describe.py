@@ -1,4 +1,4 @@
-from mindsdb_sql.parser.ast import Describe, Identifier
+from mindsdb_sql_parser.ast import Describe, Identifier
 
 from mindsdb.api.mongo.classes import Responder
 import mindsdb.api.mongo.functions as helpers

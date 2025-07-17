@@ -10,8 +10,6 @@ class TimeScaleDBHandler(PostgresHandler):
         super().__init__(name, **kwargs)
 
 
-
-
 connection_args = OrderedDict(
     host={
         'type': ARG_TYPE.STR,
@@ -31,6 +29,12 @@ connection_args = OrderedDict(
         'type': ARG_TYPE.STR,
         'description': 'The password to authenticate the user with the TimeScaleDB server.'
     },
+    schema={
+        'type': ARG_TYPE.STR,
+        'description': 'The schema in which objects are searched first.',
+        'required': False,
+        'label': 'Schema'
+    },
     port={
         'type': ARG_TYPE.INT,
         'description': 'Specify port to connect TimeScaleDB '
@@ -39,8 +43,9 @@ connection_args = OrderedDict(
 
 connection_args_example = OrderedDict(
     host='127.0.0.1',
-    port=36806,
-    password='P455W0rD',
-    user='tsdbadmin',
-    database="tsdb"
+    port=5432,
+    password='password',
+    user='root',
+    database="timescaledb",
+    schema='public'
 )

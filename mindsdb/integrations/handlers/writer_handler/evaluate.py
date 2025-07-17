@@ -359,4 +359,4 @@ class WriterEvaluator:
         elif self.args.evaluation_type == "e2e":
             return self.evaluate_e2e()
         else:
-            raise ValueError(f"evaluation_type must be either 'retrieval' or 'e2e'")
+            raise ValueError("evaluation_type must be either 'retrieval' or 'e2e'")

@@ -3,8 +3,6 @@ title: Couchbase
 sidebarTitle: Couchbase
 ---
 
-
-
 This is the implementation of the Couchbase Vector store data handler for MindsDB.
 
 [Couchbase](https://www.couchbase.com/) is an open-source, distributed multi-model NoSQL document-oriented database software package optimized for interactive applications. These applications may serve many concurrent users by creating, storing, retrieving, aggregating, manipulating, and presenting data.
@@ -24,7 +22,7 @@ In order to make use of this handler and connect to a Couchbase server in MindsD
 ```sql
 CREATE DATABASE couchbase_vectorsource
 WITH
-engine='couchbase',
+engine='couchbasevector',
 parameters={
     "connection_string": "couchbase://localhost",
     "bucket": "travel-sample",

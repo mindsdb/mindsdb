@@ -1,5 +1,4 @@
 import pandas as pd
-from typing import Dict, List
 
 from rocketchat_API.rocketchat import RocketChat
 
@@ -11,9 +10,10 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
 )
 from mindsdb.utilities import log
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 
 logger = log.getLogger(__name__)
+
 
 class RocketChatHandler(APIChatHandler):
     """A class for handling connections and interactions with the Rocket Chat API.
@@ -129,9 +129,8 @@ class RocketChatHandler(APIChatHandler):
         return response
 
     def native_query(self, query: str = None) -> Response:
-        ast = parse_sql(query, dialect='mindsdb')
+        ast = parse_sql(query)
         return self.query(ast)
-
 
     def call_api(self, method_name: str = None, *args, **kwargs) -> pd.DataFrame:
         """Calls the Rocket Chat API method with the given params.

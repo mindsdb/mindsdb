@@ -27,13 +27,13 @@ connection_args = OrderedDict(
         'description': 'The password to authenticate.',
         'secret': True
     },
-    
+
 )
 
 connection_args_example = OrderedDict(
-    server_name = 'localhost',
-    port =  9001,
-    database_name = 'xdb',
-    username = 'SA',
-    password = 'password'
+    server_name='localhost',
+    port=9001,
+    database_name='xdb',
+    username='SA',
+    password='password'
 )

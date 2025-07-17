@@ -1,4 +1,4 @@
-from mindsdb_sql.parser.ast import Select, BinaryOperation, Identifier, Constant, Star
+from mindsdb_sql_parser.ast import Select, BinaryOperation, Identifier, Constant, Star
 from mindsdb.integrations.libs.vectordatabase_handler import TableField
 
 from typing import Any, List, Optional

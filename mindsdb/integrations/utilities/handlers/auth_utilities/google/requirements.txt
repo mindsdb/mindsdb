@@ -1,1 +1,2 @@
-google-auth-httplib2
+google-auth
+google-auth-oauthlib

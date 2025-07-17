@@ -14,6 +14,7 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
     This client is used for accessing the Microsoft OneDrive specific endpoints of the Microsoft Graph API.
     Several common methods for submitting requests, fetching data, etc. are inherited from the base class.
     """
+
     def __init__(self, access_token: Text) -> None:
         super().__init__(access_token)
 
@@ -76,15 +77,15 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
         child_items = []
         for items in self.fetch_paginated_data(f"me/drive/items/{item_id}/children"):
             for item in items:
-                path = f"{path}/{item['name']}"
+                child_path = f"{path}/{item['name']}"
                 # If the item is a folder, get its child items.
                 if "folder" in item:
                     # Recursively get the child items of the folder.
-                    child_items.extend(self.get_child_items(item["id"], path))
+                    child_items.extend(self.get_child_items(item["id"], child_path))
 
                 else:
                     # Add the path to the item.
-                    item["path"] = path
+                    item["path"] = child_path
                     child_items.append(item)
 
         return child_items
@@ -99,4 +100,4 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
         Returns:
             bytes: The content of the specified item.
         """
-        return self.fetch_data(f"me/drive/root:/{path}:/content")
+        return self.fetch_data_content(f"me/drive/root:/{path}:/content")

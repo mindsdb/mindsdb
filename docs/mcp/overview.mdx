@@ -1,0 +1,46 @@
+---
+title: Model Context Protocol (MCP)
+sidebarTitle: Overview
+---
+
+The **Model Context Protocol (MCP)** facilitates real-time communication between MCP clients, such as LLMs, AI agents, and AI applications, and MCP servers like MindsDB.
+
+**MindsDB is an MCP server** that enables intelligent applications to query and reason over federated data from databases, data warehouses, and applications.
+
+## Key Features
+
+* **Unified Data Gateway**
+
+  MindsDB abstracts the complexity of dealing with disparate data sources. It enables AI apps and agents to run powerful, federated queries across structured and unstructured data systems.
+
+* **Seamless User Experience**
+
+  MindsDB enhances MCP implementations with security, monitoring, and governance. It includes built-in integrations to ensure compatibility with traditional and non-MCP applications.
+
+* **Advanced AI Workflows**
+
+  MindsDB supports composite AI operations like multi-source joins and orchestration of different models or services within a single query, which go beyond the native capabilities of most LLMs using MCP alone.
+
+## Protocol Overview
+
+MCP establishes a bidirectional communication channel between clients and servers, enabling LLMs, agents, or apps to execute queries over federated data infrastructures.
+
+<p align="center">
+  <img src="/assets/mcp.png" alt="MCP Protocol Flow Diagram" />
+</p>
+
+Federated data refers to data distributed across multiple systems, formats, or platforms, whether on-premises or in the cloud.
+
+With MindsDB as your MCP server, you can treat this distributed data as a **single virtual database**.
+
+## How It Works
+
+Here's a simplified overview of the MCP data flow:
+
+1. The client connects to the MCP server.
+2. A query is issued from the client to the MCP server.
+3. MindsDB routes the query to the appropriate federated data sources.
+4. The data sources return results to MindsDB.
+5. MindsDB returns unified results back to the client.
+
+This enables AI-native applications to deliver rich, real-time insights over complex enterprise data with minimal integration effort.

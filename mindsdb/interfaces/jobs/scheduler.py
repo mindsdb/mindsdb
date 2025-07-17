@@ -44,7 +44,7 @@ class Scheduler:
         self.q_in = queue.Queue()
         self.q_out = queue.Queue()
         self.work_thread = threading.Thread(
-            target=execute_async, args=(self.q_in, self.q_out)
+            target=execute_async, args=(self.q_in, self.q_out), name='Scheduler.execute_async'
         )
         self.work_thread.start()
 

@@ -5,5 +5,5 @@ __description__ = "MindsDB handler for Microsoft Access"
 __author__ = 'Minura Punchihewa'
 __github__ = 'https://github.com/mindsdb/mindsdb'
 __pypi__ = 'https://pypi.org/project/mindsdb/'
-__license__ = 'GPL-3.0'
-__copyright__ = 'Copyright 2022- mindsdb'
+__license__ = 'MIT'
+__copyright__ = 'Copyright 2022 - MindsDB'

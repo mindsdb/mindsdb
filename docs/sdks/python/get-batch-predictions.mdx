@@ -14,3 +14,13 @@ Use the `predict()` method to make batch predictions by passing the data table a
 ```python
 my_model.predict(my_table.limit(10))
 ```
+
+<Tip>
+When querying for predictions, you can specify the `partition_size` parameter to split data into partitions and run prediction on different workers. Note that the [ML task queue](/setup/custom-config#overview-of-config-parameters) needs to be enabled to use this parameter.
+
+To use the `partition_size` parameter, provide the below argument to the `predict` function, specifying the partition size, like this:
+
+```
+my_model.predict(df, params={'partition_size': 2})
+```
+</Tip>

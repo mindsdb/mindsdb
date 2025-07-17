@@ -13,7 +13,9 @@ class DummyHandler(BaseMLEngine):
             raise RuntimeError()
 
     def create(self, target, args=None, **kwargs):
-        self.model_storage.json_set('args', args['using'])
+        args = args['using']
+        args['target'] = target
+        self.model_storage.json_set('args', args)
 
     def predict(self, df, args=None):
         df['predicted'] = 42
@@ -25,15 +27,16 @@ class DummyHandler(BaseMLEngine):
         if 'engine_args' in df.columns:
             # could exist from previous model
             df = df.drop('engine_args', axis=1)
-            print(1)
 
         model_args = self.model_storage.json_get('args')
         engine_args = self.engine_storage.json_get('engine_args')
 
+        target = model_args['target']
         # check input
         if 'output' in model_args:
-            df['output'] = model_args['output']
-            output_columns.append('output')
+            df[target] = [model_args['output']] * len(df)
+            if target not in output_columns:
+                output_columns.append(target)
         if 'input' in df.columns:
             df['output'] = df['input']
             output_columns.append('output')

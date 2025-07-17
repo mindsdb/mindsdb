@@ -9,6 +9,8 @@ from pydantic import BaseModel
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities import log
 from langchain_core.embeddings import Embeddings
+from mindsdb.integrations.handlers.langchain_embedding_handler.vllm_embeddings import VLLMEmbeddings
+from mindsdb.integrations.handlers.langchain_embedding_handler.fastapi_embeddings import FastAPIEmbeddings
 
 logger = log.getLogger(__name__)
 
@@ -17,7 +19,13 @@ logger = log.getLogger(__name__)
 # for each class, we get a more user friendly name for it
 # E.g. OpenAIEmbeddings -> OpenAI
 # This is used for the user to select the embedding model
-EMBEDDING_MODELS = {}
+EMBEDDING_MODELS = {
+    'VLLM': 'VLLMEmbeddings',
+    'vllm': 'VLLMEmbeddings',
+    'FastAPI': 'FastAPIEmbeddings',
+    'fastapi': 'FastAPIEmbeddings'
+
+}
 
 try:
     module = importlib.import_module("langchain_community.embeddings")
@@ -47,6 +55,14 @@ def get_langchain_class(class_name: str) -> Embeddings:
     Returns:
         langchain.embeddings.BaseEmbedding: The class object
     """
+    # First check if it's our custom VLLMEmbeddings
+    if class_name == "VLLMEmbeddings":
+        return VLLMEmbeddings
+
+    if class_name == "FastAPIEmbeddings":
+        return FastAPIEmbeddings
+
+    # Then try langchain_community.embeddings
     try:
         module = importlib.import_module("langchain_community.embeddings")
         class_ = getattr(module, class_name)
@@ -86,6 +102,22 @@ def construct_model_from_args(args: Dict) -> Embeddings:
         args["target"] = target
     args["class"] = class_name
     return model
+
+
+def row_to_document(row: pd.Series) -> str:
+    """
+    Convert a row in the input dataframe into a document
+
+    Default implementation is to concatenate all the columns
+    in the form of
+    field1: value1\nfield2: value2\n...
+    """
+    fields = row.index.tolist()
+    values = row.values.tolist()
+    document = "\n".join(
+        [f"{field}: {value}" for field, value in zip(fields, values)]
+    )
+    return document
 
 
 class LangchainEmbeddingHandler(BaseMLEngine):
@@ -164,28 +196,13 @@ class LangchainEmbeddingHandler(BaseMLEngine):
             )
 
         # convert each row into a document
-        df_texts = df[input_columns].apply(self.row_to_document, axis=1)
+        df_texts = df[input_columns].apply(row_to_document, axis=1)
         embeddings = model.embed_documents(df_texts.tolist())
 
         # create a new dataframe with the embeddings
         df_embeddings = df.copy().assign(**{target: embeddings})
 
         return df_embeddings
-
-    def row_to_document(self, row: pd.Series) -> str:
-        """
-        Convert a row in the input dataframe into a document
-
-        Default implementation is to concatenate all the columns
-        in the form of
-        field1: value1\nfield2: value2\n...
-        """
-        fields = row.index.tolist()
-        values = row.values.tolist()
-        document = "\n".join(
-            [f"{field}: {value}" for field, value in zip(fields, values)]
-        )
-        return document
 
     def finetune(
         self, df: Union[DataFrame, None] = None, args: Union[Dict, None] = None

@@ -1,6 +1,7 @@
 from http import HTTPStatus
 import functools
 import time
+import os
 
 from prometheus_client import Histogram, Summary
 
@@ -28,6 +29,8 @@ def api_endpoint_metrics(method: str, uri: str):
     def decorator_metrics(endpoint_func):
         @functools.wraps(endpoint_func)
         def wrapper_metrics(*args, **kwargs):
+            if os.environ.get('PROMETHEUS_MULTIPROC_DIR', None) is None:
+                return endpoint_func(*args, **kwargs)
             time_before_query = time.perf_counter()
             try:
                 response = endpoint_func(*args, **kwargs)

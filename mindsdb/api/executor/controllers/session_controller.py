@@ -8,7 +8,7 @@
  * permission of MindsDB Inc
  *******************************************************
 """
-from mindsdb.api.executor.datahub.datahub import init_datahub
+from mindsdb.api.executor.datahub.datanodes import InformationSchemaDataNode
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.model.model_controller import ModelController
@@ -52,7 +52,7 @@ class SessionController:
         from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseController
         self.kb_controller = KnowledgeBaseController(self)
 
-        self.datahub = init_datahub(self)
+        self.datahub = InformationSchemaDataNode(self)
         self.agents_controller = AgentsController()
 
         self.prepared_stmts = {}

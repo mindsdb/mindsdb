@@ -3,6 +3,7 @@ from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
+from mindsdb.interfaces.model.functions import get_project_record, get_project_records
 
 
 class ViewController:
@@ -39,11 +40,8 @@ class ViewController:
 
     def update(self, name, query, project_name):
         name = name.lower()
-        project_record = db.session.query(db.Project).filter_by(
-            name=project_name,
-            company_id=ctx.company_id,
-            deleted_at=None
-        ).first()
+        project_record = get_project_record(project_name)
+
         rec = db.session.query(db.View).filter(
             func.lower(db.View.name) == name,
             db.View.company_id == ctx.company_id,
@@ -56,11 +54,8 @@ class ViewController:
 
     def delete(self, name, project_name):
         name = name.lower()
-        project_record = db.session.query(db.Project).filter_by(
-            name=project_name,
-            company_id=ctx.company_id,
-            deleted_at=None
-        ).first()
+        project_record = get_project_record(project_name)
+
         rec = db.session.query(db.View).filter(
             func.lower(db.View.name) == name,
             db.View.company_id == ctx.company_id,
@@ -74,17 +69,12 @@ class ViewController:
         query_context_controller.drop_query_context('view', rec.id)
 
     def list(self, project_name):
-        query = db.session.query(db.Project).filter_by(
-            company_id=ctx.company_id,
-            deleted_at=None
-        )
-        if project_name is not None:
-            query = query.filter_by(name=project_name)
 
-        project_names = {
-            i.id: i.name
-            for i in query
-        }
+        project_names = {}
+        for project in get_project_records():
+            if project_name is not None and project.name != project_name:
+                continue
+            project_names[project.id] = project.name
 
         query = db.session.query(db.View).filter(
             db.View.company_id == ctx.company_id,
@@ -112,11 +102,8 @@ class ViewController:
         }
 
     def get(self, id=None, name=None, project_name=None):
-        project_record = db.session.query(db.Project).filter_by(
-            name=project_name,
-            company_id=ctx.company_id,
-            deleted_at=None
-        ).first()
+        project_record = get_project_record(project_name)
+
         if id is not None:
             records = db.session.query(db.View).filter_by(
                 id=id,

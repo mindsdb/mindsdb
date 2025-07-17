@@ -1,8 +1,10 @@
+import ast
 from typing import List, Optional
 
-import pinecone
+import numpy as np
+from pinecone import Pinecone, ServerlessSpec
+from pinecone.core.openapi.shared.exceptions import NotFoundException, PineconeApiException
 import pandas as pd
-import ast
 
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse
@@ -18,32 +20,30 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+DEFAULT_CREATE_TABLE_PARAMS = {
+    "dimension": 8,
+    "metric": "cosine",
+    "spec": {
+        "cloud": "aws",
+        "region": "us-east-1"
+    }
+}
+MAX_FETCH_LIMIT = 10000
+UPSERT_BATCH_SIZE = 99  # API reccomendation
+
 
 class PineconeHandler(VectorStoreHandler):
     """This handler handles connection and execution of the Pinecone statements."""
 
     name = "pinecone"
 
-    def __init__(self, name: str, **kwargs):
+    def __init__(self, name: str, connection_data: dict, **kwargs):
         super().__init__(name)
-        self.MAX_FETCH_LIMIT = 10000
-        self._connection_data = kwargs.get("connection_data")
-        self._client_config = {
-            "api_key": self._connection_data.get("api_key"),
-            "environment": self._connection_data.get("environment")
-        }
-        self._table_create_params = {
-            "dimension": 8,
-            "metric": "cosine",
-            "pods": 1,
-            "replicas": 1,
-            "pod_type": 'p1',
-        }
-        for key in self._table_create_params:
-            if key in self._connection_data:
-                self._table_create_params[key] = self._connection_data[key]
+        self.connection_data = connection_data
+        self.kwargs = kwargs
+
+        self.connection = None
         self.is_connected = False
-        self.connect()
 
     def __del__(self):
         if self.is_connected is True:
@@ -51,7 +51,8 @@ class PineconeHandler(VectorStoreHandler):
 
     def _get_index_handle(self, index_name):
         """Returns handler to index specified by `index_name`"""
-        index = pinecone.Index(index_name)
+        connection = self.connect()
+        index = connection.Index(index_name)
         try:
             index.describe_index_stats()
         except Exception:
@@ -135,10 +136,15 @@ class PineconeHandler(VectorStoreHandler):
 
     def connect(self):
         """Connect to a pinecone database."""
+        if self.is_connected is True:
+            return self.connection
+
+        if 'api_key' not in self.connection_data:
+            raise ValueError('Required parameter (api_key) must be provided.')
+
         try:
-            pinecone.init(api_key=self._client_config["api_key"], environment=self._client_config["environment"])
-            pinecone.list_indexes()
-            self.is_connected = True
+            self.connection = Pinecone(api_key=self.connection_data['api_key'])
+            return self.connection
         except Exception as e:
             logger.error(f"Error connecting to Pinecone client, {e}!")
             self.is_connected = False
@@ -147,55 +153,99 @@ class PineconeHandler(VectorStoreHandler):
         """Close the pinecone connection."""
         if self.is_connected is False:
             return
-        pinecone.init(api_key="", environment="")
+        self.connection = None
         self.is_connected = False
 
     def check_connection(self):
         """Check the connection to pinecone."""
-        response_code = StatusResponse(False)
+        response = StatusResponse(False)
+        need_to_close = self.is_connected is False
+
         try:
-            pinecone.list_indexes()
-            response_code.success = True
+            connection = self.connect()
+            connection.list_indexes()
+            response.success = True
         except Exception as e:
             logger.error(f"Error connecting to pinecone , {e}!")
-            response_code.error_message = str(e)
-        return response_code
+            response.error_message = str(e)
+
+        if response.success is True and need_to_close:
+            self.disconnect()
+        if response.success is False and self.is_connected is True:
+            self.is_connected = False
+
+        return response
 
     def get_tables(self) -> HandlerResponse:
         """Get the list of indexes in the pinecone database."""
-        indexes = pinecone.list_indexes()
-        indexes_names = pd.DataFrame(
-            columns=["index_name"],
-            data=[index for index in indexes],
+        connection = self.connect()
+        indexes = connection.list_indexes()
+        df = pd.DataFrame(
+            columns=["table_name"],
+            data=[index['name'] for index in indexes],
         )
-        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=indexes_names)
+        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=df)
 
     def create_table(self, table_name: str, if_not_exists=True):
         """Create an index with the given name in the Pinecone database."""
-        pinecone.create_index(name=table_name, **self._table_create_params)
+        connection = self.connect()
 
-    def insert(self, table_name: str, data: pd.DataFrame, columns: List[str] = None):
+        # TODO: Should other parameters be supported? Pod indexes?
+        # TODO: Should there be a better way to provide these parameters rather than when establishing the connection?
+        create_table_params = {}
+        for key, val in DEFAULT_CREATE_TABLE_PARAMS.items():
+            if key in self.connection_data:
+                create_table_params[key] = self.connection_data[key]
+            else:
+                create_table_params[key] = val
+
+        create_table_params["spec"] = ServerlessSpec(**create_table_params["spec"])
+
+        try:
+            connection.create_index(name=table_name, **create_table_params)
+        except PineconeApiException as pinecone_error:
+            if pinecone_error.status == 409 and if_not_exists:
+                return
+            raise Exception(f"Error creating index '{table_name}': {pinecone_error}")
+
+    def insert(self, table_name: str, data: pd.DataFrame):
         """Insert data into pinecone index passed in through `table_name` parameter."""
-        upsert_batch_size = 99  # API reccomendation
         index = self._get_index_handle(table_name)
         if index is None:
             raise Exception(f"Error getting index '{table_name}', are you sure the name is correct?")
 
         data.rename(columns={
             TableField.ID.value: "id",
-            TableField.EMBEDDINGS.value: "values",
-            TableField.METADATA.value: "metadata"},
+            TableField.EMBEDDINGS.value: "values"},
             inplace=True)
-        data = data[["id", "values", "metadata"]]
 
-        for chunk in (data[pos:pos + upsert_batch_size] for pos in range(0, len(data), upsert_batch_size)):
+        columns = ["id", "values"]
+
+        if TableField.METADATA.value in data.columns:
+            data.rename(columns={TableField.METADATA.value: "metadata"}, inplace=True)
+            # fill None and NaN values with empty dict
+            if data['metadata'].isnull().any():
+                data['metadata'] = data['metadata'].apply(lambda x: {} if x is None or (isinstance(x, float) and np.isnan(x)) else x)
+            columns.append("metadata")
+
+        data = data[columns]
+
+        # convert the embeddings to lists if they are strings
+        data["values"] = data["values"].apply(lambda x: ast.literal_eval(x) if isinstance(x, str) else x)
+
+        for chunk in (data[pos:pos + UPSERT_BATCH_SIZE] for pos in range(0, len(data), UPSERT_BATCH_SIZE)):
             chunk = chunk.to_dict(orient="records")
             index.upsert(vectors=chunk)
 
     def drop_table(self, table_name: str, if_exists=True):
         """Delete an index passed in through `table_name` from the pinecone ."""
-
-        pinecone.delete_index(table_name)
+        connection = self.connect()
+        try:
+            connection.delete_index(table_name)
+        except NotFoundException:
+            if if_exists:
+                return
+            raise Exception(f"Error deleting index '{table_name}', are you sure the name is correct?")
 
     def delete(self, table_name: str, conditions: List[FilterCondition] = None):
         """Delete records in pinecone index `table_name` based on ids or based on metadata conditions."""
@@ -225,6 +275,7 @@ class PineconeHandler(VectorStoreHandler):
         limit: int = None,
     ):
         """Run query on pinecone index named `table_name` and get results."""
+        # TODO: Add support for namespaces.
         index = self._get_index_handle(table_name)
         if index is None:
             raise Exception(f"Error getting index '{table_name}', are you sure the name is correct?")
@@ -233,23 +284,28 @@ class PineconeHandler(VectorStoreHandler):
             "include_values": True,
             "include_metadata": True
         }
+
         # check for metadata filter
         metadata_filters = self._translate_metadata_condition(conditions)
-        # check for vector filter
-        vector_filter = (
-            None
-            if conditions is None
-            else [
-                condition.value
-                for condition in conditions
-                if condition.column == TableField.SEARCH_VECTOR.value
-            ]
-        )
-        if vector_filter:
-            if len(vector_filter) > 1:
+        if metadata_filters is not None:
+            query["filter"] = metadata_filters
+
+        # check for vector and id filters
+        vector_filters = []
+        id_filters = []
+
+        if conditions:
+            for condition in conditions:
+                if condition.column == TableField.SEARCH_VECTOR.value:
+                    vector_filters.append(condition.value)
+                elif condition.column == TableField.ID.value:
+                    id_filters.append(condition.value)
+
+        if vector_filters:
+            if len(vector_filters) > 1:
                 raise Exception("You cannot have multiple search_vectors in query")
 
-            query["vector"] = vector_filter[0]
+            query["vector"] = vector_filters[0]
             # For subqueries, the vector filter is a list of list of strings
             if isinstance(query["vector"], list) and isinstance(query["vector"][0], str):
                 if len(query["vector"]) > 1:
@@ -260,26 +316,21 @@ class PineconeHandler(VectorStoreHandler):
                 except Exception as e:
                     raise Exception(f"Cannot parse the search vector '{query['vector']}'into a list: {e}")
 
-        # check for limit
-        if limit is not None:
-            query["top_k"] = limit
-        else:
-            query["top_k"] = self.MAX_FETCH_LIMIT
-        if metadata_filters is not None:
-            query["filter"] = metadata_filters
-        # check for id filter
-        id_filters = None
-        if conditions is not None:
-            id_filters = [
-                condition.value
-                for condition in conditions
-                if condition.column == TableField.ID.value
-            ] or None
         if id_filters:
             if len(id_filters) > 1:
                 raise Exception("You cannot have multiple IDs in query")
 
             query["id"] = id_filters[0]
+
+        if not vector_filters and not id_filters:
+            raise Exception("You must provide either a search_vector or an ID in the query")
+
+        # check for limit
+        if limit is not None:
+            query["top_k"] = limit
+        else:
+            query["top_k"] = MAX_FETCH_LIMIT
+
         # exec query
         try:
             result = index.query(**query)

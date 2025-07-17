@@ -1,15 +1,15 @@
 from typing import Any, Dict, Text
 
 import msal
-from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.parser.ast import Constant, Identifier, Select, Star
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast import Constant, Identifier, Select, Star
+from mindsdb_sql_parser import parse_sql
 import pandas as pd
 from requests.exceptions import RequestException
 
 from mindsdb.integrations.handlers.ms_one_drive_handler.ms_graph_api_one_drive_client import MSGraphAPIOneDriveClient
 from mindsdb.integrations.handlers.ms_one_drive_handler.ms_one_drive_tables import FileTable, ListFilesTable
-from mindsdb.integrations.utilities.handlers.auth_utilities import MSGraphAPIDelegatedPermissionsManager
+from mindsdb.integrations.utilities.handlers.auth_utilities.microsoft import MSGraphAPIDelegatedPermissionsManager
 from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import AuthException
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
@@ -28,7 +28,7 @@ class MSOneDriveHandler(APIHandler):
     """
 
     name = 'one_drive'
-    supported_file_formats = ['csv', 'tsv', 'json', 'parquet']
+    supported_file_formats = ['csv', 'tsv', 'json', 'parquet', 'pdf', 'txt']
 
     def __init__(self, name: Text, connection_data: Dict, **kwargs: Any) -> None:
         """

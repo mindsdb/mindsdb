@@ -1,21 +1,21 @@
+from typing import List
 from copy import deepcopy
 from abc import ABC, abstractmethod
-from typing import List, Union, Tuple
 from collections import OrderedDict
 
 import pandas as pd
+from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser.ast import Select, Identifier, Star, BinaryOperation, Constant, Join, Function
+from mindsdb_sql_parser.utils import JoinType
 
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import Select, Identifier, Star, BinaryOperation, Constant, Join, Function
-from mindsdb_sql.parser.utils import JoinType
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb_sql.planner.utils import query_traversal
-
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.utilities.functions import resolve_table_identifier
 from mindsdb.api.executor.utilities.sql import get_query_tables
 from mindsdb.utilities.exception import EntityNotExistsError
 import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.context import context as ctx
+from mindsdb.api.executor.datahub.classes.response import DataHubResponse
 from mindsdb.api.executor.datahub.classes.tables_row import (
     TABLES_ROW_TYPE,
     TablesRow,
@@ -35,7 +35,7 @@ class LogTable(ABC):
     name: str
     deletable: bool = False
     visible: bool = True
-    kind: str = 'table'
+    kind: str = "table"
 
     @staticmethod
     @abstractmethod
@@ -59,142 +59,113 @@ class LogTable(ABC):
             BinaryOperation: statement that can be used for 'safe' comparison
         """
         return BinaryOperation(
-            op='=',
+            op="=",
             args=(
-                Function(
-                    op='coalesce',
-                    args=(
-                        Identifier(f'{table_a}.company_id'),
-                        0
-                    )
-                ),
-                Function(
-                    op='coalesce',
-                    args=(
-                        Identifier(f'{table_b}.company_id'),
-                        0
-                    )
-                )
-            )
+                Function(op="coalesce", args=(Identifier(f"{table_a}.company_id"), 0)),
+                Function(op="coalesce", args=(Identifier(f"{table_b}.company_id"), 0)),
+            ),
         )
 
 
 class LLMLogTable(LogTable):
-    name = 'llm_log'
+    name = "llm_log"
 
     columns = [
-        'API_KEY', 'MODEL_NAME', 'INPUT', 'OUTPUT', 'START_TIME', 'END_TIME',
-        'PROMPT_TOKENS', 'COMPLETION_TOKENS', 'TOTAL_TOKENS', 'SUCCESS'
+        "API_KEY",
+        "MODEL_NAME",
+        "INPUT",
+        "OUTPUT",
+        "START_TIME",
+        "END_TIME",
+        "PROMPT_TOKENS",
+        "COMPLETION_TOKENS",
+        "TOTAL_TOKENS",
+        "SUCCESS",
     ]
 
-    types_map = {
-        'SUCCESS': 'boolean',
-        'START_TIME': 'datetime64[ns]',
-        'END_TIME': 'datetime64[ns]'
-    }
+    types_map = {"SUCCESS": "boolean", "START_TIME": "datetime64[ns]", "END_TIME": "datetime64[ns]"}
 
     @staticmethod
     def _get_base_subquery() -> Select:
         query = Select(
             targets=[
-                Identifier('llm_log.api_key', alias=Identifier('api_key')),
-                Identifier('predictor.name', alias=Identifier('model_name')),
-                Identifier('llm_log.input', alias=Identifier('input')),
-                Identifier('llm_log.output', alias=Identifier('output')),
-                Identifier('llm_log.start_time', alias=Identifier('start_time')),
-                Identifier('llm_log.end_time', alias=Identifier('end_time')),
-                Identifier('llm_log.prompt_tokens', alias=Identifier('prompt_tokens')),
-                Identifier('llm_log.completion_tokens', alias=Identifier('completion_tokens')),
-                Identifier('llm_log.total_tokens', alias=Identifier('total_tokens')),
-                Identifier('llm_log.success', alias=Identifier('success'))
+                Identifier("llm_log.api_key", alias=Identifier("api_key")),
+                Identifier("predictor.name", alias=Identifier("model_name")),
+                Identifier("llm_log.input", alias=Identifier("input")),
+                Identifier("llm_log.output", alias=Identifier("output")),
+                Identifier("llm_log.start_time", alias=Identifier("start_time")),
+                Identifier("llm_log.end_time", alias=Identifier("end_time")),
+                Identifier("llm_log.prompt_tokens", alias=Identifier("prompt_tokens")),
+                Identifier("llm_log.completion_tokens", alias=Identifier("completion_tokens")),
+                Identifier("llm_log.total_tokens", alias=Identifier("total_tokens")),
+                Identifier("llm_log.success", alias=Identifier("success")),
             ],
             from_table=Join(
-                left=Identifier('llm_log'),
-                right=Identifier('predictor'),
+                left=Identifier("llm_log"),
+                right=Identifier("predictor"),
                 join_type=JoinType.LEFT_JOIN,
                 condition=BinaryOperation(
-                    op='and',
+                    op="and",
                     args=(
-                        LLMLogTable.company_id_comparison('llm_log', 'predictor'),
-                        BinaryOperation(
-                            op='=',
-                            args=(
-                                Identifier('llm_log.model_id'),
-                                Identifier('predictor.id')
-                            )
-                        )
-                    )
-                )
+                        LLMLogTable.company_id_comparison("llm_log", "predictor"),
+                        BinaryOperation(op="=", args=(Identifier("llm_log.model_id"), Identifier("predictor.id"))),
+                    ),
+                ),
             ),
             where=BinaryOperation(
-                op='is' if ctx.company_id is None else '=',
-                args=(Identifier('llm_log.company_id'), Constant(ctx.company_id))
+                op="is" if ctx.company_id is None else "=",
+                args=(Identifier("llm_log.company_id"), Constant(ctx.company_id)),
             ),
-            alias=Identifier('llm_log')
+            alias=Identifier("llm_log"),
         )
         return query
 
 
 class JobsHistoryTable(LogTable):
-    name = 'jobs_history'
+    name = "jobs_history"
 
-    columns = ['NAME', 'PROJECT', 'RUN_START', 'RUN_END', 'ERROR', 'QUERY']
-    types_map = {
-        'RUN_START': 'datetime64[ns]',
-        'RUN_END': 'datetime64[ns]'
-    }
+    columns = ["NAME", "PROJECT", "RUN_START", "RUN_END", "ERROR", "QUERY"]
+    types_map = {"RUN_START": "datetime64[ns]", "RUN_END": "datetime64[ns]"}
 
     @staticmethod
     def _get_base_subquery() -> Select:
         query = Select(
             targets=[
-                Identifier('jobs.name', alias=Identifier('name')),
-                Identifier('project.name', alias=Identifier('project')),
-                Identifier('jobs_history.start_at', alias=Identifier('run_start')),
-                Identifier('jobs_history.end_at', alias=Identifier('run_end')),
-                Identifier('jobs_history.error', alias=Identifier('error')),
-                Identifier('jobs_history.query_str', alias=Identifier('query'))
+                Identifier("jobs.name", alias=Identifier("name")),
+                Identifier("project.name", alias=Identifier("project")),
+                Identifier("jobs_history.start_at", alias=Identifier("run_start")),
+                Identifier("jobs_history.end_at", alias=Identifier("run_end")),
+                Identifier("jobs_history.error", alias=Identifier("error")),
+                Identifier("jobs_history.query_str", alias=Identifier("query")),
             ],
             from_table=Join(
                 left=Join(
-                    left=Identifier('jobs_history'),
-                    right=Identifier('jobs'),
+                    left=Identifier("jobs_history"),
+                    right=Identifier("jobs"),
                     join_type=JoinType.LEFT_JOIN,
                     condition=BinaryOperation(
-                        op='and',
+                        op="and",
                         args=(
-                            LLMLogTable.company_id_comparison('jobs_history', 'jobs'),
-                            BinaryOperation(
-                                op='=',
-                                args=(
-                                    Identifier('jobs_history.job_id'),
-                                    Identifier('jobs.id')
-                                )
-                            )
-                        )
-                    )
+                            LLMLogTable.company_id_comparison("jobs_history", "jobs"),
+                            BinaryOperation(op="=", args=(Identifier("jobs_history.job_id"), Identifier("jobs.id"))),
+                        ),
+                    ),
                 ),
-                right=Identifier('project'),
+                right=Identifier("project"),
                 join_type=JoinType.LEFT_JOIN,
                 condition=BinaryOperation(
-                    op='and',
+                    op="and",
                     args=(
-                        LLMLogTable.company_id_comparison('project', 'jobs'),
-                        BinaryOperation(
-                            op='=',
-                            args=(
-                                Identifier('project.id'),
-                                Identifier('jobs.project_id')
-                            )
-                        )
-                    )
-                )
+                        LLMLogTable.company_id_comparison("project", "jobs"),
+                        BinaryOperation(op="=", args=(Identifier("project.id"), Identifier("jobs.project_id"))),
+                    ),
+                ),
             ),
             where=BinaryOperation(
-                op='is' if ctx.company_id is None else '=',
-                args=(Identifier('jobs_history.company_id'), Constant(ctx.company_id))
+                op="is" if ctx.company_id is None else "=",
+                args=(Identifier("jobs_history.company_id"), Constant(ctx.company_id)),
             ),
-            alias=Identifier('jobs_history')
+            alias=Identifier("jobs_history"),
         )
         return query
 
@@ -202,8 +173,8 @@ class JobsHistoryTable(LogTable):
 class LogDBController:
     def __init__(self):
         self._tables = OrderedDict()
-        self._tables['llm_log'] = LLMLogTable
-        self._tables['jobs_history'] = JobsHistoryTable
+        self._tables["llm_log"] = LLMLogTable
+        self._tables["jobs_history"] = JobsHistoryTable
 
     def get_list(self) -> List[LogTable]:
         return list(self._tables.values())
@@ -212,9 +183,12 @@ class LogDBController:
         try:
             return self._tables[name]
         except KeyError:
-            raise EntityNotExistsError(f'Table log.{name} does not exists')
+            raise EntityNotExistsError(f"Table log.{name} does not exists")
 
     def get_tables(self) -> OrderedDict:
+        return self._tables
+
+    def get_tree_tables(self) -> OrderedDict:
         return self._tables
 
     def get_tables_rows(self) -> List[TablesRow]:
@@ -223,8 +197,7 @@ class LogDBController:
             for table_name in self._tables.keys()
         ]
 
-    def query(self, query: Select = None, native_query: str = None,
-              session=None, return_as: str = 'split') -> Union[pd.DataFrame, Tuple[pd.DataFrame, list]]:
+    def query(self, query: Select = None, native_query: str = None, session=None) -> DataHubResponse:
         if native_query is not None:
             if query is not None:
                 raise Exception("'query' and 'native_query' arguments can not be used together")
@@ -238,7 +211,7 @@ class LogDBController:
         if len(tables) != 1:
             raise Exception("Only one table may be in query to log database")
         table = tables[0]
-        if table[0] is not None and table[0].lower() != 'log':
+        if table[0] is not None and table[0].lower() != "log":
             raise Exception("This is not a query to the log database")
         if table[1].lower() not in self._tables.keys():
             raise Exception(f"There is no table '{table[1]}' in the log database")
@@ -274,7 +247,7 @@ class LogDBController:
 
         render_engine = db.engine.name
         if render_engine == "postgresql":
-            'postgres'
+            "postgres"
         render = SqlalchemyRender(render_engine)
         query_str = render.get_string(query, with_failback=False)
         df = pd.read_sql_query(query_str, db.engine)
@@ -286,12 +259,6 @@ class LogDBController:
                     df[df_column_name] = df[df_column_name].astype(column_type)
         # endregion
 
-        if return_as != 'split':
-            return df
+        columns_info = [{"name": k, "type": v} for k, v in df.dtypes.items()]
 
-        columns_info = [{
-            'name': k,
-            'type': v
-        } for k, v in df.dtypes.items()]
-
-        return df, columns_info
+        return DataHubResponse(data_frame=df, columns=columns_info)

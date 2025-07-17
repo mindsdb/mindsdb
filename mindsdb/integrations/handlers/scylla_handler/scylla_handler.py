@@ -7,10 +7,10 @@ from cassandra.cluster import Cluster
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.util import Date
 
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.parser import ast
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser.ast.base import ASTNode
+from mindsdb_sql_parser import ast
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
@@ -21,6 +21,7 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
+
 
 class ScyllaHandler(DatabaseHandler):
     """
@@ -35,17 +36,17 @@ class ScyllaHandler(DatabaseHandler):
         self.session = None
         self.is_connected = False
 
-    def download_secure_bundle(self, url, max_size=10*1024*1024):
+    def download_secure_bundle(self, url, max_size=10 * 1024 * 1024):
         """
         Downloads the secure bundle from a given URL and stores it in a temporary file.
-        
+
         :param url: URL of the secure bundle to be downloaded.
         :param max_size: Maximum allowable size of the bundle in bytes. Defaults to 10MB.
         :return: Path to the downloaded secure bundle saved as a temporary file.
         :raises ValueError: If the secure bundle size exceeds the allowed `max_size`.
-        
+
         TODO:
-        - Find a way to periodically clean up or delete the temporary files 
+        - Find a way to periodically clean up or delete the temporary files
         after they have been used to prevent filling up storage over time.
         """
         response = requests.get(url, stream=True, timeout=10)
@@ -78,7 +79,7 @@ class ScyllaHandler(DatabaseHandler):
                     username=self.connection_args['user'], password=self.connection_args['password']
                 )
             else:
-                raise ValueError("If authentication is required, both 'user' and 'password' must be provided!") 
+                raise ValueError("If authentication is required, both 'user' and 'password' must be provided!")
 
         connection_props = {
             'auth_provider': auth_provider

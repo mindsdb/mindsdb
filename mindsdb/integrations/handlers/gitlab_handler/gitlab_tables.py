@@ -6,9 +6,10 @@ from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb.utilities import log
 
-from mindsdb_sql.parser import ast
+from mindsdb_sql_parser import ast
 
 logger = log.getLogger(__name__)
+
 
 class GitlabIssuesTable(APITable):
     """The GitLab Issue Table implementation"""
@@ -80,8 +81,6 @@ class GitlabIssuesTable(APITable):
         self.handler.connect()
 
         gitlab_issues_df = pd.DataFrame(columns=self.get_columns())
-
-        start = 0
 
         issues_kwargs["per_page"] = total_results
         issues_kwargs["get_all"] = False
@@ -252,8 +251,6 @@ class GitlabMergeRequestsTable(APITable):
         self.handler.connect()
 
         gitlab_merge_requests_df = pd.DataFrame(columns=self.get_columns())
-
-        start = 0
 
         merge_requests_kwargs["per_page"] = total_results
         merge_requests_kwargs["get_all"] = False

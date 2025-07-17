@@ -5,10 +5,11 @@ from typing import List
 
 import sqlalchemy as sa
 
-from mindsdb_sql import parse_sql, ParsingException
-from mindsdb_sql.parser.dialects.mindsdb import CreateJob
-from mindsdb_sql.parser.ast import Select, Star, Identifier, BinaryOperation, Constant
+from mindsdb_sql_parser import parse_sql, ParsingException
+from mindsdb_sql_parser.ast.mindsdb import CreateJob
+from mindsdb_sql_parser.ast import Select, Star, Identifier, BinaryOperation, Constant
 
+from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.exception import EntityNotExistsError, EntityExistsError
 from mindsdb.interfaces.storage import db
@@ -19,6 +20,8 @@ from mindsdb.interfaces.database.log import LogDBController
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
+
+default_project = config.get('default_project')
 
 
 def split_sql(sql):
@@ -145,7 +148,7 @@ class JobsController:
                 # replace template variables with null
                 sql = re.sub(r'\{\{[\w\d]+}}', "", sql)
 
-                parse_sql(sql, dialect='mindsdb')
+                parse_sql(sql)
             except ParsingException as e:
                 raise ParsingException(f'Unable to parse: {sql}: {e}')
 
@@ -155,7 +158,7 @@ class JobsController:
                     # replace template variables with null
                     sql = re.sub(r'\{\{[\w\d]+}}', "", sql)
 
-                    parse_sql(sql, dialect='mindsdb')
+                    parse_sql(sql)
                 except ParsingException as e:
                     raise ParsingException(f'Unable to parse: {sql}: {e}')
 
@@ -199,7 +202,7 @@ class JobsController:
         """
 
         if project_name is None:
-            project_name = 'mindsdb'
+            project_name = default_project
 
         start_at = None
         if query.start_str is not None:
@@ -334,13 +337,10 @@ class JobsController:
                 BinaryOperation(op='=', args=[Identifier('project'), Constant(project_name)])
             ])
         )
-        data, columns = logs_db_controller.query(query)
+        response = logs_db_controller.query(query)
 
-        names = [i['name'] for i in columns]
-        records = []
-        for row in data:
-            records.append(dict(zip(names, row)))
-        return records
+        names = [i['name'] for i in response.columns]
+        return response.data_frame[names].to_dict(orient='records')
 
 
 class JobsExecutor:
@@ -490,7 +490,7 @@ class JobsExecutor:
                     #  fill template variables
                     sql = self.__fill_variables(sql, record, history_record)
 
-                    query = parse_sql(sql, dialect='mindsdb')
+                    query = parse_sql(sql)
                     executed_sql += sql + '; '
 
                     ret = command_executor.execute_command(query)
@@ -517,7 +517,7 @@ class JobsExecutor:
                     #  fill template variables
                     sql = self.__fill_variables(sql, record, history_record)
 
-                    query = parse_sql(sql, dialect='mindsdb')
+                    query = parse_sql(sql)
                     executed_sql += sql + '; '
 
                     ret = command_executor.execute_command(query)

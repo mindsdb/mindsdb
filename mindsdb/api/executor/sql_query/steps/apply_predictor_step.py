@@ -1,19 +1,19 @@
 import datetime as dt
 import re
 
-import dateinfer
 import pandas as pd
 
-from mindsdb_sql.parser.ast import (
+from mindsdb_sql_parser.ast import (
     BinaryOperation,
     Identifier,
     Constant,
-    Latest,
     BetweenOperation,
     Parameter,
 )
-from mindsdb_sql.planner.step_result import Result
-from mindsdb_sql.planner.steps import (
+from mindsdb_sql_parser.ast.mindsdb import Latest
+
+from mindsdb.api.executor.planner.step_result import Result
+from mindsdb.api.executor.planner.steps import (
     ApplyTimeseriesPredictorStep,
     ApplyPredictorRowStep,
     ApplyPredictorStep,
@@ -91,20 +91,17 @@ class ApplyPredictorRowStepCall(ApplyPredictorBaseCall):
 
         table_name = get_preditor_alias(step, self.context.get('database'))
 
-        result = ResultSet()
-        result.is_prediction = True
         if len(predictions) == 0:
-            columns = [col['name'] for col in project_datanode.get_table_columns(predictor_name)]
-            predictions = pd.DataFrame([], columns=columns)
+            columns_names = project_datanode.get_table_columns_names(predictor_name)
+            predictions = pd.DataFrame([], columns=columns_names)
 
-        result.from_df(
-            predictions,
+        return ResultSet.from_df(
+            df=predictions,
             database=table_name[0],
             table_name=table_name[1],
-            table_alias=table_name[2]
+            table_alias=table_name[2],
+            is_prediction=True
         )
-
-        return result
 
 
 class ApplyPredictorStepCall(ApplyPredictorBaseCall):
@@ -164,18 +161,17 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
                 params['force_ts_infer'] = True
                 _mdb_forecast_offset = None
 
-            data.add_column(Column('__mdb_forecast_offset'), _mdb_forecast_offset)
+            data.add_column(Column(name='__mdb_forecast_offset'), _mdb_forecast_offset)
 
         table_name = get_preditor_alias(step, self.context['database'])
-        result = ResultSet()
-        result.is_prediction = True
 
         project_datanode = self.session.datahub.get(project_name)
         if len(data) == 0:
-            cols = [col['name'] for col in project_datanode.get_table_columns(predictor_name)] + ['__mindsdb_row_id']
-            for col in cols:
+            columns_names = project_datanode.get_table_columns_names(predictor_name) + ['__mindsdb_row_id']
+            result = ResultSet(is_prediction=True)
+            for column_name in columns_names:
                 result.add_column(Column(
-                    name=col,
+                    name=column_name,
                     database=table_name[0],
                     table_name=table_name[1],
                     table_alias=table_name[2]
@@ -212,7 +208,7 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
                         columns = list(table_df.columns)
                         for col_idx, name in cols_to_rename.items():
                             columns[col_idx] = name
-                        table_df = table_df.set_axis(columns, axis=1)
+                        table_df.columns = columns
 
                 version = None
                 if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():
@@ -230,11 +226,12 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
                 pred_data = self.apply_ts_filter(pred_data, where_data, step, predictor_metadata)
                 predictions = pd.DataFrame(pred_data)
 
-            result.from_df(
+            result = ResultSet.from_df(
                 predictions,
                 database=table_name[0],
                 table_name=table_name[1],
-                table_alias=table_name[2]
+                table_alias=table_name[2],
+                is_prediction=True
             )
 
         return result
@@ -261,7 +258,7 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
             return predictor_data
 
         def get_date_format(samples):
-            # dateinfer reads sql date 2020-04-01 as yyyy-dd-mm. workaround for in
+            # Try common formats first with explicit patterns
             for date_format, pattern in (
                 ('%Y-%m-%d', r'[\d]{4}-[\d]{2}-[\d]{2}'),
                 ('%Y-%m-%d %H:%M:%S', r'[\d]{4}-[\d]{2}-[\d]{2} [\d]{2}:[\d]{2}:[\d]{2}'),
@@ -279,7 +276,26 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
                     if date_format is not None:
                         return date_format
 
-            return dateinfer.infer(samples)
+            # Use dateparser as fallback and infer format
+            try:
+                # Parse the first sample to get its format
+                # The import is heavy, so we do it here on-demand
+                import dateparser
+                parsed_date = dateparser.parse(samples[0])
+                if parsed_date is None:
+                    raise ValueError("Could not parse date")
+
+                # Verify the format works for all samples
+                for sample in samples[1:]:
+                    if dateparser.parse(sample) is None:
+                        raise ValueError("Inconsistent date formats in samples")
+                # Convert to strftime format based on the input
+                if re.search(r'\d{2}:\d{2}:\d{2}', samples[0]):
+                    return '%Y-%m-%d %H:%M:%S'
+                return '%Y-%m-%d'
+            except (ValueError, AttributeError):
+                # If dateparser fails, return a basic format as last resort
+                return '%Y-%m-%d'
 
         model_types = predictor_metadata['model_types']
         if model_types.get(order_col) in ('float', 'integer'):

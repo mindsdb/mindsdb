@@ -54,13 +54,18 @@ WHERE url = 'docs.mindsdb.com'
 LIMIT 10;
 ```
 
-Another option is to get the content from multiple websites by using the `IN ()` operator:
+In order to get the content from multiple websites, use the `UNION` operator:
 
 ```sql
 SELECT * 
 FROM my_web.crawler 
-WHERE url IN ('docs.mindsdb.com', 'docs.python.org') 
-LIMIT 1;
+WHERE url = 'docs.mindsdb.com'
+LIMIT 5
+UNION
+SELECT * 
+FROM my_web.crawler 
+WHERE url = 'docs.python.org'
+LIMIT 5;
 ```
 
 ### Get PDF Content

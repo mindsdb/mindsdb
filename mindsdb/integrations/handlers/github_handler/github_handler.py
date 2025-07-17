@@ -1,18 +1,12 @@
 import github
 
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 
 from mindsdb.integrations.handlers.github_handler.github_tables import (
     GithubIssuesTable,
-    GithubPullRequestsTable,
-    GithubCommitsTable,
-    GithubReleasesTable,
-    GithubBranchesTable,
-    GithubContributorsTable,
-    GithubMilestonesTable,
-    GithubProjectsTable, GithubFilesTable
+    GithubFilesTable
 )
-
+from mindsdb.integrations.handlers.github_handler.generate_api import get_github_types, get_github_methods, GHTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -21,6 +15,7 @@ from mindsdb.utilities import log
 
 
 logger = log.getLogger(__name__)
+
 
 class GithubHandler(APIHandler):
     """The GitHub handler implementation"""
@@ -43,15 +38,20 @@ class GithubHandler(APIHandler):
         self.connection = None
         self.is_connected = False
 
+        # custom tables
         self._register_table("issues", GithubIssuesTable(self))
-        self._register_table("pull_requests", GithubPullRequestsTable(self))
-        self._register_table("commits", GithubCommitsTable(self))
-        self._register_table("releases", GithubReleasesTable(self))
-        self._register_table("branches", GithubBranchesTable(self))
-        self._register_table("contributors", GithubContributorsTable(self))
-        self._register_table("milestones", GithubMilestonesTable(self))
-        self._register_table("projects", GithubProjectsTable(self))
         self._register_table("files", GithubFilesTable(self))
+
+        # generated tables
+        github_types = get_github_types()
+
+        # generate tables from repository object
+        for method in get_github_methods(github.Repository.Repository):
+            if method.table_name in self._tables:
+                continue
+
+            table = GHTable(self, github_types=github_types, method=method)
+            self._register_table(method.table_name, table)
 
     def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.
@@ -120,5 +120,5 @@ class GithubHandler(APIHandler):
         StatusResponse
             Request status
         """
-        ast = parse_sql(query, dialect="mindsdb")
+        ast = parse_sql(query)
         return self.query(ast)

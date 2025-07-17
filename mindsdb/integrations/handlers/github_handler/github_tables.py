@@ -1,14 +1,10 @@
 import re
 from typing import List
-
 import pandas as pd
 
-from mindsdb_sql.parser import ast
-
 from mindsdb.integrations.libs.api_handler import APIResource
-from mindsdb.integrations.utilities.handlers.query_utilities import SELECTQueryParser, SELECTQueryExecutor
 from mindsdb.integrations.utilities.sql_utils import (
-    extract_comparison_conditions, FilterCondition, FilterOperator, SortColumn)
+    FilterCondition, FilterOperator, SortColumn)
 from mindsdb.utilities import log
 
 
@@ -46,6 +42,7 @@ class GithubIssuesTable(APIResource):
                 if col.column in ('created', 'updated', 'comments'):
                     issues_kwargs['sort'] = col.column
                     issues_kwargs['direction'] = 'asc' if col.ascending else 'desc'
+                    sort.applied = True
 
                     # supported only 1 column
                     break
@@ -240,8 +237,6 @@ class GithubPullRequestsTable(APIResource):
              limit: int = None,
              sort: List[SortColumn] = None,
              targets: List[str] = None) -> pd.DataFrame:
-
-
         """Pulls data from the GitHub "List repository pull requests" API
 
         Native filters:
@@ -274,6 +269,7 @@ class GithubPullRequestsTable(APIResource):
                 if col.column in ('created', 'updated', 'popularity'):
                     issues_kwargs['sort'] = col.column
                     issues_kwargs['direction'] = 'asc' if col.ascending else 'desc'
+                    sort.applied = True
 
                     # supported only 1 column
                     break
@@ -395,7 +391,6 @@ class GithubCommitsTable(APIResource):
              limit: int = None,
              sort: List[SortColumn] = None,
              targets: List[str] = None) -> pd.DataFrame:
-
         """Pulls data from the GitHub "List commits" API
 
         Returns
@@ -418,6 +413,7 @@ class GithubCommitsTable(APIResource):
                 if col.column in ("author", "date", "message"):
                     commits_kwargs['sort'] = col.column
                     commits_kwargs['direction'] = 'asc' if col.ascending else 'desc'
+                    sort.applied = True
 
                     # supported only 1 column
                     break
@@ -470,7 +466,6 @@ class GithubReleasesTable(APIResource):
              limit: int = None,
              sort: List[SortColumn] = None,
              targets: List[str] = None) -> pd.DataFrame:
-
         """Pulls data from the GitHub "List repository releases" API
 
         Returns
@@ -547,7 +542,6 @@ class GithubBranchesTable(APIResource):
              limit: int = None,
              sort: List[SortColumn] = None,
              targets: List[str] = None) -> pd.DataFrame:
-
         """Pulls data from the GitHub "List repository branches" API
 
         Returns
@@ -613,7 +607,6 @@ class GithubContributorsTable(APIResource):
              limit: int = None,
              sort: List[SortColumn] = None,
              targets: List[str] = None) -> pd.DataFrame:
-
         """Pulls data from the GitHub "List repository contributors" API
 
         Returns
@@ -715,7 +708,6 @@ class GithubProjectsTable(APIResource):
              limit: int = None,
              sort: List[SortColumn] = None,
              targets: List[str] = None) -> pd.DataFrame:
-
         """Pulls data from the GitHub "List repository projects" API
 
         Returns
@@ -796,6 +788,7 @@ class GithubProjectsTable(APIResource):
             "creator_site_admin"
         ]
 
+
 class GithubMilestonesTable(APIResource):
     """The GitHub Milestones Table implementation"""
 
@@ -804,7 +797,6 @@ class GithubMilestonesTable(APIResource):
              limit: int = None,
              sort: List[SortColumn] = None,
              targets: List[str] = None) -> pd.DataFrame:
-
         """Pulls data from the GitHub "List repository milestones" API
 
         Returns
@@ -896,17 +888,17 @@ class GithubFilesTable(APIResource):
                 limit -= len(subres)
             else:
                 if (
-                      (
+                    (
                         file_matches is None
-                        or
-                        any(re.match(pattern, item.name) for pattern in file_matches)
-                      )
-                    and
-                      (
-                          file_not_matches is None
-                          or
-                          not any(re.match(pattern, item.name) for pattern in file_not_matches)
-                      )
+
+                        or any(re.match(pattern, item.name) for pattern in file_matches)
+                    )
+
+                    and (
+                        file_not_matches is None
+
+                        or not any(re.match(pattern, item.name) for pattern in file_not_matches)
+                    )
                 ):
 
                     file = {

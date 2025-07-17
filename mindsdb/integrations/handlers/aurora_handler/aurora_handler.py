@@ -2,7 +2,7 @@ from typing import Optional
 
 import boto3
 
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import DatabaseHandler
@@ -13,6 +13,7 @@ from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandl
 from mindsdb.integrations.handlers.postgres_handler.postgres_handler import PostgresHandler
 
 logger = log.getLogger(__name__)
+
 
 class AuroraHandler(DatabaseHandler):
     """

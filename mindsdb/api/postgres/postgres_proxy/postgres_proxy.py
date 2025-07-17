@@ -26,7 +26,7 @@ from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_message impor
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_packets import PostgresPacketReader, \
     PostgresPacketBuilder
 from mindsdb.api.postgres.postgres_proxy.utilities import strip_null_byte
-from mindsdb.utilities.config import Config
+from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
 from mindsdb.api.mysql.mysql_proxy.external_libs.mysql_scramble import scramble as scramble_func
@@ -92,7 +92,6 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
                 Copied from mysql_proxy
                 TODO: Extract method into common
             """
-        config = Config()
         is_cloud = config.get('cloud', False)
 
         if sys.platform != 'linux' or is_cloud is False:
@@ -237,7 +236,7 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
         self.server.connection_id += 1
         self.connection_id = self.server.connection_id
         self.session = SessionController()
-        self.session.database = 'mindsdb'
+        self.session.database = config.get('default_project')
 
         if hasattr(self.server, 'salt') and isinstance(self.server.salt, str):
             self.salt = self.server.salt
@@ -277,8 +276,7 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
             resp = SQLAnswer(
                 resp_type=RESPONSE_TYPE.TABLE,
                 state_track=executor.state_track,
-                columns=executor.to_postgres_columns(executor.columns),
-                data=executor.data,
+                result_set=executor.data,
                 status=executor.server_status
             )
         return resp
@@ -352,8 +350,8 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
         return strip_null_byte(sql).strip(';')
 
     def return_table(self, sql_answer: SQLAnswer, row_descs=True):
-        fields = self.to_postgres_fields(sql_answer.columns)
-        rows = self.to_postgres_rows(sql_answer.data)
+        fields = self.to_postgres_fields(sql_answer.result_set.columns)
+        rows = self.to_postgres_rows(sql_answer.result_set)
         if row_descs:
             self.send(RowDescriptions(fields=fields))
         self.send(DataRow(rows=rows))
@@ -377,8 +375,8 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
     def respond_from_sql_answer(self, sql, sql_answer: SQLAnswer, row_descs=True) -> bool:
         # TODO Add command complete passthrough for Complex Queries that exceed row limit in one go
         rows = 0
-        if sql_answer.data:
-            rows = len(sql_answer.data)
+        if sql_answer.result_set:
+            rows = len(sql_answer.result_set)
         if RESPONSE_TYPE.OK == sql_answer.type:
             return self.return_ok(sql, rows=rows)
         elif RESPONSE_TYPE.TABLE == sql_answer.type:
@@ -461,7 +459,6 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
 
     @staticmethod
     def startProxy():
-        config = Config()
         host = config['api']['postgres']['host']
         port = int(config['api']['postgres']['port'])
         server = TcpServer((host, port), PostgresProxyHandler)

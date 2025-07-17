@@ -7,10 +7,10 @@ import tempfile
 import os
 
 from pymongo import MongoClient
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 
 from mindsdb.api.executor.data_types.answer import ExecuteAnswer
-from mindsdb.api.executor import Column, ResultSet
+from mindsdb.api.executor.sql_query.result_set import Column, ResultSet
 
 # How to run:
 #  env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
@@ -78,7 +78,9 @@ class TestMongoDBServer(BaseUnitTest):
 
     def t_single_row(self, client_con, mock_executor):
         # ==== test single row ===
-        mock_executor.side_effect = lambda x: ExecuteAnswer(data=ResultSet(columns=[Column('a')], values=[['test']]))
+        mock_executor.side_effect = lambda x: ExecuteAnswer(
+            data=ResultSet(columns=[Column(name='a')], values=[['test']])
+        )
 
         res = client_con.mindsdb.fish_model1.find(
             {'length1': 10, 'type': 'a'}
@@ -92,7 +94,7 @@ class TestMongoDBServer(BaseUnitTest):
           SELECT * FROM mindsdb.fish_model1
           where length1=10 and type='a'
         '''
-        assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
+        assert parse_sql(expected_sql).to_string() == ast.to_string()
 
     def t_single_join(self, client_con, mock_executor):
         # ==== test join ===
@@ -111,7 +113,7 @@ class TestMongoDBServer(BaseUnitTest):
              (SELECT * FROM mongo.fish WHERE Species = 'Pike') as fish
              JOIN mindsdb.fish_model1
         '''
-        assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
+        assert parse_sql(expected_sql).to_string() == ast.to_string()
 
     def t_join_ts(self, client_con, mock_executor):
         # ==== test join TS ===
@@ -143,7 +145,7 @@ class TestMongoDBServer(BaseUnitTest):
              ) as house_sales2
              JOIN mindsdb.house_sales_model_h1w4
         '''
-        assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
+        assert parse_sql(expected_sql).to_string() == ast.to_string()
 
         # check modifiers
         assert ast.from_table.left.modifiers == modifiers
@@ -157,7 +159,7 @@ class TestMongoDBServer(BaseUnitTest):
         ast = mock_executor.call_args[0][0]
 
         expected_sql = "SELECT * FROM mongo.house_sales WHERE saledate > '2018-03-31 00:00:00'"
-        assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
+        assert parse_sql(expected_sql).to_string() == ast.to_string()
 
     def t_create_predictor(self, client_con, mock_executor):
         client_con.myproj.predictors.insert_one(
@@ -191,7 +193,7 @@ class TestMongoDBServer(BaseUnitTest):
            HORIZON 4
            USING encoders.location.module="CategoricalAutoEncoder"
         '''
-        assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
+        assert parse_sql(expected_sql).to_string() == ast.to_string()
 
     def t_delete_model(self, client_con, mock_executor):
 
@@ -200,7 +202,7 @@ class TestMongoDBServer(BaseUnitTest):
         client_con.myproj.models.delete_one({'name': 'house_sales_model5'})
         ast = mock_executor.call_args[0][0]
 
-        assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
+        assert parse_sql(expected_sql).to_string() == ast.to_string()
 
         # the same with 'predictors' table
         mock_executor.reset_mock()
@@ -208,7 +210,7 @@ class TestMongoDBServer(BaseUnitTest):
         client_con.myproj.predictors.delete_one({'name': 'house_sales_model5'})
         ast = mock_executor.call_args[0][0]
 
-        assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
+        assert parse_sql(expected_sql).to_string() == ast.to_string()
 
     def t_delete_model_version(self, client_con, mock_executor):
 
@@ -217,7 +219,7 @@ class TestMongoDBServer(BaseUnitTest):
         ast = mock_executor.call_args[0][0]
 
         expected_sql = "DROP MODEL myproj.house_sales_model5.112"
-        assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
+        assert parse_sql(expected_sql).to_string() == ast.to_string()
 
     # ml engines
 
@@ -228,7 +230,7 @@ class TestMongoDBServer(BaseUnitTest):
         ast = mock_executor.call_args[0][0]
 
         expected_sql = "CREATE ML_ENGINE openai2 FROM openai USING openai_api_key= 'qqq'"
-        assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
+        assert parse_sql(expected_sql).to_string() == ast.to_string()
 
     def t_list_ml_engines(self, client_con, mock_executor):
 
@@ -238,7 +240,7 @@ class TestMongoDBServer(BaseUnitTest):
         ast = mock_executor.call_args[0][0]
 
         expected_sql = "SHOW ML_ENGINES"
-        assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
+        assert parse_sql(expected_sql).to_string() == ast.to_string()
 
     def t_drop_ml_engine(self, client_con, mock_executor):
 
@@ -247,7 +249,7 @@ class TestMongoDBServer(BaseUnitTest):
         ast = mock_executor.call_args[0][0]
 
         expected_sql = "DROP ML_ENGINE openai2"
-        assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
+        assert parse_sql(expected_sql).to_string() == ast.to_string()
 
     def t_delete_model_version_by_id(self, client_con, mock_executor):
         # TODO

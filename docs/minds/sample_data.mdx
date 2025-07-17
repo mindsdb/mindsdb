@@ -1,0 +1,92 @@
+---
+title: Sample Data
+sidebarTitle: Sample Data
+icon: "table"
+---
+
+MindsDB provides a read-only PostgreSQL database pre-loaded with various datasets to help you test and explore the capabilities of Minds. These datasets are curated to cover a wide range of scenarios and use cases, allowing you to experiment with different data types and analysis techniques.
+
+Our publicly accessible PostgreSQL database is designed for testing and playground purposes. By using these datasets, you can quickly get started with Minds, understand how it works, and see how it can be applied to real-world problems.
+
+## Connection
+
+To connect to our read-only PostgreSQL database and access the example datasets, use the following connection parameters:
+
+```python
+demo_config = DatabaseConfig(
+    description='House Sales Data',
+    type='postgres',
+    connection_args={
+        'user': 'demo_user',
+        'password': 'demo_password',
+        'host': 'samples.mindsdb.com',
+        'port': '5432',
+        'database': 'demo',
+        'schema': 'demo_data'
+    },
+    tables=['house_sales']
+)
+```
+
+Below is the list of all avaiable datasets as tables.
+
+## Data Tables
+
+### `fraud_detection`
+
+| step | type     | amount  | nameOrig    | oldbalanceOrg | newbalanceOrig | nameDest    | oldbalanceDest | newbalanceDest | isFraud | isFlaggedFraud |
+| ---- | -------- | ------- | ----------- | ------------- | -------------- | ----------- | -------------- | -------------- | ------- | -------------- |
+| 1    | PAYMENT  | 9839.64 | C1231006815 | 170136.0      | 160296.36      | M1979787155 | 0.0            | 0.0            | 0       | 0              |
+| 1    | PAYMENT  | 1864.28 | C1666544295 | 21249.0       | 19384.72       | M2044282225 | 0.0            | 0.0            | 0       | 0              |
+| 1    | TRANSFER | 181.0   | C1305486145 | 181.0         | 0.0            | C553264065  | 0.0            | 0.0            | 1       | 0              |
+
+To learn more about this dataset, please visit [this link](https://www.kaggle.com/datasets/ealaxi/paysim1).
+
+### **customer\_churn**
+
+| RowNumber | CustomerId | Surname  | CreditScore | Geography | Gender | Age | Tenure | Balance  | NumOfProducts | HasCrCard | IsActiveMember | EstimatedSalary | Exited |
+| --------- | ---------- | -------- | ----------- | --------- | ------ | --- | ------ | -------- | ------------- | --------- | -------------- | --------------- | ------ |
+| 1         | 15634602   | Hargrave | 619         | France    | Female | 42  | 2      | 0        | 1             | 1         | 1              | 101348.88       | 1      |
+| 2         | 15647311   | Hill     | 608         | Spain     | Female | 41  | 1      | 83807.86 | 1             | 0         | 1              | 112542.58       | 0      |
+| 3         | 15619304   | Onio     | 502         | France    | Female | 42  | 8      | 159660.8 | 3             | 1         | 0              | 113931.57       | 1      |
+
+To learn more about this dataset, please visit [this link](https://www.kaggle.com/datasets/shantanudhakadd/bank-customer-churn-prediction).
+
+### `customer_support_chat`
+
+| flags | instruction                                           | category | intent        | response                                                                                                                                                                      |
+| ----- | ----------------------------------------------------- | -------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| B     | question about cancelling order Order Number          | ORDER    | cancel\_order | I've understood you have a question regarding canceling order Order Number, and I'm here to provide you with the information you need. Please go ahead and ask your question. |
+| BQZ   | i have a question about cancelling order Order Number | ORDER    | cancel\_order | I've been informed that you have a question about canceling order Order Number. I'm here to assist you! Let me know your question and I'll provide the guidance you need.     |
+
+To learn more about this dataset, please visit [this link](https://huggingface.co/datasets/bitext/Bitext-customer-support-llm-chatbot-training-dataset).
+
+### `bank_customer_transactions`
+
+| Customer ID | Name     | Surname   | Gender | Birthdate  | Transaction Amount | Date       | Merchant Name          | Category |
+| ----------- | -------- | --------- | ------ | ---------- | ------------------ | ---------- | ---------------------- | -------- |
+| 752858      | Sean     | Rodriguez | F      | 2002-10-20 | 35.47              | 2023-04-03 | Smith-Russell          | Cosmetic |
+| 26381       | Michelle | Phelps    |        | 1985-10-24 | 2552.72            | 2023-07-17 | Peck, Spence and Young | Travel   |
+| 305449      | Jacob    | Williams  | M      | 1981-10-25 | 115.97             | 2023-09-20 | Steele Inc             | Clothing |
+
+To learn more about this dataset, please visit [this link](https://www.kaggle.com/datasets/bkcoban/customer-transactions).
+
+### `telecom_customer_churn`
+
+| age | gender | security\_no | region\_category | membership\_category | joining\_date | joined\_through\_referral | referral\_id | preferred\_offer\_types | medium\_of\_operation | internet\_option | last\_visit\_time | days\_since\_last\_login | avg\_time\_spent | avg\_transaction\_value | avg\_frequency\_login\_days | points\_in\_wallet | used\_special\_discount | offer\_application\_preference | past\_complaint | complaint\_status   | feedback                 | churn\_risk\_score |
+| --- | ------ | ------------ | ---------------- | -------------------- | ------------- | ------------------------- | ------------ | ----------------------- | --------------------- | ---------------- | ----------------- | ------------------------ | ---------------- | ----------------------- | --------------------------- | ------------------ | ----------------------- | ------------------------------ | --------------- | ------------------- | ------------------------ | ------------------ |
+| 18  | F      | XW0DQ7H      | Village          | Platinum Membership  | 17-08-2017    | No                        | xxxxxxxx     | Gift Vouchers/Coupons   | ?                     | Wi-Fi            | 16:08:02          | 17                       | 300.63           | 53005.25                | 17                          | 781.75             | Yes                     | Yes                            | No              | Not Applicable      | Products always in Stock | 0                  |
+| 32  | F      | 5K0N3X1      | City             | Premium Membership   | 28-08-2017    | ?                         | CID21329     | Gift Vouchers/Coupons   | Desktop               | Mobile\_Data     | 12:38:13          | 16                       | 306.34           | 12838.38                | 10                          |                    | Yes                     | No                             | Yes             | Solved              | Quality Customer Care    | 0                  |
+| 44  | F      | 1F2TCL3      | Town             | No Membership        | 11-11-2016    | Yes                       | CID12313     | Gift Vouchers/Coupons   | Desktop               | Wi-Fi            | 22:53:21          | 14                       | 516.16           | 21027                   | 22                          | 500.69             | No                      | Yes                            | Yes             | Solved in Follow-up | Poor Website             | 1                  |
+
+To learn more about this dataset, please visit [this link](https://huggingface.co/datasets/d0r1h/customer_churn).
+
+### `house_sales`
+
+| saledate   | ma     | type  | bedrooms | created\_at                |
+| ---------- | ------ | ----- | -------- | -------------------------- |
+| 2007-09-30 | 441854 | house | 2        | 2007-02-02 15:41:51.922127 |
+| 2007-12-31 | 441854 | house | 2        | 2007-02-23 22:36:08.540248 |
+| 2008-03-31 | 441854 | house | 2        | 2007-02-25 19:23:52.585358 |
+
+To learn more about this dataset, please visit [this link](https://www.kaggle.com/datasets/htagholdings/property-sales).

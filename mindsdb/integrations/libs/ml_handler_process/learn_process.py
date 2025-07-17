@@ -1,11 +1,14 @@
+import os
 import importlib
 import traceback
 import datetime as dt
 
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import Identifier, Select, Star, NativeQuery
+from sqlalchemy.orm.attributes import flag_modified
 
-from mindsdb.api.executor import SQLQuery
+from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser.ast import Identifier, Select, Star, NativeQuery
+
+from mindsdb.api.executor.sql_query import SQLQuery
 import mindsdb.utilities.profiler as profiler
 from mindsdb.utilities.functions import mark_process
 from mindsdb.utilities.config import Config
@@ -37,6 +40,11 @@ def learn_process(data_integration_ref: dict, problem_definition: dict, fetch_da
         from mindsdb.interfaces.database.database import DatabaseController
 
         try:
+            predictor_record = db.Predictor.query.with_for_update().get(model_id)
+            predictor_record.training_metadata['process_id'] = os.getpid()
+            flag_modified(predictor_record, 'training_metadata')
+            db.session.commit()
+
             target = problem_definition.get('target', None)
             training_data_df = None
             if data_integration_ref is not None:
@@ -63,22 +71,20 @@ def learn_process(data_integration_ref: dict, problem_definition: dict, fetch_da
                     sqlquery = SQLQuery(query, session=sql_session)
                 elif data_integration_ref['type'] == 'view':
                     project = database_controller.get_project(project_name)
-                    query_ast = parse_sql(fetch_data_query, dialect='mindsdb')
-                    view_meta = project.query_view(query_ast)
+                    query_ast = parse_sql(fetch_data_query)
+                    view_meta = project.get_view_meta(query_ast)
                     sqlquery = SQLQuery(view_meta['query_ast'], session=sql_session)
                 elif data_integration_ref['type'] == 'project':
-                    query_ast = parse_sql(fetch_data_query, dialect='mindsdb')
+                    query_ast = parse_sql(fetch_data_query)
                     sqlquery = SQLQuery(query_ast, session=sql_session)
 
-                result = sqlquery.fetch(view='dataframe')
-                training_data_df = result['result']
+                training_data_df = sqlquery.fetched_data.to_df()
 
             training_data_columns_count, training_data_rows_count = 0, 0
             if training_data_df is not None:
                 training_data_columns_count = len(training_data_df.columns)
                 training_data_rows_count = len(training_data_df)
 
-            predictor_record = db.Predictor.query.with_for_update().get(model_id)
             predictor_record.training_data_columns_count = training_data_columns_count
             predictor_record.training_data_rows_count = training_data_rows_count
             db.session.commit()
@@ -104,10 +110,16 @@ def learn_process(data_integration_ref: dict, problem_definition: dict, fetch_da
             )
             handlers_cacher[predictor_record.id] = ml_handler
 
-            if not ml_handler.generative:
+            if not ml_handler.generative and target is not None:
                 if training_data_df is not None and target not in training_data_df.columns:
-                    raise Exception(
-                        f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
+                    # is the case different? convert column case in input dataframe
+                    col_names = {c.lower(): c for c in training_data_df.columns}
+                    target_found = col_names.get(target.lower())
+                    if target_found:
+                        training_data_df.rename(columns={target_found: target}, inplace=True)
+                    else:
+                        raise Exception(
+                            f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
 
             # create new model
             if base_model_id is None:

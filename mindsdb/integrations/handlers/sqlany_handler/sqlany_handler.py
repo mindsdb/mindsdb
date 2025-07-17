@@ -3,9 +3,9 @@ from pandas import DataFrame
 import sqlanydb
 import sqlalchemy_sqlany.base as sqlany_dialect
 
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser.ast.base import ASTNode
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import DatabaseHandler
@@ -17,6 +17,7 @@ from mindsdb.integrations.libs.response import (
 
 
 logger = log.getLogger(__name__)
+
 
 class SQLAnyHandler(DatabaseHandler):
     """
@@ -61,7 +62,7 @@ class SQLAnyHandler(DatabaseHandler):
             self.encryption = "SIMPLE"
         else:
             self.encryption = "NONE"
-        
+
         connection = sqlanydb.connect(
             host=self.host,
             userid=self.userid,
@@ -160,7 +161,7 @@ class SQLAnyHandler(DatabaseHandler):
         List all tables in SAP SQL Anywhere in the current schema
         """
 
-        return self.native_query(f"""
+        return self.native_query("""
             SELECT USER_NAME(ob.UID) AS SCHEMA_NAME
             , st.TABLE_NAME
             , st.TABLE_TYPE

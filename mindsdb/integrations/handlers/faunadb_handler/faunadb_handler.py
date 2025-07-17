@@ -4,9 +4,9 @@ from typing import List
 
 from faunadb import query as q
 from faunadb.client import FaunaClient
-from mindsdb_sql import Select, Insert, CreateTable, Delete
-from mindsdb_sql.parser.ast.select.star import Star
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql_parser import Select, Insert, CreateTable, Delete
+from mindsdb_sql_parser.ast.select.star import Star
+from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE,

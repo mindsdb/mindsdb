@@ -26,7 +26,7 @@ connection_args = OrderedDict(
 )
 
 connection_args_example = OrderedDict(
-    repository="mindsdb/mindsdb", 
-    api_key="ghp_z91InCQZWZAMlddOzFCX7xHJrf9Fai35HT7", 
+    repository="mindsdb/mindsdb",
+    api_key="ghp_z91InCQZWZAMlddOzFCX7xHJrf9Fai35HT7",
     github_url="https://github.com/mindsdb/mindsdb"
 )

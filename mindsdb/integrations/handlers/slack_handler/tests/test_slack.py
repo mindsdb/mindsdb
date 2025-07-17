@@ -22,5 +22,6 @@ class SlackHandlerTest(unittest.TestCase):
             json={'channel': '#test-channel', 'text': 'Test message'}
         )
 
+
 if __name__ == '__main__':
     unittest.main()

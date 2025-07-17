@@ -1,9 +1,8 @@
 import tiktoken
+from typing import Callable
 
-from typing import Callable, Dict
-
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import Insert
+from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser.ast import Insert
 from langchain_community.agent_toolkits.load_tools import load_tools
 
 from langchain_experimental.utilities import PythonREPL
@@ -13,25 +12,22 @@ from langchain.chains.llm import LLMChain
 from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.chains import ReduceDocumentsChain, MapReduceDocumentsChain
 
-from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
-from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel, VectorStoreType, DEFAULT_COLLECTION_NAME
-from mindsdb.interfaces.skills.skill_tool import skill_tool, SkillType
-from mindsdb.interfaces.storage import db
+from mindsdb.interfaces.skills.skill_tool import skill_tool
 from mindsdb.utilities import log
 from langchain_core.prompts import PromptTemplate
 from langchain_core.tools import Tool
 from langchain_text_splitters import CharacterTextSplitter
 
 logger = log.getLogger(__name__)
-from mindsdb.interfaces.storage.db import KnowledgeBase
-from mindsdb.utilities import log
 
 # Individual tools
 # Note: all tools are defined in a closure to pass required args (apart from LLM input) through it, as custom tools don't allow custom field assignment.  # noqa
+
+
 def get_exec_call_tool(llm, executor, model_kwargs) -> Callable:
     def mdb_exec_call_tool(query: str) -> str:
         try:
-            ast_query = parse_sql(query.strip('`'), dialect='mindsdb')
+            ast_query = parse_sql(query.strip('`'))
             ret = executor.execute_command(ast_query)
             if ret.data is None and ret.error_code is None:
                 return ''
@@ -49,6 +45,7 @@ def get_exec_call_tool(llm, executor, model_kwargs) -> Callable:
 
         return data
     return mdb_exec_call_tool
+
 
 def get_exec_metadata_tool(llm, executor, model_kwargs) -> Callable:
     def mdb_exec_metadata_call(query: str) -> str:
@@ -80,9 +77,9 @@ def get_exec_metadata_tool(llm, executor, model_kwargs) -> Callable:
                         data = f'Metadata for table {table_name}:\n'
                     fields = handler.get_columns(table_name).data_frame['Field'].to_list()
                     types = handler.get_columns(table_name).data_frame['Type'].to_list()
-                    data += f'List of columns and types:\n'
+                    data += 'List of columns and types:\n'
                     data += '\n'.join([f'\tColumn: `{field}`\tType: `{typ}`' for field, typ in zip(fields, types)])
-                except:
+                except BaseException:
                     data = f'Table {table_name} not found.'
         except Exception as e:
             data = f"mindsdb tool failed with error:\n{str(e)}"  # let the agent know
@@ -93,17 +90,19 @@ def get_exec_metadata_tool(llm, executor, model_kwargs) -> Callable:
         return data
     return mdb_exec_metadata_call
 
+
 def get_mdb_write_tool(executor) -> Callable:
     def mdb_write_call(query: str) -> str:
         try:
             query = query.strip('`')
-            ast_query = parse_sql(query.strip('`'), dialect='mindsdb')
+            ast_query = parse_sql(query.strip('`'))
             if isinstance(ast_query, Insert):
                 _ = executor.execute_command(ast_query)
                 return "mindsdb write tool executed successfully"
         except Exception as e:
             return f"mindsdb write tool failed with error:\n{str(e)}"
     return mdb_write_call
+
 
 def _setup_standard_tools(tools, llm, model_kwargs):
     executor = skill_tool.get_command_executor()

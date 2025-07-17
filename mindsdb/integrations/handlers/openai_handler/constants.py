@@ -8,11 +8,14 @@ CHAT_MODELS = (
     'gpt-4-32k',
     'gpt-4-1106-preview',
     'gpt-4-0125-preview',
-    'gpt-4o'
+    'gpt-4o',
+    'o3-mini',
+    'o1-mini'
 )
 COMPLETION_MODELS = ('babbage-002', 'davinci-002')
 FINETUNING_MODELS = ('gpt-3.5-turbo', 'babbage-002', 'davinci-002', 'gpt-4')
 COMPLETION_LEGACY_BASE_MODELS = ('davinci', 'curie', 'babbage', 'ada')
+DEFAULT_CHAT_MODEL = 'gpt-3.5-turbo'
 
 FINETUNING_LEGACY_MODELS = FINETUNING_MODELS
 COMPLETION_LEGACY_MODELS = (
@@ -29,5 +32,7 @@ EMBEDDING_MODELS = (
     + tuple(f'code-search-{model}-text-001' for model in COMPLETION_LEGACY_BASE_MODELS)
     + tuple(f'code-search-{model}-code-001' for model in COMPLETION_LEGACY_BASE_MODELS)
 )
+DEFAULT_EMBEDDING_MODEL = 'text-embedding-ada-002'
 
 IMAGE_MODELS = ('dall-e-2', 'dall-e-3')
+DEFAULT_IMAGE_MODEL = 'dall-e-2'

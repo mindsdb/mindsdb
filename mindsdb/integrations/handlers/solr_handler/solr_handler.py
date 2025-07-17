@@ -3,8 +3,8 @@ import pandas as pd
 
 from sqlalchemy import create_engine
 
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import DatabaseHandler
@@ -16,6 +16,7 @@ from mindsdb.integrations.libs.response import (
 
 
 logger = log.getLogger(__name__)
+
 
 class SolrHandler(DatabaseHandler):
     """
@@ -131,7 +132,7 @@ class SolrHandler(DatabaseHandler):
                     RESPONSE_TYPE.TABLE,
                     pd.DataFrame(
                         result,
-                        columns = columns
+                        columns=columns
                     )
                 )
             else:

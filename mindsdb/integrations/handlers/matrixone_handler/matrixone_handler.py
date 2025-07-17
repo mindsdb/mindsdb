@@ -3,9 +3,9 @@ from typing import Optional
 import pandas as pd
 import pymysql as matone
 from pymysql.cursors import DictCursor as dict
-from mindsdb_sql import parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql_parser import parse_sql
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import DatabaseHandler
@@ -18,6 +18,7 @@ from mindsdb.integrations.libs.response import (
 
 logger = log.getLogger(__name__)
 
+
 class MatrixOneHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the MatrixOne statements.
@@ -25,7 +26,7 @@ class MatrixOneHandler(DatabaseHandler):
 
     name = 'matrixone'
 
-    def __init__(self, name,connection_data: Optional[dict], **kwargs):
+    def __init__(self, name, connection_data: Optional[dict], **kwargs):
         super().__init__(name)
         self.mysql_url = None
         self.parser = parse_sql
@@ -158,11 +159,10 @@ class MatrixOneHandler(DatabaseHandler):
         """
         q = f"SHOW COLUMNS FROM {table_name};"
         result = self.native_query(q)
-        df=result.data_frame
-        result.data_frame=df.rename(columns={
+        df = result.data_frame
+        result.data_frame = df.rename(columns={
             df.columns[0]: 'COLUMN_NAME',
             df.columns[1]: 'DATA TYPE'
         })
-
 
         return result

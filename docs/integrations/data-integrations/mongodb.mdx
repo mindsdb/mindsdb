@@ -20,20 +20,22 @@ CREATE DATABASE mongodb_datasource
 WITH
   ENGINE = 'mongodb',
   PARAMETERS = {
-    "host": "mongodb+srv://admin:admin@demo.mongodb.net/public"
+    "host": "mongodb+srv://admin:admin_pass@demo.mongodb.net/public"
   };
 ```
 
-Required connection parameters include the following:
+Use the following parameters to establish the connection:
 
-* `host`: The host name, IP address or connection string of the MongoDB server.
+* `host`: The connection string of the MongoDB server that includes user (`admin`), password (`admin_pass`), host and port (`demo.mongodb.net`), and database (`public`).
+* `database`: If the connection string does not include the `/database` path, provide it in this parameter.
 
-Optional connection parameters include the following:
+Alternatively, the following set of connection parameters can be used:
 
 * `username`: The username associated with the database.
 * `password`: The password to authenticate your access.
+* `host`: The host of the MongoDB server.
 * `port`: The port through which TCP/IP connection is to be made.
-* `database`: The database name to be connected. This will be required if the connection string is missing the `/database` path.
+* `database`: The database name to be connected.
 
 ## Usage
 

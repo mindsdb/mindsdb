@@ -14,7 +14,7 @@ from mindsdb.utilities import log
 from mindsdb.integrations.utilities.date_utils import parse_local_date
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions, project_dataframe, filter_dataframe
 
-from mindsdb_sql.parser import ast
+from mindsdb_sql_parser import ast
 
 logger = log.getLogger(__name__)
 

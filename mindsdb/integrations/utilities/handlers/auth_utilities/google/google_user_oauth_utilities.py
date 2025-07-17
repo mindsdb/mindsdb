@@ -1,9 +1,8 @@
-import os
 import json
+from pathlib import Path
 import requests
 import datetime as dt
 from flask import request
-from shutil import copyfile
 
 from mindsdb.utilities import log
 
@@ -29,72 +28,64 @@ class GoogleUserOAuth2Manager:
         creds = None
 
         if self.credentials_file or self.credentials_url:
-            # get the current directory and checks tokens & creds
-            curr_dir = self.handler_storage.folder_get('config')
+            oauth_user_info = self.handler_storage.encrypted_json_get('oauth_user_info')
 
-            creds_file = os.path.join(curr_dir, 'creds.json')
-            secret_file = os.path.join(curr_dir, 'secret.json')
-
-            if os.path.isfile(creds_file):
-                creds = Credentials.from_authorized_user_file(creds_file, self.scopes)
+            if oauth_user_info:
+                creds = Credentials.from_authorized_user_info(oauth_user_info, self.scopes)
 
             if not creds or not creds.valid:
                 logger.debug("Credentials do not exist or are invalid, attempting to authorize again")
 
-                if self._download_secret_file(secret_file):
-                    # save to storage
-                    self.handler_storage.folder_sync('config')
-                else:
-                    raise ValueError('No valid Gmail Credentials filepath or S3 url found.')
+                oauth_user_info = self._download_oauth_user_info()
 
                 if creds and creds.expired and creds.refresh_token:
                     creds.refresh(Request())
                     logger.debug("Credentials refreshed successfully")
                 else:
-                    creds = self._execute_google_auth_flow(secret_file, self.scopes, self.code)
+                    creds = self._execute_google_auth_flow(oauth_user_info)
                     logger.debug("New credentials obtained")
 
-                self._save_credentials_to_file(creds, creds_file)
-                logger.debug(f"saved session credentials to {creds_file}")
-                self.handler_storage.folder_sync('config')
+                self.handler_storage.encrypted_json_set('oauth_user_info', self._convert_credentials_to_dict(creds))
+                logger.debug("Saving credentials to storage")
 
         return creds
 
-    def _download_secret_file(self, secret_file):
-        # if credentials_url is set, attempt to download the file
+    def _download_oauth_user_info(self):
+        # if credentials_url is set, attempt to download the contents of the files
         # this will be given preference over credentials_file
         if self.credentials_url:
             response = requests.get(self.credentials_url)
             if response.status_code == 200:
-                with open(secret_file, 'w') as creds:
-                    creds.write(response.text)
-                return True
+                return response.json()
             else:
-                logger.error("Failed to get credentials from S3", response.status_code)
+                logger.error("Failed to get credentials from URL", response.status_code)
 
-        # if credentials_file is set, attempt to copy the file
-        if self.credentials_file and os.path.isfile(self.credentials_file):
-            copyfile(self.credentials_file, secret_file)
-            return True
-        return False
+        # if credentials_file is set, attempt to read the contents of the file
+        if self.credentials_file:
+            path = Path(self.credentials_file).expanduser()
+            if path.exists():
+                with open(path, 'r') as f:
+                    return json.load(f)
+            else:
+                logger.error("Credentials file does not exist")
 
-    def _execute_google_auth_flow(self, secret_file, scopes, code=None):
-        flow = Flow.from_client_secrets_file(secret_file, scopes)
+        raise ValueError('OAuth2 credentials could not be found')
+
+    def _execute_google_auth_flow(self, oauth_user_info: dict):
+        flow = Flow.from_client_config(
+            oauth_user_info,
+            scopes=self.scopes
+        )
 
         flow.redirect_uri = request.headers['ORIGIN'] + '/verify-auth'
 
-        if code:
-            flow.fetch_token(code=code)
+        if self.code:
+            flow.fetch_token(code=self.code)
             creds = flow.credentials
             return creds
         else:
             auth_url = flow.authorization_url()[0]
             raise AuthException(f'Authorisation required. Please follow the url: {auth_url}', auth_url=auth_url)
-
-    def _save_credentials_to_file(self, creds, file_path):
-        with open(file_path, 'w') as token:
-            data = self._convert_credentials_to_dict(creds)
-            token.write(json.dumps(data))
 
     def _convert_credentials_to_dict(self, credentials):
         return {

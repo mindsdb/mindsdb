@@ -1,15 +1,14 @@
-import hashlib
-
-from mindsdb_sql.planner.steps import UnionStep
+from mindsdb.api.executor.planner.steps import UnionStep
 
 from mindsdb.api.executor.sql_query.result_set import ResultSet
 from mindsdb.api.executor.exceptions import WrongArgumentError
+from mindsdb.api.executor.utilities.sql import query_df_with_type_infer_fallback
+import numpy as np
 
 from .base import BaseStepCall
 
 
 class UnionStepCall(BaseStepCall):
-
     bind = UnionStep
 
     def call(self, step):
@@ -19,7 +18,8 @@ class UnionStepCall(BaseStepCall):
         # count of columns have to match
         if len(left_result.columns) != len(right_result.columns):
             raise WrongArgumentError(
-                f'UNION columns count mismatch: {len(left_result.columns)} != {len(right_result.columns)} ')
+                f"UNION columns count mismatch: {len(left_result.columns)} != {len(right_result.columns)} "
+            )
 
         # types have to match
         # TODO: return checking type later
@@ -30,27 +30,24 @@ class UnionStepCall(BaseStepCall):
         #         if type1 != type2:
         #             raise ErSqlWrongArguments(f'UNION types mismatch: {type1} != {type2}')
 
-        data = ResultSet()
-        for col in left_result.columns:
-            data.add_column(col)
+        table_a, names = left_result.to_df_cols()
+        table_b, _ = right_result.to_df_cols()
 
-        records_hashes = []
-        results = []
-        for row in left_result.to_lists():
-            if step.unique:
-                checksum = hashlib.sha256(str(row).encode()).hexdigest()
-                if checksum in records_hashes:
-                    continue
-                records_hashes.append(checksum)
-            results.append(list(row))
+        if step.operation.lower() == "intersect":
+            op = "INTERSECT"
+        else:
+            op = "UNION"
 
-        for row in right_result.to_lists():
-            if step.unique:
-                checksum = hashlib.sha256(str(row).encode()).hexdigest()
-                if checksum in records_hashes:
-                    continue
-                records_hashes.append(checksum)
-            results.append(list(row))
-        data.add_raw_values(results)
+        if step.unique is not True:
+            op += " ALL"
 
-        return data
+        query = f"""
+            SELECT * FROM table_a
+            {op}
+            SELECT * FROM table_b
+        """
+
+        resp_df, _description = query_df_with_type_infer_fallback(query, {"table_a": table_a, "table_b": table_b})
+        resp_df.replace({np.nan: None}, inplace=True)
+
+        return ResultSet.from_df_cols(df=resp_df, columns_dict=names)

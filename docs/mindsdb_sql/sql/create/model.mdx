@@ -8,8 +8,8 @@ sidebarTitle: Create, Train, and Deploy a Model
 The `CREATE MODEL` statement creates and trains a machine learning (ML) model.
 
 <Info>
-    Please note that the `CREATE MODEL` statement is equivalent to the `CREATE PREDICTOR` statement.
-    We are transitioning to the `CREATE MODEL` statement, but the `CREATE PREDICTOR` statement still works.
+    Please note that the `CREATE MODEL` statement is equivalent to the `CREATE MODEL` statement.
+    We are transitioning to the `CREATE MODEL` statement, but the `CREATE MODEL` statement still works.
 </Info>
 
 ## Syntax
@@ -44,7 +44,7 @@ Where:
 | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `project_name`                                  | Name of the project where the model is created. By default, the `mindsdb` project is used.                                                      |
 | `predictor_name`                                | Name of the model to be created.                                                                                                                |
-| `integration_name`                              | Name of the integration created using the [`CREATE DATABASE`](/sql/create/databases/) statement or [file upload](/sql/create/file/).            |
+| `integration_name`                              | Name of the integration created using the [`CREATE DATABASE`](/sql/create/database/) statement or [file upload](/sql/create/file/).            |
 | `(SELECT column_name, ... FROM table_name)`     | Selecting data to be used for training and validation.                                                                                          |
 | `target_column`                                 | Column to be predicted.                                                                                                                         |
 | `ORDER BY sequential_column`                    | Used in time series models. The column by which time series is ordered. It can be a date or anything that defines the sequence of events.                                                                                                                                                                        |

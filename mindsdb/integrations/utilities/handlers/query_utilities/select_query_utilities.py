@@ -1,7 +1,7 @@
 from typing import Text, List, Dict, Tuple
 
 import pandas as pd
-from mindsdb_sql.parser import ast
+from mindsdb_sql_parser import ast
 
 from mindsdb.integrations.utilities.sql_utils import sort_dataframe
 from mindsdb.integrations.utilities.handlers.query_utilities.base_query_utilities import BaseQueryParser

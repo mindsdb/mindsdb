@@ -27,10 +27,10 @@ class MySQLHandlerTest(unittest.TestCase):
     def test_2_get_tables(self):
         tbls = self.handler.get_tables()
         assert tbls['type'] is not RESPONSE_TYPE.ERROR
-    
+
     def test_5_drop_table(self):
         res = self.handler.native_query("DROP TABLE IF EXISTS test_mdb")
-        assert res['type'] is not RESPONSE_TYPE.ERROR 
+        assert res['type'] is not RESPONSE_TYPE.ERROR
 
     def test_4_create_table(self):
         res = self.handler.native_query("CREATE TABLE IF NOT EXISTS test_mdb (test_col INT)")

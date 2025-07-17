@@ -7,6 +7,7 @@ from mindsdb.integrations.utilities.rag.settings import (
     RAGPipelineModel
 )
 from mindsdb.integrations.utilities.rag.utils import documents_to_df
+from mindsdb.integrations.utilities.rag.retrievers.multi_hop_retriever import MultiHopRetriever
 from mindsdb.utilities.log import getLogger
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -16,6 +17,8 @@ _retriever_strategies = {
     RetrieverType.VECTOR_STORE: lambda config: _create_pipeline_from_vector_store(config),
     RetrieverType.AUTO: lambda config: _create_pipeline_from_auto_retriever(config),
     RetrieverType.MULTI: lambda config: _create_pipeline_from_multi_retriever(config),
+    RetrieverType.SQL: lambda config: _create_pipeline_from_sql_retriever(config),
+    RetrieverType.MULTI_HOP: lambda config: _create_pipeline_from_multi_hop_retriever(config)
 }
 
 
@@ -43,6 +46,25 @@ def _create_pipeline_from_multi_retriever(config: RAGPipelineModel) -> LangChain
 
     return LangChainRAGPipeline.from_multi_vector_retriever(
         config=config
+    )
+
+
+def _create_pipeline_from_sql_retriever(config: RAGPipelineModel) -> LangChainRAGPipeline:
+    return LangChainRAGPipeline.from_sql_retriever(
+        config=config
+    )
+
+
+def _create_pipeline_from_multi_hop_retriever(config: RAGPipelineModel) -> LangChainRAGPipeline:
+    retriever = MultiHopRetriever.from_config(config)
+    return LangChainRAGPipeline(
+        retriever_runnable=retriever,
+        prompt_template=config.rag_prompt_template,
+        llm=config.llm,
+        reranker_config=config.reranker_config,
+        reranker=config.reranker,
+        vector_store_config=config.vector_store_config,
+        summarization_config=config.summarization_config
     )
 
 

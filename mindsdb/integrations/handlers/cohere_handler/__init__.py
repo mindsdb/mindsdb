@@ -1,9 +1,9 @@
+from .__about__ import __version__ as version, __description__ as description
 from mindsdb.integrations.libs.const import HANDLER_TYPE
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
-from .__about__ import __version__ as version, __description__ as description
 try:
     from .cohere_handler import CohereHandler as Handler
     import_error = None

@@ -3,12 +3,12 @@ from typing import Optional
 import pandas as pd
 from pydruid.db import connect
 
-from mindsdb_sql import parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb_sql_parser import parse_sql
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.base import DatabaseHandler
 from pydruid.db.sqlalchemy import DruidDialect
 
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
@@ -105,8 +105,8 @@ class DruidHandler(DatabaseHandler):
         need_to_close = self.is_connected is False
 
         try:
-            conn=self.connect()
-            conn.cursor().execute('select 1')  # raise exception if provided wrong credentials 
+            conn = self.connect()
+            conn.cursor().execute('select 1')  # raise exception if provided wrong credentials
 
             response.success = True
         except Exception as e:

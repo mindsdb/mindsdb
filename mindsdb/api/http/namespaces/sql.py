@@ -1,3 +1,4 @@
+from http import HTTPStatus
 import traceback
 
 from flask import request
@@ -5,7 +6,9 @@ from flask_restx import Resource
 
 import mindsdb.utilities.hooks as hooks
 import mindsdb.utilities.profiler as profiler
+from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.sql import ns_conf
+from mindsdb.api.mysql.mysql_proxy.mysql_proxy import SQLAnswer
 from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
 from mindsdb.api.executor.data_types.response_type import (
     RESPONSE_TYPE as SQL_RESPONSE_TYPE,
@@ -31,6 +34,14 @@ class Query(Resource):
         query = request.json["query"]
         context = request.json.get("context", {})
 
+        if isinstance(query, str) is False or isinstance(context, dict) is False:
+            return http_error(
+                HTTPStatus.BAD_REQUEST,
+                'Wrong arguments',
+                'Please provide "query" with the request.'
+            )
+        logger.debug(f'Incoming query: {query}')
+
         if context.get("profiling") is True:
             profiler.enable()
 
@@ -46,19 +57,8 @@ class Query(Resource):
             mysql_proxy = FakeMysqlProxy()
             mysql_proxy.set_context(context)
             try:
-                result = mysql_proxy.process_query(query)
-
-                if result.type == SQL_RESPONSE_TYPE.OK:
-                    query_response = {"type": SQL_RESPONSE_TYPE.OK}
-                elif result.type == SQL_RESPONSE_TYPE.TABLE:
-                    query_response = {
-                        "type": SQL_RESPONSE_TYPE.TABLE,
-                        "data": result.data,
-                        "column_names": [
-                            x["alias"] or x["name"] if "alias" in x else x["name"]
-                            for x in result.columns
-                        ],
-                    }
+                result: SQLAnswer = mysql_proxy.process_query(query)
+                query_response: dict = result.dump_http_response()
             except ExecutorException as e:
                 # classified error
                 error_type = "expected"
@@ -67,6 +67,7 @@ class Query(Resource):
                     "error_code": 0,
                     "error_message": str(e),
                 }
+                logger.error(f"Error query processing: \n{traceback.format_exc()}")
 
             except UnknownError as e:
                 # unclassified
@@ -76,6 +77,7 @@ class Query(Resource):
                     "error_code": 0,
                     "error_message": str(e),
                 }
+                logger.error(f"Error query processing: \n{traceback.format_exc()}")
 
             except Exception as e:
                 error_type = "unexpected"
@@ -84,7 +86,7 @@ class Query(Resource):
                     "error_code": 0,
                     "error_message": str(e),
                 }
-                logger.error(f"Error profiling query: \n{traceback.format_exc()}")
+                logger.error(f"Error query processing: \n{traceback.format_exc()}")
 
             if query_response.get("type") == SQL_RESPONSE_TYPE.ERROR:
                 error_type = "expected"
@@ -118,7 +120,7 @@ class ListDatabases(Resource):
         listing_query = "SHOW DATABASES"
         mysql_proxy = FakeMysqlProxy()
         try:
-            result = mysql_proxy.process_query(listing_query)
+            result: SQLAnswer = mysql_proxy.process_query(listing_query)
 
             # iterate over result.data and perform a query on each item to get the name of the tables
             if result.type == SQL_RESPONSE_TYPE.ERROR:
@@ -131,15 +133,15 @@ class ListDatabases(Resource):
                 listing_query_response = {"type": "ok"}
             elif result.type == SQL_RESPONSE_TYPE.TABLE:
                 listing_query_response = {
-                    "data": [
-                        {
-                            "name": x[0],
-                            "tables": mysql_proxy.process_query(
-                                "SHOW TABLES FROM `{}`".format(x[0])
-                            ).data,
-                        }
-                        for x in result.data
-                    ]
+                    "data": [{
+                        "name": db_row[0],
+                        "tables": [
+                            table_row[0]
+                            for table_row in mysql_proxy.process_query(
+                                "SHOW TABLES FROM `{}`".format(db_row[0])
+                            ).result_set.to_lists()
+                        ]
+                    } for db_row in result.result_set.to_lists()]
                 }
         except Exception as e:
             listing_query_response = {

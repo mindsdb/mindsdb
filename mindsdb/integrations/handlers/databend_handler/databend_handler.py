@@ -3,12 +3,12 @@ from typing import Optional
 import pandas as pd
 from databend_sqlalchemy import connector
 
-from mindsdb_sql import parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb_sql_parser import parse_sql
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.base import DatabaseHandler
 from databend_sqlalchemy.databend_dialect import DatabendDialect
 
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
@@ -69,7 +69,7 @@ class DatabendHandler(DatabaseHandler):
         self.is_connected = True
 
         return self.connection
-    
+
     def disconnect(self):
         """
         Close any existing connections.
@@ -105,7 +105,7 @@ class DatabendHandler(DatabaseHandler):
                 self.is_connected = False
 
         return response
-    
+
     def native_query(self, query: str) -> StatusResponse:
         """
         Receive raw query and act upon it somehow.
@@ -146,7 +146,7 @@ class DatabendHandler(DatabaseHandler):
             self.disconnect()
 
         return response
-    
+
     def query(self, query: ASTNode) -> StatusResponse:
         """
         Receive query as AST (abstract syntax tree) and act upon it somehow.
@@ -178,7 +178,7 @@ class DatabendHandler(DatabaseHandler):
             result.data_frame = df.rename(columns={f'Tables_in_{self.connection_data["database"]}': 'table_name'})
 
         return result
-    
+
     def get_columns(self, table_name: str) -> StatusResponse:
         """
         Returns a list of entity columns.

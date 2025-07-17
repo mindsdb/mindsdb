@@ -3,7 +3,7 @@ import time
 import threading
 
 from bson import ObjectId
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast.base import ASTNode
 import pandas as pd
 import pymongo
 from pymongo import MongoClient

@@ -1,23 +1,38 @@
 name: Build and deploy to dev
 
+permissions:
+  contents: read
+
 on:
   pull_request_target:
     types: [opened, reopened, synchronize, labeled]
     branches:
       - 'main'
 
-# Cancel any existing runs of this workflow on the same branch/pr
-# We always want to build/deploy/test a new commit over an older one
-concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
-
 jobs:
+
+  changes:
+    name: Filter changed files
+    runs-on: mdb-dev
+    outputs:
+      not-docs: ${{ steps.filter.outputs.not-docs }}
+    steps:
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          predicate-quantifier: "every"
+          filters: |
+            not-docs:
+              - '!docs/**'  
+              - '!**/*.md'
 
   # Looks for labels like "deploy-to-<env>" attached to a PR so we can deploy to those envs
   get-deploy-labels:
     name: Get Deploy Envs
     runs-on: mdb-dev
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-labels
+      cancel-in-progress: true
     environment:
       name: ${{ github.event.pull_request.head.repo.fork && 'manual-approval' || '' }}
     outputs:
@@ -36,7 +51,10 @@ jobs:
     name: Build Docker Images
     runs-on: mdb-dev
     needs: [get-deploy-labels]
-    if: needs.get-deploy-labels.outputs.deploy-envs != '[]'
+    if: ${{ needs.get-deploy-labels.outputs.deploy-envs != '[]' }}
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-build
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,14 +68,19 @@ jobs:
       - uses: ./github-actions/docker-bake
         with:
           git-sha: ${{ github.event.pull_request.head.sha }}
-  
-  # Build our docker images based on our bake file
-  # This job only pushes the layers to the cache repo
-  # It's done separately so other jobs can run without waiting for this one
-  build_cache:
-    name: Build Docker Cache
+          target: cloud-cpu
+          platforms: linux/amd64
+          push-cache: false
+
+  # Push cache layers to docker registry
+  # This is separate to the build step so we can do other stuff in parallel
+  build-cache:
+    name: Push Docker Cache
     runs-on: mdb-dev
     needs: [build]
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-cache
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
         with:
@@ -67,9 +90,14 @@ jobs:
         with:
           repository: mindsdb/github-actions
           path: github-actions
-      - uses: ./github-actions/docker-bake-cache
+      # Build the bakefile and push
+      - uses: ./github-actions/docker-bake
         with:
           git-sha: ${{ github.event.pull_request.head.sha }}
+          target: cloud-cpu
+          platforms: linux/amd64
+          push-cache: true
+          cache-only: true
 
   # Call our deployment workflow, so long as this is not a forked PR
   # This will run the deployment workflow in the base branch, not in the PR.
@@ -84,12 +112,29 @@ jobs:
       image-tag: ${{ github.event.pull_request.head.sha }}
     secrets: inherit
 
-  # Run integration tests
-  # TODO: Run these against the deployed environment
+  # Run integration tests against the deployed environment
   run_tests:
     name: Run Integration Tests
-    needs: [deploy]
+    needs: [deploy, get-deploy-labels]
+    strategy:
+      fail-fast: false
+      matrix:
+        deploy-env: ${{ fromJson(needs.get-deploy-labels.outputs.deploy-envs) }}
+    concurrency:
+      group: deploy-${{ matrix.deploy-env }}
+      cancel-in-progress: false
     uses: ./.github/workflows/test_on_deploy.yml
     with:
       git-sha: ${{ github.event.pull_request.head.sha }}
+      deploy-env: ${{ matrix.deploy-env }}
     secrets: inherit
+
+  tests_completed:
+    needs: [run_tests, changes]
+    runs-on: mdb-dev
+    if: always()
+    steps:
+      - name: fail if tests failed or didnt run
+        if: ${{ needs.run_tests.result != 'success' && needs.changes.outputs.not-docs == 'true' }}
+        run: exit 1
+      - run: echo "Tests ran successfully"

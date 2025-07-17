@@ -2,7 +2,7 @@ import secrets
 import threading
 import time
 
-from mindsdb_sql.parser.ast import Identifier, Select, Insert
+from mindsdb_sql_parser.ast import Identifier, Select, Insert
 
 from mindsdb.utilities import log
 from mindsdb.utilities.context import context as ctx
@@ -146,24 +146,42 @@ class RealtimePolling(BasePolling):
 
         row.update(key)
 
-        t_params = self.params["chat_table"]
+        # If more than one set of parameters is present, multiple tables are supported.
+        if len(self.params) > 1:
+            # Identify the table relevant to this event based on the key.
+            event_keys = list(key.keys())
+            for param in self.params:
+                table_keys = [param["chat_table"]["chat_id_col"]] if isinstance(param["chat_table"]["chat_id_col"], str) else param["chat_table"]["chat_id_col"]
+
+                if sorted(event_keys) == sorted(table_keys):
+                    t_params = param["chat_table"]
+                    break
+
+        # Otherwise, only a single table is supported. Use the first set of parameters.
+        else:
+            t_params = self.params[0]
+
+        # Get the chat ID from the row based on the chat ID column(s).
+        chat_id = tuple(row[key] for key in t_params["chat_id_col"]) if isinstance(t_params["chat_id_col"], list) else row[t_params["chat_id_col"]]
 
         message = ChatBotMessage(
             ChatBotMessage.Type.DIRECT,
             row[t_params["text_col"]],
             # In Slack direct messages are treated as channels themselves.
             row[t_params["username_col"]],
-            row[t_params["chat_id_col"]],
+            chat_id,
         )
 
-        chat_id = row[t_params["chat_id_col"]]
-
-        self.chat_task.on_message(message, chat_id=chat_id)
+        self.chat_task.on_message(
+            message,
+            chat_id=chat_id,
+            table_name=t_params["name"],
+        )
 
     def run(self, stop_event):
-        t_params = self.params["chat_table"]
         self.chat_task.chat_handler.subscribe(
-            stop_event, self._callback, t_params["name"]
+            stop_event,
+            self._callback
         )
 
     # def send_message(self, message: ChatBotMessage):

@@ -9,12 +9,12 @@ from mindsdb.integrations.handlers.paypal_handler.paypal_tables import (
 )
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
-  HandlerStatusResponse as StatusResponse,
+    HandlerStatusResponse as StatusResponse,
 )
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 from collections import OrderedDict
 
 logger = log.getLogger(__name__)
@@ -95,7 +95,7 @@ class PayPalHandler(APIHandler):
             connection.get_access_token()
             response.success = True
         except Exception as e:
-            logger.error(f'Error connecting to PayPal!')
+            logger.error('Error connecting to PayPal!')
             response.error_message = str(e)
 
         self.is_connected = response.success
@@ -113,7 +113,7 @@ class PayPalHandler(APIHandler):
         StatusResponse
             Request status
         """
-        ast = parse_sql(query, dialect="mindsdb")
+        ast = parse_sql(query)
         return self.query(ast)
 
 

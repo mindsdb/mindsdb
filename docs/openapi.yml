@@ -8,7 +8,7 @@ info:
   contact:
     email: admin@mindsdb.com
   license:
-    name: GNU General Public License v3.0
+    name: Server Side Public License (SSPL v1)
     url: 'https://github.com/mindsdb/mindsdb/blob/main/LICENSE'
 servers:
   - url: 'http://127.0.0.1:47334/'
@@ -136,9 +136,9 @@ components:
       properties:
         name:
           type: string
-        database_id:
+        database_name:
           type: string
-          description: Connection to a chat app like Slack or MS Teams
+          description: Name of the connection to a chat app like Slack or MS Teams
         agent_name:
           type: string
           description: Agent object created beforehand. Alternatively, provide a large language model (LLM) using the `model_name` parameter.
@@ -258,6 +258,47 @@ paths:
                 type: object
                 items:
                   type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+  '/api/databases/status':
+    post:
+      summary: Checks the status of a database connection.
+      description: Checks the status of a database connection by validating the connection parameters.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                engine:
+                  type: string
+              required: [engine]
+              additionalProperties: true
+      responses:
+        '200':
+          description: Response always returns HTTP 200, but status is inside the body
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: ["success", "connection_error", "redirect_required"]
+                  detail: 
+                    type: string
+                    description: Additional information about any errors
+                  redirect_url: 
+                    type: string
+                    description: URL to redirect to if status is "redirect_required"
+                  required: [status]
         '500':
           description: Server error
           content:
@@ -1956,9 +1997,9 @@ paths:
                   properties:
                     name:
                       type: string
-                    database_id:
+                    database_name:
                       type: string
-                      description: Connection to a chat app like Slack or MS Teams
+                      description: Name of the connection to a chat app like Slack or MS Teams
                     agent_name:
                       type: string
                       description: Agent object created beforehand. Alternatively, provide a large language model (LLM) using the `model_name` parameter.

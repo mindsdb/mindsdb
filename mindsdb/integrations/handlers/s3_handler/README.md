@@ -18,9 +18,9 @@ CREATE DATABASE s3_datasource
 WITH
     engine = 's3',
     parameters = {
-      "aws_access_key_id": "AQAXEQK89OX07YS34OP"
+      "aws_access_key_id": "AQAXEQK89OX07YS34OP",
       "aws_secret_access_key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-      "bucket": "my-bucket",
+      "bucket": "my-bucket"
     };
 ```
 

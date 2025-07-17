@@ -5,42 +5,28 @@ sidebarTitle: Join Tables On
 
 ## Description
 
-The `JOIN` statement joins two tables `ON` a defined column. It is a regular `JOIN` used throughout SQL.
+The `JOIN` statement combines two or more tables based `ON` a specified column(s). It functions as a standard `JOIN` in SQL while offering the added capability of **combining data from multiple data sources**, allowing users to join data from one or more data sources seamlessly.
 
 ## Syntax
 
 Here is the syntax:
 
 ```sql
-SELECT t1.column_name, t2.column_name, ...
-FROM integration_name.table_name [AS] t1
-JOIN integration_name.table_name [AS] t2
-ON t1.column_name = t2.column_name;
+SELECT t1.column_name, t2.column_name, t3.column_name
+FROM datasource1.table1 [AS] t1
+JOIN datasource2.table2 [AS] t2
+ON t1.column_name = t2.column_name
+JOIN datasource3.table3 [AS] t3
+ON t1.column_name = t3.column_name;
 ```
 
-On execution, we get:
-
-```sql
-+-----------------+-----------------+
-| t1.column_name  | t2.column_name  |
-+-----------------+-----------------+
-| t1.value        | t2.value        |
-+-----------------+-----------------+
-```
-
-Where:
-
-| Name                                | Description                                     |
-| ----------------------------------- | ----------------------------------------------- |
-| `t1.column_name`                    | Name of the column from the first table.        |
-| `t2.column_name`                    | Name of the column from the second table.       |
-| `integration_name.table_name`       | Name of the table used in the `JOIN` operation. |
+This query joins data from three different datasources - `datasource1`, `datasource2`, and `datasource3` - allowing users to execute federated queries accross multiple data sources.
 
 <Tip>
 
 **Nested `JOINs`**
 
-MindsDB provides you with two categories of `JOINs`. One is the `JOIN` statement which combines the data table with the model table in order to fetch bulk predictions. Another is the regular `JOIN` used throughout SQL. Please note that only the latter one requires the `ON` clause.
+MindsDB provides you with two categories of `JOINs`. One is [the `JOIN` statement which combines the data table with the model table](/mindsdb_sql/sql/api/join) in order to fetch bulk predictions. Another is the regular `JOIN` used throughout SQL, which requires the `ON` clause.
 
 You can nest these types of `JOINs` as follows:
 
@@ -48,12 +34,12 @@ You can nest these types of `JOINs` as follows:
 SELECT * FROM (
     SELECT *
     FROM project_name.model_table AS m
-    JOIN integration_name.data_table AS d;
+    JOIN datasource_name.data_table AS d;
 ) AS t1
 JOIN (
     SELECT *
     FROM project_name.model_table AS m
-    JOIN integration_name.data_table AS d;
+    JOIN datasource_name.data_table AS d;
 ) AS t2
 ON t1.column_name = t2.column_name;
 ```

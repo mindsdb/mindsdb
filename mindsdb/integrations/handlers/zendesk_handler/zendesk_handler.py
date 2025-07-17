@@ -1,4 +1,4 @@
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 
 from mindsdb.integrations.handlers.zendesk_handler.zendesk_tables import (
     ZendeskUsersTable,
@@ -85,5 +85,5 @@ class ZendeskHandler(APIHandler):
         StatusResponse
             Request status
         """
-        ast = parse_sql(query, dialect="mindsdb")
+        ast = parse_sql(query)
         return self.query(ast)

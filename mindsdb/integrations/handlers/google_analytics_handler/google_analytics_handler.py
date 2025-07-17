@@ -1,4 +1,4 @@
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.utilities import log
 from mindsdb.integrations.handlers.google_analytics_handler.google_analytics_tables import ConversionEventsTable
@@ -121,7 +121,7 @@ class GoogleAnalyticsHandler(APIHandler):
         return response
 
     def native_query(self, query_string: str = None) -> Response:
-        ast = parse_sql(query_string, dialect="mindsdb")
+        ast = parse_sql(query_string)
 
         return self.query(ast)
 

@@ -4,17 +4,19 @@ import json
 import os
 import sys
 import tempfile
+import shutil
 import time
 from unittest import mock
 from pathlib import Path
-from prometheus_client import REGISTRY
 
 import duckdb
 import numpy as np
 import pandas as pd
+from prometheus_client import REGISTRY
+from mindsdb_sql_parser import parse_sql
+
 from mindsdb.utilities import log
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb_sql import parse_sql
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
 logger = log.getLogger(__name__)
 
@@ -43,16 +45,20 @@ class BaseUnitTest:
         unload_module("mindsdb")
 
         # database temp file
-        cls.db_file = tempfile.mkstemp(prefix="mindsdb_db_")[1]
+
+        cls.storage_dir = tempfile.mkdtemp(prefix="mindsdb_db_")
+
+        cls.db_file = os.path.join(cls.storage_dir, "mindsdb.db")
 
         # config
         config = {"storage_db": "sqlite:///" + cls.db_file}
         # config temp file
-        fdi, cfg_file = tempfile.mkstemp(prefix="mindsdb_conf_")
+        cfg_file = os.path.join(cls.storage_dir, "config.json")
 
-        with os.fdopen(fdi, "w") as fd:
+        with open(cfg_file, "w") as fd:
             json.dump(config, fd)
 
+        os.environ["MINDSDB_STORAGE_DIR"] = cls.storage_dir
         os.environ["MINDSDB_CONFIG_PATH"] = cfg_file
 
         # initialize config
@@ -75,19 +81,15 @@ class BaseUnitTest:
             mp_patcher = mock.patch("multiprocessing.get_context").__enter__()
             mp_patcher.side_effect = lambda x: dummy
 
-        os.unlink(cfg_file)
-
     @staticmethod
     def teardown_class(cls):
         # remove tmp db file
         cls.db.session.close()
-        try:
-            os.unlink(cls.db_file)
-        except PermissionError as e:
-            logger.warning('Unable to clean up temporary database file: %s', str(e))
+        shutil.rmtree(cls.storage_dir, ignore_errors=True)
 
         # remove environ for next tests
-        del os.environ["MINDSDB_DB_CON"]
+        if 'MINDSDB_DB_CON' in os.environ:
+            del os.environ["MINDSDB_DB_CON"]
 
         # remove import of mindsdb for next tests
         unload_module("mindsdb")
@@ -106,10 +108,9 @@ class BaseUnitTest:
         db.Base.metadata.create_all(db.engine)
 
         # fill with data
-        r = db.Integration(name="files", data={}, engine="files")
-        db.session.add(r)
-        r = db.Integration(name="views", data={}, engine="views")
-        db.session.add(r)
+        from mindsdb.interfaces.database.integrations import integration_controller
+        integration_controller.create_permanent_integrations()
+
         r = db.Integration(name="dummy_data", data={'db_path': self._dummy_db_path}, engine="dummy_data")
         db.session.add(r)
 
@@ -155,7 +156,7 @@ class BaseUnitTest:
 
     def run_sql(self, sql):
         """Execute SQL and return a DataFrame, raising an AssertionError if an error occurs"""
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect="mindsdb"))
+        ret = self.command_executor.execute_command(parse_sql(sql))
         assert ret.error_code is None, f"SQL execution failed with error: {ret.error_code}"
         if ret.data is not None:
             return ret.data.to_df()
@@ -308,8 +309,8 @@ class BaseExecutorTest(BaseUnitTest):
         from mindsdb.integrations.libs.response import RESPONSE_TYPE
         from mindsdb.integrations.libs.response import HandlerResponse as Response
 
-        def handler_response(df):
-            response = Response(RESPONSE_TYPE.TABLE, df)
+        def handler_response(df, affected_rows: None | int = None):
+            response = Response(RESPONSE_TYPE.TABLE, df, affected_rows=affected_rows)
             return response
 
         def get_tables_f():
@@ -348,22 +349,35 @@ class BaseExecutorTest(BaseUnitTest):
         def native_query_f(query):
             con = duckdb.connect(database=":memory:")
 
-            for table, df in tables.items():
-                con.register(table, df)
+            for table_name, df in tables.items():
+                # it is not possible to insert/delete from a dataframe itself, but possible if create table from it
+                con.register(f'{table_name}_df', df)
+                con.execute(f'CREATE TABLE {table_name} AS SELECT * FROM {table_name}_df;')
+
             try:
                 con.execute(query)
                 columns = [c[0] for c in con.description]
-                result_df = pd.DataFrame(con.fetchall(), columns=columns)
-
-                result_df = result_df.replace({np.nan: None})
+                data = con.fetchall()
+                # region for insert/update/delete duckdb returns rowcount as 'Count' value in result, rather than using the
+                # cursor.rowcount attr.
+                match (columns, data):
+                    case ['Count'], [(affected_rows,)]:
+                        result_df = pd.DataFrame()
+                    case _:
+                        affected_rows = None
+                        result_df = pd.DataFrame(data, columns=columns)
+                        result_df = result_df.replace({np.nan: None})
+                # endregion
             except Exception:
-                # it can be not supported command like update or insert
+                # this might be wrong.
                 result_df = pd.DataFrame()
+                affected_rows = None
+
             for table in tables.keys():
                 con.unregister(table)
 
             con.close()
-            return handler_response(result_df)
+            return handler_response(result_df, affected_rows=affected_rows)
 
         def query_f(query):
             renderer = SqlalchemyRender("postgres")
@@ -398,7 +412,7 @@ class BaseExecutorDummyML(BaseExecutorTest):
     def run_sql(self, sql, throw_error=True, database='mindsdb'):
         self.command_executor.session.database = database
         ret = self.command_executor.execute_command(
-            parse_sql(sql, dialect='mindsdb')
+            parse_sql(sql)
         )
         if throw_error:
             assert ret.error_code is None
@@ -461,6 +475,10 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
         self.db.session.commit()
 
         def predict_f(_model_name, df, pred_format="dict", *args, **kargs):
+            # df is mutable and may change after 'predict' call.
+            # This dirty hack is to save original df.
+            df._predict_df = df[:]
+
             explain_arr = []
             data = df.to_dict('records')
 
@@ -526,10 +544,8 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
 
     def execute(self, sql):
         ret = self.command_executor.execute_command(
-            parse_sql(sql, dialect='mindsdb')
+            parse_sql(sql)
         )
         if ret.error_code is not None:
             raise Exception()
-        if ret.data is not None:
-            ret.records = ret.data.records
         return ret

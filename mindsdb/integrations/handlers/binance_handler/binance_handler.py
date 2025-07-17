@@ -10,11 +10,12 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
 )
 from mindsdb.utilities import log
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 
 _BASE_BINANCE_US_URL = 'https://api.binance.us'
 
 logger = log.getLogger(__name__)
+
 
 class BinanceHandler(APIHandler):
     """A class for handling connections and interactions with the Binance API.
@@ -127,7 +128,7 @@ class BinanceHandler(APIHandler):
         return df
 
     def native_query(self, query: str = None) -> Response:
-        ast = parse_sql(query, dialect='mindsdb')
+        ast = parse_sql(query)
         return self.query(ast)
 
     def call_binance_api(self, method_name: str = None, params: Dict = None) -> pd.DataFrame:

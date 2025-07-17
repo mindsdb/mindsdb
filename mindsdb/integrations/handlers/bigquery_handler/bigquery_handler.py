@@ -1,8 +1,9 @@
-from google.cloud.bigquery import Client, QueryJobConfig
-from google.api_core.exceptions import BadRequest
+from typing import Any, Dict, Optional, Text
+
+from google.cloud.bigquery import Client, QueryJobConfig, DEFAULT_RETRY
+from google.api_core.exceptions import BadRequest, NotFound
 import pandas as pd
 from sqlalchemy_bigquery.base import BigQueryDialect
-from typing import Any, Dict, Optional, Text
 
 from mindsdb.utilities import log
 from mindsdb_sql_parser.ast.base import ASTNode
@@ -85,7 +86,7 @@ class BigQueryHandler(MetaDatabaseHandler):
 
         try:
             connection = self.connect()
-            connection.query("SELECT 1;")
+            connection.query("SELECT 1;", timeout=10, retry=DEFAULT_RETRY.with_deadline(10))
 
             # Check if the dataset exists
             connection.get_dataset(self.connection_data["dataset"])
@@ -94,6 +95,11 @@ class BigQueryHandler(MetaDatabaseHandler):
         except (BadRequest, ValueError) as e:
             logger.error(f"Error connecting to BigQuery {self.connection_data['project_id']}, {e}!")
             response.error_message = e
+        except NotFound:
+            response.error_message = (
+                f"Error connecting to BigQuery {self.connection_data['project_id']}: "
+                f"dataset '{self.connection_data["dataset"]}' not found"
+            )
 
         if response.success is False and self.is_connected is True:
             self.is_connected = False

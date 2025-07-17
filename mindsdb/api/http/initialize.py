@@ -169,7 +169,7 @@ def get_last_compatible_gui_version() -> Version:
 
 
 def get_current_gui_version() -> Version:
-    logger.debug("Getting current frontend version..")
+    logger.debug("Getting current frontend version...")
     config = Config()
     static_path = Path(config["paths"]["static"])
     version_txt_path = static_path.joinpath("version.txt")

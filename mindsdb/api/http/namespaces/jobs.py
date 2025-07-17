@@ -1,6 +1,6 @@
 from http import HTTPStatus
 
-from flask import request
+from flask import request, current_app as ca
 from flask_restx import Resource
 
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
@@ -16,9 +16,7 @@ class JobsResource(Resource):
     @api_endpoint_metrics('GET', '/jobs')
     def get(self, project_name):
         """ List all jobs in a project """
-        jobs_controller = JobsController()
-
-        return jobs_controller.get_list(project_name)
+        return ca.jobs_controller.get_list(project_name)
 
     @ns_conf.doc('create_job')
     @api_endpoint_metrics('POST', '/jobs')
@@ -41,11 +39,9 @@ class JobsResource(Resource):
         if job['end_at'] is not None:
             job['end_at'] = parse_job_date(job['end_at'])
 
-        jobs_controller = JobsController()
+        create_job_name = ca.jobs_controller.add(name, project_name, **job)
 
-        create_job_name = jobs_controller.add(name, project_name, **job)
-
-        return jobs_controller.get(create_job_name, project_name)
+        return ca.jobs_controller.get(create_job_name, project_name)
 
 
 @ns_conf.route('/<project_name>/jobs/<job_name>')
@@ -56,9 +52,7 @@ class JobResource(Resource):
     @api_endpoint_metrics('GET', '/jobs/job')
     def get(self, project_name, job_name):
         """Gets a job by name"""
-
-        jobs_controller = JobsController()
-        job_info = jobs_controller.get(job_name, project_name)
+        job_info = ca.jobs_controller.get(job_name, project_name)
         if job_info is not None:
             return job_info
 
@@ -72,9 +66,7 @@ class JobResource(Resource):
     @api_endpoint_metrics('DELETE', '/jobs/job')
     def delete(self, project_name, job_name):
         """Deletes a job by name"""
-
-        jobs_controller = JobsController()
-        jobs_controller.delete(job_name, project_name)
+        ca.jobs_controller.delete(job_name, project_name)
 
         return '', HTTPStatus.NO_CONTENT
 
@@ -87,13 +79,11 @@ class JobsHistory(Resource):
     @api_endpoint_metrics('GET', '/jobs/job/history')
     def get(self, project_name, job_name):
         """Get history of job calls"""
-
-        jobs_controller = JobsController()
-        if jobs_controller.get(job_name, project_name) is None:
+        if ca.jobs_controller.get(job_name, project_name) is None:
             return http_error(
                 HTTPStatus.NOT_FOUND,
                 'Job not found',
                 f'Job with name {job_name} does not exist'
             )
 
-        return jobs_controller.get_history(job_name, project_name)
+        return ca.jobs_controller.get_history(job_name, project_name)

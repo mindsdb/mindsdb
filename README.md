@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/mindsdb-mindsdb-badge.png)](https://mseep.ai/app/mindsdb-mindsdb)
+
 
 
 <a name="readme-top"></a>

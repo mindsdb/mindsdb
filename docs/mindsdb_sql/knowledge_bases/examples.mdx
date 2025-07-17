@@ -1,0 +1,171 @@
+---
+title: How to Use Knowledge Bases
+sidebarTitle: Examples
+---
+
+This section contains examples of usage of knowledge bases.
+
+### Sales Data
+
+Here is the data that will be inserted into the knowledge base.
+
+```sql
++----------+-------------------+------------------------+
+| order_id | product           | notes                  |
++----------+-------------------+------------------------+
+| A1B      | Wireless Mouse    | Request color: black   |
+| 3XZ      | Bluetooth Speaker | Gift wrap requested    |
+| Q7P      | Laptop Stand      | Prefer aluminum finish |
++----------+-------------------+------------------------+
+```
+
+You can access this sample data as below:
+
+```sql
+CREATE DATABASE sample_data
+WITH ENGINE = 'postgres',
+PARAMETERS = {
+    "user": "demo_user",
+    "password": "demo_password",
+    "host": "samples.mindsdb.com",
+    "port": "5432",
+    "database": "demo",
+    "schema": "demo_data"
+};
+
+SELECT * FROM sample_data.orders;
+```
+
+Here is how to create a knowledge base specifically for the data.
+
+```sql
+CREATE KNOWLEDGE_BASE my_kb
+USING
+    embedding_model = {
+        "provider": "openai",
+        "model_name" : "text-embedding-3-large",
+        "api_key": "sk-abc123"
+    },
+    reranking_model = {
+        "provider": "openai",
+        "model_name": "gpt-4o",
+        "api_key": "sk-abc123"
+    },
+    metadata_columns = ['product'],
+    content_columns = ['notes'],
+    id_column = 'order_id';
+```
+
+Here is how to insert the data.
+
+```sql
+INSERT INTO my_kb
+SELECT order_id, product, notes
+FROM sample_data.orders;
+```
+
+Here is how to query the knowledge base.
+
+```sql
+SELECT *
+FROM my_kb
+WHERE product = 'Wireless Mouse'
+AND content = 'color'
+AND relevance > 0.5;
+```
+
+### Financial Data
+
+You can access the sample data as below:
+
+```sql
+CREATE DATABASE sample_data
+WITH ENGINE = 'postgres',
+PARAMETERS = {
+    "user": "demo_user",
+    "password": "demo_password",
+    "host": "samples.mindsdb.com",
+    "port": "5432",
+    "database": "demo",
+    "schema": "demo_data"
+};
+
+SELECT * FROM sample_data.financial_headlines;
+```
+
+Here is how to create a knowledge base specifically for the data.
+
+```sql
+CREATE KNOWLEDGE_BASE my_kb
+USING
+    embedding_model = {
+        "provider": "openai",
+        "model_name" : "text-embedding-3-large",
+        "api_key": "sk-xxx"
+    },
+    reranking_model = {
+        "provider": "openai",
+        "model_name": "gpt-4o",
+        "api_key": "sk-xxx"
+    },
+    metadata_columns = ['sentiment_labelled'],
+    content_columns = ['headline'];
+```
+
+Here is how to insert the data.
+
+```sql
+INSERT INTO my_kb
+SELECT *
+FROM sample_data.financial_headlines
+USING
+    batch_size = 500,
+    threads = 10;
+```
+
+Here is how to query the knowledge base.
+
+* Query without defined `LIMIT`
+
+```sql
+SELECT *
+FROM my_kb
+WHERE content = 'investors';
+```
+
+This query returns 10 rows, as the default `LIMIT` is set to 10.
+
+<p align="center">
+  <img src="/assets/sql/kb_retrieval_example1.png" />
+</p>
+
+* Query with defined `LIMIT`
+
+```sql
+SELECT *
+FROM my_kb
+WHERE content = 'investors'
+LIMIT 20;
+```
+
+This query returns 20 rows, as the user-defined `LIMIT` is set to 20.
+
+<p align="center">
+  <img src="/assets/sql/kb_retrieval_example2.png" />
+</p>
+
+* Query with defined `LIMIT` and `relevance`
+
+```sql
+SELECT *
+FROM my_kb
+WHERE content = 'investors'
+AND relevance >= 0.8
+LIMIT 20;
+```
+
+This query may return 20 or less rows, depending on whether the relevance scores of the rows match the user-defined condition.
+
+<p align="center">
+  <img src="/assets/sql/kb_retrieval_example3.png" />
+</p>

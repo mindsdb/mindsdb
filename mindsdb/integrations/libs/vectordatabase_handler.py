@@ -21,7 +21,7 @@ from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.integrations.libs.response import RESPONSE_TYPE, HandlerResponse
 from mindsdb.utilities import log
-from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, KeywordSearchArgs
 
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 from .base import BaseHandler
@@ -334,12 +334,21 @@ class VectorStoreHandler(BaseHandler):
 
         if not df_update.empty:
             # get values of existed `created_at` and return them to metadata
-            created_dates = {row[id_col]: row[metadata_col].get("_created_at") for _, row in df_existed.iterrows()}
+            origin_id_col = "_original_doc_id"
+
+            created_dates, ids = {}, {}
+            for _, row in df_existed.iterrows():
+                chunk_id = row[id_col]
+                created_dates[chunk_id] = row[metadata_col].get("_created_at")
+                ids[chunk_id] = row[metadata_col].get(origin_id_col)
 
             def keep_created_at(row):
                 val = created_dates.get(row[id_col])
                 if val:
                     row[metadata_col]["_created_at"] = val
+                # keep id column
+                if origin_id_col not in row[metadata_col]:
+                    row[metadata_col][origin_id_col] = ids.get(row[id_col])
                 return row
 
             df_update.apply(keep_created_at, axis=1)
@@ -372,44 +381,65 @@ class VectorStoreHandler(BaseHandler):
         return self.delete(table_name, conditions=conditions)
 
     def dispatch_select(
-        self, query: Select, conditions: List[FilterCondition] = None, allowed_metadata_columns: List[str] = None
+        self,
+        query: Select,
+        conditions: Optional[List[FilterCondition]] = None,
+        allowed_metadata_columns: List[str] = None,
+        keyword_search_args: Optional[KeywordSearchArgs] = None,
     ):
         """
-        Dispatch select query to the appropriate method.
+        Dispatches a select query to the appropriate method, handling both
+        standard selections and keyword searches based on the provided arguments.
         """
-        # parse key arguments
+        # 1. Parse common query arguments
         table_name = query.from_table.parts[-1]
-        # if targets are star, select all columns
+
+        # If targets are a star (*), select all schema columns
         if isinstance(query.targets[0], Star):
             columns = [col["name"] for col in self.SCHEMA]
         else:
             columns = [col.parts[-1] for col in query.targets]
 
+        # 2. Validate columns
         if not self._is_columns_allowed(columns):
-            raise Exception(f"Columns {columns} not allowed.Allowed columns are {[col['name'] for col in self.SCHEMA]}")
+            allowed_cols = [col["name"] for col in self.SCHEMA]
+            raise Exception(f"Columns {columns} not allowed. Allowed columns are {allowed_cols}")
 
-        # check if columns are allowed
+        # 3. Extract and process conditions
         if conditions is None:
             where_statement = query.where
             conditions = self.extract_conditions(where_statement)
         self._convert_metadata_filters(conditions, allowed_metadata_columns=allowed_metadata_columns)
 
-        # get offset and limit
+        # 4. Get offset and limit
         offset = query.offset.value if query.offset is not None else None
         limit = query.limit.value if query.limit is not None else None
 
-        # dispatch select
-        try:
-            return self.select(
+        # 5. Conditionally dispatch to the correct select method
+        if keyword_search_args:
+            # It's a keyword search
+            return self.keyword_select(
                 table_name,
                 columns=columns,
                 conditions=conditions,
                 offset=offset,
                 limit=limit,
+                keyword_search_args=keyword_search_args,
             )
-        except Exception as e:
-            handler_engine = self.__class__.name
-            raise VectorHandlerException(f"Error in {handler_engine} database: {e}")
+        else:
+            # It's a standard select
+            try:
+                return self.select(
+                    table_name,
+                    columns=columns,
+                    conditions=conditions,
+                    offset=offset,
+                    limit=limit,
+                )
+
+            except Exception as e:
+                handler_engine = self.__class__.name
+                raise VectorHandlerException(f"Error in {handler_engine} database: {e}")
 
     def _dispatch(self, query: ASTNode) -> HandlerResponse:
         """

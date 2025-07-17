@@ -1,5 +1,6 @@
 import json
 import math
+import re
 import time
 from typing import List
 
@@ -16,15 +17,15 @@ logger = log.getLogger(__name__)
 
 
 GENERATE_QA_SYSTEM_PROMPT = """
-Your task is to generate question and answer pairs for a search engine. 
+Your task is to generate question and answer pairs for a search engine.
 The search engine will take your query and return a list of documents.
 You will be given a text and you need to generate a question that can be answered using the information in the text.
 Your questions will be used to evaluate the search engine.
-Question should always have enough clues to identify the specific text that this question is generated from. 
+Question should always have enough clues to identify the specific text that this question is generated from.
 Never ask questions like "What license number is associated with Amend 6" because Amend 6 could be found in many documents and the question is not specific enough.
-Example output 1:  {\"query\": \"What processor does the HP 2023 14\" FHD IPS Laptop use?\", \"reference_answer\": \"Ryzen 3 5300U\"} 
+Example output 1:  {\"query\": \"What processor does the HP 2023 14\" FHD IPS Laptop use?\", \"reference_answer\": \"Ryzen 3 5300U\"}
 Example output 2: {\"query\": \"What is the name of the river in Paris?\", \"reference_answer\": \"Seine\"}
-Don't generate questions like "What is being amended in the application?" because these questions cannot be answered using the text and without knowing which document it refers to. 
+Don't generate questions like "What is being amended in the application?" because these questions cannot be answered using the text and without knowing which document it refers to.
 The question should be answerable without the text, but the answer should be present in the text.
 Return ONLY a json response. No other text.
 """
@@ -41,6 +42,39 @@ def calc_entropy(values: List[float]) -> float:
     values = [i / total for i in values if i > 0]
     # calc
     return -sum([pk * math.log(pk) for pk in values])
+
+
+def sanitize_json_response(response: str) -> str:
+    """Remove markdown code block formatting from JSON response and extract valid JSON."""
+    if not response or not response.strip():
+        raise ValueError("Empty response provided.")
+
+    # Remove leading/trailing whitespace
+    response = response.strip()
+
+    # Remove markdown code block markers if present
+    response = re.sub(r"^```(?:json|JSON)?\s*", "", response, flags=re.MULTILINE)
+    response = re.sub(r"\s*```$", "", response, flags=re.MULTILINE)
+    response = response.strip()
+
+    # Find the first opening brace
+    start_idx = response.find("{")
+    if start_idx == -1:
+        raise ValueError("No JSON object found in the response.")
+
+    # Try to parse JSON starting from first { with increasing end positions
+    # This handles nested objects and strings with braces correctly
+    for end_idx in range(len(response), start_idx, -1):  # Start from end and work backwards
+        candidate = response[start_idx:end_idx]
+        try:
+            parsed = json.loads(candidate)
+            # Ensure it's a dictionary (object) not just any valid JSON
+            if isinstance(parsed, dict):
+                return candidate
+        except json.JSONDecodeError:
+            continue
+
+    raise ValueError("No valid JSON object found in the response.")
 
 
 class EvaluateBase:
@@ -84,13 +118,14 @@ class EvaluateBase:
 
             dn, table_name = self._get_dn_table(query.from_table)
             query.from_table = table_name
-            query.limit = Constant(self.DEFAULT_SAMPLE_SIZE)
+            if query.limit is None:
+                query.limit = Constant(self.DEFAULT_SAMPLE_SIZE)
 
             response = dn.query(query=query, session=self.session)
             df = response.data_frame
 
             if "content" not in df.columns:
-                raise ValueError("`content` column isn't found in source data")
+                raise ValueError(f"`content` column isn't found in provided sql: {gen_params['from_sql']}")
 
             df.rename(columns={"content": "chunk_content"}, inplace=True)
         else:
@@ -178,6 +213,7 @@ class EvaluateBase:
         test_data = self.read_from_table(test_table)
 
         scores = self.evaluate(test_data)
+        scores["id"] = math.floor(time.time())  # unique ID for the evaluation run
         scores["name"] = self.name
         scores["created_at"] = dt.datetime.now()
 
@@ -186,7 +222,7 @@ class EvaluateBase:
             to_table = params["save_to"]
             if isinstance(to_table, str):
                 to_table = Identifier(to_table)
-            self.save_to_table(to_table, scores)
+            self.save_to_table(to_table, scores.copy())
 
         return scores
 
@@ -237,9 +273,13 @@ class EvaluateRerank(EvaluateBase):
             {"role": "system", "content": GENERATE_QA_SYSTEM_PROMPT},
             {"role": "user", "content": f"\n\nText:\n{text}\n\n"},
         ]
-        answer = self.llm_client.completion(messages)
+        answer = self.llm_client.completion(messages, json_output=True)
+
+        # Sanitize the response by removing markdown code block formatting like ```json
+        sanitized_answer = sanitize_json_response(answer)
+
         try:
-            output = json.loads(answer)
+            output = json.loads(sanitized_answer)
         except json.JSONDecodeError:
             raise ValueError(f"Could not parse response from LLM: {answer}")
 
@@ -448,9 +488,13 @@ class EvaluateDocID(EvaluateBase):
             {"role": "system", "content": GENERATE_QA_SYSTEM_PROMPT},
             {"role": "user", "content": f"\n\nText:\n{text}\n\n"},
         ]
-        answer = self.llm_client.completion(messages)
+        answer = self.llm_client.completion(messages, json_output=True)
+
+        # Sanitize the response by removing markdown code block formatting like ```json
+        sanitized_answer = sanitize_json_response(answer)
+
         try:
-            output = json.loads(answer)
+            output = json.loads(sanitized_answer)
         except json.JSONDecodeError:
             raise ValueError(f"Could not parse response from LLM: {answer}")
 

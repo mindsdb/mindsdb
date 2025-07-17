@@ -180,7 +180,7 @@ class AgentsController:
             agent (db.Agents): The created agent
 
         Raises:
-            ValueError: Agent with given name already exists, or skill/model with given name does not exist.
+            EntityExistsError: Agent with given name already exists, or skill/model with given name does not exist.
         """
         if project_name is None:
             project_name = default_project
@@ -189,7 +189,7 @@ class AgentsController:
         agent = self.get_agent(name, project_name)
 
         if agent is not None:
-            raise ValueError(f"Agent with name already exists: {name}")
+            raise EntityExistsError("Agent already exists", name)
 
         # No need to copy params since we're not preserving the original reference
         params = params or {}
@@ -356,9 +356,10 @@ class AgentsController:
                             data_catalog_loader.load_metadata()
 
                     elif "database" in existing_skill.params:
+                        valid_table_names = existing_skill.params.get("tables", parameters.get("tables"))
                         data_catalog_loader = DataCatalogLoader(
                             database_name=existing_skill.params["database"],
-                            table_names=parameters["tables"] if "tables" in parameters else None,
+                            table_names=valid_table_names,
                         )
                         data_catalog_loader.load_metadata()
 

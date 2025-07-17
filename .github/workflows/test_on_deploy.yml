@@ -54,7 +54,7 @@ jobs:
               - '!**/*.md'
               - '!.github/workflows/build_deploy_dev.yml'
               - '!.github/workflows/test_on_deploy.yml'
-              - 'mindsdb/__about__.py'
+              - '!mindsdb/__about__.py'
   # Run our integration tests
   test:
     needs: changes

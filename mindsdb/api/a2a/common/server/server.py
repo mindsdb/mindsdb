@@ -77,7 +77,7 @@ class A2AServer:
             http="h11",
             timeout_keep_alive=65,
             log_level=get_mindsdb_log_level(),
-            log_config=get_uvicorn_logging_config('uvicorn_a2a')
+            log_config=get_uvicorn_logging_config("uvicorn_a2a"),
         )
 
     def _get_agent_card(self, request: Request) -> JSONResponse:

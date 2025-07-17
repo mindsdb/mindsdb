@@ -120,7 +120,7 @@ def get_uvicorn_logging_config(process_name: str) -> dict:
                 "level": mindsdb_log_level,
                 "propagate": False,
             }
-        }
+        },
     }
 
 

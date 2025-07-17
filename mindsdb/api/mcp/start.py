@@ -174,7 +174,7 @@ async def run_sse_async() -> None:
         host=mcp.settings.host,
         port=mcp.settings.port,
         log_level=mcp.settings.log_level.lower(),
-        log_config=get_uvicorn_logging_config('uvicorn_mcp')
+        log_config=get_uvicorn_logging_config("uvicorn_mcp"),
     )
     server = uvicorn.Server(config)
     await server.serve()

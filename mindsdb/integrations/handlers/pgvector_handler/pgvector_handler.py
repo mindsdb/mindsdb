@@ -17,6 +17,7 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
     VectorStoreHandler,
     DistanceFunction,
     TableField,
+    FilterOperator,
 )
 from mindsdb.integrations.libs.keyword_search_base import KeywordSearchBase
 from mindsdb.integrations.utilities.sql_utils import KeywordSearchArgs
@@ -181,9 +182,17 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
                 key += f" ->> '{parts[-1]}'"
 
             type_cast = None
-            if isinstance(condition.value, int):
+            value = condition.value
+            if (
+                isinstance(value, list)
+                and len(value) > 0
+                and condition.op in (FilterOperator.IN, FilterOperator.NOT_IN)
+            ):
+                value = condition.value[0]
+
+            if isinstance(value, int):
                 type_cast = "int"
-            elif isinstance(condition.value, float):
+            elif isinstance(value, float):
                 type_cast = "float"
             if type_cast is not None:
                 key = f"({key})::{type_cast}"
@@ -235,6 +244,8 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
         if not keyword_query or not content_column_name:
             return PgVectorHandler._construct_where_clause(filter_conditions)
 
+        # escape single quotes in the keyword query
+        keyword_query = keyword_query.replace("'", "''")  # Escape single quotes in the query
         keyword_query_condition = (
             f"""to_tsvector('english', {content_column_name}) @@ websearch_to_tsquery('english', '{keyword_query}')"""
         )
@@ -289,11 +300,11 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
 
         # given filter conditions, construct where clause
         where_clause = self._construct_where_clause_with_keywords(filter_conditions, query, content_column_name)
-
+        escaped_query = query.replace("'", r"''")  # Escape single quotes in the query
         query = f"""
             SELECT
                 {", ".join(columns)},
-                ts_rank_cd(to_tsvector('english', {content_column_name}), websearch_to_tsquery('english', '{query}')) as distance
+                ts_rank_cd(to_tsvector('english', {content_column_name}), websearch_to_tsquery('english', '{escaped_query}')) as distance
             FROM
                 {table_name}
             {where_clause if where_clause else ""}

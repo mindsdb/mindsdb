@@ -109,9 +109,7 @@ def get_last_compatible_gui_version() -> Version:
         return False
 
     if res.status_code != 200:
-        logger.error(
-            f"Cant get compatible-config.json: returned status code = {res.status_code}"
-        )
+        logger.error(f"Cant get compatible-config.json: returned status code = {res.status_code}")
         return False
 
     try:
@@ -132,10 +130,7 @@ def get_last_compatible_gui_version() -> Version:
             else:
                 mindsdb_lv = parse_version(el["mindsdb_version"])
                 gui_lv = parse_version(el["gui_version"])
-                if (
-                    mindsdb_lv.base_version not in gui_versions
-                    or gui_lv > gui_versions[mindsdb_lv.base_version]
-                ):
+                if mindsdb_lv.base_version not in gui_versions or gui_lv > gui_versions[mindsdb_lv.base_version]:
                     gui_versions[mindsdb_lv.base_version] = gui_lv
                 if max_mindsdb_lv is None or max_mindsdb_lv < mindsdb_lv:
                     max_mindsdb_lv = mindsdb_lv
@@ -151,9 +146,7 @@ def get_last_compatible_gui_version() -> Version:
             gui_version_lv = max_gui_lv
         else:
             lower_versions = {
-                key: value
-                for key, value in gui_versions.items()
-                if parse_version(key) < current_mindsdb_lv
+                key: value for key, value in gui_versions.items() if parse_version(key) < current_mindsdb_lv
             }
             if len(lower_versions) == 0:
                 gui_version_lv = gui_versions[all_mindsdb_lv[0].base_version]
@@ -179,9 +172,7 @@ def get_current_gui_version() -> Version:
         with open(version_txt_path, "rt") as f:
             current_gui_version = f.readline()
 
-    current_gui_lv = (
-        None if current_gui_version is None else parse_version(current_gui_version)
-    )
+    current_gui_lv = None if current_gui_version is None else parse_version(current_gui_version)
     logger.debug(f"Current frontend version: {current_gui_lv}.")
 
     return current_gui_lv
@@ -197,10 +188,7 @@ def initialize_static():
     if required_gui_version is not None:
         required_gui_version_lv = parse_version(required_gui_version)
         success = True
-        if (
-            current_gui_version_lv is None
-            or required_gui_version_lv != current_gui_version_lv
-        ):
+        if current_gui_version_lv is None or required_gui_version_lv != current_gui_version_lv:
             logger.debug("Updating gui..")
             success = update_static(required_gui_version_lv)
     else:
@@ -208,10 +196,7 @@ def initialize_static():
             return False
 
         # ignore versions like '23.9.2.2'
-        if (
-            current_gui_version_lv is not None
-            and len(current_gui_version_lv.release) < 3
-        ):
+        if current_gui_version_lv is not None and len(current_gui_version_lv.release) < 3:
             if current_gui_version_lv == last_gui_version_lv:
                 return True
         logger.debug("Updating gui..")
@@ -227,12 +212,8 @@ def initialize_app(config, no_studio):
     gui_exists = Path(static_root).joinpath("index.html").is_file()
     logger.debug(f"Does GUI already exist.. {'YES' if gui_exists else 'NO'}")
     init_static_thread = None
-    if no_studio is False and (
-        config["gui"]["autoupdate"] is True or gui_exists is False
-    ):
-        init_static_thread = threading.Thread(
-            target=initialize_static, name="initialize_static"
-        )
+    if no_studio is False and (config["gui"]["autoupdate"] is True or gui_exists is False):
+        init_static_thread = threading.Thread(target=initialize_static, name="initialize_static")
         init_static_thread.start()
 
     # Wait for static initialization.
@@ -334,9 +315,7 @@ def initialize_app(config, no_studio):
         # region routes where auth is required
         if (
             config["auth"]["http_auth_enabled"] is True
-            and any(
-                request.path.startswith(f"/api{ns.path}") for ns in protected_namespaces
-            )
+            and any(request.path.startswith(f"/api{ns.path}") for ns in protected_namespaces)
             and check_auth() is False
         ):
             return http_error(
@@ -368,18 +347,14 @@ def initialize_app(config, no_studio):
             try:
                 company_id = int(company_id)
             except Exception as e:
-                logger.error(
-                    f"Cloud not parse company id: {company_id} | exception: {e}"
-                )
+                logger.error(f"Cloud not parse company id: {company_id} | exception: {e}")
                 company_id = None
 
         if user_class is not None:
             try:
                 user_class = int(user_class)
             except Exception as e:
-                logger.error(
-                    f"Cloud not parse user_class: {user_class} | exception: {e}"
-                )
+                logger.error(f"Cloud not parse user_class: {user_class} | exception: {e}")
                 user_class = 0
         else:
             user_class = 0
@@ -419,9 +394,7 @@ def initialize_flask(config, init_static_thread, no_studio):
 
     app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", secrets.token_hex(32))
     app.config["SESSION_COOKIE_NAME"] = "session"
-    app.config["PERMANENT_SESSION_LIFETIME"] = config["auth"][
-        "http_permanent_session_lifetime"
-    ]
+    app.config["PERMANENT_SESSION_LIFETIME"] = config["auth"]["http_permanent_session_lifetime"]
     app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 60
     app.config["SWAGGER_HOST"] = "http://localhost:8000/mindsdb"
     app.json = CustomJSONProvider()
@@ -479,9 +452,7 @@ def _open_webbrowser(url: str, pid: int, port: int, init_static_thread, static_f
     if init_static_thread is not None:
         init_static_thread.join()
     try:
-        is_http_active = wait_func_is_true(
-            func=is_pid_listen_port, timeout=15, pid=pid, port=port
-        )
+        is_http_active = wait_func_is_true(func=is_pid_listen_port, timeout=15, pid=pid, port=port)
         if is_http_active:
             webbrowser.open(url)
     except Exception as e:

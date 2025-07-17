@@ -63,9 +63,11 @@ class BigQueryHandler(MetaDatabaseHandler):
                 service_account_json = json.loads(service_account_json)
             except json.decoder.JSONDecodeError:
                 raise ValueError("'service_account_json' is not valid JSON")
-        if isinstance(service_account_json, dict) and isinstance(service_account_json.get('private_key'), str):
+        if isinstance(service_account_json, dict) and isinstance(service_account_json.get("private_key"), str):
             # some editors may escape new line symbol, also replace windows-like newlines
-            service_account_json['private_key'] = service_account_json['private_key'].replace('\\n','\n').replace('\r\n', '\n')
+            service_account_json["private_key"] = (
+                service_account_json["private_key"].replace("\\n", "\n").replace("\r\n", "\n")
+            )
 
         google_sa_oauth2_manager = GoogleServiceAccountOAuth2Manager(
             credentials_file=self.connection_data.get("service_account_keys"),

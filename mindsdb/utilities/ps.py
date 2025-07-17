@@ -19,7 +19,7 @@ def net_connections():
     for p in psutil.process_iter(['pid']):
         try:
             process = psutil.Process(p.pid)
-            connections = process.connections()
+            connections = process.net_connections()
             if connections:
                 for conn in connections:
                     # Adding pid to the returned instance
@@ -66,7 +66,7 @@ def wait_port(port_num, timeout):
 def get_listen_ports(pid):
     try:
         p = psutil.Process(pid)
-        cons = p.connections()
+        cons = p.net_connections()
         cons = [x.laddr.port for x in cons]
     except Exception:
         return []

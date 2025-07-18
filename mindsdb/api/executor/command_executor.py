@@ -1333,7 +1333,7 @@ class ExecuteCommands:
                     raise
         elif isinstance(statement, AlterView):
             try:
-                project.update_view(view_name, query=query_str)
+                project.update_view(view_name, query=query_str, exact_case=(not view_name.islower()))
             except EntityNotExistsError:
                 raise ExecutorException(f"View {view_name} does not exist in {project_name}")
         else:

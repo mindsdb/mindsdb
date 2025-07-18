@@ -38,15 +38,33 @@ class ViewController:
         db.session.add(view_record)
         db.session.commit()
 
-    def update(self, name, query, project_name):
-        name = name.lower()
+    def update(self, name: str, query: str, project_name: str, exact_case: bool = False):
+        """Update the SQL query of an existing view in the specified project.
+
+        Args:
+            name (str): The name of the view to update.
+            query (str): The new SQL query for the view.
+            project_name (str): The name of the project containing the view.
+            exact_case (bool, optional): If True, the view name is case-sensitive. If False, the name comparison is case-insensitive. Defaults to False.
+
+        Raises:
+            EntityNotExistsError: If the view with the specified name does not exist in the given project.
+
+        Returns:
+            None
+        """
         project_record = get_project_record(project_name)
 
-        rec = db.session.query(db.View).filter(
-            func.lower(db.View.name) == name,
+        q = db.session.query(db.View).filter(
             db.View.company_id == ctx.company_id,
             db.View.project_id == project_record.id
-        ).first()
+        )
+        if exact_case:
+            q = q.filter(db.View.name == name)
+        else:
+            q = q.filter(func.lower(db.View.name) == func.lower(name))
+
+        rec = q.first()
         if rec is None:
             raise EntityNotExistsError('View not found', name)
         rec.query = query

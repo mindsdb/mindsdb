@@ -112,8 +112,8 @@ class Project:
     def create_view(self, name: str, query: str):
         ViewController().add(name, query=query, project_name=self.name)
 
-    def update_view(self, name: str, query: str):
-        ViewController().update(name, query=query, project_name=self.name)
+    def update_view(self, name: str, query: str, exact_case: bool = False):
+        ViewController().update(name, query=query, project_name=self.name, exact_case=exact_case)
 
     def delete_view(self, name: str):
         ViewController().delete(name, project_name=self.name)

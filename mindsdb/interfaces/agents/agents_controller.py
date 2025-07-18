@@ -466,22 +466,8 @@ class AgentsController:
 
             # add skills
             for skill_name in set(skills_to_add_names) - set(existing_agent_skills_names):
-                skill = self.skills_controller.get_skill(skill_name, project_name)
-
                 # Run Data Catalog loader if enabled
-                if skill.type == "sql" and config.get("data_catalog", {}).get("enabled", False):
-                    if "database" in skill.params:
-                        valid_table_names = skill.params.get("tables", skill.get("tables"))
-                        data_catalog_loader = DataCatalogLoader(
-                            database_name=skill.params["database"],
-                            table_names=valid_table_names,
-                        )
-                        data_catalog_loader.load_metadata()
-                        
-                    else:
-                        raise ValueError(
-                            "Data Catalog loading is enabled, but the provided parameters for the new skills are insufficient to load metadata. "
-                        )
+                self._run_data_catalog_loader_for_skill(skill_name)
 
                 skill_parameters = next(x for x in skills_to_add if x["name"] == skill_name).copy()
                 del skill_parameters["name"]
@@ -523,6 +509,29 @@ class AgentsController:
         db.session.commit()
 
         return existing_agent
+
+    def _run_data_catalog_loader_for_skill(
+        self,
+        skill_name: str,
+    ):
+        """
+        Runs Data Catalog loader for a skill if enabled in the config.
+        This is used to load metadata for SQL skills when they are added or updated.
+        """
+        if config.get("data_catalog", {}).get("enabled", False):
+            skill = self.skills_controller.get_skill(skill_name, ctx.project_name)
+            if skill.type == "sql":
+                if "database" in skill.params:
+                    valid_table_names = skill.params.get("tables", skill.get("tables"))
+                    data_catalog_loader = DataCatalogLoader(
+                        database_name=skill.params["database"],
+                        table_names=valid_table_names,
+                    )
+                    data_catalog_loader.load_metadata()
+                else:
+                    raise ValueError(
+                        "Data Catalog loading is enabled, but the provided parameters for the new skills are insufficient to load metadata. "
+                    )
 
     def delete_agent(self, agent_name: str, project_name: str = default_project):
         """

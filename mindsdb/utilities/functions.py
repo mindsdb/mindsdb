@@ -128,6 +128,9 @@ def resolve_model_identifier(identifier: Identifier) -> tuple:
         case [db_name, model_name], [db_name_quoted, model_name_quoted]: ...
         case [db_name, model_name, str(version)], [db_name_quoted, model_name_quoted, _] if version.isdigit(): ...
         case [db_name, model_name, int(version)], [db_name_quoted, model_name_quoted, _]: ...
+        case [db_name, model_name, str(version)], [db_name_quoted, model_name_quoted, _]:
+            # for back compatibility. May be delete?
+            return (None, None, None)
         case _: ...  # may be raise ValueError?
     
     if model_name_quoted is False:

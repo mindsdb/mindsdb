@@ -500,8 +500,15 @@ class AgentsController:
                 db.session.add(association)
 
         if params is not None:
-            # Merge params on update
             existing_params = existing_agent.params or {}
+
+            if params.get("data", {}).get("tables"):
+                new_table_entries = set(params["data"]["tables"]) - set(existing_params.get("data", {}).get("tables", []))
+                if new_table_entries:
+                    # Run Data Catalog loader for new table entries if enabled.
+                    self._run_data_catalog_loader_for_table_entries(new_table_entries)
+
+            # Merge params on update
             existing_params.update(params)
             # Remove None values entirely.
             params = {k: v for k, v in existing_params.items() if v is not None}

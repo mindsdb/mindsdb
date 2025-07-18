@@ -130,7 +130,7 @@ class ProjectDataNode(DataNode):
                 case [query_table], [is_quoted] if is_quoted is True:
                     pass
                 case _:
-                    raise ValueError('Tabe name should contain only one part')
+                    raise ValueError("Tabe name should contain only one part")
 
             # region is it query to 'models'?
             if query_table in ("models", "jobs", "mdb_triggers", "chatbots", "skills", "agents"):

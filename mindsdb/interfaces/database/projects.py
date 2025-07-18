@@ -301,12 +301,9 @@ class Project:
         Returns:
             dict | None: A dictionary with view information if found, otherwise None.
         """
-        query = (
-            db.session.query(db.View)
-            .filter(
-                db.View.project_id == self.id,
-                db.View.company_id == ctx.company_id,
-            )
+        query = db.session.query(db.View).filter(
+            db.View.project_id == self.id,
+            db.View.company_id == ctx.company_id,
         )
         if strict_case:
             query = query.filter(db.View.name == name)
@@ -416,7 +413,7 @@ class ProjectController:
         name: str | None = None,
         deleted: bool = False,
         is_default: bool = False,
-        strict_case: bool = False
+        strict_case: bool = False,
     ) -> Project:
         """Get a project by id or name.
 

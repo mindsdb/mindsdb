@@ -168,7 +168,8 @@ def match_one_part_name(identifier: Identifier, ensure_lower_case: bool = False)
         ValueError: If the identifier does not contain exactly one part, or if ensure_lower_case is True and the name is not lowercase.
     """
     match identifier.parts, identifier.is_quoted:
-        case [name], [is_quoted]: ...
+        case [name], [is_quoted]:
+            ...
         case _:
             raise ValueError(f"Only single-part names are allowed: {identifier}")
     if not is_quoted:
@@ -178,7 +179,9 @@ def match_one_part_name(identifier: Identifier, ensure_lower_case: bool = False)
     return name
 
 
-def match_two_part_name(identifier: Identifier, ensure_lower_case: bool = False, default_db_name: str | None = None) -> tuple[str, str]:
+def match_two_part_name(
+    identifier: Identifier, ensure_lower_case: bool = False, default_db_name: str | None = None
+) -> tuple[str, str]:
     """Extract a (database, name) tuple from an Identifier object that may have one or two parts.
 
     Args:
@@ -194,8 +197,10 @@ def match_two_part_name(identifier: Identifier, ensure_lower_case: bool = False,
     """
     db_name = None
     match identifier.parts, identifier.is_quoted:
-        case [name], [is_quoted]: ...
-        case [db_name, name], [_, is_quoted]: ...
+        case [name], [is_quoted]:
+            ...
+        case [db_name, name], [_, is_quoted]:
+            ...
         case _:
             raise ValueError(f"Only single-part or two-part names are allowed: {identifier}")
     if not is_quoted:
@@ -731,7 +736,9 @@ class ExecuteCommands:
 
     def answer_create_job(self, statement: CreateJob, database_name):
         jobs_controller = JobsController()
-        project_name, job_name = match_two_part_name(statement.name, ensure_lower_case=True, default_db_name=database_name)
+        project_name, job_name = match_two_part_name(
+            statement.name, ensure_lower_case=True, default_db_name=database_name
+        )
 
         try:
             jobs_controller.create(job_name, project_name, statement)
@@ -1322,9 +1329,7 @@ class ExecuteCommands:
             ExecuteAnswer: answer for the command
         """
         project_name, view_name = match_two_part_name(
-            statement.name,
-            default_db_name=database_name,
-            ensure_lower_case=isinstance(statement, CreateView)
+            statement.name, default_db_name=database_name, ensure_lower_case=isinstance(statement, CreateView)
         )
 
         query_str = statement.query_str
@@ -1387,7 +1392,7 @@ class ExecuteCommands:
                 case [database_name, view_name], [db_name_quoted, view_name_quoted]:
                     pass
                 case _:
-                    raise ValueError(f'Invalid view name: {name}')
+                    raise ValueError(f"Invalid view name: {name}")
 
             project = self.session.database_controller.get_project(database_name, db_name_quoted)
 
@@ -1556,7 +1561,9 @@ class ExecuteCommands:
             ml_handler = self.session.integration_controller.get_ml_handler(ml_integration_name)
         except EntityNotExistsError:
             # not exist, try to create it with same name as handler
-            self.answer_create_ml_engine(CreateMLEngine(name=Identifier(ml_integration_name), handler=ml_integration_name))
+            self.answer_create_ml_engine(
+                CreateMLEngine(name=Identifier(ml_integration_name), handler=ml_integration_name)
+            )
 
             ml_handler = self.session.integration_controller.get_ml_handler(ml_integration_name)
 

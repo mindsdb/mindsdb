@@ -156,7 +156,7 @@ class DatabaseController:
             # Only the name of the project can be updated.
             if {"name"} != set(data):
                 raise ValueError("Only the 'name' field can be updated for projects.")
-            if not data['name'].islower():
+            if not data["name"].islower():
                 raise ValueError("New name must be in lower case.")
             self.project_controller.update(name=name, new_name=str(data["name"]))
             return

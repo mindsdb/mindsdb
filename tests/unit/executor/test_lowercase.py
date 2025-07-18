@@ -14,23 +14,25 @@ class TestLowercase(BaseExecutorMockPredictor):
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_view_name_lowercase(self, mock_handler):
-        df = pd.DataFrame([
-            {"a": 1, "b": "one"},
-            {"a": 2, "b": "two"},
-        ])
+        df = pd.DataFrame(
+            [
+                {"a": 1, "b": "one"},
+                {"a": 2, "b": "two"},
+            ]
+        )
         self.set_handler(mock_handler, name="pg", tables={"tasks": df})
 
         # Error: quoted name in mx-case
         with pytest.raises(Exception):
             self.execute("CREATE VIEW `MyView` AS (SELECT * FROM pg.tasks)")
 
-        views_names = ['myview', 'MyView', 'MYVIEW']
+        views_names = ["myview", "MyView", "MYVIEW"]
         for view_name in views_names:
-            another_name = 'myVIEW'
+            another_name = "myVIEW"
             self.execute(f"CREATE VIEW {view_name} AS (SELECT * FROM pg.tasks)")
 
             res = self.execute(f"SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE table_name = '{view_name.lower()}'")
-            assert res.data.to_df()['TABLE_TYPE'][0] == 'VIEW'
+            assert res.data.to_df()["TABLE_TYPE"][0] == "VIEW"
 
             # alter view: wrong quoted case
             with pytest.raises(Exception):
@@ -52,29 +54,29 @@ class TestLowercase(BaseExecutorMockPredictor):
             self.execute(f"DROP VIEW {another_name}")
 
     def test_project_name_lowercase(self):
-        project_name = 'MyProject'
+        project_name = "MyProject"
 
         with pytest.raises(Exception):
             self.execute(f"CREATE DATABASE `{project_name}`")
 
         # processing is slightly different for 'projects' (without engine) and integrations, so we do cycle for both.
-        for engine in ['', " WITH ENGINE = 'dummy_data'"]:
-            for project_name in ['myproject', 'MyProject', 'MYPROJECT']:
-                another_name = 'myPROJECT'
+        for engine in ["", " WITH ENGINE = 'dummy_data'"]:
+            for project_name in ["myproject", "MyProject", "MYPROJECT"]:
+                another_name = "myPROJECT"
                 self.execute(f"CREATE DATABASE {project_name} {engine}")
 
                 res = self.execute(f"SELECT * FROM INFORMATION_SCHEMA.DATABASES where name = '{another_name}'")
                 assert len(res.data) == 0
 
                 res = self.execute(f"SELECT * FROM INFORMATION_SCHEMA.DATABASES where name = '{project_name.lower()}'")
-                assert res.data.to_df()['TYPE'][0] == ('project' if engine == '' else 'data')
+                assert res.data.to_df()["TYPE"][0] == ("project" if engine == "" else "data")
 
                 # FIXME
                 # with pytest.raises(Exception):
                 #     self.execute(f"""
                 #         SELECT * FROM `{another_name}`.models
                 #     """)
-                if engine == '':
+                if engine == "":
                     # change name for projects
                     with pytest.raises(Exception):
                         self.execute(f"ALTER DATABASE `{another_name}` NAME = '{another_name.lower()}'")
@@ -91,12 +93,12 @@ class TestLowercase(BaseExecutorMockPredictor):
         with pytest.raises(Exception):
             self.execute("CREATE ML_ENGINE `MyMlEngine` FROM dummy_ml")
 
-        for engine_name in ['mymlengine', 'MyMlEngine', 'MYMLENGINE']:
-            another_name = 'myMLEngine'
+        for engine_name in ["mymlengine", "MyMlEngine", "MYMLENGINE"]:
+            another_name = "myMLEngine"
             self.execute(f"CREATE ML_ENGINE {engine_name} FROM dummy_ml")
 
             res = self.execute(f"SELECT * FROM INFORMATION_SCHEMA.ML_ENGINES WHERE name = '{engine_name.lower()}'")
-            assert res.data.to_df()['HANDLER'][0] == 'dummy_ml'
+            assert res.data.to_df()["HANDLER"][0] == "dummy_ml"
 
             with pytest.raises(Exception):
                 self.execute(f"DROP ML_ENGINE `{another_name}`")
@@ -105,21 +107,23 @@ class TestLowercase(BaseExecutorMockPredictor):
 
     def test_model_name_lowercase(self):
         self.execute("CREATE ML_ENGINE myengine FROM dummy_ml")
-        df = pd.DataFrame([
-            {"a": 1, "b": "one"},
-            {"a": 2, "b": "two"},
-        ])
-        self.set_data('tasks', df)
+        df = pd.DataFrame(
+            [
+                {"a": 1, "b": "one"},
+                {"a": 2, "b": "two"},
+            ]
+        )
+        self.set_data("tasks", df)
 
         with pytest.raises(Exception):
             self.execute("CREATE MODEL `MyModel` PREDICT a USING engine='myengine', join_learn_process=true")
 
-        for model_name in ['mymodel', 'MyModel', 'MYMODEL']:
-            another_name = 'myMODEL'
+        for model_name in ["mymodel", "MyModel", "MYMODEL"]:
+            another_name = "myMODEL"
             self.execute(f"CREATE MODEL {model_name} PREDICT a USING engine='myengine', join_learn_process=true")
 
             res = self.execute(f"SELECT * FROM INFORMATION_SCHEMA.MODELS WHERE name = '{model_name.lower()}'")
-            assert res.data.to_df()['ENGINE'][0] == 'dummy_ml'
+            assert res.data.to_df()["ENGINE"][0] == "dummy_ml"
 
             with pytest.raises(Exception):
                 self.execute(f"RETRAIN MODEL `{another_name}` using join_learn_process=true")
@@ -168,9 +172,9 @@ class TestLowercase(BaseExecutorMockPredictor):
             """)
         self.run_sql("drop skill MySKILL")
 
-        for agent_name, skill_name in [('myagent', 'myskill'), ('MyAgent', 'MySkill'), ('MYAGENT', 'MYSKILL')]:
-            another_skill_name = 'mySKILL'
-            another_agent_name = 'myAGENT'
+        for agent_name, skill_name in [("myagent", "myskill"), ("MyAgent", "MySkill"), ("MYAGENT", "MYSKILL")]:
+            another_skill_name = "mySKILL"
+            another_agent_name = "myAGENT"
 
             self.run_sql(f"create skill {skill_name} {skill_params}")
 
@@ -209,15 +213,15 @@ class TestLowercase(BaseExecutorMockPredictor):
         with pytest.raises(Exception):
             self.run_sql(f"CREATE KNOWLEDGE BASE `MyKB` {kb_params}")
 
-        for kb_name in ['mykb', 'MyKB', 'MYKB']:
-            another_kb_name = 'myKB'
+        for kb_name in ["mykb", "MyKB", "MYKB"]:
+            another_kb_name = "myKB"
 
             self.execute(f"CREATE KNOWLEDGE BASE {kb_name} {kb_params}")
 
             res = self.execute(f"""
                 SELECT * FROM INFORMATION_SCHEMA.KNOWLEDGE_BASES WHERE name = '{kb_name.lower()}'
             """)
-            assert res.data.to_df()['NAME'][0] == 'mykb'
+            assert res.data.to_df()["NAME"][0] == "mykb"
 
             with pytest.raises(Exception):
                 self.execute(f"DROP KNOWLEDGE BASE `{another_kb_name}`")

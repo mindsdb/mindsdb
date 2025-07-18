@@ -23,7 +23,9 @@ class SkillsController:
             project_controller = ProjectController()
         self.project_controller = project_controller
 
-    def get_skill(self, skill_name: str, project_name: str = default_project, strict_case: bool = False) -> Optional[db.Skills]:
+    def get_skill(
+        self, skill_name: str, project_name: str = default_project, strict_case: bool = False
+    ) -> Optional[db.Skills]:
         """
         Gets a skill by name. Skills are expected to have unique names.
 

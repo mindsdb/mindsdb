@@ -35,20 +35,19 @@ def get_handler_install_message(handler_name):
 
 
 def cast_row_types(row, field_types):
-    '''
-    '''
+    """ """
     keys = [x for x in row.keys() if x in field_types]
     for key in keys:
         t = field_types[key]
-        if t == 'Timestamp' and isinstance(row[key], (int, float)):
+        if t == "Timestamp" and isinstance(row[key], (int, float)):
             timestamp = datetime.datetime.utcfromtimestamp(row[key])
-            row[key] = timestamp.strftime('%Y-%m-%d %H:%M:%S')
-        elif t == 'Date' and isinstance(row[key], (int, float)):
+            row[key] = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        elif t == "Date" and isinstance(row[key], (int, float)):
             timestamp = datetime.datetime.utcfromtimestamp(row[key])
-            row[key] = timestamp.strftime('%Y-%m-%d')
-        elif t == 'Int' and isinstance(row[key], (int, float, str)):
+            row[key] = timestamp.strftime("%Y-%m-%d")
+        elif t == "Int" and isinstance(row[key], (int, float, str)):
             try:
-                logger.debug(f'cast {row[key]} to {int(row[key])}')
+                logger.debug(f"cast {row[key]} to {int(row[key])}")
                 row[key] = int(row[key])
             except Exception:
                 pass
@@ -67,13 +66,16 @@ def mark_process(name: str, custom_mark: str = None) -> Callable:
                 return func(*args, **kwargs)
             finally:
                 delete_process_mark(name, mark)
+
         return wrapper
+
     return mark_process_wrapper
 
 
 def init_lexer_parsers():
     from mindsdb_sql_parser.lexer import MindsDBLexer
     from mindsdb_sql_parser.parser import MindsDBParser
+
     return MindsDBLexer(), MindsDBParser()
 
 
@@ -86,7 +88,7 @@ def resolve_table_identifier(identifier: Identifier, default_database: str = Non
     elif parts_count == 2:
         return (parts[0], parts[1])
     else:
-        raise Exception(f'Table identifier must contain max 2 parts: {parts}')
+        raise Exception(f"Table identifier must contain max 2 parts: {parts}")
 
 
 def resolve_model_identifier(identifier: Identifier) -> tuple:
@@ -122,17 +124,24 @@ def resolve_model_identifier(identifier: Identifier) -> tuple:
     db_name_quoted = None
 
     match identifier.parts, identifier.is_quoted:
-        case [model_name], [model_name_quoted]: ...
-        case [model_name, str(version)], [model_name_quoted, _] if version.isdigit(): ...
-        case [model_name, int(version)], [model_name_quoted, _]: ...
-        case [db_name, model_name], [db_name_quoted, model_name_quoted]: ...
-        case [db_name, model_name, str(version)], [db_name_quoted, model_name_quoted, _] if version.isdigit(): ...
-        case [db_name, model_name, int(version)], [db_name_quoted, model_name_quoted, _]: ...
+        case [model_name], [model_name_quoted]:
+            ...
+        case [model_name, str(version)], [model_name_quoted, _] if version.isdigit():
+            ...
+        case [model_name, int(version)], [model_name_quoted, _]:
+            ...
+        case [db_name, model_name], [db_name_quoted, model_name_quoted]:
+            ...
+        case [db_name, model_name, str(version)], [db_name_quoted, model_name_quoted, _] if version.isdigit():
+            ...
+        case [db_name, model_name, int(version)], [db_name_quoted, model_name_quoted, _]:
+            ...
         case [db_name, model_name, str(version)], [db_name_quoted, model_name_quoted, _]:
             # for back compatibility. May be delete?
             return (None, None, None)
-        case _: ...  # may be raise ValueError?
-    
+        case _:
+            ...  # may be raise ValueError?
+
     if model_name_quoted is False:
         model_name = model_name.lower()
 

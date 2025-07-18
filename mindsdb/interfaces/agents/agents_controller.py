@@ -489,6 +489,9 @@ class AgentsController:
                     rel.parameters = skill_name_to_parameters[rel.skill.name]
                     flag_modified(rel, "parameters")
             for new_skill_name in set(skill_name_to_parameters) - existing_skill_names:
+                # Run Data Catalog loader if enabled
+                self._run_data_catalog_loader_for_skill(new_skill_name)
+
                 association = db.AgentSkillsAssociation(
                     parameters=skill_name_to_parameters[new_skill_name],
                     agent=existing_agent,

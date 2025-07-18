@@ -35,20 +35,19 @@ def get_handler_install_message(handler_name):
 
 
 def cast_row_types(row, field_types):
-    '''
-    '''
+    """ """
     keys = [x for x in row.keys() if x in field_types]
     for key in keys:
         t = field_types[key]
-        if t == 'Timestamp' and isinstance(row[key], (int, float)):
+        if t == "Timestamp" and isinstance(row[key], (int, float)):
             timestamp = datetime.datetime.fromtimestamp(row[key], datetime.timezone.utc)
-            row[key] = timestamp.strftime('%Y-%m-%d %H:%M:%S')
-        elif t == 'Date' and isinstance(row[key], (int, float)):
+            row[key] = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        elif t == "Date" and isinstance(row[key], (int, float)):
             timestamp = datetime.datetime.fromtimestamp(row[key], datetime.timezone.utc)
-            row[key] = timestamp.strftime('%Y-%m-%d')
-        elif t == 'Int' and isinstance(row[key], (int, float, str)):
+            row[key] = timestamp.strftime("%Y-%m-%d")
+        elif t == "Int" and isinstance(row[key], (int, float, str)):
             try:
-                logger.debug(f'cast {row[key]} to {int(row[key])}')
+                logger.debug(f"cast {row[key]} to {int(row[key])}")
                 row[key] = int(row[key])
             except Exception:
                 pass
@@ -67,13 +66,16 @@ def mark_process(name: str, custom_mark: str = None) -> Callable:
                 return func(*args, **kwargs)
             finally:
                 delete_process_mark(name, mark)
+
         return wrapper
+
     return mark_process_wrapper
 
 
 def init_lexer_parsers():
     from mindsdb_sql_parser.lexer import MindsDBLexer
     from mindsdb_sql_parser.parser import MindsDBParser
+
     return MindsDBLexer(), MindsDBParser()
 
 
@@ -86,32 +88,32 @@ def resolve_table_identifier(identifier: Identifier, default_database: str = Non
     elif parts_count == 2:
         return (parts[0], parts[1])
     else:
-        raise Exception(f'Table identifier must contain max 2 parts: {parts}')
+        raise Exception(f"Table identifier must contain max 2 parts: {parts}")
 
 
 def resolve_model_identifier(identifier: Identifier) -> tuple:
-    """ split model name to parts
+    """split model name to parts
 
-        Identifier may be:
+    Identifier may be:
 
-        Examples:
-            >>> resolve_model_identifier(['a', 'b'])
-            ('a', 'b', None)
+    Examples:
+        >>> resolve_model_identifier(['a', 'b'])
+        ('a', 'b', None)
 
-            >>> resolve_model_identifier(['a', '1'])
-            (None, 'a', 1)
+        >>> resolve_model_identifier(['a', '1'])
+        (None, 'a', 1)
 
-            >>> resolve_model_identifier(['a'])
-            (None, 'a', None)
+        >>> resolve_model_identifier(['a'])
+        (None, 'a', None)
 
-            >>> resolve_model_identifier(['a', 'b', 'c'])
-            (None, None, None)  # not found
+        >>> resolve_model_identifier(['a', 'b', 'c'])
+        (None, None, None)  # not found
 
-        Args:
-            name (Identifier): Identifier parts
+    Args:
+        name (Identifier): Identifier parts
 
-        Returns:
-            tuple: (database_name, model_name, model_version)
+    Returns:
+        tuple: (database_name, model_name, model_version)
     """
     parts = identifier.parts
     database_name = None

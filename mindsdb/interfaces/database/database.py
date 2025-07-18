@@ -110,7 +110,7 @@ class DatabaseController:
     def exists(self, db_name: str) -> bool:
         return db_name.lower() in self.get_dict()
 
-    def get_project(self, name: str, strict_case: bool = False) -> "Project":
+    def get_project(self, name: str, strict_case: bool = False):
         """Get a project by name.
 
         Args:

@@ -155,6 +155,18 @@ def _get_show_where(
 
 
 def match_one_part_name(identifier: Identifier, ensure_lower_case: bool = False) -> str:
+    """Extract a single-part name from an Identifier object, optionally ensuring it is lowercase.
+
+    Args:
+        identifier (Identifier): The identifier to extract the name from. Must contain exactly one part.
+        ensure_lower_case (bool, optional): If True, raises ValueError if the name is not lowercase. Defaults to False.
+
+    Returns:
+        str: The extracted name, converted to lowercase if not quoted.
+
+    Raises:
+        ValueError: If the identifier does not contain exactly one part, or if ensure_lower_case is True and the name is not lowercase.
+    """
     match identifier.parts, identifier.is_quoted:
         case [name], [is_quoted]: ...
         case _:
@@ -167,6 +179,19 @@ def match_one_part_name(identifier: Identifier, ensure_lower_case: bool = False)
 
 
 def match_two_part_name(identifier: Identifier, ensure_lower_case: bool = False, default_db_name: str | None = None) -> tuple[str, str]:
+    """Extract a (database, name) tuple from an Identifier object that may have one or two parts.
+
+    Args:
+        identifier (Identifier): The identifier to extract names from. Must contain one or two parts.
+        ensure_lower_case (bool, optional): If True, raises ValueError if the name part is not lowercase. Defaults to False.
+        default_db_name (str | None, optional): The default database name to use if only one part is provided. Defaults to None.
+
+    Returns:
+        tuple[str, str]: A tuple of (database_name, name), where database_name may be None if not provided and no default is given.
+
+    Raises:
+        ValueError: If the identifier does not contain one or two parts, or if ensure_lower_case is True and the name is not lowercase.
+    """
     db_name = None
     match identifier.parts, identifier.is_quoted:
         case [name], [is_quoted]: ...

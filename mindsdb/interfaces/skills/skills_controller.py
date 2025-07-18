@@ -23,14 +23,14 @@ class SkillsController:
             project_controller = ProjectController()
         self.project_controller = project_controller
 
-    def get_skill(self, skill_name: str, project_name: str = default_project, exact_case: bool = False) -> Optional[db.Skills]:
+    def get_skill(self, skill_name: str, project_name: str = default_project, strict_case: bool = False) -> Optional[db.Skills]:
         """
         Gets a skill by name. Skills are expected to have unique names.
 
         Parameters:
             skill_name (str): The name of the skill
             project_name (str): The name of the containing project
-            exact_case (bool): If True, the skill name is case-sensitive. Defaults to False.
+            strict_case (bool): If True, the skill name is case-sensitive. Defaults to False.
 
         Returns:
             skill (Optional[db.Skills]): The database skill object
@@ -44,7 +44,7 @@ class SkillsController:
             db.Skills.project_id == project.id,
             db.Skills.deleted_at == null(),
         )
-        if exact_case:
+        if strict_case:
             query = query.filter(db.Skills.name == skill_name)
         else:
             query = query.filter(func.lower(db.Skills.name) == func.lower(skill_name))
@@ -167,20 +167,20 @@ class SkillsController:
 
         return existing_skill
 
-    def delete_skill(self, skill_name: str, project_name: str = default_project, exact_case: bool = False):
+    def delete_skill(self, skill_name: str, project_name: str = default_project, strict_case: bool = False):
         """
         Deletes a skill by name.
 
         Parameters:
             skill_name (str): The name of the skill to delete
             project_name (str): The name of the containing project
-            exact_case (bool): If true, then skill_name is case sensitive
+            strict_case (bool): If true, then skill_name is case sensitive
 
         Raises:
             ValueError: If `project_name` does not exist or skill doesn't exist
         """
 
-        skill = self.get_skill(skill_name, project_name, exact_case)
+        skill = self.get_skill(skill_name, project_name, strict_case)
         if skill is None:
             raise ValueError(f"Skill with name doesn't exist: {skill_name}")
         if isinstance(skill.params, dict) and skill.params.get("is_demo") is True:

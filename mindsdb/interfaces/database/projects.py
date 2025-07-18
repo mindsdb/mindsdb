@@ -94,12 +94,12 @@ class Project:
     def drop_model(self, name: str):
         ModelController().delete_model(name, project_name=self.name)
 
-    def drop_view(self, name: str, exact_case: bool = False) -> None:
+    def drop_view(self, name: str, strict_case: bool = False) -> None:
         """Remove a view with the specified name from the current project.
 
         Args:
             name (str): The name of the view to remove.
-            exact_case (bool, optional): If True, the view name is case-sensitive. Defaults to False.
+            strict_case (bool, optional): If True, the view name is case-sensitive. Defaults to False.
 
         Raises:
             EntityNotExistsError: If the view does not exist.
@@ -107,13 +107,13 @@ class Project:
         Returns:
             None
         """
-        ViewController().delete(name, project_name=self.name, exact_case=exact_case)
+        ViewController().delete(name, project_name=self.name, strict_case=strict_case)
 
     def create_view(self, name: str, query: str):
         ViewController().add(name, query=query, project_name=self.name)
 
-    def update_view(self, name: str, query: str, exact_case: bool = False):
-        ViewController().update(name, query=query, project_name=self.name, exact_case=exact_case)
+    def update_view(self, name: str, query: str, strict_case: bool = False):
+        ViewController().update(name, query=query, project_name=self.name, strict_case=strict_case)
 
     def delete_view(self, name: str):
         ViewController().delete(name, project_name=self.name)
@@ -291,12 +291,12 @@ class Project:
         ]
         return data
 
-    def get_view(self, name: str, exact_case: bool = False) -> dict | None:
+    def get_view(self, name: str, strict_case: bool = False) -> dict | None:
         """Get a view by name from the current project.
 
         Args:
             name (str): The name of the view to retrieve.
-            exact_case (bool, optional): If True, the view name is case-sensitive. Defaults to False.
+            strict_case (bool, optional): If True, the view name is case-sensitive. Defaults to False.
 
         Returns:
             dict | None: A dictionary with view information if found, otherwise None.
@@ -308,7 +308,7 @@ class Project:
                 db.View.company_id == ctx.company_id,
             )
         )
-        if exact_case:
+        if strict_case:
             query = query.filter(db.View.name == name)
         else:
             query = query.filter(sa.func.lower(db.View.name) == name.lower())
@@ -416,7 +416,7 @@ class ProjectController:
         name: str | None = None,
         deleted: bool = False,
         is_default: bool = False,
-        exact_case: bool = False
+        strict_case: bool = False
     ) -> Project:
         """Get a project by id or name.
 
@@ -425,7 +425,7 @@ class ProjectController:
             name (str | None, optional): The name of the project to retrieve. Cannot be used with 'id'.
             deleted (bool, optional): If True, include deleted projects. Defaults to False.
             is_default (bool, optional): If True, only return the default project. Defaults to False.
-            exact_case (bool, optional): If True, the project name is case-sensitive. Defaults to False.
+            strict_case (bool, optional): If True, the project name is case-sensitive. Defaults to False.
 
         Raises:
             ValueError: If both 'id' and 'name' are provided.
@@ -443,7 +443,7 @@ class ProjectController:
         if id is not None:
             q = q.filter_by(id=id)
         elif name is not None:
-            if exact_case:
+            if strict_case:
                 q = q.filter((db.Project.name == name))
             else:
                 q = q.filter((sa.func.lower(db.Project.name) == sa.func.lower(name)))

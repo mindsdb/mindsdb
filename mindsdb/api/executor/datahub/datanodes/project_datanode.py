@@ -144,7 +144,7 @@ class ProjectDataNode(DataNode):
             # endregion
 
             # other table from project
-            if self.project.get_view(query_table, exact_case=is_quoted):
+            if self.project.get_view(query_table, strict_case=is_quoted):
                 # this is the view
                 df = self.project.query_view(query, session)
 

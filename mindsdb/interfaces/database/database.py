@@ -18,12 +18,12 @@ class DatabaseController:
         self.logs_db_controller = LogDBController()
         self.information_schema_controller = None
 
-    def delete(self, name: str, exact_case: bool = False) -> None:
+    def delete(self, name: str, strict_case: bool = False) -> None:
         """Delete a database (project or integration) by name.
 
         Args:
             name (str): The name of the database to delete.
-            exact_case (bool, optional): If True, the database name is case-sensitive. Defaults to False.
+            strict_case (bool, optional): If True, the database name is case-sensitive. Defaults to False.
 
         Raises:
             EntityNotExistsError: If the database does not exist.
@@ -37,11 +37,11 @@ class DatabaseController:
             raise EntityNotExistsError("Database does not exists", name)
         db_type = databases[name.lower()]["type"]
         if db_type == "project":
-            project = self.get_project(name, exact_case)
+            project = self.get_project(name, strict_case)
             project.delete()
             return
         elif db_type == "data":
-            self.integration_controller.delete(name, exact_case)
+            self.integration_controller.delete(name, strict_case)
             return
         else:
             raise Exception(f"Database with type '{db_type}' cannot be deleted")
@@ -110,17 +110,17 @@ class DatabaseController:
     def exists(self, db_name: str) -> bool:
         return db_name.lower() in self.get_dict()
 
-    def get_project(self, name: str, exact_case: bool = False) -> "Project":
+    def get_project(self, name: str, strict_case: bool = False) -> "Project":
         """Get a project by name.
 
         Args:
             name (str): The name of the project to retrieve.
-            exact_case (bool, optional): If True, the project name is case-sensitive. Defaults to False.
+            strict_case (bool, optional): If True, the project name is case-sensitive. Defaults to False.
 
         Returns:
             Project: The project instance matching the given name.
         """
-        return self.project_controller.get(name=name, exact_case=exact_case)
+        return self.project_controller.get(name=name, strict_case=strict_case)
 
     def get_system_db(self, name: str):
         if name == "log":
@@ -133,20 +133,20 @@ class DatabaseController:
         else:
             raise Exception(f"Database '{name}' does not exists")
 
-    def update(self, name: str, data: dict, exact_case: bool = False):
+    def update(self, name: str, data: dict, strict_case: bool = False):
         """
         Updates the database with the given name using the provided data.
 
         Parameters:
             name (str): The name of the database to update.
             data (dict): The data to update the database with.
-            exact_case (bool): if True, then name is case-sesitive
+            strict_case (bool): if True, then name is case-sesitive
 
         Raises:
             EntityNotExistsError: If the database does not exist.
         """
-        databases = self.get_dict(lowercase=(not exact_case))
-        if not exact_case:
+        databases = self.get_dict(lowercase=(not strict_case))
+        if not strict_case:
             name = name.lower()
         if name not in databases:
             raise EntityNotExistsError("Database does not exist.", name)

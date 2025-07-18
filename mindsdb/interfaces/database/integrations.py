@@ -213,12 +213,12 @@ class IntegrationController:
         integration_record.data = data
         db.session.commit()
 
-    def delete(self, name: str, exact_case: bool = False) -> None:
+    def delete(self, name: str, strict_case: bool = False) -> None:
         """Delete an integration by name.
 
         Args:
             name (str): The name of the integration to delete.
-            exact_case (bool, optional): If True, the integration name is case-sensitive. Defaults to False.
+            strict_case (bool, optional): If True, the integration name is case-sensitive. Defaults to False.
 
         Raises:
             Exception: If the integration cannot be deleted (system, permanent, demo, in use, or has active models).
@@ -238,7 +238,7 @@ class IntegrationController:
             if getattr(handler, "permanent", False) is True:
                 raise Exception("Unable to drop permanent integration")
 
-        integration_record = self._get_integration_record(name, case_sensitive=exact_case)
+        integration_record = self._get_integration_record(name, case_sensitive=strict_case)
         if isinstance(integration_record.data, dict) and integration_record.data.get("is_demo") is True:
             raise Exception("Unable to drop demo object")
 

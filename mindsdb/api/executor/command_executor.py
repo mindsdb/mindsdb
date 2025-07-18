@@ -1267,7 +1267,7 @@ class ExecuteCommands:
         db_name = match_one_part_name(statement.name)
 
         try:
-            self.session.database_controller.delete(db_name, exact_case=statement.name.is_quoted[0])
+            self.session.database_controller.delete(db_name, strict_case=statement.name.is_quoted[0])
         except EntityNotExistsError:
             if statement.if_exists is not True:
                 raise
@@ -1275,7 +1275,7 @@ class ExecuteCommands:
 
     def answer_alter_database(self, statement: AlterDatabase) -> ExecuteAnswer:
         db_name = match_one_part_name(statement.name)
-        self.session.database_controller.update(db_name, data=statement.params, exact_case=statement.name.is_quoted[0])
+        self.session.database_controller.update(db_name, data=statement.params, strict_case=statement.name.is_quoted[0])
         return ExecuteAnswer()
 
     def answer_drop_tables(self, statement, database_name):
@@ -1358,7 +1358,7 @@ class ExecuteCommands:
                     raise
         elif isinstance(statement, AlterView):
             try:
-                project.update_view(view_name, query=query_str, exact_case=(not view_name.islower()))
+                project.update_view(view_name, query=query_str, strict_case=(not view_name.islower()))
             except EntityNotExistsError:
                 raise ExecutorException(f"View {view_name} does not exist in {project_name}")
         else:
@@ -1392,7 +1392,7 @@ class ExecuteCommands:
             project = self.session.database_controller.get_project(database_name, db_name_quoted)
 
             try:
-                project.drop_view(view_name, exact_case=view_name_quoted)
+                project.drop_view(view_name, strict_case=view_name_quoted)
             except EntityNotExistsError:
                 if statement.if_exists is not True:
                     raise
@@ -1459,7 +1459,7 @@ class ExecuteCommands:
         project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
 
         try:
-            self.session.skills_controller.delete_skill(name, project_name, exact_case=True)
+            self.session.skills_controller.delete_skill(name, project_name, strict_case=True)
         except ValueError as e:
             # Project does not exist or skill does not exist.
             raise ExecutorException(str(e))

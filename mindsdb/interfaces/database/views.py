@@ -38,14 +38,14 @@ class ViewController:
         db.session.add(view_record)
         db.session.commit()
 
-    def update(self, name: str, query: str, project_name: str, exact_case: bool = False):
+    def update(self, name: str, query: str, project_name: str, strict_case: bool = False):
         """Update the SQL query of an existing view in the specified project.
 
         Args:
             name (str): The name of the view to update.
             query (str): The new SQL query for the view.
             project_name (str): The name of the project containing the view.
-            exact_case (bool, optional): If True, the view name is case-sensitive. If False, the name comparison is case-insensitive. Defaults to False.
+            strict_case (bool, optional): If True, the view name is case-sensitive. If False, the name comparison is case-insensitive. Defaults to False.
 
         Raises:
             EntityNotExistsError: If the view with the specified name does not exist in the given project.
@@ -59,7 +59,7 @@ class ViewController:
             db.View.company_id == ctx.company_id,
             db.View.project_id == project_record.id
         )
-        if exact_case:
+        if strict_case:
             q = q.filter(db.View.name == name)
         else:
             q = q.filter(func.lower(db.View.name) == func.lower(name))
@@ -70,13 +70,13 @@ class ViewController:
         rec.query = query
         db.session.commit()
 
-    def delete(self, name: str, project_name: str, exact_case: bool = False) -> None:
+    def delete(self, name: str, project_name: str, strict_case: bool = False) -> None:
         """Remove a view with the specified name from the given project.
 
         Args:
             name (str): The name of the view to remove.
             project_name (str): The name of the project containing the view.
-            exact_case (bool, optional): If True, the view name is case-sensitive. Defaults to False.
+            strict_case (bool, optional): If True, the view name is case-sensitive. Defaults to False.
 
         Raises:
             EntityNotExistsError: If the view does not exist.
@@ -90,7 +90,7 @@ class ViewController:
             db.View.company_id == ctx.company_id,
             db.View.project_id == project_record.id
         )
-        if exact_case:
+        if strict_case:
             query = query.filter(db.View.name == name)
         else:
             query = query.filter(func.lower(db.View.name) == func.lower(name))

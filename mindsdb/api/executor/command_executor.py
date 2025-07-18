@@ -783,7 +783,7 @@ class ExecuteCommands:
         if statement.agent is not None:
             agent_name = statement.agent.parts[-1]
         chatbot_controller.add_chatbot(
-            name.parts[-1],
+            name,
             project_name=project_name,
             model_name=model_name,
             agent_name=agent_name,

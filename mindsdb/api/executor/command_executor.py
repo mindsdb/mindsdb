@@ -84,7 +84,7 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     TYPES,
 )
 
-from .exceptions import (
+from mindsdb.api.executor.exceptions import (
     ExecutorException,
     BadDbError,
     NotSupportedYet,
@@ -1299,9 +1299,11 @@ class ExecuteCommands:
                 db_name = database_name
 
             dn = self.session.datahub[db_name]
+            if dn is None:
+                raise ExecutorException(f"Cannot delete a table from database '{db_name}': the database does not exist")
+
             if db_name is not None:
                 dn.drop_table(table, if_exists=statement.if_exists)
-
             elif db_name in self.session.database_controller.get_dict(filter_type="project"):
                 # TODO do we need feature: delete object from project via drop table?
 
@@ -1499,6 +1501,9 @@ class ExecuteCommands:
                 provider=provider,
                 params=statement.params,
             )
+        except EntityExistsError as e:
+            if statement.if_not_exists is not True:
+                raise ExecutorException(str(e))
         except ValueError as e:
             # Project does not exist or agent already exists.
             raise ExecutorException(str(e))

@@ -57,7 +57,7 @@ def create_agent(project_name, name, agent):
             name=name, project_name=project_name, model_name=model_name, skills=skills, provider=provider, params=params
         )
         return created_agent.as_dict(), HTTPStatus.CREATED
-    except ValueError:
+    except (ValueError, EntityExistsError):
         # Model or skill doesn't exist.
         return http_error(
             HTTPStatus.NOT_FOUND,

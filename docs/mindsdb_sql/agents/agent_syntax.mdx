@@ -16,7 +16,7 @@ USING
         "provider": "openai",
         "model_name" : "gpt-4o",
         "api_key": "sk-abc123",
-        "base_url": "http://xxx.com",
+        "base_url": "http://example.com",
         "api_version": "2024-02-01"
     },
     data = {
@@ -32,6 +32,19 @@ It creates an agent that uses the defined model and has access to the connected 
 SHOW AGENTS
 WHERE name = 'my_agent';
 ```
+
+<Note>
+Note that you can insert all tables from a connected data source and all knowledge bases from a project using the `*` syntax.
+
+```sql
+    ...
+    data = {
+         "knowledge_bases": ["project_name.*", ...],
+         "tables": ["datasource_conn_name.*", ...]
+    },
+    ...
+```
+</Note>
 
 ### `model`
 
@@ -240,7 +253,7 @@ USING
         "provider": "openai",
         "model_name" : "got-4o",
         "api_key": "sk-abc123",
-        "base_url": "https://xxx.com/",
+        "base_url": "https://example.com/",
         "api_version": "2024-02-01"
     },
     ...
@@ -260,7 +273,7 @@ You can define the default models in the Settings of the MindsDB Editor GUI.
       "provider": "openai",
       "model_name" : "got-4o",
       "api_key": "sk-abc123",
-      "base_url": "https://xxx.com/",
+      "base_url": "https://example.com/",
       "api_version": "2024-02-01"
 
 }

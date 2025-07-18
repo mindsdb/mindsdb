@@ -318,7 +318,7 @@ class Config:
             self._env_config["logging"]["handlers"]["console"]["level"] = os.environ["MINDSDB_LOG_LEVEL"]
             self._env_config["logging"]["handlers"]["console"]["enabled"] = True
         if os.environ.get("MINDSDB_CONSOLE_LOG_LEVEL", "") != "":
-            self._env_config["logging"]["handlers"]["console"]["level"] = os.environ["MINDSDB_LOG_LEVEL"]
+            self._env_config["logging"]["handlers"]["console"]["level"] = os.environ["MINDSDB_CONSOLE_LOG_LEVEL"]
             self._env_config["logging"]["handlers"]["console"]["enabled"] = True
         if os.environ.get("MINDSDB_FILE_LOG_LEVEL", "") != "":
             self._env_config["logging"]["handlers"]["file"]["level"] = os.environ["MINDSDB_FILE_LOG_LEVEL"]

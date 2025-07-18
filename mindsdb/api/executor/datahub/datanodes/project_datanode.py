@@ -125,12 +125,17 @@ class ProjectDataNode(DataNode):
 
         elif isinstance(query, Select):
             match query.from_table.parts, query.from_table.is_quoted:
-                case [query_table], [is_quoted] if is_quoted is False:
-                    query_table = query_table.lower()
-                case [query_table], [is_quoted] if is_quoted is True:
-                    pass
+                case [query_table], [is_quoted]:
+                    ...
+                case [query_table, int(_)], [is_quoted, _]:
+                    ...
+                case [query_table, str(version)], [is_quoted, _] if version.isdigit():
+                    ...
                 case _:
                     raise ValueError("Tabe name should contain only one part")
+
+            if not is_quoted:
+                query_table = query_table.lower()
 
             # region is it query to 'models'?
             if query_table in ("models", "jobs", "mdb_triggers", "chatbots", "skills", "agents"):

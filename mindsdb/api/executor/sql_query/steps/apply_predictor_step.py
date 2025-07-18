@@ -43,6 +43,7 @@ class ApplyPredictorBaseCall(BaseStepCall):
                 agent,
                 messages=messages,
                 project_name=project_name,
+                params=params
             )
 
         else:

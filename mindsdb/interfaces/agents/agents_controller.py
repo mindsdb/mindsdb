@@ -585,20 +585,22 @@ class AgentsController:
     def get_completion(
         self,
         agent: db.Agents,
-        messages: List[Dict[str, str]],
+        messages: list[Dict[str, str]],
         project_name: str = default_project,
-        tools: List[BaseTool] = None,
+        tools: list[BaseTool] = None,
         stream: bool = False,
+        params: dict | None = None
     ) -> Union[Iterator[object], pd.DataFrame]:
         """
         Queries an agent to get a completion.
 
         Parameters:
             agent (db.Agents): Existing agent to get completion from
-            messages (List[Dict[str, str]]): Chat history to send to the agent
+            messages (list[Dict[str, str]]): Chat history to send to the agent
             project_name (str): Project the agent belongs to (default mindsdb)
-            tools (List[BaseTool]): Tools to use while getting the completion
+            tools (list[BaseTool]): Tools to use while getting the completion
             stream (bool): Whether to stream the response
+            params (dict | None): params to redefine agent params
 
         Returns:
             response (Union[Iterator[object], pd.DataFrame]): Completion as a DataFrame or iterator of completion chunks
@@ -607,7 +609,7 @@ class AgentsController:
             ValueError: Agent's model does not exist.
         """
         if stream:
-            return self._get_completion_stream(agent, messages, project_name=project_name, tools=tools)
+            return self._get_completion_stream(agent, messages, project_name=project_name, tools=tools, params=params)
         from .langchain_agent import LangchainAgent
 
         model, provider = self.check_model_provider(agent.model_name, agent.provider)
@@ -620,25 +622,27 @@ class AgentsController:
         llm_params = self.get_agent_llm_params(agent.params)
 
         lang_agent = LangchainAgent(agent, model, llm_params=llm_params)
-        return lang_agent.get_completion(messages)
+        return lang_agent.get_completion(messages, params=params)
 
     def _get_completion_stream(
         self,
         agent: db.Agents,
-        messages: List[Dict[str, str]],
+        messages: list[Dict[str, str]],
         project_name: str = default_project,
-        tools: List[BaseTool] = None,
+        tools: list[BaseTool] = None,
+        params: dict | None = None
     ) -> Iterator[object]:
         """
         Queries an agent to get a stream of completion chunks.
 
         Parameters:
             agent (db.Agents): Existing agent to get completion from
-            messages (List[Dict[str, str]]): Chat history to send to the agent
+            messages (list[Dict[str, str]]): Chat history to send to the agent
             trace_id (str): ID of Langfuse trace to use
             observation_id (str): ID of parent Langfuse observation to use
             project_name (str): Project the agent belongs to (default mindsdb)
-            tools (List[BaseTool]): Tools to use while getting the completion
+            tools (list[BaseTool]): Tools to use while getting the completion
+            params (dict | None): params to redefine agent params
 
         Returns:
             chunks (Iterator[object]): Completion chunks as an iterator
@@ -660,4 +664,4 @@ class AgentsController:
         llm_params = self.get_agent_llm_params(agent.params)
 
         lang_agent = LangchainAgent(agent, model=model, llm_params=llm_params)
-        return lang_agent.get_completion(messages, stream=True)
+        return lang_agent.get_completion(messages, stream=True, params=params)

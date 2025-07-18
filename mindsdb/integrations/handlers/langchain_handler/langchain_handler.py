@@ -259,7 +259,12 @@ AI: {response}'''
             for future in as_completed(futures, timeout=agent_timeout_seconds):
                 completions.append(future.result())
         except TimeoutError:
-            completions.append("I'm sorry! I couldn't come up with a response in time. Please try again.")
+            completions.append(
+                f"I'm sorry! I couldn't generate a response within the allotted time ({agent_timeout_seconds} seconds). "
+                "If you need more time for processing, you can adjust the timeout settings. "
+                "Please refer to the documentation for instructions on how to change the timeout value. "
+                "Feel free to try your request again."
+            )
         # Can't use ThreadPoolExecutor as context manager since we need wait=False.
         executor.shutdown(wait=False)
 

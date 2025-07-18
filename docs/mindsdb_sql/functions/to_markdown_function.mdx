@@ -5,72 +5,81 @@ sidebarTitle: The TO_MARKDOWN() Function
 
 MindsDB provides the `TO_MARKDOWN()` function that lets users extract the content of their documents in markdown by simply specifying the document path or URL. This function is especially useful for passing the extracted content of documents through LLMs or for storing them in a [Knowledge Base](/mindsdb_sql/agents/knowledge-bases).
 
+## Configuration
+
+The `TO_MARKDOWN()` function supports different file formats and methods of passing documents into it, as well as an LLM required for processing documents.
+
+### Supported File Formats
+
+The `TO_MARKDOWN()` function supports PDF, XML, and Nessus file formats. The documents can be provided from URLs, file storage, or Amazon S3 storage.
+
+### Supported LLMs
+
+The `TO_MARKDOWN()` function requires an LLM to process the document content into the Markdown format.
+
+The supported LLM providers include:
+
+- OpenAI
+- Azure OpenAI
+- Google
+
 <Info>
-At the moment, the `TO_MARKDOWN()` function only supports PDF documents. The documents can be provided from URLs, file storage, or Amazon S3 storage.
+The model you select must support multi-modal inputs, that is, both images and text. For example, OpenAI’s gpt-4o is a supported multi-modal model.
 </Info>
 
-## Prerequisites
+User can provide an LLM using one of the below methods:
 
-The `TO_MARKDOWN()` function in MindsDB requires the use of an LLM. To enable this, select one of the supported model providers and set the relevant environment variables.
+1. Set the default model in the Settings of MindsDB Editor.
+2. Set the default model in the [MindsDB configuration file](/setup/custom-config#default-llm).
+3. Use environment variables defined below to set an LLM specifically for the `TO_MARKDOWN()` function.
 
-The model provider can be set using the `TO_MARKDOWN_FUNCTION_PROVIDER` environment variable. The default provider is OpenAI and the default model is gpt-4o. The following providers are supported:
-- OpenAI (`openai`)
-- Azure OpenAI (`azure_openai`)
-- Google (`google`)
+    The `TO_MARKDOWN_FUNCTION_PROVIDER` environment variable defines the selected provider, which is one of `openai`, `azure_openai`, or `google`.
 
-<Info>
-The model you select must support multi-modal inputs (e.g., both images and text). For example, OpenAI’s gpt-4o is a supported multi-modal model.
+    <AccordionGroup>
+      <Accordion title="OpenAI">
+        Here are the environment variables for the OpenAI provider:
 
-You can also set up your default models in the [MindsDB configuration file](/setup/custom-config). With this, you will not need to set the environment variables specified below.
-</Info>
+        ```
+        TO_MARKDOWN_FUNCTION_API_KEY (required)
+        TO_MARKDOWN_FUNCTION_MODEL_NAME
+        TO_MARKDOWN_FUNCTION_TEMPERATURE
+        TO_MARKDOWN_FUNCTION_MAX_RETRIES
+        TO_MARKDOWN_FUNCTION_MAX_TOKENS
+        TO_MARKDOWN_FUNCTION_BASE_URL
+        TO_MARKDOWN_FUNCTION_API_ORGANIZATION
+        TO_MARKDOWN_FUNCTION_REQUEST_TIMEOUT
+        ```
 
-<AccordionGroup>
-  <Accordion title="OpenAI">
-    Here are the environment variables for the OpenAI provider:
+      </Accordion>
 
-    ```
-    TO_MARKDOWN_FUNCTION_API_KEY (required)
-    TO_MARKDOWN_FUNCTION_MODEL_NAME
-    TO_MARKDOWN_FUNCTION_TEMPERATURE
-    TO_MARKDOWN_FUNCTION_MAX_RETRIES
-    TO_MARKDOWN_FUNCTION_MAX_TOKENS
-    TO_MARKDOWN_FUNCTION_BASE_URL
-    TO_MARKDOWN_FUNCTION_API_ORGANIZATION
-    TO_MARKDOWN_FUNCTION_REQUEST_TIMEOUT
-    ```
+      <Accordion title="Azure OpenAI">
+        Here are the environment variables for the Azure OpenAI provider:
 
-  </Accordion>
+        ```
+        TO_MARKDOWN_FUNCTION_API_KEY (required)
+        TO_MARKDOWN_FUNCTION_BASE_URL (required)
+        TO_MARKDOWN_FUNCTION_API_VERSION (required)
+        TO_MARKDOWN_FUNCTION_MODEL_NAME
+        TO_MARKDOWN_FUNCTION_TEMPERATURE
+        TO_MARKDOWN_FUNCTION_MAX_RETRIES
+        TO_MARKDOWN_FUNCTION_MAX_TOKENS
+        TO_MARKDOWN_FUNCTION_API_ORGANIZATION
+        TO_MARKDOWN_FUNCTION_REQUEST_TIMEOUT
+        ```
+      </Accordion>
 
-  <Accordion title="Azure OpenAI">
-    Here are the environment variables for the Azure OpenAI provider:
+      <Accordion title="Google">
+        Here are the environment variables for the Google provider:
 
-    ```
-    TO_MARKDOWN_FUNCTION_API_KEY (required)
-    TO_MARKDOWN_FUNCTION_BASE_URL (required)
-    TO_MARKDOWN_FUNCTION_API_VERSION (required)
-    TO_MARKDOWN_FUNCTION_MODEL_NAME
-    TO_MARKDOWN_FUNCTION_TEMPERATURE
-    TO_MARKDOWN_FUNCTION_MAX_RETRIES
-    TO_MARKDOWN_FUNCTION_MAX_TOKENS
-    TO_MARKDOWN_FUNCTION_API_ORGANIZATION
-    TO_MARKDOWN_FUNCTION_REQUEST_TIMEOUT
-    ```
-  </Accordion>
-
-  <Accordion title="Google">
-    Here are the environment variables for the Google provider:
-
-    ```
-    TO_MARKDOWN_FUNCTION_API_KEY
-    TO_MARKDOWN_FUNCTION_MODEL_NAME
-    TO_MARKDOWN_FUNCTION_TEMPERATURE
-    TO_MARKDOWN_FUNCTION_MAX_RETRIES
-    TO_MARKDOWN_FUNCTION_MAX_TOKENS
-    TO_MARKDOWN_FUNCTION_API_ORGANIZATION
-    TO_MARKDOWN_FUNCTION_REQUEST_TIMEOUT
-    ```
-  </Accordion>
-</AccordionGroup>
+        ```
+        TO_MARKDOWN_FUNCTION_API_KEY
+        TO_MARKDOWN_FUNCTION_MODEL_NAME
+        TO_MARKDOWN_FUNCTION_TEMPERATURE
+        TO_MARKDOWN_FUNCTION_MAX_TOKENS
+        TO_MARKDOWN_FUNCTION_REQUEST_TIMEOUT
+        ```
+      </Accordion>
+    </AccordionGroup>
 
 ## Usage
 
@@ -90,8 +99,8 @@ You can use the `TO_MARKDOWN()` function to extract the content of your document
   Here are the steps for passing files from Amazon S3 into TO_MARKDOWN().
 
   1. Connect Amazon S3 to MindsDB following [this instruction](/integrations/data-integrations/amazon-s3).
-  2. Get the public URL of the file.
-  3. Run the above query, passing the public URL of the file as an argument.
+  2. The `public_url` of the file is generated in the `s3_datasource.files` table upon connecting the Amazon S3 data source to MindsDB.
+  3. Upon running the above query, the `public_url` of the file is selected from the `s3_datasource.files` table.
 
   </Accordion>
 

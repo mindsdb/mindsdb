@@ -204,7 +204,7 @@ class TestLowercase(BaseExecutorMockPredictor):
 
         kb_params = """
             using embedding_model = {
-                "provider": "dummy_provider",
+                "provider": "openai",
                 "model_name": "dummy_model",
                 "api_key": "dummy_key"
             }

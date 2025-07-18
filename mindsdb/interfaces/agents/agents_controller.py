@@ -145,11 +145,72 @@ class AgentsController:
 
         return all_agents.all()
 
+    def _create_default_sql_skill(
+        self,
+        name,
+        project_name,
+        database: str = None,
+        include_tables: List[str] = None,
+        ignore_tables: List[str] = None,
+        knowledge_base_database: str = None,
+        include_knowledge_bases: List[str] = None,
+        ignore_knowledge_bases: List[str] = None,
+    ):
+        # Create a default SQL skill
+        skill_name = f"{name}_sql_skill"
+        skill_params = {
+            "type": "sql",
+            "database": database,
+            "description": f"Auto-generated SQL skill for agent {name}",
+        }
+
+        # Add table restrictions if provided
+        if include_tables:
+            skill_params["include_tables"] = include_tables
+        if ignore_tables:
+            skill_params["ignore_tables"] = ignore_tables
+
+        # Add knowledge base parameters if provided
+        if knowledge_base_database:
+            skill_params["knowledge_base_database"] = knowledge_base_database
+        if include_knowledge_bases:
+            skill_params["include_knowledge_bases"] = include_knowledge_bases
+        if ignore_knowledge_bases:
+            skill_params["ignore_knowledge_bases"] = ignore_knowledge_bases
+        try:
+            # Check if skill already exists
+            existing_skill = self.skills_controller.get_skill(skill_name, project_name)
+            if existing_skill is None:
+                # Create the skill
+                skill_type = skill_params.pop("type")
+                self.skills_controller.add_skill(
+                    name=skill_name, project_name=project_name, type=skill_type, params=skill_params
+                )
+            else:
+                # Update the skill if parameters have changed
+                params_changed = False
+
+                # Check if skill parameters need to be updated
+                for param_key, param_value in skill_params.items():
+                    if existing_skill.params.get(param_key) != param_value:
+                        existing_skill.params[param_key] = param_value
+                        params_changed = True
+
+                # Update the skill if needed
+                if params_changed:
+                    flag_modified(existing_skill, "params")
+                    db.session.commit()
+
+        except Exception as e:
+            raise ValueError(f"Failed to auto-create or update SQL skill: {str(e)}")
+
+        return skill_name
+
     def add_agent(
         self,
         name: str,
         project_name: str = None,
-        model_name: str = None,
+        model_name: Union[str, dict] = None,
         skills: List[Union[str, dict]] = None,
         provider: str = None,
         params: Dict[str, Any] = None,
@@ -268,54 +329,17 @@ class AgentsController:
 
         # Auto-create SQL skill if no skills are provided but include_tables or include_knowledge_bases params are provided
         if not skills and (include_tables or include_knowledge_bases):
-            # Create a default SQL skill
-            skill_name = f"{name}_sql_skill"
-            skill_params = {
-                "type": "sql",
-                "database": database,
-                "description": f"Auto-generated SQL skill for agent {name}",
-            }
-
-            # Add table restrictions if provided
-            if include_tables:
-                skill_params["include_tables"] = include_tables
-            if ignore_tables:
-                skill_params["ignore_tables"] = ignore_tables
-
-            # Add knowledge base parameters if provided
-            if knowledge_base_database:
-                skill_params["knowledge_base_database"] = knowledge_base_database
-            if include_knowledge_bases:
-                skill_params["include_knowledge_bases"] = include_knowledge_bases
-            if ignore_knowledge_bases:
-                skill_params["ignore_knowledge_bases"] = ignore_knowledge_bases
-            try:
-                # Check if skill already exists
-                existing_skill = self.skills_controller.get_skill(skill_name, project_name)
-                if existing_skill is None:
-                    # Create the skill
-                    skill_type = skill_params.pop("type")
-                    self.skills_controller.add_skill(
-                        name=skill_name, project_name=project_name, type=skill_type, params=skill_params
-                    )
-                else:
-                    # Update the skill if parameters have changed
-                    params_changed = False
-
-                    # Check if skill parameters need to be updated
-                    for param_key, param_value in skill_params.items():
-                        if existing_skill.params.get(param_key) != param_value:
-                            existing_skill.params[param_key] = param_value
-                            params_changed = True
-
-                    # Update the skill if needed
-                    if params_changed:
-                        flag_modified(existing_skill, "params")
-                        db.session.commit()
-
-                skills = [skill_name]
-            except Exception as e:
-                raise ValueError(f"Failed to auto-create or update SQL skill: {str(e)}")
+            skill = self._create_default_sql_skill(
+                name,
+                project_name,
+                database=database,
+                include_tables=include_tables,
+                ignore_tables=ignore_tables,
+                knowledge_base_database=knowledge_base_database,
+                include_knowledge_bases=include_knowledge_bases,
+                ignore_knowledge_bases=ignore_knowledge_bases,
+            )
+            skills = [skill]
 
         agent = db.Agents(
             name=name,
@@ -410,7 +434,7 @@ class AgentsController:
         agent_name: str,
         project_name: str = default_project,
         name: str = None,
-        model_name: str = None,
+        model_name: Union[str, dict] = None,
         skills_to_add: List[Union[str, dict]] = None,
         skills_to_remove: List[str] = None,
         skills_to_rewrite: List[Union[str, dict]] = None,
@@ -424,7 +448,7 @@ class AgentsController:
             agent_name (str): The name of the new agent, or existing agent to update
             project_name (str): The containing project
             name (str): The updated name of the agent
-            model_name (str): The name of the existing ML model the agent will use
+            model_name (str | dict): The name of the existing ML model the agent will use
             skills_to_add (List[Union[str, dict]]): List of skill names to add to the agent, or list of dicts
                  with one of keys is "name", and other is additional parameters for relationship agent<>skill
             skills_to_remove (List[str]): List of skill names to remove from the agent
@@ -453,6 +477,8 @@ class AgentsController:
         existing_agent = self.get_agent(agent_name, project_name=project_name)
         if existing_agent is None:
             raise EntityNotExistsError(f"Agent with name not found: {agent_name}")
+        existing_params = existing_agent.params or {}
+
         is_demo = (existing_agent.params or {}).get("is_demo", False)
         if is_demo and (
             (name is not None and name != agent_name)
@@ -470,11 +496,35 @@ class AgentsController:
             existing_agent.name = name
 
         if model_name or provider:
+            if isinstance(model_name, dict):
+                # move into params
+                existing_params["model"] = model_name
+                model_name = None
+
             # check model and provider
             model, provider = self.check_model_provider(model_name, provider)
             # Update model and provider
             existing_agent.model_name = model_name
             existing_agent.provider = provider
+
+        if "data" in params:
+            if len(skills_to_add) > 0 or len(skills_to_remove) > 0:
+                raise ValueError(
+                    "'data' parameter cannot be used with 'skills_to_remove' or 'skills_to_add' parameters"
+                )
+
+            include_knowledge_bases = params["data"].get("knowledge_bases")
+            include_tables = params["data"].get("tables")
+
+            skill = self._create_default_sql_skill(
+                agent_name,
+                project_name,
+                database=params.get("database"),
+                include_tables=include_tables,
+                knowledge_base_database=params.get("knowledge_base_database"),
+                include_knowledge_bases=include_knowledge_bases,
+            )
+            skills_to_rewrite = [{"name": skill}]
 
         # check that all skills exist
         skill_name_to_record_map = {}
@@ -532,7 +582,6 @@ class AgentsController:
 
         if params is not None:
             # Merge params on update
-            existing_params = existing_agent.params or {}
             existing_params.update(params)
             # Remove None values entirely.
             params = {k: v for k, v in existing_params.items() if v is not None}

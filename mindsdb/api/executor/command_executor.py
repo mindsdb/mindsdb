@@ -1296,22 +1296,11 @@ class ExecuteCommands:
         Returns:
             ExecuteAnswer: answer for the command
         """
-        project_name = database_name
-
-        match statement.name.parts, statement.name.is_quoted:
-            case [project_name, view_name], [_, view_name_quoted]:
-                pass
-            case [view_name], [view_name_quoted]:
-                pass
-            case _:
-                raise ValueError(
-                    'View name should be in the form "project_name.view_name" '
-                    f'or "view_name", got {statement.name.parts}'
-                )
-
-        if view_name_quoted and not view_name.islower():
-            raise ValueError(f'Invalid name "{view_name}": only lowercase names are allowed')
-        view_name = view_name.lower()
+        project_name, view_name = match_two_part_name(
+            statement.name,
+            default_db_name=database_name,
+            ensure_lower_case=isinstance(statement, CreateView)
+        )
 
         query_str = statement.query_str
 

@@ -154,6 +154,7 @@ class PlanJoinTablesQuery:
         if len(table.parts) > 0:
             if table.parts[0] in self.planner.databases:
                 integration = table.parts.pop(0)
+                table.is_quoted.pop(0)
             else:
                 integration = self.planner.default_namespace
 

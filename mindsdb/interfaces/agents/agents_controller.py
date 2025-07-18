@@ -589,7 +589,7 @@ class AgentsController:
         project_name: str = default_project,
         tools: list[BaseTool] = None,
         stream: bool = False,
-        params: dict | None = None
+        params: dict | None = None,
     ) -> Union[Iterator[object], pd.DataFrame]:
         """
         Queries an agent to get a completion.
@@ -630,7 +630,7 @@ class AgentsController:
         messages: list[Dict[str, str]],
         project_name: str = default_project,
         tools: list[BaseTool] = None,
-        params: dict | None = None
+        params: dict | None = None,
     ) -> Iterator[object]:
         """
         Queries an agent to get a stream of completion chunks.

@@ -466,12 +466,30 @@ class AgentsController:
 
             # add skills
             for skill_name in set(skills_to_add_names) - set(existing_agent_skills_names):
+                skill = self.skills_controller.get_skill(skill_name, project_name)
+
+                # Run Data Catalog loader if enabled
+                if skill.type == "sql" and config.get("data_catalog", {}).get("enabled", False):
+                    if "database" in skill.params:
+                        valid_table_names = skill.params.get("tables", skill.get("tables"))
+                        data_catalog_loader = DataCatalogLoader(
+                            database_name=skill.params["database"],
+                            table_names=valid_table_names,
+                        )
+                        data_catalog_loader.load_metadata()
+                        
+                    else:
+                        raise ValueError(
+                            "Data Catalog loading is enabled, but the provided parameters for the new skills are insufficient to load metadata. "
+                        )
+
                 skill_parameters = next(x for x in skills_to_add if x["name"] == skill_name).copy()
                 del skill_parameters["name"]
                 association = db.AgentSkillsAssociation(
                     parameters=skill_parameters, agent=existing_agent, skill=skill_name_to_record_map[skill_name]
                 )
                 db.session.add(association)
+
         elif len(skills_to_rewrite) > 0:
             skill_name_to_parameters = {
                 x["name"]: {k: v for k, v in x.items() if k != "name"} for x in skills_to_rewrite

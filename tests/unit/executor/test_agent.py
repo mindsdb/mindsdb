@@ -421,7 +421,9 @@ class TestAgent(BaseExecutorDummyML):
         self.run_sql("""
             CREATE AGENT minimal_syntax_agent
             USING
-              include_tables = ['test.table1', 'test.table2'];
+              data = {
+                "tables": ['test.table1', 'test.table2']
+              }
          """)
 
         # Check that the agent was created with the default parameters
@@ -432,8 +434,8 @@ class TestAgent(BaseExecutorDummyML):
 
         # Verify the agent has the default parameters and include_tables
         agent_params = json.loads(agent_info["PARAMS"].iloc[0])
-        assert "include_tables" in agent_params
-        assert agent_params["include_tables"] == ["test.table1", "test.table2"]
+        assert "data" in agent_params
+        assert agent_params["data"]["tables"] == ["test.table1", "test.table2"]
 
         # Mock the OpenAI client for the agent execution
         with (
@@ -731,8 +733,10 @@ class TestAgent(BaseExecutorDummyML):
             USING
               model = "gpt-3.5-turbo",
               openai_api_key='--',
-              include_knowledge_bases = ['kb_show*'],
-              include_tables = ['files.show*'];
+              data = {
+                "knowledge_bases": ["kb_show*"],
+                "tables": ["files.show*"]
+              };
          """)
 
         # ===== Access to forbidden KBs =====

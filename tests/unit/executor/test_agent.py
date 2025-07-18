@@ -918,6 +918,34 @@ class TestAgent(BaseExecutorDummyML):
         assert "Jupiter" in mock_openai.agent_calls[1]
         assert "Jupiter" in mock_openai.agent_calls[2]
 
+    @patch("openai.OpenAI")
+    @patch('mindsdb.interfaces.agents.langchain_agent.LangchainAgent.run_agent', return_value=pd.DataFrame([['ok', None, None]], columns=['answer', 'context', 'trace_id']))
+    def test_agent_query_param_override(self, mock_run_agent, mock_openai):
+        """
+        Test that agent parameters can be overridden per-query using the USING clause in SELECT.
+        """
+        agent_response = "override test response"
+        set_openai_completion(mock_openai, agent_response)
+
+        self.run_sql(
+            """
+            CREATE AGENT override_agent
+            USING
+                model = 'gpt-4o',
+                openai_api_key = 'sk-override',
+                prompt_template = 'Answer questions',
+                timeout = 60;
+            """
+        )
+
+        self.run_sql(
+            """
+            SELECT * FROM override_agent
+            WHERE question = 'How are you?'
+            USING timeout=5;
+            """
+        )
+        assert mock_run_agent.call_args_list[0][0][2].get('timeout') == 5
 
 class TestKB(BaseExecutorDummyML):
     def _create_kb(

@@ -536,6 +536,44 @@ class AgentsController:
                         "Data Catalog loading is enabled, but the provided parameters for the new skills are insufficient to load metadata. "
                     )
 
+    def _run_data_catalog_loader_for_table_entries(
+        self,
+        table_entries: List[str],
+    ):
+        """
+        Runs Data Catalog loader for a list of table entries if enabled in the config.
+        This is used to load metadata for SQL skills when they are added or updated.
+        """
+        if config.get("data_catalog", {}).get("enabled", False):
+            database_table_map = {}
+            for table_entry in table_entries:
+                parts = table_entry.split(".", 1)
+
+                # Ensure the table name is in 'database.table' format.
+                if len(parts) != 2:
+                    raise ValueError(f"Invalid table name format: {table_entry}. Expected 'database.table' format.")
+                
+                database, table = parts[0], parts[1]
+
+                # Wildcards in database names are not supported at the moment by data catalog loader.
+                if "*" in database:
+                    raise ValueError(f"Invalid database name format: {database}. Wildcards are not supported.")
+
+                # Wildcards in table names are supported either.
+                # However, the table name itself can be a wildcard representing all tables.
+                if table == "*":
+                    table = None
+                elif "*" in table:
+                    raise ValueError(f"Invalid table name format: {table}. Wildcards are not supported.")                    
+
+                database_table_map[database] = database_table_map.get(database, []) + [table]
+
+            for database_name, table_names in database_table_map.items():
+                data_catalog_loader = DataCatalogLoader(
+                    database_name=database_name, table_names=table_names
+                )
+                data_catalog_loader.load_metadata()
+
     def delete_agent(self, agent_name: str, project_name: str = default_project):
         """
         Deletes an agent by name.

@@ -320,34 +320,13 @@ class AgentsController:
                 db.session.rollback()
                 raise ValueError(f"Skill with name does not exist: {skill_name}")
 
+            # Run Data Catalog loader if enabled.
+            if include_tables:
+                self._run_data_catalog_loader_for_table_entries(include_tables, skill=existing_skill)
+            else:
+                self._run_data_catalog_loader_for_skill(existing_skill)
+
             if existing_skill.type == "sql":
-                # Run Data Catalog loader if enabled
-                if config.get("data_catalog", {}).get("enabled", False):
-                    if include_tables:
-                        database_table_map = {}
-                        for table in include_tables:
-                            parts = table.split(".", 1)
-                            database_table_map[parts[0]] = database_table_map.get(parts[0], []) + [parts[1]]
-
-                        for database_name, table_names in database_table_map.items():
-                            data_catalog_loader = DataCatalogLoader(
-                                database_name=database_name, table_names=table_names
-                            )
-                            data_catalog_loader.load_metadata()
-
-                    elif "database" in existing_skill.params:
-                        valid_table_names = existing_skill.params.get("tables", parameters.get("tables"))
-                        data_catalog_loader = DataCatalogLoader(
-                            database_name=existing_skill.params["database"],
-                            table_names=valid_table_names,
-                        )
-                        data_catalog_loader.load_metadata()
-
-                    else:
-                        raise ValueError(
-                            "Data Catalog loading is enabled, but the provided parameters are insufficient to load metadata. "
-                        )
-
                 # Add table restrictions if this is a text2sql skill
                 if include_tables:
                     parameters["tables"] = include_tables
@@ -522,36 +501,43 @@ class AgentsController:
 
     def _run_data_catalog_loader_for_skill(
         self,
-        skill_name: str,
+        skill: Union[str, db.Skills],
     ):
         """
         Runs Data Catalog loader for a skill if enabled in the config.
         This is used to load metadata for SQL skills when they are added or updated.
         """
-        if config.get("data_catalog", {}).get("enabled", False):
-            skill = self.skills_controller.get_skill(skill_name, ctx.project_name)
-            if skill.type == "sql":
-                if "database" in skill.params:
-                    valid_table_names = skill.params.get("tables", skill.get("tables"))
-                    data_catalog_loader = DataCatalogLoader(
-                        database_name=skill.params["database"],
-                        table_names=valid_table_names,
-                    )
-                    data_catalog_loader.load_metadata()
-                else:
-                    raise ValueError(
-                        "Data Catalog loading is enabled, but the provided parameters for the new skills are insufficient to load metadata. "
-                    )
+        if not config.get("data_catalog", {}).get("enabled", False):
+            return
+
+        skill = skill if isinstance(skill, db.Skills) else self.skills_controller.get_skill(skill, ctx.project_name)
+        if skill.type == "sql":
+            if "database" in skill.params:
+                valid_table_names = skill.params.get("tables", skill.get("tables"))
+                data_catalog_loader = DataCatalogLoader(
+                    database_name=skill.params["database"],
+                    table_names=valid_table_names,
+                )
+                data_catalog_loader.load_metadata()
+            else:
+                raise ValueError(
+                    "Data Catalog loading is enabled, but the provided parameters for the new skills are insufficient to load metadata. "
+                )
 
     def _run_data_catalog_loader_for_table_entries(
         self,
         table_entries: List[str],
+        skill: Union[str, db.Skills] = None,
     ):
         """
         Runs Data Catalog loader for a list of table entries if enabled in the config.
         This is used to load metadata for SQL skills when they are added or updated.
         """
-        if config.get("data_catalog", {}).get("enabled", False):
+        if not config.get("data_catalog", {}).get("enabled", False):
+            return
+
+        skill = skill if isinstance(skill, db.Skills) else self.skills_controller.get_skill(skill, ctx.project_name)
+        if not skill or skill.type == "sql":
             database_table_map = {}
             for table_entry in table_entries:
                 parts = table_entry.split(".", 1)

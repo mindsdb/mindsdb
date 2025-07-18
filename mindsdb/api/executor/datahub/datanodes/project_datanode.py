@@ -132,7 +132,7 @@ class ProjectDataNode(DataNode):
                 case [query_table, str(version)], [is_quoted, _] if version.isdigit():
                     ...
                 case _:
-                    raise ValueError("Tabe name should contain only one part")
+                    raise ValueError("Table name should contain only one part")
 
             if not is_quoted:
                 query_table = query_table.lower()

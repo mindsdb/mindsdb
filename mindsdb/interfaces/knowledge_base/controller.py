@@ -247,6 +247,7 @@ class KnowledgeBaseTable:
         relevance_threshold = None
         hybrid_search_enabled_flag = False
         query_conditions = db_handler.extract_conditions(query.where)
+        hybrid_search_alpha = None  # Default to None, meaning no alpha weighted blending
         if query_conditions is not None:
             for item in query_conditions:
                 if item.column == "relevance" and item.op.value == FilterOperator.GREATER_THAN_OR_EQUAL.value:
@@ -270,6 +271,14 @@ class KnowledgeBaseTable:
                         hybrid_search_enabled_flag = hybrid_search_enabled_flag.lower() not in ("false")
                     if item.value is False or (isinstance(item.value, str) and item.value.lower() == "false"):
                         disable_reranking = True
+                elif item.column == "hybrid_search_alpha":
+                    # validate item.value is a float
+                    if not isinstance(item.value, (float, int)):
+                        raise ValueError(f"Invalid hybrid_search_alpha value: {item.value}. Must be a float or int.")
+                    # validate hybrid search alpha is between 0 and 1
+                    if not (0 <= item.value <= 1):
+                        raise ValueError(f"Invalid hybrid_search_alpha value: {item.value}. Must be between 0 and 1.")
+                    hybrid_search_alpha = item.value
                 elif item.column == "relevance" and item.op.value != FilterOperator.GREATER_THAN_OR_EQUAL.value:
                     raise ValueError(
                         f"Invalid operator for relevance: {item.op.value}. Only GREATER_THAN_OR_EQUAL is allowed."
@@ -343,7 +352,15 @@ class KnowledgeBaseTable:
                         f"Keyword search returned different columns: {df_keyword_select.columns} "
                         f"than expected: {df.columns}"
                     )
+                if hybrid_search_alpha:
+                    df_keyword_select[TableField.DISTANCE.value] = (
+                        hybrid_search_alpha * df_keyword_select[TableField.DISTANCE.value]
+                    )
+                    df[TableField.DISTANCE.value] = (1 - hybrid_search_alpha) * df[TableField.DISTANCE.value]
                 df = pd.concat([df, df_keyword_select], ignore_index=True)
+                # sort by distance if distance column exists
+                if TableField.DISTANCE.value in df.columns:
+                    df = df.sort_values(by=TableField.DISTANCE.value, ascending=True)
                 # if chunk_id column exists remove duplicates based on chunk_id
                 if "chunk_id" in df.columns:
                     df = df.drop_duplicates(subset=["chunk_id"])

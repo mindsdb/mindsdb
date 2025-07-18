@@ -7,7 +7,7 @@ from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.http.utils import http_error
 from mindsdb.metrics.metrics import api_endpoint_metrics
 
-from mindsdb.interfaces.jobs.jobs_controller import JobsController, parse_job_date
+from mindsdb.interfaces.jobs.jobs_controller import parse_job_date
 
 
 @ns_conf.route("/<project_name>/jobs")

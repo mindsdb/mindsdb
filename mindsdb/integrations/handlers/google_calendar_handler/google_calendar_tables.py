@@ -100,8 +100,8 @@ class GoogleCalendarEventsTable(APITable):
             else:
                 raise NotImplementedError
 
-        st = datetime.datetime.utcfromtimestamp(event_data['start_time'] / 1000).isoformat() + 'Z'
-        et = datetime.datetime.utcfromtimestamp(event_data['end_time'] / 1000).isoformat() + 'Z'
+        st = datetime.datetime.fromtimestamp(event_data['start_time'] / 1000, datetime.timezone.utc).isoformat() + 'Z'
+        et = datetime.datetime.fromtimestamp(event_data['end_time'] / 1000, datetime.timezone.utc).isoformat() + 'Z'
 
         event_data['start'] = {
             'dateTime': st,

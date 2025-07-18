@@ -41,10 +41,10 @@ def cast_row_types(row, field_types):
     for key in keys:
         t = field_types[key]
         if t == 'Timestamp' and isinstance(row[key], (int, float)):
-            timestamp = datetime.datetime.utcfromtimestamp(row[key])
+            timestamp = datetime.datetime.fromtimestamp(row[key], datetime.timezone.utc)
             row[key] = timestamp.strftime('%Y-%m-%d %H:%M:%S')
         elif t == 'Date' and isinstance(row[key], (int, float)):
-            timestamp = datetime.datetime.utcfromtimestamp(row[key])
+            timestamp = datetime.datetime.fromtimestamp(row[key], datetime.timezone.utc)
             row[key] = timestamp.strftime('%Y-%m-%d')
         elif t == 'Int' and isinstance(row[key], (int, float, str)):
             try:

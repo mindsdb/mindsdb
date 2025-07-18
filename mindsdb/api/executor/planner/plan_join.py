@@ -154,6 +154,7 @@ class PlanJoinTablesQuery:
         if len(table.parts) > 0:
             if table.parts[0] in self.planner.databases:
                 integration = table.parts.pop(0)
+                table.is_quoted.pop(0)
             else:
                 integration = self.planner.default_namespace
 
@@ -389,6 +390,7 @@ class PlanJoinTablesQuery:
     def process_table(self, item, query_in):
         table = copy.deepcopy(item.table)
         table.parts.insert(0, item.integration)
+        table.is_quoted.insert(0, False)
         query2 = Select(from_table=table, targets=[Star()])
         # parts = tuple(map(str.lower, table_name.parts))
         conditions = item.conditions
@@ -410,6 +412,7 @@ class PlanJoinTablesQuery:
                         break
                     col = copy.deepcopy(col)
                     col.field.parts = [col.field.parts[-1]]
+                    col.field.is_quoted = [col.field.is_quoted[-1]]
                     order_by.append(col)
 
             if order_by is not False:

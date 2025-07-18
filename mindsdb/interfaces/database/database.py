@@ -18,18 +18,30 @@ class DatabaseController:
         self.logs_db_controller = LogDBController()
         self.information_schema_controller = None
 
-    def delete(self, name: str):
+    def delete(self, name: str, strict_case: bool = False) -> None:
+        """Delete a database (project or integration) by name.
+
+        Args:
+            name (str): The name of the database to delete.
+            strict_case (bool, optional): If True, the database name is case-sensitive. Defaults to False.
+
+        Raises:
+            EntityNotExistsError: If the database does not exist.
+            Exception: If the database cannot be deleted.
+
+        Returns:
+            None
+        """
         databases = self.get_dict()
-        name = name.lower()
-        if name not in databases:
+        if name.lower() not in databases:
             raise EntityNotExistsError("Database does not exists", name)
-        db_type = databases[name]["type"]
+        db_type = databases[name.lower()]["type"]
         if db_type == "project":
-            project = self.get_project(name)
+            project = self.get_project(name, strict_case)
             project.delete()
             return
         elif db_type == "data":
-            self.integration_controller.delete(name)
+            self.integration_controller.delete(name, strict_case)
             return
         else:
             raise Exception(f"Database with type '{db_type}' cannot be deleted")
@@ -81,9 +93,9 @@ class DatabaseController:
 
         return result
 
-    def get_dict(self, filter_type: Optional[str] = None):
+    def get_dict(self, filter_type: Optional[str] = None, lowercase: bool = True):
         return OrderedDict(
-            (x["name"].lower(), {"type": x["type"], "engine": x["engine"], "id": x["id"]})
+            (x["name"].lower() if lowercase else x["name"], {"type": x["type"], "engine": x["engine"], "id": x["id"]})
             for x in self.get_list(filter_type=filter_type)
         )
 
@@ -98,8 +110,17 @@ class DatabaseController:
     def exists(self, db_name: str) -> bool:
         return db_name.lower() in self.get_dict()
 
-    def get_project(self, name: str):
-        return self.project_controller.get(name=name)
+    def get_project(self, name: str, strict_case: bool = False):
+        """Get a project by name.
+
+        Args:
+            name (str): The name of the project to retrieve.
+            strict_case (bool, optional): If True, the project name is case-sensitive. Defaults to False.
+
+        Returns:
+            Project: The project instance matching the given name.
+        """
+        return self.project_controller.get(name=name, strict_case=strict_case)
 
     def get_system_db(self, name: str):
         if name == "log":
@@ -112,19 +133,21 @@ class DatabaseController:
         else:
             raise Exception(f"Database '{name}' does not exists")
 
-    def update(self, name: str, data: dict):
+    def update(self, name: str, data: dict, strict_case: bool = False):
         """
         Updates the database with the given name using the provided data.
 
         Parameters:
             name (str): The name of the database to update.
             data (dict): The data to update the database with.
+            strict_case (bool): if True, then name is case-sesitive
 
         Raises:
             EntityNotExistsError: If the database does not exist.
         """
-        databases = self.get_dict()
-        name = name.lower()
+        databases = self.get_dict(lowercase=(not strict_case))
+        if not strict_case:
+            name = name.lower()
         if name not in databases:
             raise EntityNotExistsError("Database does not exist.", name)
 
@@ -133,6 +156,8 @@ class DatabaseController:
             # Only the name of the project can be updated.
             if {"name"} != set(data):
                 raise ValueError("Only the 'name' field can be updated for projects.")
+            if not data["name"].islower():
+                raise ValueError("New name must be in lower case.")
             self.project_controller.update(name=name, new_name=str(data["name"]))
             return
 

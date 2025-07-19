@@ -24,7 +24,7 @@ class VertexHandler(BaseMLEngine):
 
         model_name = args.pop("model_name")
         custom_model = args.pop("custom_model", False)
-
+        gemini_model = args.pop("gemini_model", False)
         # get credentials from engine
         credentials_url, credentials_file, credentials_json = self._get_credentials_from_engine()
 
@@ -35,28 +35,35 @@ class VertexHandler(BaseMLEngine):
         vertex = VertexClient(vertex_args, credentials_url, credentials_file, credentials_json)
 
         model = vertex.get_model_by_display_name(model_name)
-        if not model:
+        if not model and not gemini_model:
             raise Exception(f"Vertex model {model_name} not found")
         endpoint_name = model_name + "_endpoint"
         if vertex.get_endpoint_by_display_name(endpoint_name):
             logger.info(f"Endpoint {endpoint_name} already exists, skipping deployment")
         else:
             logger.info(f"Starting deployment at {endpoint_name}")
-            endpoint = vertex.deploy_model(model)
-            endpoint.display_name = endpoint_name
-            endpoint.update()
-            logger.info(f"Endpoint {endpoint_name} deployed")
+            if model:
+                endpoint = vertex.deploy_model(model)
+                endpoint.display_name = endpoint_name
+                endpoint.update()
+                logger.info(f"Endpoint {endpoint_name} deployed")
+            else:
+               
+                logger.info(f"Endpoint {endpoint_name} created")
 
         predict_args = {}
         predict_args["target"] = target
         predict_args["endpoint_name"] = endpoint_name
         predict_args["custom_model"] = custom_model
+        predict_args["model_name"] = model_name
+        predict_args["gemini_model"] = gemini_model
         self.model_storage.json_set("predict_args", predict_args)
         self.model_storage.json_set("vertex_args", vertex_args)
+       
 
     def predict(self, df, args=None):
         """Predict using the deployed model by calling the endpoint."""
-
+       
         if "__mindsdb_row_id" in df.columns:
             df.drop("__mindsdb_row_id", axis=1, inplace=True)  # TODO is this required?
 
@@ -65,14 +72,26 @@ class VertexHandler(BaseMLEngine):
 
         # get credentials from engine
         credentials_url, credentials_file, credentials_json = self._get_credentials_from_engine()
-
+       
         vertex = VertexClient(vertex_args, credentials_url, credentials_file, credentials_json)
-        results = vertex.predict_from_df(predict_args["endpoint_name"], df, custom_model=predict_args["custom_model"])
+       
+        if predict_args.get("gemini_model", False):
+            # If using Gemini model, we need to use the gemini predict method
+            
+            args_params = {}
+            args_params.update(predict_args)
+            args_params.update(vertex_args)
+            args_params.update(args)
+
+            results = vertex.gemini_predict_from_df( df, args_params)
+        else:
+            results = vertex.predict_from_df(predict_args["endpoint_name"], df, custom_model=predict_args["custom_model"])
+            results = results.predictions
 
         if predict_args["custom_model"]:
-            return pd.DataFrame(results.predictions, columns=[predict_args["target"]])
+            return pd.DataFrame(results, columns=[predict_args["target"]])
         else:
-            return pd.DataFrame(results.predictions)
+            return pd.DataFrame(results)
 
     def create_engine(self, connection_args):
         # check if one of credentials_url, credentials_file, or credentials_json is provided

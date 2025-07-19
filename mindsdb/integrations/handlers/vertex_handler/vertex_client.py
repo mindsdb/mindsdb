@@ -6,22 +6,23 @@ from google.cloud.aiplatform import init, TabularDataset, Model, Endpoint
 from vertexai.preview.generative_models import GenerativeModel, Part
 from vertexai.language_models import TextEmbeddingModel
 
+from google import genai
+from google.genai import types
+from google.oauth2 import service_account # <--- Import this for manual credential creation if needed
+
 import pandas as pd
 from mindsdb.integrations.libs.llm.utils import get_completed_prompts
 import concurrent.futures
 import numpy as np
+from concurrent.futures import ThreadPoolExecutor
 
-
-# from PIL import Image
+from PIL import Image
 import requests
-# from io import BytesIO
-
-
+from io import BytesIO
 
 from mindsdb.integrations.utilities.handlers.auth_utilities.google import GoogleServiceAccountOAuth2Manager
 
 logger = log.getLogger(__name__)
-
 
 class VertexClient:
     """A class to interact with Vertex AI"""
@@ -31,23 +32,70 @@ class VertexClient:
         self.default_embedding_model = "textembedding-gecko@003"
         self.generative = True
         self.mode = "default"
+        
+        # Define the necessary scopes for Vertex AI Generative AI
+        # This is the most comprehensive scope for cloud services.
+        required_scopes = [
+            "https://www.googleapis.com/auth/cloud-platform",
+            # Sometimes, for specific Generative AI APIs, you might also need:
+            # "https://www.googleapis.com/auth/generative-language",
+            # But 'cloud-platform' usually covers it if your SA has correct IAM roles.
+        ]
+
         google_sa_oauth2_manager = GoogleServiceAccountOAuth2Manager(
             credentials_url=credentials_url,
             credentials_file=credentials_file,
             credentials_json=credentials_json,
+            # If GoogleServiceAccountOAuth2Manager supports 'scopes' directly, pass it here
+            # scopes=required_scopes, 
         )
-        credentials = google_sa_oauth2_manager.get_oauth2_credentials()
+        
+        # Get base credentials from your manager
+        base_credentials = google_sa_oauth2_manager.get_oauth2_credentials()
+        
+        # --- Crucial Part: Ensure credentials have the required scopes ---
+        # This is a common pattern if the base_credentials don't already have the desired scopes.
+        # It assumes base_credentials is a google.auth.credentials.Credentials object or similar.
+        # You might need to load the service account key data again to build new credentials with scopes.
+        
+        if hasattr(base_credentials, 'with_scopes'): # Check if the method exists
+            credentials = base_credentials.with_scopes(required_scopes)
+        elif credentials_json:
+            # If `with_scopes` isn't available, and you have the JSON, recreate
+            service_account_info = json.loads(credentials_json)
+            credentials = service_account.Credentials.from_service_account_info(
+                service_account_info,
+                scopes=required_scopes
+            )
+        elif credentials_file:
+            # If you have the file, read it and recreate
+            with open(credentials_file, 'r') as f:
+                service_account_info = json.load(f)
+            credentials = service_account.Credentials.from_service_account_info(
+                service_account_info,
+                scopes=required_scopes
+            )
+        else:
+            # Fallback if no explicit way to add scopes. This might still fail.
+            logger.warning("Could not explicitly set scopes for credentials. Ensure your GoogleServiceAccountOAuth2Manager provides necessary scopes or adjust the source code.")
+            credentials = base_credentials # Use as is, but expect potential scope issues
 
+        # Initialize google.cloud.aiplatform
         init(
-            credentials=credentials,
+            credentials=credentials, # Use the scoped credentials
             project=args_json["project_id"],
             location=args_json["location"],
             staging_bucket=args_json["staging_bucket"],
-            # the name of the experiment to use to track
-            # logged metrics and parameters
             experiment=args_json["experiment"],
-            # description of the experiment above
             experiment_description=args_json["experiment_description"],
+        )
+        
+        # Initialize genai.Client, passing the scoped credentials
+        self.googleClient = genai.Client(
+            vertexai=True,
+            project=args_json["project_id"],
+            location=args_json["location"],
+            credentials=credentials # Pass the scoped credentials
         )
 
     def print_datasets(self):
@@ -221,11 +269,12 @@ class VertexClient:
         
 
         # called gemini model withinputs
-        model = GenerativeModel(args.get("model_name", self.default_model))
-       
+        model_name = args.get("model_name", self.default_model)
         results = []
-        for m in prompts:
-            results.append(model.generate_content(m).text)
+        # for m in prompts:
+        #     results.append(model.generate_content(m).text)
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            results = list(executor.map(lambda m: self.googleClient.models.generate_content(model=model_name, contents=m).text, prompts))
 
         pred_df = pd.DataFrame(results, columns=[args["target"]])
         return pred_df
@@ -233,42 +282,88 @@ class VertexClient:
     
     def embedding_worker(self, args: Dict, df: pd.DataFrame):
         if args.get("question_column"):
-            prompts = df[args["question_column"]].astype(str).tolist()
+            prompts = list(df[args["question_column"]].apply(lambda x: str(x)))
+            if args.get("title_column", None):
+                titles = list(df[args["title_column"]].apply(lambda x: str(x)))
+            else:
+                titles = None
+            
             model_name = args.get("model_name", self.default_embedding_model)
-            if not model_name:
-                model_name = "textembedding-gecko@003"  # default embedding model
-            model = TextEmbeddingModel.from_pretrained(model_name)
+            task_type = args.get("type")
+            task_type = f"retrieval_{task_type}"
 
-            # Gecko does not use task_type/title – only pure embedding
-            results = [str(model.get_embeddings([text])[0].values) for text in prompts]
+            if task_type == "retrieval_query":
+                results = [
+                    str(
+                        self.googleClient.models.embed_content(
+                            model=model_name, content=query, task_type=task_type
+                        )["embedding"]
+                    )
+                    for query in prompts
+                ]
+            elif titles:
+                results = [
+                    str(
+                        self.googleClient.models.embed_content(
+                            model=model_name,
+                            content=doc,
+                            task_type=task_type,
+                            title=title,
+                        )["embedding"]
+                    )
+                    for title, doc in zip(titles, prompts)
+                ]
+            else:
+                results = [
+                    str(
+                        self.googleClient.models.embed_content(
+                            model=model_name, content=doc, task_type=task_type
+                        )["embedding"]
+                    )
+                    for doc in prompts
+                ]
 
-            return pd.DataFrame(results, columns=[args["target"]])
+            pred_df = pd.DataFrame(results, columns=[args["target"]])
+            return pred_df
         else:
             raise Exception("Embedding mode needs a question_column")
-        
+    
+    
     def vision_worker(self, args: Dict, df: pd.DataFrame):
-        def get_img_bytes(url):
+        def get_img(url):
+            # URL Validation
             response = requests.get(url)
-            if response.status_code == 200 and response.headers.get("content-type", "").startswith("image/"):
-                return Part.from_data(data=response.content, mime_type="image/jpeg")
+            if response.status_code == 200 and response.headers.get(
+                "content-type", ""
+            ).startswith("image/"):
+                return Image.open(BytesIO(response.content))
             else:
-                raise Exception(f"{url} is not a valid image URL")
+                raise Exception(f"{url} is not vaild image URL..")
 
-        if not args.get("img_url"):
-            raise Exception("Vision mode needs an img_url")
+        model_name = args.get("model_name", "gemini-pro-vision")
+        if args.get("img_url"):
+            urls = list(df[args["img_url"]].apply(lambda x: str(x)))
 
-        urls = df[args["img_url"]].astype(str).tolist()
-        prompts = df[args["ctx_column"]].astype(str).tolist() if args.get("ctx_column") else None
-
-        
-        model = GenerativeModel("gemini-1.5-pro")
-
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            images = list(executor.map(get_img_bytes, urls))
-
-        if prompts:
-            results = [model.generate_content([img, text]).text for img, text in zip(images, prompts)]
         else:
-            results = [model.generate_content(img).text for img in images]
+            raise Exception("Vision mode needs a img_url")
 
-        return pd.DataFrame(results, columns=[args["target"]])
+        prompts = None
+        if args.get("ctx_column"):
+            prompts = list(df[args["ctx_column"]].apply(lambda x: str(x)))
+
+        model = self.googleClient.models
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            # Download images concurrently using ThreadPoolExecutor
+            imgs = list(executor.map(get_img, urls))
+        # imgs = [Image.open(BytesIO(requests.get(url).content)) for url in urls]
+        if prompts:
+            results = [
+                model.generate_content(model=model_name, contents=[img, text]).text
+                for img, text in zip(imgs, prompts)
+            ]
+        else:
+            results = [model.generate_content(model=model_name, contents=img).text for img in imgs]
+
+        pred_df = pd.DataFrame(results, columns=[args["target"]])
+
+        return pred_df

@@ -19,7 +19,9 @@ class VertexHandler(BaseMLEngine):
         If the endpoint does not exist, we create it and deploy the model to it.
         The runtime for this is long, it took 15 minutes for a small model.
         """
-        assert "using" in args, "Must provide USING arguments for this handler"
+        # assert "using" in args, "Must provide USING arguments for this handler"
+        if not args or "using" not in args:
+            raise ValueError("Must provide USING arguments for this handler")
         args = args["using"]
 
         model_name = args.pop("model_name")
@@ -78,9 +80,7 @@ class VertexHandler(BaseMLEngine):
         if predict_args.get("gemini_model", False):
             # If using Gemini model, we need to use the gemini predict method
             
-            args_params = {}
-            args_params.update(predict_args)
-            args_params.update(vertex_args)
+            args_params = {**predict_args, **vertex_args}
             args_params.update(args)
 
             results = vertex.gemini_predict_from_df( df, args_params)

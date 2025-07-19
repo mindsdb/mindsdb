@@ -14,6 +14,6 @@ tasks:
   - name: mindsdb
     init: |
       pip install -U pip
-      pip install -r requirements.txt
+      pip install -r requirements/requirements.txt -r requirements_dev.txt
     command: |
       python -m mindsdb

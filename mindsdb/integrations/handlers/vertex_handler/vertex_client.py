@@ -3,11 +3,9 @@ import json
 import textwrap
 from mindsdb.utilities import log
 from google.cloud.aiplatform import init, TabularDataset, Model, Endpoint
-from vertexai.preview.generative_models import GenerativeModel, Part
-from vertexai.language_models import TextEmbeddingModel
+
 
 from google import genai
-from google.genai import types
 from google.oauth2 import service_account # <--- Import this for manual credential creation if needed
 
 import pandas as pd

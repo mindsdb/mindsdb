@@ -35,6 +35,7 @@ def get_chromadb():
 
     try:
         import chromadb
+
         return chromadb
     except ImportError:
         raise ImportError("Failed to import chromadb.")

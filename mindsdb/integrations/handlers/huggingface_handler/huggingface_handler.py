@@ -127,8 +127,7 @@ class HuggingFaceHandler(BaseMLEngine):
         try:
             pipeline = transformers.pipeline(task=args['task_proper'], model=hf_model_storage_path,
                                              tokenizer=hf_model_storage_path, device=device)
-            logger.debug(f'Model already downloaded!')
-        ####
+            logger.debug('Model already downloaded!')
         # Otherwise download it
         except (ValueError, OSError):
             try:

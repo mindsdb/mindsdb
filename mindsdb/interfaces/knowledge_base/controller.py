@@ -13,6 +13,7 @@ from mindsdb_sql_parser.ast import BinaryOperation, Constant, Identifier, Select
 from mindsdb_sql_parser.ast.mindsdb import CreatePredictor
 from mindsdb_sql_parser import parse_sql
 
+from mindsdb.integrations.libs.keyword_search_base import KeywordSearchBase
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 
 import mindsdb.interfaces.storage.db as db
@@ -38,7 +39,7 @@ from mindsdb.interfaces.knowledge_base.evaluate import EvaluateBase
 from mindsdb.interfaces.knowledge_base.executor import KnowledgeBaseQueryExecutor
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
-from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, KeywordSearchArgs
 from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
 
@@ -59,6 +60,7 @@ class KnowledgeBaseInputParams(BaseModel):
     is_sparse: bool = False
     vector_size: int | None = None
     reranking_model: Dict[Text, Any] | None = None
+    preprocessing: Dict[Text, Any] | None = None
 
     class Config:
         extra = "forbid"
@@ -197,16 +199,19 @@ class KnowledgeBaseTable:
         df = executor.run(query)
 
         if (
-            query.group_by is not None
-            or query.order_by is not None
-            or query.having is not None
-            or query.distinct is True
-            or len(query.targets) != 1
-            or not isinstance(query.targets[0], Star)
+            query_copy.group_by is not None
+            or query_copy.order_by is not None
+            or query_copy.having is not None
+            or query_copy.distinct is True
+            or len(query_copy.targets) != 1
+            or not isinstance(query_copy.targets[0], Star)
         ):
             query_copy.where = None
             if "metadata" in df.columns:
                 df["metadata"] = df["metadata"].apply(to_json)
+
+            if query_copy.from_table is None:
+                query_copy.from_table = Identifier(parts=[self._kb.name])
 
             df = query_df(df, query_copy, session=self.session)
 
@@ -236,9 +241,13 @@ class KnowledgeBaseTable:
 
         # extract values from conditions and prepare for vectordb
         conditions = []
+        keyword_search_conditions = []
+        keyword_search_cols_and_values = []
         query_text = None
         relevance_threshold = None
+        hybrid_search_enabled_flag = False
         query_conditions = db_handler.extract_conditions(query.where)
+        hybrid_search_alpha = None  # Default to None, meaning no alpha weighted blending
         if query_conditions is not None:
             for item in query_conditions:
                 if item.column == "relevance" and item.op.value == FilterOperator.GREATER_THAN_OR_EQUAL.value:
@@ -255,7 +264,21 @@ class KnowledgeBaseTable:
                 elif item.column == "reranking":
                     if item.value is False or (isinstance(item.value, str) and item.value.lower() == "false"):
                         disable_reranking = True
-
+                elif item.column == "hybrid_search":
+                    hybrid_search_enabled_flag = item.value
+                    # cast to boolean
+                    if isinstance(hybrid_search_enabled_flag, str):
+                        hybrid_search_enabled_flag = hybrid_search_enabled_flag.lower() not in ("false")
+                    if item.value is False or (isinstance(item.value, str) and item.value.lower() == "false"):
+                        disable_reranking = True
+                elif item.column == "hybrid_search_alpha":
+                    # validate item.value is a float
+                    if not isinstance(item.value, (float, int)):
+                        raise ValueError(f"Invalid hybrid_search_alpha value: {item.value}. Must be a float or int.")
+                    # validate hybrid search alpha is between 0 and 1
+                    if not (0 <= item.value <= 1):
+                        raise ValueError(f"Invalid hybrid_search_alpha value: {item.value}. Must be between 0 and 1.")
+                    hybrid_search_alpha = item.value
                 elif item.column == "relevance" and item.op.value != FilterOperator.GREATER_THAN_OR_EQUAL.value:
                     raise ValueError(
                         f"Invalid operator for relevance: {item.op.value}. Only GREATER_THAN_OR_EQUAL is allowed."
@@ -271,8 +294,16 @@ class KnowledgeBaseTable:
                             op=FilterOperator.EQUAL,
                         )
                     )
+                    keyword_search_cols_and_values.append((TableField.CONTENT.value, item.value))
                 else:
                     conditions.append(item)
+                    keyword_search_conditions.append(item)  # keyword search conditions do not use embeddings
+
+        if len(keyword_search_cols_and_values) > 1:
+            raise ValueError(
+                "Multiple content columns found in query conditions. "
+                "Only one content column is allowed for keyword search."
+            )
 
         logger.debug(f"Extracted query text: {query_text}")
 
@@ -290,9 +321,50 @@ class KnowledgeBaseTable:
         allowed_metadata_columns = self._get_allowed_metadata_columns()
         df = db_handler.dispatch_select(query, conditions, allowed_metadata_columns=allowed_metadata_columns)
         df = self.addapt_result_columns(df)
-
         logger.debug(f"Query returned {len(df)} rows")
         logger.debug(f"Columns in response: {df.columns.tolist()}")
+
+        if hybrid_search_enabled_flag and not isinstance(db_handler, KeywordSearchBase):
+            raise ValueError(f"Hybrid search is enabled but the db_handler {type(db_handler)} does not support it. ")
+        # check if db_handler inherits from KeywordSearchBase
+        if hybrid_search_enabled_flag and isinstance(db_handler, KeywordSearchBase):
+            # If query_text is present, use it for keyword search
+            logger.debug(f"Performing keyword search with query text: {query_text}")
+            keyword_search_args = KeywordSearchArgs(query=query_text, column=TableField.CONTENT.value)
+            keyword_query_obj = copy.deepcopy(query)
+
+            keyword_query_obj.targets = [
+                Identifier(TableField.ID.value),
+                Identifier(TableField.CONTENT.value),
+                Identifier(TableField.METADATA.value),
+            ]
+
+            df_keyword_select = db_handler.dispatch_select(
+                keyword_query_obj, keyword_search_conditions, keyword_search_args=keyword_search_args
+            )
+            df_keyword_select = self.addapt_result_columns(df_keyword_select)
+            logger.debug(f"Keyword search returned {len(df_keyword_select)} rows")
+            logger.debug(f"Columns in keyword search response: {df_keyword_select.columns.tolist()}")
+            # ensure df and df_keyword_select have exactly the same columns
+            if not df_keyword_select.empty:
+                if set(df.columns) != set(df_keyword_select.columns):
+                    raise ValueError(
+                        f"Keyword search returned different columns: {df_keyword_select.columns} "
+                        f"than expected: {df.columns}"
+                    )
+                if hybrid_search_alpha:
+                    df_keyword_select[TableField.DISTANCE.value] = (
+                        hybrid_search_alpha * df_keyword_select[TableField.DISTANCE.value]
+                    )
+                    df[TableField.DISTANCE.value] = (1 - hybrid_search_alpha) * df[TableField.DISTANCE.value]
+                df = pd.concat([df, df_keyword_select], ignore_index=True)
+                # sort by distance if distance column exists
+                if TableField.DISTANCE.value in df.columns:
+                    df = df.sort_values(by=TableField.DISTANCE.value, ascending=True)
+                # if chunk_id column exists remove duplicates based on chunk_id
+                if "chunk_id" in df.columns:
+                    df = df.drop_duplicates(subset=["chunk_id"])
+
         # Check if we have a rerank_model configured in KB params
         df = self.add_relevance(df, query_text, relevance_threshold, disable_reranking)
 
@@ -461,6 +533,9 @@ class KnowledgeBaseTable:
                     content.value = processed_chunks[0].content
 
             query.update_columns[emb_col] = Constant(self._content_to_embeddings(content))
+
+        if "metadata" not in query.update_columns:
+            query.update_columns["metadata"] = Constant({})
 
         # TODO search content in where clause?
 
@@ -972,7 +1047,7 @@ class KnowledgeBaseController:
             msg = "\n".join(problems)
             if len(problems) > 1:
                 msg = "\n" + msg
-            raise ValueError(f"Problem with knowledge base params: {msg}")
+            raise ValueError(f"Problem with knowledge base parameters: {msg}")
 
         # Validate preprocessing config first if provided
         if preprocessing_config is not None:
@@ -1128,6 +1203,13 @@ class KnowledgeBaseController:
 
         if "provider" not in params:
             raise ValueError("'provider' parameter is required for embedding model")
+
+        # check available providers
+        avail_providers = ("openai", "azure_openai", "bedrock", "gemini", "google")
+        if params["provider"] not in avail_providers:
+            raise ValueError(
+                f"Wrong embedding provider: {params['provider']}. Available providers: {', '.join(avail_providers)}"
+            )
 
         if params["provider"] not in ("openai", "azure_openai"):
             # try use litellm

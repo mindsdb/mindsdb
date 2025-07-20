@@ -1,3 +1,7 @@
+import json
+import time
+from typing import AsyncIterable, Any, Dict
+
 from starlette.applications import Starlette
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
@@ -19,14 +23,12 @@ from ...common.types import (
     SendTaskStreamingRequest,
 )
 from pydantic import ValidationError
-import json
-import time
-from typing import AsyncIterable, Any, Dict
 from ...common.server.task_manager import TaskManager
 
-import logging
+from mindsdb.utilities import log
+from mindsdb.utilities.log import get_uvicorn_logging_config, get_mindsdb_log_level
 
-logger = logging.getLogger(__name__)
+logger = log.getLogger(__name__)
 
 
 class A2AServer:
@@ -68,7 +70,15 @@ class A2AServer:
         import uvicorn
 
         # Configure uvicorn with optimized settings for streaming
-        uvicorn.run(self.app, host=self.host, port=self.port, http="h11", timeout_keep_alive=65, log_level="info")
+        uvicorn.run(
+            self.app,
+            host=self.host,
+            port=self.port,
+            http="h11",
+            timeout_keep_alive=65,
+            log_level=get_mindsdb_log_level(),
+            log_config=get_uvicorn_logging_config("uvicorn_a2a"),
+        )
 
     def _get_agent_card(self, request: Request) -> JSONResponse:
         return JSONResponse(self.agent_card.model_dump(exclude_none=True))
@@ -135,36 +145,35 @@ class A2AServer:
 
     def _create_response(self, result: Any) -> JSONResponse | EventSourceResponse:
         if isinstance(result, AsyncIterable):
-
-            async def event_generator(result) -> AsyncIterable[dict[str, str]]:
+            # Step 2: Yield actual serialized event as JSON, with timing logs
+            async def event_generator(result):
                 async for item in result:
-                    # Send the data event with immediate flush directive
-                    yield {
-                        "data": item.model_dump_json(exclude_none=True),
-                        "event": "message",
-                        "id": str(id(item)),  # Add a unique ID for each event
-                    }
-                    # Add an empty comment event to force flush
-                    yield {
-                        "comment": " ",  # Empty comment event to force flush
-                    }
+                    t0 = time.time()
+                    logger.debug(f"[A2AServer] STEP2 serializing item at {t0}: {str(item)[:120]}")
+                    try:
+                        if hasattr(item, "model_dump_json"):
+                            data = item.model_dump_json(exclude_none=True)
+                        else:
+                            data = json.dumps(item)
+                    except Exception as e:
+                        logger.error(f"Serialization error in SSE stream: {e}")
+                        data = json.dumps({"error": f"Serialization error: {str(e)}"})
+                    yield {"data": data}
 
-            # Create EventSourceResponse with complete headers for browser compatibility
-            return EventSourceResponse(
-                event_generator(result),
-                # Complete set of headers needed for browser streaming
-                headers={
-                    "Cache-Control": "no-cache, no-transform",
-                    "X-Accel-Buffering": "no",
-                    "Connection": "keep-alive",
-                    "Content-Type": "text/event-stream",
-                    "Transfer-Encoding": "chunked",
-                },
-                # Explicitly set media_type
-                media_type="text/event-stream",
-            )
+            # Add robust SSE headers for compatibility
+            sse_headers = {
+                "Content-Type": "text/event-stream",
+                "Cache-Control": "no-cache, no-transform",
+                "X-Accel-Buffering": "no",
+                "Connection": "keep-alive",
+                "Transfer-Encoding": "chunked",
+            }
+            return EventSourceResponse(event_generator(result), headers=sse_headers)
         elif isinstance(result, JSONRPCResponse):
             return JSONResponse(result.model_dump(exclude_none=True))
+        elif isinstance(result, dict):
+            logger.warning("Falling back to JSONResponse for result type: dict")
+            return JSONResponse(result)
         else:
             logger.error(f"Unexpected result type: {type(result)}")
             raise ValueError(f"Unexpected result type: {type(result)}")

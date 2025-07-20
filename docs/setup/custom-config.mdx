@@ -175,10 +175,12 @@ The `autoupdate` parameter defines whether MindsDB automatically checks for and 
             "max_restart_count": 1,
             "max_restart_interval_seconds": 60
         },
-        "mongodb": {
+        "a2a": {
             "host": "127.0.0.1",
-            "port": "47336",
-            "database": "mindsdb"
+            "port": "47338",
+            "mindsdb_host": "127.0.0.1",
+            "mindsdb_port": "47334",
+            "enabled": true
         }
     },
 ```
@@ -189,36 +191,73 @@ Currently, the supported APIs are:
 
 * `http`: Configures the HTTP API. It requires the `host` and `port` parameters. Alternatively, configure HTTP authentication for your MindsDB instance by setting the environment variables `MINDSDB_USERNAME` and `MINDSDB_PASSWORD` before starting MindsDB, which is a recommended way for the production systems.
 * `mysql`: Configures the MySQL API. It requires the `host` and `port` parameters and additionally the `database` and `ssl` parameters.
-* `mongodb`: Configures the MongoDB API. It requires the `host` and `port` parameters and additionally the `database` parameter.
+* `a2a`: Configures the A2A API. It requires the `host` and `port` parameters. Alternatively, use the `MINDSDB_A2A_HOST` environment variable.
 
-Connection parameters within each block include:
+<AccordionGroup>
+
+<Accordion title="HTTP API">
+
+Connection parameters for the HTTP API include:
 
 * `host`: Specifies the IP address or hostname where the API should run. For example, `"127.0.0.1"` indicates the API will run locally.
 * `port`: Defines the port number on which the API will listen for incoming requests. The default ports are `47334` for HTTP, `47335` for MySQL, and `47336` for MongoDB.
-* `database` (for MySQL and MongoDB): Specifies the name of the database that MindsDB uses. Users must connect to this database to interact with MindsDB through the respective API.
-* `ssl` (for MySQL API): Indicates whether SSL support is enabled for the MySQL API.
-
-Additional setup for the HTTP API and the MySQL API:
-
 * `restart_on_failure`: If it is set to `true` (and `max_restart_count` is not reached), the restart of MindsDB will be attempted after the MindsDB process was killed - with code 9 on Linux and MacOS, or for any reason on Windows.
 * `max_restart_count`: This defines how many times the restart attempts can be made. Note that 0 stands for no limit.
 * `max_restart_interval_seconds`: This defines the time limit during which there can be no more than `max_restart_count` restart attempts. Note that 0 stands for no time limit, which means there would be a maximum of `max_restart_count` restart attempts allowed.
+
+    <Note>
+    Here is a usage example of the restart features:
+
+    Assume the following values:
+    - max_restart_count = 2
+    - max_restart_interval_seconds = 30 seconds
+
+    Assume the following scenario:
+    - MindsDB fails at 1000s of its work - the restart attempt succeeds as there were no restarts in the past 30 seconds.
+    - MindsDB fails at 1010s of its work - the restart attempt succeeds as there was only 1 restart (at 1000s) in the past 30 seconds.
+    - MindsDB fails at 1020s of its work - the restart attempt fails as there were already max_restart_count=2 restarts (at 1000s and 1010s) in the past 30 seconds.
+    - MindsDB fails at 1031s of its work - the restart attempt succeeds as there was only 1 restart (at 1010s) in the past 30 seconds.
+    </Note>
+
 * `type` within `server`: This specifies the server type used by MindsDB. It is `waitress` by default. Other values include `flask` and `gunicorn`. Alternatively, you can set the `MINDSDB_DEFAULT_SERVER` environment variable to define the server.
 * `config` within `server`: This stores the selected server configuration. Any options that are supported by the selected server (taht is, waitress, flask, or gunicorn) can be set there, except for `host` and `port` that are defined under `config['api']['http']`.
 
-<Note>
-Here is a usage example of the restart features:
+</Accordion>
 
-Assume the following values:
-- max_restart_count = 2
-- max_restart_interval_seconds = 30 seconds
+<Accordion title="MySQL API">
 
-Assume the following scenario:
-- MindsDB fails at 1000s of its work - the restart attempt succeeds as there were no restarts in the past 30 seconds.
-- MindsDB fails at 1010s of its work - the restart attempt succeeds as there was only 1 restart (at 1000s) in the past 30 seconds.
-- MindsDB fails at 1020s of its work - the restart attempt fails as there were already max_restart_count=2 restarts (at 1000s and 1010s) in the past 30 seconds.
-- MindsDB fails at 1031s of its work - the restart attempt succeeds as there was only 1 restart (at 1010s) in the past 30 seconds.
-</Note>
+Connection parameters for the MySQL API include:
+
+* `host`: Specifies the IP address or hostname where the API should run. For example, `"127.0.0.1"` indicates the API will run locally.
+* `port`: Defines the port number on which the API will listen for incoming requests. The default ports are `47334` for HTTP, `47335` for MySQL, and `47336` for MongoDB.
+* `database`: Specifies the name of the database that MindsDB uses. Users must connect to this database to interact with MindsDB through the respective API.
+* `ssl`: Indicates whether SSL support is enabled for the MySQL API.
+* `restart_on_failure`: If it is set to `true` (and `max_restart_count` is not reached), the restart of MindsDB will be attempted after the MindsDB process was killed - with code 9 on Linux and MacOS, or for any reason on Windows.
+* `max_restart_count`: This defines how many times the restart attempts can be made. Note that 0 stands for no limit.
+* `max_restart_interval_seconds`: This defines the time limit during which there can be no more than `max_restart_count` restart attempts. Note that 0 stands for no time limit, which means there would be a maximum of `max_restart_count` restart attempts allowed.
+
+</Accordion>
+
+<Accordion title="A2A API">
+
+Connection parameters for the A2A API include:
+
+* `host`: It stores the hostname where the A2A service runs. Note that if you start MindsDB with its A2A API enabled then the A2A host is the same as the host of MindsDB.
+
+    <Note>
+    When proving the value for `host`, do not include the protocol. For example, use `127.0.0.1` instead of `http://127.0.0.1/`.
+    </Note>
+
+* `port`: It stores the port where the A2A service runs. Note that MindsDB exposes its A2A API at port 47338.
+* `mindsdb_host`: It stores the hostname where MindsDB runs, which is localhost by default. Note that if you start MindsDB with its A2A API enabled then the A2A host is the same as the host of MindsDB.
+* `mindsdb_port`: It stores the port where MindsDB HTTP API runs. It is usually 47334.
+* `enabled`: It defines whether the A2A API is enabled (True) or not (False).
+
+</Accordion>
+
+</AccordionGroup>
+
+#### `cache`
 
 ```bash
     "cache": {
@@ -244,6 +283,7 @@ The `connection` parameter is required only if the `type` parameter is set to `r
         "handlers": {
             "console": {
                 "enabled": true,
+                "formatter": "default", # optional, available values include default and json
                 "level": "INFO" # optional (alternatively, it can be defined in the MINDSDB_CONSOLE_LOG_LEVEL environment variable)
             },
             "file": {
@@ -263,8 +303,18 @@ The `logging` parameter defines the details of output logging, including the log
 
 The `handler` parameter provides handlers used for logging into streams and files.
 
-* `console`: If the `enabled` parameter is set to `true`, then the logging output is saved into a stream. Users can define the logging level in the `level` parameter or in the `MINDSDB_CONSOLE_LOG_LEVEL` environment variable - one of `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`.
-* `file`: If the `enabled` parameter is set to `true`, then the logging output is saved into a file. Users can define the logging level in the `level` parameter or in the `MINDSDB_FILE_LOG_LEVEL` environment variable - one of `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. Additionally, the `filename` parameter stores the name of the file that contains logs, and the `maxBytes` and `backupCount` parameters determine the rollover process of the file - that is, if the file reached the size of `maxBytes`, then the file is closed and a new file is opened, where the number of files is defined by the `backupCount` parameter.
+* `console`: This parameter defines the setup for saving logs into a stream.
+
+    * If the `enabled` parameter is set to `true`, then the logging output is saved into a stream.
+    * Users can define the `formatter` parameter that configures the format of the logs, where the available values include `default` and `json`.
+    * Users can also define the logging level in the `level` parameter or in the `MINDSDB_CONSOLE_LOG_LEVEL` environment variable - one of `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`.
+
+* `file`: This parameter defines the setup for saving logs into a file.
+
+    * If the `enabled` parameter is set to `true`, then the logging output is saved into a file.
+    * Users can define the logging level in the `level` parameter or in the `MINDSDB_FILE_LOG_LEVEL` environment variable - one of `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`.
+    * Additionally, the `filename` parameter stores the name of the file that contains logs.
+    * And the `maxBytes` and `backupCount` parameters determine the rollover process of the file - that is, if the file reached the size of `maxBytes`, then the file is closed and a new file is opened, where the number of files is defined by the `backupCount` parameter.
 
 #### `ml_task_queue`
 
@@ -288,15 +338,23 @@ The `type` parameter defines the type of task queue to use.
     - Using a Redis queue requires additional configuration such as the `host`, `port`, `db`, `username`, and `password` parameters.
     - To use the Redis queue, start MindsDB with the following command to initiate a queue consumer process: `python3 -m mindsdb --ml_task_queue_consumer`. This process will monitor the queue and fetch tasks for execution only when sufficient resources are available.
 
-#### `file_upload_domains`
+#### `url_file_upload`
 
 ```bash
-    "file_upload_domains": [],
+   "url_file_upload": {
+           "enabled": true,
+           "allowed_origins": ["https://example.com"],
+           "disallowed_origins": ["http://example.com"]
+    }
 ```
 
-The `file_upload_domains` parameter restricts file uploads to trusted sources by specifying a list of allowed domains. This ensures that users can only upload files from the defined sources, such as S3 or Google Drive (`"file_upload_domains": ["https://s3.amazonaws.com", "https://drive.google.com"]`).
+The `url_file_upload` parameter restricts file uploads to trusted sources by specifying a list of allowed domains. This ensures that users can only upload files from the defined sources, such as S3 or Google Drive.
 
-If this parameter is left empty (`[]`), users can upload files from any URL without restriction.
+The `enabled` flag turns this feature on (`true`) or off (`false`).
+
+The `allowed_origins` parameter lists allowed domains. If left empty, then any domain is allowed.
+
+The `disallowed_origins` parameter lists domains that are not allowed. If left empty, then there are no restricted domains.
 
 #### `web_crawling_allowed_sites`
 
@@ -336,7 +394,7 @@ The `default_llm` parameter specifies the default LLM that will be used with the
 }
 ```
 
-The `default_embedding_model` parameter specifies the default embedding model used with knowledge bases. Learn more about the parameters following the [documentation of the `embedding_model` of knowledge bases](/mindsdb_sql/knowledge-bases#embedding-model).
+The `default_embedding_model` parameter specifies the default embedding model used with knowledge bases. Learn more about the parameters following the [documentation of the `embedding_model` of knowledge bases](/mindsdb_sql/knowledge_bases/create#embedding-model).
 
 #### `default_reranking_model`
 
@@ -351,7 +409,7 @@ The `default_embedding_model` parameter specifies the default embedding model us
     }
 ```
 
-The `default_reranking_model` parameter specifies the default reranking model used with knowledge bases. Learn more about the parameters following the [documentation of the `reranking_model` of knowledge bases](/mindsdb_sql/knowledge-bases#reranking-model).
+The `default_reranking_model` parameter specifies the default reranking model used with knowledge bases. Learn more about the parameters following the [documentation of the `reranking_model` of knowledge bases](/mindsdb_sql/knowledge_bases/create#reranking-model).
 
 #### `data_catalog`
 
@@ -416,6 +474,7 @@ First, create a `config.json` file.
         "handlers": {
             "console": {
                 "enabled": true,
+                "formatter": "default",
                 "level": "INFO"
             },
             "file": {
@@ -430,7 +489,11 @@ First, create a `config.json` file.
     "ml_task_queue": {
         "type": "local"
     },
-    "file_upload_domains": [],
+    "url_file_upload": {
+           "enabled": true,
+           "allowed_origins": ["https://example.com"],
+           "disallowed_origins": ["http://example.com"]
+    }
     "web_crawling_allowed_sites": []
 }
 ```

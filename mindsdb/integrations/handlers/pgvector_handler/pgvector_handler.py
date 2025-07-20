@@ -5,7 +5,19 @@ from urllib.parse import urlparse
 
 import pandas as pd
 import psycopg
-from mindsdb_sql_parser.ast import Parameter, Identifier, Update, BinaryOperation
+from mindsdb_sql_parser.ast import (
+    Parameter,
+    Identifier,
+    BinaryOperation,
+    Tuple as AstTuple,
+    Constant,
+    Select,
+    OrderBy,
+    TypeCast,
+    Delete,
+    Update,
+    Function,
+)
 from pgvector.psycopg import register_vector
 
 from mindsdb.integrations.handlers.postgres_handler.postgres_handler import (
@@ -17,7 +29,10 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
     VectorStoreHandler,
     DistanceFunction,
     TableField,
+    FilterOperator,
 )
+from mindsdb.integrations.libs.keyword_search_base import KeywordSearchBase
+from mindsdb.integrations.utilities.sql_utils import KeywordSearchArgs
 from mindsdb.utilities import log
 from mindsdb.utilities.profiler import profiler
 from mindsdb.utilities.context import context as ctx
@@ -26,7 +41,7 @@ logger = log.getLogger(__name__)
 
 
 # todo Issue #7316 add support for different indexes and search algorithms e.g. cosine similarity or L2 norm
-class PgVectorHandler(PostgresHandler, VectorStoreHandler):
+class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
     """This handler handles connection and execution of the PostgreSQL with pgvector extension statements."""
 
     name = "pgvector"
@@ -167,31 +182,42 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         embedding_condition = None
 
         for condition in conditions:
+            is_embedding = condition.column == "embeddings"
+
             parts = condition.column.split(".")
-            key = parts[0]
+            key = Identifier(parts[0])
+
             # converts 'col.el1.el2' to col->'el1'->>'el2'
             if len(parts) > 1:
                 # intermediate elements
                 for el in parts[1:-1]:
-                    key += f" -> '{el}'"
+                    key = BinaryOperation(op="->", args=[key, Constant(el)])
 
                 # last element
-                key += f" ->> '{parts[-1]}'"
+                key = BinaryOperation(op="->>", args=[key, Constant(parts[-1])])
 
             type_cast = None
-            if isinstance(condition.value, int):
+            value = condition.value
+            if (
+                isinstance(value, list)
+                and len(value) > 0
+                and condition.op in (FilterOperator.IN, FilterOperator.NOT_IN)
+            ):
+                value = condition.value[0]
+
+            if isinstance(value, int):
                 type_cast = "int"
-            elif isinstance(condition.value, float):
+            elif isinstance(value, float):
                 type_cast = "float"
             if type_cast is not None:
-                key = f"({key})::{type_cast}"
+                key = TypeCast(type_cast, key)
 
             item = {
                 "name": key,
                 "op": condition.op.value,
                 "value": condition.value,
             }
-            if key == "embeddings":
+            if is_embedding:
                 embedding_condition = item
             else:
                 filter_conditions.append(item)
@@ -203,30 +229,24 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         """
         Construct where clauses from filter conditions
         """
-        if filter_conditions is None:
-            return ""
 
-        where_clauses = []
+        where_clause = None
 
         for item in filter_conditions:
             key = item["name"]
 
             if item["op"].lower() in ("in", "not in"):
-                values = list(repr(i) for i in item["value"])
-                item["value"] = "({})".format(", ".join(values))
+                values = [Constant(i) for i in item["value"]]
+                value = AstTuple(values)
             else:
-                if item["value"] is None:
-                    item["value"] = "null"
-                else:
-                    item["value"] = repr(item["value"])
-            where_clauses.append(f"{key} {item['op']} {item['value']}")
+                value = Constant(item["value"])
+            condition = BinaryOperation(op=item["op"], args=[key, value])
 
-        if len(where_clauses) > 1:
-            return f"WHERE {' AND '.join(where_clauses)}"
-        elif len(where_clauses) == 1:
-            return f"WHERE {where_clauses[0]}"
-        else:
-            return ""
+            if where_clause is None:
+                where_clause = condition
+            else:
+                where_clause = BinaryOperation(op="AND", args=[where_clause, condition])
+        return where_clause
 
     @staticmethod
     def _construct_full_after_from_clause(
@@ -236,6 +256,58 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
     ) -> str:
         return f"{where_clause} {offset_clause} {limit_clause}"
 
+    def _build_keyword_bm25_query(
+        self,
+        table_name: str,
+        keyword_search_args: KeywordSearchArgs,
+        columns: List[str] = None,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        offset: int = None,
+    ):
+        if columns is None:
+            columns = ["id", "content", "metadata"]
+
+        filter_conditions, _ = self._translate_conditions(conditions)
+        where_clause = self._construct_where_clause(filter_conditions)
+
+        if keyword_search_args:
+            keyword_query_condition = BinaryOperation(
+                op="@@",
+                args=[
+                    Function("to_tsvector", args=[Constant("english"), Identifier(keyword_search_args.column)]),
+                    Function("websearch_to_tsquery", args=[Constant("english"), Constant(keyword_search_args.query)]),
+                ],
+            )
+
+            if where_clause:
+                where_clause = BinaryOperation(op="AND", args=[where_clause, keyword_query_condition])
+            else:
+                where_clause = keyword_query_condition
+
+        distance = Function(
+            "ts_rank_cd",
+            args=[
+                Function("to_tsvector", args=[Constant("english"), Identifier(keyword_search_args.column)]),
+                Function("websearch_to_tsquery", args=[Constant("english"), Constant(keyword_search_args.query)]),
+            ],
+            alias=Identifier("distance"),
+        )
+
+        targets = [Identifier(col) for col in columns]
+        targets.append(distance)
+
+        limit_clause = Constant(limit) if limit else None
+        offset_clause = Constant(offset) if offset else None
+
+        return Select(
+            targets=targets,
+            from_table=Identifier(table_name),
+            where=where_clause,
+            limit=limit_clause,
+            offset=offset_clause,
+        )
+
     def _build_select_query(
         self,
         table_name: str,
@@ -243,12 +315,12 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         conditions: List[FilterCondition] = None,
         limit: int = None,
         offset: int = None,
-    ) -> str:
+    ) -> Select:
         """
         given inputs, build string query
         """
-        limit_clause = f"LIMIT {limit}" if limit else ""
-        offset_clause = f"OFFSET {offset}" if offset else ""
+        limit_clause = Constant(limit) if limit else None
+        offset_clause = Constant(offset) if offset else None
 
         # translate filter conditions to dictionary
         filter_conditions, embedding_search = self._translate_conditions(conditions)
@@ -269,7 +341,15 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
             modified_columns = ["id", "content", "embeddings", "metadata"]
             has_distance = True
 
-        targets = ", ".join(modified_columns)
+        targets = [Identifier(col) for col in modified_columns]
+
+        query = Select(
+            targets=targets,
+            from_table=Identifier(table_name),
+            where=where_clause,
+            limit=limit_clause,
+            offset=offset_clause,
+        )
 
         if embedding_search:
             search_vector = embedding_search["value"]
@@ -286,15 +366,18 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
                 if isinstance(search_vector, list):
                     search_vector = f"[{','.join(str(x) for x in search_vector)}]"
 
+            vector_op = BinaryOperation(
+                op=self.distance_op,
+                args=[Identifier("embeddings"), Constant(search_vector)],
+                alias=Identifier("distance"),
+            )
             # Calculate distance as part of the query if needed
             if has_distance:
-                targets = f"{targets}, (embeddings {self.distance_op} '{search_vector}') as distance"
+                query.targets.append(vector_op)
 
-            return f"SELECT {targets} FROM {table_name} {where_clause} ORDER BY embeddings {self.distance_op} '{search_vector}' ASC {limit_clause} {offset_clause} "
+            query.order_by = [OrderBy(vector_op, direction="ASC")]
 
-        else:
-            # if filter conditions, return rows that satisfy the conditions
-            return f"SELECT {targets} FROM {table_name} {where_clause} {limit_clause} {offset_clause}"
+        return query
 
     def _check_table(self, table_name: str):
         # Apply namespace for a user
@@ -320,7 +403,32 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
             columns = ["id", "content", "embeddings", "metadata"]
 
         query = self._build_select_query(table_name, columns, conditions, limit, offset)
-        result = self.raw_query(query)
+        query_str = self.renderer.get_string(query, with_failback=True)
+        result = self.raw_query(query_str)
+
+        # ensure embeddings are returned as string so they can be parsed by mindsdb
+        if "embeddings" in columns:
+            result["embeddings"] = result["embeddings"].astype(str)
+
+        return result
+
+    def keyword_select(
+        self,
+        table_name: str,
+        columns: List[str] = None,
+        conditions: List[FilterCondition] = None,
+        offset: int = None,
+        limit: int = None,
+        keyword_search_args: KeywordSearchArgs = None,
+    ) -> pd.DataFrame:
+        table_name = self._check_table(table_name)
+
+        if columns is None:
+            columns = ["id", "content", "embeddings", "metadata"]
+
+        query = self._build_keyword_bm25_query(table_name, keyword_search_args, columns, conditions, limit, offset)
+        query_str = self.renderer.get_string(query, with_failback=True)
+        result = self.raw_query(query_str)
 
         # ensure embeddings are returned as string so they can be parsed by mindsdb
         if "embeddings" in columns:
@@ -529,8 +637,9 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         filter_conditions, _ = self._translate_conditions(conditions)
         where_clause = self._construct_where_clause(filter_conditions)
 
-        query = f"DELETE FROM {table_name} {where_clause}"
-        self.raw_query(query)
+        query = Delete(table=Identifier(table_name), where=where_clause)
+        query_str = self.renderer.get_string(query, with_failback=True)
+        self.raw_query(query_str)
 
     def drop_table(self, table_name: str, if_exists=True):
         """

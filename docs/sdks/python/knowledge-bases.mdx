@@ -253,7 +253,7 @@ Note that if you define `default_embedding_model` in the configuration file, you
 The embedding model specification includes:
 
 * `provider`
-It is a required parameter. It defines the model provider as listed in [supported LLMs](/mindsdb_sql/knowledge-bases#supported-llms).
+It is a required parameter. It defines the model provider as listed in [supported LLMs](/mindsdb_sql/knowledge_bases/create#supported-llms).
 
 * `model_name`
 It is a required parameter. It defines the embedding model name as specified by the provider.
@@ -591,7 +591,7 @@ Knowledge bases uniquely identify data rows using an ID column, which prevents f
 
 * **Case 1: Inserting data into the knowledge base without the `id_column` defined.**
 
-    When users do not define the `id_column` during the creation of a knowledge base, MindsDB generates the ID for each row using a hash of the content columns, as [explained here](/mindsdb_sql/knowledge-bases#id-column).
+    When users do not define the `id_column` during the creation of a knowledge base, MindsDB generates the ID for each row using a hash of the content columns, as [explained here](/mindsdb_sql/knowledge_bases/create#id-column).
 
     **Example:**
 
@@ -1075,5 +1075,5 @@ project.knowledge_bases.drop('my_kb')
 Upon execution, it removes the knowledge base with its content.
 
 <Tip>
-See more examples of [knowledge bases via SQL here](/mindsdb_sql/knowledge-bases).
+See more examples of [knowledge bases via SQL here](/mindsdb_sql/knowledge_bases/overview).
 </Tip>

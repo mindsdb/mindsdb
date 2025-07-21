@@ -445,7 +445,7 @@ class AgentsController:
 
             # add skills
             for skill_name in set(skills_to_add_names) - set(existing_agent_skills_names):
-                # Run Data Catalog loader if enabled
+                # Run Data Catalog loader if enabled for the new skill
                 self._run_data_catalog_loader_for_skill(
                     skill_name,
                     project_name,
@@ -563,20 +563,32 @@ class AgentsController:
 
                 # Ensure the table name is in 'database.table' format.
                 if len(parts) != 2:
-                    raise ValueError(f"Invalid table name format: {table_entry}. Expected 'database.table' format.")
+                    logger.warning(
+                        f"Invalid table name format: {table_entry}. Expected 'database.table' format."
+                        "Metadata will not be loaded for this entry."
+                    )
+                    continue
 
                 database, table = parts[0], parts[1]
 
                 # Wildcards in database names are not supported at the moment by data catalog loader.
                 if "*" in database:
-                    raise ValueError(f"Invalid database name format: {database}. Wildcards are not supported.")
+                    logger.warning(
+                        f"Invalid database name format: {database}. Wildcards are not supported."
+                        "Metadata will not be loaded for this entry."
+                    )
+                    continue
 
                 # Wildcards in table names are supported either.
                 # However, the table name itself can be a wildcard representing all tables.
                 if table == "*":
                     table = None
                 elif "*" in table:
-                    raise ValueError(f"Invalid table name format: {table}. Wildcards are not supported.")
+                    logger.warning(
+                        f"Invalid table name format: {table}. Wildcards are not supported."
+                        "Metadata will not be loaded for this entry."
+                    )
+                    continue
 
                 database_table_map[database] = database_table_map.get(database, []) + [table]
 

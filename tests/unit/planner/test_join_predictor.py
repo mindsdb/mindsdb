@@ -370,7 +370,7 @@ class TestPlanJoinPredictor:
                 ),
                 SubSelectStep(
                     dataframe=Result(2),
-                    query=Select(targets=[Identifier('time')], group_by=[Constant(1)]),
+                    query=Select(targets=[Identifier('`time`')], group_by=[Constant(1)]),
                     table_name='Custom SQL Query'
                 ),
             ],

@@ -162,10 +162,14 @@ class VertexClient:
     
 
     def gemini_predict_from_df(
-        self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None
-    ) -> pd.DataFrame:
+
+        self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None, model_args: Optional[Dict] = None
+
+        ) -> pd.DataFrame:
+
         pred_args = args["predict_params"] if args else {}
-        # args = self.model_storage.json_get("args")
+
+        args = model_args #self.model_storage.json_get("args")
        
         df = df.reset_index(drop=True)
 

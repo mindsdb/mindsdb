@@ -19,11 +19,13 @@ class VertexHandler(BaseMLEngine):
         If the endpoint does not exist, we create it and deploy the model to it.
         The runtime for this is long, it took 15 minutes for a small model.
         """
-        # assert "using" in args, "Must provide USING arguments for this handler"
-        if not args or "using" not in args:
-            raise ValueError("Must provide USING arguments for this handler")
+        assert "using" in args, "Must provide USING arguments for this handler"
+        
         args = args["using"]
 
+        args["target"] = target  # Ensure target is included in args
+        self.model_storage.json_set("args", args)
+        
         model_name = args.pop("model_name")
         custom_model = args.pop("custom_model", False)
         gemini_model = args.pop("gemini_model", False)
@@ -57,8 +59,7 @@ class VertexHandler(BaseMLEngine):
         predict_args["target"] = target
         predict_args["endpoint_name"] = endpoint_name
         predict_args["custom_model"] = custom_model
-        predict_args["model_name"] = model_name
-        predict_args["gemini_model"] = gemini_model
+        
         self.model_storage.json_set("predict_args", predict_args)
         self.model_storage.json_set("vertex_args", vertex_args)
        
@@ -71,27 +72,26 @@ class VertexHandler(BaseMLEngine):
 
         predict_args = self.model_storage.json_get("predict_args")
         vertex_args = self.model_storage.json_get("vertex_args")
+        model_args =  self.model_storage.json_get("args")
 
         # get credentials from engine
         credentials_url, credentials_file, credentials_json = self._get_credentials_from_engine()
        
         vertex = VertexClient(vertex_args, credentials_url, credentials_file, credentials_json)
        
-        if predict_args.get("gemini_model", False):
+        if model_args.get("gemini_model", False):
             # If using Gemini model, we need to use the gemini predict method
+            args = args if args else {}
             
-            args_params = {**predict_args, **vertex_args}
-            args_params.update(args)
-
-            results = vertex.gemini_predict_from_df( df, args_params)
+            results = vertex.gemini_predict_from_df( df, args, model_args)
+            return results
         else:
             results = vertex.predict_from_df(predict_args["endpoint_name"], df, custom_model=predict_args["custom_model"])
-            results = results.predictions
 
         if predict_args["custom_model"]:
-            return pd.DataFrame(results, columns=[predict_args["target"]])
+            return pd.DataFrame(results.predictions, columns=[predict_args["target"]])
         else:
-            return pd.DataFrame(results)
+            return pd.DataFrame(results.predictions)
 
     def create_engine(self, connection_args):
         # check if one of credentials_url, credentials_file, or credentials_json is provided

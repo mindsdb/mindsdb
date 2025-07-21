@@ -26,6 +26,7 @@ dill == 0.3.6
 numpy
 pytz
 botocore
+transformers
 boto3 >= 1.34.131
 python-dateutil
 scikit-learn==1.5.2
@@ -39,6 +40,7 @@ langchain-openai==0.3.6
 langchain-anthropic==0.2.4
 langchain-text-splitters==0.3.5
 langchain-google-genai>=2.0.0
+langchain-google-vertexai>=2.0.15
 langchain_writer==0.3.0 # Required for Writer agent
 lark
 lxml==5.3.0 # Required for knowledge base webpage embeddings

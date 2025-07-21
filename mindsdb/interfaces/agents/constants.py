@@ -33,6 +33,7 @@ SUPPORTED_PROVIDERS = {
     "vllm",
     "google",
     "writer",
+    "vertex",
 }
 # Chat models
 ANTHROPIC_CHAT_MODELS = (

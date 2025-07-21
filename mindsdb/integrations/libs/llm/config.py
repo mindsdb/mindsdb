@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 
+
 class BaseLLMConfig(BaseModel):
     # Remove 'model_' prefix from protected namespaces since Langchain constructor
     # kwargs share the same prefix.
@@ -114,6 +115,18 @@ class GoogleConfig(BaseLLMConfig):
     top_k: Optional[int] = Field(default=None, description="Number of highest probability tokens to consider")
     max_output_tokens: Optional[int] = Field(default=None, description="Maximum number of tokens to generate")
     google_api_key: Optional[str] = Field(default=None, description="API key for Google Generative AI")
+
+#see https://python.langchain.com/api_reference/google_vertexai/chat_models/langchain_google_vertexai.chat_models.ChatVertexAI.html
+class GoogleVertexConfig(BaseLLMConfig):
+    model_name: str = Field(default="gemini-2.5-flash")
+    temperature: Optional[float] = Field(default=0.7)
+    max_output_tokens: Optional[int] = Field(default=None)
+    max_tokens: Optional[int] = Field(default=None)
+    max_retries: Optional[int] = Field(default=6)
+    credentials:  Optional[Any] = Field(default=None, description="Google Cloud credentials for authentication")
+    project: Optional[str] = Field(default=None, description="Google Cloud project ID")
+    location: Optional[str] = Field(default=None, description="Google Cloud location (e.g., 'us-central1')")
+
 
 
 # See https://api.python.langchain.com/en/latest/llms/langchain_community.llms.writer.Writer.html

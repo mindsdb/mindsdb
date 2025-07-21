@@ -7,7 +7,6 @@ from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import null
 import pandas as pd
 
-from mindsdb.api.http.namespaces import tab
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.storage.db import Predictor
 from mindsdb.utilities.context import context as ctx
@@ -448,9 +447,7 @@ class AgentsController:
             for skill_name in set(skills_to_add_names) - set(existing_agent_skills_names):
                 # Run Data Catalog loader if enabled
                 self._run_data_catalog_loader_for_skill(
-                    skill_name,
-                    project_name,
-                    tables=skills_to_add[skill_name].get("tables")
+                    skill_name, project_name, tables=skills_to_add[skill_name].get("tables")
                 )
 
                 skill_parameters = next(x for x in skills_to_add if x["name"] == skill_name).copy()
@@ -474,9 +471,7 @@ class AgentsController:
 
                     # Run Data Catalog loader if enabled for the updated skill
                     self._run_data_catalog_loader_for_skill(
-                        rel.skill.name,
-                        project_name,
-                        tables=skill_parameters.get("tables")
+                        rel.skill.name, project_name, tables=skill_parameters.get("tables")
                     )
 
                     rel.parameters = skill_parameters
@@ -500,7 +495,9 @@ class AgentsController:
             existing_params = existing_agent.params or {}
 
             if params.get("data", {}).get("tables"):
-                new_table_entries = set(params["data"]["tables"]) - set(existing_params.get("data", {}).get("tables", []))
+                new_table_entries = set(params["data"]["tables"]) - set(
+                    existing_params.get("data", {}).get("tables", [])
+                )
                 if new_table_entries:
                     # Run Data Catalog loader for new table entries if enabled.
                     self._run_data_catalog_loader_for_table_entries(new_table_entries, project_name)
@@ -535,8 +532,7 @@ class AgentsController:
             if "database" in skill.params:
                 valid_table_names = skill.params.get("tables") if skill.params.get("tables") else tables
                 data_catalog_loader = DataCatalogLoader(
-                    database_name=skill.params["database"],
-                    table_names=valid_table_names
+                    database_name=skill.params["database"], table_names=valid_table_names
                 )
                 data_catalog_loader.load_metadata()
             else:
@@ -566,7 +562,7 @@ class AgentsController:
                 # Ensure the table name is in 'database.table' format.
                 if len(parts) != 2:
                     raise ValueError(f"Invalid table name format: {table_entry}. Expected 'database.table' format.")
-                
+
                 database, table = parts[0], parts[1]
 
                 # Wildcards in database names are not supported at the moment by data catalog loader.
@@ -578,14 +574,12 @@ class AgentsController:
                 if table == "*":
                     table = None
                 elif "*" in table:
-                    raise ValueError(f"Invalid table name format: {table}. Wildcards are not supported.")                    
+                    raise ValueError(f"Invalid table name format: {table}. Wildcards are not supported.")
 
                 database_table_map[database] = database_table_map.get(database, []) + [table]
 
             for database_name, table_names in database_table_map.items():
-                data_catalog_loader = DataCatalogLoader(
-                    database_name=database_name, table_names=table_names
-                )
+                data_catalog_loader = DataCatalogLoader(database_name=database_name, table_names=table_names)
                 data_catalog_loader.load_metadata()
 
     def delete_agent(self, agent_name: str, project_name: str = default_project):

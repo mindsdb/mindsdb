@@ -120,9 +120,7 @@ class DataCatalogLoader(BaseDataCatalog):
         Load the column metadata from the handler.
         """
         self.logger.info(f"Loading columns for {self.database_name}")
-        response = self.data_handler.meta_get_columns(
-            [table.name for table in tables]
-        )
+        response = self.data_handler.meta_get_columns([table.name for table in tables])
         if response.resp_type == RESPONSE_TYPE.ERROR:
             self.logger.error(f"Failed to load columns for {self.database_name}: {response.error_message}")
             return []
@@ -170,9 +168,7 @@ class DataCatalogLoader(BaseDataCatalog):
         Load the column statistics metadata from the handler.
         """
         self.logger.info(f"Loading column statistics for {self.database_name}")
-        response = self.data_handler.meta_get_column_statistics(
-            [table.name for table in tables]
-        )
+        response = self.data_handler.meta_get_column_statistics([table.name for table in tables])
         if response.resp_type == RESPONSE_TYPE.ERROR:
             self.logger.error(f"Failed to load column statistics for {self.database_name}: {response.error_message}")
             return
@@ -237,9 +233,7 @@ class DataCatalogLoader(BaseDataCatalog):
         Load the primary keys metadata from the handler.
         """
         self.logger.info(f"Loading primary keys for {self.database_name}")
-        response = self.data_handler.meta_get_primary_keys(
-            [table.name for table in tables]
-        )
+        response = self.data_handler.meta_get_primary_keys([table.name for table in tables])
         if response.resp_type == RESPONSE_TYPE.ERROR:
             self.logger.error(f"Failed to load primary keys for {self.database_name}: {response.error_message}")
             return
@@ -291,9 +285,7 @@ class DataCatalogLoader(BaseDataCatalog):
         Load the foreign keys metadata from the handler.
         """
         self.logger.info(f"Loading foreign keys for {self.database_name}")
-        response = self.data_handler.meta_get_foreign_keys(
-            [table.name for table in tables]
-        )
+        response = self.data_handler.meta_get_foreign_keys([table.name for table in tables])
         if response.resp_type == RESPONSE_TYPE.ERROR:
             self.logger.error(f"Failed to foreign keys for {self.database_name}: {response.error_message}")
             return

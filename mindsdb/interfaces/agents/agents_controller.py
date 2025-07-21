@@ -322,9 +322,9 @@ class AgentsController:
 
             # Run Data Catalog loader if enabled.
             if include_tables:
-                self._run_data_catalog_loader_for_table_entries(include_tables, skill=existing_skill)
+                self._run_data_catalog_loader_for_table_entries(include_tables, project_name, skill=existing_skill)
             else:
-                self._run_data_catalog_loader_for_skill(existing_skill)
+                self._run_data_catalog_loader_for_skill(existing_skill, project_name, tables=parameters.get("tables"))
 
             if existing_skill.type == "sql":
                 # Add table restrictions if this is a text2sql skill
@@ -446,7 +446,7 @@ class AgentsController:
             # add skills
             for skill_name in set(skills_to_add_names) - set(existing_agent_skills_names):
                 # Run Data Catalog loader if enabled
-                self._run_data_catalog_loader_for_skill(skill_name)
+                self._run_data_catalog_loader_for_skill(skill_name, project_name)
 
                 skill_parameters = next(x for x in skills_to_add if x["name"] == skill_name).copy()
                 del skill_parameters["name"]
@@ -469,7 +469,7 @@ class AgentsController:
                     flag_modified(rel, "parameters")
             for new_skill_name in set(skill_name_to_parameters) - existing_skill_names:
                 # Run Data Catalog loader if enabled
-                self._run_data_catalog_loader_for_skill(new_skill_name)
+                self._run_data_catalog_loader_for_skill(new_skill_name, project_name)
 
                 association = db.AgentSkillsAssociation(
                     parameters=skill_name_to_parameters[new_skill_name],
@@ -485,7 +485,7 @@ class AgentsController:
                 new_table_entries = set(params["data"]["tables"]) - set(existing_params.get("data", {}).get("tables", []))
                 if new_table_entries:
                     # Run Data Catalog loader for new table entries if enabled.
-                    self._run_data_catalog_loader_for_table_entries(new_table_entries)
+                    self._run_data_catalog_loader_for_table_entries(new_table_entries, project_name)
 
             # Merge params on update
             existing_params.update(params)
@@ -502,6 +502,8 @@ class AgentsController:
     def _run_data_catalog_loader_for_skill(
         self,
         skill: Union[str, db.Skills],
+        project_name: str,
+        tables: List[str] = None,
     ):
         """
         Runs Data Catalog loader for a skill if enabled in the config.
@@ -510,13 +512,13 @@ class AgentsController:
         if not config.get("data_catalog", {}).get("enabled", False):
             return
 
-        skill = skill if isinstance(skill, db.Skills) else self.skills_controller.get_skill(skill, ctx.project_name)
+        skill = skill if isinstance(skill, db.Skills) else self.skills_controller.get_skill(skill, project_name)
         if skill.type == "sql":
             if "database" in skill.params:
-                valid_table_names = skill.params.get("tables", skill.get("tables"))
+                valid_table_names = skill.params.get("tables") if skill.params.get("tables") else tables
                 data_catalog_loader = DataCatalogLoader(
                     database_name=skill.params["database"],
-                    table_names=valid_table_names,
+                    table_names=valid_table_names
                 )
                 data_catalog_loader.load_metadata()
             else:
@@ -527,6 +529,7 @@ class AgentsController:
     def _run_data_catalog_loader_for_table_entries(
         self,
         table_entries: List[str],
+        project_name: str,
         skill: Union[str, db.Skills] = None,
     ):
         """
@@ -536,7 +539,7 @@ class AgentsController:
         if not config.get("data_catalog", {}).get("enabled", False):
             return
 
-        skill = skill if isinstance(skill, db.Skills) else self.skills_controller.get_skill(skill, ctx.project_name)
+        skill = skill if isinstance(skill, db.Skills) else self.skills_controller.get_skill(skill, project_name)
         if not skill or skill.type == "sql":
             database_table_map = {}
             for table_entry in table_entries:

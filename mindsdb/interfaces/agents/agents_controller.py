@@ -447,7 +447,9 @@ class AgentsController:
             for skill_name in set(skills_to_add_names) - set(existing_agent_skills_names):
                 # Run Data Catalog loader if enabled
                 self._run_data_catalog_loader_for_skill(
-                    skill_name, project_name, tables=next((x for x in skills_to_add if x["name"] == skill_name), {}).get("tables")
+                    skill_name,
+                    project_name,
+                    tables=next((x for x in skills_to_add if x["name"] == skill_name), {}).get("tables"),
                 )
 
                 skill_parameters = next(x for x in skills_to_add if x["name"] == skill_name).copy()

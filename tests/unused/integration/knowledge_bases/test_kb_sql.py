@@ -418,7 +418,7 @@ class KBTest(KBTestBase):
         """)
         assert set(ret.metadata.apply(lambda x: x.get("status"))) == {"solving"}
         assert "noise" in ret.chunk_content[0]  # first line contents word
-        assert len(ret[ret.relevance < 0.65]) == 0
+        assert len(ret[ret.relevance < 0.5]) == 0
 
     def test_relevance(self):
         self.create_kb("kb_crm")

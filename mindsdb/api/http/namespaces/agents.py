@@ -35,8 +35,15 @@ def create_agent(project_name, name, agent):
 
     model_name = agent["model_name"]
     provider = agent.get("provider")
-    params = agent.get("params", {})
     skills = agent.get("skills", [])
+
+    params = agent.get("params", {})
+    if agent.get("data"):
+        params["data"] = agent["data"]
+    if agent.get("model"):
+        params["model"] = agent["model"]
+    if agent.get("prompt_template"):
+        params["prompt_template"] = agent["prompt_template"]
 
     agents_controller = AgentsController()
 
@@ -156,12 +163,6 @@ class AgentResource(Resource):
 
         agent = request.json["agent"]
         name = agent.get("name", None)
-        model_name = agent.get("model_name", None)
-        skills_to_add = agent.get("skills_to_add", [])
-        skills_to_remove = agent.get("skills_to_remove", [])
-        skills_to_rewrite = agent.get("skills", [])
-        provider = agent.get("provider")
-        params = agent.get("params", None)
 
         # Agent must not exist with new name.
         if name is not None and name != agent_name:
@@ -179,9 +180,18 @@ class AgentResource(Resource):
 
         # Update
         try:
-            # Prepare the params dictionary
-            if params is None:
-                params = {}
+            model_name = agent.get("model_name", None)
+            skills_to_add = agent.get("skills_to_add", [])
+            skills_to_remove = agent.get("skills_to_remove", [])
+            skills_to_rewrite = agent.get("skills", [])
+            provider = agent.get("provider")
+            params = agent.get("params", {})
+            if agent.get("data"):
+                params["data"] = agent["data"]
+            if agent.get("model"):
+                params["model"] = agent["model"]
+            if agent.get("prompt_template"):
+                params["prompt_template"] = agent["prompt_template"]
 
             # Check if any of the skills to be added is of type 'retrieval'
             session = SessionController()
@@ -379,13 +389,6 @@ class AgentCompletions(Resource):
             return http_error(
                 HTTPStatus.NOT_FOUND, "Project not found", f"Project with name {project_name} does not exist"
             )
-
-        # Add OpenAI API key to agent params if not already present.
-        if not existing_agent.params:
-            existing_agent.params = {}
-        existing_agent.params["openai_api_key"] = existing_agent.params.get(
-            "openai_api_key", os.getenv("OPENAI_API_KEY")
-        )
 
         # set mode to `retrieval` if agent has a skill of type `retrieval` and mode is not set
         if "mode" not in existing_agent.params and any(

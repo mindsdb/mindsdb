@@ -7,6 +7,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import null
 import pandas as pd
 
+from mindsdb.api.http.namespaces import tab
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.storage.db import Predictor
 from mindsdb.utilities.context import context as ctx
@@ -446,7 +447,11 @@ class AgentsController:
             # add skills
             for skill_name in set(skills_to_add_names) - set(existing_agent_skills_names):
                 # Run Data Catalog loader if enabled
-                self._run_data_catalog_loader_for_skill(skill_name, project_name)
+                self._run_data_catalog_loader_for_skill(
+                    skill_name,
+                    project_name,
+                    tables=skills_to_add[skill_name].get("tables")
+                )
 
                 skill_parameters = next(x for x in skills_to_add if x["name"] == skill_name).copy()
                 del skill_parameters["name"]
@@ -469,7 +474,11 @@ class AgentsController:
                     flag_modified(rel, "parameters")
             for new_skill_name in set(skill_name_to_parameters) - existing_skill_names:
                 # Run Data Catalog loader if enabled
-                self._run_data_catalog_loader_for_skill(new_skill_name, project_name)
+                self._run_data_catalog_loader_for_skill(
+                    new_skill_name,
+                    project_name,
+                    tables=skill_name_to_parameters[new_skill_name].get("tables"),
+                )
 
                 association = db.AgentSkillsAssociation(
                     parameters=skill_name_to_parameters[new_skill_name],

@@ -470,10 +470,19 @@ class AgentsController:
                     db.session.delete(rel)
                 else:
                     existing_skill_names.add(rel.skill.name)
-                    rel.parameters = skill_name_to_parameters[rel.skill.name]
+                    skill_parameters = skill_name_to_parameters[rel.skill.name]
+
+                    # Run Data Catalog loader if enabled for the updated skill
+                    self._run_data_catalog_loader_for_skill(
+                        rel.skill.name,
+                        project_name,
+                        tables=skill_parameters.get("tables")
+                    )
+
+                    rel.parameters = skill_parameters
                     flag_modified(rel, "parameters")
             for new_skill_name in set(skill_name_to_parameters) - existing_skill_names:
-                # Run Data Catalog loader if enabled
+                # Run Data Catalog loader if enabled for the new skill
                 self._run_data_catalog_loader_for_skill(
                     new_skill_name,
                     project_name,

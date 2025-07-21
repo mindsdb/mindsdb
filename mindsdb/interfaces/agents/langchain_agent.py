@@ -144,7 +144,6 @@ def get_chat_model_params(args: Dict) -> Dict:
     llm_config = get_llm_config(args.get("provider", get_llm_provider(args)), model_config)
     config_dict = llm_config.model_dump(by_alias=True)
     config_dict = {k: v for k, v in config_dict.items() if v is not None}
-
     # If provider is writer, ensure the API key is passed as 'api_key'
     if args.get("provider") == "writer" and "writer_api_key" in config_dict:
         config_dict["api_key"] = config_dict.pop("writer_api_key")

@@ -108,6 +108,9 @@ def get_google_credentials(credentials: Dict) -> Optional[Dict]:
     :return: dictionary with Google credentials, or None if not available.
     """
     try:
+        if not credentials:
+            config.logger.warning("No Google credentials provided, using default service account credentials.")
+            return None
         google_sa_oauth2_manager = GoogleServiceAccountOAuth2Manager(
             credentials_url=credentials.get("service_account_key_url",  None),
             credentials_file=credentials.get("service_account_key_file", None),

@@ -120,7 +120,6 @@ class GoogleConfig(BaseLLMConfig):
 class GoogleVertexConfig(BaseLLMConfig):
     model_name: str = Field(default="gemini-2.5-flash")
     temperature: Optional[float] = Field(default=0.7)
-    max_output_tokens: Optional[int] = Field(default=None)
     max_tokens: Optional[int] = Field(default=None)
     max_retries: Optional[int] = Field(default=6)
     credentials:  Optional[Any] = Field(default=None, description="Google Cloud credentials for authentication")

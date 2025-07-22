@@ -51,7 +51,6 @@ class VertexClient:
             return Model.list(filter=f'display_name="{display_name}"')[0]
         except IndexError:
             logger.info(f"Model with display name {display_name} not found")
-            raise ValueError(f"Model with display name '{display_name}' not found")
 
     def get_endpoint_by_display_name(self, display_name):
         """Get an endpoint by its display name"""
@@ -59,7 +58,6 @@ class VertexClient:
             return Endpoint.list(filter=f'display_name="{display_name}"')[0]
         except IndexError:
             logger.info(f"Endpoint with display name {display_name} not found")
-            raise ValueError(f"Endpoint with display name '{display_name}' not found")
 
     def get_model_by_id(self, model_id):
         """Get a model by its ID"""

@@ -33,14 +33,16 @@ class GongCallsTable(APIResource):
             If the query contains an unsupported condition
         """
 
-        if limit is None:
-            limit = 20
-
         # Default parameters for the API call
         api_params = {
             'limit': limit,
             'offset': 0
         }
+
+        if limit is not None:
+            api_params['limit'] = limit
+        else:
+            limit = 20
 
         # Handle date filtering
         if conditions:
@@ -123,14 +125,15 @@ class GongUsersTable(APIResource):
         pd.DataFrame
             Gong users matching the query
         """
-
-        if limit is None:
-            limit = 20
-
         api_params = {
             'limit': limit,
             'offset': 0
         }
+
+        if limit is not None:
+            api_params['limit'] = limit
+        else:
+            limit = 20
 
         # Handle filtering
         if conditions:
@@ -192,8 +195,14 @@ class GongAnalyticsTable(APIResource):
         pd.DataFrame
             Gong analytics matching the query
         """
+        api_params = {
+            'limit': limit,
+            'offset': 0
+        }
 
-        if limit is None:
+        if limit is not None:
+            api_params['limit'] = limit
+        else:
             limit = 20
 
         try:
@@ -301,8 +310,13 @@ class GongTranscriptsTable(APIResource):
         pd.DataFrame
             Gong transcripts matching the query
         """
-
-        if limit is None:
+        api_params = {
+            'limit': limit,
+            'offset': 0
+        }
+        if limit is not None:
+            api_params['limit'] = limit
+        else:
             limit = 20
 
         try:

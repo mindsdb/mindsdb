@@ -1,5 +1,5 @@
 import requests
-from typing import Any, Dict, Text
+from typing import Any, Dict
 
 from mindsdb_sql_parser import parse_sql
 
@@ -28,7 +28,7 @@ class GongHandler(APIHandler):
 
     name = "gong"
 
-    def __init__(self, name: Text, connection_data: Dict, **kwargs: Any) -> None:
+    def __init__(self, name: str, connection_data: Dict, **kwargs: Any) -> None:
         """
         Initializes the handler.
 
@@ -95,10 +95,14 @@ class GongHandler(APIHandler):
                     'Accept': 'application/json'
                 })
 
+            test_response = self.connection.get(f"{self.base_url}/v2/users")
+            test_response.raise_for_status()
+
             self.is_connected = True
             return self.connection
 
         except Exception as e:
+            self.is_connected = False
             logger.error(f"Error connecting to Gong API: {e}")
             raise
 
@@ -124,7 +128,7 @@ class GongHandler(APIHandler):
         self.is_connected = response.success
         return response
 
-    def native_query(self, query: Text) -> Response:
+    def native_query(self, query: str) -> Response:
         """
         Executes a native query on Gong and returns the result.
 

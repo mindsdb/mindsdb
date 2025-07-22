@@ -16,7 +16,6 @@ from langchain_writer import ChatWriter
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.agents import AgentAction, AgentStep
 from langchain_core.callbacks.base import BaseCallbackHandler
-from langchain_google_vertexai import ChatVertexAI
 
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_core.messages.base import BaseMessage
@@ -144,14 +143,17 @@ def get_chat_model_params(args: Dict) -> Dict:
     llm_config = get_llm_config(args.get("provider", get_llm_provider(args)), model_config)
     config_dict = llm_config.model_dump(by_alias=True)
     config_dict = {k: v for k, v in config_dict.items() if v is not None}
+
     # If provider is writer, ensure the API key is passed as 'api_key'
     if args.get("provider") == "writer" and "writer_api_key" in config_dict:
         config_dict["api_key"] = config_dict.pop("writer_api_key")
+
     return config_dict
 
 
 def create_chat_model(args: Dict):
     model_kwargs = get_chat_model_params(args)
+
     if args["provider"] == "anthropic":
         return ChatAnthropic(**model_kwargs)
     if args["provider"] == "openai" or args["provider"] == "vllm":
@@ -173,8 +175,6 @@ def create_chat_model(args: Dict):
         return ChatNVIDIA(**model_kwargs)
     if args["provider"] == "google":
         return ChatGoogleGenerativeAI(**model_kwargs)
-    if args["provider"] == "vertex":
-        return ChatVertexAI(**model_kwargs)
     if args["provider"] == "writer":
         return ChatWriter(**model_kwargs)
     if args["provider"] == "mindsdb":

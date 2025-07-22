@@ -1,5 +1,2 @@
-google.cloud.aiplatform>=1.35.0
-google-genai>=1.26.0
-transformers>=4.53.2
+google-cloud-aiplatform>=1.35.0
 -r mindsdb/integrations/utilities/handlers/auth_utilities/google/requirements.txt
-

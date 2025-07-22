@@ -11,7 +11,6 @@ from mindsdb.integrations.libs.llm.config import (
     AnyscaleConfig,
     BaseLLMConfig,
     GoogleConfig,
-    GoogleVertexConfig,
     LiteLLMConfig,
     OllamaConfig,
     OpenAIConfig,
@@ -21,7 +20,6 @@ from mindsdb.integrations.libs.llm.config import (
 )
 from mindsdb.utilities.config import config
 from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
-from mindsdb.integrations.utilities.handlers.auth_utilities.google import GoogleServiceAccountOAuth2Manager
 
 
 # Default to latest GPT-4 model (https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo)
@@ -100,32 +98,7 @@ def get_completed_prompts(base_template: str, df: pd.DataFrame, strict=True) -> 
 
     return prompts, empty_prompt_ids
 
-def get_google_credentials(credentials: Dict) -> Optional[Dict]:
-    """
-    Helper method to get Google credentials for LLM providers that require them.
-    Uses the service account credentials stored in MindsDB's config.
 
-    :return: dictionary with Google credentials, or None if not available.
-    """
-    try:
-        if not credentials:
-            config.logger.warning("No Google credentials provided, using default service account credentials.")
-            return None
-        google_sa_oauth2_manager = GoogleServiceAccountOAuth2Manager(
-            credentials_url=credentials.get("service_account_key_url",  None),
-            credentials_file=credentials.get("service_account_key_file", None),
-            credentials_json=credentials.get("service_account_key_json", None),
-            # If GoogleServiceAccountOAuth2Manager supports 'scopes' directly, pass it here
-            # scopes=required_scopes,
-        )
-
-        # Get base credentials from your manager
-        return google_sa_oauth2_manager.get_oauth2_credentials()
-    except Exception as e:
-        config.logger.error(f"Failed to get Google credentials: {e}")
-        return None
-
-    
 def get_llm_config(provider: str, args: Dict) -> BaseLLMConfig:
     """
     Helper method that returns the configuration for a given LLM provider.
@@ -251,17 +224,6 @@ def get_llm_config(provider: str, args: Dict) -> BaseLLMConfig:
             top_k=args.get("top_k", None),
             max_output_tokens=args.get("max_tokens", None),
             google_api_key=args["api_keys"].get("google", None),
-        )
-    if provider == "vertex":
-        return GoogleVertexConfig(
-            model_name=args.get("model_name", "gemini-2.5-flash"),
-            temperature=temperature,
-            max_output_tokens=args.get("max_output_tokens", None),
-            max_tokens=args.get("max_tokens", None),
-            max_retries=args.get("max_retries", 6),
-            credentials=get_google_credentials(args.get("credentials", None)),
-            project=args.get("project_id", None),
-            location=args.get("location", None),
         )
     if provider == "writer":
         return WriterConfig(

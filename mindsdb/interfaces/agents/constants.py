@@ -33,7 +33,6 @@ SUPPORTED_PROVIDERS = {
     "vllm",
     "google",
     "writer",
-    "vertex",
 }
 # Chat models
 ANTHROPIC_CHAT_MODELS = (
@@ -193,7 +192,6 @@ PROVIDER_TO_MODELS = MappingProxyType(
         "nvidia_nim": NVIDIA_NIM_CHAT_MODELS,
         "google": GOOGLE_GEMINI_CHAT_MODELS,
         "writer": WRITER_CHAT_MODELS,
-        "vertex": GOOGLE_GEMINI_CHAT_MODELS,  # Vertex uses the same models as Google Gemini
     }
 )
 

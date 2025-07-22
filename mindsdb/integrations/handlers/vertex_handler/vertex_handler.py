@@ -20,15 +20,11 @@ class VertexHandler(BaseMLEngine):
         The runtime for this is long, it took 15 minutes for a small model.
         """
         assert "using" in args, "Must provide USING arguments for this handler"
-        
         args = args["using"]
 
-        args["target"] = target  # Ensure target is included in args
-        self.model_storage.json_set("args", args)
-        
         model_name = args.pop("model_name")
         custom_model = args.pop("custom_model", False)
-        gemini_model = args.pop("gemini_model", False)
+
         # get credentials from engine
         credentials_url, credentials_file, credentials_json = self._get_credentials_from_engine()
 
@@ -39,54 +35,39 @@ class VertexHandler(BaseMLEngine):
         vertex = VertexClient(vertex_args, credentials_url, credentials_file, credentials_json)
 
         model = vertex.get_model_by_display_name(model_name)
-        if not model and not gemini_model:
+        if not model:
             raise Exception(f"Vertex model {model_name} not found")
         endpoint_name = model_name + "_endpoint"
         if vertex.get_endpoint_by_display_name(endpoint_name):
             logger.info(f"Endpoint {endpoint_name} already exists, skipping deployment")
         else:
             logger.info(f"Starting deployment at {endpoint_name}")
-            if model:
-                endpoint = vertex.deploy_model(model)
-                endpoint.display_name = endpoint_name
-                endpoint.update()
-                logger.info(f"Endpoint {endpoint_name} deployed")
-            else:
-               
-                logger.info(f"Endpoint {endpoint_name} created")
+            endpoint = vertex.deploy_model(model)
+            endpoint.display_name = endpoint_name
+            endpoint.update()
+            logger.info(f"Endpoint {endpoint_name} deployed")
 
         predict_args = {}
         predict_args["target"] = target
         predict_args["endpoint_name"] = endpoint_name
         predict_args["custom_model"] = custom_model
-        
         self.model_storage.json_set("predict_args", predict_args)
         self.model_storage.json_set("vertex_args", vertex_args)
-       
 
     def predict(self, df, args=None):
         """Predict using the deployed model by calling the endpoint."""
-       
+
         if "__mindsdb_row_id" in df.columns:
             df.drop("__mindsdb_row_id", axis=1, inplace=True)  # TODO is this required?
 
         predict_args = self.model_storage.json_get("predict_args")
         vertex_args = self.model_storage.json_get("vertex_args")
-        model_args =  self.model_storage.json_get("args")
 
         # get credentials from engine
         credentials_url, credentials_file, credentials_json = self._get_credentials_from_engine()
-       
+
         vertex = VertexClient(vertex_args, credentials_url, credentials_file, credentials_json)
-       
-        if model_args.get("gemini_model", False):
-            # If using Gemini model, we need to use the gemini predict method
-            args = args if args else {}
-            
-            results = vertex.gemini_predict_from_df( df, args, model_args)
-            return results
-        else:
-            results = vertex.predict_from_df(predict_args["endpoint_name"], df, custom_model=predict_args["custom_model"])
+        results = vertex.predict_from_df(predict_args["endpoint_name"], df, custom_model=predict_args["custom_model"])
 
         if predict_args["custom_model"]:
             return pd.DataFrame(results.predictions, columns=[predict_args["target"]])

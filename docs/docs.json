@@ -22,8 +22,7 @@
                 "group": "Get Started",
                 "pages": [
                   "mindsdb",
-                  "quickstart-tutorial",
-                  "minds-demo"
+                  "quickstart-tutorial"
                 ]
               },
               {
@@ -1195,8 +1194,8 @@
     ],
     "primary": {
       "type": "button",
-      "label": "Try Demo",
-      "href": "http://mdb.ai/register"
+      "label": "Watch Video",
+      "href": "https://www.youtube.com/watch?v=HPwUPJ3NWLI"
     }
   },
   "footer": {

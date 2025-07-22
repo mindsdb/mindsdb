@@ -60,6 +60,36 @@ class FilterCondition:
         """
 
 
+class FilterByJsonFieldCondition:
+    def __init__(self, column, field_name, op, value):
+        self.column = column
+        self.op = op
+        self.value = value
+        self.field_name = field_name
+        self.applied = False
+
+    def __eq__(self, __value: object) -> bool:
+        if isinstance(__value, FilterCondition):
+            return (
+                self.column == __value.column
+                and self.op == __value.op
+                and self.value == __value.value
+                and self.field_name == __value.field_name
+            )
+        else:
+            return False
+
+    def __repr__(self) -> str:
+        return f"""
+            FilterByJsonFieldCondition(
+                column={self.column},
+                op={self.op},
+                value={self.value},
+                field_name={self.field_name}
+            )
+        """
+
+
 class KeywordSearchArgs:
     def __init__(self, column: str, query: str):
         """

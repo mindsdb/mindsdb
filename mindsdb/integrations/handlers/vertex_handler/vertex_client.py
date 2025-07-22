@@ -46,7 +46,7 @@ class VertexClient:
             logger.info(f"Endpoint display name: {endpoint.display_name}, ID: {endpoint.name}")
 
     def get_model_by_display_name(self, display_name):
-        """Get a model by its display name"""
+        """Get a model by its display name""" 
         try:
             return Model.list(filter=f'display_name="{display_name}"')[0]
         except IndexError:

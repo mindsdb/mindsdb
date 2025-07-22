@@ -53,12 +53,7 @@ class AimlapiHandler(BaseMLEngine):
             "X-Title": "MindsDB",
         }
 
-        client = OpenAI(
-            api_key=api_key,
-            base_url=base_url,
-            organization=org,
-            default_headers=headers
-        )
+        client = OpenAI(api_key=api_key, base_url=base_url, organization=org, default_headers=headers)
         return client
 
     def create(self, target, args: Dict = None, **kwargs: Any) -> None:

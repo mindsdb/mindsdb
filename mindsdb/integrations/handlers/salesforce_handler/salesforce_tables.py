@@ -1,5 +1,6 @@
 
 from datetime import datetime
+import re
 from typing import Dict, List, Text
 
 from mindsdb_sql_parser.ast import Select, Star, Identifier
@@ -59,25 +60,6 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
                     column_aliases[column.parts[-1]] = column.alias.parts[-1]
                     column.alias = None
 
-            # Collect all date/datetime literals in the WHERE clause.
-            datetime_literals = []
-            if query.where is not None:
-                conditions = extract_comparison_conditions(query.where)
-                for _, _, arg2 in conditions:
-                    try:
-                        datetime.fromisoformat(arg2)
-                        datetime_literals.append(arg2)
-                        continue
-                    except (ValueError, TypeError):
-                        # Try inserting colon in timezone offset if format is like +0000 or -0530
-                        if arg2 and len(arg2) >= 5 and (arg2[-5] in ['+', '-'] and arg2[-2:].isdigit()):
-                            try:
-                                fixed = arg2[:-2] + ':' + arg2[-2:]
-                                datetime.fromisoformat(fixed)
-                                datetime_literals.append(arg2)
-                            except (ValueError, TypeError):
-                                pass
-
             client = self.handler.connect()
 
             query_str = query.to_string()
@@ -86,8 +68,7 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
             query_str = query_str.replace("`", "")
 
             # SOQL expects dates and datetimes to be unquoted when used in the WHERE clause.
-            for datetime_literal in datetime_literals:
-                query_str = query_str.replace(f"'{datetime_literal}'", datetime_literal)
+            query_str = self._remove_quotes_around_datetime_literals(query_str)
 
             results = client.sobjects.query(query_str)
 
@@ -98,6 +79,32 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
             df.rename(columns=column_aliases, inplace=True)
 
             return df
+        
+        def _is_datetime_literal(self, date_str: str) -> bool:
+            try:
+                datetime.fromisoformat(date_str)
+                return True
+            except ValueError:
+                if len(date_str) >= 5 and (date_str[-5] in ['+', '-'] and date_str[-2:].isdigit()):
+                    try:
+                        fixed = date_str[:-2] + ':' + date_str[-2:]
+                        datetime.fromisoformat(fixed)
+                        return True
+                    except ValueError:
+                        pass
+            return False
+
+        def _remove_quotes_around_datetime_literals(self, query: str) -> str:
+            # Regex: match single or double-quoted date/datetime strings.
+            pattern = r"(['\"])(\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[+-]\d{2}:?\d{2})?)?)\1"
+
+            def replacer(match):
+                _, value = match.groups()
+                if self._is_datetime_literal(value):
+                    return value
+                return match.group(0)
+
+            return re.sub(pattern, replacer, query)
 
         def add(self, item: Dict) -> None:
             """

@@ -1,3 +1,5 @@
+
+from datetime import datetime
 from typing import Dict, List, Text
 
 from mindsdb_sql_parser.ast import Select, Star, Identifier
@@ -5,7 +7,7 @@ import pandas as pd
 from salesforce_api.exceptions import RestRequestCouldNotBeUnderstoodError
 
 from mindsdb.integrations.libs.api_handler import MetaAPIResource
-from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
+from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions, FilterCondition, FilterOperator
 from mindsdb.utilities import log
 
 
@@ -57,12 +59,36 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
                     column_aliases[column.parts[-1]] = column.alias.parts[-1]
                     column.alias = None
 
+            # Collect all date/datetime literals in the WHERE clause.
+            datetime_literals = []
+            if query.where is not None:
+                conditions = extract_comparison_conditions(query.where)
+                for _, _, arg2 in conditions:
+                    try:
+                        datetime.fromisoformat(arg2)
+                        datetime_literals.append(arg2)
+                        continue
+                    except ValueError:
+                        # Try inserting colon in timezone offset if format is like +0000 or -0530
+                        if len(arg2) >= 5 and (arg2[-5] in ['+', '-'] and arg2[-2:].isdigit()):
+                            try:
+                                fixed = arg2[:-2] + ':' + arg2[-2:]
+                                datetime.fromisoformat(fixed)
+                                datetime_literals.append(arg2)
+                            except ValueError:
+                                pass
+
             client = self.handler.connect()
 
             query_str = query.to_string()
 
             # SOQL does not support backticks. Remove backticks.
             query_str = query_str.replace("`", "")
+
+            # SOQL expects dates and datetimes to be unquoted when used in the WHERE clause.
+            for datetime_literal in datetime_literals:
+                query_str = query_str.replace(f"'{datetime_literal}'", datetime_literal)
+
             results = client.sobjects.query(query_str)
 
             for result in results:

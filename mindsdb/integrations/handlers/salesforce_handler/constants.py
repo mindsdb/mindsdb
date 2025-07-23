@@ -18,6 +18,9 @@ When generating queries for {integration_name}, please follow these guidelines:
   CORRECT: WHERE CreatedDate = TODAY
   CORRECT: WHERE LastModifiedDate >= LAST_MONTH
   CORRECT: WHERE CloseDate = THIS_QUARTER
+- Date and datetime literals: Use ISO 8601 format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS.mmm±HH:MM)
+  CORRECT: WHERE LastActivityDate = '2025-01-01'
+  CORRECT: WHERE CreatedDate <= '2025-01-01T12:45:50.000+00:00'
 - LIKE operator: Only supports % wildcard, NO underscore (_) wildcard
   CORRECT: WHERE Name LIKE '%Corp%'
   CORRECT: WHERE Name LIKE 'Acme%'

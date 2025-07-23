@@ -33,18 +33,7 @@ class GongCallsTable(APIResource):
             If the query contains an unsupported condition
         """
 
-        # Default parameters for the API call
-        api_params = {
-            'limit': limit,
-            'offset': 0
-        }
-
-        if limit is not None:
-            api_params['limit'] = limit
-        else:
-            limit = 20
-
-        # Handle date filtering
+        api_params = {}
         if conditions:
             for condition in conditions:
                 if condition.column == 'date' and condition.op == FilterOperator.GREATER_THAN:
@@ -53,43 +42,75 @@ class GongCallsTable(APIResource):
                 elif condition.column == 'date' and condition.op == FilterOperator.LESS_THAN:
                     api_params['toDateTime'] = condition.value
                     condition.applied = True
-                elif condition.column == 'user_id' and condition.op == FilterOperator.EQUAL:
-                    api_params['userId'] = condition.value
-                    condition.applied = True
-                elif condition.column == 'call_type' and condition.op == FilterOperator.EQUAL:
-                    api_params['callType'] = condition.value
-                    condition.applied = True
-
-        # Handle sorting
-        if sort:
-            for col in sort:
-                if col.column in ('date', 'duration'):
-                    api_params['sortBy'] = col.column
-                    api_params['sortOrder'] = 'asc' if col.ascending else 'desc'
-                    col.applied = True
-                    break
 
         try:
-            # Make API call to get calls
-            response = self.handler.call_gong_api('/v2/calls', api_params)
-            calls_data = response.get('calls', [])
+            all_calls = []
+            cursor = None
+            
+            while True:
+                current_params = api_params.copy()
+                if cursor:
+                    current_params['cursor'] = cursor
 
+                response = self.handler.call_gong_api('/v2/calls', current_params)
+                calls_batch = response.get('calls', [])
+
+                for call in calls_batch:
+                    if limit and len(all_calls) >= limit:
+                        break
+                    all_calls.append(call)
+
+                records_info = response.get('records', {})
+                if (limit and len(all_calls) >= limit) or 'cursor' not in records_info:
+                    break
+
+                cursor = records_info.get('cursor')
+                if not cursor:
+                    break
+
+            # Process the limited data
             data = []
-            for call in calls_data:
+            for call in all_calls:
+
                 item = {
                     'call_id': call.get('id'),
                     'title': call.get('title'),
-                    'date': call.get('date'),
+                    'date': call.get('started').split('T')[0],
                     'duration': call.get('duration'),
-                    'recording_url': call.get('recordingUrl'),
-                    'call_type': call.get('callType'),
-                    'user_id': call.get('userId'),
+                    'recording_url': call.get('url', ''),
+                    'call_type': call.get('system'),
+                    'user_id': call.get('primaryUserId'),
                     'participants': ','.join([p.get('name', '') for p in call.get('participants', [])]),
                     'status': call.get('status')
                 }
                 data.append(item)
 
-            return pd.DataFrame(data)
+            df = pd.DataFrame(data)
+
+            # Apply non-date filtering at DataFrame level
+            if conditions:
+                for condition in conditions:
+                    if not condition.applied and condition.column in df.columns:
+                        if condition.op == FilterOperator.EQUAL:
+                            df = df[df[condition.column] == condition.value]
+                            condition.applied = True
+
+            if sort:
+                for col in sort:
+                    if col.column in df.columns:
+                        df = df.sort_values(
+                            by=col.column, 
+                            ascending=col.ascending,
+                            na_position='last'
+                        )
+                        col.applied = True
+                        break
+
+            if limit is not None:
+                df = df.head(limit)
+
+
+            return df
 
         except Exception as e:
             logger.error(f"Error fetching calls from Gong API: {e}")
@@ -125,44 +146,76 @@ class GongUsersTable(APIResource):
         pd.DataFrame
             Gong users matching the query
         """
-        api_params = {
-            'limit': limit,
-            'offset': 0
-        }
-
-        if limit is not None:
-            api_params['limit'] = limit
-        else:
-            limit = 20
-
-        # Handle filtering
-        if conditions:
-            for condition in conditions:
-                if condition.column == 'user_id' and condition.op == FilterOperator.EQUAL:
-                    api_params['userId'] = condition.value
-                    condition.applied = True
-                elif condition.column == 'email' and condition.op == FilterOperator.EQUAL:
-                    api_params['email'] = condition.value
-                    condition.applied = True
+        
+        api_params = {}
 
         try:
-            # Make API call to get users
-            response = self.handler.call_gong_api('/v2/users', api_params)
-            users_data = response.get('users', [])
+            all_users = []
+            cursor = None
+            
+            while True:
+                current_params = api_params.copy()
+                if cursor:
+                    current_params['cursor'] = cursor
+                
+                response = self.handler.call_gong_api('/v2/users', current_params)
+                users_batch = response.get('users', [])
+                
 
+                for user in users_batch:
+
+                    if limit and len(all_users) >= limit:
+                        break
+                    all_users.append(user)
+                
+                records_info = response.get('records', {})
+                if (limit and len(all_users) >= limit) or 'cursor' not in records_info:
+                    break
+                    
+                cursor = records_info.get('cursor')
+                if not cursor:
+                    break
+
+            # Process the limited data
             data = []
-            for user in users_data:
+            for user in all_users:
                 item = {
                     'user_id': user.get('id'),
-                    'name': user.get('name'),
-                    'email': user.get('email'),
-                    'role': user.get('role'),
+                    'name': user.get('firstName') + ' ' + user.get('lastName'),
+                    'email': user.get('emailAddress'),
+                    'role': user.get('title'),
                     'permissions': ','.join(user.get('permissions', [])),
-                    'status': user.get('status')
+                    'status': 'active' if user.get('active') else 'inactive'
                 }
                 data.append(item)
 
-            return pd.DataFrame(data)
+            df = pd.DataFrame(data)
+            
+
+            if conditions:
+                for condition in conditions:
+                    if condition.column in df.columns:
+                        if condition.op == FilterOperator.EQUAL:
+                            df = df[df[condition.column] == condition.value]
+                            condition.applied = True
+
+            if sort:
+                for col in sort:
+                    if col.column in df.columns:
+                        df = df.sort_values(
+                            by=col.column, 
+                            ascending=col.ascending,
+                            na_position='last'
+                        )
+                        col.applied = True
+                        break
+
+
+            if limit is not None:
+                df = df.head(limit)
+
+
+            return df
 
         except Exception as e:
             logger.error(f"Error fetching users from Gong API: {e}")
@@ -195,19 +248,8 @@ class GongAnalyticsTable(APIResource):
         pd.DataFrame
             Gong analytics matching the query
         """
-        api_params = {
-            'limit': limit,
-            'offset': 0
-        }
-
-        if limit is not None:
-            api_params['limit'] = limit
-        else:
-            limit = 20
 
         try:
-            session = self.handler.connect()
-
             payload = {
                 'filter': {
                     'fromDateTime': (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%dT%H:%M:%SZ'),
@@ -231,52 +273,108 @@ class GongAnalyticsTable(APIResource):
                 }
             }
 
-            response = session.post(f"{self.handler.base_url}/v2/calls/extensive", json=payload)
-            response.raise_for_status()
-            calls_response = response.json()
+            if conditions:
+                for condition in conditions:
+                    if condition.column == 'date' and condition.op == FilterOperator.GREATER_THAN:
+                        payload['filter']['fromDateTime'] = condition.value
+                        condition.applied = True
+                    elif condition.column == 'date' and condition.op == FilterOperator.LESS_THAN:
+                        payload['filter']['toDateTime'] = condition.value
+                        condition.applied = True
 
-            analytics_data = calls_response.get('calls', [])
+            session = self.handler.connect()
+            
+            all_analytics = []
+            cursor = None
+            
+            while True:
+                current_payload = payload.copy()
+                if cursor:
+                    current_payload['cursor'] = cursor
+                
+                response = session.post(f"{self.handler.base_url}/v2/calls/extensive", json=current_payload)
+                response.raise_for_status()
+                calls_response = response.json()
+                
+                analytics_batch = calls_response.get('calls', [])
+                
+                # Process and add analytics
+                for call in analytics_batch:
 
-            data = []
-            for call in analytics_data:
-                # Extract real analytics from extensive call data
-                content = call.get('content', {})
-                interaction = call.get('interaction', {})
+                    if limit and len(all_analytics) >= limit:
+                        break
+                    
+                    # Extract analytics from extensive call data
+                    content = call.get('content', {})
+                    interaction = call.get('interaction', {})
+                    metadata = call.get('metaData', {})
 
-                # Sentiment from personInteractionStats
-                person_stats = interaction.get('personInteractionStats', [])
-                sentiment_score = 0
-                if person_stats:
-                    sentiments = [stat.get('sentiment', 0) for stat in person_stats if stat.get('sentiment') is not None]
-                    sentiment_score = sum(sentiments) / len(sentiments) if sentiments else 0
+                    # Sentiment and Emotion from InteractionStats
+                    person_stats = interaction.get('interactionStats', [])
+                    sentiment_score = 0
+                    if person_stats:
+                        stats_dict = {stat['name']: stat['value'] for stat in interaction.get('interactionStats', [])}
+                        sentiment_score = (stats_dict.get('Talk Ratio', 0) + stats_dict.get('Patience', 0) + min(stats_dict.get('Interactivity', 0)/10, 1.0)) / 3
+                        emotions = f"Talk:{stats_dict.get('Talk Ratio', 0)}, Patience:{stats_dict.get('Patience', 0)}, Interactivity:{stats_dict.get('Interactivity', 0)}"
 
-                # Topics from AI analysis
-                topics = content.get('topics', [])
-                topic_names = [topic.get('name', '') for topic in topics if isinstance(topic, dict)]
+                    # Topics from AI analysis
+                    topics = content.get('topics', [])
+                    topic_names = [topic.get('name', '') for topic in topics if isinstance(topic, dict) and topic.get('duration', 0) > 0]
 
-                # Key phrases from AI
-                trackers = content.get('trackers', [])
-                key_phrases = [tracker.get('name', '') for tracker in trackers if isinstance(tracker, dict)]
+                    # Key phrases from AI
+                    trackers = content.get('trackers', [])
+                    key_phrases = [tracker.get('name', '') for tracker in trackers if tracker.get('count', 0) > 0]
 
-                # Call outcome confidence
-                call_outcome = content.get('callOutcome', {})
-                confidence_score = call_outcome.get('confidence', 0) if isinstance(call_outcome, dict) else 0
+                    # Topic scoring based on relevance
+                    topic_duration = sum([topic.get('duration', 0) for topic in topics if isinstance(topic, dict)]) / len(topics) if topics else 0
+                    call_duration = metadata.get('duration', 1)
+                    topic_score = (topic_duration / call_duration) if call_duration > 0 else 0
 
-                # Topic scoring based on relevance
-                topic_score = sum([topic.get('score', 0) for topic in topics if isinstance(topic, dict)]) / len(topics) if topics else 0
+                    item = {
+                        'call_id': metadata.get('id'),
+                        'sentiment_score': round(sentiment_score, 3),
+                        'topic_score': round(topic_score, 3),
+                        'key_phrases': ', '.join(key_phrases),
+                        'topics': ', '.join(topic_names),
+                        'emotions': emotions,
+                        'confidence_score': ''
+                    }
+                    all_analytics.append(item)
+                
+                records_info = calls_response.get('records', {})
+                if (limit and len(all_analytics) >= limit) or 'cursor' not in records_info:
+                    break
 
-                item = {
-                    'call_id': call.get('id'),
-                    'sentiment_score': round(sentiment_score, 3),
-                    'topic_score': round(topic_score, 3),
-                    'key_phrases': ', '.join(key_phrases[:5]),
-                    'topics': ', '.join(topic_names[:5]),
-                    'emotions': '',
-                    'confidence_score': round(confidence_score, 3)
-                }
-                data.append(item)
+                cursor = records_info.get('cursor')
+                if not cursor:
+                    break
 
-            return pd.DataFrame(data)
+            df = pd.DataFrame(all_analytics)
+
+            # Apply non-date filtering at DataFrame level
+            if conditions:
+                for condition in conditions:
+                    if not condition.applied and condition.column in df.columns:
+                        if condition.op == FilterOperator.EQUAL:
+                            df = df[df[condition.column] == condition.value]
+                            condition.applied = True
+
+            # Apply sorting at DataFrame level
+            if sort:
+                for col in sort:
+                    if col.column in df.columns:
+                        df = df.sort_values(
+                            by=col.column, 
+                            ascending=col.ascending,
+                            na_position='last'
+                        )
+                        col.applied = True
+                        break
+
+            if limit is not None:
+                df = df.head(limit)
+
+            return df
 
         except Exception as e:
             logger.error(f"Error fetching analytics from Gong API: {e}")
@@ -310,52 +408,124 @@ class GongTranscriptsTable(APIResource):
         pd.DataFrame
             Gong transcripts matching the query
         """
-        api_params = {
-            'limit': limit,
-            'offset': 0
-        }
-        if limit is not None:
-            api_params['limit'] = limit
-        else:
-            limit = 20
 
         try:
-            # First get recent calls
-            calls_response = self.handler.call_gong_api('/v2/calls', {'limit': limit})
-            call_ids = [call.get('id') for call in calls_response.get('calls', []) if call.get('id')]
+            calls_api_params = {}
 
-            if not call_ids:
+            if conditions:
+                for condition in conditions:
+                    if condition.column == 'date' and condition.op == FilterOperator.GREATER_THAN:
+                        calls_api_params['fromDateTime'] = condition.value
+                        condition.applied = True
+                    elif condition.column == 'date' and condition.op == FilterOperator.LESS_THAN:
+                        calls_api_params['toDateTime'] = condition.value
+                        condition.applied = True
+
+            calls_fetch_limit = limit if limit else 100
+
+            all_call_ids = []
+            cursor = None
+
+            while len(all_call_ids) < calls_fetch_limit:
+                current_params = calls_api_params.copy()
+                if cursor:
+                    current_params['cursor'] = cursor
+
+                calls_response = self.handler.call_gong_api('/v2/calls', current_params)
+                calls_batch = calls_response.get('calls', [])
+
+                batch_call_ids = [call.get('id') for call in calls_batch if call.get('id')]
+                all_call_ids.extend(batch_call_ids)
+
+                records_info = calls_response.get('records', {})
+                if len(all_call_ids) >= calls_fetch_limit or 'cursor' not in records_info:
+                    break
+
+                cursor = records_info.get('cursor')
+                if not cursor:
+                    break
+
+            if not all_call_ids:
                 return pd.DataFrame()
+            call_ids_to_fetch = all_call_ids[:limit] if limit else all_call_ids
 
-            # Get transcripts
             session = self.handler.connect()
-            payload = {
-                'filter': {
-                    'callIds': call_ids
-                }
-            }
-            response = session.post(f"{self.handler.base_url}/v2/calls/transcript", json=payload)
-            response.raise_for_status()
-            transcript_response = response.json()
-            transcript_data = transcript_response.get('callTranscripts', [])
+            all_transcript_data = []
+            transcript_cursor = None
 
-            data = []
-            for call_transcript in transcript_data:
-                call_id = call_transcript.get('callId')
-                transcript_segments = call_transcript.get('transcript', [])
-
-                for segment in transcript_segments:
-                    item = {
-                        'call_id': call_id,
-                        'speaker': segment.get('speakerId'),
-                        'timestamp': segment.get('startTime'),
-                        'text': segment.get('text'),
-                        'confidence': segment.get('confidence'),
-                        'segment_id': segment.get('segmentId')
+            while True:
+                payload = {
+                    'filter': {
+                        'callIds': call_ids_to_fetch
                     }
-                    data.append(item)
+                }
 
-            return pd.DataFrame(data)
+                if transcript_cursor:
+                    payload['cursor'] = transcript_cursor
+
+                response = session.post(f"{self.handler.base_url}/v2/calls/transcript", json=payload)
+                response.raise_for_status()
+                transcript_response = response.json()
+                transcript_batch = transcript_response.get('callTranscripts', [])
+
+                for call_transcript in transcript_batch:
+                    call_id = call_transcript.get('callId')
+                    transcript_segments = call_transcript.get('transcript', [])
+
+                    segment_counter = 0
+
+                    for speaker_block in transcript_segments:
+                        speaker_id = speaker_block.get('speakerId')
+                        sentences = speaker_block.get('sentences', [])
+
+                        for sentence in sentences:
+                            segment_counter += 1
+
+                            item = {
+                                'call_id': call_id,
+                                'speaker': speaker_id,
+                                'timestamp': sentence.get('start'),
+                                'text': sentence.get('text'),
+                                'confidence': sentence.get('confidence'),
+                                'segment_id': f"{call_id}_{segment_counter}"
+                            }
+                            all_transcript_data.append(item)
+
+                transcript_records_info = transcript_response.get('records', {})
+                if 'cursor' not in transcript_records_info:
+                    break
+
+                transcript_cursor = transcript_records_info.get('cursor')
+                if not transcript_cursor:
+                    break
+
+            df = pd.DataFrame(all_transcript_data)
+
+            if conditions:
+                for condition in conditions:
+                    if not condition.applied and condition.column in df.columns:
+                        if condition.op == FilterOperator.EQUAL:
+                            df = df[df[condition.column] == condition.value]
+                            condition.applied = True
+                        elif condition.op == FilterOperator.LIKE or condition.op == FilterOperator.CONTAINS:
+                            if condition.column == 'text':
+                                df = df[df[condition.column].str.contains(condition.value, case=False, na=False)]
+                                condition.applied = True
+
+            if sort:
+                for col in sort:
+                    if col.column in df.columns:
+                        df = df.sort_values(
+                            by=col.column,
+                            ascending=col.ascending,
+                            na_position='last'
+                        )
+                        col.applied = True
+                        break
+
+            if limit is not None:
+                df = df.head(limit)
+            return df
 
         except Exception as e:
             logger.error(f"Error fetching transcripts from Gong API: {e}")

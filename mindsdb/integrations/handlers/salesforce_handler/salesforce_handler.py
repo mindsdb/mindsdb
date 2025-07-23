@@ -11,7 +11,7 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE,
 )
 from mindsdb.integrations.handlers.salesforce_handler.salesforce_tables import create_table_class
-from mindsdb.integrations.handlers.salesforce_handler.constants import get_soql_instructions
+from mindsdb.integrations.handlers.salesforce_handler.constants import get_handler_instructions
 from mindsdb.utilities import log
 
 
@@ -316,7 +316,7 @@ class SalesforceHandler(MetaAPIHandler):
         Returns:
             str: A string containing information about the API handler's design and implementation.
         """
-        return get_soql_instructions(self.name)
+        return get_handler_instructions(self.name)
 
     def meta_get_tables(self, table_names: Optional[List[str]] = None) -> Response:
         """

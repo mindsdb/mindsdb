@@ -1,4 +1,3 @@
-
 from datetime import datetime
 import re
 from typing import Dict, List, Text
@@ -79,15 +78,15 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
             df.rename(columns=column_aliases, inplace=True)
 
             return df
-        
+
         def _is_datetime_literal(self, date_str: str) -> bool:
             try:
                 datetime.fromisoformat(date_str)
                 return True
             except ValueError:
-                if len(date_str) >= 5 and (date_str[-5] in ['+', '-'] and date_str[-2:].isdigit()):
+                if len(date_str) >= 5 and (date_str[-5] in ["+", "-"] and date_str[-2:].isdigit()):
                     try:
-                        fixed = date_str[:-2] + ':' + date_str[-2:]
+                        fixed = date_str[:-2] + ":" + date_str[-2:]
                         datetime.fromisoformat(fixed)
                         return True
                     except ValueError:

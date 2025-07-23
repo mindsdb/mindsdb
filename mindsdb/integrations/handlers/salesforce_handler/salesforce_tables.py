@@ -55,9 +55,8 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
             # SOQL does not support column aliases. Remove column aliases.
             column_aliases = {}
             for column in query.targets:
-                if column.alias is not None:
-                    column_aliases[column.parts[-1]] = column.alias.parts[-1]
-                    column.alias = None
+                column_aliases[column.parts[-1]] = column.alias.parts[-1] if column.alias else column.parts[-1]
+                column.alias = None
 
             client = self.handler.connect()
 
@@ -75,8 +74,13 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
                 del result["attributes"]
 
             df = pd.DataFrame(results)
-            df.rename(columns=column_aliases, inplace=True)
 
+            # If the DataFrame is empty, return an empty DataFrame with the expected columns.
+            if df.empty:
+                df = pd.DataFrame(columns=column_aliases.values())
+                return df
+
+            df.rename(columns=column_aliases, inplace=True)
             return df
 
         def _is_datetime_literal(self, date_str: str) -> bool:

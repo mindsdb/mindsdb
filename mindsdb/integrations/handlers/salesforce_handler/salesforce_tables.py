@@ -68,14 +68,14 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
                         datetime.fromisoformat(arg2)
                         datetime_literals.append(arg2)
                         continue
-                    except ValueError:
+                    except (ValueError, TypeError):
                         # Try inserting colon in timezone offset if format is like +0000 or -0530
                         if len(arg2) >= 5 and (arg2[-5] in ['+', '-'] and arg2[-2:].isdigit()):
                             try:
                                 fixed = arg2[:-2] + ':' + arg2[-2:]
                                 datetime.fromisoformat(fixed)
                                 datetime_literals.append(arg2)
-                            except ValueError:
+                            except (ValueError, TypeError):
                                 pass
 
             client = self.handler.connect()

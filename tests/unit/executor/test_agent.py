@@ -116,6 +116,8 @@ def get_dataset_planets():
 class TestAgent(BaseExecutorDummyML):
     @pytest.mark.slow
     def test_mindsdb_provider(self):
+        from mindsdb.api.executor.exceptions import ExecutorException
+
         agent_response = "how can I help you"
         # model
         self.run_sql(
@@ -132,13 +134,23 @@ class TestAgent(BaseExecutorDummyML):
 
         self.run_sql("CREATE ML_ENGINE langchain FROM langchain")
 
-        self.run_sql("""
-            CREATE AGENT my_agent
+        agent_params = """
             USING
-             provider='mindsdb',
-             model = "base_model", -- <
-             prompt_template="Answer the user input in a helpful way"
-         """)
+                provider='mindsdb',
+                model = "base_model", -- <
+                prompt_template="Answer the user input in a helpful way"
+        """
+        self.run_sql(f"""
+            CREATE AGENT my_agent {agent_params}
+        """)
+        with pytest.raises(ExecutorException):
+            self.run_sql(f"""
+                CREATE AGENT my_agent {agent_params}
+            """)
+        self.run_sql(f"""
+            CREATE AGENT IF NOT EXISTS my_agent {agent_params}
+        """)
+
         ret = self.run_sql("select * from my_agent where question = 'hi'")
 
         assert agent_response in ret.answer[0]
@@ -409,7 +421,9 @@ class TestAgent(BaseExecutorDummyML):
         self.run_sql("""
             CREATE AGENT minimal_syntax_agent
             USING
-              include_tables = ['test.table1', 'test.table2'];
+              data = {
+                "tables": ['test.table1', 'test.table2']
+              }
          """)
 
         # Check that the agent was created with the default parameters
@@ -420,8 +434,8 @@ class TestAgent(BaseExecutorDummyML):
 
         # Verify the agent has the default parameters and include_tables
         agent_params = json.loads(agent_info["PARAMS"].iloc[0])
-        assert "include_tables" in agent_params
-        assert agent_params["include_tables"] == ["test.table1", "test.table2"]
+        assert "data" in agent_params
+        assert agent_params["data"]["tables"] == ["test.table1", "test.table2"]
 
         # Mock the OpenAI client for the agent execution
         with (
@@ -566,7 +580,7 @@ class TestAgent(BaseExecutorDummyML):
             create knowledge base kb_review
             using
                 embedding_model = {
-                    "provider": "dummy_provider",
+                    "provider": "bedrock",
                     "model_name": "dummy_model",
                     "api_key": "dummy_key"
                 }
@@ -719,8 +733,10 @@ class TestAgent(BaseExecutorDummyML):
             USING
               model = "gpt-3.5-turbo",
               openai_api_key='--',
-              include_knowledge_bases = ['kb_show*'],
-              include_tables = ['files.show*'];
+              data = {
+                "knowledge_bases": ["kb_show*"],
+                "tables": ["files.show*"]
+              };
          """)
 
         # ===== Access to forbidden KBs =====
@@ -906,6 +922,38 @@ class TestAgent(BaseExecutorDummyML):
         assert "Jupiter" in mock_openai.agent_calls[1]
         assert "Jupiter" in mock_openai.agent_calls[2]
 
+    @patch("openai.OpenAI")
+    @patch(
+        "mindsdb.interfaces.agents.langchain_agent.LangchainAgent.run_agent",
+        return_value=pd.DataFrame([["ok", None, None]], columns=["answer", "context", "trace_id"]),
+    )
+    def test_agent_query_param_override(self, mock_run_agent, mock_openai):
+        """
+        Test that agent parameters can be overridden per-query using the USING clause in SELECT.
+        """
+        agent_response = "override test response"
+        set_openai_completion(mock_openai, agent_response)
+
+        self.run_sql(
+            """
+            CREATE AGENT override_agent
+            USING
+                model = 'gpt-4o',
+                openai_api_key = 'sk-override',
+                prompt_template = 'Answer questions',
+                timeout = 60;
+            """
+        )
+
+        self.run_sql(
+            """
+            SELECT * FROM override_agent
+            WHERE question = 'How are you?'
+            USING timeout=5;
+            """
+        )
+        assert mock_run_agent.call_args_list[0][0][2].get("timeout") == 5
+
 
 class TestKB(BaseExecutorDummyML):
     def _create_kb(
@@ -921,7 +969,7 @@ class TestKB(BaseExecutorDummyML):
 
         if embedding_model is None:
             embedding_model = {
-                "provider": "dummy_provider",
+                "provider": "bedrock",
                 "model_name": "dummy_model",
                 "api_key": "dummy_key",
             }
@@ -1384,9 +1432,9 @@ class TestKB(BaseExecutorDummyML):
             self.run_sql("select * from kb2 where cont10='val2'")
 
     @patch("mindsdb.interfaces.knowledge_base.llm_client.OpenAI")
-    @patch("mindsdb.integrations.utilities.rag.rerankers.base_reranker.AsyncOpenAI")
+    @patch("mindsdb.integrations.utilities.rag.rerankers.base_reranker.BaseLLMReranker.get_scores")
     @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
-    def test_evaluate(self, mock_litellm_embedding, mock_async_openai, mock_openai):
+    def test_evaluate(self, mock_litellm_embedding, mock_get_scores, mock_openai):
         set_litellm_embedding(mock_litellm_embedding)
 
         question, answer = "2+2", "4"
@@ -1398,10 +1446,8 @@ class TestKB(BaseExecutorDummyML):
         mock_completion.choices[0].message.content = agent_response
         mock_openai().chat.completions.create.return_value = mock_completion
 
-        mock_completion = MagicMock()
-        mock_completion.choices = [MagicMock()]
-        mock_completion.choices[0].message.content = "yes"
-        mock_async_openai().chat.completions.create = AsyncMock(return_value=mock_completion)
+        # reranking result
+        mock_get_scores.side_effect = lambda query, docs: [0.8 for _ in docs]
 
         df = self._get_ral_table()
         df = df.rename(columns={"english": "content", "ral": "id"})
@@ -1481,3 +1527,14 @@ class TestKB(BaseExecutorDummyML):
         # compare with table
         assert df_res["total"][0] == ret["total"][0]
         assert df_res["total_found"][0] == ret["total_found"][0]
+
+        # --- test reranking disabled ---
+        mock_get_scores.reset_mock()
+        df = self.run_sql("select * from kb1 where content='test'")
+        mock_get_scores.assert_called_once()
+        assert len(df) > 0
+
+        mock_get_scores.reset_mock()
+        df = self.run_sql("select * from kb1 where content='test' and reranking =false")
+        mock_get_scores.assert_not_called()
+        assert len(df) > 0

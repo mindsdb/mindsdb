@@ -1,16 +1,17 @@
+import re
+import html
+import asyncio
 from typing import List, Dict, Optional, Any
+
 import pandas as pd
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-import asyncio
-
+from langchain_core.documents import Document as LangchainDocument
 
 from mindsdb.integrations.utilities.rag.splitters.file_splitter import (
     FileSplitter,
     FileSplitterConfig,
 )
-
 from mindsdb.interfaces.agents.langchain_agent import create_chat_model
-
 from mindsdb.interfaces.knowledge_base.preprocessing.models import (
     PreprocessingConfig,
     ProcessedChunk,
@@ -21,7 +22,6 @@ from mindsdb.interfaces.knowledge_base.preprocessing.models import (
 )
 from mindsdb.utilities import log
 
-from langchain_core.documents import Document as LangchainDocument
 
 logger = log.getLogger(__name__)
 
@@ -123,11 +123,11 @@ class ContextualPreprocessor(DocumentPreprocessor):
 
     DEFAULT_CONTEXT_TEMPLATE = """
 <document>
-{{WHOLE_DOCUMENT}}
+{WHOLE_DOCUMENT}
 </document>
 Here is the chunk we want to situate within the whole document
 <chunk>
-{{CHUNK_CONTENT}}
+{CHUNK_CONTENT}
 </chunk>
 Please give a short succinct context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk. Answer only with the succinct context and nothing else."""
 
@@ -149,12 +149,20 @@ Please give a short succinct context to situate this chunk within the overall do
         self.summarize = self.config.summarize
 
     def _prepare_prompts(self, chunk_contents: list[str], full_documents: list[str]) -> list[str]:
-        prompts = [
-            self.context_template.replace("{{WHOLE_DOCUMENT}}", full_document) for full_document in full_documents
-        ]
-        prompts = [
-            prompt.replace("{{CHUNK_CONTENT}}", chunk_content) for prompt, chunk_content in zip(prompts, chunk_contents)
-        ]
+        def tag_replacer(match):
+            tag = match.group(0)
+            if tag.lower() not in ["<document>", "</document>", "<chunk>", "</chunk>"]:
+                return tag
+            return html.escape(tag)
+
+        tag_pattern = r"</?document>|</?chunk>"
+        prompts = []
+        for chunk_content, full_document in zip(chunk_contents, full_documents):
+            chunk_content = re.sub(tag_pattern, tag_replacer, chunk_content, flags=re.IGNORECASE)
+            full_document = re.sub(tag_pattern, tag_replacer, full_document, flags=re.IGNORECASE)
+            prompts.append(
+                self.DEFAULT_CONTEXT_TEMPLATE.format(WHOLE_DOCUMENT=full_document, CHUNK_CONTENT=chunk_content)
+            )
 
         return prompts
 

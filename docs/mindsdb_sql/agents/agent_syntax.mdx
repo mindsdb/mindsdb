@@ -15,7 +15,9 @@ USING
     model = {
         "provider": "openai",
         "model_name" : "gpt-4o",
-        "api_key": "sk-abc123"
+        "api_key": "sk-abc123",
+        "base_url": "http://example.com",
+        "api_version": "2024-02-01"
     },
     data = {
          "knowledge_bases": ["project_name.kb_name", ...],
@@ -31,9 +33,37 @@ SHOW AGENTS
 WHERE name = 'my_agent';
 ```
 
+<Note>
+Note that you can insert all tables from a connected data source and all knowledge bases from a project using the `*` syntax.
+
+```sql
+    ...
+    data = {
+         "knowledge_bases": ["project_name.*", ...],
+         "tables": ["datasource_conn_name.*", ...]
+    },
+    ...
+```
+</Note>
+
 ### `model`
 
-This parameter defines the underlying language model.
+This parameter defines the underlying language model, including:
+
+* `provider`
+It is a required parameter. It defines the model provider from the list below.
+
+* `model_name`
+It is a required parameter. It defines the model name from the list below.
+
+* `api_key`
+It is an optional parameter (applicable to selected providers), which stores the API key to access the model. Users can provide it either in this `api_key` parameter, or using [environment variables](/mindsdb_sql/functions/from_env).
+
+* `base_url`
+It is an optional parameter (applicable to selected providers), which stores the base URL for accessing the model. It is the root URL used to send API requests.
+
+* `api_version`
+It is an optional parameter (applicable to selected providers), which defines the API version.
 
 The available models and providers include the following.
 
@@ -223,7 +253,7 @@ USING
         "provider": "openai",
         "model_name" : "got-4o",
         "api_key": "sk-abc123",
-        "base_url": "https://xxx.com/",
+        "base_url": "https://example.com/",
         "api_version": "2024-02-01"
     },
     ...
@@ -231,13 +261,11 @@ USING
 
 **Option 2.** Define the default model in the [MindsDB configuration file](/setup/custom-config).
 
+If you define `default_llm` in the configuration file, you do not need to provide the `model` parameter when creating an agent. If provide both, then the values from the `model` parameter are used.
+
 <Tip>
 You can define the default models in the Settings of the MindsDB Editor GUI.
 </Tip>
-
-<Note>
-Note that if you define `default_llm` in the configuration file, you do not need to provide the `model` parameter when creating an agent. If provide both, then the values from the `model` parameter are used.
-</Note>
 
 ```bash
 "default_llm": {
@@ -245,28 +273,11 @@ Note that if you define `default_llm` in the configuration file, you do not need
       "provider": "openai",
       "model_name" : "got-4o",
       "api_key": "sk-abc123",
-      "base_url": "https://xxx.com/",
+      "base_url": "https://example.com/",
       "api_version": "2024-02-01"
 
 }
 ```
-
-The model specification includes:
-
-* `provider`
-It is a required parameter. It defines the model provider.
-
-* `model_name`
-It is a required parameter. It defines the model name as specified by the provider.
-
-* `api_key`
-The API key is required to access the model. Users can provide it either in this `api_key` parameter, or using [environment variables](/mindsdb_sql/functions/from_env).
-
-* `base_url`
-It is an optional parameter, which defaults to `https://api.openai.com/v1/`. It is a required parameter when using the `azure_openai` provider. It is the root URL used to send API requests.
-
-* `api_version`
-It is an optional parameter. It is a required parameter when using the `azure_openai` provider. It defines the API version.
 
 ### `data`
 

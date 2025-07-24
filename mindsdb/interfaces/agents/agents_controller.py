@@ -20,7 +20,7 @@ from mindsdb.utilities import log
 
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
-from .constants import ASSISTANT_COLUMN, SUPPORTED_PROVIDERS, PROVIDER_TO_MODELS, DEFAULT_TEXT2SQL_DATABASE
+from .constants import ASSISTANT_COLUMN, SUPPORTED_PROVIDERS, PROVIDER_TO_MODELS
 from .langchain_agent import get_llm_provider
 
 logger = log.getLogger(__name__)
@@ -165,22 +165,27 @@ class AgentsController:
                  with one of keys is "name", and other is additional parameters for relationship agent<>skill
             provider (str): The provider of the model
             params (Dict[str, str]): Parameters to use when running the agent
+                data: Dict, data sources for an agent, keys:
+                  - knowledge_bases: List of KBs to use
+                  - tables: list of tables to use
+                model: Dict, parameters for the model to use
+                  - provider: The provider of the model (e.g., 'openai', 'google')
+                  - Other model-specific parameters like 'api_key', 'model_name', etc.
+                <provider>_api_key: API key for the provider (e.g., openai_api_key)
+
+                # Deprecated parameters:
                 database: The database to use for text2sql skills (default is 'mindsdb')
                 knowledge_base_database: The database to use for knowledge base queries (default is 'mindsdb')
                 include_tables: List of tables to include for text2sql skills
                 ignore_tables: List of tables to ignore for text2sql skills
                 include_knowledge_bases: List of knowledge bases to include for text2sql skills
                 ignore_knowledge_bases: List of knowledge bases to ignore for text2sql skills
-                <provider>_api_key: API key for the provider (e.g., openai_api_key)
-                data: Dict, data sources for an agent, keys:
-                  - knowledge_bases: List of KBs to use (alternative to `include_knowledge_bases`)
-                  - tables: list of tables to use (alternative to `include_tables`)
 
         Returns:
             agent (db.Agents): The created agent
 
         Raises:
-            ValueError: Agent with given name already exists, or skill/model with given name does not exist.
+            EntityExistsError: Agent with given name already exists, or skill/model with given name does not exist.
         """
         if project_name is None:
             project_name = default_project
@@ -189,7 +194,7 @@ class AgentsController:
         agent = self.get_agent(name, project_name)
 
         if agent is not None:
-            raise ValueError(f"Agent with name already exists: {name}")
+            raise EntityExistsError("Agent already exists", name)
 
         # No need to copy params since we're not preserving the original reference
         params = params or {}
@@ -223,48 +228,31 @@ class AgentsController:
             # It will be picked up by get_api_key() in handler_utils.py
             pass
 
-        # Extract table and knowledge base parameters from params
-        database = params.pop("database", None)
-        knowledge_base_database = params.pop("knowledge_base_database", DEFAULT_TEXT2SQL_DATABASE)
-        include_tables = params.pop("include_tables", None)
-        ignore_tables = params.pop("ignore_tables", None)
-        include_knowledge_bases = params.pop("include_knowledge_bases", None)
-        ignore_knowledge_bases = params.pop("ignore_knowledge_bases", None)
+        depreciated_params = [
+            "database",
+            "knowledge_base_database",
+            "include_tables",
+            "ignore_tables",
+            "include_knowledge_bases",
+            "ignore_knowledge_bases",
+        ]
+        if any(param in params for param in depreciated_params):
+            raise ValueError(
+                f"Parameters {', '.join(depreciated_params)} are deprecated. "
+                "Use 'data' parameter with 'tables' and 'knowledge_bases' keys instead."
+            )
 
-        # Save the extracted parameters back to params for API responses only if they were explicitly provided
-        # or if they're needed for skills
-        need_params = include_tables or ignore_tables or include_knowledge_bases or ignore_knowledge_bases
-
-        if "database" in params or need_params:
-            params["database"] = database
-
+        include_tables = None
+        include_knowledge_bases = None
         if "data" in params:
-            if include_knowledge_bases is None:
-                include_knowledge_bases = params["data"].get("knowledge_bases")
-            if include_tables is None:
-                include_tables = params["data"].get("tables")
-
-        if "knowledge_base_database" in params or include_knowledge_bases or ignore_knowledge_bases:
-            params["knowledge_base_database"] = knowledge_base_database
-
-        if include_tables is not None:
-            params["include_tables"] = include_tables
-        if ignore_tables is not None:
-            params["ignore_tables"] = ignore_tables
-        if include_knowledge_bases is not None:
-            params["include_knowledge_bases"] = include_knowledge_bases
-        if ignore_knowledge_bases is not None:
-            params["ignore_knowledge_bases"] = ignore_knowledge_bases
+            include_knowledge_bases = params["data"].get("knowledge_bases")
+            include_tables = params["data"].get("tables")
 
         # Convert string parameters to lists if needed
         if isinstance(include_tables, str):
             include_tables = [t.strip() for t in include_tables.split(",")]
-        if isinstance(ignore_tables, str):
-            ignore_tables = [t.strip() for t in ignore_tables.split(",")]
         if isinstance(include_knowledge_bases, str):
             include_knowledge_bases = [kb.strip() for kb in include_knowledge_bases.split(",")]
-        if isinstance(ignore_knowledge_bases, str):
-            ignore_knowledge_bases = [kb.strip() for kb in ignore_knowledge_bases.split(",")]
 
         # Auto-create SQL skill if no skills are provided but include_tables or include_knowledge_bases params are provided
         if not skills and (include_tables or include_knowledge_bases):
@@ -272,23 +260,15 @@ class AgentsController:
             skill_name = f"{name}_sql_skill"
             skill_params = {
                 "type": "sql",
-                "database": database,
                 "description": f"Auto-generated SQL skill for agent {name}",
             }
 
-            # Add table restrictions if provided
+            # Add restrictions provided
             if include_tables:
                 skill_params["include_tables"] = include_tables
-            if ignore_tables:
-                skill_params["ignore_tables"] = ignore_tables
-
-            # Add knowledge base parameters if provided
-            if knowledge_base_database:
-                skill_params["knowledge_base_database"] = knowledge_base_database
             if include_knowledge_bases:
                 skill_params["include_knowledge_bases"] = include_knowledge_bases
-            if ignore_knowledge_bases:
-                skill_params["ignore_knowledge_bases"] = ignore_knowledge_bases
+
             try:
                 # Check if skill already exists
                 existing_skill = self.skills_controller.get_skill(skill_name, project_name)
@@ -356,9 +336,10 @@ class AgentsController:
                             data_catalog_loader.load_metadata()
 
                     elif "database" in existing_skill.params:
+                        valid_table_names = existing_skill.params.get("tables", parameters.get("tables"))
                         data_catalog_loader = DataCatalogLoader(
                             database_name=existing_skill.params["database"],
-                            table_names=parameters["tables"] if "tables" in parameters else None,
+                            table_names=valid_table_names,
                         )
                         data_catalog_loader.load_metadata()
 
@@ -368,16 +349,8 @@ class AgentsController:
                         )
 
                 # Add table restrictions if this is a text2sql skill
-                if include_tables or ignore_tables:
-                    parameters["tables"] = include_tables or ignore_tables
-
-                # Pass database parameter if provided
-                if database and "database" not in parameters:
-                    parameters["database"] = database
-
-                # Pass knowledge base database parameter if provided
-                if knowledge_base_database and "knowledge_base_database" not in parameters:
-                    parameters["knowledge_base_database"] = knowledge_base_database
+                if include_tables:
+                    parameters["tables"] = include_tables
 
                 # Add knowledge base parameters to both the skill and the association parameters
                 if include_knowledge_bases:
@@ -385,16 +358,6 @@ class AgentsController:
                     if "include_knowledge_bases" not in existing_skill.params:
                         existing_skill.params["include_knowledge_bases"] = include_knowledge_bases
                         flag_modified(existing_skill, "params")
-                elif ignore_knowledge_bases:
-                    parameters["ignore_knowledge_bases"] = ignore_knowledge_bases
-                    if "ignore_knowledge_bases" not in existing_skill.params:
-                        existing_skill.params["ignore_knowledge_bases"] = ignore_knowledge_bases
-                        flag_modified(existing_skill, "params")
-
-                # Ensure knowledge_base_database is set in the skill's params
-                if knowledge_base_database and "knowledge_base_database" not in existing_skill.params:
-                    existing_skill.params["knowledge_base_database"] = knowledge_base_database
-                    flag_modified(existing_skill, "params")
 
             association = db.AgentSkillsAssociation(parameters=parameters, agent=agent, skill=existing_skill)
             db.session.add(association)
@@ -462,6 +425,8 @@ class AgentsController:
             raise ValueError("It is forbidden to change properties of the demo object")
 
         if name is not None and name != agent_name:
+            if not name.islower():
+                raise ValueError(f"The name must be in lower case: {name}")
             # Check to see if updated name already exists
             agent_with_new_name = self.get_agent(name, project_name=project_name)
             if agent_with_new_name is not None:
@@ -584,20 +549,22 @@ class AgentsController:
     def get_completion(
         self,
         agent: db.Agents,
-        messages: List[Dict[str, str]],
+        messages: list[Dict[str, str]],
         project_name: str = default_project,
-        tools: List[BaseTool] = None,
+        tools: list[BaseTool] = None,
         stream: bool = False,
+        params: dict | None = None,
     ) -> Union[Iterator[object], pd.DataFrame]:
         """
         Queries an agent to get a completion.
 
         Parameters:
             agent (db.Agents): Existing agent to get completion from
-            messages (List[Dict[str, str]]): Chat history to send to the agent
+            messages (list[Dict[str, str]]): Chat history to send to the agent
             project_name (str): Project the agent belongs to (default mindsdb)
-            tools (List[BaseTool]): Tools to use while getting the completion
+            tools (list[BaseTool]): Tools to use while getting the completion
             stream (bool): Whether to stream the response
+            params (dict | None): params to redefine agent params
 
         Returns:
             response (Union[Iterator[object], pd.DataFrame]): Completion as a DataFrame or iterator of completion chunks
@@ -606,7 +573,7 @@ class AgentsController:
             ValueError: Agent's model does not exist.
         """
         if stream:
-            return self._get_completion_stream(agent, messages, project_name=project_name, tools=tools)
+            return self._get_completion_stream(agent, messages, project_name=project_name, tools=tools, params=params)
         from .langchain_agent import LangchainAgent
 
         model, provider = self.check_model_provider(agent.model_name, agent.provider)
@@ -619,25 +586,27 @@ class AgentsController:
         llm_params = self.get_agent_llm_params(agent.params)
 
         lang_agent = LangchainAgent(agent, model, llm_params=llm_params)
-        return lang_agent.get_completion(messages)
+        return lang_agent.get_completion(messages, params=params)
 
     def _get_completion_stream(
         self,
         agent: db.Agents,
-        messages: List[Dict[str, str]],
+        messages: list[Dict[str, str]],
         project_name: str = default_project,
-        tools: List[BaseTool] = None,
+        tools: list[BaseTool] = None,
+        params: dict | None = None,
     ) -> Iterator[object]:
         """
         Queries an agent to get a stream of completion chunks.
 
         Parameters:
             agent (db.Agents): Existing agent to get completion from
-            messages (List[Dict[str, str]]): Chat history to send to the agent
+            messages (list[Dict[str, str]]): Chat history to send to the agent
             trace_id (str): ID of Langfuse trace to use
             observation_id (str): ID of parent Langfuse observation to use
             project_name (str): Project the agent belongs to (default mindsdb)
-            tools (List[BaseTool]): Tools to use while getting the completion
+            tools (list[BaseTool]): Tools to use while getting the completion
+            params (dict | None): params to redefine agent params
 
         Returns:
             chunks (Iterator[object]): Completion chunks as an iterator
@@ -659,4 +628,4 @@ class AgentsController:
         llm_params = self.get_agent_llm_params(agent.params)
 
         lang_agent = LangchainAgent(agent, model=model, llm_params=llm_params)
-        return lang_agent.get_completion(messages, stream=True)
+        return lang_agent.get_completion(messages, stream=True, params=params)

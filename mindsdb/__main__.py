@@ -375,7 +375,7 @@ if __name__ == "__main__":
     apis = os.getenv("MINDSDB_APIS") or config.cmd_args.api
 
     if apis is None:  # If "--api" option is not specified, start the default APIs
-        api_arr = [TrunkProcessEnum.HTTP, TrunkProcessEnum.MYSQL]
+        api_arr = [TrunkProcessEnum.HTTP, TrunkProcessEnum.MYSQL, TrunkProcessEnum.MCP, TrunkProcessEnum.A2A]
     elif apis == "":  # If "--api=" (blank) is specified, don't start any APIs
         api_arr = []
     else:  # The user has provided a list of APIs to start

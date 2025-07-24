@@ -52,6 +52,14 @@ Below is the list of all language models supported for the `embedding_model` and
 
 #### `provider = 'openai'`
 
+This provider is supported for both `embedding_model` and `reranking_model`.
+
+<Note>
+Users can define the default embedding and reranking models from OpenAI in Settings of the MindsDB GUI.
+
+Furthermore, users can select `Custom OpenAI API` from the dropdown and use models from any OpenAI-compatible API.
+</Note>
+
 When choosing `openai` as the model provider, users should define the following model parameters.
 
 * `model_name` stores the name of the OpenAI model to be used.
@@ -61,6 +69,12 @@ Learn more about the [OpenAI integration with MindsDB here](/integrations/ai-eng
 
 #### `provider = 'openai_azure'`
 
+This provider is supported for both `embedding_model` and `reranking_model`.
+
+<Note>
+Users can define the default embedding and reranking models from Azure OpenAI in Settings of the MindsDB GUI.
+</Note>
+
 When choosing `openai_azure` as the model provider, users should define the following model parameters.
 
 * `model_name` stores the name of the OpenAI model to be used.
@@ -68,7 +82,24 @@ When choosing `openai_azure` as the model provider, users should define the foll
 * `base_url` stores the base URL of the Azure instance.
 * `api_version` stores the version of the Azure instance.
 
+#### `provider = 'google'`
+
+This provider is supported for both `embedding_model` and `reranking_model`.
+
+<Note>
+Users can define the default embedding and reranking models from Google in Settings of the MindsDB GUI.
+</Note>
+
+When choosing `google` as the model provider, users should define the following model parameters.
+
+* `model_name` stores the name of the Google model to be used.
+* `api_key` stores the Google API key.
+
+Learn more about the [Google Gemini integration with MindsDB here](/integrations/ai-engines/google_gemini).
+
 #### `provider = 'bedrock'`
+
+This provider is supported for both `embedding_model` and `reranking_model`.
 
 When choosing `bedrock` as the model provider, users should define the following model parameters.
 
@@ -79,6 +110,8 @@ When choosing `bedrock` as the model provider, users should define the following
 * `aws_session_token` stores a temporary token used for short-term security credentials when using AWS Identity and Access Management (IAM) roles or temporary credentials.
 
 #### `provider = 'snowflake'`
+
+This provider is supported for `reranking_model`.
 
 When choosing `snowflake` as the model provider, users should choose one of the available models from [Snowflake Cortex AI](https://www.snowflake.com/en/product/features/cortex/) and define the following model parameters.
 

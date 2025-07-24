@@ -22,8 +22,7 @@
                 "group": "Get Started",
                 "pages": [
                   "mindsdb",
-                  "quickstart-tutorial",
-                  "minds-demo"
+                  "quickstart-tutorial"
                 ]
               },
               {
@@ -72,7 +71,8 @@
               {
                 "group": "Overview",
                 "pages": [
-                  "mindsdb-connect"
+                  "mindsdb-connect",
+                  "mindsdb-fqe"
                 ]
               },
               {
@@ -221,12 +221,12 @@
                         "group": "Large Language Models",
                         "pages": [
                           "integrations/ai-engines/anthropic",
-                          "integrations/ai-engines/anyscale",
                           "integrations/ai-engines/cohere",
                           "integrations/ai-engines/google_gemini",
                           "integrations/ai-engines/huggingface",
                           "integrations/ai-engines/huggingface_inference_api",
                           "integrations/ai-engines/langchain",
+                          "integrations/ai-engines/litellm",
                           "integrations/ai-engines/llamaindex",
                           "integrations/ai-engines/monkeylearn",
                           "integrations/ai-engines/ollama",
@@ -509,7 +509,6 @@
                     "group": "Automated Fine-Tuning",
                     "pages": [
                       "use-cases/automated_finetuning/overview",
-                      "use-cases/automated_finetuning/anyscale",
                       "use-cases/automated_finetuning/openai",
                       "use-cases/automated_finetuning/classification",
                       "use-cases/automated_finetuning/regression"
@@ -1183,8 +1182,8 @@
     ],
     "primary": {
       "type": "button",
-      "label": "Try Demo",
-      "href": "http://mdb.ai/register"
+      "label": "Watch Video",
+      "href": "https://www.youtube.com/watch?v=HPwUPJ3NWLI"
     }
   },
   "footer": {
@@ -1759,10 +1758,6 @@
     {
       "source": "/agents/knowledge-bases",
       "destination": "/mindsdb_sql/agents/knowledge-bases"
-    },
-    {
-      "source": "/finetune/anyscale",
-      "destination": "/use-cases/automated_finetuning/anyscale"
     },
     {
       "source": "/finetune/openai",

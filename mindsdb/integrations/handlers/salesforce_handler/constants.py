@@ -21,9 +21,10 @@ When generating queries for {integration_name}, please follow these guidelines:
   CORRECT: WHERE LastModifiedDate >= LAST_MONTH
   CORRECT: WHERE CloseDate = THIS_QUARTER
 - N-based date literals: LAST_N_DAYS:n, NEXT_N_DAYS:n, LAST_N_WEEKS:n, NEXT_N_WEEKS:n, LAST_N_MONTHS:n, NEXT_N_MONTHS:n
-  CORRECT: WHERE CreatedDate >= LAST_N_DAYS:30
-  CORRECT: WHERE CloseDate <= NEXT_N_WEEKS:2
-  CORRECT: WHERE ActivityDate >= LAST_N_MONTHS:6
+  CORRECT: WHERE CreatedDate >= `LAST_N_DAYS:30`
+  CORRECT: WHERE CloseDate <= `NEXT_N_WEEKS:2`
+  CORRECT: WHERE ActivityDate >= `LAST_N_MONTHS:6`
+  INCORRECT: WHERE CreatedDate >= LAST_N_DAYS:30
   INCORRECT: WHERE CreatedDate >= DATE_SUB(TODAY, INTERVAL 30 DAY)
   INCORRECT: AND LastModifiedDate < CURRENT_DATE() - INTERVAL 30 DAY;
 - Date and datetime literals: Use ISO 8601 format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS.mmm±HH:MM)
@@ -63,4 +64,5 @@ When generating queries for {integration_name}, please follow these guidelines:
 **COMMON MISTAKES TO AVOID:**
 - When filtering by date, always use the special date literals, N-based date literals, or ISO 8601 format.
 - Do not use functions like DATE_SUB, CURRENT_DATE(), or DATE_ADD for date calculations.
+- N-based date literals must be enclosed in backticks.
 """

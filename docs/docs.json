@@ -221,7 +221,6 @@
                         "group": "Large Language Models",
                         "pages": [
                           "integrations/ai-engines/anthropic",
-                          "integrations/ai-engines/anyscale",
                           "integrations/ai-engines/cohere",
                           "integrations/ai-engines/google_gemini",
                           "integrations/ai-engines/huggingface",
@@ -510,7 +509,6 @@
                     "group": "Automated Fine-Tuning",
                     "pages": [
                       "use-cases/automated_finetuning/overview",
-                      "use-cases/automated_finetuning/anyscale",
                       "use-cases/automated_finetuning/openai",
                       "use-cases/automated_finetuning/classification",
                       "use-cases/automated_finetuning/regression"
@@ -1770,10 +1768,6 @@
     {
       "source": "/agents/knowledge-bases",
       "destination": "/mindsdb_sql/agents/knowledge-bases"
-    },
-    {
-      "source": "/finetune/anyscale",
-      "destination": "/use-cases/automated_finetuning/anyscale"
     },
     {
       "source": "/finetune/openai",

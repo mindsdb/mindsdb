@@ -43,6 +43,7 @@ from mindsdb.api.http.namespaces.webhooks import ns_conf as webhooks_ns
 from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.interfaces.file.file_controller import FileController
+from mindsdb.interfaces.jobs.jobs_controller import JobsController
 from mindsdb.interfaces.storage import db
 from mindsdb.metrics.server import init_metrics
 from mindsdb.utilities import log
@@ -440,6 +441,7 @@ def initialize_interfaces(app):
     app.integration_controller = integration_controller
     app.database_controller = DatabaseController()
     app.file_controller = FileController()
+    app.jobs_controller = JobsController()
     config = Config()
     app.config_obj = config
 

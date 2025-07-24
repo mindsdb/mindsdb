@@ -19,6 +19,7 @@ class ConfluenceSpacesTable(APIResource):
     """
     The table abstraction for the 'spaces' resource of the Confluence API.
     """
+
     def list(
         self,
         conditions: List[FilterCondition] = None,
@@ -145,6 +146,7 @@ class ConfluencePagesTable(APIResource):
     """
     The table abstraction for the 'pages' resource of the Confluence API.
     """
+
     def list(
         self,
         conditions: List[FilterCondition] = None,
@@ -281,6 +283,7 @@ class ConfluenceBlogPostsTable(APIResource):
     """
     The table abstraction for the 'blogposts' resource of the Confluence API.
     """
+
     def list(
         self,
         conditions: List[FilterCondition] = None,
@@ -412,6 +415,7 @@ class ConfluenceWhiteboardsTable(APIResource):
     """
     The table abstraction for the 'whiteboards' resource of the Confluence API.
     """
+
     def list(
         self,
         conditions: List[FilterCondition] = None,
@@ -488,6 +492,7 @@ class ConfluenceDatabasesTable(APIResource):
     """
     The table abstraction for the 'databases' resource of the Confluence API.
     """
+
     def list(
         self,
         conditions: List[FilterCondition] = None,
@@ -564,6 +569,7 @@ class ConfluenceTasksTable(APIResource):
     """
     The table abstraction for the 'tasks' resource of the Confluence API.
     """
+
     def list(
         self,
         conditions: List[FilterCondition] = None,

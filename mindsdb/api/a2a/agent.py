@@ -28,9 +28,7 @@ class MindsDBAgent:
         self.host = host
         self.port = port
         self.base_url = f"http://{host}:{port}"
-        self.agent_url = (
-            f"{self.base_url}/api/projects/{project_name}/agents/{agent_name}"
-        )
+        self.agent_url = f"{self.base_url}/api/projects/{project_name}/agents/{agent_name}"
         self.sql_url = f"{self.base_url}/api/sql/query"
         logger.info(f"Initialized MindsDB agent connector to {self.base_url}")
 
@@ -65,9 +63,7 @@ class MindsDBAgent:
                 for column in ["response", "result", "answer", "completion", "output"]:
                     if column in result_row:
                         content = result_row[column]
-                        logger.info(
-                            f"Found result in column '{column}': {content[:100]}..."
-                        )
+                        logger.info(f"Found result in column '{column}': {content[:100]}...")
                         return {
                             "content": content,
                             "parts": [{"type": "text", "text": content}],
@@ -122,9 +118,7 @@ class MindsDBAgent:
                 "parts": [{"type": "text", "text": error_msg}],
             }
 
-    def streaming_invoke(
-        self, messages: List[dict], timeout: int = DEFAULT_STREAM_TIMEOUT
-    ) -> Iterator[Dict[str, Any]]:
+    def streaming_invoke(self, messages: List[dict], timeout: int = DEFAULT_STREAM_TIMEOUT) -> Iterator[Dict[str, Any]]:
         """Stream responses from the MindsDB agent using the direct API endpoint.
 
         Args:
@@ -140,15 +134,11 @@ class MindsDBAgent:
             url = f"{self.base_url}/api/projects/{self.project_name}/agents/{self.agent_name}/completions/stream"
 
             # Log request for debugging
-            logger.info(
-                f"Sending streaming request to MindsDB agent: {self.agent_name}"
-            )
+            logger.info(f"Sending streaming request to MindsDB agent: {self.agent_name}")
             logger.debug(f"Request messages: {json.dumps(messages)[:200]}...")
 
             # Send the request to MindsDB streaming API with timeout
-            stream = requests.post(
-                url, json={"messages": messages}, stream=True, timeout=timeout
-            )
+            stream = requests.post(url, json={"messages": messages}, stream=True, timeout=timeout)
             stream.raise_for_status()
 
             # Process the streaming response directly
@@ -165,9 +155,7 @@ class MindsDBAgent:
                                 # Pass through the chunk with minimal modifications
                                 yield chunk
                             except json.JSONDecodeError as e:
-                                logger.warning(
-                                    f"Failed to parse JSON from line: {data}. Error: {str(e)}"
-                                )
+                                logger.warning(f"Failed to parse JSON from line: {data}. Error: {str(e)}")
                                 # Yield error information but continue processing
                                 yield {
                                     "error": f"JSON parse error: {str(e)}",
@@ -186,9 +174,7 @@ class MindsDBAgent:
                             logger.debug(f"Received non-data line: {line}")
 
                             # If it looks like a raw text response (not SSE format), wrap it
-                            if not line.startswith("event:") and not line.startswith(
-                                ":"
-                            ):
+                            if not line.startswith("event:") and not line.startswith(":"):
                                 yield {"content": line, "is_task_complete": False}
                     except UnicodeDecodeError as e:
                         logger.warning(f"Failed to decode line: {str(e)}")
@@ -252,16 +238,54 @@ class MindsDBAgent:
         # Send a final completion message
         yield {"is_task_complete": True, "metadata": {"complete": True}}
 
-    async def stream(self, query, session_id) -> AsyncIterable[Dict[str, Any]]:
-        """Stream responses from the MindsDB agent (uses streaming API endpoint)."""
+    async def stream(
+        self,
+        query: str,
+        session_id: str,
+        history: List[dict] | None = None,
+    ) -> AsyncIterable[Dict[str, Any]]:
+        """Stream responses from the MindsDB agent (uses streaming API endpoint).
+
+        Args:
+            query: The current query to send to the agent.
+            session_id: Unique identifier for the conversation session.
+            history: Optional list of previous messages in the conversation.
+
+        Returns:
+            AsyncIterable yielding chunks of the streaming response.
+        """
         try:
             logger.info(f"Using streaming API for query: {query[:100]}...")
 
-            # Format the query into the message structure expected by streaming_invoke
-            messages = [{"question": query, "answer": None}]
+            # Format history into the expected format
+            formatted_messages = []
+            if history:
+                for msg in history:
+                    # Convert Message object to dict if needed
+                    msg_dict = msg.dict() if hasattr(msg, "dict") else msg
+                    role = msg_dict.get("role", "user")
+
+                    # Extract text from parts
+                    text = ""
+                    for part in msg_dict.get("parts", []):
+                        if part.get("type") == "text":
+                            text = part.get("text", "")
+                            break
+
+                    if text:
+                        if role == "user":
+                            formatted_messages.append({"question": text, "answer": None})
+                        elif role == "assistant" and formatted_messages:
+                            # Add the answer to the last question
+                            formatted_messages[-1]["answer"] = text
+
+            # Add the current query to the messages
+            formatted_messages.append({"question": query, "answer": None})
+
+            logger.debug(f"Formatted messages for agent: {formatted_messages}")
 
             # Use the streaming_invoke method to get real streaming responses
-            streaming_response = self.streaming_invoke(messages)
+            streaming_response = self.streaming_invoke(formatted_messages)
 
             # Yield all chunks directly from the streaming response
             for chunk in streaming_response:

@@ -4,15 +4,15 @@ import click
 from dotenv import load_dotenv
 
 # A2A specific imports
-from .common.types import (
+from mindsdb.api.a2a.common.types import (
     AgentCard,
     AgentCapabilities,
     AgentSkill,
     MissingAPIKeyError,
 )
-from .common.server.server import A2AServer
-from .task_manager import AgentTaskManager
-from .agent import MindsDBAgent
+from mindsdb.api.a2a.common.server.server import A2AServer
+from mindsdb.api.a2a.task_manager import AgentTaskManager
+from mindsdb.api.a2a.agent import MindsDBAgent
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -73,10 +73,7 @@ def main(
 
         agent_card = AgentCard(
             name="MindsDB Agent Connector",
-            description=(
-                "A2A connector that proxies requests to MindsDB agents "
-                f"in project '{project_name}'."
-            ),
+            description=(f"A2A connector that proxies requests to MindsDB agents in project '{project_name}'."),
             url=f"http://{host}:{port}",
             version="1.0.0",
             defaultInputModes=MindsDBAgent.SUPPORTED_CONTENT_TYPES,
@@ -108,6 +105,39 @@ def main(
     except Exception as exc:  # noqa: BLE001
         logger.exception("Unexpected error: %s", exc)
         sys.exit(1)
+
+
+# This function is called by mindsdb/api/a2a/run_a2a.py
+def main_with_config(config=None, *args, **kwargs):
+    """
+    Alternative entry point that accepts configuration as a dictionary.
+    This is used when A2A is started as a subprocess of the main MindsDB process.
+
+    Args:
+        config (dict): Configuration dictionary
+        args: Additional positional arguments
+        kwargs: Additional keyword arguments
+    """
+    if config is None:
+        config = {}
+
+    # Extract configuration values with fallbacks to default values
+    host = config.get("host", "localhost")
+    port = int(config.get("port", 47338))
+    mindsdb_host = config.get("mindsdb_host", "localhost")
+    mindsdb_port = int(config.get("mindsdb_port", 47334))
+    project_name = config.get("project_name", "mindsdb")
+    log_level = config.get("log_level", "INFO")
+
+    # Call the main function with the extracted configuration
+    main.callback(
+        host=host,
+        port=port,
+        mindsdb_host=mindsdb_host,
+        mindsdb_port=mindsdb_port,
+        project_name=project_name,
+        log_level=log_level,
+    )
 
 
 if __name__ == "__main__":

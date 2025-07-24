@@ -1,5 +1,8 @@
 name: Test on Push
 
+permissions:
+    contents: read
+
 on:
   pull_request:
     branches: [main]
@@ -14,9 +17,6 @@ defaults:
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
-
-env:
-  UV_LINK_MODE: "symlink"
 
 jobs:
   # Sets an output var to indicate if all changes are in docs files
@@ -124,13 +124,12 @@ jobs:
         run: |
           # Install dev requirements and build our pip package
           uv pip install -r requirements/requirements-dev.txt
-          uv pip install setuptools==75.8.2
           python setup.py sdist
 
           # Install from the pip package
           # If we install from source, we don't know if the pip package is installable.
           cd dist
-          uv pip install *.tar.gz
+          uv pip install *.tar.gz --prerelease=allow
 
   unit_tests:
     name: Run Unit Tests
@@ -153,24 +152,25 @@ jobs:
       - name: Install dependencies
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
-          uv pip install .
           uv pip install -r requirements/requirements-test.txt
-          uv pip install .[lightwood]  # TODO: for now some tests rely on lightwood
-          uv pip install .[clickhouse]
-          uv pip install .[snowflake]
-          uv pip install .[web]
-          uv pip install .[redshift]
-          uv pip install .[bigquery]
-          uv pip install .[databricks]
-          uv pip install .[oracle]
-          uv pip install .[slack]
-          uv pip install .[github]
-          uv pip install .[ms_teams]
-          uv pip install .[salesforce]
-          uv pip install .[mysql]
-          uv pip install .[chromadb]
+          # TODO: for now some tests rely on lightwood
+          uv pip install . --prerelease=allow \
+            .[lightwood] \
+            .[clickhouse] \
+            .[snowflake] \
+            .[web] \
+            .[redshift] \
+            .[bigquery] \
+            .[databricks] \
+            .[oracle] \
+            .[slack] \
+            .[github] \
+            .[ms_teams] \
+            .[salesforce] \
+            .[mysql] \
+            .[chromadb]
           uv pip freeze
-          git clone https://github.com/mindsdb/mindsdb_sql_parser.git parser_tests
+          git clone --branch v$(uv pip show mindsdb_sql_parser | grep Version | cut -d ' ' -f 2) https://github.com/mindsdb/mindsdb_sql_parser.git parser_tests
       - name: Install mssql dependencies
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
@@ -190,24 +190,4 @@ jobs:
       - name: Run unit tests
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
-          if [ "$RUNNER_OS" == "Linux" ]; then
-            env PYTHONPATH=./ pytest tests/unit/planner/ -x
-            env PYTHONPATH=./ pytest tests/unit/executor/ -x -k "not test_udf"
-            env PYTHONPATH=./ pytest tests/unit/various/ -x
-            env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_openai.py
-
-            env PYTHONPATH=./:parser_tests/tests pytest tests/unit/render/ -x
-            # env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_anyscale_endpoints.py
-          fi
-      - name: Run HTTP API tests
-        if: ${{ needs.changes.outputs.not-docs == 'true' }}
-        run: |
-          if [ "$RUNNER_OS" == "Linux" ]; then
-            env PYTHONPATH=./ pytest tests/api/http/ -x -k "not knowledge_bases_test"
-          fi
-      - name: Run Handlers tests and submit Coverage to coveralls
-        if: ${{ needs.changes.outputs.not-docs == 'true' }}
-        run: |
-          python -m unittest discover -s tests/unit/handlers
-        env:
-          github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}
+          make unit_tests_slow

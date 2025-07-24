@@ -7,9 +7,9 @@ class TDEngineHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
-            "token":'<token_for_cloud>',
-            "url":"********.cloud.tdengine.com",
-            "database":"temp"
+            "token": '<token_for_cloud>',
+            "url": "********.cloud.tdengine.com",
+            "database": "temp"
         }
         cls.handler = TDEngineHandler('test_tdengine_handler', connection_data=cls.kwargs)
 
@@ -18,26 +18,26 @@ class TDEngineHandlerTest(unittest.TestCase):
 
     def test_1_connect(self):
         assert self.handler.connect()
-    
+
     def test_2_create_table(self):
         query = "CREATE Table `hari` USING `temp` (`id`) TAGS (0);"
         result = self.handler.query(query)
-        assert result.type is not RESPONSE_TYPE.ERROR 
+        assert result.type is not RESPONSE_TYPE.ERROR
         pass
 
     def test_3_insert(self):
         query = "INSERT INTO hari  VALUES (NOW, 12);"
         result = self.handler.query(query)
-        assert result.type is not RESPONSE_TYPE.ERROR 
+        assert result.type is not RESPONSE_TYPE.ERROR
 
     def test_4_native_query_select(self):
         query = "SELECT * FROM hari;"
         result = self.handler.query(query)
-        assert result.type is RESPONSE_TYPE.TABLE 
+        assert result.type is RESPONSE_TYPE.TABLE
 
     def test_5_get_tables(self):
         tables = self.handler.get_tables()
-        assert tables.type is  RESPONSE_TYPE.TABLE
+        assert tables.type is RESPONSE_TYPE.TABLE
 
     def test_6_get_columns(self):
         columns = self.handler.get_columns('hari')

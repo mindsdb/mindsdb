@@ -315,7 +315,6 @@
                     "group": "Connect MindsDB to SQL Clients",
                     "pages": [
                       "mindsdb_sql/connect/mindsdb_editor",
-                      "mindsdb_sql/connect/postgres-client",
                       "mindsdb_sql/connect/mysql-client",
                       "mindsdb_sql/connect/dbeaver",
                       "mindsdb_sql/connect/connect-mariadb-skysql",
@@ -363,6 +362,19 @@
                     ]
                   }
                 ]
+              },
+              {
+                "group": "Data Catalog",
+                "pages": [
+                  "data_catalog/overview",
+                  {
+                    "group": "Data Catalog for Integrations",
+                    "pages": [
+                      "data_catalog/integrations/overview",
+                      "data_catalog/integrations/query"
+                    ]
+                  }
+                ]
               }
             ]
           },
@@ -394,6 +406,7 @@
                       "mindsdb_sql/sql/create/view",
                       "mindsdb_sql/sql/drop/view",
                       "mindsdb_sql/sql/api/select-view",
+                      "mindsdb_sql/sql/api/alter-view",
                       "mindsdb_sql/sql/create/file",
                       "mindsdb_sql/sql/drop/file",
                       "mindsdb_sql/sql/api/select-files"
@@ -418,7 +431,8 @@
                     "pages": [
                       "mindsdb_sql/functions/custom_functions",
                       "mindsdb_sql/functions/llm_function",
-                      "mindsdb_sql/functions/to_markdown_function"
+                      "mindsdb_sql/functions/to_markdown_function",
+                      "mindsdb_sql/functions/from_env"
                     ]
                   },
                   {
@@ -516,11 +530,24 @@
                 ]
               },
               {
+                "group": "Agents",
+                "pages": [
+                  "mindsdb_sql/agents/agent"
+                ]
+              },
+              {
                 "group": "MCP API",
                 "pages": [
                   "mcp/overview",
-                  "mcp/tools",
-                  "mcp/cursor_usage"
+                  "mcp/usage",
+                  {
+                    "group": "MCP Clients",
+                    "pages": [
+                      "mcp/openai",
+                      "mcp/anthropic",
+                      "mcp/cursor_usage"
+                    ]
+                  }
                 ]
               },
               {
@@ -549,6 +576,26 @@
                       "use-cases/in-database_ml/overview",
                       "use-cases/in-database_ml/customer-churn",
                       "use-cases/in-database_ml/home-rentals"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "MCP API",
+            "groups": [
+              {
+                "group": "MCP API",
+                "pages": [
+                  "mcp/overview",
+                  "mcp/usage",
+                  {
+                    "group": "MCP Clients",
+                    "pages": [
+                      "mcp/openai",
+                      "mcp/anthropic",
+                      "mcp/cursor_usage"
                     ]
                   }
                 ]
@@ -679,6 +726,17 @@
                           "rest/agents/update-chatbot",
                           "rest/agents/delete-chatbot"
                         ]
+                      },
+                      {
+                        "group": "Knowledge Bases",
+                        "pages": [
+                          "rest/knowledge_bases/create",
+                          "rest/knowledge_bases/insert",
+                          "rest/knowledge_bases/query",
+                          "rest/knowledge_bases/list",
+                          "rest/knowledge_bases/get",
+                          "rest/knowledge_bases/delete"
+                        ]
                       }
                     ]
                   },
@@ -775,10 +833,10 @@
                         "group": "AI Agents",
                         "pages": [
                           "sdks/python/agents",
-                          "sdks/python/agents_skills",
-                          "sdks/python/agents_knowledge_bases"
+                          "sdks/python/agents_skills"
                         ]
-                      }
+                      },
+                      "sdks/python/knowledge-bases"
                     ]
                   },
                   {
@@ -974,7 +1032,8 @@
                   "faqs/persist-predictions",
                   "faqs/mindsdb-with-php",
                   "faqs/disposable-email-doman-and-openai",
-                  "faqs/missing-required-cpu-features"
+                  "faqs/missing-required-cpu-features",
+                  "faqs/a2a-unavailable"
                 ]
               }
             ]
@@ -1482,10 +1541,6 @@
     {
       "source": "/connect/mindsdb_editor",
       "destination": "/mindsdb_sql/connect/mindsdb_editor"
-    },
-    {
-      "source": "/connect/postgres-client",
-      "destination": "/mindsdb_sql/connect/postgres-client"
     },
     {
       "source": "/connect/mysql-client",

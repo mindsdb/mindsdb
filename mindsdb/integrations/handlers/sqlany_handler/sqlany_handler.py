@@ -18,6 +18,7 @@ from mindsdb.integrations.libs.response import (
 
 logger = log.getLogger(__name__)
 
+
 class SQLAnyHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the SAP SQL Anywhere statements.
@@ -61,7 +62,7 @@ class SQLAnyHandler(DatabaseHandler):
             self.encryption = "SIMPLE"
         else:
             self.encryption = "NONE"
-        
+
         connection = sqlanydb.connect(
             host=self.host,
             userid=self.userid,
@@ -160,7 +161,7 @@ class SQLAnyHandler(DatabaseHandler):
         List all tables in SAP SQL Anywhere in the current schema
         """
 
-        return self.native_query(f"""
+        return self.native_query("""
             SELECT USER_NAME(ob.UID) AS SCHEMA_NAME
             , st.TABLE_NAME
             , st.TABLE_TYPE

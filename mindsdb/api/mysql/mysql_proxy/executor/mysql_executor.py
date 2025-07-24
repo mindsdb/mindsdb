@@ -7,6 +7,7 @@ from mindsdb.api.executor.sql_query import SQLQuery
 from mindsdb.api.executor.data_types.answer import ExecuteAnswer
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.api.mysql.mysql_proxy.utilities import ErSqlSyntaxError
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -19,8 +20,8 @@ class Executor:
 
         self.query = None
 
-        self.columns = []
-        self.params = []
+        self.columns: list[Column] = []
+        self.params: list[Column] = []
         self.data = None
         self.server_status = None
         self.is_executed = False
@@ -56,14 +57,11 @@ class Executor:
 
             sqlquery.prepare_query()
 
-            self.params = [
-                Column(
-                    alias=p.value,
-                    type="str",
-                    name=p.value,
-                )
-                for p in params
-            ]
+            self.params = [Column(
+                name=p.value,
+                alias=p.value,
+                type=MYSQL_DATA_TYPE.TEXT
+            ) for p in params]
 
             # TODO:
             #   select * from mindsdb.models doesn't invoke prepare_steps and columns_list is empty

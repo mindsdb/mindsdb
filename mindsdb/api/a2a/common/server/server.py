@@ -20,7 +20,8 @@ from ...common.types import (
 )
 from pydantic import ValidationError
 import json
-from typing import AsyncIterable, Any
+import time
+from typing import AsyncIterable, Any, Dict
 from ...common.server.task_manager import TaskManager
 
 import logging
@@ -44,9 +45,9 @@ class A2AServer:
         self.agent_card = agent_card
         self.app = Starlette()
         self.app.add_route(self.endpoint, self._process_request, methods=["POST"])
-        self.app.add_route(
-            "/.well-known/agent.json", self._get_agent_card, methods=["GET"]
-        )
+        self.app.add_route("/.well-known/agent.json", self._get_agent_card, methods=["GET"])
+        # Add status endpoint
+        self.app.add_route("/status", self._get_status, methods=["GET"])
         # TODO: Remove this when we have a proper CORS policy
         self.app.add_middleware(
             CORSMiddleware,
@@ -55,6 +56,7 @@ class A2AServer:
             allow_methods=["*"],
             allow_headers=["*"],
         )
+        self.start_time = time.time()
 
     def start(self):
         if self.agent_card is None:
@@ -66,17 +68,29 @@ class A2AServer:
         import uvicorn
 
         # Configure uvicorn with optimized settings for streaming
-        uvicorn.run(
-            self.app,
-            host=self.host,
-            port=self.port,
-            http="h11",
-            timeout_keep_alive=65,
-            log_level="info"
-        )
+        uvicorn.run(self.app, host=self.host, port=self.port, http="h11", timeout_keep_alive=65, log_level="info")
 
     def _get_agent_card(self, request: Request) -> JSONResponse:
         return JSONResponse(self.agent_card.model_dump(exclude_none=True))
+
+    def _get_status(self, request: Request) -> JSONResponse:
+        """
+        Status endpoint that returns basic server information.
+        This endpoint can be used by the frontend to check if the A2A server is running.
+        """
+        uptime_seconds = time.time() - self.start_time
+
+        status_info: Dict[str, Any] = {
+            "status": "ok",
+            "service": "mindsdb-a2a",
+            "uptime_seconds": round(uptime_seconds, 2),
+            "host": self.host,
+            "port": self.port,
+            "agent_name": self.agent_card.name if self.agent_card else None,
+            "version": self.agent_card.version if self.agent_card else "unknown",
+        }
+
+        return JSONResponse(status_info)
 
     async def _process_request(self, request: Request):
         try:
@@ -89,23 +103,15 @@ class A2AServer:
                 result = await self.task_manager.on_send_task(json_rpc_request)
             elif isinstance(json_rpc_request, SendTaskStreamingRequest):
                 # Don't await the async generator, just pass it to _create_response
-                result = self.task_manager.on_send_task_subscribe(
-                    json_rpc_request
-                )
+                result = self.task_manager.on_send_task_subscribe(json_rpc_request)
             elif isinstance(json_rpc_request, CancelTaskRequest):
                 result = await self.task_manager.on_cancel_task(json_rpc_request)
             elif isinstance(json_rpc_request, SetTaskPushNotificationRequest):
-                result = await self.task_manager.on_set_task_push_notification(
-                    json_rpc_request
-                )
+                result = await self.task_manager.on_set_task_push_notification(json_rpc_request)
             elif isinstance(json_rpc_request, GetTaskPushNotificationRequest):
-                result = await self.task_manager.on_get_task_push_notification(
-                    json_rpc_request
-                )
+                result = await self.task_manager.on_get_task_push_notification(json_rpc_request)
             elif isinstance(json_rpc_request, TaskResubscriptionRequest):
-                result = await self.task_manager.on_resubscribe_to_task(
-                    json_rpc_request
-                )
+                result = await self.task_manager.on_resubscribe_to_task(json_rpc_request)
             else:
                 logger.warning(f"Unexpected request type: {type(json_rpc_request)}")
                 raise ValueError(f"Unexpected request type: {type(request)}")
@@ -152,10 +158,10 @@ class A2AServer:
                     "X-Accel-Buffering": "no",
                     "Connection": "keep-alive",
                     "Content-Type": "text/event-stream",
-                    "Transfer-Encoding": "chunked"
+                    "Transfer-Encoding": "chunked",
                 },
                 # Explicitly set media_type
-                media_type="text/event-stream"
+                media_type="text/event-stream",
             )
         elif isinstance(result, JSONRPCResponse):
             return JSONResponse(result.model_dump(exclude_none=True))

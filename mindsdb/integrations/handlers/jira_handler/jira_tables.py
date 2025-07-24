@@ -24,7 +24,7 @@ class JiraProjectsTable(APIResource):
 
         projects = []
         for condition in conditions:
-            if condition.column in ('id', 'key'): 
+            if condition.column in ('id', 'key'):
                 if condition.op == FilterOperator.EQUAL:
                     projects = [client.get_project(condition.value)]
                 elif condition.op == FilterOperator.IN:
@@ -43,7 +43,7 @@ class JiraProjectsTable(APIResource):
             projects_df = pd.DataFrame([], columns=self.get_columns())
 
         return projects_df
-    
+
     def get_columns(self) -> List[str]:
         return [
             "id",
@@ -56,7 +56,7 @@ class JiraProjectsTable(APIResource):
             "entityId",
             "uuid",
         ]
-    
+
 
 class JiraIssuesTable(APIResource):
     def list(
@@ -71,7 +71,7 @@ class JiraIssuesTable(APIResource):
 
         issues = []
         for condition in conditions:
-            if condition.column in ('id', 'key'): 
+            if condition.column in ('id', 'key'):
                 if condition.op == FilterOperator.EQUAL:
                     issues = [client.get_issue(condition.value)]
                 elif condition.op == FilterOperator.IN:
@@ -88,7 +88,7 @@ class JiraIssuesTable(APIResource):
                         issues.extend(client.get_all_project_issues(project_id, limit=limit))
 
                 condition.applied = True
-                
+
         if not issues:
             project_ids = [project['id'] for project in client.get_all_projects()]
             for project_id in project_ids:
@@ -100,7 +100,7 @@ class JiraIssuesTable(APIResource):
             issues_df = pd.DataFrame([], columns=self.get_columns())
 
         return issues_df
-    
+
     def _get_project_issues_with_limit(self, client: Jira, project_id, limit=None, current_issues=None):
         """
         Helper to get issues from a project, respecting the limit.
@@ -147,8 +147,8 @@ class JiraIssuesTable(APIResource):
             "assignee",
             "status",
         ]
-        
-        
+
+
 class JiraGroupsTable(APIResource):
     def list(
         self,
@@ -194,7 +194,7 @@ class JiraUsersTable(APIResource):
 
         users = []
         for condition in conditions:
-            if condition.column == 'accountId': 
+            if condition.column == 'accountId':
                 if condition.op == FilterOperator.EQUAL:
                     users = [client.user(account_id=condition.value)]
                 elif condition.op == FilterOperator.IN:

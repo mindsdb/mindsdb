@@ -1,0 +1,113 @@
+---
+title: Query Knowledge Base
+sidebarTitle: Query Knowledge Base
+---
+
+**POST `/api/sql/query`**
+
+This API endpoint queries a knowledge base using the `POST` method. Learn more about [querying knowledge bases using semantic search and metadata filtering here](/mindsdb_sql/knowledge-bases#select-from-kb-syntax).
+
+<Tip>
+Learn more about knowledge bases following [this doc page](/mindsdb_sql/knowledge-bases).
+</Tip>
+
+### Path Parameters
+
+None.
+
+### Body
+
+<ParamField body='query' type='string' required>
+A query that is sent to the MindsDB instance.
+</ParamField>
+
+### Response
+
+Contains data stored in the knowledge base.
+
+<RequestExample>
+
+```shell Shell
+curl -X POST http://127.0.0.1:47334/api/sql/query \
+     --header 'Content-Type: application/json' \
+     --data '{
+        "query": "SELECT * FROM my_kb;"
+     }'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Response
+{
+  "type": "table",
+  "column_names": [
+    "id",
+    "chunk_id",
+    "chunk_content",
+    "metadata",
+    "relevance",
+    "distance"
+  ],
+  "data": [
+    [
+      "A1B",
+      "A1B:notes:1of1:0to20",
+      "Request color: black",
+      {
+        "chunk_index": 0,
+        "content_column": "notes",
+        "end_char": 20,
+        "original_doc_id": "A1B",
+        "original_row_index": "0",
+        "product": "Wireless Mouse",
+        "source": "TextChunkingPreprocessor",
+        "start_char": 0
+      },
+      null,
+      null
+    ],
+    [
+      "3XZ",
+      "3XZ:notes:1of1:0to19",
+      "Gift wrap requested",
+      {
+        "chunk_index": 0,
+        "content_column": "notes",
+        "end_char": 19,
+        "original_doc_id": "3XZ",
+        "original_row_index": "1",
+        "product": "Bluetooth Speaker",
+        "source": "TextChunkingPreprocessor",
+        "start_char": 0
+      },
+      null,
+      null
+    ],
+    [
+      "Q7P",
+      "Q7P:notes:1of1:0to22",
+      "Prefer aluminum finish",
+      {
+        "chunk_index": 0,
+        "content_column": "notes",
+        "end_char": 22,
+        "original_doc_id": "Q7P",
+        "original_row_index": "2",
+        "product": "Aluminum Laptop Stand",
+        "source": "TextChunkingPreprocessor",
+        "start_char": 0
+      },
+      null,
+      null
+    ]
+  ],
+  "context": {
+    "show_secrets": false,
+    "db": "mindsdb"
+  }
+}
+```
+
+</ResponseExample>

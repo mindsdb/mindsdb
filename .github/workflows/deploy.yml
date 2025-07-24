@@ -1,3 +1,6 @@
+permissions:
+  contents: read
+
 on:
   workflow_call:
     inputs:
@@ -16,11 +19,50 @@ on:
         required: true
       REPO_DISPATCH_PAT_TOKEN:
         required: true
+      MINDSDB_DB_CON:
+        required: true
 
 jobs:
+  migrate:
+    if: github.actor != 'mindsdbadmin'
+    runs-on: ${{ matrix.deploy-env == 'prod' && 'mdb-prod' || 'mdb-dev' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        deploy-env: ${{ fromJson(inputs.deploy-envs) }}
+    environment:
+      name: ${{ matrix.deploy-env }}
+      url: ${{ vars.ENV_URL }}
+    # We only want to run one deploy job for an env at a time
+    # Don't cancel in progress jobs because it may be for a different PR
+    concurrency:
+      group: deploy-${{ matrix.deploy-env }}
+      cancel-in-progress: false
+    env:
+      MINDSDB_DB_CON: ${{ secrets.MINDSDB_DB_CON }}
+      UV_LINK_MODE: "symlink"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          # Place cache in the tool dir because we mount this in our runnners
+          cache-local-path: "/home/runner/_work/_tool/uv-local-cache"
+          prune-cache: false
+          python-version: ${{ vars.CI_PYTHON_VERSION || '3.10' }}
+      - name: Install dependencies
+        run: |
+          uv pip install --prerelease=allow -r requirements/requirements.txt
+      - name: Migrate DB
+        run: |
+          cd mindsdb/migrations
+          env PYTHONPATH=../../ alembic upgrade head
+
+
   # Trigger private repo to deploy
   trigger_deploy:
     if: github.actor != 'mindsdbadmin'
+    needs: migrate
     runs-on: mdb-dev
     strategy:
       fail-fast: false

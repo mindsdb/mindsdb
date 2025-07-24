@@ -16,16 +16,6 @@ The A2A API runs as an optional subprocess of MindsDB, allowing you to:
 - MindsDB running
 - Python 3.10 or higher
 
-## Optional Dependencies
-
-The A2A API requires several optional dependencies that are not included in the main MindsDB installation. To install these dependencies, run:
-
-```bash
-pip install httpx>=0.27.0 httpx-sse>=0.4.0 starlette>=0.36.3 sse-starlette>=2.0.0 PyJWT>=2.8.0 jwcrypto>=1.5.4 python-dotenv>=1.0.1
-```
-
-These dependencies are optional since the A2A functionality is not mandatory for using MindsDB.
-
 ## Running A2A API
 
 The A2A API can be enabled when starting MindsDB by including it in the API list:
@@ -42,7 +32,7 @@ You can configure the A2A API using a config.json file. If not provided, default
 {
   "a2a": {
     "host": "0.0.0.0",
-    "port": 10002,
+    "port": 47338,
     "mindsdb_host": "localhost",
     "mindsdb_port": 47334,
     "project_name": "mindsdb",

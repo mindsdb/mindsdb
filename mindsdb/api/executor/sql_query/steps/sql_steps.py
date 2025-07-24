@@ -38,4 +38,4 @@ class DataStepCall(BaseStepCall):
     def call(self, step):
         # create resultset
         df = pd.DataFrame(step.data)
-        return ResultSet().from_df(df, database='', table_name='')
+        return ResultSet.from_df(df, database='', table_name='')

@@ -2,8 +2,7 @@ import pandas as pd
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb_sql_parser import ast
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
-from typing import List, Tuple
-import requests
+from typing import List
 
 
 class StoriesTable(APITable):
@@ -40,7 +39,6 @@ class StoriesTable(APITable):
 
         return df
 
-
     def get_columns(self):
         """Get the list of column names for the stories table.
         Returns:
@@ -63,15 +61,17 @@ class StoriesTable(APITable):
                 columns.append(target.value)
         df = df[columns]
         return df
-    
+
+
 class HNStoriesTable(StoriesTable):
     json_endpoint = "askstories.json"
     columns = ['id', 'time', 'title', 'text', 'score', 'descendants']
 
+
 class JobStoriesTable(StoriesTable):
     json_endpoint = "jobstories.json"
     columns = ['id', 'time', 'title', 'url', 'score', 'type']
-    
+
 
 class ShowStoriesTable(StoriesTable):
     json_endpoint = "showstories.json"
@@ -116,8 +116,7 @@ class CommentsTable(APITable):
             comments_df = comments_df.head(limit)
 
         return comments_df
-    
-    
+
     def get_columns(self) -> List[str]:
         """Get the list of column names for the comments table.
         Returns:

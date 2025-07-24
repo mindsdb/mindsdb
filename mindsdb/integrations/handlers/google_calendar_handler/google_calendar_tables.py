@@ -4,9 +4,6 @@ from mindsdb_sql_parser import ast
 from pandas import DataFrame
 
 from mindsdb.integrations.libs.api_handler import APITable
-from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response,
-)
 from mindsdb.integrations.utilities.date_utils import utc_date_str_to_timestamp_ms, parse_utc_date
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 
@@ -41,7 +38,6 @@ class GoogleCalendarEventsTable(APITable):
                 params[arg1] = arg2
             elif arg1 == 'q':
                 params[arg1] = arg2
-           
 
         # Get the order by from the query.
         if query.order_by is not None:
@@ -93,7 +89,7 @@ class GoogleCalendarEventsTable(APITable):
         event_data = {}
         timestamp_columns = {'start_time', 'end_time', 'created', 'updated'}
         regular_columns = {'summary', 'description', 'location', 'status', 'html_link',
-                            'creator', 'organizer', 'reminders', 'timeZone', 'calendar_id', 'attendees'}
+                           'creator', 'organizer', 'reminders', 'timeZone', 'calendar_id', 'attendees'}
 
         # TODO: check why query.columns is None
         for col, val in zip(query.columns, values):
@@ -103,7 +99,7 @@ class GoogleCalendarEventsTable(APITable):
                 event_data[col.name] = val
             else:
                 raise NotImplementedError
-            
+
         st = datetime.datetime.utcfromtimestamp(event_data['start_time'] / 1000).isoformat() + 'Z'
         et = datetime.datetime.utcfromtimestamp(event_data['end_time'] / 1000).isoformat() + 'Z'
 

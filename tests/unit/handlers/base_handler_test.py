@@ -12,6 +12,10 @@ class MockCursorContextManager(Mock):
     A mock class that simulates a cursor context manager for database clients.
     This class is used in the `BaseDatabaseHandlerTest` class to simulate the cursor object returned by the database client.
     """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.description = kwargs.get('description', [['a']])
+        self.data = kwargs.get('data', [[1]])
 
     def __enter__(self):
         return self
@@ -19,10 +23,8 @@ class MockCursorContextManager(Mock):
     def __exit__(self, *args):
         pass
 
-    description = [['a']]
-
     def fetchall(self):
-        return [[1]]
+        return self.data
 
 
 class BaseHandlerTestSetup(ABC):

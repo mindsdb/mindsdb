@@ -1,9 +1,9 @@
 import re
 from typing import Dict
 import pandas as pd
-from pyhive import (trino, sqlalchemy_trino)
+from pyhive import sqlalchemy_trino
 from mindsdb_sql_parser import parse_sql, ASTNode
-from trino.auth import KerberosAuthentication, BasicAuthentication
+from trino.auth import BasicAuthentication
 from trino.dbapi import connect
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.base import DatabaseHandler
@@ -13,9 +13,9 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from .trino_config_provider import TrinoConfigProvider
 
 logger = log.getLogger(__name__)
+
 
 class TrinoHandler(DatabaseHandler):
     """
@@ -59,24 +59,24 @@ class TrinoHandler(DatabaseHandler):
             return self.connection
 
         # option configuration
-        http_scheme='http'
-        auth=None
-        auth_config=None
-        password=None
+        http_scheme = 'http'
+        auth = None
+        auth_config = None
+        password = None
 
         if 'auth' in self.connection_data:
-            auth=self.connection_data['auth']
+            auth = self.connection_data['auth']
         if 'password' in self.connection_data:
-            password=self.connection_data['password']
+            password = self.connection_data['password']
         if 'http_scheme' in self.connection_data:
-           http_scheme=self.connection_data['http_scheme']
+            http_scheme = self.connection_data['http_scheme']
         if 'with' in self.connection_data:
-           self.with_clause=self.connection_data['with']
+            self.with_clause = self.connection_data['with']
 
-        if password and auth=='kerberos':
+        if password and auth == 'kerberos':
             raise Exception("Kerberos authorization doesn't support password.")
         elif password:
-            auth_config=BasicAuthentication(self.connection_data['user'], password)
+            auth_config = BasicAuthentication(self.connection_data['user'], password)
 
         if auth:
             conn = connect(
@@ -159,7 +159,7 @@ class TrinoHandler(DatabaseHandler):
         renderer = SqlalchemyRender(sqlalchemy_trino.TrinoDialect)
         query_str = renderer.get_string(query, with_failback=True)
         modified_query_str = re.sub(
-            "(?is)(CREATE.+TABLE.+\(.*\))",
+            r"(?is)(CREATE.+TABLE.+\(.*\))",
             f"\\1 {self.with_clause}",
             query_str
         )

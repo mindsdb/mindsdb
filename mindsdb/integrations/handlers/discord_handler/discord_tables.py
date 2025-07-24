@@ -76,7 +76,7 @@ class MessagesTable(APITable):
                     raise NotImplementedError(
                         f'Unsupported operator {op} for timestamp'
                     )
-            
+
             elif arg1 in ['author_id', 'author_username', 'author_global_name']:
                 if user_filter_flag:
                     raise NotImplementedError('Multiple user filters are not supported')
@@ -108,7 +108,7 @@ class MessagesTable(APITable):
 
         if not channel_filter_flag:
             raise NotImplementedError('Channel filter is required')
-        
+
         result = self.handler.call_discord_api(
             'get_messages', params=params, filters=filters
         )
@@ -183,7 +183,7 @@ class MessagesTable(APITable):
             try:
                 params = {'channel_id': message['channel_id'], 'text': message['text']}
                 self.handler.call_discord_api('send_message', params=params)
-                logger.info(f"Message sent to Discord channel successfully.")
+                logger.info("Message sent to Discord channel successfully.")
             except Exception as e:
                 logger.error(f"Error sending message to Discord channel: {e}")
                 raise e

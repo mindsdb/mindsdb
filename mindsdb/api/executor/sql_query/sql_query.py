@@ -252,7 +252,7 @@ class SQLQuery:
                 # return query info
                 # columns in upper case
                 rec = {k.upper(): v for k, v in self.run_query.get_info().items()}
-                self.fetched_data = ResultSet().from_df(pd.DataFrame([rec]))
+                self.fetched_data = ResultSet.from_df(pd.DataFrame([rec]))
                 self.columns_list = self.fetched_data.columns
                 return
             self.run_query.mark_as_run()

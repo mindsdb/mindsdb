@@ -86,3 +86,16 @@ SELECT * FROM salesforce_datasource (
 <Note>
 The above examples utilize `salesforce_datasource` as the datasource name, which is defined in the `CREATE DATABASE` command.
 </Note>
+
+## Salesforce Table Filtering
+
+We have implemented a filtering logic to exclude tables that are generally not useful for direct business queries, which fall into the following categories:
+
+* System and Auditing Tables: We exclude tables that track field history, record sharing rules, and data change events (e.g., objects ending in History, Share, or ChangeEvent). These are important for system administration but not for typical business analysis.
+* Configuration and Metadata: We remove tables that define the structure and configuration of Salesforce itself. This includes objects related to user permissions, internal rules, platform settings, and data definitions (e.g., FieldDefinition, PermissionSet, AssignmentRule).
+* Feature-Specific Technical Objects: Tables that support specific backend Salesforce features are excluded. This includes objects related to:
+   * AI and Einstein: (AI...)
+   * Developer Components: (Apex..., Aura...)
+   * Data Privacy and Consent: (objects ending in Consent or containing Policy)
+   * Chatter and Collaboration Feeds: (...Feed, Collaboration...)
+* Archived or Legacy Objects: Older objects that have been replaced by modern equivalents, such as ContentWorkspace, are also excluded to simplify the list.

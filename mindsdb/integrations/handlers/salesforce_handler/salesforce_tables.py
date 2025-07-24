@@ -1,3 +1,5 @@
+from datetime import datetime
+import re
 from typing import Dict, List, Text
 
 from mindsdb_sql_parser.ast import Select, Star, Identifier, BinaryOperation
@@ -5,8 +7,8 @@ import pandas as pd
 from salesforce_api.exceptions import RestRequestCouldNotBeUnderstoodError
 
 from mindsdb.integrations.libs.api_handler import MetaAPIResource
-from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
 from mindsdb.integrations.utilities.query_traversal import query_traversal
+from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions, FilterCondition, FilterOperator
 from mindsdb.utilities import log
 
 
@@ -54,9 +56,8 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
             # SOQL does not support column aliases. Remove column aliases.
             column_aliases = {}
             for column in query.targets:
-                if column.alias is not None:
-                    column_aliases[column.parts[-1]] = column.alias.parts[-1]
-                    column.alias = None
+                column_aliases[column.parts[-1]] = column.alias.parts[-1] if column.alias else column.parts[-1]
+                column.alias = None
 
             def adapt_to_soql(node, **kwargs):
                 """Replace conditions to supported in SOQL"""
@@ -74,15 +75,50 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
 
             # SOQL does not support backticks. Remove backticks.
             query_str = query_str.replace("`", "")
+
+            # SOQL expects dates and datetimes to be unquoted when used in the WHERE clause.
+            query_str = self._remove_quotes_around_datetime_literals(query_str)
+
             results = client.sobjects.query(query_str)
 
             for result in results:
                 del result["attributes"]
 
             df = pd.DataFrame(results)
-            df.rename(columns=column_aliases, inplace=True)
 
+            # If the DataFrame is empty, return an empty DataFrame with the expected columns.
+            if df.empty:
+                df = pd.DataFrame(columns=column_aliases.values())
+                return df
+
+            df.rename(columns=column_aliases, inplace=True)
             return df
+
+        def _is_datetime_literal(self, date_str: str) -> bool:
+            try:
+                datetime.fromisoformat(date_str)
+                return True
+            except ValueError:
+                if len(date_str) >= 5 and (date_str[-5] in ["+", "-"] and date_str[-2:].isdigit()):
+                    try:
+                        fixed = date_str[:-2] + ":" + date_str[-2:]
+                        datetime.fromisoformat(fixed)
+                        return True
+                    except ValueError:
+                        pass
+            return False
+
+        def _remove_quotes_around_datetime_literals(self, query: str) -> str:
+            # Regex: match single or double-quoted date/datetime strings.
+            pattern = r"(['\"])(\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[+-]\d{2}:?\d{2})?)?)\1"
+
+            def replacer(match):
+                _, value = match.groups()
+                if self._is_datetime_literal(value):
+                    return value
+                return match.group(0)
+
+            return re.sub(pattern, replacer, query)
 
         def add(self, item: Dict) -> None:
             """

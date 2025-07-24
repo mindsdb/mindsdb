@@ -7,6 +7,8 @@ Constants for Salesforce handler.
 def get_handler_instructions(integration_name):
     return f"""
 When generating queries for {integration_name}, please follow these guidelines:
+- NEVER write reserved keywords (e.g., case, group, order) without backticks. USE FROM {integration_name}.`case` instead of FROM {integration_name}.case.
+
 
 **FIELD SELECTION:**
 - Use exact field names from the data catalog
@@ -41,11 +43,6 @@ When generating queries for {integration_name}, please follow these guidelines:
   CORRECT: WHERE Id NOT IN (SELECT AccountId FROM Contact WHERE Email LIKE '%@example.com')
   INCORRECT: WHERE EXISTS (SELECT Id FROM Contact WHERE Email LIKE '%@example.com')
   INCORRECT: WHERE NOT EXISTS (SELECT Id FROM Contact WHERE Email LIKE '%@example.com')
-- NULL values: IS NULL and IS NOT NULL are not supported, use = NULL and != NULL instead
-  CORRECT: WHERE ParentId = null
-  CORRECT: WHERE Description != null
-  INCORRECT: WHERE ParentId IS NULL
-  INCORRECT: WHERE Description IS NOT NULL
 - Functions: ONLY the following functions are supported in WHERE clauses.
   - CALENDAR_MONTH(), CALENDAR_YEAR(), CALENDAR_QUARTER(), DAY_IN_MONTH(), DAY_IN_WEEK(), DAY_IN_YEAR(), HOUR_IN_DAY(), WEEK_IN_MONTH(), WEEK_IN_YEAR()
     CORRECT: WHERE CALENDAR_YEAR(CreatedDate) = 2025

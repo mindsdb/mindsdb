@@ -112,7 +112,7 @@ class KBTestBase:
         connection_args = connection_args.copy()
         engine = connection_args.pop("engine")
 
-        name = f"test_vectordb_{kb_name}"
+        name = f"test_vectordb_{engine}_{kb_name}"
 
         # TODO update database parameters. for now keep existing connection
         # try:

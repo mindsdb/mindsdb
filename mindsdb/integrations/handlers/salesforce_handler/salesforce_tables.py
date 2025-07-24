@@ -1,11 +1,12 @@
 from typing import Dict, List, Text
 
-from mindsdb_sql_parser.ast import Select, Star, Identifier
+from mindsdb_sql_parser.ast import Select, Star, Identifier, BinaryOperation
 import pandas as pd
 from salesforce_api.exceptions import RestRequestCouldNotBeUnderstoodError
 
 from mindsdb.integrations.libs.api_handler import MetaAPIResource
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
+from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.utilities import log
 
 
@@ -56,6 +57,17 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
                 if column.alias is not None:
                     column_aliases[column.parts[-1]] = column.alias.parts[-1]
                     column.alias = None
+
+            def adapt_to_soql(node, **kwargs):
+                """Replace conditions to supported in SOQL
+                """
+                if isinstance(node, BinaryOperation):
+                    if node.op == 'is':
+                        node.op = '='
+                    elif node.op == 'is not':
+                        node.op = '!='
+
+            query_traversal(query.where, adapt_to_soql)
 
             client = self.handler.connect()
 

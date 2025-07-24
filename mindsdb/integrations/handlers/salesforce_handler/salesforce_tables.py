@@ -59,13 +59,12 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
                     column.alias = None
 
             def adapt_to_soql(node, **kwargs):
-                """Replace conditions to supported in SOQL
-                """
+                """Replace conditions to supported in SOQL"""
                 if isinstance(node, BinaryOperation):
-                    if node.op == 'is':
-                        node.op = '='
-                    elif node.op == 'is not':
-                        node.op = '!='
+                    if node.op == "is":
+                        node.op = "="
+                    elif node.op == "is not":
+                        node.op = "!="
 
             query_traversal(query.where, adapt_to_soql)
 

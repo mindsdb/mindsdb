@@ -16,7 +16,7 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 
 from mindsdb.integrations.libs.api_handler import APIResource, APIHandler
@@ -26,16 +26,17 @@ logger = log.getLogger(__name__)
 
 
 class ListFilesTable(APIResource):
-
-    def list(self,
-             targets: List[str] = None,
-             conditions: List[FilterCondition] = None,
-             limit: int = None,
-             *args, **kwargs) -> pd.DataFrame:
-
+    def list(
+        self,
+        targets: List[str] = None,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        *args,
+        **kwargs,
+    ) -> pd.DataFrame:
         buckets = None
         for condition in conditions:
-            if condition.column == 'bucket':
+            if condition.column == "bucket":
                 if condition.op == FilterOperator.IN:
                     buckets = condition.value
                 elif condition.op == FilterOperator.EQUAL:
@@ -44,13 +45,13 @@ class ListFilesTable(APIResource):
 
         data = []
         for obj in self.handler.get_objects(limit=limit, buckets=buckets):
-            path = obj['Key']
-            path = path.replace('`', '')
+            path = obj["Key"]
+            path = path.replace("`", "")
             item = {
-                'path': path,
-                'bucket': obj['Bucket'],
-                'name': path[path.rfind('/') + 1:],
-                'extension': path[path.rfind('.') + 1:]
+                "path": path,
+                "bucket": obj["Bucket"],
+                "name": path[path.rfind("/") + 1 :],
+                "extension": path[path.rfind(".") + 1 :],
             }
 
             data.append(item)
@@ -62,8 +63,9 @@ class ListFilesTable(APIResource):
 
 
 class FileTable(APIResource):
-
-    def list(self, targets: List[str] = None, table_name=None, *args, **kwargs) -> pd.DataFrame:
+    def list(
+        self, targets: List[str] = None, table_name=None, *args, **kwargs
+    ) -> pd.DataFrame:
         return self.handler.read_as_table(table_name)
 
     def add(self, data, table_name=None):
@@ -76,9 +78,9 @@ class S3Handler(APIHandler):
     This handler handles connection and execution of the SQL statements on AWS S3.
     """
 
-    name = 's3'
+    name = "s3"
     # TODO: Can other file formats be supported?
-    supported_file_formats = ['csv', 'tsv', 'json', 'parquet']
+    supported_file_formats = ["csv", "tsv", "json", "parquet"]
 
     def __init__(self, name: Text, connection_data: Optional[Dict], **kwargs):
         """
@@ -96,7 +98,7 @@ class S3Handler(APIHandler):
         self.connection = None
         self.is_connected = False
         self.thread_safe = True
-        self.bucket = self.connection_data.get('bucket')
+        self.bucket = self.connection_data.get("bucket")
         self._regions = {}
 
         self._files_table = ListFilesTable(self)
@@ -119,8 +121,13 @@ class S3Handler(APIHandler):
             return self.connection
 
         # Validate mandatory parameters.
-        if not all(key in self.connection_data for key in ['aws_access_key_id', 'aws_secret_access_key']):
-            raise ValueError('Required parameters (aws_access_key_id, aws_secret_access_key) must be provided.')
+        if not all(
+            key in self.connection_data
+            for key in ["aws_access_key_id", "aws_secret_access_key"]
+        ):
+            raise ValueError(
+                "Required parameters (aws_access_key_id, aws_secret_access_key) must be provided."
+            )
 
         # Connect to S3 and configure mandatory credentials.
         self.connection = self._connect_boto3()
@@ -142,29 +149,44 @@ class S3Handler(APIHandler):
         try:
             duckdb_conn.execute("INSTALL httpfs")
         except HTTPException as http_error:
-            logger.debug(f"Error installing the httpfs extension, {http_error}! Forcing installation.")
+            logger.debug(
+                f"Error installing the httpfs extension, {http_error}! Forcing installation."
+            )
             duckdb_conn.execute("FORCE INSTALL httpfs")
 
         duckdb_conn.execute("LOAD httpfs")
 
         # Configure mandatory credentials.
-        duckdb_conn.execute(f"SET s3_access_key_id='{self.connection_data['aws_access_key_id']}'")
-        duckdb_conn.execute(f"SET s3_secret_access_key='{self.connection_data['aws_secret_access_key']}'")
+        duckdb_conn.execute(
+            f"SET s3_access_key_id='{self.connection_data['aws_access_key_id']}'"
+        )
+        duckdb_conn.execute(
+            f"SET s3_secret_access_key='{self.connection_data['aws_secret_access_key']}'"
+        )
 
         # Configure optional parameters.
-        if 'aws_session_token' in self.connection_data:
-            duckdb_conn.execute(f"SET s3_session_token='{self.connection_data['aws_session_token']}'")
+        if "aws_session_token" in self.connection_data:
+            duckdb_conn.execute(
+                f"SET s3_session_token='{self.connection_data['aws_session_token']}'"
+            )
 
         # detect region for bucket
         if bucket not in self._regions:
             client = self.connect()
-            self._regions[bucket] = client.get_bucket_location(Bucket=bucket)['LocationConstraint']
+            self._regions[bucket] = client.get_bucket_location(Bucket=bucket)[
+                "LocationConstraint"
+            ]
 
         region = self._regions[bucket]
         duckdb_conn.execute(f"SET s3_region='{region}'")
 
-        if 'endpoint_url' in self.connection_data:
-            endpoint = self.connection_data['endpoint_url'].replace('https://', '').replace('http://', '').rstrip('/')
+        if "endpoint_url" in self.connection_data:
+            endpoint = (
+                self.connection_data["endpoint_url"]
+                .replace("https://", "")
+                .replace("http://", "")
+                .rstrip("/")
+            )
             duckdb_conn.execute(f"SET s3_endpoint='{endpoint}'")
 
         try:
@@ -181,19 +203,19 @@ class S3Handler(APIHandler):
         """
         # Configure mandatory credentials.
         config = {
-            'aws_access_key_id': self.connection_data['aws_access_key_id'],
-            'aws_secret_access_key': self.connection_data['aws_secret_access_key']
+            "aws_access_key_id": self.connection_data["aws_access_key_id"],
+            "aws_secret_access_key": self.connection_data["aws_secret_access_key"],
         }
 
-        # Configure endpoint_url 
-        if 'endpoint_url' in self.connection_data:
-            config['endpoint_url'] = self.connection_data['endpoint_url']
+        # Configure endpoint_url
+        if "endpoint_url" in self.connection_data:
+            config["endpoint_url"] = self.connection_data["endpoint_url"]
 
         # Configure optional parameters.
-        if 'aws_session_token' in self.connection_data:
-            config['aws_session_token'] = self.connection_data['aws_session_token']
+        if "aws_session_token" in self.connection_data:
+            config["aws_session_token"] = self.connection_data["aws_session_token"]
 
-        client = boto3.client('s3', **config)
+        client = boto3.client("s3", **config)
 
         # check connection
         if self.bucket is not None:
@@ -227,7 +249,7 @@ class S3Handler(APIHandler):
             self._connect_boto3()
             response.success = True
         except (ClientError, ValueError) as e:
-            logger.error(f'Error connecting to S3 with the given credentials, {e}!')
+            logger.error(f"Error connecting to S3 with the given credentials, {e}!")
             response.error_message = str(e)
 
         if response.success and need_to_close:
@@ -243,8 +265,8 @@ class S3Handler(APIHandler):
             return self.bucket, key
 
         # get bucket from first part of the key
-        ar = key.split('/')
-        return ar[0], '/'.join(ar[1:])
+        ar = key.split("/")
+        return ar[0], "/".join(ar[1:])
 
     def read_as_table(self, key) -> pd.DataFrame:
         """
@@ -253,7 +275,6 @@ class S3Handler(APIHandler):
         bucket, key = self._get_bucket(key)
 
         with self._connect_duckdb(bucket) as connection:
-
             cursor = connection.execute(f"SELECT * FROM 's3://{bucket}/{key}'")
 
             return cursor.fetchdf()
@@ -267,7 +288,7 @@ class S3Handler(APIHandler):
         client = self.connect()
 
         obj = client.get_object(Bucket=bucket, Key=key)
-        content = obj['Body'].read()
+        content = obj["Body"].read()
         return content
 
     def add_data_to_table(self, key, df) -> None:
@@ -285,12 +306,14 @@ class S3Handler(APIHandler):
             client = self.connect()
             client.head_object(Bucket=bucket, Key=key)
         except ClientError as e:
-            logger.error(f'Error querying the file {key} in the bucket {bucket}, {e}!')
+            logger.error(f"Error querying the file {key} in the bucket {bucket}, {e}!")
             raise e
 
         with self._connect_duckdb(bucket) as connection:
             # copy
-            connection.execute(f"CREATE TABLE tmp_table AS SELECT * FROM 's3://{bucket}/{key}'")
+            connection.execute(
+                f"CREATE TABLE tmp_table AS SELECT * FROM 's3://{bucket}/{key}'"
+            )
 
             # insert
             connection.execute("INSERT INTO tmp_table BY NAME SELECT * FROM df")
@@ -317,31 +340,31 @@ class S3Handler(APIHandler):
         if isinstance(query, Select):
             table_name = query.from_table.parts[-1]
 
-            if table_name == 'files':
+            if table_name == "files":
                 table = self._files_table
                 df = table.select(query)
 
                 # add content
                 has_content = False
                 for target in query.targets:
-                    if isinstance(target, Identifier) and target.parts[-1].lower() == 'content':
+                    if (
+                        isinstance(target, Identifier)
+                        and target.parts[-1].lower() == "content"
+                    ):
                         has_content = True
                         break
                 if has_content:
-                    df['content'] = df['path'].apply(self._read_as_content)
+                    df["content"] = df["path"].apply(self._read_as_content)
             else:
-                extension = table_name.split('.')[-1]
+                extension = table_name.split(".")[-1]
                 if extension not in self.supported_file_formats:
-                    logger.error(f'The file format {extension} is not supported!')
-                    raise ValueError(f'The file format {extension} is not supported!')
+                    logger.error(f"The file format {extension} is not supported!")
+                    raise ValueError(f"The file format {extension} is not supported!")
 
                 table = FileTable(self, table_name=table_name)
                 df = table.select(query)
 
-            response = Response(
-                RESPONSE_TYPE.TABLE,
-                data_frame=df
-            )
+            response = Response(RESPONSE_TYPE.TABLE, data_frame=df)
         elif isinstance(query, Insert):
             table_name = query.table.parts[-1]
             table = FileTable(self, table_name=table_name)
@@ -372,7 +395,7 @@ class S3Handler(APIHandler):
             scan_buckets = [self.bucket]
         else:
             add_bucket_to_name = True
-            scan_buckets = [b['Name'] for b in client.list_buckets()['Buckets']]
+            scan_buckets = [b["Name"] for b in client.list_buckets()["Buckets"]]
 
         objects = []
         for bucket in scan_buckets:
@@ -380,17 +403,17 @@ class S3Handler(APIHandler):
                 continue
 
             resp = client.list_objects_v2(Bucket=bucket)
-            if 'Contents' not in resp:
+            if "Contents" not in resp:
                 continue
 
-            for obj in resp['Contents']:
-                if obj.get('StorageClass', 'STANDARD') != 'STANDARD':
+            for obj in resp["Contents"]:
+                if obj.get("StorageClass", "STANDARD") != "STANDARD":
                     continue
 
-                obj['Bucket'] = bucket
+                obj["Bucket"] = bucket
                 if add_bucket_to_name:
                     # bucket is part of the name
-                    obj['Key'] = f'{bucket}/{obj["Key"]}'
+                    obj["Key"] = f"{bucket}/{obj['Key']}"
                 objects.append(obj)
             if limit is not None and len(objects) >= limit:
                 break
@@ -412,18 +435,15 @@ class S3Handler(APIHandler):
         supported_names = [
             f"`{obj['Key']}`"
             for obj in self.get_objects()
-            if obj['Key'].split('.')[-1] in self.supported_file_formats
+            if obj["Key"].split(".")[-1] in self.supported_file_formats
         ]
 
         # virtual table with list of files
-        supported_names.insert(0, 'files')
+        supported_names.insert(0, "files")
 
         response = Response(
             RESPONSE_TYPE.TABLE,
-            data_frame=pd.DataFrame(
-                supported_names,
-                columns=['table_name']
-            )
+            data_frame=pd.DataFrame(supported_names, columns=["table_name"]),
         )
 
         return response
@@ -444,7 +464,7 @@ class S3Handler(APIHandler):
         query = Select(
             targets=[Star()],
             from_table=Identifier(parts=[table_name]),
-            limit=Constant(1)
+            limit=Constant(1),
         )
 
         result = self.query(query)
@@ -453,10 +473,13 @@ class S3Handler(APIHandler):
             RESPONSE_TYPE.TABLE,
             data_frame=pd.DataFrame(
                 {
-                    'column_name': result.data_frame.columns,
-                    'data_type': [data_type if data_type != 'object' else 'string' for data_type in result.data_frame.dtypes]
+                    "column_name": result.data_frame.columns,
+                    "data_type": [
+                        data_type if data_type != "object" else "string"
+                        for data_type in result.data_frame.dtypes
+                    ],
                 }
-            )
+            ),
         )
 
         return response

@@ -10,7 +10,7 @@ on:
     types:
       - closed
     branches:
-      - 'releases
+      - 'main'
 
 jobs:
   

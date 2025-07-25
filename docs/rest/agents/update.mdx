@@ -103,19 +103,15 @@ curl --request PUT \
   "created_at": "2025-07-09 12:58:24.868202",
   "updated_at": "2025-07-09 12:58:24.868199",
   "data": {
-    "knowledge_bases": [
-      "mindsdb.kb_mindsdb_docs"
-    ],
-    "tables": [
-      "mindsdb.mindsdb_docs"
-    ]
+        "knowledge_bases": ["my_project.my_kb"],
+        "tables": ["my_data_source.my_table"]
   },
   "model": {
     "provider": "openai",
     "model_name": "gpt-4.1",
     "api_key": "sk-xxx"
   },
-  "prompt_template": "mindsdb.kb_mindsdb_docs stores documentation of MindsDB, mindsdb.mindsdb_docs stores documentation of MindsDB"
+  "prompt_template": "my_project.my_kb stores documentation of MindsDB, my_data_source.my_table stores documentation of MindsDB"
 }
 ```
 

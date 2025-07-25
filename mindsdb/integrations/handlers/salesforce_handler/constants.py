@@ -195,14 +195,5 @@ def get_soql_instructions(integration_name):
 - Multi-select picklist: SELECT Id, Name FROM Account WHERE Services__c INCLUDES ('Consulting;Support')
 - Sorting and limiting: SELECT Id, Name FROM Account ORDER BY Name ASC LIMIT 50
 
-***EXECUTION INSTRUCTIONS. IMPORTANT!***
-After generating the core SOQL (and nothing else), always make sure you wrap it exactly as:
-
-    SELECT * 
-      FROM {integration_name}(
-        /* your generated SOQL goes here, without a trailing semicolon */
-      )
-
-Return only that wrapper call.
 
 """

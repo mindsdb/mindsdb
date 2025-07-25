@@ -59,6 +59,14 @@ Timestamp indicating when the agent was last updated.
 
 <ResponseField body='data' type='string'>
 Stores data connected to an agent, including `tables` and `knowledge_bases`.
+
+In order to provide all tables from a database or all knowledge bases from a project, use the `*` wildcard like this:
+```shell
+    "data": {
+         "knowledge_bases": ["my_project.*"],
+         "tables": ["my_data_source.*"]
+    }
+```
 </ResponseField>
 
 <ResponseField body='model' type='string'>
@@ -84,10 +92,10 @@ curl --request POST \
         "api_key": "sk-xxx"
     },
     "data": {
-         "knowledge_bases": ["mindsdb.kb_mindsdb_docs"],
-         "tables": ["mindsdb.mindsdb_docs"]
+         "knowledge_bases": ["my_project.my_kb"],
+         "tables": ["my_data_source.my_table"]
     },
-    "prompt_template": "mindsdb.kb_mindsdb_docs stores documentation of MindsDB, mindsdb.mindsdb_docs stores documentation of MindsDB"
+    "prompt_template": "my_project.my_kb stores documentation of MindsDB, my_data_source.my_table stores documentation of MindsDB"
   }
 }'
 ```
@@ -105,10 +113,10 @@ curl --request POST \
   "updated_at": "2025-07-09 12:58:24.868199",
   "data": {
     "knowledge_bases": [
-      "mindsdb.kb_mindsdb_docs"
+      "my_project.my_kb"
     ],
     "tables": [
-      "mindsdb.mindsdb_docs"
+      "my_data_source.my_table"
     ]
   },
   "model": {
@@ -116,7 +124,7 @@ curl --request POST \
     "model_name": "gpt-4o",
     "api_key": "sk-xxx"
   },
-  "prompt_template": "mindsdb.kb_mindsdb_docs stores documentation of MindsDB, mindsdb.mindsdb_docs stores documentation of MindsDB"
+  "prompt_template": "my_project.my_kb stores documentation of MindsDB, my_data_source.my_table stores documentation of MindsDB"
 }
 ```
 

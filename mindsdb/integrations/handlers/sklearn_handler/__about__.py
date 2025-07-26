@@ -1,0 +1,9 @@
+__title__ = 'MindsDB Sklearn handler'
+__package_name__ = 'mindsdb_sklearn_handler'
+__version__ = '0.1.0'
+__description__ = "MindsDB handler for Scikit-learn-based regression and classification"
+__author__ = 'Abhinav Singh'
+__github__ = 'https://github.com/mindsdb/mindsdb'
+__pypi__ = 'https://pypi.org/project/mindsdb/'
+__license__ = 'MIT'
+__copyright__ = 'Copyright 2025 - mindsdb'

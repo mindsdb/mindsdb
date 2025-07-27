@@ -1,5 +1,5 @@
 from typing import Dict, Optional
-import torch 
+import torch
 import pandas as pd
 import transformers
 from huggingface_hub import HfApi
@@ -14,17 +14,15 @@ logger = log.getLogger(__name__)
 class HuggingFaceHandler(BaseMLEngine):
     name = "huggingface"
 
-
     @staticmethod
     def is_gpu_available():
         return torch.cuda.is_available()
-    
+
     def get_device(self):
         return 0 if self.is_gpu_available() else -1
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
-
         if "using" in args:
             args = args["using"]
 
@@ -50,16 +48,14 @@ class HuggingFaceHandler(BaseMLEngine):
 
         if metadata.pipeline_tag not in supported_tasks:
             raise Exception(
-                f'Not supported task for model: {metadata.pipeline_tag}.\
-             Should be one of {", ".join(supported_tasks)}'
+                f"Not supported task for model: {metadata.pipeline_tag}.\
+             Should be one of {', '.join(supported_tasks)}"
             )
 
         if "task" not in args:
             args["task"] = metadata.pipeline_tag
         elif args["task"] != metadata.pipeline_tag:
-            raise Exception(
-                f'Task mismatch for model: {args["task"]}!={metadata.pipeline_tag}'
-            )
+            raise Exception(f"Task mismatch for model: {args['task']}!={metadata.pipeline_tag}")
 
         input_keys = list(args.keys())
 
@@ -74,9 +70,7 @@ class HuggingFaceHandler(BaseMLEngine):
         if args["task"] == "zero-shot-classification":
             key = "candidate_labels"
             if key not in args:
-                raise Exception(
-                    '"candidate_labels" is required for zero-shot-classification'
-                )
+                raise Exception('"candidate_labels" is required for zero-shot-classification')
             input_keys.remove(key)
 
         if args["task"] == "translation":
@@ -99,7 +93,7 @@ class HuggingFaceHandler(BaseMLEngine):
                 input_keys.remove(key)
 
         if len(input_keys) > 0:
-            raise Exception(f'Not expected parameters: {", ".join(input_keys)}')
+            raise Exception(f"Not expected parameters: {', '.join(input_keys)}")
 
     def create(self, target, args=None, **kwargs):
         # TODO change BaseMLEngine api?
@@ -112,9 +106,7 @@ class HuggingFaceHandler(BaseMLEngine):
         hf_model_storage_path = self.engine_storage.folder_get(model_name)  # real
 
         if args["task"] == "translation":
-            args[
-                "task_proper"
-            ] = f"translation_{args['lang_input']}_to_{args['lang_output']}"
+            args["task_proper"] = f"translation_{args['lang_input']}_to_{args['lang_output']}"
         else:
             args["task_proper"] = args["task"]
 
@@ -125,14 +117,15 @@ class HuggingFaceHandler(BaseMLEngine):
         ####
         # Check if pipeline has already been downloaded
         try:
-            pipeline = transformers.pipeline(task=args['task_proper'], model=hf_model_storage_path,
-                                             tokenizer=hf_model_storage_path, device=device)
-            logger.debug('Model already downloaded!')
+            pipeline = transformers.pipeline(
+                task=args["task_proper"], model=hf_model_storage_path, tokenizer=hf_model_storage_path, device=device
+            )
+            logger.debug("Model already downloaded!")
         # Otherwise download it
         except (ValueError, OSError):
             try:
                 logger.debug(f"Downloading {model_name}...")
-                pipeline = transformers.pipeline(task=args['task_proper'], model=model_name, device=device)
+                pipeline = transformers.pipeline(task=args["task_proper"], model=model_name, device=device)
 
                 pipeline.save_pretrained(hf_model_storage_path)
 
@@ -150,7 +143,7 @@ class HuggingFaceHandler(BaseMLEngine):
         elif "max_length" in pipeline.model.config.to_dict().keys():
             args["max_length"] = pipeline.model.config.max_length
         else:
-            logger.debug('No max_length found!')
+            logger.debug("No max_length found!")
 
         labels_default = pipeline.model.config.id2label
         labels_map = {}
@@ -173,9 +166,7 @@ class HuggingFaceHandler(BaseMLEngine):
     def predict_text_classification(self, pipeline, batch, args):
         top_k = args.get("top_k", 1000)
 
-        result = pipeline(
-            batch, top_k=top_k, truncation=True, max_length=args["max_length"]
-        )[0]
+        result = pipeline(batch, top_k=top_k, truncation=True, max_length=args["max_length"])[0]
 
         final = {}
         explain = {}
@@ -256,7 +247,6 @@ class HuggingFaceHandler(BaseMLEngine):
         return final
 
     def predict(self, df, args=None):
-
         fnc_list = {
             "text-classification": self.predict_text_classification,
             "text-generation": self.predict_text_generation,
@@ -267,7 +257,7 @@ class HuggingFaceHandler(BaseMLEngine):
         }
 
         # params passed at  prediction time like batch_size and max_length
-        pred_args= args.get('predict_params', {})
+        pred_args = args.get("predict_params", {})
 
         ###### get stuff from model folder
         args = self.model_storage.json_get("args")
@@ -283,25 +273,15 @@ class HuggingFaceHandler(BaseMLEngine):
 
         try:
             # load from model storage (finetuned models will use this)
-            hf_model_storage_path = self.model_storage.folder_get(
-                args["model_name"]
-            )
+            hf_model_storage_path = self.model_storage.folder_get(args["model_name"])
             pipeline = transformers.pipeline(
-                task=args["task_proper"],
-                model=hf_model_storage_path,
-                tokenizer=hf_model_storage_path,
-                device=device
+                task=args["task_proper"], model=hf_model_storage_path, tokenizer=hf_model_storage_path, device=device
             )
         except (ValueError, OSError):
             # load from engine storage (i.e. 'common' models)
-            hf_model_storage_path = self.engine_storage.folder_get(
-                args["model_name"]
-            )
+            hf_model_storage_path = self.engine_storage.folder_get(args["model_name"])
             pipeline = transformers.pipeline(
-                task=args["task_proper"],
-                model=hf_model_storage_path,
-                tokenizer=hf_model_storage_path,
-                device=device
+                task=args["task_proper"], model=hf_model_storage_path, tokenizer=hf_model_storage_path, device=device
             )
 
         input_column = args["input_column"]
@@ -325,7 +305,7 @@ class HuggingFaceHandler(BaseMLEngine):
                 if msg == "":
                     msg = e.__class__.__name__
                 results.append({"error": msg})
-        
+
         pred_df = pd.DataFrame(results)
 
         return pred_df
@@ -343,9 +323,7 @@ class HuggingFaceHandler(BaseMLEngine):
             tables = ["args", "metadata"]
             return pd.DataFrame(tables, columns=["tables"])
 
-    def finetune(
-        self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None
-    ) -> None:
+    def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         finetune_args = args if args else {}
         args = self.base_model_storage.json_get("args")
         args.update(finetune_args)
@@ -378,4 +356,3 @@ class HuggingFaceHandler(BaseMLEngine):
             err_str = f"Finetune failed with error: {str(e)}"
             logger.debug(err_str)
             raise Exception(err_str)
-

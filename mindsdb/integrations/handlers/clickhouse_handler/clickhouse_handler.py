@@ -56,10 +56,16 @@ class ClickHouseHandler(DatabaseHandler):
         user = quote(self.connection_data['user'])
         password = quote(self.connection_data['password'])
         database = quote(self.connection_data['database'])
+        verify = self.connection_data.get('verify', False)
         url = f'{protocol}://{user}:{password}@{host}:{port}/{database}'
         # This is not redundunt. Check https://clickhouse-sqlalchemy.readthedocs.io/en/latest/connection.html#http
         if self.protocol == 'https':
             url = url + "?protocol=https"
+        if verify == False:
+            url = url + "&verify=false"
+        elif verify == True:
+            url = url + "&verify=true"
+        print(url)
         try:
             engine = create_engine(url)
             connection = engine.raw_connection()

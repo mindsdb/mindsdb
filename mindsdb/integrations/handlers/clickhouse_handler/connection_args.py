@@ -40,6 +40,12 @@ connection_args = OrderedDict(
         'required': True,
         'label': 'Password',
         'secret': True
+    },
+    verify={
+        'type': ARG_TYPE.BOOL,
+        'description': 'Controls certificate verification in https protocol. Possible choices: true/false. Default is true.',
+        'required': True,
+        'label': 'SSL Verification',
     }
 )
 
@@ -49,5 +55,6 @@ connection_args_example = OrderedDict(
     port=9000,
     user='root',
     password='password',
-    database='database'
+    database='database',
+    verify=True
 )

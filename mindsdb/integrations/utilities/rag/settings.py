@@ -8,7 +8,7 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
 from langchain_core.vectorstores import VectorStore
 from langchain_core.stores import BaseStore
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from langchain_text_splitters import TextSplitter
 
 DEFAULT_COLLECTION_NAME = "default_collection"
@@ -374,6 +374,7 @@ class LLMConfig(BaseModel):
         description="LLM model provider to use for generation",
     )
     params: Dict[str, Any] = Field(default_factory=dict)
+    model_config = ConfigDict(protected_namespaces=())
 
 
 class MultiVectorRetrieverMode(Enum):

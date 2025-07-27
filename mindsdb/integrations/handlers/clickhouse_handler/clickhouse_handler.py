@@ -61,11 +61,14 @@ class ClickHouseHandler(DatabaseHandler):
         # This is not redundunt. Check https://clickhouse-sqlalchemy.readthedocs.io/en/latest/connection.html#http
         if self.protocol == 'https':
             url = url + "?protocol=https"
+        
+        # Add SSL verification control
         if verify == False:
             url = url + "&verify=false"
-        elif verify == True:
+        if verify == True:
             url = url + "&verify=true"
-        print(url)
+        logger.debug(f'Connecting to ClickHouse with URL: {url}')
+        
         try:
             engine = create_engine(url)
             connection = engine.raw_connection()

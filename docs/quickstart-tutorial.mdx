@@ -65,17 +65,17 @@ FROM my_web.crawler
 WHERE url = 'https://docs.mindsdb.com/'
 ```
 
-Now we save this data into a table. Note that you can create a table in the default `files` database that comes with MindsDB.
+Now we save this data into a view which is saved in the default `mindsdb` project.
 
 ```sql
-CREATE TABLE files.mindsdb_docs (
+CREATE VIEW mindsdb_docs (
     SELECT url, text_content
     FROM my_web.crawler
     WHERE url = 'https://docs.mindsdb.com/'
 );
 
 SELECT *
-FROM files.mindsdb_docs;
+FROM mindsdb.mindsdb_docs;
 ```
 
 ## Step 2. Unify
@@ -117,7 +117,7 @@ INSERT INTO my_kb
 
 INSERT INTO my_kb
     SELECT text_content AS content
-    FROM files.mindsdb_docs;
+    FROM mindsdb.mindsdb_docs;
 ```
 
 [Query the knowledge base](/mindsdb_sql/knowledge_bases/query) to search your data.
@@ -136,7 +136,7 @@ WHERE content = 'rental price lower than 2000';
 In order to keep the knowledge base up-to-date with your data, use [jobs](/mindsdb_sql/sql/create/jobs) to automate data inserts every time your data is modified.
 
 ```sql
-CREATE JOB retrain_model_and_save_predictions (
+CREATE JOB update_kb (
 
   INSERT INTO my_kb
       SELECT

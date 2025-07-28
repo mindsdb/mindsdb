@@ -118,7 +118,8 @@ class EvaluateBase:
 
             dn, table_name = self._get_dn_table(query.from_table)
             query.from_table = table_name
-            query.limit = Constant(self.DEFAULT_SAMPLE_SIZE)
+            if query.limit is None:
+                query.limit = Constant(self.DEFAULT_SAMPLE_SIZE)
 
             response = dn.query(query=query, session=self.session)
             df = response.data_frame

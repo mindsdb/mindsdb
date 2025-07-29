@@ -721,7 +721,7 @@ class SnowflakeHandler(MetaDatabaseHandler):
             str: A string containing information about the database handler's design and implementation.
         """
         return (
-            "This handler DOES NOT support double quotes (\"column_name\") for column identifiers. "
+            'This handler DOES NOT support double quotes ("column_name") for column identifiers. '
             "If case sensitivity is required, use backticks (e.g., `Column_Name`) instead.\n\n"
             "Only use backticks when:\n"
             "- The column name is all lowercase (e.g., `columnname`)\n"
@@ -730,4 +730,3 @@ class SnowflakeHandler(MetaDatabaseHandler):
             "DO NOT use backticks if the column name is entirely uppercase (e.g., COLUMN_NAME) unless it contains special characters or is a reserved keyword.\n\n"
             "This is because Snowflake automatically uppercases unquoted identifiers and treats them as case-insensitive."
         )
-

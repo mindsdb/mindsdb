@@ -60,6 +60,7 @@ class KnowledgeBaseInputParams(BaseModel):
     is_sparse: bool = False
     vector_size: int | None = None
     reranking_model: Dict[Text, Any] | None = None
+    preprocessing: Dict[Text, Any] | None = None
 
     class Config:
         extra = "forbid"
@@ -244,9 +245,9 @@ class KnowledgeBaseTable:
         keyword_search_cols_and_values = []
         query_text = None
         relevance_threshold = None
-        reranking_enabled_flag = True
         hybrid_search_enabled_flag = False
         query_conditions = db_handler.extract_conditions(query.where)
+        hybrid_search_alpha = None  # Default to None, meaning no alpha weighted blending
         if query_conditions is not None:
             for item in query_conditions:
                 if item.column == "relevance" and item.op.value == FilterOperator.GREATER_THAN_OR_EQUAL.value:
@@ -261,10 +262,8 @@ class KnowledgeBaseTable:
                         logger.error(error_msg)
                         raise ValueError(error_msg)
                 elif item.column == "reranking":
-                    reranking_enabled_flag = item.value
-                    # cast to boolean
-                    if isinstance(reranking_enabled_flag, str):
-                        reranking_enabled_flag = reranking_enabled_flag.lower() not in ("false")
+                    if item.value is False or (isinstance(item.value, str) and item.value.lower() == "false"):
+                        disable_reranking = True
                 elif item.column == "hybrid_search":
                     hybrid_search_enabled_flag = item.value
                     # cast to boolean
@@ -272,6 +271,14 @@ class KnowledgeBaseTable:
                         hybrid_search_enabled_flag = hybrid_search_enabled_flag.lower() not in ("false")
                     if item.value is False or (isinstance(item.value, str) and item.value.lower() == "false"):
                         disable_reranking = True
+                elif item.column == "hybrid_search_alpha":
+                    # validate item.value is a float
+                    if not isinstance(item.value, (float, int)):
+                        raise ValueError(f"Invalid hybrid_search_alpha value: {item.value}. Must be a float or int.")
+                    # validate hybrid search alpha is between 0 and 1
+                    if not (0 <= item.value <= 1):
+                        raise ValueError(f"Invalid hybrid_search_alpha value: {item.value}. Must be between 0 and 1.")
+                    hybrid_search_alpha = item.value
                 elif item.column == "relevance" and item.op.value != FilterOperator.GREATER_THAN_OR_EQUAL.value:
                     raise ValueError(
                         f"Invalid operator for relevance: {item.op.value}. Only GREATER_THAN_OR_EQUAL is allowed."
@@ -345,7 +352,15 @@ class KnowledgeBaseTable:
                         f"Keyword search returned different columns: {df_keyword_select.columns} "
                         f"than expected: {df.columns}"
                     )
+                if hybrid_search_alpha:
+                    df_keyword_select[TableField.DISTANCE.value] = (
+                        hybrid_search_alpha * df_keyword_select[TableField.DISTANCE.value]
+                    )
+                    df[TableField.DISTANCE.value] = (1 - hybrid_search_alpha) * df[TableField.DISTANCE.value]
                 df = pd.concat([df, df_keyword_select], ignore_index=True)
+                # sort by distance if distance column exists
+                if TableField.DISTANCE.value in df.columns:
+                    df = df.sort_values(by=TableField.DISTANCE.value, ascending=True)
                 # if chunk_id column exists remove duplicates based on chunk_id
                 if "chunk_id" in df.columns:
                     df = df.drop_duplicates(subset=["chunk_id"])
@@ -518,6 +533,9 @@ class KnowledgeBaseTable:
                     content.value = processed_chunks[0].content
 
             query.update_columns[emb_col] = Constant(self._content_to_embeddings(content))
+
+        if "metadata" not in query.update_columns:
+            query.update_columns["metadata"] = Constant({})
 
         # TODO search content in where clause?
 
@@ -1010,6 +1028,9 @@ class KnowledgeBaseController:
         :param is_sparse: Whether to use sparse vectors for embeddings
         :param vector_size: Optional size specification for vectors, required when is_sparse=True
         """
+        if not name.islower():
+            raise ValueError(f"The name must be in lower case: {name}")
+
         # fill variables
         params = variables_controller.fill_parameters(params)
 

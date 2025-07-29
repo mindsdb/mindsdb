@@ -1239,6 +1239,44 @@ class TestExecutionTools:
         df = pd.DataFrame(d)
         query_df(df, "select * from models")
 
+    def test_query_df_functions(self):
+        tests = [{
+            "query": "select to_base64('test') as result from df",
+            "result": "dGVzdA=="
+        }, {
+            "query": "select char_length('海豚') as result from df",
+            "result": 2
+        }, {
+            "query": "select char(77, 78, 79) as result from df",
+            "result": "MNO"
+        }, {
+            "query": "select locate('no', 'yes') as result from df",
+            "result": 0
+        }, {
+            "query": "select locate('no', 'yesnoyes') as result from df",
+            "result": 4
+        }, {
+            "query": "select format(1234567.89, 0) as result from df",
+            "result": "1,234,568"
+        }, {
+            "query": "select format(1234567.89, 3) as result from df",
+            "result": "1,234,567.890"
+        }, {
+            "query": "select FORMAT('{:,.2f}', 1234567.89) as result from df",
+            "result": "1,234,567.89"
+        }, {
+            "query": "select sha2('abc') as result from df",
+            "result": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        }]
+
+        for test in tests:
+            df = pd.DataFrame([[1]], columns=['a'])
+            query = test['query']
+            expected_result = test['result']
+
+            result = query_df(df, query)['result'][0]
+            assert result == expected_result
+
 
 class TestIfExistsIfNotExists(BaseExecutorMockPredictor):
     def setup_method(self, method):

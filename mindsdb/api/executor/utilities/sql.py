@@ -14,6 +14,9 @@ from mindsdb.utilities.exception import format_db_error_message
 from mindsdb.utilities.functions import resolve_table_identifier, resolve_model_identifier
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.api.executor.utilities.mysql_to_duckdb_functions import (
+    adapt_char_fn, adapt_locate_fn, adapt_unhex_fn, adapt_format_fn, adapt_sha2_fn
+)
 
 logger = log.getLogger(__name__)
 
@@ -184,6 +187,20 @@ def query_df(df, query, session=None):
                 return node
         if isinstance(node, Function):
             fnc_name = node.op.lower()
+
+            mysql_to_duck_fn_map = {
+                # 'base64': 'to_base64',
+                # 'char_length': 'character_length',
+                # 'CHAR': 'chr'   # different args count
+                'char': adapt_char_fn,
+                'locate': adapt_locate_fn,
+                'insrt': adapt_locate_fn,
+                'unhex': adapt_unhex_fn,
+                'format': adapt_format_fn,
+                'sha2': adapt_sha2_fn
+            }
+            if fnc_name in mysql_to_duck_fn_map:
+                return mysql_to_duck_fn_map[fnc_name](node)
 
             if fnc_name == "database" and len(node.args) == 0:
                 if session is not None:

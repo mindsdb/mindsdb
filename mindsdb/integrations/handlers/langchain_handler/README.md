@@ -22,8 +22,6 @@ Available models include the following:
 - OpenAI ([how to get the API key](https://help.openai.com/en/articles/4936850-where-do-i-find-my-openai-api-key))
 - Anyscale ([how to get the API key](https://docs.endpoints.anyscale.com/guides/authenticate/))
 - Ollama ([how to download Ollama](https://ollama.com/download))
-
-The LiteLLM model provider is available through [Minds Cloud](https://mdb.ai/) where you can generate the API key.
 </Info>
 
 ## Setup

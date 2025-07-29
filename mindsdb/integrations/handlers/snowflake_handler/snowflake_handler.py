@@ -479,30 +479,6 @@ class SnowflakeHandler(MetaDatabaseHandler):
         result.data_frame["ROW_COUNT"] = result.data_frame["ROW_COUNT"].astype(int)
 
         return result
-    
-    def meta_get_handler_info(self, **kwargs) -> str:
-        """
-        Retrieves information about the design and implementation of the API handler.
-        This should include, but not be limited to, the following:
-        - The type of SQL queries and operations that the handler supports.
-        - etc.
-    
-        Args:
-            kwargs: Additional keyword arguments that may be used in generating the handler information.
-    
-        Returns:
-            str: A string containing information about the API handler's design and implementation.
-        """
-        return (
-            "This handler DOES NOT support double quotes (\"column_name\") for column identifiers. "
-            "If case sensitivity is required, use backticks (e.g., `Column_Name`) instead.\n\n"
-            "Only use backticks when:\n"
-            "- The column name is all lowercase (e.g., `columnname`)\n"
-            "- The column name is mixed case (e.g., `Column_Name`)\n"
-            "- The column name contains special characters or is a reserved keyword\n\n"
-            "DO NOT use backticks if the column name is entirely uppercase (e.g., COLUMN_NAME) unless it contains special characters or is a reserved keyword.\n\n"
-            "This is because Snowflake automatically uppercases unquoted identifiers and treats them as case-insensitive."
-        )
 
     def meta_get_columns(self, table_names: Optional[List[str]] = None) -> Response:
         """
@@ -745,6 +721,13 @@ class SnowflakeHandler(MetaDatabaseHandler):
             str: A string containing information about the database handler's design and implementation.
         """
         return (
-            "To query columns that contain special characters, use ticks around the column name, e.g. `column name`.\n"
-            "DO NOT use double quotes for this purpose."
+            "This handler DOES NOT support double quotes (\"column_name\") for column identifiers. "
+            "If case sensitivity is required, use backticks (e.g., `Column_Name`) instead.\n\n"
+            "Only use backticks when:\n"
+            "- The column name is all lowercase (e.g., `columnname`)\n"
+            "- The column name is mixed case (e.g., `Column_Name`)\n"
+            "- The column name contains special characters or is a reserved keyword\n\n"
+            "DO NOT use backticks if the column name is entirely uppercase (e.g., COLUMN_NAME) unless it contains special characters or is a reserved keyword.\n\n"
+            "This is because Snowflake automatically uppercases unquoted identifiers and treats them as case-insensitive."
         )
+

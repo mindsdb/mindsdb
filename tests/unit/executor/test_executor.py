@@ -1280,6 +1280,9 @@ class TestExecutionTools:
             "query": "select substring_index('www.mysql.com', '.', 2) as result from df",
             "result": "www.mysql"
         }, {
+            "query": "select substring_index('www.mysql.com', '.', 1) as result from df",
+            "result": "www"
+        }, {
             "query": "select TIMESTAMPDIFF(MINUTE,'2003-02-01','2003-05-01 12:05:55') as result from df",
             "result": 128885
         }, {

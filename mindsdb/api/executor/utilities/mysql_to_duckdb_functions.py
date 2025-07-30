@@ -163,7 +163,20 @@ def adapt_regexp_substr_fn(node: Function) -> None:
 
 
 def adapt_substring_index_fn(node: Function) -> BinaryOperation | Function:
-    """
+    """Adapt MySQL's SUBSTRING_INDEX function to DuckDB's SPLIT_PART function
+
+    Example:
+        SUBSTRING_INDEX('a.b.c.d', '.', 1) => SPLIT_PART('a.b.c.d', '.', 1)
+        SUBSTRING_INDEX('a.b.c.d', '.', 2) => CONCAT_WS('.', SPLIT_PART('a.b.c.d', '.', 1), SPLIT_PART('a.b.c.d', '.', 2))
+
+    Args:
+        node (Function): Function node to adapt
+
+    Returns:
+        BinaryOperation | Function: Binary operation node or function node
+
+    Raises:
+        ValueError: If the function has more than 3 arguments or the 3rd argument is not 1
     """
     if len(node.args[1].value) > 1:
         raise ValueError('Only one car in separator')
@@ -183,17 +196,57 @@ def adapt_substring_index_fn(node: Function) -> BinaryOperation | Function:
 
 
 def adapt_curtime_fn(node: Function) -> BinaryOperation:
-    return BinaryOperation('::', args=[Function(op='get_current_time', args=[]), Identifier('time')], alias=node.alias)
+    """Adapt MySQL's CURTIME function to DuckDB's GET_CURRENT_TIME function.
+    To get the same type as MySQL's CURTIME function, we need to cast the result to time type.
+
+    Example:
+        CURTIME() => GET_CURRENT_TIME()::time
+
+    Args:
+        node (Function): Function node to adapt
+
+    Returns:
+        BinaryOperation: Binary operation node
+    """
+    return BinaryOperation(
+        '::',
+        args=[
+            Function(op='get_current_time', args=[]),
+            Identifier('time')
+        ], alias=node.alias
+    )
 
 def adapt_timestampdiff_fn(node: Function) -> None:
+    """Adapt MySQL's TIMESTAMPDIFF function to DuckDB's DATE_DIFF function
+    NOTE: Looks like cast string args to timestamp works in most cases, but there may be some exceptions.
+
+    Example:
+        TIMESTAMPDIFF(YEAR, '2000-02-01', '2003-05-01') => DATE_DIFF('year', timestamp '2000-02-01', timestamp '2003-05-01')
+
+    Args:
+        node (Function): Function node to adapt
+
+    Returns:
+        None
+    """
     node.op = 'date_diff'
     node.args[0] = Constant(node.args[0].parts[0])
     node.args[1] = BinaryOperation(' ', args=[Identifier('timestamp'), node.args[1]])
     node.args[2] = BinaryOperation(' ', args=[Identifier('timestamp'), node.args[2]])
 
 def adapt_extract_df(node: Function) -> None:
-    """
-    TODO multi-part args, like YEAR_MONTH
+    """Adapt MySQL's EXTRACT function to DuckDB's EXTRACT function
+    TODO: multi-part args, like YEAR_MONTH, is not supported yet
+    NOTE: Looks like adding 'timestamp' works in most cases, but there may be some exceptions.
+
+    Example:
+        EXTRACT(YEAR FROM '2000-02-01') => EXTRACT('year' from timestamp '2000-02-01')
+
+    Args:
+        node (Function): Function node to adapt
+
+    Returns:
+        None
     """
     node.args[0] = Constant(node.args[0].parts[0])
     node.from_arg = BinaryOperation(' ', args=[Identifier('timestamp'), node.from_arg])

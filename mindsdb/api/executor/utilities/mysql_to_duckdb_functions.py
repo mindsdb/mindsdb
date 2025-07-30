@@ -14,20 +14,21 @@ def adapt_char_fn(node: Function) -> Function | None:
         Function | None: Adapted function node
     """
     if len(node.args) == 1:
-        node.op = 'chr'
+        node.op = "chr"
         return node
 
     acc = None
     for arg in node.args:
-        fn = Function(op='chr', args=[arg])
+        fn = Function(op="chr", args=[arg])
         if acc is None:
             acc = fn
             continue
-        acc = BinaryOperation('||', args=[acc, fn])
-    
+        acc = BinaryOperation("||", args=[acc, fn])
+
     acc.parentheses = True
     acc.alias = node.alias
     return acc
+
 
 def adapt_locate_fn(node: Function) -> Function | None:
     """Replace MySQL's LOCATE (or INSTR) call to DuckDB's STRPOS call
@@ -47,12 +48,13 @@ def adapt_locate_fn(node: Function) -> Function | None:
         ValueError: If the function has 3 arguments
     """
     if len(node.args) == 3:
-        raise ValueError('MySQL LOCATE function with 3 arguments is not supported')
-    if node.op == 'locate':
+        raise ValueError("MySQL LOCATE function with 3 arguments is not supported")
+    if node.op == "locate":
         node.args = [node.args[1], node.args[0]]
-    elif node.op == 'insrt':
+    elif node.op == "insrt":
         node.args = [node.args[0], node.args[1]]
-    node.op = 'strpos'
+    node.op = "strpos"
+
 
 def adapt_unhex_fn(node: Function) -> None:
     """Check MySQL's UNHEX function call arguments to ensure they are strings,
@@ -70,7 +72,8 @@ def adapt_unhex_fn(node: Function) -> None:
     """
     for arg in node.args:
         if not isinstance(arg, (str, bytes)):
-            raise ValueError('MySQL UNHEX function argument must be a string')
+            raise ValueError("MySQL UNHEX function argument must be a string")
+
 
 def adapt_format_fn(node: Function) -> None:
     """Adapt MySQL's FORMAT function to DuckDB's FORMAT function
@@ -90,15 +93,18 @@ def adapt_format_fn(node: Function) -> None:
         ValueError: If MySQL's function has 3rd 'locale' argument, like FORMAT(12332.2, 2, 'de_DE')
     """
     if (
-        not isinstance(node.args[0], Constant) or not isinstance(node.args[0].value, (int, float))
-        or not isinstance(node.args[1], Constant) or not isinstance(node.args[1].value, int)
+        not isinstance(node.args[0], Constant)
+        or not isinstance(node.args[0].value, (int, float))
+        or not isinstance(node.args[1], Constant)
+        or not isinstance(node.args[1].value, int)
     ):
         return node
     if len(node.args) > 2:
         raise ValueError("'locale' argument of 'format' function is not supported")
     decimal_places = node.args[1].value
     node.args[1].value = node.args[0].value
-    node.args[0].value = f'{{:,.{decimal_places}f}}'
+    node.args[0].value = f"{{:,.{decimal_places}f}}"
+
 
 def adapt_sha2_fn(node: Function) -> None:
     """Adapt MySQL's SHA2 function to DuckDB's SHA256 function
@@ -123,7 +129,7 @@ def adapt_sha2_fn(node: Function) -> None:
 
 def adapt_length_fn(node: Function) -> None:
     """Adapt MySQL's LENGTH function to DuckDB's STRLEN function
-    NOTE: 
+    NOTE:
 
     Example:
         LENGTH('test') => STRLEN('test')
@@ -134,7 +140,7 @@ def adapt_length_fn(node: Function) -> None:
     Returns:
         None
     """
-    node.op = 'strlen'
+    node.op = "strlen"
 
 
 def adapt_regexp_substr_fn(node: Function) -> None:
@@ -153,13 +159,15 @@ def adapt_regexp_substr_fn(node: Function) -> None:
         ValueError: If the function has more than 2 arguments or 3rd or 4th argument is not 1
     """
     if (
-        len(node.args) == 3 and node.args[2].value != 1
-        or len(node.args) == 4 and (node.args[3].value != 1 or node.args[2].value != 1)
+        len(node.args) == 3
+        and node.args[2].value != 1
+        or len(node.args) == 4
+        and (node.args[3].value != 1 or node.args[2].value != 1)
         or len(node.args) > 4
     ):
-        raise ValueError('Only 2 arguments are supported for REGEXP_SUBSTR function')
+        raise ValueError("Only 2 arguments are supported for REGEXP_SUBSTR function")
     node.args = node.args[:2]
-    node.op = 'regexp_extract'
+    node.op = "regexp_extract"
 
 
 def adapt_substring_index_fn(node: Function) -> BinaryOperation | Function:
@@ -179,18 +187,18 @@ def adapt_substring_index_fn(node: Function) -> BinaryOperation | Function:
         ValueError: If the function has more than 3 arguments or the 3rd argument is not 1
     """
     if len(node.args[1].value) > 1:
-        raise ValueError('Only one car in separator')
+        raise ValueError("Only one car in separator")
 
     if node.args[2].value == 1:
-        node.op = 'split_part'
+        node.op = "split_part"
         return node
 
     acc = [node.args[1]]
     for i in range(node.args[2].value):
-        fn = Function(op='split_part', args=[node.args[0], node.args[1], Constant(i + 1)])
+        fn = Function(op="split_part", args=[node.args[0], node.args[1], Constant(i + 1)])
         acc.append(fn)
 
-    acc = Function(op='concat_ws', args=acc)
+    acc = Function(op="concat_ws", args=acc)
     acc.alias = node.alias
     return acc
 
@@ -208,13 +216,8 @@ def adapt_curtime_fn(node: Function) -> BinaryOperation:
     Returns:
         BinaryOperation: Binary operation node
     """
-    return BinaryOperation(
-        '::',
-        args=[
-            Function(op='get_current_time', args=[]),
-            Identifier('time')
-        ], alias=node.alias
-    )
+    return BinaryOperation("::", args=[Function(op="get_current_time", args=[]), Identifier("time")], alias=node.alias)
+
 
 def adapt_timestampdiff_fn(node: Function) -> None:
     """Adapt MySQL's TIMESTAMPDIFF function to DuckDB's DATE_DIFF function
@@ -229,10 +232,11 @@ def adapt_timestampdiff_fn(node: Function) -> None:
     Returns:
         None
     """
-    node.op = 'date_diff'
+    node.op = "date_diff"
     node.args[0] = Constant(node.args[0].parts[0])
-    node.args[1] = BinaryOperation(' ', args=[Identifier('timestamp'), node.args[1]])
-    node.args[2] = BinaryOperation(' ', args=[Identifier('timestamp'), node.args[2]])
+    node.args[1] = BinaryOperation(" ", args=[Identifier("timestamp"), node.args[1]])
+    node.args[2] = BinaryOperation(" ", args=[Identifier("timestamp"), node.args[2]])
+
 
 def adapt_extract_df(node: Function) -> None:
     """Adapt MySQL's EXTRACT function to DuckDB's EXTRACT function
@@ -249,4 +253,4 @@ def adapt_extract_df(node: Function) -> None:
         None
     """
     node.args[0] = Constant(node.args[0].parts[0])
-    node.from_arg = BinaryOperation(' ', args=[Identifier('timestamp'), node.from_arg])
+    node.from_arg = BinaryOperation(" ", args=[Identifier("timestamp"), node.from_arg])

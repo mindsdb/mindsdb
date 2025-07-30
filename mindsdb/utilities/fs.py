@@ -2,6 +2,7 @@ import os
 import time
 import tempfile
 import threading
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Optional, List, Tuple
 
@@ -151,3 +152,22 @@ def safe_extract(tarfile, path=".", members=None, *, numeric_owner=False):
         if not __is_within_directory(path, member_path):
             raise Exception("Attempted Path Traversal in Tar File")
     tarfile.extractall(path, members=members, numeric_owner=numeric_owner)
+
+
+@contextmanager
+def context_mark(folder: str, mark: str):
+    """Context manager for creating and automatically cleaning up process marks.
+    
+    Args:
+        folder (str): Folder where the process mark will be created
+        mark (str): Custom mark identifier. If None, generates automatically
+
+    Yields:
+        str: The process mark identifier
+    """
+    created_mark = set_process_mark(folder, mark)
+
+    try:
+        yield created_mark
+    finally:
+        delete_process_mark(folder, created_mark)

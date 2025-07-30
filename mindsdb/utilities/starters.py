@@ -7,7 +7,6 @@ def mark_api(func):
 
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        # Use the function name as the mark identifier
         mark = func.__name__.split('_')[1]
 
         with context_mark("api", mark):

@@ -13,6 +13,7 @@ from mindsdb.api.http.utils import http_error
 from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.utilities import log
 from mindsdb.utilities.functions import decrypt, encrypt
+from mindsdb.utilities.fs import get_processes_dir_files_generator
 from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.response import HandlerStatusResponse
 
@@ -32,8 +33,20 @@ class GetConfig(Resource):
             value = config.get(key)
             if value is not None:
                 resp[key] = value
-        if "a2a" in config["api"]:
-            resp["a2a"] = config["api"]["a2a"]
+
+        api_info = copy.deepcopy(config["api"])
+        running_apis = [
+            file[0].parts[-1].split('-')[-1] for file in get_processes_dir_files_generator() if 
+            file[0].is_relative_to(Path(tempfile.gettempdir()).joinpath("mindsdb/processes/api/"))
+        ]
+
+        for api_name, _ in api_info.items():
+            if api_name in running_apis:
+                api_info[api_name]["running"] = True
+            else:
+                api_info[api_name]["running"] = False
+        resp["api"] = api_info
+
         return resp
 
     @ns_conf.doc("put_config")

@@ -87,15 +87,16 @@ class OpenAIHandler(BaseMLEngine):
             org = connection_args.get("api_organization")
             api_base = connection_args.get("api_base") or os.environ.get("OPENAI_API_BASE", OPENAI_API_BASE)
             client = self._get_client(api_key=api_key, base_url=api_base, org=org, args=connection_args)
-            OpenAIHandler._check_client_connection(client)
+            OpenAIHandler._check_client_connection(client, connection_args)
 
     @staticmethod
-    def _check_client_connection(client: OpenAI) -> None:
+    def _check_client_connection(client: OpenAI, connection_args: Optional[Dict] = None) -> None:
         """
         Check the OpenAI engine client connection by retrieving a model.
 
         Args:
             client (openai.OpenAI): OpenAI client configured with the API credentials.
+            connection_args (Dict): Connection arguments containing model_name.
 
         Raises:
             Exception: If the client connection (API key) is invalid or something else goes wrong.
@@ -103,8 +104,13 @@ class OpenAIHandler(BaseMLEngine):
         Returns:
             None
         """
+        # Use model_name from connection_args if provided, otherwise fallback to "test"
+        model_name = "test"
+        if connection_args and "model_name" in connection_args:
+            model_name = connection_args["model_name"]
+        
         try:
-            client.models.retrieve("test")
+            client.models.retrieve(model_name)
         except NotFoundError:
             pass
         except AuthenticationError as e:
@@ -197,8 +203,11 @@ class OpenAIHandler(BaseMLEngine):
             or os.environ.get("OPENAI_API_BASE", OPENAI_API_BASE)
         )
         org = args.get("api_organization")
+        
+        # Merge args and connection_args for _check_client_connection
+        merged_args = {**connection_args, **args} if args else connection_args
         client = OpenAIHandler._get_client(api_key=api_key, base_url=api_base, org=org, args=args)
-        OpenAIHandler._check_client_connection(client)
+        OpenAIHandler._check_client_connection(client, merged_args)
 
     def create(self, target, args: Dict = None, **kwargs: Any) -> None:
         """

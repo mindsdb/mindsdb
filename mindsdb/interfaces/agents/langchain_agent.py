@@ -11,7 +11,7 @@ import pandas as pd
 from langchain.agents import AgentExecutor
 from langchain.agents.initialize import initialize_agent
 from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
-from langchain_community.chat_models import ChatAnyscale, ChatLiteLLM, ChatOllama
+from langchain_community.chat_models import ChatLiteLLM, ChatOllama
 from langchain_writer import ChatWriter
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.agents import AgentAction, AgentStep
@@ -165,8 +165,6 @@ def create_chat_model(args: Dict):
         except NotImplementedError:
             chat_open_ai.tiktoken_model_name = DEFAULT_TIKTOKEN_MODEL_NAME
         return chat_open_ai
-    if args["provider"] == "anyscale":
-        return ChatAnyscale(**model_kwargs)
     if args["provider"] == "litellm":
         return ChatLiteLLM(**model_kwargs)
     if args["provider"] == "ollama":

@@ -54,7 +54,6 @@ class LangChainHandler(BaseMLEngine):
     Supported LLM providers:
         - OpenAI
         - Anthropic
-        - Anyscale
         - Google
         - LiteLLM
         - Ollama

@@ -72,7 +72,7 @@ def adapt_unhex_fn(node: Function) -> None:
         if not isinstance(arg, (str, bytes)):
             raise ValueError('MySQL UNHEX function argument must be a string')
 
-def adapt_format_fn(node: Function) -> Function | None:
+def adapt_format_fn(node: Function) -> None:
     """Adapt MySQL's FORMAT function to DuckDB's FORMAT function
 
     Example:
@@ -84,7 +84,7 @@ def adapt_format_fn(node: Function) -> Function | None:
         node (Function): Function node to adapt
 
     Returns:
-        Function | None: Adapted function node
+        None
 
     Raises:
         ValueError: If MySQL's function has 3rd 'locale' argument, like FORMAT(12332.2, 2, 'de_DE')
@@ -100,7 +100,7 @@ def adapt_format_fn(node: Function) -> Function | None:
     node.args[1].value = node.args[0].value
     node.args[0].value = f'{{:,.{decimal_places}f}}'
 
-def adapt_sha2_fn(node: Function) -> Function | None:
+def adapt_sha2_fn(node: Function) -> None:
     """Adapt MySQL's SHA2 function to DuckDB's SHA256 function
 
     Example:
@@ -110,7 +110,7 @@ def adapt_sha2_fn(node: Function) -> Function | None:
         node (Function): Function node to adapt
 
     Returns:
-        Function | None: Adapted function node
+        None
 
     Raises:
         ValueError: If the function has more than 1 argument or the argument is not 256
@@ -119,3 +119,81 @@ def adapt_sha2_fn(node: Function) -> Function | None:
         raise ValueError("Only sha256 is supported")
     node.op = "sha256"
     node.args = [node.args[0]]
+
+
+def adapt_length_fn(node: Function) -> None:
+    """Adapt MySQL's LENGTH function to DuckDB's STRLEN function
+    NOTE: 
+
+    Example:
+        LENGTH('test') => STRLEN('test')
+
+    Args:
+        node (Function): Function node to adapt
+
+    Returns:
+        None
+    """
+    node.op = 'strlen'
+
+
+def adapt_regexp_substr_fn(node: Function) -> None:
+    """Adapt MySQL's REGEXP_SUBSTR function to DuckDB's REGEXP_EXTRACT function
+
+    Example:
+        REGEXP_SUBSTR('foobarbar', 'bar', 1, 1) => REGEXP_EXTRACT('foobarbar', 'bar')
+
+    Args:
+        node (Function): Function node to adapt
+
+    Returns:
+        None
+
+    Raises:
+        ValueError: If the function has more than 2 arguments or 3rd or 4th argument is not 1
+    """
+    if (
+        len(node.args) == 3 and node.args[2].value != 1
+        or len(node.args) == 4 and (node.args[3].value != 1 or node.args[2].value != 1)
+        or len(node.args) > 4
+    ):
+        raise ValueError('Only 2 arguments are supported for REGEXP_SUBSTR function')
+    node.args = node.args[:2]
+    node.op = 'regexp_extract'
+
+
+def adapt_substring_index_fn(node: Function) -> BinaryOperation | Function:
+    """
+    """
+    if len(node.args[1].value) > 1:
+        raise ValueError('Only one car in separator')
+
+    if node.args[2].value == 1:
+        node.op = 'split_part'
+        return node
+
+    acc = [node.args[1]]
+    for i in range(node.args[2].value):
+        fn = Function(op='split_part', args=[node.args[0], node.args[1], Constant(i + 1)])
+        acc.append(fn)
+
+    acc = Function(op='concat_ws', args=acc)
+    acc.alias = node.alias
+    return acc
+
+
+def adapt_curtime_fn(node: Function) -> BinaryOperation:
+    return BinaryOperation('::', args=[Function(op='get_current_time', args=[]), Identifier('time')], alias=node.alias)
+
+def adapt_timestampdiff_fn(node: Function) -> None:
+    node.op = 'date_diff'
+    node.args[0] = Constant(node.args[0].parts[0])
+    node.args[1] = BinaryOperation(' ', args=[Identifier('timestamp'), node.args[1]])
+    node.args[2] = BinaryOperation(' ', args=[Identifier('timestamp'), node.args[2]])
+
+def adapt_extract_df(node: Function) -> None:
+    """
+    TODO multi-part args, like YEAR_MONTH
+    """
+    node.args[0] = Constant(node.args[0].parts[0])
+    node.from_arg = BinaryOperation(' ', args=[Identifier('timestamp'), node.from_arg])

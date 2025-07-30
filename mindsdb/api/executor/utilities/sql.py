@@ -15,7 +15,9 @@ from mindsdb.utilities.functions import resolve_table_identifier, resolve_model_
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.api.executor.utilities.mysql_to_duckdb_functions import (
-    adapt_char_fn, adapt_locate_fn, adapt_unhex_fn, adapt_format_fn, adapt_sha2_fn
+    adapt_char_fn, adapt_locate_fn, adapt_unhex_fn, adapt_format_fn, adapt_sha2_fn, adapt_length_fn,
+    adapt_regexp_substr_fn, adapt_substring_index_fn, adapt_curtime_fn, adapt_timestampdiff_fn,
+    adapt_extract_df
 )
 
 logger = log.getLogger(__name__)
@@ -197,7 +199,13 @@ def query_df(df, query, session=None):
                 'insrt': adapt_locate_fn,
                 'unhex': adapt_unhex_fn,
                 'format': adapt_format_fn,
-                'sha2': adapt_sha2_fn
+                'sha2': adapt_sha2_fn,
+                'length': adapt_length_fn,
+                'regexp_substr': adapt_regexp_substr_fn,
+                'substring_index': adapt_substring_index_fn,
+                'curtime': adapt_curtime_fn,
+                'timestampdiff': adapt_timestampdiff_fn,
+                'extract': adapt_extract_df
             }
             if fnc_name in mysql_to_duck_fn_map:
                 return mysql_to_duck_fn_map[fnc_name](node)

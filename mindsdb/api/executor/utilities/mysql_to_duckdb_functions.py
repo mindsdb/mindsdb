@@ -1,4 +1,4 @@
-from mindsdb_sql_parser.ast import ASTNode, Select, Identifier, Function, Constant, BinaryOperation
+from mindsdb_sql_parser.ast import Identifier, Function, Constant, BinaryOperation
 
 
 def adapt_char_fn(node: Function) -> Function | None:

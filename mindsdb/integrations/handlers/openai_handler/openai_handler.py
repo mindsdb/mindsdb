@@ -203,8 +203,9 @@ class OpenAIHandler(BaseMLEngine):
             or os.environ.get("OPENAI_API_BASE", OPENAI_API_BASE)
         )
         org = args.get("api_organization")
-        
         # Merge args and connection_args for _check_client_connection
+        if connection_args is None:
+            connection_args = {}
         merged_args = {**connection_args, **args} if args else connection_args
         client = OpenAIHandler._get_client(api_key=api_key, base_url=api_base, org=org, args=args)
         OpenAIHandler._check_client_connection(client, merged_args)

@@ -1,3 +1,22 @@
+import functools
+from mindsdb.utilities.fs import context_mark
+
+
+def mark_api(func):
+    """Decorator to mark API functions with a process mark to identify if they are running or not."""
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        # Use the function name as the mark identifier
+        mark = func.__name__.split('_')[1]
+
+        with context_mark("api", mark):
+            return func(*args, **kwargs)
+    
+    return wrapper
+
+
+@mark_api
 def start_http(*args, **kwargs):
     from mindsdb.utilities.log import initialize_logging
 
@@ -8,6 +27,7 @@ def start_http(*args, **kwargs):
     start(*args, **kwargs)
 
 
+@mark_api
 def start_mysql(*args, **kwargs):
     from mindsdb.utilities.log import initialize_logging
 
@@ -18,6 +38,7 @@ def start_mysql(*args, **kwargs):
     start(*args, **kwargs)
 
 
+@mark_api
 def start_mongo(*args, **kwargs):
     from mindsdb.utilities.log import initialize_logging
 
@@ -28,6 +49,7 @@ def start_mongo(*args, **kwargs):
     start(*args, **kwargs)
 
 
+@mark_api
 def start_postgres(*args, **kwargs):
     from mindsdb.utilities.log import initialize_logging
 
@@ -68,6 +90,7 @@ def start_scheduler(*args, **kwargs):
     start(*args, **kwargs)
 
 
+@mark_api
 def start_mcp(*args, **kwargs):
     """Start the MCP server"""
     from mindsdb.utilities.log import initialize_logging
@@ -79,6 +102,7 @@ def start_mcp(*args, **kwargs):
     start(*args, **kwargs)
 
 
+@mark_api
 def start_litellm(*args, **kwargs):
     """Start the LiteLLM server"""
     from mindsdb.utilities.log import initialize_logging
@@ -90,6 +114,7 @@ def start_litellm(*args, **kwargs):
     start(*args, **kwargs)
 
 
+@mark_api
 def start_a2a(*args, **kwargs):
     """Start the A2A server as a subprocess of the main MindsDB process"""
     from mindsdb.utilities.log import initialize_logging

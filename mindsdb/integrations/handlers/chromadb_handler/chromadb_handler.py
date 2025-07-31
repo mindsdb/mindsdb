@@ -397,7 +397,7 @@ class ChromaDBHandler(VectorStoreHandler):
 
         return df
 
-    def insert(self, collection_name: str, df: pd.DataFrame):
+    def insert(self, collection_name: str, df: pd.DataFrame) -> Response:
         """
         Insert/Upsert data into ChromaDB collection.
         If records with same IDs exist, they will be updated.
@@ -435,6 +435,7 @@ class ChromaDBHandler(VectorStoreHandler):
         except Exception as e:
             logger.error(f"Error during upsert operation: {str(e)}")
             raise Exception(f"Failed to insert/update data: {str(e)}")
+        return Response(RESPONSE_TYPE.OK, affected_rows=len(df))
 
     def upsert(self, table_name: str, data: pd.DataFrame):
         """

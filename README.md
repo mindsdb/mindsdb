@@ -22,7 +22,7 @@
     ·
     <a href="https://docs.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Docs</a>
     ·
-    <a href="https://mdb.ai/register">Demo</a>
+    <a href="https://mindsdb.com/contact">Contact us for a Demo</a>
     ·
     <a href="https://mindsdb.com/joincommunity?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Community Slack</a>
   </p>
@@ -37,9 +37,6 @@ MindsDB enables humans, AI, agents, and applications to get highly accurate answ
 
 
 [MindsDB has an MCP server built in](https://docs.mindsdb.com/mcp/overview) that enables your MCP applications to connect, unify and respond to questions over large-scale federated data—spanning databases, data warehouses, and SaaS applications.
-
-## Minds [Demo](https://mdb.ai/register)
-Play with [Minds demo](https://mdb.ai/register), and see the power of MindsDB at answering questions from structured to unstructured data, whether it's scattered across SaaS applications, databases, or... hibernating in data warehouses like that $100 bill in your tuxedo pocket from prom night, lost, waiting to be discovered.
  
 ## Install MindsDB Server 
 

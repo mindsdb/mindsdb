@@ -421,7 +421,9 @@ class TestAgent(BaseExecutorDummyML):
         self.run_sql("""
             CREATE AGENT minimal_syntax_agent
             USING
-              include_tables = ['test.table1', 'test.table2'];
+              data = {
+                "tables": ['test.table1', 'test.table2']
+              }
          """)
 
         # Check that the agent was created with the default parameters
@@ -432,8 +434,8 @@ class TestAgent(BaseExecutorDummyML):
 
         # Verify the agent has the default parameters and include_tables
         agent_params = json.loads(agent_info["PARAMS"].iloc[0])
-        assert "include_tables" in agent_params
-        assert agent_params["include_tables"] == ["test.table1", "test.table2"]
+        assert "data" in agent_params
+        assert agent_params["data"]["tables"] == ["test.table1", "test.table2"]
 
         # Mock the OpenAI client for the agent execution
         with (
@@ -731,8 +733,10 @@ class TestAgent(BaseExecutorDummyML):
             USING
               model = "gpt-3.5-turbo",
               openai_api_key='--',
-              include_knowledge_bases = ['kb_show*'],
-              include_tables = ['files.show*'];
+              data = {
+                "knowledge_bases": ["kb_show*"],
+                "tables": ["files.show*"]
+              };
          """)
 
         # ===== Access to forbidden KBs =====
@@ -917,6 +921,38 @@ class TestAgent(BaseExecutorDummyML):
 
         assert "Jupiter" in mock_openai.agent_calls[1]
         assert "Jupiter" in mock_openai.agent_calls[2]
+
+    @patch("openai.OpenAI")
+    @patch(
+        "mindsdb.interfaces.agents.langchain_agent.LangchainAgent.run_agent",
+        return_value=pd.DataFrame([["ok", None, None]], columns=["answer", "context", "trace_id"]),
+    )
+    def test_agent_query_param_override(self, mock_run_agent, mock_openai):
+        """
+        Test that agent parameters can be overridden per-query using the USING clause in SELECT.
+        """
+        agent_response = "override test response"
+        set_openai_completion(mock_openai, agent_response)
+
+        self.run_sql(
+            """
+            CREATE AGENT override_agent
+            USING
+                model = 'gpt-4o',
+                openai_api_key = 'sk-override',
+                prompt_template = 'Answer questions',
+                timeout = 60;
+            """
+        )
+
+        self.run_sql(
+            """
+            SELECT * FROM override_agent
+            WHERE question = 'How are you?'
+            USING timeout=5;
+            """
+        )
+        assert mock_run_agent.call_args_list[0][0][2].get("timeout") == 5
 
 
 class TestKB(BaseExecutorDummyML):

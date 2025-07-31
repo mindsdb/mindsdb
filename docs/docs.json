@@ -599,14 +599,14 @@
               {
                 "group": "MCP API",
                 "pages": [
-                  "mcp/overview",
-                  "mcp/usage",
+                  "model-context-protocol/overview",
+                  "model-context-protocol/usage",
                   {
                     "group": "MCP Clients",
                     "pages": [
-                      "mcp/openai",
-                      "mcp/anthropic",
-                      "mcp/cursor_usage"
+                      "model-context-protocol/openai",
+                      "model-context-protocol/anthropic",
+                      "model-context-protocol/cursor_usage"
                     ]
                   }
                 ]

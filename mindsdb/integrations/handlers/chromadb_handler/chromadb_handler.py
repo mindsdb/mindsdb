@@ -275,7 +275,6 @@ class ChromaDBHandler(VectorStoreHandler):
                 "query_embeddings": vector_filter.value if vector_filter is not None else None,
                 "include": include + ["distances"],
             }
-            print(query_payload)
 
             if limit is not None:
                 if len(ids_include) == 0 and len(ids_exclude) == 0:

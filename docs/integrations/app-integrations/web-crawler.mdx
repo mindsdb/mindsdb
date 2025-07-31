@@ -77,7 +77,7 @@ To crawl multiple URLs at once:
 ```sql
 SELECT * 
 FROM my_web.crawler 
-WHERE url IN ('https://docs.mindsdb.com/', 'https://docs.mdb.ai/', 'https://mindsdb.com/');
+WHERE url IN ('https://docs.mindsdb.com/', 'https://dev.mysql.com/doc/', 'https://mindsdb.com/');
 ```
 
 Returns **3 rows** by default (1 row per URL).
@@ -87,7 +87,7 @@ To apply a per-URL limit:
 ```sql
 SELECT * 
 FROM my_web.crawler 
-WHERE url IN ('https://docs.mindsdb.com/', 'https://docs.mdb.ai/')
+WHERE url IN ('https://docs.mindsdb.com/', 'https://dev.mysql.com/doc/')
 AND per_url_limit = 2;
 ```
 
@@ -111,7 +111,7 @@ For multiple URLs with crawl depth:
 ```sql
 SELECT * 
 FROM my_web.crawler 
-WHERE url IN ('https://docs.mindsdb.com/', 'https://docs.mdb.ai/')
+WHERE url IN ('https://docs.mindsdb.com/', 'https://dev.mysql.com/doc/')
 AND crawl_depth = 1;
 ```
 

@@ -3,6 +3,15 @@ title: Create a Table
 sidebarTitle: Create a Table
 ---
 
-<Info>
-This feature is in progress.
-</Info>
+## Description
+
+The `runQuery()` function executes a query given as its argument directly in MindsDB.
+
+## Syntax
+
+Here is the syntax:
+
+```
+const query = `CREATE TABLE integration_name.table_name (SELECT * FROM data);`;
+const queryResult = await MindsDB.SQL.runQuery(query);
+```

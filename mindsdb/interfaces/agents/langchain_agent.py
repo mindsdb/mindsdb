@@ -11,7 +11,7 @@ import pandas as pd
 from langchain.agents import AgentExecutor
 from langchain.agents.initialize import initialize_agent
 from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
-from langchain_community.chat_models import ChatAnyscale, ChatLiteLLM, ChatOllama
+from langchain_community.chat_models import ChatLiteLLM, ChatOllama
 from langchain_writer import ChatWriter
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.agents import AgentAction, AgentStep
@@ -165,8 +165,6 @@ def create_chat_model(args: Dict):
         except NotImplementedError:
             chat_open_ai.tiktoken_model_name = DEFAULT_TIKTOKEN_MODEL_NAME
         return chat_open_ai
-    if args["provider"] == "anyscale":
-        return ChatAnyscale(**model_kwargs)
     if args["provider"] == "litellm":
         return ChatLiteLLM(**model_kwargs)
     if args["provider"] == "ollama":
@@ -321,7 +319,7 @@ class LangchainAgent:
             self.provider,
         ]
 
-    def get_completion(self, messages, stream: bool = False):
+    def get_completion(self, messages, stream: bool = False, params: dict | None = None):
         # Get metadata and tags to be used in the trace
         metadata = self.get_metadata()
         tags = self.get_tags()
@@ -342,7 +340,9 @@ class LangchainAgent:
         if stream:
             return self._get_completion_stream(messages)
 
-        args = self.args
+        args = {}
+        args.update(self.args)
+        args.update(params or {})
 
         df = pd.DataFrame(messages)
 
@@ -598,7 +598,12 @@ AI: {response}"""
                     completions.append(result[ASSISTANT_COLUMN])
                     contexts.append(result[CONTEXT_COLUMN])
             except TimeoutError:
-                timeout_message = "I'm sorry! I couldn't come up with a response in time. Please try again."
+                timeout_message = (
+                    f"I'm sorry! I couldn't generate a response within the allotted time ({agent_timeout_seconds} seconds). "
+                    "If you need more time for processing, you can adjust the timeout settings. "
+                    "Please refer to the documentation for instructions on how to change the timeout value. "
+                    "Feel free to try your request again."
+                )
                 logger.warning(f"Agent execution timed out after {agent_timeout_seconds} seconds")
                 for _ in range(len(futures) - len(completions)):
                     completions.append(timeout_message)

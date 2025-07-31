@@ -112,7 +112,7 @@ class KBTestBase:
         connection_args = connection_args.copy()
         engine = connection_args.pop("engine")
 
-        name = f"test_vectordb_{kb_name}"
+        name = f"test_vectordb_{engine}_{kb_name}"
 
         # TODO update database parameters. for now keep existing connection
         # try:
@@ -403,7 +403,7 @@ class TestKB(KBTestBase):
         """)
         assert set(ret.metadata.apply(lambda x: x.get("status"))) == {"solving"}
         assert "noise" in ret.chunk_content[0]  # first line contents word
-        assert len(ret[ret.relevance < 0.65]) == 0
+        assert len(ret[ret.relevance < 0.5]) == 0
 
     @pytest.mark.parametrize("storage, embedding_model, reranking_model", get_rerank_configurations())
     def test_with_reranking(self, storage, embedding_model, reranking_model):

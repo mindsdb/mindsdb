@@ -2,7 +2,7 @@ from collections import defaultdict
 
 import pandas as pd
 
-from mindsdb_sql_parser.ast import Identifier, Select, Star, Constant, Parameter, Function, Variable, BinaryOperation
+from mindsdb_sql_parser.ast import Identifier, Select, Star, Constant, Parameter, Function, Variable, BinaryOperation, Tuple
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import SERVER_VARIABLES
 from mindsdb.api.executor.planner.step_result import Result
@@ -57,7 +57,9 @@ class SubSelectStepCall(BaseStepCall):
                     prev_result = self.steps_data[node.value.step_num]
                     match kwargs['callstack']:
                         case [BinaryOperation(op='in'), *_]:
-                            return Constant(prev_result.get_column_values(col_idx=0)[0], parentheses=True)
+                            return Tuple(items=[
+                                Constant(value) for value in prev_result.get_column_values(col_idx=0)
+                            ])
                         case _:
                             return Constant(prev_result.get_column_values(col_idx=0)[0])
 

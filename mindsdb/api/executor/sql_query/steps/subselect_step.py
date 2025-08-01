@@ -52,11 +52,14 @@ class SubSelectStepCall(BaseStepCall):
 
         # inject previous step values
         if isinstance(query, Select):
-
             def inject_values(node, **kwargs):
                 if isinstance(node, Parameter) and isinstance(node.value, Result):
                     prev_result = self.steps_data[node.value.step_num]
-                    return Constant(prev_result.get_column_values(col_idx=0)[0])
+                    match kwargs['callstack']:
+                        case [BinaryOperation(op='in'), *_]:
+                            return Constant(prev_result.get_column_values(col_idx=0)[0], parentheses=True)
+                        case _:
+                            return Constant(prev_result.get_column_values(col_idx=0)[0])
 
             query_traversal(query, inject_values)
 

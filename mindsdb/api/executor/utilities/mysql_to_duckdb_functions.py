@@ -129,7 +129,7 @@ def adapt_sha2_fn(node: Function) -> None:
 
 def adapt_length_fn(node: Function) -> None:
     """Adapt MySQL's LENGTH function to DuckDB's STRLEN function
-    NOTE:
+    NOTE: duckdb also have LENGTH, therefore it can not be used
 
     Example:
         LENGTH('test') => STRLEN('test')

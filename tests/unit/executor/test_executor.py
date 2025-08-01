@@ -901,19 +901,25 @@ class TestComplexQueries(BaseExecutorMockPredictor):
 
     @patch("mindsdb.integrations.handlers.mysql_handler.Handler")
     def test_cte(self, mock_handler):
-        test_df_1 = pd.DataFrame([
-            [1, 'a'],
-            [1, 'b'],
-            [2, 'b'],
-            [3, 'c'],
-        ], columns=['a', 'b'])
+        test_df_1 = pd.DataFrame(
+            [
+                [1, "a"],
+                [1, "b"],
+                [2, "b"],
+                [3, "c"],
+            ],
+            columns=["a", "b"],
+        )
 
-        test_df_2 = pd.DataFrame([
-            [1, 'a'],
-            [2, 'b'],
-            [2, 'b'],
-            [3, 'c'],
-        ], columns=['a', 'c'])
+        test_df_2 = pd.DataFrame(
+            [
+                [1, "a"],
+                [2, "b"],
+                [2, "b"],
+                [3, "c"],
+            ],
+            columns=["a", "c"],
+        )
         self.set_handler(mock_handler, name="pg", tables={"test_t1": test_df_1, "test_t2": test_df_2}, engine="mysql")
 
         # NOTE important to test joins with different count of rows (0, 1, many),
@@ -930,12 +936,7 @@ class TestComplexQueries(BaseExecutorMockPredictor):
         """
         resp = self.execute(sql)
         pdt.assert_frame_equal(
-            resp.data.to_df(),
-            pd.DataFrame(
-                [['a', 2, 'b']],
-                columns=['a', 'b', 'c']
-            ),
-            check_dtype=False
+            resp.data.to_df(), pd.DataFrame([["a", 2, "b"]], columns=["a", "b", "c"]), check_dtype=False
         )
 
         sql = """
@@ -952,14 +953,11 @@ class TestComplexQueries(BaseExecutorMockPredictor):
         """
         resp = self.execute(sql)
         pdt.assert_frame_equal(
-            resp.data.to_df().sort_values(by=['a', 'b', 'c'], ignore_index=True),
-            pd.DataFrame([
-                    ['a', 2, 'b'],
-                    ['b', 2, None]
-                ],
-                columns=['a', 'b', 'c']
-            ).sort_values(by=['a', 'b', 'c'], ignore_index=True),
-            check_dtype=False
+            resp.data.to_df().sort_values(by=["a", "b", "c"], ignore_index=True),
+            pd.DataFrame([["a", 2, "b"], ["b", 2, None]], columns=["a", "b", "c"]).sort_values(
+                by=["a", "b", "c"], ignore_index=True
+            ),
+            check_dtype=False,
         )
 
         # NOTE error CONN-1340
@@ -1003,16 +1001,11 @@ class TestComplexQueries(BaseExecutorMockPredictor):
         """
         resp = self.execute(sql)
         pdt.assert_frame_equal(
-            resp.data.to_df().sort_values(by=['a', 'b', 'c'], ignore_index=True),
-            pd.DataFrame([
-                    [1, 'a', 'a'],
-                    [1, 'a', 'b'],
-                    [1, 'b', 'a'],
-                    [1, 'b', 'b']
-                ],
-                columns=['a', 'b', 'c']
-            ).sort_values(by=['a', 'b', 'c'], ignore_index=True),
-            check_dtype=False
+            resp.data.to_df().sort_values(by=["a", "b", "c"], ignore_index=True),
+            pd.DataFrame(
+                [[1, "a", "a"], [1, "a", "b"], [1, "b", "a"], [1, "b", "b"]], columns=["a", "b", "c"]
+            ).sort_values(by=["a", "b", "c"], ignore_index=True),
+            check_dtype=False,
         )
 
         sql = """
@@ -1031,15 +1024,8 @@ class TestComplexQueries(BaseExecutorMockPredictor):
         resp = self.execute(sql)
         pdt.assert_frame_equal(
             resp.data.to_df(),
-            pd.DataFrame([
-                    [1, 'a', 'a'],
-                    [1, 'a', 'b'],
-                    [1, 'b', 'a'],
-                    [1, 'b', 'b']
-                ],
-                columns=['a', 'b', 'c']
-            ),
-            check_dtype=False
+            pd.DataFrame([[1, "a", "a"], [1, "a", "b"], [1, "b", "a"], [1, "b", "b"]], columns=["a", "b", "c"]),
+            check_dtype=False,
         )
 
         sql = """
@@ -1067,14 +1053,11 @@ class TestComplexQueries(BaseExecutorMockPredictor):
         """
         resp = self.execute(sql)
         pdt.assert_frame_equal(
-            resp.data.to_df().sort_values(by=['a', 'b', 'c'], ignore_index=True),
-            pd.DataFrame([
-                    [1, 'b', None],
-                    [2, 'b', None]
-                ],
-                columns=['a', 'b', 'c']
-            ).sort_values(by=['a', 'b', 'c'], ignore_index=True),
-            check_dtype=False
+            resp.data.to_df().sort_values(by=["a", "b", "c"], ignore_index=True),
+            pd.DataFrame([[1, "b", None], [2, "b", None]], columns=["a", "b", "c"]).sort_values(
+                by=["a", "b", "c"], ignore_index=True
+            ),
+            check_dtype=False,
         )
 
         sql = """
@@ -1089,18 +1072,12 @@ class TestComplexQueries(BaseExecutorMockPredictor):
         """
         resp = self.execute(sql)
         pdt.assert_frame_equal(
-            resp.data.to_df().sort_values(by=['a', 'b', 'c'], ignore_index=True),
-            pd.DataFrame([
-                    [1, 'a', None],
-                    [1, 'b', None],
-                    [2, 'b', None],
-                    [3, 'c', 'c']
-                ],
-                columns=['a', 'b', 'c']
-            ).sort_values(by=['a', 'b', 'c'], ignore_index=True),
-            check_dtype=False
+            resp.data.to_df().sort_values(by=["a", "b", "c"], ignore_index=True),
+            pd.DataFrame(
+                [[1, "a", None], [1, "b", None], [2, "b", None], [3, "c", "c"]], columns=["a", "b", "c"]
+            ).sort_values(by=["a", "b", "c"], ignore_index=True),
+            check_dtype=False,
         )
-
 
     # @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     # def test_union_type_mismatch(self, mock_handler):

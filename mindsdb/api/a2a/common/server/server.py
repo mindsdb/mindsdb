@@ -1,3 +1,7 @@
+import json
+import time
+from typing import AsyncIterable, Any, Dict
+
 from starlette.applications import Starlette
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
@@ -19,14 +23,12 @@ from ...common.types import (
     SendTaskStreamingRequest,
 )
 from pydantic import ValidationError
-import json
-import time
-from typing import AsyncIterable, Any, Dict
 from ...common.server.task_manager import TaskManager
 
-import logging
+from mindsdb.utilities import log
+from mindsdb.utilities.log import get_uvicorn_logging_config, get_mindsdb_log_level
 
-logger = logging.getLogger(__name__)
+logger = log.getLogger(__name__)
 
 
 class A2AServer:
@@ -68,7 +70,15 @@ class A2AServer:
         import uvicorn
 
         # Configure uvicorn with optimized settings for streaming
-        uvicorn.run(self.app, host=self.host, port=self.port, http="h11", timeout_keep_alive=65, log_level="info")
+        uvicorn.run(
+            self.app,
+            host=self.host,
+            port=self.port,
+            http="h11",
+            timeout_keep_alive=65,
+            log_level=get_mindsdb_log_level(),
+            log_config=get_uvicorn_logging_config("uvicorn_a2a"),
+        )
 
     def _get_agent_card(self, request: Request) -> JSONResponse:
         return JSONResponse(self.agent_card.model_dump(exclude_none=True))

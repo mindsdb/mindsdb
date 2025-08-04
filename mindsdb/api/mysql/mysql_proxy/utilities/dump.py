@@ -118,8 +118,9 @@ def _dump_str(var: Any) -> str | None:
             return json_encoder.encode(var)
         except Exception:
             return str(var)
-    if isinstance(var, list) is False and pd.isna(var):
-        # pd.isna returns array of bools for list, so we need to check if it is not a list
+    # pd.isna returns array of bools for list
+    # and the truth value of a numpy array is ambiguous
+    if isinstance(var, (list, np.ndarray)) is False and pd.isna(var):
         return None
     return str(var)
 

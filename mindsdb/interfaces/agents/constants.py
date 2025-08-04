@@ -26,7 +26,6 @@ OPEN_AI_CHAT_MODELS = (
 SUPPORTED_PROVIDERS = {
     "openai",
     "anthropic",
-    "anyscale",
     "litellm",
     "ollama",
     "nvidia_nim",

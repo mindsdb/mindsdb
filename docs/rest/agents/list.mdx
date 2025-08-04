@@ -1,0 +1,91 @@
+---
+title: List Agents
+sidebarTitle: List Agents
+---
+
+**GET `/api/projects/{project_name}/agents`**
+
+This API endpoint lists all available agents using the `GET` method.
+
+<Tip>
+Learn more about agents and the available parameters following [this doc page](/mindsdb_sql/agents/agent).
+</Tip>
+
+### Path Parameters
+
+<ParamField body='project_name' type='string' required>
+Defines the project where the agents are located. Note that the default project name is `mindsdb`.
+</ParamField>
+
+### Body
+
+None.
+
+### Response
+
+<ResponseField name="id" type="string" required>  
+Unique identifier for the agent.
+</ResponseField>
+
+<ResponseField name="name" type="string" required>  
+The name assigned to the agent.
+</ResponseField>
+
+<ResponseField name="project_id" type="string" required>  
+The ID of the project where the agent resides.
+</ResponseField>
+
+<ResponseField name="created_at" type="string" required>  
+Timestamp indicating when the agent was created.
+</ResponseField>
+
+<ResponseField name="updated_at" type="string" required>  
+Timestamp indicating when the agent was last updated.
+</ResponseField>
+
+<ResponseField body='data' type='string'>
+Stores data connected to an agent, including `tables` and `knowledge_bases`.
+</ResponseField>
+
+<ResponseField body='model' type='string'>
+Stores parameters of the model, including `provider`, `model_name`, and `api_key`.
+</ResponseField>
+
+<ResponseField body='prompt_template' type='string'>
+Stores instruction to an agent. This should contain the description of connected data.
+</ResponseField>
+
+<RequestExample>
+
+```shell Shell
+curl --request GET \
+  --url http://127.0.0.1:47334/api/projects/mindsdb/agents
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Response
+[
+    {
+        "id": 197,
+        "name": "my_agent",
+        "project_id": 1,
+        "created_at": "2025-07-09 12:58:24.868202",
+        "updated_at": "2025-07-09 12:58:24.868199",
+        "data": {
+            "knowledge_bases": ["my_project.my_kb"],
+            "tables": ["my_data_source.my_table"]
+        },
+        "model": {
+            "provider": "openai",
+            "model_name": "gpt-4o",
+            "api_key": "sk-xxx"
+        },
+        "prompt_template": "my_project.my_kb stores documentation of MindsDB, my_data_source.my_table stores documentation of MindsDB"
+    }
+]
+```
+
+</ResponseExample>

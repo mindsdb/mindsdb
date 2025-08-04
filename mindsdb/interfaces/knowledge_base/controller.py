@@ -245,12 +245,16 @@ class KnowledgeBaseTable:
         keyword_search_cols_and_values = []
         query_text = None
         relevance_threshold = None
+        relevance_threshold_allowed_operators = [
+            FilterOperator.GREATER_THAN_OR_EQUAL.value,
+            FilterOperator.GREATER_THAN.value,
+        ]
         hybrid_search_enabled_flag = False
         query_conditions = db_handler.extract_conditions(query.where)
         hybrid_search_alpha = None  # Default to None, meaning no alpha weighted blending
         if query_conditions is not None:
             for item in query_conditions:
-                if item.column == "relevance" and item.op.value == FilterOperator.GREATER_THAN_OR_EQUAL.value:
+                if (item.column == "relevance") and (item.op.value in relevance_threshold_allowed_operators):
                     try:
                         relevance_threshold = float(item.value)
                         # Validate range: must be between 0 and 1
@@ -279,7 +283,7 @@ class KnowledgeBaseTable:
                     if not (0 <= item.value <= 1):
                         raise ValueError(f"Invalid hybrid_search_alpha value: {item.value}. Must be between 0 and 1.")
                     hybrid_search_alpha = item.value
-                elif item.column == "relevance" and item.op.value != FilterOperator.GREATER_THAN_OR_EQUAL.value:
+                elif (item.column == "relevance") and (item.op.value not in relevance_threshold_allowed_operators):
                     raise ValueError(
                         f"Invalid operator for relevance: {item.op.value}. Only GREATER_THAN_OR_EQUAL is allowed."
                     )

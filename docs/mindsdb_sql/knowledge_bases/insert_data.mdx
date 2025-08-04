@@ -3,7 +3,15 @@ title: How to Insert Data into Knowledge Bases
 sidebarTitle: Insert Data into KB
 ---
 
-Knowledge Bases organize data across data sources, including databases, files, documents, webpages. Users can insert data in partitions and specify the chunking startegy.
+Knowledge Bases (KBs) organize data across data sources, including databases, files, documents, webpages, enabling efficient search capabilities.
+
+Here is what happens to data when it is inserted into the knowledge base.
+
+<p align="center">
+  <img src="/assets/kb_data_insertion.png"/>
+</p>
+
+Upon inserting data into the knowledge base, it is split into chunks, transformed into the embedding representation to enhance the search capabilities, and stored in a vector database.
 
 ## `INSERT INTO` Syntax
 

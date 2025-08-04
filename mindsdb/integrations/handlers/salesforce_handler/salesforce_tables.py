@@ -176,7 +176,6 @@ def create_table_class(resource_name: Text) -> MetaAPIResource:
                     "table_description": "",
                     "row_count": None,
                 }
-
             # Get row count if Id column is aggregatable.
             row_count = None
             # if next(field for field in resource_metadata['fields'] if field['name'] == 'Id').get('aggregatable', False):

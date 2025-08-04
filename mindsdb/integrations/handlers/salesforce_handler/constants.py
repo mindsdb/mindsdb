@@ -22,6 +22,7 @@ def get_soql_instructions(integration_name):
 - NO subqueries in FROM clause - only relationship-based subqueries allowed
   SQL: SELECT * FROM (SELECT Name FROM Account) AS AccountNames;
   SOQL: Not supported
+- Do not use fields that are not defined in the schema or data catalog. Always reference exact field names.
 
 **FIELD SELECTION:**
 - Always include Id field when querying
@@ -43,7 +44,10 @@ def get_soql_instructions(integration_name):
 - Special date literals: TODAY, YESTERDAY, LAST_WEEK, LAST_MONTH, LAST_QUARTER, LAST_YEAR, THIS_WEEK, THIS_MONTH, THIS_QUARTER, THIS_YEAR
   CORRECT: WHERE CreatedDate = TODAY
   CORRECT: WHERE LastModifiedDate >= LAST_MONTH
-  CORRECT: WHERE CloseDate = THIS_QUARTER
+  CORRECT: WHERE CloseDate >= THIS_QUARTER
+- Date arithmetic (e.g., TODAY - 10) is not supported. Use literals like LAST_N_DAYS:10 instead.
+  CORRECT: WHERE CloseDate >= LAST_N_DAYS:10
+  INCORRECT: WHERE CloseDate >= TODAY - 10
 - LIKE operator: Only supports % wildcard, NO underscore (_) wildcard
   CORRECT: WHERE Name LIKE '%Corp%'
   CORRECT: WHERE Name LIKE 'Acme%'
@@ -69,6 +73,9 @@ def get_soql_instructions(integration_name):
   CORRECT: WHERE Services__c INCLUDES ('Consulting;Support')
   CORRECT: WHERE Services__c EXCLUDES ('Training')
   INCORRECT: WHERE Services__c = 'Consulting'
+- Limited subquery support - only IN/NOT IN with non-correlated subqueries in WHERE clause
+  CORRECT: SELECT Id FROM Contact WHERE Id NOT IN (SELECT WhoId FROM Task)
+  INCORRECT: SELECT Id FROM Contact WHERE NOT EXISTS (SELECT 1 FROM Task WHERE WhoId = Contact.Id)
 
 **JOINS:**
 - NO explicit JOIN syntax supported
@@ -195,6 +202,7 @@ def get_soql_instructions(integration_name):
 - Multi-select picklist: SELECT Id, Name FROM Account WHERE Services__c INCLUDES ('Consulting;Support')
 - Sorting and limiting: SELECT Id, Name FROM Account ORDER BY Name ASC LIMIT 50
 
+
 ***EXECUTION INSTRUCTIONS. IMPORTANT!***
 After generating the core SOQL (and nothing else), always make sure you wrap it exactly as:
 
@@ -204,5 +212,4 @@ After generating the core SOQL (and nothing else), always make sure you wrap it 
       )
 
 Return only that wrapper call.
-
 """

@@ -335,6 +335,12 @@ if __name__ == "__main__":
         print(f"MindsDB {mindsdb_version}")
         sys.exit(0)
 
+    if config.cmd_args.update_gui:
+        from mindsdb.api.http.initialize import initialize_static
+        logger.info("Updating the GUI version")
+        initialize_static()
+        sys.exit(0)
+
     config.raise_warnings(logger=logger)
     os.environ["MINDSDB_RUNTIME"] = "1"
 

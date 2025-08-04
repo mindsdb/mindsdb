@@ -126,4 +126,7 @@ ENTRYPOINT [ "bash", "-c", "watchfiles --filter python 'python -Im mindsdb --con
 # Make sure the regular image is the default
 FROM extras
 
+# Run GUI update during build so the final image already contains it
+RUN python -Im mindsdb --config=/root/mindsdb_config.json --update-gui
+
 ENTRYPOINT [ "bash", "-c", "python -Im mindsdb --config=/root/mindsdb_config.json --api=http,mysql,a2a,mcp" ]

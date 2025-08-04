@@ -285,7 +285,8 @@ class KnowledgeBaseTable:
                     hybrid_search_alpha = item.value
                 elif (item.column == "relevance") and (item.op.value not in relevance_threshold_allowed_operators):
                     raise ValueError(
-                        f"Invalid operator for relevance: {item.op.value}. Only GREATER_THAN_OR_EQUAL is allowed."
+                        f"Invalid operator for relevance: {item.op.value}. Only the following operators are allowed: "
+                        f"{','.join(relevance_threshold_allowed_operators)}."
                     )
                 elif item.column == TableField.CONTENT.value:
                     query_text = item.value

@@ -253,4 +253,6 @@ def adapt_extract_df(node: Function) -> None:
         None
     """
     node.args[0] = Constant(node.args[0].parts[0])
-    node.from_arg = BinaryOperation(" ", args=[Identifier("timestamp"), node.from_arg])
+    if not isinstance(node.from_arg, Identifier):
+        node.from_arg = BinaryOperation(" ", args=[Identifier("timestamp"), node.from_arg])
+

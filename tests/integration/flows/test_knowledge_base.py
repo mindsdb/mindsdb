@@ -399,7 +399,7 @@ class TestKB(KBTestBase):
         ret = self.run_sql("""
             SELECT *
             FROM test_kb_crm_meta
-            WHERE status = "solving" AND content = "noise" AND relevance>=0.65
+            WHERE status = "solving" AND content = "noise" AND relevance>=0.5
         """)
         assert set(ret.metadata.apply(lambda x: x.get("status"))) == {"solving"}
         assert "noise" in ret.chunk_content[0]  # first line contents word

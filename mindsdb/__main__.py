@@ -337,6 +337,7 @@ if __name__ == "__main__":
 
     if config.cmd_args.update_gui:
         from mindsdb.api.http.initialize import initialize_static
+
         logger.info("Updating the GUI version")
         initialize_static()
         sys.exit(0)

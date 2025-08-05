@@ -599,7 +599,7 @@ class Config:
                 ml_task_queue_consumer=None,
                 agent=None,
                 project=None,
-                update_gui=False
+                update_gui=False,
             )
             return
 

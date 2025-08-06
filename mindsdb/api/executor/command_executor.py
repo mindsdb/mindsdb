@@ -1203,7 +1203,7 @@ class ExecuteCommands:
                     is_cloud is False
                     # NOTE: BYOM may raise these errors if there is an error in the user's code,
                     # therefore error_message will be None
-                    and handler_module_meta['name'] != 'byom'
+                    and handler_module_meta["name"] != "byom"
                     and "No module named" in handler_module_meta["import"]["error_message"]
                 ):
                     logger.info(get_handler_install_message(handler_module_meta["name"]))

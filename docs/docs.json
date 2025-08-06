@@ -398,6 +398,7 @@
                       "mindsdb_sql/knowledge_bases/create",
                       "mindsdb_sql/knowledge_bases/insert_data",
                       "mindsdb_sql/knowledge_bases/query",
+                      "mindsdb_sql/knowledge_bases/hybrid_search",
                       "mindsdb_sql/knowledge_bases/evaluate",
                       "mindsdb_sql/knowledge_bases/examples"
                     ]

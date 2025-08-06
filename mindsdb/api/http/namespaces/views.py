@@ -60,7 +60,7 @@ class ViewsList(Resource):
         if project.get_view(name) is not None:
             return http_error(HTTPStatus.CONFLICT, 'Name conflict', f'View with name {name} already exists.')
 
-        project.create_view(name, query)
+        project.create_view(name, query, session)
         created_view = project.get_view(name)
         # Only want to return relevant fields to the user.
         return {
@@ -113,7 +113,7 @@ class ViewResource(Resource):
             # Create
             if 'query' not in request_view:
                 return http_error(HTTPStatus.BAD_REQUEST, 'Wrong argument', 'Missing "query" field for new view')
-            project.create_view(view_name, request_view['query'])
+            project.create_view(view_name, request_view['query'], session)
             created_view = project.get_view(view_name)
             # Only want to return relevant fields to the user.
             return {

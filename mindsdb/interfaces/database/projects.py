@@ -109,7 +109,19 @@ class Project:
         """
         ViewController().delete(name, project_name=self.name, strict_case=strict_case)
 
-    def create_view(self, name: str, query: str):
+    def create_view(self, name: str, query: str, session):
+        ast_query = parse_sql(query)
+
+        if isinstance(ast_query, Select):
+            # check create view sql
+            ast_query.limit = Constant(1)
+
+            query_context_controller.set_context(query_context_controller.IGNORE_CONTEXT)
+            try:
+                SQLQuery(ast_query, session=session, database=self.name)
+            finally:
+                query_context_controller.release_context(query_context_controller.IGNORE_CONTEXT)
+
         ViewController().add(name, query=query, project_name=self.name)
 
     def update_view(self, name: str, query: str, strict_case: bool = False):

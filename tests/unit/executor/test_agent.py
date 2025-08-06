@@ -848,8 +848,8 @@ class TestAgent(BaseExecutorDummyML):
 
         # --- ALTER AGENT ---
         self.run_sql("""
-            UPDATE AGENT my_agent
-            SET
+            ALTER AGENT my_agent
+            USING
               model = {
                 "provider": 'openai',
                 "model_name": "gpt-18",

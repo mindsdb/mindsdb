@@ -7,7 +7,7 @@ from mindsdb.integrations.handlers.gong_handler.gong_tables import (
     GongCallsTable,
     GongUsersTable,
     GongAnalyticsTable,
-    GongTranscriptsTable
+    GongTranscriptsTable,
 )
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
@@ -83,17 +83,16 @@ class GongHandler(APIHandler):
             if auth_method == "basic":
                 # Basic authentication with access key + secret key
                 self.connection.auth = (self.access_key, self.secret_key)
-                self.connection.headers.update({
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                })
+                self.connection.headers.update({"Content-Type": "application/json", "Accept": "application/json"})
             else:
                 # Bearer token authentication
-                self.connection.headers.update({
-                    'Authorization': f'Bearer {self.bearer_token}',
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                })
+                self.connection.headers.update(
+                    {
+                        "Authorization": f"Bearer {self.bearer_token}",
+                        "Content-Type": "application/json",
+                        "Accept": "application/json",
+                    }
+                )
 
             test_response = self.connection.get(f"{self.base_url}/v2/users")
             test_response.raise_for_status()

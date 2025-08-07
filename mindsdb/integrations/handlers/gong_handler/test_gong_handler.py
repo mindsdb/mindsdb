@@ -6,16 +6,18 @@ Simple test script for the Gong handler
 import sys
 import os
 import logging
+
 logger = logging.getLogger(__name__)
 
 # Add the mindsdb directory to the path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
 
 def test_gong_handler_import():
     """Test that the Gong handler can be imported successfully"""
     try:
         from mindsdb.integrations.handlers.gong_handler import connection_args, connection_args_example
+
         logger.info("✅ Gong handler imported successfully!")
         logger.info(f"✅ Connection args: {len(connection_args)} parameters defined")
         logger.info(f"✅ Connection example: {len(connection_args_example)} example values")
@@ -30,11 +32,7 @@ def test_gong_handler_initialization():
     try:
         from mindsdb.integrations.handlers.gong_handler import Handler
 
-
-        connection_data = {
-            "api_key": "test_api_key",
-            "base_url": "https://api.gong.io"
-        }
+        connection_data = {"api_key": "test_api_key", "base_url": "https://api.gong.io"}
 
         handler = Handler("test_gong", connection_data)
         assert handler is not None
@@ -52,8 +50,9 @@ def test_gong_tables():
             GongCallsTable,
             GongUsersTable,
             GongAnalyticsTable,
-            GongTranscriptsTable
+            GongTranscriptsTable,
         )
+
         assert GongCallsTable(None) is not None
         assert GongUsersTable(None) is not None
         assert GongAnalyticsTable(None) is not None
@@ -63,10 +62,28 @@ def test_gong_tables():
 
         # Test table columns
         expected_tables = {
-            'GongCallsTable': ['call_id', 'title', 'date', 'duration', 'recording_url', 'call_type', 'user_id', 'participants', 'status'],
-            'GongUsersTable': ['user_id', 'name', 'email', 'role', 'permissions', 'status'],
-            'GongAnalyticsTable': ['call_id', 'sentiment_score', 'topic_score', 'key_phrases', 'topics', 'emotions', 'confidence_score'],
-            'GongTranscriptsTable': ['call_id', 'speaker', 'timestamp', 'text', 'confidence', 'segment_id']
+            "GongCallsTable": [
+                "call_id",
+                "title",
+                "date",
+                "duration",
+                "recording_url",
+                "call_type",
+                "user_id",
+                "participants",
+                "status",
+            ],
+            "GongUsersTable": ["user_id", "name", "email", "role", "permissions", "status"],
+            "GongAnalyticsTable": [
+                "call_id",
+                "sentiment_score",
+                "topic_score",
+                "key_phrases",
+                "topics",
+                "emotions",
+                "confidence_score",
+            ],
+            "GongTranscriptsTable": ["call_id", "speaker", "timestamp", "text", "confidence", "segment_id"],
         }
 
         for table_name, expected_columns in expected_tables.items():
@@ -83,11 +100,7 @@ def main():
     logger.info("🧪 Testing Gong Handler Implementation")
     logger.info("=" * 50)
 
-    tests = [
-        test_gong_handler_import,
-        test_gong_handler_initialization,
-        test_gong_tables
-    ]
+    tests = [test_gong_handler_import, test_gong_handler_initialization, test_gong_tables]
 
     passed = 0
     total = len(tests)

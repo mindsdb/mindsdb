@@ -11,9 +11,9 @@ from .__about__ import __version__ as version, __description__ as description
 # NOTE: security vulnerability is in `pytorch` v2.7.1, revert changes here and in
 # requirements.txt/requirements_cpu.txt when new version is released
 Handler = None
-import_error = """
-    The `huggingface_handler` is temporary disabled in current version of MindsDB due to security vulnerability.
-"""
+import_error = ImportError(
+    "The `huggingface_handler` is temporary disabled in current version of MindsDB due to security vulnerability."
+)
 
 title = "Hugging Face"
 name = "huggingface"

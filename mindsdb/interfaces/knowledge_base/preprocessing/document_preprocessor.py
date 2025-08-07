@@ -1,16 +1,16 @@
-from typing import List, Dict, Optional, Any
-import pandas as pd
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+import re
+import html
 import asyncio
+from typing import List, Dict, Optional, Any
 
+import pandas as pd
+from mindsdb.interfaces.knowledge_base.preprocessing.text_splitter import TextSplitter
 
 from mindsdb.integrations.utilities.rag.splitters.file_splitter import (
     FileSplitter,
     FileSplitterConfig,
 )
-
 from mindsdb.interfaces.agents.langchain_agent import create_chat_model
-
 from mindsdb.interfaces.knowledge_base.preprocessing.models import (
     PreprocessingConfig,
     ProcessedChunk,
@@ -20,8 +20,6 @@ from mindsdb.interfaces.knowledge_base.preprocessing.models import (
     TextChunkingConfig,
 )
 from mindsdb.utilities import log
-
-from langchain_core.documents import Document as LangchainDocument
 
 logger = log.getLogger(__name__)
 
@@ -49,11 +47,10 @@ class DocumentPreprocessor:
         if self.splitter is None:
             raise ValueError("Splitter not configured")
 
-        # Convert to langchain Document for splitting
-        langchain_doc = LangchainDocument(page_content=doc.content, metadata=doc.metadata or {})
+        metadata = doc.metadata or {}
         # Split and convert back to our Document type
-        split_docs = self.splitter.split_documents([langchain_doc])
-        return [Document(content=split_doc.page_content, metadata=split_doc.metadata) for split_doc in split_docs]
+        split_texts = self.splitter.split_text(doc.content)
+        return [Document(content=text, metadata=metadata) for text in split_texts]
 
     def _get_source(self) -> str:
         """Get the source identifier for this preprocessor"""
@@ -123,11 +120,11 @@ class ContextualPreprocessor(DocumentPreprocessor):
 
     DEFAULT_CONTEXT_TEMPLATE = """
 <document>
-{{WHOLE_DOCUMENT}}
+{WHOLE_DOCUMENT}
 </document>
 Here is the chunk we want to situate within the whole document
 <chunk>
-{{CHUNK_CONTENT}}
+{CHUNK_CONTENT}
 </chunk>
 Please give a short succinct context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk. Answer only with the succinct context and nothing else."""
 
@@ -149,12 +146,20 @@ Please give a short succinct context to situate this chunk within the overall do
         self.summarize = self.config.summarize
 
     def _prepare_prompts(self, chunk_contents: list[str], full_documents: list[str]) -> list[str]:
-        prompts = [
-            self.context_template.replace("{{WHOLE_DOCUMENT}}", full_document) for full_document in full_documents
-        ]
-        prompts = [
-            prompt.replace("{{CHUNK_CONTENT}}", chunk_content) for prompt, chunk_content in zip(prompts, chunk_contents)
-        ]
+        def tag_replacer(match):
+            tag = match.group(0)
+            if tag.lower() not in ["<document>", "</document>", "<chunk>", "</chunk>"]:
+                return tag
+            return html.escape(tag)
+
+        tag_pattern = r"</?document>|</?chunk>"
+        prompts = []
+        for chunk_content, full_document in zip(chunk_contents, full_documents):
+            chunk_content = re.sub(tag_pattern, tag_replacer, chunk_content, flags=re.IGNORECASE)
+            full_document = re.sub(tag_pattern, tag_replacer, full_document, flags=re.IGNORECASE)
+            prompts.append(
+                self.DEFAULT_CONTEXT_TEMPLATE.format(WHOLE_DOCUMENT=full_document, CHUNK_CONTENT=chunk_content)
+            )
 
         return prompts
 
@@ -258,16 +263,15 @@ Please give a short succinct context to situate this chunk within the overall do
 
 
 class TextChunkingPreprocessor(DocumentPreprocessor):
-    """Default text chunking preprocessor using RecursiveCharacterTextSplitter"""
+    """Default text chunking preprocessor using TextSplitter"""
 
     def __init__(self, config: Optional[TextChunkingConfig] = None):
         """Initialize with text chunking configuration"""
         super().__init__()
         self.config = config or TextChunkingConfig()
-        self.splitter = RecursiveCharacterTextSplitter(
+        self.splitter = TextSplitter(
             chunk_size=self.config.chunk_size,
             chunk_overlap=self.config.chunk_overlap,
-            length_function=self.config.length_function,
             separators=self.config.separators,
         )
 

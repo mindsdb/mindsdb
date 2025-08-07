@@ -16,14 +16,15 @@ USING
         "provider": "openai",
         "model_name" : "gpt-4o",
         "api_key": "sk-abc123",
-        "base_url": "http://xxx.com",
+        "base_url": "http://example.com",
         "api_version": "2024-02-01"
     },
     data = {
          "knowledge_bases": ["project_name.kb_name", ...],
          "tables": ["datasource_conn_name.table_name", ...]
     },
-    prompt_template='describe data';
+    prompt_template='describe data',
+    timeout=10;
 ```
 
 It creates an agent that uses the defined model and has access to the connected data.
@@ -253,7 +254,7 @@ USING
         "provider": "openai",
         "model_name" : "got-4o",
         "api_key": "sk-abc123",
-        "base_url": "https://xxx.com/",
+        "base_url": "https://example.com/",
         "api_version": "2024-02-01"
     },
     ...
@@ -273,7 +274,7 @@ You can define the default models in the Settings of the MindsDB Editor GUI.
       "provider": "openai",
       "model_name" : "got-4o",
       "api_key": "sk-abc123",
-      "base_url": "https://xxx.com/",
+      "base_url": "https://example.com/",
       "api_version": "2024-02-01"
 
 }
@@ -295,6 +296,12 @@ This parameter stores instructions for the agent.
 
 It is recommended to provide data description of the data sources listed in the `knowledge_bases` and `tables` parameters to help the agent locate relevant data for answering questions.
 
+### `timeout`
+
+This parameter defines the time the agent can take to come back with an answer.
+
+For example, when the `timeout` parameter is set to 10, the agent has 10 seconds to return an answer. If the agent takes longer than 10 seconds, it aborts the process and comes back with an answer indicating its failure to return an answer within the defined time interval.
+
 ## `SELECT FROM AGENT` Syntax
 
 Query an agent to generate responses to questions.
@@ -303,6 +310,42 @@ Query an agent to generate responses to questions.
 SELECT answer
 FROM my_agent 
 WHERE question = 'What is the average number of orders per customers?';
+```
+
+You can redefine the agent's parameters at the query time as below.
+
+```sql
+SELECT answer
+FROM my_agent 
+WHERE question = 'What is the average number of orders per customers?';
+USING
+    model = {
+        "provider": "openai",
+        "model_name" : "gpt-4.1",
+        "api_key": "sk-abc123"
+    },
+    data = {
+         "knowledge_bases": ["project_name.kb_name", ...],
+         "tables": ["datasource_conn_name.table_name", ...]
+    },
+    prompt_template='describe data',
+    timeout=10;
+```
+
+The `USING` clause may contain any combination of parameters from the `CREATE AGENT` command, depending on which parameters users want to update for the query.
+
+For example, users may want to check the performance of other models to decide which model works better for their use case.
+
+```sql
+SELECT answer
+FROM my_agent 
+WHERE question = 'What is the average number of orders per customers?';
+USING
+    model = {
+        "provider": "google",
+        "model_name" : "gemini-2.5-flash",
+        "api_key": "ABc123"
+    };
 ```
 
 ## `DROP AGENT` Syntax

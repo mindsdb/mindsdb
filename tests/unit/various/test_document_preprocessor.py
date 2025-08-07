@@ -1,3 +1,6 @@
+from collections import defaultdict
+
+import pandas as pd
 import pytest
 from unittest.mock import Mock, patch, AsyncMock
 from mindsdb.interfaces.knowledge_base.preprocessing.models import (
@@ -5,6 +8,7 @@ from mindsdb.interfaces.knowledge_base.preprocessing.models import (
     TextChunkingConfig,
     ContextualConfig,
 )
+from mindsdb.interfaces.knowledge_base.preprocessing.text_splitter import TextSplitter
 
 # Mock all langchain imports to avoid pydantic version conflicts
 with patch.dict(
@@ -21,6 +25,221 @@ with patch.dict(
         TextChunkingPreprocessor,
         ContextualPreprocessor,
     )
+
+SAMPLE_DOC = """
+Federal Register, Volume 89 Issue 153 (Thursday, August 8, 2024)
+[Federal Register Volume 89, Number 153 (Thursday, August 8, 2024)]
+[Notices]
+[Pages 64964-64965]
+From the Federal Register Online via the Government Publishing Office [www.gpo.gov]
+[FR Doc No: 2024-17521]
+[[Page 64964]]
+=======================================================================
+-----------------------------------------------------------------------
+NUCLEAR REGULATORY COMMISSION
+[Docket No. 50-0320; NRC-2024-0099]
+TMI-2SOLUTIONS, LLC; Three Mile Island Nuclear Station, Unit No.
+2; Environmental Assessment and Finding of No Significant Impact
+AGENCY: Nuclear Regulatory Commission.
+ACTION: Notice; issuance.
+-----------------------------------------------------------------------
+SUMMARY: The U.S. Nuclear Regulatory Commission (NRC) is issuing a
+final environmental assessment (EA) and finding of no significant
+impact (FONSI) for a proposed amendment of NRC Possession Only License
+(POL) DPR-73 for the Three Mile Island Nuclear Station, Unit No. 2
+(TMI-2), located in Londonderry Township, Dauphin County, Pennsylvania.
+The proposed amendment would ensure that TMI-2 Energy Solutions (TMI-
+2Solutions, the licensee) can continue decommissioning the facility in
+accordance with NRC regulations. TMI-2Solutions will be engaging in
+certain major decommissioning activities, including the physical
+demolition of buildings previously deemed eligible for the National
+Register of Historic Places (NRHP). The EA, ``Environmental Assessment
+for Specific Decommissioning Activities at Three Mile Island, Unit 2 in
+Dauphin County, Pennsylvania,'' documents the NRC staff's environmental
+review of the license amendment application.
+DATES: The EA and FONSI referenced in this document are available on
+August 8, 2024.
+ADDRESSES: Please refer to Docket ID NRC-2024-0099 when contacting the
+NRC about the availability of information regarding this document. You
+may obtain publicly available information related to this document
+using any of the following methods:
+     Federal Rulemaking Website: Go to https://www.regulations.gov and search for Docket ID NRC-2024-0099. Address
+questions about Docket IDs to Stacy Schumann; telephone: 301-415-0624;
+email: [email protected]. For technical questions, contact the
+individual listed in the FOR FURTHER INFORMATION CONTACT section of
+this document.
+     NRC's Agencywide Documents Access and Management System
+(ADAMS): You may obtain publicly available documents online in the
+ADAMS Public Documents collection at https://www.nrc.gov/reading-rm/adams.html. To begin the search, select ``Begin Web-based ADAMS
+Search.'' For problems with ADAMS, please contact the NRC's Public
+Document Room (PDR) reference staff at 1-800-397-4209, at 301-415-4737,
+or by email to [email protected]. The ADAMS accession number for
+each document referenced (if it is available in ADAMS) is provided the
+first time that it is mentioned in this document.
+     NRC's PDR: The PDR, where you may examine and order copies
+of publicly available documents, is open by appointment. To make an
+appointment to visit the PDR, please send an email to
+[email protected] or call 1-800-397-4209 or 301-415-4737, between 8
+a.m. and 4 p.m. eastern time (ET), Monday through Friday, except
+Federal holidays.
+     Project Website: Information related to the TMI-2 project
+can be accessed on NRC's TMI-2 public website at https://www.nrc.gov/info-finder/decommissioning/power-reactor/three-mile-island-unit-2.html.
+FOR FURTHER INFORMATION CONTACT: Jean Trefethen, Office of Nuclear
+Material Safety and Safeguards, U.S. Nuclear Regulatory Commission,
+Washington, DC 20555-0001; telephone: 301-415-0867; email:
+[email protected].
+SUPPLEMENTARY INFORMATION:
+I. Background
+    The Three Mile Island Nuclear Station (TMINS) is approximately 16
+kilometers (10 miles) southeast of Harrisburg, Pennsylvania. The TMINS
+site includes Three Mile Island Nuclear Station, Unit 1 and TMI-2. It
+encompasses approximately 178 hectares (440 acres), including the
+adjacent islands on the north end, a strip of land on the mainland
+along the eastern shore of the river, and an area on the eastern shore
+of Shelley Island. The TMINS site has significance in U.S. history
+because it is the site of the nation's most serious commercial nuclear
+power plant accident, occurring at TMI-2. On March 28, 1979, TMI-2
+experienced an accident initiated by interruption of secondary
+feedwater flow which led to a core heat up that caused fuel damage. The
+partial meltdown of the reactor core led to a very small offsite
+release of radioactivity. In response to this accident many changes
+occurred at nuclear power plants including emergency response planning,
+reactor operator training, human factors engineering, radiation
+protection and heightened NRC regulatory oversight.
+II. Discussion
+    By letter dated February 22, 2023 (ADAMS Accession No.
+ML23058A064), TMI-2Solutions requested an amendment to POL No. DPR-73.
+TMI-2Solutions will be engaging in certain major decommissioning
+activities, including the physical demolition of buildings previously
+deemed eligible for the NRHP. Because the impacts on the historic
+properties from these decommissioning activities have not been
+previously evaluated and are not bounded by the impact's discussion in
+NUREG-0586, ``Final Generic Environmental Impact Statement on
+Decommissioning of Nuclear Facilities,'' TMI-2Solutions requested an
+amendment that would require evaluation of the impacts of the
+decommissioning activities on the NRHP-eligible properties, in
+compliance with paragraph 50.82(a)(6)(ii) of title 10 of the Code of
+Federal Regulations (10 CFR).
+    Pursuant to 36 CFR 800.8, the NRC used its National Environmental
+Policy Act process for developing the EA to facilitate consultation
+pursuant to section 106 of the National Historic Preservation Act
+(NHPA).
+    Adverse effects to historic properties would result from
+decommissioning activities at TMI-2. Therefore, the NRC and consulting
+parties proceeded with development of a programmatic agreement (PA) to
+resolve adverse effects. The draft PA was issued for public comment
+through a Federal Register notice dated March 6, 2024 (89 FR 16037).
+One comment was received and considered before finalizing the PA. The
+PA addresses the potential direct and indirect adverse effects from the
+decommissioning activities and ensures that appropriate mitigation
+measures are implemented. The NRC's EA references the final PA and,
+therefore, conclude NHPA section 106 consultation.
+    In accordance with NRC's regulations in 10 CFR part 51,
+``Environmental Protection Regulations for Domestic Licensing and
+Related Regulatory Functions,'' that implement the National Environment
+Protection Agency (NEPA), the NRC staff has prepared an EA documenting
+its environmental review of the license amendment application. Based on
+the environmental review, the NRC has made a determination that the
+proposed action will not significantly affect the quality of the human
+environment and that a FONSI is therefore appropriate.
+III. Summary of Environmental Assessment
+    The EA is publicly available in ADAMS under Accession No.
+ML24197A005. A summary description of the proposed action and expected
+environmental impacts is provided as follows.
+[[Page 64965]]
+Description of the Proposed Action
+    The proposed action is to amend POL No. DPR-73 so that TMI-
+2Solutions can continue with certain major decommissioning activities
+planned under Phase 2 of its decommissioning schedule. Phase 2
+decommissioning activities include the removal of any radioactive
+components in preparation for demolition of structures, decommissioning
+and dismantlement of the TMI-2 site to a level that permits the release
+of the site, except for an area potentially to be set aside for storage
+of fuel-bearing material (small quantities of spent nuclear fuel,
+damaged core material, and high-level waste) on the independent spent
+fuel storage installation, backfilling of the site, license termination
+plan submittal and implementation, and site restoration activities. In
+order to comply with 10 CFR 50.82(a)(6)(ii), TMI-2Solutions requested
+that NRC evaluate the impacts of certain major decommissioning
+activities on historic and cultural resources and NRHP-eligible
+properties. The definition of major decommissioning activity is in 10
+CFR 50.2, which states ``major decommissioning activity means, for a
+nuclear power reactor facility, any activity that results in permanent
+removal of major radioactive components, permanently modifies the
+structure of the containment, or results in dismantling components for
+shipment containing greater than class C waste in accordance with Sec.
+61.55 of this chapter.'' Due to radioactive contamination, the TMI-2
+structures must be demolished and removed during decommissioning.
+Environmental Impacts of the Proposed Action
+    In the EA, the staff assessed the potential environmental impacts
+from the proposed license amendment to the following resource areas:
+land use; visual and scenic resources; the geologic environment;
+surface and groundwater resources; ecological resources; air quality;
+noise; historic and cultural resources; socioeconomic conditions;
+environmental justice; public and occupational health; transportation;
+and waste generation and management. The NRC staff also considered the
+cumulative impacts from past, present, and reasonably foreseeable
+actions when combined with the proposed action. The TMI-2 Historic
+District would be adversely affected by the TMI-2 decommissioning, and
+adverse effects cannot be avoided. The mitigation of adverse effects to
+the TMI-2 Historic District will be completed in accordance with the
+TMI-2 Demolition and Decommissioning Programmatic Agreement (NRC
+2024a).
+    As part of the NRC's consultation under section 7 of the Endangered
+Species Act, NRC staff determined that the proposed action may affect
+but is not likely to adversely affect the Indiana bat (Myotis sodalis),
+northern long-eared bat (Myotis septentrionalis), tricolored bat
+(Perimyotis subflavus), monarch butterfly (Danaus plexippus),
+northeastern bulrush (Scirpus ancistrochaetus), or green floater
+(Lasmigona subviridis). The NRC staff transmitted a letter to the U.S.
+Fish and Wildlife Service (FWS) for its review and concurrence on May
+24, 2024 (ADAMS Accession No. ML24120A324). The FWS concurred with the
+NRC's findings on July 15, 2024 (ADAMS Accession No. ML24199A062).
+    All other potential impacts from the proposed action were
+determined to be not significant, as described in the EA. The NRC staff
+found that there would be no significant negative cumulative impact to
+any resource area from the proposed action when added to other past,
+present, and reasonably foreseeable actions.
+Environmental Impacts of the Alternative to the Proposed Action
+    As an alternative to the proposed action, the NRC staff considered
+denial of the proposed action (i.e., the ``no-action'' alternative).
+Under the no-action alternative, the NRC would deny the licensee's
+request to allow for the continuation of major decommissioning
+activities under Phase 2. In this case, the NRC staff would not review
+the historic and cultural resource impacts of the major decommissioning
+activities as defined in 10 CFR 50.2 and would therefore disallow the
+removal of NRHP-eligible structures and any impacts to historic and
+cultural resources. However, due to the presence of radioactive
+contamination, TMI-2 structures, including the NRHP-eligible
+structures, must be removed during the decommissioning process.
+Therefore, the NRC staff concludes that denying the amendment request
+is not a reasonable alternative.
+IV. Finding of No Significant Impact
+    In accordance with the NEPA and 10 CFR part 51, the NRC staff has
+conducted an environmental review of a request for an amendment to POL
+No. DPR-73. The proposed amendment would revise the POL to allow the
+licensee to conduct decommissioning at TMI-2 covering activities that
+were not previously addressed in the staff's environmental assessments
+(site-specific historical and cultural resources). Based on its
+environmental review of the proposed action, the NRC staff has made a
+finding of no significant impact in the EA. Therefore, the NRC staff
+has determined, pursuant to 10 CFR 51.31, that preparation of an
+environmental impact statement is not required for the proposed action
+and a FONSI is appropriate.
+    Dated: August 2, 2024.
+    For the Nuclear Regulatory Commission.
+Christopher M. Regan,
+Director, Division of Rulemaking, Environmental, and Financial Support,
+Office of Nuclear Material Safety, and Safeguards.
+[FR Doc. 2024-17521 Filed 8-7-24; 8:45 am]
+BILLING CODE 7590-01-P
+Federal Register, Volume 89 Issue 153 (Thursday, August 8, 2024)
+[Federal Register Volume 89, Number 153 (Thursday, August 8, 2024)]
+[Notices]
+[Pages 64964-64965]
+From the Federal Register Online via the Government Publishing Office [www.gpo.gov]
+[FR Doc No: 2024-17521]
+[[Page 64964]]"""
 
 
 class TestDocumentPreprocessor:
@@ -433,217 +652,47 @@ class TestContextualPreprocessor:
 
     @pytest.fixture
     def sample_document(self):
-        return """
-    Federal Register, Volume 89 Issue 153 (Thursday, August 8, 2024)
-    [Federal Register Volume 89, Number 153 (Thursday, August 8, 2024)]
-    [Notices]
-    [Pages 64964-64965]
-    From the Federal Register Online via the Government Publishing Office [www.gpo.gov]
-    [FR Doc No: 2024-17521]
-    [[Page 64964]]
-    =======================================================================
-    -----------------------------------------------------------------------
-    NUCLEAR REGULATORY COMMISSION
-    [Docket No. 50-0320; NRC-2024-0099]
-    TMI-2SOLUTIONS, LLC; Three Mile Island Nuclear Station, Unit No.
-    2; Environmental Assessment and Finding of No Significant Impact
-    AGENCY: Nuclear Regulatory Commission.
-    ACTION: Notice; issuance.
-    -----------------------------------------------------------------------
-    SUMMARY: The U.S. Nuclear Regulatory Commission (NRC) is issuing a
-    final environmental assessment (EA) and finding of no significant
-    impact (FONSI) for a proposed amendment of NRC Possession Only License
-    (POL) DPR-73 for the Three Mile Island Nuclear Station, Unit No. 2
-    (TMI-2), located in Londonderry Township, Dauphin County, Pennsylvania.
-    The proposed amendment would ensure that TMI-2 Energy Solutions (TMI-
-    2Solutions, the licensee) can continue decommissioning the facility in
-    accordance with NRC regulations. TMI-2Solutions will be engaging in
-    certain major decommissioning activities, including the physical
-    demolition of buildings previously deemed eligible for the National
-    Register of Historic Places (NRHP). The EA, ``Environmental Assessment
-    for Specific Decommissioning Activities at Three Mile Island, Unit 2 in
-    Dauphin County, Pennsylvania,'' documents the NRC staff's environmental
-    review of the license amendment application.
-    DATES: The EA and FONSI referenced in this document are available on
-    August 8, 2024.
-    ADDRESSES: Please refer to Docket ID NRC-2024-0099 when contacting the
-    NRC about the availability of information regarding this document. You
-    may obtain publicly available information related to this document
-    using any of the following methods:
-         Federal Rulemaking Website: Go to https://www.regulations.gov and search for Docket ID NRC-2024-0099. Address
-    questions about Docket IDs to Stacy Schumann; telephone: 301-415-0624;
-    email: [email protected]. For technical questions, contact the
-    individual listed in the FOR FURTHER INFORMATION CONTACT section of
-    this document.
-         NRC's Agencywide Documents Access and Management System
-    (ADAMS): You may obtain publicly available documents online in the
-    ADAMS Public Documents collection at https://www.nrc.gov/reading-rm/adams.html. To begin the search, select ``Begin Web-based ADAMS
-    Search.'' For problems with ADAMS, please contact the NRC's Public
-    Document Room (PDR) reference staff at 1-800-397-4209, at 301-415-4737,
-    or by email to [email protected]. The ADAMS accession number for
-    each document referenced (if it is available in ADAMS) is provided the
-    first time that it is mentioned in this document.
-         NRC's PDR: The PDR, where you may examine and order copies
-    of publicly available documents, is open by appointment. To make an
-    appointment to visit the PDR, please send an email to
-    [email protected] or call 1-800-397-4209 or 301-415-4737, between 8
-    a.m. and 4 p.m. eastern time (ET), Monday through Friday, except
-    Federal holidays.
-         Project Website: Information related to the TMI-2 project
-    can be accessed on NRC's TMI-2 public website at https://www.nrc.gov/info-finder/decommissioning/power-reactor/three-mile-island-unit-2.html.
-    FOR FURTHER INFORMATION CONTACT: Jean Trefethen, Office of Nuclear
-    Material Safety and Safeguards, U.S. Nuclear Regulatory Commission,
-    Washington, DC 20555-0001; telephone: 301-415-0867; email:
-    [email protected].
-    SUPPLEMENTARY INFORMATION:
-    I. Background
-        The Three Mile Island Nuclear Station (TMINS) is approximately 16
-    kilometers (10 miles) southeast of Harrisburg, Pennsylvania. The TMINS
-    site includes Three Mile Island Nuclear Station, Unit 1 and TMI-2. It
-    encompasses approximately 178 hectares (440 acres), including the
-    adjacent islands on the north end, a strip of land on the mainland
-    along the eastern shore of the river, and an area on the eastern shore
-    of Shelley Island. The TMINS site has significance in U.S. history
-    because it is the site of the nation's most serious commercial nuclear
-    power plant accident, occurring at TMI-2. On March 28, 1979, TMI-2
-    experienced an accident initiated by interruption of secondary
-    feedwater flow which led to a core heat up that caused fuel damage. The
-    partial meltdown of the reactor core led to a very small offsite
-    release of radioactivity. In response to this accident many changes
-    occurred at nuclear power plants including emergency response planning,
-    reactor operator training, human factors engineering, radiation
-    protection and heightened NRC regulatory oversight.
-    II. Discussion
-        By letter dated February 22, 2023 (ADAMS Accession No.
-    ML23058A064), TMI-2Solutions requested an amendment to POL No. DPR-73.
-    TMI-2Solutions will be engaging in certain major decommissioning
-    activities, including the physical demolition of buildings previously
-    deemed eligible for the NRHP. Because the impacts on the historic
-    properties from these decommissioning activities have not been
-    previously evaluated and are not bounded by the impact's discussion in
-    NUREG-0586, ``Final Generic Environmental Impact Statement on
-    Decommissioning of Nuclear Facilities,'' TMI-2Solutions requested an
-    amendment that would require evaluation of the impacts of the
-    decommissioning activities on the NRHP-eligible properties, in
-    compliance with paragraph 50.82(a)(6)(ii) of title 10 of the Code of
-    Federal Regulations (10 CFR).
-        Pursuant to 36 CFR 800.8, the NRC used its National Environmental
-    Policy Act process for developing the EA to facilitate consultation
-    pursuant to section 106 of the National Historic Preservation Act
-    (NHPA).
-        Adverse effects to historic properties would result from
-    decommissioning activities at TMI-2. Therefore, the NRC and consulting
-    parties proceeded with development of a programmatic agreement (PA) to
-    resolve adverse effects. The draft PA was issued for public comment
-    through a Federal Register notice dated March 6, 2024 (89 FR 16037).
-    One comment was received and considered before finalizing the PA. The
-    PA addresses the potential direct and indirect adverse effects from the
-    decommissioning activities and ensures that appropriate mitigation
-    measures are implemented. The NRC's EA references the final PA and,
-    therefore, conclude NHPA section 106 consultation.
-        In accordance with NRC's regulations in 10 CFR part 51,
-    ``Environmental Protection Regulations for Domestic Licensing and
-    Related Regulatory Functions,'' that implement the National Environment
-    Protection Agency (NEPA), the NRC staff has prepared an EA documenting
-    its environmental review of the license amendment application. Based on
-    the environmental review, the NRC has made a determination that the
-    proposed action will not significantly affect the quality of the human
-    environment and that a FONSI is therefore appropriate.
-    III. Summary of Environmental Assessment
-        The EA is publicly available in ADAMS under Accession No.
-    ML24197A005. A summary description of the proposed action and expected
-    environmental impacts is provided as follows.
-    [[Page 64965]]
-    Description of the Proposed Action
-        The proposed action is to amend POL No. DPR-73 so that TMI-
-    2Solutions can continue with certain major decommissioning activities
-    planned under Phase 2 of its decommissioning schedule. Phase 2
-    decommissioning activities include the removal of any radioactive
-    components in preparation for demolition of structures, decommissioning
-    and dismantlement of the TMI-2 site to a level that permits the release
-    of the site, except for an area potentially to be set aside for storage
-    of fuel-bearing material (small quantities of spent nuclear fuel,
-    damaged core material, and high-level waste) on the independent spent
-    fuel storage installation, backfilling of the site, license termination
-    plan submittal and implementation, and site restoration activities. In
-    order to comply with 10 CFR 50.82(a)(6)(ii), TMI-2Solutions requested
-    that NRC evaluate the impacts of certain major decommissioning
-    activities on historic and cultural resources and NRHP-eligible
-    properties. The definition of major decommissioning activity is in 10
-    CFR 50.2, which states ``major decommissioning activity means, for a
-    nuclear power reactor facility, any activity that results in permanent
-    removal of major radioactive components, permanently modifies the
-    structure of the containment, or results in dismantling components for
-    shipment containing greater than class C waste in accordance with Sec.
-    61.55 of this chapter.'' Due to radioactive contamination, the TMI-2
-    structures must be demolished and removed during decommissioning.
-    Environmental Impacts of the Proposed Action
-        In the EA, the staff assessed the potential environmental impacts
-    from the proposed license amendment to the following resource areas:
-    land use; visual and scenic resources; the geologic environment;
-    surface and groundwater resources; ecological resources; air quality;
-    noise; historic and cultural resources; socioeconomic conditions;
-    environmental justice; public and occupational health; transportation;
-    and waste generation and management. The NRC staff also considered the
-    cumulative impacts from past, present, and reasonably foreseeable
-    actions when combined with the proposed action. The TMI-2 Historic
-    District would be adversely affected by the TMI-2 decommissioning, and
-    adverse effects cannot be avoided. The mitigation of adverse effects to
-    the TMI-2 Historic District will be completed in accordance with the
-    TMI-2 Demolition and Decommissioning Programmatic Agreement (NRC
-    2024a).
-        As part of the NRC's consultation under section 7 of the Endangered
-    Species Act, NRC staff determined that the proposed action may affect
-    but is not likely to adversely affect the Indiana bat (Myotis sodalis),
-    northern long-eared bat (Myotis septentrionalis), tricolored bat
-    (Perimyotis subflavus), monarch butterfly (Danaus plexippus),
-    northeastern bulrush (Scirpus ancistrochaetus), or green floater
-    (Lasmigona subviridis). The NRC staff transmitted a letter to the U.S.
-    Fish and Wildlife Service (FWS) for its review and concurrence on May
-    24, 2024 (ADAMS Accession No. ML24120A324). The FWS concurred with the
-    NRC's findings on July 15, 2024 (ADAMS Accession No. ML24199A062).
-        All other potential impacts from the proposed action were
-    determined to be not significant, as described in the EA. The NRC staff
-    found that there would be no significant negative cumulative impact to
-    any resource area from the proposed action when added to other past,
-    present, and reasonably foreseeable actions.
-    Environmental Impacts of the Alternative to the Proposed Action
-        As an alternative to the proposed action, the NRC staff considered
-    denial of the proposed action (i.e., the ``no-action'' alternative).
-    Under the no-action alternative, the NRC would deny the licensee's
-    request to allow for the continuation of major decommissioning
-    activities under Phase 2. In this case, the NRC staff would not review
-    the historic and cultural resource impacts of the major decommissioning
-    activities as defined in 10 CFR 50.2 and would therefore disallow the
-    removal of NRHP-eligible structures and any impacts to historic and
-    cultural resources. However, due to the presence of radioactive
-    contamination, TMI-2 structures, including the NRHP-eligible
-    structures, must be removed during the decommissioning process.
-    Therefore, the NRC staff concludes that denying the amendment request
-    is not a reasonable alternative.
-    IV. Finding of No Significant Impact
-        In accordance with the NEPA and 10 CFR part 51, the NRC staff has
-    conducted an environmental review of a request for an amendment to POL
-    No. DPR-73. The proposed amendment would revise the POL to allow the
-    licensee to conduct decommissioning at TMI-2 covering activities that
-    were not previously addressed in the staff's environmental assessments
-    (site-specific historical and cultural resources). Based on its
-    environmental review of the proposed action, the NRC staff has made a
-    finding of no significant impact in the EA. Therefore, the NRC staff
-    has determined, pursuant to 10 CFR 51.31, that preparation of an
-    environmental impact statement is not required for the proposed action
-    and a FONSI is appropriate.
-        Dated: August 2, 2024.
-        For the Nuclear Regulatory Commission.
-    Christopher M. Regan,
-    Director, Division of Rulemaking, Environmental, and Financial Support,
-    Office of Nuclear Material Safety, and Safeguards.
-    [FR Doc. 2024-17521 Filed 8-7-24; 8:45 am]
-    BILLING CODE 7590-01-P
-    Federal Register, Volume 89 Issue 153 (Thursday, August 8, 2024)
-    [Federal Register Volume 89, Number 153 (Thursday, August 8, 2024)]
-    [Notices]
-    [Pages 64964-64965]
-    From the Federal Register Online via the Government Publishing Office [www.gpo.gov]
-    [FR Doc No: 2024-17521]
-    [[Page 64964]]"""  # noqa
+        return SAMPLE_DOC
+
+
+class TextSplitEval:
+    def evaluate(self, text, chunks, chunk_size):
+        lengths = [len(chunk) for chunk in chunks]
+        len_df = pd.DataFrame(lengths, columns=["length"])
+
+        text2 = text3 = text
+        sep_stat = defaultdict(int)
+        for chunk in chunks:
+            pos = text2.find(chunk)
+            if pos == -1:
+                pos = text3.find(chunk)
+                if pos == -1:
+                    raise Exception("chunk is not from text:" + chunk)
+                print("----------------\noverlap: ", text3[pos : len(text3) - len(text2)])
+                text2 = text3
+
+            else:
+                sep = text2[:pos]
+
+                sep_stat[sep] += 1
+
+            text3 = text2  # previous
+            text2 = text2[pos + len(chunk) :]
+
+        print("______________")
+        print("avg len:", len_df["length"].mean())
+        print("median len:", len_df["length"].median())
+        print("count:", len(len_df))
+        c_75 = len(len_df[len_df["length"] > chunk_size * 0.75])
+        print("count > 75%:", int(c_75 / len(len_df) * 100), "%")
+        print("separators using:", dict(sep_stat))
+
+    def eval_text_splitter(self):
+        chunk_size = 1000
+        chunk_overlap = 200
+        separators = ["\n\n", ".\n", ". ", " ", ""]
+        splitter = TextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap, separators=separators)
+        text = SAMPLE_DOC
+        chunks = splitter.split_text(text)
+
+        self.evaluate(text, chunks, chunk_overlap)

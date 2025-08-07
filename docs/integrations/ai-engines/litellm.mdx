@@ -32,7 +32,7 @@ USING
     model = "gpt-4",
     base_url = "https://api.openai.com/v1",
     api_key = "sk-xxx",
-    prompt_template = "answer questions in three bullet points: {{question}}";
+    prompt_template = "answer questions in three bullet points: {question}";
 ```
 
 The parameters include:
@@ -40,6 +40,10 @@ The parameters include:
 * `engine` is the LiteLLM engine created based on the LiteLLM handler with the [`CREATE ML_ENGINE`](https://docs.mindsdb.com/mindsdb_sql/sql/create/ml-engine) statement.
 
 * `model` is the one of the models supported by LiteLLM. See the [complete list of the supported providers and models here](https://docs.litellm.ai/docs/providers).
+
+    <Note>
+    Note that you may need to provide the model name following this format: `provider/model_name`. For example, `ollama/llama2` or `openai/gpt-4o`.
+    </Note>
 
 * `base_url` is an optional parameter that stores the base URL for accessing models.
 
@@ -56,11 +60,11 @@ CREATE ML_ENGINE litellm
 FROM litellm;
 
 CREATE MODEL chat_model
-PREDICT result
+PREDICT answer
 USING
     engine = "litellm",
-    model = "gpt-4o",
-    api_key = "sk-xxx";
+    model = "ollama/llama2:latest",
+    base_url = "http://localhost:11434";
 
 SELECT *
 FROM chat_model

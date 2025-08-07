@@ -37,54 +37,74 @@ def get_api_key(
 
     # 1
     if "using" in create_args and f"{api_name.lower()}_api_key" in create_args["using"]:
-        return create_args["using"][f"{api_name.lower()}_api_key"]
+        api_key = create_args["using"][f"{api_name.lower()}_api_key"]
+        if api_key:
+            return api_key
 
     # 1.5 - Check for generic api_key in using
     if "using" in create_args and "api_key" in create_args["using"]:
-        return create_args["using"]["api_key"]
+        api_key = create_args["using"]["api_key"]
+        if api_key:
+            return api_key
 
     # 2
     if f"{api_name.lower()}_api_key" in create_args:
-        return create_args[f"{api_name.lower()}_api_key"]
+        api_key = create_args[f"{api_name.lower()}_api_key"]
+        if api_key:
+            return api_key
 
     # 2.5 - Check for generic api_key
     if "api_key" in create_args:
-        return create_args["api_key"]
+        api_key = create_args["api_key"]
+        if api_key:
+            return api_key
 
     # 3 - Check in params dictionary if it exists (for agents)
     if "params" in create_args and create_args["params"] is not None:
         if f"{api_name.lower()}_api_key" in create_args["params"]:
-            return create_args["params"][f"{api_name.lower()}_api_key"]
+            api_key = create_args["params"][f"{api_name.lower()}_api_key"]
+            if api_key:
+                return api_key
         # 3.5 - Check for generic api_key in params
         if "api_key" in create_args["params"]:
-            return create_args["params"]["api_key"]
+            api_key = create_args["params"]["api_key"]
+            if api_key:
+                return api_key
 
     # 4
     if engine_storage is not None:
         connection_args = engine_storage.get_connection_args()
         if f"{api_name.lower()}_api_key" in connection_args:
-            return connection_args[f"{api_name.lower()}_api_key"]
+            api_key = connection_args[f"{api_name.lower()}_api_key"]
+            if api_key:
+                return api_key
         # 4.5 - Check for generic api_key in connection_args
         if "api_key" in connection_args:
-            return connection_args["api_key"]
+            api_key = connection_args["api_key"]
+            if api_key:
+                return api_key
 
     # 5
     api_key = os.getenv(f"{api_name.lower()}_api_key")
-    if api_key is not None:
+    if api_key:
         return api_key
     api_key = os.getenv(f"{api_name.upper()}_API_KEY")
-    if api_key is not None:
+    if api_key:
         return api_key
 
     # 6
     config = Config()
     api_cfg = config.get(api_name, {})
     if f"{api_name.lower()}_api_key" in api_cfg:
-        return api_cfg[f"{api_name.lower()}_api_key"]
+        api_key = api_cfg[f"{api_name.lower()}_api_key"]
+        if api_key:
+            return api_key
 
     # 7
     if "api_keys" in create_args and api_name in create_args["api_keys"]:
-        return create_args["api_keys"][api_name]
+        api_key = create_args["api_keys"][api_name]
+        if api_key:
+            return api_key
 
     if strict:
         provider_upper = api_name.upper()

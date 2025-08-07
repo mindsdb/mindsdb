@@ -217,6 +217,17 @@ class KnowledgeBaseQueryExecutor:
                 f'Operator "{content_condition.op}" is not supported for condition: {content_condition}'
             )
 
+    @staticmethod
+    def to_include_content(content_condition: BinaryOperation) -> List[str]:
+        """
+        Handles positive conditions for content. Returns list of content values
+        """
+        if content_condition.op == "IN":
+            return [item.value for item in content_condition.args[1].items]
+
+        elif content_condition.op in ("=", "LIKE"):
+            return [content_condition.args[1].value]
+
     def to_excluded_ids(
         self, content_condition: BinaryOperation, other_conditions: List[BinaryOperation]
     ) -> Optional[List[str]]:
@@ -290,11 +301,17 @@ class KnowledgeBaseQueryExecutor:
             if len(content_filters) > 0:
                 content_filters2 = []
                 exclude_ids = set()
+                include_contents = set()
                 # exclude content conditions
                 for condition in content_filters:
                     ids = self.to_excluded_ids(condition, other_filters)
                     if ids is not None:
                         exclude_ids.update(ids)
+                        continue
+                    contents = self.to_include_content(condition)
+                    if contents is not None:
+                        include_contents.update(contents)
+                        continue
                     else:
                         # keep origin content filter
                         content_filters2.append(condition)
@@ -305,6 +322,13 @@ class KnowledgeBaseQueryExecutor:
                     condition = BinaryOperation(op="NOT IN", args=[Identifier(self.id_column), Tuple(values)])
                     other_filters.append(condition)
                 # execute content filters
+                if include_contents:
+                    content = " AND ".join(include_contents)
+                    result = self.execute_content_condition(
+                        BinaryOperation(op="=", args=[Identifier(self.content_column), Constant(content)]),
+                        other_filters,
+                    )
+                    results.append(result)
                 for condition in content_filters2:
                     result = self.execute_content_condition(condition, other_filters)
                     results.append(result)

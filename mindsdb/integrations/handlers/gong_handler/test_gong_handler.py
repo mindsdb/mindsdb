@@ -5,6 +5,8 @@ Simple test script for the Gong handler
 
 import sys
 import os
+import logging
+logger = logging.getLogger(__name__)
 
 # Add the mindsdb directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
@@ -14,12 +16,12 @@ def test_gong_handler_import():
     """Test that the Gong handler can be imported successfully"""
     try:
         from mindsdb.integrations.handlers.gong_handler import connection_args, connection_args_example
-        print("✅ Gong handler imported successfully!")
-        print(f"✅ Connection args: {len(connection_args)} parameters defined")
-        print(f"✅ Connection example: {len(connection_args_example)} example values")
+        logger.info("✅ Gong handler imported successfully!")
+        logger.info(f"✅ Connection args: {len(connection_args)} parameters defined")
+        logger.info(f"✅ Connection example: {len(connection_args_example)} example values")
         return True
     except Exception as e:
-        print(f"❌ Failed to import Gong handler: {e}")
+        logger.info(f"❌ Failed to import Gong handler: {e}")
         return False
 
 
@@ -36,10 +38,10 @@ def test_gong_handler_initialization():
 
         handler = Handler("test_gong", connection_data)
         assert handler is not None
-        print("✅ Gong handler initialized successfully!")
+        logger.info("✅ Gong handler initialized successfully!")
         return True
     except Exception as e:
-        print(f"❌ Failed to initialize Gong handler: {e}")
+        logger.info(f"❌ Failed to initialize Gong handler: {e}")
         return False
 
 
@@ -57,7 +59,7 @@ def test_gong_tables():
         assert GongAnalyticsTable(None) is not None
         assert GongTranscriptsTable(None) is not None
 
-        print("✅ All Gong table classes imported successfully!")
+        logger.info("✅ All Gong table classes imported successfully!")
 
         # Test table columns
         expected_tables = {
@@ -68,18 +70,18 @@ def test_gong_tables():
         }
 
         for table_name, expected_columns in expected_tables.items():
-            print(f"✅ {table_name} columns defined correctly")
+            logger.info(f"✅ {table_name} columns defined correctly")
 
         return True
     except Exception as e:
-        print(f"❌ Failed to test Gong tables: {e}")
+        logger.info(f"❌ Failed to test Gong tables: {e}")
         return False
 
 
 def main():
     """Run all tests"""
-    print("🧪 Testing Gong Handler Implementation")
-    print("=" * 50)
+    logger.info("🧪 Testing Gong Handler Implementation")
+    logger.info("=" * 50)
 
     tests = [
         test_gong_handler_import,
@@ -93,16 +95,15 @@ def main():
     for test in tests:
         if test():
             passed += 1
-        print()
 
-    print("=" * 50)
-    print(f"📊 Test Results: {passed}/{total} tests passed")
+    logger.info("=" * 50)
+    logger.info(f"📊 Test Results: {passed}/{total} tests passed")
 
     if passed == total:
-        print("🎉 All tests passed! Gong handler is ready to use.")
+        logger.info("🎉 All tests passed! Gong handler is ready to use.")
         return True
     else:
-        print("❌ Some tests failed. Please check the implementation.")
+        logger.info("❌ Some tests failed. Please check the implementation.")
         return False
 
 

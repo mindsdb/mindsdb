@@ -30,7 +30,7 @@ def test_gong_handler_initialization():
     try:
         from mindsdb.integrations.handlers.gong_handler import Handler
 
-        # Test initialization with mock data
+
         connection_data = {
             "api_key": "test_api_key",
             "base_url": "https://api.gong.io"

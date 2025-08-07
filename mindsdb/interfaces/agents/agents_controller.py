@@ -536,8 +536,6 @@ class AgentsController:
                 db.session.add(association)
 
         if params is not None:
-            existing_params = existing_agent.params or {}
-
             if params.get("data", {}).get("tables"):
                 new_table_entries = set(params["data"]["tables"]) - set(
                     existing_params.get("data", {}).get("tables", [])

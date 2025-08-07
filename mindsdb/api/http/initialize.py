@@ -203,7 +203,8 @@ def initialize_static():
         logger.debug("Updating gui..")
         success = update_static(last_gui_version_lv)
 
-    db.session.close()
+    if db.session:
+        db.session.close()
     return success
 
 

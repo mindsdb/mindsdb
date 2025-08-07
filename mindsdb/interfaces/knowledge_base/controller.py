@@ -1141,7 +1141,7 @@ class KnowledgeBaseController:
 
         data_node = self.session.datahub.get(vector_db_name)
         if data_node:
-            vector_store_handler = self.session.datahub.get(vector_db_name).integration_handler
+            vector_store_handler = data_node.integration_handler
         else:
             raise ValueError(
                 f"Unable to find database named {vector_db_name}, please make sure {vector_db_name} is defined"

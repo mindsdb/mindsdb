@@ -6,6 +6,7 @@ from ibm_db_sa.ibm_db import DB2Dialect_ibm_db as DB2Dialect
 from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 import pandas as pd
+import re
 
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
@@ -61,12 +62,20 @@ class DB2Handler(DatabaseHandler):
         # Mandatory connection parameters.
         if not all(key in self.connection_data for key in ['host', 'user', 'password', 'database']):
             raise ValueError('Required parameters (host, user, password, database) must be provided.')
+        cloud = 'databases.appdomain.cloud' in self.connection_data['host']
+        if cloud:
+            connection_string = f"DATABASE={self.connection_data['database']};HOSTNAME={self.connection_data['host']};PORT={self.connection_data['port']};PROTOCOL=TCPIP;UID={self.connection_data['user']};PWD={self.connection_data['password']};SECURITY=SSL;"
 
-        connection_string = f"DRIVER={'IBM DB2 ODBC DRIVER'};DATABASE={self.connection_data['database']};HOST={self.connection_data['host']};PROTOCOL=TCPIP;UID={self.connection_data['user']};PWD={self.connection_data['password']};"
+            if 'port' in self.connection_data:
+                connection_string += f"PORT={self.connection_data['port']};"
+                connection_string += "SSLSERVERCERTIFICATE=;"
+        else:
+            
+            connection_string = f"DRIVER={'IBM DB2 ODBC DRIVER'};DATABASE={self.connection_data['database']};HOST={self.connection_data['host']};PROTOCOL=TCPIP;UID={self.connection_data['user']};PWD={self.connection_data['password']};"
 
         # Optional connection parameters.
-        if 'port' in self.connection_data:
-            connection_string += f"PORT={self.connection_data['port']};"
+            if 'port' in self.connection_data:
+                connection_string += f"PORT={self.connection_data['port']};"
 
         if 'schema' in self.connection_data:
             connection_string += f"CURRENTSCHEMA={self.connection_data['schema']};"
@@ -175,6 +184,7 @@ class DB2Handler(DatabaseHandler):
         """
         renderer = SqlalchemyRender(DB2Dialect)
         query_str = renderer.get_string(query, with_failback=True)
+        query_str = query_str.replace('`', '"')
         return self.native_query(query_str)
 
     def get_tables(self) -> Response:

@@ -39,7 +39,7 @@ from mindsdb.utilities.starters import (
 )
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 import mindsdb.interfaces.storage.db as db
-from mindsdb.utilities.fs import clean_process_marks, clean_unlinked_process_marks
+from mindsdb.utilities.fs import clean_process_marks, clean_unlinked_process_marks, create_pid_file, delete_pid_file
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.auth import register_oauth_client, get_aws_meta_data
 from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
@@ -510,6 +510,8 @@ if __name__ == "__main__":
     if config.cmd_args.ml_task_queue_consumer is True:
         trunc_processes_struct[TrunkProcessEnum.ML_TASK_QUEUE].need_to_run = True
 
+    create_pid_file()
+
     for trunc_process_data in trunc_processes_struct.values():
         if trunc_process_data.started is True or trunc_process_data.need_to_run is False:
             continue
@@ -591,6 +593,7 @@ if __name__ == "__main__":
             ],
             return_exceptions=False,
         )
+        delete_pid_file()
 
     ioloop = asyncio.new_event_loop()
     ioloop.run_until_complete(wait_apis_start())

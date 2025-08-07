@@ -7,6 +7,7 @@ import datetime as dt
 import pandas as pd
 from mindsdb_sql_parser.ast import (
     BinaryOperation,
+    Identifier,
     Constant,
     CreateTable,
     Delete,
@@ -21,7 +22,12 @@ from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.integrations.libs.response import RESPONSE_TYPE, HandlerResponse
 from mindsdb.utilities import log
-from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, KeywordSearchArgs
+from mindsdb.integrations.utilities.sql_utils import (
+    FilterCondition,
+    FilterOperator,
+    KeywordSearchArgs,
+    FilterByJsonFieldCondition,
+)
 
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 from .base import BaseHandler
@@ -98,38 +104,65 @@ class VectorStoreHandler(BaseHandler):
         else:
             return value
 
-    def extract_conditions(self, where_statement) -> Optional[List[FilterCondition]]:
+    def extract_conditions(self, where_statement: ASTNode) -> Optional[List[FilterCondition]]:
+        if where_statement is None:
+            return None
+
         conditions = []
-        # parse conditions
-        if where_statement is not None:
-            # dfs to get all binary operators in the where statement
-            def _extract_comparison_conditions(node, **kwargs):
-                if isinstance(node, BinaryOperation):
-                    # if the op is and, continue
-                    # TODO: need to handle the OR case
-                    if node.op.upper() == "AND":
-                        return
-                    op = FilterOperator(node.op.upper())
-                    # unquote the left hand side
-                    left_hand = node.args[0].parts[-1].strip("`")
-                    if isinstance(node.args[1], Constant):
-                        if left_hand == TableField.SEARCH_VECTOR.value:
-                            right_hand = ast.literal_eval(node.args[1].value)
-                        else:
-                            right_hand = node.args[1].value
-                    elif isinstance(node.args[1], Tuple):
-                        # Constant could be actually a list i.e. [1.2, 3.2]
-                        right_hand = [item.value for item in node.args[1].items]
-                    else:
-                        raise Exception(f"Unsupported right hand side: {node.args[1]}")
-                    conditions.append(FilterCondition(column=left_hand, op=op, value=right_hand))
 
-            query_traversal(where_statement, _extract_comparison_conditions)
+        def unwind_json_path(node: ASTNode) -> List[str]:
+            """
+            Recursively unwinds nested '->>' BinaryOperations into a list of path parts.
+            e.g., profile ->> 'contact' ->> 'job_title' becomes ['profile', 'contact', 'job_title']
+            """
+            if isinstance(node, BinaryOperation) and node.op == "->>":
+                left_path = unwind_json_path(node.args[0])
+                json_key = node.args[1].value
+                return left_path + [json_key]
+            elif isinstance(node, Identifier):
+                return [node.to_string()]
+            else:
+                raise Exception(f"Unsupported node type in JSON path: {type(node)}, node = {node}")
 
-        else:
-            conditions = None
+        def _get_value_from_node(node: ASTNode):
+            """Helper to extract the value from the right side of a comparison."""
+            if isinstance(node, Constant):
+                return node.value
+            elif isinstance(node, Tuple):
+                return [item.value for item in node.items]
+            else:
+                raise Exception(f"Unsupported right-hand side in WHERE clause: {type(node)}")
 
-        return conditions
+        def _extract_comparison_conditions(node: ASTNode, **kwargs):
+            """Callback for query_traversal to process comparison operations."""
+            # We only care about actual comparison nodes. We ignore logical operators
+            # and let the traversal utility navigate into their children.
+            if not isinstance(node, BinaryOperation) or node.op.upper() in ["AND", "OR", "->>"]:
+                return
+
+            # At this point, we know 'node' is a comparison like '=', '>', etc.
+            op = FilterOperator(node.op.upper())
+            right_hand_value = _get_value_from_node(node.args[1])
+            left_node = node.args[0]
+
+            if isinstance(left_node, BinaryOperation) and left_node.op == "->>":
+                # Handle: json_column ->> 'field' = 'value'
+                path_parts = unwind_json_path(left_node)
+                column = path_parts[0]
+                field_name = ".".join(path_parts[1:])
+                conditions.append(
+                    FilterByJsonFieldCondition(column=column, field_name=field_name, op=op, value=right_hand_value)
+                )
+            elif isinstance(left_node, Identifier):
+                # Handle: simple_column = 'value'
+                column = left_node.to_string()
+                conditions.append(FilterCondition(column=column, op=op, value=right_hand_value))
+            else:
+                raise Exception(f"Unsupported left-hand side in WHERE clause: {type(left_node)}")
+
+        query_traversal(where_statement, _extract_comparison_conditions)
+
+        return conditions if conditions else None
 
     def _convert_metadata_filters(self, conditions, allowed_metadata_columns=None):
         if conditions is None:

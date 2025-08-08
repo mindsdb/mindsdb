@@ -977,14 +977,8 @@ class TestComplexQueries(BaseExecutorMockPredictor):
         resp = self.execute(sql)
         pdt.assert_frame_equal(
             resp.data.to_df(),
-            pd.DataFrame([
-                    ['a', 2, 'b'],
-                    ['a', 2, 'c'],
-                    ['b', 2, None]
-                ],
-                columns=['a', 'b', 'c']
-            ),
-            check_dtype=False
+            pd.DataFrame([["a", 2, "b"], ["a", 2, "c"], ["b", 2, None]], columns=["a", "b", "c"]),
+            check_dtype=False,
         )
 
         sql = """

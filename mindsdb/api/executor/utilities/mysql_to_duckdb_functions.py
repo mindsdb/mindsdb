@@ -81,6 +81,7 @@ def adapt_format_fn(node: Function) -> None:
     Example:
         FORMAT(1234567.89, 0) => FORMAT('{:,.0f}', 1234567.89)
         FORMAT(1234567.89, 2) => FORMAT('{:,.2f}', 1234567.89)
+        FORMAT(name, 2) => FORMAT('{:,.2f}', name)
         FORMAT('{:.2f}', 1234567.89) => FORMAT('{:,.2f}', 1234567.89)  # no changes for original style
 
     Args:
@@ -92,18 +93,24 @@ def adapt_format_fn(node: Function) -> None:
     Raises:
         ValueError: If MySQL's function has 3rd 'locale' argument, like FORMAT(12332.2, 2, 'de_DE')
     """
-    if (
-        not isinstance(node.args[0], Constant)
-        or not isinstance(node.args[0].value, (int, float))
-        or not isinstance(node.args[1], Constant)
-        or not isinstance(node.args[1].value, int)
-    ):
-        return node
+    match node.args[0], node.args[1]:
+        case Constant(value=(int() | float())), Constant(value=int()):
+            ...
+        case Identifier(), Constant(value=int()):
+            ...
+        case _:
+            return node
+
     if len(node.args) > 2:
         raise ValueError("'locale' argument of 'format' function is not supported")
     decimal_places = node.args[1].value
-    node.args[1].value = node.args[0].value
-    node.args[0].value = f"{{:,.{decimal_places}f}}"
+
+    if isinstance(node.args[0], Constant):
+        node.args[1].value = node.args[0].value
+        node.args[0].value = f"{{:,.{decimal_places}f}}"
+    else:
+        node.args[1] = node.args[0]
+        node.args[0] = Constant(f"{{:,.{decimal_places}f}}")
 
 
 def adapt_sha2_fn(node: Function) -> None:

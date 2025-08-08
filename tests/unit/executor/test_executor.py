@@ -1249,6 +1249,7 @@ class TestExecutionTools:
             {"query": "select locate('no', 'yesnoyes') as result from df", "result": 4},
             {"query": "select format(1234567.89, 0) as result from df", "result": "1,234,568"},
             {"query": "select format(1234567.89, 3) as result from df", "result": "1,234,567.890"},
+            {"query": "select format(f_float, 2) as result from df", "result": "1.10"},
             {"query": "select FORMAT('{:,.2f}', 1234567.89) as result from df", "result": "1,234,567.89"},
             {
                 "query": "select sha2('abc') as result from df",
@@ -1273,7 +1274,7 @@ class TestExecutionTools:
         ]
 
         for test in tests:
-            df = pd.DataFrame([[1]], columns=["a"])
+            df = pd.DataFrame([[1, 1.1]], columns=["f_int", "f_float"])
             query = test["query"]
             expected_result = test["result"]
 

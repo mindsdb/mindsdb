@@ -137,7 +137,7 @@ Follow the below steps to generate the API key.
     * Save the public key, that is, the content of rsa_key.pub, into your database user:
 
         ```sql
-        ALTER USER my_user SET RSA_PUBLIC_KEY = "path/to/rsa_key.pub"
+        ALTER USER my_user SET RSA_PUBLIC_KEY = "<content of rsa_key.pub>"
         ```
 
 2. Verify the key pair with the database user.

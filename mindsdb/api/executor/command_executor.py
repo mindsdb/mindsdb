@@ -1195,11 +1195,17 @@ class ExecuteCommands:
                 msg = dedent(
                     f"""\
                     The '{handler_module_meta["name"]}' handler cannot be used. Reason is:
-                        {handler_module_meta["import"]["error_message"]}
+                        {handler_module_meta["import"]["error_message"] or msg}
                 """
                 )
                 is_cloud = self.session.config.get("cloud", False)
-                if is_cloud is False and "No module named" in handler_module_meta["import"]["error_message"]:
+                if (
+                    is_cloud is False
+                    # NOTE: BYOM may raise these errors if there is an error in the user's code,
+                    # therefore error_message will be None
+                    and handler_module_meta["name"] != "byom"
+                    and "No module named" in handler_module_meta["import"]["error_message"]
+                ):
                     logger.info(get_handler_install_message(handler_module_meta["name"]))
             ast_drop = DropMLEngine(name=Identifier(name))
             self.answer_drop_ml_engine(ast_drop)

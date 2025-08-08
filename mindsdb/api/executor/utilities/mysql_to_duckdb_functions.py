@@ -245,7 +245,7 @@ def adapt_timestampdiff_fn(node: Function) -> None:
     node.args[2] = BinaryOperation(" ", args=[Identifier("timestamp"), node.args[2]])
 
 
-def adapt_extract_df(node: Function) -> None:
+def adapt_extract_fn(node: Function) -> None:
     """Adapt MySQL's EXTRACT function to DuckDB's EXTRACT function
     TODO: multi-part args, like YEAR_MONTH, is not supported yet
     NOTE: Looks like adding 'timestamp' works in most cases, but there may be some exceptions.

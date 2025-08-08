@@ -29,9 +29,7 @@ def _finetune_cls(df, args):
         return tokenizer(examples["text"], padding="max_length", truncation=True)
 
     tokenized_datasets = dataset.map(_tokenize_text_cls_fn, batched=True)
-    ds = tokenized_datasets.shuffle(seed=42).train_test_split(
-        test_size=args.get("eval_size", 0.1)
-    )
+    ds = tokenized_datasets.shuffle(seed=42).train_test_split(test_size=args.get("eval_size", 0.1))
     train_ds = ds["train"]
     eval_ds = ds["test"]
 
@@ -40,14 +38,12 @@ def _finetune_cls(df, args):
 
     n_labels = len(args["labels_map"])
     # todo replace for prod
-    assert (
-        n_labels == df["labels"].nunique()
-    ), f'Label mismatch! Ensure labels match what the model was originally trained on. Found {df["labels"].nunique()} classes, expected {n_labels}.'  # noqa
+    assert n_labels == df["labels"].nunique(), (
+        f"Label mismatch! Ensure labels match what the model was originally trained on. Found {df['labels'].nunique()} classes, expected {n_labels}."
+    )  # noqa
     # TODO: ideally check that labels are a subset of the original ones, too.
     config = AutoConfig.from_pretrained(args["model_name"])
-    model = AutoModelForSequenceClassification.from_pretrained(
-        args["model_name"], config=config
-    )
+    model = AutoModelForSequenceClassification.from_pretrained(args["model_name"], config=config)
     metric = evaluate.load("accuracy")
     training_args = TrainingArguments(**ft_args)
 
@@ -71,9 +67,7 @@ def _finetune_cls(df, args):
 # TODO: merge with summarization?
 def _finetune_translate(df, args):
     config = AutoConfig.from_pretrained(args["model_name"])
-    df = df.rename(
-        columns={args["target"]: "translation", args["input_column"]: "text"}
-    )
+    df = df.rename(columns={args["target"]: "translation", args["input_column"]: "text"})
     tokenizer_from = args.get("using", {}).get("tokenizer_from", args["model_name"])
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_from)
     dataset = Dataset.from_pandas(df)
@@ -95,9 +89,7 @@ def _finetune_translate(df, args):
         return model_inputs
 
     tokenized_datasets = dataset.map(_tokenize_translate_fn, batched=True)
-    ds = tokenized_datasets.shuffle(seed=42).train_test_split(
-        test_size=args.get("eval_size", 0.1)
-    )
+    ds = tokenized_datasets.shuffle(seed=42).train_test_split(test_size=args.get("eval_size", 0.1))
     train_ds = ds["train"]
     eval_ds = ds["test"]
     ft_args = args.get("using", {}).get("trainer_args", {})
@@ -148,9 +140,7 @@ def _finetune_summarization(df, args):
         return model_inputs
 
     tokenized_datasets = dataset.map(_tokenize_summarize_fn, batched=True)
-    ds = tokenized_datasets.shuffle(seed=42).train_test_split(
-        test_size=args.get("eval_size", 0.1)
-    )
+    ds = tokenized_datasets.shuffle(seed=42).train_test_split(test_size=args.get("eval_size", 0.1))
     train_ds = ds["train"]
     eval_ds = ds["test"]
 
@@ -170,12 +160,8 @@ def _finetune_summarization(df, args):
         decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
 
         # Rogue expects a newline after each sentence
-        decoded_preds = [
-            "\n".join(nltk.sent_tokenize(pred.strip())) for pred in decoded_preds
-        ]
-        decoded_labels = [
-            "\n".join(nltk.sent_tokenize(label.strip())) for label in decoded_labels
-        ]
+        decoded_preds = ["\n".join(nltk.sent_tokenize(pred.strip())) for pred in decoded_preds]
+        decoded_labels = ["\n".join(nltk.sent_tokenize(label.strip())) for label in decoded_labels]
 
         result = metric.compute(
             predictions=decoded_preds,
@@ -184,9 +170,7 @@ def _finetune_summarization(df, args):
             use_aggregator=True,
         )
         result = {key: value * 100 for key, value in result.items()}
-        prediction_lens = [
-            np.count_nonzero(pred != tokenizer.pad_token_id) for pred in predictions
-        ]
+        prediction_lens = [np.count_nonzero(pred != tokenizer.pad_token_id) for pred in predictions]
         result["gen_len"] = np.mean(prediction_lens)  # todo: remove?
         return {k: round(v, 4) for k, v in result.items()}
 
@@ -212,12 +196,8 @@ def _finetune_text_generation(df, args):
 
 
 def _finetune_question_answering(df, args):
-    raise NotImplementedError(
-        "Finetuning question-answering models is not yet supported."
-    )
+    raise NotImplementedError("Finetuning question-answering models is not yet supported.")
 
 
 def _finetune_text_2_text_generation(df, args):
-    raise NotImplementedError(
-        "Finetuning text-2-text generation models is not yet supported."
-    )
+    raise NotImplementedError("Finetuning text-2-text generation models is not yet supported.")

@@ -348,6 +348,56 @@ USING
     };
 ```
 
+## `ALTER AGENT` Syntax
+
+Update existing agents with new data, model, or prompt.
+
+```sql
+ALTER AGENT my_agent
+USING
+    model = {
+        "provider": "openai",
+        "model_name" : "gpt-4.1",
+        "api_key": "sk-abc123",
+        "base_url": "http://example.com",
+        "api_version": "2024-02-01"
+    },
+    data = {
+         "knowledge_bases": ["project_name.kb_name", ...],
+         "tables": ["datasource_conn_name.table_name", ...]
+    },
+    prompt_template='describe data';
+```
+
+Note that all parameters are optional. Users can update any combination of parameters.
+
+<Tip>
+See detailed descriptions of parameters in the [`CREATE AGENT` section](/mindsdb_sql/agents/agent_syntax#create-agent-syntax).
+</Tip>
+
+Here is how to connect new data to an agent.
+
+```sql
+ALTER AGENT my_agent
+USING
+    data = {
+         "knowledge_bases": ["mindsdb.sales_kb"],
+         "tables": ["mysql_db.car_sales", "mysql_db.car_info"]
+    };
+```
+
+ANd here is how to update a model used by the agent.
+
+```sql
+ALTER AGENT my_agent
+USING
+    model = {
+        "provider": "openai",
+        "model_name" : "gpt-4.1",
+        "api_key": "sk-abc123"
+    };
+```
+
 ## `DROP AGENT` Syntax
 
 Here is the syntax for deleting an agent:

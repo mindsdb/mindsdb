@@ -840,13 +840,7 @@
                         "group": "Respond",
                         "icon": "comment-dots",
                         "pages": [
-                          {
-                            "group": "AI Agents",
-                            "pages": [
-                              "sdks/python/agents",
-                              "sdks/python/agents_skills"
-                            ]
-                          }
+                          "sdks/python/agents"
                         ]
                       }
                     ]

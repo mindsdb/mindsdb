@@ -1028,6 +1028,9 @@ class KnowledgeBaseController:
         :param is_sparse: Whether to use sparse vectors for embeddings
         :param vector_size: Optional size specification for vectors, required when is_sparse=True
         """
+        if not name.islower():
+            raise ValueError(f"The name must be in lower case: {name}")
+
         # fill variables
         params = variables_controller.fill_parameters(params)
 
@@ -1136,8 +1139,14 @@ class KnowledgeBaseController:
         else:
             vector_db_name, vector_table_name = storage.parts
 
+        data_node = self.session.datahub.get(vector_db_name)
+        if data_node:
+            vector_store_handler = data_node.integration_handler
+        else:
+            raise ValueError(
+                f"Unable to find database named {vector_db_name}, please make sure {vector_db_name} is defined"
+            )
         # create table in vectordb before creating KB
-        vector_store_handler = self.session.datahub.get(vector_db_name).integration_handler
         vector_store_handler.create_table(vector_table_name)
         if keyword_search_enabled:
             vector_store_handler.add_full_text_index(vector_table_name, TableField.CONTENT.value)

@@ -960,32 +960,32 @@ class TestComplexQueries(BaseExecutorMockPredictor):
             check_dtype=False,
         )
 
-        # NOTE error CONN-1340
-        # sql = """
-        #     WITH ta AS (
-        #         SELECT 'a' AS a, 2 AS b
-        #         UNION ALL
-        #         SELECT 'b' AS a, 2 AS b
-        #     ), tb AS (
-        #         SELECT 'a' AS a, 'b' AS c
-        #         UNION ALL
-        #         SELECT 'a' AS a, 'c' AS c
-        #     )
-        #     SELECT ta.a, ta.b, tb.c
-        #     FROM ta
-        #     LEFT JOIN tb ON ta.a = tb.a;
-        # """
-        # resp = self.execute(sql)
-        # pdt.assert_frame_equal(
-        #     resp.data.to_df(),
-        #     pd.DataFrame([
-        #             ['a', 2, 'b'],
-        #             ['a', 2, 'c']
-        #         ],
-        #         columns=['a', 'b', 'c']
-        #     ),
-        #     check_dtype=False
-        # )
+        sql = """
+            WITH ta AS (
+                SELECT 'a' AS a, 2 AS b
+                UNION ALL
+                SELECT 'b' AS a, 2 AS b
+            ), tb AS (
+                SELECT 'a' AS a, 'b' AS c
+                UNION ALL
+                SELECT 'a' AS a, 'c' AS c
+            )
+            SELECT ta.a, ta.b, tb.c
+            FROM ta
+            LEFT JOIN tb ON ta.a = tb.a;
+        """
+        resp = self.execute(sql)
+        pdt.assert_frame_equal(
+            resp.data.to_df(),
+            pd.DataFrame([
+                    ['a', 2, 'b'],
+                    ['a', 2, 'c'],
+                    ['b', 2, None]
+                ],
+                columns=['a', 'b', 'c']
+            ),
+            check_dtype=False
+        )
 
         sql = """
             WITH ta AS (

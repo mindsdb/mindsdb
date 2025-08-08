@@ -25,7 +25,7 @@ from mindsdb.api.executor.utilities.mysql_to_duckdb_functions import (
     adapt_substring_index_fn,
     adapt_curtime_fn,
     adapt_timestampdiff_fn,
-    adapt_extract_dn,
+    adapt_extract_fn,
 )
 
 logger = log.getLogger(__name__)
@@ -210,7 +210,7 @@ def query_df(df, query, session=None):
                 "substring_index": adapt_substring_index_fn,
                 "curtime": adapt_curtime_fn,
                 "timestampdiff": adapt_timestampdiff_fn,
-                "extract": adapt_extract_dn,
+                "extract": adapt_extract_fn,
             }
             if fnc_name in mysql_to_duck_fn_map:
                 return mysql_to_duck_fn_map[fnc_name](node)

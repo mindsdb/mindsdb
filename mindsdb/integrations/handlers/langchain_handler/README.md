@@ -20,7 +20,6 @@ Available models include the following:
 
 - Anthropic ([how to get the API key](https://docs.anthropic.com/claude/docs/getting-access-to-claude))
 - OpenAI ([how to get the API key](https://help.openai.com/en/articles/4936850-where-do-i-find-my-openai-api-key))
-- Anyscale ([how to get the API key](https://docs.endpoints.anyscale.com/guides/authenticate/))
 - Ollama ([how to download Ollama](https://ollama.com/download))
 </Info>
 
@@ -41,7 +40,7 @@ USING
       openai_api_key = 'api-key-value';
 ```
 
-Create a model using `langchain_engine` as an engine and one of OpenAI/Anthropic/Anyscale/LiteLLM as a model provider.
+Create a model using `langchain_engine` as an engine and one of OpenAI/Anthropic/LiteLLM as a model provider.
 
 ```sql
 CREATE MODEL langchain_model
@@ -78,7 +77,7 @@ There are three different tools utilized by this agent:
 Each tool exposes the internal MindsDB executor in a different way to perform its tasks, effectively enabling the agent model to read from (and potentially write to) data sources or models available in the active MindsDB project.
 </Info>
 
-Create a conversational model using `langchain_engine` as an engine and one of OpenAI/Anthropic/Anyscale/LiteLLM as a model provider.
+Create a conversational model using `langchain_engine` as an engine and one of OpenAI/Anthropic/LiteLLM as a model provider.
 
 <AccordionGroup>
 
@@ -126,28 +125,6 @@ USING
 ```
 </Accordion>
 
-<Accordion title="Anyscale">
-```sql
-CREATE ML_ENGINE langchain_engine
-FROM langchain
-USING
-      anyscale_api_key = 'api-key-value';
-
-CREATE MODEL langchain_anyscale_model
-PREDICT answer 
-USING
-     engine = 'langchain_engine',                        -- engine name as created via CREATE ML_ENGINE
-     provider = 'anyscale',                              -- one of the available providers
-     anyscale_api_key = 'api-key-value',                 -- if not provided in CREATE ML_ENGINE
-     model_name = 'mistralai/Mistral-7B-Instruct-v0.1',  -- choose one of the models available from Anyscale
-     mode = 'conversational',           -- conversational mode
-     user_column = 'question',          -- column name that stores input from the user
-     assistant_column = 'answer',       -- column name that stores output of the model (see PREDICT column) 
-     base_url = 'https://api.endpoints.anyscale.com/v1',
-     verbose = True,
-     prompt_template = 'Answer the user\'s input in a helpful way: {{question}}';
-```
-</Accordion>
 
 <Accordion title="Ollama">
 ```sql

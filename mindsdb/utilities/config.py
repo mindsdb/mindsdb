@@ -599,6 +599,7 @@ class Config:
                 ml_task_queue_consumer=None,
                 agent=None,
                 project=None,
+                update_gui=False,
             )
             return
 
@@ -635,6 +636,7 @@ class Config:
             help="MindsDB agent name to connect to",
         )
         parser.add_argument("--project-name", type=str, default=None, help="MindsDB project name")
+        parser.add_argument("--update-gui", action="store_true", default=False, help="Update GUI and exit")
 
         self._cmd_args = parser.parse_args()
 

@@ -91,6 +91,8 @@ EXPOSE 47337/tcp
 # Expose A2A port
 EXPOSE 47338/tcp
 
+# Run GUI update during build so the final image already contains it
+RUN python -Im mindsdb --config=/root/mindsdb_config.json --update-gui
 
 
 

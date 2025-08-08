@@ -6,6 +6,7 @@ import json
 import os
 
 import pandas as pd
+import pandas.testing as pdt
 import numpy as np
 
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
@@ -897,6 +898,180 @@ class TestComplexQueries(BaseExecutorMockPredictor):
         sql = "update pg.tasks set a = 0"
         resp = self.execute(sql)
         assert resp.affected_rows == 3
+
+    @patch("mindsdb.integrations.handlers.mysql_handler.Handler")
+    def test_cte(self, mock_handler):
+        test_df_1 = pd.DataFrame(
+            [
+                [1, "a"],
+                [1, "b"],
+                [2, "b"],
+                [3, "c"],
+            ],
+            columns=["a", "b"],
+        )
+
+        test_df_2 = pd.DataFrame(
+            [
+                [1, "a"],
+                [2, "b"],
+                [2, "b"],
+                [3, "c"],
+            ],
+            columns=["a", "c"],
+        )
+        self.set_handler(mock_handler, name="pg", tables={"test_t1": test_df_1, "test_t2": test_df_2}, engine="mysql")
+
+        # NOTE important to test joins with different count of rows (0, 1, many),
+        # as this can affect the actual query that is executed.
+        sql = """
+            WITH ta AS (
+                SELECT 'a' AS a, 2 AS b
+            ), tb AS (
+                SELECT 'a' AS a, 'b' AS c
+            )
+            SELECT ta.a, ta.b, tb.c
+            FROM ta
+            LEFT JOIN tb ON ta.a = tb.a;
+        """
+        resp = self.execute(sql)
+        pdt.assert_frame_equal(
+            resp.data.to_df(), pd.DataFrame([["a", 2, "b"]], columns=["a", "b", "c"]), check_dtype=False
+        )
+
+        sql = """
+            WITH ta AS (
+                SELECT 'a' AS a, 2 AS b
+                UNION ALL
+                SELECT 'b' AS a, 2 AS b
+            ), tb AS (
+                SELECT 'a' AS a, 'b' AS c
+            )
+            SELECT ta.a, ta.b, tb.c
+            FROM ta
+            LEFT JOIN tb ON ta.a = tb.a;
+        """
+        resp = self.execute(sql)
+        pdt.assert_frame_equal(
+            resp.data.to_df().sort_values(by=["a", "b", "c"], ignore_index=True),
+            pd.DataFrame([["a", 2, "b"], ["b", 2, None]], columns=["a", "b", "c"]).sort_values(
+                by=["a", "b", "c"], ignore_index=True
+            ),
+            check_dtype=False,
+        )
+
+        sql = """
+            WITH ta AS (
+                SELECT 'a' AS a, 2 AS b
+                UNION ALL
+                SELECT 'b' AS a, 2 AS b
+            ), tb AS (
+                SELECT 'a' AS a, 'b' AS c
+                UNION ALL
+                SELECT 'a' AS a, 'c' AS c
+            )
+            SELECT ta.a, ta.b, tb.c
+            FROM ta
+            LEFT JOIN tb ON ta.a = tb.a;
+        """
+        resp = self.execute(sql)
+        pdt.assert_frame_equal(
+            resp.data.to_df(),
+            pd.DataFrame([["a", 2, "b"], ["a", 2, "c"], ["b", 2, None]], columns=["a", "b", "c"]),
+            check_dtype=False,
+        )
+
+        sql = """
+            WITH ta AS (
+                SELECT 1 as a, 'a' AS b
+                UNION ALL
+                SELECT 1 as a, 'b' AS b
+            ), tb AS (
+                select * from pg.test_t1
+            )
+            SELECT ta.a, ta.b, tb.b as c
+            FROM ta
+            LEFT JOIN tb ON ta.a = tb.a;
+        """
+        resp = self.execute(sql)
+        pdt.assert_frame_equal(
+            resp.data.to_df().sort_values(by=["a", "b", "c"], ignore_index=True),
+            pd.DataFrame(
+                [[1, "a", "a"], [1, "a", "b"], [1, "b", "a"], [1, "b", "b"]], columns=["a", "b", "c"]
+            ).sort_values(by=["a", "b", "c"], ignore_index=True),
+            check_dtype=False,
+        )
+
+        sql = """
+            WITH ta AS (
+                SELECT 1 as a, 'a' AS b
+                UNION ALL
+                SELECT 1 as a, 'b' AS b
+            ), tb AS (
+                select * from pg.test_t1
+            )
+            SELECT ta.a as a, ta.b as b, tb.b as c
+            FROM ta
+            LEFT JOIN tb ON ta.a = tb.a
+            order by a, b, c;
+        """
+        resp = self.execute(sql)
+        pdt.assert_frame_equal(
+            resp.data.to_df(),
+            pd.DataFrame([[1, "a", "a"], [1, "a", "b"], [1, "b", "a"], [1, "b", "b"]], columns=["a", "b", "c"]),
+            check_dtype=False,
+        )
+
+        sql = """
+            WITH ta AS (
+                select * from pg.test_t1 where 1 = 0
+            ), tb AS (
+                select * from pg.test_t2 where c = 'c'
+            )
+            SELECT ta.a, ta.b, tb.c as c
+            FROM ta
+            LEFT JOIN tb ON ta.a = tb.a;
+        """
+        resp = self.execute(sql)
+        assert len(resp.data) == 0
+
+        sql = """
+            WITH ta AS (
+                select * from pg.test_t1 where b = 'b'
+            ), tb AS (
+                select * from pg.test_t2 where 1 = 0
+            )
+            SELECT ta.a, ta.b, tb.c as c
+            FROM ta
+            LEFT JOIN tb ON ta.a = tb.a;
+        """
+        resp = self.execute(sql)
+        pdt.assert_frame_equal(
+            resp.data.to_df().sort_values(by=["a", "b", "c"], ignore_index=True),
+            pd.DataFrame([[1, "b", None], [2, "b", None]], columns=["a", "b", "c"]).sort_values(
+                by=["a", "b", "c"], ignore_index=True
+            ),
+            check_dtype=False,
+        )
+
+        sql = """
+            WITH ta AS (
+                select * from pg.test_t1
+            ), tb AS (
+                select * from pg.test_t2 where c = 'c'
+            )
+            SELECT ta.a, ta.b, tb.c as c
+            FROM ta
+            LEFT JOIN tb ON ta.a = tb.a;
+        """
+        resp = self.execute(sql)
+        pdt.assert_frame_equal(
+            resp.data.to_df().sort_values(by=["a", "b", "c"], ignore_index=True),
+            pd.DataFrame(
+                [[1, "a", None], [1, "b", None], [2, "b", None], [3, "c", "c"]], columns=["a", "b", "c"]
+            ).sort_values(by=["a", "b", "c"], ignore_index=True),
+            check_dtype=False,
+        )
 
     # @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     # def test_union_type_mismatch(self, mock_handler):

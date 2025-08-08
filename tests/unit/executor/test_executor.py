@@ -1414,6 +1414,52 @@ class TestExecutionTools:
         df = pd.DataFrame(d)
         query_df(df, "select * from models")
 
+    def test_query_df_functions(self):
+        tests = [
+            {"query": "select to_base64('test') as result from df", "result": "dGVzdA=="},
+            {"query": "select char_length('海豚') as result from df", "result": 2},
+            {"query": "select length('海豚') as result from df", "result": 6},
+            {"query": "select char(77, 78, 79) as result from df", "result": "MNO"},
+            {"query": "select locate('no', 'yes') as result from df", "result": 0},
+            {"query": "select locate('no', 'yesnoyes') as result from df", "result": 4},
+            {"query": "select format(1234567.89, 0) as result from df", "result": "1,234,568"},
+            {"query": "select format(1234567.89, 3) as result from df", "result": "1,234,567.890"},
+            {"query": "select format(f_float, 2) as result from df", "result": "1.10"},
+            {"query": "select FORMAT('{:,.2f}', 1234567.89) as result from df", "result": "1,234,567.89"},
+            {
+                "query": "select sha2('abc') as result from df",
+                "result": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+            },
+            {"query": "select REGEXP_SUBSTR('abc def ghi', '[a-z]+') as result from df", "result": "abc"},
+            {"query": "select REGEXP_SUBSTR('abc def ghi', '[a-z]+', 1, 1) as result from df", "result": "abc"},
+            {"query": "select substring_index('www.mysql.com', '.', 2) as result from df", "result": "www.mysql"},
+            {"query": "select substring_index('www.mysql.com', '.', 1) as result from df", "result": "www"},
+            {
+                "query": "select TIMESTAMPDIFF(MINUTE,'2003-02-01','2003-05-01 12:05:55') as result from df",
+                "result": 128885,
+            },
+            {"query": "select TIMESTAMPDIFF(MONTH,'2003-02-01','2003-05-01') as result from df", "result": 3},
+            {
+                "query": "select EXTRACT(YEAR FROM '2019-07-02') as result from df",
+                "result": 2019,
+                # }, {
+                #     "query": "select EXTRACT(YEAR_MONTH FROM '2019-07-02') as result from df",
+                #     "result": 201907
+            },
+        ]
+
+        for test in tests:
+            df = pd.DataFrame([[1, 1.1]], columns=["f_int", "f_float"])
+            query = test["query"]
+            expected_result = test["result"]
+
+            result = query_df(df, query)["result"][0]
+            assert result == expected_result
+
+        query = "select CURTIME() as result from df"
+        result = query_df(df, query)["result"][0]
+        assert isinstance(result, dt.time)
+
 
 class TestIfExistsIfNotExists(BaseExecutorMockPredictor):
     def setup_method(self, method):

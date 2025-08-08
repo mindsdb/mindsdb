@@ -4,6 +4,7 @@ import time
 import math
 
 import openai
+from openai import AzureOpenAI
 
 import tiktoken
 
@@ -183,6 +184,12 @@ def get_available_models(client) -> List[Text]:
     Returns:
         List[Text]: List of available models
     """
+    
+    # Handle Azure OpenAI differently - it doesn't have the same models endpoint
+    if isinstance(client, AzureOpenAI):
+        # For Azure OpenAI, we can't list models the same way
+        # The user must specify the exact deployment name as model_name
+        return []
+    
     res = client.models.list()
-
     return [models.id for models in res.data]

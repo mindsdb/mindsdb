@@ -7,11 +7,9 @@ from mindsdb_sql_parser.ast import (
     Select,
     Star,
     Constant,
-    Parameter,
     Function,
     Variable,
     BinaryOperation,
-    Tuple,
 )
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import SERVER_VARIABLES

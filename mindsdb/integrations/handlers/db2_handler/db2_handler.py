@@ -65,10 +65,7 @@ class DB2Handler(DatabaseHandler):
         cloud = 'databases.appdomain.cloud' in self.connection_data['host']
         if cloud:
             connection_string = f"DATABASE={self.connection_data['database']};HOSTNAME={self.connection_data['host']};PORT={self.connection_data['port']};PROTOCOL=TCPIP;UID={self.connection_data['user']};PWD={self.connection_data['password']};SECURITY=SSL;"
-
-            if 'port' in self.connection_data:
-                connection_string += f"PORT={self.connection_data['port']};"
-                connection_string += "SSLSERVERCERTIFICATE=;"
+            connection_string += "SSLSERVERCERTIFICATE=;"
         else:
             
             connection_string = f"DRIVER={'IBM DB2 ODBC DRIVER'};DATABASE={self.connection_data['database']};HOST={self.connection_data['host']};PROTOCOL=TCPIP;UID={self.connection_data['user']};PWD={self.connection_data['password']};"

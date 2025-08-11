@@ -398,6 +398,7 @@
                       "mindsdb_sql/knowledge_bases/create",
                       "mindsdb_sql/knowledge_bases/insert_data",
                       "mindsdb_sql/knowledge_bases/query",
+                      "mindsdb_sql/knowledge_bases/hybrid_search",
                       "mindsdb_sql/knowledge_bases/evaluate",
                       "mindsdb_sql/knowledge_bases/examples"
                     ]
@@ -631,112 +632,109 @@
                       "rest/overview",
                       {
                         "group": "Connect",
+                        "icon": "link",
                         "pages": [
-                          "rest/usage"
+                          "rest/usage",
+                          {
+                            "group": "Data Sources",
+                            "pages": [
+                              "rest/databases/create-databases",
+                              "rest/databases/update-databases",
+                              "rest/databases/delete-databases",
+                              "rest/databases/list-databases",
+                              "rest/databases/list-database"
+                            ]
+                          },
+                          {
+                            "group": "Models",
+                            "pages": [
+                              "rest/models/train-model",
+                              "rest/models/delete-model",
+                              "rest/models/list-models",
+                              "rest/models/describe-model",
+                              "rest/models/list-model",
+                              "rest/models/query-model",
+                              "rest/models/query-model-joined-with-data"
+                            ]
+                          }
                         ]
                       },
                       {
-                        "group": "Data Sources",
+                        "group": "Unify",
+                        "icon": "circle-nodes",
                         "pages": [
-                          "rest/databases/create-databases",
-                          "rest/databases/update-databases",
-                          "rest/databases/delete-databases",
-                          "rest/databases/list-databases",
-                          "rest/databases/list-database"
+                          {
+                            "group": "Projects",
+                            "pages": [
+                              "rest/projects/get-projects",
+                              "rest/projects/get-project"
+                            ]
+                          },
+                          {
+                            "group": "Knowledge Bases",
+                            "pages": [
+                              "rest/knowledge_bases/create",
+                              "rest/knowledge_bases/insert",
+                              "rest/knowledge_bases/query",
+                              "rest/knowledge_bases/list",
+                              "rest/knowledge_bases/get",
+                              "rest/knowledge_bases/delete"
+                            ]
+                          },
+                          {
+                            "group": "Tables",
+                            "pages": [
+                              "rest/tables/create-table",
+                              "rest/tables/delete-table",
+                              "rest/tables/list-tables",
+                              "rest/tables/list-table",
+                              "rest/sql"
+                            ]
+                          },
+                          {
+                            "group": "Views",
+                            "pages": [
+                              "rest/views/create-view",
+                              "rest/views/delete-views",
+                              "rest/views/update-view",
+                              "rest/views/list-views",
+                              "rest/views/list-view"
+                            ]
+                          },
+                          {
+                            "group": "Files",
+                            "pages": [
+                              "rest/files/upload",
+                              "rest/files/delete",
+                              "rest/files/list"
+                            ]
+                          },
+                          {
+                            "group": "Jobs",
+                            "pages": [
+                              "rest/jobs/create",
+                              "rest/jobs/list",
+                              "rest/jobs/get",
+                              "rest/jobs/delete"
+                            ]
+                          }
                         ]
                       },
                       {
-                        "group": "AI/ML Engines",
+                        "group": "Respond",
+                        "icon": "comment-dots",
                         "pages": [
-                          "rest/ml_engines/create",
-                          "rest/ml_engines/delete",
-                          "rest/ml_engines/list"
-                        ]
-                      },
-                      {
-                        "group": "Projects",
-                        "pages": [
-                          "rest/projects/create",
-                          "rest/projects/drop",
-                          "rest/projects/get-projects",
-                          "rest/projects/get-project"
-                        ]
-                      },
-                      {
-                        "group": "Models",
-                        "pages": [
-                          "rest/models/train-model",
-                          "rest/models/delete-model",
-                          "rest/models/list-models",
-                          "rest/models/describe-model",
-                          "rest/models/list-model",
-                          "rest/models/retrain",
-                          "rest/models/finetune",
-                          "rest/models/manage-model-versions",
-                          "rest/models/query-model",
-                          "rest/models/query-model-joined-with-data"
-                        ]
-                      },
-                      {
-                        "group": "Tables",
-                        "pages": [
-                          "rest/tables/create-table",
-                          "rest/tables/delete-table",
-                          "rest/tables/list-tables",
-                          "rest/tables/list-table",
-                          "rest/tables/update",
-                          "rest/tables/insert",
-                          "rest/tables/delete",
-                          "rest/sql"
-                        ]
-                      },
-                      {
-                        "group": "Views",
-                        "pages": [
-                          "rest/views/create-view",
-                          "rest/views/delete-views",
-                          "rest/views/update-view",
-                          "rest/views/list-views",
-                          "rest/views/list-view"
-                        ]
-                      },
-                      {
-                        "group": "Files",
-                        "pages": [
-                          "rest/files/upload",
-                          "rest/files/delete",
-                          "rest/files/list"
-                        ]
-                      },
-                      {
-                        "group": "Jobs",
-                        "pages": [
-                          "rest/jobs/create",
-                          "rest/jobs/list",
-                          "rest/jobs/get",
-                          "rest/jobs/delete"
-                        ]
-                      },
-                      {
-                        "group": "AI Agents",
-                        "pages": [
-                          "rest/agents/create",
-                          "rest/agents/list",
-                          "rest/agents/get",
-                          "rest/agents/query",
-                          "rest/agents/update",
-                          "rest/agents/delete"
-                        ]
-                      },
-                      {
-                        "group": "Knowledge Bases",
-                        "pages": [
-                          "rest/knowledge_bases/create",
-                          "rest/knowledge_bases/insert",
-                          "rest/knowledge_bases/query",
-                          "rest/knowledge_bases/list",
-                          "rest/knowledge_bases/get",
-                          "rest/knowledge_bases/delete"
+                          {
+                            "group": "AI Agents",
+                            "pages": [
+                              "rest/agents/create",
+                              "rest/agents/list",
+                              "rest/agents/get",
+                              "rest/agents/query",
+                              "rest/agents/update",
+                              "rest/agents/delete"
+                            ]
+                          }
                         ]
                       }
                     ]
@@ -747,97 +745,110 @@
                       "sdks/python/overview",
                       {
                         "group": "Connect",
+                        "icon": "link",
                         "pages": [
-                          "sdks/python/installation",
-                          "sdks/python/connect"
+                          {
+                            "group": "Setup",
+                            "pages": [
+                              "sdks/python/installation",
+                              "sdks/python/connect"
+                            ]
+                          },
+                          {
+                            "group": "Data Sources",
+                            "pages": [
+                              "sdks/python/list_data_handlers",
+                              "sdks/python/create_database",
+                              "sdks/python/drop_database",
+                              "sdks/python/list_databases"
+                            ]
+                          },
+                          {
+                            "group": "AI/ML Engines",
+                            "pages": [
+                              "sdks/python/list_ml_handlers",
+                              "sdks/python/create_ml_engine",
+                              "sdks/python/drop_ml_engine",
+                              "sdks/python/list_ml_engines"
+                            ]
+                          },
+                          {
+                            "group": "Models",
+                            "pages": [
+                              "sdks/python/create_model",
+                              "sdks/python/drop_model",
+                              "sdks/python/list_models",
+                              "sdks/python/describe",
+                              "sdks/python/get_status",
+                              "sdks/python/refresh_model",
+                              "sdks/python/retrain",
+                              "sdks/python/finetune",
+                              "sdks/python/manage-model-versions",
+                              "sdks/python/get-single-prediction",
+                              "sdks/python/get-batch-predictions"
+                            ]
+                          }
                         ]
                       },
                       {
-                        "group": "Data Sources",
+                        "group": "Unify",
+                        "icon": "circle-nodes",
                         "pages": [
-                          "sdks/python/list_data_handlers",
-                          "sdks/python/create_database",
-                          "sdks/python/drop_database",
-                          "sdks/python/list_databases"
+                          {
+                            "group": "Projects",
+                            "pages": [
+                              "sdks/python/create_project",
+                              "sdks/python/drop_project",
+                              "sdks/python/list_projects",
+                              "sdks/python/query_projects"
+                            ]
+                          },
+                          "sdks/python/knowledge-bases",
+                          {
+                            "group": "Tables, Views, and Files",
+                            "pages": [
+                              "sdks/python/create_table",
+                              "sdks/python/delete_table",
+                              "sdks/python/query_table",
+                              "sdks/python/native_queries",
+                              "sdks/python/update_table",
+                              "sdks/python/insert_into_table",
+                              "sdks/python/join_on",
+                              "sdks/python/delete_from",
+                              "sdks/python/create_view",
+                              "sdks/python/drop_view",
+                              "sdks/python/query_view",
+                              "sdks/python/list_views",
+                              "sdks/python/upload_file",
+                              "sdks/python/delete_file",
+                              "sdks/python/query_files"
+                            ]
+                          },
+                          {
+                            "group": "Jobs",
+                            "pages": [
+                              "sdks/python/create_job",
+                              "sdks/python/drop_job",
+                              "sdks/python/list_jobs",
+                              "sdks/python/refresh_job",
+                              "sdks/python/get_history"
+                            ]
+                          }
                         ]
                       },
                       {
-                        "group": "AI/ML Engines",
+                        "group": "Respond",
+                        "icon": "comment-dots",
                         "pages": [
-                          "sdks/python/list_ml_handlers",
-                          "sdks/python/create_ml_engine",
-                          "sdks/python/drop_ml_engine",
-                          "sdks/python/list_ml_engines"
+                          {
+                            "group": "AI Agents",
+                            "pages": [
+                              "sdks/python/agents",
+                              "sdks/python/agents_skills"
+                            ]
+                          }
                         ]
-                      },
-                      {
-                        "group": "Projects",
-                        "pages": [
-                          "sdks/python/create_project",
-                          "sdks/python/drop_project",
-                          "sdks/python/list_projects",
-                          "sdks/python/query_projects"
-                        ]
-                      },
-                      {
-                        "group": "Models",
-                        "pages": [
-                          "sdks/python/create_model",
-                          "sdks/python/drop_model",
-                          "sdks/python/list_models",
-                          "sdks/python/describe",
-                          "sdks/python/get_status",
-                          "sdks/python/refresh_model",
-                          "sdks/python/retrain",
-                          "sdks/python/finetune",
-                          "sdks/python/manage-model-versions"
-                        ]
-                      },
-                      {
-                        "group": "Predictions",
-                        "pages": [
-                          "sdks/python/get-single-prediction",
-                          "sdks/python/get-batch-predictions"
-                        ]
-                      },
-                      {
-                        "group": "Tables, Views, and Files",
-                        "pages": [
-                          "sdks/python/create_table",
-                          "sdks/python/delete_table",
-                          "sdks/python/query_table",
-                          "sdks/python/native_queries",
-                          "sdks/python/update_table",
-                          "sdks/python/insert_into_table",
-                          "sdks/python/join_on",
-                          "sdks/python/delete_from",
-                          "sdks/python/create_view",
-                          "sdks/python/drop_view",
-                          "sdks/python/query_view",
-                          "sdks/python/list_views",
-                          "sdks/python/upload_file",
-                          "sdks/python/delete_file",
-                          "sdks/python/query_files"
-                        ]
-                      },
-                      {
-                        "group": "Jobs",
-                        "pages": [
-                          "sdks/python/create_job",
-                          "sdks/python/drop_job",
-                          "sdks/python/list_jobs",
-                          "sdks/python/refresh_job",
-                          "sdks/python/get_history"
-                        ]
-                      },
-                      {
-                        "group": "AI Agents",
-                        "pages": [
-                          "sdks/python/agents",
-                          "sdks/python/agents_skills"
-                        ]
-                      },
-                      "sdks/python/knowledge-bases"
+                      }
                     ]
                   },
                   {
@@ -846,84 +857,82 @@
                       "sdks/javascript/overview",
                       {
                         "group": "Connect",
+                        "icon": "link",
                         "pages": [
-                          "sdks/javascript/installation",
-                          "sdks/javascript/connect"
+                          {
+                            "group": "Setup",
+                            "pages": [
+                              "sdks/javascript/installation",
+                              "sdks/javascript/connect"
+                            ]
+                          },
+                          {
+                            "group": "Data Sources",
+                            "pages": [
+                              "sdks/javascript/list_data_handlers",
+                              "sdks/javascript/create_database",
+                              "sdks/javascript/get_database",
+                              "sdks/javascript/drop_database",
+                              "sdks/javascript/list_databases"
+                            ]
+                          },
+                          {
+                            "group": "AI/ML Engines",
+                            "pages": [
+                              "sdks/javascript/list_ml_handlers"
+                            ]
+                          },
+                          {
+                            "group": "Models",
+                            "pages": [
+                              "sdks/javascript/create_model",
+                              "sdks/javascript/drop_model",
+                              "sdks/javascript/list_models",
+                              "sdks/javascript/describe",
+                              "sdks/javascript/get_status",
+                              "sdks/javascript/retrain",
+                              "sdks/javascript/finetune",
+                              "sdks/javascript/query",
+                              "sdks/javascript/batchQuery"
+                            ]
+                          }
                         ]
                       },
                       {
-                        "group": "Data Sources",
+                        "group": "Unify",
+                        "icon": "circle-nodes",
                         "pages": [
-                          "sdks/javascript/list_data_handlers",
-                          "sdks/javascript/create_database",
-                          "sdks/javascript/get_database",
-                          "sdks/javascript/drop_database",
-                          "sdks/javascript/list_databases"
+                          {
+                            "group": "Projects",
+                            "pages": [
+                              "sdks/javascript/list_projects"
+                            ]
+                          },
+                          {
+                            "group": "Tables, Views, and Files",
+                            "pages": [
+                              "sdks/javascript/create_table",
+                              "sdks/javascript/delete_table",
+                              "sdks/javascript/query_table",
+                              "sdks/javascript/native_queries",
+                              "sdks/javascript/update_table",
+                              "sdks/javascript/insert_into_table",
+                              "sdks/javascript/join_on",
+                              "sdks/javascript/delete_from",
+                              "sdks/javascript/create_view",
+                              "sdks/javascript/drop_view",
+                              "sdks/javascript/query_view",
+                              "sdks/javascript/list_views",
+                              "sdks/javascript/query_files"
+                            ]
+                          }
                         ]
                       },
                       {
-                        "group": "AI/ML Engines",
+                        "group": "Respond",
+                        "icon": "comment-dots",
                         "pages": [
-                          "sdks/javascript/list_ml_handlers",
-                          "sdks/javascript/create_ml_engine",
-                          "sdks/javascript/drop_ml_engine",
-                          "sdks/javascript/list_ml_engines"
-                        ]
-                      },
-                      {
-                        "group": "Projects",
-                        "pages": [
-                          "sdks/javascript/create_project",
-                          "sdks/javascript/drop_project",
-                          "sdks/javascript/list_projects"
-                        ]
-                      },
-                      {
-                        "group": "Models",
-                        "pages": [
-                          "sdks/javascript/create_model",
-                          "sdks/javascript/drop_model",
-                          "sdks/javascript/list_models",
-                          "sdks/javascript/describe",
-                          "sdks/javascript/get_status",
-                          "sdks/javascript/retrain",
-                          "sdks/javascript/finetune",
-                          "sdks/javascript/manage-model-versions"
-                        ]
-                      },
-                      {
-                        "group": "Predictions",
-                        "pages": [
-                          "sdks/javascript/query",
-                          "sdks/javascript/batchQuery"
-                        ]
-                      },
-                      {
-                        "group": "Tables, Views, and Files",
-                        "pages": [
-                          "sdks/javascript/create_table",
-                          "sdks/javascript/delete_table",
-                          "sdks/javascript/query_table",
-                          "sdks/javascript/native_queries",
-                          "sdks/javascript/update_table",
-                          "sdks/javascript/insert_into_table",
-                          "sdks/javascript/join_on",
-                          "sdks/javascript/delete_from",
-                          "sdks/javascript/create_view",
-                          "sdks/javascript/drop_view",
-                          "sdks/javascript/query_view",
-                          "sdks/javascript/list_views",
-                          "sdks/javascript/upload_file",
-                          "sdks/javascript/delete_file",
-                          "sdks/javascript/query_files"
-                        ]
-                      },
-                      {
-                        "group": "Jobs",
-                        "pages": [
-                          "sdks/javascript/create_job",
-                          "sdks/javascript/drop_job",
-                          "sdks/javascript/query_jobs"
+                          "sdks/javascript/agents"
                         ]
                       }
                     ]
@@ -934,63 +943,61 @@
                       "sdks/mongo/mindsdb-mongo-ql-overview",
                       {
                         "group": "Connect",
+                        "icon": "link",
                         "pages": [
-                          "sdks/mongo/connect/mongo-compass",
-                          "sdks/mongo/connect/mongo-shell"
+                          {
+                            "group": "Setup",
+                            "pages": [
+                              "sdks/mongo/connect/mongo-compass",
+                              "sdks/mongo/connect/mongo-shell"
+                            ]
+                          },
+                          {
+                            "group": "Data Sources",
+                            "pages": [
+                              "sdks/mongo/databases/list-data-handlers",
+                              "sdks/mongo/databases/insertOne",
+                              "sdks/mongo/databases/deleteOne",
+                              "sdks/mongo/databases/find",
+                              "sdks/mongo/databases/use"
+                            ]
+                          },
+                          {
+                            "group": "AI/ML Engines",
+                            "pages": [
+                              "sdks/mongo/ml_engines/list-ml-handlers",
+                              "sdks/mongo/ml_engines/insertOne",
+                              "sdks/mongo/ml_engines/deleteOne",
+                              "sdks/mongo/ml_engines/find"
+                            ]
+                          },
+                          {
+                            "group": "Models",
+                            "pages": [
+                              "sdks/mongo/models/insertOne",
+                              "sdks/mongo/models/deleteOne",
+                              "sdks/mongo/models/find",
+                              "sdks/mongo/models/describe",
+                              "sdks/mongo/models/retrain",
+                              "sdks/mongo/models/finetune",
+                              "sdks/mongo/models/get-single-prediction",
+                              "sdks/mongo/models/get-batch-predictions"
+                            ]
+                          }
                         ]
                       },
                       {
-                        "group": "Data Sources",
+                        "group": "Unify",
+                        "icon": "circle-nodes",
                         "pages": [
-                          "sdks/mongo/databases/list-data-handlers",
-                          "sdks/mongo/databases/insertOne",
-                          "sdks/mongo/databases/deleteOne",
-                          "sdks/mongo/databases/find",
-                          "sdks/mongo/databases/use"
-                        ]
-                      },
-                      {
-                        "group": "AI/ML Engines",
-                        "pages": [
-                          "sdks/mongo/ml_engines/list-ml-handlers",
-                          "sdks/mongo/ml_engines/insertOne",
-                          "sdks/mongo/ml_engines/deleteOne",
-                          "sdks/mongo/ml_engines/find"
-                        ]
-                      },
-                      {
-                        "group": "Projects",
-                        "pages": [
-                          "sdks/mongo/projects/insertOne",
-                          "sdks/mongo/projects/deleteOne",
-                          "sdks/mongo/projects/list-projects"
-                        ]
-                      },
-                      {
-                        "group": "Models",
-                        "pages": [
-                          "sdks/mongo/models/insertOne",
-                          "sdks/mongo/models/deleteOne",
-                          "sdks/mongo/models/find",
-                          "sdks/mongo/models/describe",
-                          "sdks/mongo/models/retrain",
-                          "sdks/mongo/models/finetune",
-                          "sdks/mongo/models/manage-model-versions"
-                        ]
-                      },
-                      {
-                        "group": "Predictions",
-                        "pages": [
-                          "sdks/mongo/models/get-single-prediction",
-                          "sdks/mongo/models/get-batch-predictions"
-                        ]
-                      },
-                      {
-                        "group": "Jobs",
-                        "pages": [
-                          "sdks/mongo/jobs/insertOne",
-                          "sdks/mongo/jobs/deleteOne",
-                          "sdks/mongo/jobs/query-jobs"
+                          {
+                            "group": "Jobs",
+                            "pages": [
+                              "sdks/mongo/jobs/insertOne",
+                              "sdks/mongo/jobs/deleteOne",
+                              "sdks/mongo/jobs/query-jobs"
+                            ]
+                          }
                         ]
                       }
                     ]

@@ -1,3 +1,4 @@
+import re
 from urllib.parse import quote
 
 import pandas as pd
@@ -12,10 +13,52 @@ from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 
 logger = log.getLogger(__name__)
+
+
+class MindsDBClickHouseDialect(ClickHouseDialect):
+    """
+    Custom ClickHouse dialect to handle MindsDB specific requirements.
+    """
+
+    driver = "clickhouse"
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.driver = "clickhouse"
+
+
+def convert_interval_to_clickhouse(query_str):
+    """
+    Convert interval to ClickHouse compatible format.
+    """
+    interval_pattern = r"INTERVAL\s+'([^']+)'\s+(\w+)"
+
+    def replace_interval(match):
+        value = match.group(1)
+        unit = match.group(2).upper()
+
+        interval_mapping = {
+            "SECOND": "toIntervalSecond",
+            "MINUTE": "toIntervalMinute",
+            "HOUR": "toIntervalHour",
+            "DAY": "toIntervalDay",
+            "WEEK": "toIntervalWeek",
+            "MONTH": "toIntervalMonth",
+            "QUARTER": "toIntervalQuarter",
+            "YEAR": "toIntervalYear",
+        }
+
+        if unit in interval_mapping:
+            return f"{interval_mapping[unit]}('{value}')"
+        else:
+            return match.group(0)
+
+    return re.sub(interval_pattern, replace_interval, query_str,
+                  flags=re.IGNORECASE)
 
 
 class ClickHouseHandler(DatabaseHandler):
@@ -23,15 +66,15 @@ class ClickHouseHandler(DatabaseHandler):
     This handler handles connection and execution of the ClickHouse statements.
     """
 
-    name = 'clickhouse'
+    name = "clickhouse"
 
     def __init__(self, name, connection_data, **kwargs):
         super().__init__(name)
-        self.dialect = 'clickhouse'
+        self.dialect = "clickhouse"
         self.connection_data = connection_data
-        self.renderer = SqlalchemyRender(ClickHouseDialect)
+        self.renderer = SqlalchemyRender(MindsDBClickHouseDialect)
         self.is_connected = False
-        self.protocol = connection_data.get('protocol', 'native')
+        self.protocol = connection_data.get("protocol", "native")
 
     def __del__(self):
         if self.is_connected is True:
@@ -50,15 +93,17 @@ class ClickHouseHandler(DatabaseHandler):
         if self.is_connected:
             return self.connection
 
-        protocol = "clickhouse+native" if self.protocol == 'native' else "clickhouse+http"
-        host = quote(self.connection_data['host'])
-        port = self.connection_data['port']
-        user = quote(self.connection_data['user'])
-        password = quote(self.connection_data['password'])
-        database = quote(self.connection_data['database'])
-        url = f'{protocol}://{user}:{password}@{host}:{port}/{database}'
+        protocol = (
+            "clickhouse+native" if self.protocol == "native" else "clickhouse+http"
+        )
+        host = quote(self.connection_data["host"])
+        port = self.connection_data["port"]
+        user = quote(self.connection_data["user"])
+        password = quote(self.connection_data["password"])
+        database = quote(self.connection_data["database"])
+        url = f"{protocol}://{user}:{password}@{host}:{port}/{database}"
         # This is not redundunt. Check https://clickhouse-sqlalchemy.readthedocs.io/en/latest/connection.html#http
-        if self.protocol == 'https':
+        if self.protocol == "https":
             url = url + "?protocol=https"
         try:
             engine = create_engine(url)
@@ -66,7 +111,9 @@ class ClickHouseHandler(DatabaseHandler):
             self.is_connected = True
             self.connection = connection
         except SQLAlchemyError as e:
-            logger.error(f'Error connecting to ClickHouse {self.connection_data["database"]}, {e}!')
+            logger.error(
+                f'Error connecting to ClickHouse {self.connection_data["database"]}, {e}!'
+            )
             self.is_connected = False
             raise
 
@@ -86,12 +133,14 @@ class ClickHouseHandler(DatabaseHandler):
             connection = self.connect()
             cur = connection.cursor()
             try:
-                cur.execute('select 1;')
+                cur.execute("select 1;")
             finally:
                 cur.close()
             response.success = True
         except SQLAlchemyError as e:
-            logger.error(f'Error connecting to ClickHouse {self.connection_data["database"]}, {e}!')
+            logger.error(
+                f'Error connecting to ClickHouse {self.connection_data["database"]}, {e}!'
+            )
             response.error_message = str(e)
             self.is_connected = False
 
@@ -119,20 +168,16 @@ class ClickHouseHandler(DatabaseHandler):
             if result:
                 response = Response(
                     RESPONSE_TYPE.TABLE,
-                    pd.DataFrame(
-                        result,
-                        columns=[x[0] for x in cur.description]
-                    )
+                    pd.DataFrame(result, columns=[x[0] for x in cur.description]),
                 )
             else:
                 response = Response(RESPONSE_TYPE.OK)
             connection.commit()
         except SQLAlchemyError as e:
-            logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
+            logger.error(
+                f'Error running query: {query} on {self.connection_data["database"]}!'
             )
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
             connection.rollback()
         finally:
             cur.close()
@@ -144,7 +189,7 @@ class ClickHouseHandler(DatabaseHandler):
         Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
         """
         query_str = self.renderer.get_string(query, with_failback=True)
-        return self.native_query(query_str)
+        return self.native_query(convert_interval_to_clickhouse(query_str))
 
     def get_tables(self) -> Response:
         """
@@ -155,7 +200,7 @@ class ClickHouseHandler(DatabaseHandler):
         df = result.data_frame
 
         if df is not None:
-            result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
+            result.data_frame = df.rename(columns={df.columns[0]: "table_name"})
 
         return result
 

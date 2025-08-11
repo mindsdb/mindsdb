@@ -2,7 +2,15 @@ from collections import defaultdict
 
 import pandas as pd
 
-from mindsdb_sql_parser.ast import Identifier, Select, Star, Constant, Parameter, Function, Variable, BinaryOperation
+from mindsdb_sql_parser.ast import (
+    Identifier,
+    Select,
+    Star,
+    Constant,
+    Function,
+    Variable,
+    BinaryOperation,
+)
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import SERVER_VARIABLES
 from mindsdb.api.executor.planner.step_result import Result
@@ -52,13 +60,8 @@ class SubSelectStepCall(BaseStepCall):
 
         # inject previous step values
         if isinstance(query, Select):
-
-            def inject_values(node, **kwargs):
-                if isinstance(node, Parameter) and isinstance(node.value, Result):
-                    prev_result = self.steps_data[node.value.step_num]
-                    return Constant(prev_result.get_column_values(col_idx=0)[0])
-
-            query_traversal(query, inject_values)
+            fill_params = get_fill_param_fnc(self.steps_data)
+            query_traversal(query, fill_params)
 
         df = result.to_df()
         res = query_df(df, query, session=self.session)

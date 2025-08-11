@@ -24,7 +24,7 @@ from mindsdb.integrations.handlers.openai_handler.helpers import (
     PendingFT,
 )
 from mindsdb.integrations.handlers.openai_handler.constants import (
-    CHAT_MODELS,
+    CHAT_MODELS_PREFIXES,
     IMAGE_MODELS,
     FINETUNING_MODELS,
     OPENAI_API_BASE,
@@ -62,7 +62,6 @@ class OpenAIHandler(BaseMLEngine):
         self.rate_limit = 60  # requests per minute
         self.max_batch_size = 20
         self.default_max_tokens = 100
-        self.chat_completion_models = CHAT_MODELS
         self.supported_ft_models = FINETUNING_MODELS  # base models compatible with finetuning
         # For now this are only used for handlers that inherits OpenAIHandler and don't need to override base methods
         self.api_key_name = getattr(self, "api_key_name", self.name)
@@ -88,6 +87,13 @@ class OpenAIHandler(BaseMLEngine):
             api_base = connection_args.get("api_base") or os.environ.get("OPENAI_API_BASE", OPENAI_API_BASE)
             client = self._get_client(api_key=api_key, base_url=api_base, org=org, args=connection_args)
             OpenAIHandler._check_client_connection(client)
+
+    @staticmethod
+    def is_chat_model(model_name):
+        for prefix in CHAT_MODELS_PREFIXES:
+            if model_name.startswith(prefix):
+                return True
+        return False
 
     @staticmethod
     def _check_client_connection(client: OpenAI) -> None:
@@ -350,11 +356,6 @@ class OpenAIHandler(BaseMLEngine):
                 "user": pred_args.get("user", None),
             }
 
-            if args.get("mode", self.default_mode) != "default" and model_name not in self.chat_completion_models:
-                raise Exception(
-                    f"Conversational modes are only available for the following models: {', '.join(self.chat_completion_models)}"
-                )  # noqa
-
             if args.get("prompt_template", False):
                 prompts, empty_prompt_ids = get_completed_prompts(base_template, df, strict=strict_prompt_template)
 
@@ -515,7 +516,7 @@ class OpenAIHandler(BaseMLEngine):
                 return _submit_image_completion(kwargs, prompts, api_args)
             elif model_name == "embedding":
                 return _submit_embedding_completion(kwargs, prompts, api_args)
-            elif model_name in self.chat_completion_models:
+            elif self.is_chat_model(model_name):
                 if model_name == "gpt-3.5-turbo-instruct":
                     return _submit_normal_completion(kwargs, prompts, api_args)
                 else:
@@ -579,13 +580,14 @@ class OpenAIHandler(BaseMLEngine):
                         tidy_comps.append(c.text.strip("\n").strip(""))
                 return tidy_comps
 
-            kwargs["prompt"] = prompts
             kwargs = {**kwargs, **api_args}
 
             before_openai_query(kwargs)
-            resp = _tidy(client.completions.create(**kwargs))
-            _log_api_call(kwargs, resp)
-            return resp
+            responses = []
+            for prompt in prompts:
+                responses.extend(_tidy(client.completions.create(prompt=prompt, **kwargs)))
+            _log_api_call(kwargs, responses)
+            return responses
 
         def _submit_embedding_completion(kwargs: Dict, prompts: List[Text], api_args: Dict) -> List[float]:
             """

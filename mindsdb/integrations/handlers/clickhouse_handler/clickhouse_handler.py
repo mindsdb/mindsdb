@@ -31,44 +31,6 @@ class MindsDBClickHouseDialect(ClickHouseDialect):
         self.driver = "clickhouse"
 
 
-def convert_interval_to_clickhouse(query_str):
-    """
-    Convert interval to ClickHouse compatible format.
-    This function replaces PostgreSQL-style interval expressions with ClickHouse equivalents.
-    For example:
-    - "INTERVAL '15' MINUTE" becomes "toIntervalMinute('15')"
-    - "INTERVAL '2' HOUR" becomes "toIntervalHour('2')"
-    - "INTERVAL '7' DAY" becomes "toIntervalDay('7')"
-    """
-
-    if "INTERVAL" not in query_str.upper():
-        return query_str
-
-    interval_pattern = r"INTERVAL\s+'(-?\d+)'\s+(\w+)"
-
-    def replace_interval(match):
-        value = match.group(1)
-        unit = match.group(2).upper()
-
-        interval_mapping = {
-            "SECOND": "toIntervalSecond",
-            "MINUTE": "toIntervalMinute",
-            "HOUR": "toIntervalHour",
-            "DAY": "toIntervalDay",
-            "WEEK": "toIntervalWeek",
-            "MONTH": "toIntervalMonth",
-            "QUARTER": "toIntervalQuarter",
-            "YEAR": "toIntervalYear",
-        }
-
-        if unit in interval_mapping:
-            return f"{interval_mapping[unit]}('{value}')"
-        else:
-            return match.group(0)
-
-    return re.sub(interval_pattern, replace_interval, query_str, flags=re.IGNORECASE)
-
-
 class ClickHouseHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the ClickHouse statements.
@@ -197,7 +159,7 @@ class ClickHouseHandler(DatabaseHandler):
         Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
         """
         query_str = self.renderer.get_string(query, with_failback=True)
-        return self.native_query(convert_interval_to_clickhouse(query_str))
+        return self.native_query(query_str)
 
     def get_tables(self) -> Response:
         """

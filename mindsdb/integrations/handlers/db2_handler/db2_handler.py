@@ -184,7 +184,8 @@ class DB2Handler(DatabaseHandler):
         """
         renderer = SqlalchemyRender(DB2Dialect)
         query_str = renderer.get_string(query, with_failback=True)
-        query_str = query_str.replace('`', '"')
+        # TODO: Remove this once we have a way to handle ` quotes in the query
+        # query_str = query_str.replace('`', '"')
         return self.native_query(query_str)
 
     def get_tables(self) -> Response:

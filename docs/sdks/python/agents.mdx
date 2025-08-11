@@ -5,17 +5,12 @@ sidebarTitle: AI Agents
 
 Agents enable conversation with data, including structured and unstructured data connected to MindsDB.
 
-## Deploy Agents
+## Create Agents
 
 Here is the syntax for creating an agent:
 
 ```python
-# prerequisite: get an existing project
-project = server.get_project()
-print(project)
-
-# create an agent
-agent = project.agents.create(
+agent = server.agents.create(
         'my_agent',
         model={
             'model_name': 'gpt-4o',
@@ -35,28 +30,11 @@ agent = project.agents.create(
 It creates an agent that uses the defined model and has access to the connected data. Here is how to list all available agents.
 
 ```python
-agents = project.agents.list()
+agents = server.agents.list()
 print(agents)
 ```
 
-Alternatively, you can get an existing agent:
-
-```python
-agent = project.agents.get('sales_agent')
-```
-
-<Note>
-Note that you can insert all tables from a connected data source and all knowledge bases from a project using the `*` syntax.
-
-```python
-        ...
-        data={
-            'knowledge_bases': ['project_name.*', ...]
-            'tables': ['datasource_conn_name.*', ...]
-        },
-        ...
-```
-</Note>
+The following sections explain all the agent parameters.
 
 ### `model`
 
@@ -300,6 +278,19 @@ The following parameters store the list of connected data.
 
 * `tables` stores the list of tables from data sources connected to MindsDB.
 
+<Note>
+Note that you can insert all tables from a connected data source and all knowledge bases from a project using the `*` syntax.
+
+```python
+        ...
+        data={
+            'knowledge_bases': ['project_name.*', ...]
+            'tables': ['datasource_conn_name.*', ...]
+        },
+        ...
+```
+</Note>
+
 ### `prompt_template`
 
 This parameter stores instructions for the agent.
@@ -311,6 +302,14 @@ It is recommended to provide data description of the data sources listed in the 
 This parameter defines the time the agent can take to come back with an answer.
 
 For example, when the `timeout` parameter is set to 10, the agent has 10 seconds to return an answer. If the agent takes longer than 10 seconds, it aborts the process and comes back with an answer indicating its failure to return an answer within the defined time interval.
+
+## Get Agents
+
+You can get an existing agent with the `get()` method.
+
+```python
+agent = server.agents.get('sales_agent')
+```
 
 ## Query Agents
 
@@ -335,7 +334,7 @@ Update existing agents with new data, model, or prompt.
 
 ```python
 agent.data['tables'].append('mysql_demo_db.car_sales')
-updated_agent = project.agents.update('my_agent', agent)
+updated_agent = server.agents.update('my_agent', agent)
 print(updated_agent)
 ```
 
@@ -344,5 +343,5 @@ print(updated_agent)
 Here is the syntax for deleting an agent:
 
 ```python
-project.agents.drop('my_agent')
+server.agents.drop('my_agent')
 ```

@@ -34,8 +34,17 @@ class MindsDBClickHouseDialect(ClickHouseDialect):
 def convert_interval_to_clickhouse(query_str):
     """
     Convert interval to ClickHouse compatible format.
+    This function replaces PostgreSQL-style interval expressions with ClickHouse equivalents.
+    For example:
+    - "INTERVAL '15' MINUTE" becomes "toIntervalMinute('15')"
+    - "INTERVAL '2' HOUR" becomes "toIntervalHour('2')"
+    - "INTERVAL '7' DAY" becomes "toIntervalDay('7')"
     """
-    interval_pattern = r"INTERVAL\s+'([^']+)'\s+(\w+)"
+
+    if "INTERVAL" not in query_str.upper():
+        return query_str
+
+    interval_pattern = r"INTERVAL\s+'(-?\d+)'\s+(\w+)"
 
     def replace_interval(match):
         value = match.group(1)
@@ -57,8 +66,7 @@ def convert_interval_to_clickhouse(query_str):
         else:
             return match.group(0)
 
-    return re.sub(interval_pattern, replace_interval, query_str,
-                  flags=re.IGNORECASE)
+    return re.sub(interval_pattern, replace_interval, query_str, flags=re.IGNORECASE)
 
 
 class ClickHouseHandler(DatabaseHandler):

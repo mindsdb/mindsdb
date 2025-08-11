@@ -62,3 +62,23 @@ class PostgresHandlerTest(unittest.TestCase):
         expected = "SELECT * FROM table WHERE date >= toIntervalDay('7')"
         result = convert_interval_to_clickhouse(query)
         assert result == expected
+
+    def test_7_negative_interval_conversion(self):
+        """Test negative intervals"""
+        # Test MINUTE interval
+        query = "SELECT * FROM table WHERE time >= (now() - INTERVAL '-15' MINUTE)"
+        expected = "SELECT * FROM table WHERE time >= (now() - toIntervalMinute('-15'))"
+        result = convert_interval_to_clickhouse(query)
+        assert result == expected
+
+        # Test HOUR interval
+        query = "SELECT * FROM table WHERE date >= INTERVAL '-2' HOUR"
+        expected = "SELECT * FROM table WHERE date >= toIntervalHour('-2')"
+        result = convert_interval_to_clickhouse(query)
+        assert result == expected
+
+        # Test DAY interval
+        query = "SELECT * FROM table WHERE date >= INTERVAL '-7' DAY"
+        expected = "SELECT * FROM table WHERE date >= toIntervalDay('-7')"
+        result = convert_interval_to_clickhouse(query)
+        assert result == expected

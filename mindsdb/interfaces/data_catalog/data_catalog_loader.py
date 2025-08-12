@@ -86,6 +86,8 @@ class DataCatalogLoader(BaseDataCatalog):
         if response.error_code is not None:
             raise ValueError(f"Error inserting metadata to knowledge base for data catalog: {response.error_message}")
 
+        self.logger.info(f"Metadata loading to knowledge base completed for {self.database_name}.")
+
     def _get_loaded_table_names(self) -> List[str]:
         """
         Retrieve the names of tables that are already present in the data catalog for the current integration.
@@ -426,7 +428,34 @@ class DataCatalogLoader(BaseDataCatalog):
 
             db.session.delete(table)
         db.session.commit()
+
+        if config.get("data_catalog", {}).get("knowledge_base_enabled", False):
+            self._unload_metadata_from_knowledge_base()
+
         self.logger.info(f"Metadata for {self.database_name} removed successfully.")
+
+    def _unload_metadata_from_knowledge_base(self) -> None:
+        """
+        Unload the metadata from the knowledge base.
+        """
+        self.logger.info(f"Unloading metadata from knowledge base for {self.database_name}")
+        
+        from mindsdb.api.executor.command_executor import ExecuteCommands
+        from mindsdb.api.executor.controllers.session_controller import SessionController
+        from mindsdb_sql_parser.ast import BinaryOperation, Constant, Delete, Identifier
+
+        command_executor = ExecuteCommands(session=SessionController())
+        delete_query = Delete(
+            table=Identifier(config.get("data_catalog")["knowledge_base_name"]),
+            where=BinaryOperation(
+                op="=",
+                args=[
+                    Identifier("database_name"),
+                    Constant(self.database_name),
+                ],
+            ),
+        )
+        command_executor.execute_command(delete_query, config.get("default_project"))
 
     def to_str(self, val) -> str:
         """

@@ -20,6 +20,7 @@ from packaging.version import Version, parse as parse_version
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.api.http.gui import update_static
 from mindsdb.api.http.utils import http_error
+from mindsdb.api.http.namespaces.auth_tokens import ns_conf as auth_tokens_ns
 from mindsdb.api.http.namespaces.agents import ns_conf as agents_ns
 from mindsdb.api.http.namespaces.analysis import ns_conf as analysis_ns
 from mindsdb.api.http.namespaces.auth import ns_conf as auth_ns
@@ -258,6 +259,7 @@ def initialize_app(config, no_studio):
             return send_from_directory(static_root, "index.html")
 
     protected_namespaces = [
+        auth_tokens_ns,
         tab_ns,
         utils_ns,
         conf_ns,

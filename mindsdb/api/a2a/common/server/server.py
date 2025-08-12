@@ -7,6 +7,7 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
 from sse_starlette.sse import EventSourceResponse
 from starlette.requests import Request
+from .auth_middleware import A2AAuthMiddleware
 from ...common.types import (
     A2ARequest,
     JSONRPCResponse,
@@ -50,6 +51,10 @@ class A2AServer:
         self.app.add_route("/.well-known/agent.json", self._get_agent_card, methods=["GET"])
         # Add status endpoint
         self.app.add_route("/status", self._get_status, methods=["GET"])
+        
+        # Add authentication middleware
+        self.app.add_middleware(A2AAuthMiddleware)
+        
         # TODO: Remove this when we have a proper CORS policy
         self.app.add_middleware(
             CORSMiddleware,

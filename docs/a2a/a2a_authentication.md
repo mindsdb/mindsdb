@@ -25,6 +25,7 @@ Since services like the A2A server run as separate processes from the main Minds
 - **External Services**: Validate tokens by making HTTP requests to the HTTP server
 - **Communication**: External services call `/api/auth_tokens/token/validate` endpoint to verify tokens
 - **Configuration**: External services automatically read the HTTP API configuration from the MindsDB config file
+- **Agent Card**: A2A server includes authentication information in its agent card when authentication is required
 
 This design allows external services to be completely independent while still maintaining secure token-based authentication, with no additional configuration required.
 
@@ -162,6 +163,37 @@ The MCP server supports two authentication modes:
 External services automatically read the HTTP API configuration from the MindsDB config file. They use the same `api.http.host` and `api.http.port` settings that the main MindsDB server uses.
 
 No additional configuration is required - external services will automatically connect to the correct HTTP API endpoint.
+
+### Agent Card Authentication Information
+
+The A2A server automatically includes authentication information in its agent card when authentication is required:
+
+**When HTTP Auth is Disabled:**
+```json
+{
+  "name": "MindsDB Agent Connector",
+  "version": "1.0.0",
+  "capabilities": { ... },
+  "skills": [ ... ]
+  // No authentication field
+}
+```
+
+**When HTTP Auth is Enabled:**
+```json
+{
+  "name": "MindsDB Agent Connector",
+  "version": "1.0.0",
+  "capabilities": { ... },
+  "skills": [ ... ],
+  "authentication": {
+    "schemes": ["bearer"],
+    "credentials": "Authentication token required. Generate token via /api/auth_tokens/token endpoint."
+  }
+}
+```
+
+This allows A2A clients to automatically discover authentication requirements and provide appropriate credentials.
 
 ## Usage Examples
 

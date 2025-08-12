@@ -8,11 +8,13 @@ from mindsdb.api.a2a.common.types import (
     AgentCard,
     AgentCapabilities,
     AgentSkill,
+    AgentAuthentication,
     MissingAPIKeyError,
 )
 from mindsdb.api.a2a.common.server.server import A2AServer
 from mindsdb.api.a2a.task_manager import AgentTaskManager
 from mindsdb.api.a2a.agent import MindsDBAgent
+from mindsdb.utilities.a2a_auth import get_auth_required_status
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -71,6 +73,16 @@ def main(
             outputModes=MindsDBAgent.SUPPORTED_CONTENT_TYPES,
         )
 
+        # Check if authentication is required
+        auth_required = get_auth_required_status()
+        authentication = None
+        
+        if auth_required:
+            authentication = AgentAuthentication(
+                schemes=["bearer"],
+                credentials="Authentication token required. Generate token via /api/auth_tokens/token endpoint."
+            )
+        
         agent_card = AgentCard(
             name="MindsDB Agent Connector",
             description=(f"A2A connector that proxies requests to MindsDB agents in project '{project_name}'."),
@@ -79,6 +91,7 @@ def main(
             defaultInputModes=MindsDBAgent.SUPPORTED_CONTENT_TYPES,
             defaultOutputModes=MindsDBAgent.SUPPORTED_CONTENT_TYPES,
             capabilities=capabilities,
+            authentication=authentication,
             skills=[skill],
         )
 

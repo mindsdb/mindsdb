@@ -73,7 +73,7 @@ class TestSelect(BaseExecutorDummyML):
 
         data_handler.reset_mock()
         ret = self.run_sql("select * from v1 where b=2")
-        assert len(ret) == 1 and ret['b'][0] == 2
+        assert len(ret) == 1 and ret["b"][0] == 2
         calls = data_handler().query.call_args_list
         sql = calls[0][0][0].to_string()
 

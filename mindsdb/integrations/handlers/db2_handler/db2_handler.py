@@ -6,7 +6,6 @@ from ibm_db_sa.ibm_db import DB2Dialect_ibm_db as DB2Dialect
 from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 import pandas as pd
-import re
 
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (

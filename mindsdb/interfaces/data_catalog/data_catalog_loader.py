@@ -2,9 +2,11 @@ from typing import List, Union
 import pandas as pd
 import json
 import datetime
+
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.interfaces.data_catalog.base_data_catalog import BaseDataCatalog
 from mindsdb.interfaces.storage import db
+from mindsdb.utilities.config import config
 
 
 class DataCatalogLoader(BaseDataCatalog):
@@ -32,7 +34,57 @@ class DataCatalogLoader(BaseDataCatalog):
 
             self._load_foreign_keys(tables, columns)
 
+        if config.get("data_catalog", {}).get("knowledge_base_enabled", False):
+            self._load_metadata_to_knowledge_base(tables)
+
         self.logger.info(f"Metadata loading completed for {self.database_name}.")
+
+    def _load_metadata_to_knowledge_base(self, tables: List[db.MetaTables]) -> None:
+        """
+        Load the metadata to the knowledge base.
+        """
+        self.logger.info(f"Loading metadata to knowledge base for {self.database_name}")
+
+        from mindsdb.api.executor.command_executor import ExecuteCommands
+        from mindsdb.api.executor.controllers.session_controller import SessionController
+        from mindsdb_sql_parser.ast import Constant, Insert, Identifier
+        from mindsdb_sql_parser.ast.mindsdb import CreateKnowledgeBase
+
+        command_executor = ExecuteCommands(session=SessionController())
+        response = command_executor.answer_create_kb(
+            CreateKnowledgeBase(
+                name=Identifier(config.get("data_catalog")["knowledge_base_name"]),
+                if_not_exists=True,
+                params={
+                    "metadata_columns": [
+                        "database_name",
+                        "schema_name",
+                        "table_name",
+                    ]
+                }
+            ),
+            config.get("default_project"),
+        )
+
+        if response.error_code is not None:
+            raise ValueError(f"Error creating knowledge base for data catalog: {response.error_message}")
+
+        insert_query = Insert(
+            table=Identifier(config.get("data_catalog")["knowledge_base_name"]),
+            columns=["content", "database_name", "schema_name", "table_name"],
+            values=[
+                [
+                    Constant(table.as_string()),
+                    Constant(self.database_name),
+                    Constant(table.schema),
+                    Constant(table.name),
+                ] for table in tables
+            ],
+        )
+        response = command_executor.execute_command(insert_query, config.get("default_project"))
+
+        if response.error_code is not None:
+            raise ValueError(f"Error inserting metadata to knowledge base for data catalog: {response.error_message}")
 
     def _get_loaded_table_names(self) -> List[str]:
         """

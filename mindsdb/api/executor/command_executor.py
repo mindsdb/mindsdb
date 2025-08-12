@@ -1348,24 +1348,12 @@ class ExecuteCommands:
                 from_table=NativeQuery(integration=statement.from_table, query=statement.query_str),
             )
             query_str = query.to_string()
-        else:
-            query = parse_sql(query_str)
-
-        if isinstance(query, Select):
-            # check create view sql
-            query.limit = Constant(1)
-
-            query_context_controller.set_context(query_context_controller.IGNORE_CONTEXT)
-            try:
-                SQLQuery(query, session=self.session, database=database_name)
-            finally:
-                query_context_controller.release_context(query_context_controller.IGNORE_CONTEXT)
 
         project = self.session.database_controller.get_project(project_name)
 
         if isinstance(statement, CreateView):
             try:
-                project.create_view(view_name, query=query_str)
+                project.create_view(view_name, query=query_str, session=self.session)
             except EntityExistsError:
                 if getattr(statement, "if_not_exists", False) is False:
                     raise

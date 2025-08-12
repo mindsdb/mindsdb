@@ -131,7 +131,7 @@ Returns the current authentication configuration.
 
 ## Service Authentication
 
-External services (like the A2A server) automatically check for authentication based on the HTTP API configuration. Since these services run as separate processes, they validate tokens by making HTTP requests to the main MindsDB HTTP API.
+External services (like the A2A server and MCP server) automatically check for authentication based on the HTTP API configuration. Since these services run as separate processes, they validate tokens by making HTTP requests to the main MindsDB HTTP API.
 
 ### When HTTP Auth is Disabled
 - No authentication required
@@ -142,6 +142,20 @@ External services (like the A2A server) automatically check for authentication b
 - Requests must include a valid `Authorization: Bearer <token>` header
 - Invalid or missing tokens return 401 Unauthorized
 - Token validation is performed by calling the HTTP API endpoint `/api/auth_tokens/token/validate`
+
+### MCP Server Authentication
+
+The MCP server supports two authentication modes:
+
+1. **Environment-based MCP token** (priority):
+   - Set `MINDSDB_MCP_ACCESS_TOKEN` environment variable
+   - Uses the exact token value for authentication
+   - Overrides HTTP auth configuration
+
+2. **HTTP auth-based token validation** (fallback):
+   - When `MINDSDB_MCP_ACCESS_TOKEN` is not set
+   - Uses the same authentication token system as other services
+   - Respects HTTP auth configuration (enabled/disabled)
 
 ### Configuration
 
@@ -186,7 +200,17 @@ curl -X GET http://localhost:10002/status \
   -H "Authorization: Bearer your_a2a_token_here"
 ```
 
-### 5. Validate a Token
+### 5. Use Token with MCP Server
+```bash
+# Connect to MCP server with authentication token
+# (when MINDSDB_MCP_ACCESS_TOKEN is not set and HTTP auth is enabled)
+curl -X POST http://localhost:47337/ \
+  -H "Authorization: Bearer your_authentication_token_here" \
+  -H "Content-Type: application/json" \
+  -d '{"method": "tools/list", "params": {}}'
+```
+
+### 6. Validate a Token
 ```bash
 curl -X POST http://localhost:47334/api/auth_tokens/token/validate \
   -H "Content-Type: application/json" \

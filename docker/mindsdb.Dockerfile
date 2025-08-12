@@ -86,12 +86,13 @@ ENV PATH=/venv/bin:$PATH
 
 EXPOSE 47334/tcp
 EXPOSE 47335/tcp
-EXPOSE 47336/tcp
 # Expose MCP port
 EXPOSE 47337/tcp
 # Expose A2A port
 EXPOSE 47338/tcp
 
+# Run GUI update during build so the final image already contains it
+RUN python -Im mindsdb --config=/root/mindsdb_config.json --update-gui
 
 
 
@@ -119,7 +120,7 @@ RUN --mount=type=cache,target=/root/.cache uv pip install -r requirements/requir
 
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
-ENTRYPOINT [ "bash", "-c", "watchfiles --filter python 'python -Im mindsdb --config=/root/mindsdb_config.json --api=http,a2a,mcp' mindsdb" ]
+ENTRYPOINT [ "bash", "-c", "watchfiles --filter python 'python -Im mindsdb --config=/root/mindsdb_config.json --api=http,mysql,a2a,mcp' mindsdb" ]
 
 
 
@@ -127,4 +128,4 @@ ENTRYPOINT [ "bash", "-c", "watchfiles --filter python 'python -Im mindsdb --con
 # Make sure the regular image is the default
 FROM extras
 
-ENTRYPOINT [ "bash", "-c", "python -Im mindsdb --config=/root/mindsdb_config.json --api=http,a2a,mcp" ]
+ENTRYPOINT [ "bash", "-c", "python -Im mindsdb --config=/root/mindsdb_config.json --api=http,mysql,a2a,mcp" ]

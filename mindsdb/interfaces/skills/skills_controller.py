@@ -23,13 +23,16 @@ class SkillsController:
             project_controller = ProjectController()
         self.project_controller = project_controller
 
-    def get_skill(self, skill_name: str, project_name: str = default_project) -> Optional[db.Skills]:
+    def get_skill(
+        self, skill_name: str, project_name: str = default_project, strict_case: bool = False
+    ) -> Optional[db.Skills]:
         """
         Gets a skill by name. Skills are expected to have unique names.
 
         Parameters:
             skill_name (str): The name of the skill
             project_name (str): The name of the containing project
+            strict_case (bool): If True, the skill name is case-sensitive. Defaults to False.
 
         Returns:
             skill (Optional[db.Skills]): The database skill object
@@ -39,11 +42,16 @@ class SkillsController:
         """
 
         project = self.project_controller.get(name=project_name)
-        return db.Skills.query.filter(
-            func.lower(db.Skills.name) == func.lower(skill_name),
+        query = db.Skills.query.filter(
             db.Skills.project_id == project.id,
             db.Skills.deleted_at == null(),
-        ).first()
+        )
+        if strict_case:
+            query = query.filter(db.Skills.name == skill_name)
+        else:
+            query = query.filter(func.lower(db.Skills.name) == func.lower(skill_name))
+
+        return query.first()
 
     def get_skills(self, project_name: Optional[str]) -> List[dict]:
         """
@@ -91,6 +99,9 @@ class SkillsController:
         if project_name is None:
             project_name = default_project
         project = self.project_controller.get(name=project_name)
+
+        if not name.islower():
+            raise ValueError(f"The name must be in lower case: {name}")
 
         skill = self.get_skill(name, project_name)
 
@@ -158,19 +169,20 @@ class SkillsController:
 
         return existing_skill
 
-    def delete_skill(self, skill_name: str, project_name: str = default_project):
+    def delete_skill(self, skill_name: str, project_name: str = default_project, strict_case: bool = False):
         """
         Deletes a skill by name.
 
         Parameters:
             skill_name (str): The name of the skill to delete
             project_name (str): The name of the containing project
+            strict_case (bool): If true, then skill_name is case sensitive
 
         Raises:
             ValueError: If `project_name` does not exist or skill doesn't exist
         """
 
-        skill = self.get_skill(skill_name, project_name)
+        skill = self.get_skill(skill_name, project_name, strict_case)
         if skill is None:
             raise ValueError(f"Skill with name doesn't exist: {skill_name}")
         if isinstance(skill.params, dict) and skill.params.get("is_demo") is True:

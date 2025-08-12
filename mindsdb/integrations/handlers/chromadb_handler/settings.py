@@ -14,7 +14,11 @@ class ChromaHandlerConfig(BaseModel):
     host: str = None
     port: str = None
     password: str = None
-    distance: str = 'cosine'
+    distance: str = "cosine"
+    tenant: str = None
+    database: str = None
+    api_key: str = None
+    ssl: bool = False
 
     class Config:
         extra = "forbid"
@@ -27,13 +31,9 @@ class ChromaHandlerConfig(BaseModel):
         expected_params = cls.model_fields.keys()
         for key in values.keys():
             if key not in expected_params:
-                close_matches = difflib.get_close_matches(
-                    key, expected_params, cutoff=0.4
-                )
+                close_matches = difflib.get_close_matches(key, expected_params, cutoff=0.4)
                 if close_matches:
-                    raise ValueError(
-                        f"Unexpected parameter '{key}'. Did you mean '{close_matches[0]}'?"
-                    )
+                    raise ValueError(f"Unexpected parameter '{key}'. Did you mean '{close_matches[0]}'?")
                 else:
                     raise ValueError(f"Unexpected parameter '{key}'.")
         return values
@@ -47,6 +47,9 @@ class ChromaHandlerConfig(BaseModel):
         host = values.get("host")
         port = values.get("port")
         persist_directory = values.get("persist_directory")
+        api_key = values.get("api_key")
+        tenant = values.get("tenant")
+        database = values.get("database")
 
         if bool(port) != bool(host) or (host and persist_directory):
             raise ValueError(
@@ -56,8 +59,13 @@ class ChromaHandlerConfig(BaseModel):
 
         if persist_directory and (host or port):
             raise ValueError(
-                f"For {vector_store} handler - if persistence_folder is provided, "
-                f"host, port should not be provided."
+                f"For {vector_store} handler - if persistence_folder is provided, host, port should not be provided."
+            )
+
+        # Validate that if api_key is provided, tenant and database are also provided
+        if api_key and (not tenant or not database):
+            raise ValueError(
+                f"For {vector_store} handler - if api_key is provided, both tenant and database must also be provided."
             )
 
         return values

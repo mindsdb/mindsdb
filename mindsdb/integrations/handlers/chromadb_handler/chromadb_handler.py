@@ -67,6 +67,10 @@ class ChromaDBHandler(VectorStoreHandler):
             "chroma_server_host": config.host,
             "chroma_server_http_port": config.port,
             "persist_directory": self.persist_directory,
+            "chroma_server_api_key": config.api_key,
+            "chroma_server_tenant": config.tenant,
+            "chroma_server_database": config.database,
+            "chroma_server_ssl": config.ssl,
         }
 
         self.create_collection_metadata = {
@@ -105,11 +109,33 @@ class ChromaDBHandler(VectorStoreHandler):
         # decide the client type to be used, either persistent or httpclient
         if client_config["persist_directory"] is not None:
             return chromadb.PersistentClient(path=client_config["persist_directory"])
+        elif client_config["chroma_server_host"] is not None and client_config["chroma_server_http_port"] is not None:
+            # Prepare headers for authentication
+            headers = {}
+            if client_config["chroma_server_api_key"]:
+                headers["x-chroma-token"] = client_config["chroma_server_api_key"]
+
+            # Create HttpClient with optional tenant and database
+            http_client_args = {
+                "host": client_config["chroma_server_host"],
+                "port": client_config["chroma_server_http_port"],
+                "ssl": client_config["chroma_server_ssl"],
+            }
+
+            if headers:
+                http_client_args["headers"] = headers
+
+            if client_config["chroma_server_tenant"]:
+                http_client_args["tenant"] = client_config["chroma_server_tenant"]
+
+            if client_config["chroma_server_database"]:
+                http_client_args["database"] = client_config["chroma_server_database"]
+
+            return chromadb.HttpClient(**http_client_args)
         else:
-            return chromadb.HttpClient(
-                host=client_config["chroma_server_host"],
-                port=client_config["chroma_server_http_port"],
-            )
+            # Default to PersistentClient when no connection details are provided
+            # This is for backward compatibility and knowledge base default behavior
+            return chromadb.PersistentClient()
 
     def _sync(self):
         """Sync the database to disk if using persistent storage"""
@@ -480,9 +506,10 @@ class ChromaDBHandler(VectorStoreHandler):
         """
         Create a collection with the given name in the ChromaDB database.
         """
-        self._client.create_collection(
-            table_name, get_or_create=if_not_exists, metadata=self.create_collection_metadata
-        )
+        if if_not_exists:
+            self._client.get_or_create_collection(name=table_name, metadata=self.create_collection_metadata)
+        else:
+            self._client.create_collection(name=table_name, metadata=self.create_collection_metadata)
         self._sync()
 
     def drop_table(self, table_name: str, if_exists=True):
@@ -503,9 +530,11 @@ class ChromaDBHandler(VectorStoreHandler):
         Get the list of collections in the ChromaDB database.
         """
         collections = self._client.list_collections()
+        # Extract collection names from Collection objects
+        collection_names = [collection.name for collection in collections]
         collections_name = pd.DataFrame(
             columns=["table_name"],
-            data=collections,
+            data=collection_names,
         )
         return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=collections_name)
 

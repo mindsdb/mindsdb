@@ -15,6 +15,14 @@ Before proceeding, ensure the following prerequisites are met:
 2. To connect ChromaDB to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
 3. Install or ensure access to ChromaDB.
 
+## Creating a Chroma Server
+
+You can either:
+
+1. Create a [Chroma Cloud](https://trychroma.com/home) account
+2. Install the [Chroma CLI](https://docs.trychroma.com/docs/cli/run) and run `chroma run`
+3. Deploy a Chroma server a [Docker instance](https://docs.trychroma.com/guides/deploy/docker)
+
 ## Connection
 
 This handler is implemented using the `chromadb` Python library.
@@ -31,11 +39,33 @@ PARAMETERS = {
 }
 ```
 
+For Chroma Cloud, you can specify:
+
+```sql
+CREATE DATABASE chromadb_datasource
+WITH ENGINE = 'chromadb'
+PARAMETERS = {
+    "host": "api.trychroma.com",
+    "port": 8000,
+    "api_key": "YOUR_API_KEY",
+    "tenant": "YOUR_TENANT",
+    "database": "YOUR_DATABASE",
+    "ssl": true,
+}
+```
+
 The required parameters are:
 
 * `host`: The host name or IP address of the ChromaDB instance.
 * `port`: The TCP/IP port of the ChromaDB instance.
+
+The optional parameters are:
+
 * `distance`: It defines how the distance between vectors is calculated. Available method include l2, cosine, and ip, as [explained here](https://docs.trychroma.com/docs/collections/configure).
+* `ssl`: Whether to use SSL for the connection (default: false).
+* `api_key`: API key for Chroma Cloud authentication. If provided, `tenant` and `database` must also be specified.
+* `tenant`: Chroma tenant (required if `api_key` is provided).
+* `database`: Chroma database (required if `api_key` is provided).
 
 To connect to an in-memory ChromaDB instance, use the following statement:
 

@@ -210,9 +210,6 @@ class Project:
                         view_where = BinaryOperation("AND", args=[view_where, condition])
                 view_query.where = view_where
 
-        if query.limit is not None:
-            view_query.limit = query.limit
-
         # combine outer query with view's query
         view_query.parentheses = True
         query.from_table = view_query

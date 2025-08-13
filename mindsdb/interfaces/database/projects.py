@@ -168,46 +168,47 @@ class Project:
 
             conditions = get_conditions_to_move(query.where)
 
-            # analyse targets
-            # if target element has alias
-            #    if element is not identifier or the name is not equal to alias:
-            #         add alias to black list
-            # white list:
-            #     all targets that are identifiers with no alias or equal to its alias
-            # condition can be moved if
-            #     column is not in black list AND (query has star(*) OR column in white list)
+            if conditions:
+                # analyse targets
+                # if target element has alias
+                #    if element is not identifier or the name is not equal to alias:
+                #         add alias to black list
+                # white list:
+                #     all targets that are identifiers with no alias or equal to its alias
+                # condition can be moved if
+                #     column is not in black list AND (query has star(*) OR column in white list)
 
-            has_star = False
-            white_list, black_list = [], []
-            for target in view_query.targets:
-                if isinstance(target, Star):
-                    has_star = True
-                if isinstance(target, Identifier):
-                    name = target.parts[-1].lower()
-                    if target.alias is None or target.alias.parts[-1].lower() == name:
-                        white_list.append(name)
-                elif target.alias is not None:
-                    black_list.append(target.alias.parts[-1].lower())
+                has_star = False
+                white_list, black_list = [], []
+                for target in view_query.targets:
+                    if isinstance(target, Star):
+                        has_star = True
+                    if isinstance(target, Identifier):
+                        name = target.parts[-1].lower()
+                        if target.alias is None or target.alias.parts[-1].lower() == name:
+                            white_list.append(name)
+                    elif target.alias is not None:
+                        black_list.append(target.alias.parts[-1].lower())
 
-            view_where = view_query.where
-            for condition in conditions:
-                arg1, arg2 = condition.args
+                view_where = view_query.where
+                for condition in conditions:
+                    arg1, arg2 = condition.args
 
-                if isinstance(arg1, Identifier):
-                    name = arg1.parts[-1].lower()
-                    if name in black_list or not (has_star or name in white_list):
-                        continue
-                if isinstance(arg2, Identifier):
-                    name = arg2.parts[-1].lower()
-                    if name in black_list or not (has_star or name in white_list):
-                        continue
+                    if isinstance(arg1, Identifier):
+                        name = arg1.parts[-1].lower()
+                        if name in black_list or not (has_star or name in white_list):
+                            continue
+                    if isinstance(arg2, Identifier):
+                        name = arg2.parts[-1].lower()
+                        if name in black_list or not (has_star or name in white_list):
+                            continue
 
-                # condition can be moved into view
-                if view_where is None:
-                    view_where = condition
-                else:
-                    view_where = BinaryOperation("AND", args=[view_where, condition])
-            view_query.where = view_where
+                    # condition can be moved into view
+                    if view_where is None:
+                        view_where = condition
+                    else:
+                        view_where = BinaryOperation("AND", args=[view_where, condition])
+                view_query.where = view_where
 
         if query.limit is not None:
             view_query.limit = query.limit

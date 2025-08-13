@@ -3,6 +3,7 @@ from copy import deepcopy
 from typing import List, Optional
 from collections import OrderedDict
 
+import pandas as pd
 import sqlalchemy as sa
 import numpy as np
 
@@ -136,21 +137,32 @@ class Project:
         view_meta["query_ast"] = parse_sql(view_meta["query"])
         return view_meta
 
-    def query_view(self, query, session):
+    def query_view(self, query: Select, session) -> pd.DataFrame:
         view_meta = self.get_view_meta(query)
 
         query_context_controller.set_context("view", view_meta["id"])
-
+        query_applied = False
         try:
-            sqlquery = SQLQuery(view_meta["query_ast"], session=session)
+            view_query = view_meta["query_ast"]
+            if isinstance(view_query, Select):
+                # combine outer query with view's query
+                view_query.parentheses = True
+                query.from_table = view_query
+                view_query = query
+
+                query_applied = True
+
+            sqlquery = SQLQuery(view_query, session=session)
             df = sqlquery.fetched_data.to_df()
         finally:
             query_context_controller.release_context("view", view_meta["id"])
 
         # remove duplicated columns
         df = df.loc[:, ~df.columns.duplicated()]
-
-        return query_df(df, query, session=session)
+        if query_applied:
+            return df
+        else:
+            return query_df(df, query, session=session)
 
     @staticmethod
     def _get_model_data(predictor_record, integraion_record, with_secrets: bool = True):

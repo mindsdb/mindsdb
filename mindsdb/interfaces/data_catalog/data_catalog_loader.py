@@ -56,6 +56,12 @@ class DataCatalogLoader(BaseDataCatalog):
                 name=Identifier(config.get("data_catalog")["knowledge_base_name"]),
                 if_not_exists=True,
                 params={
+                    # TODO: Is there a better way to avoid chunking individual records (tables)?
+                    "preprocessing": {
+                        "text_chunking_config": {
+                            "chunk_size": 1000000,
+                        }
+                    },
                     "metadata_columns": [
                         "database_name",
                         "schema_name",

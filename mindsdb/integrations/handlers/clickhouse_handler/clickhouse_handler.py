@@ -1,4 +1,3 @@
-import re
 from urllib.parse import quote
 
 import pandas as pd
@@ -13,7 +12,7 @@ from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE,
+    RESPONSE_TYPE
 )
 
 logger = log.getLogger(__name__)
@@ -24,11 +23,11 @@ class MindsDBClickHouseDialect(ClickHouseDialect):
     Custom ClickHouse dialect to handle MindsDB specific requirements.
     """
 
-    driver = "clickhouse"
+    driver = 'clickhouse'
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.driver = "clickhouse"
+        self.driver = 'clickhouse'
 
 
 class ClickHouseHandler(DatabaseHandler):
@@ -36,15 +35,15 @@ class ClickHouseHandler(DatabaseHandler):
     This handler handles connection and execution of the ClickHouse statements.
     """
 
-    name = "clickhouse"
+    name = 'clickhouse'
 
     def __init__(self, name, connection_data, **kwargs):
         super().__init__(name)
-        self.dialect = "clickhouse"
+        self.dialect = 'clickhouse'
         self.connection_data = connection_data
         self.renderer = SqlalchemyRender(MindsDBClickHouseDialect)
         self.is_connected = False
-        self.protocol = connection_data.get("protocol", "native")
+        self.protocol = connection_data.get('protocol', 'native')
 
     def __del__(self):
         if self.is_connected is True:
@@ -66,15 +65,15 @@ class ClickHouseHandler(DatabaseHandler):
         protocol = (
             "clickhouse+native" if self.protocol == "native" else "clickhouse+http"
         )
-        host = quote(self.connection_data["host"])
-        port = self.connection_data["port"]
-        user = quote(self.connection_data["user"])
-        password = quote(self.connection_data["password"])
-        database = quote(self.connection_data["database"])
+        host = quote(self.connection_data['host'])
+        port = self.connection_data['port']
+        user = quote(self.connection_data['user'])
+        password = quote(self.connection_data['password'])
+        database = quote(self.connection_data['database'])
         url = f"{protocol}://{user}:{password}@{host}:{port}/{database}"
         # This is not redundunt. Check https://clickhouse-sqlalchemy.readthedocs.io/en/latest/connection.html#http
-        if self.protocol == "https":
-            url = url + "?protocol=https"
+        if self.protocol == 'https':
+            url = url + '?protocol=https'
         try:
             engine = create_engine(url)
             connection = engine.raw_connection()
@@ -103,7 +102,7 @@ class ClickHouseHandler(DatabaseHandler):
             connection = self.connect()
             cur = connection.cursor()
             try:
-                cur.execute("select 1;")
+                cur.execute('select 1;')
             finally:
                 cur.close()
             response.success = True
@@ -170,7 +169,7 @@ class ClickHouseHandler(DatabaseHandler):
         df = result.data_frame
 
         if df is not None:
-            result.data_frame = df.rename(columns={df.columns[0]: "table_name"})
+            result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
 
         return result
 

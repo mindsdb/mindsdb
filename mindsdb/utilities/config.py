@@ -227,6 +227,8 @@ class Config:
             "default_reranking_model": {},
             "data_catalog": {
                 "enabled": False,
+                "update_job_enabled": False,
+                "update_interval": 60 * 60 * 24,  # 24 hours
             },
         }
         # endregion
@@ -372,6 +374,10 @@ class Config:
             }
         if os.environ.get("MINDSDB_DATA_CATALOG_ENABLED", "").lower() in ("1", "true"):
             self._env_config["data_catalog"] = {"enabled": True}
+        if os.environ.get("MINDSDB_DATA_CATALOG_UPDATE_JOB_ENABLED", "").lower() in ("1", "true"):
+            self._env_config["data_catalog"]["update_job_enabled"] = True
+        if os.environ.get("MINDSDB_DATA_CATALOG_UPDATE_INTERVAL", "") != "":
+            self._env_config["data_catalog"]["update_interval"] = int(os.environ["MINDSDB_DATA_CATALOG_UPDATE_INTERVAL"])
 
         # region vars: a2a configuration
         a2a_config = {}

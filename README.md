@@ -5,12 +5,12 @@
 <div align="center">
 	<a href="https://pypi.org/project/MindsDB/" target="_blank"><img src="https://badge.fury.io/py/MindsDB.svg" alt="MindsDB Release"></a>
 	<a href="https://www.python.org/downloads/" target="_blank"><img src="https://img.shields.io/badge/python-3.10.x%7C%203.11.x-brightgreen.svg" alt="Python supported"></a>
-	<a href="https://ossrank.com/p/630"><img src="https://shields.io/endpoint?url=https://ossrank.com/shield/630"></a>
-	<img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/Mindsdb">
 	<a href="https://hub.docker.com/u/mindsdb" target="_blank"><img src="https://img.shields.io/docker/pulls/mindsdb/mindsdb" alt="Docker pulls"></a>
 
   <br />
   <br />
+
+  <a href="https://trendshift.io/repositories/3068" target="_blank"><img src="https://trendshift.io/api/badge/repositories/3068" alt="mindsdb%2Fmindsdb | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
   <a href="https://github.com/mindsdb/mindsdb">
     <img src="/docs/assets/mindsdb_logo.png" alt="MindsDB" width="300">
@@ -22,7 +22,7 @@
     ·
     <a href="https://docs.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Docs</a>
     ·
-    <a href="https://mdb.ai/register">Demo</a>
+    <a href="https://mindsdb.com/contact">Contact us for a Demo</a>
     ·
     <a href="https://mindsdb.com/joincommunity?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Community Slack</a>
   </p>
@@ -37,9 +37,6 @@ MindsDB enables humans, AI, agents, and applications to get highly accurate answ
 
 
 [MindsDB has an MCP server built in](https://docs.mindsdb.com/mcp/overview) that enables your MCP applications to connect, unify and respond to questions over large-scale federated data—spanning databases, data warehouses, and SaaS applications.
-
-## Minds [Demo](https://mdb.ai/register)
-Play with [Minds demo](https://mdb.ai/register), and see the power of MindsDB at answering questions from structured to unstructured data, whether it's scattered across SaaS applications, databases, or... hibernating in data warehouses like that $100 bill in your tuxedo pocket from prom night, lost, waiting to be discovered.
  
 ## Install MindsDB Server 
 

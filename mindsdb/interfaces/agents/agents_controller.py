@@ -145,11 +145,60 @@ class AgentsController:
 
         return all_agents.all()
 
+    def _create_default_sql_skill(
+        self,
+        name,
+        project_name,
+        include_tables: List[str] = None,
+        include_knowledge_bases: List[str] = None,
+    ):
+        # Create a default SQL skill
+        skill_name = f"{name}_sql_skill"
+        skill_params = {
+            "type": "sql",
+            "description": f"Auto-generated SQL skill for agent {name}",
+        }
+
+        # Add restrictions provided
+        if include_tables:
+            skill_params["include_tables"] = include_tables
+        if include_knowledge_bases:
+            skill_params["include_knowledge_bases"] = include_knowledge_bases
+
+        try:
+            # Check if skill already exists
+            existing_skill = self.skills_controller.get_skill(skill_name, project_name)
+            if existing_skill is None:
+                # Create the skill
+                skill_type = skill_params.pop("type")
+                self.skills_controller.add_skill(
+                    name=skill_name, project_name=project_name, type=skill_type, params=skill_params
+                )
+            else:
+                # Update the skill if parameters have changed
+                params_changed = False
+
+                # Check if skill parameters need to be updated
+                for param_key, param_value in skill_params.items():
+                    if existing_skill.params.get(param_key) != param_value:
+                        existing_skill.params[param_key] = param_value
+                        params_changed = True
+
+                # Update the skill if needed
+                if params_changed:
+                    flag_modified(existing_skill, "params")
+                    db.session.commit()
+
+        except Exception as e:
+            raise ValueError(f"Failed to auto-create or update SQL skill: {str(e)}")
+
+        return skill_name
+
     def add_agent(
         self,
         name: str,
         project_name: str = None,
-        model_name: str = None,
+        model_name: Union[str, dict] = None,
         skills: List[Union[str, dict]] = None,
         provider: str = None,
         params: Dict[str, Any] = None,
@@ -256,46 +305,13 @@ class AgentsController:
 
         # Auto-create SQL skill if no skills are provided but include_tables or include_knowledge_bases params are provided
         if not skills and (include_tables or include_knowledge_bases):
-            # Create a default SQL skill
-            skill_name = f"{name}_sql_skill"
-            skill_params = {
-                "type": "sql",
-                "description": f"Auto-generated SQL skill for agent {name}",
-            }
-
-            # Add restrictions provided
-            if include_tables:
-                skill_params["include_tables"] = include_tables
-            if include_knowledge_bases:
-                skill_params["include_knowledge_bases"] = include_knowledge_bases
-
-            try:
-                # Check if skill already exists
-                existing_skill = self.skills_controller.get_skill(skill_name, project_name)
-                if existing_skill is None:
-                    # Create the skill
-                    skill_type = skill_params.pop("type")
-                    self.skills_controller.add_skill(
-                        name=skill_name, project_name=project_name, type=skill_type, params=skill_params
-                    )
-                else:
-                    # Update the skill if parameters have changed
-                    params_changed = False
-
-                    # Check if skill parameters need to be updated
-                    for param_key, param_value in skill_params.items():
-                        if existing_skill.params.get(param_key) != param_value:
-                            existing_skill.params[param_key] = param_value
-                            params_changed = True
-
-                    # Update the skill if needed
-                    if params_changed:
-                        flag_modified(existing_skill, "params")
-                        db.session.commit()
-
-                skills = [skill_name]
-            except Exception as e:
-                raise ValueError(f"Failed to auto-create or update SQL skill: {str(e)}")
+            skill = self._create_default_sql_skill(
+                name,
+                project_name,
+                include_tables=include_tables,
+                include_knowledge_bases=include_knowledge_bases,
+            )
+            skills = [skill]
 
         agent = db.Agents(
             name=name,
@@ -320,34 +336,13 @@ class AgentsController:
                 db.session.rollback()
                 raise ValueError(f"Skill with name does not exist: {skill_name}")
 
+            # Run Data Catalog loader if enabled.
+            if include_tables:
+                self._run_data_catalog_loader_for_table_entries(include_tables, project_name, skill=existing_skill)
+            else:
+                self._run_data_catalog_loader_for_skill(existing_skill, project_name, tables=parameters.get("tables"))
+
             if existing_skill.type == "sql":
-                # Run Data Catalog loader if enabled
-                if config.get("data_catalog", {}).get("enabled", False):
-                    if include_tables:
-                        database_table_map = {}
-                        for table in include_tables:
-                            parts = table.split(".", 1)
-                            database_table_map[parts[0]] = database_table_map.get(parts[0], []) + [parts[1]]
-
-                        for database_name, table_names in database_table_map.items():
-                            data_catalog_loader = DataCatalogLoader(
-                                database_name=database_name, table_names=table_names
-                            )
-                            data_catalog_loader.load_metadata()
-
-                    elif "database" in existing_skill.params:
-                        valid_table_names = existing_skill.params.get("tables", parameters.get("tables"))
-                        data_catalog_loader = DataCatalogLoader(
-                            database_name=existing_skill.params["database"],
-                            table_names=valid_table_names,
-                        )
-                        data_catalog_loader.load_metadata()
-
-                    else:
-                        raise ValueError(
-                            "Data Catalog loading is enabled, but the provided parameters are insufficient to load metadata. "
-                        )
-
                 # Add table restrictions if this is a text2sql skill
                 if include_tables:
                     parameters["tables"] = include_tables
@@ -372,7 +367,7 @@ class AgentsController:
         agent_name: str,
         project_name: str = default_project,
         name: str = None,
-        model_name: str = None,
+        model_name: Union[str, dict] = None,
         skills_to_add: List[Union[str, dict]] = None,
         skills_to_remove: List[str] = None,
         skills_to_rewrite: List[Union[str, dict]] = None,
@@ -386,7 +381,7 @@ class AgentsController:
             agent_name (str): The name of the new agent, or existing agent to update
             project_name (str): The containing project
             name (str): The updated name of the agent
-            model_name (str): The name of the existing ML model the agent will use
+            model_name (str | dict): The name of the existing ML model the agent will use
             skills_to_add (List[Union[str, dict]]): List of skill names to add to the agent, or list of dicts
                  with one of keys is "name", and other is additional parameters for relationship agent<>skill
             skills_to_remove (List[str]): List of skill names to remove from the agent
@@ -415,6 +410,8 @@ class AgentsController:
         existing_agent = self.get_agent(agent_name, project_name=project_name)
         if existing_agent is None:
             raise EntityNotExistsError(f"Agent with name not found: {agent_name}")
+        existing_params = existing_agent.params or {}
+
         is_demo = (existing_agent.params or {}).get("is_demo", False)
         if is_demo and (
             (name is not None and name != agent_name)
@@ -434,11 +431,33 @@ class AgentsController:
             existing_agent.name = name
 
         if model_name or provider:
+            if isinstance(model_name, dict):
+                # move into params
+                existing_params["model"] = model_name
+                model_name = None
+
             # check model and provider
             model, provider = self.check_model_provider(model_name, provider)
             # Update model and provider
             existing_agent.model_name = model_name
             existing_agent.provider = provider
+
+        if "data" in params:
+            if len(skills_to_add) > 0 or len(skills_to_remove) > 0:
+                raise ValueError(
+                    "'data' parameter cannot be used with 'skills_to_remove' or 'skills_to_add' parameters"
+                )
+
+            include_knowledge_bases = params["data"].get("knowledge_bases")
+            include_tables = params["data"].get("tables")
+
+            skill = self._create_default_sql_skill(
+                agent_name,
+                project_name,
+                include_tables=include_tables,
+                include_knowledge_bases=include_knowledge_bases,
+            )
+            skills_to_rewrite = [{"name": skill}]
 
         # check that all skills exist
         skill_name_to_record_map = {}
@@ -468,12 +487,20 @@ class AgentsController:
 
             # add skills
             for skill_name in set(skills_to_add_names) - set(existing_agent_skills_names):
+                # Run Data Catalog loader if enabled for the new skill
+                self._run_data_catalog_loader_for_skill(
+                    skill_name,
+                    project_name,
+                    tables=next((x for x in skills_to_add if x["name"] == skill_name), {}).get("tables"),
+                )
+
                 skill_parameters = next(x for x in skills_to_add if x["name"] == skill_name).copy()
                 del skill_parameters["name"]
                 association = db.AgentSkillsAssociation(
                     parameters=skill_parameters, agent=existing_agent, skill=skill_name_to_record_map[skill_name]
                 )
                 db.session.add(association)
+
         elif len(skills_to_rewrite) > 0:
             skill_name_to_parameters = {
                 x["name"]: {k: v for k, v in x.items() if k != "name"} for x in skills_to_rewrite
@@ -484,9 +511,23 @@ class AgentsController:
                     db.session.delete(rel)
                 else:
                     existing_skill_names.add(rel.skill.name)
-                    rel.parameters = skill_name_to_parameters[rel.skill.name]
+                    skill_parameters = skill_name_to_parameters[rel.skill.name]
+
+                    # Run Data Catalog loader if enabled for the updated skill
+                    self._run_data_catalog_loader_for_skill(
+                        rel.skill.name, project_name, tables=skill_parameters.get("tables")
+                    )
+
+                    rel.parameters = skill_parameters
                     flag_modified(rel, "parameters")
             for new_skill_name in set(skill_name_to_parameters) - existing_skill_names:
+                # Run Data Catalog loader if enabled for the new skill
+                self._run_data_catalog_loader_for_skill(
+                    new_skill_name,
+                    project_name,
+                    tables=skill_name_to_parameters[new_skill_name].get("tables"),
+                )
+
                 association = db.AgentSkillsAssociation(
                     parameters=skill_name_to_parameters[new_skill_name],
                     agent=existing_agent,
@@ -495,8 +536,15 @@ class AgentsController:
                 db.session.add(association)
 
         if params is not None:
+            if params.get("data", {}).get("tables"):
+                new_table_entries = set(params["data"]["tables"]) - set(
+                    existing_params.get("data", {}).get("tables", [])
+                )
+                if new_table_entries:
+                    # Run Data Catalog loader for new table entries if enabled.
+                    self._run_data_catalog_loader_for_table_entries(new_table_entries, project_name)
+
             # Merge params on update
-            existing_params = existing_agent.params or {}
             existing_params.update(params)
             # Remove None values entirely.
             params = {k: v for k, v in existing_params.items() if v is not None}
@@ -507,6 +555,86 @@ class AgentsController:
         db.session.commit()
 
         return existing_agent
+
+    def _run_data_catalog_loader_for_skill(
+        self,
+        skill: Union[str, db.Skills],
+        project_name: str,
+        tables: List[str] = None,
+    ):
+        """
+        Runs Data Catalog loader for a skill if enabled in the config.
+        This is used to load metadata for SQL skills when they are added or updated.
+        """
+        if not config.get("data_catalog", {}).get("enabled", False):
+            return
+
+        skill = skill if isinstance(skill, db.Skills) else self.skills_controller.get_skill(skill, project_name)
+        if skill.type == "sql":
+            if "database" in skill.params:
+                valid_table_names = skill.params.get("tables") if skill.params.get("tables") else tables
+                data_catalog_loader = DataCatalogLoader(
+                    database_name=skill.params["database"], table_names=valid_table_names
+                )
+                data_catalog_loader.load_metadata()
+            else:
+                raise ValueError(
+                    "Data Catalog loading is enabled, but the provided parameters for the new skills are insufficient to load metadata. "
+                )
+
+    def _run_data_catalog_loader_for_table_entries(
+        self,
+        table_entries: List[str],
+        project_name: str,
+        skill: Union[str, db.Skills] = None,
+    ):
+        """
+        Runs Data Catalog loader for a list of table entries if enabled in the config.
+        This is used to load metadata for SQL skills when they are added or updated.
+        """
+        if not config.get("data_catalog", {}).get("enabled", False):
+            return
+
+        skill = skill if isinstance(skill, db.Skills) else self.skills_controller.get_skill(skill, project_name)
+        if not skill or skill.type == "sql":
+            database_table_map = {}
+            for table_entry in table_entries:
+                parts = table_entry.split(".", 1)
+
+                # Ensure the table name is in 'database.table' format.
+                if len(parts) != 2:
+                    logger.warning(
+                        f"Invalid table name format: {table_entry}. Expected 'database.table' format."
+                        "Metadata will not be loaded for this entry."
+                    )
+                    continue
+
+                database, table = parts[0], parts[1]
+
+                # Wildcards in database names are not supported at the moment by data catalog loader.
+                if "*" in database:
+                    logger.warning(
+                        f"Invalid database name format: {database}. Wildcards are not supported."
+                        "Metadata will not be loaded for this entry."
+                    )
+                    continue
+
+                # Wildcards in table names are supported either.
+                # However, the table name itself can be a wildcard representing all tables.
+                if table == "*":
+                    table = None
+                elif "*" in table:
+                    logger.warning(
+                        f"Invalid table name format: {table}. Wildcards are not supported."
+                        "Metadata will not be loaded for this entry."
+                    )
+                    continue
+
+                database_table_map[database] = database_table_map.get(database, []) + [table]
+
+            for database_name, table_names in database_table_map.items():
+                data_catalog_loader = DataCatalogLoader(database_name=database_name, table_names=table_names)
+                data_catalog_loader.load_metadata()
 
     def delete_agent(self, agent_name: str, project_name: str = default_project):
         """
@@ -549,20 +677,22 @@ class AgentsController:
     def get_completion(
         self,
         agent: db.Agents,
-        messages: List[Dict[str, str]],
+        messages: list[Dict[str, str]],
         project_name: str = default_project,
-        tools: List[BaseTool] = None,
+        tools: list[BaseTool] = None,
         stream: bool = False,
+        params: dict | None = None,
     ) -> Union[Iterator[object], pd.DataFrame]:
         """
         Queries an agent to get a completion.
 
         Parameters:
             agent (db.Agents): Existing agent to get completion from
-            messages (List[Dict[str, str]]): Chat history to send to the agent
+            messages (list[Dict[str, str]]): Chat history to send to the agent
             project_name (str): Project the agent belongs to (default mindsdb)
-            tools (List[BaseTool]): Tools to use while getting the completion
+            tools (list[BaseTool]): Tools to use while getting the completion
             stream (bool): Whether to stream the response
+            params (dict | None): params to redefine agent params
 
         Returns:
             response (Union[Iterator[object], pd.DataFrame]): Completion as a DataFrame or iterator of completion chunks
@@ -571,7 +701,7 @@ class AgentsController:
             ValueError: Agent's model does not exist.
         """
         if stream:
-            return self._get_completion_stream(agent, messages, project_name=project_name, tools=tools)
+            return self._get_completion_stream(agent, messages, project_name=project_name, tools=tools, params=params)
         from .langchain_agent import LangchainAgent
 
         model, provider = self.check_model_provider(agent.model_name, agent.provider)
@@ -584,25 +714,27 @@ class AgentsController:
         llm_params = self.get_agent_llm_params(agent.params)
 
         lang_agent = LangchainAgent(agent, model, llm_params=llm_params)
-        return lang_agent.get_completion(messages)
+        return lang_agent.get_completion(messages, params=params)
 
     def _get_completion_stream(
         self,
         agent: db.Agents,
-        messages: List[Dict[str, str]],
+        messages: list[Dict[str, str]],
         project_name: str = default_project,
-        tools: List[BaseTool] = None,
+        tools: list[BaseTool] = None,
+        params: dict | None = None,
     ) -> Iterator[object]:
         """
         Queries an agent to get a stream of completion chunks.
 
         Parameters:
             agent (db.Agents): Existing agent to get completion from
-            messages (List[Dict[str, str]]): Chat history to send to the agent
+            messages (list[Dict[str, str]]): Chat history to send to the agent
             trace_id (str): ID of Langfuse trace to use
             observation_id (str): ID of parent Langfuse observation to use
             project_name (str): Project the agent belongs to (default mindsdb)
-            tools (List[BaseTool]): Tools to use while getting the completion
+            tools (list[BaseTool]): Tools to use while getting the completion
+            params (dict | None): params to redefine agent params
 
         Returns:
             chunks (Iterator[object]): Completion chunks as an iterator
@@ -624,4 +756,4 @@ class AgentsController:
         llm_params = self.get_agent_llm_params(agent.params)
 
         lang_agent = LangchainAgent(agent, model=model, llm_params=llm_params)
-        return lang_agent.get_completion(messages, stream=True)
+        return lang_agent.get_completion(messages, stream=True, params=params)

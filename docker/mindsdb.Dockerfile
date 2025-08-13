@@ -56,10 +56,9 @@ ENV UV_LINK_MODE=copy \
 
 # Install all requirements for mindsdb and all the default handlers
 # Installs everything into a venv in /mindsdb so that everything is isolated
-# TODO: Remove --prerelease=allow once writer release new version
 RUN --mount=type=cache,target=/root/.cache \
     uv venv /venv \
-    && uv pip install pip "." --prerelease=allow
+    && uv pip install pip "."
 
 
 

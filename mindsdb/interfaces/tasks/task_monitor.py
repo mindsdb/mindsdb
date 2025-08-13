@@ -6,9 +6,11 @@ from threading import Event
 
 import sqlalchemy as sa
 
+from mindsdb.interfaces.data_catalog.data_catalog_task import DataCatalogTask
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
+from mindsdb.utilities.context import context as ctx
 
 from .task_thread import TaskThread
 
@@ -27,6 +29,8 @@ class TaskMonitor:
         config = Config()
         db.init()
         self.config = config
+
+        self._add_data_catalog_task()
 
         while True:
             try:
@@ -142,6 +146,33 @@ class TaskMonitor:
 
         del self._active_tasks[task_id]
         self._unlock_task(task_id)
+
+    def _add_data_catalog_task(self) -> None:
+        """
+        Add a data catalog task if the data catalog update job is enabled.
+        This should only be added if it doesn't already exist.
+        """
+        if not self.config.get("data_catalog").get("update_job_enabled"):
+            return
+
+        existing_task = db.Tasks.query.filter_by(
+            company_id=ctx.company_id,
+            user_class=ctx.user_class,
+            object_type="data_catalog",
+            object_id=0
+        ).first()
+
+        if existing_task is not None:
+            return
+
+        task = db.Tasks(
+            company_id=ctx.company_id,
+            user_class=ctx.user_class,
+            object_type="data_catalog",
+            object_id=0,
+        )
+        db.session.add(task)
+        db.session.commit()
 
 
 def start(verbose=False):

@@ -6,6 +6,7 @@ from mindsdb.utilities import log
 
 from mindsdb.interfaces.triggers.trigger_task import TriggerTask
 from mindsdb.interfaces.chatbot.chatbot_task import ChatBotTask
+from mindsdb.interfaces.data_catalog.data_catalog_task import DataCatalogTask
 from mindsdb.interfaces.query_context.query_task import QueryTask
 
 logger = log.getLogger(__name__)
@@ -48,6 +49,10 @@ class TaskThread(threading.Thread):
             elif self.object_type == 'query':
                 query = QueryTask(self.task_id, self.object_id)
                 query.run(self._stop_event)
+
+            elif self.object_type == 'data_catalog':
+                data_catalog = DataCatalogTask(self.task_id, self.object_id)
+                data_catalog.run(self._stop_event)
 
         except Exception:
             logger.error(traceback.format_exc())

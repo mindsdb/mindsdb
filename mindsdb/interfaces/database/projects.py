@@ -8,7 +8,7 @@ import sqlalchemy as sa
 import numpy as np
 
 from mindsdb_sql_parser.ast.base import ASTNode
-from mindsdb_sql_parser.ast import Select, Star, Constant, Identifier
+from mindsdb_sql_parser.ast import Select, Star, Constant, Identifier, BinaryOperation
 from mindsdb_sql_parser import parse_sql
 
 from mindsdb.interfaces.storage import db
@@ -137,6 +137,86 @@ class Project:
         view_meta["query_ast"] = parse_sql(view_meta["query"])
         return view_meta
 
+    @staticmethod
+    def combine_view_select(view_query: Select, query: Select) -> Select:
+        """
+        Create a combined query from view's query and outer query.
+        """
+
+        # apply optimizations
+        if query.where is not None:
+            # Get conditions that can be duplicated into view's query
+            # It has to be simple condition with identifier and constant
+            # Also it shouldn't be under the OR condition
+
+            def get_conditions_to_move(node):
+                if not isinstance(node, BinaryOperation):
+                    return []
+                op = node.op.upper()
+                if op == "AND":
+                    conditions = []
+                    conditions.extend(get_conditions_to_move(node.args[0]))
+                    conditions.extend(get_conditions_to_move(node.args[1]))
+                    return conditions
+
+                if op == "OR":
+                    return []
+                if isinstance(node.args[0], (Identifier, Constant)) and isinstance(
+                    node.args[1], (Identifier, Constant)
+                ):
+                    return [node]
+
+            conditions = get_conditions_to_move(query.where)
+
+            # analyse targets
+            # if target element has alias
+            #    if element is not identifier or the name is not equal to alias:
+            #         add alias to black list
+            # white list:
+            #     all targets that are identifiers with no alias or equal to its alias
+            # condition can be moved if
+            #     column is not in black list AND (query has star(*) OR column in white list)
+
+            has_star = False
+            white_list, black_list = [], []
+            for target in view_query.targets:
+                if isinstance(target, Star):
+                    has_star = True
+                if isinstance(target, Identifier):
+                    name = target.parts[-1].lower()
+                    if target.alias is None or target.alias.parts[-1].lower() == name:
+                        white_list.append(name)
+                elif target.alias is not None:
+                    black_list.append(target.alias.parts[-1].lower())
+
+            view_where = view_query.where
+            for condition in conditions:
+                arg1, arg2 = condition.args
+
+                if isinstance(arg1, Identifier):
+                    name = arg1.parts[-1].lower()
+                    if name in black_list or not (has_star or name in white_list):
+                        continue
+                if isinstance(arg2, Identifier):
+                    name = arg2.parts[-1].lower()
+                    if name in black_list or not (has_star or name in white_list):
+                        continue
+
+                # condition can be moved into view
+                if view_where is None:
+                    view_where = condition
+                else:
+                    view_where = BinaryOperation("AND", args=[view_where, condition])
+            view_query.where = view_where
+
+        if query.limit is not None:
+            view_query.limit = query.limit
+
+        # combine outer query with view's query
+        view_query.parentheses = True
+        query.from_table = view_query
+        return query
+
     def query_view(self, query: Select, session) -> pd.DataFrame:
         view_meta = self.get_view_meta(query)
 
@@ -145,11 +225,7 @@ class Project:
         try:
             view_query = view_meta["query_ast"]
             if isinstance(view_query, Select):
-                # combine outer query with view's query
-                view_query.parentheses = True
-                query.from_table = view_query
-                view_query = query
-
+                view_query = self.combine_view_select(view_query, query)
                 query_applied = True
 
             sqlquery = SQLQuery(view_query, session=session)

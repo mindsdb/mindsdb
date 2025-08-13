@@ -72,13 +72,13 @@ class TestSelect(BaseExecutorDummyML):
         self.run_sql("create view v1 (select * from pg.tbl1 where a=1)")
 
         data_handler.reset_mock()
-        ret = self.run_sql("select * from v1 where b=2")
+        ret = self.run_sql("select * from v1 where b=2 limit 1")
         assert len(ret) == 1 and ret["b"][0] == 2
         calls = data_handler().query.call_args_list
         sql = calls[0][0][0].to_string()
 
         # both conditions are used in query to database
-        assert "a = 1" in sql and "b = 2" in sql
+        assert "a = 1" in sql and "b = 2" in sql and "LIMIT 1" in sql
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_complex_joins(self, data_handler):

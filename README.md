@@ -33,7 +33,7 @@
 
 MindsDB enables humans, AI, agents, and applications to get highly accurate answers across sprawled and large scale data sources.
 
-![image](https://github.com/user-attachments/assets/a796276a-2d3e-4aa2-9a52-25bf44cf32e7)
+[![MindsDB Demo](https://github.com/user-attachments/assets/684b0009-3523-4537-8cdf-f52a584c0149)](https://www.youtube.com/watch?v=MX3OKpnsoLM)
 
 
 [MindsDB has an MCP server built in](https://docs.mindsdb.com/mcp/overview) that enables your MCP applications to connect, unify and respond to questions over large-scale federated data—spanning databases, data warehouses, and SaaS applications.

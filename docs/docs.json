@@ -223,16 +223,10 @@
                           "integrations/ai-engines/anthropic",
                           "integrations/ai-engines/cohere",
                           "integrations/ai-engines/google_gemini",
-                          "integrations/ai-engines/huggingface",
                           "integrations/ai-engines/huggingface_inference_api",
-                          "integrations/ai-engines/langchain",
                           "integrations/ai-engines/litellm",
-                          "integrations/ai-engines/llamaindex",
-                          "integrations/ai-engines/monkeylearn",
                           "integrations/ai-engines/ollama",
                           "integrations/ai-engines/openai",
-                          "integrations/ai-engines/portkey",
-                          "integrations/ai-engines/replicate-llm",
                           "integrations/ai-engines/vertex"
                         ]
                       },
@@ -246,62 +240,7 @@
                         "group": "Bring Your Own Models",
                         "pages": [
                           "integrations/ai-engines/byom",
-                          "integrations/ai-engines/mlflow",
-                          "integrations/ai-engines/ray-serve"
-                        ]
-                      },
-                      {
-                        "group": "Anomaly Detection",
-                        "pages": [
-                          "integrations/ai-engines/anomaly"
-                        ]
-                      },
-                      {
-                        "group": "AutoML",
-                        "pages": [
-                          "integrations/ai-engines/lightwood",
-                          "integrations/ai-engines/pycaret"
-                        ]
-                      },
-                      {
-                        "group": "Time Series Models",
-                        "pages": [
-                          "integrations/ai-engines/neuralforecast",
-                          "integrations/ai-engines/statsforecast",
-                          "integrations/ai-engines/timegpt"
-                        ]
-                      },
-                      {
-                        "group": "Recommender Models",
-                        "pages": [
-                          "integrations/ai-engines/lightfm",
-                          "integrations/ai-engines/popularity-recommender"
-                        ]
-                      },
-                      {
-                        "group": "Multi-Media Models",
-                        "pages": [
-                          {
-                            "group": "Audio Models",
-                            "pages": [
-                              "integrations/ai-engines/replicate-audio"
-                            ]
-                          },
-                          {
-                            "group": "Image Models",
-                            "pages": [
-                              "integrations/ai-engines/clipdrop",
-                              "integrations/ai-engines/replicate-text2img",
-                              "integrations/ai-engines/replicate-img2text"
-                            ]
-                          },
-                          {
-                            "group": "Video Models",
-                            "pages": [
-                              "integrations/ai-engines/twelvelabs",
-                              "integrations/ai-engines/replicate-text2video"
-                            ]
-                          }
+                          "integrations/ai-engines/mlflow"
                         ]
                       }
                     ]

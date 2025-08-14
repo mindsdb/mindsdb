@@ -10,7 +10,7 @@
     "runOnBranch": "main"
   },
   {
-     "runs_on": "windows-latest",
+     "runs_on": "windows-2025",
      "python-version": 3.11,
      "runOnBranch": "always"
   },

@@ -635,6 +635,7 @@
                         "icon": "link",
                         "pages": [
                           "rest/usage",
+                          "rest/authentication",
                           {
                             "group": "Data Sources",
                             "pages": [

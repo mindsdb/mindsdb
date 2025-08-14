@@ -344,22 +344,6 @@
                       "mindsdb_sql/sql/drop/ml-engine",
                       "mindsdb_sql/sql/show-ml-engines"
                     ]
-                  },
-                  {
-                    "group": "Deploy AI/ML Models",
-                    "pages": [
-                      "mindsdb_sql/sql/create/model",
-                      "mindsdb_sql/sql/drop/model",
-                      "mindsdb_sql/sql/show-models",
-                      "mindsdb_sql/sql/api/describe",
-                      "mindsdb_sql/sql/api/retrain",
-                      "mindsdb_sql/sql/api/finetune",
-                      "mindsdb_sql/sql/api/manage-models-versions",
-                      "mindsdb_sql/sql/get-single-prediction",
-                      "mindsdb_sql/sql/get-batch-predictions",
-                      "mindsdb_sql/sql/api/join",
-                      "mindsdb_sql/sql/api/evaluate"
-                    ]
                   }
                 ]
               },

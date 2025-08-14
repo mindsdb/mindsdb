@@ -44,7 +44,6 @@ MindsDB is an open-source server that can be deployed anywhere - from your lapto
 
   * [Using Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop). This is the fastest and recommended way to get started and have it all running.
   * [Using Docker](https://docs.mindsdb.com/setup/self-hosted/docker). This is also simple, but gives you more flexibility on how to further customize your server.
-  * [Using PyPI](https://docs.mindsdb.com/contribute/install). This option enables you to contribute to MindsDB.
 
 ----------------------------------------
 
@@ -58,13 +57,12 @@ You can connect to hundreds of enterprise [data sources (learn more)](https://do
 
 ## [Unify](https://docs.mindsdb.com/mindsdb_sql/overview) Your Data
 
-Once connected, these data sources can be queried using a full SQL dialect, as if they were all part of a single database. MindsDB’s federated query engine translates your SQL queries and executes them on the appropriate connected data sources.
 
-When working with many data sources, it’s important to prepare and unify your data before generating responses from it. MindsDB SQL offers virtual tables (views, knowledge bases, ml-models) to allow working with heterogeneous data as if it were unified in a single organized system.
+In many situations, it’s important to be able to prepare and unify data before generating responses from it. MindsDB SQL offers knowledge bases and views that allow indexing and organizing structured and unstructured data as if it were unified in a single system.
 
+* [**KNOWLEDGE BASES**](https://docs.mindsdb.com/mindsdb_sql/knowledge-bases) – Index and organize unstructured data for efficient Q&A.
 * [**VIEWS**](https://docs.mindsdb.com/mindsdb_sql/sql/create/view) – Simplify data access by creating unified views across different sources (no-ETL).
-* [**KNOWLEDGE BASES**](https://docs.mindsdb.com/mindsdb_sql/knowledge-bases) – Index and organize unstructured data for efficient retrieval.
-* [**ML MODELS**](https://docs.mindsdb.com/mindsdb_sql/sql/create/model) – Apply AI/ML transformations to gain insights from your data.
+
 
 Unification of data can be automated using JOBs
 

@@ -5,15 +5,16 @@ sidebarTitle: Create KB
 
 A knowledge base is an advanced system that organizes information based on semantic meaning rather than simple keyword matching. It integrates embedding models, reranking models, and vector stores to enable context-aware data retrieval.
 
+<Tip>
+Learn more about features of [knowledge bases available via SQL API](/mindsdb_sql/knowledge_bases/overview).
+</Tip>
+
 ## `create()` Function
 
 Here is the syntax for creating a knowledge base:
 
 ```python
-project = server.get_project()
-print(project)
-
-my_kb = project.knowledge_bases.create(
+my_kb = server.knowledge_bases.create(
     'my_kb',
     embedding_model={
         'provider': 'openai', 
@@ -113,20 +114,18 @@ Users can define the embedding model choosing one of the following options.
 
 **Option 1.** Use the `embedding_model` parameter to define the specification.
 
-```sql
-CREATE KNOWLEDGE_BASE my_kb
-USING
-    ...
-    embedding_model = {
+```python
+...
+embedding_model = {
 
-        "provider": "azure_openai",
-        "model_name" : "text-embedding-3-large",
-        "api_key": "sk-abc123",
-        "base_url": "https://ai-6689.openai.azure.com/",
-        "api_version": "2024-02-01"
+    "provider": "azure_openai",
+    "model_name" : "text-embedding-3-large",
+    "api_key": "sk-abc123",
+    "base_url": "https://ai-6689.openai.azure.com/",
+    "api_version": "2024-02-01"
 
-    },
-    ...
+},
+...
 ```
 
 **Option 2.** Define the default embedding model in the [MindsDB configuration file](/setup/custom-config).
@@ -174,33 +173,29 @@ The reranking model is an optional component of the knowledge base. It stores sp
 
 Users can disable reranking features of knowledge bases by setting this parameter to `false`.
 
-```sql
-CREATE KNOWLEDGE_BASE my_kb
-USING
-    ...
-    reranking_model = false,
-    ...
+```python
+...
+reranking_model = False,
+...
 ```
 
 Users can enable reranking features of knowledge bases by defining the reranking model choosing one of the following options.
 
 **Option 1.** Use the `reranking_model` parameter to define the specification.
 
-```sql
-CREATE KNOWLEDGE_BASE my_kb
-USING
-    ...
-    reranking_model = {
+```python
+...
+reranking_model = {
 
-        "provider": "azure_openai",
-        "model_name" : "gpt-4o",
-        "api_key": "sk-abc123",
-        "base_url": "https://ai-6689.openai.azure.com/",
-        "api_version": "2024-02-01",
-        "method": "multi-class"
+    "provider": "azure_openai",
+    "model_name" : "gpt-4o",
+    "api_key": "sk-abc123",
+    "base_url": "https://ai-6689.openai.azure.com/",
+    "api_version": "2024-02-01",
+    "method": "multi-class"
 
-    },
-    ...
+},
+...
 ```
 
 **Option 2.** Define the default reranking model in the [MindsDB configuration file](/setup/custom-config).
@@ -279,23 +274,12 @@ In order to provide the storage vector database, it is required to connect it to
 
 Here is an example for [PGVector](/integrations/vector-db-integrations/pgvector).
 
-```sql
-CREATE DATABASE my_pgvector
-WITH ENGINE = 'pgvector',
-PARAMETERS = {
-    "host": "127.0.0.1",
-    "port": 5432,
-    "database": "postgres",
-    "user": "user",
-    "password": "password",
-    "distance": "cosine"
-};
-
-CREATE KNOWLEDGE_BASE my_kb
-USING
+```python
+my_kb = server.knowledge_bases.create(
     ...
-    storage = my_pgvector.storage_table,
+    storage=server.databases.my_pgvector.tables.my_table,
     ...
+)
 ```
 
 <Info>
@@ -330,12 +314,12 @@ Go to the *Complete Example* section below to find out how to access this sample
 
 The `product` column can be used as metadata to enable metadata filtering.
 
-```sql
-CREATE KNOWLEDGE_BASE my_kb
-USING
+```python
+my_kb = server.knowledge_bases.create(
     ...
-    metadata_columns = ['product'],
+    metadata_columns=['product'],
     ...
+)
 ```
 
 ### `content_columns`
@@ -366,12 +350,12 @@ Go to the *Complete Example* section below to find out how to access this sample
 
 The `notes` column can be used as content.
 
-```sql
-CREATE KNOWLEDGE_BASE my_kb
-USING
+```python
+my_kb = server.knowledge_bases.create(
     ...
-    content_columns = ['notes'],
+    content_columns=['notes'],
     ...
+)
 ```
 
 ### `id_column`
@@ -398,12 +382,11 @@ Go to the *Complete Example* section below to find out how to access this sample
 
 The `order_id` column can be used as ID.
 
-```sql
-CREATE KNOWLEDGE_BASE my_kb
-USING
+```python
+my_kb = server.knowledge_bases.create(
     ...
-    id_column = 'order_id',
-    ...
+    id_column='order_id'
+)
 ```
 
 <Info>
@@ -430,54 +413,30 @@ INSERT INTO my_kb (
 If the `id_column` parameter is not defined, its default values are build from the hash of the content columns and follow the format: `<first 16 char of md5 hash of row content>`.
 </Note>
 
-### Example
+## `list()` and `get()` Functions
 
-Here is a sample knowledge base that will be used for examples in the following content.
+Users can get details about the knowledge base using the `get()` function.
 
-```sql
-CREATE KNOWLEDGE_BASE my_kb
-USING
-    embedding_model = {
-        "provider": "openai",
-        "model_name" : "text-embedding-3-large",
-        "api_key": "sk-abc123"
-    },
-    reranking_model = {
-        "provider": "openai",
-        "model_name": "gpt-4o",
-        "api_key": "sk-abc123"
-    },
-    metadata_columns = ['product'],
-    content_columns = ['notes'],
-    id_column = 'order_id';
+```python
+my_kb = project.knowledge_bases.get('my_kb')
 ```
 
-## `DESCRIBE KNOWLEDGE_BASE` Syntax
+And list all available knowledge bases using the `list()` function.
 
-Users can get details about the knowledge base using the `DESCRIBE KNOWLEDGE_BASE` command.
-
-```sql
-DESCRIBE KNOWLEDGE_BASE my_kb;
+```python
+kb_list = project.knowledge_bases.list()
 ```
 
-Here is the sample output:
-
-```sql
-+---------+---------+--------+----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-------------------+--------------------+----------------+-------+----------+
-| NAME    | PROJECT | MODEL  | STORAGE                                | PARAMS                                                                                                                                                                                                                                       | INSERT_STARTED_AT | INSERT_FINISHED_AT | PROCESSED_ROWS | ERROR | QUERY_ID |
-+---------+---------+--------+----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-------------------+--------------------+----------------+-------+----------+
-| my_kb   | mindsdb | [NULL] | my_kb_chromadb.default_collection      | {"embedding_model": {"provider": "openai", "model_name": "text-embedding-ada-002", "api_key": "sk-xxx"}, "reranking_model": {"provider": "openai", "model_name": "gpt-4o", "api_key": "sk-xxx"}, "default_vector_storage": "my_kb_chromadb"} | [NULL]            | [NULL]             | [NULL]         | [NULL]| [NULL]   |
-+---------+---------+--------+----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-------------------+--------------------+----------------+-------+----------+
-```
-
-## `DROP KNOWLEDGE_BASE` Syntax
+## `drop()` Function
 
 Here is the syntax for deleting a knowledge base:
 
-```sql
-DROP KNOWLEDGE_BASE my_kb;
+```python
+project.knowledge_bases.drop('my_kb')
 ```
 
 Upon execution, it removes the knowledge base with its content.
 
-Upon execution, it identifies matching records based on the user-defined condition and removes all associated data (metadata, content, chunks, embeddings) for matching records from the KB's storage.
+<Tip>
+See more examples of [knowledge bases via SQL here](/mindsdb_sql/knowledge_bases/overview).
+</Tip>

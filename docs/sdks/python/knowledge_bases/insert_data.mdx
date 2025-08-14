@@ -13,37 +13,60 @@ Here is what happens to data when it is inserted into the knowledge base.
 
 Upon inserting data into the knowledge base, it is split into chunks, transformed into the embedding representation to enhance the search capabilities, and stored in a vector database.
 
-## `INSERT INTO` Syntax
+<Tip>
+Learn more about features of [knowledge bases available via SQL API](/mindsdb_sql/knowledge_bases/overview).
+</Tip>
+
+## `insert()` Function
 
 Here is the syntax for inserting data into a knowledge base:
 
-```sql
-INSERT INTO my_kb
-SELECT order_id, product, notes
-FROM sample_data.orders;
-```
+* Inserting raw data:
+
+    ```python
+    my_kb.insert([
+        {'type': 'apartment', 'price': 100000},
+        {'type': 'villa', 'price': 500000}
+    ])
+    ```
+
+* Inserting data from data sources connected to MindsDB:
+
+    ```python
+    my_kb.insert_query(
+        server.databases.my_database.tables.my_table.filter(type='my_type')
+    )
+    ```
+
+* Inserting data from files uploaded to MindsDB:
+
+    ```python
+    my_kb.insert_files(['my_pdf_file', 'my_txt_file'])
+    ```
+
+* Inserting data from webpages:
+
+    ```python
+    kb.insert_webpages(
+        ['https://example.com'],
+        crawl_depth=2,
+        filters=[r'.*\/blog\/.*'],
+        limit=10
+    )
+    ```
+
+    Where:
+
+    * `urls`: Base URLs to crawl.
+    * `crawl_depth`: Depth for recursive crawling. Default is 1.
+    * `filters`: Regex patterns to include.
+    * `limit`: Max number of pages.
 
 Upon execution, it inserts data into a knowledge base, using the embedding model to embed it into vectors before inserting into an underlying vector database.
 
 <Tip>
-The status of the `INSERT INTO` is logged in the `information_schema.queries` table with the timestamp when it was ran, and can be queried as follows:
-
-```sql
-SELECT *
-FROM information_schema.queries;
-```
+The status of the insert operations is logged in the `information_schema.queries` table with the timestamp when it was ran.
 </Tip>
-
-<Info>
-To speed up the initial loading of a knowledge base with data, run the `INSERT INTO` command with the `kb_no_upsert` flag. It is recommended to use this flag only when the knowledge base is empty, that is, only for the initial data insertion.
-
-```sql
-INSERT INTO my_kb
-SELECT *
-FROM table_name
-USING kb_no_upsert = true;
-```
-</Info>
 
 <Note>
 **Handling duplicate data while inserting into the knowledge base**
@@ -122,11 +145,10 @@ Go to the *Complete Example* section below to find out how to access this sample
 
 Here is how to propagate this change into the knowledge base.
 
-```sql
-INSERT INTO my_kb
-SELECT order_id, product, notes
-FROM sample_data.orders
-WHERE order_id = 'Q7P';
+```python
+my_kb.insert_query(
+    server.databases.sample_data.tables.orders.filter(order_id='Q7P')
+)
 ```
 
 The knowledge base matches the ID value to the existing one and updates the data if required.
@@ -137,15 +159,19 @@ In order to optimize the performance of data insertion into the knowledge base, 
 
 Here is an example.
 
-```sql
-INSERT INTO my_kb
-SELECT order_id, product, notes
-FROM sample_data.orders
-USING
-    batch_size = 200,
-    track_column = order_id,
-    threads = 10,
-    error = 'skip';
+```python
+project.query(
+    '''
+    INSERT INTO my_kb
+    SELECT order_id, product, notes
+    FROM sample_data.orders
+    USING
+        batch_size = 200,
+        track_column = order_id,
+        threads = 10,
+        error = 'skip';
+    '''
+)
 ```
 
 The parameters include the following:
@@ -162,23 +188,37 @@ The parameters include the following:
 
 After executing the `INSERT INTO` statement with the above parameters, users can view the data insertion progress by querying the `information_schema.queries` table.
 
-```sql
-SELECT * FROM information_schema.queries;
+```python
+project.query(
+    '''
+    SELECT * FROM information_schema.queries;
+    '''
+)
 ```
 
-Users can cancel the data insertion process using the process ID from the `information_schema.queries` table.
+Users can cancel the data insertion process using the process ID from the `information_schema.queries` table. 
 
-```sql
-SELECT query_cancel(1);
+```python
+project.query(
+    '''
+    SELECT query_cancel(1);
+    '''
+)
 ```
 
-Note that canceling the query will not remove the already inserted data.
+If you want to cancel the data insertion process, look up the process ID value from the `information_schema.queries` table and pass it as an argument to the `query_cancel()` function. Note that canceling the query will not remove the already inserted data.
 
 Users can resume the data insertion process using the process ID from the `information_schema.queries` table.
 
-```sql
-SELECT query_resume(1);
+```python
+project.query(
+    '''
+    SELECT query_resume(1);
+    '''
+)
 ```
+
+If you want to resume the data insertion process (which may have been interrupted by an error or cancelled by a user), look up the process ID value from the `information_schema.queries` table and pass it as an argument to the `query_resume()` function. Note that resuming the query will not remove the already inserted data and will start appending the remaining data.
 
 ### Chunking Data
 
@@ -190,17 +230,18 @@ Each chunk is identified by its chunk ID of the following format: `<id>:<chunk_n
 
 Users can opt for defining the chunking parameters when creating a knowledge base.
 
-```sql
-CREATE KNOWLEDGE_BASE my_kb
-USING
+```python
+my_kb = project.knowledge_bases.create(
     ...
-    preprocessing = {
-        "text_chunking_config" : {
-            "chunk_size": 2000,
-            "chunk_overlap": 200
+    params={
+        "preprocessing": {
+            "text_chunking_config" : {
+                "chunk_size": 2000,
+                "chunk_overlap": 200
+            }
         }
-    },
-    ...;
+    }
+)
 ```
 
 The `chunk_size` parameter defines the size of the chunk as the number of characters. And the `chunk_overlap` parameter defines the number of characters that should overlap between subsequent chunks.
@@ -209,17 +250,18 @@ The `chunk_size` parameter defines the size of the chunk as the number of charac
 
 Users can opt for defining the chunking parameters specifically for JSON data.
 
-```sql
-CREATE KNOWLEDGE_BASE my_kb
-USING
+```python
+my_kb = project.knowledge_bases.create(
     ...
-    preprocessing = {
-        "type": "json_chunking",
-        "json_chunking_config" : {
-            ...
+    params={
+        "preprocessing": {
+            "type": "json_chunking",
+            "json_chunking_config" : {
+                ...
+            }
         }
-    },
-    ...;
+    }
+)
 ```
 
 When the `type` of chunking is set to `json_chunking`, users can configure it by setting the following parameter values in the `json_chunking_config` parameter:
@@ -268,67 +310,22 @@ Users can query the underlying vector store as follows.
 
 * KB with the default ChromaDB vector store:
 
-```sql
-SELECT id, content, metadata, embeddings
-FROM <kb_name>_chromadb.storage_table;
+```python
+project.query(
+    '''
+    SELECT id, content, metadata, embeddings
+    FROM <kb_name>_chromadb.storage_table;
+    '''
+)
 ```
 
 * KB with user-defined vector store (either [PGVector](/integrations/vector-db-integrations/pgvector) or [ChromaDB](/integrations/vector-db-integrations/chromadb)):
 
-```sql
-SELECT id, content, metadata, embeddings
-FROM <vector_store_connection_name>.<table_name>;
+```python
+project.query(
+    '''
+    SELECT id, content, metadata, embeddings
+    FROM <vector_store_connection_name>.<table_name>;
+    '''
+)
 ```
-
-### Example
-
-Here a sample knowledge base created in the previous **Example** section is inserted into.
-
-```sql
-INSERT INTO my_kb
-SELECT order_id, product, notes
-FROM sample_data.orders;
-```
-
-<Note>
-When inserting into a knowledge base where the `content_columns` parameter was not specified, the column storing content must be aliased `AS content` as below.
-
-```sql
-CREATE KNOWLEDGE_BASE my_kb
-USING
-    ...
-    id_column = 'order_id',
-    ...
-```
-
-```sql
-INSERT INTO my_kb
-SELECT order_id, notes AS content
-FROM sample_data.orders;
-```
-</Note>
-
-## `DELETE FROM` Syntax
-
-Here is the syntax for deleting from a knowledge base:
-
-```sql
-DELETE FROM my_kb
-WHERE id = 'A1B';
-```
-
-## `CREATE INDEX ON KNOWLEDGE_BASE` Syntax
-
-Users can create index on the knowledge base to speed up the search operations.
-
-```sql
-CREATE INDEX ON KNOWLEDGE_BASE my_kb;
-```
-
-<Warning>
-Note that this feature works only when PGVector is used as the [storage of the knowledge base](/mindsdb_sql/knowledge_bases/create#storage), as ChromaDB provides the index features by default.
-</Warning>
-
-Upon executing this statement, an index is created on the knowledge base's underlying vector store. This is essentially a database index created on the vector database.
-
-Note that having an index on the knowledge base may reduce the speed of the insert operations. Therefore, it is recommended to insert bulk data into the knowledge base before creating an index. The index improves performance of querying the knowledge base, while it may slow down subsequent data inserts.

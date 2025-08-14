@@ -806,12 +806,10 @@
                           {
                             "group": "Knowledge Bases",
                             "pages": [
+                              "sdks/python/knowledge_bases/overview",
                               "sdks/python/knowledge_bases/create",
                               "sdks/python/knowledge_bases/insert_data",
-                              "sdks/python/knowledge_bases/query",
-                              "sdks/python/knowledge_bases/hybrid_search",
-                              "sdks/python/knowledge_bases/evaluate",
-                              "sdks/python/knowledge_bases/examples"
+                              "sdks/python/knowledge_bases/query"
                             ]
                           },
                           {

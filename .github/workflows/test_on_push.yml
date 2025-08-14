@@ -155,7 +155,7 @@ jobs:
         run: |
           uv pip install -r requirements/requirements-test.txt
           # TODO: for now some tests rely on lightwood
-          uv pip install . \
+          uv pip install --no-binary duckdb . \
             .[lightwood] \
             .[clickhouse] \
             .[snowflake] \

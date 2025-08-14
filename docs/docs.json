@@ -435,36 +435,6 @@
                     ]
                   }
                 ]
-              },
-              {
-                "group": "Use Cases",
-                "pages": [
-                  {
-                    "group": "MCP API",
-                    "pages": [
-                      "use-cases/mcp_api/overview",
-                      "use-cases/mcp_api/mindsdb_mcp_server",
-                      "use-cases/mcp_api/cursor"
-                    ]
-                  },
-                  {
-                    "group": "Predictive Analytics",
-                    "pages": [
-                      "use-cases/predictive_analytics/overview",
-                      "use-cases/predictive_analytics/house-sales-forecasting",
-                      "use-cases/predictive_analytics/expenditures-statsforecast",
-                      "use-cases/predictive_analytics/eeg-forecasting"
-                    ]
-                  },
-                  {
-                    "group": "In-Database Machine Learning",
-                    "pages": [
-                      "use-cases/in-database_ml/overview",
-                      "use-cases/in-database_ml/customer-churn",
-                      "use-cases/in-database_ml/home-rentals"
-                    ]
-                  }
-                ]
               }
             ]
           },
@@ -517,18 +487,6 @@
                               "rest/databases/delete-databases",
                               "rest/databases/list-databases",
                               "rest/databases/list-database"
-                            ]
-                          },
-                          {
-                            "group": "Models",
-                            "pages": [
-                              "rest/models/train-model",
-                              "rest/models/delete-model",
-                              "rest/models/list-models",
-                              "rest/models/describe-model",
-                              "rest/models/list-model",
-                              "rest/models/query-model",
-                              "rest/models/query-model-joined-with-data"
                             ]
                           }
                         ]
@@ -645,22 +603,6 @@
                               "sdks/python/drop_ml_engine",
                               "sdks/python/list_ml_engines"
                             ]
-                          },
-                          {
-                            "group": "Models",
-                            "pages": [
-                              "sdks/python/create_model",
-                              "sdks/python/drop_model",
-                              "sdks/python/list_models",
-                              "sdks/python/describe",
-                              "sdks/python/get_status",
-                              "sdks/python/refresh_model",
-                              "sdks/python/retrain",
-                              "sdks/python/finetune",
-                              "sdks/python/manage-model-versions",
-                              "sdks/python/get-single-prediction",
-                              "sdks/python/get-batch-predictions"
-                            ]
                           }
                         ]
                       },
@@ -749,20 +691,6 @@
                             "pages": [
                               "sdks/javascript/list_ml_handlers"
                             ]
-                          },
-                          {
-                            "group": "Models",
-                            "pages": [
-                              "sdks/javascript/create_model",
-                              "sdks/javascript/drop_model",
-                              "sdks/javascript/list_models",
-                              "sdks/javascript/describe",
-                              "sdks/javascript/get_status",
-                              "sdks/javascript/retrain",
-                              "sdks/javascript/finetune",
-                              "sdks/javascript/query",
-                              "sdks/javascript/batchQuery"
-                            ]
                           }
                         ]
                       },
@@ -804,71 +732,6 @@
                         ]
                       }
                     ]
-                  },
-                  {
-                    "group": "MQL API",
-                    "pages": [
-                      "sdks/mongo/mindsdb-mongo-ql-overview",
-                      {
-                        "group": "Connect",
-                        "icon": "link",
-                        "pages": [
-                          {
-                            "group": "Setup",
-                            "pages": [
-                              "sdks/mongo/connect/mongo-compass",
-                              "sdks/mongo/connect/mongo-shell"
-                            ]
-                          },
-                          {
-                            "group": "Data Sources",
-                            "pages": [
-                              "sdks/mongo/databases/list-data-handlers",
-                              "sdks/mongo/databases/insertOne",
-                              "sdks/mongo/databases/deleteOne",
-                              "sdks/mongo/databases/find",
-                              "sdks/mongo/databases/use"
-                            ]
-                          },
-                          {
-                            "group": "AI/ML Engines",
-                            "pages": [
-                              "sdks/mongo/ml_engines/list-ml-handlers",
-                              "sdks/mongo/ml_engines/insertOne",
-                              "sdks/mongo/ml_engines/deleteOne",
-                              "sdks/mongo/ml_engines/find"
-                            ]
-                          },
-                          {
-                            "group": "Models",
-                            "pages": [
-                              "sdks/mongo/models/insertOne",
-                              "sdks/mongo/models/deleteOne",
-                              "sdks/mongo/models/find",
-                              "sdks/mongo/models/describe",
-                              "sdks/mongo/models/retrain",
-                              "sdks/mongo/models/finetune",
-                              "sdks/mongo/models/get-single-prediction",
-                              "sdks/mongo/models/get-batch-predictions"
-                            ]
-                          }
-                        ]
-                      },
-                      {
-                        "group": "Unify",
-                        "icon": "circle-nodes",
-                        "pages": [
-                          {
-                            "group": "Jobs",
-                            "pages": [
-                              "sdks/mongo/jobs/insertOne",
-                              "sdks/mongo/jobs/deleteOne",
-                              "sdks/mongo/jobs/query-jobs"
-                            ]
-                          }
-                        ]
-                      }
-                    ]
                   }
                 ]
               }
@@ -886,7 +749,6 @@
                   "contribute/install",
                   "contribute/python-coding-standards",
                   "contribute/data-handlers",
-                  "contribute/ml-handlers",
                   "contribute/app-handlers",
                   "contribute/tests",
                   "contribute/integrations-readme",

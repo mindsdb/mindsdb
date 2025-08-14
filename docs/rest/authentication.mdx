@@ -17,7 +17,7 @@ If this authentication method is defined in the MindsDB configuration file, it i
         --data-raw '{"username":"your-username","password":"your-password"}' -v
     ```
 
-    This command returns a session cookie that is used when calling other REST APIs.
+    This command returns an HTTP status code 200 if the request is successful. In the response header, find a session cookie and use it when calling other REST APIs.
 
 2. Call any other endpoint providing the session cookie.
 

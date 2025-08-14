@@ -226,15 +226,6 @@
                       "mindsdb_sql/sql/show-databases",
                       "mindsdb_sql/sql/api/use"
                     ]
-                  },
-                  {
-                    "group": "Configure AI/ML Frameworks",
-                    "pages": [
-                      "mindsdb_sql/sql/list-ml-handlers",
-                      "mindsdb_sql/sql/create/ml-engine",
-                      "mindsdb_sql/sql/drop/ml-engine",
-                      "mindsdb_sql/sql/show-ml-engines"
-                    ]
                   }
                 ]
               },

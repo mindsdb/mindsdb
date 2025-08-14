@@ -544,15 +544,6 @@
                               "sdks/python/drop_database",
                               "sdks/python/list_databases"
                             ]
-                          },
-                          {
-                            "group": "AI/ML Engines",
-                            "pages": [
-                              "sdks/python/list_ml_handlers",
-                              "sdks/python/create_ml_engine",
-                              "sdks/python/drop_ml_engine",
-                              "sdks/python/list_ml_engines"
-                            ]
                           }
                         ]
                       },
@@ -634,12 +625,6 @@
                               "sdks/javascript/get_database",
                               "sdks/javascript/drop_database",
                               "sdks/javascript/list_databases"
-                            ]
-                          },
-                          {
-                            "group": "AI/ML Engines",
-                            "pages": [
-                              "sdks/javascript/list_ml_handlers"
                             ]
                           }
                         ]

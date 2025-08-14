@@ -33,11 +33,12 @@
 
 MindsDB enables humans, AI, agents, and applications to get highly accurate answers across sprawled and large scale data sources.
 
-[![MindsDB Demo](https://github.com/user-attachments/assets/684b0009-3523-4537-8cdf-f52a584c0149)](https://www.youtube.com/watch?v=MX3OKpnsoLM)
+<a href="https://www.youtube.com/watch?v=MX3OKpnsoLM" target="_blank" rel="noopener noreferrer">
+  <img src="https://github.com/user-attachments/assets/119e7b82-f901-4214-a26f-ff7c5ad86064" alt="MindsDB Demo">
+	
+</a>
 
 
-[MindsDB has an MCP server built in](https://docs.mindsdb.com/mcp/overview) that enables your MCP applications to connect, unify and respond to questions over large-scale federated data—spanning databases, data warehouses, and SaaS applications.
- 
 ## Install MindsDB Server 
 
 MindsDB is an open-source server that can be deployed anywhere - from your laptop to the cloud, and everywhere in between. And yes, you can customize it to your heart's content.
@@ -45,6 +46,8 @@ MindsDB is an open-source server that can be deployed anywhere - from your lapto
   * [Using Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop). This is the fastest and recommended way to get started and have it all running.
   * [Using Docker](https://docs.mindsdb.com/setup/self-hosted/docker). This is also simple, but gives you more flexibility on how to further customize your server.
 
+[MindsDB has an MCP server built in](https://docs.mindsdb.com/mcp/overview) that enables your MCP applications to connect, unify and respond to questions over large-scale federated data—spanning databases, data warehouses, and SaaS applications.
+ 
 ----------------------------------------
 
 # Core Philosophy: Connect, Unify, Respond

@@ -204,10 +204,16 @@ class Project:
                             continue
 
                     # condition can be moved into view
+                    condition2 = BinaryOperation(condition.op, [arg1, arg2])
                     if view_where is None:
-                        view_where = condition
+                        view_where = condition2
                     else:
-                        view_where = BinaryOperation("AND", args=[view_where, condition])
+                        view_where = BinaryOperation("AND", args=[view_where, condition2])
+
+                    # disable outer condition
+                    condition.op = "="
+                    condition.args = [Constant(0), Constant(0)]
+
                 view_query.where = view_where
 
         # combine outer query with view's query

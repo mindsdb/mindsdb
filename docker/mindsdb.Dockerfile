@@ -50,7 +50,9 @@ ENV UV_LINK_MODE=copy \
     UV_PYTHON=python3.10 \
     UV_PROJECT_ENVIRONMENT=/mindsdb \
     VIRTUAL_ENV=/venv \
-    PATH=/venv/bin:$PATH
+    PATH=/venv/bin:$PATH \
+    PYTHONDONTWRITEBYTECODE=1
+
 
 # Install all requirements for mindsdb and all the default handlers
 # Installs everything into a venv in /mindsdb so that everything is isolated

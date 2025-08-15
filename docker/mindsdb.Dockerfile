@@ -37,7 +37,7 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     freetds-dev freetds-bin libpq5 curl # freetds-dev required to build pymssql on arm64 for mssql_handler. Can be removed when we are on python3.11+
 
 # Use a specific tag so the file doesn't change
-COPY --from=ghcr.io/astral-sh/uv:0.4.23 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.8.11 /uv /usr/local/bin/uv
 # Copy requirements files from the first stage
 COPY --from=deps /mindsdb .
 
@@ -88,10 +88,6 @@ EXPOSE 47335/tcp
 EXPOSE 47337/tcp
 # Expose A2A port
 EXPOSE 47338/tcp
-
-# Run GUI update during build so the final image already contains it
-RUN python -IBm mindsdb --config=/root/mindsdb_config.json --update-gui
-
 
 
 

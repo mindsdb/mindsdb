@@ -91,7 +91,6 @@ EXPOSE 47338/tcp
 
 
 
-
 # Same as extras image, but with dev dependencies installed.
 # This image is used in our docker-compose
 FROM extras AS dev

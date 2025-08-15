@@ -561,7 +561,15 @@
                               "sdks/python/query_projects"
                             ]
                           },
-                          "sdks/python/knowledge-bases",
+                          {
+                            "group": "Knowledge Bases",
+                            "pages": [
+                              "sdks/python/knowledge_bases/overview",
+                              "sdks/python/knowledge_bases/create",
+                              "sdks/python/knowledge_bases/insert_data",
+                              "sdks/python/knowledge_bases/query"
+                            ]
+                          },
                           {
                             "group": "Tables, Views, and Files",
                             "pages": [

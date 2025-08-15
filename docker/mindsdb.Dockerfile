@@ -90,7 +90,7 @@ EXPOSE 47337/tcp
 EXPOSE 47338/tcp
 
 # Run GUI update during build so the final image already contains it
-RUN python -Im mindsdb --config=/root/mindsdb_config.json --update-gui
+RUN python -IBm mindsdb --config=/root/mindsdb_config.json --update-gui
 
 
 

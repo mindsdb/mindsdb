@@ -201,7 +201,7 @@ class File(Resource):
     def delete(self, name: str):
         """delete file"""
 
-        # ✅ FIX: check existence before deleting
+        # FIX: check existence before deleting
         existing_file_names = ca.file_controller.get_files_names()
         if name.lower() not in existing_file_names:
             return http_error(

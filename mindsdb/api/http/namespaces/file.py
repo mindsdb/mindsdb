@@ -201,6 +201,15 @@ class File(Resource):
     def delete(self, name: str):
         """delete file"""
 
+        # ✅ FIX: check existence before deleting
+        existing_file_names = ca.file_controller.get_files_names()
+        if name.lower() not in existing_file_names:
+            return http_error(
+                404,
+                "File not found",
+                f"File with name '{name}' does not exist",
+            )
+
         try:
             ca.file_controller.delete_file(name)
         except Exception as e:
@@ -208,6 +217,6 @@ class File(Resource):
             return http_error(
                 400,
                 "Error deleting file",
-                f"There was an error while tring to delete file with name '{name}'",
+                f"There was an error while trying to delete file with name '{name}'",
             )
         return "", 200

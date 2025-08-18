@@ -92,58 +92,68 @@ def resolve_table_identifier(identifier: Identifier, default_database: str = Non
 
 
 def resolve_model_identifier(identifier: Identifier) -> tuple:
-    """split model name to parts
+    """
+    Splits a model identifier into its database, model name, and version components.
 
-    Identifier may be:
+    The identifier may contain one, two, or three parts.
+    The function supports both quoted and unquoted identifiers, and normalizes names to lowercase if unquoted.
 
     Examples:
-        >>> resolve_model_identifier(['a', 'b'])
+        >>> resolve_model_identifier(Identifier(parts=['a', 'b']))
         ('a', 'b', None)
-
-        >>> resolve_model_identifier(['a', '1'])
+        >>> resolve_model_identifier(Identifier(parts=['a', '1']))
         (None, 'a', 1)
-
-        >>> resolve_model_identifier(['a'])
+        >>> resolve_model_identifier(Identifier(parts=['a']))
         (None, 'a', None)
-
-        >>> resolve_model_identifier(['a', 'b', 'c'])
+        >>> resolve_model_identifier(Identifier(parts=['a', 'b', 'c']))
         (None, None, None)  # not found
 
     Args:
-        name (Identifier): Identifier parts
+        identifier (Identifier): The identifier object containing parts and is_quoted attributes.
 
     Returns:
         tuple: (database_name, model_name, model_version)
+            - database_name (str or None): The name of the database/project, or None if not specified.
+            - model_name (str or None): The name of the model, or None if not found.
+            - model_version (int or None): The model version as an integer, or None if not specified.
     """
-    parts = identifier.parts
-    database_name = None
     model_name = None
-    model_version = None
+    db_name = None
+    version = None
+    model_name_quoted = None
+    db_name_quoted = None
 
-    parts_count = len(parts)
-    if parts_count == 1:
-        database_name = None
-        model_name = parts[0]
-        model_version = None
-    elif parts_count == 2:
-        if parts[-1].isdigit():
-            database_name = None
-            model_name = parts[0]
-            model_version = int(parts[-1])
-        else:
-            database_name = parts[0]
-            model_name = parts[1]
-            model_version = None
-    elif parts_count == 3:
-        database_name = parts[0]
-        model_name = parts[1]
-        if parts[2].isdigit():
-            model_version = int(parts[2])
-        else:
-            # not found
-            return None, None, None
+    match identifier.parts, identifier.is_quoted:
+        case [model_name], [model_name_quoted]:
+            ...
+        case [model_name, str(version)], [model_name_quoted, _] if version.isdigit():
+            ...
+        case [model_name, int(version)], [model_name_quoted, _]:
+            ...
+        case [db_name, model_name], [db_name_quoted, model_name_quoted]:
+            ...
+        case [db_name, model_name, str(version)], [db_name_quoted, model_name_quoted, _] if version.isdigit():
+            ...
+        case [db_name, model_name, int(version)], [db_name_quoted, model_name_quoted, _]:
+            ...
+        case [db_name, model_name, str(version)], [db_name_quoted, model_name_quoted, _]:
+            # for back compatibility. May be delete?
+            return (None, None, None)
+        case _:
+            ...  # may be raise ValueError?
 
-    return database_name, model_name, model_version
+    if model_name_quoted is False:
+        model_name = model_name.lower()
+
+    if db_name_quoted is False:
+        db_name = db_name.lower()
+
+    if isinstance(version, int) or isinstance(version, str) and version.isdigit():
+        version = int(version)
+    else:
+        version = None
+
+    return db_name, model_name, version
 
 
 def encrypt(string: bytes, key: str) -> bytes:

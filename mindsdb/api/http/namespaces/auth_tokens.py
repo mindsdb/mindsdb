@@ -205,12 +205,20 @@ class AuthTokensStatusRoute(Resource):
         ''' Get A2A authentication status
         
         This endpoint returns the current A2A authentication configuration.
+        For unauthenticated users, only basic configuration is returned.
         '''
         config = Config()
         
-        all_tokens = get_all_auth_tokens()
-        return {
+        # Base response with configuration info
+        response = {
             'http_auth_enabled': config['auth']['http_auth_enabled'],
-            'auth_required': get_auth_required_status(),
-            'active_tokens_count': len(all_tokens)
-        }, 200
+            'auth_required': get_auth_required_status()
+        }
+        
+        # Only include token count if user is authenticated
+        if config['auth']['http_auth_enabled'] is True:
+            if check_auth():
+                all_tokens = get_all_auth_tokens()
+                response['active_tokens_count'] = len(all_tokens)
+        
+        return response, 200

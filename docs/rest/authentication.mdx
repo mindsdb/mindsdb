@@ -1,0 +1,49 @@
+---
+title: Authentication
+sidebarTitle: Authentication
+---
+
+MindsDB provides an optional authentication mechanism for its HTTP API. This includes setting up a username and a password for the MindsDB instance. Learn [more here](/setup/custom-config#auth).
+
+If this authentication method is defined in the MindsDB configuration file, it is required to authenticate oneself when using the REST API endpoints of this MindsDB instance.
+
+**Here is how to authenticate an HTTP session for calling MindsDB REST APIs.**
+
+1. Call the `login` endpoint with the username and password parameters.
+
+    ```
+    curl --request POST --url 'http://127.0.0.1:47334/api/login' \
+        --header 'Content-Type: application/json' \
+        --data-raw '{"username":"your-username","password":"your-password"}' -v
+    ```
+
+    This command returns an HTTP status code 200 if the request is successful. In the response header, find a session cookie and use it when calling other REST APIs.
+
+2. Call any other endpoint providing the session cookie.
+
+    ```
+    curl --request GET \
+    --url http://127.0.0.1:47334/api/projects/mindsdb/... \
+    --header 'Content-Type: application/json' \
+    --cookie 'session=your-session-cookie' \
+    --data '{
+    ...
+    }'
+    ```
+
+    For example, query an agent under the authenticated session:
+
+    ```
+    curl --request POST \
+    --url http://127.0.0.1:47334/api/projects/mindsdb/agents/my_agent/completions/stream \
+    --header 'Content-Type: application/json' \
+    --cookie 'session=your-session-cookie' \
+    --data '{
+    "messages": [
+        {
+        "question": "What is MindsDB?",
+        "answer": ""
+        }
+    ]
+    }'
+    ```

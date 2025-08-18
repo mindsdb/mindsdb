@@ -1,0 +1,331 @@
+---
+title: How to Insert Data into Knowledge Bases
+sidebarTitle: Insert Data into KB
+---
+
+Knowledge Bases (KBs) organize data across data sources, including databases, files, documents, webpages, enabling efficient search capabilities.
+
+Here is what happens to data when it is inserted into the knowledge base.
+
+<p align="center">
+  <img src="/assets/kb_data_insertion.png"/>
+</p>
+
+Upon inserting data into the knowledge base, it is split into chunks, transformed into the embedding representation to enhance the search capabilities, and stored in a vector database.
+
+<Tip>
+Learn more about features of [knowledge bases available via SQL API](/mindsdb_sql/knowledge_bases/overview).
+</Tip>
+
+## `insert()` Function
+
+Here is the syntax for inserting data into a knowledge base:
+
+* Inserting raw data:
+
+    ```python
+    my_kb.insert([
+        {'type': 'apartment', 'price': 100000},
+        {'type': 'villa', 'price': 500000}
+    ])
+    ```
+
+* Inserting data from data sources connected to MindsDB:
+
+    ```python
+    my_kb.insert_query(
+        server.databases.my_database.tables.my_table.filter(type='my_type')
+    )
+    ```
+
+* Inserting data from files uploaded to MindsDB:
+
+    ```python
+    my_kb.insert_files(['my_pdf_file', 'my_txt_file'])
+    ```
+
+* Inserting data from webpages:
+
+    ```python
+    kb.insert_webpages(
+        ['https://example.com'],
+        crawl_depth=2,
+        filters=[r'.*\/blog\/.*'],
+        limit=10
+    )
+    ```
+
+    Where:
+
+    * `urls`: Base URLs to crawl.
+    * `crawl_depth`: Depth for recursive crawling. Default is 1.
+    * `filters`: Regex patterns to include.
+    * `limit`: Max number of pages.
+
+Upon execution, it inserts data into a knowledge base, using the embedding model to embed it into vectors before inserting into an underlying vector database.
+
+<Tip>
+The status of the insert operations is logged in the `information_schema.queries` table with the timestamp when it was ran.
+</Tip>
+
+<Note>
+**Handling duplicate data while inserting into the knowledge base**
+
+Knowledge bases uniquely identify data rows using an ID column, which prevents from inserting duplicate data, as follows.
+
+* **Case 1: Inserting data into the knowledge base without the `id_column` defined.**
+
+    When users do not define the `id_column` during the creation of a knowledge base, MindsDB generates the ID for each row using a hash of the content columns, as [explained here](/mindsdb_sql/knowledge_bases/create#id-column).
+
+    **Example:**
+
+    If two rows have exactly the same content in the content columns, their hash (and thus their generated ID) will be the same.
+
+    Note that duplicate rows are skipped and not inserted.
+
+    Since both rows in the below table have the same content, only one row will be inserted.
+
+    | name  | age |
+    |-------|-----|
+    | Alice | 25  |
+    | Alice | 25  |
+
+* **Case 2: Inserting data into the knowledge base with the `id_column` defined.**
+
+    When users define the `id_column` during the creation of a knowledge base, then the knowledge base uses that column's values as the row ID.
+
+    **Example:**
+
+    If the `id_column` has duplicate values, the knowledge base skips the duplicate row(s) during the insert.
+
+    The second row in the below table has the same `id` as the first row, so only one of these rows is inserted.
+
+    | id  | name  | age |
+    |-----|-------|-----|
+    | 1   | Alice | 25  |
+    | 1   | Bob   | 30  |
+
+**Best practice**
+
+Ensure the `id_column` uniquely identifies each row to avoid unintentional data loss due to duplicate ID skipping.
+
+</Note>
+
+### Update Existing Data
+
+In order to update existing data in the knowledge base, insert data with the column ID that you want to update and the updated content.
+
+Here is an example of usage. A knowledge base stores the following data.
+
+```sql
++----------+-------------------+------------------------+
+| order_id | product           | notes                  |
++----------+-------------------+------------------------+
+| A1B      | Wireless Mouse    | Request color: black   |
+| 3XZ      | Bluetooth Speaker | Gift wrap requested    |
+| Q7P      | Laptop Stand      | Prefer aluminum finish |
++----------+-------------------+------------------------+
+```
+
+A user updated `Laptop Stand` to `Aluminum Laptop Stand`.
+
+```sql
++----------+-----------------------+------------------------+
+| order_id | product               | notes                  |
++----------+-----------------------+------------------------+
+| A1B      | Wireless Mouse        | Request color: black   |
+| 3XZ      | Bluetooth Speaker     | Gift wrap requested    |
+| Q7P      | Aluminum Laptop Stand | Prefer aluminum finish |
++----------+-----------------------+------------------------+
+```
+
+<Tip>
+Go to the *Complete Example* section below to find out how to access this sample data.
+</Tip>
+
+Here is how to propagate this change into the knowledge base.
+
+```python
+my_kb.insert_query(
+    server.databases.sample_data.tables.orders.filter(order_id='Q7P')
+)
+```
+
+The knowledge base matches the ID value to the existing one and updates the data if required.
+
+### Insert Data using Partitions
+
+In order to optimize the performance of data insertion into the knowledge base, users can set up partitions and threads to insert batches of data in parallel. This also enables tracking the progress of data insertion process including cancelling and resuming it if required.
+
+Here is an example.
+
+```python
+project.query(
+    '''
+    INSERT INTO my_kb
+    SELECT order_id, product, notes
+    FROM sample_data.orders
+    USING
+        batch_size = 200,
+        track_column = order_id,
+        threads = 10,
+        error = 'skip';
+    '''
+)
+```
+
+The parameters include the following:
+
+* `batch_size` defines the number of rows fetched per iteration to optimize data extraction from the source. It defaults to 1000.
+
+* `threads` defines threads for running partitions. Note that if the [ML task queue](/setup/custom-config#overview-of-config-parameters) is enabled, threads are used automatically. The available values for `threads` are:
+    - a number of threads to be used, for example, `threads = 10`,
+    - a boolean value that defines whether to enable threads, setting `threads = true`, or disable threads, setting `threads = false`.
+
+* `track_column` defines the column used for sorting data before partitioning.
+
+* `error` defines the error processing options. The available values include `raise`, used to raise errors as they come, or `skip`, used to subside errors. It defaults to `raise` if not provided.
+
+After executing the `INSERT INTO` statement with the above parameters, users can view the data insertion progress by querying the `information_schema.queries` table.
+
+```python
+project.query(
+    '''
+    SELECT * FROM information_schema.queries;
+    '''
+)
+```
+
+Users can cancel the data insertion process using the process ID from the `information_schema.queries` table. 
+
+```python
+project.query(
+    '''
+    SELECT query_cancel(1);
+    '''
+)
+```
+
+If you want to cancel the data insertion process, look up the process ID value from the `information_schema.queries` table and pass it as an argument to the `query_cancel()` function. Note that canceling the query will not remove the already inserted data.
+
+Users can resume the data insertion process using the process ID from the `information_schema.queries` table.
+
+```python
+project.query(
+    '''
+    SELECT query_resume(1);
+    '''
+)
+```
+
+If you want to resume the data insertion process (which may have been interrupted by an error or cancelled by a user), look up the process ID value from the `information_schema.queries` table and pass it as an argument to the `query_resume()` function. Note that resuming the query will not remove the already inserted data and will start appending the remaining data.
+
+### Chunking Data
+
+Upon inserting data into the knowledge base, the data chunking is performed in order to optimize the storage and search of data.
+
+Each chunk is identified by its chunk ID of the following format: `<id>:<chunk_number>of<total_chunks>:<start_char_number>to<end_char_number>`.
+
+#### Text
+
+Users can opt for defining the chunking parameters when creating a knowledge base.
+
+```python
+my_kb = project.knowledge_bases.create(
+    ...
+    params={
+        "preprocessing": {
+            "text_chunking_config" : {
+                "chunk_size": 2000,
+                "chunk_overlap": 200
+            }
+        }
+    }
+)
+```
+
+The `chunk_size` parameter defines the size of the chunk as the number of characters. And the `chunk_overlap` parameter defines the number of characters that should overlap between subsequent chunks.
+
+#### JSON
+
+Users can opt for defining the chunking parameters specifically for JSON data.
+
+```python
+my_kb = project.knowledge_bases.create(
+    ...
+    params={
+        "preprocessing": {
+            "type": "json_chunking",
+            "json_chunking_config" : {
+                ...
+            }
+        }
+    }
+)
+```
+
+When the `type` of chunking is set to `json_chunking`, users can configure it by setting the following parameter values in the `json_chunking_config` parameter:
+
+* `flatten_nested`  
+It is of the `bool` data type with the default value of `True`.  
+It defines whether to flatten nested JSON structures.
+
+* `include_metadata`  
+It is of the `bool` data type with the default value of `True`.  
+It defines whether to include original metadata in chunks.
+
+* `chunk_by_object`  
+It is of the `bool` data type with the default value of `True`.  
+It defines whether to chunk by top-level objects (`True`) or create a single document (`False`).
+
+* `exclude_fields`  
+It is of the `List[str]` data type with the default value of an empty list.  
+It defines the list of fields to exclude from chunking.
+
+* `include_fields`  
+It is of the `List[str]` data type with the default value of an empty list.  
+It defines the list of fields to include in chunking (if empty, all fields except excluded ones are included).
+
+* `metadata_fields`  
+It is of the `List[str]` data type with the default value of an empty list.  
+It defines the list of fields to extract into metadata for filtering (can include nested fields using dot notation). If empty, all primitive fields will be extracted (top-level fields if available, otherwise all primitive fields in the flattened structure).
+
+* `extract_all_primitives`  
+It is of the `bool` data type with the default value of `False`.  
+It defines whether to extract all primitive values (strings, numbers, booleans) into metadata.
+
+* `nested_delimiter`  
+It is of the `str` data type with the default value of `"."`.  
+It defines the delimiter for flattened nested field names.
+
+* `content_column`  
+It is of the `str` data type with the default value of `"content"`.  
+It defines the name of the content column for chunk ID generation.
+
+### Underlying Vector Store
+
+Each knowledge base has its underlying vector store that stores data inserted into the knowledge base in the form of embeddings.
+
+Users can query the underlying vector store as follows.
+
+* KB with the default ChromaDB vector store:
+
+```python
+project.query(
+    '''
+    SELECT id, content, metadata, embeddings
+    FROM <kb_name>_chromadb.storage_table;
+    '''
+)
+```
+
+* KB with user-defined vector store (either [PGVector](/integrations/vector-db-integrations/pgvector) or [ChromaDB](/integrations/vector-db-integrations/chromadb)):
+
+```python
+project.query(
+    '''
+    SELECT id, content, metadata, embeddings
+    FROM <vector_store_connection_name>.<table_name>;
+    '''
+)
+```

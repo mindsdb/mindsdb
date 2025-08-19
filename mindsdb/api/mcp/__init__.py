@@ -55,5 +55,6 @@ def get_mcp_app(host: str = None, port: int = None):
         mcp.settings.host = host
     if port is not None:
         mcp.settings.port = port
-    starlette_app = mcp.sse_app()
-    starlette_app.add_middleware(CustomAuthMiddleware)
+    app = mcp.sse_app()
+    app.add_middleware(CustomAuthMiddleware)
+    return app

@@ -41,10 +41,10 @@ def start(apis, verbose, no_studio, app: Flask = None):
 
     routes = []
     # Specific mounts FIRST
-    #if "a2a" in apis:
-    routes.append(Mount("/a2a/", app=get_a2a_app()))
-    #if "mcp" in apis:
-    routes.append(Mount("/mcp", app=get_mcp_app()))
+    if "a2a" in apis:
+        routes.append(Mount("/a2a/", app=get_a2a_app()))
+    if "mcp" in apis:
+        routes.append(Mount("/mcp", app=get_mcp_app()))
     
     # Root app LAST so it won't shadow the others
     routes.append(Mount("/", app=WSGIMiddleware(app)))

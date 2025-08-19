@@ -28,7 +28,7 @@ logger = log.getLogger(__name__)
 
 
 def start(apis, verbose, no_studio, app: Flask = None):
-    logger.debug(f"Starting MindsDB HTTP server with APIs: {apis}")
+    logger.info(f"Starting MindsDB HTTP server with APIs: {apis}")
     db.init()
     init_lexer_parsers()
 

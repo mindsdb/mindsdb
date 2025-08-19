@@ -29,7 +29,7 @@ from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embeddi
     construct_model_from_args,
 )
 
-from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS
+from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS, MAX_INSERT_BATCH_SIZE
 from mindsdb.interfaces.agents.langchain_agent import create_chat_model, get_llm_provider
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.variables.variables_controller import variables_controller
@@ -493,6 +493,8 @@ class KnowledgeBaseTable:
         """Process and insert raw data rows"""
         if not rows:
             return
+        if len(rows) > MAX_INSERT_BATCH_SIZE:
+            raise ValueError("Input data is too large, please load data in batches")
 
         df = pd.DataFrame(rows)
 

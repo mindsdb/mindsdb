@@ -183,26 +183,9 @@ class Config:
                 },
                 "mongodb": {"host": api_host, "port": "47336", "database": "mindsdb"},
                 "postgres": {"host": api_host, "port": "55432", "database": "mindsdb"},
-                "mcp": {
-                    "host": api_host,
-                    "port": "47337",
-                    "enabled": True,
-                    "restart_on_failure": True,
-                    "max_restart_count": 1,
-                    "max_restart_interval_seconds": 60,
-                },
                 "litellm": {
                     "host": "0.0.0.0",  # API server binds to all interfaces by default
                     "port": "8000",
-                },
-                "a2a": {
-                    "host": api_host,
-                    "port": 47338,
-                    "mindsdb_host": "localhost",
-                    "mindsdb_port": 47334,
-                    "agent_name": "my_agent",
-                    "project_name": "mindsdb",
-                    "enabled": False,
                 },
             },
             "cache": {"type": "local"},
@@ -446,16 +429,6 @@ class Config:
 
         if hasattr(self.cmd_args, "project_name") and self.cmd_args.project_name is not None:
             a2a_config["project_name"] = self.cmd_args.project_name
-
-        # Merge command-line args config with highest priority
-        if a2a_config:
-            _merge_configs(new_config, {"api": {"a2a": a2a_config}})
-
-        # Ensure A2A port is never 0, which would prevent the A2A API from starting
-        a2a_config = new_config["api"].get("a2a")
-        if a2a_config is not None and isinstance(a2a_config, dict):
-            if "port" in a2a_config and (a2a_config["port"] == 0 or a2a_config["port"] is None):
-                a2a_config["port"] = 47338  # Use the default port value
 
         # region create dirs
         for key, value in new_config["paths"].items():

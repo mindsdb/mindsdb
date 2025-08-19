@@ -225,7 +225,7 @@ class Config:
         """Collect config values from env vars to self._env_config"""
         self._env_config = {
             "logging": {"handlers": {"console": {}, "file": {}}},
-            "api": {"http": {}, "a2a": {}},
+            "api": {"http": {}},
             "auth": {},
             "paths": {},
             "permanent_storage": {},
@@ -319,32 +319,6 @@ class Config:
         if os.environ.get("MINDSDB_DATA_CATALOG_ENABLED", "").lower() in ("1", "true"):
             self._env_config["data_catalog"] = {"enabled": True}
 
-        # region vars: a2a configuration
-        a2a_config = {}
-        if os.environ.get("MINDSDB_A2A_HOST"):
-            a2a_config["host"] = os.environ.get("MINDSDB_A2A_HOST")
-        if os.environ.get("MINDSDB_A2A_PORT"):
-            a2a_config["port"] = int(os.environ.get("MINDSDB_A2A_PORT"))
-        if os.environ.get("MINDSDB_HOST"):
-            a2a_config["mindsdb_host"] = os.environ.get("MINDSDB_HOST")
-        if os.environ.get("MINDSDB_PORT"):
-            a2a_config["mindsdb_port"] = int(os.environ.get("MINDSDB_PORT"))
-        if os.environ.get("MINDSDB_AGENT_NAME"):
-            a2a_config["agent_name"] = os.environ.get("MINDSDB_AGENT_NAME")
-        if os.environ.get("MINDSDB_PROJECT_NAME"):
-            a2a_config["project_name"] = os.environ.get("MINDSDB_PROJECT_NAME")
-        if os.environ.get("MINDSDB_A2A_ENABLED") is not None:
-            a2a_config["enabled"] = os.environ.get("MINDSDB_A2A_ENABLED").lower() in (
-                "true",
-                "1",
-                "yes",
-                "y",
-            )
-
-        if a2a_config:
-            self._env_config["api"]["a2a"] = a2a_config
-        # endregion
-
     def fetch_auto_config(self) -> bool:
         """Load dict readed from config.auto.json to `auto_config`.
         Do it only if `auto_config` was not loaded before or config.auto.json been changed.
@@ -408,27 +382,7 @@ class Config:
         _merge_configs(new_config, self._auto_config or {})
         _merge_configs(new_config, self._env_config or {})
 
-        # Apply command-line arguments for A2A
-        a2a_config = {}
 
-        # Check for A2A command-line arguments
-        if hasattr(self.cmd_args, "a2a_host") and self.cmd_args.a2a_host is not None:
-            a2a_config["host"] = self.cmd_args.a2a_host
-
-        if hasattr(self.cmd_args, "a2a_port") and self.cmd_args.a2a_port is not None:
-            a2a_config["port"] = self.cmd_args.a2a_port
-
-        if hasattr(self.cmd_args, "mindsdb_host") and self.cmd_args.mindsdb_host is not None:
-            a2a_config["mindsdb_host"] = self.cmd_args.mindsdb_host
-
-        if hasattr(self.cmd_args, "mindsdb_port") and self.cmd_args.mindsdb_port is not None:
-            a2a_config["mindsdb_port"] = self.cmd_args.mindsdb_port
-
-        if hasattr(self.cmd_args, "agent_name") and self.cmd_args.agent_name is not None:
-            a2a_config["agent_name"] = self.cmd_args.agent_name
-
-        if hasattr(self.cmd_args, "project_name") and self.cmd_args.project_name is not None:
-            a2a_config["project_name"] = self.cmd_args.project_name
 
         # region create dirs
         for key, value in new_config["paths"].items():

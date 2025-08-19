@@ -7,6 +7,7 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
 from sse_starlette.sse import EventSourceResponse
 from starlette.requests import Request
+from starlette.routing import Route
 from ...common.types import (
     A2ARequest,
     JSONRPCResponse,
@@ -35,20 +36,20 @@ class A2AServer:
         self,
         host="0.0.0.0",
         port=5000,
-        endpoint="/",
         agent_card: AgentCard = None,
         task_manager: TaskManager = None,
     ):
         self.host = host
         self.port = port
-        self.endpoint = endpoint
         self.task_manager = task_manager
         self.agent_card = agent_card
-        self.app = Starlette()
-        self.app.add_route(self.endpoint, self._process_request, methods=["POST"])
-        self.app.add_route("/.well-known/agent.json", self._get_agent_card, methods=["GET"])
-        # Add status endpoint
-        self.app.add_route("/status", self._get_status, methods=["GET"])
+        self.app = Starlette(
+            routes = [
+                Route("/", self._process_request, methods=["POST"]),
+                Route("/.well-known/agent.json", self._get_agent_card, methods=["GET"]),
+                Route("/status", self._get_status, methods=["GET"]),
+            ]
+        )
         # TODO: Remove this when we have a proper CORS policy
         self.app.add_middleware(
             CORSMiddleware,

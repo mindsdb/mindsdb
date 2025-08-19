@@ -9,7 +9,7 @@ from mindsdb.api.a2a.common.server.server import A2AServer
 from mindsdb.api.a2a.task_manager import AgentTaskManager
 from mindsdb.api.a2a.agent import MindsDBAgent
 
-def get_a2a_app(
+def get_a2a_server(
     host: str = "0.0.0.0",
     mindsdb_host: str = "127.0.0.1",
     mindsdb_port: int = 47334,
@@ -52,4 +52,17 @@ def get_a2a_app(
         task_manager=task_manager,
         host=host,
     )
-    return server.app
+    return server
+
+def get_a2a_app(
+    host: str = "0.0.0.0",
+    mindsdb_host: str = "127.0.0.1",
+    mindsdb_port: int = 47334,
+    project_name: str = "mindsdb",
+):
+    return get_a2a_server(
+        host=host,
+        mindsdb_host=mindsdb_host,
+        mindsdb_port=mindsdb_port,
+        project_name=project_name,
+    ).app

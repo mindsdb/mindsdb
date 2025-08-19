@@ -53,7 +53,7 @@ def main(
             project_name,
         )
 
-        server = get_a2a_app(
+        server = get_a2a_server(
             host=host,
             mindsdb_host=mindsdb_host,
             mindsdb_port=mindsdb_port,

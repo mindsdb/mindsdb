@@ -26,7 +26,6 @@ from pydantic import ValidationError
 from ...common.server.task_manager import TaskManager
 
 from mindsdb.utilities import log
-from mindsdb.utilities.log import get_uvicorn_logging_config, get_mindsdb_log_level
 
 logger = log.getLogger(__name__)
 
@@ -76,8 +75,8 @@ class A2AServer:
             port=self.port,
             http="h11",
             timeout_keep_alive=65,
-            log_level=get_mindsdb_log_level(),
-            log_config=get_uvicorn_logging_config("uvicorn_a2a"),
+            log_level=None,
+            log_config=None,
         )
 
     def _get_agent_card(self, request: Request) -> JSONResponse:

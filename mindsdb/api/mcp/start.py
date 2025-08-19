@@ -1,50 +1,17 @@
-import os
 from typing import Any
 from textwrap import dedent
-from contextlib import asynccontextmanager
-from collections.abc import AsyncIterator
-from dataclasses import dataclass
 
 import uvicorn
 import anyio
-from mcp.server.fastmcp import FastMCP
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
-from starlette.responses import Response
 
+from mindsdb.api.mcp import get_mcp_app
 from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE as SQL_RESPONSE_TYPE
 from mindsdb.utilities import log
-from mindsdb.utilities.log import get_uvicorn_logging_config
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.storage import db
 
 logger = log.getLogger(__name__)
 
-
-@dataclass
-class AppContext:
-    db: Any
-
-
-@asynccontextmanager
-async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
-    """Manage application lifecycle with type-safe context"""
-    # Initialize on startup
-    db.init()
-    try:
-        yield AppContext(db=db)
-    finally:
-        # TODO: We need better way to handle this in storage/db.py
-        pass
-
-
-# Configure server with lifespan
-mcp = FastMCP(
-    "MindsDB",
-    lifespan=app_lifespan,
-    dependencies=["mindsdb"],  # Add any additional dependencies
-)
 # MCP Queries
 LISTING_QUERY = "SHOW DATABASES"
 
@@ -149,32 +116,18 @@ def list_databases() -> list[str]:
         }
 
 
-class CustomAuthMiddleware(BaseHTTPMiddleware):
-    """Custom middleware to handle authentication basing on header 'Authorization'"""
-
-    async def dispatch(self, request: Request, call_next):
-        mcp_access_token = os.environ.get("MINDSDB_MCP_ACCESS_TOKEN")
-        if mcp_access_token is not None:
-            auth_token = request.headers.get("Authorization", "").partition("Bearer ")[-1]
-            if mcp_access_token != auth_token:
-                return Response(status_code=401, content="Unauthorized", media_type="text/plain")
-
-        response = await call_next(request)
-
-        return response
 
 
-async def run_sse_async() -> None:
+
+async def run_sse_async(app) -> None:
     """Run the server using SSE transport."""
-    starlette_app = mcp.sse_app()
-    starlette_app.add_middleware(CustomAuthMiddleware)
 
     config = uvicorn.Config(
-        starlette_app,
-        host=mcp.settings.host,
-        port=mcp.settings.port,
-        log_level=mcp.settings.log_level.lower(),
-        log_config=get_uvicorn_logging_config("uvicorn_mcp"),
+        app,
+        host=app.host,
+        port=app.port,
+        log_level=None,
+        log_config=None,
     )
     server = uvicorn.Server(config)
     await server.serve()
@@ -191,11 +144,9 @@ def start(*args, **kwargs):
     host = config["api"].get("mcp", {}).get("host", "127.0.0.1")
 
     logger.info(f"Starting MCP server on {host}:{port}")
-    mcp.settings.host = host
-    mcp.settings.port = port
 
     try:
-        anyio.run(run_sse_async)
+        anyio.run(run_sse_async(get_mcp_app(host, port)))
     except Exception as e:
         logger.error(f"Error starting MCP server: {str(e)}")
         raise

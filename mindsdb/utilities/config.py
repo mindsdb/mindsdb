@@ -171,14 +171,6 @@ class Config:
                     "restart_on_failure": True,
                     "max_restart_count": 1,
                     "max_restart_interval_seconds": 60,
-                    "server": {
-                        "type": "waitress",  # MINDSDB_HTTP_SERVER_TYPE MINDSDB_DEFAULT_SERVER
-                        "config": {
-                            "threads": 16,
-                            "max_request_body_size": (1 << 30) * 10,  # 10GB
-                            "inbuf_overflow": (1 << 30) * 10,
-                        },
-                    },
                 },
                 "mysql": {
                     "host": api_host,
@@ -250,7 +242,7 @@ class Config:
         """Collect config values from env vars to self._env_config"""
         self._env_config = {
             "logging": {"handlers": {"console": {}, "file": {}}},
-            "api": {"http": {"server": {}}, "a2a": {}},
+            "api": {"http": {}, "a2a": {}},
             "auth": {},
             "paths": {},
             "permanent_storage": {},
@@ -323,35 +315,6 @@ class Config:
         if os.environ.get("MINDSDB_FILE_LOG_LEVEL", "") != "":
             self._env_config["logging"]["handlers"]["file"]["level"] = os.environ["MINDSDB_FILE_LOG_LEVEL"]
             self._env_config["logging"]["handlers"]["file"]["enabled"] = True
-        # endregion
-
-        # region server type
-        server_type = os.environ.get("MINDSDB_HTTP_SERVER_TYPE", "").lower()
-        if server_type == "":
-            server_type = os.environ.get("MINDSDB_DEFAULT_SERVER", "").lower()
-        if server_type != "":
-            if server_type == "waitress":
-                self._env_config["api"]["http"]["server"]["type"] = "waitress"
-                self._default_config["api"]["http"]["server"]["config"] = {}
-                self._env_config["api"]["http"]["server"]["config"] = {
-                    "threads": 16,
-                    "max_request_body_size": (1 << 30) * 10,  # 10GB
-                    "inbuf_overflow": (1 << 30) * 10,
-                }
-            elif server_type == "flask":
-                self._env_config["api"]["http"]["server"]["type"] = "flask"
-                self._default_config["api"]["http"]["server"]["config"] = {}
-                self._env_config["api"]["http"]["server"]["config"] = {}
-            elif server_type == "gunicorn":
-                self._env_config["api"]["http"]["server"]["type"] = "gunicorn"
-                self._default_config["api"]["http"]["server"]["config"] = {}
-                self._env_config["api"]["http"]["server"]["config"] = {
-                    "workers": min(mp.cpu_count(), 4),
-                    "timeout": 600,
-                    "reuse_port": True,
-                    "preload_app": True,
-                    "threads": 4,
-                }
         # endregion
 
         if os.environ.get("MINDSDB_DB_CON", "") != "":
@@ -550,12 +513,6 @@ class Config:
         if "log" in self._config:
             logger.warning("The 'log' config option is no longer supported. Use 'logging' instead.")
 
-        if os.environ.get("MINDSDB_DEFAULT_SERVER", "") != "":
-            logger.warning(
-                "Env variable 'MINDSDB_DEFAULT_SERVER' is going to be deprecated soon. "
-                "Use 'MINDSDB_HTTP_SERVER_TYPE' instead."
-            )
-
         file_upload_domains = self._config.get("file_upload_domains")
         if isinstance(file_upload_domains, list) and len(file_upload_domains) > 0:
             allowed_origins = self._config["url_file_upload"]["allowed_origins"]
@@ -565,14 +522,6 @@ class Config:
                 'Config option "file_upload_domains" is deprecated, '
                 'use config["url_file_upload"]["allowed_origins"] instead.'
             )
-
-        for env_name in ("MINDSDB_HTTP_SERVER_TYPE", "MINDSDB_DEFAULT_SERVER"):
-            env_value = os.environ.get(env_name, "")
-            if env_value.lower() not in ("waitress", "flask", "gunicorn", ""):
-                logger.warning(
-                    f"The value '{env_value}' of the environment variable {env_name} is not valid. "
-                    "It must be one of the following: 'waitress', 'flask', or 'gunicorn'."
-                )
 
     @property
     def cmd_args(self):
@@ -624,17 +573,6 @@ class Config:
             help="Project containing the agent (default: mindsdb)",
         )
 
-        # A2A specific arguments
-        parser.add_argument("--a2a-host", type=str, default=None, help="A2A server host")
-        parser.add_argument("--a2a-port", type=int, default=None, help="A2A server port")
-        parser.add_argument("--mindsdb-host", type=str, default=None, help="MindsDB server host")
-        parser.add_argument("--mindsdb-port", type=int, default=None, help="MindsDB server port")
-        parser.add_argument(
-            "--agent-name",
-            type=str,
-            default=None,
-            help="MindsDB agent name to connect to",
-        )
         parser.add_argument("--project-name", type=str, default=None, help="MindsDB project name")
         parser.add_argument("--update-gui", action="store_true", default=False, help="Update GUI and exit")
 

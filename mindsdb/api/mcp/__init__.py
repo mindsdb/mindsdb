@@ -23,6 +23,7 @@ logger = log.getLogger(__name__)
 class AppContext:
     db: Any
 
+
 @asynccontextmanager
 async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
     """Manage application lifecycle with type-safe context"""
@@ -145,9 +146,6 @@ def list_databases() -> list[str]:
             "error_code": 0,
             "error_message": str(e),
         }
-
-
-
 
 
 class CustomAuthMiddleware(BaseHTTPMiddleware):

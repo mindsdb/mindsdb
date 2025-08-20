@@ -1,5 +1,4 @@
 import os
-import mcp
 
 from textwrap import dedent
 from typing import Any
@@ -23,6 +22,25 @@ logger = log.getLogger(__name__)
 @dataclass
 class AppContext:
     db: Any
+
+@asynccontextmanager
+async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
+    """Manage application lifecycle with type-safe context"""
+    # Initialize on startup
+    db.init()
+    try:
+        yield AppContext(db=db)
+    finally:
+        # TODO: We need better way to handle this in storage/db.py
+        pass
+
+
+# Configure server with lifespan
+mcp = FastMCP(
+    "MindsDB",
+    lifespan=app_lifespan,
+    dependencies=["mindsdb"],  # Add any additional dependencies
+)
 
 
 # MCP Queries
@@ -129,24 +147,7 @@ def list_databases() -> list[str]:
         }
 
 
-@asynccontextmanager
-async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
-    """Manage application lifecycle with type-safe context"""
-    # Initialize on startup
-    db.init()
-    try:
-        yield AppContext(db=db)
-    finally:
-        # TODO: We need better way to handle this in storage/db.py
-        pass
 
-
-# Configure server with lifespan
-mcp = FastMCP(
-    "MindsDB",
-    lifespan=app_lifespan,
-    dependencies=["mindsdb"],  # Add any additional dependencies
-)
 
 
 class CustomAuthMiddleware(BaseHTTPMiddleware):

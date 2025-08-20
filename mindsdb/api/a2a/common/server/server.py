@@ -44,7 +44,7 @@ class A2AServer:
         self.task_manager = task_manager
         self.agent_card = agent_card
         self.app = Starlette(
-            routes = [
+            routes=[
                 Route("/", self._process_request, methods=["POST"]),
                 Route("/.well-known/agent.json", self._get_agent_card, methods=["GET"]),
                 Route("/status", self._get_status, methods=["GET"]),

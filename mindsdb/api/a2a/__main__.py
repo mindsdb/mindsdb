@@ -4,19 +4,17 @@ import click
 from dotenv import load_dotenv
 
 # A2A specific imports
-from mindsdb.api.a2a import get_a2a_app
+from mindsdb.api.a2a import get_a2a_server
 from mindsdb.api.a2a.common.types import (
     MissingAPIKeyError,
 )
-from mindsdb.api.a2a.common.server.server import A2AServer
-from mindsdb.api.a2a.task_manager import AgentTaskManager
-from mindsdb.api.a2a.agent import MindsDBAgent
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
+
 
 @click.command()
 @click.option("--host", default="localhost", help="A2A server host")
@@ -67,6 +65,7 @@ def main(
     except Exception as exc:  # noqa: BLE001
         logger.exception("Unexpected error: %s", exc)
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

@@ -1,4 +1,3 @@
-
 # A2A specific imports
 from mindsdb.api.a2a.common.types import (
     AgentCard,
@@ -8,6 +7,7 @@ from mindsdb.api.a2a.common.types import (
 from mindsdb.api.a2a.common.server.server import A2AServer
 from mindsdb.api.a2a.task_manager import AgentTaskManager
 from mindsdb.api.a2a.agent import MindsDBAgent
+
 
 def get_a2a_server(
     host: str = "0.0.0.0",
@@ -53,6 +53,7 @@ def get_a2a_server(
         host=host,
     )
     return server
+
 
 def get_a2a_app(
     host: str = "0.0.0.0",

@@ -5,7 +5,6 @@ import argparse
 import datetime
 from pathlib import Path
 from copy import deepcopy
-import multiprocessing as mp
 
 from appdirs import user_data_dir
 
@@ -381,8 +380,6 @@ class Config:
         _merge_configs(new_config, self._user_config)
         _merge_configs(new_config, self._auto_config or {})
         _merge_configs(new_config, self._env_config or {})
-
-
 
         # region create dirs
         for key, value in new_config["paths"].items():

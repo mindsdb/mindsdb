@@ -1,10 +1,8 @@
 import gc
+
 gc.disable()
 
-import asyncio
-
 from flask import Flask
-from waitress import serve
 
 from mindsdb.api.http.initialize import initialize_app
 from mindsdb.interfaces.storage import db
@@ -35,8 +33,8 @@ def start(apis, verbose, no_studio, app: Flask = None):
     if app is None:
         app = initialize_app(config, no_studio)
 
-    port = config['api']['http']['port']
-    host = config['api']['http']['host']
+    port = config["api"]["http"]["port"]
+    host = config["api"]["http"]["host"]
     process_cache.init()
 
     routes = []
@@ -45,7 +43,7 @@ def start(apis, verbose, no_studio, app: Flask = None):
         routes.append(Mount("/a2a", app=get_a2a_app()))
     if "mcp" in apis:
         routes.append(Mount("/mcp", app=get_mcp_app()))
-    
+
     # Root app LAST so it won't shadow the others
     routes.append(Mount("/", app=WSGIMiddleware(app)))
 

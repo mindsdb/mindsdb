@@ -99,7 +99,8 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
                  - NULL filtering: IS NULL, IS NOT NULL
                - Examples:
                  - `SELECT * FROM my_kb WHERE metadata.author = 'John Doe' AND metadata.year > 2020;`
-                 - `SELECT * FROM my_kb WHERE content LIKE '%search_term%';`
+                 - `SELECT * FROM my_kb WHERE content LIKE 'search_term';`
+                 - Note '%' is not supported for semantic search on the `content` column.
                  - `SELECT * FROM my_kb WHERE metadata.tags IN ('tech', 'ai');`
             Adhere to these guidelines for all queries and responses. Ask for clarification if needed.
         """

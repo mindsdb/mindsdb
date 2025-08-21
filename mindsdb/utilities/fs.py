@@ -144,11 +144,11 @@ def create_pid_file():
         pid = pid_file.read_text().strip()
         try:
             psutil.Process(int(pid))
-            raise Exception(f"Found PID file with existing process: {pid}")
+            raise Exception(f"Found PID file with existing process: {pid} {pid_file}")
         except (psutil.Error, ValueError):
             ...
 
-        logger.warning(f"Found existing PID file ({pid}), removing")
+        logger.warning(f"Found existing PID file {pid_file}({pid}), removing")
         pid_file.unlink()
 
     pid_file.write_text(str(os.getpid()))
@@ -169,7 +169,7 @@ def delete_pid_file():
 
     pid = pid_file.read_text().strip()
     if pid != str(os.getpid()):
-        logger.warning("Process id in PID file doesn't match mindsdb pid")
+        logger.warning(f"Process id in PID file ({pid_file}) doesn't match mindsdb pid")
         return
 
     pid_file.unlink()

@@ -158,7 +158,6 @@ def delete_pid_file():
     pid_file = get_tmp_dir().joinpath("pid")
 
     if not pid_file.exists():
-        logger.warning("Mindsdb PID file does not exist")
         return
 
     pid = pid_file.read_text().strip()

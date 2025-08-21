@@ -203,6 +203,8 @@ def get_soql_instructions(integration_name):
 - Null checks: SELECT Id, Name FROM Account WHERE ParentId = null
 - Multi-select picklist: SELECT Id, Name FROM Account WHERE Services__c INCLUDES ('Consulting;Support')
 - Sorting and limiting: SELECT Id, Name FROM Account ORDER BY Name ASC LIMIT 50
+- Never use semi/anti-joins on Task or Event (no IN/NOT IN subqueries selecting from them). 
+- For “recent/no recent activity,” prefer LastActivityDate.
 
 
 ***EXECUTION INSTRUCTIONS. IMPORTANT!***

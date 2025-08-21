@@ -8,6 +8,7 @@ from typing import Optional, List, Tuple
 import psutil
 
 from mindsdb.utilities import log
+from mindsdb.utilities.config import config
 
 logger = log.getLogger(__name__)
 
@@ -133,6 +134,9 @@ def create_pid_file():
     Create mindsdb process pid file. Check if previous process exists and is running
     """
 
+    if config.use_docker_env:
+        return
+
     p = get_tmp_dir()
     p.mkdir(parents=True, exist_ok=True)
     pid_file = p.joinpath("pid")
@@ -155,6 +159,10 @@ def delete_pid_file():
     """
     Remove existing process pid file if it matches current process
     """
+
+    if config.use_docker_env:
+        return
+
     pid_file = get_tmp_dir().joinpath("pid")
 
     if not pid_file.exists():

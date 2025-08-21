@@ -208,7 +208,7 @@ After generating the core SOQL (and nothing else), always make sure you wrap it 
 
     SELECT * 
       FROM {integration_name}(
-        /* your generated SOQL goes here, without a trailing semicolon */
+        your generated SOQL goes here, without a trailing semicolon
       )
 
 Return only that wrapper call.

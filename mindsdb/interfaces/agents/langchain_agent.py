@@ -7,6 +7,7 @@ import re
 import threading
 import numpy as np
 import pandas as pd
+import logging
 
 from langchain.agents import AgentExecutor
 from langchain.agents.initialize import initialize_agent
@@ -346,9 +347,7 @@ class LangchainAgent:
 
         df = pd.DataFrame(messages)
         logger.info(f"LangchainAgent.get_completion: Received {len(messages)} messages")
-        logger.debug(f"Messages DataFrame shape: {df.shape}")
-        logger.debug(f"Messages DataFrame columns: {df.columns.tolist()}")
-        if logger.isEnabledFor(logger.DEBUG):
+        if logger.isEnabledFor(logging.DEBUG):
             logger.debug(f"Messages DataFrame shape: {df.shape}")
             logger.debug(f"Messages DataFrame columns: {df.columns.tolist()}")
             logger.debug(f"Messages DataFrame content: {df.to_dict('records')}")

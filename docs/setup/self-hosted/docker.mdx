@@ -101,7 +101,7 @@ docker run --name mindsdb_container -e MINDSDB_USERNAME='admin' -e MINDSDB_PASSW
 
 ### Install dependencies
 
-MindsDB integrates with numerous data sources and AI frameworks. To use any of the integrations, you should enure that the required dependencies are installed in the Docker container.
+MindsDB integrates with numerous data sources and AI frameworks. To use any of the integrations, you should ensure that the required dependencies are installed in the Docker container.
 
 **Method 1**
 
@@ -201,10 +201,10 @@ The default configuration for MindsDB's Docker image is stored as a JSON code, a
 
 ### Custom configuration
 
-To override the default configuration, you can mount a config file over `/root/mindsdb_config.json`, as below.
+To override the default configuration, you can mount a config file created in your host machine over `/root/mindsdb_config.json`, as below.
 
 ```bash
-docker run --name mindsdb_container -e MINDSDB_APIS=http -d -p 47334:47334 -v mdb_config.json:/root/mindsdb_config.json mindsdb/mindsdb
+docker run --name mindsdb_container -e MINDSDB_APIS=http -d -p 47334:47334 -v $(pwd)/mdb_config.json:/root/mindsdb_config.json mindsdb/mindsdb
 ```
 
 <Tip>

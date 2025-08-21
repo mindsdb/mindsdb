@@ -345,15 +345,19 @@ class LangchainAgent:
         args.update(params or {})
 
         df = pd.DataFrame(messages)
+        logger.info(f"LangchainAgent.get_completion: Received {len(messages)} messages")
+        logger.debug(f"Messages DataFrame shape: {df.shape}")
+        logger.debug(f"Messages DataFrame columns: {df.columns.tolist()}")
+        logger.debug(f"Messages DataFrame content: {df.to_dict('records')}")
 
         # Back compatibility for old models
         self.provider = args.get("provider", get_llm_provider(args))
 
         df = df.reset_index(drop=True)
         agent = self.create_agent(df)
-        # Use last message as prompt, remove other questions.
-        user_column = args.get("user_column", USER_COLUMN)
-        df.iloc[:-1, df.columns.get_loc(user_column)] = None
+        # Keep conversation history for context - don't nullify previous messages
+
+        # Only use the last message as the current prompt, but preserve history for agent memory
         response = self.run_agent(df, agent, args)
 
         # End the run completion span and update the metadata with tool usage
@@ -374,6 +378,10 @@ class LangchainAgent:
         args = self.args
 
         df = pd.DataFrame(messages)
+        logger.info(f"LangchainAgent._get_completion_stream: Received {len(messages)} messages")
+        logger.debug(f"Streaming Messages DataFrame shape: {df.shape}")
+        logger.debug(f"Streaming Messages DataFrame columns: {df.columns.tolist()}")
+        logger.debug(f"Streaming Messages DataFrame content: {df.to_dict('records')}")
 
         self.embedding_model_provider = args.get("embedding_model_provider", get_embedding_model_provider(args))
         # Back compatibility for old models
@@ -381,9 +389,8 @@ class LangchainAgent:
 
         df = df.reset_index(drop=True)
         agent = self.create_agent(df)
-        # Use last message as prompt, remove other questions.
-        user_column = args.get("user_column", USER_COLUMN)
-        df.iloc[:-1, df.columns.get_loc(user_column)] = None
+        # Keep conversation history for context - don't nullify previous messages
+        # Only use the last message as the current prompt, but preserve history for agent memory
         return self.stream_agent(df, agent, args)
 
     def create_agent(self, df: pd.DataFrame) -> AgentExecutor:
@@ -416,13 +423,30 @@ class LangchainAgent:
         # User - Assistant conversation. All except the last message.
         user_column = args.get("user_column", USER_COLUMN)
         assistant_column = args.get("assistant_column", ASSISTANT_COLUMN)
-        for row in df[:-1].to_dict("records"):
-            question = row[user_column]
-            answer = row[assistant_column]
+
+        logger.info(f"Processing conversation history: {len(df)} total messages, {len(df[:-1])} history messages")
+        logger.debug(f"User column: {user_column}, Assistant column: {assistant_column}")
+
+        history_count = 0
+        for i, row in enumerate(df[:-1].to_dict("records")):
+            question = row.get(user_column)
+            answer = row.get(assistant_column)
+            logger.debug(f"History message {i}: question='{question}', answer='{answer}'")
+
             if isinstance(question, str) and len(question) > 0:
                 memory.chat_memory.add_user_message(question)
+                history_count += 1
+                logger.debug(f"Added user message to memory: {question}")
             if isinstance(answer, str) and len(answer) > 0:
                 memory.chat_memory.add_ai_message(answer)
+                history_count += 1
+                logger.debug(f"Added AI message to memory: {answer}")
+
+        logger.info(f"Added {history_count} messages to conversation memory")
+        logger.debug(f"Total memory messages: {len(memory.chat_memory.messages)}")
+
+        # Store reference to memory for potential question retrieval
+        self._conversation_memory = memory
 
         agent_type = args.get("agent_type", DEFAULT_AGENT_TYPE)
         agent_executor = initialize_agent(

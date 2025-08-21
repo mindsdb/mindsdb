@@ -348,7 +348,7 @@ class LangchainAgent:
         logger.info(f"LangchainAgent.get_completion: Received {len(messages)} messages")
         logger.debug(f"Messages DataFrame shape: {df.shape}")
         logger.debug(f"Messages DataFrame columns: {df.columns.tolist()}")
-        if logger.isEnabledFor(logging.DEBUG):
+        if logger.isEnabledFor(logger.DEBUG):
             logger.debug(f"Messages DataFrame shape: {df.shape}")
             logger.debug(f"Messages DataFrame columns: {df.columns.tolist()}")
             logger.debug(f"Messages DataFrame content: {df.to_dict('records')}")

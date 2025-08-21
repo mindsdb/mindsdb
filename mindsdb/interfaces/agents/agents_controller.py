@@ -674,7 +674,7 @@ class AgentsController:
 
         return combined_model_params
 
-    def _convert_messages_format(self, messages: list[Dict[str, str]]) -> list[Dict[str, str]]:
+    def _convert_messages_format(self, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         Convert A2A message format to LangChain format.
         A2A sends: [{"question": "...", "answer": "..."}]

@@ -348,7 +348,10 @@ class LangchainAgent:
         logger.info(f"LangchainAgent.get_completion: Received {len(messages)} messages")
         logger.debug(f"Messages DataFrame shape: {df.shape}")
         logger.debug(f"Messages DataFrame columns: {df.columns.tolist()}")
-        logger.debug(f"Messages DataFrame content: {df.to_dict('records')}")
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"Messages DataFrame shape: {df.shape}")
+            logger.debug(f"Messages DataFrame columns: {df.columns.tolist()}")
+            logger.debug(f"Messages DataFrame content: {df.to_dict('records')}")
 
         # Back compatibility for old models
         self.provider = args.get("provider", get_llm_provider(args))

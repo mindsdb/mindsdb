@@ -74,7 +74,9 @@ def get_soql_instructions(integration_name):
   CORRECT: WHERE Services__c EXCLUDES ('Training')
   INCORRECT: WHERE Services__c = 'Consulting'
 - Limited subquery support - only IN/NOT IN with non-correlated subqueries in WHERE clause
-  CORRECT: SELECT Id FROM Contact WHERE Id NOT IN (SELECT WhoId FROM Task)
+  Important: Certain standard objects such as Task and Event are not supported as the inner entity of semi-join/anti-join subqueries. 
+  Attempting queries like WHERE Id NOT IN (SELECT WhoId FROM Task) will fail. Use parent-to-child subqueries or two-step logic instead.
+  CORRECT: SELECT Id FROM Contact WHERE AccountId IN (SELECT Id FROM Account WHERE Industry = 'Technology'))
   INCORRECT: SELECT Id FROM Contact WHERE NOT EXISTS (SELECT 1 FROM Task WHERE WhoId = Contact.Id)
 
 **JOINS:**

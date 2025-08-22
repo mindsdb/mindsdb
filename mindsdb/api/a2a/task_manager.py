@@ -93,7 +93,7 @@ class AgentTaskManager(InMemoryTaskManager):
             yield error_result
             return  # Early return from generator
 
-        agent = self._create_agent(agent_name, user_info=user_info)
+        agent = self._create_agent(user_info, agent_name)
 
         # Get the history from the task
         history = task.history if task and task.history else []
@@ -341,7 +341,7 @@ class AgentTaskManager(InMemoryTaskManager):
         # We can't await an async generator directly, so we need to use it as is
         try:
             logger.debug(f"[TaskManager] Entering streaming path at {time.time()}")
-            async for response in self._stream_generator(request, user_info=user_info):
+            async for response in self._stream_generator(request, user_info):
                 logger.debug(f"[TaskManager] Yielding streaming response at {time.time()} with: {str(response)[:120]}")
                 yield response
         except Exception as e:
@@ -427,7 +427,7 @@ class AgentTaskManager(InMemoryTaskManager):
         params = self._get_task_params(task_send_params)
         agent_name = params["agent_name"]
         streaming = params["streaming"]
-        agent = self._create_agent(user_info=user_info, agent_name=agent_name)
+        agent = self._create_agent(user_info, agent_name)
 
         try:
             # Get the history from the task

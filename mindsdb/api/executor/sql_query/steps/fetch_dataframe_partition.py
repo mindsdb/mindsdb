@@ -97,6 +97,7 @@ class FetchDataframePartitionCall(BaseStepCall):
         for df in run_query.get_partitions(self.dn, self, query):
             try:
                 sub_data = self.exec_sub_steps(df)
+                run_query.set_progress(processed_rows=len(df))
                 results.append(sub_data)
             except Exception as e:
                 if on_error == "skip":
@@ -175,17 +176,22 @@ class FetchDataframePartitionCall(BaseStepCall):
                 # split into chunks and send to workers
                 futures = []
                 for df2 in split_data_frame(df, partition_size):
-                    futures.append(executor.submit(self.exec_sub_steps, df2))
+                    futures.append([executor.submit(self.exec_sub_steps, df2), len(df2)])
 
-                for future in futures:
+                error = None
+                for future, rows_count in futures:
                     try:
                         results.append(future.result())
+                        run_query.set_progress(processed_rows=rows_count)
                     except Exception as e:
                         if on_error == "skip":
                             logger.error(e)
                         else:
                             executor.shutdown()
-                            raise e
+                            error = e
+
+                if error:
+                    raise error
                 if self.sql_query.stop_event is not None and self.sql_query.stop_event.is_set():
                     executor.shutdown()
                     raise RuntimeError("Query is interrupted")

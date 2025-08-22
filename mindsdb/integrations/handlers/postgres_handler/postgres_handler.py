@@ -1,5 +1,3 @@
-import csv
-import io
 import time
 import json
 from typing import Optional, Any
@@ -625,7 +623,7 @@ class PostgresHandler(MetaDatabaseHandler):
         result = self.native_query(query)
         return result
 
-    def meta_get_column_statistics(self, table_names: Optional[list] = None) -> dict:
+    def meta_get_column_statistics(self, table_names: Optional[list] = None) -> Response:
         """
         Retrieves column statistics (e.g., most common values, frequencies, null percentage, and distinct value count)
         for the specified tables or all tables if no list is provided.
@@ -634,54 +632,58 @@ class PostgresHandler(MetaDatabaseHandler):
             table_names (list): A list of table names for which to retrieve column statistics.
 
         Returns:
-            dict: A dictionary containing the column statistics.
+            Response: A response object containing the column statistics.
         """
-        query = """
+        table_filter = ""
+        if table_names is not None and len(table_names) > 0:
+            quoted_names = [f"'{t}'" for t in table_names]
+            table_filter = f" AND ps.tablename IN ({','.join(quoted_names)})"
+
+        query = (
+            """
             SELECT
-                ps.attname AS column_name,
-                ps.tablename AS table_name,
-                ps.most_common_vals AS most_common_values,
-                ps.most_common_freqs::text AS most_common_frequencies,
-                ps.null_frac * 100 AS null_percentage,
-                ps.n_distinct AS distinct_values_count,
-                ps.histogram_bounds AS histogram_bounds
+                ps.tablename AS TABLE_NAME,
+                ps.attname AS COLUMN_NAME,
+                ROUND(ps.null_frac::numeric * 100, 2) AS NULL_PERCENTAGE,
+                CASE 
+                    WHEN ps.n_distinct < 0 THEN NULL
+                    ELSE ps.n_distinct::bigint
+                END AS DISTINCT_VALUES_COUNT,
+                ps.most_common_vals AS MOST_COMMON_VALUES,
+                ps.most_common_freqs AS MOST_COMMON_FREQUENCIES,
+                ps.histogram_bounds
             FROM pg_stats ps
             WHERE ps.schemaname = current_schema()
             AND ps.tablename NOT LIKE 'pg_%'
             AND ps.tablename NOT LIKE 'sql_%'
         """
-
-        if table_names is not None and len(table_names) > 0:
-            table_names = [f"'{t}'" for t in table_names]
-            query += f" AND ps.tablename IN ({','.join(table_names)})"
+            + table_filter
+            + """
+            ORDER BY ps.tablename, ps.attname
+        """
+        )
 
         result = self.native_query(query)
-        df = result.data_frame
 
-        def parse_pg_array_string(x):
-            try:
-                return (
-                    [item.strip(" ,") for row in csv.reader(io.StringIO(x.strip("{}"))) for item in row if item.strip()]
-                    if x
-                    else []
-                )
-            except IndexError:
-                logger.error(f"Error parsing PostgreSQL array string: {x}")
-                return []
+        if result.type == RESPONSE_TYPE.TABLE and result.data_frame is not None:
+            df = result.data_frame
 
-        # Convert most_common_values and most_common_frequencies from string representation to lists.
-        df["most_common_values"] = df["most_common_values"].apply(lambda x: parse_pg_array_string(x))
-        df["most_common_frequencies"] = df["most_common_frequencies"].apply(lambda x: parse_pg_array_string(x))
+            # Extract min/max from histogram bounds
+            def extract_min_max(histogram_str):
+                if histogram_str and str(histogram_str) != "nan":
+                    clean = str(histogram_str).strip("{}")
+                    if clean:
+                        values = clean.split(",")
+                        min_val = values[0].strip(" \"'") if values else None
+                        max_val = values[-1].strip(" \"'") if values else None
+                        return min_val, max_val
+                return None, None
 
-        # Get the minimum and maximum values from the histogram bounds.
-        df["minimum_value"] = df["histogram_bounds"].apply(lambda x: parse_pg_array_string(x)[0] if x else None)
-        df["maximum_value"] = df["histogram_bounds"].apply(lambda x: parse_pg_array_string(x)[-1] if x else None)
-
-        # Handle cases where distinct_values_count is negative (indicating an approximation).
-        df["distinct_values_count"] = df["distinct_values_count"].apply(lambda x: x if x >= 0 else None)
+            min_max_values = df["histogram_bounds"].apply(extract_min_max)
+            df["MINIMUM_VALUE"] = min_max_values.apply(lambda x: x[0])
+            df["MAXIMUM_VALUE"] = min_max_values.apply(lambda x: x[1])
 
         result.data_frame = df.drop(columns=["histogram_bounds"])
-
         return result
 
     def meta_get_primary_keys(self, table_names: Optional[list] = None) -> Response:

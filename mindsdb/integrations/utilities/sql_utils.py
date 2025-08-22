@@ -60,6 +60,17 @@ class FilterCondition:
         """
 
 
+class KeywordSearchArgs:
+    def __init__(self, column: str, query: str):
+        """
+        Args:
+            column: The column to search in.
+            query: The search query string.
+        """
+        self.column = column
+        self.query = query
+
+
 class SortColumn:
     def __init__(self, column: str, ascending: bool = True):
         self.column = column

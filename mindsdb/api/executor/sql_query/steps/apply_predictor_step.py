@@ -26,38 +26,28 @@ from .base import BaseStepCall
 
 
 def get_preditor_alias(step, mindsdb_database):
-    predictor_name = '.'.join(step.predictor.parts)
-    predictor_alias = '.'.join(step.predictor.alias.parts) if step.predictor.alias is not None else predictor_name
+    predictor_name = ".".join(step.predictor.parts)
+    predictor_alias = ".".join(step.predictor.alias.parts) if step.predictor.alias is not None else predictor_name
     return (mindsdb_database, predictor_name, predictor_alias)
 
 
 class ApplyPredictorBaseCall(BaseStepCall):
-
     def apply_predictor(self, project_name, predictor_name, df, version, params):
         # is it an agent?
         agent = self.session.agents_controller.get_agent(predictor_name, project_name)
         if agent is not None:
-
-            messages = df.to_dict('records')
+            messages = df.to_dict("records")
             predictions = self.session.agents_controller.get_completion(
-                agent,
-                messages=messages,
-                project_name=project_name,
+                agent, messages=messages, project_name=project_name, params=params
             )
 
         else:
             project_datanode = self.session.datahub.get(project_name)
-            predictions = project_datanode.predict(
-                model_name=predictor_name,
-                df=df,
-                version=version,
-                params=params
-            )
+            predictions = project_datanode.predict(model_name=predictor_name, df=df, version=version, params=params)
         return predictions
 
 
 class ApplyPredictorRowStepCall(ApplyPredictorBaseCall):
-
     bind = ApplyPredictorRowStep
 
     def call(self, step):
@@ -89,7 +79,7 @@ class ApplyPredictorRowStepCall(ApplyPredictorBaseCall):
         for k, v in where_data.items():
             predictions[k] = v
 
-        table_name = get_preditor_alias(step, self.context.get('database'))
+        table_name = get_preditor_alias(step, self.context.get("database"))
 
         if len(predictions) == 0:
             columns_names = project_datanode.get_table_columns_names(predictor_name)
@@ -100,12 +90,11 @@ class ApplyPredictorRowStepCall(ApplyPredictorBaseCall):
             database=table_name[0],
             table_name=table_name[1],
             table_alias=table_name[2],
-            is_prediction=True
+            is_prediction=True,
         )
 
 
 class ApplyPredictorStepCall(ApplyPredictorBaseCall):
-
     bind = ApplyPredictorStep
 
     def call(self, step):
@@ -115,20 +104,20 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
         params = step.params or {}
 
         # adding __mindsdb_row_id, use first table if exists
-        if len(data.find_columns('__mindsdb_row_id')) == 0:
+        if len(data.find_columns("__mindsdb_row_id")) == 0:
             table = data.get_tables()[0] if len(data.get_tables()) > 0 else None
 
             row_id_col = Column(
-                name='__mindsdb_row_id',
-                database=table['database'] if table is not None else None,
-                table_name=table['table_name'] if table is not None else None,
-                table_alias=table['table_alias'] if table is not None else None
+                name="__mindsdb_row_id",
+                database=table["database"] if table is not None else None,
+                table_name=table["table_name"] if table is not None else None,
+                table_alias=table["table_alias"] if table is not None else None,
             )
 
-            row_id = self.context.get('row_id')
+            row_id = self.context.get("row_id")
             values = range(row_id, row_id + data.length())
             data.add_column(row_id_col, values)
-            self.context['row_id'] += data.length()
+            self.context["row_id"] += data.length()
 
         project_name = step.namespace
         predictor_name = step.predictor.parts[0]
@@ -143,47 +132,46 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
                 data.set_column_values(k, v)
 
         predictor_metadata = {}
-        for pm in self.context['predictor_metadata']:
-            if pm['name'] == predictor_name and pm['integration_name'].lower() == project_name:
+        for pm in self.context["predictor_metadata"]:
+            if pm["name"] == predictor_name and pm["integration_name"].lower() == project_name:
                 predictor_metadata = pm
                 break
-        is_timeseries = predictor_metadata['timeseries']
+        is_timeseries = predictor_metadata["timeseries"]
         _mdb_forecast_offset = None
         if is_timeseries:
-            if '> LATEST' in self.context['query_str']:
+            if "> LATEST" in self.context["query_str"]:
                 # stream mode -- if > LATEST, forecast starts on inferred next timestamp
                 _mdb_forecast_offset = 1
-            elif '= LATEST' in self.context['query_str']:
+            elif "= LATEST" in self.context["query_str"]:
                 # override: when = LATEST, forecast starts on last provided timestamp instead of inferred next time
                 _mdb_forecast_offset = 0
             else:
                 # normal mode -- emit a forecast ($HORIZON data points on each) for each provided timestamp
-                params['force_ts_infer'] = True
+                params["force_ts_infer"] = True
                 _mdb_forecast_offset = None
 
-            data.add_column(Column(name='__mdb_forecast_offset'), _mdb_forecast_offset)
+            data.add_column(Column(name="__mdb_forecast_offset"), _mdb_forecast_offset)
 
-        table_name = get_preditor_alias(step, self.context['database'])
+        table_name = get_preditor_alias(step, self.context["database"])
 
         project_datanode = self.session.datahub.get(project_name)
         if len(data) == 0:
-            columns_names = project_datanode.get_table_columns_names(predictor_name) + ['__mindsdb_row_id']
+            columns_names = project_datanode.get_table_columns_names(predictor_name) + ["__mindsdb_row_id"]
             result = ResultSet(is_prediction=True)
             for column_name in columns_names:
-                result.add_column(Column(
-                    name=column_name,
-                    database=table_name[0],
-                    table_name=table_name[1],
-                    table_alias=table_name[2]
-                ))
+                result.add_column(
+                    Column(
+                        name=column_name, database=table_name[0], table_name=table_name[1], table_alias=table_name[2]
+                    )
+                )
         else:
-            predictor_id = predictor_metadata['id']
+            predictor_id = predictor_metadata["id"]
             table_df = data.to_df()
 
             if self.session.predictor_cache is not False:
-                key = f'{predictor_name}_{predictor_id}_{dataframe_checksum(table_df)}'
+                key = f"{predictor_name}_{predictor_id}_{dataframe_checksum(table_df)}"
 
-                predictor_cache = get_cache('predict')
+                predictor_cache = get_cache("predict")
                 predictions = predictor_cache.get(key)
             else:
                 predictions = None
@@ -221,7 +209,7 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
 
             # apply filter
             if is_timeseries:
-                pred_data = predictions.to_dict(orient='records')
+                pred_data = predictions.to_dict(orient="records")
                 where_data = list(data.get_records())
                 pred_data = self.apply_ts_filter(pred_data, where_data, step, predictor_metadata)
                 predictions = pd.DataFrame(pred_data)
@@ -231,37 +219,33 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
                 database=table_name[0],
                 table_name=table_name[1],
                 table_alias=table_name[2],
-                is_prediction=True
+                is_prediction=True,
             )
 
         return result
 
     def apply_ts_filter(self, predictor_data, table_data, step, predictor_metadata):
-
         if step.output_time_filter is None:
             # no filter, exit
             return predictor_data
 
             # apply filter
-        group_cols = predictor_metadata['group_by_columns']
-        order_col = predictor_metadata['order_by_column']
+        group_cols = predictor_metadata["group_by_columns"]
+        order_col = predictor_metadata["order_by_column"]
 
         filter_args = step.output_time_filter.args
         filter_op = step.output_time_filter.op
 
         # filter field must be order column
-        if not (
-            isinstance(filter_args[0], Identifier)
-            and filter_args[0].parts[-1] == order_col
-        ):
+        if not (isinstance(filter_args[0], Identifier) and filter_args[0].parts[-1] == order_col):
             # exit otherwise
             return predictor_data
 
         def get_date_format(samples):
             # Try common formats first with explicit patterns
             for date_format, pattern in (
-                ('%Y-%m-%d', r'[\d]{4}-[\d]{2}-[\d]{2}'),
-                ('%Y-%m-%d %H:%M:%S', r'[\d]{4}-[\d]{2}-[\d]{2} [\d]{2}:[\d]{2}:[\d]{2}'),
+                ("%Y-%m-%d", r"[\d]{4}-[\d]{2}-[\d]{2}"),
+                ("%Y-%m-%d %H:%M:%S", r"[\d]{4}-[\d]{2}-[\d]{2} [\d]{2}:[\d]{2}:[\d]{2}"),
                 # ('%Y-%m-%d %H:%M:%S%z', r'[\d]{4}-[\d]{2}-[\d]{2} [\d]{2}:[\d]{2}:[\d]{2}\+[\d]{2}:[\d]{2}'),
                 # ('%Y', '[\d]{4}')
             ):
@@ -281,6 +265,7 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
                 # Parse the first sample to get its format
                 # The import is heavy, so we do it here on-demand
                 import dateparser
+
                 parsed_date = dateparser.parse(samples[0])
                 if parsed_date is None:
                     raise ValueError("Could not parse date")
@@ -290,25 +275,21 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
                     if dateparser.parse(sample) is None:
                         raise ValueError("Inconsistent date formats in samples")
                 # Convert to strftime format based on the input
-                if re.search(r'\d{2}:\d{2}:\d{2}', samples[0]):
-                    return '%Y-%m-%d %H:%M:%S'
-                return '%Y-%m-%d'
+                if re.search(r"\d{2}:\d{2}:\d{2}", samples[0]):
+                    return "%Y-%m-%d %H:%M:%S"
+                return "%Y-%m-%d"
             except (ValueError, AttributeError):
                 # If dateparser fails, return a basic format as last resort
-                return '%Y-%m-%d'
+                return "%Y-%m-%d"
 
-        model_types = predictor_metadata['model_types']
-        if model_types.get(order_col) in ('float', 'integer'):
+        model_types = predictor_metadata["model_types"]
+        if model_types.get(order_col) in ("float", "integer"):
             # convert strings to digits
-            fnc = {
-                'integer': int,
-                'float': float
-            }[model_types[order_col]]
+            fnc = {"integer": int, "float": float}[model_types[order_col]]
 
             # convert predictor_data
             if len(predictor_data) > 0:
                 if isinstance(predictor_data[0][order_col], str):
-
                     for row in predictor_data:
                         row[order_col] = fnc(row[order_col])
                 elif isinstance(predictor_data[0][order_col], dt.date):
@@ -318,7 +299,6 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
 
             # convert predictor_data
             if isinstance(table_data[0][order_col], str):
-
                 for row in table_data:
                     row[order_col] = fnc(row[order_col])
             elif isinstance(table_data[0][order_col], dt.date):
@@ -327,18 +307,13 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
                     row[order_col] = fnc(row[order_col])
 
             # convert args to date
-            samples = [
-                arg.value
-                for arg in filter_args
-                if isinstance(arg, Constant) and isinstance(arg.value, str)
-            ]
+            samples = [arg.value for arg in filter_args if isinstance(arg, Constant) and isinstance(arg.value, str)]
             if len(samples) > 0:
-
                 for arg in filter_args:
                     if isinstance(arg, Constant) and isinstance(arg.value, str):
                         arg.value = fnc(arg.value)
 
-        if model_types.get(order_col) in ('date', 'datetime') or isinstance(predictor_data[0][order_col], pd.Timestamp):  # noqa
+        if model_types.get(order_col) in ("date", "datetime") or isinstance(predictor_data[0][order_col], pd.Timestamp):  # noqa
             # convert strings to date
             # it is making side effect on original data by changing it but let it be
 
@@ -364,11 +339,7 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
             _cast_samples(table_data, order_col)
 
             # convert args to date
-            samples = [
-                arg.value
-                for arg in filter_args
-                if isinstance(arg, Constant) and isinstance(arg.value, str)
-            ]
+            samples = [arg.value for arg in filter_args if isinstance(arg, Constant) and isinstance(arg.value, str)]
             if len(samples) > 0:
                 date_format = get_date_format(samples)
 
@@ -380,7 +351,6 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
         # first pass: get max values for Latest in table data
         latest_vals = {}
         if Latest() in filter_args:
-
             for row in table_data:
                 if group_cols is None:
                     key = 0  # the same for any value
@@ -400,11 +370,11 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
                     data2.append(row)
             elif isinstance(step.output_time_filter, BinaryOperation):
                 op_map = {
-                    '<': '__lt__',
-                    '<=': '__le__',
-                    '>': '__gt__',
-                    '>=': '__ge__',
-                    '=': '__eq__',
+                    "<": "__lt__",
+                    "<=": "__le__",
+                    ">": "__gt__",
+                    ">=": "__ge__",
+                    "=": "__eq__",
                 }
                 arg = filter_args[1]
                 if isinstance(arg, Latest):
@@ -435,5 +405,4 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
 
 
 class ApplyTimeseriesPredictorStepCall(ApplyPredictorStepCall):
-
     bind = ApplyTimeseriesPredictorStep

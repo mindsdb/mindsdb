@@ -31,7 +31,8 @@ class CompletionParameters(BaseModel):
     # set api_base, api_version, api_key
     base_url: Optional[str] = None  # Base URL of the API.
     api_version: Optional[str] = None  # Version of the API to be used.
-    api_key: str  # API key for authentication.
+    api_key: Optional[str] = None  # API key for authentication.
+    target: Optional[str] = None  # the name of output column
 
     class Config:
         extra = Extra.forbid

@@ -19,7 +19,6 @@ Available models include the following:
 
 - OpenAI ([how to get the API key](https://help.openai.com/en/articles/4936850-where-do-i-find-my-openai-api-key))
 - Anthropic ([how to get the API key](https://docs.anthropic.com/claude/docs/getting-access-to-claude))
-- Anyscale ([how to get the API key](https://docs.endpoints.anyscale.com/guides/authenticate/))
 - Google ([how to get the API key](http://aistudio.google.com/))
 - Ollama ([how to download Ollama](https://ollama.com/download))
 - LiteLLM (use the API key of the model used via LiteLLM)
@@ -44,7 +43,7 @@ CREATE MODEL langchain_model
 PREDICT target_column
 USING
       engine = 'langchain_engine',           -- engine name as created via CREATE ML_ENGINE
-      <provider>_api_key = 'api-key-value',  -- replace <provider> with one of the available values (openai, anthropic, anyscale, google, litellm)
+      <provider>_api_key = 'api-key-value',  -- replace <provider> with one of the available values (openai, anthropic, google, litellm)
       model_name = 'model-name',             -- optional, model to be used (for example, 'gpt-4' if 'openai_api_key' provided)
       prompt_template = 'message to the model that may include some {{input}} columns as variables',
       max_tokens = 4096; -- defines the maximum number of tokens
@@ -103,25 +102,6 @@ USING
      mode = 'conversational',              -- conversational mode
      user_column = 'question',             -- column name that stores input from the user
      assistant_column = 'answer',          -- column name that stores output of the model (see PREDICT column)
-     verbose = True,
-     prompt_template = 'Answer the users input in a helpful way: {{question}}',
-     max_tokens = 4096;
-```
-</Accordion>
-
-<Accordion title="Anyscale">
-```sql
-CREATE MODEL langchain_anyscale_model
-PREDICT answer 
-USING
-     engine = 'langchain_engine',                         -- engine name as created via CREATE ML_ENGINE
-     provider = 'anyscale',                               -- one of the available providers
-     anyscale_api_key = 'api-key-value',
-     model_name = 'mistralai/Mistral-7B-Instruct-v0.1',   -- choose one of the models available from Anyscale
-     mode = 'conversational',                             -- conversational mode
-     user_column = 'question',                            -- column name that stores input from the user
-     assistant_column = 'answer',                         -- column name that stores output of the model (see PREDICT column) 
-     base_url = 'https://api.endpoints.anyscale.com/v1',
      verbose = True,
      prompt_template = 'Answer the users input in a helpful way: {{question}}',
      max_tokens = 4096;

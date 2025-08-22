@@ -33,7 +33,7 @@ class BaseLLMReranker(BaseModel, ABC):
     client: Optional[AsyncOpenAI | BaseMLEngine] = None
     _semaphore: Optional[asyncio.Semaphore] = None
     max_concurrent_requests: int = 20
-    max_retries: int = 2
+    max_retries: int = 4
     retry_delay: float = 1.0
     request_timeout: float = 20.0  # Timeout for API requests
     early_stop: bool = True  # Whether to enable early stopping

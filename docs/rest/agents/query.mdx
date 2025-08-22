@@ -1,0 +1,72 @@
+---
+title: Query Agents
+sidebarTitle: Query Agents
+---
+
+**POST `/api/projects/{project_name}/agents/{agent_name}/completions[/stream]`**
+
+This API endpoint queries an agent using the `POST` method. The `completions` endpoints returns an answer, while the `completions/stream` endpoint streams the thoughts and returns an answer.
+
+<Tip>
+Learn more about agents and the available parameters following [this doc page](/mindsdb_sql/agents/agent).
+</Tip>
+
+### Path Parameters
+
+<ParamField body='project_name' type='string' required>
+Defines the project where the agents are located. Note that the default project name is `mindsdb`.
+</ParamField>
+
+<ParamField body='agent_name' type='string' required>
+Defines the agent name.
+</ParamField>
+
+### Body
+
+<ParamField body='messages' type='string'>
+Stores the question to an agent.
+</ParamField>
+
+### Response
+
+<ResponseField name="data" type="string" required>  
+Returns data chunks containing thoughts and an answer.
+</ResponseField>
+
+<RequestExample>
+
+```shell Shell
+curl --request POST \
+  --url http://127.0.0.1:47334/api/projects/mindsdb/agents/my_agent/completions/stream \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "messages": [
+    {
+      "question": "What is MindsDB?",
+      "answer": ""
+    }
+  ]
+}'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Response
+data: {"type": "start", "prompt": "What is MindsDB?", "trace_id": ""}
+
+data: {"actions": [{"tool": "kb_list_tool", "tool_input": "", "log": "```\nThought: Do I need to use a tool? Yes\nAction: kb_list_tool\nAction Input: "}], "messages": [{"content": "```\nThought: Do I need to use a tool? Yes\nAction: kb_list_tool\nAction Input: "}], "trace_id": ""}
+
+data: {"steps": [{"action": {"tool": "kb_list_tool", "tool_input": "", "log": "```\nThought: Do I need to use a tool? Yes\nAction: kb_list_tool\nAction Input: "}, "observation": "[\"kb_mindsdb_docs\"]"}], "messages": [{"content": "[\"kb_mindsdb_docs\"]"}], "trace_id": ""}
+
+data: {"actions": [{"tool": "kb_query_tool", "tool_input": "SELECT * FROM `kb_mindsdb_docs` WHERE content = 'What is MindsDB?' LIMIT 1;", "log": "I have identified a knowledge base named `kb_mindsdb_docs` that contains documentation about MindsDB. I will now query this knowledge base to provide you with information about MindsDB.\n\n```\nAction: kb_query_tool\nAction Input: SELECT * FROM `kb_mindsdb_docs` WHERE content = 'What is MindsDB?' LIMIT 1;"}], "messages": [{"content": "I have identified a knowledge base named `kb_mindsdb_docs` that contains documentation about MindsDB. I will now query this knowledge base to provide you with information about MindsDB.\n\n```\nAction: kb_query_tool\nAction Input: SELECT * FROM `kb_mindsdb_docs` WHERE content = 'What is MindsDB?' LIMIT 1;"}], "trace_id": ""}
+
+data: {"steps": [{"action": {"tool": "kb_query_tool", "tool_input": "SELECT * FROM `kb_mindsdb_docs` WHERE content = 'What is MindsDB?' LIMIT 1;", "log": "I have identified a knowledge base named `kb_mindsdb_docs` that contains documentation about MindsDB. I will now query this knowledge base to provide you with information about MindsDB.\n\n```\nAction: kb_query_tool\nAction Input: SELECT * FROM `kb_mindsdb_docs` WHERE content = 'What is MindsDB?' LIMIT 1;"}, "observation": "Output columns: 'id', 'chunk_id', 'chunk_content', 'metadata', 'distance', 'relevance'\nResult in CSV format (dialect is 'excel'):\nid,chunk_id,chunk_content,metadata,distance,relevance\r\nc2b24e025ed01388,c2b24e025ed01388:text_content:1766of1836:1633168to1634163,\"with MindsDB By integrating databases and OpenAI using MindsDB, developers can easily extract insights from text data with just a few SQL commands. These powerful natural language processing (NLP) models are capable of answering questions with or without context and completing general prompts. Furthermore, these models are powered by large pre-trained language models from OpenAI, so there is no need for manual development work. Ultimately, this provides developers with an easy way to incorporate powerful NLP capabilities into their applications while saving time and resources compared to traditional ML development pipelines and methods. All in all, MindsDB makes it possible for developers to harness the power of OpenAI efficiently! MindsDB is now the fastest-growing open-source applied machine-learning platform in the world. Its community continues to contribute to more than 70 data-source and ML-framework integrations. Stay tuned for the upcoming features - including more control\",\"{'_chunk_index': 1765, '_content_column': 'text_content', '_end_char': 1634163, '_original_doc_id': 'c2b24e025ed01388', '_original_row_index': '0', '_source': 'TextChunkingPreprocessor', '_start_char': 1633168, '_updated_at': '2025-07-01 12:36:41', 'url': 'https://docs.mindsdb.com/llms-full.txt'}\",0.24353297838910382,0.9321520551316381\r\n"}], "messages": [{"content": "Output columns: 'id', 'chunk_id', 'chunk_content', 'metadata', 'distance', 'relevance'\nResult in CSV format (dialect is 'excel'):\nid,chunk_id,chunk_content,metadata,distance,relevance\r\nc2b24e025ed01388,c2b24e025ed01388:text_content:1766of1836:1633168to1634163,\"with MindsDB By integrating databases and OpenAI using MindsDB, developers can easily extract insights from text data with just a few SQL commands. These powerful natural language processing (NLP) models are capable of answering questions with or without context and completing general prompts. Furthermore, these models are powered by large pre-trained language models from OpenAI, so there is no need for manual development work. Ultimately, this provides developers with an easy way to incorporate powerful NLP capabilities into their applications while saving time and resources compared to traditional ML development pipelines and methods. All in all, MindsDB makes it possible for developers to harness the power of OpenAI efficiently! MindsDB is now the fastest-growing open-source applied machine-learning platform in the world. Its community continues to contribute to more than 70 data-source and ML-framework integrations. Stay tuned for the upcoming features - including more control\",\"{'_chunk_index': 1765, '_content_column': 'text_content', '_end_char': 1634163, '_original_doc_id': 'c2b24e025ed01388', '_original_row_index': '0', '_source': 'TextChunkingPreprocessor', '_start_char': 1633168, '_updated_at': '2025-07-01 12:36:41', 'url': 'https://docs.mindsdb.com/llms-full.txt'}\",0.24353297838910382,0.9321520551316381\r\n"}], "trace_id": ""}
+
+data: {"output": "MindsDB is an open-source platform that integrates databases and OpenAI to enable developers to extract insights from text data using SQL commands. It leverages powerful natural language processing (NLP) models, powered by large pre-trained language models from OpenAI, to answer questions and complete prompts without the need for manual development work. This makes it easier for developers to incorporate NLP capabilities into their applications, saving time and resources compared to traditional machine learning development methods. MindsDB is recognized as the fastest-growing open-source applied machine-learning platform, with a community contributing to over 70 data-source and ML-framework integrations.", "messages": [{"content": "MindsDB is an open-source platform that integrates databases and OpenAI to enable developers to extract insights from text data using SQL commands. It leverages powerful natural language processing (NLP) models, powered by large pre-trained language models from OpenAI, to answer questions and complete prompts without the need for manual development work. This makes it easier for developers to incorporate NLP capabilities into their applications, saving time and resources compared to traditional machine learning development methods. MindsDB is recognized as the fastest-growing open-source applied machine-learning platform, with a community contributing to over 70 data-source and ML-framework integrations."}], "trace_id": ""}
+
+data: {"type": "end"}
+```
+
+</ResponseExample>

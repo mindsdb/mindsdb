@@ -37,20 +37,6 @@ class AnthropicConfig(BaseLLMConfig):
     anthropic_api_url: Optional[str]
 
 
-# See https://api.python.langchain.com/en/latest/chat_models/langchain_community.chat_models.anyscale.ChatAnyscale.html
-# This config does not have to be exclusively used with Langchain.
-class AnyscaleConfig(BaseLLMConfig):
-    model_name: str
-    temperature: Optional[float]
-    max_retries: Optional[int]
-    max_tokens: Optional[int]
-    anyscale_api_base: Optional[str]
-    # Inferred from ANYSCALE_API_KEY if not provided.
-    anyscale_api_key: Optional[str]
-    anyscale_proxy: Optional[str]
-    request_timeout: Optional[float]
-
-
 # See https://api.python.langchain.com/en/latest/chat_models/langchain_community.chat_models.litellm.ChatLiteLLM.html
 # This config does not have to be exclusively used with Langchain.
 class LiteLLMConfig(BaseLLMConfig):

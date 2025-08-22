@@ -60,6 +60,27 @@ class TestSelect(BaseExecutorDummyML):
         assert ret.value[0] == ret.VALUE[0]
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_view_conditions(self, data_handler):
+        # test view optimisations
+        df = pd.DataFrame(
+            [
+                {"a": 1, "b": 1},
+                {"a": 1, "b": 2},
+            ]
+        )
+        self.set_handler(data_handler, name="pg", tables={"tbl1": df})
+        self.run_sql("create view v1 (select * from pg.tbl1 where a=1)")
+
+        data_handler.reset_mock()
+        ret = self.run_sql("select * from v1 where b=2 limit 1")
+        assert len(ret) == 1 and ret["b"][0] == 2
+        calls = data_handler().query.call_args_list
+        sql = calls[0][0][0].to_string()
+
+        # both conditions are used in query to database
+        assert "a = 1" in sql and "b = 2" in sql and "LIMIT 1" in sql
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_complex_joins(self, data_handler):
         df1 = pd.DataFrame(
             [

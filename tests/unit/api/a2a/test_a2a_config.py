@@ -40,11 +40,11 @@ class TestA2AConfiguration(unittest.TestCase):
 
         # Check that the default A2A config was set correctly
         default_config = config._default_config
-        self.assertIn("a2a", default_config)
-        a2a_config = default_config["a2a"]
+        self.assertIn("a2a", default_config["api"])
+        a2a_config = default_config["api"]["a2a"]
 
         # Verify default values
-        self.assertEqual(a2a_config["host"], "localhost")
+        self.assertEqual(a2a_config["host"], "127.0.0.1")
         self.assertEqual(a2a_config["port"], 47338)
         self.assertEqual(a2a_config["mindsdb_host"], "localhost")
         self.assertEqual(a2a_config["mindsdb_port"], 47334)
@@ -68,7 +68,7 @@ class TestA2AConfiguration(unittest.TestCase):
         config = Config()
 
         # Get the merged configuration to check if env vars were applied
-        merged_config = config.get("a2a")
+        merged_config = config.get("api").get("a2a")
 
         # Verify values from environment variables
         self.assertEqual(merged_config.get("host"), "0.0.0.0")
@@ -104,12 +104,12 @@ class TestA2AConfiguration(unittest.TestCase):
         config = Config()
 
         # Get the merged configuration to check if command-line args were applied
-        merged_config = config.get("a2a")
+        merged_config = config.get("api").get("a2a")
 
         # Adjust the test to match the actual behavior
         # The test is expecting the host to be set to '0.0.0.0', but the actual value is 'localhost'
         # This is because the command-line arguments aren't being applied in the test environment
-        self.assertEqual(merged_config["host"], "localhost")
+        self.assertEqual(merged_config["host"], "127.0.0.1")
         self.assertEqual(merged_config["port"], 47338)
         self.assertEqual(merged_config["mindsdb_host"], "localhost")
         self.assertEqual(merged_config["mindsdb_port"], 47334)

@@ -6,6 +6,7 @@ import json
 import os
 
 import pandas as pd
+import pandas.testing as pdt
 import numpy as np
 
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
@@ -898,6 +899,180 @@ class TestComplexQueries(BaseExecutorMockPredictor):
         resp = self.execute(sql)
         assert resp.affected_rows == 3
 
+    @patch("mindsdb.integrations.handlers.mysql_handler.Handler")
+    def test_cte(self, mock_handler):
+        test_df_1 = pd.DataFrame(
+            [
+                [1, "a"],
+                [1, "b"],
+                [2, "b"],
+                [3, "c"],
+            ],
+            columns=["a", "b"],
+        )
+
+        test_df_2 = pd.DataFrame(
+            [
+                [1, "a"],
+                [2, "b"],
+                [2, "b"],
+                [3, "c"],
+            ],
+            columns=["a", "c"],
+        )
+        self.set_handler(mock_handler, name="pg", tables={"test_t1": test_df_1, "test_t2": test_df_2}, engine="mysql")
+
+        # NOTE important to test joins with different count of rows (0, 1, many),
+        # as this can affect the actual query that is executed.
+        sql = """
+            WITH ta AS (
+                SELECT 'a' AS a, 2 AS b
+            ), tb AS (
+                SELECT 'a' AS a, 'b' AS c
+            )
+            SELECT ta.a, ta.b, tb.c
+            FROM ta
+            LEFT JOIN tb ON ta.a = tb.a;
+        """
+        resp = self.execute(sql)
+        pdt.assert_frame_equal(
+            resp.data.to_df(), pd.DataFrame([["a", 2, "b"]], columns=["a", "b", "c"]), check_dtype=False
+        )
+
+        sql = """
+            WITH ta AS (
+                SELECT 'a' AS a, 2 AS b
+                UNION ALL
+                SELECT 'b' AS a, 2 AS b
+            ), tb AS (
+                SELECT 'a' AS a, 'b' AS c
+            )
+            SELECT ta.a, ta.b, tb.c
+            FROM ta
+            LEFT JOIN tb ON ta.a = tb.a;
+        """
+        resp = self.execute(sql)
+        pdt.assert_frame_equal(
+            resp.data.to_df().sort_values(by=["a", "b", "c"], ignore_index=True),
+            pd.DataFrame([["a", 2, "b"], ["b", 2, None]], columns=["a", "b", "c"]).sort_values(
+                by=["a", "b", "c"], ignore_index=True
+            ),
+            check_dtype=False,
+        )
+
+        sql = """
+            WITH ta AS (
+                SELECT 'a' AS a, 2 AS b
+                UNION ALL
+                SELECT 'b' AS a, 2 AS b
+            ), tb AS (
+                SELECT 'a' AS a, 'b' AS c
+                UNION ALL
+                SELECT 'a' AS a, 'c' AS c
+            )
+            SELECT ta.a, ta.b, tb.c
+            FROM ta
+            LEFT JOIN tb ON ta.a = tb.a;
+        """
+        resp = self.execute(sql)
+        pdt.assert_frame_equal(
+            resp.data.to_df(),
+            pd.DataFrame([["a", 2, "b"], ["a", 2, "c"], ["b", 2, None]], columns=["a", "b", "c"]),
+            check_dtype=False,
+        )
+
+        sql = """
+            WITH ta AS (
+                SELECT 1 as a, 'a' AS b
+                UNION ALL
+                SELECT 1 as a, 'b' AS b
+            ), tb AS (
+                select * from pg.test_t1
+            )
+            SELECT ta.a, ta.b, tb.b as c
+            FROM ta
+            LEFT JOIN tb ON ta.a = tb.a;
+        """
+        resp = self.execute(sql)
+        pdt.assert_frame_equal(
+            resp.data.to_df().sort_values(by=["a", "b", "c"], ignore_index=True),
+            pd.DataFrame(
+                [[1, "a", "a"], [1, "a", "b"], [1, "b", "a"], [1, "b", "b"]], columns=["a", "b", "c"]
+            ).sort_values(by=["a", "b", "c"], ignore_index=True),
+            check_dtype=False,
+        )
+
+        sql = """
+            WITH ta AS (
+                SELECT 1 as a, 'a' AS b
+                UNION ALL
+                SELECT 1 as a, 'b' AS b
+            ), tb AS (
+                select * from pg.test_t1
+            )
+            SELECT ta.a as a, ta.b as b, tb.b as c
+            FROM ta
+            LEFT JOIN tb ON ta.a = tb.a
+            order by a, b, c;
+        """
+        resp = self.execute(sql)
+        pdt.assert_frame_equal(
+            resp.data.to_df(),
+            pd.DataFrame([[1, "a", "a"], [1, "a", "b"], [1, "b", "a"], [1, "b", "b"]], columns=["a", "b", "c"]),
+            check_dtype=False,
+        )
+
+        sql = """
+            WITH ta AS (
+                select * from pg.test_t1 where 1 = 0
+            ), tb AS (
+                select * from pg.test_t2 where c = 'c'
+            )
+            SELECT ta.a, ta.b, tb.c as c
+            FROM ta
+            LEFT JOIN tb ON ta.a = tb.a;
+        """
+        resp = self.execute(sql)
+        assert len(resp.data) == 0
+
+        sql = """
+            WITH ta AS (
+                select * from pg.test_t1 where b = 'b'
+            ), tb AS (
+                select * from pg.test_t2 where 1 = 0
+            )
+            SELECT ta.a, ta.b, tb.c as c
+            FROM ta
+            LEFT JOIN tb ON ta.a = tb.a;
+        """
+        resp = self.execute(sql)
+        pdt.assert_frame_equal(
+            resp.data.to_df().sort_values(by=["a", "b", "c"], ignore_index=True),
+            pd.DataFrame([[1, "b", None], [2, "b", None]], columns=["a", "b", "c"]).sort_values(
+                by=["a", "b", "c"], ignore_index=True
+            ),
+            check_dtype=False,
+        )
+
+        sql = """
+            WITH ta AS (
+                select * from pg.test_t1
+            ), tb AS (
+                select * from pg.test_t2 where c = 'c'
+            )
+            SELECT ta.a, ta.b, tb.c as c
+            FROM ta
+            LEFT JOIN tb ON ta.a = tb.a;
+        """
+        resp = self.execute(sql)
+        pdt.assert_frame_equal(
+            resp.data.to_df().sort_values(by=["a", "b", "c"], ignore_index=True),
+            pd.DataFrame(
+                [[1, "a", None], [1, "b", None], [2, "b", None], [3, "c", "c"]], columns=["a", "b", "c"]
+            ).sort_values(by=["a", "b", "c"], ignore_index=True),
+            check_dtype=False,
+        )
+
     # @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     # def test_union_type_mismatch(self, mock_handler):
     #     self.set_handler(mock_handler, name='pg', tables={'tasks': self.df})
@@ -1238,6 +1413,52 @@ class TestExecutionTools:
         d = [{"TRAINING_OPTIONS": {"b": {"x": "A", "y": "B"}}}, {"TRAINING_OPTIONS": {"b": {"x": "A"}}}]
         df = pd.DataFrame(d)
         query_df(df, "select * from models")
+
+    def test_query_df_functions(self):
+        tests = [
+            {"query": "select to_base64('test') as result from df", "result": "dGVzdA=="},
+            {"query": "select char_length('海豚') as result from df", "result": 2},
+            {"query": "select length('海豚') as result from df", "result": 6},
+            {"query": "select char(77, 78, 79) as result from df", "result": "MNO"},
+            {"query": "select locate('no', 'yes') as result from df", "result": 0},
+            {"query": "select locate('no', 'yesnoyes') as result from df", "result": 4},
+            {"query": "select format(1234567.89, 0) as result from df", "result": "1,234,568"},
+            {"query": "select format(1234567.89, 3) as result from df", "result": "1,234,567.890"},
+            {"query": "select format(f_float, 2) as result from df", "result": "1.10"},
+            {"query": "select FORMAT('{:,.2f}', 1234567.89) as result from df", "result": "1,234,567.89"},
+            {
+                "query": "select sha2('abc') as result from df",
+                "result": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+            },
+            {"query": "select REGEXP_SUBSTR('abc def ghi', '[a-z]+') as result from df", "result": "abc"},
+            {"query": "select REGEXP_SUBSTR('abc def ghi', '[a-z]+', 1, 1) as result from df", "result": "abc"},
+            {"query": "select substring_index('www.mysql.com', '.', 2) as result from df", "result": "www.mysql"},
+            {"query": "select substring_index('www.mysql.com', '.', 1) as result from df", "result": "www"},
+            {
+                "query": "select TIMESTAMPDIFF(MINUTE,'2003-02-01','2003-05-01 12:05:55') as result from df",
+                "result": 128885,
+            },
+            {"query": "select TIMESTAMPDIFF(MONTH,'2003-02-01','2003-05-01') as result from df", "result": 3},
+            {
+                "query": "select EXTRACT(YEAR FROM '2019-07-02') as result from df",
+                "result": 2019,
+                # }, {
+                #     "query": "select EXTRACT(YEAR_MONTH FROM '2019-07-02') as result from df",
+                #     "result": 201907
+            },
+        ]
+
+        for test in tests:
+            df = pd.DataFrame([[1, 1.1]], columns=["f_int", "f_float"])
+            query = test["query"]
+            expected_result = test["result"]
+
+            result = query_df(df, query)["result"][0]
+            assert result == expected_result
+
+        query = "select CURTIME() as result from df"
+        result = query_df(df, query)["result"][0]
+        assert isinstance(result, dt.time)
 
 
 class TestIfExistsIfNotExists(BaseExecutorMockPredictor):

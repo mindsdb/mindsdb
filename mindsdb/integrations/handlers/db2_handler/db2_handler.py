@@ -59,16 +59,20 @@ class DB2Handler(DatabaseHandler):
             return self.connection
 
         # Mandatory connection parameters.
-        if not all(key in self.connection_data for key in ['host', 'user', 'password', 'database']):
-            raise ValueError('Required parameters (host, user, password, database) must be provided.')
+        if not all(key in self.connection_data for key in ["host", "user", "password", "database"]):
+            raise ValueError("Required parameters (host, user, password, database) must be provided.")
+        cloud = "databases.appdomain.cloud" in self.connection_data["host"]
+        if cloud:
+            connection_string = f"DATABASE={self.connection_data['database']};HOSTNAME={self.connection_data['host']};PORT={self.connection_data['port']};PROTOCOL=TCPIP;UID={self.connection_data['user']};PWD={self.connection_data['password']};SECURITY=SSL;"
+            connection_string += "SSLSERVERCERTIFICATE=;"
+        else:
+            connection_string = f"DRIVER={'IBM DB2 ODBC DRIVER'};DATABASE={self.connection_data['database']};HOST={self.connection_data['host']};PROTOCOL=TCPIP;UID={self.connection_data['user']};PWD={self.connection_data['password']};"
 
-        connection_string = f"DRIVER={'IBM DB2 ODBC DRIVER'};DATABASE={self.connection_data['database']};HOST={self.connection_data['host']};PROTOCOL=TCPIP;UID={self.connection_data['user']};PWD={self.connection_data['password']};"
+            # Optional connection parameters.
+            if "port" in self.connection_data:
+                connection_string += f"PORT={self.connection_data['port']};"
 
-        # Optional connection parameters.
-        if 'port' in self.connection_data:
-            connection_string += f"PORT={self.connection_data['port']};"
-
-        if 'schema' in self.connection_data:
+        if "schema" in self.connection_data:
             connection_string += f"CURRENTSCHEMA={self.connection_data['schema']};"
 
         try:
@@ -106,10 +110,10 @@ class DB2Handler(DatabaseHandler):
             self.connect()
             response.success = True
         except (OperationalError, ValueError) as known_error:
-            logger.error(f'Connection check to IBM Db2 failed, {known_error}!')
+            logger.error(f"Connection check to IBM Db2 failed, {known_error}!")
             response.error_message = str(known_error)
         except Exception as unknown_error:
-            logger.error(f'Connection check to IBM Db2 failed due to an unknown error, {unknown_error}!')
+            logger.error(f"Connection check to IBM Db2 failed due to an unknown error, {unknown_error}!")
             response.error_message = str(unknown_error)
 
         if response.success and need_to_close:
@@ -141,9 +145,7 @@ class DB2Handler(DatabaseHandler):
                     result = cur.fetchall()
                     response = Response(
                         RESPONSE_TYPE.TABLE,
-                        data_frame=pd.DataFrame(
-                            result, columns=[x[0] for x in cur.description]
-                        ),
+                        data_frame=pd.DataFrame(result, columns=[x[0] for x in cur.description]),
                     )
                 else:
                     response = Response(RESPONSE_TYPE.OK)
@@ -198,10 +200,7 @@ class DB2Handler(DatabaseHandler):
                 }
             )
 
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=pd.DataFrame(tables)
-        )
+        response = Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(tables))
 
         return response
 
@@ -227,9 +226,6 @@ class DB2Handler(DatabaseHandler):
 
         columns = [column["COLUMN_NAME"] for column in result]
 
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=pd.DataFrame(columns, columns=["COLUMN_NAME"])
-        )
+        response = Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(columns, columns=["COLUMN_NAME"]))
 
         return response

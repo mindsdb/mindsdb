@@ -84,7 +84,7 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     TYPES,
 )
 
-from .exceptions import (
+from mindsdb.api.executor.exceptions import (
     ExecutorException,
     BadDbError,
     NotSupportedYet,
@@ -154,6 +154,64 @@ def _get_show_where(
     return None
 
 
+def match_one_part_name(identifier: Identifier, ensure_lower_case: bool = False) -> str:
+    """Extract a single-part name from an Identifier object, optionally ensuring it is lowercase.
+
+    Args:
+        identifier (Identifier): The identifier to extract the name from. Must contain exactly one part.
+        ensure_lower_case (bool, optional): If True, raises ValueError if the name is not lowercase. Defaults to False.
+
+    Returns:
+        str: The extracted name, converted to lowercase if not quoted.
+
+    Raises:
+        ValueError: If the identifier does not contain exactly one part, or if ensure_lower_case is True and the name is not lowercase.
+    """
+    match identifier.parts, identifier.is_quoted:
+        case [name], [is_quoted]:
+            ...
+        case _:
+            raise ValueError(f"Only single-part names are allowed: {identifier}")
+    if not is_quoted:
+        name = name.lower()
+    if ensure_lower_case and not name.islower():
+        raise ValueError(f"The name must be in lowercase: {identifier}")
+    return name
+
+
+def match_two_part_name(
+    identifier: Identifier, ensure_lower_case: bool = False, default_db_name: str | None = None
+) -> tuple[str, str]:
+    """Extract a (database, name) tuple from an Identifier object that may have one or two parts.
+
+    Args:
+        identifier (Identifier): The identifier to extract names from. Must contain one or two parts.
+        ensure_lower_case (bool, optional): If True, raises ValueError if the name part is not lowercase. Defaults to False.
+        default_db_name (str | None, optional): The default database name to use if only one part is provided. Defaults to None.
+
+    Returns:
+        tuple[str, str]: A tuple of (database_name, name), where database_name may be None if not provided and no default is given.
+
+    Raises:
+        ValueError: If the identifier does not contain one or two parts, or if ensure_lower_case is True and the name is not lowercase.
+    """
+    db_name = None
+    match identifier.parts, identifier.is_quoted:
+        case [name], [is_quoted]:
+            ...
+        case [db_name, name], [_, is_quoted]:
+            ...
+        case _:
+            raise ValueError(f"Only single-part or two-part names are allowed: {identifier}")
+    if not is_quoted:
+        name = name.lower()
+    if ensure_lower_case and not name.islower():
+        raise ValueError(f"The name must be in lowercase: {identifier}")
+    if db_name is None:
+        db_name = default_db_name
+    return db_name, name
+
+
 class ExecuteCommands:
     def __init__(self, session, context=None):
         if context is None:
@@ -177,19 +235,11 @@ class ExecuteCommands:
         if statement_type is CreateDatabase:
             return self.answer_create_database(statement)
         elif statement_type is CreateMLEngine:
-            name = statement.name.parts[-1]
-
-            return self.answer_create_ml_engine(
-                name,
-                handler=statement.handler,
-                params=statement.params,
-                if_not_exists=getattr(statement, "if_not_exists", False),
-            )
+            return self.answer_create_ml_engine(statement)
         elif statement_type is DropMLEngine:
             return self.answer_drop_ml_engine(statement)
         elif statement_type is DropPredictor:
             return self.answer_drop_model(statement, database_name)
-
         elif statement_type is DropTables:
             return self.answer_drop_tables(statement, database_name)
         elif statement_type is DropDatasource or statement_type is DropDatabase:
@@ -660,10 +710,9 @@ class ExecuteCommands:
 
     def answer_create_trigger(self, statement, database_name):
         triggers_controller = TriggersController()
-
-        name = statement.name
-        trigger_name = statement.name.parts[-1]
-        project_name = name.parts[-2] if len(name.parts) > 1 else database_name
+        project_name, trigger_name = match_two_part_name(
+            statement.name, ensure_lower_case=True, default_db_name=database_name
+        )
 
         triggers_controller.add(
             trigger_name,
@@ -687,10 +736,9 @@ class ExecuteCommands:
 
     def answer_create_job(self, statement: CreateJob, database_name):
         jobs_controller = JobsController()
-
-        name = statement.name
-        job_name = name.parts[-1]
-        project_name = name.parts[-2] if len(name.parts) > 1 else database_name
+        project_name, job_name = match_two_part_name(
+            statement.name, ensure_lower_case=True, default_db_name=database_name
+        )
 
         try:
             jobs_controller.create(job_name, project_name, statement)
@@ -702,10 +750,8 @@ class ExecuteCommands:
 
     def answer_drop_job(self, statement, database_name):
         jobs_controller = JobsController()
+        project_name, job_name = match_two_part_name(statement.name, default_db_name=database_name)
 
-        name = statement.name
-        job_name = name.parts[-1]
-        project_name = name.parts[-2] if len(name.parts) > 1 else database_name
         try:
             jobs_controller.delete(job_name, project_name)
         except EntityNotExistsError:
@@ -718,9 +764,8 @@ class ExecuteCommands:
 
     def answer_create_chatbot(self, statement, database_name):
         chatbot_controller = ChatBotController()
+        project_name, name = match_two_part_name(statement.name, ensure_lower_case=True, default_db_name=database_name)
 
-        name = statement.name
-        project_name = name.parts[-2] if len(name.parts) > 1 else database_name
         is_running = statement.params.pop("is_running", True)
 
         database = self.session.integration_controller.get(statement.database.parts[-1])
@@ -738,7 +783,7 @@ class ExecuteCommands:
         if statement.agent is not None:
             agent_name = statement.agent.parts[-1]
         chatbot_controller.add_chatbot(
-            name.parts[-1],
+            name,
             project_name=project_name,
             model_name=model_name,
             agent_name=agent_name,
@@ -912,14 +957,12 @@ class ExecuteCommands:
         return ExecuteAnswer(data=ResultSet.from_df(df, table_name=""))
 
     def answer_create_kb_index(self, statement, database_name):
-        table_name = statement.name.parts[-1]
-        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
+        project_name, table_name = match_two_part_name(statement.name, default_db_name=database_name)
         self.session.kb_controller.create_index(table_name=table_name, project_name=project_name)
         return ExecuteAnswer()
 
     def answer_evaluate_kb(self, statement: EvaluateKnowledgeBase, database_name):
-        table_name = statement.name.parts[-1]
-        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
+        project_name, table_name = match_two_part_name(statement.name, default_db_name=database_name)
         scores = self.session.kb_controller.evaluate(
             table_name=table_name, project_name=project_name, params=statement.params
         )
@@ -928,6 +971,7 @@ class ExecuteCommands:
     def _get_model_info(self, identifier, except_absent=True, database_name=None):
         if len(identifier.parts) == 1:
             identifier.parts = [database_name, identifier.parts[0]]
+            identifier.is_quoted = [False] + identifier.is_quoted
 
         database_name, model_name, model_version = resolve_model_identifier(identifier)
         if database_name is None:
@@ -1105,7 +1149,24 @@ class ExecuteCommands:
             handler = self.session.integration_controller.get_data_handler(name, connect=False)
             handler.handler_storage.import_files(storage)
 
-    def answer_create_ml_engine(self, name: str, handler: str, params: dict = None, if_not_exists=False):
+    def answer_create_ml_engine(self, statement: CreateMLEngine) -> ExecuteAnswer:
+        """Handles the `CREATE ML_ENGINE` command, which creates a new ML integration (engine) in the system.
+
+        Args:
+            statement (CreateMLEngine): The AST object representing the CREATE ML_ENGINE command.
+
+        Returns:
+            ExecuteAnswer: The result of the ML engine creation operation.
+
+        Raises:
+            ValueError: If the ml_engine name format is invalid.
+        """
+        name = match_one_part_name(statement.name, ensure_lower_case=True)
+
+        handler = statement.handler
+        params = statement.params
+        if_not_exists = getattr(statement, "if_not_exists", False)
+
         integrations = self.session.integration_controller.get_all()
         if name in integrations:
             if not if_not_exists:
@@ -1134,11 +1195,17 @@ class ExecuteCommands:
                 msg = dedent(
                     f"""\
                     The '{handler_module_meta["name"]}' handler cannot be used. Reason is:
-                        {handler_module_meta["import"]["error_message"]}
+                        {handler_module_meta["import"]["error_message"] or msg}
                 """
                 )
                 is_cloud = self.session.config.get("cloud", False)
-                if is_cloud is False and "No module named" in handler_module_meta["import"]["error_message"]:
+                if (
+                    is_cloud is False
+                    # NOTE: BYOM may raise these errors if there is an error in the user's code,
+                    # therefore error_message will be None
+                    and handler_module_meta["name"] != "byom"
+                    and "No module named" in handler_module_meta["import"]["error_message"]
+                ):
                     logger.info(get_handler_install_message(handler_module_meta["name"]))
             ast_drop = DropMLEngine(name=Identifier(name))
             self.answer_drop_ml_engine(ast_drop)
@@ -1147,8 +1214,21 @@ class ExecuteCommands:
 
         return ExecuteAnswer()
 
-    def answer_drop_ml_engine(self, statement: ASTNode):
-        name = statement.name.parts[-1]
+    def answer_drop_ml_engine(self, statement: DropMLEngine) -> ExecuteAnswer:
+        """Handles the `DROP ML_ENGINE` command, which removes an ML integration (engine) from the system.
+
+        Args:
+            statement (DropMLEngine): The AST object representing the DROP ML_ENGINE command.
+
+        Raises:
+            EntityNotExistsError: If the integration does not exist and IF EXISTS is not specified.
+            ValueError: If the integration name is provided in an invalid format.
+
+        Returns:
+            ExecuteAnswer: The result of the ML engine deletion operation.
+        """
+        name = match_one_part_name(statement.name)
+
         integrations = self.session.integration_controller.get_all()
         if name not in integrations:
             if not statement.if_exists:
@@ -1158,53 +1238,57 @@ class ExecuteCommands:
         self.session.integration_controller.delete(name)
         return ExecuteAnswer()
 
-    def answer_create_database(self, statement: ASTNode):
-        """create new handler (datasource/integration in old terms)
+    def answer_create_database(self, statement: CreateDatabase) -> ExecuteAnswer:
+        """Create new integration or project
+
         Args:
-            statement (ASTNode): data for creating database/project
+            statement (CreateDatabase): data for creating database/project
+
+        Returns:
+            ExecuteAnswer: 'ok' answer
         """
+        database_name = match_one_part_name(statement.name, ensure_lower_case=True)
 
-        if len(statement.name.parts) != 1:
-            raise Exception("Database name should contain only 1 part.")
+        engine = (statement.engine or "mindsdb").lower()
 
-        database_name = statement.name.parts[0]
-        engine = statement.engine
-        if engine is None:
-            engine = "mindsdb"
-        engine = engine.lower()
         connection_args = statement.parameters
 
-        if engine == "mindsdb":
-            try:
+        try:
+            if engine == "mindsdb":
                 ProjectController().add(database_name)
-            except EntityExistsError:
-                if statement.if_not_exists is False:
-                    raise
-        else:
-            try:
+            else:
                 self._create_integration(database_name, engine, connection_args)
-            except EntityExistsError:
-                if getattr(statement, "if_not_exists", False) is False:
-                    raise
+        except EntityExistsError:
+            if statement.if_not_exists is False:
+                raise
 
         return ExecuteAnswer()
 
-    def answer_drop_database(self, statement):
-        if len(statement.name.parts) != 1:
-            raise Exception("Database name should contain only 1 part.")
-        db_name = statement.name.parts[0]
+    def answer_drop_database(self, statement: DropDatabase | DropDatasource) -> ExecuteAnswer:
+        """Drop a database (project or integration) by name.
+
+        Args:
+            statement (DropDatabase | DropDatasource): The parsed DROP DATABASE or DROP DATASOURCE statement.
+
+        Raises:
+            Exception: If the database name format is invalid.
+            EntityNotExistsError: If the database does not exist and 'IF EXISTS' is not specified in the statement.
+
+        Returns:
+            ExecuteAnswer: The result of the drop database operation.
+        """
+        db_name = match_one_part_name(statement.name)
+
         try:
-            self.session.database_controller.delete(db_name)
+            self.session.database_controller.delete(db_name, strict_case=statement.name.is_quoted[0])
         except EntityNotExistsError:
             if statement.if_exists is not True:
                 raise
         return ExecuteAnswer()
 
-    def answer_alter_database(self, statement):
-        if len(statement.name.parts) != 1:
-            raise Exception("Database name should contain only 1 part.")
-        db_name = statement.name.parts[0]
-        self.session.database_controller.update(db_name, data=statement.params)
+    def answer_alter_database(self, statement: AlterDatabase) -> ExecuteAnswer:
+        db_name = match_one_part_name(statement.name)
+        self.session.database_controller.update(db_name, data=statement.params, strict_case=statement.name.is_quoted[0])
         return ExecuteAnswer()
 
     def answer_drop_tables(self, statement, database_name):
@@ -1221,9 +1305,11 @@ class ExecuteCommands:
                 db_name = database_name
 
             dn = self.session.datahub[db_name]
+            if dn is None:
+                raise ExecutorException(f"Cannot delete a table from database '{db_name}': the database does not exist")
+
             if db_name is not None:
                 dn.drop_table(table, if_exists=statement.if_exists)
-
             elif db_name in self.session.database_controller.get_dict(filter_type="project"):
                 # TODO do we need feature: delete object from project via drop table?
 
@@ -1240,35 +1326,19 @@ class ExecuteCommands:
 
         return ExecuteAnswer()
 
-    def answer_create_or_alter_view(self, statement: ASTNode, database_name: str) -> ExecuteAnswer:
+    def answer_create_or_alter_view(self, statement: CreateView | AlterView, database_name: str) -> ExecuteAnswer:
         """Process CREATE and ALTER VIEW commands
 
         Args:
-            statement (ASTNode): data for creating or altering view
+            statement (CreateView | AlterView): data for creating or altering view
             database_name (str): name of the current database
 
         Returns:
             ExecuteAnswer: answer for the command
         """
-        project_name = database_name
-
-        if isinstance(statement.name, str):
-            parts = statement.name.split(".")
-        elif isinstance(statement.name, Identifier):
-            parts = statement.name.parts
-        else:
-            raise ValueError(f"Unknown type of view name: {statement.name}")
-
-        match parts:
-            case [project_name, view_name]:
-                pass
-            case [view_name]:
-                pass
-            case _:
-                raise ValueError(
-                    'View name should be in the form "project_name.view_name" '
-                    f'or "view_name", got {statement.name.parts}'
-                )
+        project_name, view_name = match_two_part_name(
+            statement.name, default_db_name=database_name, ensure_lower_case=isinstance(statement, CreateView)
+        )
 
         query_str = statement.query_str
 
@@ -1278,30 +1348,18 @@ class ExecuteCommands:
                 from_table=NativeQuery(integration=statement.from_table, query=statement.query_str),
             )
             query_str = query.to_string()
-        else:
-            query = parse_sql(query_str)
-
-        if isinstance(query, Select):
-            # check create view sql
-            query.limit = Constant(1)
-
-            query_context_controller.set_context(query_context_controller.IGNORE_CONTEXT)
-            try:
-                SQLQuery(query, session=self.session, database=database_name)
-            finally:
-                query_context_controller.release_context(query_context_controller.IGNORE_CONTEXT)
 
         project = self.session.database_controller.get_project(project_name)
 
         if isinstance(statement, CreateView):
             try:
-                project.create_view(view_name, query=query_str)
+                project.create_view(view_name, query=query_str, session=self.session)
             except EntityExistsError:
                 if getattr(statement, "if_not_exists", False) is False:
                     raise
         elif isinstance(statement, AlterView):
             try:
-                project.update_view(view_name, query=query_str)
+                project.update_view(view_name, query=query_str, strict_case=(not view_name.islower()))
             except EntityNotExistsError:
                 raise ExecutorException(f"View {view_name} does not exist in {project_name}")
         else:
@@ -1309,19 +1367,33 @@ class ExecuteCommands:
 
         return ExecuteAnswer()
 
-    def answer_drop_view(self, statement, database_name):
-        names = statement.names
+    def answer_drop_view(self, statement: DropView, database_name: str) -> ExecuteAnswer:
+        """Drop one or more views from the specified database/project.
 
-        for name in names:
-            view_name = name.parts[-1]
-            if len(name.parts) > 1:
-                db_name = name.parts[0]
-            else:
-                db_name = database_name
-            project = self.session.database_controller.get_project(db_name)
+        Args:
+            statement (DropView): The parsed DROP VIEW statement containing view names and options.
+            database_name (str): The name of the database (project) from which to drop the views.
+
+        Raises:
+            EntityNotExistsError: If a view does not exist and 'IF EXISTS' is not specified in the statement.
+            ValueError: If the view name format is invalid.
+
+        Returns:
+            ExecuteAnswer: The result of the drop view operation.
+        """
+        for name in statement.names:
+            match name.parts, name.is_quoted:
+                case [view_name], [view_name_quoted]:
+                    db_name_quoted = False
+                case [database_name, view_name], [db_name_quoted, view_name_quoted]:
+                    pass
+                case _:
+                    raise ValueError(f"Invalid view name: {name}")
+
+            project = self.session.database_controller.get_project(database_name, db_name_quoted)
 
             try:
-                project.drop_view(view_name)
+                project.drop_view(view_name, strict_case=view_name_quoted)
             except EntityNotExistsError:
                 if statement.if_exists is not True:
                     raise
@@ -1335,7 +1407,9 @@ class ExecuteCommands:
                 "Please pass the model parameters as a JSON object in the embedding_model field."
             )
 
-        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
+        project_name, kb_name = match_two_part_name(
+            statement.name, ensure_lower_case=True, default_db_name=database_name
+        )
 
         if statement.storage is not None:
             if len(statement.storage.parts) != 2:
@@ -1346,8 +1420,6 @@ class ExecuteCommands:
         if statement.from_query is not None:
             # TODO: implement this
             raise ExecutorException("Create a knowledge base from a select is not supported yet")
-
-        kb_name = statement.name.parts[-1]
 
         # create the knowledge base
         _ = self.session.kb_controller.add(
@@ -1361,13 +1433,12 @@ class ExecuteCommands:
 
         return ExecuteAnswer()
 
-    def answer_drop_kb(self, statement: DropKnowledgeBase, database_name: str):
-        name = statement.name.parts[-1]
-        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
+    def answer_drop_kb(self, statement: DropKnowledgeBase, database_name: str) -> ExecuteAnswer:
+        project_name, kb_name = match_two_part_name(statement.name, default_db_name=database_name)
 
         # delete the knowledge base
         self.session.kb_controller.delete(
-            name=name,
+            name=kb_name,
             project_name=project_name,
             if_exists=statement.if_exists,
         )
@@ -1375,8 +1446,7 @@ class ExecuteCommands:
         return ExecuteAnswer()
 
     def answer_create_skill(self, statement, database_name):
-        name = statement.name.parts[-1]
-        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
+        project_name, name = match_two_part_name(statement.name, ensure_lower_case=True, default_db_name=database_name)
 
         try:
             _ = self.session.skills_controller.add_skill(name, project_name, statement.type, statement.params)
@@ -1387,11 +1457,10 @@ class ExecuteCommands:
         return ExecuteAnswer()
 
     def answer_drop_skill(self, statement, database_name):
-        name = statement.name.parts[-1]
-        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
+        project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
 
         try:
-            self.session.skills_controller.delete_skill(name, project_name)
+            self.session.skills_controller.delete_skill(name, project_name, strict_case=True)
         except ValueError as e:
             # Project does not exist or skill does not exist.
             raise ExecutorException(str(e))
@@ -1399,8 +1468,7 @@ class ExecuteCommands:
         return ExecuteAnswer()
 
     def answer_update_skill(self, statement, database_name):
-        name = statement.name.parts[-1]
-        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
+        project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
 
         type = statement.params.pop("type", None)
         try:
@@ -1414,8 +1482,7 @@ class ExecuteCommands:
         return ExecuteAnswer()
 
     def answer_create_agent(self, statement, database_name):
-        name = statement.name.parts[-1]
-        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
+        project_name, name = match_two_part_name(statement.name, ensure_lower_case=True, default_db_name=database_name)
 
         skills = statement.params.pop("skills", [])
         provider = statement.params.pop("provider", None)
@@ -1428,15 +1495,17 @@ class ExecuteCommands:
                 provider=provider,
                 params=statement.params,
             )
+        except EntityExistsError as e:
+            if statement.if_not_exists is not True:
+                raise ExecutorException(str(e))
         except ValueError as e:
             # Project does not exist or agent already exists.
             raise ExecutorException(str(e))
 
         return ExecuteAnswer()
 
-    def answer_drop_agent(self, statement, database_name):
-        name = statement.name.parts[-1]
-        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
+    def answer_drop_agent(self, statement: DropAgent, database_name: str):
+        project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
 
         try:
             self.session.agents_controller.delete_agent(name, project_name)
@@ -1446,9 +1515,8 @@ class ExecuteCommands:
 
         return ExecuteAnswer()
 
-    def answer_update_agent(self, statement, database_name):
-        name = statement.name.parts[-1]
-        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else database_name
+    def answer_update_agent(self, statement: UpdateAgent, database_name: str):
+        project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
 
         model = statement.params.pop("model", None)
         skills_to_add = statement.params.pop("skills_to_add", [])
@@ -1469,14 +1537,13 @@ class ExecuteCommands:
         return ExecuteAnswer()
 
     @mark_process("learn")
-    def answer_create_predictor(self, statement: CreatePredictor, database_name):
-        integration_name = database_name
+    def answer_create_predictor(self, statement: CreatePredictor, database_name: str):
+        integration_name, model_name = match_two_part_name(
+            statement.name, ensure_lower_case=True, default_db_name=database_name
+        )
 
-        # allow creation in non-active projects, e.g. 'create mode proj.model' works whether `proj` is active or not
-        if len(statement.name.parts) > 1:
-            integration_name = statement.name.parts[0]
-        model_name = statement.name.parts[-1]
         statement.name.parts = [integration_name.lower(), model_name]
+        statement.name.is_quoted = [False, False]
 
         ml_integration_name = "lightwood"  # default
         if statement.using is not None:
@@ -1493,7 +1560,9 @@ class ExecuteCommands:
             ml_handler = self.session.integration_controller.get_ml_handler(ml_integration_name)
         except EntityNotExistsError:
             # not exist, try to create it with same name as handler
-            self.answer_create_ml_engine(ml_integration_name, handler=ml_integration_name)
+            self.answer_create_ml_engine(
+                CreateMLEngine(name=Identifier(ml_integration_name), handler=ml_integration_name)
+            )
 
             ml_handler = self.session.integration_controller.get_ml_handler(ml_integration_name)
 
@@ -1506,7 +1575,6 @@ class ExecuteCommands:
 
         try:
             df = self.session.model_controller.create_model(statement, ml_handler)
-
             return ExecuteAnswer(data=ResultSet.from_df(df))
         except EntityExistsError:
             if getattr(statement, "if_not_exists", False) is True:
@@ -1921,22 +1989,24 @@ class ExecuteCommands:
         self.session.model_controller.set_model_active_version(project_name, model_name, version)
         return ExecuteAnswer()
 
-    def answer_drop_model(self, statement, database_name):
-        model_parts = statement.name.parts
-        version = None
+    def answer_drop_model(self, statement: DropPredictor, database_name: str) -> ExecuteAnswer:
+        """Handles the DROP MODEL (or DROP PREDICTOR) command, which removes a model
+        or a specific model version from a project.
 
-        # with version?
-        if model_parts[-1].isdigit():
-            version = int(model_parts[-1])
-            model_parts = model_parts[:-1]
+        Args:
+            statement (DropPredictor): The AST object representing the DROP MODEL or DROP PREDICTOR command.
+            database_name (str): The name of the current database/project.
 
-        if len(model_parts) == 2:
-            project_name, model_name = model_parts
-        elif len(model_parts) == 1:
-            model_name = model_parts[0]
+        Raises:
+            EntityNotExistsError: If the model or version does not exist and IF EXISTS is not specified.
+            ValueError: If the model name format is invalid.
+
+        Returns:
+            ExecuteAnswer: The result of the model deletion operation.
+        """
+        project_name, model_name, version = resolve_model_identifier(statement.name)
+        if project_name is None:
             project_name = database_name
-        else:
-            raise ExecutorException(f"Unknown model: {statement.name}")
 
         if version is not None:
             # delete version

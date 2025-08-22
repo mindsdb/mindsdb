@@ -2,7 +2,8 @@ import ast
 from typing import Dict, Optional, List
 
 
-from litellm import completion, batch_completion, embedding, acompletion
+from litellm import completion, batch_completion, embedding, acompletion, supports_response_schema
+
 import pandas as pd
 
 from mindsdb.integrations.libs.base import BaseMLEngine
@@ -58,6 +59,15 @@ class LiteLLMHandler(BaseMLEngine):
     @classmethod
     def completion(cls, provider: str, model: str, messages: List[dict], args: dict):
         model, args = cls.prepare_arguments(provider, model, args)
+        json_output = args.pop("json_output", False)
+
+        supports_json_output = supports_response_schema(model=model, custom_llm_provider=provider)
+
+        if json_output and supports_json_output:
+            args["response_format"] = {"type": "json_object"}
+        else:
+            args["response_format"] = None
+
         return completion(model=model, messages=messages, stream=False, **args)
 
     def create(
@@ -77,6 +87,7 @@ class LiteLLMHandler(BaseMLEngine):
 
         # check engine_storage for api_key
         input_args.update({k: v for k, v in ml_engine_args.items()})
+        input_args["target"] = target
 
         # validate args
         export_args = CompletionParameters(**input_args).model_dump()
@@ -94,6 +105,8 @@ class LiteLLMHandler(BaseMLEngine):
         # validate args
         args = CompletionParameters(**input_args).model_dump()
 
+        target = args.pop("target")
+
         # build messages
         self._build_messages(args, df)
 
@@ -103,12 +116,12 @@ class LiteLLMHandler(BaseMLEngine):
         if len(args["messages"]) > 1:
             # if more than one message, use batch completion
             responses = batch_completion(**args)
-            return pd.DataFrame({"result": [response.choices[0].message.content for response in responses]})
+            return pd.DataFrame({target: [response.choices[0].message.content for response in responses]})
 
         # run completion
         response = completion(**args)
 
-        return pd.DataFrame({"result": [response.choices[0].message.content]})
+        return pd.DataFrame({target: [response.choices[0].message.content]})
 
     @staticmethod
     def _prompt_to_messages(prompt: str, **kwargs) -> List[Dict]:

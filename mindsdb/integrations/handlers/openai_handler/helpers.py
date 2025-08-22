@@ -14,6 +14,7 @@ class PendingFT(openai.OpenAIError):
     """
     Custom exception to handle pending fine-tuning status.
     """
+
     message: str
 
     def __init__(self, message) -> None:
@@ -65,10 +66,7 @@ def retry_with_exponential_backoff(
 
             if isinstance(hour_budget, float) or isinstance(hour_budget, int):
                 try:
-                    max_retries = round(
-                        (math.log((hour_budget * 3600) / initial_delay))
-                        / math.log(exponential_base)
-                    )
+                    max_retries = round((math.log((hour_budget * 3600) / initial_delay)) / math.log(exponential_base))
                 except ValueError:
                     max_retries = 10
             else:
@@ -81,22 +79,20 @@ def retry_with_exponential_backoff(
 
                 except status_errors as e:
                     raise Exception(
-                        f'Error status {e.status_code} raised by OpenAI API: {e.body.get("message", "Please refer to `https://platform.openai.com/docs/guides/error-codes` for more information.")}'   # noqa
+                        f"Error status {e.status_code} raised by OpenAI API: {e.body.get('message', 'Please refer to `https://platform.openai.com/docs/guides/error-codes` for more information.')}"  # noqa
                     )  # noqa
 
                 except wait_errors:
                     num_retries += 1
                     if num_retries > max_retries:
-                        raise Exception(
-                            f"Maximum number of retries ({max_retries}) exceeded."
-                        )
+                        raise Exception(f"Maximum number of retries ({max_retries}) exceeded.")
                     # Increment the delay and wait
                     delay *= exponential_base * (1 + jitter * random.random())
                     time.sleep(delay)
 
                 except openai.OpenAIError as e:
                     raise Exception(
-                        f'General {str(e)} error raised by OpenAI. Please refer to `https://platform.openai.com/docs/guides/error-codes` for more information.'    # noqa
+                        f"General {str(e)} error raised by OpenAI. Please refer to `https://platform.openai.com/docs/guides/error-codes` for more information."  # noqa
                     )
 
                 except Exception as e:
@@ -107,7 +103,7 @@ def retry_with_exponential_backoff(
     return _retry_with_exponential_backoff
 
 
-def truncate_msgs_for_token_limit(messages: List[Dict], model_name: Text, max_tokens: int, truncate: Text = 'first'):
+def truncate_msgs_for_token_limit(messages: List[Dict], model_name: Text, max_tokens: int, truncate: Text = "first"):
     """
     Truncates message list to fit within the token limit.
     The first message for chat completion models are general directives with the system role, which will ideally be kept at all times.
@@ -129,20 +125,18 @@ def truncate_msgs_for_token_limit(messages: List[Dict], model_name: Text, max_to
     except KeyError:
         # If the encoding is not found, defualt to cl100k_base.
         # This is applicable for handlers that extend the OpenAI handler such as Anyscale.
-        model_name = 'gpt-3.5-turbo-0301'
-        encoder = tiktoken.get_encoding('cl100k_base')
+        model_name = "gpt-3.5-turbo-0301"
+        encoder = tiktoken.get_encoding("cl100k_base")
 
     sys_priming = messages[0:1]
     n_tokens = count_tokens(messages, encoder, model_name)
     while n_tokens > max_tokens:
         if len(messages) == 2:
-            return messages[
-                :-1
-            ]  # edge case: if limit is surpassed by just one input, we remove initial instruction
+            return messages[:-1]  # edge case: if limit is surpassed by just one input, we remove initial instruction
         elif len(messages) == 1:
             return messages
 
-        if truncate == 'first':
+        if truncate == "first":
             messages = sys_priming + messages[2:]
         else:
             messages = sys_priming + messages[1:-1]
@@ -151,7 +145,7 @@ def truncate_msgs_for_token_limit(messages: List[Dict], model_name: Text, max_to
     return messages
 
 
-def count_tokens(messages: List[Dict], encoder: tiktoken.core.Encoding, model_name: Text = 'gpt-3.5-turbo-0301'):
+def count_tokens(messages: List[Dict], encoder: tiktoken.core.Encoding, model_name: Text = "gpt-3.5-turbo-0301"):
     """
     Counts the number of tokens in a list of messages.
 
@@ -160,24 +154,23 @@ def count_tokens(messages: List[Dict], encoder: tiktoken.core.Encoding, model_na
         encoder: Tokenizer
         model_name: Model name
     """
-    if (
-        "gpt-3.5-turbo" in model_name
-    ):  # note: future models may deviate from this (only 0301 really complies)
-        num_tokens = 0
-        for message in messages:
-            num_tokens += (
-                4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
-            )
-            for key, value in message.items():
-                num_tokens += len(encoder.encode(value))
-                if key == "name":  # if there's a name, the role is omitted
-                    num_tokens += -1  # role is always required and always 1 token
-        num_tokens += 2  # every reply is primed with <im_start>assistant
-        return num_tokens
+    if "gpt-3.5-turbo" in model_name:  # note: future models may deviate from this (only 0301 really complies)
+        tokens_per_message = 4  # every message follows <|start|>{role/name}\n{content}<|end|>\n
+        tokens_per_name = -1
     else:
-        raise NotImplementedError(
-            f"""_count_tokens() is not presently implemented for model {model_name}."""
-        )
+        tokens_per_message = 3
+        tokens_per_name = 1
+
+    num_tokens = 0
+    for message in messages:
+        num_tokens += tokens_per_message
+
+        for key, value in message.items():
+            num_tokens += len(encoder.encode(value))
+            if key == "name":  # if there's a name, the role is omitted
+                num_tokens += tokens_per_name
+    num_tokens += 2  # every reply is primed with <im_start>assistant
+    return num_tokens
 
 
 def get_available_models(client) -> List[Text]:

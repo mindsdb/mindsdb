@@ -1,0 +1,446 @@
+---
+title: How to Create Knowledge Bases
+sidebarTitle: Create KB
+---
+
+A knowledge base is an advanced system that organizes information based on semantic meaning rather than simple keyword matching. It integrates embedding models, reranking models, and vector stores to enable context-aware data retrieval.
+
+<Tip>
+Learn more about features of [knowledge bases available via SQL API](/mindsdb_sql/knowledge_bases/overview).
+</Tip>
+
+## `create()` Function
+
+Here is the syntax for creating a knowledge base:
+
+```python
+my_kb = server.knowledge_bases.create(
+    'my_kb',
+    embedding_model={
+        'provider': 'openai', 
+        'model_name': 'text-embedding-3-small', 
+        'api_key': 'sk-...'},
+    reranking_model={
+        'provider': 'openai', 
+        'model_name': 'gpt-4', 
+        'api_key': 'sk-...'},
+    storage=server.databases.my_db.tables.my_table,
+    metadata_columns=['date', 'creator', ...],
+    content_columns=['review', 'content', ...],
+    id_column='id'
+)
+```
+
+Upon execution, it registers `my_kb` and associates the specified models and storage. `my_kb` is a unique identifier of the knowledge base within MindsDB.
+
+### Supported LLMs
+
+Below is the list of all language models supported for the `embedding_model` and `reranking_model` parameters.
+
+#### `provider = 'openai'`
+
+This provider is supported for both `embedding_model` and `reranking_model`.
+
+<Note>
+Users can define the default embedding and reranking models from OpenAI in Settings of the MindsDB GUI.
+
+Furthermore, users can select `Custom OpenAI API` from the dropdown and use models from any OpenAI-compatible API.
+</Note>
+
+When choosing `openai` as the model provider, users should define the following model parameters.
+
+* `model_name` stores the name of the OpenAI model to be used.
+* `api_key` stores the OpenAI API key.
+
+Learn more about the [OpenAI integration with MindsDB here](/integrations/ai-engines/openai).
+
+#### `provider = 'openai_azure'`
+
+This provider is supported for both `embedding_model` and `reranking_model`.
+
+<Note>
+Users can define the default embedding and reranking models from Azure OpenAI in Settings of the MindsDB GUI.
+</Note>
+
+When choosing `openai_azure` as the model provider, users should define the following model parameters.
+
+* `model_name` stores the name of the OpenAI model to be used.
+* `api_key` stores the OpenAI API key.
+* `base_url` stores the base URL of the Azure instance.
+* `api_version` stores the version of the Azure instance.
+
+<Tip>
+Users need to log in to their Azure OpenAI instance to retrieve all relevant parameter values. Next, click on `Explore Azure AI Foundry portal` and go to `Models + endpoints`. Select the model and copy the parameter values.
+</Tip>
+
+#### `provider = 'google'`
+
+This provider is supported for both `embedding_model` and `reranking_model`.
+
+<Note>
+Users can define the default embedding and reranking models from Google in Settings of the MindsDB GUI.
+</Note>
+
+When choosing `google` as the model provider, users should define the following model parameters.
+
+* `model_name` stores the name of the Google model to be used.
+* `api_key` stores the Google API key.
+
+Learn more about the [Google Gemini integration with MindsDB here](/integrations/ai-engines/google_gemini).
+
+#### `provider = 'bedrock'`
+
+This provider is supported for both `embedding_model` and `reranking_model`.
+
+When choosing `bedrock` as the model provider, users should define the following model parameters.
+
+* `model_name` stores the name of the model available via Amazon Bedrock.
+* `aws_access_key_id` stores a unique identifier associated with your AWS account, used to identify the user or application making requests to AWS.
+* `aws_region_name` stores the name of the AWS region you want to send your requests to (e.g., `"us-west-2"`).
+* `aws_secret_access_key` stores the secret key associated with your AWS access key ID. It is used to sign your requests securely.
+* `aws_session_token` stores a temporary token used for short-term security credentials when using AWS Identity and Access Management (IAM) roles or temporary credentials.
+
+#### `provider = 'snowflake'`
+
+This provider is supported for `reranking_model`.
+
+When choosing `snowflake` as the model provider, users should choose one of the available models from [Snowflake Cortex AI](https://www.snowflake.com/en/product/features/cortex/) and define the following model parameters.
+
+* `model_name` stores the name of the model available via Snowflake Cortex AI.
+* `api_key` stores the Snowflake Cortex AI API key.
+* `snowflake_account_id` stores the Snowflake account ID.
+
+### `embedding_model`
+
+The embedding model is a required component of the knowledge base. It stores specifications of the embedding model to be used.
+
+Users can define the embedding model choosing one of the following options.
+
+**Option 1.** Use the `embedding_model` parameter to define the specification.
+
+```python
+...
+embedding_model = {
+
+    "provider": "azure_openai",
+    "model_name" : "text-embedding-3-large",
+    "api_key": "sk-abc123",
+    "base_url": "https://ai-6689.openai.azure.com/",
+    "api_version": "2024-02-01"
+
+},
+...
+```
+
+**Option 2.** Define the default embedding model in the [MindsDB configuration file](/setup/custom-config).
+
+<Tip>
+You can define the default models in the Settings of the MindsDB Editor GUI.
+</Tip>
+
+<Note>
+Note that if you define `default_embedding_model` in the configuration file, you do not need to provide the `embedding_model` parameter when creating a knowledge base. If provide both, then the values from the `embedding_model` parameter are used.
+</Note>
+
+```bash
+"default_embedding_model": {
+
+   "provider": "azure_openai",
+   "model_name" : "text-embedding-3-large",
+   "api_key": "sk-abc123",
+   "base_url": "https://ai-6689.openai.azure.com/",
+   "api_version": "2024-02-01"
+
+}
+```
+
+The embedding model specification includes:
+
+* `provider`
+It is a required parameter. It defines the model provider.
+
+* `model_name`
+It is a required parameter. It defines the embedding model name as specified by the provider.
+
+* `api_key`
+The API key is required to access the embedding model assigned to a knowledge base. Users can provide it either in this `api_key` parameter, or in the `OPENAI_API_KEY` environment variable for `"provider": "openai"` and `AZURE_OPENAI_API_KEY` environment variable for `"provider": "azure_openai"`.
+
+* `base_url`
+It is an optional parameter, which defaults to `https://api.openai.com/v1/`. It is a required parameter when using the `azure_openai` provider. It is the root URL used to send API requests.
+
+* `api_version`
+It is an optional parameter. It is a required parameter when using the `azure_openai` provider. It defines the API version.
+
+### `reranking_model`
+
+The reranking model is an optional component of the knowledge base. It stores specifications of the reranking model to be used.
+
+Users can disable reranking features of knowledge bases by setting this parameter to `false`.
+
+```python
+...
+reranking_model = False,
+...
+```
+
+Users can enable reranking features of knowledge bases by defining the reranking model choosing one of the following options.
+
+**Option 1.** Use the `reranking_model` parameter to define the specification.
+
+```python
+...
+reranking_model = {
+
+    "provider": "azure_openai",
+    "model_name" : "gpt-4o",
+    "api_key": "sk-abc123",
+    "base_url": "https://ai-6689.openai.azure.com/",
+    "api_version": "2024-02-01",
+    "method": "multi-class"
+
+},
+...
+```
+
+**Option 2.** Define the default reranking model in the [MindsDB configuration file](/setup/custom-config).
+
+<Tip>
+You can define the default models in the Settings of the MindsDB Editor GUI.
+</Tip>
+
+<Note>
+Note that if you define [`default_reranking_model` in the configuration file](/setup/custom-config#default-reranking-model), you do not need to provide the `reranking_model` parameter when creating a knowledge base. If provide both, then the values from the `reranking_model` parameter are used.
+</Note>
+
+```bash
+"default_reranking_model": {
+
+  "provider": "azure_openai",
+  "model_name" : "gpt-4o",
+  "api_key": "sk-abc123",
+  "base_url": "https://ai-6689.openai.azure.com/",
+  "api_version": "2024-02-01",
+  "method": "multi-class"
+
+}
+```
+
+The reranking model specification includes:
+
+* `provider`
+It is a required parameter. It defines the model provider as listed in [supported LLMs](/mindsdb_sql/knowledge_bases/create#supported-llms).
+
+* `model_name`
+It is a required parameter. It defines the embedding model name as specified by the provider.
+
+* `api_key`
+The API key is required to access the embedding model assigned to a knowledge base. Users can provide it either in this `api_key` parameter, or in the `OPENAI_API_KEY` environment variable for `"provider": "openai"` and `AZURE_OPENAI_API_KEY` environment variable for `"provider": "azure_openai"`.
+
+* `base_url`
+It is an optional parameter, which defaults to `https://api.openai.com/v1/`. It is a required parameter when using the `azure_openai` provider. It is the root URL used to send API requests.
+
+* `api_version`
+It is an optional parameter. It is a required parameter when using the `azure_openai` provider. It defines the API version.
+
+* `method`
+It is an optional parameter. It defines the method used to calculate the relevance of the output rows. The available options include `multi-class` and `binary`. It defaults to `multi-class`.
+
+<Info>
+**Reranking Method**
+
+The `multi-class` reranking method classifies each document chunk (that meets any specified metadata filtering conditions) into one of four relevance classes:
+
+1. Not relevant with class weight of 0.25.
+2. Slightly relevant with class weight of 0.5.
+3. Moderately relevant with class weight of 0.75.
+4. Highly relevant with class weight of 1.
+
+The overall `relevance_score` of a document is calculated as the sum of each chunk’s class weight multiplied by its class probability (from model logprob output).
+
+The `binary` reranking method simplifies classification by determining whether a document is relevant or not, without intermediate relevance levels. With this method, the overall `relevance_score` of a document is calculated based on the model log probability.
+</Info>
+
+### `storage`
+
+The vector store is a required component of the knowledge base. It stores data in the form of embeddings.
+
+It is optional for users to provide the `storage` parameter. If not provided, the default ChromaDB is created when creating a knowledge base.
+
+The available options include either [PGVector](/integrations/vector-db-integrations/pgvector) or [ChromaDB](/integrations/vector-db-integrations/chromadb).
+
+<Tip>
+It is recommended to use PGVector version 0.8.0 or higher for a better performance.
+</Tip>
+
+If the `storage` parameter is not provided, the system creates the default ChromaDB vector database called `<kb_name>_chromadb` with the default table called `default_collection` that stores the embedded data. This default ChromaDB vector database is stored in MindsDB's storage.
+
+In order to provide the storage vector database, it is required to connect it to MindsDB beforehand.
+
+Here is an example for [PGVector](/integrations/vector-db-integrations/pgvector).
+
+```python
+my_kb = server.knowledge_bases.create(
+    ...
+    storage=server.databases.my_pgvector.tables.my_table,
+    ...
+)
+```
+
+<Info>
+Note that you do not need to have the `storage_table` created as it is created when creating a knowledge base.
+</Info>
+
+### `metadata_columns`
+
+The data inserted into the knowledge base can be classified as metadata, which enables users to filter the search results using defined data fields.
+
+<Note>
+Note that source data column(s) included in `metadata_columns` cannot be used in `content_columns`, and vice versa.
+</Note>
+
+This parameter is an array of strings that lists column names from the source data to be used as metadata. If not provided, then all inserted columns (except for columns defined as `id_column` and `content_columns`) are considered metadata columns.
+
+Here is an example of usage. A user wants to store the following data in a knowledge base.
+
+```sql
++----------+-------------------+------------------------+
+| order_id | product           | notes                  |
++----------+-------------------+------------------------+
+| A1B      | Wireless Mouse    | Request color: black   |
+| 3XZ      | Bluetooth Speaker | Gift wrap requested    |
+| Q7P      | Laptop Stand      | Prefer aluminum finish |
++----------+-------------------+------------------------+
+```
+
+<Tip>
+Go to the *Complete Example* section below to find out how to access this sample data.
+</Tip>
+
+The `product` column can be used as metadata to enable metadata filtering.
+
+```python
+my_kb = server.knowledge_bases.create(
+    ...
+    metadata_columns=['product'],
+    ...
+)
+```
+
+### `content_columns`
+
+The data inserted into the knowledge base can be classified as content, which is embedded by the embedding model and stored in the underlying vector store.
+
+<Note>
+Note that source data column(s) included in `content_columns` cannot be used in `metadata_columns`, and vice versa.
+</Note>
+
+This parameter is an array of strings that lists column names from the source data to be used as content and processed into embeddings. If not provided, the `content` column is expected by default when inserting data into the knowledge base.
+
+Here is an example of usage. A user wants to store the following data in a knowledge base.
+
+```sql
++----------+-------------------+------------------------+
+| order_id | product           | notes                  |
++----------+-------------------+------------------------+
+| A1B      | Wireless Mouse    | Request color: black   |
+| 3XZ      | Bluetooth Speaker | Gift wrap requested    |
+| Q7P      | Laptop Stand      | Prefer aluminum finish |
++----------+-------------------+------------------------+
+```
+
+<Tip>
+Go to the *Complete Example* section below to find out how to access this sample data.
+</Tip>
+
+The `notes` column can be used as content.
+
+```python
+my_kb = server.knowledge_bases.create(
+    ...
+    content_columns=['notes'],
+    ...
+)
+```
+
+### `id_column`
+
+The ID column uniquely identifies each source data row in the knowledge base.
+
+It is an optional parameter. If provided, this parameter is a string that contains the source data ID column name. If not provided, it is generated from the hash of the content columns.
+
+Here is an example of usage. A user wants to store the following data in a knowledge base.
+
+```sql
++----------+-------------------+------------------------+
+| order_id | product           | notes                  |
++----------+-------------------+------------------------+
+| A1B      | Wireless Mouse    | Request color: black   |
+| 3XZ      | Bluetooth Speaker | Gift wrap requested    |
+| Q7P      | Laptop Stand      | Prefer aluminum finish |
++----------+-------------------+------------------------+
+```
+
+<Tip>
+Go to the *Complete Example* section below to find out how to access this sample data.
+</Tip>
+
+The `order_id` column can be used as ID.
+
+```python
+my_kb = server.knowledge_bases.create(
+    ...
+    id_column='order_id'
+)
+```
+
+<Info>
+Note that if the source data row is chunked into multiple chunks by the knowledge base (that is, to optimize the storage), then these rows in the knowledge base have the same ID value that identifies chunks from one source data row.
+</Info>
+
+<Note>
+**Available options for the ID column values**
+
+* User-Defined ID Column: <br></br>
+When users defined the `id_column` parameter, the values from the provided source data column are used to identify source data rows within the knowledge base.
+
+* User-Generated ID Column: <br></br>
+When users do not have a column that uniquely identifies each row in their source data, they can generate the ID column values when inserting data into the knowledge base using functions like `HASH()` or `ROW_NUMBER()`.
+
+```sql
+INSERT INTO my_kb (
+    SELECT ROW_NUMBER() OVER (ORDER BY order_id) AS id, *
+    FROM sample_data.orders
+);
+```
+
+* Default ID Column: <br></br>
+If the `id_column` parameter is not defined, its default values are build from the hash of the content columns and follow the format: `<first 16 char of md5 hash of row content>`.
+</Note>
+
+## `list()` and `get()` Functions
+
+Users can get details about the knowledge base using the `get()` function.
+
+```python
+my_kb = project.knowledge_bases.get('my_kb')
+```
+
+And list all available knowledge bases using the `list()` function.
+
+```python
+kb_list = project.knowledge_bases.list()
+```
+
+## `drop()` Function
+
+Here is the syntax for deleting a knowledge base:
+
+```python
+project.knowledge_bases.drop('my_kb')
+```
+
+Upon execution, it removes the knowledge base with its content.
+
+<Tip>
+See more examples of [knowledge bases via SQL here](/mindsdb_sql/knowledge_bases/overview).
+</Tip>

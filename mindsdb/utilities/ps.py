@@ -11,23 +11,23 @@ def get_child_pids(pid):
 
 def net_connections():
     """Cross-platform psutil.net_connections like interface"""
-    if sys.platform.lower().startswith('linux'):
+    if sys.platform.lower().startswith("linux"):
         return psutil.net_connections()
 
     all_connections = []
     Pconn = None
-    for p in psutil.process_iter(['pid']):
+    for p in psutil.process_iter(["pid"]):
         try:
             process = psutil.Process(p.pid)
-            connections = process.connections()
+            connections = process.net_connections()
             if connections:
                 for conn in connections:
                     # Adding pid to the returned instance
                     # for consistency with psutil.net_connections()
                     if Pconn is None:
                         fields = list(conn._fields)
-                        fields.append('pid')
-                        _conn = namedtuple('Pconn', fields)
+                        fields.append("pid")
+                        _conn = namedtuple("Pconn", fields)
                     for attr in conn._fields:
                         setattr(_conn, attr, getattr(conn, attr))
                     _conn.pid = p.pid
@@ -43,7 +43,7 @@ def is_port_in_use(port_num):
     parent_process = psutil.Process()
     child_pids = [x.pid for x in parent_process.children(recursive=True)]
     conns = net_connections()
-    portsinuse = [x.laddr[1] for x in conns if x.pid in child_pids and x.status == 'LISTEN']
+    portsinuse = [x.laddr[1] for x in conns if x.pid in child_pids and x.status == "LISTEN"]
     portsinuse.sort()
     return int(port_num) in portsinuse
 
@@ -66,7 +66,7 @@ def wait_port(port_num, timeout):
 def get_listen_ports(pid):
     try:
         p = psutil.Process(pid)
-        cons = p.connections()
+        cons = p.net_connections()
         cons = [x.laddr.port for x in cons]
     except Exception:
         return []

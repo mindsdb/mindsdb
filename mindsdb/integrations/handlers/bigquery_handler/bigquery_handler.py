@@ -1,8 +1,10 @@
-from google.cloud.bigquery import Client, QueryJobConfig
-from google.api_core.exceptions import BadRequest
+import json
+from typing import Any, Dict, Optional, Text
+
+from google.cloud.bigquery import Client, QueryJobConfig, DEFAULT_RETRY
+from google.api_core.exceptions import BadRequest, NotFound
 import pandas as pd
 from sqlalchemy_bigquery.base import BigQueryDialect
-from typing import Any, Dict, Optional, Text
 
 from mindsdb.utilities import log
 from mindsdb_sql_parser.ast.base import ASTNode
@@ -54,9 +56,22 @@ class BigQueryHandler(MetaDatabaseHandler):
         if not all(key in self.connection_data for key in ["project_id", "dataset"]):
             raise ValueError("Required parameters (project_id, dataset) must be provided.")
 
+        service_account_json = self.connection_data.get("service_account_json")
+        if isinstance(service_account_json, str):
+            # GUI send it as str
+            try:
+                service_account_json = json.loads(service_account_json)
+            except json.decoder.JSONDecodeError:
+                raise ValueError("'service_account_json' is not valid JSON")
+        if isinstance(service_account_json, dict) and isinstance(service_account_json.get("private_key"), str):
+            # some editors may escape new line symbol, also replace windows-like newlines
+            service_account_json["private_key"] = (
+                service_account_json["private_key"].replace("\\n", "\n").replace("\r\n", "\n")
+            )
+
         google_sa_oauth2_manager = GoogleServiceAccountOAuth2Manager(
             credentials_file=self.connection_data.get("service_account_keys"),
-            credentials_json=self.connection_data.get("service_account_json"),
+            credentials_json=service_account_json,
         )
         credentials = google_sa_oauth2_manager.get_oauth2_credentials()
 
@@ -85,7 +100,7 @@ class BigQueryHandler(MetaDatabaseHandler):
 
         try:
             connection = self.connect()
-            connection.query("SELECT 1;")
+            connection.query("SELECT 1;", timeout=10, retry=DEFAULT_RETRY.with_deadline(10))
 
             # Check if the dataset exists
             connection.get_dataset(self.connection_data["dataset"])
@@ -94,6 +109,11 @@ class BigQueryHandler(MetaDatabaseHandler):
         except (BadRequest, ValueError) as e:
             logger.error(f"Error connecting to BigQuery {self.connection_data['project_id']}, {e}!")
             response.error_message = e
+        except NotFound:
+            response.error_message = (
+                f"Error connecting to BigQuery {self.connection_data['project_id']}: "
+                f"dataset '{self.connection_data['dataset']}' not found"
+            )
 
         if response.success is False and self.is_connected is True:
             self.is_connected = False

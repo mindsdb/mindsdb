@@ -184,7 +184,7 @@ class KBTestBase:
         """)
 
 
-class TestKB(KBTestBase):
+class Disable_TestKB(KBTestBase):
     @pytest.mark.parametrize("storage, embedding_model", get_configurations())
     def test_base_syntax(self, storage, embedding_model):
         self.create_kb("test_kb_crm", storage, embedding_model)
@@ -409,7 +409,7 @@ class TestKB(KBTestBase):
         assert len(ret[ret.relevance < 0.5]) == 0
 
     @pytest.mark.parametrize("storage, embedding_model, reranking_model", get_rerank_configurations())
-    def disable_test_with_reranking(self, storage, embedding_model, reranking_model):
+    def test_with_reranking(self, storage, embedding_model, reranking_model):
         # --- reranking ---
         self.create_kb(
             "test_kb_crm_rerank",

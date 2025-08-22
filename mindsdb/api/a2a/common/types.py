@@ -35,9 +35,7 @@ class FileContent(BaseModel):
         if not (self.bytes or self.uri):
             raise ValueError("Either 'bytes' or 'uri' must be present in the file data")
         if self.bytes and self.uri:
-            raise ValueError(
-                "Only one of 'bytes' or 'uri' can be present in the file data"
-            )
+            raise ValueError("Only one of 'bytes' or 'uri' can be present in the file data")
         return self
 
 
@@ -60,6 +58,7 @@ class Message(BaseModel):
     role: Literal["user", "agent"]
     parts: List[Part]
     metadata: dict[str, Any] | None = None
+    history: Optional[List["Message"]] = None
 
 
 class TaskStatus(BaseModel):

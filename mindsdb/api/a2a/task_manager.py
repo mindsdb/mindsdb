@@ -94,22 +94,8 @@ class AgentTaskManager(InMemoryTaskManager):
 
         agent = self._create_agent(agent_name)
 
-        # Get the history from the task
+        # Get the history from the task object (where it was properly extracted and stored)
         history = task.history if task and task.history else []
-        logger.info(f"Using history with length {len(history)} for request")
-
-        # Log the history for debugging
-        logger.info(f"Conversation history for task {task_send_params.id}:")
-        for idx, msg in enumerate(history):
-            # Convert Message object to dict if needed
-            msg_dict = msg.dict() if hasattr(msg, "dict") else msg
-            role = msg_dict.get("role", "unknown")
-            text = ""
-            for part in msg_dict.get("parts", []):
-                if part.get("type") == "text":
-                    text = part.get("text", "")
-                    break
-            logger.info(f"Message {idx + 1} ({role}): {text[:100]}...")
 
         if not streaming:
             # If streaming is disabled, use invoke and return a single response
@@ -187,37 +173,79 @@ class AgentTaskManager(InMemoryTaskManager):
             all_messages = []
 
             # Add history messages first (convert to question/answer format)
+            # Process messages in pairs (user question + assistant answer)
+            current_qa_pair = {}
+
             for msg in history:
                 msg_dict = msg.model_dump() if hasattr(msg, "model_dump") else msg
-                # Convert history message to question/answer format
+                logger.debug(f"Processing history message: role={msg_dict.get('role')}, parts={msg_dict.get('parts')}")
+
+                # Extract text from parts
+                text_content = ""
                 for part in msg_dict.get("parts", []):
                     if part.get("type") == "text" and "text" in part:
-                        if msg_dict.get("role") == "user":
-                            all_messages.append({"question": part["text"]})
-                        elif msg_dict.get("role") == "assistant":
-                            # For assistant messages, we need to find the corresponding question
-                            if all_messages and "answer" not in all_messages[-1]:
-                                all_messages[-1]["answer"] = part["text"]
-                            else:
-                                # If no question to pair with, create a new entry
-                                all_messages.append({"question": "", "answer": part["text"]})
+                        text_content = part["text"]
+                        break
 
-            # Add current message (should only be user message)
-            current_message_formatted = to_question_format(
-                [
-                    {
-                        "role": task_send_params.message.role,
-                        "parts": task_send_params.message.parts,
-                        "metadata": task_send_params.message.metadata,
-                    }
-                ]
-            )
-            all_messages.extend(current_message_formatted)
+                if text_content:
+                    if msg_dict.get("role") == "user":
+                        # If we have a pending Q&A pair, save it first
+                        if current_qa_pair:
+                            all_messages.append(current_qa_pair)
+                            logger.debug(f"Added Q&A pair: {current_qa_pair}")
+                        # Start new Q&A pair
+                        current_qa_pair = {"question": text_content}
+                        logger.debug(f"Started new Q&A pair with question: {text_content}")
+                    elif msg_dict.get("role") in ["assistant", "agent"]:
+                        # Add answer to current Q&A pair (handle both "assistant" and "agent" roles)
+                        if current_qa_pair and "question" in current_qa_pair:
+                            current_qa_pair["answer"] = text_content
+                            logger.debug(f"Paired A2A {msg_dict.get('role')} response with question")
+                        else:
+                            # Standalone assistant/agent message (shouldn't happen in normal conversation)
+                            logger.warning(
+                                f"Found {msg_dict.get('role')} message without preceding user question: {text_content}"
+                            )
+                            all_messages.append({"question": "", "answer": text_content})
 
-            logger.info(
-                f"Sending {len(all_messages)} total messages to streaming agent ({len(history)} from history + current)"
-            )
-            logger.debug(f"DEBUG: Complete message list being sent to agent: {all_messages}")
+            # Don't forget to add the last Q&A pair if it exists
+            if current_qa_pair:
+                # Ensure incomplete Q&A pairs have both question and answer fields
+                if "answer" not in current_qa_pair:
+                    current_qa_pair["answer"] = ""  # Add empty answer for incomplete pairs
+                    logger.warning(f"Added empty answer to incomplete Q&A pair: {current_qa_pair}")
+                all_messages.append(current_qa_pair)
+                logger.debug(f"Added final Q&A pair: {current_qa_pair}")
+
+            logger.debug(f"Converted {len(history)} history messages to {len(all_messages)} Q&A pairs")
+
+            # Verify all Q&A pairs have both question and answer fields
+            for i, qa_pair in enumerate(all_messages):
+                if "question" not in qa_pair or "answer" not in qa_pair:
+                    logger.error(f"Q&A pair {i} missing required fields: {qa_pair}")
+                    # Fix incomplete pairs
+                    if "question" not in qa_pair:
+                        qa_pair["question"] = ""
+                    if "answer" not in qa_pair:
+                        qa_pair["answer"] = ""
+                    logger.warning(f"Fixed Q&A pair {i}: {qa_pair}")
+
+            # Extract the current question from the message parts
+            current_question = ""
+            # Extract current question from message parts
+
+            for part in task_send_params.message.parts:
+                if part.type == "text":
+                    current_question = part.text
+                    break
+
+            # Add current question as the final message (this is what LangChain agent will process)
+            if current_question:
+                all_messages.append({"question": current_question, "answer": ""})
+            else:
+                logger.error("No current question found in message parts")
+
+            logger.debug(f"Sending {len(all_messages)} total messages to streaming agent")
             async for item in agent.streaming_invoke(all_messages, timeout=60):
                 # Clean up: Remove verbose debug logs, keep only errors and essential info
                 if isinstance(item, dict) and "artifact" in item and "parts" in item["artifact"]:
@@ -262,27 +290,21 @@ class AgentTaskManager(InMemoryTaskManager):
 
                 # Get history from request if available - check both locations
                 history = []
+
                 # First check if history is at top level (task_send_params.history)
                 if hasattr(task_send_params, "history") and task_send_params.history:
-                    # Convert each history item to dict if needed and ensure proper role
+                    # Convert each history item to dict if needed
                     for item in task_send_params.history:
                         item_dict = item.model_dump() if hasattr(item, "model_dump") else item
-                        # Ensure the role is properly set
-                        if "role" not in item_dict:
-                            item_dict["role"] = "assistant" if "answer" in item_dict else "user"
                         history.append(item_dict)
                 # Also check if history is nested under message (message.history)
                 elif hasattr(task_send_params.message, "history") and task_send_params.message.history:
-                    logger.info(f"Found history nested under message: {len(task_send_params.message.history)} items")
                     for item in task_send_params.message.history:
                         item_dict = item.model_dump() if hasattr(item, "model_dump") else item
-                        # Ensure the role is properly set
-                        if "role" not in item_dict:
-                            item_dict["role"] = "assistant" if "answer" in item_dict else "user"
                         history.append(item_dict)
 
-                # Add current message to history
-                history.append(message_dict)
+                # DO NOT add current message to history - it should be processed separately
+                # The current message will be extracted during streaming from task_send_params.message
 
                 # Create a new task
                 task = Task(

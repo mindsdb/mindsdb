@@ -674,30 +674,6 @@ class AgentsController:
 
         return combined_model_params
 
-    def _convert_messages_format(self, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """
-        Convert A2A message format to LangChain format.
-        A2A sends: [{"question": "...", "answer": "..."}]
-        LangChain expects: [{"user": "...", "assistant": "..."}]
-        """
-        converted_messages = []
-        for msg in messages:
-            if isinstance(msg, dict):
-                if "question" in msg and "answer" in msg:
-                    # Convert A2A format to LangChain format
-                    if msg["question"]:
-                        converted_messages.append({"user": msg["question"]})
-                    if msg["answer"]:
-                        converted_messages.append({"assistant": msg["answer"]})
-                else:
-                    # Already in correct format or different format, pass through
-                    converted_messages.append(msg)
-            else:
-                converted_messages.append(msg)
-
-        logger.info(f"Converted {len(messages)} A2A messages to {len(converted_messages)} LangChain messages")
-        return converted_messages
-
     def get_completion(
         self,
         agent: db.Agents,
@@ -737,13 +713,8 @@ class AgentsController:
         # Get agent parameters and combine with default LLM parameters at runtime
         llm_params = self.get_agent_llm_params(agent.params)
 
-        # Convert A2A message format to LangChain format if needed
-        # A2A sends: [{"question": "...", "answer": "..."}]
-        # LangChain expects: [{"user": "...", "assistant": "..."}]
-        converted_messages = self._convert_messages_format(messages)
-
         lang_agent = LangchainAgent(agent, model, llm_params=llm_params)
-        return lang_agent.get_completion(converted_messages, params=params)
+        return lang_agent.get_completion(messages, params=params)
 
     def _get_completion_stream(
         self,
@@ -784,8 +755,5 @@ class AgentsController:
         # Get agent parameters and combine with default LLM parameters at runtime
         llm_params = self.get_agent_llm_params(agent.params)
 
-        # Convert A2A message format to LangChain format if needed
-        converted_messages = self._convert_messages_format(messages)
-
         lang_agent = LangchainAgent(agent, model=model, llm_params=llm_params)
-        return lang_agent.get_completion(converted_messages, stream=True, params=params)
+        return lang_agent.get_completion(messages, stream=True, params=params)

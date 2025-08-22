@@ -116,12 +116,12 @@ class A2AServer:
             }
 
             if isinstance(json_rpc_request, GetTaskRequest):
-                result = await self.task_manager.on_get_task(json_rpc_request, user_info)
+                result = await self.task_manager.on_get_task(json_rpc_request)
             elif isinstance(json_rpc_request, SendTaskRequest):
-                result = await self.task_manager.on_send_task(json_rpc_request)
+                result = await self.task_manager.on_send_task(json_rpc_request, user_info)
             elif isinstance(json_rpc_request, SendTaskStreamingRequest):
                 # Don't await the async generator, just pass it to _create_response
-                result = self.task_manager.on_send_task_subscribe(json_rpc_request)
+                result = self.task_manager.on_send_task_subscribe(json_rpc_request, user_info)
             elif isinstance(json_rpc_request, CancelTaskRequest):
                 result = await self.task_manager.on_cancel_task(json_rpc_request)
             elif isinstance(json_rpc_request, SetTaskPushNotificationRequest):

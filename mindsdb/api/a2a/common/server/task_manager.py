@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Union, AsyncIterable, List
+from typing import Union, AsyncIterable, List, Dict
 from ...common.types import Task
 from ...common.types import (
     JSONRPCResponse,
@@ -47,12 +47,12 @@ class TaskManager(ABC):
         pass
 
     @abstractmethod
-    async def on_send_task(self, request: SendTaskRequest) -> SendTaskResponse:
+    async def on_send_task(self, request: SendTaskRequest, user_info: Dict) -> SendTaskResponse:
         pass
 
     @abstractmethod
     async def on_send_task_subscribe(
-        self, request: SendTaskStreamingRequest
+        self, request: SendTaskStreamingRequest, user_info: Dict
     ) -> Union[AsyncIterable[SendTaskStreamingResponse], JSONRPCResponse]:
         pass
 
@@ -110,12 +110,12 @@ class InMemoryTaskManager(TaskManager):
         return CancelTaskResponse(id=request.id, error=TaskNotCancelableError())
 
     @abstractmethod
-    async def on_send_task(self, request: SendTaskRequest) -> SendTaskResponse:
+    async def on_send_task(self, request: SendTaskRequest, user_info: Dict) -> SendTaskResponse:
         pass
 
     @abstractmethod
     async def on_send_task_subscribe(
-        self, request: SendTaskStreamingRequest
+        self, request: SendTaskStreamingRequest, user_info: Dict
     ) -> Union[AsyncIterable[SendTaskStreamingResponse], JSONRPCResponse]:
         pass
 

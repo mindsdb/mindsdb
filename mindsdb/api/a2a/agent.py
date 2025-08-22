@@ -20,6 +20,7 @@ class MindsDBAgent:
         project_name="mindsdb",
         host="localhost",
         port=47334,
+        user_info: Dict[str, Any] = None
     ):
         self.agent_name = agent_name
         self.project_name = project_name
@@ -28,6 +29,7 @@ class MindsDBAgent:
         self.base_url = f"http://{host}:{port}"
         self.agent_url = f"{self.base_url}/api/projects/{project_name}/agents/{agent_name}"
         self.sql_url = f"{self.base_url}/api/sql/query"
+        self.headers = user_info or {}
         logger.info(f"Initialized MindsDB agent connector to {self.base_url}")
 
     def invoke(self, query, session_id) -> Dict[str, Any]:
@@ -36,8 +38,8 @@ class MindsDBAgent:
             escaped_query = query.replace("'", "''")
             sql_query = f"SELECT * FROM {self.project_name}.{self.agent_name} WHERE question = '{escaped_query}'"
             logger.info(f"Sending SQL query to MindsDB: {sql_query[:100]}...")
-            logger.info(f"session id: {session_id}")
-            response = requests.post(self.sql_url, json={"query": sql_query})
+            logger.info(f"with headers: {self.headers}")
+            response = requests.post(self.sql_url, json={"query": sql_query}, headers=self.headers)
             response.raise_for_status()
             data = response.json()
             logger.debug(f"Received response from MindsDB: {json.dumps(data)[:200]}...")
@@ -91,7 +93,8 @@ class MindsDBAgent:
     async def streaming_invoke(self, messages, timeout=DEFAULT_STREAM_TIMEOUT):
         url = f"{self.base_url}/api/projects/{self.project_name}/agents/{self.agent_name}/completions/stream"
         logger.info(f"Sending streaming request to MindsDB agent: {self.agent_name}")
-        async with httpx.AsyncClient(timeout=timeout) as client:
+        logger.info(f"with headers: {self.headers}")
+        async with httpx.AsyncClient(timeout=timeout, headers=self.headers) as client:
             async with client.stream("POST", url, json={"messages": to_serializable(messages)}) as response:
                 response.raise_for_status()
                 async for line in response.aiter_lines():

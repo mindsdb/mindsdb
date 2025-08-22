@@ -109,8 +109,14 @@ class A2AServer:
             body = await request.json()
             json_rpc_request = A2ARequest.validate_python(body)
 
+            user_info = {
+                "user-id": request.headers.get("user-id", None),
+                "company-id": request.headers.get("company-id", None),
+                "user-class": request.headers.get("user-class", None),
+            }
+
             if isinstance(json_rpc_request, GetTaskRequest):
-                result = await self.task_manager.on_get_task(json_rpc_request)
+                result = await self.task_manager.on_get_task(json_rpc_request, user_info)
             elif isinstance(json_rpc_request, SendTaskRequest):
                 result = await self.task_manager.on_send_task(json_rpc_request)
             elif isinstance(json_rpc_request, SendTaskStreamingRequest):

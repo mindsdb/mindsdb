@@ -1,4 +1,4 @@
-from typing import AsyncIterable
+from typing import AsyncIterable, Dict
 from mindsdb.api.a2a.common.types import (
     SendTaskRequest,
     TaskSendParams,
@@ -58,7 +58,7 @@ class AgentTaskManager(InMemoryTaskManager):
         self.tasks = {}  # Task storage
         self.lock = asyncio.Lock()  # Lock for task operations
 
-    def _create_agent(self, agent_name: str = None) -> MindsDBAgent:
+    def _create_agent(self, user_info: Dict, agent_name: str = None) -> MindsDBAgent:
         """Create a new MindsDBAgent instance for the given agent name."""
         if not agent_name:
             raise ValueError("Agent name is required but was not provided in the request")
@@ -68,9 +68,10 @@ class AgentTaskManager(InMemoryTaskManager):
             project_name=self.project_name,
             host=self.mindsdb_host,
             port=self.mindsdb_port,
+            user_info=user_info
         )
 
-    async def _stream_generator(self, request: SendTaskStreamingRequest) -> AsyncIterable[SendTaskStreamingResponse]:
+    async def _stream_generator(self, request: SendTaskStreamingRequest, user_info: Dict) -> AsyncIterable[SendTaskStreamingResponse]:
         task_send_params: TaskSendParams = request.params
         query = self._get_user_query(task_send_params)
         params = self._get_task_params(task_send_params)
@@ -92,7 +93,7 @@ class AgentTaskManager(InMemoryTaskManager):
             yield error_result
             return  # Early return from generator
 
-        agent = self._create_agent(agent_name)
+        agent = self._create_agent(agent_name, user_info=user_info)
 
         # Get the history from the task
         history = task.history if task and task.history else []
@@ -321,15 +322,15 @@ class AgentTaskManager(InMemoryTaskManager):
 
         return None
 
-    async def on_send_task(self, request: SendTaskRequest) -> SendTaskResponse:
+    async def on_send_task(self, request: SendTaskRequest, user_info: Dict) -> SendTaskResponse:
         error = self._validate_request(request)
         if error:
             return error
 
-        return await self._invoke(request)
+        return await self._invoke(request, user_info=user_info)
 
     async def on_send_task_subscribe(
-        self, request: SendTaskStreamingRequest
+        self, request: SendTaskStreamingRequest, user_info: Dict
     ) -> AsyncIterable[SendTaskStreamingResponse]:
         error = self._validate_request(request)
         if error:
@@ -340,7 +341,7 @@ class AgentTaskManager(InMemoryTaskManager):
         # We can't await an async generator directly, so we need to use it as is
         try:
             logger.debug(f"[TaskManager] Entering streaming path at {time.time()}")
-            async for response in self._stream_generator(request):
+            async for response in self._stream_generator(request, user_info=user_info):
                 logger.debug(f"[TaskManager] Yielding streaming response at {time.time()} with: {str(response)[:120]}")
                 yield response
         except Exception as e:
@@ -420,13 +421,13 @@ class AgentTaskManager(InMemoryTaskManager):
             "session_id": task_send_params.sessionId,
         }
 
-    async def _invoke(self, request: SendTaskRequest) -> SendTaskResponse:
+    async def _invoke(self, request: SendTaskRequest, user_info: Dict) -> SendTaskResponse:
         task_send_params: TaskSendParams = request.params
         query = self._get_user_query(task_send_params)
         params = self._get_task_params(task_send_params)
         agent_name = params["agent_name"]
         streaming = params["streaming"]
-        agent = self._create_agent(agent_name)
+        agent = self._create_agent(user_info=user_info, agent_name=agent_name)
 
         try:
             # Get the history from the task

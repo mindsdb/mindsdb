@@ -36,6 +36,7 @@ class MindsDBAgent:
             escaped_query = query.replace("'", "''")
             sql_query = f"SELECT * FROM {self.project_name}.{self.agent_name} WHERE question = '{escaped_query}'"
             logger.info(f"Sending SQL query to MindsDB: {sql_query[:100]}...")
+            logger.info(f"session id: {session_id}")
             response = requests.post(self.sql_url, json={"query": sql_query})
             response.raise_for_status()
             data = response.json()

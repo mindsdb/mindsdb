@@ -3,38 +3,50 @@ title: Standard Functions
 sidebarTitle: Standard Functions
 ---
 
-todo
+MindsDB supports standard SQL functions via DuckDB and MySQL engines.
 
-### Aggregate Functions
+## Functions via DuckDB
 
-MindsDB supports aggregate functions via DuckDB. See the [complete list here](https://duckdb.org/docs/stable/sql/functions/aggregates).
+The following functions are supported via the DuckDB engine. See the [complete list of supported functions here](https://duckdb.org/docs/stable/sql/functions/overview).
 
-SQL aggregate functions perform calculations on a set of values and return a single result, making them useful for summarizing or analyzing data across multiple rows. Common aggregate functions include `COUNT()`, `SUM()`, `AVG()`, `MIN()`, and `MAX()`. These functions are used with `GROUP BY` to organize results by specific categories.
+* [Aggregate Functions](https://duckdb.org/docs/stable/sql/functions/aggregates)
+* [Array Functions](https://duckdb.org/docs/stable/sql/functions/array)
+* [Bitstring Functions](https://duckdb.org/docs/stable/sql/functions/bitstring)
+* [Blob Functions](https://duckdb.org/docs/stable/sql/functions/blob)
+* [Date Format Functions](https://duckdb.org/docs/stable/sql/functions/dateformat)
+* [Date Functions](https://duckdb.org/docs/stable/sql/functions/date)
+* [Date Part Functions](https://duckdb.org/docs/stable/sql/functions/datepart)
+* [Enum Functions](https://duckdb.org/docs/stable/sql/functions/enum)
+* [Interval Functions](https://duckdb.org/docs/stable/sql/functions/interval)
+* [Lambda Functions](https://duckdb.org/docs/stable/sql/functions/lambda)
+* [List Functions](https://duckdb.org/docs/stable/sql/functions/list)
+* [Map Functions](https://duckdb.org/docs/stable/sql/functions/map)
+* [Nested Functions](https://duckdb.org/docs/stable/sql/functions/nested)
+* [Numeric Functions](https://duckdb.org/docs/stable/sql/functions/numeric)
+* [Pattern Matching](https://duckdb.org/docs/stable/sql/functions/pattern_matching)
+* [Regular Expressions](https://duckdb.org/docs/stable/sql/functions/regular_expressions)
+* [Struct Functions](https://duckdb.org/docs/stable/sql/functions/struct)
+* [Text Functions](https://duckdb.org/docs/stable/sql/functions/text)
+* [Time Functions](https://duckdb.org/docs/stable/sql/functions/time)
+* [Timestamp Functions](https://duckdb.org/docs/stable/sql/functions/timestamp)
+* [Timestamp with Time Zone Functions](https://duckdb.org/docs/stable/sql/functions/timestamptz)
+* [Union Functions](https://duckdb.org/docs/stable/sql/functions/union)
+* [Utility Functions](https://duckdb.org/docs/stable/sql/functions/utility)
+* [Window Functions](https://duckdb.org/docs/stable/sql/functions/window_functions)
 
-```sql
-SELECT
-        year,
-        SUM(salary) AS annual_salary
-FROM salaries
-GROUP BY year;
-```
+## Functions via MySQL
 
-### Array Functions
+The following functions are supported via the MySQL engine.
 
-
-
-
-
-### Window Functions
-
-todo
-
-Window functions in SQL perform calculations across a set of table rows related to the current row, without collapsing rows into a single result like aggregate functions do. These functions are useful for ranking, calculating running totals, and working with moving averages. Common window functions include `ROW_NUMBER()`, `RANK()`, `DENSE_RANK()`, `NTILE(n)`, `LAG()`, `LEAD()`, `SUM()`, and `AVG()`.
-
-```sql
-SELECT
-        a + b * (c-d) as a,
-        AVG(a) OVER (PARTITION BY b)
-FROM table_name;
-```
-
+* [`char()`](https://dev.mysql.com/doc/refman/8.4/en/string-functions.html#function_char)
+* [`locate()`](https://dev.mysql.com/doc/refman/8.4/en/string-functions.html#function_locate)
+* [`instr()`](https://dev.mysql.com/doc/refman/8.0/en/string-functions.html#function_instr)
+* [`unhex()`](https://dev.mysql.com/doc/refman/8.4/en/string-functions.html#function_unhex)
+* [`format()`](https://dev.mysql.com/doc/refman/8.4/en/string-functions.html#function_format)
+* [`sha2()`](https://dev.mysql.com/doc/refman/8.4/en/encryption-functions.html#function_sha2)
+* [`length()`](https://dev.mysql.com/doc/refman/8.4/en/string-functions.html#function_length)
+* [`regexp_substr()`](https://dev.mysql.com/doc/refman/8.4/en/regexp.html#function_regexp-substr)
+* [`substring_index()`](https://dev.mysql.com/doc/refman/8.4/en/string-functions.html#function_substring-index)
+* [`curtime()`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_curtime)
+* [`timestampdiff()`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_timestampdiff)
+* [`extract()`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_extract)

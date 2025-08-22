@@ -183,8 +183,27 @@ class AgentTaskManager(InMemoryTaskManager):
         # If streaming is enabled (default), use the streaming implementation
         try:
             logger.debug(f"[TaskManager] Entering agent.stream() at {time.time()}")
-            # Transform to agent-compatible format
-            agent_messages = to_question_format(
+            # Build complete message list: history + current message (like agents controller does)
+            all_messages = []
+
+            # Add history messages first (convert to question/answer format)
+            for msg in history:
+                msg_dict = msg.model_dump() if hasattr(msg, "model_dump") else msg
+                # Convert history message to question/answer format
+                for part in msg_dict.get("parts", []):
+                    if part.get("type") == "text" and "text" in part:
+                        if msg_dict.get("role") == "user":
+                            all_messages.append({"question": part["text"]})
+                        elif msg_dict.get("role") == "assistant":
+                            # For assistant messages, we need to find the corresponding question
+                            if all_messages and "answer" not in all_messages[-1]:
+                                all_messages[-1]["answer"] = part["text"]
+                            else:
+                                # If no question to pair with, create a new entry
+                                all_messages.append({"question": "", "answer": part["text"]})
+
+            # Add current message (should only be user message)
+            current_message_formatted = to_question_format(
                 [
                     {
                         "role": task_send_params.message.role,
@@ -193,7 +212,13 @@ class AgentTaskManager(InMemoryTaskManager):
                     }
                 ]
             )
-            async for item in agent.streaming_invoke(agent_messages, timeout=60):
+            all_messages.extend(current_message_formatted)
+
+            logger.info(
+                f"Sending {len(all_messages)} total messages to streaming agent ({len(history)} from history + current)"
+            )
+            logger.debug(f"DEBUG: Complete message list being sent to agent: {all_messages}")
+            async for item in agent.streaming_invoke(all_messages, timeout=60):
                 # Clean up: Remove verbose debug logs, keep only errors and essential info
                 if isinstance(item, dict) and "artifact" in item and "parts" in item["artifact"]:
                     item["artifact"]["parts"] = [to_serializable(p) for p in item["artifact"]["parts"]]
@@ -235,12 +260,22 @@ class AgentTaskManager(InMemoryTaskManager):
                 message = task_send_params.message
                 message_dict = message.dict() if hasattr(message, "dict") else message
 
-                # Get history from request if available
+                # Get history from request if available - check both locations
                 history = []
+                # First check if history is at top level (task_send_params.history)
                 if hasattr(task_send_params, "history") and task_send_params.history:
                     # Convert each history item to dict if needed and ensure proper role
                     for item in task_send_params.history:
-                        item_dict = item.dict() if hasattr(item, "dict") else item
+                        item_dict = item.model_dump() if hasattr(item, "model_dump") else item
+                        # Ensure the role is properly set
+                        if "role" not in item_dict:
+                            item_dict["role"] = "assistant" if "answer" in item_dict else "user"
+                        history.append(item_dict)
+                # Also check if history is nested under message (message.history)
+                elif hasattr(task_send_params.message, "history") and task_send_params.message.history:
+                    logger.info(f"Found history nested under message: {len(task_send_params.message.history)} items")
+                    for item in task_send_params.message.history:
+                        item_dict = item.model_dump() if hasattr(item, "model_dump") else item
                         # Ensure the role is properly set
                         if "role" not in item_dict:
                             item_dict["role"] = "assistant" if "answer" in item_dict else "user"

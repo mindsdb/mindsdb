@@ -191,162 +191,159 @@
                     "integrations/files/parquet"
                   ]
                 }
-
-              ]
-            },
-            {
-              "group": "Connection",
-              "pages": [
-                {
-                  "group": "Connect MindsDB to SQL Clients",
-                  "pages": [
-                    "mindsdb_sql/connect/mindsdb_editor",
-                    "mindsdb_sql/connect/mysql-client",
-                    "mindsdb_sql/connect/dbeaver",
-                    "mindsdb_sql/connect/connect-mariadb-skysql",
-                    "mindsdb_sql/connect/sql-alchemy",
-                    "mindsdb_sql/connect/deepnote",
-                    "mindsdb_sql/connect/metabase",
-                    "mindsdb_sql/connect/tableau",
-                    "mindsdb_sql/connect/jupysql",
-                    "mindsdb_sql/connect/grafana"
-                  ]
-                },
-                {
-                  "group": "Connect Data",
-                  "pages": [
-                    "mindsdb_sql/sql/list-data-handlers",
-                    "mindsdb_sql/sql/create/database",
-                    "mindsdb_sql/sql/drop/database",
-                    "mindsdb_sql/sql/show-databases",
-                    "mindsdb_sql/sql/api/use"
-                  ]
-                }
-              ]
-            },
-            {
-              "group": "Data Catalog",
-              "pages": [
-                "data_catalog/overview",
-                {
-                  "group": "Data Catalog for Integrations",
-                  "pages": [
-                    "data_catalog/integrations/overview",
-                    "data_catalog/integrations/query"
-                  ]
-                }
-              ]
-            },
-            {
-              "group": "Bring Your Own Models",
-              "pages": [
-                "integrations/ai-engines/byom",
-                "integrations/ai-engines/mlflow"
-              ]
-            }
-          ]
-        },
-        {
-          "tab": "Unify",
-          "groups": [
-            {
-              "group": "Overview",
-              "pages": [
-                "mindsdb-unify",
-                "mindsdb_sql/overview"
-              ]
-            },
-            {
-              "group": "Data Unification",
-              "pages": [
-                {
-                  "group": "Knowledge Bases",
-                  "pages": [
-                    "mindsdb_sql/knowledge_bases/overview",
-                    "mindsdb_sql/knowledge_bases/create",
-                    "mindsdb_sql/knowledge_bases/insert_data",
-                    "mindsdb_sql/knowledge_bases/query",
-                    "mindsdb_sql/knowledge_bases/hybrid_search",
-                    "mindsdb_sql/knowledge_bases/evaluate",
-                    "mindsdb_sql/knowledge_bases/examples"
-                  ]
-                },
-                {
-                  "group": "Tables, Views, and Files",
-                  "pages": [
-                    "mindsdb_sql/sql/create/table",
-                    "mindsdb_sql/sql/drop/table",
-                    "mindsdb_sql/sql/api/select",
-                    "mindsdb_sql/sql/native-queries",
-                    "mindsdb_sql/sql/api/update",
-                    "mindsdb_sql/sql/api/insert",
-                    "mindsdb_sql/sql/api/join-on",
-                    "mindsdb_sql/sql/api/delete",
-                    "mindsdb_sql/sql/create/view",
-                    "mindsdb_sql/sql/drop/view",
-                    "mindsdb_sql/sql/api/select-view",
-                    "mindsdb_sql/sql/api/alter-view",
-                    "mindsdb_sql/sql/create/file",
-                    "mindsdb_sql/sql/drop/file",
-                    "mindsdb_sql/sql/api/select-files"
-                  ]
-                },
-                {
-                  "group": "Projects",
-                  "pages": [
-                    "mindsdb_sql/sql/create/project",
-                    "mindsdb_sql/sql/drop/project",
-                    "mindsdb_sql/sql/list-projects",
-                    "mindsdb_sql/sql/use/project"
-                  ]
-                }
-              ]
-            },
-            {
-              "group": "Data Transformation",
-              "pages": [
-                {
-                  "group": "Functions",
-                  "pages": [
-                    "mindsdb_sql/functions/custom_functions",
-                    "mindsdb_sql/functions/llm_function",
-                    "mindsdb_sql/functions/to_markdown_function",
-                    "mindsdb_sql/functions/from_env"
-                  ]
-                },
-                {
-                  "group": "Standard SQL Support",
-                  "pages": [
-                    "mindsdb_sql/sql_support/cte",
-                    "mindsdb_sql/sql_support/case-when",
-                    "mindsdb_sql/sql_support/aggregate-functions",
-                    "mindsdb_sql/sql_support/window-functions"
-                  ]
-                }
-              ]
-            },
-            {
-              "group": "Data Automation",
-              "pages": [
-                {
-                  "group": "Jobs",
-                  "pages": [
-                    "mindsdb_sql/sql/create/jobs",
-                    "mindsdb_sql/sql/drop/jobs",
-                    "mindsdb_sql/sql/query-jobs"
-                  ]
-                },
-                {
-                  "group": "Triggers",
-                  "pages": [
-                    "mindsdb_sql/sql/create/trigger",
-                    "mindsdb_sql/sql/drop/trigger",
-                    "mindsdb_sql/sql/query-triggers"
-                  ]
-                }
-              ]
-            }
-
+              },
+              {
+                "group": "Connection",
+                "pages": [
+                  {
+                    "group": "Connect MindsDB to SQL Clients",
+                    "pages": [
+                      "mindsdb_sql/connect/mindsdb_editor",
+                      "mindsdb_sql/connect/mysql-client",
+                      "mindsdb_sql/connect/dbeaver",
+                      "mindsdb_sql/connect/connect-mariadb-skysql",
+                      "mindsdb_sql/connect/sql-alchemy",
+                      "mindsdb_sql/connect/deepnote",
+                      "mindsdb_sql/connect/metabase",
+                      "mindsdb_sql/connect/tableau",
+                      "mindsdb_sql/connect/jupysql",
+                      "mindsdb_sql/connect/grafana"
+                    ]
+                  },
+                  {
+                    "group": "Connect Data",
+                    "pages": [
+                      "mindsdb_sql/sql/list-data-handlers",
+                      "mindsdb_sql/sql/create/database",
+                      "mindsdb_sql/sql/drop/database",
+                      "mindsdb_sql/sql/show-databases",
+                      "mindsdb_sql/sql/api/use"
+                    ]
+                  }
+                ]
+              },
+              {
+                "group": "Data Catalog",
+                "pages": [
+                  "data_catalog/overview",
+                  {
+                    "group": "Data Catalog for Integrations",
+                    "pages": [
+                      "data_catalog/integrations/overview",
+                      "data_catalog/integrations/query"
+                    ]
+                  }
+                ]
+              },
+              {
+                "group": "Bring Your Own Models",
+                "pages": [
+                  "integrations/ai-engines/byom",
+                  "integrations/ai-engines/mlflow"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Unify",
+            "groups": [
+              {
+                "group": "Overview",
+                "pages": [
+                  "mindsdb-unify",
+                  "mindsdb_sql/overview"
+                ]
+              },
+              {
+                "group": "Data Unification",
+                "pages": [
+                  {
+                    "group": "Knowledge Bases",
+                    "pages": [
+                      "mindsdb_sql/knowledge_bases/overview",
+                      "mindsdb_sql/knowledge_bases/create",
+                      "mindsdb_sql/knowledge_bases/insert_data",
+                      "mindsdb_sql/knowledge_bases/query",
+                      "mindsdb_sql/knowledge_bases/hybrid_search",
+                      "mindsdb_sql/knowledge_bases/evaluate",
+                      "mindsdb_sql/knowledge_bases/examples"
+                    ]
+                  },
+                  {
+                    "group": "Tables, Views, and Files",
+                    "pages": [
+                      "mindsdb_sql/sql/create/table",
+                      "mindsdb_sql/sql/drop/table",
+                      "mindsdb_sql/sql/api/select",
+                      "mindsdb_sql/sql/native-queries",
+                      "mindsdb_sql/sql/api/update",
+                      "mindsdb_sql/sql/api/insert",
+                      "mindsdb_sql/sql/api/join-on",
+                      "mindsdb_sql/sql/api/delete",
+                      "mindsdb_sql/sql/create/view",
+                      "mindsdb_sql/sql/drop/view",
+                      "mindsdb_sql/sql/api/select-view",
+                      "mindsdb_sql/sql/api/alter-view",
+                      "mindsdb_sql/sql/create/file",
+                      "mindsdb_sql/sql/drop/file",
+                      "mindsdb_sql/sql/api/select-files"
+                    ]
+                  },
+                  {
+                    "group": "Projects",
+                    "pages": [
+                      "mindsdb_sql/sql/create/project",
+                      "mindsdb_sql/sql/drop/project",
+                      "mindsdb_sql/sql/list-projects",
+                      "mindsdb_sql/sql/use/project"
+                    ]
+                  }
+                ]
+              },
+              {
+                "group": "Data Transformation",
+                "pages": [
+                  {
+                    "group": "Custom Functions",
+                    "pages": [
+                      "mindsdb_sql/functions/llm_function",
+                      "mindsdb_sql/functions/to_markdown_function",
+                      "mindsdb_sql/functions/from_env",
+                      "mindsdb_sql/functions/custom_functions",
+                      "mindsdb_sql/functions/variables"
+                    ]
+                  },
+                  {
+                    "group": "Standard SQL Support",
+                    "pages": [
+                      "mindsdb_sql/functions/standard-functions",
+                      "mindsdb_sql/sql_support/cte",
+                      "mindsdb_sql/sql_support/case-when"
+                    ]
+                  }
+                ]
+              },
+              {
+                "group": "Data Automation",
+                "pages": [
+                  {
+                    "group": "Jobs",
+                    "pages": [
+                      "mindsdb_sql/sql/create/jobs",
+                      "mindsdb_sql/sql/drop/jobs",
+                      "mindsdb_sql/sql/query-jobs"
+                    ]
+                  },
+                  {
+                    "group": "Triggers",
+                    "pages": [
+                      "mindsdb_sql/sql/create/trigger",
+                      "mindsdb_sql/sql/drop/trigger",
+                      "mindsdb_sql/sql/query-triggers"
+                    ]
+                  }
+                ]
+              }
           ]
         },
         {

@@ -18,6 +18,18 @@ from mindsdb.integrations.libs.response import (
 logger = log.getLogger(__name__)
 
 
+class MindsDBClickHouseDialect(ClickHouseDialect):
+    """
+    Custom ClickHouse dialect to handle MindsDB specific requirements.
+    """
+
+    driver = 'clickhouse'
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.driver = 'clickhouse'
+
+
 class ClickHouseHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the ClickHouse statements.
@@ -29,7 +41,7 @@ class ClickHouseHandler(DatabaseHandler):
         super().__init__(name)
         self.dialect = 'clickhouse'
         self.connection_data = connection_data
-        self.renderer = SqlalchemyRender(ClickHouseDialect)
+        self.renderer = SqlalchemyRender(MindsDBClickHouseDialect)
         self.is_connected = False
         self.protocol = connection_data.get('protocol', 'native')
 
@@ -50,23 +62,27 @@ class ClickHouseHandler(DatabaseHandler):
         if self.is_connected:
             return self.connection
 
-        protocol = "clickhouse+native" if self.protocol == 'native' else "clickhouse+http"
+        protocol = (
+            "clickhouse+native" if self.protocol == "native" else "clickhouse+http"
+        )
         host = quote(self.connection_data['host'])
         port = self.connection_data['port']
         user = quote(self.connection_data['user'])
         password = quote(self.connection_data['password'])
         database = quote(self.connection_data['database'])
-        url = f'{protocol}://{user}:{password}@{host}:{port}/{database}'
+        url = f"{protocol}://{user}:{password}@{host}:{port}/{database}"
         # This is not redundunt. Check https://clickhouse-sqlalchemy.readthedocs.io/en/latest/connection.html#http
         if self.protocol == 'https':
-            url = url + "?protocol=https"
+            url = url + '?protocol=https'
         try:
             engine = create_engine(url)
             connection = engine.raw_connection()
             self.is_connected = True
             self.connection = connection
         except SQLAlchemyError as e:
-            logger.error(f'Error connecting to ClickHouse {self.connection_data["database"]}, {e}!')
+            logger.error(
+                f'Error connecting to ClickHouse {self.connection_data["database"]}, {e}!'
+            )
             self.is_connected = False
             raise
 
@@ -91,7 +107,9 @@ class ClickHouseHandler(DatabaseHandler):
                 cur.close()
             response.success = True
         except SQLAlchemyError as e:
-            logger.error(f'Error connecting to ClickHouse {self.connection_data["database"]}, {e}!')
+            logger.error(
+                f'Error connecting to ClickHouse {self.connection_data["database"]}, {e}!'
+            )
             response.error_message = str(e)
             self.is_connected = False
 
@@ -119,20 +137,16 @@ class ClickHouseHandler(DatabaseHandler):
             if result:
                 response = Response(
                     RESPONSE_TYPE.TABLE,
-                    pd.DataFrame(
-                        result,
-                        columns=[x[0] for x in cur.description]
-                    )
+                    pd.DataFrame(result, columns=[x[0] for x in cur.description]),
                 )
             else:
                 response = Response(RESPONSE_TYPE.OK)
             connection.commit()
         except SQLAlchemyError as e:
-            logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
+            logger.error(
+                f'Error running query: {query} on {self.connection_data["database"]}!'
             )
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
             connection.rollback()
         finally:
             cur.close()

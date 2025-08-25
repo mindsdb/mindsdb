@@ -18,7 +18,7 @@ from mindsdb.api.a2a.common.types import (
 )
 from mindsdb.api.a2a.common.server.task_manager import InMemoryTaskManager
 from mindsdb.api.a2a.agent import MindsDBAgent
-from mindsdb.api.a2a.utils import to_serializable
+from mindsdb.api.a2a.utils import to_serializable, convert_a2a_message_to_qa_format
 
 from typing import Union
 import logging
@@ -169,81 +169,13 @@ class AgentTaskManager(InMemoryTaskManager):
         # If streaming is enabled (default), use the streaming implementation
         try:
             logger.debug(f"[TaskManager] Entering agent.stream() at {time.time()}")
-            # Build complete message list: history + current message (like agents controller does)
-            all_messages = []
+            # Create A2A message structure and convert using centralized utility
+            a2a_message = task_send_params.message.model_dump()
+            if history:
+                a2a_message["history"] = [msg.model_dump() if hasattr(msg, "model_dump") else msg for msg in history]
 
-            # Add history messages first (convert to question/answer format)
-            # Process messages in pairs (user question + assistant answer)
-            current_qa_pair = {}
-
-            for msg in history:
-                msg_dict = msg.model_dump() if hasattr(msg, "model_dump") else msg
-                logger.debug(f"Processing history message: role={msg_dict.get('role')}, parts={msg_dict.get('parts')}")
-
-                # Extract text from parts
-                text_content = ""
-                for part in msg_dict.get("parts", []):
-                    if part.get("type") == "text" and "text" in part:
-                        text_content = part["text"]
-                        break
-
-                if text_content:
-                    if msg_dict.get("role") == "user":
-                        # If we have a pending Q&A pair, save it first
-                        if current_qa_pair:
-                            all_messages.append(current_qa_pair)
-                            logger.debug(f"Added Q&A pair: {current_qa_pair}")
-                        # Start new Q&A pair
-                        current_qa_pair = {"question": text_content}
-                        logger.debug(f"Started new Q&A pair with question: {text_content}")
-                    elif msg_dict.get("role") in ["assistant", "agent"]:
-                        # Add answer to current Q&A pair (handle both "assistant" and "agent" roles)
-                        if current_qa_pair and "question" in current_qa_pair:
-                            current_qa_pair["answer"] = text_content
-                            logger.debug(f"Paired A2A {msg_dict.get('role')} response with question")
-                        else:
-                            # Standalone assistant/agent message (shouldn't happen in normal conversation)
-                            logger.warning(
-                                f"Found {msg_dict.get('role')} message without preceding user question: {text_content}"
-                            )
-                            all_messages.append({"question": "", "answer": text_content})
-
-            # Don't forget to add the last Q&A pair if it exists
-            if current_qa_pair:
-                # Ensure incomplete Q&A pairs have both question and answer fields
-                if "answer" not in current_qa_pair:
-                    current_qa_pair["answer"] = ""  # Add empty answer for incomplete pairs
-                    logger.warning(f"Added empty answer to incomplete Q&A pair: {current_qa_pair}")
-                all_messages.append(current_qa_pair)
-                logger.debug(f"Added final Q&A pair: {current_qa_pair}")
-
-            logger.debug(f"Converted {len(history)} history messages to {len(all_messages)} Q&A pairs")
-
-            # Verify all Q&A pairs have both question and answer fields
-            for i, qa_pair in enumerate(all_messages):
-                if "question" not in qa_pair or "answer" not in qa_pair:
-                    logger.error(f"Q&A pair {i} missing required fields: {qa_pair}")
-                    # Fix incomplete pairs
-                    if "question" not in qa_pair:
-                        qa_pair["question"] = ""
-                    if "answer" not in qa_pair:
-                        qa_pair["answer"] = ""
-                    logger.warning(f"Fixed Q&A pair {i}: {qa_pair}")
-
-            # Extract the current question from the message parts
-            current_question = ""
-            # Extract current question from message parts
-
-            for part in task_send_params.message.parts:
-                if part.type == "text":
-                    current_question = part.text
-                    break
-
-            # Add current question as the final message (this is what LangChain agent will process)
-            if current_question:
-                all_messages.append({"question": current_question, "answer": ""})
-            else:
-                logger.error("No current question found in message parts")
+            # Convert to Q&A format using centralized utility function
+            all_messages = convert_a2a_message_to_qa_format(a2a_message)
 
             logger.debug(f"Sending {len(all_messages)} total messages to streaming agent")
             async for item in agent.streaming_invoke(all_messages, timeout=60):

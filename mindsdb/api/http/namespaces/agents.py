@@ -323,65 +323,15 @@ class AgentCompletionsStream(Resource):
     @ns_conf.doc("agent_completions_stream")
     @api_endpoint_metrics("POST", "/agents/agent/completions/stream")
     def post(self, project_name, agent_name):
-        # Handle both regular HTTP requests and A2A requests
-
-        if "messages" in request.json:
-            # Regular HTTP request format
-            messages = request.json["messages"]
-        elif "params" in request.json and "message" in request.json["params"]:
-            # A2A request format - extract history and current message
-            a2a_message = request.json["params"]["message"]
-
-            # Convert A2A role/parts format to question/answer format
-            converted_messages = []
-
-            # Process conversation history first
-            if "history" in a2a_message:
-                for idx, hist_msg in enumerate(a2a_message["history"]):
-                    if hist_msg.get("role") == "user":
-                        # Extract text from parts
-                        text = ""
-                        for part in hist_msg.get("parts", []):
-                            if part.get("type") == "text":
-                                text = part.get("text", "")
-                                break
-                        # Create question with empty answer initially
-                        converted_messages.append({"question": text, "answer": ""})
-                    elif hist_msg.get("role") == "agent":
-                        # Extract text from parts
-                        text = ""
-                        for part in hist_msg.get("parts", []):
-                            if part.get("type") == "text":
-                                text = part.get("text", "")
-                                break
-                        # Pair with the most recent question that has empty answer
-                        paired = False
-                        for i in range(len(converted_messages) - 1, -1, -1):
-                            if converted_messages[i].get("answer") == "":
-                                converted_messages[i]["answer"] = text
-                                paired = True
-                                break
-
-                        if not paired:
-                            logger.warning("Could not pair agent response with question (no empty answer found)")
-
-                logger.debug(f"Converted {len(a2a_message['history'])} A2A history messages to Q&A format")
-
-            # Add current message as final question with empty answer
-            current_text = ""
-            for part in a2a_message.get("parts", []):
-                if part.get("type") == "text":
-                    current_text = part.get("text", "")
-                    break
-            converted_messages.append({"question": current_text, "answer": ""})
-            messages = converted_messages
-        else:
-            logger.error("Missing 'messages' or A2A 'params.message' in request body")
+        # Extract messages from request (HTTP format only)
+        if "messages" not in request.json:
             return http_error(
                 HTTPStatus.BAD_REQUEST,
                 "Missing parameter",
-                'Must provide "messages" parameter or A2A "params.message" structure in POST body',
+                'Must provide "messages" parameter in POST body',
             )
+
+        messages = request.json["messages"]
 
         session = SessionController()
         try:

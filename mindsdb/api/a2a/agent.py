@@ -3,7 +3,7 @@ from typing import Any, AsyncIterable, Dict, List
 import requests
 import logging
 import httpx
-from mindsdb.api.a2a.utils import to_serializable
+from mindsdb.api.a2a.utils import to_serializable, convert_a2a_message_to_qa_format
 from mindsdb.api.a2a.constants import DEFAULT_STREAM_TIMEOUT
 
 logger = logging.getLogger(__name__)
@@ -117,22 +117,12 @@ class MindsDBAgent:
         """Stream responses from the MindsDB agent (uses streaming API endpoint)."""
         try:
             logger.info(f"Using streaming API for query: {query[:100]}...")
-            formatted_messages = []
+            # Create A2A message structure with history and current query
+            a2a_message = {"role": "user", "parts": [{"text": query}]}
             if history:
-                for msg in history:
-                    msg_dict = msg.dict() if hasattr(msg, "dict") else msg
-                    role = msg_dict.get("role", "user")
-                    text = ""
-                    for part in msg_dict.get("parts", []):
-                        if part.get("type") == "text":
-                            text = part.get("text", "")
-                            break
-                    if text:
-                        if role == "user":
-                            formatted_messages.append({"question": text, "answer": None})
-                        elif role == "assistant" and formatted_messages:
-                            formatted_messages[-1]["answer"] = text
-            formatted_messages.append({"question": query, "answer": None})
+                a2a_message["history"] = history
+            # Convert to Q&A format using centralized utility
+            formatted_messages = convert_a2a_message_to_qa_format(a2a_message)
             logger.debug(f"Formatted messages for agent: {formatted_messages}")
             streaming_response = self.streaming_invoke(formatted_messages, timeout=timeout)
             async for chunk in streaming_response:

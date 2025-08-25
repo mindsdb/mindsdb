@@ -443,9 +443,9 @@ class BaseMLEngineExec:
         except (ImportError, ModuleNotFoundError):
             raise
         except Exception as e:
-            raise
-            # if type(e) is MLProcessException:
-            #     e = e.base_exception
+            if type(e) is MLProcessException:
+                e = e.base_exception
+            raise e
             # msg = str(e).strip()
             # if msg == '':
             #     msg = e.__class__.__name__

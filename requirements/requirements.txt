@@ -6,7 +6,6 @@ pandas == 2.2.3
 python-multipart == 0.0.18
 cryptography>=35.0
 psycopg[binary]
-waitress >= 1.4.4
 pymongo[srv] == 4.8.0
 psutil~=7.0
 sqlalchemy >= 2.0.0, < 3.0.0
@@ -51,7 +50,7 @@ mcp~=1.10.1
 anyio>=4.5          # for MCP server, should match 'mcp' requirements
 starlette>=0.27     # for MCP server, should match 'mcp' requirements
 fastapi>=0.110.0, <1.0.0  # Required for LiteLLM server
-uvicorn>=0.30.0, <1.0.0   # Required for LiteLLM server
+uvicorn>=0.30.0, <1.0.0   # Required for http, LiteLLM servers
 
 # files reading
 pymupdf==1.25.2

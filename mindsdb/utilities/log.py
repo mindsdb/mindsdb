@@ -99,31 +99,6 @@ def get_handlers_config(process_name: str) -> dict:
     return handlers_config
 
 
-def get_uvicorn_logging_config(process_name: str) -> dict:
-    """Generate a logging configuration dictionary for Uvicorn using MindsDB's logging settings.
-
-    Args:
-        process_name (str): The name of the process to include in log file names and handlers.
-
-    Returns:
-        dict: A dictionary suitable for use with logging.config.dictConfig, configured for Uvicorn logging.
-    """
-    handlers_config = get_handlers_config(process_name)
-    mindsdb_log_level = get_mindsdb_log_level()
-    return {
-        "version": 1,
-        "formatters": FORMATTERS,
-        "handlers": handlers_config,
-        "loggers": {
-            "uvicorn": {
-                "handlers": list(handlers_config.keys()),
-                "level": mindsdb_log_level,
-                "propagate": False,
-            }
-        },
-    }
-
-
 def configure_logging(process_name: str = None):
     handlers_config = get_handlers_config(process_name)
     mindsdb_log_level = get_mindsdb_log_level()

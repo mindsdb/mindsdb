@@ -141,30 +141,7 @@ The `autoupdate` parameter defines whether MindsDB automatically checks for and 
             "port": "47334",
             "restart_on_failure": true,
             "max_restart_count": 1,
-            "max_restart_interval_seconds": 60,
-            "server": {
-                "type": "server_type",
-                "config": {
-                    //  waitres 
-                    {
-                        "threads": 16,
-                        "max_request_body_size": (1 << 30) * 10,    # 10GB
-                        "inbuf_overflow": (1 << 30) * 10
-                    }
-
-                    // flask
-                    {}
-
-                    // gunicorn
-                    {
-                        'workers': min(multiprocessing.cpu_count(), 4),
-                        'timeout': 600,
-                        'reuse_port': True,
-                        'preload_app': True,
-                        'threads': 4
-                    }
-                }
-            }
+            "max_restart_interval_seconds": 60
         },
         "mysql": {
             "host": "127.0.0.1",
@@ -175,13 +152,6 @@ The `autoupdate` parameter defines whether MindsDB automatically checks for and 
             "max_restart_count": 1,
             "max_restart_interval_seconds": 60
         },
-        "a2a": {
-            "host": "127.0.0.1",
-            "port": "47338",
-            "mindsdb_host": "127.0.0.1",
-            "mindsdb_port": "47334",
-            "enabled": true
-        }
     },
 ```
 
@@ -191,7 +161,6 @@ Currently, the supported APIs are:
 
 * `http`: Configures the HTTP API. It requires the `host` and `port` parameters. Alternatively, configure HTTP authentication for your MindsDB instance by setting the environment variables `MINDSDB_USERNAME` and `MINDSDB_PASSWORD` before starting MindsDB, which is a recommended way for the production systems.
 * `mysql`: Configures the MySQL API. It requires the `host` and `port` parameters and additionally the `database` and `ssl` parameters.
-* `a2a`: Configures the A2A API. It requires the `host` and `port` parameters. Alternatively, use the `MINDSDB_A2A_HOST` environment variable.
 
 <AccordionGroup>
 
@@ -235,23 +204,6 @@ Connection parameters for the MySQL API include:
 * `restart_on_failure`: If it is set to `true` (and `max_restart_count` is not reached), the restart of MindsDB will be attempted after the MindsDB process was killed - with code 9 on Linux and MacOS, or for any reason on Windows.
 * `max_restart_count`: This defines how many times the restart attempts can be made. Note that 0 stands for no limit.
 * `max_restart_interval_seconds`: This defines the time limit during which there can be no more than `max_restart_count` restart attempts. Note that 0 stands for no time limit, which means there would be a maximum of `max_restart_count` restart attempts allowed.
-
-</Accordion>
-
-<Accordion title="A2A API">
-
-Connection parameters for the A2A API include:
-
-* `host`: It stores the hostname where the A2A service runs. Note that if you start MindsDB with its A2A API enabled then the A2A host is the same as the host of MindsDB.
-
-    <Note>
-    When proving the value for `host`, do not include the protocol. For example, use `127.0.0.1` instead of `http://127.0.0.1/`.
-    </Note>
-
-* `port`: It stores the port where the A2A service runs. Note that MindsDB exposes its A2A API at port 47338.
-* `mindsdb_host`: It stores the hostname where MindsDB runs, which is localhost by default. Note that if you start MindsDB with its A2A API enabled then the A2A host is the same as the host of MindsDB.
-* `mindsdb_port`: It stores the port where MindsDB HTTP API runs. It is usually 47334.
-* `enabled`: It defines whether the A2A API is enabled (True) or not (False).
 
 </Accordion>
 

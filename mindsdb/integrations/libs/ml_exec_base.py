@@ -443,11 +443,12 @@ class BaseMLEngineExec:
         except (ImportError, ModuleNotFoundError):
             raise
         except Exception as e:
-            if type(e) is MLProcessException:
-                e = e.base_exception
-            msg = str(e).strip()
-            if msg == '':
-                msg = e.__class__.__name__
-            model_identifier = '' if model_identifier is None else f'/{model_identifier}'
-            msg = f'[{self.name}{model_identifier}]: {msg}'
-            raise MLEngineException(msg) from e
+            raise
+            # if type(e) is MLProcessException:
+            #     e = e.base_exception
+            # msg = str(e).strip()
+            # if msg == '':
+            #     msg = e.__class__.__name__
+            # model_identifier = '' if model_identifier is None else f'/{model_identifier}'
+            # msg = f'[{self.name}{model_identifier}]: {msg}'
+            # raise MLEngineException(msg) from e

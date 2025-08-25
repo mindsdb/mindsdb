@@ -311,21 +311,21 @@
                 "group": "Data Transformation",
                 "pages": [
                   {
-                    "group": "Functions",
+                    "group": "Custom Functions",
                     "pages": [
-                      "mindsdb_sql/functions/custom_functions",
                       "mindsdb_sql/functions/llm_function",
                       "mindsdb_sql/functions/to_markdown_function",
-                      "mindsdb_sql/functions/from_env"
+                      "mindsdb_sql/functions/from_env",
+                      "mindsdb_sql/functions/custom_functions",
+                      "mindsdb_sql/functions/variables"
                     ]
                   },
                   {
                     "group": "Standard SQL Support",
                     "pages": [
+                      "mindsdb_sql/functions/standard-functions",
                       "mindsdb_sql/sql_support/cte",
-                      "mindsdb_sql/sql_support/case-when",
-                      "mindsdb_sql/sql_support/aggregate-functions",
-                      "mindsdb_sql/sql_support/window-functions"
+                      "mindsdb_sql/sql_support/case-when"
                     ]
                   }
                 ]

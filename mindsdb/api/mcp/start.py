@@ -17,6 +17,7 @@ from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE as SQL_R
 from mindsdb.utilities import log
 from mindsdb.utilities.log import get_uvicorn_logging_config
 from mindsdb.utilities.config import Config
+from mindsdb.utilities.a2a_auth import validate_auth_token_remote, get_auth_required_status
 from mindsdb.interfaces.storage import db
 
 logger = log.getLogger(__name__)
@@ -153,14 +154,32 @@ class CustomAuthMiddleware(BaseHTTPMiddleware):
     """Custom middleware to handle authentication basing on header 'Authorization'"""
 
     async def dispatch(self, request: Request, call_next):
+        # Check if MCP access token is set in environment
         mcp_access_token = os.environ.get("MINDSDB_MCP_ACCESS_TOKEN")
+        
         if mcp_access_token is not None:
+            # Use environment-based MCP token
             auth_token = request.headers.get("Authorization", "").partition("Bearer ")[-1]
             if mcp_access_token != auth_token:
                 return Response(status_code=401, content="Unauthorized", media_type="text/plain")
+        else:
+            # Check if authentication is required based on HTTP auth configuration
+            if get_auth_required_status():
+                # Validate using authentication token system
+                auth_header = request.headers.get("Authorization")
+                if not auth_header:
+                    return Response(status_code=401, content="Authorization header required", media_type="text/plain")
+                
+                if not auth_header.startswith("Bearer "):
+                    return Response(status_code=401, content="Authorization header must start with 'Bearer '", media_type="text/plain")
+                
+                token = auth_header[7:]  # Remove "Bearer " prefix
+                
+                # Validate token remotely via HTTP API
+                if not validate_auth_token_remote(token):
+                    return Response(status_code=401, content="Invalid or expired token", media_type="text/plain")
 
         response = await call_next(request)
-
         return response
 
 

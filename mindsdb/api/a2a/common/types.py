@@ -55,7 +55,7 @@ Part = Annotated[Union[TextPart, FilePart, DataPart], Field(discriminator="type"
 
 
 class Message(BaseModel):
-    role: Literal["user", "agent"]
+    role: Literal["user", "agent", "assistant"]
     parts: List[Part]
     metadata: dict[str, Any] | None = None
     history: Optional[List["Message"]] = None

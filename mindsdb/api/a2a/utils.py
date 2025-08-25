@@ -53,7 +53,7 @@ def convert_a2a_message_to_qa_format(a2a_message: Dict) -> List[Dict[str, str]]:
                         break
                 # Create question with empty answer initially
                 converted_messages.append({"question": text, "answer": ""})
-            elif hist_msg.get("role") == "agent":
+            elif hist_msg.get("role") in ["agent", "assistant"]:
                 # Extract text from parts
                 text = ""
                 for part in hist_msg.get("parts", []):

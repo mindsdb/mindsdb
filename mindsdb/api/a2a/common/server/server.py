@@ -103,8 +103,6 @@ class A2AServer:
         return JSONResponse(status_info)
 
     async def _process_request(self, request: Request):
-        logger.info("===========================================================")
-        logger.info(f"[A2AServer] Processing request: {request.__dict__}")
         try:
             body = await request.json()
             json_rpc_request = A2ARequest.validate_python(body)

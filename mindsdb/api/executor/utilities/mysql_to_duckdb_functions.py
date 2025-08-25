@@ -290,7 +290,8 @@ def extract_fn(node: Function) -> None:
 
 def get_format_fn(node: Function) -> Constant:
     """
-    Replace function with constant according to table:
+    Replace function with a constant according to table:
+    Important! The parameters can be only constants.
 
     Example: GET_FORMAT(DATE, 'USA') => '%m.%d.%Y'
 
@@ -360,6 +361,7 @@ def date_format_fn(node: Function):
     Docs:
         https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_date-format
         https://duckdb.org/docs/stable/sql/functions/timestamp.html#strftimetimestamp-format
+        https://duckdb.org/docs/stable/sql/functions/dateformat.html#format-specifiers
     """
     specifiers_map = {
         "%c": "%-m",  # Month, numeric (0..12) -> Month as decimal
@@ -374,9 +376,9 @@ def date_format_fn(node: Function):
         "%r": "%I:%M:%S %p",  # Time, 12-hour
         "%s": "%S",  # Seconds
         "%T": "%X",  # Time, 24-hour
-        "%u": "%W",  # Week (00..53), Monday first day
-        "%v": "%W",  # Week (00..53), Monday first day
-        "%V": "%U",  # Week (00..53), Sunday first day
+        "%u": "%V",  # Week, mode 1, Monday is first day, can be wrong in the edges of year
+        "%v": "%V",  # Week, mode 3, Monday is first day
+        "%V": "%U",  # Week, mode 2, Sunday is first day, can be wrong in the edges of year
         "%W": "%A",  # Weekday name -> Full weekday name
         "%X": "%G",  # Year for week
         "%x": "%G",  # Year for week
@@ -438,7 +440,7 @@ def from_days_fn(node):
 def dayofyear_fn(node):
     """
     Addapt to DATE_PART:
-        DAYOFYEAR('2007-02-03') => DATE_PART('doy', '2007-02-03'::date);
+        DAYOFYEAR('2007-02-03') => DATE_PART('doy', '2007-02-03'::date)
 
     Docs:
         https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_dayofyear
@@ -472,8 +474,8 @@ def dayofmonth_fn(node):
 
 def dayname_fn(node):
     """
-    Add type casting
-    DAYNAME('2007-02-03') => DAYNAME('2007-02-03'::date)
+    Use the same function with type casting
+        DAYNAME('2007-02-03') => DAYNAME('2007-02-03'::date)
 
     Docs:
         https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_dayname
@@ -499,7 +501,7 @@ def curdate_fn(node):
 def datediff_fn(node):
     """
     Change argument's order and cast to date:
-       DATEDIFF('2007-12-31 23:59:59','2007-11-30') => date_diff('day',DATE '2007-11-30', DATE '2007-12-31 23:59:59')
+        DATEDIFF('2007-12-31 23:59:59','2007-11-30') => datediff('day',DATE '2007-11-30', DATE '2007-12-31 23:59:59')
 
     Docs:
         https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_datediff
@@ -610,7 +612,7 @@ def addtime_fn(node):
 def convert_tz_fn(node):
     """
     Concatenate timezone to first argument and cast it as timestamptz. Then use `timezone` function
-    Warning! Duckdb doesn't recognize timezones in digital formats: +10:00
+    Important! Duckdb doesn't recognize timezones in digital formats: +10:00
 
       CONVERT_TZ('2004-01-01 12:00:00','GMT','MET')
         =>

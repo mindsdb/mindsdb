@@ -43,6 +43,10 @@ from mindsdb.utilities.ml_task_queue.producer import MLTaskProducer
 from mindsdb.utilities.ml_task_queue.const import ML_TASK_TYPE
 from mindsdb.integrations.libs.process_cache import process_cache, empty_callback, MLProcessException
 
+from mindsdb.utilities.log import getLogger
+
+logger = getLogger(__name__)
+
 try:
     import torch.multiprocessing as mp
 except Exception:
@@ -93,6 +97,12 @@ class BaseMLEngineExec:
         target = problem_definition.get('target', [''])  # db.Predictor expects Column(Array(String))
 
         project = self.database_controller.get_project(name=project_name)
+
+        logger.warning("===============================================================================================")
+        logger.warning(f"model: '{model_name}' using engine '{self.engine}'")
+        logger.warning(f"target: '{target}'")
+        logger.warning(f"problem_definition: '{problem_definition}'")
+        logger.warning("===============================================================================================")
 
         self.create_validation(target, problem_definition, self.integration_id)
 

@@ -134,6 +134,9 @@ class TrunkProcessData:
 
 def close_api_gracefully(trunc_processes_struct):
     _stop_event.set()
+
+    delete_pid_file()
+
     try:
         for trunc_processes_data in trunc_processes_struct.values():
             process = trunc_processes_data.process
@@ -600,7 +603,6 @@ if __name__ == "__main__":
             ],
             return_exceptions=False,
         )
-        delete_pid_file()
 
     ioloop = asyncio.new_event_loop()
     ioloop.run_until_complete(wait_apis_start())

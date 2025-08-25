@@ -8,6 +8,7 @@ from mindsdb.utilities import log
 from mindsdb.utilities.config import config
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES
+from mindsdb.interfaces.data_catalog.data_catalog_retriever import DataCatalogRetriever
 from mindsdb.interfaces.data_catalog.data_catalog_reader import DataCatalogReader
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE, MYSQL_DATA_TYPE_COLUMNS_DEFAULT
 from mindsdb.api.executor.datahub.classes.tables_row import TABLES_ROW_TYPE, TablesRow
@@ -532,23 +533,35 @@ class MetaTablesTable(Table):
 
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
-        databases, _ = _get_scope(query)
+        conditions = extract_comparison_conditions(query.where, ignore_functions=True)
+        catalogs, tables = None, None
+        for op, arg1, arg2 in conditions:
+            if op == "=":
+                scope = [arg2]
+            elif op == "in":
+                if not isinstance(arg2, list):
+                    arg2 = [arg2]
+                scope = arg2
+            else:
+                continue
 
-        records = _get_records_from_data_catalog(databases)
+            if arg1.lower() == "table_catalog":
+                catalogs = scope
+            elif arg1.lower() == "table_name":
+                tables = scope
 
-        data = []
-        for record in records:
-            item = {
-                "TABLE_CATALOG": "def",
-                "TABLE_SCHEMA": record.integration.name,
-                "TABLE_NAME": record.name,
-                "TABLE_TYPE": record.type,
-                "TABLE_DESCRIPTION": record.description or "",
-                "ROW_COUNT": record.row_count,
-            }
-            data.append(item)
+        df = pd.DataFrame()
+        for catalog in catalogs:
+            data_catalog_retriever = DataCatalogRetriever(database_name=catalog, table_names=tables)
+            table_df = data_catalog_retriever.retrieve_table_metadata()
+            table_df['TABLE_CATALOG'] = catalog
+            df = pd.concat([df, table_df])
 
-        df = pd.DataFrame(data, columns=cls.columns)
+        # Capitalize the column names.
+        df.columns = df.columns.str.upper()
+        # Reorder the columns.
+        df = df[cls.columns]
+
         return df
 
 

@@ -323,7 +323,7 @@ class ExecuteCommands:
                     schema = statement.in_table.parts[-1]
                     statement.in_table = None
 
-                table_types = [Constant(t) for t in ["MODEL", "BASE TABLE", "SYSTEM VIEW", "VIEW"]]
+                table_types = [Constant(t) for t in ["MODEL", "BASE TABLE", "SYSTEM VIEW", "VIEW", "KNOWLEDGE BASE"]]
                 where = BinaryOperation(
                     "and",
                     args=[

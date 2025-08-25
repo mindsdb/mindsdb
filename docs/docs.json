@@ -9,824 +9,712 @@
   },
   "favicon": "/favicon.png",
   "navigation": {
-    "dropdowns": [
-      {
-        "dropdown": "MindsDB",
-        "icon": "database",
-        "description":"Open Source Product Docs",
-        "tabs": [
-          {
-            "tab": "Documentation",
-            "groups": [
-              {
-                "group": "Get Started",
-                "pages": [
-                  "mindsdb",
-                  "quickstart-tutorial"
-                ]
-              },
-              {
-                "group": "Setup",
-                "pages": [
-                  {
-                    "group": "Installation",
-                    "pages": [
-                      "setup/self-hosted/docker",
-                      "setup/self-hosted/docker-desktop",
-                      "setup/cloud/aws-marketplace"
-                    ]
-                  },
-                  {
-                    "group": "Configuration",
-                    "pages": [
-                      "setup/custom-config",
-                      "setup/environment-vars"
-                    ]
-                  },
-                  {
-                    "group": "Learn more",
-                    "pages": [
-                      "sql/table-structure",
-                      "sql/project",
-                      "mindsdb-gui"
-                    ]
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "tab": "Connect",
-            "groups": [
-              {
-                "group": "Overview",
-                "pages": [
-                  "mindsdb-connect",
-                  "mindsdb-fqe"
-                ]
-              },
-              {
-                "group": "Data Sources",
-                "pages": [
-                  "integrations/data-overview",
-                  "integrations/sample-database",
-                  {
-                    "group": "Applications",
-                    "pages": [
-                      "integrations/app-integrations/binance",
-                      "integrations/app-integrations/confluence",
-                      "integrations/app-integrations/dockerhub",
-                      "integrations/app-integrations/email",
-                      "integrations/app-integrations/github",
-                      "integrations/app-integrations/gitlab",
-                      "integrations/app-integrations/gmail",
-                      "integrations/app-integrations/google-calendar",
-                      "integrations/app-integrations/google-analytics",
-                      "integrations/app-integrations/hackernews",
-                      "integrations/app-integrations/instatus",
-                      "integrations/app-integrations/intercom",
-                      "integrations/app-integrations/jira",
-                      "integrations/app-integrations/mediawiki",
-                      "integrations/app-integrations/microsoft-onedrive",
-                      "integrations/app-integrations/microsoft-teams",
-                      "integrations/app-integrations/newsapi",
-                      "integrations/app-integrations/paypal",
-                      "integrations/app-integrations/plaid",
-                      "integrations/app-integrations/pypi",
-                      "integrations/app-integrations/reddit",
-                      "integrations/app-integrations/salesforce",
-                      "integrations/app-integrations/sendinblue",
-                      "integrations/app-integrations/shopify",
-                      "integrations/app-integrations/slack",
-                      "integrations/app-integrations/strapi",
-                      "integrations/app-integrations/stripe",
-                      "integrations/app-integrations/symbl",
-                      "integrations/app-integrations/twitter",
-                      "integrations/app-integrations/web-crawler",
-                      "integrations/app-integrations/youtube"
-                    ]
-                  },
-                  {
-                    "group": "Databases",
-                    "pages": [
-                      "integrations/data-integrations/airtable",
-                      "integrations/data-integrations/amazon-aurora",
-                      "integrations/data-integrations/amazon-dynamodb",
-                      "integrations/data-integrations/amazon-redshift",
-                      "integrations/data-integrations/amazon-s3",
-                      "integrations/data-integrations/apache-cassandra",
-                      "integrations/data-integrations/apache-druid",
-                      "integrations/data-integrations/apache-hive",
-                      "integrations/data-integrations/apache-ignite",
-                      "integrations/data-integrations/apache-impala",
-                      "integrations/data-integrations/apache-pinot",
-                      "integrations/data-integrations/apache-solr",
-                      "integrations/data-integrations/ckan",
-                      "integrations/data-integrations/clickhouse",
-                      "integrations/data-integrations/cloud-spanner",
-                      "integrations/data-integrations/cockroachdb",
-                      "integrations/data-integrations/couchbase",
-                      "integrations/data-integrations/cratedb",
-                      "integrations/data-integrations/d0lt",
-                      "integrations/data-integrations/databend",
-                      "integrations/data-integrations/databricks",
-                      "integrations/data-integrations/datastax",
-                      "integrations/data-integrations/duckdb",
-                      "integrations/data-integrations/edgelessdb",
-                      "integrations/data-integrations/elasticsearch",
-                      "integrations/data-integrations/firebird",
-                      "integrations/data-integrations/google-bigquery",
-                      "integrations/data-integrations/google-cloud-sql",
-                      "integrations/data-integrations/google-sheets",
-                      "integrations/data-integrations/greptimedb",
-                      "integrations/data-integrations/ibm-db2",
-                      "integrations/data-integrations/ibm-informix",
-                      "integrations/data-integrations/influxdb",
-                      "integrations/data-integrations/mariadb",
-                      "integrations/data-integrations/matrixone",
-                      "integrations/data-integrations/microsoft-access",
-                      "integrations/data-integrations/microsoft-sql-server",
-                      "integrations/data-integrations/monetdb",
-                      "integrations/data-integrations/mongodb",
-                      "integrations/data-integrations/mysql",
-                      "integrations/data-integrations/oceanbase",
-                      "integrations/data-integrations/opengauss",
-                      "integrations/data-integrations/oracle",
-                      "integrations/data-integrations/orioledb",
-                      "integrations/data-integrations/planetscale",
-                      "integrations/data-integrations/postgresql",
-                      "integrations/data-integrations/questdb",
-                      "integrations/data-integrations/sap-hana",
-                      "integrations/data-integrations/sap-sql-anywhere",
-                      "integrations/data-integrations/scylladb",
-                      "integrations/data-integrations/singlestore",
-                      "integrations/data-integrations/snowflake",
-                      "integrations/data-integrations/sqlite",
-                      "integrations/data-integrations/starrocks",
-                      "integrations/data-integrations/supabase",
-                      "integrations/data-integrations/surrealdb",
-                      "integrations/data-integrations/tdengine",
-                      "integrations/data-integrations/teradata",
-                      "integrations/data-integrations/tidb",
-                      "integrations/data-integrations/timescaledb",
-                      "integrations/data-integrations/trino",
-                      "integrations/data-integrations/vertica",
-                      "integrations/data-integrations/vitess",
-                      "integrations/data-integrations/yugabytedb"
-                    ]
-                  },
-                  {
-                    "group": "Vector Stores",
-                    "pages": [
-                      "integrations/vector-db-integrations/chromadb",
-                      "integrations/vector-db-integrations/couchbase",
-                      "integrations/vector-db-integrations/milvus",
-                      "integrations/vector-db-integrations/pgvector",
-                      "integrations/vector-db-integrations/pinecone",
-                      "integrations/vector-db-integrations/weaviate"
-                    ]
-                  },
-                  {
-                    "group": "Files",
-                    "pages": [
-                      "integrations/files/csv-xlsx-xls",
-                      "integrations/files/json",
-                      "integrations/files/txt",
-                      "integrations/files/pdf",
-                      "integrations/files/parquet"
-                    ]
-                  }
+      "tabs": [
+        {
+          "tab": "Documentation",
+          "groups": [
+            {
+              "group": "Get Started",
+              "pages": [
+                "mindsdb",
+                "quickstart-tutorial"
+              ]
+            },
+            {
+              "group": "Setup",
+              "pages": [
+                {
+                  "group": "Installation",
+                  "pages": [
+                    "setup/self-hosted/docker",
+                    "setup/self-hosted/docker-desktop",
+                    "setup/cloud/aws-marketplace"
+                  ]
+                },
+                {
+                  "group": "Configuration",
+                  "pages": [
+                    "setup/custom-config",
+                    "setup/environment-vars"
+                  ]
+                },
+                {
+                  "group": "Learn more",
+                  "pages": [
+                    "sql/table-structure",
+                    "sql/project",
+                    "mindsdb-gui"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tab": "Connect",
+          "groups": [
+            {
+              "group": "Overview",
+              "pages": [
+                "mindsdb-connect",
+                "mindsdb-fqe"
+              ]
+            },
+            {
+              "group": "Data Sources",
+              "pages": [
+                "integrations/data-overview",
+                "integrations/sample-database",
+                {
+                  "group": "Applications",
+                  "pages": [
+                    "integrations/app-integrations/binance",
+                    "integrations/app-integrations/confluence",
+                    "integrations/app-integrations/dockerhub",
+                    "integrations/app-integrations/email",
+                    "integrations/app-integrations/github",
+                    "integrations/app-integrations/gitlab",
+                    "integrations/app-integrations/gmail",
+                    "integrations/app-integrations/google-calendar",
+                    "integrations/app-integrations/google-analytics",
+                    "integrations/app-integrations/hackernews",
+                    "integrations/app-integrations/instatus",
+                    "integrations/app-integrations/intercom",
+                    "integrations/app-integrations/jira",
+                    "integrations/app-integrations/mediawiki",
+                    "integrations/app-integrations/microsoft-onedrive",
+                    "integrations/app-integrations/microsoft-teams",
+                    "integrations/app-integrations/newsapi",
+                    "integrations/app-integrations/paypal",
+                    "integrations/app-integrations/plaid",
+                    "integrations/app-integrations/pypi",
+                    "integrations/app-integrations/reddit",
+                    "integrations/app-integrations/salesforce",
+                    "integrations/app-integrations/sendinblue",
+                    "integrations/app-integrations/shopify",
+                    "integrations/app-integrations/slack",
+                    "integrations/app-integrations/strapi",
+                    "integrations/app-integrations/stripe",
+                    "integrations/app-integrations/symbl",
+                    "integrations/app-integrations/twitter",
+                    "integrations/app-integrations/web-crawler",
+                    "integrations/app-integrations/youtube"
+                  ]
+                },
+                {
+                  "group": "Databases",
+                  "pages": [
+                    "integrations/data-integrations/airtable",
+                    "integrations/data-integrations/amazon-aurora",
+                    "integrations/data-integrations/amazon-dynamodb",
+                    "integrations/data-integrations/amazon-redshift",
+                    "integrations/data-integrations/amazon-s3",
+                    "integrations/data-integrations/apache-cassandra",
+                    "integrations/data-integrations/apache-druid",
+                    "integrations/data-integrations/apache-hive",
+                    "integrations/data-integrations/apache-ignite",
+                    "integrations/data-integrations/apache-impala",
+                    "integrations/data-integrations/apache-pinot",
+                    "integrations/data-integrations/apache-solr",
+                    "integrations/data-integrations/ckan",
+                    "integrations/data-integrations/clickhouse",
+                    "integrations/data-integrations/cloud-spanner",
+                    "integrations/data-integrations/cockroachdb",
+                    "integrations/data-integrations/couchbase",
+                    "integrations/data-integrations/cratedb",
+                    "integrations/data-integrations/d0lt",
+                    "integrations/data-integrations/databend",
+                    "integrations/data-integrations/databricks",
+                    "integrations/data-integrations/datastax",
+                    "integrations/data-integrations/duckdb",
+                    "integrations/data-integrations/edgelessdb",
+                    "integrations/data-integrations/elasticsearch",
+                    "integrations/data-integrations/firebird",
+                    "integrations/data-integrations/google-bigquery",
+                    "integrations/data-integrations/google-cloud-sql",
+                    "integrations/data-integrations/google-sheets",
+                    "integrations/data-integrations/greptimedb",
+                    "integrations/data-integrations/ibm-db2",
+                    "integrations/data-integrations/ibm-informix",
+                    "integrations/data-integrations/influxdb",
+                    "integrations/data-integrations/mariadb",
+                    "integrations/data-integrations/matrixone",
+                    "integrations/data-integrations/microsoft-access",
+                    "integrations/data-integrations/microsoft-sql-server",
+                    "integrations/data-integrations/monetdb",
+                    "integrations/data-integrations/mongodb",
+                    "integrations/data-integrations/mysql",
+                    "integrations/data-integrations/oceanbase",
+                    "integrations/data-integrations/opengauss",
+                    "integrations/data-integrations/oracle",
+                    "integrations/data-integrations/orioledb",
+                    "integrations/data-integrations/planetscale",
+                    "integrations/data-integrations/postgresql",
+                    "integrations/data-integrations/questdb",
+                    "integrations/data-integrations/sap-hana",
+                    "integrations/data-integrations/sap-sql-anywhere",
+                    "integrations/data-integrations/scylladb",
+                    "integrations/data-integrations/singlestore",
+                    "integrations/data-integrations/snowflake",
+                    "integrations/data-integrations/sqlite",
+                    "integrations/data-integrations/starrocks",
+                    "integrations/data-integrations/supabase",
+                    "integrations/data-integrations/surrealdb",
+                    "integrations/data-integrations/tdengine",
+                    "integrations/data-integrations/teradata",
+                    "integrations/data-integrations/tidb",
+                    "integrations/data-integrations/timescaledb",
+                    "integrations/data-integrations/trino",
+                    "integrations/data-integrations/vertica",
+                    "integrations/data-integrations/vitess",
+                    "integrations/data-integrations/yugabytedb"
+                  ]
+                },
+                {
+                  "group": "Vector Stores",
+                  "pages": [
+                    "integrations/vector-db-integrations/chromadb",
+                    "integrations/vector-db-integrations/couchbase",
+                    "integrations/vector-db-integrations/milvus",
+                    "integrations/vector-db-integrations/pgvector",
+                    "integrations/vector-db-integrations/pinecone",
+                    "integrations/vector-db-integrations/weaviate"
+                  ]
+                },
+                {
+                  "group": "Files",
+                  "pages": [
+                    "integrations/files/csv-xlsx-xls",
+                    "integrations/files/json",
+                    "integrations/files/txt",
+                    "integrations/files/pdf",
+                    "integrations/files/parquet"
+                  ]
+                }
 
-                ]
-              },
-              {
-                "group": "Connection",
-                "pages": [
-                  {
-                    "group": "Connect MindsDB to SQL Clients",
-                    "pages": [
-                      "mindsdb_sql/connect/mindsdb_editor",
-                      "mindsdb_sql/connect/mysql-client",
-                      "mindsdb_sql/connect/dbeaver",
-                      "mindsdb_sql/connect/connect-mariadb-skysql",
-                      "mindsdb_sql/connect/sql-alchemy",
-                      "mindsdb_sql/connect/deepnote",
-                      "mindsdb_sql/connect/metabase",
-                      "mindsdb_sql/connect/tableau",
-                      "mindsdb_sql/connect/jupysql",
-                      "mindsdb_sql/connect/grafana"
-                    ]
-                  },
-                  {
-                    "group": "Connect Data",
-                    "pages": [
-                      "mindsdb_sql/sql/list-data-handlers",
-                      "mindsdb_sql/sql/create/database",
-                      "mindsdb_sql/sql/drop/database",
-                      "mindsdb_sql/sql/show-databases",
-                      "mindsdb_sql/sql/api/use"
-                    ]
-                  }
-                ]
-              },
-              {
-                "group": "Data Catalog",
-                "pages": [
-                  "data_catalog/overview",
-                  {
-                    "group": "Data Catalog for Integrations",
-                    "pages": [
-                      "data_catalog/integrations/overview",
-                      "data_catalog/integrations/query"
-                    ]
-                  }
-                ]
-              },
-              {
-                "group": "Bring Your Own Models",
-                "pages": [
-                  "integrations/ai-engines/byom",
-                  "integrations/ai-engines/mlflow"
-                ]
-              }
-            ]
-          },
-          {
-            "tab": "Unify",
-            "groups": [
-              {
-                "group": "Overview",
-                "pages": [
-                  "mindsdb-unify",
-                  "mindsdb_sql/overview"
-                ]
-              },
-              {
-                "group": "Data Unification",
-                "pages": [
-                  {
-                    "group": "Knowledge Bases",
-                    "pages": [
-                      "mindsdb_sql/knowledge_bases/overview",
-                      "mindsdb_sql/knowledge_bases/create",
-                      "mindsdb_sql/knowledge_bases/insert_data",
-                      "mindsdb_sql/knowledge_bases/query",
-                      "mindsdb_sql/knowledge_bases/hybrid_search",
-                      "mindsdb_sql/knowledge_bases/evaluate",
-                      "mindsdb_sql/knowledge_bases/examples"
-                    ]
-                  },
-                  {
-                    "group": "Tables, Views, and Files",
-                    "pages": [
-                      "mindsdb_sql/sql/create/table",
-                      "mindsdb_sql/sql/drop/table",
-                      "mindsdb_sql/sql/api/select",
-                      "mindsdb_sql/sql/native-queries",
-                      "mindsdb_sql/sql/api/update",
-                      "mindsdb_sql/sql/api/insert",
-                      "mindsdb_sql/sql/api/join-on",
-                      "mindsdb_sql/sql/api/delete",
-                      "mindsdb_sql/sql/create/view",
-                      "mindsdb_sql/sql/drop/view",
-                      "mindsdb_sql/sql/api/select-view",
-                      "mindsdb_sql/sql/api/alter-view",
-                      "mindsdb_sql/sql/create/file",
-                      "mindsdb_sql/sql/drop/file",
-                      "mindsdb_sql/sql/api/select-files"
-                    ]
-                  },
-                  {
-                    "group": "Projects",
-                    "pages": [
-                      "mindsdb_sql/sql/create/project",
-                      "mindsdb_sql/sql/drop/project",
-                      "mindsdb_sql/sql/list-projects",
-                      "mindsdb_sql/sql/use/project"
-                    ]
-                  }
-                ]
-              },
-              {
-                "group": "Data Transformation",
-                "pages": [
-                  {
-                    "group": "Functions",
-                    "pages": [
-                      "mindsdb_sql/functions/custom_functions",
-                      "mindsdb_sql/functions/llm_function",
-                      "mindsdb_sql/functions/to_markdown_function",
-                      "mindsdb_sql/functions/from_env"
-                    ]
-                  },
-                  {
-                    "group": "Standard SQL Support",
-                    "pages": [
-                      "mindsdb_sql/sql_support/cte",
-                      "mindsdb_sql/sql_support/case-when",
-                      "mindsdb_sql/sql_support/aggregate-functions",
-                      "mindsdb_sql/sql_support/window-functions"
-                    ]
-                  }
-                ]
-              },
-              {
-                "group": "Data Automation",
-                "pages": [
-                  {
-                    "group": "Jobs",
-                    "pages": [
-                      "mindsdb_sql/sql/create/jobs",
-                      "mindsdb_sql/sql/drop/jobs",
-                      "mindsdb_sql/sql/query-jobs"
-                    ]
-                  },
-                  {
-                    "group": "Triggers",
-                    "pages": [
-                      "mindsdb_sql/sql/create/trigger",
-                      "mindsdb_sql/sql/drop/trigger",
-                      "mindsdb_sql/sql/query-triggers"
-                    ]
-                  }
-                ]
-              }
+              ]
+            },
+            {
+              "group": "Connection",
+              "pages": [
+                {
+                  "group": "Connect MindsDB to SQL Clients",
+                  "pages": [
+                    "mindsdb_sql/connect/mindsdb_editor",
+                    "mindsdb_sql/connect/mysql-client",
+                    "mindsdb_sql/connect/dbeaver",
+                    "mindsdb_sql/connect/connect-mariadb-skysql",
+                    "mindsdb_sql/connect/sql-alchemy",
+                    "mindsdb_sql/connect/deepnote",
+                    "mindsdb_sql/connect/metabase",
+                    "mindsdb_sql/connect/tableau",
+                    "mindsdb_sql/connect/jupysql",
+                    "mindsdb_sql/connect/grafana"
+                  ]
+                },
+                {
+                  "group": "Connect Data",
+                  "pages": [
+                    "mindsdb_sql/sql/list-data-handlers",
+                    "mindsdb_sql/sql/create/database",
+                    "mindsdb_sql/sql/drop/database",
+                    "mindsdb_sql/sql/show-databases",
+                    "mindsdb_sql/sql/api/use"
+                  ]
+                }
+              ]
+            },
+            {
+              "group": "Data Catalog",
+              "pages": [
+                "data_catalog/overview",
+                {
+                  "group": "Data Catalog for Integrations",
+                  "pages": [
+                    "data_catalog/integrations/overview",
+                    "data_catalog/integrations/query"
+                  ]
+                }
+              ]
+            },
+            {
+              "group": "Bring Your Own Models",
+              "pages": [
+                "integrations/ai-engines/byom",
+                "integrations/ai-engines/mlflow"
+              ]
+            }
+          ]
+        },
+        {
+          "tab": "Unify",
+          "groups": [
+            {
+              "group": "Overview",
+              "pages": [
+                "mindsdb-unify",
+                "mindsdb_sql/overview"
+              ]
+            },
+            {
+              "group": "Data Unification",
+              "pages": [
+                {
+                  "group": "Knowledge Bases",
+                  "pages": [
+                    "mindsdb_sql/knowledge_bases/overview",
+                    "mindsdb_sql/knowledge_bases/create",
+                    "mindsdb_sql/knowledge_bases/insert_data",
+                    "mindsdb_sql/knowledge_bases/query",
+                    "mindsdb_sql/knowledge_bases/hybrid_search",
+                    "mindsdb_sql/knowledge_bases/evaluate",
+                    "mindsdb_sql/knowledge_bases/examples"
+                  ]
+                },
+                {
+                  "group": "Tables, Views, and Files",
+                  "pages": [
+                    "mindsdb_sql/sql/create/table",
+                    "mindsdb_sql/sql/drop/table",
+                    "mindsdb_sql/sql/api/select",
+                    "mindsdb_sql/sql/native-queries",
+                    "mindsdb_sql/sql/api/update",
+                    "mindsdb_sql/sql/api/insert",
+                    "mindsdb_sql/sql/api/join-on",
+                    "mindsdb_sql/sql/api/delete",
+                    "mindsdb_sql/sql/create/view",
+                    "mindsdb_sql/sql/drop/view",
+                    "mindsdb_sql/sql/api/select-view",
+                    "mindsdb_sql/sql/api/alter-view",
+                    "mindsdb_sql/sql/create/file",
+                    "mindsdb_sql/sql/drop/file",
+                    "mindsdb_sql/sql/api/select-files"
+                  ]
+                },
+                {
+                  "group": "Projects",
+                  "pages": [
+                    "mindsdb_sql/sql/create/project",
+                    "mindsdb_sql/sql/drop/project",
+                    "mindsdb_sql/sql/list-projects",
+                    "mindsdb_sql/sql/use/project"
+                  ]
+                }
+              ]
+            },
+            {
+              "group": "Data Transformation",
+              "pages": [
+                {
+                  "group": "Functions",
+                  "pages": [
+                    "mindsdb_sql/functions/custom_functions",
+                    "mindsdb_sql/functions/llm_function",
+                    "mindsdb_sql/functions/to_markdown_function",
+                    "mindsdb_sql/functions/from_env"
+                  ]
+                },
+                {
+                  "group": "Standard SQL Support",
+                  "pages": [
+                    "mindsdb_sql/sql_support/cte",
+                    "mindsdb_sql/sql_support/case-when",
+                    "mindsdb_sql/sql_support/aggregate-functions",
+                    "mindsdb_sql/sql_support/window-functions"
+                  ]
+                }
+              ]
+            },
+            {
+              "group": "Data Automation",
+              "pages": [
+                {
+                  "group": "Jobs",
+                  "pages": [
+                    "mindsdb_sql/sql/create/jobs",
+                    "mindsdb_sql/sql/drop/jobs",
+                    "mindsdb_sql/sql/query-jobs"
+                  ]
+                },
+                {
+                  "group": "Triggers",
+                  "pages": [
+                    "mindsdb_sql/sql/create/trigger",
+                    "mindsdb_sql/sql/drop/trigger",
+                    "mindsdb_sql/sql/query-triggers"
+                  ]
+                }
+              ]
+            }
 
-            ]
-          },
-          {
-            "tab": "Respond",
-            "groups": [
-              {
-                "group": "Overview",
-                "pages": [
-                  "mindsdb-respond"
-                ]
-              },
-              {
-                "group": "Agents",
-                "pages": [
-                  "mindsdb_sql/agents/agent",
-                  "mindsdb_sql/agents/agent_syntax",
-                  "mindsdb_sql/agents/agent_gui"
-                ]
-              },
-              {
-                "group": "MCP API",
-                "pages": [
-                  "model-context-protocol/overview",
-                  "model-context-protocol/usage",
-                  {
-                    "group": "MCP Clients",
-                    "pages": [
-                      "model-context-protocol/openai",
-                      "model-context-protocol/anthropic",
-                      "model-context-protocol/cursor_usage"
-                    ]
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "tab": "MCP API",
-            "groups": [
-              {
-                "group": "MCP API",
-                "pages": [
-                  "model-context-protocol/overview",
-                  "model-context-protocol/usage",
-                  {
-                    "group": "MCP Clients",
-                    "pages": [
-                      "model-context-protocol/openai",
-                      "model-context-protocol/anthropic",
-                      "model-context-protocol/cursor_usage"
-                    ]
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "tab": "SDKs & APIs",
-            "groups": [
-              {
-                "group": "Overview",
-                "pages": [
-                  "overview_sdks_apis"
-                ]
-              },
-              {
-                "group": "Interfaces",
-                "pages": [
-                  {
-                    "group": "REST API",
-                    "pages": [
-                      "rest/overview",
-                      {
-                        "group": "Connect",
-                        "icon": "link",
-                        "pages": [
-                          "rest/usage",
-                          "rest/authentication",
-                          {
-                            "group": "Data Sources",
-                            "pages": [
-                              "rest/databases/create-databases",
-                              "rest/databases/update-databases",
-                              "rest/databases/delete-databases",
-                              "rest/databases/list-databases",
-                              "rest/databases/list-database"
-                            ]
-                          }
-                        ]
-                      },
-                      {
-                        "group": "Unify",
-                        "icon": "circle-nodes",
-                        "pages": [
-                          {
-                            "group": "Projects",
-                            "pages": [
-                              "rest/projects/get-projects",
-                              "rest/projects/get-project"
-                            ]
-                          },
-                          {
-                            "group": "Knowledge Bases",
-                            "pages": [
-                              "rest/knowledge_bases/create",
-                              "rest/knowledge_bases/insert",
-                              "rest/knowledge_bases/query",
-                              "rest/knowledge_bases/list",
-                              "rest/knowledge_bases/get",
-                              "rest/knowledge_bases/delete"
-                            ]
-                          },
-                          {
-                            "group": "Tables",
-                            "pages": [
-                              "rest/tables/create-table",
-                              "rest/tables/delete-table",
-                              "rest/tables/list-tables",
-                              "rest/tables/list-table",
-                              "rest/sql"
-                            ]
-                          },
-                          {
-                            "group": "Views",
-                            "pages": [
-                              "rest/views/create-view",
-                              "rest/views/delete-views",
-                              "rest/views/update-view",
-                              "rest/views/list-views",
-                              "rest/views/list-view"
-                            ]
-                          },
-                          {
-                            "group": "Files",
-                            "pages": [
-                              "rest/files/upload",
-                              "rest/files/delete",
-                              "rest/files/list"
-                            ]
-                          },
-                          {
-                            "group": "Jobs",
-                            "pages": [
-                              "rest/jobs/create",
-                              "rest/jobs/list",
-                              "rest/jobs/get",
-                              "rest/jobs/delete"
-                            ]
-                          }
-                        ]
-                      },
-                      {
-                        "group": "Respond",
-                        "icon": "comment-dots",
-                        "pages": [
-                          {
-                            "group": "AI Agents",
-                            "pages": [
-                              "rest/agents/create",
-                              "rest/agents/list",
-                              "rest/agents/get",
-                              "rest/agents/query",
-                              "rest/agents/update",
-                              "rest/agents/delete"
-                            ]
-                          }
-                        ]
-                      }
-                    ]
-                  },
-                  {
-                    "group": "Python SDK",
-                    "pages": [
-                      "sdks/python/overview",
-                      {
-                        "group": "Connect",
-                        "icon": "link",
-                        "pages": [
-                          {
-                            "group": "Setup",
-                            "pages": [
-                              "sdks/python/installation",
-                              "sdks/python/connect"
-                            ]
-                          },
-                          {
-                            "group": "Data Sources",
-                            "pages": [
-                              "sdks/python/list_data_handlers",
-                              "sdks/python/create_database",
-                              "sdks/python/drop_database",
-                              "sdks/python/list_databases"
-                            ]
-                          }
-                        ]
-                      },
-                      {
-                        "group": "Unify",
-                        "icon": "circle-nodes",
-                        "pages": [
-                          {
-                            "group": "Projects",
-                            "pages": [
-                              "sdks/python/create_project",
-                              "sdks/python/drop_project",
-                              "sdks/python/list_projects",
-                              "sdks/python/query_projects"
-                            ]
-                          },
-                          {
-                            "group": "Knowledge Bases",
-                            "pages": [
-                              "sdks/python/knowledge_bases/overview",
-                              "sdks/python/knowledge_bases/create",
-                              "sdks/python/knowledge_bases/insert_data",
-                              "sdks/python/knowledge_bases/query"
-                            ]
-                          },
-                          {
-                            "group": "Tables, Views, and Files",
-                            "pages": [
-                              "sdks/python/create_table",
-                              "sdks/python/delete_table",
-                              "sdks/python/query_table",
-                              "sdks/python/native_queries",
-                              "sdks/python/update_table",
-                              "sdks/python/insert_into_table",
-                              "sdks/python/join_on",
-                              "sdks/python/delete_from",
-                              "sdks/python/create_view",
-                              "sdks/python/drop_view",
-                              "sdks/python/query_view",
-                              "sdks/python/list_views",
-                              "sdks/python/upload_file",
-                              "sdks/python/delete_file",
-                              "sdks/python/query_files"
-                            ]
-                          },
-                          {
-                            "group": "Jobs",
-                            "pages": [
-                              "sdks/python/create_job",
-                              "sdks/python/drop_job",
-                              "sdks/python/list_jobs",
-                              "sdks/python/refresh_job",
-                              "sdks/python/get_history"
-                            ]
-                          }
-                        ]
-                      },
-                      {
-                        "group": "Respond",
-                        "icon": "comment-dots",
-                        "pages": [
-                          "sdks/python/agents"
-                        ]
-                      }
-                    ]
-                  },
-                  {
-                    "group": "JavaScript SDK",
-                    "pages": [
-                      "sdks/javascript/overview",
-                      {
-                        "group": "Connect",
-                        "icon": "link",
-                        "pages": [
-                          {
-                            "group": "Setup",
-                            "pages": [
-                              "sdks/javascript/installation",
-                              "sdks/javascript/connect"
-                            ]
-                          },
-                          {
-                            "group": "Data Sources",
-                            "pages": [
-                              "sdks/javascript/list_data_handlers",
-                              "sdks/javascript/create_database",
-                              "sdks/javascript/get_database",
-                              "sdks/javascript/drop_database",
-                              "sdks/javascript/list_databases"
-                            ]
-                          }
-                        ]
-                      },
-                      {
-                        "group": "Unify",
-                        "icon": "circle-nodes",
-                        "pages": [
-                          {
-                            "group": "Projects",
-                            "pages": [
-                              "sdks/javascript/list_projects"
-                            ]
-                          },
-                          {
-                            "group": "Tables, Views, and Files",
-                            "pages": [
-                              "sdks/javascript/create_table",
-                              "sdks/javascript/delete_table",
-                              "sdks/javascript/query_table",
-                              "sdks/javascript/native_queries",
-                              "sdks/javascript/update_table",
-                              "sdks/javascript/insert_into_table",
-                              "sdks/javascript/join_on",
-                              "sdks/javascript/delete_from",
-                              "sdks/javascript/create_view",
-                              "sdks/javascript/drop_view",
-                              "sdks/javascript/query_view",
-                              "sdks/javascript/list_views",
-                              "sdks/javascript/query_files"
-                            ]
-                          }
-                        ]
-                      },
-                      {
-                        "group": "Respond",
-                        "icon": "comment-dots",
-                        "pages": [
-                          "sdks/javascript/agents"
-                        ]
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "tab": "Contribute",
-            "groups": [
-              {
-                "group": "Contribute",
-                "pages": [
-                  "contribute/contribute",
-                  "contribute/issues",
-                  "contribute/issue-labels",
-                  "contribute/install",
-                  "contribute/python-coding-standards",
-                  "contribute/data-handlers",
-                  "contribute/app-handlers",
-                  "contribute/tests",
-                  "contribute/integrations-readme",
-                  "contribute/tutorials",
-                  "contribute/docs",
-                  "contribute/docs-rules",
-                  "contribute/community"
-                ]
-              }
-            ]
-          },
-          {
-            "tab": "FAQs",
-            "groups": [
-              {
-                "group": "FAQs",
-                "pages": [
-                  "faqs/benefits",
-                  "faqs/persist-predictions",
-                  "faqs/mindsdb-with-php",
-                  "faqs/disposable-email-doman-and-openai",
-                  "faqs/missing-required-cpu-features",
-                  "faqs/a2a-unavailable"
-                ]
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "dropdown": "Minds",
-        "icon": "messages",
-        "description":"Commercial Product Docs",
-        "tabs": [
-          {
-            "tab": "Documentation",
-            "groups": [
-              {
-                "group": "Get Started",
-                "pages": [
-                  "minds",
-                  "minds/quickstart",
-                  "minds/quickstart_custom_mind",
-                  "minds/quickstart_best_practices"
-                ]
-              },
-              {
-                "group": "Resources",
-                "pages": [
-                  "minds/minds_overview",
-                  "minds/data_sources",
-                  "minds/sample_data",
-                  "minds/authentication",
-                  "minds/minds_ips"
-                ]
-              }
-            ]
-          },
-          {
-            "tab": "Python SDK",
-            "groups": [
-              {
-                "group": "Get Started",
-                "pages": [
-                  "minds/python_sdk/overview",
-                  "minds/python_sdk/mind_setup",
-                  "minds/python_sdk/completions_api",
-                  "minds/python_sdk/assistants_api"
-                ]
-              }
-            ]
-          },
-          {
-            "tab": "REST API",
-            "groups": [
-              {
-                "group": "API Reference",
-                "pages": [
-                  "minds/rest_api/overview",
-                  {
-                    "group": "Minds",
-                    "pages": [
-                      "minds/rest_api/create_mind",
-                      "minds/rest_api/list_minds",
-                      "minds/rest_api/get_mind",
-                      "minds/rest_api/update_mind",
-                      "minds/rest_api/add_data_to_mind",
-                      "minds/rest_api/delete_mind"
-                    ]
-                  },
-                  {
-                    "group": "Data Sources",
-                    "pages": [
-                      "minds/rest_api/create_datasource",
-                      "minds/rest_api/list_datasources",
-                      "minds/rest_api/get_datasource",
-                      "minds/rest_api/update_datasource",
-                      "minds/rest_api/delete_datasource"
-                    ]
-                  },
-                  "minds/rest_api/chat"
-                ]
-              },
-              {
-                "group": "Assistants API",
-                "pages": [
-                  "minds/rest_api/overview_assistants",
-                  {
-                    "group": "Threads",
-                    "pages": [
-                      "minds/rest_api/create_thread",
-                      "minds/rest_api/delete_thread"
-                    ]
-                  },
-                  {
-                    "group": "Messages",
-                    "pages": [
-                      "minds/rest_api/create_message",
-                      "minds/rest_api/list_messages"
-                    ]
-                  },
-                  {
-                    "group": "Runs",
-                    "pages": [
-                      "minds/rest_api/create_run",
-                      "minds/rest_api/retrieve_run"
-                    ]
-                  }
-                ]
-              }
-            ]
-          }
-        ]
-      }
+          ]
+        },
+        {
+          "tab": "Respond",
+          "groups": [
+            {
+              "group": "Overview",
+              "pages": [
+                "mindsdb-respond"
+              ]
+            },
+            {
+              "group": "Agents",
+              "pages": [
+                "mindsdb_sql/agents/agent",
+                "mindsdb_sql/agents/agent_syntax",
+                "mindsdb_sql/agents/agent_gui"
+              ]
+            },
+            {
+              "group": "MCP API",
+              "pages": [
+                "model-context-protocol/overview",
+                "model-context-protocol/usage",
+                {
+                  "group": "MCP Clients",
+                  "pages": [
+                    "model-context-protocol/openai",
+                    "model-context-protocol/anthropic",
+                    "model-context-protocol/cursor_usage"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tab": "MCP API",
+          "groups": [
+            {
+              "group": "MCP API",
+              "pages": [
+                "model-context-protocol/overview",
+                "model-context-protocol/usage",
+                {
+                  "group": "MCP Clients",
+                  "pages": [
+                    "model-context-protocol/openai",
+                    "model-context-protocol/anthropic",
+                    "model-context-protocol/cursor_usage"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tab": "SDKs & APIs",
+          "groups": [
+            {
+              "group": "Overview",
+              "pages": [
+                "overview_sdks_apis"
+              ]
+            },
+            {
+              "group": "Interfaces",
+              "pages": [
+                {
+                  "group": "REST API",
+                  "pages": [
+                    "rest/overview",
+                    {
+                      "group": "Connect",
+                      "icon": "link",
+                      "pages": [
+                        "rest/usage",
+                        "rest/authentication",
+                        {
+                          "group": "Data Sources",
+                          "pages": [
+                            "rest/databases/create-databases",
+                            "rest/databases/update-databases",
+                            "rest/databases/delete-databases",
+                            "rest/databases/list-databases",
+                            "rest/databases/list-database"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "group": "Unify",
+                      "icon": "circle-nodes",
+                      "pages": [
+                        {
+                          "group": "Projects",
+                          "pages": [
+                            "rest/projects/get-projects",
+                            "rest/projects/get-project"
+                          ]
+                        },
+                        {
+                          "group": "Knowledge Bases",
+                          "pages": [
+                            "rest/knowledge_bases/create",
+                            "rest/knowledge_bases/insert",
+                            "rest/knowledge_bases/query",
+                            "rest/knowledge_bases/list",
+                            "rest/knowledge_bases/get",
+                            "rest/knowledge_bases/delete"
+                          ]
+                        },
+                        {
+                          "group": "Tables",
+                          "pages": [
+                            "rest/tables/create-table",
+                            "rest/tables/delete-table",
+                            "rest/tables/list-tables",
+                            "rest/tables/list-table",
+                            "rest/sql"
+                          ]
+                        },
+                        {
+                          "group": "Views",
+                          "pages": [
+                            "rest/views/create-view",
+                            "rest/views/delete-views",
+                            "rest/views/update-view",
+                            "rest/views/list-views",
+                            "rest/views/list-view"
+                          ]
+                        },
+                        {
+                          "group": "Files",
+                          "pages": [
+                            "rest/files/upload",
+                            "rest/files/delete",
+                            "rest/files/list"
+                          ]
+                        },
+                        {
+                          "group": "Jobs",
+                          "pages": [
+                            "rest/jobs/create",
+                            "rest/jobs/list",
+                            "rest/jobs/get",
+                            "rest/jobs/delete"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "group": "Respond",
+                      "icon": "comment-dots",
+                      "pages": [
+                        {
+                          "group": "AI Agents",
+                          "pages": [
+                            "rest/agents/create",
+                            "rest/agents/list",
+                            "rest/agents/get",
+                            "rest/agents/query",
+                            "rest/agents/update",
+                            "rest/agents/delete"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "group": "Python SDK",
+                  "pages": [
+                    "sdks/python/overview",
+                    {
+                      "group": "Connect",
+                      "icon": "link",
+                      "pages": [
+                        {
+                          "group": "Setup",
+                          "pages": [
+                            "sdks/python/installation",
+                            "sdks/python/connect"
+                          ]
+                        },
+                        {
+                          "group": "Data Sources",
+                          "pages": [
+                            "sdks/python/list_data_handlers",
+                            "sdks/python/create_database",
+                            "sdks/python/drop_database",
+                            "sdks/python/list_databases"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "group": "Unify",
+                      "icon": "circle-nodes",
+                      "pages": [
+                        {
+                          "group": "Projects",
+                          "pages": [
+                            "sdks/python/create_project",
+                            "sdks/python/drop_project",
+                            "sdks/python/list_projects",
+                            "sdks/python/query_projects"
+                          ]
+                        },
+                        {
+                          "group": "Knowledge Bases",
+                          "pages": [
+                            "sdks/python/knowledge_bases/overview",
+                            "sdks/python/knowledge_bases/create",
+                            "sdks/python/knowledge_bases/insert_data",
+                            "sdks/python/knowledge_bases/query"
+                          ]
+                        },
+                        {
+                          "group": "Tables, Views, and Files",
+                          "pages": [
+                            "sdks/python/create_table",
+                            "sdks/python/delete_table",
+                            "sdks/python/query_table",
+                            "sdks/python/native_queries",
+                            "sdks/python/update_table",
+                            "sdks/python/insert_into_table",
+                            "sdks/python/join_on",
+                            "sdks/python/delete_from",
+                            "sdks/python/create_view",
+                            "sdks/python/drop_view",
+                            "sdks/python/query_view",
+                            "sdks/python/list_views",
+                            "sdks/python/upload_file",
+                            "sdks/python/delete_file",
+                            "sdks/python/query_files"
+                          ]
+                        },
+                        {
+                          "group": "Jobs",
+                          "pages": [
+                            "sdks/python/create_job",
+                            "sdks/python/drop_job",
+                            "sdks/python/list_jobs",
+                            "sdks/python/refresh_job",
+                            "sdks/python/get_history"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "group": "Respond",
+                      "icon": "comment-dots",
+                      "pages": [
+                        "sdks/python/agents"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "group": "JavaScript SDK",
+                  "pages": [
+                    "sdks/javascript/overview",
+                    {
+                      "group": "Connect",
+                      "icon": "link",
+                      "pages": [
+                        {
+                          "group": "Setup",
+                          "pages": [
+                            "sdks/javascript/installation",
+                            "sdks/javascript/connect"
+                          ]
+                        },
+                        {
+                          "group": "Data Sources",
+                          "pages": [
+                            "sdks/javascript/list_data_handlers",
+                            "sdks/javascript/create_database",
+                            "sdks/javascript/get_database",
+                            "sdks/javascript/drop_database",
+                            "sdks/javascript/list_databases"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "group": "Unify",
+                      "icon": "circle-nodes",
+                      "pages": [
+                        {
+                          "group": "Projects",
+                          "pages": [
+                            "sdks/javascript/list_projects"
+                          ]
+                        },
+                        {
+                          "group": "Tables, Views, and Files",
+                          "pages": [
+                            "sdks/javascript/create_table",
+                            "sdks/javascript/delete_table",
+                            "sdks/javascript/query_table",
+                            "sdks/javascript/native_queries",
+                            "sdks/javascript/update_table",
+                            "sdks/javascript/insert_into_table",
+                            "sdks/javascript/join_on",
+                            "sdks/javascript/delete_from",
+                            "sdks/javascript/create_view",
+                            "sdks/javascript/drop_view",
+                            "sdks/javascript/query_view",
+                            "sdks/javascript/list_views",
+                            "sdks/javascript/query_files"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "group": "Respond",
+                      "icon": "comment-dots",
+                      "pages": [
+                        "sdks/javascript/agents"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tab": "Contribute",
+          "groups": [
+            {
+              "group": "Contribute",
+              "pages": [
+                "contribute/contribute",
+                "contribute/issues",
+                "contribute/issue-labels",
+                "contribute/install",
+                "contribute/python-coding-standards",
+                "contribute/data-handlers",
+                "contribute/app-handlers",
+                "contribute/tests",
+                "contribute/integrations-readme",
+                "contribute/tutorials",
+                "contribute/docs",
+                "contribute/docs-rules",
+                "contribute/community"
+              ]
+            }
+          ]
+        },
+        {
+          "tab": "FAQs",
+          "groups": [
+            {
+              "group": "FAQs",
+              "pages": [
+                "faqs/benefits",
+                "faqs/persist-predictions",
+                "faqs/mindsdb-with-php",
+                "faqs/disposable-email-doman-and-openai",
+                "faqs/missing-required-cpu-features",
+                "faqs/a2a-unavailable"
+              ]
+            }
+          ]
+        }
     ],
     "global": {
       "anchors": [

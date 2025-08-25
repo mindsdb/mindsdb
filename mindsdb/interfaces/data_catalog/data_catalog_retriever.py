@@ -15,7 +15,7 @@ class DataCatalogRetriever(BaseDataCatalog):
         """
         Retrieve the table metadata from the handler.
         """
-        self.logger.info(f"Retrieving {", ".join(self.table_names) if self.table_names else "all"} tables for {self.database_name}")
+        self.logger.info(f"Retrieving {', '.join(self.table_names) if self.table_names else 'all'} tables for {self.database_name}")
         response = self.data_handler.meta_get_tables(self.table_names)
         if response.resp_type == RESPONSE_TYPE.ERROR:
             self.logger.error(f"Failed to retrieve tables for {self.database_name}: {response.error_message}")
@@ -30,7 +30,7 @@ class DataCatalogRetriever(BaseDataCatalog):
         """
         Retrieve the column metadata from the handler.
         """
-        self.logger.info(f"Retrieving columns for {", ".join(self.table_names) if self.table_names else "all"} tables for {self.database_name}")
+        self.logger.info(f"Retrieving columns for {', '.join(self.table_names) if self.table_names else 'all'} tables for {self.database_name}")
         response = self.data_handler.meta_get_columns(self.table_names)
         if response.resp_type == RESPONSE_TYPE.ERROR:
             self.logger.error(f"Failed to retrieve columns for {self.database_name}: {response.error_message}")

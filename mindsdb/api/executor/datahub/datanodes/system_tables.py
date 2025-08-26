@@ -18,11 +18,11 @@ logger = log.getLogger(__name__)
 
 
 def _get_scope(query):
-    databases, tables = None, None
+    catalogs, databases, tables = None, None, None
     try:
         conditions = extract_comparison_conditions(query.where, ignore_functions=True)
     except NotImplementedError:
-        return databases, tables
+        return catalogs, databases, tables
     for op, arg1, arg2 in conditions:
         if op == "=":
             scope = [arg2]
@@ -33,11 +33,13 @@ def _get_scope(query):
         else:
             continue
 
-        if arg1.lower() == "table_schema":
+        if arg1.lower() == "table_catalog":
+            catalogs = scope
+        elif arg1.lower() == "table_schema":
             databases = scope
         elif arg1.lower() == "table_name":
             tables = scope
-    return databases, tables
+    return catalogs, databases, tables
 
 
 class Table:
@@ -94,7 +96,7 @@ class TablesTable(Table):
 
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
-        databases, _ = _get_scope(query)
+        _, databases, _ = _get_scope(query)
 
         data = []
         for name in inf_schema.tables.keys():
@@ -283,7 +285,7 @@ class ColumnsTable(Table):
 
     @classmethod
     def get_data(cls, inf_schema=None, query: ASTNode = None, **kwargs) -> pd.DataFrame:
-        databases, tables_names = _get_scope(query)
+        _, databases, tables_names = _get_scope(query)
 
         if databases is None:
             databases = ["information_schema", config.get("default_project"), "files"]
@@ -533,22 +535,7 @@ class MetaTablesTable(Table):
 
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
-        conditions = extract_comparison_conditions(query.where, ignore_functions=True)
-        catalogs, tables = None, None
-        for op, arg1, arg2 in conditions:
-            if op == "=":
-                scope = [arg2]
-            elif op == "in":
-                if not isinstance(arg2, list):
-                    arg2 = [arg2]
-                scope = arg2
-            else:
-                continue
-
-            if arg1.lower() == "table_catalog":
-                catalogs = scope
-            elif arg1.lower() == "table_name":
-                tables = scope
+        catalogs, _, tables = _get_scope(query)
 
         df = pd.DataFrame()
         for catalog in catalogs:
@@ -582,7 +569,7 @@ class MetaColumnsTable(Table):
 
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
-        databases, tables = _get_scope(query)
+        _, databases, tables = _get_scope(query)
 
         records = _get_records_from_data_catalog(databases, tables)
 
@@ -625,7 +612,7 @@ class MetaColumnStatisticsTable(Table):
 
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
-        databases, tables = _get_scope(query)
+        _, databases, tables = _get_scope(query)
 
         records = _get_records_from_data_catalog(databases, tables)
 
@@ -676,7 +663,7 @@ class MetaTableConstraintsTable(Table):
 
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
-        databases, tables = _get_scope(query)
+        _, databases, tables = _get_scope(query)
 
         records = _get_records_from_data_catalog(databases, tables)
 
@@ -744,7 +731,7 @@ class MetaColumnUsageTable(Table):
 
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
-        databases, tables = _get_scope(query)
+        _, databases, tables = _get_scope(query)
 
         records = _get_records_from_data_catalog(databases, tables)
 
@@ -819,7 +806,7 @@ class MetaHandlerInfoTable(Table):
 
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
-        databases, tables = _get_scope(query)
+        _, databases, tables = _get_scope(query)
 
         data = []
         for database in databases:

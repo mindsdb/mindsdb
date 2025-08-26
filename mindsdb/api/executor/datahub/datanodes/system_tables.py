@@ -544,9 +544,7 @@ class MetaTablesTable(Table):
             table_df['TABLE_CATALOG'] = catalog
             df = pd.concat([df, table_df])
 
-        # Capitalize the column names.
         df.columns = df.columns.str.upper()
-        # Reorder the columns.
         df = df[cls.columns]
 
         return df
@@ -569,30 +567,23 @@ class MetaColumnsTable(Table):
 
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
-        _, databases, tables = _get_scope(query)
+        catalogs, _, tables = _get_scope(query)
 
-        records = _get_records_from_data_catalog(databases, tables)
+        df = pd.DataFrame()
+        for catalog in catalogs:
+            data_catalog_retriever = DataCatalogRetriever(database_name=catalog, table_names=tables)
+            columns_df = data_catalog_retriever.retrieve_column_metadata()
+            columns_df['TABLE_CATALOG'] = catalog
+            df = pd.concat([df, columns_df])
 
-        data = []
-        for record in records:
-            database_name = record.integration.name
-            table_name = record.name
-            columns = record.meta_columns
+        df.columns = df.columns.str.upper()
 
-            for column in columns:
-                item = {
-                    "TABLE_CATALOG": "def",
-                    "TABLE_SCHEMA": database_name,
-                    "TABLE_NAME": table_name,
-                    "COLUMN_NAME": column.name,
-                    "DATA_TYPE": column.data_type,
-                    "COLUMN_DESCRIPTION": column.description or "",
-                    "COLUMN_DEFAULT": column.default_value,
-                    "IS_NULLABLE": "YES" if column.is_nullable else "NO",
-                }
-                data.append(item)
+        df['IS_NULLABLE'] = df['IS_NULLABLE'].map({True: "YES", False: "NO"})
+        if 'TABLE_SCHEMA' not in df.columns:
+            df['TABLE_SCHEMA'] = None
 
-        df = pd.DataFrame(data, columns=cls.columns)
+        df = df[cls.columns]
+
         return df
 
 

@@ -545,7 +545,7 @@ class MetaTablesTable(Table):
             df = pd.concat([df, table_df])
 
         df.columns = df.columns.str.upper()
-        df = df[cls.columns]
+        df = df.reindex(columns=cls.columns, fill_value=None)
 
         return df
 
@@ -578,11 +578,8 @@ class MetaColumnsTable(Table):
 
         df.columns = df.columns.str.upper()
 
+        df = df.reindex(columns=cls.columns, fill_value=None)
         df['IS_NULLABLE'] = df['IS_NULLABLE'].map({True: "YES", False: "NO"})
-        if 'TABLE_SCHEMA' not in df.columns:
-            df['TABLE_SCHEMA'] = None
-
-        df = df[cls.columns]
 
         return df
 

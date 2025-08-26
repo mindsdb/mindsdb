@@ -172,9 +172,11 @@ class AgentTaskManager(InMemoryTaskManager):
             logger.debug(f"[TaskManager] Entering agent.stream() at {time.time()}")
             # Create A2A message structure and convert using centralized utility
             a2a_message = task_send_params.message.model_dump()
+            logger.debug(f"History: {history}")
             if history:
                 a2a_message["history"] = [msg.model_dump() if hasattr(msg, "model_dump") else msg for msg in history]
 
+            logger.debug(f"Getting all messages from A2A message: {a2a_message}")
             # Convert to Q&A format using centralized utility function
             all_messages = convert_a2a_message_to_qa_format(a2a_message)
 

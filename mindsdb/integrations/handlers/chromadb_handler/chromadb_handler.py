@@ -17,7 +17,6 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
     TableField,
     VectorStoreHandler,
 )
-from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)

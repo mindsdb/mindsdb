@@ -184,7 +184,7 @@ class KBTestBase:
         """)
 
 
-class Disable_TestKB(KBTestBase):
+class TestKB(KBTestBase):
     @pytest.mark.parametrize("storage, embedding_model", get_configurations())
     def test_base_syntax(self, storage, embedding_model):
         self.create_kb("test_kb_crm", storage, embedding_model)

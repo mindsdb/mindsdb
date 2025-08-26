@@ -198,6 +198,11 @@ class IntegrationController:
             ml_handler = self.get_ml_handler(name)
             ml_handler.create_engine(connection_args, integration_id)
 
+        if engine == "chromadb":
+            # sqlite reuse ids and a new db can see files from a previous one
+            handler_storage = HandlerStorage(integration_id)
+            handler_storage.delete()
+
         return integration_id
 
     def modify(self, name, data):

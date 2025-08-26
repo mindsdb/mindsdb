@@ -692,6 +692,7 @@ class MetaColumnUsageTable(Table):
         "COLUMN_NAME",
         "ORDINAL_POSITION",
         "POSITION_IN_UNIQUE_CONSTRAINT",
+        "REFERENCED_TABLE_CATALOG",
         "REFERENCED_TABLE_SCHEMA",
         "REFERENCED_TABLE_NAME",
         "REFERENCED_COLUMN_NAME",
@@ -699,72 +700,47 @@ class MetaColumnUsageTable(Table):
 
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
-        _, databases, tables = _get_scope(query)
+        catalogs, _, tables = _get_scope(query)
 
-        records = _get_records_from_data_catalog(databases, tables)
+        df = pd.DataFrame()
+        for catalog in catalogs:
+            data_catalog_retriever = DataCatalogRetriever(database_name=catalog, table_names=tables)
 
-        data = []
-        for record in records:
-            database_name = record.integration.name
-            table_name = record.name
-            primary_keys = record.meta_primary_keys
-            foreign_keys_children = record.meta_foreign_keys_children
-            foreign_keys_parents = record.meta_foreign_keys_parents
+            primary_keys_df = data_catalog_retriever.retrieve_primary_keys()
+            if not primary_keys_df.empty:
+                primary_keys_df['CONSTRAINT_CATALOG'] = catalog
+                primary_keys_df['TABLE_CATALOG'] = catalog
 
-            for pk in primary_keys:
-                column = pk.meta_columns
+                primary_keys_df.columns = primary_keys_df.columns.str.upper()
 
-                item = {
-                    "CONSTRAINT_CATALOG": "def",
-                    "CONSTRAINT_SCHEMA": database_name,
-                    "CONSTRAINT_NAME": pk.constraint_name,
-                    "TABLE_CATALOG": "def",
-                    "TABLE_SCHEMA": database_name,
-                    "TABLE_NAME": table_name,
-                    "COLUMN_NAME": column.name,
-                    "ORDINAL_POSITION": pk.ordinal_position,
-                    "POSITION_IN_UNIQUE_CONSTRAINT": None,
-                    "REFERENCED_TABLE_SCHEMA": None,
-                    "REFERENCED_TABLE_NAME": None,
-                    "REFERENCED_COLUMN_NAME": None,
-                }
-                data.append(item)
+                df = pd.concat([df, primary_keys_df])
 
-            for fk in foreign_keys_children:
-                item = {
-                    "CONSTRAINT_CATALOG": "def",
-                    "CONSTRAINT_SCHEMA": database_name,
-                    "CONSTRAINT_NAME": fk.constraint_name,
-                    "TABLE_CATALOG": "def",
-                    "TABLE_SCHEMA": database_name,
-                    "TABLE_NAME": table_name,
-                    "COLUMN_NAME": fk.child_column.name,
-                    "ORDINAL_POSITION": None,
-                    "POSITION_IN_UNIQUE_CONSTRAINT": None,
-                    "REFERENCED_TABLE_SCHEMA": fk.parent_table.integration.name if fk.parent_table else None,
-                    "REFERENCED_TABLE_NAME": fk.parent_table.name if fk.parent_table else None,
-                    "REFERENCED_COLUMN_NAME": fk.parent_column.name if fk.parent_column else None,
-                }
-                data.append(item)
+            foreign_keys_df = data_catalog_retriever.retrieve_foreign_keys()
+            if not foreign_keys_df.empty:
+                foreign_keys_df[['CONSTRAINT_CATALOG', 'TABLE_CATALOG', 'REFERENCED_TABLE_CATALOG']] = catalog
 
-            for fk in foreign_keys_parents:
-                item = {
-                    "CONSTRAINT_CATALOG": "def",
-                    "CONSTRAINT_SCHEMA": database_name,
-                    "CONSTRAINT_NAME": fk.constraint_name,
-                    "TABLE_CATALOG": "def",
-                    "TABLE_SCHEMA": database_name,
-                    "TABLE_NAME": table_name,
-                    "COLUMN_NAME": fk.child_column.name,
-                    "ORDINAL_POSITION": None,
-                    "POSITION_IN_UNIQUE_CONSTRAINT": None,
-                    "REFERENCED_TABLE_SCHEMA": fk.child_table.integration.name if fk.child_table else None,
-                    "REFERENCED_TABLE_NAME": fk.child_table.name if fk.child_table else None,
-                    "REFERENCED_COLUMN_NAME": fk.parent_column.name if fk.child_column else None,
-                }
-                data.append(item)
+                foreign_keys_df.columns = foreign_keys_df.columns.str.upper()
 
-        df = pd.DataFrame(data, columns=cls.columns)
+                parent_constraints_df = foreign_keys_df.copy(deep=True)
+                child_constraints_df = foreign_keys_df.copy(deep=True)
+
+                parent_constraints_df.rename(columns={
+                    'PARENT_TABLE_NAME': 'TABLE_NAME',
+                    'PARENT_COLUMN_NAME': 'COLUMN_NAME',
+                    'CHILD_TABLE_NAME': 'REFERENCED_TABLE_NAME',
+                    'CHILD_COLUMN_NAME': 'REFERENCED_COLUMN_NAME',
+                }, inplace=True)
+                child_constraints_df.rename(columns={
+                    'CHILD_TABLE_NAME': 'TABLE_NAME',
+                    'CHILD_COLUMN_NAME': 'COLUMN_NAME',
+                    'PARENT_TABLE_NAME': 'REFERENCED_TABLE_NAME',
+                    'PARENT_COLUMN_NAME': 'REFERENCED_COLUMN_NAME',
+                }, inplace=True)
+
+                df = pd.concat([df, parent_constraints_df, child_constraints_df])
+
+        df = df.reindex(columns=cls.columns, fill_value=None)
+
         return df
 
 

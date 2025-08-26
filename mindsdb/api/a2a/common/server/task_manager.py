@@ -31,10 +31,10 @@ from ...common.types import (
     InternalError,
 )
 from ...common.server.utils import new_not_implemented_error
+from mindsdb.utilities import log
 import asyncio
-import logging
 
-logger = logging.getLogger(__name__)
+logger = log.getLogger(__name__)
 
 
 class TaskManager(ABC):

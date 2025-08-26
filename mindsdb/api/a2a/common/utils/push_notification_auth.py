@@ -9,11 +9,12 @@ import time
 import json
 import hashlib
 import httpx
-import logging
 
 from jwt import PyJWK, PyJWKClient
 
-logger = logging.getLogger(__name__)
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 AUTH_HEADER_PREFIX = "Bearer "
 
 

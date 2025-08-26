@@ -1,12 +1,12 @@
 import json
 from typing import Any, AsyncIterable, Dict, List
 import requests
-import logging
 import httpx
 from mindsdb.api.a2a.utils import to_serializable
 from mindsdb.api.a2a.constants import DEFAULT_STREAM_TIMEOUT
+from mindsdb.utilities import log
 
-logger = logging.getLogger(__name__)
+logger = log.getLogger(__name__)
 
 
 class MindsDBAgent:

@@ -55,7 +55,7 @@ class ChromaDBHandler(VectorStoreHandler):
 
     def __init__(self, name: str, **kwargs):
         super().__init__(name)
-        self.handler_storage = HandlerStorage(kwargs.get("integration_id"))
+        self.handler_storage = kwargs['handler_storage']
         self._client = None
         self.persist_directory = None
         self.is_connected = False

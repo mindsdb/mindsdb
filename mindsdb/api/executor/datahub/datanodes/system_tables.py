@@ -653,7 +653,6 @@ class MetaTableConstraintsTable(Table):
                 primary_keys_df['CONSTRAINT_TYPE'] = 'PRIMARY KEY'
 
                 primary_keys_df.columns = primary_keys_df.columns.str.upper()
-                primary_keys_df = primary_keys_df.reindex(columns=cls.columns, fill_value=None)
 
                 df = pd.concat([df, primary_keys_df])
 
@@ -674,10 +673,9 @@ class MetaTableConstraintsTable(Table):
                     'CHILD_TABLE_NAME': 'TABLE_NAME',
                 }, inplace=True)
 
-                parent_constraints_df = parent_constraints_df.reindex(columns=cls.columns, fill_value=None)
-                child_constraints_df = child_constraints_df.reindex(columns=cls.columns, fill_value=None)
-
                 df = pd.concat([df, parent_constraints_df, child_constraints_df])
+
+        df = df.reindex(columns=cls.columns, fill_value=None)
 
         return df
 

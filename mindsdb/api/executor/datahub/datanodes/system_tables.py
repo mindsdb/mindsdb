@@ -33,7 +33,7 @@ def _get_scope(query):
         else:
             continue
 
-        if arg1.lower() == "table_catalog":
+        if arg1.lower() in ["table_catalog", "constraint_catalog"]:
             catalogs = scope
         elif arg1.lower() == "table_schema":
             databases = scope
@@ -641,52 +641,44 @@ class MetaTableConstraintsTable(Table):
 
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
-        _, databases, tables = _get_scope(query)
+        catalogs, _, tables = _get_scope(query)
 
-        records = _get_records_from_data_catalog(databases, tables)
+        df = pd.DataFrame()
+        for catalog in catalogs:
+            data_catalog_retriever = DataCatalogRetriever(database_name=catalog, table_names=tables)
 
-        data = []
-        for record in records:
-            database_name = record.integration.name
-            table_name = record.name
-            primary_keys = record.meta_primary_keys
-            foreign_keys_children = record.meta_foreign_keys_children
-            foreign_keys_parents = record.meta_foreign_keys_parents
+            primary_keys_df = data_catalog_retriever.retrieve_primary_keys()
+            if not primary_keys_df.empty:
+                primary_keys_df['CONSTRAINT_CATALOG'] = catalog
+                primary_keys_df['CONSTRAINT_TYPE'] = 'PRIMARY KEY'
 
-            for pk in primary_keys:
-                item = {
-                    "CONSTRAINT_CATALOG": "def",
-                    "CONSTRAINT_SCHEMA": database_name,
-                    "CONSTRAINT_NAME": pk.constraint_name,
-                    "TABLE_SCHEMA": database_name,
-                    "TABLE_NAME": table_name,
-                    "CONSTRAINT_TYPE": "PRIMARY KEY",
-                }
-                data.append(item)
+                primary_keys_df.columns = primary_keys_df.columns.str.upper()
+                primary_keys_df = primary_keys_df.reindex(columns=cls.columns, fill_value=None)
 
-            for fk in foreign_keys_children:
-                item = {
-                    "CONSTRAINT_CATALOG": "def",
-                    "CONSTRAINT_SCHEMA": database_name,
-                    "CONSTRAINT_NAME": fk.constraint_name,
-                    "TABLE_SCHEMA": database_name,
-                    "TABLE_NAME": table_name,
-                    "CONSTRAINT_TYPE": "FOREIGN KEY",
-                }
-                data.append(item)
+                df = pd.concat([df, primary_keys_df])
 
-            for fk in foreign_keys_parents:
-                item = {
-                    "CONSTRAINT_CATALOG": "def",
-                    "CONSTRAINT_SCHEMA": database_name,
-                    "CONSTRAINT_NAME": fk.constraint_name,
-                    "TABLE_SCHEMA": database_name,
-                    "TABLE_NAME": table_name,
-                    "CONSTRAINT_TYPE": "FOREIGN KEY",
-                }
-                data.append(item)
+            foreign_keys_df = data_catalog_retriever.retrieve_foreign_keys()
+            if not foreign_keys_df.empty:
+                foreign_keys_df['CONSTRAINT_CATALOG'] = catalog
+                foreign_keys_df['CONSTRAINT_TYPE'] = 'FOREIGN KEY'
 
-        df = pd.DataFrame(data, columns=cls.columns)
+                foreign_keys_df.columns = foreign_keys_df.columns.str.upper()
+
+                parent_constraints_df = foreign_keys_df.copy(deep=True)
+                child_constraints_df = foreign_keys_df.copy(deep=True)
+
+                parent_constraints_df.rename(columns={
+                    'PARENT_TABLE_NAME': 'TABLE_NAME',
+                }, inplace=True)
+                child_constraints_df.rename(columns={
+                    'CHILD_TABLE_NAME': 'TABLE_NAME',
+                }, inplace=True)
+
+                parent_constraints_df = parent_constraints_df.reindex(columns=cls.columns, fill_value=None)
+                child_constraints_df = child_constraints_df.reindex(columns=cls.columns, fill_value=None)
+
+                df = pd.concat([df, parent_constraints_df, child_constraints_df])
+
         return df
 
 

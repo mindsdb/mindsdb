@@ -1,4 +1,5 @@
 import requests
+import time
 from typing import Dict, Any
 
 from mindsdb_sql_parser import parse_sql
@@ -109,11 +110,41 @@ class RaindropAPIClient:
         self.api_key = api_key
         self.base_url = "https://api.raindrop.io/rest/v1"
         self.headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+        # Rate limiting: 120 requests per minute = 2 requests per second
+        self.rate_limit_per_second = 2
+        self.request_times = []
+
+    def _apply_rate_limit(self):
+        """Apply rate limiting to avoid hitting API limits"""
+        current_time = time.time()
+
+        # Remove requests older than 1 second
+        self.request_times = [t for t in self.request_times if current_time - t < 1.0]
+
+        # Check if we need to wait
+        if len(self.request_times) >= self.rate_limit_per_second:
+            # Calculate how long to wait
+            oldest_request = min(self.request_times)
+            wait_time = 1.0 - (current_time - oldest_request)
+
+            if wait_time > 0:
+                logger.debug(".2f")
+                time.sleep(wait_time)
+                # Update current_time after sleep
+                current_time = time.time()
+                # Clean up old requests again after sleep
+                self.request_times = [t for t in self.request_times if current_time - t < 1.0]
+
+        # Record this request
+        self.request_times.append(current_time)
 
     def _make_request(
         self, method: str, endpoint: str, params: Dict[str, Any] = None, data: Dict[str, Any] = None
     ) -> Dict[str, Any]:
-        """Make a request to the Raindrop.io API"""
+        """Make a request to the Raindrop.io API with rate limiting"""
+        # Apply rate limiting
+        self._apply_rate_limit()
+
         # Validate endpoint to prevent path traversal/injection attacks
         allowed_endpoints = ["/user/stats", "/raindrops", "/raindrop", "/collections", "/collection"]
 
@@ -153,10 +184,18 @@ class RaindropAPIClient:
         per_page: int = 50,
         max_results: int = None,
     ) -> Dict[str, Any]:
-        """Get raindrops from a collection with automatic pagination"""
+        """Get raindrops from a collection with optimized pagination"""
         all_items = []
         current_page = page
-        per_page_limit = min(per_page, 50)  # API limit is 50
+
+        # Optimize page size based on max_results to minimize API calls
+        if max_results and max_results <= 10:
+            # For small limits, use smaller page sizes to avoid wasting requests
+            per_page_limit = max(5, min(per_page, max_results))
+        elif max_results and max_results <= 25:
+            per_page_limit = max(10, min(per_page, max_results))
+        else:
+            per_page_limit = min(per_page, 50)  # API limit is 50
 
         while True:
             params = {"page": current_page, "perpage": per_page_limit}
@@ -187,6 +226,11 @@ class RaindropAPIClient:
                 break
 
             current_page += 1
+
+            # Safety check: don't fetch more than 10 pages to prevent infinite loops
+            if current_page > 10:
+                logger.warning("Stopping pagination after 10 pages to prevent rate limit issues")
+                break
 
         # Return response in same format as original API
         return {"result": True, "items": all_items, "count": len(all_items)}

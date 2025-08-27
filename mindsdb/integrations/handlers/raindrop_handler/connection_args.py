@@ -9,10 +9,8 @@ connection_args = OrderedDict(
         "description": "Raindrop.io API access token. You can get this from https://app.raindrop.io/settings/integrations",
         "required": True,
         "label": "API Key",
-        "secret": True
+        "secret": True,
     },
 )
 
-connection_args_example = OrderedDict(
-    api_key="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeee"
-)
+connection_args_example = OrderedDict(api_key="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeee")

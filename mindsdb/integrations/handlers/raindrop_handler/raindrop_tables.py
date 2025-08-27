@@ -81,49 +81,28 @@ class RaindropsTable(APITable):
         # If specific IDs are requested, try to fetch efficiently
         if raindrop_ids:
             raindrops_data = []
-            # Batch process IDs to reduce API calls
-            batch_size = 10  # Process in smaller batches to avoid overwhelming the API
-
-            for i in range(0, len(raindrop_ids), batch_size):
-                batch_ids = raindrop_ids[i : i + batch_size]
-
-                # Try to fetch from the same collection if possible to use bulk operations
-                # Since Raindrop.io doesn't have a bulk get endpoint, we'll minimize calls
-                # by fetching efficiently in smaller batches
-                for raindrop_id in batch_ids:
-                    try:
-                        response = self.handler.connection.get_raindrop(raindrop_id)
-                        if response.get("result") and response.get("item"):
-                            raindrops_data.append(response["item"])
-                    except Exception as e:
-                        logger.warning(f"Failed to fetch raindrop {raindrop_id}: {e}")
-                        continue
+            # Process IDs individually with rate limiting
+            # Raindrop.io doesn't have bulk get endpoints, so we need to be careful with rate limits
+            for raindrop_id in raindrop_ids:
+                try:
+                    response = self.handler.connection.get_raindrop(raindrop_id)
+                    if response.get("result") and response.get("item"):
+                        raindrops_data.append(response["item"])
+                except Exception as e:
+                    logger.warning(f"Failed to fetch raindrop {raindrop_id}: {e}")
+                    continue
         else:
-            # Get raindrops from collection with pagination
-            raindrops_data = []
-            page = 0
-            per_page = min(result_limit or 50, 50)  # API limit is 50
-            total_fetched = 0
-
-            while True:
-                response = self.handler.connection.get_raindrops(
-                    collection_id=collection_id, search=search_query, sort=sort_order, page=page, per_page=per_page
-                )
-
-                if not response.get("result") or not response.get("items"):
-                    break
-
-                items = response["items"]
-                raindrops_data.extend(items)
-                total_fetched += len(items)
-
-                # Check if we've fetched enough or if there are no more items
-                if result_limit and total_fetched >= result_limit:
-                    break
-                if len(items) < per_page:  # No more items available
-                    break
-
-                page += 1
+            # Get raindrops from collection with optimized pagination
+            # Pass max_results to the API client to optimize page sizes and minimize requests
+            response = self.handler.connection.get_raindrops(
+                collection_id=collection_id,
+                search=search_query,
+                sort=sort_order,
+                page=0,
+                per_page=50,
+                max_results=result_limit,
+            )
+            raindrops_data = response.get("items", [])
 
         # Convert to DataFrame
         if raindrops_data:

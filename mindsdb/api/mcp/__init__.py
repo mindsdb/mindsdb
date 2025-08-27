@@ -1,5 +1,3 @@
-import os
-
 from textwrap import dedent
 from typing import Any
 from contextlib import asynccontextmanager
@@ -8,7 +6,6 @@ from dataclasses import dataclass
 
 from mcp.server.fastmcp import FastMCP
 from starlette.requests import Request
-from starlette.routing import Route
 from starlette.responses import JSONResponse
 
 from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy

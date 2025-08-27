@@ -1,6 +1,4 @@
-import time
-
-from flask import request, session
+from flask import request
 from flask_restx import Resource
 from flask_restx import fields
 

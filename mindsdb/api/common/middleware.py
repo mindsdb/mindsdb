@@ -17,7 +17,7 @@ SIMPLE_USER_TOKEN = None
 
 def new_token() -> str:
     global SIMPLE_USER_TOKEN
-    logger.debug(f"Generating new auth token")
+    logger.debug("Generating new auth token")
     SIMPLE_USER_TOKEN = secrets.token_urlsafe(32)
     return SIMPLE_USER_TOKEN
 

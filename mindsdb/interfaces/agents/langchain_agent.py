@@ -300,7 +300,7 @@ class LangchainAgent:
 
         if "model_name" not in args:
             raise ValueError(
-                f"No model name provided for agent. Provide it in the model parameter or in the default model setup."
+                "No model name provided for agent. Provide it in the model parameter or in the default model setup."
             )
 
         return args

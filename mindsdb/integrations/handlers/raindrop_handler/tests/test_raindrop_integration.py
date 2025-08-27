@@ -10,12 +10,12 @@ class TestRaindropHandlerIntegration(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Set up the test environment"""
-        cls.api_key = os.environ.get('RAINDROP_API_KEY')
+        cls.api_key = os.environ.get("RAINDROP_API_KEY")
         if not cls.api_key:
             raise unittest.SkipTest("RAINDROP_API_KEY environment variable not set")
-        
-        cls.handler = RaindropHandler('test_raindrop_handler')
-        cls.handler.connection_data = {'api_key': cls.api_key}
+
+        cls.handler = RaindropHandler("test_raindrop_handler")
+        cls.handler.connection_data = {"api_key": cls.api_key}
 
     def test_check_connection(self):
         """Test that we can connect to the Raindrop.io API"""
@@ -26,10 +26,10 @@ class TestRaindropHandlerIntegration(unittest.TestCase):
         """Test that tables are properly registered"""
         tables = self.handler.get_tables()
         table_names = [table.data[0] for table in tables.data]
-        
-        self.assertIn('raindrops', table_names)
-        self.assertIn('bookmarks', table_names)
-        self.assertIn('collections', table_names)
+
+        self.assertIn("raindrops", table_names)
+        self.assertIn("bookmarks", table_names)
+        self.assertIn("collections", table_names)
 
     def test_raindrops_table_select(self):
         """Test selecting from raindrops table"""
@@ -37,9 +37,9 @@ class TestRaindropHandlerIntegration(unittest.TestCase):
         query = "SELECT * FROM raindrops LIMIT 5"
         result = self.handler.native_query(query)
         self.assertTrue(result.success, f"Query failed: {result.error_message}")
-        
+
         # Check that we get a DataFrame
-        if hasattr(result, 'data_frame') and result.data_frame is not None:
+        if hasattr(result, "data_frame") and result.data_frame is not None:
             self.assertIsInstance(result.data_frame, pd.DataFrame)
 
     def test_collections_table_select(self):
@@ -47,37 +47,68 @@ class TestRaindropHandlerIntegration(unittest.TestCase):
         query = "SELECT * FROM collections LIMIT 5"
         result = self.handler.native_query(query)
         self.assertTrue(result.success, f"Query failed: {result.error_message}")
-        
+
         # Check that we get a DataFrame
-        if hasattr(result, 'data_frame') and result.data_frame is not None:
+        if hasattr(result, "data_frame") and result.data_frame is not None:
             self.assertIsInstance(result.data_frame, pd.DataFrame)
 
     def test_raindrops_table_columns(self):
         """Test that raindrops table has expected columns"""
-        raindrops_table = self.handler.get_table('raindrops')
+        raindrops_table = self.handler.get_table("raindrops")
         columns = raindrops_table.get_columns()
-        
+
         expected_columns = [
-            "_id", "link", "title", "excerpt", "note", "type", "cover", "tags",
-            "important", "reminder", "removed", "created", "lastUpdate",
-            "domain", "collection.id", "collection.title", "user.id", "broken",
-            "cache", "file.name", "file.size", "file.type"
+            "_id",
+            "link",
+            "title",
+            "excerpt",
+            "note",
+            "type",
+            "cover",
+            "tags",
+            "important",
+            "reminder",
+            "removed",
+            "created",
+            "lastUpdate",
+            "domain",
+            "collection.id",
+            "collection.title",
+            "user.id",
+            "broken",
+            "cache",
+            "file.name",
+            "file.size",
+            "file.type",
         ]
-        
+
         for col in expected_columns:
             self.assertIn(col, columns, f"Column {col} not found in raindrops table")
 
     def test_collections_table_columns(self):
         """Test that collections table has expected columns"""
-        collections_table = self.handler.get_table('collections')
+        collections_table = self.handler.get_table("collections")
         columns = collections_table.get_columns()
-        
+
         expected_columns = [
-            "_id", "title", "description", "color", "view", "public", "sort",
-            "count", "created", "lastUpdate", "expanded", "parent.id", "user.id",
-            "cover", "access.level", "access.draggable"
+            "_id",
+            "title",
+            "description",
+            "color",
+            "view",
+            "public",
+            "sort",
+            "count",
+            "created",
+            "lastUpdate",
+            "expanded",
+            "parent.id",
+            "user.id",
+            "cover",
+            "access.level",
+            "access.draggable",
         ]
-        
+
         for col in expected_columns:
             self.assertIn(col, columns, f"Column {col} not found in collections table")
 
@@ -90,24 +121,24 @@ class TestRaindropHandlerIntegration(unittest.TestCase):
             VALUES ('https://example.com/test', 'Test Bookmark', 'Test note', 'test,automated')
             """
             result = self.handler.native_query(insert_query)
-            
+
             if not result.success:
                 # Skip if we don't have write permissions
                 self.skipTest(f"Cannot create bookmarks: {result.error_message}")
-            
+
             # Try to find the bookmark we just created
             select_query = "SELECT * FROM raindrops WHERE title = 'Test Bookmark' LIMIT 1"
             result = self.handler.native_query(select_query)
             self.assertTrue(result.success)
-            
-            if hasattr(result, 'data_frame') and result.data_frame is not None and not result.data_frame.empty:
-                bookmark_id = result.data_frame['_id'].iloc[0]
-                
+
+            if hasattr(result, "data_frame") and result.data_frame is not None and not result.data_frame.empty:
+                bookmark_id = result.data_frame["_id"].iloc[0]
+
                 # Delete the test bookmark
                 delete_query = f"DELETE FROM raindrops WHERE _id = {bookmark_id}"
                 result = self.handler.native_query(delete_query)
                 self.assertTrue(result.success)
-                
+
         except Exception as e:
             self.fail(f"Create/delete test failed: {e}")
 
@@ -120,28 +151,28 @@ class TestRaindropHandlerIntegration(unittest.TestCase):
             VALUES ('Test Collection', 'Automated test collection', '#FF0000')
             """
             result = self.handler.native_query(insert_query)
-            
+
             if not result.success:
                 # Skip if we don't have write permissions
                 self.skipTest(f"Cannot create collections: {result.error_message}")
-            
+
             # Try to find the collection we just created
             select_query = "SELECT * FROM collections WHERE title = 'Test Collection' LIMIT 1"
             result = self.handler.native_query(select_query)
             self.assertTrue(result.success)
-            
-            if hasattr(result, 'data_frame') and result.data_frame is not None and not result.data_frame.empty:
-                collection_id = result.data_frame['_id'].iloc[0]
-                
+
+            if hasattr(result, "data_frame") and result.data_frame is not None and not result.data_frame.empty:
+                collection_id = result.data_frame["_id"].iloc[0]
+
                 # Delete the test collection
                 delete_query = f"DELETE FROM collections WHERE _id = {collection_id}"
                 result = self.handler.native_query(delete_query)
                 self.assertTrue(result.success)
-                
+
         except Exception as e:
             self.fail(f"Create/delete collection test failed: {e}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Run integration tests only if API key is available
     unittest.main()

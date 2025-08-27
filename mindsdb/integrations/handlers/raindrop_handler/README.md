@@ -273,6 +273,17 @@ The Raindrop.io API has the following rate limits:
 - The handler automatically handles pagination (API returns max 50 items per request)
 - Bulk operations are used when possible to minimize API calls
 
+### Rate Limiting Features
+
+The handler includes intelligent rate limiting to prevent hitting API quotas:
+
+- **Automatic Throttling**: Requests are automatically delayed to stay within 120 requests/minute limit
+- **Smart Pagination**: Page sizes are optimized based on LIMIT clauses (e.g., LIMIT 5 uses smaller pages)
+- **Request Tracking**: The handler tracks request times and adds delays when approaching limits
+- **Graceful Degradation**: Continues working even with rate limit errors
+
+**Example**: A `SELECT * FROM raindrop_db.raindrops LIMIT 5` query will use smaller page sizes and make fewer requests compared to larger queries.
+
 ## Error Handling
 
 The handler includes comprehensive error handling:
@@ -289,6 +300,9 @@ The handler includes comprehensive error handling:
 - **Empty Data Handling**: Improved handling of empty API responses with proper column structure
 - **Error Resilience**: Added try-catch blocks around data processing operations to prevent crashes
 - **Logging Integration**: Replaced print statements with proper logging for better integration with MindsDB
+- **Rate Limiting**: Implemented intelligent rate limiting to prevent API quota exhaustion (120 requests/minute)
+- **Optimized Pagination**: Smart page sizing based on LIMIT clauses to minimize API calls
+- **Request Throttling**: Automatic delays between requests to stay within API limits
 
 ### Dependency Management
 - Removed duplicate `requests` dependency from handler-specific requirements.txt

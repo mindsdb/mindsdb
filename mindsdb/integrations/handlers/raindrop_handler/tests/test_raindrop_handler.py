@@ -104,6 +104,56 @@ class TestRaindropAPIClient(unittest.TestCase):
         )
         self.assertEqual(result, {"result": True, "items": []})
 
+    @patch("mindsdb.integrations.handlers.raindrop_handler.raindrop_handler.requests.request")
+    def test_rate_limiting(self, mock_request):
+        """Test that rate limiting works correctly"""
+        import time
+
+        # Mock response
+        mock_response = Mock()
+        mock_response.json.return_value = {"result": True, "items": []}
+        mock_response.raise_for_status.return_value = None
+        mock_request.return_value = mock_response
+
+        # Reset request times to ensure clean state
+        self.client.request_times = []
+
+        # Make multiple rapid requests
+        start_time = time.time()
+        for i in range(3):
+            self.client._make_request("GET", "/user/stats")
+        end_time = time.time()
+
+        # Should take at least 1 second due to rate limiting (2 requests/second limit)
+        total_time = end_time - start_time
+        self.assertGreaterEqual(total_time, 1.0, "Rate limiting should add delays between requests")
+
+        # Should have tracked the requests (rate limiter may clean up old entries)
+        self.assertGreaterEqual(len(self.client.request_times), 1, "Should track at least the most recent request")
+
+    @patch.object(RaindropAPIClient, "_make_request")
+    def test_get_raindrops_optimized_pagination(self, mock_request):
+        """Test that get_raindrops optimizes page sizes based on LIMIT"""
+        # Mock response with items
+        mock_response = {"result": True, "items": [{"_id": 1, "title": "Test"}] * 5, "count": 5}
+        mock_request.return_value = mock_response
+
+        # Test small LIMIT - should use smaller page size
+        result = self.client.get_raindrops(max_results=5)
+        self.assertEqual(len(result["items"]), 5)
+
+        # Verify the request was made with optimized page size
+        args, kwargs = mock_request.call_args
+        self.assertEqual(kwargs["params"]["perpage"], 5, "Should use small page size for small LIMIT")
+
+        # Reset mock
+        mock_request.reset_mock()
+
+        # Test larger LIMIT - should use larger page size
+        result = self.client.get_raindrops(max_results=100)
+        args, kwargs = mock_request.call_args
+        self.assertEqual(kwargs["params"]["perpage"], 50, "Should use larger page size for bigger LIMIT")
+
     @patch("mindsdb.integrations.handlers.raindrop_handler.raindrop_handler.requests")
     def test_make_request_post(self, mock_requests):
         """Test POST request with data"""
@@ -346,6 +396,35 @@ class TestRaindropsTable(unittest.TestCase):
             # Should be empty but have all columns
             self.assertTrue(result.empty)
             self.assertEqual(len(result.columns), len(expected_columns))
+
+    def test_select_optimized_for_limit(self):
+        """Test that SELECT with LIMIT uses optimized pagination"""
+        # Mock empty response from API (no items)
+        self.handler.connection.get_raindrops.return_value = {"result": True, "items": []}
+
+        # Mock the SELECT query components with LIMIT 3
+        with (
+            patch("mindsdb.integrations.handlers.raindrop_handler.raindrop_tables.SELECTQueryParser") as mock_parser,
+            patch(
+                "mindsdb.integrations.handlers.raindrop_handler.raindrop_tables.SELECTQueryExecutor"
+            ) as mock_executor,
+        ):
+            mock_parser_instance = Mock()
+            mock_parser_instance.parse_query.return_value = ([], [], [], 3)  # LIMIT 3
+            mock_parser.return_value = mock_parser_instance
+
+            mock_executor_instance = Mock()
+            empty_df_with_columns = pd.DataFrame(columns=self.table.get_columns())
+            mock_executor_instance.execute_query.return_value = empty_df_with_columns
+            mock_executor.return_value = mock_executor_instance
+
+            query = Mock()
+            self.table.select(query)
+
+            # Verify that get_raindrops was called with max_results=3 for optimization
+            self.handler.connection.get_raindrops.assert_called_once()
+            args, kwargs = self.handler.connection.get_raindrops.call_args
+            self.assertEqual(kwargs.get("max_results"), 3, "Should pass LIMIT to API for optimization")
 
     def test_normalize_raindrop_data_partial_nested_data(self):
         """Test _normalize_raindrop_data with partial nested data"""

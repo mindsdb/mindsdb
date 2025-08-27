@@ -8,6 +8,8 @@ Recent improvements:
 - Uses logging instead of print statements for better integration with MindsDB logging
 - Tests robustness of data normalization with missing columns
 - Validates error handling for various edge cases
+- Implements rate limiting to prevent API quota exhaustion
+- Optimizes pagination for small LIMIT queries
 """
 
 import sys

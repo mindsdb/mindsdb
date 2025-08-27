@@ -27,7 +27,7 @@ from mindsdb.api.http.namespaces.chatbots import ns_conf as chatbots_ns
 from mindsdb.api.http.namespaces.jobs import ns_conf as jobs_ns
 from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
 from mindsdb.api.http.namespaces.databases import ns_conf as databases_ns
-from mindsdb.api.http.namespaces.default import ns_conf as default_ns, check_auth
+from mindsdb.api.http.namespaces.default import ns_conf as default_ns
 from mindsdb.api.http.namespaces.file import ns_conf as file_ns
 from mindsdb.api.http.namespaces.handlers import ns_conf as handlers_ns
 from mindsdb.api.http.namespaces.knowledge_bases import ns_conf as knowledge_bases_ns
@@ -53,6 +53,7 @@ from mindsdb.utilities.json_encoder import CustomJSONProvider
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
 from mindsdb.utilities.otel import trace  # noqa: F401
+from mindsdb.api.common.middleware import verify_token
 
 logger = log.getLogger(__name__)
 
@@ -314,11 +315,17 @@ def initialize_app(config, no_studio):
         ctx.set_default()
         config = Config()
 
+        h = request.headers.get("Authorization")
+        if not h or not h.startswith("Bearer "):
+            bearer = None
+        else:
+            bearer =  h.split(" ", 1)[1].strip() or None
+
         # region routes where auth is required
         if (
             config["auth"]["http_auth_enabled"] is True
             and any(request.path.startswith(f"/api{ns.path}") for ns in protected_namespaces)
-            and check_auth() is False
+            and verify_token(bearer) is False
         ):
             return http_error(
                 HTTPStatus.UNAUTHORIZED,

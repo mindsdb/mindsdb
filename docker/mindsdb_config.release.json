@@ -1,5 +1,10 @@
 {
     "config_version": "1.4",
+    "auth": {
+        "http_auth_enabled": true,
+        "username": "admin",
+        "password": "mindsdb"
+    },
     "paths": {
         "root": "/root/mdb_storage"
     },

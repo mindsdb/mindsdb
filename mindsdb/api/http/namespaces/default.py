@@ -10,31 +10,11 @@ from mindsdb.api.http.utils import http_error
 from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.utilities.config import Config
 from mindsdb.utilities import log
+from mindsdb.api.common.middleware import new_token
+from mindsdb.api.common.middleware import verify_token
 
 
 logger = log.getLogger(__name__)
-
-
-def check_auth() -> bool:
-    ''' checking whether current user is authenticated
-
-        Returns:
-            bool: True if user authentication is approved
-    '''
-    config = Config()
-    if config['auth']['http_auth_enabled'] is False:
-        return True
-
-    if config['auth'].get('provider') == 'cloud':
-        if isinstance(session.get('username'), str) is False:
-            return False
-
-        if config['auth']['oauth']['tokens']['expires_at'] < time.time():
-            return False
-
-        return True
-
-    return session.get('username') == config['auth']['username']
 
 
 @ns_conf.route('/login', methods=['POST'])
@@ -78,11 +58,9 @@ class LoginRoute(Resource):
                 'Invalid username or password'
             )
 
-        session.clear()
-        session['username'] = username
-        session.permanent = True
+        logger.info(f"User '{username}' logged in successfully")
 
-        return '', 200
+        return {"token": new_token()}, 200
 
 
 @ns_conf.route('/logout', methods=['POST'])
@@ -143,7 +121,7 @@ class StatusRoute(Resource):
             'mindsdb_version': mindsdb_version,
             'environment': environment,
             'auth': {
-                'confirmed': check_auth(),
+                'confirmed': verify_token(request.headers.get("Authorization", "").replace("Bearer ", "")),
                 'http_auth_enabled': config['auth']['http_auth_enabled'],
                 'provider': auth_provider
             }

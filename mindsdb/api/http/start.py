@@ -10,6 +10,7 @@ from mindsdb.utilities import log
 from mindsdb.utilities.config import config
 from mindsdb.utilities.functions import init_lexer_parsers
 from mindsdb.integrations.libs.ml_exec_base import process_cache
+from mindsdb.api.common.middleware import PATAuthMiddleware
 
 
 from starlette.applications import Starlette
@@ -39,8 +40,12 @@ def start(apis, verbose, no_studio, app: Flask = None):
 
     routes = []
     # Specific mounts FIRST
-    routes.append(Mount("/a2a", app=get_a2a_app()))
-    routes.append(Mount("/mcp", app=get_mcp_app()))
+    a2a = get_a2a_app()
+    a2a.add_middleware(PATAuthMiddleware)
+    mcp = get_mcp_app()
+    mcp.add_middleware(PATAuthMiddleware)
+    routes.append(Mount("/a2a", app=a2a))
+    routes.append(Mount("/mcp", app=mcp))
 
     # Root app LAST so it won't shadow the others
     routes.append(Mount("/", app=WSGIMiddleware(app)))

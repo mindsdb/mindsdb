@@ -208,6 +208,6 @@ class File(Resource):
             return http_error(
                 400,
                 "Error deleting file",
-                f"There was an error while tring to delete file with name '{name}'",
+                f"There was an error while trying to delete file with name '{name}'",
             )
         return "", 200

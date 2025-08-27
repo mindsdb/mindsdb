@@ -1,13 +1,9 @@
 import requests
 from typing import Dict, Any
-import pandas as pd
 
 from mindsdb_sql_parser import parse_sql
 
-from mindsdb.integrations.handlers.raindrop_handler.raindrop_tables import (
-    RaindropsTable,
-    CollectionsTable
-)
+from mindsdb.integrations.handlers.raindrop_handler.raindrop_tables import RaindropsTable, CollectionsTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -112,45 +108,32 @@ class RaindropAPIClient:
     def __init__(self, api_key: str):
         self.api_key = api_key
         self.base_url = "https://api.raindrop.io/rest/v1"
-        self.headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
+        self.headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
-    def _make_request(self, method: str, endpoint: str, params: Dict[str, Any] = None, data: Dict[str, Any] = None) -> Dict[str, Any]:
+    def _make_request(
+        self, method: str, endpoint: str, params: Dict[str, Any] = None, data: Dict[str, Any] = None
+    ) -> Dict[str, Any]:
         """Make a request to the Raindrop.io API"""
         # Validate endpoint to prevent path traversal/injection attacks
-        allowed_endpoints = [
-            '/user/stats',
-            '/raindrops',
-            '/raindrop',
-            '/collections',
-            '/collection'
-        ]
-        
+        allowed_endpoints = ["/user/stats", "/raindrops", "/raindrop", "/collections", "/collection"]
+
         # Normalize endpoint by ensuring it starts with /
         normalized_endpoint = f"/{endpoint.lstrip('/')}"
-        
+
         # Check if endpoint matches any allowed prefix
         if not any(normalized_endpoint.startswith(prefix) for prefix in allowed_endpoints):
             raise ValueError(f"Invalid endpoint: {endpoint}. Only Raindrop.io API endpoints are allowed.")
-        
+
         url = f"{self.base_url}{normalized_endpoint}"
-        
-        response = requests.request(
-            method=method,
-            url=url,
-            headers=self.headers,
-            params=params,
-            json=data
-        )
-        
+
+        response = requests.request(method=method, url=url, headers=self.headers, params=params, json=data)
+
         try:
             response.raise_for_status()
         except requests.exceptions.HTTPError as e:
             try:
                 error_data = response.json()
-                error_message = error_data.get('error', error_data.get('message', str(e)))
+                error_message = error_data.get("error", error_data.get("message", str(e)))
             except (ValueError, KeyError):
                 error_message = str(e)
             raise Exception(f"Raindrop API error: {error_message}")
@@ -161,52 +144,52 @@ class RaindropAPIClient:
         return self._make_request("GET", "/user/stats")
 
     # Raindrops (Bookmarks) methods
-    def get_raindrops(self, collection_id: int = 0, search: str = None, sort: str = None, 
-                     page: int = 0, per_page: int = 50, max_results: int = None) -> Dict[str, Any]:
+    def get_raindrops(
+        self,
+        collection_id: int = 0,
+        search: str = None,
+        sort: str = None,
+        page: int = 0,
+        per_page: int = 50,
+        max_results: int = None,
+    ) -> Dict[str, Any]:
         """Get raindrops from a collection with automatic pagination"""
         all_items = []
         current_page = page
         per_page_limit = min(per_page, 50)  # API limit is 50
-        
+
         while True:
-            params = {
-                "page": current_page,
-                "perpage": per_page_limit
-            }
-            
+            params = {"page": current_page, "perpage": per_page_limit}
+
             if search:
                 params["search"] = search
             if sort:
                 params["sort"] = sort
-                
+
             response = self._make_request("GET", f"/raindrops/{collection_id}", params=params)
-            
+
             if not response.get("result", False):
                 break
-                
+
             items = response.get("items", [])
             if not items:
                 break
-                
+
             all_items.extend(items)
-            
+
             # Check if we've reached max_results limit
             if max_results and len(all_items) >= max_results:
                 all_items = all_items[:max_results]
                 break
-                
+
             # Check if we got fewer items than requested (last page)
             if len(items) < per_page_limit:
                 break
-                
+
             current_page += 1
-        
+
         # Return response in same format as original API
-        return {
-            "result": True,
-            "items": all_items,
-            "count": len(all_items)
-        }
+        return {"result": True, "items": all_items, "count": len(all_items)}
 
     def get_raindrop(self, raindrop_id: int) -> Dict[str, Any]:
         """Get a single raindrop"""
@@ -228,8 +211,9 @@ class RaindropAPIClient:
         """Create multiple raindrops"""
         return self._make_request("POST", "/raindrops", data={"items": raindrops_data})
 
-    def update_multiple_raindrops(self, collection_id: int, update_data: Dict[str, Any], 
-                                 search: str = None, ids: list = None) -> Dict[str, Any]:
+    def update_multiple_raindrops(
+        self, collection_id: int, update_data: Dict[str, Any], search: str = None, ids: list = None
+    ) -> Dict[str, Any]:
         """Update multiple raindrops"""
         data = update_data.copy()
         if search:

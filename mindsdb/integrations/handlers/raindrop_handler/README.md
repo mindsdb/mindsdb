@@ -281,6 +281,19 @@ The handler includes comprehensive error handling:
 - Proper error logging for debugging
 - Handles API rate limiting and network errors
 
+## Recent Improvements
+
+### Version 0.0.1 Improvements
+- **Robust Data Normalization**: Enhanced column normalization to handle missing nested fields gracefully
+- **Defensive Column Checks**: Added checks to ensure all expected columns exist before query execution
+- **Empty Data Handling**: Improved handling of empty API responses with proper column structure
+- **Error Resilience**: Added try-catch blocks around data processing operations to prevent crashes
+- **Logging Integration**: Replaced print statements with proper logging for better integration with MindsDB
+
+### Dependency Management
+- Removed duplicate `requests` dependency from handler-specific requirements.txt
+- All dependencies are now properly managed through the main requirements.txt file
+
 ## Notes
 
 - The `raindrops` table has an alias `bookmarks` for convenience

@@ -290,3 +290,4 @@ The handler includes comprehensive error handling:
 - Collection ID 0 represents "All bookmarks" (unsorted)
 - Collection ID -1 represents "Unsorted" bookmarks
 - Collection ID -99 represents "Trash"
+- The `requests` dependency is already declared in the main requirements.txt file, so it's not included in this handler's requirements.txt to avoid duplication

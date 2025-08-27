@@ -1,6 +1,5 @@
 import pandas as pd
 from typing import List, Dict, Any
-from datetime import datetime
 
 from mindsdb_sql_parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
@@ -84,10 +83,10 @@ class RaindropsTable(APITable):
             raindrops_data = []
             # Batch process IDs to reduce API calls
             batch_size = 10  # Process in smaller batches to avoid overwhelming the API
-            
+
             for i in range(0, len(raindrop_ids), batch_size):
-                batch_ids = raindrop_ids[i:i + batch_size]
-                
+                batch_ids = raindrop_ids[i : i + batch_size]
+
                 # Try to fetch from the same collection if possible to use bulk operations
                 # Since Raindrop.io doesn't have a bulk get endpoint, we'll minimize calls
                 # by fetching efficiently in smaller batches
@@ -108,11 +107,7 @@ class RaindropsTable(APITable):
 
             while True:
                 response = self.handler.connection.get_raindrops(
-                    collection_id=collection_id,
-                    search=search_query,
-                    sort=sort_order,
-                    page=page,
-                    per_page=per_page
+                    collection_id=collection_id, search=search_query, sort=sort_order, page=page, per_page=per_page
                 )
 
                 if not response.get("result") or not response.get("items"):
@@ -135,7 +130,15 @@ class RaindropsTable(APITable):
             raindrops_df = pd.json_normalize(raindrops_data)
             raindrops_df = self._normalize_raindrop_data(raindrops_df)
         else:
-            raindrops_df = pd.DataFrame()
+            # Create empty DataFrame with all expected columns
+            raindrops_df = pd.DataFrame(columns=self.get_columns())
+
+        # Ensure all expected columns exist (defensive check)
+        expected_columns = self.get_columns()
+        for col in expected_columns:
+            if col not in raindrops_df.columns:
+                logger.warning(f"Missing column after normalization: {col}, adding as None")
+                raindrops_df[col] = None
 
         # Apply additional filtering and ordering using the executor
         select_statement_executor = SELECTQueryExecutor(
@@ -177,7 +180,7 @@ class RaindropsTable(APITable):
             for row in values_to_insert:
                 raindrop_data = self._prepare_raindrop_data(row)
                 raindrops_data.append(raindrop_data)
-            
+
             # Use batch insert if more than one item
             if len(raindrops_data) > 1:
                 self.handler.connection.create_multiple_raindrops(raindrops_data)
@@ -213,7 +216,7 @@ class RaindropsTable(APITable):
         raindrop_ids = []
         collection_id = None
         search_query = None
-        
+
         for condition in where_conditions:
             if condition.column in ["_id", "id"]:
                 if isinstance(condition.value, list):
@@ -238,17 +241,17 @@ class RaindropsTable(APITable):
         # For complex filters, fetch only relevant data based on conditions
         fetch_params = {}
         if collection_id is not None:
-            fetch_params['collection_id'] = collection_id
+            fetch_params["collection_id"] = collection_id
         if search_query:
-            fetch_params['search'] = search_query
-        
+            fetch_params["search"] = search_query
+
         # Fetch only the relevant subset of data
         raindrops_data = self.get_raindrops(**fetch_params)
-        
+
         if not raindrops_data:
             logger.warning("No raindrops found matching the WHERE conditions")
             return
-            
+
         raindrops_df = pd.json_normalize(raindrops_data)
         raindrops_df = self._normalize_raindrop_data(raindrops_df)
 
@@ -261,18 +264,16 @@ class RaindropsTable(APITable):
             return
 
         raindrop_ids = raindrops_df["_id"].tolist()
-        
+
         # Check if we should do bulk update or individual updates
         if len(raindrop_ids) > 1:
             # Try bulk update first
             collection_id = raindrops_df["collection.$id"].iloc[0] if "collection.$id" in raindrops_df.columns else 0
-            
+
             try:
                 update_data = self._prepare_raindrop_data(values_to_update)
                 self.handler.connection.update_multiple_raindrops(
-                    collection_id=collection_id,
-                    update_data=update_data,
-                    ids=raindrop_ids
+                    collection_id=collection_id, update_data=update_data, ids=raindrop_ids
                 )
             except Exception as e:
                 logger.warning(f"Bulk update failed, falling back to individual updates: {e}")
@@ -314,7 +315,7 @@ class RaindropsTable(APITable):
         raindrop_ids = []
         collection_id = None
         search_query = None
-        
+
         for condition in where_conditions:
             if condition.column in ["_id", "id"]:
                 if isinstance(condition.value, list):
@@ -331,14 +332,11 @@ class RaindropsTable(APITable):
             if len(raindrop_ids) > 1 and collection_id is not None:
                 # Try bulk delete if we know the collection
                 try:
-                    self.handler.connection.delete_multiple_raindrops(
-                        collection_id=collection_id,
-                        ids=raindrop_ids
-                    )
+                    self.handler.connection.delete_multiple_raindrops(collection_id=collection_id, ids=raindrop_ids)
                     return
                 except Exception as e:
                     logger.warning(f"Bulk delete failed, falling back to individual deletes: {e}")
-            
+
             # Individual deletes
             for raindrop_id in raindrop_ids:
                 try:
@@ -350,17 +348,17 @@ class RaindropsTable(APITable):
         # For complex filters, fetch only relevant data based on conditions
         fetch_params = {}
         if collection_id is not None:
-            fetch_params['collection_id'] = collection_id
+            fetch_params["collection_id"] = collection_id
         if search_query:
-            fetch_params['search'] = search_query
-        
+            fetch_params["search"] = search_query
+
         # Fetch only the relevant subset of data
         raindrops_data = self.get_raindrops(**fetch_params)
-        
+
         if not raindrops_data:
             logger.warning("No raindrops found matching the WHERE conditions")
             return
-            
+
         raindrops_df = pd.json_normalize(raindrops_data)
         raindrops_df = self._normalize_raindrop_data(raindrops_df)
 
@@ -378,12 +376,9 @@ class RaindropsTable(APITable):
         if len(raindrop_ids) > 1:
             # Try bulk delete first
             collection_id = raindrops_df["collection.$id"].iloc[0] if "collection.$id" in raindrops_df.columns else 0
-            
+
             try:
-                self.handler.connection.delete_multiple_raindrops(
-                    collection_id=collection_id,
-                    ids=raindrop_ids
-                )
+                self.handler.connection.delete_multiple_raindrops(collection_id=collection_id, ids=raindrop_ids)
             except Exception as e:
                 logger.warning(f"Bulk delete failed, falling back to individual deletes: {e}")
                 # Fall back to individual deletes
@@ -400,17 +395,35 @@ class RaindropsTable(APITable):
     def get_columns(self) -> List[str]:
         """Get the column names for the raindrops table"""
         return [
-            "_id", "link", "title", "excerpt", "note", "type", "cover", "tags",
-            "important", "reminder", "removed", "created", "lastUpdate",
-            "domain", "collection.id", "collection.title", "user.id", "broken",
-            "cache", "file.name", "file.size", "file.type"
+            "_id",
+            "link",
+            "title",
+            "excerpt",
+            "note",
+            "type",
+            "cover",
+            "tags",
+            "important",
+            "reminder",
+            "removed",
+            "created",
+            "lastUpdate",
+            "domain",
+            "collection.id",
+            "collection.title",
+            "user.id",
+            "broken",
+            "cache",
+            "file.name",
+            "file.size",
+            "file.type",
         ]
 
     def get_raindrops(self, **kwargs) -> List[Dict]:
         """Get raindrops data"""
         if not self.handler.connection:
             self.handler.connect()
-        
+
         # Get from all collections by default
         response = self.handler.connection.get_raindrops(**kwargs)
         return response.get("items", [])
@@ -420,37 +433,62 @@ class RaindropsTable(APITable):
         if df.empty:
             return df
 
-        # Handle nested collection data
-        if "collection" in df.columns and not df["collection"].isnull().all():
-            df["collection.id"] = df["collection"].apply(lambda x: x.get("$id") if isinstance(x, dict) else None)
-            df["collection.$id"] = df["collection"].apply(lambda x: x.get("$id") if isinstance(x, dict) else None)
-            df["collection.title"] = df["collection"].apply(lambda x: x.get("title") if isinstance(x, dict) else None)
+        # Process nested data first to extract flattened columns
+        try:
+            # Handle nested collection data
+            if "collection" in df.columns:
+                df["collection.id"] = df["collection"].apply(lambda x: x.get("$id") if isinstance(x, dict) else None)
+                df["collection.$id"] = df["collection"].apply(lambda x: x.get("$id") if isinstance(x, dict) else None)
+                df["collection.title"] = df["collection"].apply(
+                    lambda x: x.get("title") if isinstance(x, dict) else None
+                )
+        except Exception as e:
+            logger.warning(f"Error processing collection data: {e}")
 
-        # Handle nested user data
-        if "user" in df.columns and not df["user"].isnull().all():
-            df["user.id"] = df["user"].apply(lambda x: x.get("$id") if isinstance(x, dict) else None)
+        try:
+            # Handle nested user data
+            if "user" in df.columns:
+                df["user.id"] = df["user"].apply(lambda x: x.get("$id") if isinstance(x, dict) else None)
+        except Exception as e:
+            logger.warning(f"Error processing user data: {e}")
 
-        # Handle nested file data
-        if "file" in df.columns and not df["file"].isnull().all():
-            df["file.name"] = df["file"].apply(lambda x: x.get("name") if isinstance(x, dict) else None)
-            df["file.size"] = df["file"].apply(lambda x: x.get("size") if isinstance(x, dict) else None)
-            df["file.type"] = df["file"].apply(lambda x: x.get("type") if isinstance(x, dict) else None)
+        try:
+            # Handle nested file data
+            if "file" in df.columns:
+                df["file.name"] = df["file"].apply(lambda x: x.get("name") if isinstance(x, dict) else None)
+                df["file.size"] = df["file"].apply(lambda x: x.get("size") if isinstance(x, dict) else None)
+                df["file.type"] = df["file"].apply(lambda x: x.get("type") if isinstance(x, dict) else None)
+        except Exception as e:
+            logger.warning(f"Error processing file data: {e}")
 
         # Convert tags list to string
-        if "tags" in df.columns:
-            df["tags"] = df["tags"].apply(lambda x: ",".join(x) if isinstance(x, list) else x)
+        try:
+            if "tags" in df.columns:
+                df["tags"] = df["tags"].apply(lambda x: ",".join(x) if isinstance(x, list) else x)
+        except Exception as e:
+            logger.warning(f"Error processing tags data: {e}")
 
         # Convert dates
         for date_col in ["created", "lastUpdate"]:
-            if date_col in df.columns:
-                df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
+            try:
+                if date_col in df.columns:
+                    df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
+            except Exception as e:
+                logger.warning(f"Error processing date column {date_col}: {e}")
+
+        # Ensure ALL expected columns exist, even if empty
+        # This must happen LAST to ensure any newly created columns are preserved
+        expected_columns = self.get_columns()
+        for col in expected_columns:
+            if col not in df.columns:
+                df[col] = None
 
         return df
 
     def _prepare_raindrop_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Prepare raindrop data for API submission"""
         raindrop_data = {}
-        
+
         # Map common fields
         field_mappings = {
             "link": "link",
@@ -461,7 +499,7 @@ class RaindropsTable(APITable):
             "cover": "cover",
             "important": "important",
             "collection_id": "collection",
-            "collection.id": "collection"
+            "collection.id": "collection",
         }
 
         for key, value in data.items():
@@ -522,7 +560,15 @@ class CollectionsTable(APITable):
             collections_df = pd.json_normalize(collections_data)
             collections_df = self._normalize_collection_data(collections_df)
         else:
-            collections_df = pd.DataFrame()
+            # Create empty DataFrame with all expected columns
+            collections_df = pd.DataFrame(columns=self.get_columns())
+
+        # Ensure all expected columns exist (defensive check)
+        expected_columns = self.get_columns()
+        for col in expected_columns:
+            if col not in collections_df.columns:
+                logger.warning(f"Missing column after normalization: {col}, adding as None")
+                collections_df[col] = None
 
         # Apply filtering and ordering
         select_statement_executor = SELECTQueryExecutor(
@@ -590,7 +636,7 @@ class CollectionsTable(APITable):
 
         # Extract specific IDs from WHERE conditions to avoid loading all data
         collection_ids = []
-        
+
         for condition in where_conditions:
             if condition.column in ["_id", "id"]:
                 if isinstance(condition.value, list):
@@ -611,11 +657,11 @@ class CollectionsTable(APITable):
         # For complex filters, we need to fetch and filter collections
         # Since collections are typically fewer in number than raindrops, this is more acceptable
         collections_data = self.get_collections()
-        
+
         if not collections_data:
             logger.warning("No collections found")
             return
-            
+
         collections_df = pd.json_normalize(collections_data)
         collections_df = self._normalize_collection_data(collections_df)
 
@@ -660,7 +706,7 @@ class CollectionsTable(APITable):
 
         # Extract specific IDs from WHERE conditions to avoid loading all data
         collection_ids = []
-        
+
         for condition in where_conditions:
             if condition.column in ["_id", "id"]:
                 if isinstance(condition.value, list):
@@ -676,7 +722,7 @@ class CollectionsTable(APITable):
                     return
                 except Exception as e:
                     logger.warning(f"Bulk delete failed, falling back to individual deletes: {e}")
-            
+
             # Individual deletes
             for collection_id in collection_ids:
                 try:
@@ -688,11 +734,11 @@ class CollectionsTable(APITable):
         # For complex filters, we need to fetch and filter collections
         # Since collections are typically fewer in number than raindrops, this is more acceptable
         collections_data = self.get_collections()
-        
+
         if not collections_data:
             logger.warning("No collections found")
             return
-            
+
         collections_df = pd.json_normalize(collections_data)
         collections_df = self._normalize_collection_data(collections_df)
 
@@ -726,24 +772,37 @@ class CollectionsTable(APITable):
     def get_columns(self) -> List[str]:
         """Get the column names for the collections table"""
         return [
-            "_id", "title", "description", "color", "view", "public", "sort",
-            "count", "created", "lastUpdate", "expanded", "parent.id", "user.id",
-            "cover", "access.level", "access.draggable"
+            "_id",
+            "title",
+            "description",
+            "color",
+            "view",
+            "public",
+            "sort",
+            "count",
+            "created",
+            "lastUpdate",
+            "expanded",
+            "parent.id",
+            "user.id",
+            "cover",
+            "access.level",
+            "access.draggable",
         ]
 
     def get_collections(self, **kwargs) -> List[Dict]:
         """Get collections data"""
         if not self.handler.connection:
             self.handler.connect()
-        
+
         # Get both root and child collections
         root_response = self.handler.connection.get_collections()
         child_response = self.handler.connection.get_child_collections()
-        
+
         all_collections = []
         all_collections.extend(root_response.get("items", []))
         all_collections.extend(child_response.get("items", []))
-        
+
         return all_collections
 
     def _normalize_collection_data(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -751,34 +810,59 @@ class CollectionsTable(APITable):
         if df.empty:
             return df
 
-        # Handle nested parent data
-        if "parent" in df.columns and not df["parent"].isnull().all():
-            df["parent.id"] = df["parent"].apply(lambda x: x.get("$id") if isinstance(x, dict) else None)
+        # Process nested data first to extract flattened columns
+        try:
+            # Handle nested parent data
+            if "parent" in df.columns:
+                df["parent.id"] = df["parent"].apply(lambda x: x.get("$id") if isinstance(x, dict) else None)
+        except Exception as e:
+            logger.warning(f"Error processing parent data: {e}")
 
-        # Handle nested user data
-        if "user" in df.columns and not df["user"].isnull().all():
-            df["user.id"] = df["user"].apply(lambda x: x.get("$id") if isinstance(x, dict) else None)
+        try:
+            # Handle nested user data
+            if "user" in df.columns:
+                df["user.id"] = df["user"].apply(lambda x: x.get("$id") if isinstance(x, dict) else None)
+        except Exception as e:
+            logger.warning(f"Error processing user data: {e}")
 
-        # Handle nested access data
-        if "access" in df.columns and not df["access"].isnull().all():
-            df["access.level"] = df["access"].apply(lambda x: x.get("level") if isinstance(x, dict) else None)
-            df["access.draggable"] = df["access"].apply(lambda x: x.get("draggable") if isinstance(x, dict) else None)
+        try:
+            # Handle nested access data
+            if "access" in df.columns:
+                df["access.level"] = df["access"].apply(lambda x: x.get("level") if isinstance(x, dict) else None)
+                df["access.draggable"] = df["access"].apply(
+                    lambda x: x.get("draggable") if isinstance(x, dict) else None
+                )
+        except Exception as e:
+            logger.warning(f"Error processing access data: {e}")
 
         # Convert cover list to string
-        if "cover" in df.columns:
-            df["cover"] = df["cover"].apply(lambda x: x[0] if isinstance(x, list) and x else x)
+        try:
+            if "cover" in df.columns:
+                df["cover"] = df["cover"].apply(lambda x: x[0] if isinstance(x, list) and x else x)
+        except Exception as e:
+            logger.warning(f"Error processing cover data: {e}")
 
         # Convert dates
         for date_col in ["created", "lastUpdate"]:
-            if date_col in df.columns:
-                df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
+            try:
+                if date_col in df.columns:
+                    df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
+            except Exception as e:
+                logger.warning(f"Error processing date column {date_col}: {e}")
+
+        # Ensure ALL expected columns exist, even if empty
+        # This must happen LAST to ensure any newly created columns are preserved
+        expected_columns = self.get_columns()
+        for col in expected_columns:
+            if col not in df.columns:
+                df[col] = None
 
         return df
 
     def _prepare_collection_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Prepare collection data for API submission"""
         collection_data = {}
-        
+
         # Map common fields
         field_mappings = {
             "title": "title",
@@ -788,7 +872,7 @@ class CollectionsTable(APITable):
             "public": "public",
             "sort": "sort",
             "parent_id": "parent",
-            "parent.id": "parent"
+            "parent.id": "parent",
         }
 
         for key, value in data.items():

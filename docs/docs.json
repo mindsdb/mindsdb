@@ -9,65 +9,60 @@
   },
   "favicon": "/favicon.png",
   "navigation": {
-    "dropdowns": [
-      {
-        "dropdown": "MindsDB",
-        "icon": "database",
-        "description":"Open Source Product Docs",
-        "tabs": [
-          {
-            "tab": "Documentation",
-            "groups": [
-              {
-                "group": "Get Started",
-                "pages": [
-                  "mindsdb",
-                  "quickstart-tutorial"
-                ]
-              },
-              {
-                "group": "Setup",
-                "pages": [
-                  {
-                    "group": "Installation",
-                    "pages": [
-                      "setup/self-hosted/docker",
-                      "setup/self-hosted/docker-desktop",
-                      "setup/cloud/aws-marketplace"
-                    ]
-                  },
-                  {
-                    "group": "Configuration",
-                    "pages": [
-                      "setup/custom-config",
-                      "setup/environment-vars"
-                    ]
-                  },
-                  {
-                    "group": "Learn more",
-                    "pages": [
-                      "sql/table-structure",
-                      "sql/project",
-                      "mindsdb-gui"
-                    ]
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "tab": "Connect",
-            "groups": [
-              {
-                "group": "Overview",
-                "pages": [
-                  "mindsdb-connect",
-                  "mindsdb-fqe"
-                ]
-              },
-              {
-                "group": "Data Sources",
-                "pages": [
+      "tabs": [
+        {
+          "tab": "Documentation",
+          "groups": [
+            {
+              "group": "Get Started",
+              "pages": [
+                "mindsdb",
+                "quickstart-tutorial"
+              ]
+            },
+            {
+              "group": "Setup",
+              "pages": [
+                {
+                  "group": "Installation",
+                  "pages": [
+                    "setup/self-hosted/docker",
+                    "setup/self-hosted/docker-desktop",
+                    "setup/cloud/aws-marketplace"
+                  ]
+                },
+                {
+                  "group": "Configuration",
+                  "pages": [
+                    "setup/custom-config",
+                    "setup/environment-vars"
+                  ]
+                },
+                {
+                  "group": "Learn more",
+                  "pages": [
+                    "sql/table-structure",
+                    "sql/project",
+                    "mindsdb-gui"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tab": "Connect",
+          "groups": [
+            {
+              "group": "Overview",
+              "pages": [
+                "mindsdb-connect",
+                "mindsdb-fqe"
+              ]
+            },
+            {
+              "group": "Data Sources",
+              "pages": [
                   "integrations/data-overview",
                   "integrations/sample-database",
                   {
@@ -196,7 +191,6 @@
                       "integrations/files/parquet"
                     ]
                   }
-
                 ]
               },
               {
@@ -311,21 +305,21 @@
                 "group": "Data Transformation",
                 "pages": [
                   {
-                    "group": "Functions",
+                    "group": "Custom Functions",
                     "pages": [
-                      "mindsdb_sql/functions/custom_functions",
                       "mindsdb_sql/functions/llm_function",
                       "mindsdb_sql/functions/to_markdown_function",
-                      "mindsdb_sql/functions/from_env"
+                      "mindsdb_sql/functions/from_env",
+                      "mindsdb_sql/functions/custom_functions",
+                      "mindsdb_sql/functions/variables"
                     ]
                   },
                   {
                     "group": "Standard SQL Support",
                     "pages": [
+                      "mindsdb_sql/functions/standard-functions",
                       "mindsdb_sql/sql_support/cte",
-                      "mindsdb_sql/sql_support/case-when",
-                      "mindsdb_sql/sql_support/aggregate-functions",
-                      "mindsdb_sql/sql_support/window-functions"
+                      "mindsdb_sql/sql_support/case-when"
                     ]
                   }
                 ]
@@ -351,482 +345,374 @@
                   }
                 ]
               }
-
-            ]
-          },
-          {
-            "tab": "Respond",
-            "groups": [
-              {
-                "group": "Overview",
-                "pages": [
-                  "mindsdb-respond"
-                ]
-              },
-              {
-                "group": "Agents",
-                "pages": [
-                  "mindsdb_sql/agents/agent",
-                  "mindsdb_sql/agents/agent_syntax",
-                  "mindsdb_sql/agents/agent_gui"
-                ]
-              },
-              {
-                "group": "MCP API",
-                "pages": [
-                  "model-context-protocol/overview",
-                  "model-context-protocol/usage",
-                  {
-                    "group": "MCP Clients",
-                    "pages": [
-                      "model-context-protocol/openai",
-                      "model-context-protocol/anthropic",
-                      "model-context-protocol/cursor_usage"
-                    ]
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "tab": "MCP API",
-            "groups": [
-              {
-                "group": "MCP API",
-                "pages": [
-                  "model-context-protocol/overview",
-                  "model-context-protocol/usage",
-                  {
-                    "group": "MCP Clients",
-                    "pages": [
-                      "model-context-protocol/openai",
-                      "model-context-protocol/anthropic",
-                      "model-context-protocol/cursor_usage"
-                    ]
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "tab": "SDKs & APIs",
-            "groups": [
-              {
-                "group": "Overview",
-                "pages": [
-                  "overview_sdks_apis"
-                ]
-              },
-              {
-                "group": "Interfaces",
-                "pages": [
-                  {
-                    "group": "REST API",
-                    "pages": [
-                      "rest/overview",
-                      {
-                        "group": "Connect",
-                        "icon": "link",
-                        "pages": [
-                          "rest/usage",
-                          "rest/authentication",
-                          {
-                            "group": "Data Sources",
-                            "pages": [
-                              "rest/databases/create-databases",
-                              "rest/databases/update-databases",
-                              "rest/databases/delete-databases",
-                              "rest/databases/list-databases",
-                              "rest/databases/list-database"
-                            ]
-                          }
-                        ]
-                      },
-                      {
-                        "group": "Unify",
-                        "icon": "circle-nodes",
-                        "pages": [
-                          {
-                            "group": "Projects",
-                            "pages": [
-                              "rest/projects/get-projects",
-                              "rest/projects/get-project"
-                            ]
-                          },
-                          {
-                            "group": "Knowledge Bases",
-                            "pages": [
-                              "rest/knowledge_bases/create",
-                              "rest/knowledge_bases/insert",
-                              "rest/knowledge_bases/query",
-                              "rest/knowledge_bases/list",
-                              "rest/knowledge_bases/get",
-                              "rest/knowledge_bases/delete"
-                            ]
-                          },
-                          {
-                            "group": "Tables",
-                            "pages": [
-                              "rest/tables/create-table",
-                              "rest/tables/delete-table",
-                              "rest/tables/list-tables",
-                              "rest/tables/list-table",
-                              "rest/sql"
-                            ]
-                          },
-                          {
-                            "group": "Views",
-                            "pages": [
-                              "rest/views/create-view",
-                              "rest/views/delete-views",
-                              "rest/views/update-view",
-                              "rest/views/list-views",
-                              "rest/views/list-view"
-                            ]
-                          },
-                          {
-                            "group": "Files",
-                            "pages": [
-                              "rest/files/upload",
-                              "rest/files/delete",
-                              "rest/files/list"
-                            ]
-                          },
-                          {
-                            "group": "Jobs",
-                            "pages": [
-                              "rest/jobs/create",
-                              "rest/jobs/list",
-                              "rest/jobs/get",
-                              "rest/jobs/delete"
-                            ]
-                          }
-                        ]
-                      },
-                      {
-                        "group": "Respond",
-                        "icon": "comment-dots",
-                        "pages": [
-                          {
-                            "group": "AI Agents",
-                            "pages": [
-                              "rest/agents/create",
-                              "rest/agents/list",
-                              "rest/agents/get",
-                              "rest/agents/query",
-                              "rest/agents/update",
-                              "rest/agents/delete"
-                            ]
-                          }
-                        ]
-                      }
-                    ]
-                  },
-                  {
-                    "group": "Python SDK",
-                    "pages": [
-                      "sdks/python/overview",
-                      {
-                        "group": "Connect",
-                        "icon": "link",
-                        "pages": [
-                          {
-                            "group": "Setup",
-                            "pages": [
-                              "sdks/python/installation",
-                              "sdks/python/connect"
-                            ]
-                          },
-                          {
-                            "group": "Data Sources",
-                            "pages": [
-                              "sdks/python/list_data_handlers",
-                              "sdks/python/create_database",
-                              "sdks/python/drop_database",
-                              "sdks/python/list_databases"
-                            ]
-                          }
-                        ]
-                      },
-                      {
-                        "group": "Unify",
-                        "icon": "circle-nodes",
-                        "pages": [
-                          {
-                            "group": "Projects",
-                            "pages": [
-                              "sdks/python/create_project",
-                              "sdks/python/drop_project",
-                              "sdks/python/list_projects",
-                              "sdks/python/query_projects"
-                            ]
-                          },
-                          {
-                            "group": "Knowledge Bases",
-                            "pages": [
-                              "sdks/python/knowledge_bases/overview",
-                              "sdks/python/knowledge_bases/create",
-                              "sdks/python/knowledge_bases/insert_data",
-                              "sdks/python/knowledge_bases/query"
-                            ]
-                          },
-                          {
-                            "group": "Tables, Views, and Files",
-                            "pages": [
-                              "sdks/python/create_table",
-                              "sdks/python/delete_table",
-                              "sdks/python/query_table",
-                              "sdks/python/native_queries",
-                              "sdks/python/update_table",
-                              "sdks/python/insert_into_table",
-                              "sdks/python/join_on",
-                              "sdks/python/delete_from",
-                              "sdks/python/create_view",
-                              "sdks/python/drop_view",
-                              "sdks/python/query_view",
-                              "sdks/python/list_views",
-                              "sdks/python/upload_file",
-                              "sdks/python/delete_file",
-                              "sdks/python/query_files"
-                            ]
-                          },
-                          {
-                            "group": "Jobs",
-                            "pages": [
-                              "sdks/python/create_job",
-                              "sdks/python/drop_job",
-                              "sdks/python/list_jobs",
-                              "sdks/python/refresh_job",
-                              "sdks/python/get_history"
-                            ]
-                          }
-                        ]
-                      },
-                      {
-                        "group": "Respond",
-                        "icon": "comment-dots",
-                        "pages": [
-                          "sdks/python/agents"
-                        ]
-                      }
-                    ]
-                  },
-                  {
-                    "group": "JavaScript SDK",
-                    "pages": [
-                      "sdks/javascript/overview",
-                      {
-                        "group": "Connect",
-                        "icon": "link",
-                        "pages": [
-                          {
-                            "group": "Setup",
-                            "pages": [
-                              "sdks/javascript/installation",
-                              "sdks/javascript/connect"
-                            ]
-                          },
-                          {
-                            "group": "Data Sources",
-                            "pages": [
-                              "sdks/javascript/list_data_handlers",
-                              "sdks/javascript/create_database",
-                              "sdks/javascript/get_database",
-                              "sdks/javascript/drop_database",
-                              "sdks/javascript/list_databases"
-                            ]
-                          }
-                        ]
-                      },
-                      {
-                        "group": "Unify",
-                        "icon": "circle-nodes",
-                        "pages": [
-                          {
-                            "group": "Projects",
-                            "pages": [
-                              "sdks/javascript/list_projects"
-                            ]
-                          },
-                          {
-                            "group": "Tables, Views, and Files",
-                            "pages": [
-                              "sdks/javascript/create_table",
-                              "sdks/javascript/delete_table",
-                              "sdks/javascript/query_table",
-                              "sdks/javascript/native_queries",
-                              "sdks/javascript/update_table",
-                              "sdks/javascript/insert_into_table",
-                              "sdks/javascript/join_on",
-                              "sdks/javascript/delete_from",
-                              "sdks/javascript/create_view",
-                              "sdks/javascript/drop_view",
-                              "sdks/javascript/query_view",
-                              "sdks/javascript/list_views",
-                              "sdks/javascript/query_files"
-                            ]
-                          }
-                        ]
-                      },
-                      {
-                        "group": "Respond",
-                        "icon": "comment-dots",
-                        "pages": [
-                          "sdks/javascript/agents"
-                        ]
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "tab": "Contribute",
-            "groups": [
-              {
-                "group": "Contribute",
-                "pages": [
-                  "contribute/contribute",
-                  "contribute/issues",
-                  "contribute/issue-labels",
-                  "contribute/install",
-                  "contribute/python-coding-standards",
-                  "contribute/data-handlers",
-                  "contribute/app-handlers",
-                  "contribute/tests",
-                  "contribute/integrations-readme",
-                  "contribute/tutorials",
-                  "contribute/docs",
-                  "contribute/docs-rules",
-                  "contribute/community"
-                ]
-              }
-            ]
-          },
-          {
-            "tab": "FAQs",
-            "groups": [
-              {
-                "group": "FAQs",
-                "pages": [
-                  "faqs/benefits",
-                  "faqs/persist-predictions",
-                  "faqs/mindsdb-with-php",
-                  "faqs/disposable-email-doman-and-openai",
-                  "faqs/missing-required-cpu-features",
-                  "faqs/a2a-unavailable"
-                ]
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "dropdown": "Minds",
-        "icon": "messages",
-        "description":"Commercial Product Docs",
-        "tabs": [
-          {
-            "tab": "Documentation",
-            "groups": [
-              {
-                "group": "Get Started",
-                "pages": [
-                  "minds",
-                  "minds/quickstart",
-                  "minds/quickstart_custom_mind",
-                  "minds/quickstart_best_practices"
-                ]
-              },
-              {
-                "group": "Resources",
-                "pages": [
-                  "minds/minds_overview",
-                  "minds/data_sources",
-                  "minds/sample_data",
-                  "minds/authentication",
-                  "minds/minds_ips"
-                ]
-              }
-            ]
-          },
-          {
-            "tab": "Python SDK",
-            "groups": [
-              {
-                "group": "Get Started",
-                "pages": [
-                  "minds/python_sdk/overview",
-                  "minds/python_sdk/mind_setup",
-                  "minds/python_sdk/completions_api",
-                  "minds/python_sdk/assistants_api"
-                ]
-              }
-            ]
-          },
-          {
-            "tab": "REST API",
-            "groups": [
-              {
-                "group": "API Reference",
-                "pages": [
-                  "minds/rest_api/overview",
-                  {
-                    "group": "Minds",
-                    "pages": [
-                      "minds/rest_api/create_mind",
-                      "minds/rest_api/list_minds",
-                      "minds/rest_api/get_mind",
-                      "minds/rest_api/update_mind",
-                      "minds/rest_api/add_data_to_mind",
-                      "minds/rest_api/delete_mind"
-                    ]
-                  },
-                  {
-                    "group": "Data Sources",
-                    "pages": [
-                      "minds/rest_api/create_datasource",
-                      "minds/rest_api/list_datasources",
-                      "minds/rest_api/get_datasource",
-                      "minds/rest_api/update_datasource",
-                      "minds/rest_api/delete_datasource"
-                    ]
-                  },
-                  "minds/rest_api/chat"
-                ]
-              },
-              {
-                "group": "Assistants API",
-                "pages": [
-                  "minds/rest_api/overview_assistants",
-                  {
-                    "group": "Threads",
-                    "pages": [
-                      "minds/rest_api/create_thread",
-                      "minds/rest_api/delete_thread"
-                    ]
-                  },
-                  {
-                    "group": "Messages",
-                    "pages": [
-                      "minds/rest_api/create_message",
-                      "minds/rest_api/list_messages"
-                    ]
-                  },
-                  {
-                    "group": "Runs",
-                    "pages": [
-                      "minds/rest_api/create_run",
-                      "minds/rest_api/retrieve_run"
-                    ]
-                  }
-                ]
-              }
-            ]
-          }
-        ]
-      }
+          ]
+        },
+        {
+          "tab": "Respond",
+          "groups": [
+            {
+              "group": "Overview",
+              "pages": [
+                "mindsdb-respond"
+              ]
+            },
+            {
+              "group": "Agents",
+              "pages": [
+                "mindsdb_sql/agents/agent",
+                "mindsdb_sql/agents/agent_syntax",
+                "mindsdb_sql/agents/agent_gui"
+              ]
+            },
+            {
+              "group": "MCP API",
+              "pages": [
+                "model-context-protocol/overview",
+                "model-context-protocol/usage",
+                {
+                  "group": "MCP Clients",
+                  "pages": [
+                    "model-context-protocol/openai",
+                    "model-context-protocol/anthropic",
+                    "model-context-protocol/cursor_usage"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tab": "MCP API",
+          "groups": [
+            {
+              "group": "MCP API",
+              "pages": [
+                "model-context-protocol/overview",
+                "model-context-protocol/usage",
+                {
+                  "group": "MCP Clients",
+                  "pages": [
+                    "model-context-protocol/openai",
+                    "model-context-protocol/anthropic",
+                    "model-context-protocol/cursor_usage"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tab": "SDKs & APIs",
+          "groups": [
+            {
+              "group": "Overview",
+              "pages": [
+                "overview_sdks_apis"
+              ]
+            },
+            {
+              "group": "Interfaces",
+              "pages": [
+                {
+                  "group": "REST API",
+                  "pages": [
+                    "rest/overview",
+                    {
+                      "group": "Connect",
+                      "icon": "link",
+                      "pages": [
+                        "rest/usage",
+                        "rest/authentication",
+                        {
+                          "group": "Data Sources",
+                          "pages": [
+                            "rest/databases/create-databases",
+                            "rest/databases/update-databases",
+                            "rest/databases/delete-databases",
+                            "rest/databases/list-databases",
+                            "rest/databases/list-database"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "group": "Unify",
+                      "icon": "circle-nodes",
+                      "pages": [
+                        {
+                          "group": "Projects",
+                          "pages": [
+                            "rest/projects/get-projects",
+                            "rest/projects/get-project"
+                          ]
+                        },
+                        {
+                          "group": "Knowledge Bases",
+                          "pages": [
+                            "rest/knowledge_bases/create",
+                            "rest/knowledge_bases/insert",
+                            "rest/knowledge_bases/query",
+                            "rest/knowledge_bases/list",
+                            "rest/knowledge_bases/get",
+                            "rest/knowledge_bases/delete"
+                          ]
+                        },
+                        {
+                          "group": "Tables",
+                          "pages": [
+                            "rest/tables/create-table",
+                            "rest/tables/delete-table",
+                            "rest/tables/list-tables",
+                            "rest/tables/list-table",
+                            "rest/sql"
+                          ]
+                        },
+                        {
+                          "group": "Views",
+                          "pages": [
+                            "rest/views/create-view",
+                            "rest/views/delete-views",
+                            "rest/views/update-view",
+                            "rest/views/list-views",
+                            "rest/views/list-view"
+                          ]
+                        },
+                        {
+                          "group": "Files",
+                          "pages": [
+                            "rest/files/upload",
+                            "rest/files/delete",
+                            "rest/files/list"
+                          ]
+                        },
+                        {
+                          "group": "Jobs",
+                          "pages": [
+                            "rest/jobs/create",
+                            "rest/jobs/list",
+                            "rest/jobs/get",
+                            "rest/jobs/delete"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "group": "Respond",
+                      "icon": "comment-dots",
+                      "pages": [
+                        {
+                          "group": "AI Agents",
+                          "pages": [
+                            "rest/agents/create",
+                            "rest/agents/list",
+                            "rest/agents/get",
+                            "rest/agents/query",
+                            "rest/agents/update",
+                            "rest/agents/delete"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "group": "Python SDK",
+                  "pages": [
+                    "sdks/python/overview",
+                    {
+                      "group": "Connect",
+                      "icon": "link",
+                      "pages": [
+                        {
+                          "group": "Setup",
+                          "pages": [
+                            "sdks/python/installation",
+                            "sdks/python/connect"
+                          ]
+                        },
+                        {
+                          "group": "Data Sources",
+                          "pages": [
+                            "sdks/python/list_data_handlers",
+                            "sdks/python/create_database",
+                            "sdks/python/drop_database",
+                            "sdks/python/list_databases"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "group": "Unify",
+                      "icon": "circle-nodes",
+                      "pages": [
+                        {
+                          "group": "Projects",
+                          "pages": [
+                            "sdks/python/create_project",
+                            "sdks/python/drop_project",
+                            "sdks/python/list_projects",
+                            "sdks/python/query_projects"
+                          ]
+                        },
+                        {
+                          "group": "Knowledge Bases",
+                          "pages": [
+                            "sdks/python/knowledge_bases/overview",
+                            "sdks/python/knowledge_bases/create",
+                            "sdks/python/knowledge_bases/insert_data",
+                            "sdks/python/knowledge_bases/query"
+                          ]
+                        },
+                        {
+                          "group": "Tables, Views, and Files",
+                          "pages": [
+                            "sdks/python/create_table",
+                            "sdks/python/delete_table",
+                            "sdks/python/query_table",
+                            "sdks/python/native_queries",
+                            "sdks/python/update_table",
+                            "sdks/python/insert_into_table",
+                            "sdks/python/join_on",
+                            "sdks/python/delete_from",
+                            "sdks/python/create_view",
+                            "sdks/python/drop_view",
+                            "sdks/python/query_view",
+                            "sdks/python/list_views",
+                            "sdks/python/upload_file",
+                            "sdks/python/delete_file",
+                            "sdks/python/query_files"
+                          ]
+                        },
+                        {
+                          "group": "Jobs",
+                          "pages": [
+                            "sdks/python/create_job",
+                            "sdks/python/drop_job",
+                            "sdks/python/list_jobs",
+                            "sdks/python/refresh_job",
+                            "sdks/python/get_history"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "group": "Respond",
+                      "icon": "comment-dots",
+                      "pages": [
+                        "sdks/python/agents"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "group": "JavaScript SDK",
+                  "pages": [
+                    "sdks/javascript/overview",
+                    {
+                      "group": "Connect",
+                      "icon": "link",
+                      "pages": [
+                        {
+                          "group": "Setup",
+                          "pages": [
+                            "sdks/javascript/installation",
+                            "sdks/javascript/connect"
+                          ]
+                        },
+                        {
+                          "group": "Data Sources",
+                          "pages": [
+                            "sdks/javascript/list_data_handlers",
+                            "sdks/javascript/create_database",
+                            "sdks/javascript/get_database",
+                            "sdks/javascript/drop_database",
+                            "sdks/javascript/list_databases"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "group": "Unify",
+                      "icon": "circle-nodes",
+                      "pages": [
+                        {
+                          "group": "Projects",
+                          "pages": [
+                            "sdks/javascript/list_projects"
+                          ]
+                        },
+                        {
+                          "group": "Tables, Views, and Files",
+                          "pages": [
+                            "sdks/javascript/create_table",
+                            "sdks/javascript/delete_table",
+                            "sdks/javascript/query_table",
+                            "sdks/javascript/native_queries",
+                            "sdks/javascript/update_table",
+                            "sdks/javascript/insert_into_table",
+                            "sdks/javascript/join_on",
+                            "sdks/javascript/delete_from",
+                            "sdks/javascript/create_view",
+                            "sdks/javascript/drop_view",
+                            "sdks/javascript/query_view",
+                            "sdks/javascript/list_views",
+                            "sdks/javascript/query_files"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "group": "Respond",
+                      "icon": "comment-dots",
+                      "pages": [
+                        "sdks/javascript/agents"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tab": "Contribute",
+          "groups": [
+            {
+              "group": "Contribute",
+              "pages": [
+                "contribute/contribute",
+                "contribute/issues",
+                "contribute/issue-labels",
+                "contribute/install",
+                "contribute/python-coding-standards",
+                "contribute/data-handlers",
+                "contribute/app-handlers",
+                "contribute/tests",
+                "contribute/integrations-readme",
+                "contribute/tutorials",
+                "contribute/docs",
+                "contribute/docs-rules",
+                "contribute/community"
+              ]
+            }
+          ]
+        },
+        {
+          "tab": "FAQs",
+          "groups": [
+            {
+              "group": "FAQs",
+              "pages": [
+                "faqs/benefits",
+                "faqs/persist-predictions",
+                "faqs/mindsdb-with-php",
+                "faqs/disposable-email-doman-and-openai",
+                "faqs/missing-required-cpu-features",
+                "faqs/a2a-unavailable"
+              ]
+            }
+          ]
+        }
     ],
     "global": {
       "anchors": [

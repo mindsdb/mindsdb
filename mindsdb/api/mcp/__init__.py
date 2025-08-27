@@ -7,9 +7,9 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass
 
 from mcp.server.fastmcp import FastMCP
-from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.routing import Route
+from starlette.responses import JSONResponse
 
 from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE as SQL_RESPONSE_TYPE
@@ -148,26 +148,21 @@ def list_databases() -> list[str]:
         }
 
 
-class CustomAuthMiddleware(BaseHTTPMiddleware):
-    """Custom middleware to handle authentication basing on header 'Authorization'"""
+def _get_status(request: Request) -> JSONResponse:
+    """
+    Status endpoint that returns basic server information.
+    This endpoint can be used by the frontend to check if the MCP server is running.
+    """
 
-    async def dispatch(self, request: Request, call_next):
-        mcp_access_token = os.environ.get("MINDSDB_MCP_ACCESS_TOKEN")
-        if mcp_access_token is not None:
-            auth_token = request.headers.get("Authorization", "").partition("Bearer ")[-1]
-            if mcp_access_token != auth_token:
-                return Response(status_code=401, content="Unauthorized", media_type="text/plain")
+    status_info = {
+        "status": "ok",
+        "service": "mindsdb-mcp",
+    }
 
-        response = await call_next(request)
-
-        return response
+    return JSONResponse(status_info)
 
 
-def get_mcp_app(host: str = None, port: int = None):
-    if host is not None:
-        mcp.settings.host = host
-    if port is not None:
-        mcp.settings.port = port
+def get_mcp_app():
     app = mcp.sse_app()
-    app.add_middleware(CustomAuthMiddleware)
+    app.add_route("/status", _get_status, methods=["GET"])
     return app

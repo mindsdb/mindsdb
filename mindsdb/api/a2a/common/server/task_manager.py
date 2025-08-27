@@ -92,9 +92,7 @@ class InMemoryTaskManager(TaskManager):
             if task is None:
                 return GetTaskResponse(id=request.id, error=TaskNotFoundError())
 
-            task_result = self.append_task_history(
-                task, task_query_params.historyLength
-            )
+            task_result = self.append_task_history(task, task_query_params.historyLength)
 
         return GetTaskResponse(id=request.id, result=task_result)
 
@@ -119,9 +117,7 @@ class InMemoryTaskManager(TaskManager):
     ) -> Union[AsyncIterable[SendTaskStreamingResponse], JSONRPCResponse]:
         pass
 
-    async def set_push_notification_info(
-        self, task_id: str, notification_config: PushNotificationConfig
-    ):
+    async def set_push_notification_info(self, task_id: str, notification_config: PushNotificationConfig):
         async with self.lock:
             task = self.tasks.get(task_id)
             if task is None:
@@ -160,14 +156,10 @@ class InMemoryTaskManager(TaskManager):
             logger.error(f"Error while setting push notification info: {e}")
             return JSONRPCResponse(
                 id=request.id,
-                error=InternalError(
-                    message="An error occurred while setting push notification info"
-                ),
+                error=InternalError(message="An error occurred while setting push notification info"),
             )
 
-        return SetTaskPushNotificationResponse(
-            id=request.id, result=task_notification_params
-        )
+        return SetTaskPushNotificationResponse(id=request.id, result=task_notification_params)
 
     async def on_get_task_push_notification(
         self, request: GetTaskPushNotificationRequest
@@ -181,16 +173,12 @@ class InMemoryTaskManager(TaskManager):
             logger.error(f"Error while getting push notification info: {e}")
             return GetTaskPushNotificationResponse(
                 id=request.id,
-                error=InternalError(
-                    message="An error occurred while getting push notification info"
-                ),
+                error=InternalError(message="An error occurred while getting push notification info"),
             )
 
         return GetTaskPushNotificationResponse(
             id=request.id,
-            result=TaskPushNotificationConfig(
-                id=task_params.id, pushNotificationConfig=notification_info
-            ),
+            result=TaskPushNotificationConfig(id=task_params.id, pushNotificationConfig=notification_info),
         )
 
     async def upsert_task(self, task_send_params: TaskSendParams) -> Task:
@@ -216,9 +204,7 @@ class InMemoryTaskManager(TaskManager):
     ) -> Union[AsyncIterable[SendTaskStreamingResponse], JSONRPCResponse]:
         return new_not_implemented_error(request.id)
 
-    async def update_store(
-        self, task_id: str, status: TaskStatus, artifacts: list[Artifact]
-    ) -> Task:
+    async def update_store(self, task_id: str, status: TaskStatus, artifacts: list[Artifact]) -> Task:
         async with self.lock:
             try:
                 task = self.tasks[task_id]

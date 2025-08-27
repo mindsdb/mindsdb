@@ -20,7 +20,7 @@ class MindsDBAgent:
         project_name="mindsdb",
         host="localhost",
         port=47334,
-        user_info: Dict[str, Any] = None
+        user_info: Dict[str, Any] = None,
     ):
         self.agent_name = agent_name
         self.project_name = project_name

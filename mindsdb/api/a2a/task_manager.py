@@ -68,10 +68,12 @@ class AgentTaskManager(InMemoryTaskManager):
             project_name=self.project_name,
             host=self.mindsdb_host,
             port=self.mindsdb_port,
-            user_info=user_info
+            user_info=user_info,
         )
 
-    async def _stream_generator(self, request: SendTaskStreamingRequest, user_info: Dict) -> AsyncIterable[SendTaskStreamingResponse]:
+    async def _stream_generator(
+        self, request: SendTaskStreamingRequest, user_info: Dict
+    ) -> AsyncIterable[SendTaskStreamingResponse]:
         task_send_params: TaskSendParams = request.params
         query = self._get_user_query(task_send_params)
         params = self._get_task_params(task_send_params)

@@ -44,18 +44,14 @@ class PushNotificationSenderAuth(PushNotificationAuth):
         async with httpx.AsyncClient(timeout=10) as client:
             try:
                 validation_token = str(uuid.uuid4())
-                response = await client.get(
-                    url, params={"validationToken": validation_token}
-                )
+                response = await client.get(url, params={"validationToken": validation_token})
                 response.raise_for_status()
                 is_verified = response.text == validation_token
 
                 logger.info(f"Verified push-notification URL: {url} => {is_verified}")
                 return is_verified
             except Exception as e:
-                logger.warning(
-                    f"Error during sending push-notification for URL {url}: {e}"
-                )
+                logger.warning(f"Error during sending push-notification for URL {url}: {e}")
 
         return False
 
@@ -96,9 +92,7 @@ class PushNotificationSenderAuth(PushNotificationAuth):
                 response.raise_for_status()
                 logger.info(f"Push-notification sent for URL: {url}")
             except Exception as e:
-                logger.warning(
-                    f"Error during sending push-notification for URL {url}: {e}"
-                )
+                logger.warning(f"Error during sending push-notification for URL {url}: {e}")
 
 
 class PushNotificationReceiverAuth(PushNotificationAuth):
@@ -114,7 +108,7 @@ class PushNotificationReceiverAuth(PushNotificationAuth):
         if not auth_header or not auth_header.startswith(AUTH_HEADER_PREFIX):
             return False
 
-        token = auth_header[len(AUTH_HEADER_PREFIX):]
+        token = auth_header[len(AUTH_HEADER_PREFIX) :]
         signing_key = self.jwks_client.get_signing_key_from_jwt(token)
 
         decode_token = jwt.decode(

@@ -319,7 +319,7 @@ def initialize_app(config, no_studio):
         if not h or not h.startswith("Bearer "):
             bearer = None
         else:
-            bearer =  h.split(" ", 1)[1].strip() or None
+            bearer = h.split(" ", 1)[1].strip() or None
 
         # region routes where auth is required
         if (
@@ -327,6 +327,7 @@ def initialize_app(config, no_studio):
             and any(request.path.startswith(f"/api{ns.path}") for ns in protected_namespaces)
             and verify_token(bearer) is False
         ):
+            logger.debug(f"Auth failed for path {request.path}")
             return http_error(
                 HTTPStatus.UNAUTHORIZED,
                 "Unauthorized",

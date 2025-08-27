@@ -299,7 +299,9 @@ class LangchainAgent:
             logger.info(f"Using prompt template: {args['prompt_template'][:50]}...")
 
         if "model_name" not in args:
-            raise ValueError(f"No model name provided for agent. Provide it in the model parameter or in the default model setup.")
+            raise ValueError(
+                f"No model name provided for agent. Provide it in the model parameter or in the default model setup."
+            )
 
         return args
 

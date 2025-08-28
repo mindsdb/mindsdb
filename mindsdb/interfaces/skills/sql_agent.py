@@ -405,6 +405,7 @@ class SQLAgent:
             tables_idx[tuple(table.parts)] = table
 
         tables = []
+        not_found = []
         for table_name in table_names:
             if not table_name.strip():
                 continue
@@ -419,9 +420,12 @@ class SQLAgent:
             table_identifier = tables_idx.get(tuple(table_parts))
 
             if table_identifier is None:
-                raise ValueError(f"Table {table_name} not found in the database")
-            tables.append(table_identifier)
+                not_found.append(table_name)
+            else:
+                tables.append(table_identifier)
 
+        if not_found:
+            raise ValueError(f"Tables: {', '.join(not_found)} not found in the database")
         return tables
 
     def get_knowledge_base_info(self, kb_names: Optional[List[str]] = None) -> str:

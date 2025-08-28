@@ -172,18 +172,16 @@ class AgentTaskManager(InMemoryTaskManager):
 
         # If streaming is enabled (default), use the streaming implementation
         try:
-            logger.debug(f"[TaskManager] Entering agent.stream() at {time.time()}")
+            logger.debug(f"Entering agent.stream() at {time.time()}")
             # Create A2A message structure and convert using centralized utility
             a2a_message = task_send_params.message.model_dump()
             logger.debug(f"History: {history}")
             if history:
                 a2a_message["history"] = [msg.model_dump() if hasattr(msg, "model_dump") else msg for msg in history]
 
-            logger.debug(f"Getting all messages from A2A message: {a2a_message}")
             # Convert to Q&A format using centralized utility function
             all_messages = convert_a2a_message_to_qa_format(a2a_message)
 
-            logger.debug(f"Sending {len(all_messages)} total messages to streaming agent")
             async for item in agent.streaming_invoke(all_messages, timeout=60):
                 # Clean up: Remove verbose debug logs, keep only errors and essential info
                 if isinstance(item, dict) and "artifact" in item and "parts" in item["artifact"]:
@@ -329,15 +327,15 @@ class AgentTaskManager(InMemoryTaskManager):
     ) -> AsyncIterable[SendTaskStreamingResponse]:
         error = self._validate_request(request)
         if error:
-            logger.info(f"[TaskManager] Yielding error at {time.time()} for invalid request: {error}")
+            logger.info(f"Yielding error at {time.time()} for invalid request: {error}")
             yield to_serializable(SendTaskStreamingResponse(id=request.id, error=to_serializable(error.error)))
             return
 
         # We can't await an async generator directly, so we need to use it as is
         try:
-            logger.debug(f"[TaskManager] Entering streaming path at {time.time()}")
+            logger.debug(f"Entering streaming path at {time.time()}")
             async for response in self._stream_generator(request, user_info):
-                logger.debug(f"[TaskManager] Yielding streaming response at {time.time()} with: {str(response)[:120]}")
+                logger.debug(f"Yielding streaming response at {time.time()} with: {str(response)[:120]}")
                 yield response
         except Exception as e:
             # If an error occurs, yield an error response

@@ -348,11 +348,6 @@ def initialize_app(config, no_studio):
         except Exception:
             user_id = 0
 
-        try:
-            session_id = request.cookies.get("session")
-        except Exception:
-            session_id = "unknown"
-
         if company_id is not None:
             try:
                 company_id = int(company_id)
@@ -370,7 +365,6 @@ def initialize_app(config, no_studio):
             user_class = 0
 
         ctx.user_id = user_id
-        ctx.session_id = session_id
         ctx.company_id = company_id
         ctx.user_class = user_class
         ctx.email_confirmed = email_confirmed

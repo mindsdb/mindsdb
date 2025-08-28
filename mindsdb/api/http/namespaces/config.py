@@ -32,8 +32,6 @@ class GetConfig(Resource):
             value = config.get(key)
             if value is not None:
                 resp[key] = value
-        if "a2a" in config["api"]:
-            resp["a2a"] = config["api"]["a2a"]
         return resp
 
     @ns_conf.doc("put_config")

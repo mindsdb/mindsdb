@@ -92,6 +92,12 @@ class TestHTTP(HTTPHelperMixin):
         response = session.get(f"{HTTP_API_ROOT}/tree/")
         assert response.status_code == 200
 
+        response = session.get(f"{STRIPPED_API_ROOT}/a2a/status")
+        assert response.status_code == 200
+
+        response = session.get(f"{STRIPPED_API_ROOT}/mcp/status")
+        assert response.status_code == 200
+
         response = session.post(f"{HTTP_API_ROOT}/logout")
         assert response.status_code == 200
 

@@ -64,9 +64,7 @@ class TrunkProcessEnum(Enum):
     JOBS = "jobs"
     TASKS = "tasks"
     ML_TASK_QUEUE = "ml_task_queue"
-    MCP = "mcp"
     LITELLM = "litellm"
-    A2A = "a2a"
 
     @classmethod
     def _missing_(cls, value):
@@ -383,7 +381,7 @@ if __name__ == "__main__":
     apis = os.getenv("MINDSDB_APIS") or config.cmd_args.api
 
     if apis is None:  # If "--api" option is not specified, start the default APIs
-        api_arr = [TrunkProcessEnum.HTTP, TrunkProcessEnum.MYSQL, TrunkProcessEnum.MCP, TrunkProcessEnum.A2A]
+        api_arr = [TrunkProcessEnum.HTTP, TrunkProcessEnum.MYSQL]
     elif apis == "":  # If "--api=" (blank) is specified, don't start any APIs
         api_arr = []
     else:  # The user has provided a list of APIs to start
@@ -419,9 +417,7 @@ if __name__ == "__main__":
     # Get config values for APIs
     http_api_config = config.get("api", {}).get("http", {})
     mysql_api_config = config.get("api", {}).get("mysql", {})
-    mcp_api_config = config.get("api", {}).get("mcp", {})
     litellm_api_config = config.get("api", {}).get("litellm", {})
-    a2a_api_config = config.get("api", {}).get("a2a", {})
     trunc_processes_struct = {
         TrunkProcessEnum.HTTP: TrunkProcessData(
             name=TrunkProcessEnum.HTTP.value,

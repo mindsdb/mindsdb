@@ -344,9 +344,6 @@ if __name__ == "__main__":
     config.raise_warnings(logger=logger)
     os.environ["MINDSDB_RUNTIME"] = "1"
 
-    if os.environ.get("FLASK_SECRET_KEY") is None:
-        os.environ["FLASK_SECRET_KEY"] = secrets.token_hex(32)
-
     if os.environ.get("ARROW_DEFAULT_MEMORY_POOL") is None:
         try:
             """It seems like snowflake handler have memory issue that related to pyarrow. Memory usage keep growing with

@@ -7,9 +7,15 @@ from langchain_community.tools import ListSQLDatabaseTool, InfoSQLDatabaseTool, 
 from langchain_core.tools import BaseTool
 
 from mindsdb.interfaces.skills.custom.text2sql.mindsdb_sql_tool import MindsDBSQLParserTool
+from mindsdb.interfaces.skills.custom.text2sql.mindsdb_kb_tools import (
+    KnowledgeBaseListTool,
+    KnowledgeBaseInfoTool,
+)
 
 
 class MindsDBSQLToolkit(SQLDatabaseToolkit):
+    include_knowledge_base_tools: bool = True
+
     def get_tools(self, prefix="") -> List[BaseTool]:
         current_date_time = datetime.now().strftime("%Y-%m-%d %H:%M")
 
@@ -121,10 +127,56 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
             name=f"mindsdb_sql_parser_tool{prefix}", description=mindsdb_sql_parser_tool_description
         )
 
-        # Return unified toolset
-        return [
+        sql_tools = [
             query_sql_database_tool,
             info_sql_database_tool,
             list_sql_database_tool,
             mindsdb_sql_parser_tool,
+        ]
+
+        if not self.include_knowledge_base_tools:
+            return sql_tools
+
+        # Knowledge base tools
+        kb_list_tool = KnowledgeBaseListTool(
+            name=f"kb_list_tool{prefix}",
+            db=self.db,
+            description=dedent(
+                """\
+                Lists all available knowledge bases that can be queried.
+                Input: No input required, just call the tool directly.
+                Output: A table of all available knowledge bases with their names and creation dates.
+
+                Use this tool first when answering factual questions to see what knowledge bases are available.
+                Each knowledge base name is escaped using backticks.
+
+                Example usage: kb_list_tool()
+            """
+            ),
+        )
+
+        kb_info_tool = KnowledgeBaseInfoTool(
+            name=f"kb_info_tool{prefix}",
+            db=self.db,
+            description=dedent(
+                f"""\
+                Gets detailed information about specific knowledge bases including their structure and metadata fields.
+
+                Input: A knowledge base name as a simple string.
+                Output: Schema, metadata columns, and sample rows for the specified knowledge base.
+
+                Use this after kb_list_tool to understand what information is contained in the knowledge base
+                and what metadata fields are available for filtering.
+
+                Example usage: kb_info_tool("kb_name")
+
+                Make sure the knowledge base exists by calling {kb_list_tool.name} first.
+            """
+            ),
+        )
+
+        # Return standard SQL tools and knowledge base tools
+        return sql_tools + [
+            kb_list_tool,
+            kb_info_tool,
         ]

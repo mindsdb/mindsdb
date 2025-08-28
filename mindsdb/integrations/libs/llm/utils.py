@@ -16,6 +16,7 @@ from mindsdb.integrations.libs.llm.config import (
     NvidiaNIMConfig,
     MindsdbConfig,
     WriterConfig,
+    BedrockConfig,
 )
 from mindsdb.utilities.config import config
 from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
@@ -212,6 +213,18 @@ def get_llm_config(provider: str, args: Dict) -> BaseLLMConfig:
         )
     if provider == "writer":
         return WriterConfig(
+            model_name=args.get("model_name", "palmyra-x5"),
+            temperature=temperature,
+            max_tokens=args.get("max_tokens", None),
+            top_p=args.get("top_p", None),
+            stop=args.get("stop", None),
+            best_of=args.get("best_of", None),
+            writer_api_key=args["api_keys"].get("writer", None),
+            writer_org_id=args.get("writer_org_id", None),
+            base_url=args.get("base_url", None),
+        )
+    if provider == "bedrock":
+        return BedrockConfig(
             model_name=args.get("model_name", "palmyra-x5"),
             temperature=temperature,
             max_tokens=args.get("max_tokens", None),

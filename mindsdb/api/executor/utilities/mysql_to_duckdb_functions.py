@@ -16,6 +16,8 @@ def date_part(node, part):
     Docs:
         https://duckdb.org/docs/stable/sql/functions/date#date_partpart-date
     """
+    node.args = apply_nested_functions(node.args)
+
     if len(node.args) != 1:
         raise ValueError(f"Wrong arguments: {node.args}")
 
@@ -385,6 +387,8 @@ def date_format_fn(node: Function):
     }
     node.op = "strftime"
 
+    node.args = apply_nested_functions(node.args)
+
     if len(node.args) != 2 or not isinstance(node.args[1], Constant):
         raise ValueError(f"Wrong arguments: {node.args}")
 
@@ -425,6 +429,8 @@ def from_days_fn(node):
     Docs:
         https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_from-days
     """
+    node.args = apply_nested_functions(node.args)
+
     if len(node.args) != 1:
         raise ValueError(f"Wrong arguments: {node.args}")
 
@@ -518,6 +524,7 @@ def datediff_fn(node):
 def adddate_fn(node):
     """
     Replace the name of the function and add type casting
+    Important! The second parameter can be only interval (not count of days).
         SELECT ADDDATE('2008-01-02', INTERVAL 31 DAY) => SELECT DATE_ADD('2008-01-02'::date, INTERVAL 31 DAY)
 
     Docs:
@@ -561,6 +568,8 @@ def addtime_fn(node):
         https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_addtime
         https://duckdb.org/docs/stable/sql/functions/date.html#date_adddate-interval
     """
+    node.args = apply_nested_functions(node.args)
+
     if len(node.args) != 2:
         raise ValueError(f"Wrong arguments: {node.args}")
 
@@ -622,6 +631,7 @@ def convert_tz_fn(node):
         https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_convert-tz
         https://duckdb.org/docs/stable/sql/functions/timestamptz.html#timezonetext-timestamp
     """
+    node.args = apply_nested_functions(node.args)
 
     if len(node.args) != 3:
         raise ValueError(f"Wrong arguments: {node.args}")
@@ -638,6 +648,17 @@ def convert_tz_fn(node):
             cast(tzdate, "timestamptz"),
         ],
     )
+
+
+def apply_nested_functions(args):
+    args2 = []
+    for arg in args:
+        if isinstance(arg, Function):
+            fnc = mysql_to_duckdb_fnc(arg)
+            if args2 is not None:
+                arg = fnc(arg)
+        args2.append(arg)
+    return args2
 
 
 def mysql_to_duckdb_fnc(node):

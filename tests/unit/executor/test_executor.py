@@ -1450,7 +1450,7 @@ class TestExecutionTools:
             {"query": "GET_FORMAT(DATE,'ISO')", "result": "%Y-%m-%d"},
             {"query": "GET_FORMAT(DATETIME,'EUR')", "result": "%Y-%m-%d %H.%i.%s"},
             {"query": "DATE_FORMAT('2009-10-30 22:23:11', '%X %V %H:%i:%s')", "result": "2009 43 22:23:11"},
-            {"query": "DATE_FORMAT(created, '%X %V %H:%i:%s')", "result": "2009 43 22:23:11"},
+            {"query": "DATE_FORMAT(created, GET_FORMAT(DATE,'EUR'))", "result": "30.10.2009"},
             {"query": "FROM_UNIXTIME(1447430881)", "result": dt.datetime.fromisoformat("2015-11-13 16:08:01")},
             {"query": "FROM_UNIXTIME(f_seconds)", "result": dt.datetime.fromisoformat("2015-11-13 16:08:01")},
             {"query": "FROM_DAYS(730669)", "result": dt.datetime.fromisoformat("2000-07-03")},

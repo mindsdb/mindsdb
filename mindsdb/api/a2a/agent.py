@@ -29,7 +29,7 @@ class MindsDBAgent:
         self.base_url = f"http://{host}:{port}"
         self.agent_url = f"{self.base_url}/api/projects/{project_name}/agents/{agent_name}"
         self.sql_url = f"{self.base_url}/api/sql/query"
-        self.headers = user_info or {}
+        self.headers = {k: v for k, v in user_info.items() if v is not None} or {}
         logger.info(f"Initialized MindsDB agent connector to {self.base_url}")
 
     def invoke(self, query, session_id) -> Dict[str, Any]:

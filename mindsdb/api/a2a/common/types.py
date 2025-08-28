@@ -169,6 +169,7 @@ class SendTaskRequest(JSONRPCRequest):
     params: TaskSendParams
 
 
+
 class SendTaskResponse(JSONRPCResponse):
     result: Task | None = None
 
@@ -176,6 +177,7 @@ class SendTaskResponse(JSONRPCResponse):
 class SendTaskStreamingRequest(JSONRPCRequest):
     method: Literal["tasks/sendSubscribe"] = "tasks/sendSubscribe"
     params: TaskSendParams
+
 
 
 class SendTaskStreamingResponse(JSONRPCResponse):

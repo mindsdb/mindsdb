@@ -357,14 +357,14 @@ def initialize_app(config, no_studio):
             try:
                 company_id = int(company_id)
             except Exception as e:
-                logger.error(f"Cloud not parse company id: {company_id} | exception: {e}")
+                logger.error(f"Could not parse company id: {company_id} | exception: {e}")
                 company_id = None
 
         if user_class is not None:
             try:
                 user_class = int(user_class)
             except Exception as e:
-                logger.error(f"Cloud not parse user_class: {user_class} | exception: {e}")
+                logger.error(f"Could not parse user_class: {user_class} | exception: {e}")
                 user_class = 0
         else:
             user_class = 0
@@ -402,14 +402,11 @@ def initialize_flask(config, init_static_thread, no_studio):
     FlaskInstrumentor().instrument_app(app)
     RequestsInstrumentor().instrument()
 
-    app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", secrets.token_hex(32))
-    app.config["SESSION_COOKIE_NAME"] = "session"
-    app.config["PERMANENT_SESSION_LIFETIME"] = config["auth"]["http_permanent_session_lifetime"]
     app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 60
     app.config["SWAGGER_HOST"] = "http://localhost:8000/mindsdb"
     app.json = CustomJSONProvider()
 
-    authorizations = {"apikey": {"type": "session", "in": "query", "name": "session"}}
+    authorizations = {"apikey": {"type": "apiKey", "in": "header", "name": "Authorization"}}
 
     logger.debug("Creating swagger API..")
     api = Swagger_Api(

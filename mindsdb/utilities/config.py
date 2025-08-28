@@ -3,12 +3,14 @@ import sys
 import json
 import argparse
 import datetime
+import logging
 from pathlib import Path
 from copy import deepcopy
 
 from appdirs import user_data_dir
 
 # NOTE do not `import from mindsdb` here
+logger = logging.getLogger(__name__)
 
 
 def _merge_key_recursive(target_dict, source_dict, key):
@@ -267,24 +269,10 @@ class Config:
 
         # If both username and password are set, enable HTTP auth.
         if http_username and http_password:
+            logger.info(f"http username and password both set: {http_username}, {http_password}")
             self._env_config["auth"]["http_auth_enabled"] = True
             self._env_config["auth"]["username"] = http_username
             self._env_config["auth"]["password"] = http_password
-        # endregion
-
-        # region permanent session lifetime
-        for env_name in (
-            "MINDSDB_HTTP_PERMANENT_SESSION_LIFETIME",
-            "FLASK_PERMANENT_SESSION_LIFETIME",
-        ):
-            env_value = os.environ.get(env_name)
-            if isinstance(env_value, str):
-                try:
-                    permanent_session_lifetime = int(env_value)
-                except Exception:
-                    raise ValueError(f"Warning: Can't cast env var {env_name} value to int: {env_value}")
-                self._env_config["auth"]["http_permanent_session_lifetime"] = permanent_session_lifetime
-                break
         # endregion
 
         # region logging

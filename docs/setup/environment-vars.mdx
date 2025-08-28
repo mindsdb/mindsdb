@@ -90,28 +90,6 @@ To use the A2A API when running MindsDB at a remote host, use the `MINDSDB_A2A_H
     ```
 </CodeGroup>
 
-## MindsDB Server
-
-By default for the HTTP API, MindsDB uses [Waitress](https://pypi.org/project/waitress/) which is a pure-Python WSGI server. There is an option to change that 
-and use [Flask](https://flask.palletsprojects.com/en/stable/) or [Gunicorn](https://gunicorn.org/)
-
-### Example
-
-<CodeGroup>
-    ```bash Docker
-    # To use Gunicorn as a default server, it should be installed by logging into the container
-    docker exec -it mindsdb_container sh  # assuming the container name is mindsdb_container  # assuming the container name is mindsdb_container
-    pip install gunicorn
-
-    docker run --name mindsdb_container -e MINDSDB_DEFAULT_SERVER='gunicorn' -e MINDSDB_APIS=http,mysql -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
-    ```
-
-    ```bash Shell
-    export MINDSDB_DEFAULT_SERVER='gunicorn'
-    ```
-</CodeGroup>
-
-You can also use `waitress`, which is the default server or `flask`.
 
 ## MindsDB Logs
 

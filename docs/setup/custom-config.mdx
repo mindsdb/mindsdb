@@ -188,9 +188,6 @@ Connection parameters for the HTTP API include:
     - MindsDB fails at 1031s of its work - the restart attempt succeeds as there was only 1 restart (at 1010s) in the past 30 seconds.
     </Note>
 
-* `type` within `server`: This specifies the server type used by MindsDB. It is `waitress` by default. Other values include `flask` and `gunicorn`. Alternatively, you can set the `MINDSDB_DEFAULT_SERVER` environment variable to define the server.
-* `config` within `server`: This stores the selected server configuration. Any options that are supported by the selected server (taht is, waitress, flask, or gunicorn) can be set there, except for `host` and `port` that are defined under `config['api']['http']`.
-
 </Accordion>
 
 <Accordion title="MySQL API">

@@ -30,7 +30,7 @@ Here's an example of how to make a streaming request to the A2A API:
 
 ```bash
 curl -X POST \
-  "http://localhost:10002/a2a/" \
+  "http://localhost:47334/a2a/" \
   -H "Content-Type: application/json" \
   -H "Accept: text/event-stream" \
   -H "Cache-Control: no-cache" \

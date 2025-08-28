@@ -37,8 +37,7 @@ class MindsDBAgent:
         try:
             escaped_query = query.replace("'", "''")
             sql_query = f"SELECT * FROM {self.project_name}.{self.agent_name} WHERE question = '{escaped_query}'"
-            logger.info(f"Sending SQL query to MindsDB: {sql_query[:100]}...")
-            logger.info(f"with headers: {self.headers}")
+            logger.debug(f"Sending SQL query to MindsDB: {sql_query[:100]}...")
             response = requests.post(self.sql_url, json={"query": sql_query}, headers=self.headers)
             response.raise_for_status()
             data = response.json()
@@ -92,8 +91,7 @@ class MindsDBAgent:
 
     async def streaming_invoke(self, messages, timeout=DEFAULT_STREAM_TIMEOUT):
         url = f"{self.base_url}/api/projects/{self.project_name}/agents/{self.agent_name}/completions/stream"
-        logger.info(f"Sending streaming request to MindsDB agent: {self.agent_name}")
-        logger.info(f"with headers: {self.headers}")
+        logger.debug(f"Sending streaming request to MindsDB agent: {self.agent_name}")
         async with httpx.AsyncClient(timeout=timeout, headers=self.headers) as client:
             async with client.stream("POST", url, json={"messages": to_serializable(messages)}) as response:
                 response.raise_for_status()
@@ -120,14 +118,12 @@ class MindsDBAgent:
     ) -> AsyncIterable[Dict[str, Any]]:
         """Stream responses from the MindsDB agent (uses streaming API endpoint)."""
         try:
-            logger.info(f"Using streaming API for query: {query[:100]}...")
             # Create A2A message structure with history and current query
             a2a_message = {"role": "user", "parts": [{"text": query}]}
             if history:
                 a2a_message["history"] = history
             # Convert to Q&A format using centralized utility
             formatted_messages = convert_a2a_message_to_qa_format(a2a_message)
-            logger.debug(f"Formatted messages for agent: {formatted_messages}")
             streaming_response = self.streaming_invoke(formatted_messages, timeout=timeout)
             async for chunk in streaming_response:
                 content_value = chunk.get("text") or chunk.get("output") or json.dumps(chunk)

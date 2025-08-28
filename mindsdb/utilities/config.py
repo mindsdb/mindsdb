@@ -269,7 +269,6 @@ class Config:
 
         # If both username and password are set, enable HTTP auth.
         if http_username and http_password:
-            logger.info(f"http username and password both set: {http_username}, {http_password}")
             self._env_config["auth"]["http_auth_enabled"] = True
             self._env_config["auth"]["username"] = http_username
             self._env_config["auth"]["password"] = http_password

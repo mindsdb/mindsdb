@@ -24,6 +24,7 @@ from typing import Union
 import logging
 import asyncio
 import time
+import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -190,6 +191,7 @@ class AgentTaskManager(InMemoryTaskManager):
                 yield to_serializable(item)
         except Exception as e:
             logger.error(f"An error occurred while streaming the response: {e}")
+            logger.error(traceback.format_exc())
             error_text = f"An error occurred while streaming the response: {str(e)}"
             # Ensure all parts are plain dicts
             parts = [{"type": "text", "text": error_text}]

@@ -39,7 +39,7 @@ from mindsdb.utilities.starters import (
 )
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 import mindsdb.interfaces.storage.db as db
-from mindsdb.utilities.fs import clean_process_marks, clean_unlinked_process_marks
+from mindsdb.utilities.fs import clean_process_marks, clean_unlinked_process_marks, create_pid_file, delete_pid_file
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.auth import register_oauth_client, get_aws_meta_data
 from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
@@ -134,6 +134,9 @@ class TrunkProcessData:
 
 def close_api_gracefully(trunc_processes_struct):
     _stop_event.set()
+
+    delete_pid_file()
+
     try:
         for trunc_processes_data in trunc_processes_struct.values():
             process = trunc_processes_data.process
@@ -335,6 +338,13 @@ if __name__ == "__main__":
         print(f"MindsDB {mindsdb_version}")
         sys.exit(0)
 
+    if config.cmd_args.update_gui:
+        from mindsdb.api.http.initialize import initialize_static
+
+        logger.info("Updating the GUI version")
+        initialize_static()
+        sys.exit(0)
+
     config.raise_warnings(logger=logger)
     os.environ["MINDSDB_RUNTIME"] = "1"
 
@@ -509,6 +519,8 @@ if __name__ == "__main__":
 
     if config.cmd_args.ml_task_queue_consumer is True:
         trunc_processes_struct[TrunkProcessEnum.ML_TASK_QUEUE].need_to_run = True
+
+    create_pid_file()
 
     for trunc_process_data in trunc_processes_struct.values():
         if trunc_process_data.started is True or trunc_process_data.need_to_run is False:

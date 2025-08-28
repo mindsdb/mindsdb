@@ -87,6 +87,7 @@ class LiteLLMHandler(BaseMLEngine):
 
         # check engine_storage for api_key
         input_args.update({k: v for k, v in ml_engine_args.items()})
+        input_args["target"] = target
 
         # validate args
         export_args = CompletionParameters(**input_args).model_dump()
@@ -104,6 +105,8 @@ class LiteLLMHandler(BaseMLEngine):
         # validate args
         args = CompletionParameters(**input_args).model_dump()
 
+        target = args.pop("target")
+
         # build messages
         self._build_messages(args, df)
 
@@ -113,12 +116,12 @@ class LiteLLMHandler(BaseMLEngine):
         if len(args["messages"]) > 1:
             # if more than one message, use batch completion
             responses = batch_completion(**args)
-            return pd.DataFrame({"result": [response.choices[0].message.content for response in responses]})
+            return pd.DataFrame({target: [response.choices[0].message.content for response in responses]})
 
         # run completion
         response = completion(**args)
 
-        return pd.DataFrame({"result": [response.choices[0].message.content]})
+        return pd.DataFrame({target: [response.choices[0].message.content]})
 
     @staticmethod
     def _prompt_to_messages(prompt: str, **kwargs) -> List[Dict]:

@@ -4,7 +4,7 @@ import time
 import urllib
 
 import requests
-from flask import redirect, request, session, url_for
+from flask import redirect, request, url_for
 from flask_restx import Resource
 
 from mindsdb.api.http.namespaces.configs.auth import ns_conf
@@ -21,9 +21,7 @@ def get_access_token() -> str:
     Returns:
         str: token
     """
-    return (
-        Config().get("auth", {}).get("oauth", {}).get("tokens", {}).get("access_token")
-    )
+    return Config().get("auth", {}).get("oauth", {}).get("tokens", {}).get("access_token")
 
 
 def request_user_info(access_token: str = None) -> dict:
@@ -58,7 +56,7 @@ def request_user_info(access_token: str = None) -> dict:
 @ns_conf.hide
 class Auth(Resource):
     @ns_conf.doc(params={"code": "authentification code"})
-    @api_endpoint_metrics('GET', '/auth/code')
+    @api_endpoint_metrics("GET", "/auth/code")
     def get(self):
         """callback from auth server if authentification is successful"""
         config = Config()
@@ -72,9 +70,7 @@ class Auth(Resource):
         client_id = oauth_meta["client_id"]
         client_secret = oauth_meta["client_secret"]
         auth_server = oauth_meta["server_host"]
-        client_basic = base64.b64encode(
-            f"{client_id}:{client_secret}".encode()
-        ).decode()
+        client_basic = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
 
         redirect_uri = f"https://{public_hostname}{request.path}"
         response = requests.post(
@@ -115,17 +111,13 @@ class Auth(Resource):
                     "public_hostname": public_hostname,
                     "ami_id": aws_meta_data.get("ami-id"),
                 },
-                headers={"Authorization": f'Bearer {tokens["access_token"]}'},
+                headers={"Authorization": f"Bearer {tokens['access_token']}"},
                 timeout=5,
             )
             if resp.status_code != 200:
                 logger.warning(f"Wrong response from cloud server: {resp.status_code}")
         except Exception as e:
             logger.warning(f"Cant't send request to cloud server: {e}")
-
-        session["username"] = user_data["name"]
-        session["auth_provider"] = "cloud"
-        session.permanent = True
 
         if request.path.endswith("/auth/callback/cloud_home"):
             return redirect(f"https://{auth_server}")
@@ -140,7 +132,7 @@ class CloudLoginRoute(Resource):
         responses={302: "Redirect to auth server"},
         params={"location": "final redirection should lead to that location"},
     )
-    @api_endpoint_metrics('GET', '/auth/cloud_login')
+    @api_endpoint_metrics("GET", "/auth/cloud_login")
     def get(self):
         """redirect to cloud login form"""
         location = request.args.get("location")

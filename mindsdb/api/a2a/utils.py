@@ -42,7 +42,7 @@ def convert_a2a_message_to_qa_format(a2a_message: Dict) -> List[Dict[str, str]]:
     converted_messages = []
 
     # Process conversation history first
-    if "history" in a2a_message:
+    if "history" in a2a_message and a2a_message["history"] is not None:
         for hist_msg in a2a_message["history"]:
             if hist_msg.get("role") == "user":
                 # Extract text from parts

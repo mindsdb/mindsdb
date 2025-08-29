@@ -285,9 +285,21 @@ def extract_fn(node: Function) -> None:
     Returns:
         None
     """
-    node.args[0] = Constant(node.args[0].parts[0])
-    if not isinstance(node.from_arg, Identifier):
-        node.from_arg = cast(node.from_arg, "timestamp")
+    part = node.args[0].parts[0]
+    if part.upper() == "YEAR_MONTH":
+        node.args = apply_nested_functions([node.from_arg, Constant("%Y%m")])
+        node.from_arg = None
+        date_format_fn(node)
+        return cast(node, "int")
+    elif part.upper() == "DAY_MINUTE":
+        node.args = apply_nested_functions([node.from_arg, Constant("%e%H%i")])
+        node.from_arg = None
+        date_format_fn(node)
+        return cast(node, "int")
+    else:
+        node.args[0] = Constant(part)
+        if not isinstance(node.from_arg, Identifier):
+            node.from_arg = cast(node.from_arg, "timestamp")
 
 
 def get_format_fn(node: Function) -> Constant:
@@ -558,7 +570,9 @@ def date_sub_fn(node):
 def addtime_fn(node):
     """
     Convert second parameter into interval.
-    Important! The second parameter can be only a constant.
+    Important!
+        - The second parameter can be only a constant.
+        - The first parameter can be only date/datetime (not just time)
 
       ADDTIME('2007-12-31', '1 1:1:1.2')
         =>

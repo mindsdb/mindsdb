@@ -1443,10 +1443,9 @@ class TestExecutionTools:
             {
                 "query": "EXTRACT(YEAR FROM '2019-07-02')",
                 "result": 2019,
-                # }, {
-                #     "query": "EXTRACT(YEAR_MONTH FROM '2019-07-02')",
-                #     "result": 201907
             },
+            {"query": "EXTRACT(YEAR_MONTH FROM '2019-07-02')", "result": 201907},
+            {"query": "EXTRACT(DAY_MINUTE FROM created)", "result": 302223},
             {"query": "GET_FORMAT(DATE,'ISO')", "result": "%Y-%m-%d"},
             {"query": "GET_FORMAT(DATETIME,'EUR')", "result": "%Y-%m-%d %H.%i.%s"},
             {"query": "DATE_FORMAT('2009-10-30 22:23:11', '%X %V %H:%i:%s')", "result": "2009 43 22:23:11"},

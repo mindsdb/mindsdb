@@ -325,9 +325,28 @@ class BaseLLMReranker(BaseModel, ABC):
 
         # Extract response and logprobs
         token_logprobs = response.choices[0].logprobs.content
-        # Reconstruct the prediction and extract the top logprobs from the final token (e.g., "1")
-        final_token_logprob = token_logprobs[-1]
-        top_logprobs = final_token_logprob.top_logprobs
+        
+        # Find the token that contains the class number (1, 2, 3, or 4)
+        # Instead of just taking the last token, search for the actual class number token
+        class_token_logprob = None
+        for token_logprob in token_logprobs:
+            if token_logprob.token in ['1', '2', '3', '4']:
+                class_token_logprob = token_logprob
+                break
+        
+        # If we couldn't find a class token, fall back to the last non-empty token
+        if class_token_logprob is None:
+            # Look for the last meaningful token (not empty string)
+            for token_logprob in reversed(token_logprobs):
+                if token_logprob.token.strip() and token_logprob.token in ['1', '2', '3', '4']:
+                    class_token_logprob = token_logprob
+                    break
+            # If still nothing, use the last token as fallback
+            if class_token_logprob is None:
+                class_token_logprob = token_logprobs[-1]
+
+        top_logprobs = class_token_logprob.top_logprobs
+        
         # Create a map of 'class_1' -> probability, using token combinations
         class_probs = {}
         for top_token in top_logprobs:

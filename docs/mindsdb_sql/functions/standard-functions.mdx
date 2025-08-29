@@ -5,9 +5,9 @@ sidebarTitle: Standard Functions
 
 MindsDB supports standard SQL functions via DuckDB and MySQL engines.
 
-## Functions via DuckDB
+## DuckDB Functions
 
-The following functions are supported via the DuckDB engine. See the [complete list of supported functions here](https://duckdb.org/docs/stable/sql/functions/overview).
+MindsDB executes functions on the underlying DuckDB engine. Therefore, [all DuckDB functions](https://duckdb.org/docs/stable/sql/functions/overview) are supported within MindsDB out of the box.
 
 * [Aggregate Functions](https://duckdb.org/docs/stable/sql/functions/aggregates)
 * [Array Functions](https://duckdb.org/docs/stable/sql/functions/array)
@@ -34,39 +34,42 @@ The following functions are supported via the DuckDB engine. See the [complete l
 * [Utility Functions](https://duckdb.org/docs/stable/sql/functions/utility)
 * [Window Functions](https://duckdb.org/docs/stable/sql/functions/window_functions)
 
-## Functions via MySQL
+## MySQL Functions
 
-TODO: correction: these functions look like and are used like mysql functions, but under the hood they go through duckdb. so they are mysql-like abstractions on top of duckdb functions.
+MindsDB executes MySQL-style functions on the underlying DuckDB engine. The following functions have been adapted to MySQL-style functions.
 
-The following functions are supported via the MySQL engine.
+String functions:
 
-* [`char()`](https://dev.mysql.com/doc/refman/8.4/en/string-functions.html#function_char)
-* [`locate()`](https://dev.mysql.com/doc/refman/8.4/en/string-functions.html#function_locate)
-* [`instr()`](https://dev.mysql.com/doc/refman/8.0/en/string-functions.html#function_instr)
-* [`unhex()`](https://dev.mysql.com/doc/refman/8.4/en/string-functions.html#function_unhex)
-* [`format()`](https://dev.mysql.com/doc/refman/8.4/en/string-functions.html#function_format)
-* [`sha2()`](https://dev.mysql.com/doc/refman/8.4/en/encryption-functions.html#function_sha2)
-* [`length()`](https://dev.mysql.com/doc/refman/8.4/en/string-functions.html#function_length)
-* [`regexp_substr()`](https://dev.mysql.com/doc/refman/8.4/en/regexp.html#function_regexp-substr)
-* [`substring_index()`](https://dev.mysql.com/doc/refman/8.4/en/string-functions.html#function_substring-index)
-* [`curtime()`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_curtime)
-* [`timestampdiff()`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_timestampdiff)
-* [`extract()`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_extract)
+* [`CHAR`](https://dev.mysql.com/doc/refman/8.4/en/string-functions.html#function_char)
+* [`LOCATE`](https://dev.mysql.com/doc/refman/8.4/en/string-functions.html#function_locate)
+* [`INSTR`](https://dev.mysql.com/doc/refman/8.0/en/string-functions.html#function_instr)
+* [`UNHEX`](https://dev.mysql.com/doc/refman/8.4/en/string-functions.html#function_unhex)
+* [`FORMAT`](https://dev.mysql.com/doc/refman/8.4/en/string-functions.html#function_format)
+* [`LENGTH`](https://dev.mysql.com/doc/refman/8.4/en/string-functions.html#function_length)
+* [`SUBSTRING_INDEX`](https://dev.mysql.com/doc/refman/8.4/en/string-functions.html#function_substring-index)
 
-Including date-time functions:
+Date and time functions:
 
-* [`GET_FORMAT`]()
-* [`DATE_FORMAT`]()
-* [`FROM_UNIXTIME`]()
-* [`FROM_DAYS`]()
-* [`DAYOFYEAR`]()
-* [`DAYOFWEEK`]()
-* [`DAYOFMONTH`]()
-* [`DATE_PART`]()
-* [`DAYNAME`]()
-* [`CURDATE`]()
-* [`DATEDIFF`]()
-* [`ADDDATE / DATE_ADD`]()
-* [`DATE_SUB`]()
-* [`ADDTIME`]()
-* [`CONVERT_TZ`]()
+* [`GET_FORMAT`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_get-format)
+* [`DATE_FORMAT`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_date-format)
+* [`FROM_UNIXTIME`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_from-unixtime)
+* [`FROM_DAYS`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_from-days)
+* [`DAYOFYEAR`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_dayofyear)
+* [`DAYOFWEEK`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_dayofweek)
+* [`DAYOFMONTH`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_dayofmonth)
+* [`DAYNAME`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_dayname)
+* [`CURDATE`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_curdate)
+* [`DATEDIFF`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_datediff)
+* [`ADDDATE`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_adddate)
+* [`DATE_ADD`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_date-add)
+* [`DATE_SUB`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_date-sub)
+* [`ADDTIME`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_addtime)
+* [`CONVERT_TZ`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_convert-tz)
+* [`CURTIME`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_curtime)
+* [`TIMESTAMPDIFF`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_timestampdiff)
+* [`EXTRACT`](https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html#function_extract)
+
+Other functions:
+
+* [`SHA2`](https://dev.mysql.com/doc/refman/8.4/en/encryption-functions.html#function_sha2)
+* [`REGEXP_SUBSTR`](https://dev.mysql.com/doc/refman/8.4/en/regexp.html#function_regexp-substr)

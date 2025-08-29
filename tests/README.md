@@ -37,6 +37,15 @@ For example, to run the unit tests for the handlers, use the following command:
 ```
 pytest -vx tests/unit/handlers
 ```
+To run ONLY the DSI tests:
+```
+pytest -vx -m dsi
+```
+To run all tests, including DSI:
+
+```
+pytest -vx --run-dsi-tests
+```
 
 ### Load Tests
 

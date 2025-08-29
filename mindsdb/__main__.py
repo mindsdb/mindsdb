@@ -43,6 +43,7 @@ from mindsdb.utilities.fs import clean_process_marks, clean_unlinked_process_mar
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.auth import register_oauth_client, get_aws_meta_data
 from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
+from mindsdb.utilities.api_status import set_api_status
 
 try:
     import torch.multiprocessing as mp
@@ -526,6 +527,9 @@ if __name__ == "__main__":
         if trunc_process_data.started is True or trunc_process_data.need_to_run is False:
             continue
         start_process(trunc_process_data)
+        # Set status for APIs without ports (they don't go through wait_api_start)
+        if trunc_process_data.port is None:
+            set_api_status(trunc_process_data.name, True)
 
     atexit.register(close_api_gracefully, trunc_processes_struct=trunc_processes_struct)
 
@@ -536,6 +540,9 @@ if __name__ == "__main__":
         while (time.time() - start_time) < timeout and started is False:
             await asyncio.sleep(0.5)
             started = is_pid_listen_port(pid, port)
+
+        set_api_status(api_name, started)
+
         return api_name, port, started
 
     async def wait_apis_start():
@@ -554,6 +561,11 @@ if __name__ == "__main__":
                 logger.info(f"{api_name} API: started on {port}")
             else:
                 logger.error(f"ERROR: {api_name} API cant start on {port}")
+        
+        # Log the final API status
+        from mindsdb.utilities.api_status import get_api_status
+        final_status = get_api_status()
+        logger.info(f"Final API status: {final_status}")
 
     async def join_process(trunc_process_data: TrunkProcessData):
         finish = False

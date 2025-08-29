@@ -18,6 +18,7 @@ class MindsDBAgent:
         self,
         agent_name="my_agent",
         project_name="mindsdb",
+        protocol="http",
         host="localhost",
         port=47334,
     ):
@@ -25,7 +26,7 @@ class MindsDBAgent:
         self.project_name = project_name
         self.host = host
         self.port = port
-        self.base_url = f"http://{host}:{port}"
+        self.base_url = f"{protocol}://{host}:{port}"
         self.agent_url = f"{self.base_url}/api/projects/{project_name}/agents/{agent_name}"
         self.sql_url = f"{self.base_url}/api/sql/query"
         logger.info(f"Initialized MindsDB agent connector to {self.base_url}")

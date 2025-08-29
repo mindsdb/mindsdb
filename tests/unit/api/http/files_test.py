@@ -17,7 +17,6 @@ def test_put_file(client):
         temp_file.write(file_content)
         temp_file.flush()
         temp_file.seek(0)
-        temp_file.seek(0)
         data = {"file": (temp_file, "test.txt")}
         response = client.put(
             "/api/files/test.txt",

@@ -113,16 +113,3 @@ class WriterConfig(BaseLLMConfig):
     writer_api_key: Optional[str] = Field(default=None)
     writer_org_id: Optional[str] = Field(default=None)
     base_url: Optional[str] = Field(default=None)
-
-
-# https://api.python.langchain.com/en/latest/llms/langchain_aws.llms.bedrock.BedrockLLM.html#langchain_aws.llms.bedrock.BedrockLLM
-class BedrockConfig(BaseLLMConfig):
-    model_name: str = Field(default="palmyra-x5", alias="model_id")
-    temperature: Optional[float] = Field(default=0.7)
-    max_tokens: Optional[int] = Field(default=None)
-    top_p: Optional[float] = Field(default=None)
-    stop: Optional[List[str]] = Field(default=None)
-    best_of: Optional[int] = Field(default=None)
-    writer_api_key: Optional[str] = Field(default=None)
-    writer_org_id: Optional[str] = Field(default=None)
-    base_url: Optional[str] = Field(default=None)

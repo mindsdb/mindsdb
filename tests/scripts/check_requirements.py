@@ -51,6 +51,7 @@ MAIN_RULE_IGNORES = {
         "dataprep_ml",
         "opentelemetry",
         "langfuse",
+        "langchain_aws",
     ],
     "DEP002": [
         "psycopg2-binary",

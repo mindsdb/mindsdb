@@ -245,6 +245,28 @@ class BaseLLMReranker(BaseModel, ABC):
         return rerank_data
 
     async def search_relevancy_score(self, query: str, document: str) -> Any:
+        """
+        This method is used to score the relevance of a document to a query.
+
+        Args:
+            query: The query to score the relevance of.
+            document: The document to score the relevance of.
+
+        Returns:
+            A dictionary with the document and the relevance score.
+        """
+
+        log.debug("Start search_relevancy_score")
+
+        log.debug(f"Reranker query: {query[:5]}")
+        log.debug(f"Reranker document: {document[:50]}")
+        log.debug(f"Reranker model: {self.model}")
+        log.debug(f"Reranker temperature: {self.temperature}")
+        log.debug(f"Reranker n: {self.n}")
+        log.debug(f"Reranker logprobs: {self.logprobs}")
+        log.debug(f"Reranker top_logprobs: {self.top_logprobs}")
+        log.debug(f"Reranker max_tokens: {self.max_tokens}")
+
         response = await self.client.chat.completions.create(
             model=self.model,
             messages=[
@@ -336,14 +358,8 @@ class BaseLLMReranker(BaseModel, ABC):
 
         # If we couldn't find a class token, fall back to the last non-empty token
         if class_token_logprob is None:
-            # Look for the last meaningful token (not empty string)
-            for token_logprob in reversed(token_logprobs):
-                if token_logprob.token in ["1", "2", "3", "4"]:
-                    class_token_logprob = token_logprob
-                    break
-            # If still nothing, use the last token as fallback
-            if class_token_logprob is None:
-                class_token_logprob = token_logprobs[-1]
+            log.warning("No class token logprob found, using the last token as fallback")
+            class_token_logprob = token_logprobs[-1]
 
         top_logprobs = class_token_logprob.top_logprobs
 
@@ -367,6 +383,8 @@ class BaseLLMReranker(BaseModel, ABC):
                 score = 0.0
 
         rerank_data = {"document": document, "relevance_score": score}
+        log.debug(f"Reranker score: {score}")
+        log.debug("End search_relevancy_score")
         return rerank_data
 
     def get_scores(self, query: str, documents: list[str]):

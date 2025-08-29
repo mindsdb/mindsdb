@@ -19,7 +19,7 @@ from mindsdb.integrations.utilities.rag.settings import (
     DEFAULT_RERANKER_N, 
     DEFAULT_RERANKER_LOGPROBS, 
     DEFAULT_RERANKER_TOP_LOGPROBS, 
-    DEFAULT_RERANKER_MAX_TOKENS
+    DEFAULT_RERANKER_MAX_TOKENS,
 )
 from mindsdb.integrations.libs.base import BaseMLEngine
 
@@ -330,7 +330,7 @@ class BaseLLMReranker(BaseModel, ABC):
         # Instead of just taking the last token, search for the actual class number token
         class_token_logprob = None
         for token_logprob in token_logprobs:
-            if token_logprob.token in ['1', '2', '3', '4']:
+            if token_logprob.token in ["1", "2", "3", "4"]:
                 class_token_logprob = token_logprob
                 break
         
@@ -338,7 +338,7 @@ class BaseLLMReranker(BaseModel, ABC):
         if class_token_logprob is None:
             # Look for the last meaningful token (not empty string)
             for token_logprob in reversed(token_logprobs):
-                if token_logprob.token.strip() and token_logprob.token in ['1', '2', '3', '4']:
+                if token_logprob.token.strip() and token_logprob.token in ["1", "2", "3", "4"]:
                     class_token_logprob = token_logprob
                     break
             # If still nothing, use the last token as fallback

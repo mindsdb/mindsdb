@@ -49,7 +49,7 @@ Where:
 -   `docker run` is a native Docker command used to spin up a container.
 -   `--name mindsdb_container` defines a name for the container.
 -   `-e MINDSDB_A2A_HOST=<if-using-remote-host>` defines the host where MindsDB is running. Note that this is required for the A2A API only when running MindsDB on a remote host.
--   `-e MINDSDB_APIS=http,mysql,mcp,a2a` defines the APIs to be exposed by the MindsDB instance. All available APIs include `http`, `mysql`, `mongodb`, `postgres`, `mcp`, and `a2a`.
+-   `-e MINDSDB_APIS=http,mysql,mcp,a2a` defines the APIs to be exposed by the MindsDB instance. All available APIs include `http`, `mysql`, `postgres`, `mcp`, and `a2a`.
 -   `-p 47334:47334 -p 47335:47335 -p 47337:47337 -p 47338:47338` defines the ports where the APIs are exposed.
 -   `mindsdb/mindsdb` is a Docker image provided by MindsDB. You can choose a different one from the list above.
 
@@ -189,11 +189,6 @@ The default configuration for MindsDB's Docker image is stored as a JSON code, a
             "user": "mindsdb",
             "database": "mindsdb",
             "ssl": true
-        },
-         "mongodb": {
-            "host": "0.0.0.0",
-            "port": "47336",
-            "database": "mindsdb"
         }
     }
 }

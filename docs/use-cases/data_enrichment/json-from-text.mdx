@@ -84,28 +84,6 @@ Let's create an OpenAI model.
         prompt_template = '{{sentence}}';
     ```
     </Tab>
-
-    <Tab title="Mongo-QL">
-    <Info>
-    Please check out our docs on how to connect [Mongo Compass](/connect/mongo-compass) and [Mongo Shell](/connect/mongo-shell) to MindsDB.
-    </Info>
-
-    ```
-    db.models.insertOne({
-        name: 'nlp_model',
-        predict: 'json',
-        training_options: {
-            engine: 'openai',
-            prompt_template: '{{sentence}}',
-            json_struct: {
-                'rental_price': 'rental price',
-                'location': 'location',
-                'nob': 'number of bathrooms'
-            }
-        }
-    })
-    ```
-    </Tab>
 </Tabs>
 
 We pass three parameters as follows:
@@ -132,27 +110,6 @@ Now we can query the model, passing the input text stored in the `sentence` colu
     +----------------------------------------------------------+
     | {"location":"Manhattan","nob":"1","rental_price":"3000"} |
     +----------------------------------------------------------+
-    ```
-    </Tab>
-    
-    <Tab title="Mongo-QL">
-    ```sql
-    db.nlp_model.find({
-        'sentence': 'Amazing 3 bedroom apartment located at the heart of Manhattan, has one full bathrooms and one toilet room for just 3000 a month.'
-        })
-    ```
-
-    On execution, we get:
-
-    ```sql
-    {
-    json: {
-        rental_price: '3000',
-        location: 'Manhattan',
-        nob: '1'
-    },
-    sentence: 'Amazing 3 bedroom apartment located at the heart of Manhattan, has one full bathrooms and one toilet room for just 3000 a month.'
-    }
     ```
     </Tab>
 </Tabs>

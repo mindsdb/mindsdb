@@ -4,17 +4,15 @@ from bson import ObjectId
 
 
 class MongoJSONEncoder(json.JSONEncoder):
-
     def default(self, obj):
         if isinstance(obj, dt.datetime):
-            return f'ISODate({obj.isoformat()})'
+            return f"ISODate({obj.isoformat()})"
         if isinstance(obj, ObjectId):
-            return f'ObjectId({str(obj)})'
+            return f"ObjectId({str(obj)})"
         return super(MongoJSONEncoder, self).default(obj)
 
 
 class MongoQuery:
-
     def __init__(self, collection, pipline=None):
         self.collection = collection
         self.pipeline = []
@@ -30,10 +28,8 @@ class MongoQuery:
         #     'args': [{c: 3}]
         # }
 
-        if 'method' not in step \
-                or 'args' not in step \
-                or not isinstance(step['args'], list):
-            raise AttributeError(f'Wrong step {step}')
+        if "method" not in step or "args" not in step or not isinstance(step["args"], list):
+            raise AttributeError(f"Wrong step {step}")
 
         self.pipeline.append(step)
 
@@ -43,10 +39,8 @@ class MongoQuery:
     def __getattr__(self, item):
         # return callback to save step of pipeline
         def fnc(*args):
-            self.pipeline.append({
-                'method': item,
-                'args': args
-            })
+            self.pipeline.append({"method": item, "args": args})
+
         return fnc
 
     def __str__(self):
@@ -72,13 +66,13 @@ class MongoQuery:
          "db_test.fish.find({a:1}, {b:2}).sort({c:3})"
         """
 
-        call_str = f'db.{self.collection}'
+        call_str = f"db.{self.collection}"
         for step in self.pipeline:
             args_str = []
-            for arg in step['args']:
+            for arg in step["args"]:
                 args_str.append(MongoJSONEncoder().encode(arg))
-            call_str += f'.{step["method"]}({",".join(args_str)})'
+            call_str += f".{step['method']}({','.join(args_str)})"
         return call_str
 
     def __repr__(self):
-        return f'MongoQuery({self.collection}, {str(self.pipeline)})'
+        return f"MongoQuery({self.collection}, {str(self.pipeline)})"

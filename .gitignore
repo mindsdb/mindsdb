@@ -64,3 +64,5 @@ node_modules
 
 mindsdb/**/pyproject.toml
 mindsdb/**/uv.lock
+
+reports/

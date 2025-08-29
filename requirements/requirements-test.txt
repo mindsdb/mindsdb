@@ -5,6 +5,10 @@ pytest >= 8.3.5, < 9.0.0
 pytest-subtests
 pytest-xdist
 pytest-cov 
+pytest-json-report
+pytest-metadata 
+pytest-json-report
+pytest-metadata
 lightwood>=25.9.1.0  # This is required for tests/unit/test_executor.py. These tests need to be refactored.
 responses
 coveralls

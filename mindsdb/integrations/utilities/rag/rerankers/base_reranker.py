@@ -13,7 +13,14 @@ from typing import Any, List, Optional, Tuple
 from openai import AsyncOpenAI, AsyncAzureOpenAI
 from pydantic import BaseModel
 
-from mindsdb.integrations.utilities.rag.settings import DEFAULT_RERANKING_MODEL, DEFAULT_LLM_ENDPOINT
+from mindsdb.integrations.utilities.rag.settings import (
+    DEFAULT_RERANKING_MODEL, 
+    DEFAULT_LLM_ENDPOINT, 
+    DEFAULT_RERANKER_N, 
+    DEFAULT_RERANKER_LOGPROBS, 
+    DEFAULT_RERANKER_TOP_LOGPROBS, 
+    DEFAULT_RERANKER_MAX_TOKENS
+)
 from mindsdb.integrations.libs.base import BaseMLEngine
 
 log = logging.getLogger(__name__)
@@ -38,6 +45,10 @@ class BaseLLMReranker(BaseModel, ABC):
     request_timeout: float = 20.0  # Timeout for API requests
     early_stop: bool = True  # Whether to enable early stopping
     early_stop_threshold: float = 0.8  # Confidence threshold for early stopping
+    n: int = DEFAULT_RERANKER_N  # Number of completions to generate
+    logprobs: bool = DEFAULT_RERANKER_LOGPROBS  # Whether to include log probabilities
+    top_logprobs: int = DEFAULT_RERANKER_TOP_LOGPROBS  # Number of top log probabilities to include
+    max_tokens: int = DEFAULT_RERANKER_MAX_TOKENS  # Maximum tokens to generate
 
     class Config:
         arbitrary_types_allowed = True
@@ -306,10 +317,10 @@ class BaseLLMReranker(BaseModel, ABC):
                 },
             ],
             temperature=self.temperature,
-            n=1,
-            logprobs=True,
-            top_logprobs=4,
-            max_tokens=3,
+            n=self.n,
+            logprobs=self.logprobs,
+            top_logprobs=self.top_logprobs,
+            max_tokens=self.max_tokens,
         )
 
         # Extract response and logprobs

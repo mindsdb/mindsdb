@@ -14,6 +14,7 @@ from mindsdb.interfaces.skills.custom.text2sql.mindsdb_kb_tools import (
 
 
 class MindsDBSQLToolkit(SQLDatabaseToolkit):
+    include_tables_tools: bool = True
     include_knowledge_base_tools: bool = True
 
     def get_tools(self, prefix="") -> List[BaseTool]:
@@ -176,7 +177,12 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
         )
 
         # Return standard SQL tools and knowledge base tools
-        return sql_tools + [
+        kb_tools = [
             kb_list_tool,
             kb_info_tool,
         ]
+
+        if not self.include_tables_tools:
+            return kb_tools
+        else:
+            return sql_tools + kb_tools

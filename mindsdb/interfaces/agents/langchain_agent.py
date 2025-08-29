@@ -298,6 +298,11 @@ class LangchainAgent:
         if "prompt_template" in args:
             logger.info(f"Using prompt template: {args['prompt_template'][:50]}...")
 
+        if "model_name" not in args:
+            raise ValueError(
+                "No model name provided for agent. Provide it in the model parameter or in the default model setup."
+            )
+
         return args
 
     def get_metadata(self) -> Dict:

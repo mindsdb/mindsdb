@@ -5,7 +5,6 @@ import sys
 import os
 import pytest
 
-# Corrected project_root calculation
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 

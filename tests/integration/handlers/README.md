@@ -59,7 +59,7 @@ Run pytest with the --json-report flag to generate a detailed JSON file of the t
 # Create the reports directory if it doesn't exist
 mkdir -p reports
 
-# Run pytest and save the report
+# Run pytest and save the report.
 pytest --json-report --json-report-file=reports/report.json
 ```
 

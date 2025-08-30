@@ -56,7 +56,7 @@ Run pytest with the --json-report flag to generate a detailed JSON file of the t
 
 ```Bash
 
-# Create the reports directory if it doesn't exist
+# Create the reports directory if it doesn't exist.
 mkdir -p reports
 
 # Run pytest and save the report.

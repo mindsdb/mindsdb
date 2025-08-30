@@ -49,6 +49,7 @@ class BaseLLMReranker(BaseModel, ABC):
     logprobs: bool = DEFAULT_RERANKER_LOGPROBS  # Whether to include log probabilities
     top_logprobs: int = DEFAULT_RERANKER_TOP_LOGPROBS  # Number of top log probabilities to include
     max_tokens: int = DEFAULT_RERANKER_MAX_TOKENS  # Maximum tokens to generate
+    valid_class_tokens: List[str] = ["1", "2", "3", "4"]  # Valid class tokens to look for in the response
 
     class Config:
         arbitrary_types_allowed = True
@@ -348,18 +349,24 @@ class BaseLLMReranker(BaseModel, ABC):
         # Extract response and logprobs
         token_logprobs = response.choices[0].logprobs.content
 
-        # Find the token that contains the class number (1, 2, 3, or 4)
+        # Find the token that contains the class number
         # Instead of just taking the last token, search for the actual class number token
         class_token_logprob = None
         for token_logprob in token_logprobs:
-            if token_logprob.token in ["1", "2", "3", "4"]:
+            if token_logprob.token in self.valid_class_tokens:
                 class_token_logprob = token_logprob
                 break
 
         # If we couldn't find a class token, fall back to the last non-empty token
         if class_token_logprob is None:
             log.warning("No class token logprob found, using the last token as fallback")
-            class_token_logprob = token_logprobs[-1]
+            if not token_logprobs:
+                log.error("No class token logprob found and token_logprobs is empty. Cannot compute relevance score.")
+                rerank_data = {"document": document, "relevance_score": 0.0}
+                log.debug("End search_relevancy_score")
+                return rerank_data
+            else:
+                class_token_logprob = token_logprobs[-1]
 
         top_logprobs = class_token_logprob.top_logprobs
 

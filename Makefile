@@ -45,6 +45,10 @@ integration_tests_slow:
 integration_tests_debug:
 	pytest $(PYTEST_ARGS_DEBUG) tests/integration/
 
+datasource_integration_tests:
+# 	pytest -v -m dsi tests/integration/handlers/
+	pytest $(PYTEST_ARGS) tests/integration/handlers/
+	
 unit_tests:
 	# We have to run executor tests separately because they do weird things that break everything else
 	env PYTHONPATH=./ pytest $(PYTEST_ARGS) tests/unit/executor/  

@@ -76,9 +76,9 @@ def pytest_sessionfinish(session: Any, exitstatus: int) -> None:
         logging.info("--- DSI: Cleaning up generated test file ---")
         try:
             generated_test_file = project_root / 'tests' / 'integration' / 'handlers' / 'test_generated_integrations.py'
-            # if generated_test_file.exists():
-            #     os.remove(generated_test_file)
-            #     logging.info(f"DSI: Successfully removed {generated_test_file}")
+            if generated_test_file.exists():
+                os.remove(generated_test_file)
+                logging.info(f"DSI: Successfully removed {generated_test_file}")
         except Exception as e:
             logging.error(f"DSI: Failed to clean up generated test file: {e}")
 

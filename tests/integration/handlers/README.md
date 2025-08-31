@@ -56,7 +56,7 @@ Run pytest with the --json-report flag to generate a detailed JSON file of the t
 
 ```Bash
 
-# Create the reports directory if it doesn't exist.
+# Create the reports directory if it doesn't exist
 mkdir -p reports
 
 # Run pytest and save the report.
@@ -89,4 +89,4 @@ Here is the prioritized list of the next data sources we plan to integrate into 
 
 - MySQL ✅
 
-- Redshift (X) 
+- Redshift ❌

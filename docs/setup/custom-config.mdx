@@ -200,7 +200,7 @@ Currently, the supported APIs are:
 Connection parameters for the HTTP API include:
 
 * `host`: Specifies the IP address or hostname where the API should run. For example, `"127.0.0.1"` indicates the API will run locally.
-* `port`: Defines the port number on which the API will listen for incoming requests. The default ports are `47334` for HTTP, `47335` for MySQL.
+* `port`: Defines the port number on which the API will listen for incoming requests. The default ports are `47334` for HTTP, and `47335` for MySQL.
 * `restart_on_failure`: If it is set to `true` (and `max_restart_count` is not reached), the restart of MindsDB will be attempted after the MindsDB process was killed - with code 9 on Linux and MacOS, or for any reason on Windows.
 * `max_restart_count`: This defines how many times the restart attempts can be made. Note that 0 stands for no limit.
 * `max_restart_interval_seconds`: This defines the time limit during which there can be no more than `max_restart_count` restart attempts. Note that 0 stands for no time limit, which means there would be a maximum of `max_restart_count` restart attempts allowed.
@@ -488,7 +488,7 @@ First, create a `config.json` file.
            "enabled": true,
            "allowed_origins": ["https://example.com"],
            "disallowed_origins": ["http://example.com"]
-    }
+    },
     "web_crawling_allowed_sites": []
 }
 ```

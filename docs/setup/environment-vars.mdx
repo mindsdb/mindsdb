@@ -130,3 +130,33 @@ If this environment variable is set or modified after MindsDB has started, the d
 Set the `MINDSDB_MCP_ACCESS_TOKEN` environment variable to enable user authentication for accessing MindsDB's MCP Server.
 
 Learn more [here](/mcp/usage).
+
+### Example
+
+<CodeGroup>
+    ```bash Docker
+    docker run --name mindsdb_container -e MINDSDB_MCP_ACCESS_TOKEN='abc123' -e MINDSDB_APIS=http,mysql,mcp -p 47334:47334 -p 47335:47335 -p 47337:47337 mindsdb/mindsdb
+    ```
+
+    ```bash Shell
+    export MINDSDB_MCP_ACCESS_TOKEN='abc123'
+    ```
+</CodeGroup>
+
+## MindsDB's PID File
+
+When running MindsDB via [Docker](/setup/self-hosted/docker) or [Docker Extension](/setup/self-hosted/docker-desktop), the PID file is not used by default. Users can opt for enabling the PID file by defining the `USE_PIDFILE` environment variable.
+
+If used, the PID file is stored in the temp directory (`$TMPDIR` on MacOS and Linux, `%TEMP%` on Windows) under the `mindsdb` folder.
+
+### Example
+
+<CodeGroup>
+    ```bash Docker
+    docker run --name mindsdb_container -e USE_PIDFILE=1 -e MINDSDB_APIS=http,mysql -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+    ```
+
+    ```bash Shell
+    export USE_PIDFILE=1
+    ```
+</CodeGroup>

@@ -6,7 +6,6 @@ pandas == 2.2.3
 python-multipart == 0.0.18
 cryptography>=35.0
 psycopg[binary]
-pymongo[srv] == 4.8.0
 psutil~=7.0
 sqlalchemy >= 2.0.0, < 3.0.0
 psycopg2-binary  # This is required for using sqlalchemy with postgres

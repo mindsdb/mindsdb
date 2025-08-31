@@ -18,11 +18,6 @@
             "database": "mindsdb",
             "ssl": true
         },
-        "mongodb": {
-            "host": "0.0.0.0",
-            "port": "47336",
-            "database": "mindsdb"
-        },
         "mcp": {
             "host": "0.0.0.0",
             "port": "47337"

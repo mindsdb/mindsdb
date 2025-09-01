@@ -166,7 +166,13 @@ class RaindropsTable(APITable):
                     raindrops_df = raindrops_df[available_columns]
 
         # Apply limit if needed
-        if result_limit and len(raindrops_df) > result_limit:
+        # Don't apply the default limit (20) when local filters were used, as this would
+        # artificially limit results when the user didn't specify a LIMIT
+        should_apply_limit = result_limit and (
+            result_limit != 20  # Not the default limit
+            or not local_filter_conditions  # No local filters were applied
+        )
+        if should_apply_limit and len(raindrops_df) > result_limit:
             raindrops_df = raindrops_df.head(result_limit)
 
         return raindrops_df
@@ -801,7 +807,10 @@ class RaindropsTable(APITable):
         if local_filter_conditions:
             # If we have local filters, fetch more data to account for filtering
             # We'll apply the original limit after local filtering
-            fetch_limit = result_limit * 5 if result_limit else 1000  # Fetch more data for local filtering
+            if result_limit and result_limit != 20:  # 20 is the default limit when no LIMIT is specified
+                fetch_limit = result_limit * 5  # Fetch more data for local filtering
+            else:
+                fetch_limit = None  # Fetch all data when no limit specified or default limit
         else:
             fetch_limit = result_limit
 

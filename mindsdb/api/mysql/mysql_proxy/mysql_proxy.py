@@ -223,6 +223,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.session.is_ssl = True
 
             ssl_context = ssl.SSLContext()
+            ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
             ssl_context.load_cert_chain(self.server.cert_path)
             ssl_socket = ssl_context.wrap_socket(
                 self.socket, server_side=True, do_handshake_on_connect=True

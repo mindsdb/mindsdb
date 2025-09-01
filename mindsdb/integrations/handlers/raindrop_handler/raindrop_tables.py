@@ -590,6 +590,9 @@ class RaindropsTable(APITable):
             "complex_filters": {},
         }
 
+        # Collect all search-related conditions for potential optimization
+        search_conditions = []
+
         for condition in conditions:
             # Handle different condition formats
             if isinstance(condition, list) and len(condition) >= 3:
@@ -603,11 +606,17 @@ class RaindropsTable(APITable):
                 logger.warning(f"Skipping malformed condition: {condition}")
                 continue
 
+            # Collect search-related conditions for optimization
+            if self._is_search_condition(column, op):
+                search_conditions.append((column, op, value, condition))
+
             # Categorize conditions based on API support and complexity
+            # Defer search-related conditions until after optimization
             if column == "collection_id" and op == "=":
                 parsed["collection_id"] = value
                 parsed["api_supported"].append(condition)
-            elif (column in ["search", "title"]) and op == "=":
+            elif column == "search" and op == "=":
+                # Only handle direct search conditions, defer field-specific searches
                 parsed["search"] = value
                 parsed["api_supported"].append(condition)
             elif (column in ["_id", "id"]) and op in ["=", "in"]:
@@ -621,11 +630,22 @@ class RaindropsTable(APITable):
                 parsed["local_filters"].append(condition)
             elif column == "important" and op == "=":
                 parsed["local_filters"].append(condition)
-            elif column in ["tags", "domain", "excerpt", "note"] and op in ["=", "like", "in"]:
+            elif column in ["domain"] and op in ["=", "like", "in"]:
+                # Only handle domain, defer other text fields until optimization
                 parsed["local_filters"].append(condition)
-            else:
-                # For unsupported conditions, add to local filtering
+            elif not self._is_search_condition(column, op):
+                # For non-search conditions, add to local filtering immediately
                 parsed["local_filters"].append(condition)
+            # Search-related conditions (title, excerpt, note, tags with = or like) are deferred
+
+        # Optimize search conditions before final categorization
+        self._optimize_search_conditions(search_conditions, parsed)
+
+        # Now categorize any remaining search conditions that weren't optimized
+        for column, op, value, original_condition in search_conditions:
+            if original_condition not in parsed["api_supported"] and original_condition not in parsed["local_filters"]:
+                # This condition wasn't optimized, add it to local filters
+                parsed["local_filters"].append(original_condition)
 
         # Build complex filters for advanced API endpoint if we have multiple criteria
         if parsed["search"] or parsed["local_filters"]:
@@ -656,6 +676,113 @@ class RaindropsTable(APITable):
                 parsed["complex_filters"] = complex_filters
 
         return parsed
+
+    def _is_search_condition(self, column: str, op: str) -> bool:
+        """Check if a condition is search-related"""
+        return ((column in ["search", "title", "excerpt", "note", "tags"]) and op in ["=", "like"]) or (
+            column == "search" and op == "="
+        )
+
+    def _optimize_search_conditions(self, search_conditions: List, parsed: Dict[str, Any]) -> None:
+        """Optimize multiple search conditions into a single API search query"""
+        if not search_conditions:
+            return
+
+        # Check if we have a direct search condition (user explicitly specified search)
+        has_direct_search = any(column == "search" and op == "=" for column, op, _, _ in search_conditions)
+
+        # If user specified a direct search, still process other conditions but don't combine them
+        # into the search query - just mark them as API supported if they can be optimized
+
+        # Collect all text-based search terms
+        search_terms = []
+        like_conditions = []
+
+        for column, op, value, original_condition in search_conditions:
+            if op == "=" and column in ["title", "excerpt", "note"]:
+                # If we have a direct search, don't combine field-specific searches
+                # but still mark them as API supported if they can be optimized
+                if not has_direct_search:
+                    # Convert field-specific searches to general search terms
+                    if column == "title":
+                        search_terms.append(f"title:{value}")
+                    elif column == "excerpt":
+                        search_terms.append(f"excerpt:{value}")
+                    elif column == "note":
+                        search_terms.append(f"note:{value}")
+
+                # Remove from local filters and mark as API supported
+                if original_condition in parsed["local_filters"]:
+                    parsed["local_filters"].remove(original_condition)
+                if original_condition not in parsed["api_supported"]:
+                    parsed["api_supported"].append(original_condition)
+
+            elif op == "like" and column in ["title", "excerpt", "note", "tags"]:
+                like_conditions.append((column, op, value, original_condition))
+
+        # If we have multiple field-specific searches and no direct search, combine them
+        if search_terms and not has_direct_search:
+            combined_search = " ".join(search_terms)
+            if len(search_terms) > 1:
+                # For multiple terms, use AND logic
+                combined_search = f"({' AND '.join(search_terms)})"
+
+            parsed["search"] = combined_search
+
+        # Optimize simple LIKE patterns that can use API search
+        for column, op, value, original_condition in like_conditions:
+            if self._can_use_api_search_for_like(column, value):
+                # Convert simple LIKE patterns to API search
+                api_search_term = self._convert_like_to_api_search(column, value)
+                if api_search_term:
+                    if not has_direct_search:
+                        if parsed["search"]:
+                            parsed["search"] += f" {api_search_term}"
+                        else:
+                            parsed["search"] = api_search_term
+
+                    # Remove from local filters and mark as API supported
+                    if original_condition in parsed["local_filters"]:
+                        parsed["local_filters"].remove(original_condition)
+                    if original_condition not in parsed["api_supported"]:
+                        parsed["api_supported"].append(original_condition)
+
+    def _can_use_api_search_for_like(self, column: str, value: str) -> bool:
+        """Check if a LIKE pattern can be efficiently handled by API search"""
+        if not isinstance(value, str):
+            return False
+
+        # Only optimize simple patterns that start and end with %
+        if not (value.startswith("%") and value.endswith("%")):
+            return False
+
+        # Remove % and check if it's a simple word/pattern
+        pattern = value.strip("%")
+
+        # Don't optimize if pattern contains regex special chars, % in middle, or is too short
+        if len(pattern) < 3 or any(char in pattern for char in ".*+?^$()[]{}|\\") or "%" in pattern:
+            return False
+
+        return column in ["title", "excerpt", "note", "tags"]
+
+    def _convert_like_to_api_search(self, column: str, value: str) -> str:
+        """Convert LIKE pattern to API search format"""
+        if not isinstance(value, str):
+            return None
+
+        pattern = value.strip("%")
+
+        # Create field-specific search term
+        if column == "title":
+            return f"title:{pattern}"
+        elif column == "excerpt":
+            return f"excerpt:{pattern}"
+        elif column == "note":
+            return f"note:{pattern}"
+        elif column == "tags":
+            return f"tag:{pattern}"
+
+        return pattern
 
     def _can_use_advanced_filters(self, complex_filters: Dict[str, Any]) -> bool:
         """Check if we can use the advanced filtering endpoint"""

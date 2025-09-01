@@ -264,17 +264,25 @@ PARAMETERS = {
 SELECT * FROM raindrop_db.raindrops;
 
 -- Get bookmarks from a specific collection
-SELECT * FROM raindrop_db.raindrops 
+SELECT * FROM raindrop_db.raindrops
 WHERE collection_id = 12345;
 
--- Search for bookmarks
-SELECT title, link, tags FROM raindrop_db.raindrops 
-WHERE search = 'programming' 
+-- Search for bookmarks (enhanced search capabilities)
+SELECT title, link, tags FROM raindrop_db.raindrops
+WHERE search = 'programming'
 LIMIT 10;
 
+-- Advanced search with multiple field searches (automatically optimized)
+SELECT * FROM raindrop_db.raindrops
+WHERE title = 'Python Tutorial' AND excerpt = 'Learn Python';
+
+-- Optimized LIKE patterns (automatically converted to API search)
+SELECT * FROM raindrop_db.raindrops
+WHERE title LIKE '%python%' OR excerpt LIKE '%tutorial%';
+
 -- Get bookmarks with specific tags
-SELECT * FROM raindrop_db.raindrops 
-WHERE title LIKE '%python%' 
+SELECT * FROM raindrop_db.raindrops
+WHERE title LIKE '%python%'
 ORDER BY created DESC;
 
 -- Get important bookmarks
@@ -538,6 +546,17 @@ The handler includes comprehensive error handling:
 - **SQL Interface**: User-friendly SQL interface for bulk operations
 - **Enhanced Documentation**: Comprehensive examples for bulk move operations
 - **Test Coverage**: Complete unit test suite for bulk operations functionality
+
+### Version 0.0.6 Improvements
+- **Enhanced Full-Text Search**: Improved search capabilities with automatic optimization
+- **Multi-Field Search**: Support for searching across title, excerpt, note, and tags fields
+- **Smart LIKE Optimization**: Automatic conversion of simple LIKE patterns to API search
+- **Field-Specific Search**: Convert field-specific searches to optimized API queries
+- **Search Query Combination**: Intelligent combination of multiple search conditions
+- **Preserved User Intent**: Respect explicit search queries while optimizing others
+- **Performance Optimization**: Reduced local filtering by leveraging API search capabilities
+- **Backward Compatibility**: All existing search functionality remains unchanged
+- **Comprehensive Test Coverage**: 10 additional tests for search optimization features
 
 ### Dependency Management
 - Removed duplicate `requests` dependency from handler-specific requirements.txt

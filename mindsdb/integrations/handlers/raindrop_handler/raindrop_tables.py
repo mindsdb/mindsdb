@@ -1144,15 +1144,9 @@ class CollectionsTable(APITable):
         if not self.handler.connection:
             self.handler.connect()
 
-        # Get both root and child collections
-        root_response = self.handler.connection.get_collections()
-        child_response = self.handler.connection.get_child_collections()
-
-        all_collections = []
-        all_collections.extend(root_response.get("items", []))
-        all_collections.extend(child_response.get("items", []))
-
-        return all_collections
+        # Get all collections (root and nested) from the main collections endpoint
+        response = self.handler.connection.get_collections()
+        return response.get("items", [])
 
     def _normalize_collection_data(self, df: pd.DataFrame) -> pd.DataFrame:
         """Normalize collection data for consistent column structure"""

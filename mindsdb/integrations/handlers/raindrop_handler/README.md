@@ -570,6 +570,15 @@ The handler includes comprehensive error handling:
 - **Error Handling Compatibility**: Ensured error handling matches API error response formats
 - **Comprehensive Compatibility Tests**: 9 additional tests covering all aspects of API compatibility
 
+### Version 0.0.8 Improvements
+- **Fixed Collections Query Error**: Resolved 404 error when querying collections due to invalid `/collections/children` endpoint
+- **Simplified Collections API**: Removed separate child collections call, using single `/collections` endpoint for all collections
+- **Updated Collections Logic**: Modified `get_collections()` to return both root and nested collections from single API call
+- **Enhanced Error Handling**: Improved error handling for collections queries
+- **Updated Test Suite**: Fixed existing tests to work with new collections API approach
+- **Collections Endpoint Tests**: Added comprehensive tests for collections endpoint fix and table integration
+- **API Compatibility Enhancement**: Further improved compatibility by fixing collections endpoint issues
+
 ### Dependency Management
 - Removed duplicate `requests` dependency from handler-specific requirements.txt
 - All dependencies are now properly managed through the main requirements.txt file

@@ -846,13 +846,10 @@ class TestCollectionsTable(unittest.TestCase):
 
     def test_get_collections(self):
         """Test get_collections method"""
+        # Mock get_collections to return both root and child collections
         self.handler.connection.get_collections.return_value = {
             "result": True,
-            "items": [{"_id": 123, "title": "Root Collection"}],
-        }
-        self.handler.connection.get_child_collections.return_value = {
-            "result": True,
-            "items": [{"_id": 456, "title": "Child Collection"}],
+            "items": [{"_id": 123, "title": "Root Collection"}, {"_id": 456, "title": "Child Collection"}],
         }
 
         result = self.table.get_collections()
@@ -871,7 +868,6 @@ class TestCollectionsTable(unittest.TestCase):
 
         # Mock the API responses
         self.handler.connection.get_collections.return_value = {"result": True, "items": sample_data}
-        self.handler.connection.get_child_collections.return_value = {"result": True, "items": []}
 
         # Mock the SELECT query components
         with (
@@ -911,7 +907,6 @@ class TestCollectionsTable(unittest.TestCase):
 
         # Mock the API responses
         self.handler.connection.get_collections.return_value = {"result": True, "items": sample_data}
-        self.handler.connection.get_child_collections.return_value = {"result": True, "items": []}
 
         # Mock the SELECT query components
         with (
@@ -1716,7 +1711,6 @@ class TestAPICompatibility(unittest.TestCase):
             ("/raindrops/123", "PUT"),
             ("/raindrops/123", "DELETE"),
             ("/collections", "GET"),
-            ("/collections/children", "GET"),  # Fixed from childrens
             ("/collection/789", "GET"),
             ("/collection", "POST"),
             ("/collection/789", "PUT"),
@@ -1875,6 +1869,60 @@ class TestAPICompatibility(unittest.TestCase):
         expected_auth = f"Bearer {self.client.api_key}"
         self.assertEqual(self.client.headers["Authorization"], expected_auth)
         self.assertEqual(self.client.headers["Content-Type"], "application/json")
+
+    def test_collections_endpoint_fix(self):
+        """Test that collections endpoint works correctly without children endpoint"""
+        # Mock the get_collections to return all collections
+        self.client._make_request = Mock(
+            return_value={
+                "result": True,
+                "items": [
+                    {"_id": 123, "title": "Root Collection"},
+                    {"_id": 456, "title": "Child Collection", "parent": {"$id": 123}},
+                ],
+            }
+        )
+
+        # Test that get_collections works without calling children endpoint
+        response = self.client.get_collections()
+
+        # Verify the call was made correctly
+        self.client._make_request.assert_called_once_with("GET", "/collections")
+
+        # Verify response structure
+        self.assertIn("result", response)
+        self.assertIn("items", response)
+        self.assertEqual(len(response["items"]), 2)
+
+    def test_collections_table_integration(self):
+        """Test that collections table works correctly with the fix"""
+        # Mock handler and connection
+        mock_handler = Mock()
+        mock_connection = Mock()
+        mock_handler.connection = mock_connection
+
+        # Mock get_collections to return all collections
+        mock_connection.get_collections.return_value = {
+            "items": [
+                {"_id": 123, "title": "Root Collection"},
+                {"_id": 456, "title": "Child Collection", "parent": {"$id": 123}},
+            ]
+        }
+
+        # Create collections table and test get_collections method
+        collections_table = CollectionsTable(mock_handler)
+        result = collections_table.get_collections()
+
+        # Verify that get_collections was called (not get_child_collections)
+        mock_connection.get_collections.assert_called_once()
+
+        # Verify that get_child_collections was NOT called
+        mock_connection.get_child_collections.assert_not_called()
+
+        # Verify result
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["_id"], 123)
+        self.assertEqual(result[1]["_id"], 456)
 
 
 class TestSearchOptimizations(unittest.TestCase):

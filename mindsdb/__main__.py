@@ -11,6 +11,7 @@ import asyncio
 import secrets
 import traceback
 import threading
+import shutil
 from enum import Enum
 from dataclasses import dataclass, field
 from typing import Callable, Optional, Tuple, List
@@ -158,6 +159,16 @@ def close_api_gracefully(trunc_processes_struct):
                 pass
     except KeyboardInterrupt:
         sys.exit(0)
+
+
+def clean_mindsdb_tmp_dir():
+    """Clean the MindsDB tmp dir at exit."""
+    temp_dir = config["paths"]["tmp"]
+    for file in temp_dir.iterdir():
+        if file.is_dir():
+            shutil.rmtree(file)
+        else:
+            file.unlink()
 
 
 def set_error_model_status_by_pids(unexisting_pids: List[int]):
@@ -532,6 +543,7 @@ if __name__ == "__main__":
             set_api_status(trunc_process_data.name, True)
 
     atexit.register(close_api_gracefully, trunc_processes_struct=trunc_processes_struct)
+    atexit.register(clean_mindsdb_tmp_dir)
 
     async def wait_api_start(api_name, pid, port):
         timeout = 60
@@ -561,11 +573,6 @@ if __name__ == "__main__":
                 logger.info(f"{api_name} API: started on {port}")
             else:
                 logger.error(f"ERROR: {api_name} API cant start on {port}")
-        
-        # Log the final API status
-        from mindsdb.utilities.api_status import get_api_status
-        final_status = get_api_status()
-        logger.info(f"Final API status: {final_status}")
 
     async def join_process(trunc_process_data: TrunkProcessData):
         finish = False

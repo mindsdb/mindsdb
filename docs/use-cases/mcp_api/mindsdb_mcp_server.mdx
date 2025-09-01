@@ -16,13 +16,13 @@ MindsDB MCP API runs on port 47337 by default.
 To enable the MCP API, you can use the [`MINDSDB_APIS` environment variable](/setup/environment-vars#mindsdb-apis):
 
 ```bash
-export MINDSDB_APIS='http,mysql,mongodb,postgres,mcp'
+export MINDSDB_APIS='http,mysql,postgres,mcp'
 ```
 
 Or, specify it when starting MindsDB:
 
 ```bash
-python -m mindsdb --api http,mysql,mongodb,postgres,mcp
+python -m mindsdb --api http,mysql,postgres,mcp
 ```
 
 <Tip>

@@ -31,10 +31,12 @@ def generate_pat() -> str:
     return token
 
 
-def verify_pat(raw_token: str) -> Optional[str]:
+def verify_pat(raw_token: str) -> bool:
     """Verify if the raw_token matches a stored fingerprint.
     Returns token_id if valid, None if not.
     """
+    if not raw_token:
+        return False
     fp = get_pat_fingerprint(raw_token)
     for stored_fp in TOKENS:
         if hmac.compare_digest(fp, stored_fp):
@@ -44,6 +46,8 @@ def verify_pat(raw_token: str) -> Optional[str]:
 
 def revoke_pat(raw_token: str) -> bool:
     """Revoke raw_token from active tokens"""
+    if not raw_token:
+        return False
     fp = get_pat_fingerprint(raw_token)
     for stored_fp in TOKENS:
         if hmac.compare_digest(fp, stored_fp):

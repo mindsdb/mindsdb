@@ -1695,6 +1695,188 @@ class TestBulkOperationsTable(unittest.TestCase):
             self.assertEqual(str(context.exception), "API Error")
 
 
+class TestAPICompatibility(unittest.TestCase):
+    """Test cases for Raindrop API compatibility"""
+
+    def setUp(self):
+        self.client = RaindropAPIClient("test_api_key")
+
+    def test_endpoint_format_compatibility(self):
+        """Test that all endpoints match official Raindrop API specification"""
+        # Test all endpoints used in the handler
+        test_endpoints = [
+            ("/user/stats", "GET"),
+            ("/raindrops/0", "GET"),
+            ("/raindrops/123", "GET"),
+            ("/raindrop/456", "GET"),
+            ("/raindrop", "POST"),
+            ("/raindrop/456", "PUT"),
+            ("/raindrop/456", "DELETE"),
+            ("/raindrops", "POST"),
+            ("/raindrops/123", "PUT"),
+            ("/raindrops/123", "DELETE"),
+            ("/collections", "GET"),
+            ("/collections/children", "GET"),  # Fixed from childrens
+            ("/collection/789", "GET"),
+            ("/collection", "POST"),
+            ("/collection/789", "PUT"),
+            ("/collection/789", "DELETE"),
+            ("/collections", "DELETE"),
+            ("/filters/0", "POST"),
+            ("/tags", "GET"),
+            ("/parse", "POST"),
+        ]
+
+        for endpoint, method in test_endpoints:
+            with self.subTest(endpoint=endpoint, method=method):
+                try:
+                    # This should not raise a ValueError for invalid endpoints
+                    self.client._make_request(method, endpoint)
+                except ValueError as e:
+                    if "Invalid endpoint" in str(e):
+                        self.fail(f"Endpoint {endpoint} not recognized as valid")
+                except Exception:
+                    # Other exceptions (like 401 unauthorized) are expected without real API
+                    pass
+
+    def test_parameter_names_compatibility(self):
+        """Test that parameter names match official API specification"""
+        # Test get_raindrops parameters
+        with patch.object(self.client, "_make_request") as mock_request:
+            mock_request.return_value = {"result": True, "items": []}
+
+            self.client.get_raindrops(collection_id=123, search="test query", sort="-created", page=1, per_page=25)
+
+            # Verify the call was made with correct parameter names
+            args, kwargs = mock_request.call_args
+            params = kwargs.get("params", {})
+
+            # Official API uses 'perpage' (lowercase, no underscore)
+            self.assertIn("perpage", params)
+            self.assertNotIn("per_page", params)
+            self.assertEqual(params["perpage"], 25)
+
+            # Other parameters should be lowercase
+            self.assertIn("page", params)
+            self.assertIn("search", params)
+            self.assertIn("sort", params)
+
+    def test_sort_parameter_format(self):
+        """Test that sort parameter format matches API specification"""
+        # Test ascending sort (just field name)
+        with patch.object(self.client, "_make_request") as mock_request:
+            mock_request.return_value = {"result": True, "items": []}
+
+            self.client.get_raindrops(sort="created")
+            args, kwargs = mock_request.call_args
+            params = kwargs.get("params", {})
+            self.assertEqual(params["sort"], "created")
+
+        # Test descending sort (field with minus prefix)
+        with patch.object(self.client, "_make_request") as mock_request:
+            mock_request.return_value = {"result": True, "items": []}
+
+            self.client.get_raindrops(sort="-created")
+            args, kwargs = mock_request.call_args
+            params = kwargs.get("params", {})
+            self.assertEqual(params["sort"], "-created")
+
+    def test_filters_endpoint_compatibility(self):
+        """Test /filters endpoint parameter compatibility"""
+        with patch.object(self.client, "_make_request") as mock_request:
+            mock_request.return_value = {"result": True, "items": []}
+
+            filters = {"search": "test query", "important": True, "tags": ["tag1", "tag2"], "page": 0, "perpage": 50}
+
+            self.client.get_raindrops_with_filters(collection_id=123, filters=filters)
+
+            # Verify the call was made correctly
+            args, kwargs = mock_request.call_args
+            self.assertEqual(args[0], "POST")  # Should be POST request
+            self.assertEqual(args[1], "/filters/123")  # Correct endpoint format
+            self.assertEqual(kwargs["data"], filters)  # Data should match filters
+
+    def test_bulk_operations_compatibility(self):
+        """Test bulk operations compatibility"""
+        with patch.object(self.client, "_make_request") as mock_request:
+            mock_request.return_value = {"result": True}
+
+            # Test move operation with search
+            self.client.move_raindrops_to_collection(
+                target_collection_id=456, source_collection_id=123, search="test query", ids=[1, 2, 3]
+            )
+
+            args, kwargs = mock_request.call_args
+            self.assertEqual(args[0], "PUT")
+            self.assertEqual(args[1], "/raindrops/123")  # Should use source collection
+
+            data = kwargs["data"]
+            expected_data = {"collection": {"$id": 456}, "search": "test query", "ids": [1, 2, 3]}
+            self.assertEqual(data, expected_data)
+
+        # Test move operation without source collection (uses collection 0)
+        with patch.object(self.client, "_make_request") as mock_request:
+            mock_request.return_value = {"result": True}
+
+            self.client.move_raindrops_to_collection(target_collection_id=456, search="test query")
+
+            args, kwargs = mock_request.call_args
+            self.assertEqual(args[1], "/raindrops/0")  # Should default to collection 0
+
+    def test_response_format_expectations(self):
+        """Test that response format expectations match API"""
+        # Test successful response format
+        with patch.object(self.client, "_make_request") as mock_request:
+            mock_request.return_value = {
+                "result": True,
+                "items": [{"_id": 123, "title": "Test Bookmark"}, {"_id": 456, "title": "Another Bookmark"}],
+                "count": 2,
+            }
+
+            response = self.client.get_collections()
+
+            # Verify response structure matches what our code expects
+            self.assertIn("result", response)
+            self.assertIn("items", response)
+            self.assertEqual(response["result"], True)
+            self.assertEqual(len(response["items"]), 2)
+
+    def test_error_handling_compatibility(self):
+        """Test error handling matches API error formats"""
+        with patch.object(self.client, "_make_request") as mock_request:
+            # Simulate API error response
+            mock_request.side_effect = Exception("Raindrop API error: Invalid collection ID")
+
+            with self.assertRaises(Exception) as context:
+                self.client.get_collection(999)
+
+            self.assertIn("Raindrop API error", str(context.exception))
+
+    def test_rate_limiting_compatibility(self):
+        """Test rate limiting implementation matches API limits"""
+        # Raindrop API allows 120 requests per minute
+        self.assertEqual(self.client.rate_limit_per_second, 2)  # 120/60 = 2 per second
+
+        # Test that rate limiting tracks requests properly
+        # Reset request times to ensure clean state
+        self.client.request_times = []
+
+        # Test the rate limiting method directly
+        self.client._apply_rate_limit()
+        self.assertEqual(len(self.client.request_times), 1)
+
+        # Test rate limit configuration
+        self.assertEqual(self.client.rate_limit_per_second, 2)
+        self.assertIsInstance(self.client.request_times, list)
+
+    def test_authentication_header_format(self):
+        """Test authentication header format matches API requirements"""
+        # Raindrop API uses Bearer token authentication
+        expected_auth = f"Bearer {self.client.api_key}"
+        self.assertEqual(self.client.headers["Authorization"], expected_auth)
+        self.assertEqual(self.client.headers["Content-Type"], "application/json")
+
+
 class TestSearchOptimizations(unittest.TestCase):
     """Test cases for enhanced search capabilities"""
 

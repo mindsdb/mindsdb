@@ -1,6 +1,6 @@
 __title__ = "MindsDB Raindrop.io handler"
 __package_name__ = "mindsdb_raindrop_handler"
-__version__ = "0.0.3"
+__version__ = "0.0.4"
 __description__ = "MindsDB handler for Raindrop.io"
 __author__ = "Lukas Wolfsteiner <lukas@wolfsteiner.media>"
 __github__ = "https://github.com/mindsdb/mindsdb"

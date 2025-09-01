@@ -1277,3 +1277,228 @@ class TagsTable(APITable):
                 df[col] = None
 
         return df
+
+
+class ParseTable(APITable):
+    """The Raindrop.io Parse Table implementation for URL metadata extraction"""
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """
+        Parse URLs to extract metadata.
+
+        Parameters
+        ----------
+        query : ast.Select
+           Given SQL SELECT query
+
+        Returns
+        -------
+        pd.DataFrame
+            URL metadata from parsed URLs
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        select_statement_parser = SELECTQueryParser(query, "parse", self.get_columns())
+        (
+            selected_columns,
+            where_conditions,
+            order_by_conditions,
+            result_limit,
+        ) = select_statement_parser.parse_query()
+
+        # Extract URLs to parse from WHERE conditions
+        urls_to_parse = []
+
+        for condition in where_conditions:
+            # Handle different condition formats
+            if isinstance(condition, list) and len(condition) >= 3:
+                op, column, value = condition[0], condition[1], condition[2]
+            elif hasattr(condition, "op") and hasattr(condition, "column"):
+                op = getattr(condition, "op", "=")
+                column = condition.column
+                value = getattr(condition, "value", None)
+            else:
+                # Skip malformed conditions
+                logger.warning(f"Skipping malformed condition: {condition}")
+                continue
+
+            if column == "url" and op == "=" and isinstance(value, str):
+                urls_to_parse.append(value)
+            elif column == "url" and op == "in" and isinstance(value, list):
+                urls_to_parse.extend(value)
+
+        if not urls_to_parse:
+            raise ValueError(
+                "Please specify URL(s) to parse using WHERE url = 'https://...' or WHERE url IN ('url1', 'url2')"
+            )
+
+        # Parse URLs and collect results
+        parsed_results = []
+
+        for url in urls_to_parse:
+            try:
+                response = self.handler.connection.parse_url(url)
+                if response.get("result") and response.get("item"):
+                    parsed_item = response["item"]
+                    parsed_item["parsed_url"] = url  # Add original URL for reference
+                    parsed_results.append(parsed_item)
+                else:
+                    logger.warning(f"Failed to parse URL: {url}")
+                    # Add empty result for failed parsing
+                    parsed_results.append(
+                        {
+                            "parsed_url": url,
+                            "title": None,
+                            "excerpt": None,
+                            "domain": None,
+                            "type": None,
+                            "cover": None,
+                            "error": "Failed to parse URL",
+                        }
+                    )
+            except Exception as e:
+                logger.error(f"Error parsing URL {url}: {e}")
+                # Add error result
+                parsed_results.append(
+                    {
+                        "parsed_url": url,
+                        "title": None,
+                        "excerpt": None,
+                        "domain": None,
+                        "type": None,
+                        "cover": None,
+                        "error": str(e),
+                    }
+                )
+
+        # Convert to DataFrame
+        if parsed_results:
+            parse_df = pd.json_normalize(parsed_results)
+            parse_df = self._normalize_parse_data(parse_df)
+        else:
+            # Create empty DataFrame with all expected columns
+            parse_df = pd.DataFrame(columns=self.get_columns())
+
+        # Ensure all expected columns exist (defensive check)
+        expected_columns = self.get_columns()
+        for col in expected_columns:
+            if col not in parse_df.columns:
+                logger.warning(f"Missing column after normalization: {col}, adding as None")
+                parse_df[col] = None
+
+        # Apply filtering and ordering using the executor
+        select_statement_executor = SELECTQueryExecutor(
+            parse_df,
+            selected_columns,
+            [],
+            order_by_conditions,  # No additional filtering needed
+        )
+        parse_df = select_statement_executor.execute_query()
+
+        # Apply limit if needed
+        if result_limit and len(parse_df) > result_limit:
+            parse_df = parse_df.head(result_limit)
+
+        return parse_df
+
+    def insert(self, query: ast.Insert) -> None:
+        """
+        URL parsing is a read-only operation.
+        Use INSERT on the raindrops table to create bookmarks from parsed URLs.
+
+        Parameters
+        ----------
+        query : ast.Insert
+           Given SQL INSERT query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        NotImplementedError
+            URL parsing is read-only
+        """
+        raise NotImplementedError(
+            "URL parsing is a read-only operation. "
+            "Use INSERT on the raindrops table to create bookmarks from parsed URLs."
+        )
+
+    def update(self, query: ast.Update) -> None:
+        """
+        URL parsing is a read-only operation.
+
+        Parameters
+        ----------
+        query : ast.Update
+           Given SQL UPDATE query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        NotImplementedError
+            URL parsing is read-only
+        """
+        raise NotImplementedError("URL parsing is a read-only operation. Cannot update parsed URL metadata.")
+
+    def delete(self, query: ast.Delete) -> None:
+        """
+        URL parsing is a read-only operation.
+
+        Parameters
+        ----------
+        query : ast.Delete
+           Given SQL DELETE query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        NotImplementedError
+            URL parsing is read-only
+        """
+        raise NotImplementedError("URL parsing is a read-only operation. Cannot delete parsed URL metadata.")
+
+    def get_columns(self) -> List[str]:
+        """Get the column names for the parse table"""
+        return [
+            "parsed_url",
+            "title",
+            "excerpt",
+            "domain",
+            "type",
+            "cover",
+            "media",
+            "lastUpdate",
+            "error",
+        ]
+
+    def _normalize_parse_data(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Normalize parsed URL data for consistent column structure"""
+        if df.empty:
+            return df
+
+        # Convert dates
+        for date_col in ["lastUpdate"]:
+            try:
+                if date_col in df.columns:
+                    df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
+            except Exception as e:
+                logger.warning(f"Error processing date column {date_col}: {e}")
+
+        # Ensure ALL expected columns exist, even if empty
+        expected_columns = self.get_columns()
+        for col in expected_columns:
+            if col not in df.columns:
+                df[col] = None
+
+        return df

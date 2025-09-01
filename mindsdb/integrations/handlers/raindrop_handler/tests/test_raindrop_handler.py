@@ -3,7 +3,12 @@ from unittest.mock import Mock, patch
 import pandas as pd
 
 from mindsdb.integrations.handlers.raindrop_handler.raindrop_handler import RaindropHandler, RaindropAPIClient
-from mindsdb.integrations.handlers.raindrop_handler.raindrop_tables import RaindropsTable, CollectionsTable, TagsTable
+from mindsdb.integrations.handlers.raindrop_handler.raindrop_tables import (
+    RaindropsTable,
+    CollectionsTable,
+    TagsTable,
+    ParseTable,
+)
 
 
 class TestRaindropHandler(unittest.TestCase):
@@ -1215,6 +1220,310 @@ class TestTagsTable(unittest.TestCase):
         self.handler.connection.get_tags.assert_called_once()
         # Should return the items from the response
         self.assertEqual(result, expected_response["items"])
+
+
+class TestParseTable(unittest.TestCase):
+    """Test cases for ParseTable"""
+
+    def setUp(self):
+        self.handler = Mock()
+        self.handler.connection = Mock()
+        self.table = ParseTable(self.handler)
+
+    def test_get_columns(self):
+        """Test get_columns method"""
+        columns = self.table.get_columns()
+
+        expected_columns = [
+            "parsed_url",
+            "title",
+            "excerpt",
+            "domain",
+            "type",
+            "cover",
+            "media",
+            "lastUpdate",
+            "error",
+        ]
+
+        self.assertEqual(columns, expected_columns)
+
+    def test_select_single_url(self):
+        """Test select with single URL to parse"""
+        # Mock API response
+        mock_parsed_data = {
+            "title": "Test Article",
+            "excerpt": "This is a test article excerpt",
+            "domain": "example.com",
+            "type": "article",
+            "cover": "https://example.com/cover.jpg",
+            "media": [{"link": "https://example.com/image.jpg"}],
+            "lastUpdate": "2024-01-01T00:00:00Z",
+        }
+
+        # Mock the SELECT query components
+        with (
+            patch("mindsdb.integrations.handlers.raindrop_handler.raindrop_tables.SELECTQueryParser") as mock_parser,
+            patch(
+                "mindsdb.integrations.handlers.raindrop_handler.raindrop_tables.SELECTQueryExecutor"
+            ) as mock_executor,
+        ):
+            mock_parser_instance = Mock()
+            mock_parser_instance.parse_query.return_value = (
+                ["parsed_url", "title", "excerpt"],  # selected_columns
+                [["=", "url", "https://example.com/test"]],  # where_conditions
+                [],  # order_by_conditions
+                None,  # result_limit
+            )
+            mock_parser.return_value = mock_parser_instance
+
+            mock_executor_instance = Mock()
+            # Create DataFrame with expected parsed data
+            expected_df = pd.DataFrame(
+                [
+                    {
+                        "parsed_url": "https://example.com/test",
+                        "title": "Test Article",
+                        "excerpt": "This is a test article excerpt",
+                        "domain": "example.com",
+                        "type": "article",
+                        "cover": "https://example.com/cover.jpg",
+                        "media": [{"link": "https://example.com/image.jpg"}],
+                        "lastUpdate": "2024-01-01T00:00:00Z",
+                        "error": None,
+                    }
+                ]
+            )
+            mock_executor_instance.execute_query.return_value = expected_df
+            mock_executor.return_value = mock_executor_instance
+
+            # Mock the API call
+            self.handler.connection.parse_url.return_value = {"result": True, "item": mock_parsed_data}
+
+            query = Mock()
+            result = self.table.select(query)
+
+            # Verify API was called with correct URL
+            self.handler.connection.parse_url.assert_called_once_with("https://example.com/test")
+
+            # Should return DataFrame with parsed data
+            self.assertEqual(len(result), 1)
+            self.assertEqual(result["parsed_url"].iloc[0], "https://example.com/test")
+            self.assertEqual(result["title"].iloc[0], "Test Article")
+
+    def test_select_multiple_urls(self):
+        """Test select with multiple URLs using IN operator"""
+        urls = ["https://example1.com", "https://example2.com"]
+
+        # Mock API responses for each URL
+        mock_responses = [
+            {
+                "result": True,
+                "item": {"title": "Article 1", "excerpt": "Excerpt 1", "domain": "example1.com", "type": "article"},
+            },
+            {
+                "result": True,
+                "item": {"title": "Article 2", "excerpt": "Excerpt 2", "domain": "example2.com", "type": "article"},
+            },
+        ]
+
+        # Mock the SELECT query components
+        with (
+            patch("mindsdb.integrations.handlers.raindrop_handler.raindrop_tables.SELECTQueryParser") as mock_parser,
+            patch(
+                "mindsdb.integrations.handlers.raindrop_handler.raindrop_tables.SELECTQueryExecutor"
+            ) as mock_executor,
+        ):
+            mock_parser_instance = Mock()
+            mock_parser_instance.parse_query.return_value = (
+                ["parsed_url", "title"],  # selected_columns
+                [["in", "url", urls]],  # where_conditions
+                [],  # order_by_conditions
+                None,  # result_limit
+            )
+            mock_parser.return_value = mock_parser_instance
+
+            mock_executor_instance = Mock()
+            expected_df = pd.DataFrame(
+                [
+                    {"parsed_url": "https://example1.com", "title": "Article 1", "error": None},
+                    {"parsed_url": "https://example2.com", "title": "Article 2", "error": None},
+                ]
+            )
+            mock_executor_instance.execute_query.return_value = expected_df
+            mock_executor.return_value = mock_executor_instance
+
+            # Mock the API calls
+            self.handler.connection.parse_url.side_effect = mock_responses
+
+            query = Mock()
+            result = self.table.select(query)
+
+            # Verify API was called for each URL
+            self.assertEqual(self.handler.connection.parse_url.call_count, 2)
+            calls = self.handler.connection.parse_url.call_args_list
+            self.assertEqual(calls[0][0][0], "https://example1.com")
+            self.assertEqual(calls[1][0][0], "https://example2.com")
+
+            # Should return DataFrame with both parsed URLs
+            self.assertEqual(len(result), 2)
+
+    def test_select_no_url_specified(self):
+        """Test select without URL specification raises error"""
+        with (
+            patch("mindsdb.integrations.handlers.raindrop_handler.raindrop_tables.SELECTQueryParser") as mock_parser,
+        ):
+            mock_parser_instance = Mock()
+            mock_parser_instance.parse_query.return_value = (
+                ["parsed_url", "title"],  # selected_columns
+                [],  # where_conditions - no URL specified
+                [],  # order_by_conditions
+                None,  # result_limit
+            )
+            mock_parser.return_value = mock_parser_instance
+
+            query = Mock()
+            with self.assertRaises(ValueError) as context:
+                self.table.select(query)
+
+            self.assertIn("Please specify URL(s) to parse", str(context.exception))
+            self.assertIn("WHERE url =", str(context.exception))
+
+    def test_select_api_error_handling(self):
+        """Test select handles API errors gracefully"""
+        # Mock the SELECT query components
+        with (
+            patch("mindsdb.integrations.handlers.raindrop_handler.raindrop_tables.SELECTQueryParser") as mock_parser,
+            patch(
+                "mindsdb.integrations.handlers.raindrop_handler.raindrop_tables.SELECTQueryExecutor"
+            ) as mock_executor,
+        ):
+            mock_parser_instance = Mock()
+            mock_parser_instance.parse_query.return_value = (
+                ["parsed_url", "title", "error"],  # selected_columns
+                [["=", "url", "https://invalid-url.com"]],  # where_conditions
+                [],  # order_by_conditions
+                None,  # result_limit
+            )
+            mock_parser.return_value = mock_parser_instance
+
+            mock_executor_instance = Mock()
+            expected_df = pd.DataFrame([{"parsed_url": "https://invalid-url.com", "title": None, "error": "API Error"}])
+            mock_executor_instance.execute_query.return_value = expected_df
+            mock_executor.return_value = mock_executor_instance
+
+            # Mock API to raise exception
+            self.handler.connection.parse_url.side_effect = Exception("API Error")
+
+            query = Mock()
+            result = self.table.select(query)
+
+            # Should handle error gracefully and return error info
+            self.assertEqual(len(result), 1)
+            self.assertEqual(result["parsed_url"].iloc[0], "https://invalid-url.com")
+            self.assertEqual(result["error"].iloc[0], "API Error")
+
+    def test_select_with_limit(self):
+        """Test select with LIMIT clause"""
+        urls = ["https://example1.com", "https://example2.com", "https://example3.com"]
+
+        # Mock the SELECT query components
+        with (
+            patch("mindsdb.integrations.handlers.raindrop_handler.raindrop_tables.SELECTQueryParser") as mock_parser,
+            patch(
+                "mindsdb.integrations.handlers.raindrop_handler.raindrop_tables.SELECTQueryExecutor"
+            ) as mock_executor,
+        ):
+            mock_parser_instance = Mock()
+            mock_parser_instance.parse_query.return_value = (
+                ["parsed_url", "title"],  # selected_columns
+                [["in", "url", urls]],  # where_conditions
+                [],  # order_by_conditions
+                2,  # result_limit
+            )
+            mock_parser.return_value = mock_parser_instance
+
+            mock_executor_instance = Mock()
+            expected_df = pd.DataFrame(
+                [
+                    {"parsed_url": "https://example1.com", "title": "Article 1"},
+                    {"parsed_url": "https://example2.com", "title": "Article 2"},
+                ]
+            )
+            mock_executor_instance.execute_query.return_value = expected_df
+            mock_executor.return_value = mock_executor_instance
+
+            # Mock API calls
+            mock_responses = [
+                {"result": True, "item": {"title": "Article 1", "excerpt": "Excerpt 1"}},
+                {"result": True, "item": {"title": "Article 2", "excerpt": "Excerpt 2"}},
+                {"result": True, "item": {"title": "Article 3", "excerpt": "Excerpt 3"}},
+            ]
+            self.handler.connection.parse_url.side_effect = mock_responses
+
+            query = Mock()
+            result = self.table.select(query)
+
+            # Should limit to 2 results
+            self.assertEqual(len(result), 2)
+
+    def test_insert_not_supported(self):
+        """Test that insert operation raises NotImplementedError"""
+        with self.assertRaises(NotImplementedError) as context:
+            query = Mock()
+            self.table.insert(query)
+
+        self.assertIn("URL parsing is a read-only operation", str(context.exception))
+
+    def test_update_not_supported(self):
+        """Test that update operation raises NotImplementedError"""
+        with self.assertRaises(NotImplementedError) as context:
+            query = Mock()
+            self.table.update(query)
+
+        self.assertIn("URL parsing is a read-only operation", str(context.exception))
+
+    def test_delete_not_supported(self):
+        """Test that delete operation raises NotImplementedError"""
+        with self.assertRaises(NotImplementedError) as context:
+            query = Mock()
+            self.table.delete(query)
+
+        self.assertIn("URL parsing is a read-only operation", str(context.exception))
+
+    def test_normalize_parse_data(self):
+        """Test _normalize_parse_data method"""
+        test_data = pd.DataFrame(
+            [
+                {
+                    "parsed_url": "https://example.com",
+                    "title": "Test Article",
+                    "excerpt": "Test excerpt",
+                    "domain": "example.com",
+                    "lastUpdate": "2024-01-01T00:00:00Z",
+                }
+            ]
+        )
+
+        result = self.table._normalize_parse_data(test_data)
+
+        # Check that all expected columns exist
+        expected_columns = self.table.get_columns()
+        for col in expected_columns:
+            self.assertIn(col, result.columns, f"Missing column: {col}")
+
+        # Check specific values
+        self.assertEqual(result["parsed_url"].iloc[0], "https://example.com")
+        self.assertEqual(result["title"].iloc[0], "Test Article")
+
+    def test_normalize_parse_data_empty(self):
+        """Test _normalize_parse_data with empty DataFrame"""
+        empty_df = pd.DataFrame()
+
+        result = self.table._normalize_parse_data(empty_df)
+
+        # Should return the same empty DataFrame
+        self.assertTrue(result.empty)
 
 
 if __name__ == "__main__":

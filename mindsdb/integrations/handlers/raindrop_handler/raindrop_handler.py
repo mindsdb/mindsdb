@@ -4,7 +4,12 @@ from typing import Dict, Any, List
 
 from mindsdb_sql_parser import parse_sql
 
-from mindsdb.integrations.handlers.raindrop_handler.raindrop_tables import RaindropsTable, CollectionsTable, TagsTable
+from mindsdb.integrations.handlers.raindrop_handler.raindrop_tables import (
+    RaindropsTable,
+    CollectionsTable,
+    TagsTable,
+    ParseTable,
+)
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -39,6 +44,7 @@ class RaindropHandler(APIHandler):
         self._register_table("bookmarks", RaindropsTable(self))  # Alias for raindrops
         self._register_table("collections", CollectionsTable(self))
         self._register_table("tags", TagsTable(self))
+        self._register_table("parse", ParseTable(self))
 
     def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.
@@ -155,6 +161,7 @@ class RaindropAPIClient:
             "/collection",
             "/filters",
             "/tags",
+            "/parse",
         ]
 
         # Normalize endpoint by ensuring it starts with /
@@ -322,6 +329,10 @@ class RaindropAPIClient:
     def get_tags(self) -> Dict[str, Any]:
         """Get all tags with usage statistics"""
         return self._make_request("GET", "/tags")
+
+    def parse_url(self, url: str) -> Dict[str, Any]:
+        """Parse URL to extract metadata"""
+        return self._make_request("POST", "/parse", data={"url": url})
 
     def search_raindrops_advanced(
         self,

@@ -161,6 +161,7 @@ class RaindropAPIClient:
             "/raindrop",
             "/collections",
             "/collection",
+            "/collections/children",
             "/filters",
             "/tags",
             "/parse",
@@ -314,7 +315,7 @@ class RaindropAPIClient:
 
     def get_child_collections(self) -> Dict[str, Any]:
         """Get child collections"""
-        return self._make_request("GET", "/collections/childrens")
+        return self._make_request("GET", "/collections/children")
 
     def get_collection(self, collection_id: int) -> Dict[str, Any]:
         """Get a single collection"""

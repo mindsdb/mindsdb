@@ -75,8 +75,10 @@ class RaindropsTable(APITable):
         if order_by_conditions:
             for order_condition in order_by_conditions:
                 if order_condition.column in ["created", "lastUpdate", "sort", "title"]:
-                    direction = "asc" if order_condition.ascending else "desc"
-                    sort_order = f"{order_condition.column},-{direction}"
+                    if order_condition.ascending:
+                        sort_order = order_condition.column
+                    else:
+                        sort_order = f"-{order_condition.column}"
                     break
 
         # If specific IDs are requested, try to fetch efficiently

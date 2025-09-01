@@ -245,9 +245,10 @@ class RaindropAPIClient:
 
             current_page += 1
 
-            # Safety check: don't fetch more than 10 pages to prevent infinite loops
-            if current_page > 10:
-                logger.warning("Stopping pagination after 10 pages to prevent rate limit issues")
+            # Safety check: don't fetch more than 100 pages to prevent infinite loops and excessive API calls
+            # This allows fetching up to 5,000 bookmarks (100 pages * 50 per page)
+            if current_page > 100:
+                logger.warning("Stopping pagination after 100 pages to prevent excessive API usage")
                 break
 
         # Return response in same format as original API

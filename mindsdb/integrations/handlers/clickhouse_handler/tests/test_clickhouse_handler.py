@@ -1,7 +1,6 @@
 import unittest
 from mindsdb.integrations.handlers.clickhouse_handler.clickhouse_handler import (
     ClickHouseHandler,
-    convert_interval_to_clickhouse,
 )
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
@@ -16,7 +15,8 @@ class PostgresHandlerTest(unittest.TestCase):
             "password": "pass",
             "database": "test_data",
         }
-        cls.handler = ClickHouseHandler("test_clickhouse_handler", connection_data)
+        cls.handler = ClickHouseHandler("test_clickhouse_handler",
+                                        connection_data)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()

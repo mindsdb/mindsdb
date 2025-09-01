@@ -8,8 +8,7 @@ from mindsdb.api.http.utils import http_error
 from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.utilities.config import Config
 from mindsdb.utilities import log
-from mindsdb.api.common.middleware import new_token
-from mindsdb.api.common.middleware import verify_token
+from mindsdb.api.common.middleware import generate_pat, revoke_pat
 
 
 logger = log.getLogger(__name__)
@@ -46,7 +45,7 @@ class LoginRoute(Resource):
 
         logger.info(f"User '{username}' logged in successfully")
 
-        return {"token": new_token()}, 200
+        return {"token": generate_pat()}, 200
 
 
 @ns_conf.route("/logout", methods=["POST"])
@@ -54,7 +53,13 @@ class LogoutRoute(Resource):
     @ns_conf.doc(responses={200: "Success"})
     @api_endpoint_metrics("POST", "/default/logout")
     def post(self):
-        new_token()  # This effectively logs out the user by invalidating the old token
+        # We can't forcibly log out a user with the 
+        h = request.headers.get("Authorization")
+        if not h or not h.startswith("Bearer "):
+            bearer = None
+        else:
+            bearer = h.split(" ", 1)[1].strip() or None
+        revoke_pat(bearer)
         return "", 200
 
 

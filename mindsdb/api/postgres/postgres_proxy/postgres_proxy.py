@@ -14,7 +14,7 @@ from mindsdb.api.executor.controllers import SessionController
 from mindsdb.api.postgres.postgres_proxy.executor import Executor
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import CHARSET_NUMBERS
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
-from mindsdb.api.common.check_auth import check_auth
+from mindsdb.api.common.middleware import check_auth
 from mindsdb.api.mysql.mysql_proxy.mysql_proxy import SQLAnswer
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.errors import POSTGRES_SYNTAX_ERROR_CODE
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_fields import GenericField, PostgresField

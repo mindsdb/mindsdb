@@ -65,7 +65,7 @@ class TrunkProcessEnum(Enum):
 
     @classmethod
     def _missing_(cls, value):
-        print(f'"{value}" is not a valid name of subprocess')
+        logger.error(f'"{value}" is not a valid name of subprocess')
         sys.exit(1)
 
 

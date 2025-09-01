@@ -73,7 +73,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
 )
 from mindsdb.api.executor import exceptions as exec_exc
 
-from mindsdb.api.common.check_auth import check_auth
+from mindsdb.api.common.middleware import check_auth
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 from mindsdb.api.executor.sql_query.result_set import Column, ResultSet
 from mindsdb.utilities import log

@@ -52,7 +52,7 @@ from mindsdb.utilities.json_encoder import CustomJSONProvider
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
 from mindsdb.utilities.otel import trace  # noqa: F401
-from mindsdb.api.common.middleware import verify_token
+from mindsdb.api.common.middleware import verify_pat
 
 logger = log.getLogger(__name__)
 
@@ -324,7 +324,7 @@ def initialize_app(config, no_studio):
         if (
             config["auth"]["http_auth_enabled"] is True
             and any(request.path.startswith(f"/api{ns.path}") for ns in protected_namespaces)
-            and verify_token(bearer) is False
+            and verify_pat(bearer) is False
         ):
             logger.debug(f"Auth failed for path {request.path}")
             return http_error(

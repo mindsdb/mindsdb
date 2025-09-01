@@ -6,7 +6,7 @@ from mindsdb_sql_parser import parse_sql
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 import pandas as pd
 import jaydebeapi as jdbcconnector
@@ -15,11 +15,10 @@ logger = log.getLogger(__name__)
 
 
 class DerbyHandler(DatabaseHandler):
-
-    name = 'derby'
+    name = "derby"
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
-        """ Initialize the handler
+        """Initialize the handler
         Args:
             name (str): name of particular handler instance
             connection_data (dict): parameters for connecting to the database
@@ -29,16 +28,16 @@ class DerbyHandler(DatabaseHandler):
 
         self.kwargs = kwargs
         self.parser = parse_sql
-        self.database = connection_data['database']
+        self.database = connection_data["database"]
         self.connection_config = connection_data
-        self.host = connection_data['host']
-        self.port = connection_data['port']
-        self.schema = 'APP'
+        self.host = connection_data["host"]
+        self.port = connection_data["port"]
+        self.schema = "APP"
         self.connection = None
         self.is_connected = False
 
     def connect(self):
-        """ Set up any connections required by the handler
+        """Set up any connections required by the handler
         Should return output of check_connection() method after attempting
         connection. Should switch self.is_connected.
         Returns:
@@ -47,10 +46,10 @@ class DerbyHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        user = self.connection_config.get('user')
-        password = self.connection_config.get('password')
-        jdbc_class = self.connection_config.get('jdbcClass')
-        jar_location = self.connection_config.get('jdbcJarLocation')
+        user = self.connection_config.get("user")
+        password = self.connection_config.get("password")
+        jdbc_class = self.connection_config.get("jdbcClass")
+        jar_location = self.connection_config.get("jdbcJarLocation")
 
         jdbc_url = "jdbc:derby://" + self.host + ":" + self.port + "/" + self.database + ";"
 
@@ -62,11 +61,17 @@ class DerbyHandler(DatabaseHandler):
 
         try:
             if user and password and jar_location:
-                self.connection = jdbcconnector.connect(jclassname=jdbc_class, url=jdbc_url, driver_args=[user, password], jars=jar_location.split(","))
+                self.connection = jdbcconnector.connect(
+                    jclassname=jdbc_class, url=jdbc_url, driver_args=[user, password], jars=jar_location.split(",")
+                )
             elif user and password:
-                self.connection = jdbcconnector.connect(jclassname=jdbc_class, url=jdbc_url, driver_args=[user, password])
+                self.connection = jdbcconnector.connect(
+                    jclassname=jdbc_class, url=jdbc_url, driver_args=[user, password]
+                )
             elif jar_location:
-                self.connection = jdbcconnector.connect(jclassname=jdbc_class, url=jdbc_url, jars=jar_location.split(","))
+                self.connection = jdbcconnector.connect(
+                    jclassname=jdbc_class, url=jdbc_url, jars=jar_location.split(",")
+                )
             else:
                 self.connection = jdbcconnector.connect(jdbc_class, jdbc_url)
         except Exception as e:
@@ -75,7 +80,7 @@ class DerbyHandler(DatabaseHandler):
         return self.connection
 
     def disconnect(self):
-        """ Close any existing connections
+        """Close any existing connections
         Should switch self.is_connected.
         """
         if self.is_connected is False:
@@ -89,7 +94,7 @@ class DerbyHandler(DatabaseHandler):
         return
 
     def check_connection(self) -> StatusResponse:
-        """ Check connection to the handler
+        """Check connection to the handler
         Returns:
             HandlerStatusResponse
         """
@@ -100,7 +105,7 @@ class DerbyHandler(DatabaseHandler):
             self.connect()
             responseCode.success = True
         except Exception as e:
-            logger.error(f'Error connecting to database {self.database}, {e}!')
+            logger.error(f"Error connecting to database {self.database}, {e}!")
             responseCode.error_message = str(e)
         finally:
             if responseCode.success is True and need_to_close:
@@ -114,7 +119,7 @@ class DerbyHandler(DatabaseHandler):
         """Receive raw query and act upon it somehow.
         Args:
             query (Any): query in native format (str for sql databases,
-                dict for mongo, etc)
+                etc)
         Returns:
             HandlerResponse
         """
@@ -126,21 +131,14 @@ class DerbyHandler(DatabaseHandler):
                 if cur.description:
                     result = cur.fetchall()
                     response = Response(
-                        RESPONSE_TYPE.TABLE,
-                        data_frame=pd.DataFrame(
-                            result,
-                            columns=[x[0] for x in cur.description]
-                        )
+                        RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(result, columns=[x[0] for x in cur.description])
                     )
                 else:
                     response = Response(RESPONSE_TYPE.OK)
                 self.connection.commit()
             except Exception as e:
-                logger.error(f'Error running query: {query} on {self.database}!')
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=str(e)
-                )
+                logger.error(f"Error running query: {query} on {self.database}!")
+                response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
                 self.connection.rollback()
 
         if need_to_close is True:
@@ -173,12 +171,12 @@ class DerbyHandler(DatabaseHandler):
         Returns:
             Response: Names of the tables in the database.
         """
-        query = f'''
-        SELECT st.tablename FROM sys.systables st LEFT OUTER JOIN sys.sysschemas ss ON (st.schemaid = ss.schemaid) WHERE ss.schemaname ='{self.schema}' '''
+        query = f"""
+        SELECT st.tablename FROM sys.systables st LEFT OUTER JOIN sys.sysschemas ss ON (st.schemaid = ss.schemaid) WHERE ss.schemaname ='{self.schema}' """
 
         result = self.native_query(query)
         df = result.data_frame
-        result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
+        result.data_frame = df.rename(columns={df.columns[0]: "table_name"})
         return result
 
     def get_columns(self, table_name: str) -> StatusResponse:
@@ -191,5 +189,5 @@ class DerbyHandler(DatabaseHandler):
             Response: Details of the table.
         """
 
-        query = f''' SELECT COLUMNNAME FROM SYS.SYSCOLUMNS INNER JOIN SYS.SYSTABLES ON SYS.SYSCOLUMNS.REFERENCEID=SYS.SYSTABLES.TABLEID WHERE TABLENAME='{table_name}' '''
+        query = f""" SELECT COLUMNNAME FROM SYS.SYSCOLUMNS INNER JOIN SYS.SYSTABLES ON SYS.SYSCOLUMNS.REFERENCEID=SYS.SYSTABLES.TABLEID WHERE TABLENAME='{table_name}' """
         return self.native_query(query)

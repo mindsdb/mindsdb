@@ -1,4 +1,3 @@
-
 import ast as py_ast
 
 import dateutil.parser
@@ -8,30 +7,27 @@ from .mongodb_query import MongoQuery
 
 
 class MongodbParser:
-    '''
-        Converts string into MongoQuery
-    '''
+    """
+    Converts string into MongoQuery
+    """
 
     def from_string(self, call_str):
-        tree = py_ast.parse(call_str.strip(), mode='eval')
+        tree = py_ast.parse(call_str.strip(), mode="eval")
         calls = self.process(tree.body)
         # first call contents collection
-        method1 = calls[0]['method']
+        method1 = calls[0]["method"]
         if len(method1) < 2:
-            raise IndexError('Collection not found')
+            raise IndexError("Collection not found")
         collection = method1[-2]
 
         mquery = MongoQuery(collection)
 
         # keep only last name
-        calls[0]['method'] = [method1[-1]]
+        calls[0]["method"] = [method1[-1]]
 
         # convert method names: get first item of list
         for c in calls:
-            mquery.add_step({
-                'method': c['method'][0],
-                'args': c['args']
-            })
+            mquery.add_step({"method": c["method"][0], "args": c["args"]})
 
         return mquery
 
@@ -49,20 +45,17 @@ class MongodbParser:
                 func = node.func.id
 
                 # special functions:
-                if func == 'ISODate':
+                if func == "ISODate":
                     return dateutil.parser.isoparse(args[0])
-                if func == 'ObjectId':
+                if func == "ObjectId":
                     return ObjectId(args[0])
             elif isinstance(node.func, py_ast.Attribute):
                 # it can be an attribute or pipeline
                 previous_call, func = self.process_func_name(node.func)
             else:
-                raise NotImplementedError(f'Unknown function type: {node.func}')
+                raise NotImplementedError(f"Unknown function type: {node.func}")
 
-            call = [{
-                'method': func,
-                'args': args
-            }]
+            call = [{"method": func, "args": args}]
             if previous_call is not None:
                 call = previous_call + call
 
@@ -75,7 +68,6 @@ class MongodbParser:
             return elements
 
         if isinstance(node, py_ast.Dict):
-
             keys = []
             for node2 in node.keys:
                 if isinstance(node2, py_ast.Constant):
@@ -85,7 +77,7 @@ class MongodbParser:
                 elif isinstance(node2, py_ast.Name):
                     value = node2.id
                 else:
-                    raise NotImplementedError(f'Unknown dict key {node2}')
+                    raise NotImplementedError(f"Unknown dict key {node2}")
 
                 keys.append(value)
 
@@ -98,11 +90,11 @@ class MongodbParser:
         if isinstance(node, py_ast.Name):
             # special attributes
             name = node.id
-            if name == 'true':
+            if name == "true":
                 return True
-            elif name == 'false':
+            elif name == "false":
                 return False
-            elif name == 'null':
+            elif name == "null":
                 return None
 
         if isinstance(node, py_ast.Constant):
@@ -122,7 +114,7 @@ class MongodbParser:
                 value = self.process(node.operand)
                 return -value
 
-        raise NotImplementedError(f'Unknown node {node}')
+        raise NotImplementedError(f"Unknown node {node}")
 
     def process_func_name(self, node):
         previous_call = None

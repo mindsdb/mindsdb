@@ -58,7 +58,7 @@ class BaseHandler:
 
         Args:
             query (Any): query in native format (str for sql databases,
-                dict for mongo, etc)
+                etc)
 
         Returns:
             HandlerResponse

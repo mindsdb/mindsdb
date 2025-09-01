@@ -1695,5 +1695,144 @@ class TestBulkOperationsTable(unittest.TestCase):
             self.assertEqual(str(context.exception), "API Error")
 
 
+class TestSearchOptimizations(unittest.TestCase):
+    """Test cases for enhanced search capabilities"""
+
+    def setUp(self):
+        self.table = RaindropsTable(None)
+
+    def test_enhanced_search_parsing_single_field(self):
+        """Test enhanced search parsing with single field search"""
+        conditions = [["=", "title", "Python Tutorial"]]
+
+        parsed = self.table._parse_where_conditions(conditions)
+
+        # Should convert to API search
+        self.assertEqual(parsed["search"], "title:Python Tutorial")
+        self.assertEqual(len(parsed["api_supported"]), 1)
+        self.assertEqual(len(parsed["local_filters"]), 0)
+
+    def test_enhanced_search_parsing_multiple_fields(self):
+        """Test enhanced search parsing with multiple field searches"""
+        conditions = [["=", "title", "Python"], ["=", "excerpt", "Tutorial"], ["=", "note", "Advanced"]]
+
+        parsed = self.table._parse_where_conditions(conditions)
+
+        # Should combine into complex search query
+        expected_search = "(title:Python AND excerpt:Tutorial AND note:Advanced)"
+        self.assertEqual(parsed["search"], expected_search)
+        self.assertEqual(len(parsed["api_supported"]), 3)
+        self.assertEqual(len(parsed["local_filters"]), 0)
+
+    def test_enhanced_search_like_optimization(self):
+        """Test LIKE pattern optimization to API search"""
+        conditions = [["like", "title", "%python%"], ["like", "excerpt", "%tutorial%"]]
+
+        parsed = self.table._parse_where_conditions(conditions)
+
+        # Should convert LIKE patterns to API search
+        self.assertIn("title:python", parsed["search"])
+        self.assertIn("excerpt:tutorial", parsed["search"])
+        self.assertEqual(len(parsed["api_supported"]), 2)
+        self.assertEqual(len(parsed["local_filters"]), 0)
+
+    def test_enhanced_search_mixed_conditions(self):
+        """Test mixed search conditions (API and local)"""
+        conditions = [
+            ["=", "title", "Python"],  # Should be optimized to API
+            ["=", "important", True],  # Should remain local
+            ["like", "tags", "%web%"],  # Should be optimized to API
+        ]
+
+        parsed = self.table._parse_where_conditions(conditions)
+
+        # Should have both API search and local filters
+        self.assertIsNotNone(parsed["search"])
+        self.assertIn("title:Python", parsed["search"])
+        self.assertIn("tag:web", parsed["search"])
+        self.assertEqual(len(parsed["local_filters"]), 1)  # important flag
+
+    def test_like_pattern_not_optimized_complex(self):
+        """Test that complex LIKE patterns are not optimized"""
+        conditions = [
+            ["like", "title", "python%"],  # Only starts with %, not optimized
+            ["like", "title", "%p%t%"],  # Contains regex chars, not optimized
+            ["like", "title", "%ab%"],  # Too short, not optimized
+        ]
+
+        parsed = self.table._parse_where_conditions(conditions)
+
+        # Should keep complex patterns as local filters
+        self.assertIsNone(parsed["search"])
+        self.assertEqual(len(parsed["local_filters"]), 3)
+
+    def test_like_pattern_optimized_simple(self):
+        """Test that simple LIKE patterns are optimized"""
+        conditions = [
+            ["like", "title", "%python%"],  # Should be optimized
+            ["like", "excerpt", "%tutorial%"],  # Should be optimized
+            ["like", "note", "%advanced%"],  # Should be optimized
+        ]
+
+        parsed = self.table._parse_where_conditions(conditions)
+
+        # Should convert to API search
+        self.assertIsNotNone(parsed["search"])
+        self.assertIn("title:python", parsed["search"])
+        self.assertIn("excerpt:tutorial", parsed["search"])
+        self.assertIn("note:advanced", parsed["search"])
+        self.assertEqual(len(parsed["api_supported"]), 3)
+        self.assertEqual(len(parsed["local_filters"]), 0)
+
+    def test_existing_search_not_overridden(self):
+        """Test that existing search conditions are not overridden by optimizations"""
+        conditions = [
+            ["=", "search", "original query"],
+            ["=", "title", "Python"],  # This should not override the search
+        ]
+
+        parsed = self.table._parse_where_conditions(conditions)
+
+        # Should keep original search
+        self.assertEqual(parsed["search"], "original query")
+        self.assertEqual(len(parsed["api_supported"]), 2)
+
+    def test_is_search_condition_detection(self):
+        """Test search condition detection logic"""
+        # Should detect search conditions
+        self.assertTrue(self.table._is_search_condition("title", "="))
+        self.assertTrue(self.table._is_search_condition("search", "="))
+        self.assertTrue(self.table._is_search_condition("excerpt", "like"))
+        self.assertTrue(self.table._is_search_condition("tags", "like"))
+
+        # Should not detect non-search conditions
+        self.assertFalse(self.table._is_search_condition("created", ">"))
+        self.assertFalse(self.table._is_search_condition("_id", "="))
+        self.assertFalse(self.table._is_search_condition("collection_id", "="))
+
+    def test_can_use_api_search_for_like(self):
+        """Test LIKE pattern optimization detection"""
+        # Should optimize simple patterns
+        self.assertTrue(self.table._can_use_api_search_for_like("title", "%python%"))
+        self.assertTrue(self.table._can_use_api_search_for_like("excerpt", "%tutorial%"))
+
+        # Should not optimize complex patterns
+        self.assertFalse(self.table._can_use_api_search_for_like("title", "python%"))
+        self.assertFalse(self.table._can_use_api_search_for_like("title", "%p%t%"))
+        self.assertFalse(self.table._can_use_api_search_for_like("title", "%ab%"))
+        self.assertFalse(self.table._can_use_api_search_for_like("title", "%test*ing%"))
+
+    def test_convert_like_to_api_search(self):
+        """Test LIKE to API search conversion"""
+        # Should convert properly
+        self.assertEqual(self.table._convert_like_to_api_search("title", "%python%"), "title:python")
+        self.assertEqual(self.table._convert_like_to_api_search("excerpt", "%tutorial%"), "excerpt:tutorial")
+        self.assertEqual(self.table._convert_like_to_api_search("note", "%advanced%"), "note:advanced")
+        self.assertEqual(self.table._convert_like_to_api_search("tags", "%web%"), "tag:web")
+
+        # Should handle non-string values
+        self.assertIsNone(self.table._convert_like_to_api_search("title", 123))
+
+
 if __name__ == "__main__":
     unittest.main()

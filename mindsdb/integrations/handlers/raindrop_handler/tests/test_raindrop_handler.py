@@ -8,6 +8,7 @@ from mindsdb.integrations.handlers.raindrop_handler.raindrop_tables import (
     CollectionsTable,
     TagsTable,
     ParseTable,
+    BulkOperationsTable,
 )
 
 
@@ -1524,6 +1525,174 @@ class TestParseTable(unittest.TestCase):
 
         # Should return the same empty DataFrame
         self.assertTrue(result.empty)
+
+
+class TestBulkOperationsTable(unittest.TestCase):
+    """Test cases for BulkOperationsTable"""
+
+    def setUp(self):
+        self.handler = Mock()
+        self.handler.connection = Mock()
+        self.table = BulkOperationsTable(self.handler)
+
+    def test_get_columns(self):
+        """Test get_columns method"""
+        columns = self.table.get_columns()
+
+        expected_columns = [
+            "operation",
+            "status",
+            "affected_count",
+            "target_collection_id",
+            "source_collection_id",
+            "error",
+        ]
+
+        self.assertEqual(columns, expected_columns)
+
+    def test_select_not_supported(self):
+        """Test that select operation raises NotImplementedError"""
+        with self.assertRaises(NotImplementedError) as context:
+            query = Mock()
+            self.table.select(query)
+
+        self.assertIn("Bulk operations table is not queryable", str(context.exception))
+
+    def test_insert_not_supported(self):
+        """Test that insert operation raises NotImplementedError"""
+        with self.assertRaises(NotImplementedError) as context:
+            query = Mock()
+            self.table.insert(query)
+
+        self.assertIn("Use UPDATE operations on the raindrops table", str(context.exception))
+
+    def test_delete_not_supported(self):
+        """Test that delete operation raises NotImplementedError"""
+        with self.assertRaises(NotImplementedError) as context:
+            query = Mock()
+            self.table.delete(query)
+
+        self.assertIn("Use DELETE operations on the raindrops table", str(context.exception))
+
+    def test_update_bulk_move_by_collection(self):
+        """Test bulk move operation by source collection"""
+        # Mock the UPDATE query components
+        with patch("mindsdb.integrations.handlers.raindrop_handler.raindrop_tables.UPDATEQueryParser") as mock_parser:
+            mock_parser_instance = Mock()
+            mock_parser_instance.parse_query.return_value = (
+                {"collection_id": 456},  # values_to_update
+                [Mock(column="source_collection_id", value=123)],  # where_conditions
+            )
+            mock_parser.return_value = mock_parser_instance
+
+            # Mock API call
+            self.handler.connection.move_raindrops_to_collection.return_value = {"result": True}
+
+            query = Mock()
+            self.table.update(query)
+
+            # Verify API was called with correct parameters
+            self.handler.connection.move_raindrops_to_collection.assert_called_once_with(
+                target_collection_id=456, source_collection_id=123, search=None, ids=None
+            )
+
+    def test_update_bulk_move_by_ids(self):
+        """Test bulk move operation by specific raindrop IDs"""
+        # Mock the UPDATE query components
+        with patch("mindsdb.integrations.handlers.raindrop_handler.raindrop_tables.UPDATEQueryParser") as mock_parser:
+            mock_parser_instance = Mock()
+            mock_parser_instance.parse_query.return_value = (
+                {"collection_id": 789},  # values_to_update
+                [Mock(column="_id", value=[1, 2, 3])],  # where_conditions
+            )
+            mock_parser.return_value = mock_parser_instance
+
+            # Mock API call
+            self.handler.connection.move_raindrops_to_collection.return_value = {"result": True}
+
+            query = Mock()
+            self.table.update(query)
+
+            # Verify API was called with correct parameters
+            self.handler.connection.move_raindrops_to_collection.assert_called_once_with(
+                target_collection_id=789, source_collection_id=None, search=None, ids=[1, 2, 3]
+            )
+
+    def test_update_bulk_move_by_search(self):
+        """Test bulk move operation by search query"""
+        # Mock the UPDATE query components
+        with patch("mindsdb.integrations.handlers.raindrop_handler.raindrop_tables.UPDATEQueryParser") as mock_parser:
+            mock_parser_instance = Mock()
+            mock_parser_instance.parse_query.return_value = (
+                {"collection_id": 999},  # values_to_update
+                [Mock(column="search", value="python tutorial")],  # where_conditions
+            )
+            mock_parser.return_value = mock_parser_instance
+
+            # Mock API call
+            self.handler.connection.move_raindrops_to_collection.return_value = {"result": True}
+
+            query = Mock()
+            self.table.update(query)
+
+            # Verify API was called with correct parameters
+            self.handler.connection.move_raindrops_to_collection.assert_called_once_with(
+                target_collection_id=999, source_collection_id=None, search="python tutorial", ids=None
+            )
+
+    def test_update_no_collection_id_error(self):
+        """Test update operation without collection_id raises error"""
+        # Mock the UPDATE query components
+        with patch("mindsdb.integrations.handlers.raindrop_handler.raindrop_tables.UPDATEQueryParser") as mock_parser:
+            mock_parser_instance = Mock()
+            mock_parser_instance.parse_query.return_value = (
+                {"title": "New Title"},  # values_to_update - no collection_id
+                [Mock(column="source_collection_id", value=123)],  # where_conditions
+            )
+            mock_parser.return_value = mock_parser_instance
+
+            query = Mock()
+            with self.assertRaises(ValueError) as context:
+                self.table.update(query)
+
+            self.assertIn("Bulk operations table only supports collection moves", str(context.exception))
+
+    def test_update_no_conditions_error(self):
+        """Test update operation without any valid conditions raises error"""
+        # Mock the UPDATE query components
+        with patch("mindsdb.integrations.handlers.raindrop_handler.raindrop_tables.UPDATEQueryParser") as mock_parser:
+            mock_parser_instance = Mock()
+            mock_parser_instance.parse_query.return_value = (
+                {"collection_id": 456},  # values_to_update
+                [Mock(column="invalid_column", value="invalid")],  # where_conditions - no valid conditions
+            )
+            mock_parser.return_value = mock_parser_instance
+
+            query = Mock()
+            with self.assertRaises(ValueError) as context:
+                self.table.update(query)
+
+            self.assertIn("Please specify source conditions", str(context.exception))
+
+    def test_update_api_error_handling(self):
+        """Test update operation handles API errors gracefully"""
+        # Mock the UPDATE query components
+        with patch("mindsdb.integrations.handlers.raindrop_handler.raindrop_tables.UPDATEQueryParser") as mock_parser:
+            mock_parser_instance = Mock()
+            mock_parser_instance.parse_query.return_value = (
+                {"collection_id": 456},  # values_to_update
+                [Mock(column="source_collection_id", value=123)],  # where_conditions
+            )
+            mock_parser.return_value = mock_parser_instance
+
+            # Mock API to raise exception
+            self.handler.connection.move_raindrops_to_collection.side_effect = Exception("API Error")
+
+            query = Mock()
+            with self.assertRaises(Exception) as context:
+                self.table.update(query)
+
+            self.assertEqual(str(context.exception), "API Error")
 
 
 if __name__ == "__main__":

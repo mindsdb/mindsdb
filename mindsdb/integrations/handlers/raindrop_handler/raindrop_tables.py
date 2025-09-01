@@ -1502,3 +1502,151 @@ class ParseTable(APITable):
                 df[col] = None
 
         return df
+
+
+class BulkOperationsTable(APITable):
+    """The Raindrop.io Bulk Operations Table implementation for bulk move, update, and delete operations"""
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """
+        Bulk operations are not queryable. Use this table for bulk operations only.
+
+        Parameters
+        ----------
+        query : ast.Select
+           Given SQL SELECT query
+
+        Returns
+        -------
+        pd.DataFrame
+            Empty DataFrame with operation status information
+
+        Raises
+        ------
+        NotImplementedError
+            Bulk operations are not queryable
+        """
+        raise NotImplementedError(
+            "Bulk operations table is not queryable. Use INSERT, UPDATE, or DELETE operations on this table for bulk operations."
+        )
+
+    def insert(self, query: ast.Insert) -> None:
+        """
+        Bulk operations are initiated through UPDATE or DELETE operations, not INSERT.
+
+        Parameters
+        ----------
+        query : ast.Insert
+           Given SQL INSERT query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        NotImplementedError
+            Bulk operations use UPDATE/DELETE
+        """
+        raise NotImplementedError(
+            "Use UPDATE operations on the raindrops table for bulk updates, or DELETE operations for bulk deletions."
+        )
+
+    def update(self, query: ast.Update) -> None:
+        """
+        Perform bulk move operations between collections.
+
+        Parameters
+        ----------
+        query : ast.Update
+           Given SQL UPDATE query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains invalid conditions
+        """
+        update_statement_parser = UPDATEQueryParser(query)
+        values_to_update, where_conditions = update_statement_parser.parse_query()
+
+        # Check if this is a move operation (has collection_id in update values)
+        if "collection_id" not in values_to_update:
+            raise ValueError("Bulk operations table only supports collection moves. Use 'collection_id' in SET clause.")
+
+        target_collection_id = values_to_update["collection_id"]
+
+        # Extract conditions for the move operation
+        source_collection_id = None
+        raindrop_ids = []
+        search_query = None
+
+        for condition in where_conditions:
+            if condition.column == "source_collection_id":
+                source_collection_id = condition.value
+            elif condition.column in ["_id", "id"]:
+                if isinstance(condition.value, list):
+                    raindrop_ids.extend(condition.value)
+                else:
+                    raindrop_ids.append(condition.value)
+            elif condition.column in ["search", "title"]:
+                search_query = condition.value
+
+        # Validate that we have at least one condition
+        if not source_collection_id and not raindrop_ids and not search_query:
+            raise ValueError(
+                "Please specify source conditions using one of: source_collection_id = X, _id = Y, search = 'text'"
+            )
+
+        # Perform the bulk move operation
+        try:
+            result = self.handler.connection.move_raindrops_to_collection(
+                target_collection_id=target_collection_id,
+                source_collection_id=source_collection_id,
+                search=search_query,
+                ids=raindrop_ids if raindrop_ids else None,
+            )
+
+            if result.get("result"):
+                logger.info(f"Successfully moved raindrops to collection {target_collection_id}")
+            else:
+                logger.warning(f"Bulk move operation may have failed: {result}")
+
+        except Exception as e:
+            logger.error(f"Failed to perform bulk move operation: {e}")
+            raise
+
+    def delete(self, query: ast.Delete) -> None:
+        """
+        Bulk delete operations are handled by the raindrops table.
+        Use DELETE on the raindrops table for bulk deletions.
+
+        Parameters
+        ----------
+        query : ast.Delete
+           Given SQL DELETE query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        NotImplementedError
+            Bulk operations use raindrops table
+        """
+        raise NotImplementedError("Use DELETE operations on the raindrops table for bulk deletions.")
+
+    def get_columns(self) -> List[str]:
+        """Get the column names for the bulk operations table"""
+        return [
+            "operation",
+            "status",
+            "affected_count",
+            "target_collection_id",
+            "source_collection_id",
+            "error",
+        ]

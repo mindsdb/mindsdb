@@ -1,6 +1,6 @@
 import requests
 import time
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from mindsdb_sql_parser import parse_sql
 
@@ -146,7 +146,15 @@ class RaindropAPIClient:
         self._apply_rate_limit()
 
         # Validate endpoint to prevent path traversal/injection attacks
-        allowed_endpoints = ["/user/stats", "/raindrops", "/raindrop", "/collections", "/collection"]
+        allowed_endpoints = [
+            "/user/stats",
+            "/raindrops",
+            "/raindrop",
+            "/collections",
+            "/collection",
+            "/filters",
+            "/tags",
+        ]
 
         # Normalize endpoint by ensuring it starts with /
         normalized_endpoint = f"/{endpoint.lstrip('/')}"
@@ -303,3 +311,44 @@ class RaindropAPIClient:
     def delete_multiple_collections(self, collection_ids: list) -> Dict[str, Any]:
         """Delete multiple collections"""
         return self._make_request("DELETE", "/collections", data={"ids": collection_ids})
+
+    # Advanced filtering methods
+    def get_raindrops_with_filters(self, collection_id: int = 0, filters: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Get raindrops using advanced filters endpoint"""
+        endpoint = f"/filters/{collection_id}"
+        return self._make_request("POST", endpoint, data=filters or {})
+
+    def get_tags(self) -> Dict[str, Any]:
+        """Get all tags with usage statistics"""
+        return self._make_request("GET", "/tags")
+
+    def search_raindrops_advanced(
+        self,
+        collection_id: int = 0,
+        search: str = None,
+        tags: List[str] = None,
+        important: bool = None,
+        sort: str = None,
+        page: int = 0,
+        per_page: int = 50,
+    ) -> Dict[str, Any]:
+        """Advanced search with multiple filter criteria"""
+        filters = {}
+
+        if search:
+            filters["search"] = search
+        if tags:
+            filters["tags"] = tags
+        if important is not None:
+            filters["important"] = important
+        if sort:
+            filters["sort"] = sort
+
+        # Add pagination parameters to filters if provided
+        if page is not None:
+            filters["page"] = page
+        if per_page is not None:
+            filters["perpage"] = per_page
+
+        response = self.get_raindrops_with_filters(collection_id, filters)
+        return response

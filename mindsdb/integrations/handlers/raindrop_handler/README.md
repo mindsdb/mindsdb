@@ -198,6 +198,20 @@ WHERE created >= '2024-06-01'
   AND (title LIKE '%project%' OR tags LIKE '%work%')
 ORDER BY created DESC
 LIMIT 20;
+
+-- Advanced filtering with multiple AND conditions
+SELECT * FROM raindrop_db.raindrops
+WHERE collection_id = 123
+  AND created BETWEEN '2024-01-01' AND '2024-12-31'
+  AND important = true
+  AND sort > 10;
+
+-- Complex queries with mixed operators
+SELECT title, link, excerpt FROM raindrop_db.raindrops
+WHERE (title LIKE '%tutorial%' OR excerpt LIKE '%guide%')
+  AND created >= '2024-06-01'
+  AND _id NOT IN (123, 456, 789)
+ORDER BY sort DESC;
 ```
 
 ### Creating Bookmarks
@@ -345,6 +359,10 @@ The handler includes comprehensive error handling:
 - **Advanced WHERE Clause Operators**: Added support for >, <, >=, <=, BETWEEN, IN, and LIKE operators
 - **Date Range Filtering**: Automatic datetime conversion and comparison for date-based filtering
 - **Complex Condition Combinations**: Support for multiple AND/OR conditions in WHERE clauses
+- **Advanced Filtering API**: New `/filters` endpoint integration for complex queries
+- **Intelligent Query Routing**: Automatic selection between standard and advanced filtering endpoints
+- **Fallback Mechanisms**: Graceful degradation when advanced endpoints are unavailable
+- **Enhanced Error Handling**: Comprehensive error handling for API failures and edge cases
 - **Local Filtering Engine**: Intelligent routing between API-supported and locally-processed filters
 - **Enhanced Query Performance**: Optimized data fetching based on filter types and complexity
 - **Comprehensive Test Coverage**: 49 unit tests covering all new filtering capabilities

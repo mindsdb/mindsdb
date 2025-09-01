@@ -91,6 +91,16 @@ The Raindrop.io handler is initialized with the following parameter:
 - [ ] Support UPDATE for modifying tags (not supported by API)
 - [ ] Support DELETE for removing tags (not supported by API)
 
+### Parse Table
+- [x] Support SELECT for URL metadata extraction
+  - [x] Extract title, description, and other metadata from URLs
+  - [x] Support for single URL parsing
+  - [x] Support for multiple URL parsing with IN operator
+  - [x] Error handling for invalid URLs
+- [ ] Support INSERT for creating parsed URLs (read-only operation)
+- [ ] Support UPDATE for modifying parsed URLs (read-only operation)
+- [ ] Support DELETE for removing parsed URLs (read-only operation)
+
 ## Tables
 
 ### Tags
@@ -130,6 +140,53 @@ LIMIT 10;
 SELECT label, created FROM raindrop_db.tags
 WHERE created > '2024-01-01'
 ORDER BY created DESC;
+```
+
+### Parse
+
+The `parse` table provides URL metadata extraction functionality using Raindrop.io's parsing service.
+
+Available columns:
+- `parsed_url` (str): The original URL that was parsed
+- `title` (str): Extracted title from the URL
+- `excerpt` (str): Brief description or excerpt from the URL
+- `domain` (str): Domain name of the URL
+- `type` (str): Content type (article, image, video, etc.)
+- `cover` (str): Cover image URL if available
+- `media` (list): Media attachments found on the page
+- `lastUpdate` (datetime): Last update timestamp for the parsed content
+- `error` (str): Error message if parsing failed
+
+**Note**: The parse table is read-only and used for extracting metadata from URLs before creating bookmarks.
+
+#### Parsing URLs
+
+```sql
+-- Parse a single URL to extract metadata
+SELECT parsed_url, title, excerpt, domain, type, cover
+FROM raindrop_db.parse
+WHERE url = 'https://example.com/article';
+
+-- Parse multiple URLs at once
+SELECT parsed_url, title, excerpt, domain
+FROM raindrop_db.parse
+WHERE url IN ('https://example1.com', 'https://example2.com', 'https://example3.com');
+
+-- Get detailed metadata including media
+SELECT parsed_url, title, excerpt, media, lastUpdate
+FROM raindrop_db.parse
+WHERE url = 'https://news.example.com/article';
+
+-- Parse URLs with error handling
+SELECT parsed_url, title, excerpt, error
+FROM raindrop_db.parse
+WHERE url IN ('https://valid-url.com', 'https://invalid-url.com');
+
+-- Use parsed data to create bookmarks (combined query)
+INSERT INTO raindrop_db.raindrops (link, title, excerpt, collection_id)
+SELECT parsed_url, title, excerpt, 123
+FROM raindrop_db.parse
+WHERE url = 'https://example.com/article-to-bookmark';
 ```
 
 ### Raindrops (Bookmarks)
@@ -423,6 +480,16 @@ The handler includes comprehensive error handling:
 - **Read-Only Operations**: Proper handling of API limitations for tag CRUD operations
 - **Enhanced Documentation**: Comprehensive examples for tag queries
 - **Test Coverage**: Additional unit tests for tags table functionality
+
+### Version 0.0.4 Improvements
+- **Parse Table**: New `parse` table for URL metadata extraction
+- **URL Metadata Extraction**: Extract title, description, domain, and media from URLs
+- **Batch URL Parsing**: Support for parsing multiple URLs with IN operator
+- **Error Handling**: Graceful error handling for invalid or unreachable URLs
+- **API Integration**: Full integration with Raindrop.io `/parse` endpoint
+- **Read-Only Operations**: Parse table designed as read-only for metadata extraction
+- **Enhanced Documentation**: Comprehensive examples for URL parsing queries
+- **Test Coverage**: Complete unit test suite for parse table functionality
 
 ### Dependency Management
 - Removed duplicate `requests` dependency from handler-specific requirements.txt

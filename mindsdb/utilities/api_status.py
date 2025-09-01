@@ -1,7 +1,7 @@
 import os
-import tempfile
 import json
-import time
+
+from mindsdb.utilities.config import config
 
 
 _api_status_file = None
@@ -11,7 +11,7 @@ def get_api_status_file():
     global _api_status_file
     if _api_status_file is None:
         # Use a temporary file that can be shared across processes.
-        temp_dir = tempfile.gettempdir()
+        temp_dir = config["paths"]["tmp"]
         _api_status_file = os.path.join(temp_dir, "mindsdb_api_status.json")
     return _api_status_file
 

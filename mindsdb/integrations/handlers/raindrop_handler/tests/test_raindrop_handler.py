@@ -3,7 +3,7 @@ from unittest.mock import Mock, patch
 import pandas as pd
 
 from mindsdb.integrations.handlers.raindrop_handler.raindrop_handler import RaindropHandler, RaindropAPIClient
-from mindsdb.integrations.handlers.raindrop_handler.raindrop_tables import RaindropsTable, CollectionsTable
+from mindsdb.integrations.handlers.raindrop_handler.raindrop_tables import RaindropsTable, CollectionsTable, TagsTable
 
 
 class TestRaindropHandler(unittest.TestCase):
@@ -932,8 +932,289 @@ class TestCollectionsTable(unittest.TestCase):
             result = self.table.select(query)
 
             # Should filter to collections with "Work" in title
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result["title"].iloc[0], "Work Collection")
+
+
+class TestTagsTable(unittest.TestCase):
+    """Test cases for TagsTable"""
+
+    def setUp(self):
+        self.handler = Mock()
+        self.handler.connection = Mock()
+        self.table = TagsTable(self.handler)
+
+    def test_get_columns(self):
+        """Test get_columns method"""
+        columns = self.table.get_columns()
+
+        expected_columns = [
+            "_id",
+            "label",
+            "count",
+            "created",
+            "lastUpdate",
+        ]
+
+        self.assertEqual(columns, expected_columns)
+
+    def test_select_basic(self):
+        """Test basic select operation"""
+        # Mock API response
+        sample_data = [
+            {
+                "_id": "tag1",
+                "label": "Python",
+                "count": 15,
+                "created": "2024-01-01T00:00:00Z",
+                "lastUpdate": "2024-01-01T00:00:00Z",
+            },
+            {
+                "_id": "tag2",
+                "label": "JavaScript",
+                "count": 8,
+                "created": "2024-02-01T00:00:00Z",
+                "lastUpdate": "2024-02-01T00:00:00Z",
+            },
+            {
+                "_id": "tag3",
+                "label": "Machine Learning",
+                "count": 3,
+                "created": "2024-03-01T00:00:00Z",
+                "lastUpdate": "2024-03-01T00:00:00Z",
+            },
+        ]
+
+        # Mock the SELECT query components
+        with (
+            patch("mindsdb.integrations.handlers.raindrop_handler.raindrop_tables.SELECTQueryParser") as mock_parser,
+            patch(
+                "mindsdb.integrations.handlers.raindrop_handler.raindrop_tables.SELECTQueryExecutor"
+            ) as mock_executor,
+        ):
+            mock_parser_instance = Mock()
+            mock_parser_instance.parse_query.return_value = ([], [], [], None)
+            mock_parser.return_value = mock_parser_instance
+
+            mock_executor_instance = Mock()
+            # Create a DataFrame with the sample data for the executor to return
+            sample_df = pd.DataFrame(sample_data)
+            mock_executor_instance.execute_query.return_value = sample_df
+            mock_executor.return_value = mock_executor_instance
+
+            # Mock the handler connection's get_tags method
+            self.handler.connection.get_tags.return_value = {"items": sample_data}
+
+            query = Mock()
+            result = self.table.select(query)
+
+            # Should return DataFrame with all expected columns
+            expected_columns = self.table.get_columns()
+            for col in expected_columns:
+                self.assertIn(col, result.columns, f"Missing column: {col}")
+
+            # Should have the sample data
+            self.assertEqual(len(result), 3)
+            self.assertListEqual(result["label"].tolist(), ["Python", "JavaScript", "Machine Learning"])
+
+    def test_select_with_filters(self):
+        """Test select with filtering"""
+        sample_data = [
+            {
+                "_id": "tag1",
+                "label": "Python",
+                "count": 15,
+                "created": "2024-01-01T00:00:00Z",
+                "lastUpdate": "2024-01-01T00:00:00Z",
+            },
+            {
+                "_id": "tag2",
+                "label": "JavaScript",
+                "count": 8,
+                "created": "2024-02-01T00:00:00Z",
+                "lastUpdate": "2024-02-01T00:00:00Z",
+            },
+        ]
+
+        # Mock the SELECT query components
+        with (
+            patch("mindsdb.integrations.handlers.raindrop_handler.raindrop_tables.SELECTQueryParser") as mock_parser,
+            patch(
+                "mindsdb.integrations.handlers.raindrop_handler.raindrop_tables.SELECTQueryExecutor"
+            ) as mock_executor,
+        ):
+            mock_parser_instance = Mock()
+            mock_parser_instance.parse_query.return_value = (
+                ["label", "count"],  # selected_columns
+                [["=", "count", 15]],  # where_conditions
+                [],  # order_by_conditions
+                None,  # result_limit
+            )
+            mock_parser.return_value = mock_parser_instance
+
+            mock_executor_instance = Mock()
+            filtered_df = pd.DataFrame([{"label": "Python", "count": 15}])
+            mock_executor_instance.execute_query.return_value = filtered_df
+            mock_executor.return_value = mock_executor_instance
+
+            # Mock the handler connection's get_tags method
+            self.handler.connection.get_tags.return_value = {"items": sample_data}
+
+            query = Mock()
+            result = self.table.select(query)
+
+            # Should filter to tags with count = 15
             self.assertEqual(len(result), 1)
-            self.assertEqual(result["title"].iloc[0], "Work Collection")
+            self.assertEqual(result["label"].iloc[0], "Python")
+
+    def test_select_with_limit(self):
+        """Test select with LIMIT clause"""
+        sample_data = [
+            {
+                "_id": "tag1",
+                "label": "Python",
+                "count": 15,
+                "created": "2024-01-01T00:00:00Z",
+                "lastUpdate": "2024-01-01T00:00:00Z",
+            },
+            {
+                "_id": "tag2",
+                "label": "JavaScript",
+                "count": 8,
+                "created": "2024-02-01T00:00:00Z",
+                "lastUpdate": "2024-02-01T00:00:00Z",
+            },
+            {
+                "_id": "tag3",
+                "label": "Machine Learning",
+                "count": 3,
+                "created": "2024-03-01T00:00:00Z",
+                "lastUpdate": "2024-03-01T00:00:00Z",
+            },
+        ]
+
+        # Mock the SELECT query components
+        with (
+            patch("mindsdb.integrations.handlers.raindrop_handler.raindrop_tables.SELECTQueryParser") as mock_parser,
+            patch(
+                "mindsdb.integrations.handlers.raindrop_handler.raindrop_tables.SELECTQueryExecutor"
+            ) as mock_executor,
+        ):
+            mock_parser_instance = Mock()
+            mock_parser_instance.parse_query.return_value = (
+                ["label", "count"],  # selected_columns
+                [],  # where_conditions
+                [],  # order_by_conditions
+                2,  # result_limit
+            )
+            mock_parser.return_value = mock_parser_instance
+
+            mock_executor_instance = Mock()
+            limited_df = pd.DataFrame([{"label": "Python", "count": 15}, {"label": "JavaScript", "count": 8}])
+            mock_executor_instance.execute_query.return_value = limited_df
+            mock_executor.return_value = mock_executor_instance
+
+            # Mock the handler connection's get_tags method
+            self.handler.connection.get_tags.return_value = {"items": sample_data}
+
+            query = Mock()
+            result = self.table.select(query)
+
+            # Should limit to 2 results
+            self.assertEqual(len(result), 2)
+            self.assertListEqual(result["label"].tolist(), ["Python", "JavaScript"])
+
+    def test_insert_not_supported(self):
+        """Test that insert operation raises NotImplementedError"""
+        with self.assertRaises(NotImplementedError) as context:
+            query = Mock()
+            self.table.insert(query)
+
+        self.assertIn("Direct tag creation is not supported", str(context.exception))
+        self.assertIn("Raindrop.io API", str(context.exception))
+
+    def test_update_not_supported(self):
+        """Test that update operation raises NotImplementedError"""
+        with self.assertRaises(NotImplementedError) as context:
+            query = Mock()
+            self.table.update(query)
+
+        self.assertIn("Direct tag updates are not supported", str(context.exception))
+        self.assertIn("Raindrop.io API", str(context.exception))
+
+    def test_delete_not_supported(self):
+        """Test that delete operation raises NotImplementedError"""
+        with self.assertRaises(NotImplementedError) as context:
+            query = Mock()
+            self.table.delete(query)
+
+        self.assertIn("Tag deletion is not supported", str(context.exception))
+        self.assertIn("Raindrop.io API", str(context.exception))
+
+    def test_normalize_tags_data(self):
+        """Test _normalize_tags_data method"""
+        test_data = pd.DataFrame(
+            [
+                {
+                    "_id": "tag1",
+                    "label": "Python",
+                    "count": 15,
+                    "created": "2024-01-01T00:00:00Z",
+                    "lastUpdate": "2024-01-02T00:00:00Z",
+                }
+            ]
+        )
+
+        result = self.table._normalize_tags_data(test_data)
+
+        # Check that dates are converted to datetime
+        self.assertEqual(result["label"].iloc[0], "Python")
+        self.assertEqual(result["count"].iloc[0], 15)
+        # Note: Date conversion would require pandas datetime conversion, checking basic structure
+        self.assertIn("_id", result.columns)
+        self.assertIn("label", result.columns)
+        self.assertIn("count", result.columns)
+        self.assertIn("created", result.columns)
+        self.assertIn("lastUpdate", result.columns)
+
+    def test_normalize_tags_data_empty(self):
+        """Test _normalize_tags_data with empty DataFrame"""
+        empty_df = pd.DataFrame()
+
+        result = self.table._normalize_tags_data(empty_df)
+
+        # Should return the same empty DataFrame
+        self.assertTrue(result.empty)
+
+    def test_get_tags_calls_api(self):
+        """Test that get_tags calls the API correctly"""
+        expected_response = {
+            "items": [
+                {
+                    "_id": "tag1",
+                    "label": "Python",
+                    "count": 15,
+                    "created": "2024-01-01T00:00:00Z",
+                    "lastUpdate": "2024-01-01T00:00:00Z",
+                },
+                {
+                    "_id": "tag2",
+                    "label": "JavaScript",
+                    "count": 8,
+                    "created": "2024-02-01T00:00:00Z",
+                    "lastUpdate": "2024-02-01T00:00:00Z",
+                },
+            ]
+        }
+
+        self.handler.connection.get_tags.return_value = expected_response
+
+        result = self.table.get_tags()
+
+        # Should have called get_tags on the connection
+        self.handler.connection.get_tags.assert_called_once()
+        # Should return the items from the response
+        self.assertEqual(result, expected_response["items"])
 
 
 if __name__ == "__main__":

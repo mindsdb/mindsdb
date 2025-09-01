@@ -82,7 +82,55 @@ The Raindrop.io handler is initialized with the following parameter:
   - [x] Single collection deletion
   - [x] Bulk collection deletion
 
+### Tags Table
+- [x] Support SELECT for querying tag statistics
+  - [x] Tag usage counts and metadata
+  - [x] Support for filtering and sorting
+  - [x] Support for LIMIT and pagination
+- [ ] Support INSERT for creating tags (not supported by API)
+- [ ] Support UPDATE for modifying tags (not supported by API)
+- [ ] Support DELETE for removing tags (not supported by API)
+
 ## Tables
+
+### Tags
+
+The `tags` table provides access to tag management and statistics from Raindrop.io.
+
+Available columns:
+- `_id` (str): Unique tag identifier
+- `label` (str): Tag name/label
+- `count` (int): Number of bookmarks using this tag
+- `created` (datetime): Tag creation timestamp
+- `lastUpdate` (datetime): Last update timestamp
+
+**Note**: Direct tag creation, updates, and deletion are not supported by the Raindrop.io API. Tags are created automatically when bookmarks are tagged, and are removed automatically when no bookmarks use them.
+
+#### Selecting Tags
+
+```sql
+-- Get all tags
+SELECT * FROM raindrop_db.tags;
+
+-- Get tags sorted by usage count
+SELECT label, count FROM raindrop_db.tags
+ORDER BY count DESC;
+
+-- Get tags with specific usage count
+SELECT label, count FROM raindrop_db.tags
+WHERE count > 5
+ORDER BY count DESC;
+
+-- Get most popular tags (top 10)
+SELECT label, count FROM raindrop_db.tags
+ORDER BY count DESC
+LIMIT 10;
+
+-- Get recently created tags
+SELECT label, created FROM raindrop_db.tags
+WHERE created > '2024-01-01'
+ORDER BY created DESC;
+```
 
 ### Raindrops (Bookmarks)
 
@@ -366,6 +414,15 @@ The handler includes comprehensive error handling:
 - **Local Filtering Engine**: Intelligent routing between API-supported and locally-processed filters
 - **Enhanced Query Performance**: Optimized data fetching based on filter types and complexity
 - **Comprehensive Test Coverage**: 49 unit tests covering all new filtering capabilities
+
+### Version 0.0.3 Improvements
+- **Tags Table**: New `tags` table for tag management and statistics
+- **Tag Statistics**: Access to tag usage counts and metadata
+- **Tag Filtering**: Support for filtering and sorting tags by usage and creation date
+- **API Integration**: Full integration with Raindrop.io `/tags` endpoint
+- **Read-Only Operations**: Proper handling of API limitations for tag CRUD operations
+- **Enhanced Documentation**: Comprehensive examples for tag queries
+- **Test Coverage**: Additional unit tests for tags table functionality
 
 ### Dependency Management
 - Removed duplicate `requests` dependency from handler-specific requirements.txt

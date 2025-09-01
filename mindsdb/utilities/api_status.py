@@ -30,7 +30,7 @@ def get_api_status():
     status_file = _get_api_status_file()
     try:
         if os.path.exists(status_file):
-            with open(status_file, 'r') as f:
+            with open(status_file, "r") as f:
                 return json.load(f)
     except (json.JSONDecodeError, IOError):
         pass
@@ -42,11 +42,11 @@ def set_api_status(api_name: str, status: bool):
     status_file = _get_api_status_file()
     current_status = get_api_status()
     current_status[api_name] = status
-    
+
     # Write atomically to avoid race conditions.
-    temp_file = status_file + '.tmp'
+    temp_file = status_file + ".tmp"
     try:
-        with open(temp_file, 'w') as f:
+        with open(temp_file, "w") as f:
             json.dump(current_status, f)
         os.replace(temp_file, status_file)
     except IOError:

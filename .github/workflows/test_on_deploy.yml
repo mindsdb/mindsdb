@@ -60,7 +60,7 @@ jobs:
     needs: changes
     environment:
       name: ${{ inputs.deploy-env }}
-      url: ${{ vars.ENV_URL }}
+      url: ${{ vars.MDB_ENV_URL }}
     name: Run integration tests on deploy
     runs-on: mdb-dev
     if: ${{ github.ref_type == 'branch' && needs.changes.outputs.not-docs == 'true' }}
@@ -84,5 +84,5 @@ jobs:
           make integration_tests_slow
       env:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        INTERNAL_URL: ${{ vars.INTERNAL_URL }}
+        INTERNAL_URL: ${{ vars.MINDSDB_INTERNAL_URL }}
     

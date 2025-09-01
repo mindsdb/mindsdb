@@ -61,44 +61,15 @@ class RaindropsTable(APITable):
         api_supported_conditions = []  # Conditions that can be handled by Raindrop.io API
         local_filter_conditions = []  # Conditions that need local filtering
 
-        for condition in where_conditions:
-            # Handle different condition formats
-            if isinstance(condition, list) and len(condition) >= 3:
-                op, column, value = condition[0], condition[1], condition[2]
-            elif hasattr(condition, "op") and hasattr(condition, "column"):
-                op = getattr(condition, "op", "=")
-                column = condition.column
-                value = getattr(condition, "value", None)
-            else:
-                # Skip malformed conditions
-                logger.warning(f"Skipping malformed condition: {condition}")
-                continue
-
-            # Handle API-supported conditions
-            if column == "collection_id" and op == "=":
-                collection_id = value
-                api_supported_conditions.append(condition)
-            elif (column in ["search", "title"]) and op == "=":
-                search_query = value
-                api_supported_conditions.append(condition)
-            elif (column in ["_id", "id"]) and op in ["=", "in"]:
-                if isinstance(value, list):
-                    raindrop_ids.extend(value)
-                else:
-                    raindrop_ids.append(value)
-                api_supported_conditions.append(condition)
-            # Handle advanced conditions that need local filtering
-            elif column in ["created", "lastUpdate", "sort"] and op in [">", "<", ">=", "<=", "between"]:
-                local_filter_conditions.append(condition)
-            elif column == "important" and op == "=":
-                # Important flag can be handled locally
-                local_filter_conditions.append(condition)
-            elif column in ["tags", "domain", "excerpt", "note"] and op in ["=", "like", "in"]:
-                # Text-based filtering needs to be done locally
-                local_filter_conditions.append(condition)
-            else:
-                # For unsupported conditions, add to local filtering
-                local_filter_conditions.append(condition)
+        # Parse conditions and categorize them
+        parsed_conditions = self._parse_where_conditions(where_conditions)
+        collection_id = parsed_conditions.get("collection_id", 0)
+        search_query = parsed_conditions.get("search")
+        sort_order = parsed_conditions.get("sort")
+        raindrop_ids = parsed_conditions.get("raindrop_ids", [])
+        api_supported_conditions = parsed_conditions.get("api_supported", [])
+        local_filter_conditions = parsed_conditions.get("local_filters", [])
+        complex_filters = parsed_conditions.get("complex_filters", {})
 
         # Handle sorting
         if order_by_conditions:
@@ -122,26 +93,36 @@ class RaindropsTable(APITable):
                     logger.warning(f"Failed to fetch raindrop {raindrop_id}: {e}")
                     continue
         else:
-            # Get raindrops from collection with optimized pagination
-            # If we have local filters, we may need to fetch more data than requested limit
-            # to ensure we have enough data to filter locally
-            fetch_limit = None
-            if local_filter_conditions:
-                # If we have local filters, fetch more data to account for filtering
-                # We'll apply the original limit after local filtering
-                fetch_limit = result_limit * 5 if result_limit else 1000  # Fetch more data for local filtering
-            else:
-                fetch_limit = result_limit
+            # Check if we can use advanced filtering endpoint
+            if complex_filters and self._can_use_advanced_filters(complex_filters):
+                # Use advanced filtering endpoint
+                try:
+                    response = self.handler.connection.get_raindrops_with_filters(
+                        collection_id=collection_id, filters=complex_filters
+                    )
+                    raindrops_data = response.get("items", [])
 
-            response = self.handler.connection.get_raindrops(
-                collection_id=collection_id,
-                search=search_query,
-                sort=sort_order,
-                page=0,
-                per_page=50,
-                max_results=fetch_limit,
-            )
-            raindrops_data = response.get("items", [])
+                    # If advanced filtering worked, we might still need to apply local filters
+                    # for conditions not supported by the advanced endpoint
+                    if local_filter_conditions:
+                        # Convert to DataFrame for local filtering
+                        if raindrops_data:
+                            temp_df = pd.json_normalize(raindrops_data)
+                            temp_df = self._normalize_raindrop_data(temp_df)
+                            temp_df = self._apply_local_filters(temp_df, local_filter_conditions)
+                            raindrops_data = temp_df.to_dict("records")
+
+                except Exception as e:
+                    logger.warning(f"Advanced filtering failed, falling back to standard endpoint: {e}")
+                    # Fall back to standard endpoint
+                    raindrops_data = self._fetch_with_standard_endpoint(
+                        collection_id, search_query, sort_order, result_limit, local_filter_conditions
+                    )
+            else:
+                # Use standard endpoint
+                raindrops_data = self._fetch_with_standard_endpoint(
+                    collection_id, search_query, sort_order, result_limit, local_filter_conditions
+                )
 
         # Convert to DataFrame
         if raindrops_data:
@@ -596,6 +577,114 @@ class RaindropsTable(APITable):
                 continue
 
         return df
+
+    def _parse_where_conditions(self, conditions: List) -> Dict[str, Any]:
+        """Parse WHERE conditions and categorize them for different handling strategies"""
+        parsed = {
+            "collection_id": 0,
+            "search": None,
+            "sort": None,
+            "raindrop_ids": [],
+            "api_supported": [],
+            "local_filters": [],
+            "complex_filters": {},
+        }
+
+        for condition in conditions:
+            # Handle different condition formats
+            if isinstance(condition, list) and len(condition) >= 3:
+                op, column, value = condition[0], condition[1], condition[2]
+            elif hasattr(condition, "op") and hasattr(condition, "column"):
+                op = getattr(condition, "op", "=")
+                column = condition.column
+                value = getattr(condition, "value", None)
+            else:
+                # Skip malformed conditions
+                logger.warning(f"Skipping malformed condition: {condition}")
+                continue
+
+            # Categorize conditions based on API support and complexity
+            if column == "collection_id" and op == "=":
+                parsed["collection_id"] = value
+                parsed["api_supported"].append(condition)
+            elif (column in ["search", "title"]) and op == "=":
+                parsed["search"] = value
+                parsed["api_supported"].append(condition)
+            elif (column in ["_id", "id"]) and op in ["=", "in"]:
+                if isinstance(value, list):
+                    parsed["raindrop_ids"].extend(value)
+                else:
+                    parsed["raindrop_ids"].append(value)
+                parsed["api_supported"].append(condition)
+            # Handle advanced conditions that need local filtering
+            elif column in ["created", "lastUpdate", "sort"] and op in [">", "<", ">=", "<=", "between"]:
+                parsed["local_filters"].append(condition)
+            elif column == "important" and op == "=":
+                parsed["local_filters"].append(condition)
+            elif column in ["tags", "domain", "excerpt", "note"] and op in ["=", "like", "in"]:
+                parsed["local_filters"].append(condition)
+            else:
+                # For unsupported conditions, add to local filtering
+                parsed["local_filters"].append(condition)
+
+        # Build complex filters for advanced API endpoint if we have multiple criteria
+        if parsed["search"] or parsed["local_filters"]:
+            complex_filters = {}
+            if parsed["search"]:
+                complex_filters["search"] = parsed["search"]
+
+            # Extract important flag if present in local filters
+            for condition in parsed["local_filters"]:
+                if isinstance(condition, list) and len(condition) >= 3:
+                    op, column, value = condition[0], condition[1], condition[2]
+                elif hasattr(condition, "op") and hasattr(condition, "column"):
+                    op = getattr(condition, "op", "=")
+                    column = condition.column
+                    value = getattr(condition, "value", None)
+                else:
+                    continue
+
+                if column == "important" and op == "=":
+                    complex_filters["important"] = value
+                elif column == "tags" and op in ["=", "in"]:
+                    if isinstance(value, list):
+                        complex_filters["tags"] = value
+                    else:
+                        complex_filters["tags"] = [value]
+
+            if complex_filters:
+                parsed["complex_filters"] = complex_filters
+
+        return parsed
+
+    def _can_use_advanced_filters(self, complex_filters: Dict[str, Any]) -> bool:
+        """Check if we can use the advanced filtering endpoint"""
+        # Use advanced filters if we have search, important, or tags criteria
+        return any(key in complex_filters for key in ["search", "important", "tags"])
+
+    def _fetch_with_standard_endpoint(
+        self, collection_id: int, search_query: str, sort_order: str, result_limit: int, local_filter_conditions: List
+    ) -> List[Dict]:
+        """Fetch data using the standard Raindrop.io endpoint"""
+        # If we have local filters, we may need to fetch more data than requested limit
+        # to ensure we have enough data to filter locally
+        fetch_limit = None
+        if local_filter_conditions:
+            # If we have local filters, fetch more data to account for filtering
+            # We'll apply the original limit after local filtering
+            fetch_limit = result_limit * 5 if result_limit else 1000  # Fetch more data for local filtering
+        else:
+            fetch_limit = result_limit
+
+        response = self.handler.connection.get_raindrops(
+            collection_id=collection_id,
+            search=search_query,
+            sort=sort_order,
+            page=0,
+            per_page=50,
+            max_results=fetch_limit,
+        )
+        return response.get("items", [])
 
     def _apply_ordering(self, df: pd.DataFrame, order_by_conditions) -> pd.DataFrame:
         """Apply ordering to DataFrame"""

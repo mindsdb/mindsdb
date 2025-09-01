@@ -45,7 +45,7 @@ prometheus-client==0.20.0
 sentry-sdk[flask] == 2.14.0
 openai<1.100.0,>=1.58.1
 pyaml==23.12.0
-mcp~=1.10.1
+mcp~=1.13.0
 starlette>=0.27     # Required for A2A, MCP servers
 fastapi>=0.110.0, <1.0.0  # Required for LiteLLM server
 uvicorn>=0.30.0, <1.0.0   # For all HTTP-based APIs

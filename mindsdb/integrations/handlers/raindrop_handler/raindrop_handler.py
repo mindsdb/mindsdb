@@ -4,7 +4,7 @@ from typing import Dict, Any, List
 
 from mindsdb_sql_parser import parse_sql
 
-from mindsdb.integrations.handlers.raindrop_handler.raindrop_tables import RaindropsTable, CollectionsTable
+from mindsdb.integrations.handlers.raindrop_handler.raindrop_tables import RaindropsTable, CollectionsTable, TagsTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -38,6 +38,7 @@ class RaindropHandler(APIHandler):
         self._register_table("raindrops", RaindropsTable(self))
         self._register_table("bookmarks", RaindropsTable(self))  # Alias for raindrops
         self._register_table("collections", CollectionsTable(self))
+        self._register_table("tags", TagsTable(self))
 
     def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.

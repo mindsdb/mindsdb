@@ -1106,3 +1106,174 @@ class CollectionsTable(APITable):
                     collection_data[api_key] = value
 
         return collection_data
+
+
+class TagsTable(APITable):
+    """The Raindrop.io Tags Table implementation"""
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """
+        Pulls Raindrop.io tags data.
+
+        Parameters
+        ----------
+        query : ast.Select
+           Given SQL SELECT query
+
+        Returns
+        -------
+        pd.DataFrame
+            Raindrop.io tags with usage statistics
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        select_statement_parser = SELECTQueryParser(query, "tags", self.get_columns())
+        (
+            selected_columns,
+            where_conditions,
+            order_by_conditions,
+            result_limit,
+        ) = select_statement_parser.parse_query()
+
+        # Get tags data from API
+        tags_data = self.get_tags()
+
+        # Convert to DataFrame
+        if tags_data:
+            tags_df = pd.json_normalize(tags_data)
+            tags_df = self._normalize_tags_data(tags_df)
+        else:
+            # Create empty DataFrame with all expected columns
+            tags_df = pd.DataFrame(columns=self.get_columns())
+
+        # Ensure all expected columns exist (defensive check)
+        expected_columns = self.get_columns()
+        for col in expected_columns:
+            if col not in tags_df.columns:
+                logger.warning(f"Missing column after normalization: {col}, adding as None")
+                tags_df[col] = None
+
+        # Apply filtering and ordering using the executor
+        select_statement_executor = SELECTQueryExecutor(
+            tags_df, selected_columns, where_conditions, order_by_conditions
+        )
+        tags_df = select_statement_executor.execute_query()
+
+        # Apply limit if needed
+        if result_limit and len(tags_df) > result_limit:
+            tags_df = tags_df.head(result_limit)
+
+        return tags_df
+
+    def insert(self, query: ast.Insert) -> None:
+        """
+        Tags are typically created automatically when bookmarks are tagged.
+        Direct tag creation is not supported by the Raindrop.io API.
+
+        Parameters
+        ----------
+        query : ast.Insert
+           Given SQL INSERT query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        NotImplementedError
+            Direct tag creation is not supported
+        """
+        raise NotImplementedError(
+            "Direct tag creation is not supported by Raindrop.io API. "
+            "Tags are created automatically when bookmarks are tagged."
+        )
+
+    def update(self, query: ast.Update) -> None:
+        """
+        Tag updates are typically handled through bookmark updates.
+        Direct tag updates are not supported by the Raindrop.io API.
+
+        Parameters
+        ----------
+        query : ast.Update
+           Given SQL UPDATE query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        NotImplementedError
+            Direct tag updates are not supported
+        """
+        raise NotImplementedError(
+            "Direct tag updates are not supported by Raindrop.io API. Tag updates are handled through bookmark updates."
+        )
+
+    def delete(self, query: ast.Delete) -> None:
+        """
+        Tag deletion removes the tag from all bookmarks.
+        This operation is not supported by the Raindrop.io API.
+
+        Parameters
+        ----------
+        query : ast.Delete
+           Given SQL DELETE query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        NotImplementedError
+            Tag deletion is not supported
+        """
+        raise NotImplementedError(
+            "Tag deletion is not supported by Raindrop.io API. "
+            "Tags are removed automatically when no bookmarks use them."
+        )
+
+    def get_columns(self) -> List[str]:
+        """Get the column names for the tags table"""
+        return [
+            "_id",
+            "label",
+            "count",
+            "created",
+            "lastUpdate",
+        ]
+
+    def get_tags(self) -> List[Dict]:
+        """Get tags data"""
+        if not self.handler.connection:
+            self.handler.connect()
+
+        response = self.handler.connection.get_tags()
+        return response.get("items", [])
+
+    def _normalize_tags_data(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Normalize tags data for consistent column structure"""
+        if df.empty:
+            return df
+
+        # Convert dates
+        for date_col in ["created", "lastUpdate"]:
+            try:
+                if date_col in df.columns:
+                    df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
+            except Exception as e:
+                logger.warning(f"Error processing date column {date_col}: {e}")
+
+        # Ensure ALL expected columns exist, even if empty
+        expected_columns = self.get_columns()
+        for col in expected_columns:
+            if col not in df.columns:
+                df[col] = None
+
+        return df

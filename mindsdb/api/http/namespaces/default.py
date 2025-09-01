@@ -53,7 +53,7 @@ class LogoutRoute(Resource):
     @ns_conf.doc(responses={200: "Success"})
     @api_endpoint_metrics("POST", "/default/logout")
     def post(self):
-        # We can't forcibly log out a user with the 
+        # We can't forcibly log out a user with the
         h = request.headers.get("Authorization")
         if not h or not h.startswith("Bearer "):
             bearer = None

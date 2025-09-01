@@ -9,6 +9,7 @@ from mindsdb.integrations.handlers.raindrop_handler.raindrop_tables import (
     CollectionsTable,
     TagsTable,
     ParseTable,
+    BulkOperationsTable,
 )
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
@@ -45,6 +46,7 @@ class RaindropHandler(APIHandler):
         self._register_table("collections", CollectionsTable(self))
         self._register_table("tags", TagsTable(self))
         self._register_table("parse", ParseTable(self))
+        self._register_table("bulk_operations", BulkOperationsTable(self))
 
     def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.
@@ -290,6 +292,20 @@ class RaindropAPIClient:
         if ids:
             data["ids"] = ids
         return self._make_request("DELETE", f"/raindrops/{collection_id}", data=data)
+
+    def move_raindrops_to_collection(
+        self, target_collection_id: int, source_collection_id: int = None, search: str = None, ids: list = None
+    ) -> Dict[str, Any]:
+        """Move raindrops to a different collection"""
+        update_data = {"collection": {"$id": target_collection_id}}
+        data = update_data.copy()
+        if search:
+            data["search"] = search
+        if ids:
+            data["ids"] = ids
+
+        endpoint = f"/raindrops/{source_collection_id}" if source_collection_id else "/raindrops/0"
+        return self._make_request("PUT", endpoint, data=data)
 
     # Collections methods
     def get_collections(self) -> Dict[str, Any]:

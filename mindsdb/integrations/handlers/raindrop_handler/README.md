@@ -101,6 +101,16 @@ The Raindrop.io handler is initialized with the following parameter:
 - [ ] Support UPDATE for modifying parsed URLs (read-only operation)
 - [ ] Support DELETE for removing parsed URLs (read-only operation)
 
+### Bulk Operations Table
+- [x] Support UPDATE for bulk collection moves
+  - [x] Move bookmarks by source collection ID
+  - [x] Move specific bookmarks by ID
+  - [x] Move bookmarks by search criteria
+  - [x] Batch processing with error handling
+- [ ] Support SELECT for bulk operation status (not queryable)
+- [ ] Support INSERT for bulk operations (not applicable)
+- [ ] Support DELETE for bulk operations (use raindrops table)
+
 ## Tables
 
 ### Tags
@@ -422,6 +432,34 @@ WHERE title LIKE '%python%' OR note LIKE '%python%'
 ORDER BY lastUpdate DESC;
 ```
 
+### Bulk Operations
+
+```sql
+-- Move all bookmarks from one collection to another
+UPDATE raindrop_db.bulk_operations
+SET collection_id = 456
+WHERE source_collection_id = 123;
+
+-- Move specific bookmarks to a collection
+UPDATE raindrop_db.bulk_operations
+SET collection_id = 789
+WHERE _id IN (1, 2, 3, 4, 5);
+
+-- Move bookmarks matching search criteria
+UPDATE raindrop_db.bulk_operations
+SET collection_id = 999
+WHERE search = 'python tutorial';
+
+-- Combine with other operations - move then update
+UPDATE raindrop_db.bulk_operations
+SET collection_id = 456
+WHERE source_collection_id = 123;
+
+UPDATE raindrop_db.raindrops
+SET important = true
+WHERE collection_id = 456 AND created > '2024-01-01';
+```
+
 ## API Rate Limits
 
 The Raindrop.io API has the following rate limits:
@@ -490,6 +528,16 @@ The handler includes comprehensive error handling:
 - **Read-Only Operations**: Parse table designed as read-only for metadata extraction
 - **Enhanced Documentation**: Comprehensive examples for URL parsing queries
 - **Test Coverage**: Complete unit test suite for parse table functionality
+
+### Version 0.0.5 Improvements
+- **Bulk Operations Table**: New `bulk_operations` table for bulk collection moves
+- **Bulk Collection Moves**: Move multiple bookmarks between collections efficiently
+- **Flexible Move Criteria**: Support for moving by collection ID, bookmark IDs, or search terms
+- **API Integration**: Full integration with Raindrop.io bulk update endpoints
+- **Error Handling**: Comprehensive error handling for bulk operations
+- **SQL Interface**: User-friendly SQL interface for bulk operations
+- **Enhanced Documentation**: Comprehensive examples for bulk move operations
+- **Test Coverage**: Complete unit test suite for bulk operations functionality
 
 ### Dependency Management
 - Removed duplicate `requests` dependency from handler-specific requirements.txt

@@ -8,7 +8,7 @@ from mindsdb.api.http.utils import http_error
 from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.utilities.config import Config
 from mindsdb.utilities import log
-from mindsdb.api.common.middleware import generate_pat, revoke_pat
+from mindsdb.api.common.middleware import generate_pat, revoke_pat, verify_pat
 
 
 logger = log.getLogger(__name__)
@@ -111,7 +111,7 @@ class StatusRoute(Resource):
             "mindsdb_version": mindsdb_version,
             "environment": environment,
             "auth": {
-                "confirmed": verify_token(request.headers.get("Authorization", "").replace("Bearer ", "")),
+                "confirmed": verify_pat(request.headers.get("Authorization", "").replace("Bearer ", "")),
                 "http_auth_enabled": config["auth"]["http_auth_enabled"],
                 "provider": auth_provider,
             },

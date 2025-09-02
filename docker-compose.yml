@@ -33,7 +33,6 @@ services:
     ports:
       - '47334:47334'
       - '47335:47335'
-      - '47336:47336'
     environment:
       MINDSDB_DB_CON: "postgresql://postgres:postgres@postgres/mindsdb"
       MINDSDB_DOCKER_ENV: "True"

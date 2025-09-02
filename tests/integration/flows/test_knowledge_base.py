@@ -36,7 +36,7 @@ def get_configurations():
             "user": parsed.username,
             "host": parsed.hostname,
             "port": parsed.port,
-            "password": unquote(parsed.password) if parsed.password else None,
+            "password": HiddenVar(unquote(parsed.password)) if parsed.password else None,
             "database": parsed.path.lstrip("/"),
         }
         storages.append(pgvector)
@@ -141,7 +141,7 @@ class KBTestBase:
     def create_kb(self, name, storage, embedding_model, reranking_model=None, params=None):
         # remove if exists
         db_name = f"db_{name}"
-        table_name = f"test_table"
+        table_name = "test_table"
 
         #  -- clean --
         try:

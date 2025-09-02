@@ -77,7 +77,7 @@ class A2AServer:
             http="h11",
             timeout_keep_alive=65,
             log_level=None,
-            log_config=None,
+            log_config=None
         )
 
     def _get_agent_card(self, request: Request) -> JSONResponse:
@@ -111,6 +111,7 @@ class A2AServer:
                 "user-id": request.headers.get("user-id", None),
                 "company-id": request.headers.get("company-id", None),
                 "user-class": request.headers.get("user-class", None),
+                "authorization": request.headers.get("Authorization", None),
             }
 
             if isinstance(json_rpc_request, GetTaskRequest):

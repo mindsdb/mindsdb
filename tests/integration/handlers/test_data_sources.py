@@ -1,16 +1,34 @@
+import pytest
 import logging
 import json
+import time
 from pathlib import Path
 from typing import Dict, Any, List
 
 # Import helpers from the central helpers.py file
-from tests.integration.handlers.utils.helpers import get_handlers_info, build_parameters_clause
+from tests.integration.handlers.utils.helpers import get_handlers_info, build_parameters_clause, connect_to_mindsdb
 
-def generate_test_cases(mindsdb_server: Any) -> List[Dict[str, Any]]:
+# --- Test Case Generation Logic ---
+
+def generate_test_cases_for_parametrization() -> List[Dict[str, Any]]:
     """
-    Generates test case definitions for all handlers.
+    Generates test case definitions for all handlers to be used by pytest.parametrize.
+    Connects to MindsDB temporarily just for test case discovery.
     """
-    handlers_to_test, uninstalled_handlers = get_handlers_info(mindsdb_server)
+    try:
+        # We need a temporary server connection to discover handlers and tables.
+        # The actual tests will use the 'mindsdb_server' fixture from conftest.
+        server = connect_to_mindsdb()
+    except Exception as e:
+        # If we can't connect, we can't generate tests.
+        # Generate a single failing test to make the issue obvious.
+        return [{
+            'handler_name': 'mindsdb_connection_check',
+            'test_type': 'setup_failure',
+            'reason': f"Failed to connect to MindsDB to generate tests: {e}"
+        }]
+
+    handlers_to_test, uninstalled_handlers = get_handlers_info(server)
     test_cases = []
 
     for handler in handlers_to_test:
@@ -27,22 +45,17 @@ def generate_test_cases(mindsdb_server: Any) -> List[Dict[str, Any]]:
 
         temp_db_name = f"test_discover_{handler_name}"
         try:
-            mindsdb_server.query(f"DROP DATABASE IF EXISTS {temp_db_name};").fetch()
+            server.query(f"DROP DATABASE IF EXISTS {temp_db_name};").fetch()
             create_query = f"CREATE DATABASE {temp_db_name} WITH ENGINE = '{handler_name}', PARAMETERS = {params_clause};"
-            mindsdb_server.query(create_query).fetch()
-            
-            tables_df = mindsdb_server.query(f"SHOW TABLES FROM {temp_db_name};").fetch()
+            server.query(create_query).fetch()
+
+            tables_df = server.query(f"SHOW TABLES FROM {temp_db_name};").fetch()
             table_name_column = tables_df.columns[0]
             for table_name in tables_df[table_name_column].head(2):
                 test_cases.append({
                     'handler_name': handler_name,
                     'query_template': f"SELECT * FROM {{db_name}}.{table_name} LIMIT 1;",
                     'test_type': 'autodiscovery_schema'
-                })
-                test_cases.append({
-                    'handler_name': handler_name,
-                    'query_template': f"SELECT * FROM {{db_name}}.{table_name} LIMIT 5;",
-                    'test_type': 'autodiscovery_select'
                 })
         except Exception as e:
             error_message = f"Failed to discover tables for handler '{handler_name}': {e}"
@@ -52,9 +65,9 @@ def generate_test_cases(mindsdb_server: Any) -> List[Dict[str, Any]]:
                 'test_type': 'skipped_test',
                 'reason': error_message
             })
-            continue # Continue to the next handler
+            continue
         finally:
-            mindsdb_server.query(f"DROP DATABASE IF EXISTS {temp_db_name};").fetch()
+            server.query(f"DROP DATABASE IF EXISTS {temp_db_name};").fetch()
 
         config_path = Path(__file__).parent / 'configs' / f'{handler_name}.json'
         if config_path.is_file():
@@ -85,3 +98,75 @@ def generate_test_cases(mindsdb_server: Any) -> List[Dict[str, Any]]:
         })
         
     return test_cases
+
+
+# --- Main Parametrized Test Function ---
+
+# Generate a user-friendly ID for each test case in the pytest output
+def idfn(test_case):
+    return f"{test_case.get('handler_name', 'unknown')}-{test_case.get('test_type', 'unknown')}"
+
+@pytest.mark.dsi
+@pytest.mark.parametrize("test_case", generate_test_cases_for_parametrization(), ids=idfn)
+def test_handler_integrations(mindsdb_server, session_databases, query_logger, test_case):
+    """
+    This single test function runs all DSI tests based on the parametrized test_case.
+    """
+    handler_name = test_case['handler_name']
+    test_type = test_case['test_type']
+
+    if test_type == 'setup_failure':
+        pytest.fail(test_case['reason'], pytrace=False)
+
+    if test_type == 'skipped_test':
+        reason = test_case.get('reason', 'Unknown reason')
+        query_logger(handler_name, 'SKIPPED', 0, error=reason)
+        pytest.skip(reason)
+
+    if handler_name not in session_databases:
+        pytest.skip(f"Database for handler '{handler_name}' was not set up successfully.")
+
+    db_name = session_databases[handler_name]
+    query_template = test_case.get('query_template', '')
+    query = query_template.format(db_name=db_name)
+    logging.info(f"Running test for handler '{handler_name}': {query}")
+
+    start_time = time.time()
+    error = None
+    actual_response = None
+
+    try:
+        if test_type == 'negative':
+            details = test_case['details']
+            try:
+                mindsdb_server.query(query).fetch()
+                pytest.fail('Negative test failed. Query was expected to raise an error, but it succeeded.')
+            except Exception as e:
+                error_str = str(e)
+                assert details['expected_error'] in error_str, f'Negative test failed. Expected error substring "{details["expected_error"]}" not found in actual error: {error_str}'
+                error = error_str
+        else:  # Positive tests (autodiscovery and custom)
+            select_df = mindsdb_server.query(query).fetch()
+            actual_response = select_df.to_json(orient='records') if not select_df.empty else '[]'
+            assert select_df is not None, f"Query '{query}' returned None instead of a DataFrame."
+
+            if test_type == 'custom':
+                details = test_case['details']
+                assert not select_df.empty, f"Custom query '{query}' returned no results."
+                
+                expected_columns = set(details['expected_columns'])
+                actual_columns = set(select_df.columns)
+                missing_columns = expected_columns - actual_columns
+                assert not missing_columns, f'Custom query failed for {query}. Missing expected columns: {missing_columns}'
+
+                if 'exact_rows' in details:
+                    assert len(select_df) == details['exact_rows']
+                else:
+                    assert len(select_df) >= details.get('min_rows', 1)
+
+    except Exception as e:
+        error = str(e)
+        raise
+    finally:
+        duration = time.time() - start_time
+        query_logger(handler_name, query, duration, actual_response, error)

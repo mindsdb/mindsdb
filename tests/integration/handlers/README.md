@@ -33,7 +33,7 @@ This project contains a powerful, configuration-driven, automated testing framew
 To run the full test suite, execute the following command from the root of the `dsi_testing_framework` directory:
 
 ```bash
-pytest -v -s
+pytest -v --run-dsi-tests tests/integration/handlers/
 
 ```
 

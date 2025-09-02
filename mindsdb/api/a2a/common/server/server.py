@@ -71,13 +71,7 @@ class A2AServer:
 
         # Configure uvicorn with optimized settings for streaming
         uvicorn.run(
-            self.app,
-            host=self.host,
-            port=self.port,
-            http="h11",
-            timeout_keep_alive=65,
-            log_level=None,
-            log_config=None
+            self.app, host=self.host, port=self.port, http="h11", timeout_keep_alive=65, log_level=None, log_config=None
         )
 
     def _get_agent_card(self, request: Request) -> JSONResponse:

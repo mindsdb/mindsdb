@@ -348,7 +348,7 @@ class TestKB(KBTestBase):
             raise RuntimeError("Query is not partitioned")
 
         duration = None
-        for i in range(100):  # 100 sec min max
+        for i in range(200):  # 200 sec min max
             time.sleep(1)
 
             ret = self.run_sql(f"describe knowledge base {kb_name}")

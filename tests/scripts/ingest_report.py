@@ -4,12 +4,10 @@ import json
 import psycopg2
 import uuid
 from datetime import datetime
-
+from tests.integration.handlers.utils import config
 # Add the project root to the Python path to allow for absolute imports
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
-
-from tests.integration.handlers.utils import config
 
 # Define the location of the report files
 REPORTS_DIR = os.path.join(project_root, 'reports')

@@ -3,7 +3,6 @@ import json
 from typing import Dict, Any, List, Tuple
 import mindsdb_sdk
 
-# Corrected import path to find config.py in the same utils directory
 from tests.integration.handlers.utils import config
 
 def connect_to_mindsdb():
@@ -42,9 +41,9 @@ def get_handlers_info(mindsdb_server: Any) -> Tuple[List[Dict[str, Any]], List[s
             logging.warning("DSI: Did not discover any installed data handlers on the MindsDB server.")
             installed_handlers = set()
         else:
-            # Corrected: Use the boolean series directly for filtering
             installed_handlers = set(installed_handlers_df[installed_handlers_df['IMPORT_SUCCESS']]['NAME'].str.lower())
         
+        # Corrected: HANDERS_TO_TEST -> HANDLERS_TO_TEST
         target_handlers_str = config.HANDLERS_TO_TEST
         target_handlers_list = [h.strip().lower() for h in target_handlers_str.split(',') if h.strip()]
         

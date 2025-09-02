@@ -6,7 +6,7 @@ import time
 import logging
 from pathlib import Path
 from dotenv import load_dotenv
-from typing import Generator, Any, Tuple, List, Dict
+from typing import Generator, Any
 
 # DSI: Add project root to path for script imports
 project_root = Path(__file__).parent.parent
@@ -16,30 +16,21 @@ sys.path.insert(0, str(project_root))
 # --- Modified: Existing and New Pytest Hooks ---
 
 def pytest_addoption(parser):
-    # Existing option for MindsDB's test suite
     parser.addoption("--runslow", action="store_true", default=False, help="run slow tests")
+    parser.addoption("--run-dsi-tests", action="store_true", default=False, help="run DSI integration tests")
 
 
 def pytest_configure(config):
-    """
-    Called by pytest before test collection.
-    """
     config.addinivalue_line("markers", "slow: mark test as slow to run")
     config.addinivalue_line("markers", "dsi: mark test as part of the DSI framework")
 
-    # --- DSI: Smartly trigger test generation based on the test path ---
-    # This checks if the user is targeting the DSI test directory.
-    if any('integration/handlers' in str(arg) for arg in config.args):
-        # We only import the DSI framework if we need it
-        from tests.scripts.generate_tests import main as generate_tests_main
-
+    if config.getoption("--run-dsi-tests"):
         logging.basicConfig(
             level=logging.INFO,
             format='%(asctime)s - %(levelname)s - %(message)s',
             datefmt='%Y-%m-%d %H:%M:%S',
             force=True
         )
-
         logging.info("--- DSI: Loading environment variables ---")
         try:
             dotenv_path = project_root / '.env'
@@ -48,46 +39,32 @@ def pytest_configure(config):
             else:
                 logging.warning(f"DSI: Could not find .env file at {dotenv_path}. Using system variables.")
         except Exception as e:
-            logging.error(f"DSI: An error occurred while loading the .env file: {e}")
-
-        logging.info("--- DSI: Generating integration tests ---")
-        try:
-            generate_tests_main()
-            logging.info("--- DSI: Finished generating integration tests ---")
-        except Exception as e:
-            pytest.fail(f"DSI: Failed to generate tests during session start: {e}")
+            pytest.fail(f"DSI: A critical error occurred while loading the .env file: {e}", pytrace=False)
+        
+        logging.info("--- DSI: Test generation will be handled by pytest parametrization ---")
 
 
 def pytest_collection_modifyitems(config, items):
-    # The --runslow logic remains for the main test suite.
     if not config.getoption("--runslow"):
         skip_slow = pytest.mark.skip(reason="need --runslow option to run")
         for item in items:
             if "slow" in item.keywords:
                 item.add_marker(skip_slow)
 
+    if not config.getoption("--run-dsi-tests"):
+        items[:] = [item for item in items if "dsi" not in item.keywords]
+
 
 def pytest_sessionfinish(session: Any, exitstatus: int) -> None:
-    """
-    Called by pytest after the test session finishes to clean up generated files.
-    """
-    # Only clean up if the tests were generated in the first place.
-    if any('integration/handlers' in str(arg) for arg in session.config.args):
-        logging.info("--- DSI: Cleaning up generated test file ---")
-        try:
-            generated_test_file = project_root / 'tests' / 'integration' / 'handlers' / 'test_generated_integrations.py'
-            if generated_test_file.exists():
-                os.remove(generated_test_file)
-                logging.info(f"DSI: Successfully removed {generated_test_file}")
-        except Exception as e:
-            logging.error(f"DSI: Failed to clean up generated test file: {e}")
+    if session.config.getoption("--run-dsi-tests"):
+        logging.info("--- DSI: Test session finished. No generated files to clean up. ---")
 
 
-# --- New: DSI Framework Fixtures ---
+# --- DSI Framework Fixtures with Improved Error Handling ---
 
 @pytest.fixture(scope="session")
 def mindsdb_server(pytestconfig) -> Generator[Any, None, None]:
-    if not any('integration/handlers' in str(arg) for arg in pytestconfig.args):
+    if not pytestconfig.getoption("--run-dsi-tests"):
         yield None
         return
     
@@ -97,12 +74,15 @@ def mindsdb_server(pytestconfig) -> Generator[Any, None, None]:
         server = connect_to_mindsdb()
         yield server
     except Exception as e:
-        pytest.fail(f"DSI: Failed to connect to MindsDB via SDK: {e}")
+        pytest.fail(
+            f"DSI: Failed to connect to MindsDB via SDK. Please ensure MindsDB is running and accessible. Error: {e}", 
+            pytrace=False
+        )
 
 
 @pytest.fixture(scope="session")
 def query_logger(pytestconfig):
-    if not any('integration/handlers' in str(arg) for arg in pytestconfig.args):
+    if not pytestconfig.getoption("--run-dsi-tests"):
         yield None
         return
 
@@ -115,17 +95,21 @@ def query_logger(pytestconfig):
             'actual_response': actual_response, 'error': error
         })
     yield log_query
-    reports_dir = project_root / 'reports'
-    reports_dir.mkdir(exist_ok=True)
-    log_filepath = reports_dir / 'all_handlers_query_log.json'
-    with open(log_filepath, 'w') as f:
-        json.dump(full_query_log, f, indent=4)
-    logging.info(f"DSI: Full query log saved to {log_filepath}")
+    
+    try:
+        reports_dir = project_root / 'reports'
+        reports_dir.mkdir(exist_ok=True)
+        log_filepath = reports_dir / 'all_handlers_query_log.json'
+        with open(log_filepath, 'w') as f:
+            json.dump(full_query_log, f, indent=4)
+        logging.info(f"DSI: Full query log saved to {log_filepath}")
+    except Exception as e:
+        logging.error(f"DSI: Failed to save the query log file: {e}")
 
 
 @pytest.fixture(scope="session")
 def session_databases(mindsdb_server, pytestconfig):
-    if not any('integration/handlers' in str(arg) for arg in pytestconfig.args):
+    if not pytestconfig.getoption("--run-dsi-tests") or mindsdb_server is None:
         yield None
         return
 
@@ -137,8 +121,11 @@ def session_databases(mindsdb_server, pytestconfig):
         handler_name = handler_info['name']
         db_name = f"test_session_{handler_name}"
         params_clause, skip_reason = build_parameters_clause(handler_name, handler_info['connection_args'])
+        
         if skip_reason:
+            logging.warning(f"DSI: Skipping database creation for {handler_name}: {skip_reason}")
             continue
+            
         try:
             mindsdb_server.query(f"DROP DATABASE IF EXISTS {db_name};").fetch()
             create_query = f"CREATE DATABASE {db_name} WITH ENGINE = '{handler_name}', PARAMETERS = {params_clause};"
@@ -147,10 +134,13 @@ def session_databases(mindsdb_server, pytestconfig):
             logging.info(f"DSI: Successfully created database '{db_name}' for handler '{handler_name}'.")
         except Exception as e:
             logging.error(f"DSI: Failed to create database for {handler_name}: {e}")
+            
     yield created_dbs
+    
     logging.info("--- DSI: Tearing down session databases ---")
     for db_name in created_dbs.values():
         try:
             mindsdb_server.query(f"DROP DATABASE IF EXISTS {db_name};").fetch()
+            logging.info(f"DSI: Successfully dropped database {db_name}.")
         except Exception as e:
             logging.error(f"DSI: Failed to drop database {db_name}: {e}")

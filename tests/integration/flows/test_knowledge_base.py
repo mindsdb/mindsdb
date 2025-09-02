@@ -2,6 +2,7 @@ import json
 import time
 import datetime as dt
 import os
+from urllib.parse import urlparse, unquote
 
 import pytest
 import mindsdb_sdk
@@ -23,18 +24,22 @@ class HiddenVar(str):
 
 
 def get_configurations():
-    storages = [{"engine": "chromadb", "persist_directory": "default_collection"}]
+    storages = [
+        # default chromadb
+        {"engine": "chromadb", "persist_directory": "default_collection"}
+    ]
 
-    if "PGVECTOR_PASSWORD" in os.environ:
-        pgvector_local = {
+    if "KB_PGVECTOR_URL" in os.environ:
+        parsed = urlparse(os.environ["KB_PGVECTOR_URL"])
+        pgvector = {
             "engine": "pgvector",
-            "user": "vector",
-            "host": "samples.mindsdb.com",
-            "port": "5432",
-            "password": os.environ["PGVECTOR_PASSWORD"],
-            "database": "vector",
+            "user": parsed.username,
+            "host": parsed.hostname,
+            "port": parsed.port,
+            "password": unquote(parsed.password) if parsed.password else None,
+            "database": parsed.path.lstrip("/"),
         }
-        storages.append(pgvector_local)
+        storages.append(pgvector)
 
     if "OPENAI_API_KEY" in os.environ:
         embedding_model = {

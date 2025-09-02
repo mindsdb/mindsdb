@@ -204,6 +204,9 @@ class TestKB(KBTestBase):
             limit {count_rows}
         """)
 
+        ret = self.run_sql(f"select * from {kb_name}")
+        assert len(ret) == count_rows
+
         logger.debug("insert from values")
         for i in range(2):
             # do it twice second time it will be updated

@@ -71,6 +71,7 @@ class ChromaDBHandler(VectorStoreHandler):
         self.create_collection_metadata = {
             "hnsw:space": config.distance,
         }
+        self.thread_safe = False
 
     def validate_connection_parameters(self, name, **kwargs):
         """

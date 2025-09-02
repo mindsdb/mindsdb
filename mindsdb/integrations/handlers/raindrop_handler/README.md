@@ -335,6 +335,62 @@ WHERE (title LIKE '%tutorial%' OR excerpt LIKE '%guide%')
   AND created >= '2024-06-01'
   AND _id NOT IN (123, 456, 789)
 ORDER BY sort DESC;
+
+-- Query untagged bookmarks
+SELECT * FROM raindrop_db.raindrops
+WHERE tags = "";
+
+-- Get specific columns for untagged bookmarks
+SELECT _id, title, link, excerpt FROM raindrop_db.raindrops
+WHERE tags = "";
+
+-- Count untagged bookmarks
+SELECT COUNT(*) FROM raindrop_db.raindrops
+WHERE tags = "";
+
+-- Get untagged bookmarks from a specific collection
+SELECT * FROM raindrop_db.raindrops
+WHERE collection_id = 0 AND tags = "";
+
+-- Get untagged bookmarks sorted by creation date
+SELECT title, link, created FROM raindrop_db.raindrops
+WHERE tags = ""
+ORDER BY created DESC;
+
+-- Get untagged bookmarks with additional filters
+SELECT * FROM raindrop_db.raindrops
+WHERE tags = "" AND important = true;
+
+-- Get recent untagged bookmarks
+SELECT title, link, created FROM raindrop_db.raindrops
+WHERE tags = "" AND created > '2024-01-01'
+ORDER BY created DESC;
+
+-- Query broken links
+SELECT * FROM raindrop_db.raindrops
+WHERE broken = true;
+
+-- Count broken links (manual counting approach)
+SELECT _id FROM raindrop_db.raindrops
+WHERE broken = true;
+-- Note: Use application-side counting for total count
+
+-- Get broken links with details
+SELECT _id, title, link, domain, lastUpdate FROM raindrop_db.raindrops
+WHERE broken = true;
+
+-- Get broken links from a specific collection
+SELECT * FROM raindrop_db.raindrops
+WHERE collection_id = 0 AND broken = true;
+
+-- Get broken links sorted by last update
+SELECT title, link, lastUpdate FROM raindrop_db.raindrops
+WHERE broken = true
+ORDER BY lastUpdate DESC;
+
+-- Get broken links that are also important
+SELECT * FROM raindrop_db.raindrops
+WHERE broken = true AND important = true;
 ```
 
 ### Creating Bookmarks

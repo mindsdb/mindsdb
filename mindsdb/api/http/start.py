@@ -1,4 +1,5 @@
 import gc
+
 gc.disable()
 
 from flask import Flask
@@ -23,27 +24,22 @@ def start(verbose, app: Flask = None):
     if app is None:
         app = initialize_app()
 
-    port = config['api']['http']['port']
-    host = config['api']['http']['host']
-    server_type = config['api']['http']['server']['type']
-    server_config = config['api']['http']['server']['config']
+    port = config["api"]["http"]["port"]
+    host = config["api"]["http"]["host"]
+    server_type = config["api"]["http"]["server"]["type"]
+    server_config = config["api"]["http"]["server"]["config"]
 
     process_cache.init()
 
     if server_type == "waitress":
         logger.debug("Serving HTTP app with waitress...")
-        serve(
-            app,
-            host='*' if host in ('', '0.0.0.0') else host,
-            port=port,
-            **server_config
-        )
+        serve(app, host="*" if host in ("", "0.0.0.0") else host, port=port, **server_config)
     elif server_type == "flask":
         logger.debug("Serving HTTP app with flask...")
         # that will 'disable access' log in console
 
         app.run(debug=False, port=port, host=host, **server_config)
-    elif server_type == 'gunicorn':
+    elif server_type == "gunicorn":
         try:
             from mindsdb.api.http.gunicorn_wrapper import StandaloneApplication
         except ImportError:
@@ -61,12 +57,8 @@ def start(verbose, app: Flask = None):
             call 'shutdown' for such processes before exiting.
             """
             from mindsdb.integrations.libs.process_cache import process_cache
+
             process_cache.shutdown(wait=True)
 
-        options = {
-            'bind': f'{host}:{port}',
-            'post_fork': post_fork,
-            'worker_exit': before_worker_exit,
-            **server_config
-        }
+        options = {"bind": f"{host}:{port}", "post_fork": post_fork, "worker_exit": before_worker_exit, **server_config}
         StandaloneApplication(app, options).run()

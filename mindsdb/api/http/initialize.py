@@ -379,10 +379,7 @@ def initialize_flask(config, init_static_thread):
     static_path = os.path.join(config["paths"]["static"], "static/")
     if os.path.isabs(static_path) is False:
         static_path = os.path.join(os.getcwd(), static_path)
-    kwargs = {
-        "static_url_path": "/static",
-        "static_folder": static_path
-    }
+    kwargs = {"static_url_path": "/static", "static_folder": static_path}
     logger.debug(f"Static path: {static_path}")
 
     app = Flask(__name__, **kwargs)

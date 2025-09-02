@@ -492,7 +492,13 @@ class ChromaDBHandler(VectorStoreHandler):
         """
         Delete a collection from the ChromaDB database.
         """
-        self.connect()
+        try:
+            self.connect()
+        except Exception as e:
+            if self._use_handler_storage:
+                # can't connect, maybe handel storage is broken - clear it
+                self.handler_storage.delete()
+            raise e
         try:
             self._client.delete_collection(table_name)
             self._sync()

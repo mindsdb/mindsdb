@@ -3,6 +3,7 @@ import sys
 import json
 import argparse
 import datetime
+from typing import Any
 from pathlib import Path
 from copy import deepcopy
 import multiprocessing as mp
@@ -160,7 +161,7 @@ class Config:
                     },
                 }
             },
-            "gui": {"autoupdate": True},
+            "gui": {"open_on_start": True, "autoupdate": True},
             "debug": False,
             "environment": "local",
             "integrations": {},
@@ -254,6 +255,7 @@ class Config:
             "paths": {},
             "permanent_storage": {},
             "ml_task_queue": {},
+            "gui": {},
         }
 
         # region storage root path
@@ -372,6 +374,10 @@ class Config:
         if os.environ.get("MINDSDB_DATA_CATALOG_ENABLED", "").lower() in ("1", "true"):
             self._env_config["data_catalog"] = {"enabled": True}
 
+        if os.environ.get("MINDSDB_NO_STUDIO", "").lower() in ("1", "true"):
+            self._env_config["gui"]["open_on_start"] = False
+            self._env_config["gui"]["autoupdate"] = False
+
         # region vars: a2a configuration
         a2a_config = {}
         if os.environ.get("MINDSDB_A2A_HOST"):
@@ -429,10 +435,11 @@ class Config:
         """
         if self._user_config is None:
             cmd_args_config = self.cmd_args.config
-            if isinstance(cmd_args_config, str):
-                self.config_path = cmd_args_config
-            elif isinstance(os.environ.get("MINDSDB_CONFIG_PATH"), str):
+            if isinstance(os.environ.get("MINDSDB_CONFIG_PATH"), str):
                 self.config_path = os.environ["MINDSDB_CONFIG_PATH"]
+            elif isinstance(cmd_args_config, str):
+                self.config_path = cmd_args_config
+
             if self.config_path == "absent":
                 self.config_path = None
             if isinstance(self.config_path, str):
@@ -458,6 +465,11 @@ class Config:
         """Merge multiple configs to one."""
         new_config = deepcopy(self._default_config)
         _merge_configs(new_config, self._user_config)
+
+        if self.get_cmd_arg("no_studio") is True:
+            new_config["gui"]["open_on_start"] = False
+            new_config["gui"]["autoupdate"] = False
+
         _merge_configs(new_config, self._auto_config or {})
         _merge_configs(new_config, self._env_config or {})
 
@@ -465,23 +477,16 @@ class Config:
         a2a_config = {}
 
         # Check for A2A command-line arguments
-        if hasattr(self.cmd_args, "a2a_host") and self.cmd_args.a2a_host is not None:
-            a2a_config["host"] = self.cmd_args.a2a_host
-
-        if hasattr(self.cmd_args, "a2a_port") and self.cmd_args.a2a_port is not None:
-            a2a_config["port"] = self.cmd_args.a2a_port
-
-        if hasattr(self.cmd_args, "mindsdb_host") and self.cmd_args.mindsdb_host is not None:
-            a2a_config["mindsdb_host"] = self.cmd_args.mindsdb_host
-
-        if hasattr(self.cmd_args, "mindsdb_port") and self.cmd_args.mindsdb_port is not None:
-            a2a_config["mindsdb_port"] = self.cmd_args.mindsdb_port
-
-        if hasattr(self.cmd_args, "agent_name") and self.cmd_args.agent_name is not None:
-            a2a_config["agent_name"] = self.cmd_args.agent_name
-
-        if hasattr(self.cmd_args, "project_name") and self.cmd_args.project_name is not None:
-            a2a_config["project_name"] = self.cmd_args.project_name
+        for config_name, cmd_name in (
+            ("host", "a2a_host"),
+            ("port", "a2a_port"),
+            ("mindsdb_host", "mindsdb_host"),
+            ("mindsdb_port", "mindsdb_port"),
+            ("agent_name", "agent_name"),
+            ("project_name", "project_name"),
+        ):
+            if (value := self.get_cmd_arg(cmd_name)) is not None:
+                a2a_config[config_name] = value
 
         # Merge command-line args config with highest priority
         if a2a_config:
@@ -578,6 +583,18 @@ class Config:
         if self._cmd_args is None:
             self.parse_cmd_args()
         return self._cmd_args
+
+    def get_cmd_arg(self, arg_name: str) -> Any:
+        """Get command-line argument by name
+
+        Args:
+            arg_name (str): Name of the command-line argument
+        Returns:
+            Any: Value of the command-line argument
+        """
+        if hasattr(self.cmd_args, arg_name):
+            return getattr(self.cmd_args, arg_name)
+        return None
 
     def parse_cmd_args(self) -> None:
         """Collect cmd args to self._cmd_args (accessable as self.cmd_args)"""

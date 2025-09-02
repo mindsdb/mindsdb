@@ -10,7 +10,7 @@ import pytest
 from mindsdb.api.http.initialize import initialize_app
 from mindsdb.migrations import migrate
 from mindsdb.interfaces.storage import db
-from mindsdb.utilities.config import Config
+from mindsdb.utilities.config import config
 
 # Should match table name in data/seed.sql
 TEST_TABLE_NAME = 'items'
@@ -42,7 +42,9 @@ def app():
         os.environ['MINDSDB_DB_CON'] = db_path
         db.init()
         migrate.migrate_to_head()
-        app = initialize_app(Config(), True)
+        config["gui"]["open_on_start"] = False
+        config["gui"]["autoupdate"] = False
+        app = initialize_app()
 
         test_client = app.test_client()
 

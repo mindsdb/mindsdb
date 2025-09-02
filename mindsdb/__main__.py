@@ -427,7 +427,7 @@ if __name__ == "__main__":
             name=TrunkProcessEnum.HTTP.value,
             entrypoint=start_http,
             port=http_api_config["port"],
-            args=(config.cmd_args.verbose, config.cmd_args.no_studio),
+            args=(config.cmd_args.verbose,),
             restart_on_failure=http_api_config.get("restart_on_failure", False),
             max_restart_count=http_api_config.get("max_restart_count", TrunkProcessData.max_restart_count),
             max_restart_interval_seconds=http_api_config.get(

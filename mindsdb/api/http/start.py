@@ -16,12 +16,12 @@ gc.enable()
 logger = log.getLogger(__name__)
 
 
-def start(verbose, no_studio, app: Flask = None):
+def start(verbose, app: Flask = None):
     db.init()
     init_lexer_parsers()
 
     if app is None:
-        app = initialize_app(config, no_studio)
+        app = initialize_app()
 
     port = config['api']['http']['port']
     host = config['api']['http']['host']

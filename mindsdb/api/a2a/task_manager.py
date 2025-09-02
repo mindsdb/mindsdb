@@ -47,14 +47,10 @@ class AgentTaskManager(InMemoryTaskManager):
     def __init__(
         self,
         project_name: str,
-        mindsdb_host: str,
-        mindsdb_port: int,
         agent_name: str = None,
     ):
         super().__init__()
         self.project_name = project_name
-        self.mindsdb_host = mindsdb_host
-        self.mindsdb_port = mindsdb_port
         self.agent_name = agent_name
         self.tasks = {}  # Task storage
         self.lock = asyncio.Lock()  # Lock for task operations
@@ -67,8 +63,6 @@ class AgentTaskManager(InMemoryTaskManager):
         return MindsDBAgent(
             agent_name=agent_name,
             project_name=self.project_name,
-            host=self.mindsdb_host,
-            port=self.mindsdb_port,
             user_info=user_info,
         )
 

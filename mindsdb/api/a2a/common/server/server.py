@@ -34,13 +34,9 @@ logger = log.getLogger(__name__)
 class A2AServer:
     def __init__(
         self,
-        host="0.0.0.0",
-        port=5000,
         agent_card: AgentCard = None,
         task_manager: TaskManager = None,
     ):
-        self.host = host
-        self.port = port
         self.task_manager = task_manager
         self.agent_card = agent_card
         self.app = Starlette(
@@ -60,20 +56,6 @@ class A2AServer:
         )
         self.start_time = time.time()
 
-    def start(self):
-        if self.agent_card is None:
-            raise ValueError("agent_card is not defined")
-
-        if self.task_manager is None:
-            raise ValueError("request_handler is not defined")
-
-        import uvicorn
-
-        # Configure uvicorn with optimized settings for streaming
-        uvicorn.run(
-            self.app, host=self.host, port=self.port, http="h11", timeout_keep_alive=65, log_level=None, log_config=None
-        )
-
     def _get_agent_card(self, request: Request) -> JSONResponse:
         return JSONResponse(self.agent_card.model_dump(exclude_none=True))
 
@@ -88,7 +70,6 @@ class A2AServer:
             "status": "ok",
             "service": "mindsdb-a2a",
             "uptime_seconds": round(uptime_seconds, 2),
-            "host": self.host,
             "agent_name": self.agent_card.name if self.agent_card else None,
             "version": self.agent_card.version if self.agent_card else "unknown",
         }

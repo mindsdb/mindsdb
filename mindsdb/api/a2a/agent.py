@@ -5,6 +5,7 @@ import httpx
 from mindsdb.api.a2a.utils import to_serializable, convert_a2a_message_to_qa_format
 from mindsdb.api.a2a.constants import DEFAULT_STREAM_TIMEOUT
 from mindsdb.utilities import log
+from mindsdb.utilities.config import config
 
 logger = log.getLogger(__name__)
 
@@ -18,15 +19,12 @@ class MindsDBAgent:
         self,
         agent_name="my_agent",
         project_name="mindsdb",
-        host="localhost",
-        port=47334,
         user_info: Dict[str, Any] = None,
     ):
         self.agent_name = agent_name
         self.project_name = project_name
-        self.host = host
-        self.port = port
-        self.base_url = f"http://{host}:{port}"
+        port = config.get("api", {}).get("http", {}).get("port", 47334)
+        self.base_url = f"http://localhost:{port}"
         self.agent_url = f"{self.base_url}/api/projects/{project_name}/agents/{agent_name}"
         self.sql_url = f"{self.base_url}/api/sql/query"
         self.headers = {k: v for k, v in user_info.items() if v is not None} or {}

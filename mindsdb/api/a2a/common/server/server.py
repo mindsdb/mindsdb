@@ -95,7 +95,6 @@ class A2AServer:
             "service": "mindsdb-a2a",
             "uptime_seconds": round(uptime_seconds, 2),
             "host": self.host,
-            "port": self.port,
             "agent_name": self.agent_card.name if self.agent_card else None,
             "version": self.agent_card.version if self.agent_card else "unknown",
         }

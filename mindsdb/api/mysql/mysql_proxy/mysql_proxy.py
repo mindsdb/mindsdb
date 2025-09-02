@@ -502,6 +502,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
     @profiler.profile()
     def process_query(self, sql) -> SQLAnswer:
+        # Check if this is a session variable statement first
+        session_var_response = self.handle_session_variables(sql)
+        if session_var_response is not None:
+            return session_var_response
+        
+        # If not a session variable, proceed with normal execution
         executor = Executor(session=self.session, sqlserver=self)
         executor.query_execute(sql)
         executor_answer = executor.executor_answer
@@ -546,7 +552,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             parameters_def = self.to_mysql_columns(executor.params)
             packages.extend(self._get_column_defenition_packets(parameters_def))
             if self.client_capabilities.DEPRECATE_EOF is False:
-                status = sum([SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT])
+                status = 0  # No autocommit status
                 packages.append(self.packet(EofPacket, status=status))
 
         if len(executor.columns) > 0:
@@ -554,7 +560,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             packages.extend(self._get_column_defenition_packets(columns_def))
 
             if self.client_capabilities.DEPRECATE_EOF is False:
-                status = sum([SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT])
+                status = 0  # No autocommit status
                 packages.append(self.packet(EofPacket, status=status))
 
         self.send_package_group(packages)
@@ -590,7 +596,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 self.packet(BinaryResultsetRowPacket, data=row, columns=columns_dict)
             )
 
-        server_status = executor.server_status or 0x0002
+        server_status = executor.server_status or 0x0000  # No autocommit status
         packages.append(self.last_packet(status=server_status))
         prepared_stmt["fetched"] += len(data)
 
@@ -620,20 +626,184 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if len(executor_answer.data) <= limit + fetched:
             status = sum(
                 [
-                    SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT,
                     SERVER_STATUS.SERVER_STATUS_LAST_ROW_SENT,
                 ]
             )
         else:
             status = sum(
                 [
-                    SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT,
                     SERVER_STATUS.SERVER_STATUS_CURSOR_EXISTS,
                 ]
             )
 
         packages.append(self.last_packet(status=status))
         self.send_package_group(packages)
+
+    def handle_session_variables(self, sql):
+        """Handle session variable statements that the parser doesn't support"""
+        sql_lower = sql.lower().strip()
+        
+        # Handle SET @@session.autocommit = ON/OFF
+        if sql_lower.startswith('set @@session.autocommit'):
+            value = sql_lower.split('=')[-1].strip().rstrip(';')
+            # Convert ON/OFF to 1/0 for consistency
+            if value in ('on', 'true', '1'):
+                value = '1'
+            elif value in ('off', 'false', '0'):
+                value = '0'
+            return SQLAnswer(
+                resp_type=RESPONSE_TYPE.OK,
+                state_track=[["autocommit", value]]
+            )
+        
+        # Handle SET @@autocommit = ON/OFF
+        elif sql_lower.startswith('set @@autocommit'):
+            value = sql_lower.split('=')[-1].strip().rstrip(';')
+            if value in ('on', 'true', '1'):
+                value = '1'
+            elif value in ('off', 'false', '0'):
+                value = '0'
+            return SQLAnswer(
+                resp_type=RESPONSE_TYPE.OK,
+                state_track=[["autocommit", value]]
+            )
+        
+        # Handle SET @@session.sql_mode
+        elif sql_lower.startswith('set @@session.sql_mode'):
+            value = sql_lower.split('=')[-1].strip().rstrip(';').strip("'\"")
+            return SQLAnswer(
+                resp_type=RESPONSE_TYPE.OK,
+                state_track=[["sql_mode", value]]
+            )
+        
+        # Handle SET @@sql_mode
+        elif sql_lower.startswith('set @@sql_mode'):
+            value = sql_lower.split('=')[-1].strip().rstrip(';').strip("'\"")
+            return SQLAnswer(
+                resp_type=RESPONSE_TYPE.OK,
+                state_track=[["sql_mode", value]]
+            )
+        
+        # Handle SET @@session.time_zone
+        elif sql_lower.startswith('set @@session.time_zone'):
+            value = sql_lower.split('=')[-1].strip().rstrip(';').strip("'\"")
+            return SQLAnswer(
+                resp_type=RESPONSE_TYPE.OK,
+                state_track=[["time_zone", value]]
+            )
+        
+        # Handle SET @@time_zone
+        elif sql_lower.startswith('set @@time_zone'):
+            value = sql_lower.split('=')[-1].strip().rstrip(';').strip("'\"")
+            return SQLAnswer(
+                resp_type=RESPONSE_TYPE.OK,
+                state_track=[["time_zone", value]]
+            )
+        
+        # Handle SET @@session.character_set_client
+        elif sql_lower.startswith('set @@session.character_set_client'):
+            value = sql_lower.split('=')[-1].strip().rstrip(';').strip("'\"")
+            return SQLAnswer(
+                resp_type=RESPONSE_TYPE.OK,
+                state_track=[["character_set_client", value]]
+            )
+        
+        # Handle SET @@character_set_client
+        elif sql_lower.startswith('set @@character_set_client'):
+            value = sql_lower.split('=')[-1].strip().rstrip(';').strip("'\"")
+            return SQLAnswer(
+                resp_type=RESPONSE_TYPE.OK,
+                state_track=[["character_set_client", value]]
+            )
+        
+        # Handle SET @@session.character_set_connection
+        elif sql_lower.startswith('set @@session.character_set_connection'):
+            value = sql_lower.split('=')[-1].strip().rstrip(';').strip("'\"")
+            return SQLAnswer(
+                resp_type=RESPONSE_TYPE.OK,
+                state_track=[["character_set_connection", value]]
+            )
+        
+        # Handle SET @@character_set_connection
+        elif sql_lower.startswith('set @@character_set_connection'):
+            value = sql_lower.split('=')[-1].strip().rstrip(';').strip("'\"")
+            return SQLAnswer(
+                resp_type=RESPONSE_TYPE.OK,
+                state_track=[["character_set_connection", value]]
+            )
+        
+        # Handle SET @@session.character_set_results
+        elif sql_lower.startswith('set @@session.character_set_results'):
+            value = sql_lower.split('=')[-1].strip().rstrip(';').strip("'\"")
+            return SQLAnswer(
+                resp_type=RESPONSE_TYPE.OK,
+                state_track=[["character_set_results", value]]
+            )
+        
+        # Handle SET @@character_set_results
+        elif sql_lower.startswith('set @@character_set_results'):
+            value = sql_lower.split('=')[-1].strip().rstrip(';').strip("'\"")
+            return SQLAnswer(
+                resp_type=RESPONSE_TYPE.OK,
+                state_track=[["character_set_results", value]]
+            )
+        
+        # Handle SET @@session.wait_timeout
+        elif sql_lower.startswith('set @@session.wait_timeout'):
+            value = sql_lower.split('=')[-1].strip().rstrip(';').strip("'\"")
+            return SQLAnswer(
+                resp_type=RESPONSE_TYPE.OK,
+                state_track=[["wait_timeout", value]]
+            )
+        
+        # Handle SET @@wait_timeout
+        elif sql_lower.startswith('set @@wait_timeout'):
+            value = sql_lower.split('=')[-1].strip().rstrip(';').strip("'\"")
+            return SQLAnswer(
+                resp_type=RESPONSE_TYPE.OK,
+                state_track=[["wait_timeout", value]]
+            )
+        
+        # Handle SET @@session.interactive_timeout
+        elif sql_lower.startswith('set @@session.interactive_timeout'):
+            value = sql_lower.split('=')[-1].strip().rstrip(';').strip("'\"")
+            return SQLAnswer(
+                resp_type=RESPONSE_TYPE.OK,
+                state_track=[["interactive_timeout", value]]
+            )
+        
+        # Handle SET @@interactive_timeout
+        elif sql_lower.startswith('set @@interactive_timeout'):
+            value = sql_lower.split('=')[-1].strip().rstrip(';').strip("'\"")
+            return SQLAnswer(
+                resp_type=RESPONSE_TYPE.OK,
+                state_track=[["interactive_timeout", value]]
+            )
+        
+        # Handle other common session variables
+        elif sql_lower.startswith('set @@session.'):
+            # Extract variable name and value
+            parts = sql_lower.split('=', 1)
+            if len(parts) == 2:
+                var_name = parts[0].replace('set @@session.', '').strip()
+                value = parts[1].strip().rstrip(';').strip("'\"")
+                return SQLAnswer(
+                    resp_type=RESPONSE_TYPE.OK,
+                    state_track=[[var_name, value]]
+                )
+        
+        elif sql_lower.startswith('set @@'):
+            # Extract variable name and value
+            parts = sql_lower.split('=', 1)
+            if len(parts) == 2:
+                var_name = parts[0].replace('set @@', '').strip()
+                value = parts[1].strip().rstrip(';').strip("'\"")
+                return SQLAnswer(
+                    resp_type=RESPONSE_TYPE.OK,
+                    state_track=[[var_name, value]]
+                )
+        
+        return None  # Not a session variable statement
 
     def handle(self):
         """
@@ -736,6 +906,24 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     response = SQLAnswer(RESPONSE_TYPE.OK)
                 elif p.type.value == COMMANDS.COM_STMT_RESET:
                     response = SQLAnswer(RESPONSE_TYPE.OK)
+                elif p.type.value == COMMANDS.COM_PING:
+                    # Handle ping command (keep-alive)
+                    response = SQLAnswer(RESPONSE_TYPE.OK)
+                elif p.type.value == COMMANDS.COM_SET_OPTION:
+                    # Handle set option command
+                    response = SQLAnswer(RESPONSE_TYPE.OK)
+                elif p.type.value == COMMANDS.COM_RESET_CONNECTION:
+                    # Handle reset connection command
+                    response = SQLAnswer(RESPONSE_TYPE.OK)
+                elif p.type.value == COMMANDS.COM_STATISTICS:
+                    # Handle statistics command
+                    response = SQLAnswer(RESPONSE_TYPE.OK)
+                elif p.type.value == COMMANDS.COM_DEBUG:
+                    # Handle debug command (usually just return OK)
+                    response = SQLAnswer(RESPONSE_TYPE.OK)
+                elif p.type.value == COMMANDS.COM_SLEEP:
+                    # Handle sleep command (usually just return OK)
+                    response = SQLAnswer(RESPONSE_TYPE.OK)
                 else:
                     logger.warning("Command has no specific handler, return OK msg")
                     logger.debug(str(p))
@@ -831,7 +1019,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         self.session.inc_packet_sequence_number()
         return p
 
-    def last_packet(self, status=0x0002):
+    def last_packet(self, status=0x0000):  # Disable autocommit by default
         if self.client_capabilities.DEPRECATE_EOF is True:
             return self.packet(OkPacket, eof=True, status=status)
         else:

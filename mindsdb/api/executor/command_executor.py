@@ -571,7 +571,17 @@ class ExecuteCommands:
                     variables_controller.set_variable(statement.name.value, statement.value)
                 return ExecuteAnswer()
             elif category == "autocommit":
-                return ExecuteAnswer()
+                # Handle both SET autocommit and SET @@session.autocommit
+                value = statement.value.value if hasattr(statement.value, 'value') else statement.value
+                # Convert ON/OFF to 1/0 for consistency
+                if isinstance(value, str):
+                    if value.upper() in ('ON', 'TRUE', '1'):
+                        value = 1
+                    elif value.upper() in ('OFF', 'FALSE', '0'):
+                        value = 0
+                return ExecuteAnswer(
+                    state_track=[["autocommit", str(value)]]
+                )
             elif category == "names":
                 # set names utf8;
                 charsets = {

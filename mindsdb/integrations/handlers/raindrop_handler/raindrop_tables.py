@@ -58,17 +58,47 @@ class RaindropsTable(APITable):
         search_query = None
         sort_order = None
         raindrop_ids = []
+        api_supported_conditions = []  # Conditions that can be handled by Raindrop.io API
+        local_filter_conditions = []  # Conditions that need local filtering
 
         for condition in where_conditions:
-            if condition.column == "collection_id":
-                collection_id = condition.value
-            elif condition.column == "search" or condition.column == "title":
-                search_query = condition.value
-            elif condition.column == "_id" or condition.column == "id":
-                if isinstance(condition.value, list):
-                    raindrop_ids.extend(condition.value)
+            # Handle different condition formats
+            if isinstance(condition, list) and len(condition) >= 3:
+                op, column, value = condition[0], condition[1], condition[2]
+            elif hasattr(condition, "op") and hasattr(condition, "column"):
+                op = getattr(condition, "op", "=")
+                column = condition.column
+                value = getattr(condition, "value", None)
+            else:
+                # Skip malformed conditions
+                logger.warning(f"Skipping malformed condition: {condition}")
+                continue
+
+            # Handle API-supported conditions
+            if column == "collection_id" and op == "=":
+                collection_id = value
+                api_supported_conditions.append(condition)
+            elif (column in ["search", "title"]) and op == "=":
+                search_query = value
+                api_supported_conditions.append(condition)
+            elif (column in ["_id", "id"]) and op in ["=", "in"]:
+                if isinstance(value, list):
+                    raindrop_ids.extend(value)
                 else:
-                    raindrop_ids.append(condition.value)
+                    raindrop_ids.append(value)
+                api_supported_conditions.append(condition)
+            # Handle advanced conditions that need local filtering
+            elif column in ["created", "lastUpdate", "sort"] and op in [">", "<", ">=", "<=", "between"]:
+                local_filter_conditions.append(condition)
+            elif column == "important" and op == "=":
+                # Important flag can be handled locally
+                local_filter_conditions.append(condition)
+            elif column in ["tags", "domain", "excerpt", "note"] and op in ["=", "like", "in"]:
+                # Text-based filtering needs to be done locally
+                local_filter_conditions.append(condition)
+            else:
+                # For unsupported conditions, add to local filtering
+                local_filter_conditions.append(condition)
 
         # Handle sorting
         if order_by_conditions:
@@ -93,14 +123,23 @@ class RaindropsTable(APITable):
                     continue
         else:
             # Get raindrops from collection with optimized pagination
-            # Pass max_results to the API client to optimize page sizes and minimize requests
+            # If we have local filters, we may need to fetch more data than requested limit
+            # to ensure we have enough data to filter locally
+            fetch_limit = None
+            if local_filter_conditions:
+                # If we have local filters, fetch more data to account for filtering
+                # We'll apply the original limit after local filtering
+                fetch_limit = result_limit * 5 if result_limit else 1000  # Fetch more data for local filtering
+            else:
+                fetch_limit = result_limit
+
             response = self.handler.connection.get_raindrops(
                 collection_id=collection_id,
                 search=search_query,
                 sort=sort_order,
                 page=0,
                 per_page=50,
-                max_results=result_limit,
+                max_results=fetch_limit,
             )
             raindrops_data = response.get("items", [])
 
@@ -119,11 +158,29 @@ class RaindropsTable(APITable):
                 logger.warning(f"Missing column after normalization: {col}, adding as None")
                 raindrops_df[col] = None
 
-        # Apply additional filtering and ordering using the executor
-        select_statement_executor = SELECTQueryExecutor(
-            raindrops_df, selected_columns, where_conditions, order_by_conditions
-        )
-        raindrops_df = select_statement_executor.execute_query()
+        # Apply local filtering for advanced conditions
+        if local_filter_conditions:
+            raindrops_df = self._apply_local_filters(raindrops_df, local_filter_conditions)
+
+        # Apply additional filtering and ordering using the executor (for any remaining conditions)
+        remaining_conditions = [
+            cond
+            for cond in where_conditions
+            if cond not in api_supported_conditions and cond not in local_filter_conditions
+        ]
+        if remaining_conditions:
+            select_statement_executor = SELECTQueryExecutor(
+                raindrops_df, selected_columns, remaining_conditions, order_by_conditions
+            )
+            raindrops_df = select_statement_executor.execute_query()
+        else:
+            # Apply ordering and column selection manually if no remaining conditions
+            if order_by_conditions:
+                raindrops_df = self._apply_ordering(raindrops_df, order_by_conditions)
+            if selected_columns and selected_columns != self.get_columns():
+                available_columns = [col for col in selected_columns if col in raindrops_df.columns]
+                if available_columns:
+                    raindrops_df = raindrops_df[available_columns]
 
         # Apply limit if needed
         if result_limit and len(raindrops_df) > result_limit:
@@ -461,6 +518,101 @@ class RaindropsTable(APITable):
         for col in expected_columns:
             if col not in df.columns:
                 df[col] = None
+
+        return df
+
+    def _apply_local_filters(self, df: pd.DataFrame, conditions: List) -> pd.DataFrame:
+        """Apply local filtering for conditions not supported by Raindrop.io API"""
+        if df.empty or not conditions:
+            return df
+
+        for condition in conditions:
+            # Handle different condition formats
+            if isinstance(condition, list) and len(condition) >= 3:
+                op, column, value = condition[0], condition[1], condition[2]
+            elif hasattr(condition, "op") and hasattr(condition, "column"):
+                op = getattr(condition, "op", "=")
+                column = condition.column
+                value = getattr(condition, "value", None)
+            else:
+                # Skip malformed conditions
+                logger.warning(f"Skipping malformed condition in local filter: {condition}")
+                continue
+
+            if column not in df.columns:
+                logger.warning(f"Column '{column}' not found in DataFrame, skipping filter")
+                continue
+
+            try:
+                if op == "=":
+                    if isinstance(value, bool):
+                        df = df[df[column] == value]
+                    else:
+                        df = df[df[column].astype(str).str.lower() == str(value).lower()]
+                elif op == "!=":
+                    df = df[df[column] != value]
+                elif op == ">":
+                    if column in ["created", "lastUpdate"]:
+                        # Convert string dates to datetime for comparison
+                        df[column] = pd.to_datetime(df[column], errors="coerce")
+                        value = pd.to_datetime(value)
+                    df = df[df[column] > value]
+                elif op == "<":
+                    if column in ["created", "lastUpdate"]:
+                        df[column] = pd.to_datetime(df[column], errors="coerce")
+                        value = pd.to_datetime(value)
+                    df = df[df[column] < value]
+                elif op == ">=":
+                    if column in ["created", "lastUpdate"]:
+                        df[column] = pd.to_datetime(df[column], errors="coerce")
+                        value = pd.to_datetime(value)
+                    df = df[df[column] >= value]
+                elif op == "<=":
+                    if column in ["created", "lastUpdate"]:
+                        df[column] = pd.to_datetime(df[column], errors="coerce")
+                        value = pd.to_datetime(value)
+                    df = df[df[column] <= value]
+                elif op == "between":
+                    if column in ["created", "lastUpdate"]:
+                        df[column] = pd.to_datetime(df[column], errors="coerce")
+                        start_val, end_val = pd.to_datetime(value[0]), pd.to_datetime(value[1])
+                    else:
+                        start_val, end_val = value
+                    df = df[(df[column] >= start_val) & (df[column] <= end_val)]
+                elif op == "like":
+                    # Simple LIKE implementation
+                    pattern = str(value).replace("%", ".*").replace("_", ".")
+                    df = df[df[column].astype(str).str.contains(pattern, case=False, regex=True, na=False)]
+                elif op == "in":
+                    if isinstance(value, list):
+                        df = df[df[column].isin(value)]
+                    else:
+                        df = df[df[column] == value]
+                else:
+                    logger.warning(f"Unsupported operator '{op}' for column '{column}', skipping filter")
+
+            except Exception as e:
+                logger.warning(f"Error applying filter {op} on column '{column}': {e}")
+                continue
+
+        return df
+
+    def _apply_ordering(self, df: pd.DataFrame, order_by_conditions) -> pd.DataFrame:
+        """Apply ordering to DataFrame"""
+        if not order_by_conditions or df.empty:
+            return df
+
+        sort_cols = []
+        ascending = []
+
+        for order_condition in order_by_conditions:
+            column = getattr(order_condition, "column", getattr(order_condition, "field", None))
+            if column and column in df.columns:
+                sort_cols.append(column)
+                ascending.append(getattr(order_condition, "ascending", True))
+
+        if sort_cols:
+            df = df.sort_values(by=sort_cols, ascending=ascending)
 
         return df
 

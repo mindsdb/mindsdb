@@ -58,6 +58,10 @@ The Raindrop.io handler is initialized with the following parameter:
   - [x] Support for sorting by created, lastUpdate, sort, title
   - [x] Support for LIMIT and pagination
   - [x] Support for specific bookmark IDs
+  - [x] **NEW**: Advanced WHERE clause operators (>, <, >=, <=, BETWEEN, IN, LIKE)
+  - [x] **NEW**: Date range filtering with automatic datetime conversion
+  - [x] **NEW**: Complex condition combinations with AND/OR logic
+  - [x] **NEW**: Local filtering for non-API supported conditions
 - [x] Support INSERT for creating new bookmarks
   - [x] Single bookmark creation
   - [x] Bulk bookmark creation
@@ -159,8 +163,41 @@ WHERE title LIKE '%python%'
 ORDER BY created DESC;
 
 -- Get important bookmarks
-SELECT title, link, created FROM raindrop_db.raindrops 
+SELECT title, link, created FROM raindrop_db.raindrops
 WHERE important = true;
+
+-- Advanced filtering with comparison operators
+SELECT * FROM raindrop_db.raindrops
+WHERE created > '2024-01-01'
+ORDER BY created DESC;
+
+SELECT title, link FROM raindrop_db.raindrops
+WHERE sort <= 50
+  AND important = true;
+
+-- Date range filtering
+SELECT * FROM raindrop_db.raindrops
+WHERE created BETWEEN '2024-01-01' AND '2024-12-31';
+
+-- IN operator for multiple values
+SELECT * FROM raindrop_db.raindrops
+WHERE _id IN (123, 456, 789);
+
+SELECT * FROM raindrop_db.raindrops
+WHERE collection_id IN (0, 1, 2);
+
+-- LIKE operator for pattern matching
+SELECT * FROM raindrop_db.raindrops
+WHERE title LIKE '%python%'
+   OR excerpt LIKE '%tutorial%';
+
+-- Complex conditions with multiple filters
+SELECT title, link, tags, created FROM raindrop_db.raindrops
+WHERE created >= '2024-06-01'
+  AND important = true
+  AND (title LIKE '%project%' OR tags LIKE '%work%')
+ORDER BY created DESC
+LIMIT 20;
 ```
 
 ### Creating Bookmarks
@@ -303,6 +340,14 @@ The handler includes comprehensive error handling:
 - **Rate Limiting**: Implemented intelligent rate limiting to prevent API quota exhaustion (120 requests/minute)
 - **Optimized Pagination**: Smart page sizing based on LIMIT clauses to minimize API calls
 - **Request Throttling**: Automatic delays between requests to stay within API limits
+
+### Version 0.0.2 Improvements
+- **Advanced WHERE Clause Operators**: Added support for >, <, >=, <=, BETWEEN, IN, and LIKE operators
+- **Date Range Filtering**: Automatic datetime conversion and comparison for date-based filtering
+- **Complex Condition Combinations**: Support for multiple AND/OR conditions in WHERE clauses
+- **Local Filtering Engine**: Intelligent routing between API-supported and locally-processed filters
+- **Enhanced Query Performance**: Optimized data fetching based on filter types and complexity
+- **Comprehensive Test Coverage**: 49 unit tests covering all new filtering capabilities
 
 ### Dependency Management
 - Removed duplicate `requests` dependency from handler-specific requirements.txt

@@ -237,6 +237,201 @@ class TestRaindropsTable(unittest.TestCase):
         self.handler.connection = Mock()
         self.table = RaindropsTable(self.handler)
 
+    def test_apply_local_filters_greater_than(self):
+        """Test _apply_local_filters with greater than operator"""
+        test_data = pd.DataFrame(
+            [
+                {"_id": 1, "created": "2024-01-01T00:00:00Z", "sort": 10},
+                {"_id": 2, "created": "2024-01-15T00:00:00Z", "sort": 20},
+                {"_id": 3, "created": "2024-01-30T00:00:00Z", "sort": 30},
+            ]
+        )
+
+        # Test date comparison
+        conditions = [[">", "created", "2024-01-15T00:00:00Z"]]
+        result = self.table._apply_local_filters(test_data.copy(), conditions)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result["_id"].iloc[0], 3)
+
+        # Test numeric comparison
+        conditions = [[">", "sort", 15]]
+        result = self.table._apply_local_filters(test_data.copy(), conditions)
+        self.assertEqual(len(result), 2)
+        self.assertListEqual(result["_id"].tolist(), [2, 3])
+
+    def test_apply_local_filters_less_than_equal(self):
+        """Test _apply_local_filters with less than or equal operator"""
+        test_data = pd.DataFrame(
+            [
+                {"_id": 1, "sort": 10},
+                {"_id": 2, "sort": 20},
+                {"_id": 3, "sort": 30},
+            ]
+        )
+
+        conditions = [["<=", "sort", 20]]
+        result = self.table._apply_local_filters(test_data.copy(), conditions)
+        self.assertEqual(len(result), 2)
+        self.assertListEqual(result["_id"].tolist(), [1, 2])
+
+    def test_apply_local_filters_between(self):
+        """Test _apply_local_filters with BETWEEN operator"""
+        test_data = pd.DataFrame(
+            [
+                {"_id": 1, "created": "2024-01-01T00:00:00Z"},
+                {"_id": 2, "created": "2024-01-15T00:00:00Z"},
+                {"_id": 3, "created": "2024-01-30T00:00:00Z"},
+            ]
+        )
+
+        conditions = [["between", "created", ("2024-01-05T00:00:00Z", "2024-01-25T00:00:00Z")]]
+        result = self.table._apply_local_filters(test_data.copy(), conditions)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result["_id"].iloc[0], 2)
+
+    def test_apply_local_filters_like(self):
+        """Test _apply_local_filters with LIKE operator"""
+        test_data = pd.DataFrame(
+            [
+                {"_id": 1, "title": "Python Tutorial"},
+                {"_id": 2, "title": "JavaScript Guide"},
+                {"_id": 3, "title": "Python Best Practices"},
+            ]
+        )
+
+        conditions = [["like", "title", "%Python%"]]
+        result = self.table._apply_local_filters(test_data.copy(), conditions)
+        self.assertEqual(len(result), 2)
+        self.assertListEqual(result["_id"].tolist(), [1, 3])
+
+    def test_apply_local_filters_in(self):
+        """Test _apply_local_filters with IN operator"""
+        test_data = pd.DataFrame(
+            [
+                {"_id": 1, "tags": "python,javascript"},
+                {"_id": 2, "tags": "java,ruby"},
+                {"_id": 3, "tags": "python,django"},
+            ]
+        )
+
+        conditions = [["in", "_id", [1, 3]]]
+        result = self.table._apply_local_filters(test_data.copy(), conditions)
+        self.assertEqual(len(result), 2)
+        self.assertListEqual(result["_id"].tolist(), [1, 3])
+
+    def test_apply_local_filters_important_flag(self):
+        """Test _apply_local_filters with important flag"""
+        test_data = pd.DataFrame(
+            [
+                {"_id": 1, "important": True},
+                {"_id": 2, "important": False},
+                {"_id": 3, "important": True},
+            ]
+        )
+
+        conditions = [["=", "important", True]]
+        result = self.table._apply_local_filters(test_data.copy(), conditions)
+        self.assertEqual(len(result), 2)
+        self.assertListEqual(result["_id"].tolist(), [1, 3])
+
+    def test_apply_local_filters_multiple_conditions(self):
+        """Test _apply_local_filters with multiple conditions"""
+        test_data = pd.DataFrame(
+            [
+                {"_id": 1, "important": True, "sort": 10},
+                {"_id": 2, "important": False, "sort": 20},
+                {"_id": 3, "important": True, "sort": 30},
+            ]
+        )
+
+        conditions = [["=", "important", True], [">", "sort", 15]]
+        result = self.table._apply_local_filters(test_data.copy(), conditions)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result["_id"].iloc[0], 3)
+
+    def test_apply_local_filters_unsupported_operator(self):
+        """Test _apply_local_filters with unsupported operator"""
+        test_data = pd.DataFrame(
+            [
+                {"_id": 1, "title": "Test"},
+            ]
+        )
+
+        conditions = [["regex", "title", ".*"]]
+        with self.assertLogs(level="WARNING") as log:
+            result = self.table._apply_local_filters(test_data.copy(), conditions)
+            self.assertIn("Unsupported operator 'regex'", log.output[0])
+        self.assertEqual(len(result), 1)  # Original data should be returned
+
+    def test_apply_local_filters_missing_column(self):
+        """Test _apply_local_filters with missing column"""
+        test_data = pd.DataFrame(
+            [
+                {"_id": 1, "title": "Test"},
+            ]
+        )
+
+        conditions = [["=", "missing_column", "value"]]
+        with self.assertLogs(level="WARNING") as log:
+            result = self.table._apply_local_filters(test_data.copy(), conditions)
+            self.assertIn("Column 'missing_column' not found", log.output[0])
+        self.assertEqual(len(result), 1)  # Original data should be returned
+
+    def test_apply_ordering(self):
+        """Test _apply_ordering method"""
+        test_data = pd.DataFrame(
+            [
+                {"_id": 1, "sort": 30, "title": "Z Title"},
+                {"_id": 2, "sort": 10, "title": "A Title"},
+                {"_id": 3, "sort": 20, "title": "B Title"},
+            ]
+        )
+
+        # Mock order by conditions
+        order_conditions = [
+            type("MockOrder", (), {"column": "sort", "ascending": True})(),
+        ]
+
+        result = self.table._apply_ordering(test_data.copy(), order_conditions)
+        self.assertEqual(result["_id"].tolist(), [2, 3, 1])  # Sorted by sort ascending
+
+    def test_apply_ordering_descending(self):
+        """Test _apply_ordering method with descending order"""
+        test_data = pd.DataFrame(
+            [
+                {"_id": 1, "sort": 10},
+                {"_id": 2, "sort": 30},
+                {"_id": 3, "sort": 20},
+            ]
+        )
+
+        # Mock order by conditions
+        order_conditions = [
+            type("MockOrder", (), {"column": "sort", "ascending": False})(),
+        ]
+
+        result = self.table._apply_ordering(test_data.copy(), order_conditions)
+        self.assertEqual(result["_id"].tolist(), [2, 3, 1])  # Sorted by sort descending
+
+    def test_apply_ordering_multiple_columns(self):
+        """Test _apply_ordering method with multiple columns"""
+        test_data = pd.DataFrame(
+            [
+                {"_id": 1, "sort": 10, "title": "B"},
+                {"_id": 2, "sort": 20, "title": "A"},
+                {"_id": 3, "sort": 10, "title": "A"},
+            ]
+        )
+
+        # Mock order by conditions
+        order_conditions = [
+            type("MockOrder", (), {"column": "sort", "ascending": True})(),
+            type("MockOrder", (), {"column": "title", "ascending": True})(),
+        ]
+
+        result = self.table._apply_ordering(test_data.copy(), order_conditions)
+        self.assertEqual(result["_id"].tolist(), [3, 1, 2])  # Sort by sort then title
+
     def test_get_columns(self):
         """Test get_columns method"""
         columns = self.table.get_columns()
@@ -659,6 +854,86 @@ class TestCollectionsTable(unittest.TestCase):
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0]["_id"], 123)
         self.assertEqual(result[1]["_id"], 456)
+
+    def test_select_with_simple_filters(self):
+        """Test select method with simple WHERE clause conditions for collections"""
+        # Mock response with sample collection data
+        sample_data = [
+            {"_id": 123, "title": "Work Collection", "public": True},
+            {"_id": 456, "title": "Personal Collection", "public": False},
+        ]
+
+        # Mock the API responses
+        self.handler.connection.get_collections.return_value = {"result": True, "items": sample_data}
+        self.handler.connection.get_child_collections.return_value = {"result": True, "items": []}
+
+        # Mock the SELECT query components
+        with (
+            patch("mindsdb.integrations.handlers.raindrop_handler.raindrop_tables.SELECTQueryParser") as mock_parser,
+            patch(
+                "mindsdb.integrations.handlers.raindrop_handler.raindrop_tables.SELECTQueryExecutor"
+            ) as mock_executor,
+        ):
+            mock_parser_instance = Mock()
+            mock_parser_instance.parse_query.return_value = (
+                ["_id", "title"],  # selected_columns
+                [["=", "public", True]],  # where_conditions - corrected format
+                [],  # order_by_conditions
+                10,  # result_limit
+            )
+            mock_parser.return_value = mock_parser_instance
+
+            mock_executor_instance = Mock()
+            filtered_df = pd.DataFrame([{"_id": 123, "title": "Work Collection", "public": True}])
+            mock_executor_instance.execute_query.return_value = filtered_df
+            mock_executor.return_value = mock_executor_instance
+
+            query = Mock()
+            result = self.table.select(query)
+
+            # Should filter to only public collections
+            self.assertEqual(len(result), 1)
+            self.assertEqual(result["_id"].iloc[0], 123)
+
+    def test_select_with_title_filter(self):
+        """Test select method with title filtering for collections"""
+        # Mock response with sample collection data
+        sample_data = [
+            {"_id": 123, "title": "Work Collection"},
+            {"_id": 456, "title": "Personal Collection"},
+        ]
+
+        # Mock the API responses
+        self.handler.connection.get_collections.return_value = {"result": True, "items": sample_data}
+        self.handler.connection.get_child_collections.return_value = {"result": True, "items": []}
+
+        # Mock the SELECT query components
+        with (
+            patch("mindsdb.integrations.handlers.raindrop_handler.raindrop_tables.SELECTQueryParser") as mock_parser,
+            patch(
+                "mindsdb.integrations.handlers.raindrop_handler.raindrop_tables.SELECTQueryExecutor"
+            ) as mock_executor,
+        ):
+            mock_parser_instance = Mock()
+            mock_parser_instance.parse_query.return_value = (
+                ["_id", "title"],  # selected_columns
+                [["like", "title", "%Work%"]],  # where_conditions - corrected format
+                [],  # order_by_conditions
+                None,  # result_limit
+            )
+            mock_parser.return_value = mock_parser_instance
+
+            mock_executor_instance = Mock()
+            filtered_df = pd.DataFrame([{"_id": 123, "title": "Work Collection"}])
+            mock_executor_instance.execute_query.return_value = filtered_df
+            mock_executor.return_value = mock_executor_instance
+
+            query = Mock()
+            result = self.table.select(query)
+
+            # Should filter to collections with "Work" in title
+            self.assertEqual(len(result), 1)
+            self.assertEqual(result["title"].iloc[0], "Work Collection")
 
 
 if __name__ == "__main__":

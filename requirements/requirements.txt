@@ -60,11 +60,9 @@ pyarrow<=19.0.0 # used by pandas to read feather files in Files handler
 
 
 # A2A server
-click==8.1.8
 httpx==0.28.1
 sse-starlette==2.3.3
 typing-extensions==4.13.2
-python-dotenv==1.1.0
 jwcrypto==1.5.6
 pyjwt==2.10.1
 pydantic_core>=2.23.2

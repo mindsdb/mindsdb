@@ -102,7 +102,7 @@ class A2AServer:
             # Pass the socket to Uvicorn and do NOT pass host/port.
             uvicorn.run(
                 self.app,
-                sockets=[sock],  # <-- The crucial change is here
+                sockets=[sock],
                 http="h11",
                 timeout_keep_alive=65,
                 log_level=get_mindsdb_log_level(),

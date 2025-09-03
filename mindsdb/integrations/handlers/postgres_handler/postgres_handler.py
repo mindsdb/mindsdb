@@ -279,7 +279,7 @@ class PostgresHandler(MetaDatabaseHandler):
         df.columns = columns
 
     @profiler.profile()
-    def native_query(self, query: str, params=None) -> Response:
+    def native_query(self, query: str, params=None, **kwargs) -> Response:
         """
         Executes a SQL query on the PostgreSQL database and returns the result.
 
@@ -466,7 +466,7 @@ class PostgresHandler(MetaDatabaseHandler):
             AND
                 table_schema = {schema_name}
         """
-        result = self.native_query(query)
+        result = self.native_query(query, restrict=False)
         result.to_columns_table_response(map_type_fn=_map_type)
         return result
 

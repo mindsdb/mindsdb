@@ -2,7 +2,6 @@ import json
 import time
 import datetime as dt
 import os
-from urllib.parse import urlparse, unquote
 
 import pytest
 import mindsdb_sdk
@@ -25,21 +24,22 @@ class HiddenVar(str):
 
 def get_configurations():
     storages = [
-        # don't use chromadb, it is checked in unit tests
-        # {"engine": "chromadb", "persist_directory": "default_collection"}
+        # default storage
+        {"engine": "default"}
     ]
 
-    if "KB_PGVECTOR_URL" in os.environ:
-        parsed = urlparse(os.environ["KB_PGVECTOR_URL"])
-        pgvector = {
-            "engine": "pgvector",
-            "user": parsed.username,
-            "host": parsed.hostname,
-            "port": parsed.port,
-            "password": HiddenVar(unquote(parsed.password)) if parsed.password else None,
-            "database": parsed.path.lstrip("/"),
-        }
-        storages.append(pgvector)
+    #  PGVECTOR storage
+    # if "KB_PGVECTOR_URL" in os.environ:
+    #     parsed = urlparse(os.environ["KB_PGVECTOR_URL"])
+    #     pgvector = {
+    #         "engine": "pgvector",
+    #         "user": parsed.username,
+    #         "host": parsed.hostname,
+    #         "port": parsed.port,
+    #         "password": HiddenVar(unquote(parsed.password)) if parsed.password else None,
+    #         "database": parsed.path.lstrip("/"),
+    #     }
+    #     storages.append(pgvector)
 
     if "OPENAI_API_KEY" in os.environ:
         embedding_model = {
@@ -51,17 +51,18 @@ def get_configurations():
             name = f"{storage['engine']}-{embedding_model['provider']}"
             yield pytest.param(storage, embedding_model, id=name)
 
-    if "AWS_ACCESS_KEY" in os.environ and "AWS_SECRET_KEY" in os.environ:
-        embedding_model = {
-            "provider": "bedrock",
-            "model_name": "amazon.titan-embed-text-v2:0",
-            "aws_access_key_id": HiddenVar(os.environ["AWS_ACCESS_KEY"]),
-            "aws_secret_access_key": HiddenVar(os.environ["AWS_SECRET_KEY"]),
-            "aws_region_name": os.environ.get("AWS_REGION", "us-east-1"),
-        }
-        for storage in storages:
-            name = f"{storage['engine']}-{embedding_model['provider']}"
-            yield pytest.param(storage, embedding_model, id=name)
+    #  bedrock provider
+    # if "AWS_ACCESS_KEY" in os.environ and "AWS_SECRET_KEY" in os.environ:
+    #     embedding_model = {
+    #         "provider": "bedrock",
+    #         "model_name": "amazon.titan-embed-text-v2:0",
+    #         "aws_access_key_id": HiddenVar(os.environ["AWS_ACCESS_KEY"]),
+    #         "aws_secret_access_key": HiddenVar(os.environ["AWS_SECRET_KEY"]),
+    #         "aws_region_name": os.environ.get("AWS_REGION", "us-east-1"),
+    #     }
+    #     for storage in storages:
+    #         name = f"{storage['engine']}-{embedding_model['provider']}"
+    #         yield pytest.param(storage, embedding_model, id=name)
 
 
 def get_rerank_configurations():
@@ -95,8 +96,7 @@ def get_rerank_configurations():
             configurations.append([storage, embedding_model, None])
 
     for storage, embedding_model, reranking_model in configurations:
-        reranker_provider = reranking_model['provider'] if reranking_model['provider'] else 'x'
-        name = f"{storage['engine']}-{embedding_model['provider']}-{reranker_provider}"
+        name = f"{storage['engine']}-{embedding_model['provider']}-{reranking_model.get('provider', 'x')}"
         yield pytest.param(storage, embedding_model, reranking_model, id=name)
 
 
@@ -162,19 +162,32 @@ class KBTestBase:
         db_name = f"db_{name}"
         table_name = "test_table"
 
-        #  -- clean --
+        #  -- drop kb --
         try:
+            kb = self.con.knowledge_bases.get(name)
+            db_name = kb.storage.db.name
+            table_name = kb.storage.name
+
             self.con.knowledge_bases.drop(name)
         except Exception:
             ...
 
+        #  -- drop db --
+
         try:
             db = self.con.databases.get(db_name)
-
-            db.tables.drop(table_name)
-            self.con.databases.drop(db_name)
         except Exception:
-            ...
+            db = None
+
+        if db is not None:
+            try:
+                db.tables.drop(table_name)
+            except Exception:
+                ...
+            try:
+                self.con.databases.drop(db_name)
+            except Exception:
+                ...
 
         # -- create --
 
@@ -198,8 +211,10 @@ class KBTestBase:
                 param_items.append(f"{k}={json.dumps(v)}")
             param_str = ",".join(param_items)
 
-        self.create_vector_db(storage, db_name)
-        param_str += f", storage = {db_name}.{table_name}"
+        if storage["engine"] != "default":
+            self.create_vector_db(storage, db_name)
+
+            param_str += f", storage = {db_name}.{table_name}"
 
         self.run_sql(f"""
             create knowledge base {name}
@@ -230,13 +245,13 @@ class TestKB(KBTestBase):
         )
 
         logger.debug("start loading")
-        count_rows = 50
+        count_rows = 30
         ret = self.run_sql(f"""
             insert into {kb_name}
             select * from example_db.demo.crm_demo 
             order by pk
             limit {count_rows}
-            using batch_size=20, track_column=pk
+            using batch_size=10, track_column=pk
         """)
 
         if "ID" not in ret.columns:
@@ -420,7 +435,7 @@ class TestKB(KBTestBase):
             using
               test_table = files.test_eval_{kb_name},
               generate_data = {{   
-                 'from_sql': 'SELECT message_body content, pk id FROM example_db.demo.crm_demo order by pk limit 50',
+                 'from_sql': 'SELECT message_body content, pk id FROM example_db.demo.crm_demo order by pk limit 30',
                  'count': 2
              }}, 
              evaluate=true

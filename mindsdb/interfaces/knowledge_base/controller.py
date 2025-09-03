@@ -1094,6 +1094,9 @@ class KnowledgeBaseController:
             model_record = db.Predictor.query.get(model["id"])
             embedding_model_id = model_record.id
 
+            if model_record.learn_args.get("using", {}).get("sparse"):
+                is_sparse = True
+
         # if params.get("reranking_model", {}) is bool and False we evaluate it to empty dictionary
         reranking_model_params = params.get("reranking_model", {})
 
@@ -1121,7 +1124,6 @@ class KnowledgeBaseController:
                 # Add sparse vector support for pgvector
                 vector_db_params = {}
                 # Check both explicit parameter and model configuration
-                is_sparse = is_sparse or model_record.learn_args.get("using", {}).get("sparse")
                 if is_sparse:
                     vector_db_params["is_sparse"] = True
                     if vector_size is not None:

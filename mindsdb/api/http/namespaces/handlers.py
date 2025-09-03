@@ -19,7 +19,6 @@ from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.handlers import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.api.executor.command_executor import ExecuteCommands
-from mindsdb.utilities.config import Config
 
 
 @ns_conf.route('/')
@@ -122,13 +121,13 @@ def prepare_formdata():
         params[name] = value
 
     def on_file(file):
-        params[file.field_name.decode()] = file.file_object
-        file_names.append(file.field_name.decode())
+        file_name = file.field_name.decode()
+        if file_name not in ('code', 'modules'):
+            raise ValueError(f'Wrong field name: {file_name}')
+        params[file_name] = file.file_object
+        file_names.append(file_name)
 
-    temp_dir_path = temp_dir_path = tempfile.mkdtemp(
-        prefix='mindsdb_byom_file_',
-        dir=Config().paths['tmp']
-    )
+    temp_dir_path = tempfile.mkdtemp(prefix='mindsdb_file_')
 
     parser = multipart.create_form_parser(
         headers=request.headers,
@@ -138,7 +137,7 @@ def prepare_formdata():
             'UPLOAD_DIR': temp_dir_path.encode(),  # bytes required
             'UPLOAD_KEEP_FILENAME': True,
             'UPLOAD_KEEP_EXTENSIONS': True,
-            'MAX_MEMORY_FILE_SIZE': 0
+            'MAX_MEMORY_FILE_SIZE': float('inf')
         }
     )
 
@@ -151,7 +150,12 @@ def prepare_formdata():
     parser.close()
 
     for file_name in file_names:
+        file_path = os.path.join(temp_dir_path, file_name)
+        with open(file_path, 'wb') as f:
+            params[file_name].seek(0)
+            f.write(params[file_name].read())
         params[file_name].close()
+        params[file_name] = file_path
 
     return params
 
@@ -164,9 +168,9 @@ class BYOMUpload(Resource):
     def post(self, name):
         params = prepare_formdata()
 
-        code_file_path = params['code'].name.decode()
+        code_file_path = params['code']
         try:
-            module_file_path = params['modules'].name.decode()
+            module_file_path = params['modules']
         except AttributeError:
             module_file_path = Path(code_file_path).parent / 'requirements.txt'
             module_file_path.touch()
@@ -205,9 +209,9 @@ class BYOMUpload(Resource):
 
         params = prepare_formdata()
 
-        code_file_path = params['code'].name.decode()
+        code_file_path = params['code']
         try:
-            module_file_path = params['modules'].name.decode()
+            module_file_path = params['modules']
         except KeyError:
             module_file_path = Path(code_file_path).parent / 'requirements.txt'
             module_file_path.touch()

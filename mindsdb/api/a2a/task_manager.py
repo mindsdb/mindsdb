@@ -18,7 +18,7 @@ from mindsdb.api.a2a.common.types import (
 )
 from mindsdb.api.a2a.common.server.task_manager import InMemoryTaskManager
 from mindsdb.api.a2a.agent import MindsDBAgent
-from mindsdb.api.a2a.utils import to_serializable
+from mindsdb.api.a2a.utils import to_serializable, convert_a2a_message_to_qa_format
 
 from typing import Union
 import logging
@@ -94,22 +94,8 @@ class AgentTaskManager(InMemoryTaskManager):
 
         agent = self._create_agent(agent_name)
 
-        # Get the history from the task
+        # Get the history from the task object (where it was properly extracted and stored)
         history = task.history if task and task.history else []
-        logger.info(f"Using history with length {len(history)} for request")
-
-        # Log the history for debugging
-        logger.info(f"Conversation history for task {task_send_params.id}:")
-        for idx, msg in enumerate(history):
-            # Convert Message object to dict if needed
-            msg_dict = msg.dict() if hasattr(msg, "dict") else msg
-            role = msg_dict.get("role", "unknown")
-            text = ""
-            for part in msg_dict.get("parts", []):
-                if part.get("type") == "text":
-                    text = part.get("text", "")
-                    break
-            logger.info(f"Message {idx + 1} ({role}): {text[:100]}...")
 
         if not streaming:
             # If streaming is disabled, use invoke and return a single response
@@ -183,17 +169,16 @@ class AgentTaskManager(InMemoryTaskManager):
         # If streaming is enabled (default), use the streaming implementation
         try:
             logger.debug(f"[TaskManager] Entering agent.stream() at {time.time()}")
-            # Transform to agent-compatible format
-            agent_messages = to_question_format(
-                [
-                    {
-                        "role": task_send_params.message.role,
-                        "parts": task_send_params.message.parts,
-                        "metadata": task_send_params.message.metadata,
-                    }
-                ]
-            )
-            async for item in agent.streaming_invoke(agent_messages, timeout=60):
+            # Create A2A message structure and convert using centralized utility
+            a2a_message = task_send_params.message.model_dump()
+            if history:
+                a2a_message["history"] = [msg.model_dump() if hasattr(msg, "model_dump") else msg for msg in history]
+
+            # Convert to Q&A format using centralized utility function
+            all_messages = convert_a2a_message_to_qa_format(a2a_message)
+
+            logger.debug(f"Sending {len(all_messages)} total messages to streaming agent")
+            async for item in agent.streaming_invoke(all_messages, timeout=60):
                 # Clean up: Remove verbose debug logs, keep only errors and essential info
                 if isinstance(item, dict) and "artifact" in item and "parts" in item["artifact"]:
                     item["artifact"]["parts"] = [to_serializable(p) for p in item["artifact"]["parts"]]
@@ -235,19 +220,23 @@ class AgentTaskManager(InMemoryTaskManager):
                 message = task_send_params.message
                 message_dict = message.dict() if hasattr(message, "dict") else message
 
-                # Get history from request if available
+                # Get history from request if available - check both locations
                 history = []
+
+                # First check if history is at top level (task_send_params.history)
                 if hasattr(task_send_params, "history") and task_send_params.history:
-                    # Convert each history item to dict if needed and ensure proper role
+                    # Convert each history item to dict if needed
                     for item in task_send_params.history:
-                        item_dict = item.dict() if hasattr(item, "dict") else item
-                        # Ensure the role is properly set
-                        if "role" not in item_dict:
-                            item_dict["role"] = "assistant" if "answer" in item_dict else "user"
+                        item_dict = item.model_dump() if hasattr(item, "model_dump") else item
+                        history.append(item_dict)
+                # Also check if history is nested under message (message.history)
+                elif hasattr(task_send_params.message, "history") and task_send_params.message.history:
+                    for item in task_send_params.message.history:
+                        item_dict = item.model_dump() if hasattr(item, "model_dump") else item
                         history.append(item_dict)
 
-                # Add current message to history
-                history.append(message_dict)
+                # DO NOT add current message to history - it should be processed separately
+                # The current message will be extracted during streaming from task_send_params.message
 
                 # Create a new task
                 task = Task(

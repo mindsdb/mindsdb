@@ -323,14 +323,15 @@ class AgentCompletionsStream(Resource):
     @ns_conf.doc("agent_completions_stream")
     @api_endpoint_metrics("POST", "/agents/agent/completions/stream")
     def post(self, project_name, agent_name):
-        logger.info(f"Received streaming request for agent {agent_name} in project {project_name}")
-
-        # Check for required parameters.
+        # Extract messages from request (HTTP format only)
         if "messages" not in request.json:
-            logger.error("Missing 'messages' parameter in request body")
             return http_error(
-                HTTPStatus.BAD_REQUEST, "Missing parameter", 'Must provide "messages" parameter in POST body'
+                HTTPStatus.BAD_REQUEST,
+                "Missing parameter",
+                'Must provide "messages" parameter in POST body',
             )
+
+        messages = request.json["messages"]
 
         session = SessionController()
         try:
@@ -345,8 +346,6 @@ class AgentCompletionsStream(Resource):
             return http_error(
                 HTTPStatus.NOT_FOUND, "Project not found", f"Project with name {project_name} does not exist"
             )
-
-        messages = request.json["messages"]
 
         try:
             gen = _completion_event_generator(agent_name, messages, project_name)

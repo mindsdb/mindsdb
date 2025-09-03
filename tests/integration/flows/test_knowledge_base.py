@@ -25,8 +25,8 @@ class HiddenVar(str):
 
 def get_configurations():
     storages = [
-        # default chromadb
-        {"engine": "chromadb", "persist_directory": "default_collection"}
+        # don't use chromadb, it is checked in unit tests
+        # {"engine": "chromadb", "persist_directory": "default_collection"}
     ]
 
     if "KB_PGVECTOR_URL" in os.environ:

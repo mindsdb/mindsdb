@@ -64,7 +64,7 @@ class File(Resource):
             file_name = file.file_name.decode()
             data["file"] = file_name
             if Path(file_name).name != file_name:
-                raise ValueError(f'Wrong file name: {file_name}')
+                raise ValueError(f"Wrong file name: {file_name}")
             file_object = file.file_object
 
         temp_dir_path = tempfile.mkdtemp(prefix="mindsdb_file_")

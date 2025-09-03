@@ -1,5 +1,7 @@
 import json
 import time
+import sys
+import socket
 from typing import AsyncIterable, Any, Dict
 
 from starlette.applications import Starlette
@@ -60,17 +62,29 @@ class A2AServer:
         )
         self.start_time = time.time()
 
-    def force_bind_port_on_windows(self):
-        import socket
+    def _create_reusable_socket(self):
+        """
+        Creates and binds a reusable socket on Windows to mitigate port locking.
 
+        This method addresses a specific issue on Windows where a port can remain
+        in a TIME_WAIT state after the application closes, preventing immediate
+        restarts. By creating a socket and setting the SO_REUSEADDR option
+        before the server starts, we can bind to the port more reliably.
+
+        Returns:
+            socket.socket: A configured and bound socket object.
+        """
         # 1. Create a standard TCP socket
         sock = socket.socket()
 
-        # 2. Set the SO_REUSEADDR option on the socket
+        # 2. Set the SO_REUSEADDR option
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
         # 3. Bind the socket to the host and port
         sock.bind((self.host, self.port))
+
+        # 4. Return the configured socket
+        return sock
 
     def start(self):
         if self.agent_card is None:
@@ -81,17 +95,30 @@ class A2AServer:
 
         import uvicorn
 
-        self.force_bind_port_on_windows()
-        # Configure uvicorn with optimized settings for streaming
-        uvicorn.run(
-            self.app,
-            host=self.host,
-            port=self.port,
-            http="h11",
-            timeout_keep_alive=65,
-            log_level=get_mindsdb_log_level(),
-            log_config=get_uvicorn_logging_config("uvicorn_a2a"),
-        )
+        # Only apply this workaround on Windows.
+        if sys.platform == "win32":
+            # Create the reusable socket first.
+            sock = self._create_reusable_socket()
+            # Pass the socket to Uvicorn and do NOT pass host/port.
+            uvicorn.run(
+                self.app,
+                sockets=[sock],  # <-- The crucial change is here
+                http="h11",
+                timeout_keep_alive=65,
+                log_level=get_mindsdb_log_level(),
+                log_config=get_uvicorn_logging_config("uvicorn_a2a"),
+            )
+        else:
+            # On other systems (Linux, macOS), run Uvicorn normally.
+            uvicorn.run(
+                self.app,
+                host=self.host,
+                port=self.port,
+                http="h11",
+                timeout_keep_alive=65,
+                log_level=get_mindsdb_log_level(),
+                log_config=get_uvicorn_logging_config("uvicorn_a2a"),
+            )
 
     def _get_agent_card(self, request: Request) -> JSONResponse:
         return JSONResponse(self.agent_card.model_dump(exclude_none=True))

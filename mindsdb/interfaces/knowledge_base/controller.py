@@ -265,6 +265,11 @@ class KnowledgeBaseTable:
                         error_msg = f"Invalid relevance_threshold value: {item.value}. {str(e)}"
                         logger.error(error_msg)
                         raise ValueError(error_msg)
+                elif (item.column == "relevance") and (item.op.value not in relevance_threshold_allowed_operators):
+                    raise ValueError(
+                        f"Invalid operator for relevance: {item.op.value}. Only the following operators are allowed: "
+                        f"{','.join(relevance_threshold_allowed_operators)}."
+                    )
                 elif item.column == "reranking":
                     if item.value is False or (isinstance(item.value, str) and item.value.lower() == "false"):
                         disable_reranking = True
@@ -283,11 +288,6 @@ class KnowledgeBaseTable:
                     if not (0 <= item.value <= 1):
                         raise ValueError(f"Invalid hybrid_search_alpha value: {item.value}. Must be between 0 and 1.")
                     hybrid_search_alpha = item.value
-                elif (item.column == "relevance") and (item.op.value not in relevance_threshold_allowed_operators):
-                    raise ValueError(
-                        f"Invalid operator for relevance: {item.op.value}. Only the following operators are allowed: "
-                        f"{','.join(relevance_threshold_allowed_operators)}."
-                    )
                 elif item.column == TableField.CONTENT.value:
                     query_text = item.value
 

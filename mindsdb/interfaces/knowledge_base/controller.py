@@ -532,7 +532,7 @@ class KnowledgeBaseTable:
                 if processed_chunks:
                     content.value = processed_chunks[0].content
 
-            query.update_columns[emb_col] = Constant(self._content_to_embeddings(content))
+            query.update_columns[emb_col] = Constant(self._content_to_embeddings(content.value))
 
         if "metadata" not in query.update_columns:
             query.update_columns["metadata"] = Constant({})

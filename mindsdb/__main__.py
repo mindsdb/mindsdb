@@ -28,7 +28,6 @@ from mindsdb.utilities.config import config
 from mindsdb.utilities.starters import (
     start_http,
     start_mysql,
-    start_mongo,
     start_postgres,
     start_ml_task_queue,
     start_scheduler,
@@ -61,7 +60,6 @@ _stop_event = threading.Event()
 class TrunkProcessEnum(Enum):
     HTTP = "http"
     MYSQL = "mysql"
-    MONGODB = "mongodb"
     POSTGRES = "postgres"
     JOBS = "jobs"
     TASKS = "tasks"
@@ -134,6 +132,9 @@ class TrunkProcessData:
 
 def close_api_gracefully(trunc_processes_struct):
     _stop_event.set()
+
+    delete_pid_file()
+
     try:
         for trunc_processes_data in trunc_processes_struct.values():
             process = trunc_processes_data.process
@@ -444,12 +445,6 @@ if __name__ == "__main__":
                 "max_restart_interval_seconds", TrunkProcessData.max_restart_interval_seconds
             ),
         ),
-        TrunkProcessEnum.MONGODB: TrunkProcessData(
-            name=TrunkProcessEnum.MONGODB.value,
-            entrypoint=start_mongo,
-            port=config["api"]["mongodb"]["port"],
-            args=(config.cmd_args.verbose,),
-        ),
         TrunkProcessEnum.POSTGRES: TrunkProcessData(
             name=TrunkProcessEnum.POSTGRES.value,
             entrypoint=start_postgres,
@@ -600,7 +595,6 @@ if __name__ == "__main__":
             ],
             return_exceptions=False,
         )
-        delete_pid_file()
 
     ioloop = asyncio.new_event_loop()
     ioloop.run_until_complete(wait_apis_start())

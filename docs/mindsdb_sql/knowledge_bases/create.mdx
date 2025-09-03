@@ -30,6 +30,12 @@ USING
 
 Upon execution, it registers `my_kb` and associates the specified models and storage. `my_kb` is a unique identifier of the knowledge base within MindsDB.
 
+Here is how to list all knowledge bases:
+
+```sql
+SHOW KNOWLEDGE_BASES;
+```
+
 <Tip>
 Users can use the variables and the [`from_env()` function](/mindsdb_sql/functions/from_env) to pass parameters when creating knowledge bases.
 </Tip>
@@ -81,6 +87,10 @@ When choosing `openai_azure` as the model provider, users should define the foll
 * `api_key` stores the OpenAI API key.
 * `base_url` stores the base URL of the Azure instance.
 * `api_version` stores the version of the Azure instance.
+
+<Tip>
+Users need to log in to their Azure OpenAI instance to retrieve all relevant parameter values. Next, click on `Explore Azure AI Foundry portal` and go to `Models + endpoints`. Select the model and copy the parameter values.
+</Tip>
 
 #### `provider = 'google'`
 

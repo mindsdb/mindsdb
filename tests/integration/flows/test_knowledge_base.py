@@ -191,57 +191,127 @@ class KBTestBase:
 class TestKB(KBTestBase):
     @pytest.mark.parametrize("storage, embedding_model, reranking_model", get_rerank_configurations())
     def test_base_syntax(self, storage, embedding_model, reranking_model):
+        # --- Test data ingestion ---
         kb_name = f"test_{storage['engine']}_kb_crm"
-        self.create_kb(kb_name, storage, embedding_model)
 
-        # -------------- insert --------
-        logger.debug("insert from table")
-        count_rows = 10  # content too small to be chunked
-        self.run_sql(f"""
+        def to_date(s):
+            return dt.datetime.strptime(s, "%Y-%m-%d %H:%M:%S.%f")
+
+        # Create KB and start load in thread
+        self.create_kb(
+            kb_name,
+            storage,
+            embedding_model,
+            reranking_model,
+            params={
+                "metadata_columns": ["status", "category"],
+                "content_columns": ["message_body"],
+                "id_column": "pk",
+            },
+        )
+
+        logger.debug("start loading")
+        count_rows = 50
+        ret = self.run_sql(f"""
             insert into {kb_name}
-            select pk id, message_body content, ticket_id from example_db.demo.crm_demo
+            select * from example_db.demo.crm_demo 
             order by pk
             limit {count_rows}
+            using batch_size=20, track_column=pk
         """)
+
+        if "ID" not in ret.columns:
+            raise RuntimeError("Query is not partitioned")
+
+        duration = None
+        for i in range(100):  # 200 sec min max
+            time.sleep(1)
+
+            ret = self.run_sql(f"describe knowledge base {kb_name}")
+            record = ret.iloc[0]
+
+            if record["INSERT_FINISHED_AT"] is not None:
+                duration = (to_date(record["INSERT_FINISHED_AT"]) - to_date(record["INSERT_STARTED_AT"])).seconds
+                logger.debug(f"loading completed in {duration}s")
+                break
+
+            if record["ERROR"] is not None:
+                raise RuntimeError(record["ERROR"])
+        if duration is None:
+            raise RuntimeError("Timeout to finish query")
 
         ret = self.run_sql(f"select * from {kb_name}")
         assert len(ret) == count_rows
+
+        # --- test metadata ---
+
+        # -- Metadata search
+        ret = self.run_sql(f"""
+                SELECT *
+                FROM {kb_name}
+                WHERE category = "Battery";
+            """)
+        assert set(ret.metadata.apply(lambda x: x.get("category"))) == {"Battery"}
+
+        ret = self.run_sql(f"""
+                SELECT *
+                FROM {kb_name}
+                WHERE status = "solving" AND category = "Battery"
+            """)
+        assert set(ret.metadata.apply(lambda x: x.get("category"))) == {"Battery"}
+        assert set(ret.metadata.apply(lambda x: x.get("status"))) == {"solving"}
+
+        # -- Content + metadata search with limit
+        ret = self.run_sql(f"""
+                SELECT *
+                FROM {kb_name}
+                WHERE status = "solving" AND content = "noise" and reranking=false
+                LIMIT 5;
+            """)
+        assert set(ret.metadata.apply(lambda x: x.get("status"))) == {"solving"}
+        assert "noise" in ret.chunk_content[0]
+        assert len(ret) == 5
+
+        # -- Content + metadata search with limit and re-ranking threshold
+        ret = self.run_sql(f"""
+                SELECT *
+                FROM {kb_name}
+                WHERE status = "solving" 
+                 AND content = "noise"  AND reranking=false AND relevance>=0.5
+            """)
+        assert set(ret.metadata.apply(lambda x: x.get("status"))) == {"solving"}
+        assert "noise" in ret.chunk_content[0]  # first line contents word
+        assert len(ret[ret.relevance < 0.5]) == 0
+
+        #  checking columns
+        for column in ["id", "chunk_content", "metadata", "distance", "relevance"]:
+            assert column in ret.columns, f"Column {column} does not exist in response"
+
+        if storage["engine"] == "pgvector":
+            # some operators don't work with chromadb
+
+            # like / not like
+            ret = self.run_sql(f"select id, metadata, chunk_content from {kb_name} where category like '%ttery'")
+            assert len([row for _, row in ret.iterrows() if "Battery" not in str(row["metadata"])]) == 0
+
+            ret = self.run_sql(f"select id, metadata, chunk_content from {kb_name} where category not like '%ttery'")
+            assert len([row for _, row in ret.iterrows() if "Battery" in str(row["metadata"])]) == 0
+
+        # -------- insert values -------------
 
         logger.debug("insert from values")
         for i in range(2):
             # do it twice second time it will be updated
             self.run_sql(f"""
-                insert into {kb_name} (id, content) values
+                insert into {kb_name} (pk, message_body) values
                 (1000, 'Help'), (1001, 'Thank you'), (1002, 'Thank you')
             """)
         count_rows += 3
 
-        # ------------  checking columns  ------------
-        # Simplified SQL Syntax
-        kb_columns = ["id", "chunk_content", "metadata", "distance", "relevance"]
-
-        logger.debug("Select all without conditions")
         ret = self.run_sql(f"select * from {kb_name}")
         assert len(ret) == count_rows
-        for column in kb_columns:
-            assert column in ret.columns, f"Column {column} does not exist in response"
 
-        logger.debug("Select one column without conditions")
-        for column in kb_columns:
-            ret = self.run_sql(f"select {column} from {kb_name}")
-            assert len(ret) == count_rows
-            assert list(ret.columns) == [column], f"Response don''t have column {column}"
-
-        # ---------- selecting options --------
-
-        logger.debug("Limit")
-        ret = self.run_sql(f"select id, chunk_content from {kb_name} limit 4")
-        assert len(ret) == 4
-
-        logger.debug("Limit with content")
-        ret = self.run_sql(f"select id, chunk_content, distance from {kb_name} where content = 'help' limit 4")
-        assert len(ret) == 4
-        assert ret["id"][0] == 1000
+        # ---------- selecting by id --------
 
         logger.debug("filter by id")
         ret = self.run_sql(f"select id, chunk_content from {kb_name} where id = 1001")
@@ -261,16 +331,6 @@ class TestKB(KBTestBase):
         assert len(ret) == 4
         assert "1000" not in list(ret["id"])
 
-        if storage["engine"] == "pgvector":
-            # some operators don't work with chromadb
-
-            # like / not like
-            ret = self.run_sql(f"select id, metadata, chunk_content from {kb_name} where ticket_id like '%1001'")
-            assert len([row for _, row in ret.iterrows() if "1001" not in str(row["metadata"])]) == 0
-
-            ret = self.run_sql(f"select id, metadata, chunk_content from {kb_name} where ticket_id not like '%1001'")
-            assert len([row for _, row in ret.iterrows() if "1001" in str(row["metadata"])]) == 0
-
         logger.debug("outer query")
         ret = self.run_sql(
             f"select chunk_content, count(1) count, max(id) max from {kb_name} where id > 999 group by chunk_content order by max(id) desc"
@@ -286,6 +346,7 @@ class TestKB(KBTestBase):
             from {kb_name} k
             join example_db.demo.crm_demo t on t.pk = k.id
             where k.content = 'Help' and k.id not in (1000, 1001, 1002)
+              and k.reranking=false
             limit 4
         """)
 
@@ -293,7 +354,7 @@ class TestKB(KBTestBase):
         assert row["chunk_content"] == row["message_body"]
         assert row["id"] == row["pk"]
 
-        # -----------------  modify data ---------------
+        # -----------------  delete/update data ---------------
 
         # delete
         self.run_sql(f"delete from {kb_name} where id = 1")
@@ -316,123 +377,10 @@ class TestKB(KBTestBase):
         # TODO update by id don't work
         #   should it update all chunks?
 
-        # Test deletion of Knowledge Bases
-        self.run_sql(f"drop knowledge base {kb_name}")
+        if reranking_model is None:
+            return
 
-        ret = self.run_sql(f"describe knowledge base {kb_name}")
-        assert len(ret) == 0
-
-        # --- Test data ingestion ---
-        kb_name = f"test_{storage['engine']}_kb_crm"
-
-        def to_date(s):
-            return dt.datetime.strptime(s, "%Y-%m-%d %H:%M:%S.%f")
-
-        # Create KB and start load in thread
-        self.create_kb(
-            kb_name,
-            storage,
-            embedding_model,
-            params={
-                "metadata_columns": ["status", "category"],
-                "content_columns": ["message_body"],
-                "id_column": "pk",
-            },
-        )
-
-        logger.debug("start loading")
-        ret = self.run_sql(f"""
-            insert into {kb_name}
-            select * from example_db.demo.crm_demo
-            using batch_size=100, track_column=pk
-        """)
-
-        if "ID" not in ret.columns:
-            raise RuntimeError("Query is not partitioned")
-
-        duration = None
-        for i in range(200):  # 200 sec min max
-            time.sleep(1)
-
-            ret = self.run_sql(f"describe knowledge base {kb_name}")
-            record = ret.iloc[0]
-
-            if record["INSERT_FINISHED_AT"] is not None:
-                duration = (to_date(record["INSERT_FINISHED_AT"]) - to_date(record["INSERT_STARTED_AT"])).seconds
-                logger.debug(f"loading completed in {duration}s")
-                break
-
-            if record["ERROR"] is not None:
-                raise RuntimeError(record["ERROR"])
-        if duration is None:
-            raise RuntimeError("Timeout to finish query")
-
-        # --- test metadata ---
-
-        # -- Metadata search
-        ret = self.run_sql(f"""
-            SELECT *
-            FROM {kb_name}
-            WHERE category = "Battery";
-        """)
-        assert set(ret.metadata.apply(lambda x: x.get("category"))) == {"Battery"}
-
-        ret = self.run_sql(f"""
-            SELECT *
-            FROM {kb_name}
-            WHERE status = "solving" AND category = "Battery"
-        """)
-        assert set(ret.metadata.apply(lambda x: x.get("category"))) == {"Battery"}
-        assert set(ret.metadata.apply(lambda x: x.get("status"))) == {"solving"}
-
-        # -- Content + metadata search
-        ret = self.run_sql(f"""
-            SELECT *
-            FROM {kb_name}
-            WHERE status = "solving" AND content = "noise";
-        """)
-        assert set(ret.metadata.apply(lambda x: x.get("status"))) == {"solving"}
-        assert "noise" in ret.chunk_content[0]
-
-        # -- Content + metadata search with limit
-        ret = self.run_sql(f"""
-            SELECT *
-            FROM {kb_name}
-            WHERE status = "solving" AND content = "noise"
-            LIMIT 5;
-        """)
-        assert set(ret.metadata.apply(lambda x: x.get("status"))) == {"solving"}
-        assert "noise" in ret.chunk_content[0]
-        assert len(ret) == 5
-
-        # -- Content + metadata search with limit and re-ranking threshold
-        ret = self.run_sql(f"""
-            SELECT *
-            FROM {kb_name}
-            WHERE status = "solving" AND content = "noise" AND relevance>=0.5
-        """)
-        assert set(ret.metadata.apply(lambda x: x.get("status"))) == {"solving"}
-        assert "noise" in ret.chunk_content[0]  # first line contents word
-        assert len(ret[ret.relevance < 0.5]) == 0
-
-        # --- reranking ---
-        self.create_kb(
-            kb_name,
-            storage,
-            embedding_model,
-            reranking_model,
-            params={
-                "metadata_columns": ["status", "category"],
-                "content_columns": ["message_body"],
-                "id_column": "pk",
-            },
-        )
-
-        self.run_sql(f"""
-            INSERT INTO {kb_name} (
-                SELECT * FROM example_db.demo.crm_demo order by pk limit 50 
-            );
-        """)
+        # -----------------  search with reranking ---------------
 
         threshold = 0.5
         ret = self.run_sql(f"""

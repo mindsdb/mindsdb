@@ -512,21 +512,6 @@ class CollationsTable(Table):
 # Data Catalog tables
 # TODO: Should these be placed in a separate schema?
 
-
-def _get_records_from_data_catalog(databases: List, tables: Optional[List[str]] = None) -> List:
-    """Get records from the data catalog based on the specified databases and tables."""
-    # TODO: Should we allow to query all databases?
-    if not databases:
-        raise ValueError("At least one database must be specified in the query.")
-
-    records = []
-    for database in databases:
-        data_catalog_reader = DataCatalogReader(database_name=database, table_names=tables)
-        records.extend(data_catalog_reader.read_metadata_as_records())
-
-    return records
-
-
 # TODO: Combine with existing 'TablesTable'?
 class MetaTablesTable(Table):
     name = "META_TABLES"

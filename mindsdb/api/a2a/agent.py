@@ -122,6 +122,7 @@ class MindsDBAgent:
                 a2a_message["history"] = history
             # Convert to Q&A format using centralized utility
             formatted_messages = convert_a2a_message_to_qa_format(a2a_message)
+            logger.debug(f"Formatted messages for agent: {formatted_messages}")
             streaming_response = self.streaming_invoke(formatted_messages, timeout=timeout)
             async for chunk in streaming_response:
                 content_value = chunk.get("text") or chunk.get("output") or json.dumps(chunk)

@@ -60,6 +60,18 @@ class A2AServer:
         )
         self.start_time = time.time()
 
+    def force_bind_port_on_windows(self):
+        import socket
+
+        # 1. Create a standard TCP socket
+        sock = socket.socket()
+
+        # 2. Set the SO_REUSEADDR option on the socket
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+        # 3. Bind the socket to the host and port
+        sock.bind((self.host, self.port))
+
     def start(self):
         if self.agent_card is None:
             raise ValueError("agent_card is not defined")
@@ -69,6 +81,7 @@ class A2AServer:
 
         import uvicorn
 
+        self.force_bind_port_on_windows()
         # Configure uvicorn with optimized settings for streaming
         uvicorn.run(
             self.app,

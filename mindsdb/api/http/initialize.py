@@ -1,5 +1,4 @@
 import os
-import secrets
 import mimetypes
 import threading
 import traceback
@@ -27,7 +26,7 @@ from mindsdb.api.http.namespaces.chatbots import ns_conf as chatbots_ns
 from mindsdb.api.http.namespaces.jobs import ns_conf as jobs_ns
 from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
 from mindsdb.api.http.namespaces.databases import ns_conf as databases_ns
-from mindsdb.api.http.namespaces.default import ns_conf as default_ns, check_auth
+from mindsdb.api.http.namespaces.default import ns_conf as default_ns
 from mindsdb.api.http.namespaces.file import ns_conf as file_ns
 from mindsdb.api.http.namespaces.handlers import ns_conf as handlers_ns
 from mindsdb.api.http.namespaces.knowledge_bases import ns_conf as knowledge_bases_ns
@@ -53,6 +52,7 @@ from mindsdb.utilities.json_encoder import CustomJSONProvider
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
 from mindsdb.utilities.otel import trace  # noqa: F401
+from mindsdb.api.common.middleware import verify_pat
 
 logger = log.getLogger(__name__)
 
@@ -314,12 +314,19 @@ def initialize_app(config, no_studio):
         ctx.set_default()
         config = Config()
 
+        h = request.headers.get("Authorization")
+        if not h or not h.startswith("Bearer "):
+            bearer = None
+        else:
+            bearer = h.split(" ", 1)[1].strip() or None
+
         # region routes where auth is required
         if (
             config["auth"]["http_auth_enabled"] is True
             and any(request.path.startswith(f"/api{ns.path}") for ns in protected_namespaces)
-            and check_auth() is False
+            and verify_pat(bearer) is False
         ):
+            logger.debug(f"Auth failed for path {request.path}")
             return http_error(
                 HTTPStatus.UNAUTHORIZED,
                 "Unauthorized",
@@ -340,29 +347,23 @@ def initialize_app(config, no_studio):
         except Exception:
             user_id = 0
 
-        try:
-            session_id = request.cookies.get("session")
-        except Exception:
-            session_id = "unknown"
-
         if company_id is not None:
             try:
                 company_id = int(company_id)
             except Exception as e:
-                logger.error(f"Cloud not parse company id: {company_id} | exception: {e}")
+                logger.error(f"Could not parse company id: {company_id} | exception: {e}")
                 company_id = None
 
         if user_class is not None:
             try:
                 user_class = int(user_class)
             except Exception as e:
-                logger.error(f"Cloud not parse user_class: {user_class} | exception: {e}")
+                logger.error(f"Could not parse user_class: {user_class} | exception: {e}")
                 user_class = 0
         else:
             user_class = 0
 
         ctx.user_id = user_id
-        ctx.session_id = session_id
         ctx.company_id = company_id
         ctx.user_class = user_class
         ctx.email_confirmed = email_confirmed
@@ -394,14 +395,11 @@ def initialize_flask(config, init_static_thread, no_studio):
     FlaskInstrumentor().instrument_app(app)
     RequestsInstrumentor().instrument()
 
-    app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", secrets.token_hex(32))
-    app.config["SESSION_COOKIE_NAME"] = "session"
-    app.config["PERMANENT_SESSION_LIFETIME"] = config["auth"]["http_permanent_session_lifetime"]
     app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 60
     app.config["SWAGGER_HOST"] = "http://localhost:8000/mindsdb"
     app.json = CustomJSONProvider()
 
-    authorizations = {"apikey": {"type": "session", "in": "query", "name": "session"}}
+    authorizations = {"apikey": {"type": "apiKey", "in": "header", "name": "Authorization"}}
 
     logger.debug("Creating swagger API..")
     api = Swagger_Api(

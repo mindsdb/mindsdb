@@ -38,7 +38,7 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 # lark is required for auto retrieval (RAG utilities). It is used by langchain
 # and not explicitly imported in mindsdb.
 # transformers is required for langchain_core and not explicitly imported by mindsdb.
-# gunicorn and dataprep_ml are for optional features that aren't required.
+# dataprep_ml is for optional features that aren't required.
 # opentelemetry and langfuse are metrics/tracing libraries that are only used in the cloud images (they're installed there as extras)
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch", "pyarrow", "langfuse", "dataprep_ml"],
@@ -47,7 +47,6 @@ MAIN_RULE_IGNORES = {
         "pgvector",
         "pyarrow",
         "openai",
-        "gunicorn",
         "dataprep_ml",
         "opentelemetry",
         "langfuse",

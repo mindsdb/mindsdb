@@ -3,13 +3,14 @@ import sys
 import json
 import argparse
 import datetime
+import logging
 from pathlib import Path
 from copy import deepcopy
-import multiprocessing as mp
 
 from appdirs import user_data_dir
 
 # NOTE do not `import from mindsdb` here
+logger = logging.getLogger(__name__)
 
 
 def _merge_key_recursive(target_dict, source_dict, key):
@@ -171,14 +172,6 @@ class Config:
                     "restart_on_failure": True,
                     "max_restart_count": 1,
                     "max_restart_interval_seconds": 60,
-                    "server": {
-                        "type": "waitress",  # MINDSDB_HTTP_SERVER_TYPE MINDSDB_DEFAULT_SERVER
-                        "config": {
-                            "threads": 16,
-                            "max_request_body_size": (1 << 30) * 10,  # 10GB
-                            "inbuf_overflow": (1 << 30) * 10,
-                        },
-                    },
                 },
                 "mysql": {
                     "host": api_host,
@@ -190,26 +183,9 @@ class Config:
                     "max_restart_interval_seconds": 60,
                 },
                 "postgres": {"host": api_host, "port": "55432", "database": "mindsdb"},
-                "mcp": {
-                    "host": api_host,
-                    "port": "47337",
-                    "enabled": True,
-                    "restart_on_failure": True,
-                    "max_restart_count": 1,
-                    "max_restart_interval_seconds": 60,
-                },
                 "litellm": {
                     "host": "0.0.0.0",  # API server binds to all interfaces by default
                     "port": "8000",
-                },
-                "a2a": {
-                    "host": api_host,
-                    "port": 47338,
-                    "mindsdb_host": "localhost",
-                    "mindsdb_port": 47334,
-                    "agent_name": "my_agent",
-                    "project_name": "mindsdb",
-                    "enabled": False,
                 },
             },
             "cache": {"type": "local"},
@@ -249,7 +225,7 @@ class Config:
         """Collect config values from env vars to self._env_config"""
         self._env_config = {
             "logging": {"handlers": {"console": {}, "file": {}}},
-            "api": {"http": {"server": {}}, "a2a": {}},
+            "api": {"http": {}},
             "auth": {},
             "paths": {},
             "permanent_storage": {},
@@ -297,21 +273,6 @@ class Config:
             self._env_config["auth"]["password"] = http_password
         # endregion
 
-        # region permanent session lifetime
-        for env_name in (
-            "MINDSDB_HTTP_PERMANENT_SESSION_LIFETIME",
-            "FLASK_PERMANENT_SESSION_LIFETIME",
-        ):
-            env_value = os.environ.get(env_name)
-            if isinstance(env_value, str):
-                try:
-                    permanent_session_lifetime = int(env_value)
-                except Exception:
-                    raise ValueError(f"Warning: Can't cast env var {env_name} value to int: {env_value}")
-                self._env_config["auth"]["http_permanent_session_lifetime"] = permanent_session_lifetime
-                break
-        # endregion
-
         # region logging
         if os.environ.get("MINDSDB_LOG_LEVEL", "") != "":
             self._env_config["logging"]["handlers"]["console"]["level"] = os.environ["MINDSDB_LOG_LEVEL"]
@@ -322,35 +283,6 @@ class Config:
         if os.environ.get("MINDSDB_FILE_LOG_LEVEL", "") != "":
             self._env_config["logging"]["handlers"]["file"]["level"] = os.environ["MINDSDB_FILE_LOG_LEVEL"]
             self._env_config["logging"]["handlers"]["file"]["enabled"] = True
-        # endregion
-
-        # region server type
-        server_type = os.environ.get("MINDSDB_HTTP_SERVER_TYPE", "").lower()
-        if server_type == "":
-            server_type = os.environ.get("MINDSDB_DEFAULT_SERVER", "").lower()
-        if server_type != "":
-            if server_type == "waitress":
-                self._env_config["api"]["http"]["server"]["type"] = "waitress"
-                self._default_config["api"]["http"]["server"]["config"] = {}
-                self._env_config["api"]["http"]["server"]["config"] = {
-                    "threads": 16,
-                    "max_request_body_size": (1 << 30) * 10,  # 10GB
-                    "inbuf_overflow": (1 << 30) * 10,
-                }
-            elif server_type == "flask":
-                self._env_config["api"]["http"]["server"]["type"] = "flask"
-                self._default_config["api"]["http"]["server"]["config"] = {}
-                self._env_config["api"]["http"]["server"]["config"] = {}
-            elif server_type == "gunicorn":
-                self._env_config["api"]["http"]["server"]["type"] = "gunicorn"
-                self._default_config["api"]["http"]["server"]["config"] = {}
-                self._env_config["api"]["http"]["server"]["config"] = {
-                    "workers": min(mp.cpu_count(), 4),
-                    "timeout": 600,
-                    "reuse_port": True,
-                    "preload_app": True,
-                    "threads": 4,
-                }
         # endregion
 
         if os.environ.get("MINDSDB_DB_CON", "") != "":
@@ -371,32 +303,6 @@ class Config:
             }
         if os.environ.get("MINDSDB_DATA_CATALOG_ENABLED", "").lower() in ("1", "true"):
             self._env_config["data_catalog"] = {"enabled": True}
-
-        # region vars: a2a configuration
-        a2a_config = {}
-        if os.environ.get("MINDSDB_A2A_HOST"):
-            a2a_config["host"] = os.environ.get("MINDSDB_A2A_HOST")
-        if os.environ.get("MINDSDB_A2A_PORT"):
-            a2a_config["port"] = int(os.environ.get("MINDSDB_A2A_PORT"))
-        if os.environ.get("MINDSDB_HOST"):
-            a2a_config["mindsdb_host"] = os.environ.get("MINDSDB_HOST")
-        if os.environ.get("MINDSDB_PORT"):
-            a2a_config["mindsdb_port"] = int(os.environ.get("MINDSDB_PORT"))
-        if os.environ.get("MINDSDB_AGENT_NAME"):
-            a2a_config["agent_name"] = os.environ.get("MINDSDB_AGENT_NAME")
-        if os.environ.get("MINDSDB_PROJECT_NAME"):
-            a2a_config["project_name"] = os.environ.get("MINDSDB_PROJECT_NAME")
-        if os.environ.get("MINDSDB_A2A_ENABLED") is not None:
-            a2a_config["enabled"] = os.environ.get("MINDSDB_A2A_ENABLED").lower() in (
-                "true",
-                "1",
-                "yes",
-                "y",
-            )
-
-        if a2a_config:
-            self._env_config["api"]["a2a"] = a2a_config
-        # endregion
 
     def fetch_auto_config(self) -> bool:
         """Load dict readed from config.auto.json to `auto_config`.
@@ -461,38 +367,6 @@ class Config:
         _merge_configs(new_config, self._auto_config or {})
         _merge_configs(new_config, self._env_config or {})
 
-        # Apply command-line arguments for A2A
-        a2a_config = {}
-
-        # Check for A2A command-line arguments
-        if hasattr(self.cmd_args, "a2a_host") and self.cmd_args.a2a_host is not None:
-            a2a_config["host"] = self.cmd_args.a2a_host
-
-        if hasattr(self.cmd_args, "a2a_port") and self.cmd_args.a2a_port is not None:
-            a2a_config["port"] = self.cmd_args.a2a_port
-
-        if hasattr(self.cmd_args, "mindsdb_host") and self.cmd_args.mindsdb_host is not None:
-            a2a_config["mindsdb_host"] = self.cmd_args.mindsdb_host
-
-        if hasattr(self.cmd_args, "mindsdb_port") and self.cmd_args.mindsdb_port is not None:
-            a2a_config["mindsdb_port"] = self.cmd_args.mindsdb_port
-
-        if hasattr(self.cmd_args, "agent_name") and self.cmd_args.agent_name is not None:
-            a2a_config["agent_name"] = self.cmd_args.agent_name
-
-        if hasattr(self.cmd_args, "project_name") and self.cmd_args.project_name is not None:
-            a2a_config["project_name"] = self.cmd_args.project_name
-
-        # Merge command-line args config with highest priority
-        if a2a_config:
-            _merge_configs(new_config, {"api": {"a2a": a2a_config}})
-
-        # Ensure A2A port is never 0, which would prevent the A2A API from starting
-        a2a_config = new_config["api"].get("a2a")
-        if a2a_config is not None and isinstance(a2a_config, dict):
-            if "port" in a2a_config and (a2a_config["port"] == 0 or a2a_config["port"] is None):
-                a2a_config["port"] = 47338  # Use the default port value
-
         # region create dirs
         for key, value in new_config["paths"].items():
             if isinstance(value, str):
@@ -549,12 +423,6 @@ class Config:
         if "log" in self._config:
             logger.warning("The 'log' config option is no longer supported. Use 'logging' instead.")
 
-        if os.environ.get("MINDSDB_DEFAULT_SERVER", "") != "":
-            logger.warning(
-                "Env variable 'MINDSDB_DEFAULT_SERVER' is going to be deprecated soon. "
-                "Use 'MINDSDB_HTTP_SERVER_TYPE' instead."
-            )
-
         file_upload_domains = self._config.get("file_upload_domains")
         if isinstance(file_upload_domains, list) and len(file_upload_domains) > 0:
             allowed_origins = self._config["url_file_upload"]["allowed_origins"]
@@ -564,14 +432,6 @@ class Config:
                 'Config option "file_upload_domains" is deprecated, '
                 'use config["url_file_upload"]["allowed_origins"] instead.'
             )
-
-        for env_name in ("MINDSDB_HTTP_SERVER_TYPE", "MINDSDB_DEFAULT_SERVER"):
-            env_value = os.environ.get(env_name, "")
-            if env_value.lower() not in ("waitress", "flask", "gunicorn", ""):
-                logger.warning(
-                    f"The value '{env_value}' of the environment variable {env_name} is not valid. "
-                    "It must be one of the following: 'waitress', 'flask', or 'gunicorn'."
-                )
 
     @property
     def cmd_args(self):
@@ -623,17 +483,6 @@ class Config:
             help="Project containing the agent (default: mindsdb)",
         )
 
-        # A2A specific arguments
-        parser.add_argument("--a2a-host", type=str, default=None, help="A2A server host")
-        parser.add_argument("--a2a-port", type=int, default=None, help="A2A server port")
-        parser.add_argument("--mindsdb-host", type=str, default=None, help="MindsDB server host")
-        parser.add_argument("--mindsdb-port", type=int, default=None, help="MindsDB server port")
-        parser.add_argument(
-            "--agent-name",
-            type=str,
-            default=None,
-            help="MindsDB agent name to connect to",
-        )
         parser.add_argument("--project-name", type=str, default=None, help="MindsDB project name")
         parser.add_argument("--update-gui", action="store_true", default=False, help="Update GUI and exit")
 

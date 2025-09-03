@@ -85,3 +85,10 @@ class DataCatalogRetriever(BaseDataCatalog):
             return pd.DataFrame()
         
         return response.data_frame
+    
+    def retrieve_handler_info(self) -> str:
+        """
+        Retrieve the handler info from the handler.
+        """
+        self.logger.info(f"Retrieving handler info for {self.database_name}")
+        return self.data_handler.meta_get_handler_info()

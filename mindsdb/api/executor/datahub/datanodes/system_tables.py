@@ -731,17 +731,17 @@ class MetaColumnUsageTable(Table):
 
 class MetaHandlerInfoTable(Table):
     name = "META_HANDLER_INFO"
-    columns = ["HANDLER_INFO", "TABLE_SCHEMA"]
+    columns = ["HANDLER_INFO", "TABLE_CATALOG"]
 
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
-        _, databases, tables = _get_scope(query)
+        catalogs, _, tables = _get_scope(query)
 
         data = []
-        for database in databases:
-            data_catalog_reader = DataCatalogReader(database_name=database, table_names=tables)
-            handler_info = data_catalog_reader.get_handler_info()
-            data.append({"HANDLER_INFO": str(handler_info), "TABLE_SCHEMA": database})
+        for catalog in catalogs:
+            data_catalog_reader = DataCatalogRetriever(database_name=catalog, table_names=tables)
+            handler_info = data_catalog_reader.retrieve_handler_info()
+            data.append({"HANDLER_INFO": str(handler_info), "TABLE_CATALOG": catalog})
 
         df = pd.DataFrame(data, columns=cls.columns)
         return df

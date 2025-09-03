@@ -89,7 +89,7 @@ def get_rerank_configurations():
             configurations.append([storage, embedding_model, reranking_model])
         elif embedding_model["provider"] == "bedrock":
             reranking_model = embedding_model.copy()
-            reranking_model["model_name"] = "meta.llama4-maverick-17b-instruct-v1:0"
+            reranking_model["model_name"] = "mistral.mistral-large-2402-v1:0"
             configurations.append([storage, embedding_model, reranking_model])
         else:
             configurations.append([storage, embedding_model, None])

@@ -51,6 +51,18 @@ def get_configurations():
             name = f"{storage['engine']}-{embedding_model['provider']}"
             yield pytest.param(storage, embedding_model, id=name)
 
+    if "AWS_ACCESS_KEY" in os.environ and "AWS_SECRET_KEY" in os.environ:
+        embedding_model = {
+            "provider": "bedrock",
+            "model_name": "amazon.titan-embed-text-v2:0",
+            "aws_access_key_id": HiddenVar(os.environ["AWS_ACCESS_KEY"]),
+            "aws_secret_access_key": HiddenVar(os.environ["AWS_SECRET_KEY"]),
+            "aws_region_name": os.environ.get("AWS_REGION", "us-east-1"),
+        }
+        for storage in storages:
+            name = f"{storage['engine']}-{embedding_model['provider']}"
+            yield pytest.param(storage, embedding_model, id=name)
+
 
 def get_rerank_configurations():
     # configurations with reranking model
@@ -63,21 +75,28 @@ def get_rerank_configurations():
             # is pytest.param
             storage, embedding_model = params.values
 
+        # if "GEMINI_API_KEY" in os.environ:
+        #     reranking_model = {
+        #         "provider": "gemini",
+        #         "model_name": "gemini-2.0-flash",
+        #         "api_key": HiddenVar(os.environ["GEMINI_API_KEY"]),
+        #     }
+        #     configurations.append([storage, embedding_model, reranking_model])
+
         if embedding_model["provider"] == "openai":
             reranking_model = embedding_model.copy()
             reranking_model["model_name"] = "gpt-4"
             configurations.append([storage, embedding_model, reranking_model])
-
-        if "GEMINI_API_KEY" in os.environ:
-            reranking_model = {
-                "provider": "gemini",
-                "model_name": "gemini-2.0-flash",
-                "api_key": HiddenVar(os.environ["GEMINI_API_KEY"]),
-            }
+        elif embedding_model["provider"] == "bedrock":
+            reranking_model = embedding_model.copy()
+            reranking_model["model_name"] = "meta.llama4-maverick-17b-instruct-v1:0"
             configurations.append([storage, embedding_model, reranking_model])
+        else:
+            configurations.append([storage, embedding_model, None])
 
     for storage, embedding_model, reranking_model in configurations:
-        name = f"{storage['engine']}-{embedding_model['provider']}-{reranking_model['provider']}"
+        reranker_provider = reranking_model['provider'] if reranking_model['provider'] else 'x'
+        name = f"{storage['engine']}-{embedding_model['provider']}-{reranker_provider}"
         yield pytest.param(storage, embedding_model, reranking_model, id=name)
 
 

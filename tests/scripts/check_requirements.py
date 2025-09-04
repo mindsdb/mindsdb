@@ -40,6 +40,8 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 # transformers is required for langchain_core and not explicitly imported by mindsdb.
 # dataprep_ml is for optional features that aren't required.
 # opentelemetry and langfuse are metrics/tracing libraries that are only used in the cloud images (they're installed there as extras)
+# langchain_aws is used to create agent with bedrock provider;
+#   if is not installed - error message will be shown, but it is possible to use other providers with agent
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch", "pyarrow", "langfuse", "dataprep_ml"],
     "DEP001": [
@@ -50,6 +52,7 @@ MAIN_RULE_IGNORES = {
         "dataprep_ml",
         "opentelemetry",
         "langfuse",
+        "langchain_aws",
     ],
     "DEP002": [
         "psycopg2-binary",

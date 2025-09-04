@@ -7,6 +7,7 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
 from sse_starlette.sse import EventSourceResponse
 from starlette.requests import Request
+from starlette.routing import Route
 from ...common.types import (
     A2ARequest,
     JSONRPCResponse,
@@ -26,7 +27,6 @@ from pydantic import ValidationError
 from ...common.server.task_manager import TaskManager
 
 from mindsdb.utilities import log
-from mindsdb.utilities.log import get_uvicorn_logging_config, get_mindsdb_log_level
 
 logger = log.getLogger(__name__)
 
@@ -34,22 +34,18 @@ logger = log.getLogger(__name__)
 class A2AServer:
     def __init__(
         self,
-        host="0.0.0.0",
-        port=5000,
-        endpoint="/",
         agent_card: AgentCard = None,
         task_manager: TaskManager = None,
     ):
-        self.host = host
-        self.port = port
-        self.endpoint = endpoint
         self.task_manager = task_manager
         self.agent_card = agent_card
-        self.app = Starlette()
-        self.app.add_route(self.endpoint, self._process_request, methods=["POST"])
-        self.app.add_route("/.well-known/agent.json", self._get_agent_card, methods=["GET"])
-        # Add status endpoint
-        self.app.add_route("/status", self._get_status, methods=["GET"])
+        self.app = Starlette(
+            routes=[
+                Route("/", self._process_request, methods=["POST"]),
+                Route("/.well-known/agent.json", self._get_agent_card, methods=["GET"]),
+                Route("/status", self._get_status, methods=["GET"]),
+            ]
+        )
         # TODO: Remove this when we have a proper CORS policy
         self.app.add_middleware(
             CORSMiddleware,
@@ -59,26 +55,6 @@ class A2AServer:
             allow_headers=["*"],
         )
         self.start_time = time.time()
-
-    def start(self):
-        if self.agent_card is None:
-            raise ValueError("agent_card is not defined")
-
-        if self.task_manager is None:
-            raise ValueError("request_handler is not defined")
-
-        import uvicorn
-
-        # Configure uvicorn with optimized settings for streaming
-        uvicorn.run(
-            self.app,
-            host=self.host,
-            port=self.port,
-            http="h11",
-            timeout_keep_alive=65,
-            log_level=get_mindsdb_log_level(),
-            log_config=get_uvicorn_logging_config("uvicorn_a2a"),
-        )
 
     def _get_agent_card(self, request: Request) -> JSONResponse:
         return JSONResponse(self.agent_card.model_dump(exclude_none=True))
@@ -94,8 +70,6 @@ class A2AServer:
             "status": "ok",
             "service": "mindsdb-a2a",
             "uptime_seconds": round(uptime_seconds, 2),
-            "host": self.host,
-            "port": self.port,
             "agent_name": self.agent_card.name if self.agent_card else None,
             "version": self.agent_card.version if self.agent_card else "unknown",
         }
@@ -107,13 +81,20 @@ class A2AServer:
             body = await request.json()
             json_rpc_request = A2ARequest.validate_python(body)
 
+            user_info = {
+                "user-id": request.headers.get("user-id", None),
+                "company-id": request.headers.get("company-id", None),
+                "user-class": request.headers.get("user-class", None),
+                "authorization": request.headers.get("Authorization", None),
+            }
+
             if isinstance(json_rpc_request, GetTaskRequest):
                 result = await self.task_manager.on_get_task(json_rpc_request)
             elif isinstance(json_rpc_request, SendTaskRequest):
-                result = await self.task_manager.on_send_task(json_rpc_request)
+                result = await self.task_manager.on_send_task(json_rpc_request, user_info)
             elif isinstance(json_rpc_request, SendTaskStreamingRequest):
                 # Don't await the async generator, just pass it to _create_response
-                result = self.task_manager.on_send_task_subscribe(json_rpc_request)
+                result = self.task_manager.on_send_task_subscribe(json_rpc_request, user_info)
             elif isinstance(json_rpc_request, CancelTaskRequest):
                 result = await self.task_manager.on_cancel_task(json_rpc_request)
             elif isinstance(json_rpc_request, SetTaskPushNotificationRequest):

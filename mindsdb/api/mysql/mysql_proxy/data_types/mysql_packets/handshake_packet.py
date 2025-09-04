@@ -35,7 +35,7 @@ class HandshakePacket(Packet):
         self.reserved_byte = Datum('string<1>', '')
         self.server_capabilities_1st_part = Datum('int<2>', capabilities)
         self.server_default_collation = Datum('int<1>', DEFAULT_COALLITION_ID)
-        self.status_flags = Datum('int<2>', SERVER_STATUS_AUTOCOMMIT)
+        self.status_flags = Datum('int<2>', 0)  # Disable autocommit by setting status to 0
         self.server_capabilities_2nd_part = Datum('int<2>', capabilities >> 16)
         self.wireshark_filler = Datum('int<1>', FILLER_FOR_WIRESHARK_DUMP)
         # self.wireshark_filler = Datum('int<1>', len(self.proxy.salt))

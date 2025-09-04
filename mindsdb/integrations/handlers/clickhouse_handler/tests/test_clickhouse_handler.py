@@ -15,8 +15,7 @@ class PostgresHandlerTest(unittest.TestCase):
             "password": "pass",
             "database": "test_data",
         }
-        cls.handler = ClickHouseHandler("test_clickhouse_handler",
-                                        connection_data)
+        cls.handler = ClickHouseHandler("test_clickhouse_handler", connection_data)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()

@@ -3,14 +3,12 @@ import sys
 import json
 import argparse
 import datetime
-import logging
 from pathlib import Path
 from copy import deepcopy
 
 from appdirs import user_data_dir
 
 # NOTE do not `import from mindsdb` here
-logger = logging.getLogger(__name__)
 
 
 def _merge_key_recursive(target_dict, source_dict, key):
@@ -161,7 +159,7 @@ class Config:
                     },
                 }
             },
-            "gui": {"autoupdate": True},
+            "gui": {"open_on_start": True, "autoupdate": True},
             "debug": False,
             "environment": "local",
             "integrations": {},
@@ -230,6 +228,7 @@ class Config:
             "paths": {},
             "permanent_storage": {},
             "ml_task_queue": {},
+            "gui": {},
         }
 
         # region storage root path
@@ -304,6 +303,10 @@ class Config:
         if os.environ.get("MINDSDB_DATA_CATALOG_ENABLED", "").lower() in ("1", "true"):
             self._env_config["data_catalog"] = {"enabled": True}
 
+        if os.environ.get("MINDSDB_NO_STUDIO", "").lower() in ("1", "true"):
+            self._env_config["gui"]["open_on_start"] = False
+            self._env_config["gui"]["autoupdate"] = False
+
     def fetch_auto_config(self) -> bool:
         """Load dict readed from config.auto.json to `auto_config`.
         Do it only if `auto_config` was not loaded before or config.auto.json been changed.
@@ -335,10 +338,11 @@ class Config:
         """
         if self._user_config is None:
             cmd_args_config = self.cmd_args.config
-            if isinstance(cmd_args_config, str):
-                self.config_path = cmd_args_config
-            elif isinstance(os.environ.get("MINDSDB_CONFIG_PATH"), str):
+            if isinstance(os.environ.get("MINDSDB_CONFIG_PATH"), str):
                 self.config_path = os.environ["MINDSDB_CONFIG_PATH"]
+            elif isinstance(cmd_args_config, str):
+                self.config_path = cmd_args_config
+
             if self.config_path == "absent":
                 self.config_path = None
             if isinstance(self.config_path, str):
@@ -364,6 +368,11 @@ class Config:
         """Merge multiple configs to one."""
         new_config = deepcopy(self._default_config)
         _merge_configs(new_config, self._user_config)
+
+        if getattr(self.cmd_args, "no_studio", None) is True:
+            new_config["gui"]["open_on_start"] = False
+            new_config["gui"]["autoupdate"] = False
+
         _merge_configs(new_config, self._auto_config or {})
         _merge_configs(new_config, self._env_config or {})
 

@@ -1080,6 +1080,7 @@ class KnowledgeBaseController:
             raise EntityExistsError("Knowledge base already exists", name)
 
         embedding_params = get_model_params(params.get("embedding_model", {}), "default_embedding_model")
+        params["embedding_model"] = embedding_params
 
         # if model_name is None:  # Legacy
         model_name = self._create_embedding_model(
@@ -1106,6 +1107,7 @@ class KnowledgeBaseController:
             params["reranking_model"] = {}
 
         reranking_model_params = get_model_params(reranking_model_params, "default_reranking_model")
+        params["reranking_model"] = reranking_model_params
         if reranking_model_params:
             # Get reranking model from params.
             # This is called here to check validaity of the parameters.
@@ -1230,6 +1232,7 @@ class KnowledgeBaseController:
                 raise RuntimeError(f"Problem with embedding model config: {e}")
             return
 
+        params = copy.deepcopy(params)
         if "provider" in params:
             engine = params.pop("provider").lower()
 

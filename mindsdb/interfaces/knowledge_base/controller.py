@@ -29,7 +29,7 @@ from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embeddi
     construct_model_from_args,
 )
 
-from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS
+from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS, MAX_INSERT_BATCH_SIZE
 from mindsdb.interfaces.agents.langchain_agent import create_chat_model, get_llm_provider
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.variables.variables_controller import variables_controller
@@ -506,6 +506,8 @@ class KnowledgeBaseTable:
         """Process and insert raw data rows"""
         if not rows:
             return
+        if len(rows) > MAX_INSERT_BATCH_SIZE:
+            raise ValueError("Input data is too large, please load data in batches")
 
         df = pd.DataFrame(rows)
 
@@ -1091,6 +1093,7 @@ class KnowledgeBaseController:
             raise EntityExistsError("Knowledge base already exists", name)
 
         embedding_params = get_model_params(params.get("embedding_model", {}), "default_embedding_model")
+        params["embedding_model"] = embedding_params
 
         # if model_name is None:  # Legacy
         model_name = self._create_embedding_model(
@@ -1117,6 +1120,7 @@ class KnowledgeBaseController:
             params["reranking_model"] = {}
 
         reranking_model_params = get_model_params(reranking_model_params, "default_reranking_model")
+        params["reranking_model"] = reranking_model_params
         if reranking_model_params:
             # Get reranking model from params.
             # This is called here to check validaity of the parameters.
@@ -1152,8 +1156,14 @@ class KnowledgeBaseController:
         else:
             vector_db_name, vector_table_name = storage.parts
 
+        data_node = self.session.datahub.get(vector_db_name)
+        if data_node:
+            vector_store_handler = data_node.integration_handler
+        else:
+            raise ValueError(
+                f"Unable to find database named {vector_db_name}, please make sure {vector_db_name} is defined"
+            )
         # create table in vectordb before creating KB
-        vector_store_handler = self.session.datahub.get(vector_db_name).integration_handler
         vector_store_handler.create_table(vector_table_name)
         if keyword_search_enabled:
             vector_store_handler.add_full_text_index(vector_table_name, TableField.CONTENT.value)
@@ -1235,6 +1245,7 @@ class KnowledgeBaseController:
                 raise RuntimeError(f"Problem with embedding model config: {e}")
             return
 
+        params = copy.deepcopy(params)
         if "provider" in params:
             engine = params.pop("provider").lower()
 

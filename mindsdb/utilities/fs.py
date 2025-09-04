@@ -12,6 +12,10 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 
+def get_tmp_dir() -> Path:
+    return Path(tempfile.gettempdir()).joinpath("mindsdb")
+
+
 def _get_process_mark_id(unified: bool = False) -> str:
     """Creates a text that can be used to identify process+thread
     Args:
@@ -26,7 +30,7 @@ def _get_process_mark_id(unified: bool = False) -> str:
 
 
 def create_process_mark(folder="learn"):
-    p = Path(tempfile.gettempdir()).joinpath(f"mindsdb/processes/{folder}/")
+    p = get_tmp_dir().joinpath(f"processes/{folder}/")
     p.mkdir(parents=True, exist_ok=True)
     mark = _get_process_mark_id()
     p.joinpath(mark).touch()
@@ -43,7 +47,7 @@ def set_process_mark(folder: str, mark: str) -> None:
     Returns:
         str: process mark
     """
-    p = Path(tempfile.gettempdir()).joinpath(f"mindsdb/processes/{folder}/")
+    p = get_tmp_dir().joinpath(f"processes/{folder}/")
     p.mkdir(parents=True, exist_ok=True)
     mark = f"{os.getpid()}-{threading.get_native_id()}-{mark}"
     p.joinpath(mark).touch()
@@ -53,11 +57,7 @@ def set_process_mark(folder: str, mark: str) -> None:
 def delete_process_mark(folder: str = "learn", mark: Optional[str] = None):
     if mark is None:
         mark = _get_process_mark_id()
-    p = (
-        Path(tempfile.gettempdir())
-        .joinpath(f"mindsdb/processes/{folder}/")
-        .joinpath(mark)
-    )
+    p = get_tmp_dir().joinpath(f"processes/{folder}/").joinpath(mark)
     if p.exists():
         p.unlink()
 
@@ -65,7 +65,7 @@ def delete_process_mark(folder: str = "learn", mark: Optional[str] = None):
 def clean_process_marks():
     """delete all existing processes marks"""
     logger.debug("Deleting PIDs..")
-    p = Path(tempfile.gettempdir()).joinpath("mindsdb/processes/")
+    p = get_tmp_dir().joinpath("processes/")
     if p.exists() is False:
         return
     for path in p.iterdir():
@@ -81,7 +81,7 @@ def get_processes_dir_files_generator() -> Tuple[Path, int, int]:
     Yields:
         Tuple[Path, int, int]: file object, process is and thread id
     """
-    p = Path(tempfile.gettempdir()).joinpath("mindsdb/processes/")
+    p = get_tmp_dir().joinpath("processes/")
     if p.exists() is False:
         return
     for path in p.iterdir():
@@ -112,9 +112,7 @@ def clean_unlinked_process_marks() -> List[int]:
             try:
                 next(t for t in threads if t.id == thread_id)
             except StopIteration:
-                logger.warning(
-                    f"We have mark for process/thread {process_id}/{thread_id} but it does not exists"
-                )
+                logger.warning(f"We have mark for process/thread {process_id}/{thread_id} but it does not exists")
                 deleted_pids.append(process_id)
                 file.unlink()
 
@@ -124,12 +122,57 @@ def clean_unlinked_process_marks() -> List[int]:
             continue
 
         except psutil.NoSuchProcess:
-            logger.warning(
-                f"We have mark for process/thread {process_id}/{thread_id} but it does not exists"
-            )
+            logger.warning(f"We have mark for process/thread {process_id}/{thread_id} but it does not exists")
             deleted_pids.append(process_id)
             file.unlink()
     return deleted_pids
+
+
+def create_pid_file():
+    """
+    Create mindsdb process pid file. Check if previous process exists and is running
+    """
+
+    if os.environ.get("USE_PIDFILE") != "1":
+        return
+
+    p = get_tmp_dir()
+    p.mkdir(parents=True, exist_ok=True)
+    pid_file = p.joinpath("pid")
+    if pid_file.exists():
+        # if process exists raise exception
+        pid = pid_file.read_text().strip()
+        try:
+            psutil.Process(int(pid))
+            raise Exception(f"Found PID file with existing process: {pid} {pid_file}")
+        except (psutil.Error, ValueError):
+            ...
+
+        logger.warning(f"Found existing PID file {pid_file}({pid}), removing")
+        pid_file.unlink()
+
+    pid_file.write_text(str(os.getpid()))
+
+
+def delete_pid_file():
+    """
+    Remove existing process pid file if it matches current process
+    """
+
+    if os.environ.get("USE_PIDFILE") != "1":
+        return
+
+    pid_file = get_tmp_dir().joinpath("pid")
+
+    if not pid_file.exists():
+        return
+
+    pid = pid_file.read_text().strip()
+    if pid != str(os.getpid()):
+        logger.warning(f"Process id in PID file ({pid_file}) doesn't match mindsdb pid")
+        return
+
+    pid_file.unlink()
 
 
 def __is_within_directory(directory, target):
@@ -141,8 +184,8 @@ def __is_within_directory(directory, target):
 
 def safe_extract(tarfile, path=".", members=None, *, numeric_owner=False):
     # for py >= 3.12
-    if hasattr(tarfile, 'data_filter'):
-        tarfile.extractall(path, members=members, numeric_owner=numeric_owner, filter='data')
+    if hasattr(tarfile, "data_filter"):
+        tarfile.extractall(path, members=members, numeric_owner=numeric_owner, filter="data")
         return
 
     # for py < 3.12

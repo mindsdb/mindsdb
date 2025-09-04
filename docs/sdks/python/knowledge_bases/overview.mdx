@@ -1,0 +1,133 @@
+---
+title: How Knowledge Bases Work
+sidebarTitle: Overview
+---
+
+A knowledge base is an advanced system that organizes information based on semantic meaning rather than simple keyword matching. It integrates embedding models, reranking models, and vector stores to enable context-aware data retrieval.
+
+By performing semantic reasoning across multiple data points, a knowledge base delivers deeper insights and more accurate responses, making it a powerful tool for intelligent data access.
+
+<Tip>
+Learn more about features of [knowledge bases available via SQL API](/mindsdb_sql/knowledge_bases/overview).
+</Tip>
+
+Before diving into the syntax, here is a quick walkthrough showing how knowledge bases work in MindsDB.
+
+We start by creating a knowledge base and inserting data. Next we can run semantic search queries with metadata filtering.
+
+<Steps>
+  <Step title="Create a knowledge base">
+    Use the `create()` function to create a knowledge base, specifying all its components.
+
+    ```python
+    server = mindsdb_sdk.connect()
+    project = server.get_project()
+
+    my_kb = project.knowledge_bases.create(
+        'my_kb',
+        embedding_model={'provider': 'openai', 'model_name': 'text-embedding-3-small', 'api_key': 'sk-...'},
+        reranking_model={'provider': 'openai', 'model_name': 'gpt-4o', 'api_key': 'sk-...'},
+        storage=server.databases.my_vector_db.tables.my_table,
+        metadata_columns=['product'],
+        content_columns=['notes'],
+        id_column='order_id'
+    )
+    ```
+  </Step>
+  <Step title="Insert data into the knowledge base">
+    In this example, we use a simple dataset containing customer notes for product orders which will be inserted into the knowledge base.
+
+    ```sql
+    +----------+-----------------------+------------------------+
+    | order_id | product               | notes                  |
+    +----------+-----------------------+------------------------+
+    | A1B      | Wireless Mouse        | Request color: black   |
+    | 3XZ      | Bluetooth Speaker     | Gift wrap requested    |
+    | Q7P      | Aluminum Laptop Stand | Prefer aluminum finish |
+    +----------+-----------------------+------------------------+
+    ```
+
+    Use the `insert_query()` function to ingest data into the knowledge base from a query.
+
+    ```python
+    my_kb.insert_query(
+        server.databases.sample_data.tables.orders
+    )
+    ```
+  </Step>
+  <Step title="Run semantic search on the knowledge base">
+    Query the knowledge base using semantic search.
+
+    ```python
+    results = my_kb.find('color')
+
+    print(results.fetch())
+    ```
+
+    This query returns:
+
+    ```sql
+    +-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+    | id  | chunk_id             | chunk_content           | metadata                                                                                                                                                                                            | distance           | relevance          |
+    +-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+    | A1B | A1B_notes:1of1:0to20 | Request color: black    | {"chunk_index":0,"content_column":"notes","end_char":20,"original_doc_id":"A1B_notes","original_row_id":"A1B","product":"Wireless Mouse","source":"TextChunkingPreprocessor","start_char":0}        | 0.5743341242061104 | 0.5093188026135379 |
+    | Q7P | Q7P_notes:1of1:0to22 | Prefer aluminum finish  | {"chunk_index":0,"content_column":"notes","end_char":22,"original_doc_id":"Q7P_notes","original_row_id":"Q7P","product":"Aluminum Laptop Stand","source":"TextChunkingPreprocessor","start_char":0} | 0.7744703514692067 | 0.2502580835880018 |
+    | 3XZ | 3XZ_notes:1of1:0to19 | Gift wrap requested     | {"chunk_index":0,"content_column":"notes","end_char":19,"original_doc_id":"3XZ_notes","original_row_id":"3XZ","product":"Bluetooth Speaker","source":"TextChunkingPreprocessor","start_char":0}     | 0.8010851611432231 | 0.2500003885558766 |
+    +-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+    ```
+  </Step>
+  <Step title="Get the most relevant search results">
+    Query the knowledge base using semantic search and define the `relevance` parameter to receive only the best matching data for your use case.
+
+    ```python
+    results = project.query(
+        '''
+        SELECT *
+        FROM my_kb
+        WHERE content = 'color'
+        AND relevance >= 0.2502;
+        '''
+    )
+
+    print(results.fetch())
+    ```
+
+    This query returns:
+
+    ```sql
+    +-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+    | id  | chunk_id             | chunk_content           | metadata                                                                                                                                                                                            | distance           | relevance          |
+    +-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+    | A1B | A1B_notes:1of1:0to20 | Request color: black    | {"chunk_index":0,"content_column":"notes","end_char":20,"original_doc_id":"A1B_notes","original_row_id":"A1B","product":"Wireless Mouse","source":"TextChunkingPreprocessor","start_char":0}        | 0.5743341242061104 | 0.5093188026135379 |
+    | Q7P | Q7P_notes:1of1:0to22 | Prefer aluminum finish  | {"chunk_index":0,"content_column":"notes","end_char":22,"original_doc_id":"Q7P_notes","original_row_id":"Q7P","product":"Aluminum Laptop Stand","source":"TextChunkingPreprocessor","start_char":0} | 0.7744703514692067 | 0.2502580835880018 |
+    +-----+----------------------+-------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+--------------------+
+    ```
+  </Step>
+  <Step title="Filter results by metadata">
+    Add metadata filtering to focus your search.
+
+    ```python
+    results = project.query(
+        '''
+        SELECT *
+        FROM my_kb
+        WHERE product = 'Wireless Mouse'
+        AND content = 'color'
+        AND relevance >= 0.2502;
+        '''
+    )
+
+    print(results.fetch())
+    ```
+    
+    This query returns:
+
+    ```sql
+    +-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+-------------------+
+    | id  | chunk_id             | chunk_content          | metadata                                                                                                                                                                                     | distance           | relevance         |
+    +-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+-------------------+
+    | A1B | A1B_notes:1of1:0to20 | Request color: black   | {"chunk_index":0,"content_column":"notes","end_char":20,"original_doc_id":"A1B_notes","original_row_id":"A1B","product":"Wireless Mouse","source":"TextChunkingPreprocessor","start_char":0} | 0.5743341242061104 | 0.504396172197583 |
+    +-----+----------------------+------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------+-------------------+
+    ```
+  </Step>
+</Steps>

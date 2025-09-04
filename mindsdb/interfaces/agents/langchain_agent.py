@@ -7,6 +7,7 @@ import re
 import threading
 import numpy as np
 import pandas as pd
+import logging
 
 from langchain.agents import AgentExecutor
 from langchain.agents.initialize import initialize_agent
@@ -16,6 +17,7 @@ from langchain_writer import ChatWriter
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.agents import AgentAction, AgentStep
 from langchain_core.callbacks.base import BaseCallbackHandler
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_core.messages.base import BaseMessage
@@ -38,6 +40,7 @@ from .mindsdb_chat_model import ChatMindsdb
 from .callback_handlers import LogCallbackHandler, ContextCaptureCallback
 from .langfuse_callback_handler import LangfuseCallbackHandler, get_skills
 from .safe_output_parser import SafeOutputParser
+from .providers import get_bedrock_chat_model
 
 from mindsdb.interfaces.agents.constants import (
     OPEN_AI_CHAT_MODELS,
@@ -63,7 +66,6 @@ from mindsdb.interfaces.agents.constants import (
 )
 from mindsdb.interfaces.skills.skill_tool import skill_tool, SkillData
 from langchain_anthropic import ChatAnthropic
-from langchain_core.messages import SystemMessage
 from langchain_openai import ChatOpenAI
 
 from mindsdb.utilities.langfuse import LangfuseClientWrapper
@@ -175,6 +177,9 @@ def create_chat_model(args: Dict):
         return ChatGoogleGenerativeAI(**model_kwargs)
     if args["provider"] == "writer":
         return ChatWriter(**model_kwargs)
+    if args["provider"] == "bedrock":
+        ChatBedrock = get_bedrock_chat_model()
+        return ChatBedrock(**model_kwargs)
     if args["provider"] == "mindsdb":
         return ChatMindsdb(**model_kwargs)
     raise ValueError(f"Unknown provider: {args['provider']}")
@@ -297,6 +302,11 @@ class LangchainAgent:
         if "prompt_template" in args:
             logger.info(f"Using prompt template: {args['prompt_template'][:50]}...")
 
+        if "model_name" not in args:
+            raise ValueError(
+                "No model name provided for agent. Provide it in the model parameter or in the default model setup."
+            )
+
         return args
 
     def get_metadata(self) -> Dict:
@@ -345,15 +355,20 @@ class LangchainAgent:
         args.update(params or {})
 
         df = pd.DataFrame(messages)
+        logger.info(f"LangchainAgent.get_completion: Received {len(messages)} messages")
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"Messages DataFrame shape: {df.shape}")
+            logger.debug(f"Messages DataFrame columns: {df.columns.tolist()}")
+            logger.debug(f"Messages DataFrame content: {df.to_dict('records')}")
 
         # Back compatibility for old models
         self.provider = args.get("provider", get_llm_provider(args))
 
         df = df.reset_index(drop=True)
         agent = self.create_agent(df)
-        # Use last message as prompt, remove other questions.
-        user_column = args.get("user_column", USER_COLUMN)
-        df.iloc[:-1, df.columns.get_loc(user_column)] = None
+        # Keep conversation history for context - don't nullify previous messages
+
+        # Only use the last message as the current prompt, but preserve history for agent memory
         response = self.run_agent(df, agent, args)
 
         # End the run completion span and update the metadata with tool usage
@@ -374,6 +389,12 @@ class LangchainAgent:
         args = self.args
 
         df = pd.DataFrame(messages)
+        logger.info(f"LangchainAgent._get_completion_stream: Received {len(messages)} messages")
+        # Check if we have the expected columns for conversation history
+        if "question" in df.columns and "answer" in df.columns:
+            logger.debug("DataFrame has question/answer columns for conversation history")
+        else:
+            logger.warning("DataFrame missing question/answer columns! Available columns: {df.columns.tolist()}")
 
         self.embedding_model_provider = args.get("embedding_model_provider", get_embedding_model_provider(args))
         # Back compatibility for old models
@@ -381,9 +402,8 @@ class LangchainAgent:
 
         df = df.reset_index(drop=True)
         agent = self.create_agent(df)
-        # Use last message as prompt, remove other questions.
-        user_column = args.get("user_column", USER_COLUMN)
-        df.iloc[:-1, df.columns.get_loc(user_column)] = None
+        # Keep conversation history for context - don't nullify previous messages
+        # Only use the last message as the current prompt, but preserve history for agent memory
         return self.stream_agent(df, agent, args)
 
     def create_agent(self, df: pd.DataFrame) -> AgentExecutor:
@@ -403,7 +423,8 @@ class LangchainAgent:
         # Prefer prediction prompt template over original if provided.
         prompt_template = args["prompt_template"]
 
-        # Set up memory.
+        # Modern LangChain approach: Use memory but populate it correctly
+        # Create memory and populate with conversation history
         memory = ConversationSummaryBufferMemory(
             llm=llm,
             input_key="input",
@@ -412,17 +433,41 @@ class LangchainAgent:
             memory_key="chat_history",
         )
 
+        # Add system message first
         memory.chat_memory.messages.insert(0, SystemMessage(content=prompt_template))
-        # User - Assistant conversation. All except the last message.
+
         user_column = args.get("user_column", USER_COLUMN)
         assistant_column = args.get("assistant_column", ASSISTANT_COLUMN)
-        for row in df[:-1].to_dict("records"):
-            question = row[user_column]
-            answer = row[assistant_column]
+
+        logger.info(f"Processing conversation history: {len(df)} total messages, {len(df[:-1])} history messages")
+        logger.debug(f"User column: {user_column}, Assistant column: {assistant_column}")
+
+        # Process history messages (all except the last one which is current message)
+        history_df = df[:-1]
+        if len(history_df) == 0:
+            logger.debug("No history rows to process - this is normal for first message")
+
+        history_count = 0
+        for i, row in enumerate(history_df.to_dict("records")):
+            question = row.get(user_column)
+            answer = row.get(assistant_column)
+            logger.debug(f"Converting history row {i}: question='{question}', answer='{answer}'")
+
+            # Add messages directly to memory's chat_memory.messages list (modern approach)
             if isinstance(question, str) and len(question) > 0:
-                memory.chat_memory.add_user_message(question)
+                memory.chat_memory.messages.append(HumanMessage(content=question))
+                history_count += 1
+                logger.debug(f"Added HumanMessage to memory: {question}")
             if isinstance(answer, str) and len(answer) > 0:
-                memory.chat_memory.add_ai_message(answer)
+                memory.chat_memory.messages.append(AIMessage(content=answer))
+                history_count += 1
+                logger.debug(f"Added AIMessage to memory: {answer}")
+
+        logger.info(f"Built conversation history with {history_count} history messages + system message")
+        logger.debug(f"Final memory messages count: {len(memory.chat_memory.messages)}")
+
+        # Store memory for agent use
+        self._conversation_memory = memory
 
         agent_type = args.get("agent_type", DEFAULT_AGENT_TYPE)
         agent_executor = initialize_agent(
@@ -562,7 +607,22 @@ AI: {response}"""
                 return {CONTEXT_COLUMN: [], ASSISTANT_COLUMN: ""}
             try:
                 callbacks, context_callback = prepare_callbacks(self, args)
-                result = agent_executor.invoke(prompt, config={"callbacks": callbacks})
+
+                # Modern LangChain approach: Include conversation history + current message
+                if hasattr(self, "_conversation_messages") and self._conversation_messages:
+                    # Add current user message to conversation history
+                    full_messages = self._conversation_messages + [HumanMessage(content=prompt)]
+                    logger.critical(f"🔍 INVOKING AGENT with {len(full_messages)} messages (including history)")
+                    logger.debug(
+                        f"Full conversation messages: {[type(msg).__name__ + ': ' + msg.content[:100] + '...' for msg in full_messages]}"
+                    )
+
+                    # For agents, we need to pass the input in the expected format
+                    # The agent expects 'input' key with the current question, but conversation history should be in memory
+                    result = agent_executor.invoke({"input": prompt}, config={"callbacks": callbacks})
+                else:
+                    logger.warning("No conversation messages found - using simple prompt")
+                    result = agent_executor.invoke({"input": prompt}, config={"callbacks": callbacks})
                 captured_context = context_callback.get_contexts()
                 output = result["output"] if isinstance(result, dict) and "output" in result else str(result)
                 return {CONTEXT_COLUMN: captured_context, ASSISTANT_COLUMN: output}
@@ -585,7 +645,14 @@ AI: {response}"""
         agent_timeout_seconds = args.get("timeout", DEFAULT_AGENT_TIMEOUT_SECONDS)
 
         with ContextThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = [executor.submit(_invoke_agent_executor_with_prompt, agent, prompt) for prompt in prompts]
+            # Only process the last prompt (current question), not all prompts
+            # The previous prompts are conversation history and should only be used for context
+            if prompts:
+                current_prompt = prompts[-1]  # Last prompt is the current question
+                futures = [executor.submit(_invoke_agent_executor_with_prompt, agent, current_prompt)]
+            else:
+                logger.error("No prompts found to process")
+                futures = []
             try:
                 for future in as_completed(futures, timeout=agent_timeout_seconds):
                     result = future.result()
@@ -686,12 +753,14 @@ AI: {response}"""
 
         callbacks, context_callback = prepare_callbacks(self, args)
 
-        yield self.add_chunk_metadata({"type": "start", "prompt": prompts[0]})
+        # Use last prompt (current question) instead of first prompt (history)
+        current_prompt = prompts[-1] if prompts else ""
+        yield self.add_chunk_metadata({"type": "start", "prompt": current_prompt})
 
         if not hasattr(agent_executor, "stream") or not callable(agent_executor.stream):
             raise AttributeError("The agent_executor does not have a 'stream' method")
 
-        stream_iterator = self._stream_agent_executor(agent_executor, prompts[0], callbacks)
+        stream_iterator = self._stream_agent_executor(agent_executor, current_prompt, callbacks)
         for chunk in stream_iterator:
             yield chunk
 

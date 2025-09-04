@@ -8,7 +8,6 @@ import atexit
 import signal
 import psutil
 import asyncio
-import secrets
 import traceback
 import threading
 from enum import Enum
@@ -28,18 +27,15 @@ from mindsdb.utilities.config import config
 from mindsdb.utilities.starters import (
     start_http,
     start_mysql,
-    start_mongo,
     start_postgres,
     start_ml_task_queue,
     start_scheduler,
     start_tasks,
-    start_mcp,
     start_litellm,
-    start_a2a,
 )
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 import mindsdb.interfaces.storage.db as db
-from mindsdb.utilities.fs import clean_process_marks, clean_unlinked_process_marks
+from mindsdb.utilities.fs import clean_process_marks, clean_unlinked_process_marks, create_pid_file, delete_pid_file
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.auth import register_oauth_client, get_aws_meta_data
 from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
@@ -61,18 +57,15 @@ _stop_event = threading.Event()
 class TrunkProcessEnum(Enum):
     HTTP = "http"
     MYSQL = "mysql"
-    MONGODB = "mongodb"
     POSTGRES = "postgres"
     JOBS = "jobs"
     TASKS = "tasks"
     ML_TASK_QUEUE = "ml_task_queue"
-    MCP = "mcp"
     LITELLM = "litellm"
-    A2A = "a2a"
 
     @classmethod
     def _missing_(cls, value):
-        print(f'"{value}" is not a valid name of subprocess')
+        logger.error(f'"{value}" is not a valid name of subprocess')
         sys.exit(1)
 
 
@@ -134,6 +127,9 @@ class TrunkProcessData:
 
 def close_api_gracefully(trunc_processes_struct):
     _stop_event.set()
+
+    delete_pid_file()
+
     try:
         for trunc_processes_data in trunc_processes_struct.values():
             process = trunc_processes_data.process
@@ -335,11 +331,15 @@ if __name__ == "__main__":
         print(f"MindsDB {mindsdb_version}")
         sys.exit(0)
 
+    if config.cmd_args.update_gui:
+        from mindsdb.api.http.initialize import initialize_static
+
+        logger.info("Updating the GUI version")
+        initialize_static()
+        sys.exit(0)
+
     config.raise_warnings(logger=logger)
     os.environ["MINDSDB_RUNTIME"] = "1"
-
-    if os.environ.get("FLASK_SECRET_KEY") is None:
-        os.environ["FLASK_SECRET_KEY"] = secrets.token_hex(32)
 
     if os.environ.get("ARROW_DEFAULT_MEMORY_POOL") is None:
         try:
@@ -375,7 +375,7 @@ if __name__ == "__main__":
     apis = os.getenv("MINDSDB_APIS") or config.cmd_args.api
 
     if apis is None:  # If "--api" option is not specified, start the default APIs
-        api_arr = [TrunkProcessEnum.HTTP, TrunkProcessEnum.MYSQL, TrunkProcessEnum.MCP, TrunkProcessEnum.A2A]
+        api_arr = [TrunkProcessEnum.HTTP, TrunkProcessEnum.MYSQL]
     elif apis == "":  # If "--api=" (blank) is specified, don't start any APIs
         api_arr = []
     else:  # The user has provided a list of APIs to start
@@ -411,9 +411,7 @@ if __name__ == "__main__":
     # Get config values for APIs
     http_api_config = config.get("api", {}).get("http", {})
     mysql_api_config = config.get("api", {}).get("mysql", {})
-    mcp_api_config = config.get("api", {}).get("mcp", {})
     litellm_api_config = config.get("api", {}).get("litellm", {})
-    a2a_api_config = config.get("api", {}).get("a2a", {})
     trunc_processes_struct = {
         TrunkProcessEnum.HTTP: TrunkProcessData(
             name=TrunkProcessEnum.HTTP.value,
@@ -437,12 +435,6 @@ if __name__ == "__main__":
                 "max_restart_interval_seconds", TrunkProcessData.max_restart_interval_seconds
             ),
         ),
-        TrunkProcessEnum.MONGODB: TrunkProcessData(
-            name=TrunkProcessEnum.MONGODB.value,
-            entrypoint=start_mongo,
-            port=config["api"]["mongodb"]["port"],
-            args=(config.cmd_args.verbose,),
-        ),
         TrunkProcessEnum.POSTGRES: TrunkProcessData(
             name=TrunkProcessEnum.POSTGRES.value,
             entrypoint=start_postgres,
@@ -458,18 +450,6 @@ if __name__ == "__main__":
         TrunkProcessEnum.ML_TASK_QUEUE: TrunkProcessData(
             name=TrunkProcessEnum.ML_TASK_QUEUE.value, entrypoint=start_ml_task_queue, args=(config.cmd_args.verbose,)
         ),
-        TrunkProcessEnum.MCP: TrunkProcessData(
-            name=TrunkProcessEnum.MCP.value,
-            entrypoint=start_mcp,
-            port=mcp_api_config.get("port", 47337),
-            args=(config.cmd_args.verbose,),
-            need_to_run=mcp_api_config.get("need_to_run", False),
-            restart_on_failure=mcp_api_config.get("restart_on_failure", False),
-            max_restart_count=mcp_api_config.get("max_restart_count", TrunkProcessData.max_restart_count),
-            max_restart_interval_seconds=mcp_api_config.get(
-                "max_restart_interval_seconds", TrunkProcessData.max_restart_interval_seconds
-            ),
-        ),
         TrunkProcessEnum.LITELLM: TrunkProcessData(
             name=TrunkProcessEnum.LITELLM.value,
             entrypoint=start_litellm,
@@ -478,18 +458,6 @@ if __name__ == "__main__":
             restart_on_failure=litellm_api_config.get("restart_on_failure", False),
             max_restart_count=litellm_api_config.get("max_restart_count", TrunkProcessData.max_restart_count),
             max_restart_interval_seconds=litellm_api_config.get(
-                "max_restart_interval_seconds", TrunkProcessData.max_restart_interval_seconds
-            ),
-        ),
-        TrunkProcessEnum.A2A: TrunkProcessData(
-            name=TrunkProcessEnum.A2A.value,
-            entrypoint=start_a2a,
-            port=a2a_api_config.get("port", 8001),
-            args=(config.cmd_args.verbose,),
-            need_to_run=a2a_api_config.get("enabled", False),
-            restart_on_failure=a2a_api_config.get("restart_on_failure", True),
-            max_restart_count=a2a_api_config.get("max_restart_count", TrunkProcessData.max_restart_count),
-            max_restart_interval_seconds=a2a_api_config.get(
                 "max_restart_interval_seconds", TrunkProcessData.max_restart_interval_seconds
             ),
         ),
@@ -509,6 +477,8 @@ if __name__ == "__main__":
 
     if config.cmd_args.ml_task_queue_consumer is True:
         trunc_processes_struct[TrunkProcessEnum.ML_TASK_QUEUE].need_to_run = True
+
+    create_pid_file()
 
     for trunc_process_data in trunc_processes_struct.values():
         if trunc_process_data.started is True or trunc_process_data.need_to_run is False:

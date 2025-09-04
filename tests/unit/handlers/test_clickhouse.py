@@ -58,7 +58,7 @@ class TestClickHouseHandler(BaseDatabaseHandlerTest, unittest.TestCase):
     def test_renderer(self):
         sql = "SELECT * FROM ch.table WHERE created_at = (now() - INTERVAL '5' MINUTE);"
         rendered_sql = self.handler.renderer.get_string(parse_sql(sql), with_failback=True)
-        assert rendered_sql == 'SELECT * \nFROM ch."table" \nWHERE created_at = now() - INTERVAL \'5\' MINUTE'
+        assert rendered_sql == "SELECT * \nFROM ch.\"table\" \nWHERE created_at = now() - INTERVAL '5' MINUTE"
 
     def test_connect_success(self):
         self.mock_connect.return_value = MagicMock()

@@ -16,9 +16,6 @@ config = context.config
 
 # initialize
 
-if "MINDSDB_CONFIG_PATH" not in os.environ:
-    os.environ["MINDSDB_CONFIG_PATH"] = "absent"
-
 db.init()
 
 target_metadata = db.Base.metadata

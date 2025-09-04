@@ -370,7 +370,7 @@ class Config:
         new_config = deepcopy(self._default_config)
         _merge_configs(new_config, self._user_config)
 
-        if self.get_cmd_arg("no_studio") is True:
+        if getattr(self.cmd_args, "no_studio", None) is True:
             new_config["gui"]["open_on_start"] = False
             new_config["gui"]["autoupdate"] = False
 
@@ -448,18 +448,6 @@ class Config:
         if self._cmd_args is None:
             self.parse_cmd_args()
         return self._cmd_args
-
-    def get_cmd_arg(self, arg_name: str) -> Any:
-        """Get command-line argument by name
-
-        Args:
-            arg_name (str): Name of the command-line argument
-        Returns:
-            Any: Value of the command-line argument
-        """
-        if hasattr(self.cmd_args, arg_name):
-            return getattr(self.cmd_args, arg_name)
-        return None
 
     def parse_cmd_args(self) -> None:
         """Collect cmd args to self._cmd_args (accessable as self.cmd_args)"""

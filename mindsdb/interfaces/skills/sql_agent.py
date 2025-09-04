@@ -17,7 +17,6 @@ from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 from mindsdb.utilities.config import config
-from mindsdb.interfaces.data_catalog.data_catalog_reader import DataCatalogReader
 
 logger = log.getLogger(__name__)
 
@@ -454,56 +453,32 @@ class SQLAgent:
         If `sample_rows_in_table_info`, the specified number of sample rows will be
         appended to each table description. This can increase performance as demonstrated in the paper.
         """
-        if config.get("data_catalog", {}).get("enabled", False):
-            database_table_map = {}
-            for name in table_names or self.get_usable_table_names():
-                name = name.replace("`", "")
+        all_tables = []
+        for name in self.get_usable_table_names():
+            # remove backticks
+            name = name.replace("`", "")
 
-                parts = name.split(".", 1)
-                # TODO: Will there be situations where parts has more than 2 elements? Like a schema?
-                # This is unlikely given that we default to a single schema per database.
-                if len(parts) == 1:
-                    raise ValueError(f"Invalid table name: {name}. Expected format is 'database.table'.")
+            split = name.split(".")
+            if len(split) > 1:
+                all_tables.append(Identifier(parts=[split[0], split[-1]]))
+            else:
+                all_tables.append(Identifier(name))
 
-                database_table_map.setdefault(parts[0], []).append(parts[1])
+        if table_names is not None:
+            all_tables = self._resolve_table_names(table_names, all_tables)
 
-            data_catalog_str = ""
-            for database_name, table_names in database_table_map.items():
-                data_catalog_reader = DataCatalogReader(database_name=database_name, table_names=table_names)
+        tables_info = []
+        for table in all_tables:
+            key = f"{ctx.company_id}_{table}_info"
+            table_info = self._cache.get(key) if self._cache else None
+            if True or table_info is None:
+                table_info = self._get_single_table_info(table)
+                if self._cache:
+                    self._cache.set(key, table_info)
 
-                result = data_catalog_reader.read_metadata_as_string()
-                data_catalog_str += str(result or "")
+            tables_info.append(table_info)
 
-            return data_catalog_str
-
-        else:
-            # TODO: Improve old logic without data catalog
-            all_tables = []
-            for name in self.get_usable_table_names():
-                # remove backticks
-                name = name.replace("`", "")
-
-                split = name.split(".")
-                if len(split) > 1:
-                    all_tables.append(Identifier(parts=[split[0], split[-1]]))
-                else:
-                    all_tables.append(Identifier(name))
-
-            if table_names is not None:
-                all_tables = self._resolve_table_names(table_names, all_tables)
-
-            tables_info = []
-            for table in all_tables:
-                key = f"{ctx.company_id}_{table}_info"
-                table_info = self._cache.get(key) if self._cache else None
-                if True or table_info is None:
-                    table_info = self._get_single_table_info(table)
-                    if self._cache:
-                        self._cache.set(key, table_info)
-
-                tables_info.append(table_info)
-
-            return "\n\n".join(tables_info)
+        return "\n\n".join(tables_info)
 
     def get_kb_sample_rows(self, kb_name: str) -> str:
         """Get sample rows from a knowledge base.

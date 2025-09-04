@@ -16,7 +16,7 @@ flask-compress >= 1.0.0
 appdirs >= 1.0.0
 mindsdb-sql-parser ~= 0.11.3
 pydantic == 2.9.2
-mindsdb-evaluator == 0.0.18
+mindsdb-evaluator == 0.0.20
 duckdb ~= 1.3.2
 requests == 2.32.4
 dateparser==1.2.0

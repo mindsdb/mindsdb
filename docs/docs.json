@@ -34,7 +34,8 @@
                   "group": "Configuration",
                   "pages": [
                     "setup/custom-config",
-                    "setup/environment-vars"
+                    "setup/environment-vars",
+                    "setup/mindsdb-apis"
                   ]
                 },
                 {

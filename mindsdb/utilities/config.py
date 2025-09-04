@@ -3,7 +3,6 @@ import sys
 import json
 import argparse
 import datetime
-from typing import Any
 from pathlib import Path
 from copy import deepcopy
 

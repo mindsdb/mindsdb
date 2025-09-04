@@ -95,7 +95,7 @@ def custom_output_json(data, code, headers=None):
     return resp
 
 
-def get_last_compatible_gui_version() -> Version:
+def get_last_compatible_gui_version() -> Version | bool:
     logger.debug("Getting last compatible frontend..")
     try:
         res = requests.get(
@@ -188,17 +188,18 @@ def initialize_static():
         required_gui_version_lv = parse_version(required_gui_version)
         success = True
         if current_gui_version_lv is None or required_gui_version_lv != current_gui_version_lv:
-            logger.debug("Updating gui..")
             success = update_static(required_gui_version_lv)
     else:
         if last_gui_version_lv is False:
+            logger.debug(
+                "The number of the latest version has not been determined, "
+                f"so we will continue using the current version: {current_gui_version_lv}"
+            )
             return False
 
-        # ignore versions like '23.9.2.2'
-        if current_gui_version_lv is not None and len(current_gui_version_lv.release) < 3:
-            if current_gui_version_lv == last_gui_version_lv:
-                return True
-        logger.debug("Updating gui..")
+        if current_gui_version_lv == last_gui_version_lv:
+            logger.debug(f"The latest version is already in use: {current_gui_version_lv}")
+            return True
         success = update_static(last_gui_version_lv)
 
     if db.session:

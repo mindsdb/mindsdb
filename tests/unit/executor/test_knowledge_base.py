@@ -647,3 +647,26 @@ class TestKB(BaseExecutorDummyML):
         df = self.run_sql("select * from kb1 where content='test' and reranking =false")
         mock_get_scores.assert_not_called()
         assert len(df) > 0
+
+    @patch("mindsdb.utilities.config.Config.get")
+    @patch("mindsdb.integrations.handlers.litellm_handler.litellm_handler.embedding")
+    def test_save_default_params(self, mock_litellm_embedding, mock_config_get):
+        set_litellm_embedding(mock_litellm_embedding)
+
+        def config_get_side_effect(key, default=None):
+            if key == "default_embedding_model":
+                return {
+                    "provider": "bedrock",
+                    "model_name": "dummy_model",
+                    "api_key": "dummy_key",
+                }
+            return default
+
+        mock_config_get.side_effect = config_get_side_effect
+
+        self.run_sql("create knowledge base kb1")
+
+        ret = self.run_sql("describe  knowledge base kb1")
+
+        # default model was saved
+        assert "dummy_model" in ret["EMBEDDING_MODEL"][0]

@@ -8,7 +8,6 @@ import atexit
 import signal
 import psutil
 import asyncio
-import secrets
 import traceback
 import threading
 from enum import Enum
@@ -32,9 +31,7 @@ from mindsdb.utilities.starters import (
     start_ml_task_queue,
     start_scheduler,
     start_tasks,
-    start_mcp,
     start_litellm,
-    start_a2a,
 )
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 import mindsdb.interfaces.storage.db as db
@@ -64,13 +61,11 @@ class TrunkProcessEnum(Enum):
     JOBS = "jobs"
     TASKS = "tasks"
     ML_TASK_QUEUE = "ml_task_queue"
-    MCP = "mcp"
     LITELLM = "litellm"
-    A2A = "a2a"
 
     @classmethod
     def _missing_(cls, value):
-        print(f'"{value}" is not a valid name of subprocess')
+        logger.error(f'"{value}" is not a valid name of subprocess')
         sys.exit(1)
 
 
@@ -346,9 +341,6 @@ if __name__ == "__main__":
     config.raise_warnings(logger=logger)
     os.environ["MINDSDB_RUNTIME"] = "1"
 
-    if os.environ.get("FLASK_SECRET_KEY") is None:
-        os.environ["FLASK_SECRET_KEY"] = secrets.token_hex(32)
-
     if os.environ.get("ARROW_DEFAULT_MEMORY_POOL") is None:
         try:
             """It seems like snowflake handler have memory issue that related to pyarrow. Memory usage keep growing with
@@ -383,7 +375,7 @@ if __name__ == "__main__":
     apis = os.getenv("MINDSDB_APIS") or config.cmd_args.api
 
     if apis is None:  # If "--api" option is not specified, start the default APIs
-        api_arr = [TrunkProcessEnum.HTTP, TrunkProcessEnum.MYSQL, TrunkProcessEnum.MCP, TrunkProcessEnum.A2A]
+        api_arr = [TrunkProcessEnum.HTTP, TrunkProcessEnum.MYSQL]
     elif apis == "":  # If "--api=" (blank) is specified, don't start any APIs
         api_arr = []
     else:  # The user has provided a list of APIs to start
@@ -419,15 +411,13 @@ if __name__ == "__main__":
     # Get config values for APIs
     http_api_config = config.get("api", {}).get("http", {})
     mysql_api_config = config.get("api", {}).get("mysql", {})
-    mcp_api_config = config.get("api", {}).get("mcp", {})
     litellm_api_config = config.get("api", {}).get("litellm", {})
-    a2a_api_config = config.get("api", {}).get("a2a", {})
     trunc_processes_struct = {
         TrunkProcessEnum.HTTP: TrunkProcessData(
             name=TrunkProcessEnum.HTTP.value,
             entrypoint=start_http,
             port=http_api_config["port"],
-            args=(config.cmd_args.verbose, config.cmd_args.no_studio),
+            args=(config.cmd_args.verbose,),
             restart_on_failure=http_api_config.get("restart_on_failure", False),
             max_restart_count=http_api_config.get("max_restart_count", TrunkProcessData.max_restart_count),
             max_restart_interval_seconds=http_api_config.get(
@@ -460,18 +450,6 @@ if __name__ == "__main__":
         TrunkProcessEnum.ML_TASK_QUEUE: TrunkProcessData(
             name=TrunkProcessEnum.ML_TASK_QUEUE.value, entrypoint=start_ml_task_queue, args=(config.cmd_args.verbose,)
         ),
-        TrunkProcessEnum.MCP: TrunkProcessData(
-            name=TrunkProcessEnum.MCP.value,
-            entrypoint=start_mcp,
-            port=mcp_api_config.get("port", 47337),
-            args=(config.cmd_args.verbose,),
-            need_to_run=mcp_api_config.get("need_to_run", False),
-            restart_on_failure=mcp_api_config.get("restart_on_failure", False),
-            max_restart_count=mcp_api_config.get("max_restart_count", TrunkProcessData.max_restart_count),
-            max_restart_interval_seconds=mcp_api_config.get(
-                "max_restart_interval_seconds", TrunkProcessData.max_restart_interval_seconds
-            ),
-        ),
         TrunkProcessEnum.LITELLM: TrunkProcessData(
             name=TrunkProcessEnum.LITELLM.value,
             entrypoint=start_litellm,
@@ -480,18 +458,6 @@ if __name__ == "__main__":
             restart_on_failure=litellm_api_config.get("restart_on_failure", False),
             max_restart_count=litellm_api_config.get("max_restart_count", TrunkProcessData.max_restart_count),
             max_restart_interval_seconds=litellm_api_config.get(
-                "max_restart_interval_seconds", TrunkProcessData.max_restart_interval_seconds
-            ),
-        ),
-        TrunkProcessEnum.A2A: TrunkProcessData(
-            name=TrunkProcessEnum.A2A.value,
-            entrypoint=start_a2a,
-            port=a2a_api_config.get("port", 8001),
-            args=(config.cmd_args.verbose,),
-            need_to_run=a2a_api_config.get("enabled", False),
-            restart_on_failure=a2a_api_config.get("restart_on_failure", True),
-            max_restart_count=a2a_api_config.get("max_restart_count", TrunkProcessData.max_restart_count),
-            max_restart_interval_seconds=a2a_api_config.get(
                 "max_restart_interval_seconds", TrunkProcessData.max_restart_interval_seconds
             ),
         ),

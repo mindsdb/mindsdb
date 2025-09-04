@@ -26,9 +26,8 @@
                 {
                   "group": "Installation",
                   "pages": [
-                    "setup/self-hosted/docker",
                     "setup/self-hosted/docker-desktop",
-                    "setup/cloud/aws-marketplace"
+                    "setup/self-hosted/docker"
                   ]
                 },
                 {
@@ -706,8 +705,7 @@
                 "faqs/persist-predictions",
                 "faqs/mindsdb-with-php",
                 "faqs/disposable-email-doman-and-openai",
-                "faqs/missing-required-cpu-features",
-                "faqs/a2a-unavailable"
+                "faqs/missing-required-cpu-features"
               ]
             }
           ]

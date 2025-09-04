@@ -34,35 +34,22 @@ Follow the steps below to use MindsDB as an MCP server.
     * Start MindsDB MCP server without authentication to connect it to [Cursor](/mcp/cursor_usage).
 
         ```bash
-        docker run --name mindsdb_container -e MINDSDB_APIS=http,mysql,mcp,a2a -p 47334:47334 -p 47335:47335 -p 47337:47337 -p 47338:47338 mindsdb/mindsdb
+        docker run --name mindsdb_container -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
         ```
 
     * Start MindsDB MCP server with authentication to connect it to [OpenAI](/mcp/openai) or [Anthropic](/mcp/anthropic).
 
         ```bash
-        docker run --name mindsdb_container -e MINDSDB_MCP_ACCESS_TOKEN=abc123 -e MINDSDB_APIS=http,mysql,mcp,a2a -p 47334:47334 -p 47335:47335 -p 47337:47337 -p 47338:47338 mindsdb/mindsdb
+        docker run --name mindsdb_container -p 47334:47334 -p 47335:47335 -e MINDSDB_USERNAME=admin -e MINDSDB_PASSWORD=password123 mindsdb/mindsdb
         ```
 
-    The following environment variables are set in the Docker container:
+        Then get an auth token from MindsDB:
+        ```bash
+        curl -X POST -d '{"username":"admin","password":"password123"}' -H "Content-Type: application/json" http://localhost:47334/api/login
+        ```
+        This will return a token that you can use in your MCP client.
 
-    - `MINDSDB_APIS` defines the MindsDB's APIs to be started.
-    - `MINDSDB_MCP_ACCESS_TOKEN` defines the MCP access token used to access MindsDB's MCP Server from MCP Clients.
 
-    <Info>
-    Alternatively, you can use the [`MINDSDB_APIS` environment variable](/setup/environment-vars#mindsdb-apis) to define the list of APIs to be started.
-
-    ```bash
-    export MINDSDB_APIS='mcp'
-    ```
-    </Info>
-
-    <Info>
-    If you run [MindsDB via PyPI](/contribute/install), you can define APIs as below.
-
-    ```bash
-    python -m mindsdb --api=mcp
-    ```
-    </Info>
 
 ## MCP Tools
 

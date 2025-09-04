@@ -539,11 +539,11 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         ]
         response: Response = self.handler.native_query(query_str)
 
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[description[i].name][0]
-            self.assertEqual(type(result_value), type(input_value), f"type mistmatch: {result_value} != {input_value}")
-            self.assertEqual(result_value, input_value, f"value mistmatch: {result_value} != {input_value}")
+            self.assertEqual(type(result_value), type(input_value), f"type mismatch: {result_value} != {input_value}")
+            self.assertEqual(result_value, input_value, f"value mismatch: {result_value} != {input_value}")
         # endregion
 
         # region test BOOLEAN type
@@ -552,7 +552,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_cursor.description = [ColumnDescription(name="t_boolean", type_code=16)]
         excepted_mysql_types = [MYSQL_DATA_TYPE.BOOL]
         response: Response = self.handler.native_query(query_str)
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         self.assertTrue(pd_types.is_bool_dtype(response.data_frame["t_boolean"][0]))
         self.assertTrue(bool(response.data_frame["t_boolean"][0]) is True)
         self.assertTrue(bool(response.data_frame["t_boolean"][1]) is False)
@@ -669,10 +669,10 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.DOUBLE,  # n_float8
         ]
         response: Response = self.handler.native_query(query_str)
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[description[i].name][0]
-            self.assertEqual(result_value, input_value, f"value mistmatch: {result_value} != {input_value}")
+            self.assertEqual(result_value, input_value, f"value mismatch: {result_value} != {input_value}")
         # endregion
 
         # region test datetime types
@@ -745,10 +745,10 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         ]
 
         response: Response = self.handler.native_query(query_str)
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[description[i].name][0]
-            self.assertEqual(result_value, input_value, f"value mistmatch: {result_value} != {input_value}")
+            self.assertEqual(result_value, input_value, f"value mismatch: {result_value} != {input_value}")
         # endregion
 
         # region test casting of nullable types
@@ -761,10 +761,10 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         ]
         mock_cursor.description = description
         response: Response = self.handler.native_query(query_str)
-        self.assertEquals(response.data_frame.dtypes[0], "Int64")
-        self.assertEquals(response.data_frame.dtypes[1], "boolean")
-        self.assertEquals(response.data_frame.iloc[0, 0], bigint_val)
-        self.assertEquals(response.data_frame.iloc[0, 1], True)
+        self.assertEqual(response.data_frame.dtypes[0], "Int64")
+        self.assertEqual(response.data_frame.dtypes[1], "boolean")
+        self.assertEqual(response.data_frame.iloc[0, 0], bigint_val)
+        self.assertEqual(response.data_frame.iloc[0, 1], True)
         self.assertTrue(response.data_frame.iloc[1, 0] is pd.NA)
         self.assertTrue(response.data_frame.iloc[1, 1] is pd.NA)
         # endregion
@@ -816,12 +816,12 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         ]
 
         response: Response = self.handler.native_query(query_str)
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[description[i].name][0]
-            self.assertEqual(type(result_value), type(input_value), f"type mistmatch: {result_value} != {input_value}")
+            self.assertEqual(type(result_value), type(input_value), f"type mismatch: {result_value} != {input_value}")
             if isinstance(result_value, list):
-                self.assertEqual(result_value, input_value, f"value mistmatch: {result_value} != {input_value}")
+                self.assertEqual(result_value, input_value, f"value mismatch: {result_value} != {input_value}")
             else:
                 self.assertTrue(np.all(result_value == input_value))
         # endregion

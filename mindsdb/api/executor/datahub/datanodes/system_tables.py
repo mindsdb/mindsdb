@@ -552,28 +552,19 @@ class MetaColumnsTable(Table):
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
         databases, tables = _get_scope(query)
 
-        records = _get_records_from_data_catalog(databases, tables)
+        df = pd.DataFrame()
+        for database in databases:
+            data_catalog_retriever = DataCatalogRetriever(database_name=database, table_names=tables)
+            columns_df = data_catalog_retriever.retrieve_columns()
+            columns_df['TABLE_CATALOG'] = "def"
+            columns_df['TABLE_SCHEMA'] = database
+            df = pd.concat([df, columns_df])
 
-        data = []
-        for record in records:
-            database_name = record.integration.name
-            table_name = record.name
-            columns = record.meta_columns
+        df.columns = df.columns.str.upper()
 
-            for column in columns:
-                item = {
-                    "TABLE_CATALOG": "def",
-                    "TABLE_SCHEMA": database_name,
-                    "TABLE_NAME": table_name,
-                    "COLUMN_NAME": column.name,
-                    "DATA_TYPE": column.data_type,
-                    "COLUMN_DESCRIPTION": column.description or "",
-                    "COLUMN_DEFAULT": column.default_value,
-                    "IS_NULLABLE": "YES" if column.is_nullable else "NO",
-                }
-                data.append(item)
+        df = df.reindex(columns=cls.columns, fill_value=None)
+        df['IS_NULLABLE'] = df['IS_NULLABLE'].map({True: "YES", False: "NO"})
 
-        df = pd.DataFrame(data, columns=cls.columns)
         return df
 
 

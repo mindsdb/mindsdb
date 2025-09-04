@@ -587,38 +587,26 @@ class MetaColumnStatisticsTable(Table):
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
         databases, tables = _get_scope(query)
 
-        records = _get_records_from_data_catalog(databases, tables)
+        df = pd.DataFrame()
+        for database in databases:
+            data_catalog_retriever = DataCatalogRetriever(database_name=database, table_names=tables)
+            columns_df = data_catalog_retriever.retrieve_column_statistics()
+            columns_df['TABLE_CATALOG'] = "def"
+            columns_df['TABLE_SCHEMA'] = database
+            df = pd.concat([df, columns_df])
 
-        data = []
-        for record in records:
-            database_name = record.integration.name
-            table_name = record.name
-            columns = record.meta_columns
+        df.columns = df.columns.str.upper()
 
-            for column in columns:
-                column_statistics = column.meta_column_statistics[0] if column.meta_column_statistics else None
+        df.rename(columns={
+            'NULL_PERCENTAGE': 'NULL_FRAC',
+            'MOST_COMMON_VALUES': 'MOST_COMMON_VALS',
+            'MOST_COMMON_FREQUENCIES': 'MOST_COMMON_FREQS',
+            'DISTINCT_VALUES_COUNT': 'N_DISTINCT',
+            'MINIMUM_VALUE': 'MIN_VALUE',
+            'MAXIMUM_VALUE': 'MAX_VALUE',
+        }, inplace=True)
 
-                item = {
-                    "TABLE_SCHEMA": database_name,
-                    "TABLE_NAME": table_name,
-                    "COLUMN_NAME": column.name,
-                }
-
-                if column_statistics:
-                    item.update(
-                        {
-                            "MOST_COMMON_VALS": column_statistics.most_common_values,
-                            "MOST_COMMON_FREQS": column_statistics.most_common_frequencies,
-                            "NULL_FRAC": column_statistics.null_percentage,
-                            "N_DISTINCT": column_statistics.distinct_values_count,
-                            "MIN_VALUE": column_statistics.minimum_value,
-                            "MAX_VALUE": column_statistics.maximum_value,
-                        }
-                    )
-
-                data.append(item)
-
-        df = pd.DataFrame(data, columns=cls.columns)
+        df = df.reindex(columns=cls.columns, fill_value=None)
         return df
 
 

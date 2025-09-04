@@ -207,7 +207,9 @@ You can define the default models in the Settings of the MindsDB Editor GUI.
 </Tip>
 
 <Note>
-Note that if you define `default_embedding_model` in the configuration file, you do not need to provide the `embedding_model` parameter when creating a knowledge base. If provide both, then the values from the `embedding_model` parameter are used.
+Note that if you define [`default_embedding_model` in the configuration file](/setup/custom-config#default_embedding_model), you do not need to provide the `embedding_model` parameter when creating a knowledge base. If provide both, then the values from the `embedding_model` parameter are used.
+
+When using `default_embedding_model` from the configuration file, the knowledge base saves this model internally. Therefore, when changing `default_embedding_model` in the configuration file to a different one after the knowledge base is created, it does not affect the already created knowledge bases.
 </Note>
 
 ```bash
@@ -282,6 +284,8 @@ You can define the default models in the Settings of the MindsDB Editor GUI.
 
 <Note>
 Note that if you define [`default_reranking_model` in the configuration file](/setup/custom-config#default-reranking-model), you do not need to provide the `reranking_model` parameter when creating a knowledge base. If provide both, then the values from the `reranking_model` parameter are used.
+
+When using `default_reranking_model` from the configuration file, the knowledge base saves this model internally. Therefore, when changing `default_reranking_model` in the configuration file to a different one after the knowledge base is created, it does not affect the already created knowledge bases.
 </Note>
 
 ```bash

@@ -1,4 +1,4 @@
-from typing import Optional, List, Literal
+from typing import Optional, Literal
 from dataclasses import dataclass, fields
 
 import pandas as pd
@@ -8,7 +8,7 @@ from mindsdb.utilities import log
 from mindsdb.utilities.config import config
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb.integrations.libs.response import INF_SCHEMA_COLUMNS_NAMES
-from mindsdb.interfaces.data_catalog.data_catalog_reader import DataCatalogReader
+from mindsdb.interfaces.data_catalog.data_catalog_retriever import DataCatalogRetriever
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE, MYSQL_DATA_TYPE_COLUMNS_DEFAULT
 from mindsdb.api.executor.datahub.classes.tables_row import TABLES_ROW_TYPE, TablesRow
 
@@ -509,21 +509,6 @@ class CollationsTable(Table):
 # Data Catalog tables
 # TODO: Should these be placed in a separate schema?
 
-
-def _get_records_from_data_catalog(databases: List, tables: Optional[List[str]] = None) -> List:
-    """Get records from the data catalog based on the specified databases and tables."""
-    # TODO: Should we allow to query all databases?
-    if not databases:
-        raise ValueError("At least one database must be specified in the query.")
-
-    records = []
-    for database in databases:
-        data_catalog_reader = DataCatalogReader(database_name=database, table_names=tables)
-        records.extend(data_catalog_reader.read_metadata_as_records())
-
-    return records
-
-
 # TODO: Combine with existing 'TablesTable'?
 class MetaTablesTable(Table):
     name = "META_TABLES"
@@ -532,23 +517,19 @@ class MetaTablesTable(Table):
 
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
-        databases, _ = _get_scope(query)
+        databases, tables = _get_scope(query)
 
-        records = _get_records_from_data_catalog(databases)
+        df = pd.DataFrame()
+        for database in databases:
+            data_catalog_retriever = DataCatalogRetriever(database_name=database, table_names=tables)
+            table_df = data_catalog_retriever.retrieve_tables()
+            table_df['TABLE_CATALOG'] = "def"
+            table_df['TABLE_SCHEMA'] = database
+            df = pd.concat([df, table_df])
 
-        data = []
-        for record in records:
-            item = {
-                "TABLE_CATALOG": "def",
-                "TABLE_SCHEMA": record.integration.name,
-                "TABLE_NAME": record.name,
-                "TABLE_TYPE": record.type,
-                "TABLE_DESCRIPTION": record.description or "",
-                "ROW_COUNT": record.row_count,
-            }
-            data.append(item)
+        df.columns = df.columns.str.upper()
+        df = df.reindex(columns=cls.columns, fill_value=None)
 
-        df = pd.DataFrame(data, columns=cls.columns)
         return df
 
 

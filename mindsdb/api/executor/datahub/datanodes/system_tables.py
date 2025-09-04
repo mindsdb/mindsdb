@@ -520,15 +520,19 @@ class MetaTablesTable(Table):
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
         databases, tables = _get_scope(query)
 
+        if not databases:
+            raise ValueError("At least one database must be specified in the query.")
+
         df = pd.DataFrame()
         for database in databases:
             data_catalog_retriever = DataCatalogRetriever(database_name=database, table_names=tables)
             table_df = data_catalog_retriever.retrieve_tables()
+            # Table schema may be returned as a column name.
+            table_df.columns = table_df.columns.str.upper()
             table_df['TABLE_CATALOG'] = "def"
             table_df['TABLE_SCHEMA'] = database
             df = pd.concat([df, table_df])
 
-        df.columns = df.columns.str.upper()
         df = df.reindex(columns=cls.columns, fill_value=None)
 
         return df
@@ -552,6 +556,9 @@ class MetaColumnsTable(Table):
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
         databases, tables = _get_scope(query)
+
+        if not databases:
+            raise ValueError("At least one database must be specified in the query.")
 
         df = pd.DataFrame()
         for database in databases:
@@ -586,6 +593,9 @@ class MetaColumnStatisticsTable(Table):
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
         databases, tables = _get_scope(query)
+
+        if not databases:
+            raise ValueError("At least one database must be specified in the query.")
 
         df = pd.DataFrame()
         for database in databases:
@@ -625,6 +635,9 @@ class MetaTableConstraintsTable(Table):
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
         databases, tables = _get_scope(query)
+
+        if not databases:
+            raise ValueError("At least one database must be specified in the query.")
 
         df = pd.DataFrame()
         for database in databases:
@@ -686,6 +699,9 @@ class MetaColumnUsageTable(Table):
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
         databases, tables = _get_scope(query)
 
+        if not databases:
+            raise ValueError("At least one database must be specified in the query.")
+
         df = pd.DataFrame()
         for database in databases:
             data_catalog_retriever = DataCatalogRetriever(database_name=database, table_names=tables)
@@ -736,6 +752,9 @@ class MetaHandlerInfoTable(Table):
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
         databases, tables = _get_scope(query)
+
+        if not databases:
+            raise ValueError("At least one database must be specified in the query.")
 
         data = []
         for database in databases:

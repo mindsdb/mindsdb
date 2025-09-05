@@ -20,6 +20,7 @@ from mindsdb.integrations.utilities.rag.settings import (
     DEFAULT_RERANKER_LOGPROBS,
     DEFAULT_RERANKER_TOP_LOGPROBS,
     DEFAULT_RERANKER_MAX_TOKENS,
+    DEFAULT_VALID_CLASS_TOKENS,
 )
 from mindsdb.integrations.libs.base import BaseMLEngine
 
@@ -49,6 +50,7 @@ class BaseLLMReranker(BaseModel, ABC):
     logprobs: bool = DEFAULT_RERANKER_LOGPROBS  # Whether to include log probabilities
     top_logprobs: int = DEFAULT_RERANKER_TOP_LOGPROBS  # Number of top log probabilities to include
     max_tokens: int = DEFAULT_RERANKER_MAX_TOKENS  # Maximum tokens to generate
+    valid_class_tokens: List[str] = DEFAULT_VALID_CLASS_TOKENS
 
     class Config:
         arbitrary_types_allowed = True
@@ -266,6 +268,7 @@ class BaseLLMReranker(BaseModel, ABC):
         log.debug(f"Reranker logprobs: {self.logprobs}")
         log.debug(f"Reranker top_logprobs: {self.top_logprobs}")
         log.debug(f"Reranker max_tokens: {self.max_tokens}")
+        log.debug(f"Reranker valid_class_tokens: {self.valid_class_tokens}")
 
         response = await self.client.chat.completions.create(
             model=self.model,
@@ -348,11 +351,11 @@ class BaseLLMReranker(BaseModel, ABC):
         # Extract response and logprobs
         token_logprobs = response.choices[0].logprobs.content
 
-        # Find the token that contains the class number (1, 2, 3, or 4)
+        # Find the token that contains the class number
         # Instead of just taking the last token, search for the actual class number token
         class_token_logprob = None
         for token_logprob in reversed(token_logprobs):
-            if token_logprob.token in ["1", "2", "3", "4"]:
+            if token_logprob.token in self.valid_class_tokens:
                 class_token_logprob = token_logprob
                 break
 

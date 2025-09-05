@@ -36,6 +36,7 @@ DEFAULT_RERANKER_N = 1
 DEFAULT_RERANKER_LOGPROBS = True
 DEFAULT_RERANKER_TOP_LOGPROBS = 4
 DEFAULT_RERANKER_MAX_TOKENS = 3
+DEFAULT_VALID_CLASS_TOKENS = ["1", "2", "3", "4"]
 DEFAULT_AUTO_META_PROMPT_TEMPLATE = """
 Below is a json representation of a table with information about {description}.
 Return a JSON list with an entry for each column. Each entry should have
@@ -702,6 +703,7 @@ class RerankerConfig(BaseModel):
     logprobs: bool = DEFAULT_RERANKER_LOGPROBS  # Whether to include log probabilities
     top_logprobs: int = DEFAULT_RERANKER_TOP_LOGPROBS  # Number of top log probabilities to include
     max_tokens: int = DEFAULT_RERANKER_MAX_TOKENS  # Maximum tokens to generate
+    valid_class_tokens: List[str] = DEFAULT_VALID_CLASS_TOKENS  # Valid class tokens to look for in the response
 
 
 class MultiHopRetrieverConfig(BaseModel):

@@ -336,6 +336,14 @@ class Config:
                     f"MINDSDB_RERANKER_MAX_TOKENS must be an integer, got: {os.environ['MINDSDB_RERANKER_MAX_TOKENS']}"
                 )
 
+        if os.environ.get("MINDSDB_RERANKER_VALID_CLASS_TOKENS", "") != "":
+            try:
+                reranker_config["valid_class_tokens"] = os.environ["MINDSDB_RERANKER_VALID_CLASS_TOKENS"].split(",")
+            except ValueError:
+                raise ValueError(
+                    f"MINDSDB_RERANKER_VALID_CLASS_TOKENS must be a comma-separated list of strings, got: {os.environ['MINDSDB_RERANKER_VALID_CLASS_TOKENS']}"
+                )
+
         if reranker_config:
             if "default_reranking_model" not in self._env_config:
                 self._env_config["default_reranking_model"] = {}

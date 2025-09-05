@@ -67,4 +67,4 @@ unit_tests_debug:
 	env PYTHONPATH=./ pytest $(PYTEST_ARGS_DEBUG) tests/unit/executor/  
 	pytest $(PYTEST_ARGS_DEBUG) --ignore=tests/unit/executor tests/unit/
 
-.PHONY: install_mindsdb install_handler precommit format run_mindsby check build_docker run_docker integration_tests integration_tests_slow integration_tests_debug datasource_integration_tests datasource_integration_tests_debug unit_tests unit_tests_slow unit_tests_debug
+.PHONY: install_mindsdb install_handler precommit format run_mindsdb check build_docker run_docker integration_tests integration_tests_slow integration_tests_debug datasource_integration_tests datasource_integration_tests_debug unit_tests unit_tests_slow unit_tests_debug

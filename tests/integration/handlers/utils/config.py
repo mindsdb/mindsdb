@@ -4,16 +4,11 @@ from dotenv import load_dotenv
 from typing import Dict, Optional, Any
 from pathlib import Path
 
-# --- Corrected: Load .env from the project root ---
-# Navigates up from tests/integration/handlers/utils to the main project root
-project_root = Path(__file__).parent.parent.parent.parent.parent
-dotenv_path = project_root / '.env'
-
-if load_dotenv(dotenv_path=dotenv_path, override=True):
-    logging.info(f"DSI: Successfully loaded and overrode env variables from {dotenv_path}")
+# When tests are run from the project root, python-dotenv finds the .env file automatically.
+if load_dotenv(override=True):
+    logging.info("DSI: Successfully loaded and overrode env variables from .env file.")
 else:
-    logging.warning(f"DSI: Could not find .env file at {dotenv_path}. Using system variables.")
-
+    logging.warning("DSI: Could not find .env file. Using system variables.")
 
 # --- MindsDB Connection Details ---
 MINDSDB_PROTOCOL: str = os.getenv("MINDSDB_PROTOCOL", "http")

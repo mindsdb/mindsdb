@@ -2,7 +2,6 @@ import os
 import logging
 from dotenv import load_dotenv
 from typing import Dict, Optional, Any
-from pathlib import Path
 
 # When tests are run from the project root, python-dotenv finds the .env file automatically.
 if load_dotenv(override=True):

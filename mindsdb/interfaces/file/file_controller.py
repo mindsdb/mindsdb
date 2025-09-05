@@ -151,7 +151,7 @@ class FileController:
     def delete_file(self, name):
         file_record = db.session.query(db.File).filter_by(company_id=ctx.company_id, name=name).first()
         if file_record is None:
-            return None
+            raise Exception(f"File '{name}' does not exists")
         file_id = file_record.id
         db.session.delete(file_record)
         db.session.commit()

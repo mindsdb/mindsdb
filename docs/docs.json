@@ -57,7 +57,8 @@
               "group": "Overview",
               "pages": [
                 "mindsdb-connect",
-                "mindsdb-fqe"
+                "mindsdb-fqe",
+                "mindsdb-objects"
               ]
             },
             {

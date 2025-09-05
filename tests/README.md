@@ -32,6 +32,16 @@ To execute unit or integration tests, use the following pytest command:
 pytest -vx <test_dir>
 ```
 
+To run ONLY the DSI tests:
+```
+pytest -v --run-dsi-tests tests/integration/handlers/
+```
+To run all tests, including DSI:
+
+```
+pytest -v --run-dsi-tests
+```
+
 For example, to run the unit tests for the handlers, use the following command:
 
 ```

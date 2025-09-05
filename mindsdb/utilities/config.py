@@ -300,6 +300,54 @@ class Config:
             self._env_config["default_reranking_model"] = {
                 "api_key": os.environ["MINDSDB_DEFAULT_RERANKING_MODEL_API_KEY"]
             }
+
+        # Reranker configuration from environment variables
+        reranker_config = {}
+        if os.environ.get("MINDSDB_RERANKER_N", "") != "":
+            try:
+                reranker_config["n"] = int(os.environ["MINDSDB_RERANKER_N"])
+            except ValueError:
+                raise ValueError(f"MINDSDB_RERANKER_N must be an integer, got: {os.environ['MINDSDB_RERANKER_N']}")
+
+        if os.environ.get("MINDSDB_RERANKER_LOGPROBS", "") != "":
+            logprobs_value = os.environ["MINDSDB_RERANKER_LOGPROBS"].lower()
+            if logprobs_value in ("true", "1", "yes", "y"):
+                reranker_config["logprobs"] = True
+            elif logprobs_value in ("false", "0", "no", "n"):
+                reranker_config["logprobs"] = False
+            else:
+                raise ValueError(
+                    f"MINDSDB_RERANKER_LOGPROBS must be a boolean value, got: {os.environ['MINDSDB_RERANKER_LOGPROBS']}"
+                )
+
+        if os.environ.get("MINDSDB_RERANKER_TOP_LOGPROBS", "") != "":
+            try:
+                reranker_config["top_logprobs"] = int(os.environ["MINDSDB_RERANKER_TOP_LOGPROBS"])
+            except ValueError:
+                raise ValueError(
+                    f"MINDSDB_RERANKER_TOP_LOGPROBS must be an integer, got: {os.environ['MINDSDB_RERANKER_TOP_LOGPROBS']}"
+                )
+
+        if os.environ.get("MINDSDB_RERANKER_MAX_TOKENS", "") != "":
+            try:
+                reranker_config["max_tokens"] = int(os.environ["MINDSDB_RERANKER_MAX_TOKENS"])
+            except ValueError:
+                raise ValueError(
+                    f"MINDSDB_RERANKER_MAX_TOKENS must be an integer, got: {os.environ['MINDSDB_RERANKER_MAX_TOKENS']}"
+                )
+
+        if os.environ.get("MINDSDB_RERANKER_VALID_CLASS_TOKENS", "") != "":
+            try:
+                reranker_config["valid_class_tokens"] = os.environ["MINDSDB_RERANKER_VALID_CLASS_TOKENS"].split(",")
+            except ValueError:
+                raise ValueError(
+                    f"MINDSDB_RERANKER_VALID_CLASS_TOKENS must be a comma-separated list of strings, got: {os.environ['MINDSDB_RERANKER_VALID_CLASS_TOKENS']}"
+                )
+
+        if reranker_config:
+            if "default_reranking_model" not in self._env_config:
+                self._env_config["default_reranking_model"] = {}
+            self._env_config["default_reranking_model"].update(reranker_config)
         if os.environ.get("MINDSDB_DATA_CATALOG_ENABLED", "").lower() in ("1", "true"):
             self._env_config["data_catalog"] = {"enabled": True}
 

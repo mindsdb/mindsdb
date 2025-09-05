@@ -250,6 +250,7 @@ class BaseLLMReranker(BaseModel, ABC):
 
                     Respond with only one of: "class_1", "class_2", "class_3", or "class_4".
 
+
                     Examples:
 
                     Search query: "How to reset a router to factory settings?"

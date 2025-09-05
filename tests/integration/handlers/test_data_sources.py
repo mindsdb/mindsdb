@@ -56,7 +56,7 @@ def generate_test_cases_for_parametrization() -> List[Dict[str, Any]]:
                     'query_template': f"SELECT * FROM {{db_name}}.{table_name} LIMIT 1;",
                     'test_type': 'autodiscovery_schema'
                 })
-        except Exception as e:
+        except RuntimeError as e:
             error_message = f"Failed to discover tables for handler '{handler_name}': {e}"
             logging.error(f"DSI: {error_message}")
             test_cases.append({

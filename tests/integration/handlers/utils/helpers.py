@@ -28,7 +28,7 @@ def connect_to_mindsdb():
             
         logging.info("DSI: Successfully connected to MindsDB via SDK.")
         return server
-    except Exception as e:
+    except RuntimeError as e:
         logging.error(f"DSI: Failed to connect to MindsDB via SDK: {e}", exc_info=True)
         raise e
 
@@ -67,7 +67,7 @@ def get_handlers_info(mindsdb_server: Any) -> Tuple[List[Dict[str, Any]], List[s
                     "connection_args": json.loads(row['CONNECTION_ARGS']) if row['CONNECTION_ARGS'] else {}
                 })
         return handlers, uninstalled_handlers
-    except Exception as e:
+    except RuntimeError as e:
         raise Exception(f"Failed to fetch handler information from MindsDB: {e}")
 
 def build_parameters_clause(handler_name: str, connection_args: Dict[str, Any]) -> Tuple[str, str]:

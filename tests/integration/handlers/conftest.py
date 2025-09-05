@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from typing import Generator, Any
 
 from tests.integration.handlers.utils import config
-from tests.integration.handlers.utils.helpers import get_handlers_info, build_parameters_clause
+from tests.integration.handlers.utils.helpers import get_handlers_info, build_parameters_clause, connect_to_mindsdb
 
 # Define project_root relative to this conftest's location for logging.
 project_root = Path(__file__).parent.parent.parent.parent
@@ -41,16 +41,7 @@ def mindsdb_server(query_log_data) -> Generator[Any, None, None]:
     to automatically log all queries.
     """
     logging.info("--- DSI: Attempting to connect to SDK ---")
-    url = f"{config.MINDSDB_PROTOCOL}://{config.MINDSDB_HOST}:{config.MINDSDB_PORT}"
-
-    try:
-        if config.MINDSDB_USER and config.MINDSDB_PASSWORD:
-            server = mindsdb_sdk.connect(url=url, login=config.MINDSDB_USER, password=config.MINDSDB_PASSWORD)
-        else:
-            server = mindsdb_sdk.connect(url)
-        logging.info("DSI: Successfully connected to MindsDB via SDK.")
-    except ConnectionError as e:
-        pytest.fail(f"DSI: Failed to connect to MindsDB. Error: {e}", pytrace=False)
+    server = connect_to_mindsdb()
 
     # --- ENHANCED MONKEY-PATCHING LOGIC ---
     original_query_method = server.query

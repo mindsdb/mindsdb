@@ -1,6 +1,7 @@
 PYTEST_ARGS = -v -rs --disable-warnings -n auto --dist loadfile
 PYTEST_ARGS_DEBUG = --runslow -vs -rs
 DSI_PYTEST_ARGS = --run-dsi-tests
+DSI_REPORT_ARGS = --json-report --json-report-file=reports/report.json
 
 install_mindsdb:
 	pip install -e .
@@ -48,11 +49,15 @@ integration_tests_debug:
 
 datasource_integration_tests:
 	@echo "--- Running Datasource Integration (DSI) Tests ---"
-	pytest $(PYTEST_ARGS) $(DSI_PYTEST_ARGS) tests/integration/handlers/
+	# Ensure the reports directory exists before running tests
+	mkdir -p reports
+	# Added DSI_REPORT_ARGS to generate JSON report
+	pytest $(PYTEST_ARGS) $(DSI_PYTEST_ARGS) $(DSI_REPORT_ARGS) tests/integration/handlers/
 
 datasource_integration_tests_debug:
-    @echo "--- Running Datasource Integration (DSI) Tests (Debug) ---"
-    pytest $(PYTEST_ARGS_DEBUG) $(DSI_PYTEST_ARGS) tests/integration/handlers/
+	@echo "--- Running Datasource Integration (DSI) Tests (Debug) ---"
+	mkdir -p reports
+	pytest $(PYTEST_ARGS_DEBUG) $(DSI_PYTEST_ARGS) $(DSI_REPORT_ARGS) tests/integration/handlers/
 	
 unit_tests:
 	# We have to run executor tests separately because they do weird things that break everything else

@@ -14,6 +14,7 @@ project_root = Path(__file__).parent.parent.parent.parent
 
 # --- Pytest Hooks for DSI ---
 
+
 def pytest_configure(config):
     config.addinivalue_line("markers", "dsi: mark test as part of the DSI framework")
     if config.getoption("--run-dsi-tests"):
@@ -25,6 +26,7 @@ def pytest_configure(config):
 
 
 # --- DSI Framework Fixtures ---
+
 
 @pytest.fixture(scope="session")
 def query_log_data():
@@ -48,30 +50,33 @@ def mindsdb_server(query_log_data) -> Generator[Any, None, None]:
 
     # Create a new class that inherits from the original Query class
     class PatchedQuery(original_query_class):
-            def fetch(self, *args, **kwargs):
-                handler_name = "dsi_test"
-                start_time = time.time()
-                actual_response = None
-                error = None
-                try:
-                    # Call the original fetch method
-                    response_df = super().fetch(*args, **kwargs)
-                    if response_df is not None:
-                        actual_response = response_df.to_json(orient='records') if not response_df.empty else '[]'
-                    return response_df
-                # Catch only the specific error the SDK raises for query failures.
-                except RuntimeError as e:
-                    error = str(e)
-                    raise # Re-raise to ensure the test handles the failure.
-                finally:
-                    duration = time.time() - start_time
-                    if handler_name not in query_log_data:
-                        query_log_data[handler_name] = []
-                    query_log_data[handler_name].append({
-                        'query': self.sql, 'duration': round(duration, 4),
-                        'actual_response': actual_response, 'error': error
-                    })
-
+        def fetch(self, *args, **kwargs):
+            handler_name = "dsi_test"
+            start_time = time.time()
+            actual_response = None
+            error = None
+            try:
+                # Call the original fetch method
+                response_df = super().fetch(*args, **kwargs)
+                if response_df is not None:
+                    actual_response = response_df.to_json(orient="records") if not response_df.empty else "[]"
+                return response_df
+            # Catch only the specific error the SDK raises for query failures.
+            except RuntimeError as e:
+                error = str(e)
+                raise  # Re-raise to ensure the test handles the failure.
+            finally:
+                duration = time.time() - start_time
+                if handler_name not in query_log_data:
+                    query_log_data[handler_name] = []
+                query_log_data[handler_name].append(
+                    {
+                        "query": self.sql,
+                        "duration": round(duration, 4),
+                        "actual_response": actual_response,
+                        "error": error,
+                    }
+                )
 
     # This new function will create a query object and then change its class to our patched version
     def patched_query_constructor(sql_query: str):
@@ -86,10 +91,10 @@ def mindsdb_server(query_log_data) -> Generator[Any, None, None]:
     yield server
 
     # Teardown: write the log file.
-    reports_dir = project_root / 'reports'
+    reports_dir = project_root / "reports"
     reports_dir.mkdir(exist_ok=True)
-    log_filepath = reports_dir / 'all_handlers_query_log.json'
-    with open(log_filepath, 'w') as f:
+    log_filepath = reports_dir / "all_handlers_query_log.json"
+    with open(log_filepath, "w") as f:
         json.dump(query_log_data, f, indent=4)
     logging.info(f"DSI: Full query log saved to {log_filepath}")
 
@@ -101,9 +106,9 @@ def session_databases(mindsdb_server):
     all_handlers, _ = get_handlers_info(mindsdb_server)
 
     for handler_info in all_handlers:
-        handler_name = handler_info['name']
+        handler_name = handler_info["name"]
         db_name = f"test_session_{handler_name}"
-        params_clause, skip_reason = build_parameters_clause(handler_name, handler_info['connection_args'])
+        params_clause, skip_reason = build_parameters_clause(handler_name, handler_info["connection_args"])
 
         if skip_reason:
             logging.warning(f"DSI: Skipping database creation for {handler_name}: {skip_reason}")

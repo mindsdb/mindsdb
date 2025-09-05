@@ -67,12 +67,7 @@ default storage option and use different database by adding the new connection s
 
 ## MindsDB APIs
 
-By default, MindsDB starts the http and mysql APIs. To define which APIs you want to start, you can use the `MINDSDB_APIS` environment variable. The available APIs are:
-
-- `http` (port 47334) - HTTP/REST API
-- `mysql` (port 47335) - MySQL API
-
-To expose the ports for the APIs, you need to add the respective ports to the command with the `-p` flag.
+The `MINDSDB_APIS` environment variable lets users define which APIs to start. Learn more about the [available APIs here](/setup/mindsdb-apis).
 
 ### Example
 

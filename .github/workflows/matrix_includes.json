@@ -2,12 +2,12 @@
   {
     "runs_on": "ubuntu-latest",
     "python-version": "3.10",
-    "runOnBranch": "main"
+    "runOnBranch": "always"
   },
   {
     "runs_on": "ubuntu-latest",
     "python-version": "3.11",
-    "runOnBranch": "always"
+    "runOnBranch": "main"
   },
   {
     "runs_on": "ubuntu-latest",

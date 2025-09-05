@@ -2,12 +2,10 @@ import pytest
 import json
 import logging
 import time
-import mindsdb_sdk
 from pathlib import Path
 from dotenv import load_dotenv
 from typing import Generator, Any
 
-from tests.integration.handlers.utils import config
 from tests.integration.handlers.utils.helpers import get_handlers_info, build_parameters_clause, connect_to_mindsdb
 
 # Define project_root relative to this conftest's location for logging.

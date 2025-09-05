@@ -17,6 +17,13 @@ connection_args = OrderedDict(
         "label": "Api key",
         "secret": True
     },
+    token={
+        "type": ARG_TYPE.PWD,
+        "description": "Optional GitHub personal access token for authentication (alternative to api_key).",
+        "required": False,
+        "label": "Token",
+        "secret": True
+    },
     github_url={
         "type": ARG_TYPE.STR,
         "description": "Optional GitHub URL to connect to a GitHub Enterprise instance.",

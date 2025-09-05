@@ -117,7 +117,9 @@ class GithubIssuesTable(APIResource):
             If the query contains an unsupported condition
         """
 
-        if self.handler.connection_data.get("api_key", None) is None:
+        # Check for both 'api_key' and 'token' parameters
+        api_key = self.handler.connection_data.get("api_key") or self.handler.connection_data.get("token")
+        if api_key is None:
             raise ValueError(
                 "Need an authenticated connection in order to insert a GitHub issue"
             )

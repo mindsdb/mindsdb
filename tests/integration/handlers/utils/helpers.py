@@ -5,15 +5,17 @@ import mindsdb_sdk
 
 from tests.integration.handlers.utils import config
 
+# In tests/integration/handlers/utils/helpers.py
+
 def connect_to_mindsdb():
     """
     Reusable function to connect to MindsDB SDK, handling both
     authenticated and unauthenticated scenarios based on .env config.
     """
     logging.info("--- DSI: Attempting to connect to SDK ---")
+    url = f"{config.MINDSDB_PROTOCOL}://{config.MINDSDB_HOST}:{config.MINDSDB_PORT}"
     try:
         if config.MINDSDB_USER and config.MINDSDB_PASSWORD:
-            url = f"{config.MINDSDB_PROTOCOL}://{config.MINDSDB_HOST}:{config.MINDSDB_PORT}"
             logging.info(f"DSI: Connecting SDK with credentials to server at: {url}")
             server = mindsdb_sdk.connect(
                 url=url,
@@ -21,7 +23,6 @@ def connect_to_mindsdb():
                 password=config.MINDSDB_PASSWORD
             )
         else:
-            url = f"{config.MINDSDB_PROTOCOL}://{config.MINDSDB_HOST}:{config.MINDSDB_PORT}"
             logging.info(f"DSI: Connecting SDK to server at: {url} (no auth)...")
             server = mindsdb_sdk.connect(url)
             

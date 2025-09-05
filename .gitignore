@@ -66,4 +66,3 @@ mindsdb/**/pyproject.toml
 mindsdb/**/uv.lock
 
 reports/
-test_generated_integrations.py

@@ -259,7 +259,6 @@ class BaseLLMReranker(BaseModel, ABC):
         """
 
         log.debug("Start search_relevancy_score")
-
         log.debug(f"Reranker query: {query[:5]}")
         log.debug(f"Reranker document: {document[:50]}")
         log.debug(f"Reranker model: {self.model}")

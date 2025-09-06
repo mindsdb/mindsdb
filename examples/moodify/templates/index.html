@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moodify 🎶</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-bg { background: #000000; }
+        .card-gradient {
+            background: linear-gradient(145deg, rgba(25, 20, 20, 0.9), rgba(25, 20, 20, 0.8));
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .btn-gradient {
+            background: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(29, 185, 84, 0.4);
+        }
+        .spotify-btn {
+            background: #1DB954;
+            transition: all 0.3s ease;
+        }
+        .spotify-btn:hover {
+            background: #1ed760;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(29, 185, 84, 0.3);
+        }
+        .mood-input {
+            background: rgba(40, 40, 40, 0.9);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(29, 185, 84, 0.3);
+            color: #ffffff;
+            transition: all 0.3s ease;
+        }
+        .mood-input:focus {
+            border-color: #1db954;
+            box-shadow: 0 0 0 3px rgba(29, 185, 84, 0.2);
+        }
+        .mood-input::placeholder { color: #b3b3b3; }
+        .result-card {
+            background: linear-gradient(145deg, rgba(25, 20, 20, 0.95), rgba(25, 20, 20, 0.9));
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        /* Spinner */
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-top: 4px solid #1db954;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-md">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-white mb-3">Moodify 🎶</h1>
+            <p class="text-lg text-white/90 font-light">Generate Spotify playlists that match your mood.</p>
+        </div>
+
+        <!-- Main Card -->
+        <div class="card-gradient rounded-3xl p-6 mb-6 shadow-xl">
+            <!-- Mood Input -->
+            <div class="mb-6">
+                <label for="moodInput" class="block text-white/90 text-sm font-medium mb-3">How are you feeling?</label>
+                <textarea 
+                    id="moodInput" 
+                    class="mood-input w-full h-32 px-4 py-3 rounded-2xl resize-none outline-none"
+                    placeholder="I'm stressed but hopeful..."
+                ></textarea>
+            </div>
+
+            <!-- Generate Button -->
+            <button 
+                id="generateBtn"
+                class="btn-gradient w-full py-4 px-6 rounded-2xl text-white font-semibold text-lg shadow-lg"
+            >
+                Generate Playlist
+            </button>
+        </div>
+
+        <!-- Login Section -->
+        <div id="loginSection" class="card-gradient rounded-3xl p-6 mb-6 shadow-xl text-center">
+            <div class="mb-4">
+                <div class="w-16 h-16 mx-auto mb-3 bg-white/20 rounded-full flex items-center justify-center">
+                    <span class="text-2xl">🎵</span>
+                </div>
+                <p class="text-white/90 text-sm mb-4">Connect your Spotify account to generate personalized playlists</p>
+            </div>
+            <button class="spotify-btn w-full py-3 px-6 rounded-2xl text-white font-semibold flex items-center justify-center gap-2 shadow-lg">
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.42 1.56-.299.421-1.02.599-1.559.3z"/>
+                </svg>
+                Login with Spotify
+            </button>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="result-card rounded-3xl p-6 shadow-xl hidden">
+            <div class="text-center mb-4">
+                <div class="w-12 h-12 mx-auto mb-3 bg-gradient-to-r from-green-500 to-green-400 rounded-full flex items-center justify-center">
+                    <span class="text-white text-xl">🎯</span>
+                </div>
+                <h3 class="text-lg font-semibold text-white mb-2">Mood Detected</h3>
+                <div id="detectedMood" class="inline-block bg-gradient-to-r from-green-500 to-green-400 text-black px-4 py-2 rounded-full text-sm font-medium">
+                    Hopeful & Energetic
+                </div>
+            </div>
+            
+            <div class="border-t border-gray-600 pt-4">
+                <p class="text-gray-300 text-sm mb-3 text-center">Your personalized playlist is ready!</p>
+                <a 
+                    id="playlistLink" 
+                    href="#" 
+                    class="spotify-btn w-full py-3 px-4 rounded-2xl text-white font-medium flex items-center justify-center gap-2 shadow-lg text-sm"
+                >
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.42 1.56-.299.421-1.02.599-1.559.3z"/>
+                    </svg>
+                    Open in Spotify
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Circular Loader -->
+    <div id="loader" class="hidden fixed inset-0 flex items-center justify-center bg-black/70 z-50">
+        <div class="spinner"></div>
+    </div>
+
+    <div id="toast" class="hidden fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg">Login successful 🎉</div>
+
+<script>
+let isLoggedIn = false;
+
+// Show/Hide spinner
+function startLoading() {
+  document.getElementById('loader').classList.remove('hidden');
+}
+function stopLoading() {
+  document.getElementById('loader').classList.add('hidden');
+}
+
+// Show toast
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.remove('hidden');
+  setTimeout(() => toast.classList.add('hidden'), 3000);
+}
+
+// Playlist generation
+document.getElementById('generateBtn').addEventListener('click', async function() {
+  const moodInput = document.getElementById('moodInput').value.trim();
+  if (!moodInput) { alert("Please describe your mood first!"); return; }
+  if (!isLoggedIn) { alert("Login with Spotify first!"); return; }
+
+  try {
+    startLoading();
+    const response = await fetch('/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mood: moodInput })
+    });
+    const data = await response.json();
+    stopLoading();
+
+    if (data.error) throw new Error(data.error);
+
+    document.getElementById('detectedMood').textContent = data.mood;
+    document.getElementById('playlistLink').href = data.playlist_url;
+    document.getElementById('resultsSection').classList.remove('hidden');
+    document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+  } catch (err) {
+    console.error(err);
+    stopLoading();
+    alert("Something went wrong while generating your playlist.");
+  }
+});
+
+// Login button
+document.querySelector('.spotify-btn').addEventListener('click', () => {
+  window.location.href = '/login';
+});
+
+// On load, check login status
+window.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const res = await fetch('/status');
+    const data = await res.json();
+    if (data.logged_in) {
+      isLoggedIn = true;
+      document.getElementById('loginSection').style.display = 'none';
+      if (window.location.pathname === "/success") {
+        showToast("Login successful 🎉");
+      }
+    }
+  } catch {
+    document.getElementById('loginSection').style.display = 'block';
+  }
+});
+</script>
+</body>
+</html>

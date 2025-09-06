@@ -1,0 +1,21 @@
+app = "moodify-taniya"   # <-- replace with your unique app name
+
+primary_region = "sin"   # Singapore (closest to India). You can change if needed.
+
+[build]
+  # Uses Dockerfile automatically if it exists, or detects Python
+
+[env]
+  PORT = "8080"
+
+[[services]]
+  internal_port = 8080
+  protocol = "tcp"
+
+  [[services.ports]]
+    handlers = ["http"]
+    port = 80
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443

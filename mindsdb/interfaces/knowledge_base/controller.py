@@ -706,9 +706,6 @@ class KnowledgeBaseTable:
         if params is not None and params.get("kb_no_upsert", False):
             # speed up inserting by disable checking existing records
             db_handler.insert(self._kb.vector_database_table, df)
-        elif params is not None and params.get("kb_skip_existing", False):
-            # We already filtered out existing items, so we can safely use insert
-            db_handler.insert(self._kb.vector_database_table, df)
         else:
             db_handler.do_upsert(self._kb.vector_database_table, df)
 

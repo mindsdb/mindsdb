@@ -683,7 +683,7 @@ class KnowledgeBaseTable:
         if params is not None and params.get("kb_skip_existing", False):
             logger.debug(f"Checking for existing items to skip before processing {len(df)} items")
             db_handler = self.get_vector_db()
-            
+
             # Get list of IDs from current batch
             current_ids = df[TableField.ID.value].dropna().astype(str).tolist()
             if current_ids:
@@ -693,7 +693,7 @@ class KnowledgeBaseTable:
                     # Filter out existing items
                     df = df[~df[TableField.ID.value].astype(str).isin(existing_ids)]
                     logger.info(f"Skipped {len(current_ids)} existing items, processing {len(df)} new items")
-                    
+
                     if df.empty:
                         logger.info("All items already exist, nothing to insert")
                         return

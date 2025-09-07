@@ -596,17 +596,17 @@ class VectorStoreHandler(BaseHandler):
     def check_existing_ids(self, table_name: str, ids: List[str]) -> List[str]:
         """
         Check which IDs from the provided list already exist in the table.
-        
+
         Args:
             table_name (str): Name of the table to check
             ids (List[str]): List of IDs to check for existence
-            
+
         Returns:
             List[str]: List of IDs that already exist in the table
         """
         if not ids:
             return []
-            
+
         try:
             # Query existing IDs
             df_existing = self.select(

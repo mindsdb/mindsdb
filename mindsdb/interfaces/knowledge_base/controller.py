@@ -56,6 +56,7 @@ class KnowledgeBaseInputParams(BaseModel):
     content_columns: List[str] | None = None
     id_column: str | None = None
     kb_no_upsert: bool = False
+    kb_skip_existing: bool = False
     embedding_model: Dict[Text, Any] | None = None
     is_sparse: bool = False
     vector_size: int | None = None
@@ -678,6 +679,25 @@ class KnowledgeBaseTable:
             logger.warning("No valid content found in any content columns")
             return
 
+        # Check if we should skip existing items (before calculating embeddings)
+        if params is not None and params.get("kb_skip_existing", False):
+            logger.debug(f"Checking for existing items to skip before processing {len(df)} items")
+            db_handler = self.get_vector_db()
+            
+            # Get list of IDs from current batch
+            current_ids = df[TableField.ID.value].dropna().astype(str).tolist()
+            if current_ids:
+                # Check which IDs already exist
+                existing_ids = db_handler.check_existing_ids(self._kb.vector_database_table, current_ids)
+                if existing_ids:
+                    # Filter out existing items
+                    df = df[~df[TableField.ID.value].astype(str).isin(existing_ids)]
+                    logger.info(f"Skipped {len(existing_ids)} existing items, processing {len(df)} new items")
+                    
+                    if df.empty:
+                        logger.info("All items already exist, nothing to insert")
+                        return
+
         # add embeddings and send to vector db
         df_emb = self._df_to_embeddings(df)
         df = pd.concat([df, df_emb], axis=1)
@@ -685,6 +705,9 @@ class KnowledgeBaseTable:
 
         if params is not None and params.get("kb_no_upsert", False):
             # speed up inserting by disable checking existing records
+            db_handler.insert(self._kb.vector_database_table, df)
+        elif params is not None and params.get("kb_skip_existing", False):
+            # We already filtered out existing items, so we can safely use insert
             db_handler.insert(self._kb.vector_database_table, df)
         else:
             db_handler.do_upsert(self._kb.vector_database_table, df)

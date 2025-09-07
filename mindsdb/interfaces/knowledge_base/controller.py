@@ -56,6 +56,7 @@ class KnowledgeBaseInputParams(BaseModel):
     content_columns: List[str] | None = None
     id_column: str | None = None
     kb_no_upsert: bool = False
+    skip_existing: bool = False
     embedding_model: Dict[Text, Any] | None = None
     is_sparse: bool = False
     vector_size: int | None = None
@@ -687,7 +688,8 @@ class KnowledgeBaseTable:
             # speed up inserting by disable checking existing records
             db_handler.insert(self._kb.vector_database_table, df)
         else:
-            db_handler.do_upsert(self._kb.vector_database_table, df)
+            skip_existing = params.get("skip_existing", False) if params is not None else False
+            db_handler.do_upsert(self._kb.vector_database_table, df, skip_existing=skip_existing)
 
     def _adapt_column_names(self, df: pd.DataFrame) -> pd.DataFrame:
         """

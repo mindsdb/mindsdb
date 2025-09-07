@@ -280,16 +280,18 @@ class VectorStoreHandler(BaseHandler):
 
         df[metadata_col].apply(set_time)
 
-    def do_upsert(self, table_name, df):
+    def do_upsert(self, table_name, df, skip_existing=False):
         """Upsert data into table, handling document updates and deletions.
 
         Args:
             table_name (str): Name of the table
             df (pd.DataFrame): DataFrame containing the data to upsert
+            skip_existing (bool): If True, skip existing documents instead of updating them
 
         The function handles three cases:
         1. New documents: Insert them
-        2. Updated documents: Delete old chunks and insert new ones
+        2. Updated documents: Delete old chunks and insert new ones (unless skip_existing=True)
+        3. Skip existing: Only insert new documents, skip existing ones
         """
         id_col = TableField.ID.value
         metadata_col = TableField.METADATA.value
@@ -328,11 +330,12 @@ class VectorStoreHandler(BaseHandler):
         )
         existed_ids = list(df_existed[id_col])
 
-        # update existed
+        # handle existing and new documents
         df_update = df[df[id_col].isin(existed_ids)]
         df_insert = df[~df[id_col].isin(existed_ids)]
 
-        if not df_update.empty:
+        if not df_update.empty and not skip_existing:
+            # update existing documents (normal upsert behavior)
             # get values of existed `created_at` and return them to metadata
             origin_id_col = "_original_doc_id"
 
@@ -360,6 +363,9 @@ class VectorStoreHandler(BaseHandler):
                 conditions = [FilterCondition(column=id_col, op=FilterOperator.IN, value=list(df[id_col]))]
                 self.delete(table_name, conditions)
                 self.insert(table_name, df_update)
+        elif not df_update.empty and skip_existing:
+            # skip existing documents - do not update them
+            LOG.info(f"Skipping {len(df_update)} existing documents due to skip_existing=True")
         if not df_insert.empty:
             # set created_at
             self.set_metadata_cur_time(df_insert, "_created_at")

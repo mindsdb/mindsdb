@@ -160,7 +160,7 @@ class OracleHandler(DatabaseHandler):
 
         Args:
             name (Text): The name of the handler instance.
-            connection_data (Dict): The connection data required to connect to Amazon DynamoDB.
+            connection_data (Dict): The connection data required to connect to OracleDB.
             kwargs: Arbitrary keyword arguments.
         """
         super().__init__(name)
@@ -244,7 +244,7 @@ class OracleHandler(DatabaseHandler):
             raise
 
         except Exception as unknown_error:
-            logger.error(f"Unknown error when connecting to Elasticsearch: {unknown_error}")
+            logger.error(f"Unknown error when connecting to Oracle: {unknown_error}")
             raise
 
         self.is_connected = True

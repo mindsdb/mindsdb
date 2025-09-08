@@ -7,28 +7,105 @@ from typing import Dict, Optional, Any
 if load_dotenv(override=True):
     logging.info("DSI: Successfully loaded and overrode env variables from .env file.")
 else:
-    logging.warning("DSI: Could not find .env file. Using system variables.")
+    logging.warning("DSI: Could not find .env file. Using system variables or falling back to default credentials.")
+
+
+# --- Default Public Credentials ---
+# Used as a fallback if corresponding environment variables are not set.
+DEFAULT_CREDS = {
+    'postgres': {
+        "host": "samples.mindsdb.com",
+        "port": 5432,
+        "database": "demo",
+        "user": "demo_user",
+        "password": "demo_password",
+        "schema": "sample_data",
+    },
+    'mariadb': {
+        "host": "samples.mindsdb.com",
+        "port": 3307,
+        "database": "test_data",
+        "user": "demo_user",
+        "password": "demo_password",
+    },
+    'mysql': {
+        "host": "samples.mindsdb.com",
+        "port": 3306,
+        "database": "public",
+        "user": "user",
+        "password": "MindsDBUser123!",
+    },
+    'mssql': {
+        "host": "samples.mindsdb.com",
+        "port": 1433,
+        "database": "demo",
+        "user": "demo_user",
+        "password": "D3mo_Passw0rd",
+    }
+}
+
+
+def get_creds(handler_name: str, env_key: str, creds_key: str) -> Optional[Any]:
+    """
+    Gets a credential value, prioritizing environment variables over hardcoded defaults.
+    """
+    # 1. Check environment variable first.
+    value = os.getenv(env_key)
+    if value is not None:
+        return value
+    
+    # 2. If no env var, try to get from the default dictionary.
+    if handler_name in DEFAULT_CREDS:
+        return DEFAULT_CREDS[handler_name].get(creds_key)
+        
+    return None
 
 # --- MindsDB Connection Details ---
 MINDSDB_PROTOCOL: str = os.getenv("MINDSDB_PROTOCOL", "http")
-MINDSDB_HOST: str = os.getenv("MINDSDB_HOST", "127.0.0.1")
+MINDSDB_HOST: str = os.getenv("MINDSDB_HOST", "locahost")
 MINDSDB_PORT: str = os.getenv("MINDSDB_PORT", "47334")
 MINDSDB_USER: Optional[str] = os.getenv("MINDSDB_USER")
 MINDSDB_PASSWORD: Optional[str] = os.getenv("MINDSDB_PASSWORD")
 
 # --- Test Execution Configuration ---
-HANDLERS_TO_TEST: str = os.getenv("HANDLERS_TO_TEST", "postgres")
+# Default to handlers that have public credentials for a better out-of-the-box experience.
+HANDLERS_TO_TEST: str = os.getenv("HANDLERS_TO_TEST", "postgres,mariadb,mysql,mssql")
 
 # --- Data Source Credentials (Convention: HANDLERNAME_CREDS) ---
 POSTGRES_CREDS: Dict[str, Any] = {
-    "host": os.getenv("PG_SOURCE_HOST"),
-    "port": int(os.getenv("PG_SOURCE_PORT")) if os.getenv("PG_SOURCE_PORT") else None,
-    "database": os.getenv("PG_SOURCE_DATABASE"),
-    "user": os.getenv("PG_SOURCE_USER"),
-    "password": os.getenv("PG_SOURCE_PASSWORD"),
-    "schema": os.getenv("PG_SOURCE_SCHEMA"),
+    "host": get_creds('postgres', "PG_SOURCE_HOST", "host"),
+    "port": int(get_creds('postgres', "PG_SOURCE_PORT", "port")),
+    "database": get_creds('postgres', "PG_SOURCE_DATABASE", "database"),
+    "user": get_creds('postgres', "PG_SOURCE_USER", "user"),
+    "password": get_creds('postgres', "PG_SOURCE_PASSWORD", "password"),
+    "schema": get_creds('postgres', "PG_SOURCE_SCHEMA", "schema"),
 }
 
+MARIADB_CREDS: Dict[str, Any] = {
+    "host": get_creds('mariadb', "MARIADB_HOST", "host"),
+    "port": int(get_creds('mariadb', "MARIADB_PORT", "port")),
+    "database": get_creds('mariadb', "MARIADB_DATABASE", "database"),
+    "user": get_creds('mariadb', "MARIADB_USER", "user"),
+    "password": get_creds('mariadb', "MARIADB_PASSWORD", "password"),
+}
+
+MYSQL_CREDS: Dict[str, Any] = {
+    "host": get_creds('mysql', "MYSQL_HOST", "host"),
+    "port": int(get_creds('mysql', "MYSQL_PORT", "port")),
+    "database": get_creds('mysql', "MYSQL_DATABASE", "database"),
+    "user": get_creds('mysql', "MYSQL_USER", "user"),
+    "password": get_creds('mysql', "MYSQL_PASSWORD", "password"),
+}
+
+MSSQL_CREDS: Dict[str, Any] = {
+    "host": get_creds('mssql', "SQLSERVER_HOST", "host"),
+    "port": int(get_creds('mssql', "SQLSERVER_PORT", "port")),
+    "database": get_creds('mssql', "SQLSERVER_DATABASE", "database"),
+    "user": get_creds('mssql', "SQLSERVER_USER", "user"),
+    "password": get_creds('mssql', "SQLSERVER_SA_PASSWORD", "password"),
+}
+
+# --- Handlers without default credentials ---
 DATABRICKS_CREDS: Dict[str, Any] = {
     "server_hostname": os.getenv("DATABRICKS_HOST"),
     "http_path": f"/sql/1.0/warehouses/{os.getenv('DATABRICKS_WAREHOUSE_ID')}",
@@ -47,35 +124,10 @@ SNOWFLAKE_CREDS: Dict[str, Any] = {
 
 GITHUB_CREDS: Dict[str, Any] = {"token": os.getenv("GITHUB_TOKEN"), "repository": os.getenv("GITHUB_REPOSITORY")}
 
-
 BIGQUERY_CREDS: Dict[str, Any] = {
     "project_id": os.getenv("BIGQUERY_PROJECT_ID"),
     "dataset": os.getenv("BIGQUERY_DATASET"),
     "service_account_json": os.getenv("BIGQUERY_SERVICE_ACCOUNT_JSON"),
-}
-
-MARIADB_CREDS: Dict[str, Any] = {
-    "host": os.getenv("MARIADB_HOST"),
-    "port": int(os.getenv("MARIADB_PORT")) if os.getenv("MARIADB_PORT") else None,
-    "database": os.getenv("MARIADB_DATABASE"),
-    "user": os.getenv("MARIADB_USER"),
-    "password": os.getenv("MARIADB_PASSWORD"),
-}
-
-MYSQL_CREDS: Dict[str, Any] = {
-    "host": os.getenv("MYSQL_HOST"),
-    "port": int(os.getenv("MYSQL_PORT")) if os.getenv("MYSQL_PORT") else None,
-    "database": os.getenv("MYSQL_DATABASE"),
-    "user": os.getenv("MYSQL_USER"),
-    "password": os.getenv("MYSQL_PASSWORD"),
-}
-
-MSSQL_CREDS: Dict[str, Any] = {
-    "host": os.getenv("SQLSERVER_HOST"),
-    "port": int(os.getenv("SQLSERVER_PORT")) if os.getenv("SQLSERVER_PORT") else None,
-    "database": os.getenv("SQLSERVER_DATABASE"),
-    "user": os.getenv("SQLSERVER_USER"),
-    "password": os.getenv("SQLSERVER_SA_PASSWORD"),
 }
 
 S3_CREDS: Dict[str, Any] = {

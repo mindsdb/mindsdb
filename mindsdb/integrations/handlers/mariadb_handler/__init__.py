@@ -15,6 +15,12 @@ type = HANDLER_TYPE.DATA
 icon_path = 'icon.svg'
 
 __all__ = [
-    'Handler', 'version', 'name', 'type', 'title', 'description',
-    'import_error', 'icon_path'
+    'Handler',
+    'version',
+    'name',
+    'type',
+    'title',
+    'description',
+    'import_error',
+    'icon_path'
 ]

@@ -585,7 +585,7 @@ class SQLAgent:
 
     def _get_sample_rows(self, table: str, fields: List[str]) -> str:
         logger.info(f"_get_sample_rows: table={table} fields={fields}")
-        command = f"select {', '.join(fields)} from {table} limit {self._sample_rows_in_table_info};"
+        command = f"select * from {table} limit {self._sample_rows_in_table_info};"
         try:
             ret = self._call_engine(command)
             sample_rows = ret.data.to_lists()

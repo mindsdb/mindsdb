@@ -26,16 +26,16 @@
                 {
                   "group": "Installation",
                   "pages": [
-                    "setup/self-hosted/docker",
                     "setup/self-hosted/docker-desktop",
-                    "setup/cloud/aws-marketplace"
+                    "setup/self-hosted/docker"
                   ]
                 },
                 {
                   "group": "Configuration",
                   "pages": [
                     "setup/custom-config",
-                    "setup/environment-vars"
+                    "setup/environment-vars",
+                    "setup/mindsdb-apis"
                   ]
                 },
                 {
@@ -57,7 +57,8 @@
               "group": "Overview",
               "pages": [
                 "mindsdb-connect",
-                "mindsdb-fqe"
+                "mindsdb-fqe",
+                "mindsdb-objects"
               ]
             },
             {
@@ -706,8 +707,7 @@
                 "faqs/persist-predictions",
                 "faqs/mindsdb-with-php",
                 "faqs/disposable-email-doman-and-openai",
-                "faqs/missing-required-cpu-features",
-                "faqs/a2a-unavailable"
+                "faqs/missing-required-cpu-features"
               ]
             }
           ]

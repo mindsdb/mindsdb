@@ -1,137 +1,347 @@
 ---
-title: AI Agents with LLMs and Skills
-sidebarTitle: Agents
+title: How to Use Agents
+sidebarTitle: AI Agents
 ---
 
-## Description
+Agents enable conversation with data, including structured and unstructured data connected to MindsDB.
 
-With MindsDB, you can create and deploy AI agents that comprise AI models and customizable skills such as knowledge bases and text-to-SQL.
+## Create Agents
 
-<p align="center">
-  <img src="/assets/agent_diagram.png" />
-</p>
-
-AI agents comprise of skills, such as text2sql and knowledge_base, and a conversational model.
-
-* Skills provide data resources to an agent, enabling it to answer questions about available data. Learn more about [skills here](/sdks/python/agents_skills). Learn more about [knowledge bases here](/sdks/python/agents_knowledge_bases).
-
-* A conversational model (like OpenAI) from LangChain utilizes [tools as skills](https://python.langchain.com/docs/how_to/#tools) to respond to user input. Users can customize these models with their own prompts to fit their use cases.
-
-## Syntax
-
-### Creating an agent
-
-When creating an agent, you can use the default conversational model:
-
-```python
-agent = server.agents.create('new_demo_agent')
-```
-
-Or specify model parameters:
+Here is the syntax for creating an agent:
 
 ```python
 agent = server.agents.create(
-    name='new_demo_agent',
-    model='gpt-4',
-    openai_api_key='OPENAI_API_KEY',
-    prompt_template='Hello! Ask a question: {{question}}',
-    temperature=0.0,
-    max_tokens=1000,
-    top_p=1.0,
-    top_k=0
+        'my_agent',
+        model={
+            'model_name': 'gpt-4o',
+            'provider': 'openai',
+            'api_key': 'sk-abc123',
+            'base_url': 'http://example.com',
+            'api_version': '2024-02-01'
+        },
+        data={
+            'knowledge_bases': ['project_name.kb_name', ...]
+            'tables': ['datasource_conn_name.table_name', ...]
+        },
+        prompt_template='describe data'
 )
 ```
 
-Or use an existing model:
+It creates an agent that uses the defined model and has access to the connected data. Here is how to list all available agents.
 
 ```python
-model = server.models.get('existing_model')
-agent = server.agents.create('demo_agent', model)
+agents = server.agents.list()
+print(agents)
 ```
 
-Furthermore, you can list all existing agents, get agents by name, update agents, and delete agents.
+The following sections explain all the agent parameters.
+
+### `model`
+
+This parameter defines the underlying language model, including:
+
+* `provider`
+It is a required parameter. It defines the model provider from the list below.
+
+* `model_name`
+It is a required parameter. It defines the model name from the list below.
+
+* `api_key`
+It is an optional parameter (applicable to selected providers), which stores the API key to access the model. Users can provide it either in this `api_key` parameter, or using [environment variables](/mindsdb_sql/functions/from_env).
+
+* `base_url`
+It is an optional parameter (applicable to selected providers), which stores the base URL for accessing the model. It is the root URL used to send API requests.
+
+* `api_version`
+It is an optional parameter (applicable to selected providers), which defines the API version.
+
+The available models and providers include the following.
+
+<AccordionGroup>
+
+<Accordion title="Anthropic">
+Available models:
+- claude-3-opus-20240229
+- claude-3-sonnet-20240229
+- claude-3-haiku-20240307
+- claude-2.1
+- claude-2.0
+- claude-instant-1.2
+</Accordion>
+
+<Accordion title="Google">
+Available models:
+- gemini-2.5-pro-preview-03-25
+- gemini-2.0-flash
+- gemini-2.0-flash-lite
+- gemini-1.5-flash
+- gemini-1.5-flash-8b
+- gemini-1.5-pro
+</Accordion>
+
+<Accordion title="Ollama">
+Available models:
+- gemma
+- llama2
+- mistral
+- mixtral
+- llava
+- neural-chat
+- codellama
+- dolphin-mixtral
+- qwen
+- llama2-uncensored
+- mistral-openorca
+- deepseek-coder
+- nous-hermes2
+- phi
+- orca-mini
+- dolphin-mistral
+- wizard-vicuna-uncensored
+- vicuna
+- tinydolphin
+- llama2-chinese
+- openhermes
+- zephyr
+- nomic-embed-text
+- tinyllama
+- openchat
+- wizardcoder
+- phind-codellama
+- starcoder
+- yi
+- orca2
+- falcon
+- starcoder2
+- wizard-math
+- dolphin-phi
+- nous-hermes
+- starling-lm
+- stable-code
+- medllama2
+- bakllava
+- codeup
+- wizardlm-uncensored
+- solar
+- everythinglm
+- sqlcoder
+- nous-hermes2-mixtral
+- stable-beluga
+- yarn-mistral
+- samantha-mistral
+- stablelm2
+- meditron
+- stablelm-zephyr
+- magicoder
+- yarn-llama2
+- wizard-vicuna
+- llama-pro
+- deepseek-llm
+- codebooga
+- mistrallite
+- dolphincoder
+- nexusraven
+- open-orca-platypus2
+- all-minilm
+- goliath
+- notux
+- alfred
+- megadolphin
+- xwinlm
+- wizardlm
+- duckdb-nsql
+- notus
+</Accordion>
+
+<Accordion title="OpenAI">
+Available models:
+- gpt-3.5-turbo
+- gpt-3.5-turbo-16k
+- gpt-3.5-turbo-instruct
+- gpt-4
+- gpt-4-32k
+- gpt-4-1106-preview
+- gpt-4-0125-preview
+- gpt-4.1
+- gpt-4.1-mini
+- gpt-4o
+- o4-mini
+- o3-mini
+- o1-mini
+</Accordion>
+
+<Accordion title="Nvidia NIM">
+Available models:
+- microsoft/phi-3-mini-4k-instruct
+- mistralai/mistral-7b-instruct-v0.2
+- writer/palmyra-med-70b
+- mistralai/mistral-large
+- mistralai/codestral-22b-instruct-v0.1
+- nvidia/llama3-chatqa-1.5-70b
+- upstage/solar-10.7b-instruct
+- google/gemma-2-9b-it
+- adept/fuyu-8b
+- google/gemma-2b
+- databricks/dbrx-instruct
+- meta/llama-3_1-8b-instruct
+- microsoft/phi-3-medium-128k-instruct
+- 01-ai/yi-large
+- nvidia/neva-22b
+- meta/llama-3_1-70b-instruct
+- google/codegemma-7b
+- google/recurrentgemma-2b
+- google/gemma-2-27b-it
+- deepseek-ai/deepseek-coder-6.7b-instruct
+- mediatek/breeze-7b-instruct
+- microsoft/kosmos-2
+- microsoft/phi-3-mini-128k-instruct
+- nvidia/llama3-chatqa-1.5-8b
+- writer/palmyra-med-70b-32k
+- google/deplot
+- meta/llama-3_1-405b-instruct
+- aisingapore/sea-lion-7b-instruct
+- liuhaotian/llava-v1.6-mistral-7b
+- microsoft/phi-3-small-8k-instruct
+- meta/codellama-70b
+- liuhaotian/llava-v1.6-34b
+- nv-mistralai/mistral-nemo-12b-instruct
+- microsoft/phi-3-medium-4k-instruct
+- seallms/seallm-7b-v2.5
+- mistralai/mixtral-8x7b-instruct-v0.1
+- mistralai/mistral-7b-instruct-v0.3
+- google/paligemma
+- google/gemma-7b
+- mistralai/mixtral-8x22b-instruct-v0.1
+- google/codegemma-1.1-7b
+- nvidia/nemotron-4-340b-instruct
+- meta/llama3-70b-instruct
+- microsoft/phi-3-small-128k-instruct
+- ibm/granite-8b-code-instruct
+- meta/llama3-8b-instruct
+- snowflake/arctic
+- microsoft/phi-3-vision-128k-instruct
+- meta/llama2-70b
+- ibm/granite-34b-code-instruct
+</Accordion>
+
+<Accordion title="Writer">
+Available models:
+- palmyra-x5
+- palmyra-x4
+</Accordion>
+
+</AccordionGroup>
+
+Users can define the model for the agent choosing one of the following options.
+
+**Option 1.** Use the `model` parameter to define the specification.
 
 ```python
-# list all agents
-agents = agents.list()
-
-# get an agent by name
-agent = agents.get('my_agent')
-
-# update an agent
-new_model = models.get('new_model')
-agent.model_name = new_model.name
-new_skill = skills.create('new_skill', 'sql', { 'tables': ['new_table'], 'database': 'new_database' })
-updated_agent.skills.append(new_skill)
-updated_agent = agents.update('my_agent', agent)
-
-# delete an agent by name
-agents.delete('my_agent')
+        ...
+        model={
+            'model_name': 'gpt-4o',
+            'provider': 'openai',
+            'api_key': 'sk-abc123',
+            'base_url': 'http://example.com',
+            'api_version': '2024-02-01'
+        },
+        ...
 ```
 
-### Assigning skills to an agent
+**Option 2.** Define the default model in the [MindsDB configuration file](/setup/custom-config).
 
-You can add skills to an agent, providing it with data stored in databases, files, or webpages.
-
-The retrieval skill is similar to [knowledge bases](/sdks/python/agents_knowledge_bases).
-
-```python
-# add data from one or more files as skills
-agent.add_file('./file_name.txt', 'file content description')
-agent.add_files(['./file_name.pdf', './file_name.pdf', ...], 'files content description')
-
-# add data from one or more webpages as skills
-agent.add_webpages(['example1.com', 'example2.com', ...], 'webpages content description')
-```
-
-The text2SQL skill retrieves relevant information from databases.
-
-```python
-# add data from a database connected to mindsdb as skills
-db = server.databases.create('datasource_name', 'engine_name', {'database': 'db.db_name'})
-db = server.databases.get('datasource_name')
-agent.add_database(db.name, ['table_name'], 'data description')
-```
+If you define `default_llm` in the configuration file, you do not need to provide the `model` parameter when creating an agent. If provide both, then the values from the `model` parameter are used.
 
 <Tip>
-Learn more about [all data sources integrated with MindsDB](/integrations/data-overview).
+You can define the default models in the Settings of the MindsDB Editor GUI.
 </Tip>
 
-### Querying an agent
+```bash
+"default_llm": {
 
-Once you created an agent and assigned it a set of skills, you can ask questions related to your data.
+      "provider": "openai",
+      "model_name" : "got-4o",
+      "api_key": "sk-abc123",
+      "base_url": "https://example.com/",
+      "api_version": "2024-02-01"
 
-```python
-question = 'ask a question'
-answer = agent.completion([{'question': question, 'answer': None}])
-print(answer.content)
+}
 ```
 
-## Example
+### `data`
 
-Here is a sample Python code to deploy an agent:
+This parameter stores data connected to the agent, including knowledge bases and data sources connected to MindsDB.
+
+The following parameters store the list of connected data.
+
+* `knowledge_bases` stores the list of [knowledge bases](/mindsdb_sql/knowledge_bases/overview) to be used by the agent.
+
+* `tables` stores the list of tables from data sources connected to MindsDB.
+
+<Note>
+Note that you can insert all tables from a connected data source and all knowledge bases from a project using the `*` syntax.
 
 ```python
-import mindsdb_sdk
-con = mindsdb_sdk.connect()
+        ...
+        data={
+            'knowledge_bases': ['project_name.*', ...]
+            'tables': ['datasource_conn_name.*', ...]
+        },
+        ...
+```
+</Note>
 
-# IMPORTANT: This code requires to set OPENAI_API_KEY as env variable
+### `prompt_template`
 
-agent = con.agents.create(f'new_demo_agent')
+This parameter stores instructions for the agent.
 
-print('Adding Hooblyblob details...')
-agent.add_file('./hooblyblob.txt', 'Details about the company Hooblyblob')
+It is recommended to provide data description of the data sources listed in the `knowledge_bases` and `tables` parameters to help the agent locate relevant data for answering questions.
 
-print('Adding rulebook details...')
-agent.add_files(['./codenames-rulebook.pdf'], 'Rulebooks for various board games')
+### `timeout`
 
-print('Adding MindsDB docs...')
-agent.add_webpages(['docs.mindsdb.com'], 'Documentation for MindsDB')
+This parameter defines the time the agent can take to come back with an answer.
 
-print('Agent ready to use.')
-while True:
-    print('Ask a question: ')
-    question = input()
-    answer = agent.completion([{'question': question, 'answer': None}])
-    print(answer.content)
+For example, when the `timeout` parameter is set to 10, the agent has 10 seconds to return an answer. If the agent takes longer than 10 seconds, it aborts the process and comes back with an answer indicating its failure to return an answer within the defined time interval.
+
+## Get Agents
+
+You can get an existing agent with the `get()` method.
+
+```python
+agent = server.agents.get('sales_agent')
+```
+
+## Query Agents
+
+Query an agent to generate responses to questions.
+
+```python
+completion = agent.completion([{'question': 'What is the average number of orders per customers?', 'answer': None}])
+print(completion.content)
+```
+
+Here is how to query agents with enabled streaming, allowing users to view agent's thoughts when it is working on answering questions.
+
+```python
+completion = agent.completion_stream([{'question': 'What is the average number of orders per customers?', 'answer': None}])
+for chunk in completion:
+    print(chunk)
+```
+
+## Update Agents
+
+Update existing agents with new data, model, or prompt.
+
+```python
+agent.data['tables'].append('mysql_demo_db.car_sales')
+updated_agent = server.agents.update('my_agent', agent)
+print(updated_agent)
+```
+
+## Delete Agents
+
+Here is the syntax for deleting an agent:
+
+```python
+server.agents.drop('my_agent')
 ```

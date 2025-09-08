@@ -14,6 +14,7 @@ from mindsdb.utilities.exception import format_db_error_message
 from mindsdb.utilities.functions import resolve_table_identifier, resolve_model_identifier
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.api.executor.utilities.mysql_to_duckdb_functions import mysql_to_duckdb_fnc
 
 logger = log.getLogger(__name__)
 
@@ -183,8 +184,15 @@ def query_df(df, query, session=None):
                 node.parts = [node.parts[-1]]
                 return node
         if isinstance(node, Function):
-            fnc_name = node.op.lower()
+            fnc = mysql_to_duckdb_fnc(node)
+            if fnc is not None:
+                node2 = fnc(node)
+                if node2 is not None:
+                    # copy alias
+                    node2.alias = node.alias
+                return node2
 
+            fnc_name = node.op.lower()
             if fnc_name == "database" and len(node.args) == 0:
                 if session is not None:
                     cur_db = session.database

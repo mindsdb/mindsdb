@@ -50,29 +50,26 @@ def get_table_alias(table_obj, default_db_name):
 
 def get_fill_param_fnc(steps_data):
     def fill_params(node, callstack=None, **kwargs):
-        if isinstance(node, Parameter):
-            rs = steps_data[node.value.step_num]
-            items = [Constant(i) for i in rs.get_column_values(col_idx=0)]
+        if not isinstance(node, Parameter):
+            return
 
-            is_single_item = True
-            if callstack:
-                node_prev = callstack[0]
-                if isinstance(node_prev, BinaryOperation):
-                    # Check case: 'something IN Parameter()'
-                    if node_prev.op.lower() == "in" and node_prev.args[1] is node:
-                        is_single_item = False
+        rs = steps_data[node.value.step_num]
+        items = [Constant(i) for i in rs.get_column_values(col_idx=0)]
 
-            if is_single_item and len(items) == 1:
-                # extract one value for option 'col=(subselect)'
-                node = items[0]
-            else:
-                node = Tuple(items)
-            return node
+        is_single_item = True
+        if callstack:
+            node_prev = callstack[0]
+            if isinstance(node_prev, BinaryOperation):
+                # Check case: 'something IN Parameter()'
+                if node_prev.op.lower() == "in" and node_prev.args[1] is node:
+                    is_single_item = False
 
-        if isinstance(node, Parameter):
-            rs = steps_data[node.value.step_num]
-            items = [Constant(i) for i in rs.get_column_values(col_idx=0)]
-            return Tuple(items)
+        if is_single_item and len(items) == 1:
+            # extract one value for option 'col=(subselect)'
+            node = items[0]
+        else:
+            node = Tuple(items)
+        return node
 
     return fill_params
 
@@ -115,7 +112,7 @@ class FetchDataframeStepCall(BaseStepCall):
 
         # if query registered, set progress
         if self.sql_query.run_query is not None:
-            self.sql_query.run_query.set_progress(df, None)
+            self.sql_query.run_query.set_progress(processed_rows=len(df))
         return ResultSet.from_df(
             df,
             table_name=table_alias[1],

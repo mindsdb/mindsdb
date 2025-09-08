@@ -37,17 +37,15 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     freetds-dev freetds-bin libpq5 curl # freetds-dev required to build pymssql on arm64 for mssql_handler. Can be removed when we are on python3.11+
 
 # Use a specific tag so the file doesn't change
-COPY --from=ghcr.io/astral-sh/uv:0.4.23 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.8.11 /uv /usr/local/bin/uv
 # Copy requirements files from the first stage
 COPY --from=deps /mindsdb .
 
 # - Silence uv complaining about not being able to use hard links,
-# - tell uv to byte-compile packages for faster application startups,
 # - prevent uv from accidentally downloading isolated Python builds,
 # - pick a Python,
 # - and finally declare `/mindsdb` as the target dir.
 ENV UV_LINK_MODE=copy \
-    UV_COMPILE_BYTECODE=1 \
     UV_PYTHON_DOWNLOADS=never \
     UV_PYTHON=python3.10 \
     UV_PROJECT_ENVIRONMENT=/mindsdb \
@@ -86,12 +84,6 @@ ENV PATH=/venv/bin:$PATH
 
 EXPOSE 47334/tcp
 EXPOSE 47335/tcp
-# Expose MCP port
-EXPOSE 47337/tcp
-# Expose A2A port
-EXPOSE 47338/tcp
-
-
 
 
 
@@ -118,7 +110,7 @@ RUN --mount=type=cache,target=/root/.cache uv pip install -r requirements/requir
 
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
-ENTRYPOINT [ "bash", "-c", "watchfiles --filter python 'python -Im mindsdb --config=/root/mindsdb_config.json --api=http,mysql,a2a,mcp' mindsdb" ]
+ENTRYPOINT [ "bash", "-c", "watchfiles --filter python 'python -Im mindsdb --config=/root/mindsdb_config.json --api=http,mysql' mindsdb" ]
 
 
 
@@ -126,4 +118,4 @@ ENTRYPOINT [ "bash", "-c", "watchfiles --filter python 'python -Im mindsdb --con
 # Make sure the regular image is the default
 FROM extras
 
-ENTRYPOINT [ "bash", "-c", "python -Im mindsdb --config=/root/mindsdb_config.json --api=http,mysql,a2a,mcp" ]
+ENTRYPOINT [ "bash", "-c", "python -Im mindsdb --config=/root/mindsdb_config.json --api=http,mysql" ]

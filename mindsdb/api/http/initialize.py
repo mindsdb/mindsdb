@@ -1,5 +1,4 @@
 import os
-import secrets
 import mimetypes
 import threading
 import traceback
@@ -27,7 +26,7 @@ from mindsdb.api.http.namespaces.chatbots import ns_conf as chatbots_ns
 from mindsdb.api.http.namespaces.jobs import ns_conf as jobs_ns
 from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
 from mindsdb.api.http.namespaces.databases import ns_conf as databases_ns
-from mindsdb.api.http.namespaces.default import ns_conf as default_ns, check_auth
+from mindsdb.api.http.namespaces.default import ns_conf as default_ns
 from mindsdb.api.http.namespaces.file import ns_conf as file_ns
 from mindsdb.api.http.namespaces.handlers import ns_conf as handlers_ns
 from mindsdb.api.http.namespaces.knowledge_bases import ns_conf as knowledge_bases_ns
@@ -47,12 +46,13 @@ from mindsdb.interfaces.jobs.jobs_controller import JobsController
 from mindsdb.interfaces.storage import db
 from mindsdb.metrics.server import init_metrics
 from mindsdb.utilities import log
-from mindsdb.utilities.config import Config
+from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.json_encoder import CustomJSONProvider
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
 from mindsdb.utilities.otel import trace  # noqa: F401
+from mindsdb.api.common.middleware import verify_pat
 
 logger = log.getLogger(__name__)
 
@@ -95,7 +95,7 @@ def custom_output_json(data, code, headers=None):
     return resp
 
 
-def get_last_compatible_gui_version() -> Version:
+def get_last_compatible_gui_version() -> Version | bool:
     logger.debug("Getting last compatible frontend..")
     try:
         res = requests.get(
@@ -164,7 +164,6 @@ def get_last_compatible_gui_version() -> Version:
 
 def get_current_gui_version() -> Version:
     logger.debug("Getting current frontend version...")
-    config = Config()
     static_path = Path(config["paths"]["static"])
     version_txt_path = static_path.joinpath("version.txt")
 
@@ -181,7 +180,6 @@ def get_current_gui_version() -> Version:
 
 def initialize_static():
     logger.debug("Initializing static..")
-    config = Config()
     last_gui_version_lv = get_last_compatible_gui_version()
     current_gui_version_lv = get_current_gui_version()
     required_gui_version = config["gui"].get("version")
@@ -190,38 +188,41 @@ def initialize_static():
         required_gui_version_lv = parse_version(required_gui_version)
         success = True
         if current_gui_version_lv is None or required_gui_version_lv != current_gui_version_lv:
-            logger.debug("Updating gui..")
             success = update_static(required_gui_version_lv)
     else:
         if last_gui_version_lv is False:
+            logger.debug(
+                "The number of the latest version has not been determined, "
+                f"so we will continue using the current version: {current_gui_version_lv}"
+            )
             return False
 
-        # ignore versions like '23.9.2.2'
-        if current_gui_version_lv is not None and len(current_gui_version_lv.release) < 3:
-            if current_gui_version_lv == last_gui_version_lv:
-                return True
-        logger.debug("Updating gui..")
+        if current_gui_version_lv == last_gui_version_lv:
+            logger.debug(f"The latest version is already in use: {current_gui_version_lv}")
+            return True
         success = update_static(last_gui_version_lv)
 
-    db.session.close()
+    if db.session:
+        db.session.close()
     return success
 
 
-def initialize_app(config, no_studio):
+def initialize_app():
     static_root = config["paths"]["static"]
     logger.debug(f"Static route: {static_root}")
     gui_exists = Path(static_root).joinpath("index.html").is_file()
     logger.debug(f"Does GUI already exist.. {'YES' if gui_exists else 'NO'}")
     init_static_thread = None
-    if no_studio is False and (config["gui"]["autoupdate"] is True or gui_exists is False):
+
+    if config["gui"]["autoupdate"] is True or (config["gui"]["open_on_start"] is True and gui_exists is False):
         init_static_thread = threading.Thread(target=initialize_static, name="initialize_static")
         init_static_thread.start()
 
     # Wait for static initialization.
-    if not no_studio and init_static_thread is not None:
+    if config["gui"]["open_on_start"] is True and init_static_thread is not None:
         init_static_thread.join()
 
-    app, api = initialize_flask(config, init_static_thread, no_studio)
+    app, api = initialize_flask(config, init_static_thread)
     Compress(app)
 
     initialize_interfaces(app)
@@ -311,14 +312,20 @@ def initialize_app(config, no_studio):
     def before_request():
         logger.debug(f"HTTP {request.method}: {request.path}")
         ctx.set_default()
-        config = Config()
+
+        h = request.headers.get("Authorization")
+        if not h or not h.startswith("Bearer "):
+            bearer = None
+        else:
+            bearer = h.split(" ", 1)[1].strip() or None
 
         # region routes where auth is required
         if (
             config["auth"]["http_auth_enabled"] is True
             and any(request.path.startswith(f"/api{ns.path}") for ns in protected_namespaces)
-            and check_auth() is False
+            and verify_pat(bearer) is False
         ):
+            logger.debug(f"Auth failed for path {request.path}")
             return http_error(
                 HTTPStatus.UNAUTHORIZED,
                 "Unauthorized",
@@ -339,29 +346,23 @@ def initialize_app(config, no_studio):
         except Exception:
             user_id = 0
 
-        try:
-            session_id = request.cookies.get("session")
-        except Exception:
-            session_id = "unknown"
-
         if company_id is not None:
             try:
                 company_id = int(company_id)
             except Exception as e:
-                logger.error(f"Cloud not parse company id: {company_id} | exception: {e}")
+                logger.error(f"Could not parse company id: {company_id} | exception: {e}")
                 company_id = None
 
         if user_class is not None:
             try:
                 user_class = int(user_class)
             except Exception as e:
-                logger.error(f"Cloud not parse user_class: {user_class} | exception: {e}")
+                logger.error(f"Could not parse user_class: {user_class} | exception: {e}")
                 user_class = 0
         else:
             user_class = 0
 
         ctx.user_id = user_id
-        ctx.session_id = session_id
         ctx.company_id = company_id
         ctx.user_class = user_class
         ctx.email_confirmed = email_confirmed
@@ -370,21 +371,18 @@ def initialize_app(config, no_studio):
     return app
 
 
-def initialize_flask(config, init_static_thread, no_studio):
+def initialize_flask(config, init_static_thread):
     logger.debug("Initializing flask..")
     # region required for windows https://github.com/mindsdb/mindsdb/issues/2526
     mimetypes.add_type("text/css", ".css")
     mimetypes.add_type("text/javascript", ".js")
     # endregion
 
-    kwargs = {}
-    if no_studio is not True:
-        static_path = os.path.join(config["paths"]["static"], "static/")
-        if os.path.isabs(static_path) is False:
-            static_path = os.path.join(os.getcwd(), static_path)
-        kwargs["static_url_path"] = "/static"
-        kwargs["static_folder"] = static_path
-        logger.debug(f"Static path: {static_path}")
+    static_path = os.path.join(config["paths"]["static"], "static/")
+    if os.path.isabs(static_path) is False:
+        static_path = os.path.join(os.getcwd(), static_path)
+    kwargs = {"static_url_path": "/static", "static_folder": static_path}
+    logger.debug(f"Static path: {static_path}")
 
     app = Flask(__name__, **kwargs)
     init_metrics(app)
@@ -393,14 +391,11 @@ def initialize_flask(config, init_static_thread, no_studio):
     FlaskInstrumentor().instrument_app(app)
     RequestsInstrumentor().instrument()
 
-    app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", secrets.token_hex(32))
-    app.config["SESSION_COOKIE_NAME"] = "session"
-    app.config["PERMANENT_SESSION_LIFETIME"] = config["auth"]["http_permanent_session_lifetime"]
     app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 60
     app.config["SWAGGER_HOST"] = "http://localhost:8000/mindsdb"
     app.json = CustomJSONProvider()
 
-    authorizations = {"apikey": {"type": "session", "in": "query", "name": "session"}}
+    authorizations = {"apikey": {"type": "apiKey", "in": "header", "name": "Authorization"}}
 
     logger.debug("Creating swagger API..")
     api = Swagger_Api(
@@ -417,8 +412,7 @@ def initialize_flask(config, init_static_thread, no_studio):
     port = config["api"]["http"]["port"]
     host = config["api"]["http"]["host"]
 
-    # NOTE rewrite it, that hotfix to see GUI link
-    if not no_studio:
+    if config["gui"]["open_on_start"]:
         if host in ("", "0.0.0.0"):
             url = f"http://127.0.0.1:{port}/"
         else:
@@ -442,8 +436,6 @@ def initialize_interfaces(app):
     app.database_controller = DatabaseController()
     app.file_controller = FileController()
     app.jobs_controller = JobsController()
-    config = Config()
-    app.config_obj = config
 
 
 def _open_webbrowser(url: str, pid: int, port: int, init_static_thread, static_folder):

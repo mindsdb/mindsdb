@@ -47,7 +47,7 @@ def _compile_interval(element, compiler, **kw):
         if items[1].upper().endswith("S"):
             items[1] = items[1][:-1]
 
-    if compiler.dialect.driver in ["snowflake"] or compiler.dialect.name in ["postgresql"]:
+    if getattr(compiler.dialect, "driver", None) == "snowflake" or compiler.dialect.name == "postgresql":
         # quote all
         args = " ".join(map(str, items))
         args = f"'{args}'"

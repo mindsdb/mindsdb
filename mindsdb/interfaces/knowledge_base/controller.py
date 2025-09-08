@@ -548,7 +548,7 @@ class KnowledgeBaseTable:
                 if processed_chunks:
                     content.value = processed_chunks[0].content
 
-            query.update_columns[emb_col] = Constant(self._content_to_embeddings(content))
+            query.update_columns[emb_col] = Constant(self._content_to_embeddings(content.value))
 
         if "metadata" not in query.update_columns:
             query.update_columns["metadata"] = Constant({})
@@ -1130,6 +1130,9 @@ class KnowledgeBaseController:
             model_record = db.Predictor.query.get(model["id"])
             embedding_model_id = model_record.id
 
+            if model_record.learn_args.get("using", {}).get("sparse"):
+                is_sparse = True
+
         # if params.get("reranking_model", {}) is bool and False we evaluate it to empty dictionary
         reranking_model_params = params.get("reranking_model", {})
 
@@ -1158,7 +1161,6 @@ class KnowledgeBaseController:
                 # Add sparse vector support for pgvector
                 vector_db_params = {}
                 # Check both explicit parameter and model configuration
-                is_sparse = is_sparse or model_record.learn_args.get("using", {}).get("sparse")
                 if is_sparse:
                     vector_db_params["is_sparse"] = True
                     if vector_size is not None:

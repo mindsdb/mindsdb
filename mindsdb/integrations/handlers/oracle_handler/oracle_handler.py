@@ -188,7 +188,11 @@ class OracleHandler(DatabaseHandler):
             raise ValueError("Required parameters (user, password) must be provided.")
 
         if self.connection_data.get("thick_mode", False):
-            oracledb.init_oracle_client()
+            lib_dir = self.connection_data.get("oracle_client_lib_dir")
+            if isinstance(lib_dir, str) and lib_dir.strip():
+                oracledb.init_oracle_client(lib_dir=lib_dir)
+            else:
+                raise ValueError("A non-empty oracle_client_lib_dir must be provided when using thick_mode.")
 
         config = {
             "user": self.connection_data["user"],

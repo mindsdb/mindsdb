@@ -120,7 +120,7 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
             query_sql_database_tool,
             info_sql_database_tool,
             list_sql_database_tool,
-            mindsdb_sql_parser_tool,
+            # mindsdb_sql_parser_tool,
         ]
         if not self.include_knowledge_base_tools:
             return sql_tools

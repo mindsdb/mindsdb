@@ -112,7 +112,7 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
             "If the query is correct, it will be parsed and returned. "
             f"ALWAYS run this tool before executing a query with {query_sql_database_tool.name}. "
         )
-        mindsdb_sql_parser_tool = MindsDBSQLParserTool(
+        mindsdb_sql_parser_tool = MindsDBSQLParserTool(  # noqa: F841
             name=f"mindsdb_sql_parser_tool{prefix}", description=mindsdb_sql_parser_tool_description
         )
 

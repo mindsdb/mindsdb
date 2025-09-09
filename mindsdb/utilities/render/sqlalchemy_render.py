@@ -578,7 +578,7 @@ class SqlalchemyRender:
                             raise NotImplementedError(f"Unsupported join type: {join_type}")
                         method = "join"
                         is_full = False
-                        if join_type == "LEFT JOIN":
+                        if join_type == "LEFT JOIN" or join_type == "LEFT OUTER JOIN":
                             method = "outerjoin"
                         if join_type == "FULL JOIN":
                             is_full = True

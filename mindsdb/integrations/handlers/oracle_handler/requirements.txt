@@ -1,1 +1,2 @@
-oracledb==3.3.0
+oracledb==2.4.1; python_version<"3.12"
+oracledb>=3.0.0; python_version>="3.12"

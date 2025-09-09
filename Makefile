@@ -1,4 +1,11 @@
-PYTEST_ARGS = -v -rs --disable-warnings -n auto --dist loadfile
+# Base arguments for all tests
+PYTEST_BASE_ARGS = -v -rs --disable-warnings
+# Arguments specifically for parallel execution
+PYTEST_PARALLEL_ARGS = -n auto --dist loadfile
+
+# Targets that should still run in parallel
+PYTEST_ARGS = $(PYTEST_BASE_ARGS) $(PYTEST_PARALLEL_ARGS)
+
 PYTEST_ARGS_DEBUG = --runslow -vs -rs
 DSI_PYTEST_ARGS = --run-dsi-tests
 DSI_REPORT_ARGS = --json-report --json-report-file=reports/report.json
@@ -13,7 +20,7 @@ install_handler:
 		pip install -e .[$(HANDLER_NAME)];\
 	else\
 		echo 'Please set $$HANDLER_NAME to the handler to install.';\
-	fi	
+	fi
 precommit:
 	pre-commit install
 	pre-commit run --files $$(git diff --cached --name-only)
@@ -38,7 +45,7 @@ run_docker: build_docker
 
 integration_tests:
 	pytest $(PYTEST_ARGS) tests/integration/ -k "not test_auth"
-	pytest $(PYTEST_ARGS) tests/integration/ -k test_auth  # Run this test separately because it alters the auth requirements, which breaks other tests
+	pytest $(PYTEST_ARGS) tests/integration/ -k test_auth # Run this test separately because it alters the auth requirements, which breaks other tests
 
 integration_tests_slow:
 	pytest --runslow $(PYTEST_ARGS) tests/integration/ -k "not test_auth"
@@ -48,29 +55,28 @@ integration_tests_debug:
 	pytest $(PYTEST_ARGS_DEBUG) tests/integration/
 
 datasource_integration_tests:
-	@echo "--- Running Datasource Integration (DSI) Tests ---"
+	@echo "--- Running Datasource Integration (DSI) Tests (Sequentially) ---"
 	# Ensure the reports directory exists before running tests
 	mkdir -p reports
-	# Added DSI_REPORT_ARGS to generate JSON report
-	pytest $(PYTEST_ARGS) $(DSI_PYTEST_ARGS) $(DSI_REPORT_ARGS) tests/integration/handlers/
+	# --- MODIFICATION 2: Use PYTEST_BASE_ARGS to run sequentially ---
+	pytest $(PYTEST_BASE_ARGS) $(DSI_PYTEST_ARGS) $(DSI_REPORT_ARGS) tests/integration/handlers/
 
 datasource_integration_tests_debug:
 	@echo "--- Running Datasource Integration (DSI) Tests (Debug) ---"
 	mkdir -p reports
 	pytest $(PYTEST_ARGS_DEBUG) $(DSI_PYTEST_ARGS) $(DSI_REPORT_ARGS) tests/integration/handlers/
-	
+
 unit_tests:
 	# We have to run executor tests separately because they do weird things that break everything else
-	env PYTHONPATH=./ pytest $(PYTEST_ARGS) tests/unit/executor/  
+	env PYTHONPATH=./ pytest $(PYTEST_ARGS) tests/unit/executor/
 	pytest $(PYTEST_ARGS) --ignore=tests/unit/executor tests/unit/
 
 unit_tests_slow:
-	env PYTHONPATH=./ pytest --runslow $(PYTEST_ARGS) tests/unit/executor/  # We have to run executor tests separately because they do weird things that break everything else
+	env PYTHONPATH=./ pytest --runslow $(PYTEST_ARGS) tests/unit/executor/ # We have to run executor tests separately because they do weird things that break everything else
 	pytest --runslow $(PYTEST_ARGS) --ignore=tests/unit/executor tests/unit/
 
 unit_tests_debug:
-	env PYTHONPATH=./ pytest $(PYTEST_ARGS_DEBUG) tests/unit/executor/  
+	env PYTHONPATH=./ pytest $(PYTEST_ARGS_DEBUG) tests/unit/executor/
 	pytest $(PYTEST_ARGS_DEBUG) --ignore=tests/unit/executor tests/unit/
 
 .PHONY: install_mindsdb install_handler precommit format run_mindsdb check build_docker run_docker integration_tests integration_tests_slow integration_tests_debug datasource_integration_tests datasource_integration_tests_report datasource_integration_tests_debug unit_tests unit_tests_slow unit_tests_debug
-.PHONY: install_mindsdb install_handler precommit format run_mindsdb check build_docker run_docker integration_tests integration_tests_slow integration_tests_debug datasource_integration_tests datasource_integration_tests_debug unit_tests unit_tests_slow unit_tests_debug

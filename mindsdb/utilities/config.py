@@ -343,8 +343,6 @@ class Config:
             elif isinstance(cmd_args_config, str):
                 self.config_path = cmd_args_config
 
-            if self.config_path == "absent":
-                self.config_path = None
             if isinstance(self.config_path, str):
                 self.config_path = Path(self.config_path)
                 if not self.config_path.is_file():

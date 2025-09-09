@@ -40,7 +40,7 @@ services:
       FLASK_DEBUG: 1  # This will make sure http requests are logged regardless of log level
       SENTRY_IO_DSN: ""
       SENTRY_IO_ENVIRONMENT: "local"
-      #MINDSDB_APIS: "http"  # Explicitly set the APIs to enable
+      MINDSDB_APIS: "http"  # Explicitly set the APIs to enable
       # SENTRY_IO_FORCE_RUN: "true" # Uncomment me to force-start sentry on local development. Good for profiling, but may annoy other devs on sentry.io with the "noise"
       # MINDSDB_LOG_LEVEL: "DEBUG"
       # OPENAI_API_KEY: "..."

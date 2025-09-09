@@ -11,7 +11,7 @@ HANDLER_KWARGS = {
         "host": os.environ.get("MDB_TEST_MARIADB_HOST", "127.0.0.1"),
         "port": int(os.environ.get("MDB_TEST_MARIADB_PORT", "3306")),
         "user": os.environ.get("MDB_TEST_MARIADB_USER", "root"),
-        "password": os.environ.get("MDB_TEST_MARIADB_PASS", "admin"),
+        "password": os.environ.get("MDB_TEST_MARIADB_PASS", "password"),
         "database": os.environ.get("MDB_TEST_MARIADB_DB", "mdb_db_handler_test"),
     }
 }

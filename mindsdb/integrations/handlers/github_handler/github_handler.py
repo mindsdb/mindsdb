@@ -67,8 +67,10 @@ class GithubHandler(APIHandler):
 
         connection_kwargs = {}
 
-        if self.connection_data.get("api_key", None):
-            connection_kwargs["login_or_token"] = self.connection_data["api_key"]
+        # Support both 'api_key' and 'token' parameters for authentication
+        api_key = self.connection_data.get("api_key") or self.connection_data.get("token")
+        if api_key:
+            connection_kwargs["login_or_token"] = api_key
 
         if self.connection_data.get("github_url", None):
             connection_kwargs["base_url"] = self.connection_data["github_url"]
@@ -90,7 +92,9 @@ class GithubHandler(APIHandler):
 
         try:
             self.connect()
-            if self.connection_data.get("api_key", None):
+            # Check for both 'api_key' and 'token' parameters
+            api_key = self.connection_data.get("api_key") or self.connection_data.get("token")
+            if api_key:
                 current_user = self.connection.get_user().name
                 logger.info(f"Authenticated as user {current_user}")
             else:

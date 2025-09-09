@@ -33,6 +33,9 @@ This is a configuration-driven, automated testing framework for MindsDB data sou
 To run the full test suite, execute the following command from the project's root directory:
 
 ```bash
+# using make
+
+# using pytest
 pytest -v --run-dsi-tests tests/integration/handlers/
 
 ```

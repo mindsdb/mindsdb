@@ -34,7 +34,7 @@ To run the full test suite, execute the following command from the project's roo
 
 ```bash
 # using make
-
+make datasource_integration_tests
 # using pytest
 pytest -v --run-dsi-tests tests/integration/handlers/
 

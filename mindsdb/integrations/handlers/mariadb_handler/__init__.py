@@ -21,6 +21,8 @@ __all__ = [
     'type',
     'title',
     'description',
+    'connection_args',
+    'connection_args_example',
     'import_error',
-    'icon_path'
+    'icon_path',
 ]

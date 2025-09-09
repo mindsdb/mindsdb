@@ -1,5 +1,4 @@
-from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
-
+from mindsdb.integrations.handlers.mysql_handler import Handler as MySQLHandler
 
 class MariaDBHandler(MySQLHandler):
     """

@@ -22,7 +22,7 @@ CREATE DATABASE mariadb_conn
 WITH ENGINE = 'mariadb', 
 PARAMETERS = {
     "host": "host-name",
-    "port": 3307,
+    "port": 3306,
     "database": "db-name",
     "user": "user-name",
     "password": "password"

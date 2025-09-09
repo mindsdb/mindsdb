@@ -1,5 +1,5 @@
 import pytest
-import mysql.connector
+import pymysql
 import os
 import time
 
@@ -9,9 +9,9 @@ from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 HANDLER_KWARGS = {
     "connection_data": {
         "host": os.environ.get("MDB_TEST_MARIADB_HOST", "127.0.0.1"),
-        "port": os.environ.get("MDB_TEST_MARIADB_PORT", "3306"),
+        "port": int(os.environ.get("MDB_TEST_MARIADB_PORT", "3306")),
         "user": os.environ.get("MDB_TEST_MARIADB_USER", "root"),
-        "password": os.environ.get("MDB_TEST_MARIADB_PASS", "supersecret"),
+        "password": os.environ.get("MDB_TEST_MARIADB_PASS", "admin"),
         "database": os.environ.get("MDB_TEST_MARIADB_DB", "mdb_db_handler_test"),
     }
 }
@@ -28,11 +28,24 @@ def seed_db():
     # Connect to 'information_schema' while we create our test DB
     conn_info = HANDLER_KWARGS["connection_data"].copy()
     conn_info["database"] = "information_schema"
-    db = mysql.connector.connect(**conn_info)
+
+    db = pymysql.connect(
+        host=conn_info["host"],
+        port=conn_info["port"],
+        user=conn_info["user"],
+        password=conn_info["password"],
+        database=conn_info["database"],
+        autocommit=True
+    )
     cursor = db.cursor()
 
     with open("mindsdb/integrations/handlers/mariadb_handler/tests/seed.sql", "r") as f:
-        cursor.execute(f.read(), multi=True)
+        sql_script = f.read()
+        for statement in sql_script.split(";"):
+            stmt = statement.strip()
+            if stmt:
+                cursor.execute(stmt)
+
     db.close()
     time.sleep(1)  # Without this, the data won't show up for the handler
 
@@ -87,7 +100,7 @@ class TestMariaDBHandlerQuery:
         expected_db = HANDLER_KWARGS["connection_data"]["database"]
         assert (
             expected_db in dbs
-        ), f"expec72ecd4a0d5aeted to have {expected_db} db in response: {dbs}"
+        ), f"expected to have {expected_db} db in response: {dbs}"
 
     def test_select_query(self, handler):
         limit = 3
@@ -112,7 +125,6 @@ class TestMariaDBHandlerTables:
         assert (
             "table_name" in tables
         ), f"expected to get 'table_name' column in the response:\n{tables}"
-        # get a specific table from the tables list
         assert (
             "test" in test_table
         ), f"expected to have 'test' table in the db but got: {test_table}"
@@ -127,8 +139,6 @@ class TestMariaDBHandlerTables:
         assert (
             new_table in tables
         ), f"expected to have {new_table} in database, but got: {tables}"
-
-    # TODO - edit this test so that it can be run on it's own - perhaps run drop table as a clean up method?
 
     def test_drop_table(self, handler):
         drop_table = table_for_creation
@@ -156,7 +166,7 @@ class TestMariaDBHandlerColumns:
         got_columns = list(describe_data.iloc[:, 0])
         assert (
             got_columns == expected_columns
-        ), f"expected to have next columns in test table:\n{expected_columns}\nbut got:\n{got_columns}"
+        ), f"expected columns:\n{expected_columns}\nbut got:\n{got_columns}"
 
 
 class TestMariaDBHandlerDisconnect:

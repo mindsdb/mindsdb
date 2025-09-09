@@ -159,8 +159,9 @@ class S3Handler(APIHandler):
             client = self.connect()
             self._regions[bucket] = client.get_bucket_location(Bucket=bucket)["LocationConstraint"]
 
-        region = self._regions[bucket]
-        duckdb_conn.execute(f"SET s3_region='{region}'")
+        # region = self._regions[bucket]
+        # duckdb_conn.execute(f"SET s3_region='{region}'")
+        duckdb_conn.execute(f"SET s3_region='{self.connection_data['region_name']}'")
 
         try:
             yield duckdb_conn

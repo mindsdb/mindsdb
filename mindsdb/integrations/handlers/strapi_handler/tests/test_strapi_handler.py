@@ -31,7 +31,7 @@ class StrapiHandlerTest(unittest.TestCase):
 
     def test_4_get_data_with_condition(self):
         # Ensure that you can retrieve data with a condition
-        data = self.handler.native_query('SELECT * FROM products WHERE id = 1')
+        data = self.handler.native_query("SELECT * FROM products WHERE documentId = 'mvaprjyy72ayx7z4v592sdnr'")
         assert data.type is not RESPONSE_TYPE.ERROR
 
     def test_5_insert_data(self):
@@ -42,7 +42,7 @@ class StrapiHandlerTest(unittest.TestCase):
 
     def test_6_update_data(self):
         # Ensure that data updating is successful
-        query = "UPDATE products SET name = 'test2' WHERE id = 1"
+        query = "UPDATE products SET name = 'test2' WHERE documentId = 'mvaprjyy72ayx7z4v592sdnr'"
         result = self.handler.native_query(query)
         self.assertTrue(result)
 

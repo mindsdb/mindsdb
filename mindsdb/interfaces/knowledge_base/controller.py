@@ -692,7 +692,7 @@ class KnowledgeBaseTable:
                 if existing_ids:
                     # Filter out existing items
                     df = df[~df[TableField.ID.value].astype(str).isin(existing_ids)]
-                    logger.info(f"Skipped {len(current_ids)} existing items, processing {len(df)} new items")
+                    logger.info(f"Skipped {len(existing_ids)} existing items, processing {len(df)} new items")
 
                     if df.empty:
                         logger.info("All items already exist, nothing to insert")

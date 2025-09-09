@@ -20,7 +20,7 @@ This is a configuration-driven, automated testing framework for MindsDB data sou
 
 2.  **Install dependencies:**
     ```bash
-    uv pip install -r requirements.txt
+    uv pip install -r requirements/requirements-test.txt
     ```
 
 3.  **Configure Environment:**

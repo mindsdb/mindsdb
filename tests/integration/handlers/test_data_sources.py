@@ -1,6 +1,7 @@
 import pytest
 import logging
 import json
+import time
 from pathlib import Path
 from typing import Dict, Any, List
 
@@ -136,8 +137,11 @@ def test_handler_integrations(mindsdb_server, session_databases, test_case):
 
     if test_type == "negative":
         details = test_case["details"]
-        with pytest.raises(Exception) as excinfo:
+        # --- FIX IS HERE ---
+        # Expect the specific RuntimeError from the SDK, not a generic Exception.
+        with pytest.raises(RuntimeError) as excinfo:
             mindsdb_server.query(query).fetch()
+        # --- END FIX ---
 
         error_str = str(excinfo.value)
         assert details["expected_error"] in error_str, (

@@ -5,8 +5,6 @@ import mindsdb_sdk
 
 from tests.integration.handlers.utils import config
 
-# In tests/integration/handlers/utils/helpers.py
-
 
 def connect_to_mindsdb():
     """
@@ -25,8 +23,10 @@ def connect_to_mindsdb():
 
         logging.info("DSI: Successfully connected to MindsDB via SDK.")
         return server
-    except RuntimeError as e:
-        logging.error(f"DSI: Failed to connect to MindsDB via SDK: {e}", exc_info=True)
+    # Catch the specific error for network/connection issues.
+    except ConnectionError as e:
+        # Use logging.exception() to include full traceback info.
+        logging.exception(f"DSI: Failed to connect to MindsDB via SDK: {e}")
         raise e
 
 
@@ -44,7 +44,6 @@ def get_handlers_info(mindsdb_server: Any) -> Tuple[List[Dict[str, Any]], List[s
         else:
             installed_handlers = set(installed_handlers_df[installed_handlers_df["IMPORT_SUCCESS"]]["NAME"].str.lower())
 
-        # Corrected: HANDERS_TO_TEST -> HANDLERS_TO_TEST
         target_handlers_str = config.HANDLERS_TO_TEST
         target_handlers_list = [h.strip().lower() for h in target_handlers_str.split(",") if h.strip()]
 
@@ -69,7 +68,9 @@ def get_handlers_info(mindsdb_server: Any) -> Tuple[List[Dict[str, Any]], List[s
                     }
                 )
         return handlers, uninstalled_handlers
+    # Catch the specific error the SDK raises on query failure.
     except RuntimeError as e:
+        # Re-raise as a generic Exception to signal a critical setup failure.
         raise Exception(f"Failed to fetch handler information from MindsDB: {e}")
 
 

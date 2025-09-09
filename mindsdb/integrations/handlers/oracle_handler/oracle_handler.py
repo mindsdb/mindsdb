@@ -40,7 +40,6 @@ def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
             "NATIONAL CHARACTER",
             "NATIONAL CHAR",
             "VARCHAR",
-            "NCHAR",
             "NATIONAL CHARACTER VARYING",
             "NATIONAL CHAR VARYING",
             "NCHAR VARYING",

@@ -203,7 +203,27 @@ class Config:
             },
             "kms": {
                 "enabled": False,
+                "provider": "local",  # local, aws, azure, gcp
                 "secret_key": "dummy-key",
+                "aws": {
+                    "region": "us-east-1",
+                    "key_id": None,  # KMS key ID for direct KMS encryption
+                    "secret_name": None,  # Secrets Manager secret name
+                    "access_key_id": None,  # Optional: AWS access key
+                    "secret_access_key": None,  # Optional: AWS secret key
+                },
+                "azure": {
+                    "vault_url": None,  # Azure Key Vault URL
+                    "secret_name": "mindsdb-encryption-key",
+                    "tenant_id": None,  # Optional: Azure tenant ID
+                    "client_id": None,  # Optional: Azure client ID
+                    "client_secret": None,  # Optional: Azure client secret
+                },
+                "gcp": {
+                    "project_id": None,  # GCP project ID
+                    "secret_id": "mindsdb-encryption-key",
+                    "version_id": "latest",
+                },
             },
         }
         # endregion
@@ -310,10 +330,111 @@ class Config:
         # KMS encryption configuration
         if os.environ.get("MINDSDB_KMS_ENABLED", "").lower() in ("1", "true"):
             self._env_config["kms"] = {"enabled": True}
+        
+        # KMS provider configuration
+        if os.environ.get("MINDSDB_KMS_PROVIDER", "") != "":
+            if "kms" not in self._env_config:
+                self._env_config["kms"] = {}
+            self._env_config["kms"]["provider"] = os.environ["MINDSDB_KMS_PROVIDER"].lower()
+        
         if os.environ.get("MINDSDB_KMS_SECRET_KEY", "") != "":
             if "kms" not in self._env_config:
                 self._env_config["kms"] = {}
             self._env_config["kms"]["secret_key"] = os.environ["MINDSDB_KMS_SECRET_KEY"]
+        
+        # AWS KMS configuration
+        if os.environ.get("MINDSDB_KMS_AWS_REGION", "") != "":
+            if "kms" not in self._env_config:
+                self._env_config["kms"] = {}
+            if "aws" not in self._env_config["kms"]:
+                self._env_config["kms"]["aws"] = {}
+            self._env_config["kms"]["aws"]["region"] = os.environ["MINDSDB_KMS_AWS_REGION"]
+        
+        if os.environ.get("MINDSDB_KMS_AWS_KEY_ID", "") != "":
+            if "kms" not in self._env_config:
+                self._env_config["kms"] = {}
+            if "aws" not in self._env_config["kms"]:
+                self._env_config["kms"]["aws"] = {}
+            self._env_config["kms"]["aws"]["key_id"] = os.environ["MINDSDB_KMS_AWS_KEY_ID"]
+        
+        if os.environ.get("MINDSDB_KMS_AWS_SECRET_NAME", "") != "":
+            if "kms" not in self._env_config:
+                self._env_config["kms"] = {}
+            if "aws" not in self._env_config["kms"]:
+                self._env_config["kms"]["aws"] = {}
+            self._env_config["kms"]["aws"]["secret_name"] = os.environ["MINDSDB_KMS_AWS_SECRET_NAME"]
+        
+        if os.environ.get("MINDSDB_KMS_AWS_ACCESS_KEY_ID", "") != "":
+            if "kms" not in self._env_config:
+                self._env_config["kms"] = {}
+            if "aws" not in self._env_config["kms"]:
+                self._env_config["kms"]["aws"] = {}
+            self._env_config["kms"]["aws"]["access_key_id"] = os.environ["MINDSDB_KMS_AWS_ACCESS_KEY_ID"]
+        
+        if os.environ.get("MINDSDB_KMS_AWS_SECRET_ACCESS_KEY", "") != "":
+            if "kms" not in self._env_config:
+                self._env_config["kms"] = {}
+            if "aws" not in self._env_config["kms"]:
+                self._env_config["kms"]["aws"] = {}
+            self._env_config["kms"]["aws"]["secret_access_key"] = os.environ["MINDSDB_KMS_AWS_SECRET_ACCESS_KEY"]
+        
+        # Azure KMS configuration
+        if os.environ.get("MINDSDB_KMS_AZURE_VAULT_URL", "") != "":
+            if "kms" not in self._env_config:
+                self._env_config["kms"] = {}
+            if "azure" not in self._env_config["kms"]:
+                self._env_config["kms"]["azure"] = {}
+            self._env_config["kms"]["azure"]["vault_url"] = os.environ["MINDSDB_KMS_AZURE_VAULT_URL"]
+        
+        if os.environ.get("MINDSDB_KMS_AZURE_SECRET_NAME", "") != "":
+            if "kms" not in self._env_config:
+                self._env_config["kms"] = {}
+            if "azure" not in self._env_config["kms"]:
+                self._env_config["kms"]["azure"] = {}
+            self._env_config["kms"]["azure"]["secret_name"] = os.environ["MINDSDB_KMS_AZURE_SECRET_NAME"]
+        
+        if os.environ.get("MINDSDB_KMS_AZURE_TENANT_ID", "") != "":
+            if "kms" not in self._env_config:
+                self._env_config["kms"] = {}
+            if "azure" not in self._env_config["kms"]:
+                self._env_config["kms"]["azure"] = {}
+            self._env_config["kms"]["azure"]["tenant_id"] = os.environ["MINDSDB_KMS_AZURE_TENANT_ID"]
+        
+        if os.environ.get("MINDSDB_KMS_AZURE_CLIENT_ID", "") != "":
+            if "kms" not in self._env_config:
+                self._env_config["kms"] = {}
+            if "azure" not in self._env_config["kms"]:
+                self._env_config["kms"]["azure"] = {}
+            self._env_config["kms"]["azure"]["client_id"] = os.environ["MINDSDB_KMS_AZURE_CLIENT_ID"]
+        
+        if os.environ.get("MINDSDB_KMS_AZURE_CLIENT_SECRET", "") != "":
+            if "kms" not in self._env_config:
+                self._env_config["kms"] = {}
+            if "azure" not in self._env_config["kms"]:
+                self._env_config["kms"]["azure"] = {}
+            self._env_config["kms"]["azure"]["client_secret"] = os.environ["MINDSDB_KMS_AZURE_CLIENT_SECRET"]
+        
+        # GCP KMS configuration
+        if os.environ.get("MINDSDB_KMS_GCP_PROJECT_ID", "") != "":
+            if "kms" not in self._env_config:
+                self._env_config["kms"] = {}
+            if "gcp" not in self._env_config["kms"]:
+                self._env_config["kms"]["gcp"] = {}
+            self._env_config["kms"]["gcp"]["project_id"] = os.environ["MINDSDB_KMS_GCP_PROJECT_ID"]
+        
+        if os.environ.get("MINDSDB_KMS_GCP_SECRET_ID", "") != "":
+            if "kms" not in self._env_config:
+                self._env_config["kms"] = {}
+            if "gcp" not in self._env_config["kms"]:
+                self._env_config["kms"]["gcp"] = {}
+            self._env_config["kms"]["gcp"]["secret_id"] = os.environ["MINDSDB_KMS_GCP_SECRET_ID"]
+        
+        if os.environ.get("MINDSDB_KMS_GCP_VERSION_ID", "") != "":
+            if "kms" not in self._env_config:
+                self._env_config["kms"] = {}
+            if "gcp" not in self._env_config["kms"]:
+                self._env_config["kms"]["gcp"] = {}
+            self._env_config["kms"]["gcp"]["version_id"] = os.environ["MINDSDB_KMS_GCP_VERSION_ID"]
 
         if os.environ.get("MINDSDB_NO_STUDIO", "").lower() in ("1", "true"):
             self._env_config["gui"]["open_on_start"] = False

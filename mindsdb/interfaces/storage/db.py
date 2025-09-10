@@ -33,6 +33,7 @@ from sqlalchemy.sql.schema import ForeignKey
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
 from mindsdb.utilities.config import config
 from mindsdb.utilities.functions import encrypt_json, decrypt_json
+from mindsdb.utilities.kms_wrapper import create_kms_wrapper
 
 
 class Base:
@@ -133,6 +134,13 @@ class EncryptedJson(types.TypeDecorator):
 
     impl = types.LargeBinary
 
+    def _get_kms_wrapper(self):
+        """Get or create KMS wrapper instance."""
+        if not hasattr(self, '_kms_wrapper'):
+            kms_config = config.get('kms', {})
+            self._kms_wrapper = create_kms_wrapper(kms_config)
+        return self._kms_wrapper
+
     def process_bind_param(self, value, dialect):  # insert
         if value is None:
             return None
@@ -140,9 +148,17 @@ class EncryptedJson(types.TypeDecorator):
         # Check if KMS encryption is enabled
         kms_config = config.get('kms', {})
         if kms_config.get('enabled', False):
-            # Encrypt the JSON data
-            secret_key = kms_config.get('secret_key', config.get('secret_key', 'dummy-key'))
-            return encrypt_json(value, secret_key)
+            try:
+                # Use KMS wrapper for encryption
+                kms_wrapper = self._get_kms_wrapper()
+                return kms_wrapper.encrypt(value)
+            except Exception as e:
+                # Fall back to local encryption if KMS fails
+                from mindsdb.utilities import log
+                logger = log.getLogger(__name__)
+                logger.warning(f"KMS encryption failed, falling back to local encryption: {e}")
+                secret_key = kms_config.get('secret_key', config.get('secret_key', 'dummy-key'))
+                return encrypt_json(value, secret_key)
         else:
             # Store as regular JSON string
             return json.dumps(value, cls=NumpyEncoder).encode('utf-8')
@@ -154,9 +170,17 @@ class EncryptedJson(types.TypeDecorator):
         # Check if KMS encryption is enabled
         kms_config = config.get('kms', {})
         if kms_config.get('enabled', False):
-            # Decrypt the data
-            secret_key = kms_config.get('secret_key', config.get('secret_key', 'dummy-key'))
-            return decrypt_json(value, secret_key)
+            try:
+                # Use KMS wrapper for decryption
+                kms_wrapper = self._get_kms_wrapper()
+                return kms_wrapper.decrypt(value)
+            except Exception as e:
+                # Fall back to local decryption if KMS fails
+                from mindsdb.utilities import log
+                logger = log.getLogger(__name__)
+                logger.warning(f"KMS decryption failed, falling back to local decryption: {e}")
+                secret_key = kms_config.get('secret_key', config.get('secret_key', 'dummy-key'))
+                return decrypt_json(value, secret_key)
         else:
             # Parse as regular JSON
             if isinstance(value, bytes):

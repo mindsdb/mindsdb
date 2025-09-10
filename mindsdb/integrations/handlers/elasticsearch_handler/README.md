@@ -1,289 +1,304 @@
-# Elasticsearch Handler
+---
+title: Elasticsearch
+sidebarTitle: Elasticsearch
+---
 
-![Elasticsearch](https://img.shields.io/badge/Elasticsearch-005571?style=for-the-badge&logo=elasticsearch&logoColor=white)
-![MindsDB](https://img.shields.io/badge/MindsDB-brightgreen?style=for-the-badge)
-![Python](https://img.shields.io/badge/python-3.8+-blue.svg?style=for-the-badge&logo=python&logoColor=white)
+This documentation describes the integration of MindsDB with [Elasticsearch](https://www.elastic.co/elasticsearch/), a distributed search and analytics engine.
+The integration allows MindsDB to access data stored in Elasticsearch indices and enhance Elasticsearch with AI capabilities.
 
-The Elasticsearch handler for MindsDB enables you to query Elasticsearch clusters using SQL syntax. This integration allows you to seamlessly connect to Elasticsearch indices and perform SQL operations on your search data.
+## Prerequisites
 
-## Table of Contents
+Before proceeding, ensure the following prerequisites are met:
 
-- [Features](#features)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Configuration](#configuration)
-- [Examples](#examples)
-- [Limitations](#limitations)
-- [Troubleshooting](#troubleshooting)
-- [Contributing](#contributing)
+1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
+2. To connect Elasticsearch to MindsDB, install the required dependencies following [this instruction](https://docs.mindsdb.com/setup/self-hosted/docker#install-dependencies).
 
-## Features
+## Connection
 
-### ✅ Supported Operations
-
-- **SELECT queries** with WHERE, ORDER BY, LIMIT, OFFSET
-- **Aggregations**: COUNT, SUM, AVG, MAX, MIN
-- **GROUP BY** operations with terms aggregation
-- **Filtering** on numeric, text, keyword, and date fields
-- **Array field handling** - automatically converts arrays to JSON strings
-- **Schema discovery** via MindsDB's information_schema
-- **Large dataset support** using Elasticsearch scroll API
-- **Unicode and special character support**
-- **Multiple authentication methods**
-
-### ❌ Not Supported
-
-- **SHOW TABLES** / **DESCRIBE** commands (use alternatives below)
-- **SQL JOINs** (limitation of Elasticsearch architecture)
-- **Complex nested subqueries**
-- **Advanced SQL functions not mappable to Elasticsearch DSL**
-
-## Installation
-
-### Prerequisites
-
-- MindsDB installed and running
-- Elasticsearch cluster (version 7.x or 8.x)
-- Python 3.8 or higher
-
-### Install Dependencies
-
-The handler dependencies are automatically installed when MindsDB loads the integration:
-
-```bash
-pip install elasticsearch>=7.13.4 elasticsearch-dbapi>=0.2.9 pydantic pandas
-```
-
-## Usage
-
-### 1. Create Connection
-
-Connect to your Elasticsearch cluster:
+Establish a connection to your Elasticsearch cluster from MindsDB by executing the following SQL command:
 
 ```sql
-CREATE DATABASE my_elasticsearch
+CREATE DATABASE elasticsearch_conn
 WITH ENGINE = 'elasticsearch',
 PARAMETERS = {
     "hosts": "localhost:9200",
     "user": "elastic", 
-    "password": "your_password"
+    "password": "changeme"
 };
 ```
 
-### 2. Query Your Data
+Required connection parameters include the following:
 
-Once connected, you can query Elasticsearch indices using SQL:
+* `hosts`: The Elasticsearch host(s) in format "host:port". For multiple hosts, use comma separation like "host1:port1,host2:port2".
+
+Optional connection parameters include the following:
+
+* `user`: The username for Elasticsearch authentication.
+* `password`: The password for Elasticsearch authentication.
+* `api_key`: API key for authentication (alternative to user/password).
+* `cloud_id`: Elastic Cloud deployment ID for hosted Elasticsearch.
+* `ca_certs`: Path to CA certificate file for SSL verification.
+* `client_cert`: Path to client certificate file for SSL authentication.
+* `client_key`: Path to client private key file for SSL authentication.
+* `verify_certs`: Boolean to enable/disable SSL certificate verification (default: true).
+* `timeout`: Request timeout in seconds.
+
+## Usage
+
+The following usage examples utilize the connection to Elasticsearch made via the `CREATE DATABASE` statement and named `elasticsearch_conn`.
+
+Retrieve data from a specified index by providing the integration name and index name:
 
 ```sql
--- Basic SELECT
-SELECT * FROM my_elasticsearch.products LIMIT 10;
+SELECT *
+FROM elasticsearch_conn.products
+LIMIT 10;
+```
 
--- Filtering
-SELECT name, price FROM my_elasticsearch.products 
-WHERE price > 100 AND category = 'electronics';
+Query with filtering and aggregation:
 
--- Aggregations
+```sql
 SELECT category, COUNT(*) as product_count, AVG(price) as avg_price
-FROM my_elasticsearch.products 
-GROUP BY category 
+FROM elasticsearch_conn.products 
+WHERE price > 100
+GROUP BY category
 ORDER BY product_count DESC;
 ```
 
-## Configuration
+Run queries with array fields (automatically converted to JSON strings):
 
-### Connection Parameters
-
-| Parameter | Required | Description | Example |
-|-----------|----------|-------------|---------|
-| `hosts` | Yes | Elasticsearch host(s) | `"localhost:9200"` or `"host1:9200,host2:9200"` |
-| `user` | No | Username for authentication | `"elastic"` |
-| `password` | No | Password for authentication | `"changeme"` |
-| `api_key` | No | API key (alternative to user/password) | `"your_api_key"` |
-| `cloud_id` | No | Elastic Cloud ID | `"deployment:dXMtY2VudHJhbDE..."` |
-
-### Example Configurations
-
-**Basic Connection:**
 ```sql
-CREATE DATABASE local_es
-WITH ENGINE = 'elasticsearch',
-PARAMETERS = {
-    "hosts": "localhost:9200"
-};
+SELECT product_name, tags, categories 
+FROM elasticsearch_conn.products 
+WHERE product_id = '12345';
 ```
 
-**With Authentication:**
+<Tip>
+**Array Field Support**
+
+The Elasticsearch handler automatically detects and converts array fields to JSON strings for SQL compatibility. This prevents "Arrays not supported" errors while preserving the original data structure.
+</Tip>
+
+## Advanced Queries
+
+The Elasticsearch handler supports a wide range of advanced SQL operations and Elasticsearch-specific functionality:
+
+### Text Search and Filtering
+
 ```sql
-CREATE DATABASE secure_es
-WITH ENGINE = 'elasticsearch', 
-PARAMETERS = {
-    "hosts": "https://my-cluster.es.amazonaws.com:443",
-    "user": "admin",
-    "password": "secure_password"
-};
+-- Full-text search using LIKE for pattern matching
+SELECT product_name, description, price 
+FROM elasticsearch_conn.products 
+WHERE description LIKE '%wireless%' 
+AND price BETWEEN 50 AND 500
+ORDER BY price ASC;
+
+-- Case-insensitive search
+SELECT title, author, publication_date 
+FROM elasticsearch_conn.books 
+WHERE LOWER(title) LIKE '%python%' 
+OR LOWER(author) LIKE '%python%';
 ```
 
-**Elastic Cloud:**
+### Date and Time Queries
+
 ```sql
-CREATE DATABASE cloud_es
-WITH ENGINE = 'elasticsearch',
-PARAMETERS = {
-    "cloud_id": "deployment:dXMtY2VudHJhbDE...",
-    "api_key": "your_cloud_api_key"
-};
+-- Date range filtering
+SELECT order_id, customer_name, order_date, total_amount 
+FROM elasticsearch_conn.orders 
+WHERE order_date >= '2024-01-01' 
+AND order_date < '2024-12-31'
+ORDER BY order_date DESC;
+
+-- Recent data queries
+SELECT log_level, message, timestamp 
+FROM elasticsearch_conn.application_logs 
+WHERE timestamp >= NOW() - INTERVAL 24 HOUR
+AND log_level IN ('ERROR', 'WARN');
 ```
 
-## Examples
+### Aggregations and Analytics
 
-### Schema Discovery
+```sql
+-- Statistical aggregations
+SELECT 
+    category,
+    COUNT(*) as total_products,
+    AVG(price) as average_price,
+    MIN(price) as min_price,
+    MAX(price) as max_price,
+    SUM(stock_quantity) as total_stock
+FROM elasticsearch_conn.products 
+WHERE status = 'active'
+GROUP BY category 
+HAVING COUNT(*) > 10
+ORDER BY average_price DESC;
 
-Since `SHOW TABLES` and `DESCRIBE` have limitations, use these alternatives:
+-- Time-based aggregations
+SELECT 
+    DATE_FORMAT(created_at, '%Y-%m') as month,
+    COUNT(*) as user_registrations,
+    COUNT(DISTINCT country) as countries_count
+FROM elasticsearch_conn.users 
+WHERE created_at >= '2024-01-01'
+GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+ORDER BY month;
+```
+
+### Working with Array and Nested Fields
+
+```sql
+-- Query documents with array fields (automatically handled)
+SELECT 
+    product_id,
+    product_name,
+    tags,  -- Array field converted to JSON string
+    categories,  -- Array field converted to JSON string
+    attributes  -- Object field converted to JSON string
+FROM elasticsearch_conn.products 
+WHERE product_id IN ('12345', '67890', '11111');
+
+-- Search within array-like JSON strings (use JSON functions if available)
+SELECT product_name, tags, price 
+FROM elasticsearch_conn.products 
+WHERE tags LIKE '%electronics%' 
+OR tags LIKE '%gadget%';
+```
+
+### Complex Filtering
+
+```sql
+-- Multiple condition filtering
+SELECT 
+    user_id,
+    email,
+    last_login,
+    account_status
+FROM elasticsearch_conn.users 
+WHERE account_status = 'active'
+AND last_login >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+AND email LIKE '%@company.com'
+ORDER BY last_login DESC;
+
+-- Null and existence checks
+SELECT product_id, product_name, description 
+FROM elasticsearch_conn.products 
+WHERE description IS NOT NULL 
+AND price IS NOT NULL
+AND stock_quantity > 0;
+```
+
+### Pagination and Limiting
+
+```sql
+-- Efficient pagination
+SELECT product_id, product_name, price 
+FROM elasticsearch_conn.products 
+WHERE category = 'electronics'
+ORDER BY created_at DESC 
+LIMIT 20 OFFSET 100;
+
+-- Top N queries
+SELECT customer_id, customer_name, total_orders 
+FROM elasticsearch_conn.customer_summary 
+ORDER BY total_orders DESC 
+LIMIT 10;
+```
+
+### Performance Optimization Tips
+
+```sql
+-- Use specific field selection instead of SELECT *
+SELECT id, title, status 
+FROM elasticsearch_conn.documents 
+WHERE status = 'published'
+LIMIT 1000;
+
+-- Filter before aggregation for better performance
+SELECT region, AVG(sales_amount) as avg_sales
+FROM elasticsearch_conn.sales 
+WHERE sale_date >= '2024-01-01'  -- Filter first
+GROUP BY region;
+
+-- Use EXISTS queries for field presence
+SELECT document_id, title 
+FROM elasticsearch_conn.documents 
+WHERE content IS NOT NULL 
+AND LENGTH(content) > 100;
+```
+
+### Integration with MindsDB AI Features
+
+```sql
+-- Use Elasticsearch data with MindsDB models
+SELECT 
+    p.product_id,
+    p.product_name,
+    p.description,
+    m.predicted_category
+FROM elasticsearch_conn.products p
+JOIN mindsdb.product_classifier m
+WHERE p.category IS NULL;
+
+-- Sentiment analysis on Elasticsearch text data
+SELECT 
+    review_id,
+    review_text,
+    rating,
+    sentiment_analysis.sentiment as predicted_sentiment
+FROM elasticsearch_conn.product_reviews r
+JOIN mindsdb.sentiment_analyzer sentiment_analysis
+WHERE rating IS NOT NULL;
+```
+
+## Schema Discovery
+
+Since `SHOW TABLES` and `DESCRIBE` may have limitations, use these alternatives:
 
 ```sql
 -- List all indices (tables)
 SELECT table_name FROM information_schema.tables 
-WHERE table_schema = 'my_elasticsearch';
+WHERE table_schema = 'elasticsearch_conn';
 
 -- Get column information
 SELECT column_name, data_type FROM information_schema.columns 
-WHERE table_name = 'products' AND table_schema = 'my_elasticsearch';
+WHERE table_name = 'products' AND table_schema = 'elasticsearch_conn';
 ```
-
-### Advanced Queries
-
-```sql
--- Date range filtering
-SELECT title, publish_date FROM my_elasticsearch.articles 
-WHERE publish_date >= '2023-01-01' AND publish_date <= '2023-12-31';
-
--- Text search with LIKE
-SELECT name, description FROM my_elasticsearch.products 
-WHERE name LIKE '%laptop%' OR description LIKE '%computer%';
-
--- Aggregation example
-SELECT 
-    status,
-    COUNT(*) as order_count,
-    SUM(total_amount) as total_revenue
-FROM my_elasticsearch.orders 
-WHERE created_at >= '2023-01-01'
-GROUP BY status
-ORDER BY total_revenue DESC;
-```
-
-### Working with Arrays
-
-The handler automatically converts Elasticsearch arrays to JSON strings:
-
-```sql
--- Query will return arrays as JSON strings
-SELECT product_name, tags, categories FROM my_elasticsearch.products 
-WHERE product_id = '12345';
-
--- Result: tags = '["electronics", "laptop", "gaming"]'
-```
-
-## Limitations
-
-### Known Issues
-
-1. **SHOW TABLES FROM database** - May not work due to MindsDB core routing
-   - **Workaround**: Use `information_schema.tables` or direct API calls
-
-2. **DESCRIBE table** - May fail for some configurations  
-   - **Workaround**: Use `information_schema.columns` or mapping API
-
-3. **Array Fields** - Converted to JSON strings for SQL compatibility
-   - **Note**: This is intentional to prevent "Arrays not supported" errors
-
-### Elasticsearch Limitations
-
-- **No JOINs**: Elasticsearch doesn't support table joins
-- **Limited Subqueries**: Complex nested queries may not translate properly
-- **Real-time**: Elasticsearch has near-real-time search characteristics (refresh interval)
-
-For a detailed guide on the limitations of the Elasticsearch SQL API, refer to the [official documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/sql-limitations.html).
 
 ## Troubleshooting
 
-### Common Issues
+<Warning>
+`Database Connection Error`
 
-**Connection Failed:**
-```
-Error: Failed to connect to Elasticsearch
-```
-- Verify host and port are correct
-- Check authentication credentials
-- Ensure Elasticsearch is running and accessible
+* **Symptoms**: Failure to connect MindsDB with the Elasticsearch cluster.
+* **Checklist**:
+    1. Make sure the Elasticsearch cluster is active and accessible.
+    2. Confirm that host, port, user, and password are correct. Try a direct Elasticsearch connection.
+    3. Ensure a stable network between MindsDB and Elasticsearch.
+    4. Check if authentication is required and credentials are valid.
+</Warning>
 
-**Arrays Not Supported:**
-```
-Error: Arrays are not supported
-```
-- This is handled automatically by the handler
-- Arrays are converted to JSON strings
-- If you see this error, please report it as a bug
+<Warning>
+`Arrays Not Supported Error`
 
-**Query Too Complex:**
-```
-Error: Query too complex to translate
-```
-- Simplify the query by removing complex subqueries
-- Use multiple simpler queries instead
-- Check if the SQL operation is supported by Elasticsearch
+* **Symptoms**: SQL queries failing with "Arrays are not supported" message.
+* **Solution**: This is automatically handled by the integration. Array fields are converted to JSON strings for SQL compatibility.
+* **Note**: If you still encounter this error, the handler will automatically fall back to the Search API.
+</Warning>
 
-### Getting Help
+<Warning>
+`SHOW TABLES returns empty or fails`
 
-1. Check the [MindsDB Documentation](https://docs.mindsdb.com/)
-2. Join the [MindsDB Community Slack](https://mindsdb.com/joincommunity)
-3. Open an issue on [GitHub](https://github.com/mindsdb/mindsdb/issues)
+* **Symptoms**: `SHOW TABLES FROM elasticsearch_conn` returns no results or fails.
+* **Solution**: Use the information_schema alternative:
+    ```sql
+    SELECT table_name FROM information_schema.tables 
+    WHERE table_schema = 'elasticsearch_conn';
+    ```
+</Warning>
 
-## Contributing
+## Limitations
 
-We welcome contributions! Here's how you can help:
-
-1. **Report Bugs**: Open an issue with details about the problem
-2. **Suggest Features**: Share ideas for new functionality
-3. **Submit PRs**: Fix bugs or add features
-4. **Improve Docs**: Help make documentation clearer
-
-### Development Setup
-
-```bash
-# Clone the repository
-git clone https://github.com/mindsdb/mindsdb.git
-cd mindsdb
-
-# Install in development mode
-pip install -e .
-```
-
-### Running Tests
-
-```bash
-# Test the handler functionality (run from handler directory)
-cd mindsdb/integrations/handlers/elasticsearch_handler
-python -c "from elasticsearch_handler import ElasticsearchHandler; print('Handler loads successfully')"
-
-# Or test from main MindsDB directory
-python -c "
-import sys
-sys.path.append('mindsdb/integrations/handlers/elasticsearch_handler')
-from elasticsearch_handler import ElasticsearchHandler
-print('Handler loads successfully')
-"
-
-# Run MindsDB integration tests
-python -m pytest tests/unit/handlers/ -k elasticsearch -v
-```
-
-## License
-
-This handler is part of MindsDB and is licensed under the [GNU GPL v3.0](https://github.com/mindsdb/mindsdb/blob/main/LICENSE).
-
----
-
-**Need Help?** Join our community:
-- [Documentation](https://docs.mindsdb.com/)
-- [Community Slack](https://mindsdb.com/joincommunity) 
-- [GitHub Discussions](https://github.com/mindsdb/mindsdb/discussions)
+* **JOINs**: Not supported due to Elasticsearch architecture limitations.
+* **Complex Subqueries**: Limited by Elasticsearch's SQL capabilities.
+* **Real-time Data**: Elasticsearch has near-real-time search characteristics due to refresh intervals.

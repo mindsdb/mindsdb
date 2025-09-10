@@ -201,6 +201,10 @@ class Config:
             "data_catalog": {
                 "enabled": False,
             },
+            "kms": {
+                "enabled": False,
+                "secret_key": "dummy-key",
+            },
         }
         # endregion
 
@@ -302,6 +306,14 @@ class Config:
             }
         if os.environ.get("MINDSDB_DATA_CATALOG_ENABLED", "").lower() in ("1", "true"):
             self._env_config["data_catalog"] = {"enabled": True}
+
+        # KMS encryption configuration
+        if os.environ.get("MINDSDB_KMS_ENABLED", "").lower() in ("1", "true"):
+            self._env_config["kms"] = {"enabled": True}
+        if os.environ.get("MINDSDB_KMS_SECRET_KEY", "") != "":
+            if "kms" not in self._env_config:
+                self._env_config["kms"] = {}
+            self._env_config["kms"]["secret_key"] = os.environ["MINDSDB_KMS_SECRET_KEY"]
 
         if os.environ.get("MINDSDB_NO_STUDIO", "").lower() in ("1", "true"):
             self._env_config["gui"]["open_on_start"] = False

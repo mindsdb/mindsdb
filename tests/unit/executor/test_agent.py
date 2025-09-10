@@ -2,6 +2,9 @@ import time
 import os
 import json
 from textwrap import dedent
+import tempfile
+import shutil
+from pathlib import Path
 
 from unittest.mock import patch, MagicMock, AsyncMock
 
@@ -917,7 +920,7 @@ class TestAgent(BaseExecutorDummyML):
               openai_api_key='--',
               data = {
                  "knowledge_bases": ["kb1"],
-                 "tables": ["files.file1"]
+                 "tables": ["files.file1", "files.file2.*"]
               }
          """)
         self.run_sql("""
@@ -925,7 +928,7 @@ class TestAgent(BaseExecutorDummyML):
             select id, planet_name content from files.file1
         """)
 
-        # exposed
+        # # exposed
         set_openai_completion(
             mock_openai,
             [
@@ -938,6 +941,29 @@ class TestAgent(BaseExecutorDummyML):
 
         assert "Jupiter" in mock_openai.agent_calls[1]
         assert "Jupiter" in mock_openai.agent_calls[2]
+
+        # test 3 part identifiers
+        source_path = Path(__file__).parent / "data" / "test.xlsx"
+        fd, file_path = tempfile.mkstemp()
+        os.close(fd)
+        shutil.copy(source_path, file_path)
+
+        self.file_controller.save_file("file2", file_path, source_path.name)
+
+        set_openai_completion(
+            mock_openai,
+            [
+                self._action("sql_db_query", "SELECT * FROM files.file2.Sheet1 WHERE col_four = 'A'"),
+                self._action("sql_db_query", "SELECT * FROM `files.file2`.Sheet1 WHERE col_four = 'A'"),
+                self._action("sql_db_query", "SELECT * FROM `files.file2`.`Sheet1` WHERE col_four = 'A'"),
+                "Hi!",
+            ],
+        )
+        self.run_sql("select * from my_agent where question = 'test'")
+
+        assert "col_four" in mock_openai.agent_calls[1]
+        assert "col_four" in mock_openai.agent_calls[2]
+        assert "col_four" in mock_openai.agent_calls[3]
 
     @patch("openai.OpenAI")
     @patch(

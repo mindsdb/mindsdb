@@ -254,8 +254,16 @@ class SQLAgent:
                             self.check_table_permission(node)
                         except ValueError as origin_exc:
                             # was it badly quoted by llm?
-                            if len(node.parts) == 1 and node.is_quoted[0] and "." in node.parts[0]:
-                                node2 = Identifier(node.parts[0])
+                            #
+                            if "." in str(node):
+                                # extract quoted parts (with dots) to sub-parts
+                                parts = []
+                                for i, item in enumerate(node.parts):
+                                    if node.is_quoted[i] and "." in item:
+                                        parts.extend(Identifier(item).parts)
+                                    else:
+                                        parts.append(item)
+                                node2 = Identifier(parts=parts)
                                 try:
                                     _check_f(node2, is_table=True)
                                     return node2

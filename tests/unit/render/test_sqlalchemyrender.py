@@ -145,6 +145,24 @@ class TestRender:
 
         assert rendered.replace('\n', '') == sql
 
+    def test_join(self):
+        sql = """
+            SELECT * FROM tbl1
+            {JOIN} tbl2 ON tbl1.x = tbl2.x
+        """
+        for input_join_type, output_join_type in [
+            ('JOIN', 'JOIN'),
+            ('INNER JOIN', 'JOIN'),
+            ('LEFT JOIN', 'LEFT OUTER JOIN'),
+            ('LEFT OUTER JOIN', 'LEFT OUTER JOIN'),
+            # ('RIGHT JOIN', 'RIGHT OUTER JOIN'),
+            # ('RIGHT OUTER JOIN', 'RIGHT OUTER JOIN'),
+        ]:
+            original_query = sql.format(JOIN=input_join_type)
+            query = parse_sql(original_query)
+            rendered = SqlalchemyRender('postgres').get_string(query, with_failback=False)
+            assert " ".join(rendered.split()) == " ".join(sql.format(JOIN=output_join_type).split())
+
     def test_mixed_join(self):
         sql = """
             SELECT * FROM tbl1

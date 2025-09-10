@@ -209,7 +209,7 @@ class File(Resource):
 
         try:
             ca.file_controller.delete_file(name)
-        except Exception as e:
+        except (FileNotFoundError, Exception) as e:
             logger.error(e)
             return http_error(
                 400,

@@ -84,7 +84,7 @@ Example:
 ```sql
 SELECT description, price
 FROM myshop.products
-WHERE id = 1;
+WHERE documentId = 'mvaprjyy72ayx7z4v592sdnr';
 ```
 
 ---
@@ -140,7 +140,7 @@ Example
 UPDATE myshop.products
 SET price = 299,
 avaiablity = false
-WHERE id = 1;
+WHERE documentId = 'mvaprjyy72ayx7z4v592sdnr';
 ```
 
 Note: You only able to update data into the collection which has `update` permission.

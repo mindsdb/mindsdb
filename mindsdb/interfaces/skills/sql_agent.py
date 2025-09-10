@@ -255,7 +255,7 @@ class SQLAgent:
                         except ValueError as origin_exc:
                             # was it badly quoted by llm?
                             #
-                            if "." in str(node):
+                            if "." in node.parts[0]:
                                 # extract quoted parts (with dots) to sub-parts
                                 parts = []
                                 for i, item in enumerate(node.parts):

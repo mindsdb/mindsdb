@@ -10,6 +10,7 @@ import psutil
 import asyncio
 import traceback
 import threading
+import shutil
 from enum import Enum
 from dataclasses import dataclass, field
 from typing import Callable, Optional, Tuple, List
@@ -39,6 +40,7 @@ from mindsdb.utilities.fs import clean_process_marks, clean_unlinked_process_mar
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.auth import register_oauth_client, get_aws_meta_data
 from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
+from mindsdb.utilities.api_status import set_api_status
 
 try:
     import torch.multiprocessing as mp
@@ -150,6 +152,16 @@ def close_api_gracefully(trunc_processes_struct):
                 pass
     except KeyboardInterrupt:
         sys.exit(0)
+
+
+def clean_mindsdb_tmp_dir():
+    """Clean the MindsDB tmp dir at exit."""
+    temp_dir = config["paths"]["tmp"]
+    for file in temp_dir.iterdir():
+        if file.is_dir():
+            shutil.rmtree(file)
+        else:
+            file.unlink()
 
 
 def set_error_model_status_by_pids(unexisting_pids: List[int]):
@@ -484,8 +496,12 @@ if __name__ == "__main__":
         if trunc_process_data.started is True or trunc_process_data.need_to_run is False:
             continue
         start_process(trunc_process_data)
+        # Set status for APIs without ports (they don't go through wait_api_start)
+        if trunc_process_data.port is None:
+            set_api_status(trunc_process_data.name, True)
 
     atexit.register(close_api_gracefully, trunc_processes_struct=trunc_processes_struct)
+    atexit.register(clean_mindsdb_tmp_dir)
 
     async def wait_api_start(api_name, pid, port):
         timeout = 60
@@ -494,6 +510,9 @@ if __name__ == "__main__":
         while (time.time() - start_time) < timeout and started is False:
             await asyncio.sleep(0.5)
             started = is_pid_listen_port(pid, port)
+
+        set_api_status(api_name, started)
+
         return api_name, port, started
 
     async def wait_apis_start():

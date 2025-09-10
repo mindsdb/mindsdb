@@ -40,7 +40,6 @@ def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
             "NATIONAL CHARACTER",
             "NATIONAL CHAR",
             "VARCHAR",
-            "NCHAR",
             "NATIONAL CHARACTER VARYING",
             "NATIONAL CHAR VARYING",
             "NCHAR VARYING",
@@ -160,7 +159,7 @@ class OracleHandler(DatabaseHandler):
 
         Args:
             name (Text): The name of the handler instance.
-            connection_data (Dict): The connection data required to connect to Amazon DynamoDB.
+            connection_data (Dict): The connection data required to connect to OracleDB.
             kwargs: Arbitrary keyword arguments.
         """
         super().__init__(name)
@@ -188,7 +187,16 @@ class OracleHandler(DatabaseHandler):
             raise ValueError("Required parameters (user, password) must be provided.")
 
         if self.connection_data.get("thick_mode", False):
-            oracledb.init_oracle_client()
+            oracle_client_lib_dir = self.connection_data.get("oracle_client_lib_dir")
+            if isinstance(oracle_client_lib_dir, str) and oracle_client_lib_dir.strip():
+                try:
+                    oracledb.init_oracle_client(lib_dir=oracle_client_lib_dir)
+                except Exception as e:
+                    raise ValueError(f"Failed to initialize Oracle client: {e}")
+            else:
+                raise ValueError(
+                    "Parameter 'oracle_client_lib_dir' must be provided as a non-empty string when using thick_mode."
+                )
 
         config = {
             "user": self.connection_data["user"],
@@ -240,7 +248,7 @@ class OracleHandler(DatabaseHandler):
             raise
 
         except Exception as unknown_error:
-            logger.error(f"Unknown error when connecting to Elasticsearch: {unknown_error}")
+            logger.error(f"Unknown error when connecting to Oracle: {unknown_error}")
             raise
 
         self.is_connected = True
@@ -349,10 +357,12 @@ class OracleHandler(DatabaseHandler):
         Returns:
             Response: A response object containing the list of tables and views, formatted as per the `Response` class.
         """
-        # TODO: This query does not seem to be correct.
         query = """
             SELECT table_name
             FROM user_tables
+            UNION ALL
+            SELECT view_name AS table_name
+            FROM user_views
             ORDER BY 1
         """
         return self.native_query(query)

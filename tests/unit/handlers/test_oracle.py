@@ -91,6 +91,13 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         with self.assertRaises(ValueError):
             handler.connect()
 
+        # Test missing 'oracle_client_lib_dir' when thick_mode is enabled
+        invalid_connection_args = self.dummy_connection_data.copy()
+        invalid_connection_args["thick_mode"] = True
+        handler = OracleHandler("oracle", connection_data=invalid_connection_args)
+        with self.assertRaises(ValueError):
+            handler.connect()
+
     def test_disconnect(self):
         """
         Tests the disconnect method to ensure it correctly closes connections
@@ -136,6 +143,19 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertFalse(response.success)
         self.assertEqual(response.error_message, str(ping_error))
         mock_conn.ping.assert_called_once()
+
+    def test_thick_mode_connection(self):
+        """
+        Tests that thick mode connection initializes Oracle client with the provided library directory
+        """
+        connection_args = self.dummy_connection_data.copy()
+        connection_args["thick_mode"] = True
+        connection_args["oracle_client_lib_dir"] = "/path/to/oracle/client/lib"
+
+        with patch("mindsdb.integrations.handlers.oracle_handler.oracle_handler.oracledb.init_oracle_client") as mock_init:
+            handler = OracleHandler("oracle", connection_data=connection_args)
+            handler.connect()
+            mock_init.assert_called_once_with(lib_dir="/path/to/oracle/client/lib")
 
     def test_native_query_with_results(self):
         """

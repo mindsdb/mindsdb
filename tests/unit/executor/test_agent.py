@@ -943,7 +943,7 @@ class TestAgent(BaseExecutorDummyML):
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_3_part_table(self, mock_pg, mock_openai):
         df = get_dataset_planets()
-        self.set_handler(mock_pg, name="pg", tables={"planets": df})
+        self.set_handler(mock_pg, name="pg", tables={"planets": df}, schema="public")
 
         self.run_sql("""
             CREATE AGENT my_agent

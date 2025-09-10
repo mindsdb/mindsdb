@@ -293,7 +293,7 @@ class BaseExecutorTest(BaseUnitTest):
         df.to_parquet(file_path)
         self.file_controller.save_file(name, file_path, name)
 
-    def set_handler(self, mock_handler, name, tables, engine="postgres", schema="public"):
+    def set_handler(self, mock_handler, name, tables, engine="postgres", schema=None):
         # integration
         # delete by name
         r = self.db.Integration.query.filter_by(name=name).first()
@@ -317,7 +317,7 @@ class BaseExecutorTest(BaseUnitTest):
             for table in tables:
                 tables_ar.append(
                     {
-                        "table_schema": schema,
+                        "table_schema": schema or "public",
                         "table_name": table,
                         "table_type": "BASE TABLE",
                     }
@@ -346,13 +346,16 @@ class BaseExecutorTest(BaseUnitTest):
         def native_query_f(query):
             con = duckdb.connect(database=":memory:")
 
-            con.execute(f"CREATE SCHEMA {schema}")
+            if schema is not None:
+                con.execute(f"CREATE SCHEMA {schema}")
 
             for table_name, df in tables.items():
                 # it is not possible to insert/delete from a dataframe itself, but possible if create table from it
                 con.register(f"{table_name}_df", df)
-                # con.execute(f'CREATE TABLE {table_name} AS SELECT * FROM {table_name}_df;')
-                con.execute(f"CREATE TABLE {schema}.{table_name} AS SELECT * FROM {table_name}_df;")
+                if schema is None:
+                    con.execute(f"CREATE TABLE {table_name} AS SELECT * FROM {table_name}_df;")
+                else:
+                    con.execute(f"CREATE TABLE {schema}.{table_name} AS SELECT * FROM {table_name}_df;")
 
             try:
                 con.execute(query)

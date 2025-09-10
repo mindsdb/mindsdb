@@ -491,9 +491,9 @@ class SQLAgent:
                 # remove backticks
                 name = name.replace("`", "")
 
-                split = name.split(".")
-                if len(split) > 1:
-                    all_tables.append(Identifier(parts=[split[0], split[-1]]))
+                parts = name.split(".")
+                if len(parts) > 1:
+                    all_tables.append(Identifier(parts=parts))
                 else:
                     all_tables.append(Identifier(name))
 

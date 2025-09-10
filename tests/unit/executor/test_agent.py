@@ -2,9 +2,6 @@ import time
 import os
 import json
 from textwrap import dedent
-import tempfile
-import shutil
-from pathlib import Path
 
 from unittest.mock import patch, MagicMock, AsyncMock
 
@@ -942,28 +939,43 @@ class TestAgent(BaseExecutorDummyML):
         assert "Jupiter" in mock_openai.agent_calls[1]
         assert "Jupiter" in mock_openai.agent_calls[2]
 
-        # test 3 part identifiers
-        source_path = Path(__file__).parent / "data" / "test.xlsx"
-        fd, file_path = tempfile.mkstemp()
-        os.close(fd)
-        shutil.copy(source_path, file_path)
+    @patch("openai.OpenAI")
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_3_part_table(self, mock_pg, mock_openai):
+        df = get_dataset_planets()
+        self.set_handler(mock_pg, name="pg", tables={"planets": df})
 
-        self.file_controller.save_file("file2", file_path, source_path.name)
+        self.run_sql("""
+            CREATE AGENT my_agent
+            USING
+              model = "gpt-3.5-turbo",
+              openai_api_key='--',
+              data = {
+                 "tables": ["pg.public.*"] 
+              }
+        """)
 
         set_openai_completion(
             mock_openai,
             [
-                self._action("sql_db_query", "SELECT * FROM files.file2.Sheet1 WHERE col_four = 'A'"),
-                self._action("sql_db_query", "SELECT * FROM `files.file2`.Sheet1 WHERE col_four = 'A'"),
-                self._action("sql_db_query", "SELECT * FROM `files.file2`.`Sheet1` WHERE col_four = 'A'"),
+                # test getting table info
+                self._action("sql_db_schema", "pg.public.planets"),
+                # test wrong quoting
+                self._action("sql_db_query", "SELECT * FROM pg.public.planets WHERE id = '1000'"),
+                self._action("sql_db_query", "SELECT * FROM `pg.public`.planets WHERE id = '1000'"),
+                self._action("sql_db_query", "SELECT * FROM `pg.public`.`planets` WHERE id = '1000'"),
                 "Hi!",
             ],
         )
         self.run_sql("select * from my_agent where question = 'test'")
 
-        assert "col_four" in mock_openai.agent_calls[1]
-        assert "col_four" in mock_openai.agent_calls[2]
-        assert "col_four" in mock_openai.agent_calls[3]
+        # result of sql_db_schema
+        assert "planets" in mock_openai.agent_calls[1]  # table name
+        assert "Jupiter" in mock_openai.agent_calls[1]  # column
+        # results of sql_db_query
+        assert "Moon" in mock_openai.agent_calls[2]
+        assert "Moon" in mock_openai.agent_calls[3]
+        assert "Moon" in mock_openai.agent_calls[4]
 
     @patch("openai.OpenAI")
     @patch(

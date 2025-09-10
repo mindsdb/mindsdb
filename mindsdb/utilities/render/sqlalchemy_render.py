@@ -574,12 +574,9 @@ class SqlalchemyRender:
                         else:
                             condition = self.to_expression(item["condition"])
 
-                        if (
-                            "ASOF" in join_type
-                            or "RIGHT" in join_type
-                        ):
+                        if "ASOF" in join_type or "RIGHT" in join_type:
                             raise NotImplementedError(f"Unsupported join type: {join_type}")
- 
+
                         is_full = False
                         is_outer = False
                         if join_type in ("LEFT JOIN", "LEFT OUTER JOIN"):

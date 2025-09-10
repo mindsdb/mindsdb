@@ -3,6 +3,7 @@ import pandas as pd
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb_sql_parser import ast
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
+from mindsdb_sql_parser.ast.select.operation import BetweenOperation
 from mindsdb_sql_parser.ast.select.constant import Constant
 from mindsdb_sql_parser.ast.base import ASTNode
 import json
@@ -30,6 +31,17 @@ def extract_or_conditions(node: ASTNode) -> list:
             if isinstance(arg2, ast.Constant):
                 value = arg2.value
                 return (op, arg1.parts[-1], value)
+        # Add this new condition for BETWEEN
+        elif isinstance(node, BetweenOperation):
+            field = node.args[0]  # The field being tested
+            min_val = node.args[1]  # Lower bound
+            max_val = node.args[2]  # Upper bound
+            
+            if isinstance(field, ast.Identifier) and isinstance(min_val, ast.Constant) and isinstance(max_val, ast.Constant):
+                return ('between', field.parts[-1], [min_val.value, max_val.value])
+            else:
+                raise NotImplementedError(f"BETWEEN with non-constant values not supported")
+
         raise NotImplementedError(f"Unsupported condition type: {type(node)}")
     
     def extract_conditions_recursive(node: ASTNode) -> list:
@@ -64,6 +76,10 @@ def extract_or_conditions(node: ASTNode) -> list:
                 
             else:
                 # For comparison operations, return as single condition in a group
+                condition = extract_single_condition(node)
+                return [[condition]]  # Single condition in its own group
+
+        elif isinstance(node, BetweenOperation):
                 condition = extract_single_condition(node)
                 return [[condition]]  # Single condition in its own group
         
@@ -217,7 +233,17 @@ class StrapiTable(APITable):
         """
         condition = {}
         
-        if op.upper() == 'LIKE':
+        if op.upper() == 'BETWEEN':
+            if isinstance(value, (list, tuple)) and len(value) == 2:
+                # BETWEEN translates to field >= min AND field <= max
+                condition[field] = {
+                    '$gte': value[0],
+                    '$lte': value[1]
+                }
+            else:
+                raise ValueError("BETWEEN operator requires exactly 2 values")
+        
+        elif op.upper() == 'LIKE':
             if not isinstance(value, str):
                 raise ValueError("LIKE operator requires a string value")
             
@@ -366,13 +392,27 @@ class StrapiTable(APITable):
         Args:
             query (ast.Insert): user's entered query
         """
-        data = {'data': {}}
-        for column, value in zip(query.columns, query.values[0]):
-            if isinstance(value, Constant):
-                data['data'][column.name] = value.value
-            else:
-                data['data'][column.name] = value
-        self.handler.call_strapi_api(method='POST', endpoint=f'/api/{self.name}', json_data=json.dumps(data))
+        # Loop through all rows in the VALUES clause
+        for row_values in query.values:
+            data = {'data': {}}
+
+            for column, value in zip(query.columns, row_values):
+                # Clean column name (remove backticks if present)
+                column_name = column.name
+                if column_name.startswith('`') and column_name.endswith('`'):
+                    column_name = column_name[1:-1]
+                    
+                if isinstance(value, Constant):
+                    data['data'][column_name] = value.value
+                else:
+                    data['data'][column_name] = value
+            
+            # Make individual API call for each row
+            self.handler.call_strapi_api(
+                method='POST', 
+                endpoint=f'/api/{self.name}', 
+                json_data=json.dumps(data)
+            )
 
     def update(self, query: ast.Update) -> None:
         """triggered at the UPDATE query

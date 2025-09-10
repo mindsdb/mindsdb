@@ -47,7 +47,7 @@ def _compile_interval(element, compiler, **kw):
         if items[1].upper().endswith("S"):
             items[1] = items[1][:-1]
 
-    if compiler.dialect.driver in ["snowflake"]:
+    if getattr(compiler.dialect, "driver", None) == "snowflake" or compiler.dialect.name == "postgresql":
         # quote all
         args = " ".join(map(str, items))
         args = f"'{args}'"
@@ -282,6 +282,12 @@ class SqlalchemyRender:
                 func = functions[t.op.lower()]
                 col = func(arg0, arg1)
             else:
+                # for unknown operators wrap arguments into parens
+                if isinstance(t.args[0], ast.BinaryOperation):
+                    arg0 = arg0.self_group()
+                if isinstance(t.args[1], ast.BinaryOperation):
+                    arg1 = arg1.self_group()
+
                 col = arg0.op(t.op)(arg1)
 
             if t.alias:

@@ -40,6 +40,7 @@ from .mindsdb_chat_model import ChatMindsdb
 from .callback_handlers import LogCallbackHandler, ContextCaptureCallback
 from .langfuse_callback_handler import LangfuseCallbackHandler, get_skills
 from .safe_output_parser import SafeOutputParser
+from .providers import get_bedrock_chat_model
 
 from mindsdb.interfaces.agents.constants import (
     OPEN_AI_CHAT_MODELS,
@@ -176,6 +177,9 @@ def create_chat_model(args: Dict):
         return ChatGoogleGenerativeAI(**model_kwargs)
     if args["provider"] == "writer":
         return ChatWriter(**model_kwargs)
+    if args["provider"] == "bedrock":
+        ChatBedrock = get_bedrock_chat_model()
+        return ChatBedrock(**model_kwargs)
     if args["provider"] == "mindsdb":
         return ChatMindsdb(**model_kwargs)
     raise ValueError(f"Unknown provider: {args['provider']}")

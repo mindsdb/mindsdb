@@ -11,6 +11,7 @@ from flask import current_app as ca
 from mindsdb.api.http.namespaces.configs.config import ns_conf
 from mindsdb.api.http.utils import http_error
 from mindsdb.metrics.metrics import api_endpoint_metrics
+from mindsdb.utilities.api_status import get_api_status
 from mindsdb.utilities import log
 from mindsdb.utilities.functions import decrypt, encrypt
 from mindsdb.utilities.config import Config
@@ -32,8 +33,13 @@ class GetConfig(Resource):
             value = config.get(key)
             if value is not None:
                 resp[key] = value
-        if "a2a" in config["api"]:
-            resp["a2a"] = config["api"]["a2a"]
+
+        api_status = get_api_status()
+        api_configs = copy.deepcopy(config["api"])
+        for api_name, api_config in api_configs.items():
+            api_config["running"] = api_status.get(api_name, False)
+        resp["api"] = api_configs
+
         return resp
 
     @ns_conf.doc("put_config")

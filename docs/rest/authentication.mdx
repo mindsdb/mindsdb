@@ -17,15 +17,15 @@ If this authentication method is defined in the MindsDB configuration file, it i
         --data-raw '{"username":"your-username","password":"your-password"}' -v
     ```
 
-    This command returns an HTTP status code 200 if the request is successful. In the response header, find a session cookie and use it when calling other REST APIs.
+    This command returns an HTTP status code 200 if the request is successful, along with a token in the response body.
 
-2. Call any other endpoint providing the session cookie.
+2. Call any other endpoint providing the token.
 
     ```
     curl --request GET \
     --url http://127.0.0.1:47334/api/projects/mindsdb/... \
     --header 'Content-Type: application/json' \
-    --cookie 'session=your-session-cookie' \
+    --header 'Authorization: Bearer pat_your_mindsdb_token_here' \
     --data '{
     ...
     }'
@@ -37,7 +37,7 @@ If this authentication method is defined in the MindsDB configuration file, it i
     curl --request POST \
     --url http://127.0.0.1:47334/api/projects/mindsdb/agents/my_agent/completions/stream \
     --header 'Content-Type: application/json' \
-    --cookie 'session=your-session-cookie' \
+    --header 'Authorization: Bearer pat_your_mindsdb_token_here' \
     --data '{
     "messages": [
         {

@@ -195,8 +195,7 @@ class OracleHandler(DatabaseHandler):
                     raise ValueError(f"Failed to initialize Oracle client: {e}")
             else:
                 raise ValueError(
-                    "Parameter 'oracle_client_lib_dir' must be provided as a non-empty string "
-                    "when using thick_mode."
+                    "Parameter 'oracle_client_lib_dir' must be provided as a non-empty string when using thick_mode."
                 )
 
         config = {

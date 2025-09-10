@@ -96,9 +96,13 @@ class File(Resource):
                     try:
                         file_object.flush()
                     except (AttributeError, ValueError, OSError):
-                        logger.debug("Failed to flush file_object before closing.", exc_info=True)
+                        logger.debug(
+                            "Failed to flush file_object before closing.", exc_info=True
+                        )
                     file_object.close()
-                Path(file_object.name).rename(Path(file_object.name).parent / data["file"])
+                Path(file_object.name).rename(
+                    Path(file_object.name).parent / data["file"]
+                )
                 file_object = None
         else:
             data = request.json
@@ -126,7 +130,9 @@ class File(Resource):
 
             url_file_upload_enabled = config["url_file_upload"]["enabled"]
             if url_file_upload_enabled is False:
-                return http_error(400, "URL file upload is disabled.", "URL file upload is disabled.")
+                return http_error(
+                    400, "URL file upload is disabled.", "URL file upload is disabled."
+                )
 
             allowed_origins = config["url_file_upload"]["allowed_origins"]
             disallowed_origins = config["url_file_upload"]["disallowed_origins"]
@@ -160,10 +166,16 @@ class File(Resource):
                             "Сan't determine remote file size",
                         )
                     if file_size > MAX_FILE_SIZE:
-                        return http_error(400, "File is too big", f"Upload limit for file is {MAX_FILE_SIZE >> 20} MB")
+                        return http_error(
+                            400,
+                            "File is too big",
+                            f"Upload limit for file is {MAX_FILE_SIZE >> 20} MB",
+                        )
             with requests.get(url, stream=True) as r:
                 if r.status_code != 200:
-                    return http_error(400, "Error getting file", f"Got status code: {r.status_code}")
+                    return http_error(
+                        400, "Error getting file", f"Got status code: {r.status_code}"
+                    )
                 file_path = os.path.join(temp_dir_path, data["file"])
                 with open(file_path, "wb") as f:
                     for chunk in r.iter_content(chunk_size=8192):
@@ -184,15 +196,21 @@ class File(Resource):
             files = os.listdir(temp_dir_path)
             if len(files) != 1:
                 os.rmdir(temp_dir_path)
-                return http_error(400, "Wrong content.", "Archive must contain only one data file.")
+                return http_error(
+                    400, "Wrong content.", "Archive must contain only one data file."
+                )
             file_path = os.path.join(temp_dir_path, files[0])
             mindsdb_file_name = files[0]
             if not os.path.isfile(file_path):
                 os.rmdir(temp_dir_path)
-                return http_error(400, "Wrong content.", "Archive must contain data file in root.")
+                return http_error(
+                    400, "Wrong content.", "Archive must contain data file in root."
+                )
 
         try:
-            ca.file_controller.save_file(mindsdb_file_name, file_path, file_name=original_file_name)
+            ca.file_controller.save_file(
+                mindsdb_file_name, file_path, file_name=original_file_name
+            )
         except FileProcessingError as e:
             return http_error(400, "Error", str(e))
         except Exception as e:
@@ -209,11 +227,18 @@ class File(Resource):
 
         try:
             ca.file_controller.delete_file(name)
-        except (FileNotFoundError, Exception) as e:
+        except FileNotFoundError as e:
             logger.error(e)
             return http_error(
                 400,
                 "Error deleting file",
+                f"There was an error while trying to delete file with name '{name}'",
+            )
+        except Exception as e:
+            logger.error(e)
+            return http_error(
+                500,
+                "Error occured while deleting file",
                 f"There was an error while trying to delete file with name '{name}'",
             )
         return "", 200

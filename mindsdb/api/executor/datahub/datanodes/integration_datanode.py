@@ -39,9 +39,10 @@ def collect_metrics(func):
             result = func(self, *args, **kwargs)
 
             # metrics
+            handler_class_name = get_class_name(self.integration_handler)
             elapsed_seconds = time.perf_counter() - time_before_query
             query_time_with_labels = metrics.INTEGRATION_HANDLER_QUERY_TIME.labels(
-                get_class_name(self.integration_handler), result.type
+                handler_class_name, result.type
             )
             query_time_with_labels.observe(elapsed_seconds)
 
@@ -49,10 +50,10 @@ def collect_metrics(func):
             if result.data_frame is not None:
                 num_rows = len(result.data_frame.index)
             response_size_with_labels = metrics.INTEGRATION_HANDLER_RESPONSE_SIZE.labels(
-                get_class_name(self.integration_handler), result.type
+                handler_class_name, result.type
             )
             response_size_with_labels.observe(num_rows)
-            logger.debug(f"Handler returned {num_rows} rows in {elapsed_seconds} seconds")
+            logger.debug(f"Handler '{handler_class_name}' returned {num_rows} rows in {elapsed_seconds:.3f} seconds")
         except Exception as e:
             msg = str(e).strip()
             if msg == "":

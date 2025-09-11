@@ -8,6 +8,7 @@ on:
     types: [opened, reopened, synchronize, labeled]
     branches:
       - 'main'
+      - 'develop'
 
 jobs:
 

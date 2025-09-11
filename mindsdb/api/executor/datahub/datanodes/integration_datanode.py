@@ -60,6 +60,7 @@ def collect_metrics(func):
             msg = f"[{self.ds_type}/{self.integration_name}]: {msg}"
             raise DBHandlerException(msg) from e
         return result
+
     return wrapper
 
 

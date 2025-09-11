@@ -879,7 +879,9 @@ class IntegrationController:
                 handler_module = importlib.import_module(f"{base_import}{handler_folder_name}")
                 self.handler_modules[handler_name] = handler_module
                 handler_meta = self._get_handler_meta(handler_name)
-                logger.debug(f"Handler '{handler_name}' imported successfully in {(time.perf_counter() - time_before_import):.3f} seconds")
+                logger.debug(
+                    f"Handler '{handler_name}' imported successfully in {(time.perf_counter() - time_before_import):.3f} seconds"
+                )
             except Exception as e:
                 handler_meta["import"]["success"] = False
                 handler_meta["import"]["error_message"] = str(e)

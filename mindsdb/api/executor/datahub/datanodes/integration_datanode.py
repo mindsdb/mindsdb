@@ -44,6 +44,7 @@ def collect_metrics(func):
     Returns:
         function: Wrapped function that includes metrics collection and error handling
     """
+
     @functools.wraps(func)
     def wrapper(self, *args, **kwargs):
         try:
@@ -53,9 +54,7 @@ def collect_metrics(func):
             # metrics
             handler_class_name = get_class_name(self.integration_handler)
             elapsed_seconds = time.perf_counter() - time_before_query
-            query_time_with_labels = metrics.INTEGRATION_HANDLER_QUERY_TIME.labels(
-                handler_class_name, result.type
-            )
+            query_time_with_labels = metrics.INTEGRATION_HANDLER_QUERY_TIME.labels(handler_class_name, result.type)
             query_time_with_labels.observe(elapsed_seconds)
 
             num_rows = 0
@@ -259,7 +258,7 @@ class IntegrationDataNode(DataNode):
         """Execute a query against the integration data source.
 
         This method processes SQL queries either as ASTNode objects or raw SQL strings
-        
+
         Args:
             query (ASTNode | str, optional): The query to execute. Can be either:
                 - ASTNode: A parsed SQL query object

@@ -147,6 +147,14 @@ def getLogger(name=None):
 
 
 def log_ram_info(logger: logging.Logger) -> None:
+    """Log RAM/memory information to the provided logger.
+
+    This function logs memory usage information: total, available, used memory in GB and memory
+    usage percentage. The logging only occurs if the logger is enabled for DEBUG level.
+
+    Args:
+        logger (logging.Logger): The logger instance to use for outputting memory information.
+    """
     if logger.isEnabledFor(logging.DEBUG) is False:
         return
 

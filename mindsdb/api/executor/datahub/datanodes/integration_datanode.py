@@ -32,6 +32,18 @@ class DBHandlerException(Exception):
 
 
 def collect_metrics(func):
+    """Decorator for collecting performance metrics if integration handler query.
+
+    The decorator measures:
+    - Query execution time using high-precision performance counter
+    - Response size (number of rows returned)
+
+    Args:
+        func: The function to be decorated (integration handler method)
+
+    Returns:
+        function: Wrapped function that includes metrics collection and error handling
+    """
     @functools.wraps(func)
     def wrapper(self, *args, **kwargs):
         try:
@@ -244,6 +256,23 @@ class IntegrationDataNode(DataNode):
 
     @profiler.profile()
     def query(self, query: ASTNode | str = None, session=None) -> DataHubResponse:
+        """Execute a query against the integration data source.
+
+        This method processes SQL queries either as ASTNode objects or raw SQL strings
+        
+        Args:
+            query (ASTNode | str, optional): The query to execute. Can be either:
+                - ASTNode: A parsed SQL query object
+                - str: Raw SQL query string
+            session: Session object (currently unused but kept for compatibility)
+
+        Returns:
+            DataHubResponse: Response object
+
+        Raises:
+            NotImplementedError: If query is not ASTNode or str type
+            Exception: If the query execution fails with an error response
+        """
         if isinstance(query, ASTNode):
             result: HandlerResponse = self.query_integration_handler(query=query)
             query_str = query.to_string()

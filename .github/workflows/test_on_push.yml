@@ -5,9 +5,15 @@ permissions:
 
 on:
   pull_request:
-    branches: [main]
+    branches:
+      - 'main'
+      - 'develop'
+      - 'release/*'
   push:
-    branches: [main]
+    branches:
+      - 'main'
+      - 'develop'
+      - 'release/*'
   workflow_dispatch:
 
 defaults:
@@ -218,7 +224,7 @@ jobs:
                       "type": "header",
                       "text": {
                         "type": "plain_text",
-                        "text": "UNIT TEST RUN FAILED ON MAIN",
+                        "text": "UNIT TEST RUN FAILED ON ${{ github.ref_name }}",
                         "emoji": true
                       }
                     },

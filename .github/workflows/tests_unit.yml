@@ -137,7 +137,6 @@ jobs:
         run: |
           # TODO: for now some tests rely on lightwood
           uv pip install . \
-            -r requirements/requirements-test.txt \
             .[lightwood] \
             .[clickhouse] \
             .[snowflake] \

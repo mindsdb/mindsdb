@@ -11,12 +11,7 @@ on:
       - closed
     branches:
       - 'main'
-      - 'develop'
       - 'release/*'
-
-concurrency:
-  group: ${{ github.workflow_ref }}
-  cancel-in-progress: true
 
 jobs:
   
@@ -115,7 +110,7 @@ jobs:
                       "type": "header",
                       "text": {
                         "type": "plain_text",
-                        "text": "TEST RUN FAILED ON ${{ github.base_ref }}",
+                        "text": "TEST RUN FAILED ON ${{ github.head_ref }}",
                         "emoji": true
                       }
                     },

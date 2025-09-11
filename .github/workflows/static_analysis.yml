@@ -1,0 +1,46 @@
+name: Static analysis
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+  workflow_dispatch:
+    inputs:
+
+jobs:
+  test-branch:
+    runs-on: ubuntu-latest
+
+    # container:
+    #   image: 'python:3.12-slim'
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache Python requirements
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          # cache: 'pip' # caching pip dependencies
+          # cache-dependency-path: '**/poetry.lock'
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-
+            ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install poetry
+        run: |
+          pipx install poetry
+
+      - name: Install requirements
+        run: |
+          poetry install
+
+      - name: Run static analysis on the source code
+        run: poetry run ruff check mktplace/ bin/
+
+      - name: Run static analysis on the tests
+        run: poetry run ruff --config ruff_tests.toml check tests/

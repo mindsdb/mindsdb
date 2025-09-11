@@ -1,48 +1,49 @@
-name: Deploy
+# This workflow will build and push a new container image to Amazon ECR,
+# and then will deploy it to kubernetes.
+
+name: Deploy Staging
 
 on:
   workflow_dispatch:
     inputs:
-      environment:
-        description: 'Target environment'
-        required: true
-        default: 'staging'
-        type: choice
-        options:
-          - staging
-          -  ${{ github.event.inputs.environment }}
 
 env:
+  # AWS credentials
+  AWS_GIT_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_GIT_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   AWS_REGION: us-east-1
-  PROJECT_NAME: mindsdb
-
-  # # AWS credentials
-  # AWS_GIT_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  # AWS_GIT_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  # AWS_REGION: us-east-1
-  # # For clonning private composer dependencies
-  # COMPOSER_AUTH: '{"github-oauth": { "github.com": "${{ secrets.GIT_COMPOSER_AUTH }}" } }'
-  # # Kubernetes
-  # PROJECT_NAME: mindsdb
-  # KUBE_EKS_CLUSTER: programmatic-ad-prod-cluster
-  # #
-  # CONTAINER_REPOSITORY_URI: "124082513016.dkr.ecr.us-east-1.amazonaws.com/mindsdb"
-  # ENVIRONMENT: prod
+  # For clonning private composer dependencies
+  COMPOSER_AUTH: '{"github-oauth": { "github.com": "${{ secrets.GIT_COMPOSER_AUTH }}" } }'
+  # Kubernetes
+  PROJECT_NAME: mktplace
+  KUBE_EKS_CLUSTER: programmatic-ad-staging-cluster
+  #
+  CONTAINER_REPOSITORY_URI: "124082513016.dkr.ecr.us-east-1.amazonaws.com/mktplace"
+  ENVIRONMENT: staging
 
 jobs:
-  deploy:
+  #########################################
+  #####      Deploy Staging       ######
+  #########################################
+  deploy-staging:
+    ## For use in Staging deploy
     # if: github.ref == 'refs/heads/main'
-    name: Deploy to  ${{ github.event.inputs.environment }}
+    name: Deploy to Staging
     runs-on: ubuntu-latest
+    # Define the environment that the job references.
+    # A deployment will be used by GitHub in some parts of its user interface.
+    # Also, one can use a deployment to specify protection rules on GitHub.
+    # reference: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idenvironment
     environment:
-      name: ${{ github.event.inputs.environment }}
+      name: staging
+      url: http://api.tflux.internal/mktplace
     # Custom environment variables
     # reference: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idenv
     env:
       # Variables need be change on each environment
-      ENVIRONMENT: ${{ github.event.inputs.environment }}
-      KUBE_EKS_CLUSTER: programmatic-ad-prod-cluster
-      K8S_NAMESPACE: mindsdb
+      ENVIRONMENT: staging
+      KUBE_EKS_CLUSTER: programmatic-ad-staging-cluster
+      K8S_NAMESPACE: mktplace
 
     steps:
       - name: Checkout
@@ -93,16 +94,16 @@ jobs:
       #|
       #| Update secret APP_VERSION
       #|
-      - name: "[${{ env.ENVIRONMENT }}] mindsdb: update Secret 'APP_VERSION'"
+      - name: "[${{ env.ENVIRONMENT }}] mktplace: update Secret 'APP_VERSION'"
         env:
-          K8S_NAMESPACE: mindsdb
+          K8S_NAMESPACE: mktplace
         run: |
-          kubectl patch secret -n mindsdb mindsdb-all -p="{\"data\":{\"APP_VERSION\":\"$(echo -n $APP_VERSION | base64)\"}}"
+          kubectl patch secret -n mktplace mktplace-all -p="{\"data\":{\"APP_VERSION\":\"$(echo -n $APP_VERSION | base64)\"}}"
 
       # #|
       # #| Build main image
       # #|
-      - name: Build and push - mindsdb base
+      - name: Build and push - mktplace base
         uses: docker/build-push-action@v6
         with:
           target: web-base
@@ -113,49 +114,73 @@ jobs:
             APP_VERSION=${{ env.APP_VERSION }}
             GH_AUTH=${{ secrets.GIT_COMPOSER_AUTH }}
           tags: |
-            ${{ env.CONTAINER_REPOSITORY_URI }}:web-prod-${{ env.APP_LATEST_IMAGE_VERSION }}
-            ${{ env.CONTAINER_REPOSITORY_URI }}:web-prod-latest
+            ${{ env.CONTAINER_REPOSITORY_URI }}:web-staging-${{ env.APP_LATEST_IMAGE_VERSION }}
+            ${{ env.CONTAINER_REPOSITORY_URI }}:web-staging-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Trivy vulnerability scanner — FS (IaC + dependências) em tabela
-      - name: Trivy FS (table)
+
+# -----------------------------------------------------------------------------------------
+# Modo 1
+      - name: Instalar Trivy via curl
+        shell: bash
+        run: |
+          curl -sfL curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin v0.60.0
+          trivy --version
+
+      - name: Verificar vulnerabilidades nas dependências do repositório (SBOM)
+        shell: bash
+        run: |
+          trivy repo --scanners vuln,secret,license,config,misconfig --severity CRITICAL,HIGH --format table --table-mode summary .
+
+      - name: Verificar vulnerabilidades no código-fonte
+        shell: bash
+        run: |
+          trivy fs --scanners vuln,secret,license,config,misconfig --severity CRITICAL,HIGH --format table --table-mode summary -o trivy-report-summary .
+
+      - name: Scan a local code repository, for vulnerabilities, exposed secrets and misconfigurations
+        shell: bash
+        run: |
+          trivy fs --severity CRITICAL,HIGH --scanners vuln,secret,license,config,misconfig --format table -o trivy-report .
+
+      - name: Verificar vulnerabilidades no Dockerfile
+        shell: bash
+        run: |
+          trivy config --severity CRITICAL,HIGH ./var/docker/Dockerfile
+
+      - name: Verificar vulnerabilidades na imagem Docker
+        shell: bash
+        run: |
+          trivy image --severity CRITICAL,HIGH --exit-code 0 ${{ env.CONTAINER_REPOSITORY_URI }}:web-${{ env.ENVIRONMENT }}-${{ env.APP_LATEST_IMAGE_VERSION }}
+
+      # 5. Upload o artefato do relatório
+      - name: Upload Trivy report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: trivy-report
+          retention-days: 1
+
+      # 6. Exibir o resumo do relatório no Summary
+      - name: Add Trivy report to Summary
+        run: |
+          ls
+          echo "### Trivy Security Report" >> $GITHUB_STEP_SUMMARY
+          echo "#### Summary of vulnerabilities found" >> $GITHUB_STEP_SUMMARY
+          cat trivy-report-summary >> $GITHUB_STEP_SUMMARY
+
+# -----------------------------------------------------------------------------------------
+# Modo 2
+      - name: Instalar e rodar Trivy para código-fonte (IaC, dependências)
         uses: aquasecurity/trivy-action@master
         with:
-          scan-type: fs
-          scan-ref: .
+          scan-type: 'fs'  # Verifica código-fonte
+          scan-ref: '.'  # Diretório atual
           ignore-unfixed: true
-          severity: CRITICAL,HIGH
-          format: table
-          output: trivy-fs.table.txt
-          exit-code: 0   # opcional: não falha o job; remova se quiser falhar em vulnerabilidade
+          severity: 'CRITICAL,HIGH'
+          format: 'table'
 
-      # Trivy vulnerability scanner — Repo (SBOM/deps) em tabela
-      - name: Trivy Repo (table)
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: repo
-          scan-ref: .
-          ignore-unfixed: true
-          severity: CRITICAL,HIGH
-          format: table
-          output: trivy-repo.table.txt
-          exit-code: 0
-
-      # Trivy vulnerability scanner — FS em JSON (para parsing/CI)
-      - name: Trivy FS (json)
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: fs
-          scan-ref: .
-          ignore-unfixed: true
-          severity: CRITICAL,HIGH
-          format: json
-          output: trivy-fs.json
-          exit-code: 0
-
-
-      # Trivy vulnerability scanner
+# Trivy vulnerability scanner
       - name: Verificar vulnerabilidades na imagem Docker
         uses: aquasecurity/trivy-action@0.28.0
         with:
@@ -166,39 +191,37 @@ jobs:
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
-          output: trivy-image.table.txt
 
-      # Escrever um relatório no Job Summary com os relatórios em tabela
-      - name: Montar Job Summary
-        if: always()
-        run: |
-          {
-            echo "## Trivy — Sumário"
-            echo ""
-            echo "### FS (table)"
-            echo '```'
-            sed -n '1,200p' trivy-fs.table.txt
-            echo '```'
-            echo ""
-            echo "### Repo (table)"
-            echo '```'
-            sed -n '1,200p' trivy-repo.table.txt
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+# Trivy vulnerability scanner
+      - name: Verificar dependências do repositório (SBOM)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'repo'
+          scan-ref: '.'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+          format: 'table'
 
-      # Upload de TODOS os relatórios gerados
-      - name: Upload dos Relatórios Trivy
-        if: always()
+# Trivy vulnerability scanner
+
+      - name: Gerar Relatório JSON
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+          format: 'json'
+          output: 'trivy-report.json'
+
+      - name: Upload do Relatório JSON
         uses: actions/upload-artifact@v4
         with:
-          name: trivy-reports
-          path: |
-            trivy-fs.table.txt
-            trivy-repo.table.txt
-            trivy-fs.json
-            trivy-image.table.txt
+          name: trivy-security-report
+          path: trivy-report.json
           retention-days: 1
 
+#########################################################################################
 
       #| Create release
       - run: npm install axios
@@ -215,15 +238,15 @@ jobs:
       #|
       #| Namespace: web / migrations
       #|
-      - name: "[prod] migrations: update and run migrations job"
+      - name: "[staging] migrations: update and run migrations job"
         env:
-          K8S_NAMESPACE: mindsdb
+          K8S_NAMESPACE: mktplace
         run: |
-          sed -i 's/MIGRATION_JOB_NAME/${{ env.MIGRATION_JOB_NAME }}/g' ./var/kubernetes/${{ env.ENVIRONMENT }}/web/migrations.yaml
-          sed -i 's/WEB_TAG_TEMPLATE/web-prod-${{ env.APP_LATEST_IMAGE_VERSION }}/g' ./var/kubernetes/${{ env.ENVIRONMENT }}/web/migrations.yaml
-          kubectl apply -f ./var/kubernetes/${{ env.ENVIRONMENT }}/web/migrations.yaml -n ${{ env.K8S_NAMESPACE }}
+          sed -i 's/MIGRATION_JOB_NAME/${{ env.MIGRATION_JOB_NAME }}/g' ./var/kubernetes/staging/web/migrations.yaml
+          sed -i 's/WEB_TAG_TEMPLATE/web-staging-${{ env.APP_LATEST_IMAGE_VERSION }}/g' ./var/kubernetes/staging/web/migrations.yaml
+          kubectl apply -f ./var/kubernetes/staging/web/migrations.yaml -n ${{ env.K8S_NAMESPACE }}
           sleep 5
-        #  kubectl wait --for=condition=complete --timeout=3600s job/mindsdb-migrations-${{ env.MIGRATION_JOB_NAME }} -n ${{ env.K8S_NAMESPACE }}
+        #  kubectl wait --for=condition=complete --timeout=3600s job/mktplace-migrations-${{ env.MIGRATION_JOB_NAME }} -n ${{ env.K8S_NAMESPACE }}
         # please, note that the k8s job also has a timeout defined by "ttlSecondsAfterFinished"
 
       - name: Wait for Job migrations complete
@@ -231,12 +254,12 @@ jobs:
         if: ${{ always() }}
         run: |
           while true; do
-            STATUS=$(kubectl get job mindsdb-migrations-${{ env.MIGRATION_JOB_NAME }} -n ${{ env.K8S_NAMESPACE }} -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}')
+            STATUS=$(kubectl get job mktplace-migrations-${{ env.MIGRATION_JOB_NAME }} -n ${{ env.K8S_NAMESPACE }} -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}')
             if [ "$STATUS" == "True" ]; then
               echo "Job succeeded"
               break
             fi
-            STATUS=$(kubectl get job mindsdb-migrations-${{ env.MIGRATION_JOB_NAME }} -n ${{ env.K8S_NAMESPACE }} -o jsonpath='{.status.conditions[?(@.type=="Failed")].status}')
+            STATUS=$(kubectl get job mktplace-migrations-${{ env.MIGRATION_JOB_NAME }} -n ${{ env.K8S_NAMESPACE }} -o jsonpath='{.status.conditions[?(@.type=="Failed")].status}')
             if [ "$STATUS" == "True" ]; then
               echo "Job failed"
               break
@@ -249,19 +272,19 @@ jobs:
         if: ${{ always() }}
         id: get-pod-names
         run: |
-          POD_NAMES=$(kubectl get pods -n ${{ env.K8S_NAMESPACE }} -l job-name=mindsdb-migrations-${{ env.MIGRATION_JOB_NAME }} -o jsonpath='{.items[*].metadata.name}')
+          POD_NAMES=$(kubectl get pods -n ${{ env.K8S_NAMESPACE }} -l job-name=mktplace-migrations-${{ env.MIGRATION_JOB_NAME }} -o jsonpath='{.items[*].metadata.name}')
           echo "POD_NAMES=${POD_NAMES}" >> $GITHUB_ENV
 
       - name: Save Migrations Logs
         if: ${{ always() }}
         id: check-status
         run: |
-          STATUS=$(kubectl get job mindsdb-migrations-${{ env.MIGRATION_JOB_NAME }} -n ${{ env.K8S_NAMESPACE }} -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}')
+          STATUS=$(kubectl get job mktplace-migrations-${{ env.MIGRATION_JOB_NAME }} -n ${{ env.K8S_NAMESPACE }} -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}')
           PODS=(${{ env.POD_NAMES }})
           for POD in "${PODS[@]}"; do
-            echo "========== log pod: $POD =============" >> "mindsdb-migrations-${{ env.MIGRATION_JOB_NAME }}.txt"
-            kubectl logs pod/$POD -n ${{ env.K8S_NAMESPACE }} >> "mindsdb-migrations-${{ env.MIGRATION_JOB_NAME }}.txt"
-            echo "==========================================" >> "mindsdb-migrations-${{ env.MIGRATION_JOB_NAME }}.txt"
+            echo "========== log pod: $POD =============" >> "mktplace-migrations-${{ env.MIGRATION_JOB_NAME }}.txt"
+            kubectl logs pod/$POD -n ${{ env.K8S_NAMESPACE }} >> "mktplace-migrations-${{ env.MIGRATION_JOB_NAME }}.txt"
+            echo "==========================================" >> "mktplace-migrations-${{ env.MIGRATION_JOB_NAME }}.txt"
           done
           if [ "$STATUS" != "True" ]; then
             echo "Job failed"
@@ -272,14 +295,14 @@ jobs:
       - name: Show Migrations Logs
         if: ${{ always() }}
         run: |
-          cat mindsdb-migrations-${{ env.MIGRATION_JOB_NAME }}.txt
+          cat mktplace-migrations-${{ env.MIGRATION_JOB_NAME }}.txt
 
       - name: Upload Migrations Logs Artifact
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: mindsdb-migrations-${{ env.MIGRATION_JOB_NAME }}
-          path: mindsdb-migrations-${{ env.MIGRATION_JOB_NAME }}.txt
+          name: mktplace-migrations-${{ env.MIGRATION_JOB_NAME }}
+          path: mktplace-migrations-${{ env.MIGRATION_JOB_NAME }}.txt
           retention-days: 1
 
       #|
@@ -290,7 +313,7 @@ jobs:
       # - name: "[${{ env.ENVIRONMENT }}] cronjob: update configurations for cronjobs"
       #   id: deployment
       #   env:
-      #     K8S_NAMESPACE: mindsdb
+      #     K8S_NAMESPACE: mktplace
       #   run: |
       #     FILES=$(cd var/kubernetes/${{ env.ENVIRONMENT }}/cronjob && ls *.yaml)
       #     for pod_name in $FILES; do
@@ -302,10 +325,10 @@ jobs:
       #|
       #| Deploy web
       #|
-      - name: "[${{ env.ENVIRONMENT }}] web: update image for workload 'mindsdb-web', container 'mindsdb-web'."
+      - name: "[${{ env.ENVIRONMENT }}] web: update image for workload 'mktplace-web', container 'mktplace-web'."
         id: deployment
         env:
-          K8S_NAMESPACE: mindsdb
+          K8S_NAMESPACE: mktplace
         run: |
           sed -i 's/WEB_TAG_TEMPLATE/web-${{ env.ENVIRONMENT }}-${{ env.APP_LATEST_IMAGE_VERSION }}/g' ./var/kubernetes/${{ env.ENVIRONMENT }}/web/deployment.yaml
           kubectl config use-context arn:aws:eks:us-east-1:124082513016:cluster/${{ env.KUBE_EKS_CLUSTER }}
@@ -319,7 +342,7 @@ jobs:
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ env.PROJECT_NAME }}
         with:
-          environment: prod
+          environment: staging
           version: ${{ env.APP_VERSION }}
 
       - name: Status

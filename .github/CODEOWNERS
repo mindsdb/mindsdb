@@ -1,4 +1,16 @@
-/.github/workflows/ @mindsdb/devops
-/tests/scripts/ @mindsdb/devops
-/docker/docker-bake.hcl @mindsdb/devops
-/pyproject.toml @mindsdb/devops
+#|
+#| GitHub code owners
+#|
+# Code owners are automatically requested for review when someone opens a pull
+# request that modifies code that they own.
+# Documentation https://help.github.com/en/github/creating-cloning-and-archiving-repositories/about-code-owners
+
+* @gnumoksha
+* @magroski
+
+#|
+#| Infra
+#|
+/var/docker/** @CarvalhoRod
+/var/kubernetes/** @CarvalhoRod
+./github/** @CarvalhoRod

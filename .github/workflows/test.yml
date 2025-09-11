@@ -1,0 +1,80 @@
+name: Test
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+  workflow_dispatch:
+    inputs:
+
+env:
+  APP_ENV: test
+  CONTAINER_REPOSITORY_URI: "124082513016.dkr.ecr.us-east-1.amazonaws.com/${{ github.repository }}"
+
+jobs:
+  test-branch:
+    runs-on: ubuntu-latest
+
+    # container:
+    #   image: 'python:3.12-slim'
+    services:
+      postgresql:
+        image: postgres:17.4
+        env:
+          POSTGRES_DB: mktplace_test
+          POSTGRES_USER: mktplace
+          POSTGRES_PASSWORD: mktplace
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache Python requirements
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          # cache: 'pip' # caching pip dependencies
+          # cache-dependency-path: '**/poetry.lock'
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-
+            ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install poetry
+        run: |
+          pipx install poetry
+
+      - name: Install requirements
+        run: poetry install
+
+      - name: Running database migrations
+        run: poetry run alembic upgrade head
+
+      - name: Running database fixtures
+        run: poetry run python bin/fixtures
+
+      - name: Run unit test
+        run: poetry run pytest -m "not llm_access"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            ./tests/output/
+            ./var/log/
+          # can be: error, warn, ignore
+          # please, note that this action will run after ANY step fails
+          if-no-files-found: warn
+          retention-days: 1

@@ -6,6 +6,8 @@ permissions:
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
   workflow_dispatch:
 
 defaults:
@@ -27,6 +29,7 @@ jobs:
     outputs:
       not-docs: ${{ steps.filter.outputs.not-docs }}
     steps:
+      - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -78,7 +81,7 @@ jobs:
       - name: Run pre-commit
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
-          pre-commit run --show-diff-on-failure --color=always --from-ref ${{ github.event.pull_request.base.sha }} --to-ref ${{ github.event.pull_request.head.sha }}
+          pre-commit run --show-diff-on-failure --color=always --from-ref ${{ github.event.pull_request.base.sha || 'HEAD~1' }} --to-ref ${{ github.event.pull_request.head.sha || 'HEAD' }}
 
       # Runs a few different checks against our many requirements files
       # to make sure they're in order
@@ -192,3 +195,53 @@ jobs:
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
           make unit_tests_slow
+
+  slack_message:
+    if: failure() && !cancelled()
+    name: Notify Slack
+    # Every previous job needs to be in here, because failure() will only return true if the job that failed is in 'needs'
+    needs: [changes, code_checking, matrix_prep, check_install, unit_tests]
+    runs-on: mdb-dev
+    steps:
+      - name: Notify of failing tests
+        if: ${{ needs.unit_tests.result != 'success' && needs.unit_tests.result != 'cancelled' && github.event_name == 'push' }}
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          channel-id: ${{ secrets.SLACK_ENG_CHANNEL_ID }}
+          payload: |
+            {
+              "attachments": [
+                {
+                  "color": "#FF4444",
+                  "blocks": [
+                    {
+                      "type": "header",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "UNIT TEST RUN FAILED ON MAIN",
+                        "emoji": true
+                      }
+                    },
+                    {
+                      "type": "section",
+                      "text": {
+                        "type": "mrkdwn",
+                        "text": " "
+                      },
+                      "fields": [
+                        {
+                          "type": "mrkdwn",
+                          "text": "*Commit*\n<${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>"
+                        },
+                        {
+                          "type": "mrkdwn",
+                          "text": "*Workflow Run*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.GH_ACTIONS_SLACK_BOT_TOKEN }}

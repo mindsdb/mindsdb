@@ -14,19 +14,7 @@ from mindsdb.utilities.exception import format_db_error_message
 from mindsdb.utilities.functions import resolve_table_identifier, resolve_model_identifier
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb.api.executor.utilities.mysql_to_duckdb_functions import (
-    adapt_char_fn,
-    adapt_locate_fn,
-    adapt_unhex_fn,
-    adapt_format_fn,
-    adapt_sha2_fn,
-    adapt_length_fn,
-    adapt_regexp_substr_fn,
-    adapt_substring_index_fn,
-    adapt_curtime_fn,
-    adapt_timestampdiff_fn,
-    adapt_extract_fn,
-)
+from mindsdb.api.executor.utilities.mysql_to_duckdb_functions import mysql_to_duckdb_fnc
 
 logger = log.getLogger(__name__)
 
@@ -196,25 +184,15 @@ def query_df(df, query, session=None):
                 node.parts = [node.parts[-1]]
                 return node
         if isinstance(node, Function):
+            fnc = mysql_to_duckdb_fnc(node)
+            if fnc is not None:
+                node2 = fnc(node)
+                if node2 is not None:
+                    # copy alias
+                    node2.alias = node.alias
+                return node2
+
             fnc_name = node.op.lower()
-
-            mysql_to_duck_fn_map = {
-                "char": adapt_char_fn,
-                "locate": adapt_locate_fn,
-                "insrt": adapt_locate_fn,
-                "unhex": adapt_unhex_fn,
-                "format": adapt_format_fn,
-                "sha2": adapt_sha2_fn,
-                "length": adapt_length_fn,
-                "regexp_substr": adapt_regexp_substr_fn,
-                "substring_index": adapt_substring_index_fn,
-                "curtime": adapt_curtime_fn,
-                "timestampdiff": adapt_timestampdiff_fn,
-                "extract": adapt_extract_fn,
-            }
-            if fnc_name in mysql_to_duck_fn_map:
-                return mysql_to_duck_fn_map[fnc_name](node)
-
             if fnc_name == "database" and len(node.args) == 0:
                 if session is not None:
                     cur_db = session.database

@@ -146,6 +146,25 @@ def getLogger(name=None):
     return logging.getLogger(name)
 
 
+def log_ram_info(logger: logging.Logger) -> None:
+    if logger.isEnabledFor(logging.DEBUG) is False:
+        return
+
+    try:
+        import psutil
+
+        memory = psutil.virtual_memory()
+        total_memory_gb = memory.total / (1024**3)
+        available_memory_gb = memory.available / (1024**3)
+        used_memory_gb = memory.used / (1024**3)
+        memory_percent = memory.percent
+        logger.debug(
+            f"Memory: {total_memory_gb:.1f}GB total, {available_memory_gb:.1f}GB available, {used_memory_gb:.1f}GB used ({memory_percent:.1f}%)"
+        )
+    except Exception as e:
+        logger.debug(f"Failed to get memory information: {e}")
+
+
 def log_system_info(logger: logging.Logger) -> None:
     """Log detailed system information for debugging purposes.
 
@@ -280,16 +299,8 @@ def log_system_info(logger: logging.Logger) -> None:
         logger.debug(f"CPU: {cpu_info} ({cpu_count} physical cores, {cpu_count_logical} logical cores)")
         # endregion
 
-        # region memory information
-        memory = psutil.virtual_memory()
-        total_memory_gb = memory.total / (1024**3)
-        available_memory_gb = memory.available / (1024**3)
-        used_memory_gb = memory.used / (1024**3)
-        memory_percent = memory.percent
-        logger.debug(
-            f"Memory: {total_memory_gb:.1f}GB total, {available_memory_gb:.1f}GB available, {used_memory_gb:.1f}GB used ({memory_percent:.1f}%)"
-        )
-        # endregion
+        # memory information
+        log_ram_info(logger)
 
         # region GPU information
         gpu_info = []

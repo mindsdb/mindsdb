@@ -48,8 +48,7 @@ class File(Resource):
         """
 
         data = {}
-        base_name = Path(name).stem
-        mindsdb_file_name = base_name.lower()
+        mindsdb_file_name = name.lower()
 
         existing_file_names = ca.file_controller.get_files_names()
 
@@ -188,13 +187,14 @@ class File(Resource):
                 return http_error(400, "Wrong content.", "Archive must contain only one data file.")
             file_path = os.path.join(temp_dir_path, files[0])
             mindsdb_file_name = files[0]
-            base_name = Path(mindsdb_file_name).stem
             if not os.path.isfile(file_path):
                 os.rmdir(temp_dir_path)
                 return http_error(400, "Wrong content.", "Archive must contain data file in root.")
 
         try:
-            ca.file_controller.save_file(base_name, file_path, file_name=original_file_name)
+            if not Path(mindsdb_file_name).suffix == "":
+                raise ValueError("File name cannot contain extension.")
+            ca.file_controller.save_file(mindsdb_file_name, file_path, file_name=original_file_name)
         except FileProcessingError as e:
             return http_error(400, "Error", str(e))
         except Exception as e:

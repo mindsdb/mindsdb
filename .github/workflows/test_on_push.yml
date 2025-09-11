@@ -8,10 +8,12 @@ on:
     branches:
       - 'main'
       - 'develop'
+      - 'release/*'
   push:
     branches:
       - 'main'
       - 'develop'
+      - 'release/*'
   workflow_dispatch:
 
 defaults:

@@ -5,9 +5,15 @@ permissions:
 
 on:
   pull_request:
-    branches: [main]
+    branches:
+      - 'main'
+      - 'develop'
+      - 'release/*'
   push:
-    branches: [main]
+    branches:
+      - 'main'
+      - 'develop'
+      - 'release/*'
   workflow_dispatch:
 
 defaults:
@@ -132,7 +138,7 @@ jobs:
           # Install from the pip package
           # If we install from source, we don't know if the pip package is installable.
           cd dist
-          uv pip install *.tar.gz --prerelease=allow
+          uv pip install *.tar.gz
 
   unit_tests:
     name: Run Unit Tests
@@ -158,7 +164,7 @@ jobs:
         run: |
           uv pip install -r requirements/requirements-test.txt
           # TODO: for now some tests rely on lightwood
-          uv pip install . --prerelease=allow \
+          uv pip install . \
             .[lightwood] \
             .[clickhouse] \
             .[snowflake] \
@@ -218,7 +224,7 @@ jobs:
                       "type": "header",
                       "text": {
                         "type": "plain_text",
-                        "text": "UNIT TEST RUN FAILED ON MAIN",
+                        "text": "UNIT TEST RUN FAILED ON ${{ github.ref_name }}",
                         "emoji": true
                       }
                     },

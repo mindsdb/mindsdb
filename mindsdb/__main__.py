@@ -566,7 +566,7 @@ if __name__ == "__main__":
             finally:
                 if trunc_process_data.should_restart:
                     if trunc_process_data.request_restart_attempt():
-                        logger.warning(f"{trunc_process_data.name} API: stopped unexpectedly, restarting")
+                        logger.warning(f"{trunc_process_data.name} API: stopped unexpectedly (exit code: {trunc_process_data.process.exitcode}), restarting")
                         trunc_process_data.process = None
                         if trunc_process_data.name == TrunkProcessEnum.HTTP.value:
                             # do not open GUI on HTTP API restart

@@ -2,7 +2,7 @@ import copy
 from typing import List
 
 import duckdb
-from duckdb import InvalidInputException
+from duckdb import InvalidInputException, BinderException
 import numpy as np
 
 from mindsdb_sql_parser import parse_sql
@@ -79,7 +79,7 @@ def query_df_with_type_infer_fallback(query_str: str, dataframes: dict, user_fun
                 try:
                     con.execute(f"set global pandas_analyze_sample={sample_size};")
                     result_df = con.execute(query_str).fetchdf()
-                except InvalidInputException as e:
+                except (InvalidInputException, BinderException) as e:
                     exception = e
                 else:
                     break

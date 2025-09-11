@@ -4,7 +4,7 @@ The A2A API enables MindsDB agents to communicate with external systems and othe
 
 ## Overview
 
-The A2A API runs as an optional subprocess of MindsDB, allowing you to:
+The A2A API runs as part of the MindsDB HTTP API, allowing you to:
 
 - Query MindsDB agents using natural language
 - Stream responses in real-time for interactive applications
@@ -18,27 +18,10 @@ The A2A API runs as an optional subprocess of MindsDB, allowing you to:
 
 ## Running A2A API
 
-The A2A API can be enabled when starting MindsDB by including it in the API list:
+The A2A API is enabled by default when starting MindsDB (or when you include `--api=http`):
 
 ```bash
-python -m mindsdb --api=mysql,mcp,http,a2a
-```
-
-## Configuration
-
-You can configure the A2A API using a config.json file. If not provided, default values will be used:
-
-```json
-{
-  "a2a": {
-    "host": "0.0.0.0",
-    "port": 47338,
-    "mindsdb_host": "localhost",
-    "mindsdb_port": 47334,
-    "project_name": "mindsdb",
-    "log_level": "info"
-  }
-}
+python -m mindsdb
 ```
 
 ## Example Request
@@ -47,7 +30,7 @@ Here's an example of how to make a streaming request to the A2A API:
 
 ```bash
 curl -X POST \
-  "http://localhost:10002/a2a" \
+  "http://localhost:47334/a2a/" \
   -H "Content-Type: application/json" \
   -H "Accept: text/event-stream" \
   -H "Cache-Control: no-cache" \

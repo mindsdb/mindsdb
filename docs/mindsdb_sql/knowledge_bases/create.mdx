@@ -30,6 +30,12 @@ USING
 
 Upon execution, it registers `my_kb` and associates the specified models and storage. `my_kb` is a unique identifier of the knowledge base within MindsDB.
 
+Here is how to list all knowledge bases:
+
+```sql
+SHOW KNOWLEDGE_BASES;
+```
+
 <Tip>
 Users can use the variables and the [`from_env()` function](/mindsdb_sql/functions/from_env) to pass parameters when creating knowledge bases.
 </Tip>
@@ -82,6 +88,10 @@ When choosing `openai_azure` as the model provider, users should define the foll
 * `base_url` stores the base URL of the Azure instance.
 * `api_version` stores the version of the Azure instance.
 
+<Tip>
+Users need to log in to their Azure OpenAI instance to retrieve all relevant parameter values. Next, click on `Explore Azure AI Foundry portal` and go to `Models + endpoints`. Select the model and copy the parameter values.
+</Tip>
+
 #### `provider = 'google'`
 
 This provider is supported for both `embedding_model` and `reranking_model`.
@@ -111,13 +121,60 @@ When choosing `bedrock` as the model provider, users should define the following
 
 #### `provider = 'snowflake'`
 
-This provider is supported for `reranking_model`.
+This provider is supported for `reranking_model`. Note that Snowflake Cortex AI does not offer embedding models as of now.
 
 When choosing `snowflake` as the model provider, users should choose one of the available models from [Snowflake Cortex AI](https://www.snowflake.com/en/product/features/cortex/) and define the following model parameters.
 
 * `model_name` stores the name of the model available via Snowflake Cortex AI.
 * `api_key` stores the Snowflake Cortex AI API key.
 * `snowflake_account_id` stores the Snowflake account ID.
+
+<Accordion title = "How to Generate the API key of Snowflake Cortex AI">
+
+Follow the below steps to generate the API key.
+
+1. Generate a key pair according to [this instruction](https://docs.snowflake.com/en/user-guide/key-pair-auth) as below.
+
+    * Execute these commands in the console:
+
+        ```bash
+        # generate private key
+        openssl genrsa 2048 | openssl pkcs8 -topk8 -inform PEM -out rsa_key.p8 -nocrypt
+        # generate public key
+        openssl rsa -in rsa_key.p8 -pubout -out rsa_key.pub
+        ```
+    
+    * Save the public key, that is, the content of rsa_key.pub, into your database user:
+
+        ```sql
+        ALTER USER my_user SET RSA_PUBLIC_KEY = "<content of rsa_key.pub>"
+        ```
+
+2. Verify the key pair with the database user.
+
+    * Install `snowsql` following [this instruction](https://docs.snowflake.com/en/user-guide/snowsql-install-config).
+
+    * Execute this command in the console:
+
+        ```bash
+        snowsql -a <snowflake-account-id> -u my_user --private-key-path rsa_key.p8
+        ```
+
+3. Generate JWT token.
+
+    * Download the Python script from [Snowflake's Developer Guide for Authentication](https://docs.snowflake.com/en/developer-guide/sql-api/authenticating). Here is a [direct download link](https://docs.snowflake.com/en/_downloads/aeb84cdfe91dcfbd889465403b875515/sql-api-generate-jwt.py).
+
+    * Ensure to have the PyJWT module installed that is required for running the script.
+
+    * Run the script using this command:
+
+        ```bash
+        sql-api-generate-jwt.py --account <snowflake-account-id> --user my_user --private_key_file_path rsa_key.p8
+        ```
+
+        This command returns the JWT token, which is used in the `api_key` parameter for the `snowflake` provider.
+
+</Accordion>
 
 ### `embedding_model`
 
@@ -150,7 +207,9 @@ You can define the default models in the Settings of the MindsDB Editor GUI.
 </Tip>
 
 <Note>
-Note that if you define `default_embedding_model` in the configuration file, you do not need to provide the `embedding_model` parameter when creating a knowledge base. If provide both, then the values from the `embedding_model` parameter are used.
+Note that if you define [`default_embedding_model` in the configuration file](/setup/custom-config#default_embedding_model), you do not need to provide the `embedding_model` parameter when creating a knowledge base. If provide both, then the values from the `embedding_model` parameter are used.
+
+When using `default_embedding_model` from the configuration file, the knowledge base saves this model internally. Therefore, when changing `default_embedding_model` in the configuration file to a different one after the knowledge base is created, it does not affect the already created knowledge bases.
 </Note>
 
 ```bash
@@ -225,6 +284,8 @@ You can define the default models in the Settings of the MindsDB Editor GUI.
 
 <Note>
 Note that if you define [`default_reranking_model` in the configuration file](/setup/custom-config#default-reranking-model), you do not need to provide the `reranking_model` parameter when creating a knowledge base. If provide both, then the values from the `reranking_model` parameter are used.
+
+When using `default_reranking_model` from the configuration file, the knowledge base saves this model internally. Therefore, when changing `default_reranking_model` in the configuration file to a different one after the knowledge base is created, it does not affect the already created knowledge bases.
 </Note>
 
 ```bash

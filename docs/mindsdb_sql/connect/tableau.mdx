@@ -3,17 +3,6 @@ title: MindsDB and Tableau
 sidebarTitle: Tableau
 ---
 
-<iframe
-  className="w-full h-96"
-  width="613"
-  height="286"
-  src="https://www.youtube.com/embed/eUiBVrm85v4"
-  title="Connect using Tableau"
-  frameBorder="0"
-  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-  allowFullScreen
-></iframe>
-
 Tableau lets you visualize your data easily and intuitively. Now that MindsDB
 supports the MySQL binary protocol, you can connect it to Tableau and see the
 forecasts.
@@ -37,19 +26,19 @@ password. Then, click _Sign In_.
   <img src="/assets/connect_tableau_2.png" />
 </p>
 
-Here are the connection parameters specific to your MindsDB installation type:
+Here are the connection parameters:
 
-<Tabs>
-    <Tab title="Local MindsDB">
-      ```text
-      Host: `localhost`
-      Port: `47335`
-      Database name: `mindsdb`
-      Username: `mindsdb`
-      Password: *leave it empty*
-      ```
-    </Tab>
-</Tabs>
+```text
+Host: `localhost`
+Port: `47335`
+Database name: `mindsdb`
+Username: `mindsdb`
+Password: *leave it empty*
+```
+
+<Tip>
+You can [set up the authetication with user and password in the config file](/setup/custom-config#auth).
+</Tip>
 
 Now you're connected!
 

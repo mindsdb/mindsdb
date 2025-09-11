@@ -9,20 +9,19 @@ This sections provides instructions on how to start MindsDB with its MCP API ena
 
 1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
 
-2. When starting MindsDB, enable its MCP API.
+2. The MCP API is enabled by default, as part of the HTTP API, at path `/mcp/`.
 
-MindsDB MCP API runs on port 47337 by default.
 
-To enable the MCP API, you can use the [`MINDSDB_APIS` environment variable](/setup/environment-vars#mindsdb-apis):
+To enable the HTTP API explicitly, you can use the [`MINDSDB_APIS` environment variable](/setup/environment-vars#mindsdb-apis):
 
 ```bash
-export MINDSDB_APIS='http,mysql,mongodb,postgres,mcp'
+export MINDSDB_APIS='http,mysql,postgres'
 ```
 
 Or, specify it when starting MindsDB:
 
 ```bash
-python -m mindsdb --api http,mysql,mongodb,postgres,mcp
+python -m mindsdb --api http,mysql,postgres
 ```
 
 <Tip>
@@ -43,4 +42,4 @@ PARAMETERS = {
 ```
 </Tip>
 
-3. MindsDB's MCP server is available at `localhost:47337`.
+3. MindsDB's MCP server is available at `localhost:47334/mcp/sse`.

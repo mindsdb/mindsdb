@@ -67,51 +67,20 @@ default storage option and use different database by adding the new connection s
 
 ## MindsDB APIs
 
-By default, MindsDB starts the http and mysql APIs. To define which APIs you want to start, you can use the `MINDSDB_APIS` environment variable. The available APIs are:
-
-- `http` (port 47334) - HTTP/REST API
-- `mysql` (port 47335) - MySQL API
-- `mcp` (port 47337) - Model Context Protocol API
-- `a2a` (port 47338) - Aget2Agent Protocol API
-
-To expose the ports for the APIs, you need to add the respective ports to the command with the `-p` flag.
-
-To use the A2A API when running MindsDB at a remote host, use the `MINDSDB_A2A_HOST` environemnt variable to specify the host. Alternatively, you can set it up in the [configuration file](/setup/custom-config#api).
+The `MINDSDB_APIS` environment variable lets users define which APIs to start. Learn more about the [available APIs here](/setup/mindsdb-apis).
 
 ### Example
 
 <CodeGroup>
     ```bash Docker
-    docker run --name mindsdb_container -e MINDSDB_MCP_ACCESS_TOKEN=abc123 -e MINDSDB_APIS=http,mysql,mcp,a2a -p 47334:47334 -p 47335:47335 -p 47337:47337 -p 47338:47338 mindsdb/mindsdb
+    docker run --name mindsdb_container -e MINDSDB_APIS=http,mysql -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
     ```
 
     ```bash Shell
-    export MINDSDB_APIS='http,mysql,mcp,a2a'
+    export MINDSDB_APIS='http,mysql'
     ```
 </CodeGroup>
 
-## MindsDB Server
-
-By default for the HTTP API, MindsDB uses [Waitress](https://pypi.org/project/waitress/) which is a pure-Python WSGI server. There is an option to change that 
-and use [Flask](https://flask.palletsprojects.com/en/stable/) or [Gunicorn](https://gunicorn.org/)
-
-### Example
-
-<CodeGroup>
-    ```bash Docker
-    # To use Gunicorn as a default server, it should be installed by logging into the container
-    docker exec -it mindsdb_container sh  # assuming the container name is mindsdb_container  # assuming the container name is mindsdb_container
-    pip install gunicorn
-
-    docker run --name mindsdb_container -e MINDSDB_DEFAULT_SERVER='gunicorn' -e MINDSDB_APIS=http,mysql -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
-    ```
-
-    ```bash Shell
-    export MINDSDB_DEFAULT_SERVER='gunicorn'
-    ```
-</CodeGroup>
-
-You can also use `waitress`, which is the default server or `flask`.
 
 ## MindsDB Logs
 
@@ -147,8 +116,20 @@ If this environment variable is set or modified after MindsDB has started, the d
     ```
 </CodeGroup>
 
-## MindsDB's MCP API Authentication
+## MindsDB's PID File
 
-Set the `MINDSDB_MCP_ACCESS_TOKEN` environment variable to enable user authentication for accessing MindsDB's MCP Server.
+When running MindsDB via [Docker](/setup/self-hosted/docker) or [Docker Extension](/setup/self-hosted/docker-desktop), the PID file is not used by default. Users can opt for enabling the PID file by defining the `USE_PIDFILE` environment variable.
 
-Learn more [here](/mcp/usage).
+If used, the PID file is stored in the temp directory (`$TMPDIR` on MacOS and Linux, `%TEMP%` on Windows) under the `mindsdb` folder.
+
+### Example
+
+<CodeGroup>
+    ```bash Docker
+    docker run --name mindsdb_container -e USE_PIDFILE=1 -e MINDSDB_APIS=http,mysql -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+    ```
+
+    ```bash Shell
+    export USE_PIDFILE=1
+    ```
+</CodeGroup>

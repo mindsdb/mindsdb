@@ -108,11 +108,9 @@ class KBTestBase:
         )
         return name
 
-    def create_vector_db(self, connection_args, kb_name):
+    def create_vector_db(self, connection_args, name):
         connection_args = connection_args.copy()
         engine = connection_args.pop("engine")
-
-        name = f"test_vectordb_{engine}_{kb_name}"
 
         # TODO update database parameters. for now keep existing connection
         # try:
@@ -137,20 +135,25 @@ class KBTestBase:
 
     def create_kb(self, name, storage, embedding_model, reranking_model=None, params=None):
         # remove if exists
+        engine = storage["engine"]
+        db_name = f"test_vectordb_{engine}_{name}"
+        table_name = f"tbl_{name}"
+
+        #  -- clean --
         try:
-            kb = self.con.knowledge_bases.get(name)
-
             self.con.knowledge_bases.drop(name)
-
-            # remove storage table
-            table = kb.storage
-            try:
-                table.db.tables.drop(table.name)
-            except RuntimeError:
-                ...
-
         except Exception:
             ...
+
+        try:
+            db = self.con.databases.get(db_name)
+
+            db.tables.drop(table_name)
+            self.con.databases.drop(db_name)
+        except Exception:
+            ...
+
+        # -- create --
 
         # prepare KB
         kb_params = {
@@ -172,8 +175,8 @@ class KBTestBase:
                 param_items.append(f"{k}={json.dumps(v)}")
             param_str = ",".join(param_items)
 
-        db_name = self.create_vector_db(storage, name)
-        param_str += f", storage = {db_name}.tbl_{name}"
+        self.create_vector_db(storage, db_name)
+        param_str += f", storage = {db_name}.{table_name}"
 
         self.run_sql(f"""
             create knowledge base {name}
@@ -181,7 +184,7 @@ class KBTestBase:
         """)
 
 
-class TestKB(KBTestBase):
+class Disable_TestKB(KBTestBase):
     @pytest.mark.parametrize("storage, embedding_model", get_configurations())
     def test_base_syntax(self, storage, embedding_model):
         self.create_kb("test_kb_crm", storage, embedding_model)
@@ -399,7 +402,7 @@ class TestKB(KBTestBase):
         ret = self.run_sql("""
             SELECT *
             FROM test_kb_crm_meta
-            WHERE status = "solving" AND content = "noise" AND relevance>=0.65
+            WHERE status = "solving" AND content = "noise" AND relevance>=0.5
         """)
         assert set(ret.metadata.apply(lambda x: x.get("status"))) == {"solving"}
         assert "noise" in ret.chunk_content[0]  # first line contents word

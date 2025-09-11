@@ -29,7 +29,7 @@ from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embeddi
     construct_model_from_args,
 )
 
-from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS
+from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS, MAX_INSERT_BATCH_SIZE
 from mindsdb.interfaces.agents.langchain_agent import create_chat_model, get_llm_provider
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.variables.variables_controller import variables_controller
@@ -245,22 +245,34 @@ class KnowledgeBaseTable:
         keyword_search_cols_and_values = []
         query_text = None
         relevance_threshold = None
+        relevance_threshold_allowed_operators = [
+            FilterOperator.GREATER_THAN_OR_EQUAL.value,
+            FilterOperator.GREATER_THAN.value,
+        ]
+        gt_filtering = False
         hybrid_search_enabled_flag = False
         query_conditions = db_handler.extract_conditions(query.where)
         hybrid_search_alpha = None  # Default to None, meaning no alpha weighted blending
         if query_conditions is not None:
             for item in query_conditions:
-                if item.column == "relevance" and item.op.value == FilterOperator.GREATER_THAN_OR_EQUAL.value:
+                if (item.column == "relevance") and (item.op.value in relevance_threshold_allowed_operators):
                     try:
                         relevance_threshold = float(item.value)
                         # Validate range: must be between 0 and 1
                         if not (0 <= relevance_threshold <= 1):
                             raise ValueError(f"relevance_threshold must be between 0 and 1, got: {relevance_threshold}")
+                        if item.op.value == FilterOperator.GREATER_THAN.value:
+                            gt_filtering = True
                         logger.debug(f"Found relevance_threshold in query: {relevance_threshold}")
                     except (ValueError, TypeError) as e:
                         error_msg = f"Invalid relevance_threshold value: {item.value}. {str(e)}"
                         logger.error(error_msg)
                         raise ValueError(error_msg)
+                elif (item.column == "relevance") and (item.op.value not in relevance_threshold_allowed_operators):
+                    raise ValueError(
+                        f"Invalid operator for relevance: {item.op.value}. Only the following operators are allowed: "
+                        f"{','.join(relevance_threshold_allowed_operators)}."
+                    )
                 elif item.column == "reranking":
                     if item.value is False or (isinstance(item.value, str) and item.value.lower() == "false"):
                         disable_reranking = True
@@ -279,10 +291,6 @@ class KnowledgeBaseTable:
                     if not (0 <= item.value <= 1):
                         raise ValueError(f"Invalid hybrid_search_alpha value: {item.value}. Must be between 0 and 1.")
                     hybrid_search_alpha = item.value
-                elif item.column == "relevance" and item.op.value != FilterOperator.GREATER_THAN_OR_EQUAL.value:
-                    raise ValueError(
-                        f"Invalid operator for relevance: {item.op.value}. Only GREATER_THAN_OR_EQUAL is allowed."
-                    )
                 elif item.column == TableField.CONTENT.value:
                     query_text = item.value
 
@@ -368,6 +376,11 @@ class KnowledgeBaseTable:
         # Check if we have a rerank_model configured in KB params
         df = self.add_relevance(df, query_text, relevance_threshold, disable_reranking)
 
+        # if relevance filtering method is strictly GREATER THAN we filter the df
+        if gt_filtering:
+            relevance_scores = TableField.RELEVANCE.value
+            df = df[relevance_scores > relevance_threshold]
+
         return df
 
     def _get_allowed_metadata_columns(self) -> List[str] | None:
@@ -410,7 +423,7 @@ class KnowledgeBaseTable:
 
             # Filter by threshold
             scores_array = np.array(scores)
-            df = df[scores_array > reranker.filtering_threshold]
+            df = df[scores_array >= reranker.filtering_threshold]
             logger.debug(f"Applied reranking with params: {reranking_model_params}")
 
         elif "distance" in df.columns:
@@ -493,6 +506,8 @@ class KnowledgeBaseTable:
         """Process and insert raw data rows"""
         if not rows:
             return
+        if len(rows) > MAX_INSERT_BATCH_SIZE:
+            raise ValueError("Input data is too large, please load data in batches")
 
         df = pd.DataFrame(rows)
 
@@ -1078,6 +1093,7 @@ class KnowledgeBaseController:
             raise EntityExistsError("Knowledge base already exists", name)
 
         embedding_params = get_model_params(params.get("embedding_model", {}), "default_embedding_model")
+        params["embedding_model"] = embedding_params
 
         # if model_name is None:  # Legacy
         model_name = self._create_embedding_model(
@@ -1104,6 +1120,7 @@ class KnowledgeBaseController:
             params["reranking_model"] = {}
 
         reranking_model_params = get_model_params(reranking_model_params, "default_reranking_model")
+        params["reranking_model"] = reranking_model_params
         if reranking_model_params:
             # Get reranking model from params.
             # This is called here to check validaity of the parameters.
@@ -1139,8 +1156,14 @@ class KnowledgeBaseController:
         else:
             vector_db_name, vector_table_name = storage.parts
 
+        data_node = self.session.datahub.get(vector_db_name)
+        if data_node:
+            vector_store_handler = data_node.integration_handler
+        else:
+            raise ValueError(
+                f"Unable to find database named {vector_db_name}, please make sure {vector_db_name} is defined"
+            )
         # create table in vectordb before creating KB
-        vector_store_handler = self.session.datahub.get(vector_db_name).integration_handler
         vector_store_handler.create_table(vector_table_name)
         if keyword_search_enabled:
             vector_store_handler.add_full_text_index(vector_table_name, TableField.CONTENT.value)
@@ -1222,6 +1245,7 @@ class KnowledgeBaseController:
                 raise RuntimeError(f"Problem with embedding model config: {e}")
             return
 
+        params = copy.deepcopy(params)
         if "provider" in params:
             engine = params.pop("provider").lower()
 

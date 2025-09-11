@@ -5,7 +5,7 @@ import pandas as pd
 from oracledb import connect, Connection, DatabaseError, Cursor
 from mindsdb_sql_parser.ast.base import ASTNode
 
-from mindsdb.integrations.libs.base import DatabaseHandler
+from mindsdb.integrations.libs.base import MetaDatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -146,7 +146,7 @@ def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
     return Response(RESPONSE_TYPE.TABLE, data_frame=df, mysql_types=mysql_types)
 
 
-class OracleHandler(DatabaseHandler):
+class OracleHandler(MetaDatabaseHandler):
     """
     This handler handles connection and execution of SQL queries on Oracle.
     """
@@ -401,3 +401,4 @@ class OracleHandler(DatabaseHandler):
         if result.resp_type is RESPONSE_TYPE.TABLE:
             result.to_columns_table_response(map_type_fn=_map_type)
         return result
+        

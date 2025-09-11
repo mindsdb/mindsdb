@@ -7,6 +7,8 @@
 	<a href="https://www.python.org/downloads/" target="_blank"><img src="https://img.shields.io/badge/python-3.10.x%7C%203.11.x-brightgreen.svg" alt="Python supported"></a>
 	<a href="https://hub.docker.com/u/mindsdb" target="_blank"><img src="https://img.shields.io/docker/pulls/mindsdb/mindsdb" alt="Docker pulls"></a>
 
+[![Trust Score](https://archestra.ai/mcp-catalog/api/badge/quality/mindsdb/mindsdb)](https://archestra.ai/mcp-catalog/mindsdb__mindsdb)
+
   <br />
   <br />
 

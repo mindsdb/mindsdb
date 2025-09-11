@@ -7,15 +7,18 @@ from pathlib import Path
 from dotenv import load_dotenv
 from typing import Generator, Any
 from functools import wraps
-
-# Use absolute imports to ensure all necessary modules are available.
 from tests.integration.handlers.utils import config
 from tests.integration.handlers.utils.helpers import get_handlers_info, build_parameters_clause
 
-# Define project_root relative to this conftest's location for logging.
+
 project_root = Path(__file__).parent.parent.parent.parent
 
-# --- Pytest Hooks for DSI ---
+def pytest_addoption(parser):
+    """
+    Adds command-line options specific to DSI tests.
+    """
+    parser.addoption("--run-dsi-tests", action="store_true", default=False, help="run DSI integration tests")
+
 def pytest_configure(config):
     """
     Registers the custom 'dsi' mark and loads the .env file.
@@ -28,13 +31,20 @@ def pytest_configure(config):
         else:
             logging.info("DSI: Successfully loaded environment variables from .env file.")
 
-
-# --- DSI Framework Fixtures ---
 @pytest.fixture(scope="session")
 def query_log_data():
     """A session-scoped dictionary to store all query logs."""
     return {}
 
+def pytest_collection_modifyitems(config, items):
+    """
+    Modifies DSI test items after collection to skip them if the flag is not provided.
+    """
+    if not config.getoption("--run-dsi-tests"):
+        skip_dsi = pytest.mark.skip(reason="need --run-dsi-tests option to run")
+        for item in items:
+            if "dsi" in item.keywords:
+                item.add_marker(skip_dsi)
 
 @pytest.fixture(scope="session")
 def mindsdb_server(query_log_data) -> Generator[Any, None, None]:
@@ -71,7 +81,7 @@ def mindsdb_server(query_log_data) -> Generator[Any, None, None]:
                 if response_df is not None:
                     actual_response = response_df.to_json(orient='records') if not response_df.empty else '[]'
                 return response_df
-            except RuntimeError as e: # Catch the specific SDK error.
+            except RuntimeError as e: 
                 error = str(e)
                 raise
             finally:
@@ -120,13 +130,11 @@ def session_databases(mindsdb_server):
             created_dbs[handler_name] = db_name
             logging.info(f"DSI: Successfully created database '{db_name}' for handler '{handler_name}'.")
         except RuntimeError as e:
-            # Use logging.exception to include traceback, as suggested.
             logging.exception(f"DSI: Failed to create database for {handler_name}: {e}")
             raise
 
     yield created_dbs
 
-    # Teardown: drop all created databases.
     logging.info("--- DSI: Tearing down session databases ---")
     for db_name in created_dbs.values():
         try:

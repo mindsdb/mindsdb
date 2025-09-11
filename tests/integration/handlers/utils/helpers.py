@@ -34,44 +34,40 @@ def get_handlers_info(mindsdb_server: Any) -> Tuple[List[Dict[str, Any]], List[s
     """
     Discovers connection arguments for specified handlers and identifies which are not installed.
     """
-    try:
-        installed_handlers_df = mindsdb_server.query(
-            "SELECT NAME, IMPORT_SUCCESS FROM information_schema.handlers WHERE type = 'data'"
-        ).fetch()
-        if installed_handlers_df.empty:
-            logging.warning("DSI: Did not discover any installed data handlers on the MindsDB server.")
-            installed_handlers = set()
-        else:
-            installed_handlers = set(installed_handlers_df[installed_handlers_df["IMPORT_SUCCESS"]]["NAME"].str.lower())
+    # Let any RuntimeError from the SDK propagate naturally for a better traceback.
+    installed_handlers_df = mindsdb_server.query(
+        "SELECT NAME, IMPORT_SUCCESS FROM information_schema.handlers WHERE type = 'data'"
+    ).fetch()
+    if installed_handlers_df.empty:
+        logging.warning("DSI: Did not discover any installed data handlers on the MindsDB server.")
+        installed_handlers = set()
+    else:
+        installed_handlers = set(installed_handlers_df[installed_handlers_df["IMPORT_SUCCESS"]]["NAME"].str.lower())
 
-        target_handlers_str = config.HANDLERS_TO_TEST
-        target_handlers_list = [h.strip().lower() for h in target_handlers_str.split(",") if h.strip()]
+    target_handlers_str = config.HANDLERS_TO_TEST
+    target_handlers_list = [h.strip().lower() for h in target_handlers_str.split(",") if h.strip()]
 
-        uninstalled_handlers = [h for h in target_handlers_list if h not in installed_handlers]
-        handlers_to_test = [h for h in target_handlers_list if h in installed_handlers]
+    uninstalled_handlers = [h for h in target_handlers_list if h not in installed_handlers]
+    handlers_to_test = [h for h in target_handlers_list if h in installed_handlers]
 
-        if not handlers_to_test:
-            return [], uninstalled_handlers
+    if not handlers_to_test:
+        return [], uninstalled_handlers
 
-        in_clause = " AND LOWER(NAME) IN (" + ", ".join(f"'{h}'" for h in handlers_to_test) + ")"
-        query = "SELECT NAME, CONNECTION_ARGS FROM information_schema.handlers WHERE type = 'data'" + in_clause
+    in_clause = " AND LOWER(NAME) IN (" + ", ".join(f"'{h}'" for h in handlers_to_test) + ")"
+    query = "SELECT NAME, CONNECTION_ARGS FROM information_schema.handlers WHERE type = 'data'" + in_clause
 
-        result_df = mindsdb_server.query(query).fetch()
+    result_df = mindsdb_server.query(query).fetch()
 
-        handlers = []
-        if not result_df.empty:
-            for _, row in result_df.iterrows():
-                handlers.append(
-                    {
-                        "name": row["NAME"],
-                        "connection_args": json.loads(row["CONNECTION_ARGS"]) if row["CONNECTION_ARGS"] else {},
-                    }
-                )
-        return handlers, uninstalled_handlers
-    # Catch the specific error the SDK raises on query failure.
-    except RuntimeError as e:
-        # Re-raise as a generic Exception to signal a critical setup failure.
-        raise Exception(f"Failed to fetch handler information from MindsDB: {e}")
+    handlers = []
+    if not result_df.empty:
+        for _, row in result_df.iterrows():
+            handlers.append(
+                {
+                    "name": row["NAME"],
+                    "connection_args": json.loads(row["CONNECTION_ARGS"]) if row["CONNECTION_ARGS"] else {},
+                }
+            )
+    return handlers, uninstalled_handlers
 
 
 def build_parameters_clause(handler_name: str, connection_args: Dict[str, Any]) -> Tuple[str, str]:

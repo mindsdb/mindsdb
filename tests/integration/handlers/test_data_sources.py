@@ -83,11 +83,8 @@ def test_handler_integrations(mindsdb_server, session_databases, test_case):
     # --- Test Execution Logic ---
 
     if test_type == "autodiscovery":
-        try:
-            tables_df = mindsdb_server.query(f"SHOW TABLES FROM {db_name};").fetch()
-            assert not tables_df.empty, "Autodiscovery failed: SHOW TABLES returned no results."
-        except Exception as e:
-            pytest.fail(f"Autodiscovery for {handler_name} failed with an error: {e}")
+        tables_df = mindsdb_server.query(f"SHOW TABLES FROM {db_name};").fetch()
+        assert not tables_df.empty, "Autodiscovery failed: SHOW TABLES returned no results."
 
     elif test_type == "custom":
         with open(config_path, "r") as f:
@@ -108,6 +105,11 @@ def test_handler_integrations(mindsdb_server, session_databases, test_case):
         query = neg_test["query"].format(db_name=db_name)
 
         logging.info(f"Running negative test #{test_index}: {query}")
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(RuntimeError) as excinfo:
             mindsdb_server.query(query).fetch()
-        assert neg_test["expected_error"] in str(excinfo.value)
+        
+        error_str = str(excinfo.value)
+        expected_error = neg_test["expected_error"]
+        assert expected_error in error_str, (
+            f'Negative test failed. Expected error substring "{expected_error}" not found in actual error: {error_str}'
+        )

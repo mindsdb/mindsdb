@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+env/
+venv/
+.venv/
+.Python
+
+# dotenv
+.env
+.env.*.local
+
+# VSCode
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Spotify cache
+.spotifycache

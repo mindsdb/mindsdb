@@ -274,14 +274,20 @@ class IntegrationDataNode(DataNode):
         """
         if isinstance(query, ASTNode):
             result: HandlerResponse = self.query_integration_handler(query=query)
-            query_str = query.to_string()
         elif isinstance(query, str):
             result: HandlerResponse = self.native_query_integration(query=query)
-            query_str = query
         else:
             raise NotImplementedError("Thew query argument must be ASTNode or string type")
 
         if result.type == RESPONSE_TYPE.ERROR:
+            if isinstance(query, ASTNode):
+                try:
+                    query_str = query.to_string()
+                except Exception:
+                    # most likely it is CreateTable with exotic column types
+                    query_str = "can't be dump"
+            else:
+                query_str = query
             raise Exception(
                 format_db_error_message(
                     db_name=self.integration_handler.name,

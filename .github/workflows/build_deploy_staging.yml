@@ -11,6 +11,7 @@ on:
       - closed
     branches:
       - 'main'
+      - 'release/*'
 
 jobs:
   
@@ -104,7 +105,7 @@ jobs:
                       "type": "header",
                       "text": {
                         "type": "plain_text",
-                        "text": "TEST RUN FAILED ON MAIN",
+                        "text": "TEST RUN FAILED ON ${{ github.head_ref }}",
                         "emoji": true
                       }
                     },

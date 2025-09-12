@@ -9,7 +9,9 @@ from unittest.mock import patch, MagicMock
 try:
     import oracledb
     from oracledb import DatabaseError
-    from mindsdb.integrations.handlers.oracle_handler.oracle_handler import OracleHandler
+    from mindsdb.integrations.handlers.oracle_handler.oracle_handler import (
+        OracleHandler,
+    )
 except ImportError:
     pytestmark = pytest.mark.skip("Oracle handler not installed")
 
@@ -17,14 +19,20 @@ import pandas as pd
 from pandas import DataFrame
 
 from base_handler_test import BaseDatabaseHandlerTest
-from mindsdb.integrations.libs.response import HandlerResponse as Response, INF_SCHEMA_COLUMNS_NAMES_SET, RESPONSE_TYPE
+from mindsdb.integrations.libs.response import (
+    HandlerResponse as Response,
+    INF_SCHEMA_COLUMNS_NAMES_SET,
+    RESPONSE_TYPE,
+)
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 
 class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
     @property
     def dummy_connection_data(self):
-        return OrderedDict(user="example_user", password="example_pass", dsn="example_dsn")
+        return OrderedDict(
+            user="example_user", password="example_pass", dsn="example_dsn"
+        )
 
     @property
     def err_to_raise_on_connect_failure(self):
@@ -63,7 +71,9 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         return OracleHandler("oracle", connection_data=self.dummy_connection_data)
 
     def create_patcher(self):
-        return patch("mindsdb.integrations.handlers.oracle_handler.oracle_handler.connect")
+        return patch(
+            "mindsdb.integrations.handlers.oracle_handler.oracle_handler.connect"
+        )
 
     def test_connect_validation(self):
         """
@@ -152,7 +162,9 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         connection_args["thick_mode"] = True
         connection_args["oracle_client_lib_dir"] = "/path/to/oracle/client/lib"
 
-        with patch("mindsdb.integrations.handlers.oracle_handler.oracle_handler.oracledb.init_oracle_client") as mock_init:
+        with patch(
+            "mindsdb.integrations.handlers.oracle_handler.oracle_handler.oracledb.init_oracle_client"
+        ) as mock_init:
             handler = OracleHandler("oracle", connection_data=connection_args)
             handler.connect()
             mock_init.assert_called_once_with(lib_dir="/path/to/oracle/client/lib")
@@ -263,14 +275,18 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         expected_sql = "SELECT * FROM rendered_table"
 
-        with patch("mindsdb.integrations.handlers.oracle_handler.oracle_handler.SqlalchemyRender") as MockRenderer:
+        with patch(
+            "mindsdb.integrations.handlers.oracle_handler.oracle_handler.SqlalchemyRender"
+        ) as MockRenderer:
             mock_renderer_instance = MockRenderer.return_value
             mock_renderer_instance.get_string.return_value = expected_sql
 
             result = self.handler.query(mock_ast)
 
             MockRenderer.assert_called_once_with("oracle")
-            mock_renderer_instance.get_string.assert_called_once_with(mock_ast, with_failback=True)
+            mock_renderer_instance.get_string.assert_called_once_with(
+                mock_ast, with_failback=True
+            )
             self.handler.native_query.assert_called_once_with(expected_sql)
             self.assertEqual(result, expected_response)
 
@@ -562,7 +578,17 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             HEXTORAW('54657374')      -- t_blob
         );
         """
-        input_row = ("Test      ", "Unicode   ", "Test", "Unicode", "Test", "Test", "Test", b"Test", b"Test")
+        input_row = (
+            "Test      ",
+            "Unicode   ",
+            "Test",
+            "Unicode",
+            "Test",
+            "Test",
+            "Test",
+            b"Test",
+            b"Test",
+        )
         mock_cursor.fetchall.return_value = [input_row]
 
         mock_cursor.description = [
@@ -636,7 +662,11 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ("D_TIMESTAMP_P", oracledb.DB_TYPE_TIMESTAMP, 23, None, 0, 9, True),
         ]
         response: Response = self.handler.native_query(query_str)
-        excepted_mysql_types = [MYSQL_DATA_TYPE.DATE, MYSQL_DATA_TYPE.TIMESTAMP, MYSQL_DATA_TYPE.TIMESTAMP]
+        excepted_mysql_types = [
+            MYSQL_DATA_TYPE.DATE,
+            MYSQL_DATA_TYPE.TIMESTAMP,
+            MYSQL_DATA_TYPE.TIMESTAMP,
+        ]
         self.assertEqual(response.mysql_types, excepted_mysql_types)
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[response.data_frame.columns[i]][0]
@@ -648,7 +678,15 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         input_rows = [(bigint_val, True), (None, None)]
         mock_cursor.fetchall.return_value = input_rows
         mock_cursor.description = [
-            ("N_BIGINT", oracledb.DB_TYPE_NUMBER, 39, None, 17, 0, True),  # set 17 just to force cast to Int64
+            (
+                "N_BIGINT",
+                oracledb.DB_TYPE_NUMBER,
+                39,
+                None,
+                17,
+                0,
+                True,
+            ),  # set 17 just to force cast to Int64
             ("T_BOOLEAN", oracledb.DB_TYPE_BOOLEAN, None, None, None, None, True),
         ]
         response: Response = self.handler.native_query(query_str)
@@ -675,7 +713,10 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                 )
             );
         """
-        input_row = (array("f", [1.1, 2.2, 3.3]), {"category": "electronics", "price": Decimal("299.99")})
+        input_row = (
+            array("f", [1.1, 2.2, 3.3]),
+            {"category": "electronics", "price": Decimal("299.99")},
+        )
         mock_cursor.fetchall.return_value = [input_row]
         mock_cursor.description = [
             ("T_EMBEDDING", oracledb.DB_TYPE_VECTOR, None, None, None, None, True),
@@ -704,9 +745,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                 "row_count",
             ],
         )
-        mock_response = Response(
-            RESPONSE_TYPE.TABLE, data_frame=expected_df
-        )
+        mock_response = Response(RESPONSE_TYPE.TABLE, data_frame=expected_df)
         self.handler.native_query = MagicMock(return_value=mock_response)
 
         response = self.handler.meta_get_tables()
@@ -715,6 +754,39 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         assert response is mock_response
         df = response.data_frame
         assert list(df["table_name"]) == ["TABLE1", "TABLE2"]
+
+        del self.handler.native_query
+
+    def test_meta_get_columns(self):
+        """
+        Test the retrieval of column metadata.
+        """
+        expected_df = DataFrame(
+            [
+                ("TABLE1", "COL1", "VARCHAR2", "desc1", None, 1),
+                ("TABLE1", "COL2", "NUMBER", "desc2", "0", 0),
+            ],
+            columns=[
+                "table_name",
+                "column_name",
+                "data_type",
+                "column_description",
+                "column_default",
+                "is_nullable",
+            ],
+        )
+
+        mock_response = Response(RESPONSE_TYPE.TABLE, data_frame=expected_df)
+        self.handler.native_query = MagicMock(return_value=mock_response)
+
+        table_name = "TABLE1"
+        response = self.handler.meta_get_columns(table_name)
+        self.handler.native_query.assert_called_once()
+
+        assert response is mock_response
+        df = response.data_frame
+        assert list(df["column_name"]) == ["COL1", "COL2"]
+        assert list(df["is_nullable"]) == [1, 0]
 
         del self.handler.native_query
 

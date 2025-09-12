@@ -35,14 +35,25 @@ FROM information_schema.queries;
 </Tip>
 
 <Info>
-To speed up the initial loading of a knowledge base with data, run the `INSERT INTO` command with the `kb_no_upsert` flag. It is recommended to use this flag only when the knowledge base is empty, that is, only for the initial data insertion.
+To speed up data insertion, you can use these performance optimization flags:
 
+**Skip duplicate checking (kb_no_upsert)**
 ```sql
 INSERT INTO my_kb
 SELECT *
 FROM table_name
 USING kb_no_upsert = true;
 ```
+This skips all duplicate checking and directly inserts data. Use only when the knowledge base is empty (initial data load).
+
+**Skip existing items (kb_skip_existing)**
+```sql
+INSERT INTO my_kb
+SELECT *
+FROM table_name
+USING kb_skip_existing = true;
+```
+This checks for existing items and skips them entirely, including avoiding embedding calculation for existing content. More efficient than upsert when you only want to insert new items.
 </Info>
 
 <Note>
@@ -85,6 +96,12 @@ Knowledge bases uniquely identify data rows using an ID column, which prevents f
 **Best practice**
 
 Ensure the `id_column` uniquely identifies each row to avoid unintentional data loss due to duplicate ID skipping.
+
+**Performance optimization for duplicate handling**
+
+For better performance when handling duplicates, you can use:
+- `kb_skip_existing = true`: Checks for existing IDs and skips them completely (no embedding calculation, more efficient)
+- `kb_no_upsert = true`: Skips duplicate checking entirely (fastest, use only for initial load into empty KB)
 
 </Note>
 

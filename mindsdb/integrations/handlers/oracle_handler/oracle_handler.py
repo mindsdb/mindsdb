@@ -401,4 +401,36 @@ class OracleHandler(MetaDatabaseHandler):
         if result.resp_type is RESPONSE_TYPE.TABLE:
             result.to_columns_table_response(map_type_fn=_map_type)
         return result
-        
+
+    def meta_get_tables(self, table_names: list[str] | None = None) -> list[dict[str, Any]]:
+        """
+        Retrieves metadata about all non-system tables and views in the current schema of the Oracle database.
+
+        Returns:
+            list[dict[str, Any]]: A list of dictionaries, each containing metadata about a table or view.
+        """
+        query = """
+            SELECT
+                o.object_name AS table_name,
+                USER AS table_schema,
+                o.object_type AS table_type,
+                c.comments AS table_description,
+                t.num_rows AS row_count
+            FROM
+                user_objects o
+            LEFT JOIN
+                user_tab_comments c ON o.object_name = c.table_name
+            LEFT JOIN
+                user_tables t ON o.object_name = t.table_name AND o.object_type = 'TABLE'
+            WHERE
+                o.object_type IN ('TABLE', 'VIEW')
+            ORDER BY
+                o.object_name;
+        """
+        if table_names is not None and len(table_names) > 0:
+            table_names = [f"'{t}'" for t in table_names]
+            query += f" AND o.object_name IN ({','.join(table_names)})"
+
+        result = self.native_query(query)
+        return result
+    

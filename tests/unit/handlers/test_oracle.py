@@ -688,6 +688,36 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             self.assertEqual(result_value, input_value)
         # endreion
 
+    # Metadata Handler Tests
+
+    def test_meta_get_tables(self):
+        expected_df = DataFrame(
+            [
+                ("TABLE1", "SAMPLEUSER", "TABLE", "desc1", 5),
+                ("TABLE2", "SAMPLEUSER", "VIEW", "desc2", 0),
+            ],
+            columns=[
+                "table_name",
+                "table_schema",
+                "table_type",
+                "table_description",
+                "row_count",
+            ],
+        )
+        mock_response = Response(
+            RESPONSE_TYPE.TABLE, data_frame=expected_df
+        )
+        self.handler.native_query = MagicMock(return_value=mock_response)
+
+        response = self.handler.meta_get_tables()
+        self.handler.native_query.assert_called_once()
+
+        assert response is mock_response
+        df = response.data_frame
+        assert list(df["table_name"]) == ["TABLE1", "TABLE2"]
+
+        del self.handler.native_query
+
 
 if __name__ == "__main__":
     unittest.main()

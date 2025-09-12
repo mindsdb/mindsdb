@@ -132,7 +132,10 @@ class ProjectDataNode(DataNode):
                 case [query_table, str(version)], [is_quoted, _] if version.isdigit():
                     ...
                 case _:
-                    raise ValueError("Table name should contain only one part")
+                    raise EntityNotExistsError(
+                        f"Table '{query.from_table}' not found in the database. The project database support only single-part names",
+                        self.project.name,
+                    )
 
             if not is_quoted:
                 query_table = query_table.lower()

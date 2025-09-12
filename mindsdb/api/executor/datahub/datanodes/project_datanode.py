@@ -2,6 +2,7 @@ from copy import deepcopy
 from dataclasses import astuple
 
 import pandas as pd
+from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb_sql_parser import parse_sql
 from mindsdb_sql_parser.ast import (
     BinaryOperation,
@@ -99,9 +100,9 @@ class ProjectDataNode(DataNode):
 
         return ml_handler.predict(model_name, df, project_name=self.project.name, version=version, params=params)
 
-    def query(self, query=None, native_query=None, session=None) -> DataHubResponse:
-        if query is None and native_query is not None:
-            query = parse_sql(native_query)
+    def query(self, query: ASTNode | str = None, session=None) -> DataHubResponse:
+        if isinstance(query, str):
+            query = parse_sql(query)
 
         if isinstance(query, Update):
             query_table = query.table.parts[0].lower()

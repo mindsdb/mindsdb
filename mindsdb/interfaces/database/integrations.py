@@ -866,6 +866,8 @@ class IntegrationController:
 
     def import_handler(self, handler_name: str, base_import: str = None):
         with self._import_lock:
+            time_before_import = time.perf_counter()
+            logger.debug(f"Importing handler '{handler_name}'")
             handler_meta = self.handlers_import_status[handler_name]
             handler_dir = handler_meta["path"]
 
@@ -877,9 +879,13 @@ class IntegrationController:
                 handler_module = importlib.import_module(f"{base_import}{handler_folder_name}")
                 self.handler_modules[handler_name] = handler_module
                 handler_meta = self._get_handler_meta(handler_name)
+                logger.debug(
+                    f"Handler '{handler_name}' imported successfully in {(time.perf_counter() - time_before_import):.3f} seconds"
+                )
             except Exception as e:
                 handler_meta["import"]["success"] = False
                 handler_meta["import"]["error_message"] = str(e)
+                logger.debug(f"Failed to import handler '{handler_name}': {e}")
 
             self.handlers_import_status[handler_meta["name"]] = handler_meta
             return handler_meta

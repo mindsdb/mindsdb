@@ -253,6 +253,8 @@ def log_system_info(logger: logging.Logger) -> None:
             os_details.append(f"{distro_info} (kernel {os_release})")
 
         elif os_system == "Windows":
+            os_name = "Windows"
+            os_version = "unknown"
             try:
                 result = subprocess.run(
                     ["wmic", "os", "get", "Caption,Version", "/format:list"], capture_output=True, text=True, timeout=3
@@ -265,15 +267,15 @@ def log_system_info(logger: logging.Logger) -> None:
                             windows_info[key] = value.strip()
 
                     if "Caption" in windows_info and "Version" in windows_info:
-                        os_details.append(f"{windows_info['Caption']} (build {windows_info['Version']})")
-                    else:
-                        os_details.append(f"Windows {os_release}")
-                else:
-                    os_details.append(f"Windows {os_release}")
+                        os_name = windows_info['Caption']
+                        os_version = windows_info['Version']
             except Exception:
-                os_details.append(f"Windows {os_release}")
+                pass
+            os_details.append(f"{os_name} {os_release} (version {os_version})")
 
         elif os_system == "Darwin":  # macOS
+            os_name = "macOS"
+            os_version = "unknown"
             try:
                 result = subprocess.run(
                     ["sw_vers", "-productName", "-productVersion"], capture_output=True, text=True, timeout=3
@@ -281,15 +283,11 @@ def log_system_info(logger: logging.Logger) -> None:
                 if result.returncode == 0:
                     lines = result.stdout.strip().split("\n")
                     if len(lines) >= 2:
-                        product_name = lines[0].strip()
-                        product_version = lines[1].strip()
-                        os_details.append(f"{product_name} {product_version}")
-                    else:
-                        os_details.append(f"macOS {os_release}")
-                else:
-                    os_details.append(f"macOS {os_release}")
+                        os_name = lines[0].strip()
+                        os_version = lines[1].strip()
             except Exception:
-                os_details.append(f"macOS {os_release}")
+                pass
+            os_details.append(f"{os_name} {os_release} (version {os_version})")
         else:
             os_details.append(f"{os_system} {os_release}")
 

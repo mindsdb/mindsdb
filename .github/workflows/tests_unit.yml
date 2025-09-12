@@ -1,50 +1,26 @@
-name: Test on Push
+name: Unit Tests
 
 permissions:
     contents: read
 
 on:
-  pull_request:
-    branches:
-      - 'main'
-      - 'develop'
-      - 'release/*'
-  push:
-    branches:
-      - 'main'
-      - 'develop'
-      - 'release/*'
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      git-sha:
+        required: false
+        type: string
+        default: ""
+    secrets:
+      SLACK_ENG_CHANNEL_ID:
+        required: true
+      GH_ACTIONS_SLACK_BOT_TOKEN:
+        required: true
 
 defaults:
   run:
     shell: bash
 
-# Cancel any existing runs of this workflow on the same branch/pr
-# We always want to build/deploy/test a new commit over an older one
-concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  # Sets an output var to indicate if all changes are in docs files
-  # This output is used to skip running code checks on docs changes
-  changes:
-    name: Filter changed files
-    runs-on: mdb-dev
-    outputs:
-      not-docs: ${{ steps.filter.outputs.not-docs }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          predicate-quantifier: "every"
-          filters: |
-            not-docs:
-              - '!docs/**'  
-              - '!**/*.md'
-
   # Run all of our static code checks here
   code_checking:
     name: Run static code checks
@@ -56,7 +32,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           # required to grab the history of the PR for pre-commit to work out what's changed
-          fetch-depth: 0 
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}  # Always check out the PR branch
       # Install python and setup UV
       - name: Setup uv
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
@@ -105,6 +82,8 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}  # Always check out the PR branch
       - id: set-matrix
         uses: JoshuaTheMiller/conditional-build-matrix@v2.0.1
         with:
@@ -121,6 +100,8 @@ jobs:
       - name: Checkout
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}  # Always check out the PR branch
       # Install python and setup UV
       - name: Setup uv
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
@@ -151,6 +132,8 @@ jobs:
       - name: Checkout
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}  # Always check out the PR branch
       # Install python and setup UV
       - name: Setup uv
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
@@ -201,53 +184,3 @@ jobs:
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
           make unit_tests_slow
-
-  slack_message:
-    if: failure() && !cancelled()
-    name: Notify Slack
-    # Every previous job needs to be in here, because failure() will only return true if the job that failed is in 'needs'
-    needs: [changes, code_checking, matrix_prep, check_install, unit_tests]
-    runs-on: mdb-dev
-    steps:
-      - name: Notify of failing tests
-        if: ${{ needs.unit_tests.result != 'success' && needs.unit_tests.result != 'cancelled' && github.event_name == 'push' }}
-        uses: slackapi/slack-github-action@v1.26.0
-        with:
-          channel-id: ${{ secrets.SLACK_ENG_CHANNEL_ID }}
-          payload: |
-            {
-              "attachments": [
-                {
-                  "color": "#FF4444",
-                  "blocks": [
-                    {
-                      "type": "header",
-                      "text": {
-                        "type": "plain_text",
-                        "text": "UNIT TEST RUN FAILED ON ${{ github.ref_name }}",
-                        "emoji": true
-                      }
-                    },
-                    {
-                      "type": "section",
-                      "text": {
-                        "type": "mrkdwn",
-                        "text": " "
-                      },
-                      "fields": [
-                        {
-                          "type": "mrkdwn",
-                          "text": "*Commit*\n<${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>"
-                        },
-                        {
-                          "type": "mrkdwn",
-                          "text": "*Workflow Run*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>"
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
-            }
-        env:
-          SLACK_BOT_TOKEN: ${{ secrets.GH_ACTIONS_SLACK_BOT_TOKEN }}

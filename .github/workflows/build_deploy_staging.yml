@@ -13,25 +13,33 @@ on:
       - 'main'
       - 'release/*'
 
+concurrency:
+  group: ${{ github.workflow_ref }}
+  cancel-in-progress: true
+
 jobs:
   
+  run_unit_tests:
+    name: Run Unit Tests
+    runs-on: mdb-dev
+    if: github.event.pull_request.merged == true
+    uses: ./.github/workflows/tests_unit.yml
+    with:
+      git-sha: ${{ github.event.pull_request.merge_commit_sha }}
+    secrets: inherit
+
   # Build our docker images based on our bake file
   build:
     if: github.event.pull_request.merged == true
     name: Build Docker Images
     runs-on: mdb-dev
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-build
-      cancel-in-progress: true
     steps:
+      # Check out the merge commit on the base branch
       - uses: actions/checkout@v4
-      - name: Pull MindsDB Github Actions
-        uses: actions/checkout@v4
         with:
-          repository: mindsdb/github-actions
-          path: github-actions
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
       # Build the bakefile and push
-      - uses: ./github-actions/docker-bake
+      - uses: mindsdb/github-actions/docker-bake@main
         with:
           push-cache: false
 
@@ -41,20 +49,13 @@ jobs:
     name: Push Docker Cache
     runs-on: mdb-dev
     needs: [build]
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-cache
-      cancel-in-progress: true
     steps:
+      # Check out the merge commit on the base branch
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
-      - name: Pull MindsDB Github Actions
-        uses: actions/checkout@v4
-        with:
-          repository: mindsdb/github-actions
-          path: github-actions
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
       # Build the bakefile and push
-      - uses: ./github-actions/docker-bake
+      - uses: mindsdb/github-actions/docker-bake@main
         with:
           push-cache: true
           cache-only: true
@@ -66,32 +67,43 @@ jobs:
     uses: ./.github/workflows/deploy.yml
     with:
       deploy-envs: '["staging", "dev", "alpha-dev"]'
-      image-tag: ${{ github.sha }}
+      image-tag: ${{ github.event.pull_request.merge_commit_sha }}
     secrets: inherit
 
   # Run integration tests
-  # TODO: Run these against the deployed environment
-  run_tests:
+  run_integration_tests:
     if: github.event.pull_request.merged == true
     name: Run Integration Tests
     needs: [deploy]
     concurrency:
       group: deploy-staging
       cancel-in-progress: false
-    uses: ./.github/workflows/test_on_deploy.yml
+    uses: ./.github/workflows/tests_integration.yml
     with:
+      git-sha: ${{ github.event.pull_request.merge_commit_sha }}
       deploy-env: staging
     secrets: inherit
   
+  tests_completed:
+    name: All Tests Succeeded
+    needs: [run_unit_tests, run_integration_tests]
+    runs-on: mdb-dev
+    if: always()
+    steps:
+      - name: fail if tests failed or didnt run
+        if: ${{ needs.run_unit_tests.result != 'success' || needs.run_integration_tests.result != 'success'}}
+        run: exit 1
+      - run: echo "Tests ran successfully"
+
   slack_message:
     if: failure() && !cancelled()
     name: Notify Slack
     # Every previous job needs to be in here, because failure() will only return true if the job that failed is in 'needs'
-    needs: [build, build-cache, deploy, run_tests]
+    needs: [run_unit_tests, build, build-cache, deploy, run_integration_tests, tests_completed]
     runs-on: mdb-dev
     steps:
       - name: Notify of failing tests
-        if: ${{ needs.run_tests.result != 'success' && needs.run_tests.result != 'cancelled' }}
+        if: ${{ needs.tests_completed.result != 'success' && needs.tests_completed.result != 'cancelled' }}
         uses: slackapi/slack-github-action@v1.26.0
         with:
           channel-id: ${{ secrets.SLACK_ENG_CHANNEL_ID }}

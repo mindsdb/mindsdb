@@ -279,7 +279,7 @@ class PostgresHandler(MetaDatabaseHandler):
         df.columns = columns
 
     @profiler.profile()
-    def native_query(self, query: str, params=None) -> Response:
+    def native_query(self, query: str, params=None, **kwargs) -> Response:
         """
         Executes a SQL query on the PostgreSQL database and returns the result.
 
@@ -466,7 +466,10 @@ class PostgresHandler(MetaDatabaseHandler):
             AND
                 table_schema = {schema_name}
         """
-        result = self.native_query(query)
+        # If it is used by pgvector handler - `native_query` method of pgvector handler will be used
+        #   in that case if shared pgvector db is used - `native_query` will be skipped (return  empty result)
+        #   `no_restrict` flag allows to execute native query, and it will call `native_query` of postgres handler
+        result = self.native_query(query, no_restrict=True)
         result.to_columns_table_response(map_type_fn=_map_type)
         return result
 

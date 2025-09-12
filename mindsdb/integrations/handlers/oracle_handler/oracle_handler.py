@@ -52,8 +52,18 @@ def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
         ("BINARY_DOUBLE",): MYSQL_DATA_TYPE.DOUBLE,
         ("LONG",): MYSQL_DATA_TYPE.BIGINT,
         ("DATE",): MYSQL_DATA_TYPE.DATE,
-        ("HOUR", "MINUTE", "SECOND", "TIMEZONE_HOUR", "TIMEZONE_MINUTE"): MYSQL_DATA_TYPE.SMALLINT,
-        ("TIMESTAMP", "TIMESTAMP WITH TIME ZONE", "TIMESTAMP WITH LOCAL TIME ZONE"): MYSQL_DATA_TYPE.TIMESTAMP,
+        (
+            "HOUR",
+            "MINUTE",
+            "SECOND",
+            "TIMEZONE_HOUR",
+            "TIMEZONE_MINUTE",
+        ): MYSQL_DATA_TYPE.SMALLINT,
+        (
+            "TIMESTAMP",
+            "TIMESTAMP WITH TIME ZONE",
+            "TIMESTAMP WITH LOCAL TIME ZONE",
+        ): MYSQL_DATA_TYPE.TIMESTAMP,
         ("RAW", "LONG RAW", "BLOB", "BFILE"): MYSQL_DATA_TYPE.BINARY,
         ("ROWID", "UROWID"): MYSQL_DATA_TYPE.TEXT,
         ("CHAR", "NCHAR", "CLOB", "NCLOB", "CHARACTER"): MYSQL_DATA_TYPE.CHAR,
@@ -65,7 +75,9 @@ def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
         if internal_type_name in db_types_list:
             return mysql_data_type
 
-    logger.debug(f"Oracle handler type mapping: unknown type: {internal_type_name}, use VARCHAR as fallback.")
+    logger.debug(
+        f"Oracle handler type mapping: unknown type: {internal_type_name}, use VARCHAR as fallback."
+    )
     return MYSQL_DATA_TYPE.VARCHAR
 
 
@@ -139,7 +151,11 @@ def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
             expected_dtype = "Int64"
         elif mysql_type in (MYSQL_DATA_TYPE.BOOL, MYSQL_DATA_TYPE.BOOLEAN):
             expected_dtype = "boolean"
-        serieses.append(pd.Series([row[i] for row in result], dtype=expected_dtype, name=description[i][0]))
+        serieses.append(
+            pd.Series(
+                [row[i] for row in result], dtype=expected_dtype, name=description[i][0]
+            )
+        )
     df = pd.concat(serieses, axis=1, copy=False)
     # endregion
 
@@ -282,7 +298,9 @@ class OracleHandler(MetaDatabaseHandler):
             logger.error(f"Connection check to Oracle failed, {known_error}!")
             response.error_message = str(known_error)
         except Exception as unknown_error:
-            logger.error(f"Connection check to Oracle failed due to an unknown error, {unknown_error}!")
+            logger.error(
+                f"Connection check to Oracle failed due to an unknown error, {unknown_error}!"
+            )
             response.error_message = str(unknown_error)
 
         if response.success and need_to_close:
@@ -316,7 +334,9 @@ class OracleHandler(MetaDatabaseHandler):
                     response = _make_table_response(result, cur)
                 connection.commit()
             except DatabaseError as database_error:
-                logger.error(f"Error running query: {query} on Oracle, {database_error}!")
+                logger.error(
+                    f"Error running query: {query} on Oracle, {database_error}!"
+                )
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_message=str(database_error),
@@ -324,7 +344,9 @@ class OracleHandler(MetaDatabaseHandler):
                 connection.rollback()
 
             except Exception as unknown_error:
-                logger.error(f"Unknwon error running query: {query} on Oracle, {unknown_error}!")
+                logger.error(
+                    f"Unknwon error running query: {query} on Oracle, {unknown_error}!"
+                )
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_message=str(unknown_error),
@@ -402,7 +424,9 @@ class OracleHandler(MetaDatabaseHandler):
             result.to_columns_table_response(map_type_fn=_map_type)
         return result
 
-    def meta_get_tables(self, table_names: list[str] | None = None) -> list[dict[str, Any]]:
+    def meta_get_tables(
+        self, table_names: list[str] | None = None
+    ) -> list[dict[str, Any]]:
         """
         Retrieves metadata about all non-system tables and views in the current schema of the Oracle database.
 
@@ -433,4 +457,40 @@ class OracleHandler(MetaDatabaseHandler):
 
         result = self.native_query(query)
         return result
-    
+
+    def meta_get_columns(self, table_names):
+        """Retrieves metadata about the columns of specified tables in the Oracle database.
+
+        Args:
+            table_names (list[str]): A list of table names for which to retrieve column metadata.
+
+        Returns:
+            list[dict[str, Any]]: A list of dictionaries, each containing metadata about a column.
+        """
+        query = """
+            SELECT
+                utc.table_name,
+                utc.column_name,
+                utc.data_type,
+                ucc.comments AS column_description,
+                utc.data_default AS column_default,
+                CASE
+                    WHEN utc.nullable = 'Y' THEN 1
+                    ELSE 0
+                END AS is_nullable
+            FROM
+                user_tab_columns utc
+            JOIN
+                user_tables ut ON utc.table_name = ut.table_name
+            LEFT JOIN
+                user_col_comments ucc ON utc.table_name = ucc.table_name AND utc.column_name = ucc.column_name
+            ORDER BY
+                utc.table_name,
+                utc.column_id;
+        """
+        if table_names is not None and len(table_names) > 0:
+            table_names = [f"'{t}'" for t in table_names]
+            query += f" WHERE utc.table_name IN ({','.join(table_names)})"
+
+        result = self.native_query(query)
+        return result

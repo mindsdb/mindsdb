@@ -790,6 +790,50 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         del self.handler.native_query
 
+    def test_meta_get_column_statistics(self):
+        """
+        Test the retrieval of column statistics.
+        """
+        expected_df = DataFrame(
+            [
+                ("STATS_TABLE", "ID", 0.0, 1500, None, None, "1,1500"),
+                ("STATS_TABLE", "CATEGORY", 5.5, 12, None, None, "A,Z"),
+            ],
+            columns=[
+                "TABLE_NAME",
+                "COLUMN_NAME",
+                "NULL_PERCENTAGE",
+                "DISTINCT_VALUES_COUNT",
+                "MOST_COMMON_VALUES",
+                "MOST_COMMON_FREQUENCIES",
+                "HISTOGRAM_BOUNDS",
+            ],
+        )
+
+        mock_response = Response(RESPONSE_TYPE.TABLE, data_frame=expected_df)
+        self.handler.native_query = MagicMock(return_value=mock_response)
+        table_names = ["STATS_TABLE"]
+        response = self.handler.meta_get_column_statistics(table_names=table_names)
+        self.handler.native_query.assert_called_once()
+        final_df = response.data_frame
+
+        assert list(final_df.columns) == [
+            "TABLE_NAME",
+            "COLUMN_NAME",
+            "NULL_PERCENTAGE",
+            "DISTINCT_VALUES_COUNT",
+            "MOST_COMMON_VALUES",
+            "MOST_COMMON_FREQUENCIES",
+            "MINIMUM_VALUE",
+            "MAXIMUM_VALUE",
+        ]
+
+        assert list(final_df["COLUMN_NAME"]) == ["ID", "CATEGORY"]
+        assert list(final_df["MINIMUM_VALUE"]) == ["1", "A"]
+        assert list(final_df["MAXIMUM_VALUE"]) == ["1500", "Z"]
+
+        del self.handler.native_query
+
 
 if __name__ == "__main__":
     unittest.main()

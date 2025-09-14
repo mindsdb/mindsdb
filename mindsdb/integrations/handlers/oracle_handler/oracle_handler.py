@@ -494,3 +494,76 @@ class OracleHandler(MetaDatabaseHandler):
 
         result = self.native_query(query)
         return result
+
+    def meta_get_column_statistics(self, table_names):
+        """Retrieves statistics about the columns of specified tables in the Oracle database.
+
+        Args:
+            table_names (list[str]): A list of table names for which to retrieve column statistics.
+
+        Returns:
+            list[dict[str, Any]]: A list of dictionaries, each containing statistics about a column.
+        """
+        table_filter = ""
+        if table_names is not None and len(table_names) > 0:
+            quoted_names = [f"'{t.upper()}'" for t in table_names]
+            table_filter = f" WHERE cs.table_name IN ({','.join(quoted_names)})"
+
+        query = (
+            """
+            SELECT
+                cs.table_name AS TABLE_NAME,
+                cs.column_name AS COLUMN_NAME,
+                CASE
+                    WHEN cs.sample_size > 0 THEN ROUND((cs.num_nulls / cs.sample_size) * 100, 2)
+                    ELSE NULL
+                END AS NULL_PERCENTAGE,
+                cs.num_distinct AS DISTINCT_VALUES_COUNT,
+                NULL AS MOST_COMMON_VALUES,
+                NULL AS MOST_COMMON_FREQUENCIES,
+                h.bounds AS HISTOGRAM_BOUNDS
+            FROM
+                user_tab_col_statistics cs
+            LEFT JOIN (
+                SELECT
+                    table_name,
+                    column_name,
+                    LISTAGG(endpoint_value, ', ') WITHIN GROUP (ORDER BY endpoint_number) AS bounds
+                FROM
+                    user_tab_histograms
+                WHERE
+                    histogram = 'HEIGHT BALANCED'
+                GROUP BY
+                    table_name,
+                    column_name
+            ) h ON cs.table_name = h.table_name AND cs.column_name = h.column_name
+            """
+            + table_filter
+            + """
+            ORDER BY
+                cs.table_name,
+                cs.column_name
+            """
+        )
+
+        result = self.native_query(query)
+
+        if result.resp_type is RESPONSE_TYPE.TABLE and result.data_frame is not None:
+            df = result.data_frame
+
+            def extract_min_max(
+                histogram_str: str,
+            ) -> tuple[Optional[float], Optional[float]]:
+                if histogram_str and str(histogram_str).lower() not in ["nan", "none"]:
+                    values = str(histogram_str).split(",")
+                    if values:
+                        min_val = values[0].strip(" '\"")
+                        max_val = values[-1].strip(" '\"")
+                        return min_val, max_val
+                return None, None
+
+            min_max_values = df["HISTOGRAM_BOUNDS"].apply(extract_min_max)
+            df["MINIMUM_VALUE"] = min_max_values.apply(lambda x: x[0])
+            df["MAXIMUM_VALUE"] = min_max_values.apply(lambda x: x[1])
+            df.drop(columns=["HISTOGRAM_BOUNDS"], inplace=True)
+        return result

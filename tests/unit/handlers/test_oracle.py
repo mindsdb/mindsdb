@@ -834,6 +834,90 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         del self.handler.native_query
 
+    def test_meta_get_primary_keys(self):
+        """
+        Test the retrieval of primary key metadata.
+        """
+        expected_df = DataFrame(
+            [
+                ("USERS", "USER_ID", 1, "PK_USERS"),
+                ("ORDERS", "ORDER_ID", 3, "PK_ORDERS"),
+            ],
+            columns=[
+                "table_name",
+                "column_name",
+                "ordinal_position",
+                "constraint_name",
+            ],
+        )
+
+        mock_response = Response(RESPONSE_TYPE.TABLE, data_frame=expected_df)
+        self.handler.native_query = MagicMock(return_value=mock_response)
+
+        table_names = ["USERS", "ORDERS"]
+        response = self.handler.meta_get_primary_keys(table_names=table_names)
+        self.handler.native_query.assert_called_once()
+
+        assert response is mock_response
+        df = response.data_frame
+        assert list(df["table_name"]) == ["USERS", "ORDERS"]
+        assert list(df["column_name"]) == ["USER_ID", "ORDER_ID"]
+        assert list(df["ordinal_position"]) == [1, 3]
+        assert list(df["constraint_name"]) == ["PK_USERS", "PK_ORDERS"]
+
+        del self.handler.native_query
+
+    def test_meta_get_foreign_keys(self):
+        """
+        Test the retrieval of foreign key metadata.
+        """
+        expected_df = DataFrame(
+            [
+                (
+                    "ORDERS",
+                    "USER_ID",
+                    "USERS",
+                    "USER_ID",
+                    1,
+                    "FK_ORDERS_USERS",
+                ),
+                (
+                    "ORDER_ITEMS",
+                    "ORDER_ID",
+                    "ORDERS",
+                    "ORDER_ID",
+                    1,
+                    "FK_ORDERITEMS_ORDERS",
+                ),
+            ],
+            columns=[
+                "table_name",
+                "column_name",
+                "referenced_table_name",
+                "referenced_column_name",
+                "ordinal_position",
+                "constraint_name",
+            ],
+        )
+
+        mock_response = Response(RESPONSE_TYPE.TABLE, data_frame=expected_df)
+        self.handler.native_query = MagicMock(return_value=mock_response)
+
+        table_names = ["ORDERS", "ORDER_ITEMS"]
+        response = self.handler.meta_get_foreign_keys(table_names=table_names)
+        self.handler.native_query.assert_called_once()
+
+        assert response is mock_response
+        df = response.data_frame
+        assert list(df["table_name"]) == ["ORDERS", "ORDER_ITEMS"]
+        assert list(df["column_name"]) == ["USER_ID", "ORDER_ID"]
+        assert list(df["referenced_table_name"]) == ["USERS", "ORDERS"]
+        assert list(df["referenced_column_name"]) == ["USER_ID", "ORDER_ID"]
+        assert list(df["ordinal_position"]) == [1, 1]
+        assert list(df["constraint_name"]) == ["FK_ORDERS_USERS", "FK_ORDERITEMS_ORDERS"]
+
+        del self.handler.native_query
+
 
 if __name__ == "__main__":
     unittest.main()

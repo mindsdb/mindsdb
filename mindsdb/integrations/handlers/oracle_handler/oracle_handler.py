@@ -567,3 +567,74 @@ class OracleHandler(MetaDatabaseHandler):
             df["MAXIMUM_VALUE"] = min_max_values.apply(lambda x: x[1])
             df.drop(columns=["HISTOGRAM_BOUNDS"], inplace=True)
         return result
+
+    def meta_get_primary_keys(self, table_names):
+        """
+        Retrieves the primary keys for the specified tables in the Oracle database.
+
+        Args:
+            table_names (list[str]): A list of table names for which to retrieve primary keys.
+
+        Returns:
+            list[dict[str, Any]]: A list of dictionaries, each containing information about a primary key.
+        """
+
+        query = """
+            SELECT
+                cols.table_name,
+                cols.column_name,
+                cols.position AS ordinal_position,
+                cons.constraint_name
+            FROM
+                all_constraints cons
+            JOIN
+                all_cons_columns cols ON cons.constraint_name = cols.constraint_name AND cons.owner = cols.owner
+            WHERE
+                cons.constraint_type = 'P'
+                AND cons.owner = SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA')
+        """
+        if table_names is not None and len(table_names) > 0:
+            quoted_names = [f"'{t.upper()}'" for t in table_names]
+            query += f" AND cols.table_name IN ({','.join(quoted_names)})"
+
+        query += " ORDER BY cols.table_name, cols.position"
+
+        result = self.native_query(query)
+        return result
+
+    def meta_get_foreign_keys(self, table_names):
+        """
+        Retrieves the foreign keys for the specified tables in the Oracle database.
+
+        Args:
+            table_names (list[str]): A list of table names for which to retrieve foreign keys.
+
+        Returns:
+            list[dict[str, Any]]: A list of dictionaries, each containing information about a foreign key.
+        """
+
+        query = """
+            SELECT
+            pk_cols.table_name AS parent_table_name,
+            pk_cols.column_name AS parent_column_name,
+            fk_cols.table_name AS child_table_name,
+            fk_cols.column_name AS child_column_name,
+            fk_cons.constraint_name
+        FROM
+            all_constraints fk_cons
+        JOIN
+            all_cons_columns fk_cols ON fk_cons.owner = fk_cols.owner AND fk_cons.constraint_name = fk_cols.constraint_name
+        JOIN
+            all_cons_columns pk_cols ON fk_cons.owner = pk_cols.owner AND fk_cons.r_constraint_name = pk_cols.constraint_name
+        WHERE
+            fk_cons.constraint_type = 'R'
+            AND fk_cons.owner = SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA')
+        """
+        if table_names is not None and len(table_names) > 0:
+            quoted_names = [f"'{t.upper()}'" for t in table_names]
+            query += f" AND fk_cols.table_name IN ({','.join(quoted_names)})"
+
+        query += " ORDER BY fk_cols.table_name, fk_cols.position"
+
+        result = self.native_query(query)
+        return result

@@ -71,7 +71,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
       # Build the bakefile and push
-      - uses: .mindsdb/github-actions/docker-bake@main
+      - uses: mindsdb/github-actions/docker-bake@main
         with:
           git-sha: ${{ github.event.pull_request.head.sha }}
           target: cloud-cpu

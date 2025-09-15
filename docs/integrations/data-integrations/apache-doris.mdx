@@ -1,0 +1,47 @@
+---
+title: Apache Doris
+sidebarTitle: Apache Doris
+---
+
+This is the implementation of Apache Doris data handler for MindsDB.
+
+[Apache Doris](https://doris.apache.org/) provides high-performance hybrid search capabilities across structured data, semi-structured data (such as JSON), and vector data. It excels at delivering high-concurrency, low-latency queries, while also offering advanced optimization for complex join operations. In addition, Doris can serve as a unified query engine, delivering high-performance analytical services not only on its self-managed internal table format but also on open lakehouse formats such as Iceberg.
+
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB locally via [Docker](/setup/self-hosted/docker) or [Docker Desktop](/setup/self-hosted/docker-desktop).
+2. To connect Apache Doris to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Apache Doris.
+
+## Connection
+
+Use the following SQL to establish a connection to Apache Doris from MindsDB:
+
+```sql
+CREATE DATABASE doris_conn
+WITH ENGINE = 'doris',
+PARAMETERS = {
+  "host": "127.0.0.1",
+  "port": 9030,
+  "user": "doris_user",
+  "password": "doris_pwd",
+  "database": "doris_database"
+};
+```
+The following parameters are required:
+
+* `host` is Apache Doris Frontend node address.
+* `port` is the query port of Apache Doris Frontend.
+* `user` is Apache Doris user.
+* `password` is Apache Doris password.
+* `database` is Apache Doris database name.
+
+Then, you can query your table as follows:
+
+```sql
+SELECT *
+FROM doris_conn.demo_table
+LIMIT 10;
+```

@@ -17,7 +17,9 @@ from mindsdb_sql_parser.ast import (
     Delete,
     Update,
     Function,
+    DropTables,
 )
+from mindsdb_sql_parser.ast.base import ASTNode
 from pgvector.psycopg import register_vector
 
 from mindsdb.integrations.handlers.postgres_handler.postgres_handler import (
@@ -116,9 +118,22 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
             return Response(RESPONSE_TYPE.OK)
         return super().get_tables()
 
-    def native_query(self, query, params=None) -> Response:
+    def query(self, query: ASTNode) -> Response:
+        # Option to drop table of shared pgvector connection
+        if isinstance(query, DropTables):
+            query.tables = [self._check_table(table.parts[-1]) for table in query.tables]
+            query_str, params = self.renderer.get_exec_params(query, with_failback=True)
+            return self.native_query(query_str, params, no_restrict=True)
+        return super().query(query)
+
+    def native_query(self, query, params=None, no_restrict=False) -> Response:
+        """
+        Altered `native_query` method of postgres handler.
+        Restrict usage of native query from executor with shared pg vector connection
+          Exceptions: if it is used by pgvector itself (with no_restrict = True)
+        """
         # Prevent execute native queries
-        if self._is_shared_db:
+        if self._is_shared_db and not no_restrict:
             return Response(RESPONSE_TYPE.OK)
         return super().native_query(query, params=params)
 
@@ -550,6 +565,9 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler, KeywordSearchBase):
 
     def create_table(self, table_name: str):
         """Create a table with a vector column."""
+
+        table_name = self._check_table(table_name)
+
         with self.connection.cursor() as cur:
             # For sparse vectors, use sparsevec type
             vector_column_type = "sparsevec" if self._is_sparse else "vector"

@@ -2,6 +2,7 @@
 # Then update the release notes to contain the new summary
 
 
+
 name: Update Release Notes
 
 permissions:

@@ -54,6 +54,7 @@ jobs:
   get-deploy-labels:
     name: Get Deploy Envs
     runs-on: mdb-dev
+    needs: [changes]
     outputs:
       deploy-envs: ${{ steps.get-labels.outputs.deploy-envs }}
     steps:

@@ -22,9 +22,6 @@ on:
       MINDSDB_DB_URI:
         required: true
 
-concurrency:
-  group: deploy-${{ matrix.deploy-env }}
-  cancel-in-progress: false
 
 jobs:
   migrate:
@@ -34,6 +31,9 @@ jobs:
       fail-fast: false
       matrix:
         deploy-env: ${{ fromJson(inputs.deploy-envs) }}
+    concurrency:
+      group: deploy-${{ matrix.deploy-env }}
+      cancel-in-progress: false
     environment:
       name: ${{ matrix.deploy-env }}
       url: ${{ vars.MDB_ENV_URL }}
@@ -69,6 +69,9 @@ jobs:
       fail-fast: false
       matrix:
         deploy-env: ${{ fromJson(inputs.deploy-envs) }}
+    concurrency:
+      group: deploy-${{ matrix.deploy-env }}
+      cancel-in-progress: false
     environment:
       name: ${{ matrix.deploy-env }}
       url: ${{ vars.MDB_ENV_URL }}

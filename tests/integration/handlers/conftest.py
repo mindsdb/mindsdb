@@ -13,11 +13,13 @@ from tests.integration.handlers.utils.helpers import get_handlers_info, build_pa
 
 project_root = Path(__file__).parent.parent.parent.parent
 
+
 def pytest_addoption(parser):
     """
     Adds command-line options specific to DSI tests.
     """
     parser.addoption("--run-dsi-tests", action="store_true", default=False, help="run DSI integration tests")
+
 
 def pytest_configure(config):
     """
@@ -31,10 +33,12 @@ def pytest_configure(config):
         else:
             logging.info("DSI: Successfully loaded environment variables from .env file.")
 
+
 @pytest.fixture(scope="session")
 def query_log_data():
     """A session-scoped dictionary to store all query logs."""
     return {}
+
 
 def pytest_collection_modifyitems(config, items):
     """
@@ -45,6 +49,7 @@ def pytest_collection_modifyitems(config, items):
         for item in items:
             if "dsi" in item.keywords:
                 item.add_marker(skip_dsi)
+
 
 @pytest.fixture(scope="session")
 def mindsdb_server(query_log_data) -> Generator[Any, None, None]:
@@ -79,20 +84,24 @@ def mindsdb_server(query_log_data) -> Generator[Any, None, None]:
             try:
                 response_df = original_fetch(*args, **kwargs)
                 if response_df is not None:
-                    actual_response = response_df.to_json(orient='records') if not response_df.empty else '[]'
+                    actual_response = response_df.to_json(orient="records") if not response_df.empty else "[]"
                 return response_df
-            except RuntimeError as e: 
+            except RuntimeError as e:
                 error = str(e)
                 raise
             finally:
                 duration = time.time() - start_time
                 if handler_name not in query_log_data:
                     query_log_data[handler_name] = []
-                query_log_data[handler_name].append({
-                    'query': sql_query, 'duration': round(duration, 4),
-                    'actual_response': actual_response, 'error': error
-                })
-        
+                query_log_data[handler_name].append(
+                    {
+                        "query": sql_query,
+                        "duration": round(duration, 4),
+                        "actual_response": actual_response,
+                        "error": error,
+                    }
+                )
+
         query_object.fetch = logged_fetch
         return query_object
 
@@ -100,10 +109,10 @@ def mindsdb_server(query_log_data) -> Generator[Any, None, None]:
     yield server
 
     # Teardown: write the log file.
-    reports_dir = project_root / 'reports'
+    reports_dir = project_root / "reports"
     reports_dir.mkdir(exist_ok=True)
-    log_filepath = reports_dir / 'all_handlers_query_log.json'
-    with open(log_filepath, 'w') as f:
+    log_filepath = reports_dir / "all_handlers_query_log.json"
+    with open(log_filepath, "w") as f:
         json.dump(query_log_data, f, indent=4)
     logging.info(f"DSI: Full query log saved to {log_filepath}")
 

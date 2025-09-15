@@ -7,6 +7,7 @@ from typing import Dict, Any, List
 
 # --- Test Case Generation (I/O-Free, Filtered, and Deterministic) ---
 
+
 def get_handlers_to_test() -> List[str]:
     """
     Determines which handlers to test.
@@ -15,7 +16,7 @@ def get_handlers_to_test() -> List[str]:
     """
     env_handlers = os.environ.get("HANDLERS_TO_TEST")
     if env_handlers:
-        return [h.strip() for h in env_handlers.split(',')]
+        return [h.strip() for h in env_handlers.split(",")]
 
     # Fallback to discovering from config files, excluding examples
     configs_path = Path(__file__).parent / "configs"
@@ -33,7 +34,7 @@ def generate_test_cases_for_parametrization() -> List[Dict[str, Any]]:
 
     for name in handlers_to_run:
         config_path = configs_path / f"{name}.json"
-        
+
         # Add a placeholder for autodiscovery for every handler
         test_cases.append({"handler_name": name, "test_type": "autodiscovery"})
 
@@ -41,7 +42,7 @@ def generate_test_cases_for_parametrization() -> List[Dict[str, Any]]:
         if config_path.is_file():
             with open(config_path, "r") as f:
                 test_config = json.load(f)
-            
+
             if "queries" in test_config:
                 for query_name in sorted(test_config["queries"].keys()):
                     test_cases.append({"handler_name": name, "test_type": "custom", "query_name": query_name})
@@ -49,10 +50,12 @@ def generate_test_cases_for_parametrization() -> List[Dict[str, Any]]:
             if "negative_tests" in test_config:
                 for i in range(len(test_config["negative_tests"])):
                     test_cases.append({"handler_name": name, "test_type": "negative", "test_index": i})
-    
+
     return test_cases
 
+
 # --- Main Parametrized Test Function ---
+
 
 def idfn(test_case):
     """Generates a unique and descriptive ID for each test case."""
@@ -63,6 +66,7 @@ def idfn(test_case):
     if ttype == "negative":
         return f"{name}-{ttype}-negative_{test_case['test_index']}"
     return f"{name}-{ttype}"
+
 
 @pytest.mark.dsi
 @pytest.mark.parametrize("test_case", generate_test_cases_for_parametrization(), ids=idfn)
@@ -92,7 +96,7 @@ def test_handler_integrations(mindsdb_server, session_databases, test_case):
         query_name = test_case["query_name"]
         query_details = test_config["queries"][query_name]
         query = query_details["query"].format(db_name=db_name)
-        
+
         logging.info(f"Running custom query '{query_name}': {query}")
         select_df = mindsdb_server.query(query).fetch()
         assert not select_df.empty, f"Custom query '{query_name}' returned no results."
@@ -107,7 +111,7 @@ def test_handler_integrations(mindsdb_server, session_databases, test_case):
         logging.info(f"Running negative test #{test_index}: {query}")
         with pytest.raises(RuntimeError) as excinfo:
             mindsdb_server.query(query).fetch()
-        
+
         error_str = str(excinfo.value)
         expected_error = neg_test["expected_error"]
         assert expected_error in error_str, (

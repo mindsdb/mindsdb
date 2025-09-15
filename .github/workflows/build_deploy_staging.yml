@@ -21,7 +21,6 @@ jobs:
   
   run_unit_tests:
     name: Run Unit Tests
-    runs-on: mdb-dev
     if: github.event.pull_request.merged == true
     uses: ./.github/workflows/tests_unit.yml
     with:

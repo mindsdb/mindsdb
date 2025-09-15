@@ -42,7 +42,6 @@ jobs:
   # and they don't depend on build or deployment
   run_unit_tests:
     name: Run Unit Tests
-    runs-on: mdb-dev
     needs: [changes]
     if: ${{ needs.changes.outputs.not-docs == 'true' }}
     uses: ./.github/workflows/tests_unit.yml

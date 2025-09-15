@@ -1,4 +1,8 @@
-from typing import AsyncIterable, Dict
+import time
+import logging
+import asyncio
+from typing import AsyncIterable, Dict, Union
+
 from mindsdb.api.a2a.common.types import (
     SendTaskRequest,
     TaskSendParams,
@@ -20,11 +24,6 @@ from mindsdb.api.a2a.common.server.task_manager import InMemoryTaskManager
 from mindsdb.api.a2a.agent import MindsDBAgent
 from mindsdb.api.a2a.utils import to_serializable, convert_a2a_message_to_qa_format
 
-from typing import Union
-import logging
-import asyncio
-import time
-import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -182,11 +181,10 @@ class AgentTaskManager(InMemoryTaskManager):
                     item["artifact"]["parts"] = [to_serializable(p) for p in item["artifact"]["parts"]]
                 yield to_serializable(item)
         except Exception as e:
-            logger.error(f"An error occurred while streaming the response: {e}")
-            logger.error(traceback.format_exc())
-            error_text = f"An error occurred while streaming the response: {str(e)}"
+            error_text = "An error occurred while streaming the response:"
+            logger.error(error_text, exc_info=True)
             # Ensure all parts are plain dicts
-            parts = [{"type": "text", "text": error_text}]
+            parts = [{"type": "text", "text": f"{error_text} {e}"}]
             parts = [to_serializable(part) for part in parts]
             artifact = {
                 "parts": parts,

@@ -97,9 +97,8 @@ class ChatBotTask(BaseTask):
         except (SystemExit, KeyboardInterrupt):
             raise
         except Exception:
-            error = traceback.format_exc()
-            logger.error(error)
-            self.set_error(str(error))
+            logger.error("Error during chatbot message processing:", exc_info=True)
+            self.set_error(traceback.format_exc())
 
     def _on_holding_message(self, chat_id: str = None, chat_memory: BaseMemory = None, table_name: str = None):
         """

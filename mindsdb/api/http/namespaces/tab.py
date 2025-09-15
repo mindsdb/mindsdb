@@ -1,5 +1,4 @@
 import json
-import traceback
 from http import HTTPStatus
 
 from flask import request
@@ -78,9 +77,8 @@ class Tabs(Resource):
                 tabs = request.json
                 b_types = json.dumps(tabs).encode("utf-8")
                 storage.file_set(TABS_FILENAME, b_types)
-            except Exception as e:
-                logger.error("unable to store tabs data - %s", e)
-                logger.error(traceback.format_exc())
+            except Exception:
+                logger.error("Unable to store tabs data:", exc_info=True)
                 return http_error(
                     HTTPStatus.INTERNAL_SERVER_ERROR,
                     "Can't save tabs",

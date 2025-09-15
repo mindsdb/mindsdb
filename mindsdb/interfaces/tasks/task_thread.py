@@ -50,8 +50,8 @@ class TaskThread(threading.Thread):
                 query.run(self._stop_event)
 
         except Exception:
-            logger.error(traceback.format_exc())
-            task_record.last_error = str(traceback.format_exc())
+            logger.error("Error during task processing:", exc_info=True)
+            task_record.last_error = traceback.format_exc()
 
         db.session.commit()
 

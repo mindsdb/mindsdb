@@ -8,7 +8,6 @@ import atexit
 import signal
 import psutil
 import asyncio
-import traceback
 import threading
 import shutil
 from enum import Enum
@@ -301,7 +300,7 @@ def start_process(trunc_process_data: TrunkProcessData) -> None:
         )
         trunc_process_data.process.start()
     except Exception as e:
-        logger.error(f"Failed to start {trunc_process_data.name} API with exception {e}\n{traceback.format_exc()}")
+        logger.error(f"Failed to start {trunc_process_data.name} API with exception:", exc_info=True)
         close_api_gracefully(trunc_processes_struct)
         raise e
 

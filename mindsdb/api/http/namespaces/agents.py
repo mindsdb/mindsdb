@@ -307,10 +307,10 @@ def _completion_event_generator(agent_name: str, messages: List[Dict], project_n
 
         logger.info("Completion stream finished")
 
-    except Exception as e:
-        logger.error(f"Error in completion event generator: {e}")
-        logger.error(traceback.format_exc())
-        yield json_serialize({"error": "error in completion event generator"})
+    except Exception:
+        error_message = "Error in completion event generator"
+        logger.error(error_message, exc_info=True)
+        yield json_serialize({"error": error_message})
 
     finally:
         yield json_serialize({"type": "end"})
@@ -352,8 +352,7 @@ class AgentCompletionsStream(Resource):
             logger.info(f"Starting streaming response for agent {agent_name}")
             return Response(gen, mimetype="text/event-stream")
         except Exception as e:
-            logger.error(f"Error during streaming for agent {agent_name}: {str(e)}")
-            logger.error(traceback.format_exc())
+            logger.error(f"Error during streaming for agent {agent_name}:", exc_info=True)
             return http_error(
                 HTTPStatus.INTERNAL_SERVER_ERROR, "Streaming error", f"An error occurred during streaming: {str(e)}"
             )

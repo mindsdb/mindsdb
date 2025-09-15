@@ -67,10 +67,8 @@ class QueryAnalysis(Resource):
         try:
             result = mysql_proxy.process_query(query)
         except Exception as e:
-            import traceback
-
-            logger.error(traceback.format_exc())
-            return http_error(500, "Error", str(e))
+            logger.error("Error during query analysis:", exc_info=True)
+            return http_error(500, "Error", f"Unexpected error duting query analysis: {e}")
 
         if result.type == SQL_RESPONSE_TYPE.ERROR:
             return http_error(500, f"Error {result.error_code}", result.error_message)

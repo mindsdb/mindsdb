@@ -1,7 +1,6 @@
 import re
 import csv
 import inspect
-import traceback
 from io import StringIO
 from typing import Iterable, List, Optional, Any, Tuple
 from collections import defaultdict
@@ -655,7 +654,7 @@ class SQLAgent:
             logger.info(f"query_safe (fetch={fetch}): {command}")
             return self.query(command, fetch)
         except Exception as e:
-            logger.error(f"Error in query_safe: {str(e)}\n{traceback.format_exc()}")
+            logger.error("Error in query_safe:", exc_info=True)
             logger.info(f"query_safe error: {e}")
             msg = f"Error: {e}"
             if "does not exist" in msg and " relation " in msg:

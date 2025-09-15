@@ -1,7 +1,6 @@
 import os
 import mimetypes
 import threading
-import traceback
 import webbrowser
 
 from pathlib import Path
@@ -449,7 +448,6 @@ def _open_webbrowser(url: str, pid: int, port: int, init_static_thread, static_f
         is_http_active = wait_func_is_true(func=is_pid_listen_port, timeout=15, pid=pid, port=port)
         if is_http_active:
             webbrowser.open(url)
-    except Exception as e:
-        logger.error(f"Failed to open {url} in webbrowser with exception {e}")
-        logger.error(traceback.format_exc())
+    except Exception:
+        logger.error(f"Failed to open {url} in webbrowser with exception:", exc_info=True)
     db.session.close()

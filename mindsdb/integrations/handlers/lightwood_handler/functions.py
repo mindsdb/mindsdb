@@ -237,10 +237,9 @@ def run_finetune(df: DataFrame, args: dict, model_storage):
         db.session.commit()
 
     except Exception as e:
-        logger.error(e)
+        logger.error("Unexpected error during Lightwood model finetune:", exc_info=True)
         predictor_id = model_storage.predictor_id
         predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
-        logger.error(traceback.format_exc())
         error_message = format_exception_error(e)
         predictor_record.data = {"error": error_message}
         predictor_record.status = PREDICTOR_STATUS.ERROR

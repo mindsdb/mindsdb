@@ -1,5 +1,4 @@
 from http import HTTPStatus
-import traceback
 
 from flask import request
 from flask_restx import Resource
@@ -67,7 +66,7 @@ class Query(Resource):
                     "error_code": 0,
                     "error_message": str(e),
                 }
-                logger.error(f"Error query processing: \n{traceback.format_exc()}")
+                logger.error("Error query processing:", exc_info=True)
 
             except UnknownError as e:
                 # unclassified
@@ -77,7 +76,7 @@ class Query(Resource):
                     "error_code": 0,
                     "error_message": str(e),
                 }
-                logger.error(f"Error query processing: \n{traceback.format_exc()}")
+                logger.error("Error query processing:", exc_info=True)
 
             except Exception as e:
                 error_type = "unexpected"
@@ -86,7 +85,7 @@ class Query(Resource):
                     "error_code": 0,
                     "error_message": str(e),
                 }
-                logger.error(f"Error query processing: \n{traceback.format_exc()}")
+                logger.error("Error query processing:", exc_info=True)
 
             if query_response.get("type") == SQL_RESPONSE_TYPE.ERROR:
                 error_type = "expected"

@@ -45,10 +45,9 @@ jobs:
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
         with:
-          # Place cache in the tool dir because we mount this in our runnners
-          cache-local-path: "/home/runner/_work/_tool/uv-local-cache"
-          prune-cache: false
-          python-version: ${{ vars.CI_PYTHON_VERSION || '3.10' }}
+          cache-local-path: "/home/runner/_work/_tool/uv-local-cache"  # Place cache in the tool dir because we mount this in our runnners
+          prune-cache: false                                           # We want to save all cache because it's in the mount^
+          python-version: ${{ vars.CI_PYTHON_VERSION || '3.11' }}      # Default to 3.11 where vars aren't available (PRs from forks)
       - name: Install dependencies
         run: |
           uv pip install -r requirements/requirements-dev.txt

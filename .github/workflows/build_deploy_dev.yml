@@ -126,6 +126,7 @@ jobs:
       deploy-env: ${{ matrix.deploy-env }}
     secrets: inherit
 
+  # This is a collection point for all of the matrix tests above so we can have a single required job
   tests_completed:
     name: All Tests Succeeded
     needs: [run_unit_tests, run_integration_tests, changes]

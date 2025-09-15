@@ -57,7 +57,7 @@ ENV UV_LINK_MODE=copy \
 # TODO: Remove --prerelease=allow once writer release new version
 RUN --mount=type=cache,target=/root/.cache \
     uv venv /venv \
-    && uv pip install pip "." --prerelease=allow
+    && uv pip install pip "."
 
 
 

@@ -4,41 +4,18 @@ permissions:
     contents: read
 
 on:
-  pull_request:
-    branches:
-      - 'main'
-      - 'develop'
-      - 'release/*'
-  push:
-    branches:
-      - 'main'
-      - 'develop'
-      - 'release/*'
-  workflow_dispatch:
+  workflow_call:
+    secrets:
+      SLACK_ENG_CHANNEL_ID:
+        required: true
+      GH_ACTIONS_SLACK_BOT_TOKEN:
+        required: true
 
 defaults:
   run:
     shell: bash
 
 jobs:
-  # Sets an output var to indicate if all changes are in docs files
-  # This output is used to skip running code checks on docs changes
-  changes:
-    name: Filter changed files
-    runs-on: mdb-dev
-    outputs:
-      not-docs: ${{ steps.filter.outputs.not-docs }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          predicate-quantifier: "every"
-          filters: |
-            not-docs:
-              - '!docs/**'  
-              - '!**/*.md'
-
   # Run all of our static code checks here
   code_checking:
     name: Run static code checks
@@ -143,6 +120,7 @@ jobs:
         run: |
           # TODO: for now some tests rely on lightwood
           uv pip install . \
+            -r requirements/requirements-test.txt \
             .[lightwood] \
             .[clickhouse] \
             .[snowflake] \
@@ -165,53 +143,3 @@ jobs:
       - name: Run unit tests
         run: |
           make unit_tests_slow
-
-  slack_message:
-    if: failure() && !cancelled()
-    name: Notify Slack
-    # Every previous job needs to be in here, because failure() will only return true if the job that failed is in 'needs'
-    needs: [changes, code_checking, matrix_prep, check_install, unit_tests]
-    runs-on: mdb-dev
-    steps:
-      - name: Notify of failing tests
-        if: ${{ needs.unit_tests.result != 'success' && needs.unit_tests.result != 'cancelled' && github.event_name == 'push' }}
-        uses: slackapi/slack-github-action@v1.26.0
-        with:
-          channel-id: ${{ secrets.SLACK_ENG_CHANNEL_ID }}
-          payload: |
-            {
-              "attachments": [
-                {
-                  "color": "#FF4444",
-                  "blocks": [
-                    {
-                      "type": "header",
-                      "text": {
-                        "type": "plain_text",
-                        "text": "UNIT TEST RUN FAILED ON ${{ github.ref_name }}",
-                        "emoji": true
-                      }
-                    },
-                    {
-                      "type": "section",
-                      "text": {
-                        "type": "mrkdwn",
-                        "text": " "
-                      },
-                      "fields": [
-                        {
-                          "type": "mrkdwn",
-                          "text": "*Commit*\n<${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>"
-                        },
-                        {
-                          "type": "mrkdwn",
-                          "text": "*Workflow Run*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>"
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
-            }
-        env:
-          SLACK_BOT_TOKEN: ${{ secrets.GH_ACTIONS_SLACK_BOT_TOKEN }}

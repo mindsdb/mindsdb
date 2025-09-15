@@ -13,12 +13,18 @@ on:
       - 'main'
       - 'release/*'
 
+concurrency:
+  group: ${{ github.workflow_ref }}
+  cancel-in-progress: true
+
 jobs:
   
   run_unit_tests:
     name: Run Unit Tests
     if: github.event.pull_request.merged == true
     uses: ./.github/workflows/tests_unit.yml
+    with:
+      git-sha: ${{ github.event.pull_request.merge_commit_sha }}
     secrets: inherit
 
   # Build our docker images based on our bake file
@@ -78,10 +84,10 @@ jobs:
     secrets: inherit
   
   tests_completed:
-    if: always() && github.event.pull_request.merged == true
     name: All Tests Succeeded
     needs: [run_unit_tests, run_integration_tests]
     runs-on: mdb-dev
+    if: always()
     steps:
       - name: fail if tests failed or didnt run
         if: ${{ needs.run_unit_tests.result != 'success' || needs.run_integration_tests.result != 'success'}}

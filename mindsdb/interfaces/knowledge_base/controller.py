@@ -276,13 +276,6 @@ class KnowledgeBaseTable:
                 elif item.column == "reranking":
                     if item.value is False or (isinstance(item.value, str) and item.value.lower() == "false"):
                         disable_reranking = True
-                elif item.column == "hybrid_search":
-                    hybrid_search_enabled_flag = item.value
-                    # cast to boolean
-                    if isinstance(hybrid_search_enabled_flag, str):
-                        hybrid_search_enabled_flag = hybrid_search_enabled_flag.lower() not in ("false")
-                    if item.value is False or (isinstance(item.value, str) and item.value.lower() == "false"):
-                        disable_reranking = True
                 elif item.column == "hybrid_search_alpha":
                     # validate item.value is a float
                     if not isinstance(item.value, (float, int)):
@@ -290,6 +283,10 @@ class KnowledgeBaseTable:
                     # validate hybrid search alpha is between 0 and 1
                     if not (0 <= item.value <= 1):
                         raise ValueError(f"Invalid hybrid_search_alpha value: {item.value}. Must be between 0 and 1.")
+                    if hybrid_search_alpha == 0:
+                        hybrid_search_enabled_flag = False
+                    else:
+                        hybrid_search_enabled_flag = True
                     hybrid_search_alpha = item.value
                 elif item.column == TableField.CONTENT.value:
                     query_text = item.value

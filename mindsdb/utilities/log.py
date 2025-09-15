@@ -267,8 +267,8 @@ def log_system_info(logger: logging.Logger) -> None:
                             windows_info[key] = value.strip()
 
                     if "Caption" in windows_info and "Version" in windows_info:
-                        os_name = windows_info['Caption']
-                        os_version = windows_info['Version']
+                        os_name = windows_info["Caption"]
+                        os_version = windows_info["Version"]
             except Exception:
                 pass
             os_details.append(f"{os_name} {os_release} (version {os_version})")

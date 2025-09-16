@@ -1,9 +1,9 @@
 import logging
 import json
 from typing import Dict, Any, List, Tuple
-import mindsdb_sdk
 
 from tests.integration.handlers.utils import config
+
 
 def get_handlers_info(mindsdb_server: Any) -> Tuple[List[Dict[str, Any]], List[str]]:
     """

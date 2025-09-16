@@ -489,6 +489,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
     @profiler.profile()
     def process_query(self, sql) -> SQLAnswer:
+        log.log_ram_info(logger)
         executor = Executor(session=self.session, sqlserver=self)
         executor.query_execute(sql)
         executor_answer = executor.executor_answer

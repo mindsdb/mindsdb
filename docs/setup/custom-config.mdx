@@ -5,45 +5,19 @@ sidebarTitle: Extend the Default MindsDB Configuration
 
 To follow this guide, install MindsDB locally via [Docker](/setup/self-hosted/docker-desktop) or [PyPI](/setup/self-hosted/pip/source).
 
-## Starting MindsDB with Default Configuration
-
-Start MindsDB locally with the default configuration.
-
-1. Activate the virtual environment:
-
-```bash
-source mindsdb/bin/activate
-```
-
-2. Start MindsDB:
-
-```bash
-python -m mindsdb
-```
-
-3. Access MindsDB locally at `127.0.0.1:47334`.
-
-<Tip>
-By default, MindsDB starts the `http` and `mysql` APIs. You can define which APIs to start using the `api` flag as below.
-
-```bash
-python -m mindsdb --api http,mysql,postgres
-```
-
-If you want to start MindsDB without the graphical user interface (GUI), use the `--no_studio` flag as below.
-
-```bash
-python -m mindsdb --no_studio
-```
-</Tip>
-
 ## Starting MindsDB with Extended Configuration
 
 Start MindsDB locally with your custom configuration by providing a path to the `config.json` file that stores custom config parameters listed in this section.
 
-```bash
-python -m mindsdb --config=/path-to-the-extended-config-file/config.json
-```
+<CodeGroup>
+    ```bash Docker
+    docker run --name mindsdb_container -e MINDSDB_CONFIG_PATH=/Users/username/path/config.json -e MINDSDB_APIS=http,mysql -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+    ```
+
+    ```bash Python
+    python -m mindsdb --config=/path-to-the-extended-config-file/config.json
+    ```
+</CodeGroup>
 
 ### Available Config Parameters
 
@@ -123,13 +97,16 @@ In local instances of MindsDB, users can enable simple HTTP authentication based
 
 ```bash
     "gui": {
-        "autoupdate": true
+        "autoupdate": true,
+        "open_on_start": true
     },
 ```
 
 The `gui` parameter controls the behavior of the MindsDB graphical user interface (GUI) updates.
 
 The `autoupdate` parameter defines whether MindsDB automatically checks for and updates the GUI to the latest version when the application starts. If set to `true`, MindsDB will attempt to fetch the latest available version of the GUI. If set to `False`, MindsDB will not try to update the GUI on startup.
+
+The `open_on_start` parameter defines whether MindsDB automatically opens the GUI on start. If set to `true`, MindsDB will open the GUI automatically. If set to `False`, MindsDB will not open the GUI on startup.
 
 #### `api`
 

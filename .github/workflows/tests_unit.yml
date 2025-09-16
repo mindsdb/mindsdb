@@ -5,6 +5,11 @@ permissions:
 
 on:
   workflow_call:
+    inputs:
+      git-sha:
+        required: false
+        type: string
+        default: ""
     secrets:
       SLACK_ENG_CHANNEL_ID:
         required: true
@@ -133,7 +138,6 @@ jobs:
             .[github] \
             .[ms_teams] \
             .[salesforce] \
-            .[statsforecast] \
             .[mysql] \
             .[chromadb] \
             .[mssql]

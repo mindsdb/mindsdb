@@ -5,31 +5,6 @@ import mindsdb_sdk
 
 from tests.integration.handlers.utils import config
 
-
-def connect_to_mindsdb():
-    """
-    Reusable function to connect to MindsDB SDK, handling both
-    authenticated and unauthenticated scenarios based on .env config.
-    """
-    logging.info("--- DSI: Attempting to connect to SDK ---")
-    url = f"{config.MINDSDB_PROTOCOL}://{config.MINDSDB_HOST}:{config.MINDSDB_PORT}"
-    try:
-        if config.MINDSDB_USER and config.MINDSDB_PASSWORD:
-            logging.info(f"DSI: Connecting SDK with credentials to server at: {url}")
-            server = mindsdb_sdk.connect(url=url, login=config.MINDSDB_USER, password=config.MINDSDB_PASSWORD)
-        else:
-            logging.info(f"DSI: Connecting SDK to server at: {url} (no auth)...")
-            server = mindsdb_sdk.connect(url)
-
-        logging.info("DSI: Successfully connected to MindsDB via SDK.")
-        return server
-    # Catch the specific error for network/connection issues.
-    except ConnectionError as e:
-        # Use logging.exception() to include full traceback info.
-        logging.exception(f"DSI: Failed to connect to MindsDB via SDK: {e}")
-        raise e
-
-
 def get_handlers_info(mindsdb_server: Any) -> Tuple[List[Dict[str, Any]], List[str]]:
     """
     Discovers connection arguments for specified handlers and identifies which are not installed.

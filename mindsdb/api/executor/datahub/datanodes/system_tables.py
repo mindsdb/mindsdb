@@ -509,6 +509,7 @@ class CollationsTable(Table):
 # Data Catalog tables
 # TODO: Should these be placed in a separate schema?
 
+
 # TODO: Combine with existing 'TablesTable'?
 class MetaTablesTable(Table):
     name = "META_TABLES"
@@ -528,8 +529,8 @@ class MetaTablesTable(Table):
             table_df = data_catalog_retriever.retrieve_tables()
             # Table schema may be returned as a column name.
             table_df.columns = table_df.columns.str.upper()
-            table_df['TABLE_CATALOG'] = "def"
-            table_df['TABLE_SCHEMA'] = database
+            table_df["TABLE_CATALOG"] = "def"
+            table_df["TABLE_SCHEMA"] = database
             df = pd.concat([df, table_df])
 
         df = df.reindex(columns=cls.columns, fill_value=None)
@@ -563,14 +564,14 @@ class MetaColumnsTable(Table):
         for database in databases:
             data_catalog_retriever = DataCatalogRetriever(database_name=database, table_names=tables)
             columns_df = data_catalog_retriever.retrieve_columns()
-            columns_df['TABLE_CATALOG'] = "def"
-            columns_df['TABLE_SCHEMA'] = database
+            columns_df["TABLE_CATALOG"] = "def"
+            columns_df["TABLE_SCHEMA"] = database
             df = pd.concat([df, columns_df])
 
         df.columns = df.columns.str.upper()
 
         df = df.reindex(columns=cls.columns, fill_value=None)
-        df['IS_NULLABLE'] = df['IS_NULLABLE'].map({True: "YES", False: "NO"})
+        df["IS_NULLABLE"] = df["IS_NULLABLE"].map({True: "YES", False: "NO"})
 
         return df
 
@@ -600,20 +601,23 @@ class MetaColumnStatisticsTable(Table):
         for database in databases:
             data_catalog_retriever = DataCatalogRetriever(database_name=database, table_names=tables)
             columns_df = data_catalog_retriever.retrieve_column_statistics()
-            columns_df['TABLE_CATALOG'] = "def"
-            columns_df['TABLE_SCHEMA'] = database
+            columns_df["TABLE_CATALOG"] = "def"
+            columns_df["TABLE_SCHEMA"] = database
             df = pd.concat([df, columns_df])
 
         df.columns = df.columns.str.upper()
 
-        df.rename(columns={
-            'NULL_PERCENTAGE': 'NULL_FRAC',
-            'MOST_COMMON_VALUES': 'MOST_COMMON_VALS',
-            'MOST_COMMON_FREQUENCIES': 'MOST_COMMON_FREQS',
-            'DISTINCT_VALUES_COUNT': 'N_DISTINCT',
-            'MINIMUM_VALUE': 'MIN_VALUE',
-            'MAXIMUM_VALUE': 'MAX_VALUE',
-        }, inplace=True)
+        df.rename(
+            columns={
+                "NULL_PERCENTAGE": "NULL_FRAC",
+                "MOST_COMMON_VALUES": "MOST_COMMON_VALS",
+                "MOST_COMMON_FREQUENCIES": "MOST_COMMON_FREQS",
+                "DISTINCT_VALUES_COUNT": "N_DISTINCT",
+                "MINIMUM_VALUE": "MIN_VALUE",
+                "MAXIMUM_VALUE": "MAX_VALUE",
+            },
+            inplace=True,
+        )
 
         df = df.reindex(columns=cls.columns, fill_value=None)
         return df
@@ -644,9 +648,9 @@ class MetaTableConstraintsTable(Table):
 
             primary_keys_df = data_catalog_retriever.retrieve_primary_keys()
             if not primary_keys_df.empty:
-                primary_keys_df['CONSTRAINT_CATALOG'] = "def"
-                primary_keys_df['CONSTRAINT_SCHEMA'] = database
-                primary_keys_df['CONSTRAINT_TYPE'] = 'PRIMARY KEY'
+                primary_keys_df["CONSTRAINT_CATALOG"] = "def"
+                primary_keys_df["CONSTRAINT_SCHEMA"] = database
+                primary_keys_df["CONSTRAINT_TYPE"] = "PRIMARY KEY"
 
                 primary_keys_df.columns = primary_keys_df.columns.str.upper()
 
@@ -654,21 +658,27 @@ class MetaTableConstraintsTable(Table):
 
             foreign_keys_df = data_catalog_retriever.retrieve_foreign_keys()
             if not foreign_keys_df.empty:
-                foreign_keys_df['CONSTRAINT_CATALOG'] = "def"
-                foreign_keys_df['CONSTRAINT_SCHEMA'] = database
-                foreign_keys_df['CONSTRAINT_TYPE'] = 'FOREIGN KEY'
+                foreign_keys_df["CONSTRAINT_CATALOG"] = "def"
+                foreign_keys_df["CONSTRAINT_SCHEMA"] = database
+                foreign_keys_df["CONSTRAINT_TYPE"] = "FOREIGN KEY"
 
                 foreign_keys_df.columns = foreign_keys_df.columns.str.upper()
 
                 parent_constraints_df = foreign_keys_df.copy(deep=True)
                 child_constraints_df = foreign_keys_df.copy(deep=True)
 
-                parent_constraints_df.rename(columns={
-                    'PARENT_TABLE_NAME': 'TABLE_NAME',
-                }, inplace=True)
-                child_constraints_df.rename(columns={
-                    'CHILD_TABLE_NAME': 'TABLE_NAME',
-                }, inplace=True)
+                parent_constraints_df.rename(
+                    columns={
+                        "PARENT_TABLE_NAME": "TABLE_NAME",
+                    },
+                    inplace=True,
+                )
+                child_constraints_df.rename(
+                    columns={
+                        "CHILD_TABLE_NAME": "TABLE_NAME",
+                    },
+                    inplace=True,
+                )
 
                 df = pd.concat([df, parent_constraints_df, child_constraints_df])
 
@@ -707,8 +717,8 @@ class MetaColumnUsageTable(Table):
 
             primary_keys_df = data_catalog_retriever.retrieve_primary_keys()
             if not primary_keys_df.empty:
-                primary_keys_df[['CONSTRAINT_CATALOG', 'TABLE_CATALOG']] = "def"
-                primary_keys_df[['CONSTRAINT_SCHEMA', 'TABLE_SCHEMA']] = database
+                primary_keys_df[["CONSTRAINT_CATALOG", "TABLE_CATALOG"]] = "def"
+                primary_keys_df[["CONSTRAINT_SCHEMA", "TABLE_SCHEMA"]] = database
 
                 primary_keys_df.columns = primary_keys_df.columns.str.upper()
 
@@ -716,26 +726,32 @@ class MetaColumnUsageTable(Table):
 
             foreign_keys_df = data_catalog_retriever.retrieve_foreign_keys()
             if not foreign_keys_df.empty:
-                foreign_keys_df[['CONSTRAINT_CATALOG', 'TABLE_CATALOG']] = "def"
-                foreign_keys_df[['TABLE_SCHEMA', 'REFERENCED_TABLE_SCHEMA']] = database
+                foreign_keys_df[["CONSTRAINT_CATALOG", "TABLE_CATALOG"]] = "def"
+                foreign_keys_df[["TABLE_SCHEMA", "REFERENCED_TABLE_SCHEMA"]] = database
 
                 foreign_keys_df.columns = foreign_keys_df.columns.str.upper()
 
                 parent_constraints_df = foreign_keys_df.copy(deep=True)
                 child_constraints_df = foreign_keys_df.copy(deep=True)
 
-                parent_constraints_df.rename(columns={
-                    'PARENT_TABLE_NAME': 'TABLE_NAME',
-                    'PARENT_COLUMN_NAME': 'COLUMN_NAME',
-                    'CHILD_TABLE_NAME': 'REFERENCED_TABLE_NAME',
-                    'CHILD_COLUMN_NAME': 'REFERENCED_COLUMN_NAME',
-                }, inplace=True)
-                child_constraints_df.rename(columns={
-                    'CHILD_TABLE_NAME': 'TABLE_NAME',
-                    'CHILD_COLUMN_NAME': 'COLUMN_NAME',
-                    'PARENT_TABLE_NAME': 'REFERENCED_TABLE_NAME',
-                    'PARENT_COLUMN_NAME': 'REFERENCED_COLUMN_NAME',
-                }, inplace=True)
+                parent_constraints_df.rename(
+                    columns={
+                        "PARENT_TABLE_NAME": "TABLE_NAME",
+                        "PARENT_COLUMN_NAME": "COLUMN_NAME",
+                        "CHILD_TABLE_NAME": "REFERENCED_TABLE_NAME",
+                        "CHILD_COLUMN_NAME": "REFERENCED_COLUMN_NAME",
+                    },
+                    inplace=True,
+                )
+                child_constraints_df.rename(
+                    columns={
+                        "CHILD_TABLE_NAME": "TABLE_NAME",
+                        "CHILD_COLUMN_NAME": "COLUMN_NAME",
+                        "PARENT_TABLE_NAME": "REFERENCED_TABLE_NAME",
+                        "PARENT_COLUMN_NAME": "REFERENCED_COLUMN_NAME",
+                    },
+                    inplace=True,
+                )
 
                 df = pd.concat([df, parent_constraints_df, child_constraints_df])
 

@@ -1,4 +1,5 @@
 from typing import List, Optional, Union
+
 import pandas as pd
 
 from mindsdb.integrations.libs.api_handler import MetaAPIHandler
@@ -52,7 +53,7 @@ class DataCatalogRetriever:
         elif response.resp_type == RESPONSE_TYPE.OK:
             logger.error(f"No tables found for {self.database_name} in the data source.")
             return pd.DataFrame()
-        
+
         return response.data_frame
 
     def retrieve_columns(self) -> pd.DataFrame:
@@ -67,7 +68,7 @@ class DataCatalogRetriever:
         elif response.resp_type == RESPONSE_TYPE.OK:
             logger.error(f"No columns found for {self.database_name} in the data source.")
             return pd.DataFrame()
-        
+
         return response.data_frame
 
     def retrieve_column_statistics(self) -> pd.DataFrame:
@@ -82,7 +83,7 @@ class DataCatalogRetriever:
         elif response.resp_type == RESPONSE_TYPE.OK:
             logger.error(f"No column statistics found for {self.database_name} in the data source.")
             return pd.DataFrame()
-        
+
         return response.data_frame
 
     def retrieve_primary_keys(self) -> pd.DataFrame:
@@ -97,7 +98,7 @@ class DataCatalogRetriever:
         elif response.resp_type == RESPONSE_TYPE.OK:
             logger.error(f"No primary keys found for {self.database_name} in the data source.")
             return pd.DataFrame()
-        
+
         return response.data_frame
 
     def retrieve_foreign_keys(self) -> pd.DataFrame:
@@ -112,9 +113,9 @@ class DataCatalogRetriever:
         elif response.resp_type == RESPONSE_TYPE.OK:
             logger.error(f"No foreign keys found for {self.database_name} in the data source.")
             return pd.DataFrame()
-        
+
         return response.data_frame
-    
+
     def retrieve_handler_info(self) -> str:
         """
         Retrieve the handler info from the handler.

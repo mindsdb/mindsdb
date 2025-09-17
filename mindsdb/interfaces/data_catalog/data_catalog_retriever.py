@@ -1,4 +1,3 @@
-from typing import List
 import pandas as pd
 
 from mindsdb.interfaces.data_catalog.base_data_catalog import BaseDataCatalog

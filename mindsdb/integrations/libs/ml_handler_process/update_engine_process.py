@@ -22,7 +22,5 @@ def update_engine_process(connection_args: dict, integration_id: int, module_pat
             ).update_engine(connection_args=connection_args)
         except NotImplementedError:
             return None
-        except Exception as e:
-            raise e
 
     return result

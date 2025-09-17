@@ -90,6 +90,7 @@ class TriggerTask(BaseTask):
                 self.set_error(ret.error_message)
 
         except Exception:
+            logger.exception("Error during trigger call processing")
             self.set_error(str(traceback.format_exc()))
 
         db.session.commit()

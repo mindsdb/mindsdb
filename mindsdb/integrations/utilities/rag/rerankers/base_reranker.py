@@ -142,7 +142,7 @@ class BaseLLMReranker(BaseModel, ABC):
                         return ranked_results
                 except Exception as e:
                     # Don't let early stopping errors stop the whole process
-                    log.warning(f"Error in early stopping check: {str(e)}")
+                    log.warning(f"Error in early stopping check: {e}")
 
         return ranked_results
 

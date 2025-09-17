@@ -75,7 +75,7 @@ def _build_rag_pipeline_tool(tool: dict, pred_args: dict, skill: db.Skills):
             logger.debug(f"RAG pipeline result: {result}")
             return result['answer']
         except Exception as e:
-            logger.error("Error in RAG pipeline:", exc_info=True)
+            logger.exception("Error in RAG pipeline:")
             return f"Error in retrieval: {str(e)}"
 
     # Create RAG tool
@@ -178,7 +178,7 @@ def build_retrieval_tools(tool: dict, pred_args: dict, skill: db.Skills):
     try:
         rag_config = _load_rag_config(tool, pred_args, skill)
     except Exception as e:
-        logger.error(f"Error building RAG pipeline: {str(e)}")
+        logger.exception("Error building RAG pipeline:")
         raise ValueError(f"Failed to build RAG pipeline: {str(e)}")
     tools = [_build_rag_pipeline_tool(tool, pred_args, skill)]
     if rag_config.metadata_config is None:

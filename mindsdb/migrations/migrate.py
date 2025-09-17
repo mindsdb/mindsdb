@@ -56,6 +56,7 @@ def migrate_to_head():
         If alembic unable to recognize current revision (In case when database version is newer than backend)
         then do nothing.
     """
+    logger.debug("Applying database migrations")
 
     config_file = Path(__file__).parent / 'alembic.ini'
     config = Config(config_file)

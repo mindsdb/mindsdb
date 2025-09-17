@@ -79,11 +79,11 @@ class AgentTaskManager(InMemoryTaskManager):
             task = await self.upsert_task(task_send_params)
             logger.info(f"Task created/updated with history length: {len(task.history) if task.history else 0}")
         except Exception as e:
-            logger.error(f"Error creating task: {str(e)}")
+            logger.exception("Error creating task:")
             error_result = to_serializable(
                 {
                     "id": request.id,
-                    "error": to_serializable(InternalError(message=f"Error creating task: {str(e)}")),
+                    "error": to_serializable(InternalError(message=f"Error creating task: {e}")),
                 }
             )
             yield error_result
@@ -148,14 +148,14 @@ class AgentTaskManager(InMemoryTaskManager):
                 return
 
             except Exception as e:
-                logger.error(f"Error invoking agent: {e}")
+                logger.exception("Error invoking agent:")
                 error_result = to_serializable(
                     {
                         "id": request.id,
                         "error": to_serializable(
                             JSONRPCResponse(
                                 id=request.id,
-                                error=to_serializable(InternalError(message=f"Error invoking agent: {str(e)}")),
+                                error=to_serializable(InternalError(message=f"Error invoking agent: {e}")),
                             )
                         ),
                     }
@@ -182,7 +182,7 @@ class AgentTaskManager(InMemoryTaskManager):
                 yield to_serializable(item)
         except Exception as e:
             error_text = "An error occurred while streaming the response:"
-            logger.error(error_text, exc_info=True)
+            logger.exception(error_text)
             # Ensure all parts are plain dicts
             parts = [{"type": "text", "text": f"{error_text} {e}"}]
             parts = [to_serializable(part) for part in parts]
@@ -331,11 +331,11 @@ class AgentTaskManager(InMemoryTaskManager):
                 yield response
         except Exception as e:
             # If an error occurs, yield an error response
-            logger.error(f"Error in on_send_task_subscribe: {str(e)}")
+            logger.exception(f"Error in on_send_task_subscribe: {e}")
             error_result = to_serializable(
                 {
                     "id": request.id,
-                    "error": to_serializable(InternalError(message=f"Error processing streaming request: {str(e)}")),
+                    "error": to_serializable(InternalError(message=f"Error processing streaming request: {e}")),
                 }
             )
             yield error_result
@@ -461,7 +461,7 @@ class AgentTaskManager(InMemoryTaskManager):
                 )
                 return to_serializable(SendTaskResponse(id=request.id, result=task))
         except Exception as e:
-            logger.error(f"Error invoking agent: {e}")
+            logger.exception("Error invoking agent:")
             result_text = f"Error invoking agent: {e}"
             parts = [{"type": "text", "text": result_text}]
 

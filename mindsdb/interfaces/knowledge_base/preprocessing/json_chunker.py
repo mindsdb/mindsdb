@@ -1,7 +1,8 @@
-from typing import List, Dict, Any, Optional
-import json
-import pandas as pd
 import ast
+import json
+from typing import List, Dict, Any, Optional
+
+import pandas as pd
 
 from mindsdb.interfaces.knowledge_base.preprocessing.models import (
     Document,
@@ -50,7 +51,7 @@ class JSONChunkingPreprocessor(DocumentPreprocessor):
                 chunks = self._process_json_data(json_data, doc)
                 all_chunks.extend(chunks)
             except Exception as e:
-                logger.error(f"Error processing document {doc.id}: {e}")
+                logger.exception(f"Error processing document {doc.id}:")
                 error_chunk = self._create_error_chunk(doc, str(e))
                 all_chunks.append(error_chunk)
 
@@ -76,8 +77,8 @@ class JSONChunkingPreprocessor(DocumentPreprocessor):
             # If JSON parsing fails, try as Python literal
             try:
                 return ast.literal_eval(doc.content)
-            except (SyntaxError, ValueError) as e:
-                logger.error(f"Error parsing content for document {doc.id}: {e}")
+            except (SyntaxError, ValueError):
+                logger.exception(f"Error parsing content for document {doc.id}:")
                 # We'll create the error chunk in the main process_documents method
                 return None
 
@@ -159,7 +160,7 @@ class JSONChunkingPreprocessor(DocumentPreprocessor):
             try:
                 json_dict = json.loads(json_dict)
             except json.JSONDecodeError:
-                logger.error(f"Error parsing JSON string: {json_dict[:100]}...")
+                logger.exception(f"Error parsing JSON string: {json_dict[:100]}...")
                 return [self._create_error_chunk(doc, "Invalid JSON string")]
 
         # Filter fields based on include/exclude lists
@@ -214,7 +215,7 @@ class JSONChunkingPreprocessor(DocumentPreprocessor):
             try:
                 json_dict = json.loads(json_dict)
             except json.JSONDecodeError:
-                logger.error(f"Error parsing JSON string: {json_dict[:100]}...")
+                logger.exception(f"Error parsing JSON string: {json_dict[:100]}...")
                 return self._create_error_chunk(doc, "Invalid JSON string")
 
         # Format the content
@@ -380,7 +381,7 @@ class JSONChunkingPreprocessor(DocumentPreprocessor):
             try:
                 json_dict = json.loads(json_dict)
             except json.JSONDecodeError:
-                logger.error(f"Error parsing JSON string: {json_dict[:100]}...")
+                logger.exception(f"Error parsing JSON string: {json_dict[:100]}...")
                 return
 
         # Always flatten the dictionary for metadata extraction

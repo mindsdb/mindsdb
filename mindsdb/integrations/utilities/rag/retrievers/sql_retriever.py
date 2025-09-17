@@ -1,10 +1,10 @@
 import re
+import math
+import logging
+import collections
+from typing import List, Any, Optional, Dict, Tuple, Union, Callable
 
 from pydantic import BaseModel, Field
-from typing import List, Any, Optional, Dict, Tuple, Union, Callable
-import collections
-import math
-
 from langchain.chains.llm import LLMChain
 from langchain_core.callbacks.manager import CallbackManagerForRetrieverRun
 from langchain_core.documents.base import Document
@@ -754,7 +754,8 @@ Below is a description of the contents in this column in list format:
                                 metadata_filter = AblativeMetadataFilter(**model_dump)
                             except OutputParserException as e:
                                 logger.warning(
-                                    f"LLM failed to generate structured metadata filters: {str(e)}"
+                                    f"LLM failed to generate structured metadata filters: {e}",
+                                    exc_info=logger.isEnabledFor(logging.DEBUG)
                                 )
                                 return HandlerResponse(
                                     RESPONSE_TYPE.ERROR, error_message=str(e)
@@ -790,7 +791,8 @@ Below is a description of the contents in this column in list format:
             )
         except Exception as e:
             logger.warning(
-                f"Failed to prepare and execute SQL query from structured metadata: {str(e)}"
+                f"Failed to prepare and execute SQL query from structured metadata: {e}",
+                exc_info=logger.isEnabledFor(logging.DEBUG)
             )
             return HandlerResponse(RESPONSE_TYPE.ERROR, error_message=str(e))
 

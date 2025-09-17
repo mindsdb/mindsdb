@@ -22,7 +22,5 @@ def create_engine_process(connection_args: dict, integration_id: int, module_pat
             ).create_engine(connection_args=connection_args)
         except NotImplementedError:
             return None
-        except Exception as e:
-            raise e
 
     return result

@@ -625,8 +625,6 @@ class FileStorage:
                 shutil.rmtree(lock_folder_path)
             except FileNotFoundError:
                 logger.warning('Tried to delete file not found: %s', lock_folder_path)
-            except Exception as e:
-                raise e
             # endregion
             return
 

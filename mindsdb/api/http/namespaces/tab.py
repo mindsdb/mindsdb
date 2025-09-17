@@ -50,8 +50,8 @@ class Tabs(Resource):
             try:
                 raw_data = storage.file_get(TABS_FILENAME)
                 tabs = json.loads(raw_data)
-            except Exception as e:
-                logger.warning("unable to get tabs data - %s", e)
+            except Exception:
+                logger.warning("unable to get tabs data - %s", exc_info=True)
                 return {}, 200
             return tabs, 200
 
@@ -78,7 +78,7 @@ class Tabs(Resource):
                 b_types = json.dumps(tabs).encode("utf-8")
                 storage.file_set(TABS_FILENAME, b_types)
             except Exception:
-                logger.error("Unable to store tabs data:", exc_info=True)
+                logger.exception("Unable to store tabs data:")
                 return http_error(
                     HTTPStatus.INTERNAL_SERVER_ERROR,
                     "Can't save tabs",

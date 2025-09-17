@@ -64,8 +64,8 @@ class Scheduler:
                 self.check_timetable()
             except (SystemExit, KeyboardInterrupt):
                 raise
-            except Exception as e:
-                logger.error(e)
+            except Exception:
+                logger.exception("Error in 'scheduler_monitor'")
 
             # different instances should start in not the same time
 

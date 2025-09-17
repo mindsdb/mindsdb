@@ -3,6 +3,7 @@ from http import HTTPStatus
 from flask import request
 from flask_restx import Resource
 from langchain_text_splitters import MarkdownHeaderTextSplitter
+from mindsdb_sql_parser.ast import Identifier
 
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
@@ -24,11 +25,10 @@ from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseTable
 from mindsdb.utilities import log
-from mindsdb.utilities.exception import EntityNotExistsError
+from mindsdb.utilities.exception import EntityNotExistsError, EntityExistsError
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_LLM_MODEL, DEFAULT_RAG_PROMPT_TEMPLATE
 
 
-from mindsdb_sql_parser.ast import Identifier
 
 logger = log.getLogger(__name__)
 
@@ -133,6 +133,8 @@ class KnowledgeBasesResource(Resource):
             )
         except ValueError as e:
             return http_error(HTTPStatus.BAD_REQUEST, "Invalid preprocessing configuration", str(e))
+        except EntityExistsError as e:
+            return http_error(HTTPStatus.BAD_REQUEST, "Knowledge base already exists", str(e))
 
         return new_kb.as_dict(session.show_secrets), HTTPStatus.CREATED
 
@@ -241,17 +243,17 @@ class KnowledgeBaseResource(Resource):
                 table.insert_query_result(kb_data["query"], project_name)
 
         except ExecutorException as e:
-            logger.error(f"Error during preprocessing and insertion: {str(e)}")
+            logger.exception("Error during preprocessing and insertion:")
             return http_error(
                 HTTPStatus.BAD_REQUEST,
                 "Invalid SELECT query",
-                f'Executing "query" failed. Needs to be a valid SELECT statement that returns data: {str(e)}',
+                f'Executing "query" failed. Needs to be a valid SELECT statement that returns data: {e}',
             )
 
         except Exception as e:
-            logger.error(f"Error during preprocessing and insertion: {str(e)}")
+            logger.exception("Error during preprocessing and insertion:")
             return http_error(
-                HTTPStatus.BAD_REQUEST, "Preprocessing Error", f"Error during preprocessing and insertion: {str(e)}"
+                HTTPStatus.BAD_REQUEST, "Preprocessing Error", f"Error during preprocessing and insertion: {e}"
             )
 
         return "", HTTPStatus.OK

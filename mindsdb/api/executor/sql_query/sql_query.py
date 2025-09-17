@@ -203,7 +203,7 @@ class SQLQuery:
                 step.set_result(data)
                 self.steps_data[step.step_num] = data
         except PlanningException as e:
-            raise LogicError(e)
+            raise LogicError(e) from e
 
         statement_info = self.planner.get_statement_info()
 
@@ -237,7 +237,7 @@ class SQLQuery:
         try:
             steps = list(self.planner.execute_steps())
         except PlanningException as e:
-            raise LogicError(e)
+            raise LogicError(e) from e
 
         if self.planner.plan.is_resumable:
             # create query

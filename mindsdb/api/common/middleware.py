@@ -101,4 +101,4 @@ def check_auth(username, password, scramble_func, salt, company_id, config):
         logger.info(f"Check auth, user={username}: Ok")
         return {"success": True, "username": username}
     except Exception:
-        logger.error(f"Check auth, user={username}: ERROR", exc_info=True)
+        logger.exception(f"Check auth, user={username}: ERROR")

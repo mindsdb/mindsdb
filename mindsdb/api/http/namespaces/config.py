@@ -171,9 +171,7 @@ class Integration(Resource):
             )
 
         try:
-            engine = params["type"]
-            if engine is not None:
-                del params["type"]
+            engine = params.pop("type", None)
             params.pop("publish", False)
             storage = params.pop("storage", None)
             ca.integration_controller.add(name, engine, params)
@@ -186,10 +184,10 @@ class Integration(Resource):
                 handler.handler_storage.import_files(export)
 
         except Exception as e:
-            logger.error(str(e))
+            logger.exception("An error occurred during the creation of the integration:")
             if temp_dir is not None:
                 shutil.rmtree(temp_dir)
-            return http_error(HTTPStatus.INTERNAL_SERVER_ERROR, "Error", f"Error during config update: {str(e)}")
+            return http_error(HTTPStatus.INTERNAL_SERVER_ERROR, "Error", f"Error during config update: {e}")
 
         if temp_dir is not None:
             shutil.rmtree(temp_dir)
@@ -206,8 +204,8 @@ class Integration(Resource):
         try:
             ca.integration_controller.delete(name)
         except Exception as e:
-            logger.error(str(e))
-            return http_error(HTTPStatus.INTERNAL_SERVER_ERROR, "Error", f"Error during integration delete: {str(e)}")
+            logger.exception("An error occurred while deleting the integration")
+            return http_error(HTTPStatus.INTERNAL_SERVER_ERROR, "Error", f"Error during integration delete: {e}")
         return "", 200
 
     @ns_conf.doc("modify_integration")
@@ -231,8 +229,8 @@ class Integration(Resource):
             ca.integration_controller.modify(name, params)
 
         except Exception as e:
-            logger.error(str(e))
+            logger.exception('An error occurred while modifying the integration')
             return http_error(
-                HTTPStatus.INTERNAL_SERVER_ERROR, "Error", f"Error during integration modification: {str(e)}"
+                HTTPStatus.INTERNAL_SERVER_ERROR, "Error", f"Error during integration modification: {e}"
             )
         return "", 200

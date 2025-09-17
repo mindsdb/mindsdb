@@ -29,6 +29,6 @@ def parse_csv_attributes(csv_attributes: typing.Optional[str] = "") -> typing.Di
                 else:
                     raise ValueError(f"Invalid attribute format: {pair}")
     except Exception as e:
-        raise ValueError(f"Failed to parse csv_attributes='{csv_attributes}': {e}")
+        raise ValueError(f"Failed to parse csv_attributes='{csv_attributes}': {e}") from e
 
     return attributes

@@ -265,9 +265,9 @@ class KnowledgeBaseTable:
                             gt_filtering = True
                         logger.debug(f"Found relevance_threshold in query: {relevance_threshold}")
                     except (ValueError, TypeError) as e:
-                        error_msg = f"Invalid relevance_threshold value: {item.value}. {str(e)}"
+                        error_msg = f"Invalid relevance_threshold value: {item.value}. {e}"
                         logger.error(error_msg)
-                        raise ValueError(error_msg)
+                        raise ValueError(error_msg) from e
                 elif (item.column == "relevance") and (item.op.value not in relevance_threshold_allowed_operators):
                     raise ValueError(
                         f"Invalid operator for relevance: {item.op.value}. Only the following operators are allowed: "
@@ -952,8 +952,8 @@ class KnowledgeBaseTable:
             return rag
 
         except Exception as e:
-            logger.error(f"Error building RAG pipeline: {str(e)}")
-            raise ValueError(f"Failed to build RAG pipeline: {str(e)}")
+            logger.exception("Error building RAG pipeline:")
+            raise ValueError(f"Failed to build RAG pipeline: {str(e)}") from e
 
     def _parse_metadata(self, base_metadata):
         """Helper function to robustly parse metadata string to dict"""
@@ -1065,7 +1065,7 @@ class KnowledgeBaseController:
             msg = "\n".join(problems)
             if len(problems) > 1:
                 msg = "\n" + msg
-            raise ValueError(f"Problem with knowledge base parameters: {msg}")
+            raise ValueError(f"Problem with knowledge base parameters: {msg}") from e
 
         # Validate preprocessing config first if provided
         if preprocessing_config is not None:
@@ -1131,7 +1131,7 @@ class KnowledgeBaseController:
                 reranker = get_reranking_model_from_params(reranking_model_params)
                 reranker.get_scores("test", ["test"])
             except (ValueError, RuntimeError) as e:
-                raise RuntimeError(f"Problem with reranker config: {e}")
+                raise RuntimeError(f"Problem with reranker config: {e}") from e
 
         # search for the vector database table
         if storage is None:
@@ -1244,7 +1244,7 @@ class KnowledgeBaseController:
             try:
                 KnowledgeBaseTable.call_litellm_embedding(self.session, params, ["test"])
             except Exception as e:
-                raise RuntimeError(f"Problem with embedding model config: {e}")
+                raise RuntimeError(f"Problem with embedding model config: {e}") from e
             return
 
         params = copy.deepcopy(params)
@@ -1297,8 +1297,8 @@ class KnowledgeBaseController:
         """
         try:
             project = self.session.database_controller.get_project(project_name)
-        except ValueError:
-            raise ValueError(f"Project not found: {project_name}")
+        except ValueError as e:
+            raise ValueError(f"Project not found: {project_name}") from e
         project_id = project.id
 
         # check if knowledge base exists

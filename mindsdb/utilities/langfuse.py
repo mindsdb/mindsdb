@@ -149,8 +149,8 @@ class LangfuseClientWrapper:
                 user_id=user_id,
                 session_id=session_id
             )
-        except Exception as e:
-            logger.error(f'Something went wrong while processing Langfuse trace {self.trace.id}: {str(e)}')
+        except Exception:
+            logger.exception(f'Something went wrong while processing Langfuse trace {self.trace.id}:')
 
         logger.info(f"Langfuse trace configured with ID: {self.trace.id}")
 
@@ -230,9 +230,8 @@ class LangfuseClientWrapper:
             self.client.flush()
             metadata['tool_usage'] = self._get_tool_usage()
             self.trace.update(metadata=metadata)
-
-        except Exception as e:
-            logger.error(f'Something went wrong while processing Langfuse trace {self.trace.id}: {str(e)}')
+        except Exception:
+            logger.exception(f'Something went wrong while processing Langfuse trace {self.trace.id}:')
 
     def get_langchain_handler(self) -> typing.Optional['CallbackHandler']:
         """
@@ -282,7 +281,7 @@ class LangfuseClientWrapper:
                     tool_usage[tool_name] += 1
         except TraceNotFoundError:
             logger.warning(f'Langfuse trace {self.trace.id} not found')
-        except Exception as e:
-            logger.error(f'Something went wrong while processing Langfuse trace {self.trace.id}: {str(e)}')
+        except Exception:
+            logger.exception(f'Something went wrong while processing Langfuse trace {self.trace.id}:')
 
         return tool_usage

@@ -66,7 +66,7 @@ class Query(Resource):
                     "error_code": 0,
                     "error_message": str(e),
                 }
-                logger.error("Error query processing:", exc_info=True)
+                logger.warning(f"Error query processing: {e}")
 
             except UnknownError as e:
                 # unclassified
@@ -76,7 +76,7 @@ class Query(Resource):
                     "error_code": 0,
                     "error_message": str(e),
                 }
-                logger.error("Error query processing:", exc_info=True)
+                logger.exception("Error query processing:")
 
             except Exception as e:
                 error_type = "unexpected"
@@ -85,7 +85,7 @@ class Query(Resource):
                     "error_code": 0,
                     "error_message": str(e),
                 }
-                logger.error("Error query processing:", exc_info=True)
+                logger.exception("Error query processing:")
 
             if query_response.get("type") == SQL_RESPONSE_TYPE.ERROR:
                 error_type = "expected"
@@ -143,6 +143,7 @@ class ListDatabases(Resource):
                     } for db_row in result.result_set.to_lists()]
                 }
         except Exception as e:
+            logger.exception("Error while retrieving list of databases")
             listing_query_response = {
                 "type": "error",
                 "error_code": 0,

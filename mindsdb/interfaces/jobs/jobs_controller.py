@@ -152,7 +152,7 @@ class JobsController:
 
                 parse_sql(sql)
             except ParsingException as e:
-                raise ParsingException(f"Unable to parse: {sql}: {e}")
+                raise ParsingException(f"Unable to parse: {sql}: {e}") from e
 
         if if_query is not None:
             for sql in split_sql(if_query):
@@ -162,7 +162,7 @@ class JobsController:
 
                     parse_sql(sql)
                 except ParsingException as e:
-                    raise ParsingException(f"Unable to parse: {sql}: {e}")
+                    raise ParsingException(f"Unable to parse: {sql}: {e}") from e
 
         # plan next run
         next_run_at = start_at
@@ -494,7 +494,7 @@ class JobsExecutor:
 
                     data = ret.data
                 except Exception as e:
-                    logger.error(e)
+                    logger.exception("Error during 'execute_task_local'")
                     error = str(e)
                     break
 
@@ -518,7 +518,7 @@ class JobsExecutor:
                         error = ret.error_message
                         break
                 except Exception as e:
-                    logger.error(e)
+                    logger.exception("Error during 'execute_task_local'")
                     error = str(e)
                     break
 
@@ -526,7 +526,7 @@ class JobsExecutor:
             self.update_task_schedule(record)
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error to update schedule: {e}")
+            logger.exception("Error to update schedule:")
             error += f"Error to update schedule: {e}"
 
             # stop scheduling

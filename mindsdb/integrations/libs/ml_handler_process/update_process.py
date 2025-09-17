@@ -21,7 +21,5 @@ def update_process(args: dict, integration_id: int, module_path: str, model_id: 
             ).upgate(args=args)
         except NotImplementedError:
             return None
-        except Exception as e:
-            raise e
 
     return result

@@ -126,7 +126,7 @@ class PostgresPacketReader:
         try:
             message_type = self.read_byte()
         except PostgresEmptyDataException:
-            self.logger.warn("Postgres Proxy: Received empty data string")
+            self.logger.warning("Postgres Proxy: Received empty data string")
             return None
         try:
             message_type = PostgresFrontendMessageIdentifier(message_type)

@@ -19,6 +19,10 @@ from mindsdb_sql_parser import parse_sql, ParsingException
 from mindsdb_sql_parser.ast import CreateTable, DropTables
 from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.integrations.libs.response import HandlerStatusResponse
+from mindsdb.utilities import log
+
+
+logger = log.getLogger(__name__)
 
 
 @ns_conf.route('/')
@@ -268,6 +272,7 @@ class DatabaseResource(Resource):
         try:
             session.database_controller.delete(database_name)
         except Exception as e:
+            logger.debug(f"Error while deleting database '{database_name}'", exc_info=True)
             return http_error(
                 HTTPStatus.BAD_REQUEST, 'Error',
                 f'Cannot delete database {database_name}. '

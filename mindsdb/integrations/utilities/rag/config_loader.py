@@ -73,5 +73,5 @@ def load_rag_config(base_config: Dict[str, Any], kb_params: Optional[Dict[str, A
     try:
         return RAGPipelineModel(**rag_params)
     except Exception as e:
-        logger.error(f"Invalid RAG configuration: {str(e)}")
-        raise ValueError(f"Configuration validation failed: {str(e)}")
+        logger.exception("Invalid RAG configuration:")
+        raise ValueError(f"Configuration validation failed: {str(e)}") from e

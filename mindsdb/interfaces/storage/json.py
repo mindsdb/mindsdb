@@ -76,7 +76,7 @@ class JsonStorage:
                 db.session.commit()
             except Exception:
                 db.session.rollback()
-                logger.error('cant delete record from JSON storage')
+                logger.exception('cant delete record from JSON storage:')
 
     def delete(self, key):
         del self[key]
@@ -89,7 +89,7 @@ class JsonStorage:
             db.session.commit()
         except Exception:
             db.session.rollback()
-            logger.error('cant delete records from JSON storage')
+            logger.exception('cant delete records from JSON storage:')
 
 
 class EncryptedJsonStorage(JsonStorage):

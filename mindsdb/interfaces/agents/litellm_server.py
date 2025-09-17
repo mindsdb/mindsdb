@@ -90,8 +90,8 @@ async def chat_completions(request: ChatCompletionRequest):
                     async for chunk in agent_wrapper.acompletion_stream(messages, model=request.model):
                         yield f"data: {json.dumps(chunk)}\n\n"
                     yield "data: [DONE]\n\n"
-                except Exception as e:
-                    logger.error(f"Streaming error: {str(e)}")
+                except Exception:
+                    logger.exception("Streaming error:")
                     yield "data: {{'error': 'Streaming failed due to an internal error.'}}\n\n"
             return StreamingResponse(generate(), media_type="text/event-stream")
         else:
@@ -114,7 +114,7 @@ async def chat_completions(request: ChatCompletionRequest):
             )
 
     except Exception as e:
-        logger.error(f"Error in chat completion: {str(e)}")
+        logger.exception("Error in chat completion:")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -140,7 +140,7 @@ async def direct_sql(request: DirectSQLRequest, background_tasks: BackgroundTask
             raise HTTPException(status_code=500, detail="No MCP session available")
 
     except Exception as e:
-        logger.error(f"Error executing direct SQL: {str(e)}")
+        logger.exception("Error executing direct SQL:")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -241,8 +241,8 @@ async def test_mcp_connection():
             "tools": [tool.name for tool in tools_response.tools]
         }
     except Exception as e:
-        logger.error(f"Error connecting to MCP server: {str(e)}")
-        error_detail = f"Error connecting to MCP server: {str(e)}. Make sure MindsDB server is running with MCP enabled: python -m mindsdb --api=mysql,mcp,http"
+        logger.exception("Error connecting to MCP server:")
+        error_detail = f"Error connecting to MCP server: {str(e)}. Make sure MindsDB server is running with HTTP enabled: python -m mindsdb --api=http"
         raise HTTPException(status_code=500, detail=error_detail)
 
 
@@ -264,8 +264,8 @@ async def init_agent(agent_name: str, project_name: str, mcp_host: str, mcp_port
 
         logger.info("Agent initialized successfully")
         return True
-    except Exception as e:
-        logger.error(f"Failed to initialize agent: {str(e)}")
+    except Exception:
+        logger.exception("Failed to initialize agent:")
         return False
 
 

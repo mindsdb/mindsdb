@@ -39,8 +39,8 @@ class TaskMonitor:
                 self.stop_all_tasks()
                 return
 
-            except Exception as e:
-                logger.error(e)
+            except Exception:
+                logger.exception("Error in TaskMonitor.start")
                 db.session.rollback()
 
             if stop_event is not None and stop_event.is_set():

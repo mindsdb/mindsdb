@@ -20,7 +20,5 @@ def func_call_process(name: str, args: dict, integration_id: int, module_path: s
             ).function_call(name, args)
         except NotImplementedError:
             return None
-        except Exception as e:
-            raise e
 
     return result

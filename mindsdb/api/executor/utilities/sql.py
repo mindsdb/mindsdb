@@ -245,8 +245,8 @@ def query_df(df, query, session=None):
     render = SqlalchemyRender("postgres")
     try:
         query_str = render.get_string(query_ast, with_failback=False)
-    except Exception as e:
-        logger.error(f"Exception during query casting to 'postgres' dialect. Query: {str(query)}. Error: {e}")
+    except Exception:
+        logger.exception(f"Exception during query casting to 'postgres' dialect. Query:\n{str(query)}.\nError:")
         query_str = render.get_string(query_ast, with_failback=True)
 
     # workaround to prevent duckdb.TypeMismatchException

@@ -381,9 +381,9 @@ class SQLAgent:
             #     self._cache.set(cache_key, set(kb_names))
 
             return kb_names
-        except Exception as e:
+        except Exception:
             # If there's an error, log it and return an empty list
-            logger.error(f"Error in get_usable_knowledge_base_names: {str(e)}")
+            logger.exception("Error in get_usable_knowledge_base_names")
             return []
 
     def _resolve_table_names(self, table_names: List[str], all_tables: List[Identifier]) -> List[Identifier]:
@@ -525,8 +525,8 @@ class SQLAgent:
 
             sample_rows = list(map(lambda row: [truncate_value(value) for value in row], sample_rows))
             sample_rows_str = "\n" + f"{kb_name}:" + list_to_csv_str(sample_rows)
-        except Exception as e:
-            logger.info(f"_get_sample_rows error: {e}")
+        except Exception:
+            logger.info("_get_sample_rows error:", exc_info=True)
             sample_rows_str = "\n" + "\t [error] Couldn't retrieve sample rows!"
 
         return sample_rows_str
@@ -559,7 +559,7 @@ class SQLAgent:
                 )
             ]
         except Exception as e:
-            logger.error(f"Failed processing column info for {table_str}: {e}", exc_info=True)
+            logger.exception(f"Failed processing column info for {table_str}:")
             raise ValueError(f"Failed to process column info for {table_str}") from e
 
         if not fields:
@@ -569,7 +569,7 @@ class SQLAgent:
         try:
             sample_rows_info = self._get_sample_rows(table_str, fields)
         except Exception as e:
-            logger.warning(f"Could not get sample rows for {table_str}: {e}")
+            logger.warning(f"Could not get sample rows for {table_str}:", exc_info=True)
             sample_rows_info = "\n\t [error] Couldn't retrieve sample rows!"
 
         info = f"Table named `{table_str}`:\n"
@@ -595,8 +595,8 @@ class SQLAgent:
 
             sample_rows = list(map(lambda row: [truncate_value(value) for value in row], sample_rows))
             sample_rows_str = "\n" + list_to_csv_str([fields] + sample_rows)
-        except Exception as e:
-            logger.info(f"_get_sample_rows error: {e}")
+        except Exception:
+            logger.info("_get_sample_rows error:", exc_info=True)
             sample_rows_str = "\n" + "\t [error] Couldn't retrieve sample rows!"
 
         return sample_rows_str
@@ -646,7 +646,7 @@ class SQLAgent:
             logger.info(f"get_table_info_safe: {table_names}")
             return self.get_table_info(table_names)
         except Exception as e:
-            logger.info(f"get_table_info_safe error: {e}")
+            logger.info("get_table_info_safe error:", exc_info=True)
             return f"Error: {e}"
 
     def query_safe(self, command: str, fetch: str = "all") -> str:
@@ -654,8 +654,7 @@ class SQLAgent:
             logger.info(f"query_safe (fetch={fetch}): {command}")
             return self.query(command, fetch)
         except Exception as e:
-            logger.error("Error in query_safe:", exc_info=True)
-            logger.info(f"query_safe error: {e}")
+            logger.exception("Error in query_safe:")
             msg = f"Error: {e}"
             if "does not exist" in msg and " relation " in msg:
                 msg += "\nAvailable tables: " + ", ".join(self.get_usable_table_names())

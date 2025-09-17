@@ -49,7 +49,7 @@ def send_profiling_results(profiling_data: dict):
             connect_timeout=5
         )
     except Exception:
-        logger.error('cant get acceess to profiling database')
+        logger.warning('cant get acceess to profiling database')
         return
     cur = connection.cursor()
     cur.execute("""

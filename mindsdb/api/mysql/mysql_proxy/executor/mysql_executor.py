@@ -1,9 +1,11 @@
 from mindsdb_sql_parser import parse_sql
-from mindsdb.api.executor.planner import utils as planner_utils
+from mindsdb_sql_parser.exceptions import ParsingException
+from mindsdb_sql_parser.ast.base import ASTNode
 
 import mindsdb.utilities.profiler as profiler
-from mindsdb.api.executor.sql_query.result_set import Column
 from mindsdb.api.executor.sql_query import SQLQuery
+from mindsdb.api.executor.sql_query.result_set import Column
+from mindsdb.api.executor.planner import utils as planner_utils
 from mindsdb.api.executor.data_types.answer import ExecuteAnswer
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.api.mysql.mysql_proxy.utilities import ErSqlSyntaxError
@@ -18,7 +20,7 @@ class Executor:
         self.session = session
         self.sqlserver = sqlserver
 
-        self.query = None
+        self.query: ASTNode = None
 
         self.columns: list[Column] = []
         self.params: list[Column] = []
@@ -90,7 +92,7 @@ class Executor:
 
         try:
             self.query = parse_sql(sql)
-        except Exception as mdb_error:
+        except ParsingException as mdb_error:
             # not all statements are parsed by parse_sql
             logger.warning('Failed to parse SQL query')
             logger.debug(f'Query that cannot be parsed: {sql}')
@@ -98,9 +100,9 @@ class Executor:
             raise ErSqlSyntaxError(
                 f"The SQL statement cannot be parsed - {sql}: {mdb_error}"
             ) from mdb_error
-
-            # == a place for workarounds ==
-            # or run sql in integration without parsing
+        except Exception:
+            logger.exception(f"Unexpected error while parsing SQL query: {sql}")
+            raise
 
     @profiler.profile()
     def do_execute(self):

@@ -60,20 +60,20 @@ class MessageCountPolling(BasePolling):
                                 chat_id,
                                 table_name=chat_params["chat_table"]["name"],
                             )
-                        except Exception as e:
-                            logger.error(f"Problem retrieving chat memory: {e}")
+                        except Exception:
+                            logger.exception("Problem retrieving chat memory:")
 
                         try:
                             message = self.get_last_message(chat_memory)
-                        except Exception as e:
-                            logger.error(f"Problem getting last message: {e}")
+                        except Exception:
+                            logger.exception("Problem getting last message:")
                             message = None
 
                         if message:
                             self.chat_task.on_message(message, chat_memory=chat_memory, table_name=chat_params["chat_table"]["name"])
 
-            except Exception as e:
-                logger.error(e)
+            except Exception:
+                logger.exception("Unexpected error")
 
             if stop_event.is_set():
                 return
@@ -84,8 +84,8 @@ class MessageCountPolling(BasePolling):
         # retrive from history
         try:
             history = chat_memory.get_history()
-        except Exception as e:
-            logger.error(f"Problem retrieving history: {e}")
+        except Exception:
+            logger.exception("Problem retrieving history:")
             history = []
         last_message = history[-1]
         if last_message.user == self.chat_task.bot_params["bot_username"]:

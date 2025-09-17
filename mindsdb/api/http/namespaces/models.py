@@ -4,7 +4,6 @@ import json
 
 from flask import request
 from flask_restx import Resource
-from sqlalchemy.exc import NoResultFound
 import pandas as pd
 
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
@@ -15,6 +14,10 @@ from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.interfaces.storage.db import Predictor
 from mindsdb_sql_parser import parse_sql
 from mindsdb_sql_parser.ast.mindsdb import CreatePredictor
+from mindsdb.utilities.exception import EntityNotExistsError
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 @ns_conf.route('/<project_name>/models')
@@ -27,7 +30,7 @@ class ModelsList(Resource):
 
         try:
             session.database_controller.get_project(project_name)
-        except NoResultFound:
+        except EntityNotExistsError:
             return http_error(
                 HTTPStatus.NOT_FOUND,
                 'Project not found',
@@ -109,6 +112,7 @@ class ModelsList(Resource):
                 'problem_definition': model_df.at[0, 'TRAINING_OPTIONS']
             }, HTTPStatus.CREATED
         except Exception as e:
+            logger.exception("Something went wrong while creating and training model")
             return http_error(
                 HTTPStatus.INTERNAL_SERVER_ERROR,
                 'Unable to train model',
@@ -200,6 +204,7 @@ class ModelResource(Resource):
         try:
             session.model_controller.delete_model(name_no_version, project_name, version=version)
         except Exception as e:
+            logger.exception(f"Something went wrong while deleting model '{model_name}'")
             return http_error(
                 HTTPStatus.INTERNAL_SERVER_ERROR,
                 'Error deleting model',

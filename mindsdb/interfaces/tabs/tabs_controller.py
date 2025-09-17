@@ -171,14 +171,14 @@ class TabsController:
 
         try:
             raw_tab_data = self._get_file_storage().file_get(f'tab_{tab_id}')
-        except FileNotFoundError:
-            raise EntityNotExistsError(f'tab {tab_id}')
+        except FileNotFoundError as e:
+            raise EntityNotExistsError(f'tab {tab_id}') from e
 
         try:
             data = json.loads(raw_tab_data)
         except Exception as e:
             logger.error(f"Can't read data of tab {ctx.company_id}/{tab_id}: {e}")
-            raise Exception(f"Can't read data of tab: {e}")
+            raise Exception(f"Can't read data of tab: {e}") from e
 
         return {
             'id': tab_id,
@@ -282,8 +282,8 @@ class TabsController:
         file_storage = self._get_file_storage()
         try:
             file_storage.file_get(f'tab_{tab_id}')
-        except FileNotFoundError:
-            raise EntityNotExistsError(f'tab {tab_id}')
+        except FileNotFoundError as e:
+            raise EntityNotExistsError(f'tab {tab_id}') from e
 
         file_storage.delete(f'tab_{tab_id}')
 

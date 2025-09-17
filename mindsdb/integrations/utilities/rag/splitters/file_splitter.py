@@ -105,8 +105,8 @@ class FileSplitter:
             try:
                 split_documents += split_func(document.page_content)
             except Exception as e:
-                logger.error(
-                    f"Error splitting document with extension {extension}: {str(e)}"
+                logger.exception(
+                    f"Error splitting document with extension {extension}:"
                 )
                 if not default_failover:
                     raise ValueError(

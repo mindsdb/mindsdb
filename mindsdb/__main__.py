@@ -228,19 +228,20 @@ def create_permanent_integrations():
     """
     integration_name = "files"
     existing = db.session.query(db.Integration).filter_by(name=integration_name, company_id=None).first()
-    if existing is None:
-        integration_record = db.Integration(
-            name=integration_name,
-            data={},
-            engine=integration_name,
-            company_id=None,
-        )
-        db.session.add(integration_record)
-        try:
-            db.session.commit()
-        except Exception as e:
-            logger.error(f"Failed to commit permanent integration {integration_name}: {e}")
-            db.session.rollback()
+    if existing is not None:
+        return
+    integration_record = db.Integration(
+        name=integration_name,
+        data={},
+        engine=integration_name,
+        company_id=None,
+    )
+    db.session.add(integration_record)
+    try:
+        db.session.commit()
+    except Exception:
+        logger.exception(f"Failed to create permanent integration '{integration_name}' in the internal database.")
+        db.session.rollback()
 
 
 def validate_default_project() -> None:
@@ -300,7 +301,7 @@ def start_process(trunc_process_data: TrunkProcessData) -> None:
         )
         trunc_process_data.process.start()
     except Exception as e:
-        logger.error(f"Failed to start {trunc_process_data.name} API with exception:", exc_info=True)
+        logger.exception(f"Failed to start '{trunc_process_data.name}' API process due to unexpected error:")
         close_api_gracefully(trunc_processes_struct)
         raise e
 
@@ -374,8 +375,8 @@ if __name__ == "__main__":
     if environment == "aws_marketplace":
         try:
             register_oauth_client()
-        except Exception as e:
-            logger.error(f"Something went wrong during client register: {e}")
+        except Exception:
+            logger.exception("Something went wrong during client register:")
     elif environment != "local":
         try:
             aws_meta_data = get_aws_meta_data()
@@ -402,13 +403,12 @@ if __name__ == "__main__":
     is_cloud = config.is_cloud
     unexisting_pids = clean_unlinked_process_marks()
     if not is_cloud:
-        logger.debug("Applying database migrations")
         try:
             from mindsdb.migrations import migrate
 
             migrate.migrate_to_head()
-        except Exception as e:
-            logger.error(f"Error! Something went wrong during DB migrations: {e}")
+        except Exception:
+            logger.exception("Failed to apply database migrations. This may prevent MindsDB from operating correctly:")
 
         validate_default_project()
 

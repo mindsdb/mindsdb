@@ -271,8 +271,8 @@ class IntegrationDataNode(DataNode):
             # replace python's Nan, np.NaN, np.nan and pd.NA to None
             # TODO keep all NAN to the end of processing, bacause replacing also changes dtypes
             df.replace([np.NaN, pd.NA, pd.NaT], None, inplace=True)
-        except Exception as e:
-            logger.error(f"Issue with clearing DF from NaN values: {e}")
+        except Exception:
+            logger.exception("Issue with clearing DF from NaN values:")
         # endregion
 
         columns_info = [{"name": k, "type": v} for k, v in df.dtypes.items()]

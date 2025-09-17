@@ -148,7 +148,7 @@ def learn_process(data_integration_ref: dict, problem_definition: dict, fetch_da
                 models.sort(key=lambda x: x.created_at)
                 models[-1].active = True
         except Exception as e:
-            logger.error("Error during 'learn' process:", exc_info=True)
+            logger.exception("Error during 'learn' process:")
             error_message = format_exception_error(e)
 
             predictor_record = db.Predictor.query.with_for_update().get(model_id)

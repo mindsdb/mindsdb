@@ -77,5 +77,5 @@ class MLTaskProducer(BaseRedisQueue):
             self.stream.add(message)
             return Task(self.db, redis_key)
         except ConnectionError:
-            logger.error('Cant send message to redis: connect failed')
+            logger.exception('Cant send message to redis: connect failed')
             raise

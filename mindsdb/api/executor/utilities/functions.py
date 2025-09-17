@@ -25,7 +25,7 @@ def download_file(url):
     except ValueError:
         raise Exception(f'Invalid url: {url}')
     except Exception as e:
-        raise Exception(f'URL parsing error: {e}')
+        raise Exception(f'URL parsing error: {e}') from e
     temp_dir = tempfile.mkdtemp(prefix='mindsdb_file_download_')
     if scheme == '':
         raise Exception(f"Unknown url schema: {url}")

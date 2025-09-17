@@ -75,7 +75,7 @@ def decode(file_obj: IOBase) -> StringIO:
 
                 data_str = StringIO(byte_str.decode(encoding, errors))
     except Exception as e:
-        logger.error("Error during file decode:", exc_info=True)
+        logger.exception("Error during file decode:")
         raise FileProcessingError("Could not load into string") from e
 
     return data_str

@@ -61,7 +61,7 @@ class TriggersController:
         try:
             parse_sql(query_str)
         except ParsingException as e:
-            raise ParsingException(f'Unable to parse: {query_str}: {e}')
+            raise ParsingException(f'Unable to parse: {query_str}: {e}') from e
 
         # create job record
         record = db.Triggers(

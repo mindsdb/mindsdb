@@ -36,8 +36,8 @@ def delete_model_storage(model_id, ctx_dump):
         ctx.load(ctx_dump)
         modelStorage = ModelStorage(model_id)
         modelStorage.delete()
-    except Exception as e:
-        logger.error(f'Something went wrong during deleting storage of model {model_id}: {e}')
+    except Exception:
+        logger.exception(f'Something went wrong during deleting storage of model {model_id}:')
 
 
 class ModelController():

@@ -209,8 +209,8 @@ class File(Resource):
 
         try:
             ca.file_controller.delete_file(name)
-        except Exception as e:
-            logger.error(e)
+        except Exception:
+            logger.exception(f"Error when deleting file '{name}'")
             return http_error(
                 400,
                 "Error deleting file",

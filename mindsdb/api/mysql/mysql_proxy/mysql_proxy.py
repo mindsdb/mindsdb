@@ -647,7 +647,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             try:
                 success = p.get()
             except Exception:
-                logger.error("Session closed, on packet read error:", exc_info=True)
+                logger.exception("Session closed, on packet read error:")
                 return
 
             if success is False:
@@ -763,7 +763,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 # any other exception
                 error_type = "unexpected"
                 error_traceback = traceback.format_exc()
-                logger.error("ERROR while executing query:", exc_info=True)
+                logger.exception("ERROR while executing query:")
                 error_code = ERR.ER_SYNTAX_ERROR
                 response = SQLAnswer(
                     resp_type=RESPONSE_TYPE.ERROR,

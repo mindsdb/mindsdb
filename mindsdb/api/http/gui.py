@@ -30,8 +30,8 @@ def download_gui(destignation, version):
     try:
         for r in resources:
             get_resources(r)
-    except Exception as e:
-        logger.error(f"Error during downloading files from s3: {e}")
+    except Exception:
+        logger.exception("Error during downloading files from s3:")
         return False
 
     static_folder = destignation

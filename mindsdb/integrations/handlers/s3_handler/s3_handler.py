@@ -170,17 +170,16 @@ class S3Handler(APIHandler):
         Returns:
             boto3.client: A client object to the AWS (S3) account.
         """
-        if use_env_credentials:
-            # Usa as credenciais do ambiente (IAM Role via ServiceAccount)
-            config = {}
+        config = {}
+        # Se use_env_credentials ou não existem as chaves, usa só region_name se existir
+        if use_env_credentials or not ("aws_access_key_id" in self.connection_data and "aws_secret_access_key" in self.connection_data):
             if "region_name" in self.connection_data:
                 config["region_name"] = self.connection_data["region_name"]
+            # Não adiciona credenciais, boto3 usará IAM Role do ambiente
         else:
             # Configure mandatory credentials.
-            config = {
-                "aws_access_key_id": self.connection_data["aws_access_key_id"],
-                "aws_secret_access_key": self.connection_data["aws_secret_access_key"],
-            }
+            config["aws_access_key_id"] = self.connection_data["aws_access_key_id"]
+            config["aws_secret_access_key"] = self.connection_data["aws_secret_access_key"]
             # Configure optional parameters.
             optional_parameters = ["region_name", "aws_session_token"]
             for parameter in optional_parameters:

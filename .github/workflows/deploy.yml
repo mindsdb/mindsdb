@@ -40,7 +40,7 @@ jobs:
     # We only want to run one deploy job for an env at a time
     # Don't cancel in progress jobs because it may be for a different PR
     env:
-      MINDSDB_DB_CON: ${{ secrets.MINDS_DB_URI }}
+      MINDSDB_DB_CON: ${{ secrets.MINDSDB_DB_URI }}
       UV_LINK_MODE: "symlink"
     steps:
       - uses: actions/checkout@v4

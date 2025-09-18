@@ -596,7 +596,7 @@ class TestSelect(BaseExecutorDummyML):
                 select t.* from dummy_data.tasks t
                 join task_model m
                 where t.a > coalesce(last, 1)
-            """
+            """,
         ]
 
         # first call two rows

@@ -366,13 +366,13 @@ DEFAULT_NUM_QUERY_RETRIES = 2
 
 
 class LLMConfig(BaseModel):
-    model_config = ConfigDict(protected_namespaces=())
     model_name: str = Field(default=DEFAULT_LLM_MODEL, description="LLM model to use for generation")
     provider: str = Field(
         default=DEFAULT_LLM_MODEL_PROVIDER,
         description="LLM model provider to use for generation",
     )
     params: Dict[str, Any] = Field(default_factory=dict)
+    model_config = ConfigDict(protected_namespaces=())
 
 
 class MultiVectorRetrieverMode(Enum):

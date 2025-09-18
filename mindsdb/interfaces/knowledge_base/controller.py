@@ -313,13 +313,20 @@ class KnowledgeBaseTable:
         self.addapt_conditions_columns(conditions)
 
         # Set default limit if query is present
+        limit = query.limit.value if query.limit is not None else None
         if query_text is not None:
-            limit = query.limit.value if query.limit is not None else None
             if limit is None:
                 limit = 10
             elif limit > 100:
                 limit = 100
-            query.limit = Constant(limit)
+
+            if not disable_reranking:
+                # expand limit, get more records before reranking usage:
+                #   get twice size of input but not greater than 30
+                query_limit = min(limit * 2, limit + 30)
+            else:
+                query_limit = limit
+            query.limit = Constant(query_limit)
 
         allowed_metadata_columns = self._get_allowed_metadata_columns()
         df = db_handler.dispatch_select(query, conditions, allowed_metadata_columns=allowed_metadata_columns)
@@ -370,6 +377,8 @@ class KnowledgeBaseTable:
 
         # Check if we have a rerank_model configured in KB params
         df = self.add_relevance(df, query_text, relevance_threshold, disable_reranking)
+        if limit is not None:
+            df = df[:limit]
 
         # if relevance filtering method is strictly GREATER THAN we filter the df
         if gt_filtering:
@@ -402,7 +411,6 @@ class KnowledgeBaseTable:
         if reranking_model_params and query_text and len(df) > 0 and not disable_reranking:
             # Use reranker for relevance score
 
-            logger.info(f"Using knowledge reranking model from params: {reranking_model_params}")
             # Apply custom filtering threshold if provided
             if relevance_threshold is not None:
                 reranking_model_params["filtering_threshold"] = relevance_threshold
@@ -419,7 +427,6 @@ class KnowledgeBaseTable:
             # Filter by threshold
             scores_array = np.array(scores)
             df = df[scores_array >= reranker.filtering_threshold]
-            logger.debug(f"Applied reranking with params: {reranking_model_params}")
 
         elif "distance" in df.columns:
             # Calculate relevance from distance
@@ -542,7 +549,7 @@ class KnowledgeBaseTable:
                 if processed_chunks:
                     content.value = processed_chunks[0].content
 
-            query.update_columns[emb_col] = Constant(self._content_to_embeddings(content))
+            query.update_columns[emb_col] = Constant(self._content_to_embeddings(content.value))
 
         if "metadata" not in query.update_columns:
             query.update_columns["metadata"] = Constant({})
@@ -1110,6 +1117,9 @@ class KnowledgeBaseController:
             model_record = db.Predictor.query.get(model["id"])
             embedding_model_id = model_record.id
 
+            if model_record.learn_args.get("using", {}).get("sparse"):
+                is_sparse = True
+
         # if params.get("reranking_model", {}) is bool and False we evaluate it to empty dictionary
         reranking_model_params = params.get("reranking_model", {})
 
@@ -1138,7 +1148,6 @@ class KnowledgeBaseController:
                 # Add sparse vector support for pgvector
                 vector_db_params = {}
                 # Check both explicit parameter and model configuration
-                is_sparse = is_sparse or model_record.learn_args.get("using", {}).get("sparse")
                 if is_sparse:
                     vector_db_params["is_sparse"] = True
                     if vector_size is not None:

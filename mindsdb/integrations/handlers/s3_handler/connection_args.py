@@ -6,15 +6,15 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 connection_args = OrderedDict(
     aws_access_key_id={
         'type': ARG_TYPE.STR,
-        'description': 'The AWS access key that identifies the user or IAM role.',
-        'required': True,
+        'description': 'The AWS access key that identifies the user or IAM role. Opcional se usar IAM Role via ServiceAccount.',
+        'required': False,
         'label': 'AWS Access Key'
     },
     aws_secret_access_key={
         'type': ARG_TYPE.STR,
-        'description': 'The AWS secret access key that identifies the user or IAM role.',
+        'description': 'The AWS secret access key que identifica o usuário ou IAM role. Opcional se usar IAM Role via ServiceAccount.',
         'secret': True,
-        'required': True,
+        'required': False,
         'label': 'AWS Secret Access Key'
     },
     bucket={

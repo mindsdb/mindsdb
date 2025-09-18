@@ -1,5 +1,6 @@
 import time
 import threading
+import traceback
 from typing import Optional, Callable
 from concurrent.futures import ProcessPoolExecutor, Future
 
@@ -48,7 +49,8 @@ class MLProcessException(Exception):
 
     def __init__(self, base_exception: Exception, message: str = None) -> None:
         super().__init__(message)
-        self.message = f'{base_exception.__class__.__name__}: {base_exception}'
+        traceback_text = '\n'.join(traceback.format_exception(base_exception))
+        self.message = f'{base_exception.__class__.__name__}: {base_exception}\n{traceback_text}'
 
     @property
     def base_exception(self) -> Exception:

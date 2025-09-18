@@ -141,9 +141,11 @@ class S3Handler(APIHandler):
 
         duckdb_conn.execute("LOAD httpfs")
 
-        # Configure mandatory credentials.
-        duckdb_conn.execute(f"SET s3_access_key_id='{self.connection_data['aws_access_key_id']}'")
-        duckdb_conn.execute(f"SET s3_secret_access_key='{self.connection_data['aws_secret_access_key']}'")
+        # Configure credentials only if presentes
+        if "aws_access_key_id" in self.connection_data:
+            duckdb_conn.execute(f"SET s3_access_key_id='{self.connection_data['aws_access_key_id']}'")
+        if "aws_secret_access_key" in self.connection_data:
+            duckdb_conn.execute(f"SET s3_secret_access_key='{self.connection_data['aws_secret_access_key']}'")
 
         # Configure optional parameters.
         if "aws_session_token" in self.connection_data:
@@ -156,7 +158,8 @@ class S3Handler(APIHandler):
 
         # region = self._regions[bucket]
         # duckdb_conn.execute(f"SET s3_region='{region}'")
-        duckdb_conn.execute(f"SET s3_region='{self.connection_data['region_name']}'")
+        if "region_name" in self.connection_data:
+            duckdb_conn.execute(f"SET s3_region='{self.connection_data['region_name']}'")
 
         try:
             yield duckdb_conn

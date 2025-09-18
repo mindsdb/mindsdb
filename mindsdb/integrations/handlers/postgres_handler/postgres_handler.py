@@ -1,5 +1,6 @@
 import time
 import json
+import logging
 from typing import Optional, Any
 
 import pandas as pd
@@ -304,8 +305,19 @@ class PostgresHandler(MetaDatabaseHandler):
                     result = cur.fetchall()
                     response = _make_table_response(result, cur)
                 connection.commit()
+            except (psycopg.ProgrammingError, psycopg.DataError) as e:
+                # These is 'expected' exceptions, they should not be treated as mindsdb's errors
+                # ProgrammingError: table not found or already exists, syntax error, etc
+                # DataError: division by zero, numeric value out of range, etc.
+                # https://www.psycopg.org/psycopg3/docs/api/errors.html
+                log_message = "Database query failed with error, likely due to invalid SQL query"
+                if logger.isEnabledFor(logging.DEBUG):
+                    log_message += f". Executed query:\n{query}"
+                logger.info(log_message)
+                response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(e), is_expected=True)
+                connection.rollback()
             except Exception as e:
-                logger.error(f"Error running query: {query} on {self.database}, {e}!")
+                logger.error(f"Error running query:\n{query}\non {self.database}, {e}")
                 response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(e))
                 connection.rollback()
 

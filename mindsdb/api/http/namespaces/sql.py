@@ -17,6 +17,7 @@ from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.exception import QueryError
 
 logger = log.getLogger(__name__)
 
@@ -67,7 +68,17 @@ class Query(Resource):
                     "error_message": str(e),
                 }
                 logger.warning(f"Error query processing: {e}")
-
+            except QueryError as e:
+                error_type = "expected" if e.is_expected else "unexpected"
+                query_response = {
+                    "type": SQL_RESPONSE_TYPE.ERROR,
+                    "error_code": 0,
+                    "error_message": str(e),
+                }
+                if e.is_expected:
+                    logger.warning(f"Query failed due to expected reason: {e}")
+                else:
+                    logger.exception("Error query processing:")
             except UnknownError as e:
                 # unclassified
                 error_type = "unexpected"

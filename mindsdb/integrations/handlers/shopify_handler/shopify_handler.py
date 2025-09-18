@@ -108,8 +108,8 @@ class ShopifyHandler(APIHandler):
             response.success = True
         except Exception as e:
             logger.error('Error connecting to Shopify!')
-            raise ConnectionFailed("Conenction to Shopify failed.")
             response.error_message = str(e)
+            raise ConnectionFailed("Conenction to Shopify failed.")
 
         if self.yotpo_app_key is not None and self.yotpo_access_token is not None:
             url = f"https://api.yotpo.com/v1/apps/{self.yotpo_app_key}/reviews?count=1&utoken={self.yotpo_access_token}"

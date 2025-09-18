@@ -10,7 +10,7 @@ from mindsdb.api.executor.sql_query import SQLQuery
 from mindsdb.api.executor.sql_query.result_set import Column
 from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
 from mindsdb.api.executor.command_executor import ExecuteCommands
-from mindsdb.api.mysql.mysql_proxy.utilities import SqlApiException
+from mindsdb.api.executor.exceptions import SqlSyntaxError
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_fields import POSTGRES_TYPES
 from mindsdb.utilities import log
 
@@ -50,7 +50,7 @@ class Executor:
             self.logger.warning('Failed to parse SQL query')
             self.logger.debug(f'Query that cannot be parsed: {sql}')
 
-            raise SqlApiException(
+            raise SqlSyntaxError(
                 f"The SQL statement cannot be parsed - {sql}: {mdb_error}"
             ) from mdb_error
 

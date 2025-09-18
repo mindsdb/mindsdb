@@ -1,3 +1,4 @@
+import sys
 from typing import Callable
 from dataclasses import dataclass, fields
 
@@ -43,7 +44,7 @@ class HandlerResponse:
     def __init__(
             self, resp_type: RESPONSE_TYPE, data_frame: pandas.DataFrame = None, query: ASTNode = 0,
             error_code: int = 0, error_message: str | None = None, affected_rows: int | None = None,
-            mysql_types: list[MYSQL_DATA_TYPE] | None = None
+            mysql_types: list[MYSQL_DATA_TYPE] | None = None, is_expected: bool = False
     ) -> None:
         self.resp_type = resp_type
         self.query = query
@@ -54,6 +55,11 @@ class HandlerResponse:
         if isinstance(self.affected_rows, int) is False or self.affected_rows < 0:
             self.affected_rows = 0
         self.mysql_types = mysql_types
+        self.is_expected = is_expected
+        self.exception = None
+        current_exception = sys.exc_info()
+        if current_exception[0] is not None:
+            self.exception = current_exception[1]
 
     @property
     def type(self):

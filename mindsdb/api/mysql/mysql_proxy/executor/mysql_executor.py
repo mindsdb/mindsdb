@@ -8,7 +8,7 @@ from mindsdb.api.executor.sql_query.result_set import Column
 from mindsdb.api.executor.planner import utils as planner_utils
 from mindsdb.api.executor.data_types.answer import ExecuteAnswer
 from mindsdb.api.executor.command_executor import ExecuteCommands
-from mindsdb.api.mysql.mysql_proxy.utilities import ErSqlSyntaxError
+from mindsdb.api.executor.exceptions import SqlSyntaxError
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 from mindsdb.utilities import log
 
@@ -97,7 +97,7 @@ class Executor:
             logger.warning('Failed to parse SQL query')
             logger.debug(f'Query that cannot be parsed: {sql}')
 
-            raise ErSqlSyntaxError(
+            raise SqlSyntaxError(
                 f"The SQL statement cannot be parsed - {sql}: {mdb_error}"
             ) from mdb_error
         except Exception:

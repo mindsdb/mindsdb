@@ -45,11 +45,16 @@ def start(verbose, app: Flask = None):
     routes.append(Mount("/mcp", app=mcp))
 
     # Root app LAST so it won't shadow the others
-    routes.append(Mount("/", app=WSGIMiddleware(
-        app,
-        workers=config["api"]["http"]["a2wsgi"]["workers"],
-        send_queue_size=config["api"]["http"]["a2wsgi"]["send_queue_size"]
-    )))
+    routes.append(
+        Mount(
+            "/",
+            app=WSGIMiddleware(
+                app,
+                workers=config["api"]["http"]["a2wsgi"]["workers"],
+                send_queue_size=config["api"]["http"]["a2wsgi"]["send_queue_size"],
+            ),
+        )
+    )
 
     # Setting logging to None makes uvicorn use the existing logging configuration
     uvicorn.run(Starlette(routes=routes, debug=verbose), host=host, port=int(port), log_level=None, log_config=None)

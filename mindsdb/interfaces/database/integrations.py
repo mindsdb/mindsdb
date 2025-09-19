@@ -71,7 +71,7 @@ class HandlersCache:
     def set(self, handler: DatabaseHandler):
         """add (or replace) handler in cache
 
-        NOTE: If the handler is not thread-safe, then use a lock when making connection. Otherwise, make connection in 
+        NOTE: If the handler is not thread-safe, then use a lock when making connection. Otherwise, make connection in
         the same thread without using a lock to speed up parallel queries. (They don't need to wait for a connection in
         another thread.)
 
@@ -115,10 +115,8 @@ class HandlersCache:
                 # If the handler is thread safe, a 0 will be assigned to the last element of the key.
                 key = (name, ctx.company_id, 0)
             if key not in self.handlers or self.handlers[key]["expired_at"] < time.time():
-                logger.info(f'CACHE there are {len(self.handlers)} handlers, return NONE, key={key}')
                 return None
             self.handlers[key]["expired_at"] = time.time() + self.ttl
-            logger.info(f'CACHE there are {len(self.handlers)} handlers, return {key}')
             return self.handlers[key]["handler"]
 
     def delete(self, name: str) -> None:

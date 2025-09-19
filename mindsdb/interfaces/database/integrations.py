@@ -71,22 +71,33 @@ class HandlersCache:
     def set(self, handler: DatabaseHandler):
         """add (or replace) handler in cache
 
+        NOTE: If the handler is not thread-safe, then use a lock when making connection. Otherwise, make connection in 
+        the same thread without using a lock to speed up parallel queries. (They don't need to wait for a connection in
+        another thread.)
+
         Args:
             handler (DatabaseHandler)
         """
+        thread_safe = getattr(handler, "thread_safe", False)
         with self._lock:
             try:
                 # If the handler is defined to be thread safe, set 0 as the last element of the key, otherwise set the thrad ID.
                 key = (
                     handler.name,
                     ctx.company_id,
-                    0 if getattr(handler, "thread_safe", False) else threading.get_native_id(),
+                    0 if thread_safe else threading.get_native_id(),
                 )
-                handler.connect()
                 self.handlers[key] = {"handler": handler, "expired_at": time.time() + self.ttl}
+                if thread_safe:
+                    handler.connect()
             except Exception:
                 pass
             self._start_clean()
+        try:
+            if not thread_safe:
+                handler.connect()
+        except Exception:
+            pass
 
     def get(self, name: str) -> Optional[DatabaseHandler]:
         """get handler from cache by name
@@ -104,8 +115,10 @@ class HandlersCache:
                 # If the handler is thread safe, a 0 will be assigned to the last element of the key.
                 key = (name, ctx.company_id, 0)
             if key not in self.handlers or self.handlers[key]["expired_at"] < time.time():
+                logger.info(f'CACHE there are {len(self.handlers)} handlers, return NONE, key={key}')
                 return None
             self.handlers[key]["expired_at"] = time.time() + self.ttl
+            logger.info(f'CACHE there are {len(self.handlers)} handlers, return {key}')
             return self.handlers[key]["handler"]
 
     def delete(self, name: str) -> None:

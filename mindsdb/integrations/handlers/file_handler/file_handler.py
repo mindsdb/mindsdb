@@ -50,6 +50,7 @@ class FileHandler(DatabaseHandler):
         self.chunk_size = connection_data.get("chunk_size", DEFAULT_CHUNK_SIZE)
         self.chunk_overlap = connection_data.get("chunk_overlap", DEFAULT_CHUNK_OVERLAP)
         self.file_controller = file_controller
+        self.thread_safe = True
 
     def connect(self, **kwargs):
         return

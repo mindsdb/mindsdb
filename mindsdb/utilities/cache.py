@@ -72,12 +72,21 @@ _CACHE_MAX_SIZE = 500
 
 
 def dataframe_checksum(df: pd.DataFrame):
-    original_columns = df.columns
-    df.columns = list(range(len(df.columns)))
-    result = hashlib.sha256(
-        str(df.values).encode()
-    ).hexdigest()
-    df.columns = original_columns
+    """Compute efficient checksum for DataFrame without column manipulation."""
+    # Create a more efficient hash using pandas built-in methods
+    try:
+        # Use pandas util.hash_pandas_object for better performance
+        from pandas.util import hash_pandas_object
+        hash_values = hash_pandas_object(df, index=True).values
+        result = hashlib.sha256(hash_values.tobytes()).hexdigest()
+    except ImportError:
+        # Fallback to original method if pandas util not available
+        original_columns = df.columns
+        df.columns = list(range(len(df.columns)))
+        result = hashlib.sha256(
+            str(df.values).encode()
+        ).hexdigest()
+        df.columns = original_columns
     return result
 
 

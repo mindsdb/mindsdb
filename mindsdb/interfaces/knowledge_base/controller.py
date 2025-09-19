@@ -17,6 +17,7 @@ from mindsdb.integrations.libs.keyword_search_base import KeywordSearchBase
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 
 import mindsdb.interfaces.storage.db as db
+
 from mindsdb.integrations.libs.vectordatabase_handler import (
     DistanceFunction,
     TableField,

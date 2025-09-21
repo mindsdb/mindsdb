@@ -23,8 +23,6 @@ jobs:
     runs-on: mdb-dev
     outputs:
       not-docs: ${{ steps.filter.outputs.not-docs }}
-    environment:
-      name: ${{ github.event.pull_request.head.repo.fork && 'manual-approval' || '' }}
     steps:
       - uses: dorny/paths-filter@v3
         id: filter

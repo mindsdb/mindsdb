@@ -103,6 +103,7 @@ OPENAI_DEP002_IGNORE_HANDLER_DEPS = ["tiktoken"]
 
 CHROMADB_EP002_IGNORE_HANDLER_DEPS = ["onnxruntime"]
 
+# upper version of numba is fixed in statsforecast handler to prevent installing numba==0.62.0
 STATSFORECAST_EP002_IGNORE_HANDLER_DEPS = ["numba"]
 
 # The `pyarrow` package is used only if it is installed.

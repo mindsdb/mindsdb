@@ -494,7 +494,7 @@ class JobsExecutor:
 
                     data = ret.data
                 except Exception as e:
-                    logger.exception("Error during 'execute_task_local'")
+                    logger.exception("Error to execute job`s condition query'")
                     error = str(e)
                     break
 
@@ -518,7 +518,7 @@ class JobsExecutor:
                         error = ret.error_message
                         break
                 except Exception as e:
-                    logger.exception("Error during 'execute_task_local'")
+                    logger.exception("Error to execute job`s condition query'")
                     error = str(e)
                     break
 

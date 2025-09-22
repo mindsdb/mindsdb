@@ -132,6 +132,7 @@ class MysqlTCPServer(SocketServer.ThreadingTCPServer):
     """
     Custom TCP Server with increased request queue size
     """
+
     request_queue_size = 30
 
 

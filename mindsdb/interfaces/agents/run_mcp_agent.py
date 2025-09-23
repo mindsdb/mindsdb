@@ -48,11 +48,7 @@ async def execute_direct_query(query):
     # Set up MCP client to connect to the running server
     async with AsyncExitStack() as stack:
         # Connect to MCP server
-        server_params = StdioServerParameters(
-            command="python",
-            args=["-m", "mindsdb", "--api=mcp"],
-            env=None
-        )
+        server_params = StdioServerParameters(command="python", args=["-m", "mindsdb", "--api=mcp"], env=None)
 
         try:
             stdio_transport = await stack.enter_async_context(stdio_client(server_params))
@@ -100,6 +96,7 @@ async def main():
     try:
         # Initialize database connection
         from mindsdb.interfaces.storage import db
+
         db.init()
 
         # Direct SQL execution mode (for testing MCP connection)
@@ -117,10 +114,7 @@ async def main():
         logger.info("Make sure MindsDB server is running with MCP enabled: python -m mindsdb --api=mysql,mcp,http")
 
         agent_wrapper = create_mcp_agent(
-            agent_name=args.agent,
-            project_name=args.project,
-            mcp_host=args.host,
-            mcp_port=args.port
+            agent_name=args.agent, project_name=args.project, mcp_host=args.host, mcp_port=args.port
         )
 
         # Run an example query if provided
@@ -184,10 +178,7 @@ async def main():
                 # Add assistant's response to the conversation history
                 if not args.stream:
                     response = await agent_wrapper.acompletion(messages)
-                    messages.append({
-                        "role": "assistant",
-                        "content": response["choices"][0]["message"]["content"]
-                    })
+                    messages.append({"role": "assistant", "content": response["choices"][0]["message"]["content"]})
 
         # Clean up resources
         logger.info("Cleaning up resources")

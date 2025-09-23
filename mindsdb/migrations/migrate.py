@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from alembic.command import upgrade, autogen    # noqa
+from alembic.command import upgrade, autogen  # noqa
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 from alembic.script.revision import ResolutionError
@@ -15,20 +15,19 @@ logger = log.getLogger(__name__)
 
 # This is a migration that is like a 'base version'. Applying only this
 # migration to a fresh DB is equivalent to applying all previous migrations.
-current_checkpoint = '9f150e4f9a05'
+current_checkpoint = "9f150e4f9a05"
 
 
 def apply_checkpoint_migration(script) -> None:
-    """Apply the checkpoint migration to the database.
-    """
+    """Apply the checkpoint migration to the database."""
     with db.engine.begin() as connection:
         context = MigrationContext.configure(
             connection,
             opts={
-                'as_sql': False,
-                'starting_rev': None,  # ignore current version
-                'destination_rev': current_checkpoint,
-            }
+                "as_sql": False,
+                "starting_rev": None,  # ignore current version
+                "destination_rev": current_checkpoint,
+            },
         )
         revision = script.get_revision(current_checkpoint)
         if not revision:
@@ -41,7 +40,7 @@ def apply_checkpoint_migration(script) -> None:
 
 
 def get_current_revision() -> str | None:
-    """ Get the current revision of the database.
+    """Get the current revision of the database.
 
     Returns:
         str | None: The current revision of the database.
@@ -52,18 +51,18 @@ def get_current_revision() -> str | None:
 
 
 def migrate_to_head():
-    """ Trying to update database to head revision.
-        If alembic unable to recognize current revision (In case when database version is newer than backend)
-        then do nothing.
+    """Trying to update database to head revision.
+    If alembic unable to recognize current revision (In case when database version is newer than backend)
+    then do nothing.
     """
     logger.debug("Applying database migrations")
 
-    config_file = Path(__file__).parent / 'alembic.ini'
+    config_file = Path(__file__).parent / "alembic.ini"
     config = Config(config_file)
 
     # mindsdb can runs not from project directory
-    script_location_abc = config_file.parent / config.get_main_option('script_location')
-    config.set_main_option('script_location', str(script_location_abc))
+    script_location_abc = config_file.parent / config.get_main_option("script_location")
+    config.set_main_option("script_location", str(script_location_abc))
 
     script = ScriptDirectory.from_config(config)
     cur_revision = get_current_revision()
@@ -82,7 +81,7 @@ def migrate_to_head():
         return
 
     logger.info("Migrations are available. Applying updates to the database.")
-    upgrade(config=config, revision='head')
+    upgrade(config=config, revision="head")
 
 
 if __name__ == "__main__":

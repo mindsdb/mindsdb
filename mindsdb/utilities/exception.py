@@ -54,7 +54,7 @@ class QueryError(MindsDBError):
         db_error_msg: str | None = None,
         failed_query: str | None = None,
         is_external: bool = True,
-        is_acceptable: bool = False
+        is_acceptable: bool = False,
     ) -> None:
         self.mysql_error_code = ERR.ER_UNKNOWN_ERROR
         self.db_name = db_name
@@ -70,7 +70,7 @@ class QueryError(MindsDBError):
             db_type=self.db_type,
             db_error_msg=self.db_error_msg,
             failed_query=self.failed_query,
-            is_external=self.is_external
+            is_external=self.is_external,
         )
 
 

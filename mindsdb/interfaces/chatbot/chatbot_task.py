@@ -21,7 +21,6 @@ HOLDING_MESSAGE = "Bot is typing..."
 
 
 class ChatBotTask(BaseTask):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.bot_id = self.object_id
@@ -40,7 +39,7 @@ class ChatBotTask(BaseTask):
         self.agent_id = bot_record.agent_id
         if self.agent_id is not None:
             self.bot_executor_cls = AgentExecutor
-        elif self.bot_params.get('modes') is None:
+        elif self.bot_params.get("modes") is None:
             self.bot_executor_cls = BotExecutor
         else:
             self.bot_executor_cls = MultiModeBotExecutor
@@ -52,36 +51,35 @@ class ChatBotTask(BaseTask):
             raise Exception(f"Can't use chat database: {database_name}")
 
         chat_params = self.chat_handler.get_chat_config()
-        polling = chat_params['polling']['type']
+        polling = chat_params["polling"]["type"]
 
-        memory = chat_params['memory']['type'] if 'memory' in chat_params else None
+        memory = chat_params["memory"]["type"] if "memory" in chat_params else None
         memory_cls = None
         if memory:
-            memory_cls = DBMemory if memory == 'db' else HandlerMemory
+            memory_cls = DBMemory if memory == "db" else HandlerMemory
 
-        if polling == 'message_count':
-            chat_params = chat_params['tables'] if 'tables' in chat_params else [chat_params]
+        if polling == "message_count":
+            chat_params = chat_params["tables"] if "tables" in chat_params else [chat_params]
             self.chat_pooling = MessageCountPolling(self, chat_params)
             # The default type for message count polling is HandlerMemory if not specified.
             self.memory = HandlerMemory(self, chat_params) if memory_cls is None else memory_cls(self, chat_params)
 
-        elif polling == 'realtime':
-            chat_params = chat_params['tables'] if 'tables' in chat_params else [chat_params]
+        elif polling == "realtime":
+            chat_params = chat_params["tables"] if "tables" in chat_params else [chat_params]
             self.chat_pooling = RealtimePolling(self, chat_params)
             # The default type for real-time polling is DBMemory if not specified.
             self.memory = DBMemory(self, chat_params) if memory_cls is None else memory_cls(self, chat_params)
 
-        elif polling == 'webhook':
+        elif polling == "webhook":
             self.chat_pooling = WebhookPolling(self, chat_params)
             self.memory = DBMemory(self, chat_params)
 
         else:
             raise Exception(f"Not supported polling: {polling}")
 
-        self.bot_params['bot_username'] = self.chat_handler.get_my_user_name()
+        self.bot_params["bot_username"] = self.chat_handler.get_my_user_name()
 
     def run(self, stop_event):
-
         # TODO check deleted, raise errors
         # TODO checks on delete predictor / project/ integration
 
@@ -89,7 +87,7 @@ class ChatBotTask(BaseTask):
 
     def on_message(self, message: ChatBotMessage, chat_id=None, chat_memory=None, table_name=None):
         if not chat_id and not chat_memory:
-            raise Exception('chat_id or chat_memory should be provided')
+            raise Exception("chat_id or chat_memory should be provided")
 
         try:
             self._on_holding_message(chat_id, chat_memory, table_name)
@@ -116,14 +114,14 @@ class ChatBotTask(BaseTask):
             ChatBotMessage.Type.DIRECT,
             HOLDING_MESSAGE,
             # In Slack direct messages are treated as channels themselves.
-            user=self.bot_params['bot_username'],
+            user=self.bot_params["bot_username"],
             destination=chat_id,
-            sent_at=dt.datetime.now()
+            sent_at=dt.datetime.now(),
         )
 
         # send to chat adapter
         self.chat_pooling.send_message(response_message, table_name=table_name)
-        logger.debug(f'>>chatbot {chat_id} out (holding message): {response_message.text}')
+        logger.debug(f">>chatbot {chat_id} out (holding message): {response_message.text}")
 
     def _on_message(self, message: ChatBotMessage, chat_id, chat_memory, table_name=None):
         # add question to history
@@ -131,26 +129,26 @@ class ChatBotTask(BaseTask):
         chat_memory = chat_memory if chat_memory else self.memory.get_chat(chat_id, table_name=table_name)
         chat_memory.add_to_history(message)
 
-        logger.debug(f'>>chatbot {chat_memory.chat_id} in: {message.text}')
+        logger.debug(f">>chatbot {chat_memory.chat_id} in: {message.text}")
 
         # process
         bot_executor = self.bot_executor_cls(self, chat_memory)
         response_text = bot_executor.process()
 
         chat_id = chat_memory.chat_id
-        bot_username = self.bot_params['bot_username']
+        bot_username = self.bot_params["bot_username"]
         response_message = ChatBotMessage(
             ChatBotMessage.Type.DIRECT,
             response_text,
             # In Slack direct messages are treated as channels themselves.
             user=bot_username,
             destination=chat_id,
-            sent_at=dt.datetime.now()
+            sent_at=dt.datetime.now(),
         )
 
         # send to chat adapter
         self.chat_pooling.send_message(response_message, table_name=table_name)
-        logger.debug(f'>>chatbot {chat_id} out: {response_message.text}')
+        logger.debug(f">>chatbot {chat_id} out: {response_message.text}")
 
         # send to history
         chat_memory.add_to_history(response_message)

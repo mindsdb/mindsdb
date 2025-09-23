@@ -39,9 +39,7 @@ class MetadataFilter(BaseModel):
     """Represents an LLM generated metadata filter to apply to a PostgreSQL query."""
 
     attribute: str = Field(description="Database column to apply filter to")
-    comparator: str = Field(
-        description="PostgreSQL comparator to use to filter database column"
-    )
+    comparator: str = Field(description="PostgreSQL comparator to use to filter database column")
     value: Any = Field(description="Value to use to filter database column")
 
 
@@ -56,9 +54,7 @@ class AblativeMetadataFilter(MetadataFilter):
 class MetadataFilters(BaseModel):
     """List of LLM generated metadata filters to apply to a PostgreSQL query."""
 
-    filters: List[MetadataFilter] = Field(
-        description="List of PostgreSQL metadata filters to apply for user query"
-    )
+    filters: List[MetadataFilter] = Field(description="List of PostgreSQL metadata filters to apply for user query")
 
 
 class SQLRetriever(BaseRetriever):
@@ -142,25 +138,17 @@ class SQLRetriever(BaseRetriever):
         elif isinstance(schema, ColumnSchema):
             collection_key = "values"
         else:
-            raise Exception(
-                "schema must be either a DatabaseSchema, TableSchema, or ColumnSchema."
-            )
+            raise Exception("schema must be either a DatabaseSchema, TableSchema, or ColumnSchema.")
 
         if update is not None:
-            ordered = collections.OrderedDict(
-                sorted(update.items(), key=key, reverse=True)
-            )
+            ordered = collections.OrderedDict(sorted(update.items(), key=key, reverse=True))
         else:
-            ordered = collections.OrderedDict(
-                sorted(getattr(schema, collection_key).items(), key=key, reverse=True)
-            )
+            ordered = collections.OrderedDict(sorted(getattr(schema, collection_key).items(), key=key, reverse=True))
         schema = schema.model_copy(update={collection_key: ordered})
 
         return schema
 
-    def _sort_database_schema_by_key(
-        self, database_schema: DatabaseSchema, key: Callable
-    ) -> DatabaseSchema:
+    def _sort_database_schema_by_key(self, database_schema: DatabaseSchema, key: Callable) -> DatabaseSchema:
         """Re-build schema with OrderedDicts"""
         tables = {}
         # build new tables dict
@@ -169,17 +157,11 @@ class SQLRetriever(BaseRetriever):
             # build new column dict
             for column_key, column_schema in table_schema.columns.items():
                 # sort values directly and update column schema
-                columns[column_key] = self._sort_schema_by_key(
-                    schema=column_schema, key=key
-                )
+                columns[column_key] = self._sort_schema_by_key(schema=column_schema, key=key)
             # update table schema and sort
-            tables[table_key] = self._sort_schema_by_key(
-                schema=table_schema, key=key, update=columns
-            )
+            tables[table_key] = self._sort_schema_by_key(schema=table_schema, key=key, update=columns)
         # update table schema and sort
-        database_schema = self._sort_schema_by_key(
-            schema=database_schema, key=key, update=tables
-        )
+        database_schema = self._sort_schema_by_key(schema=database_schema, key=key, update=tables)
 
         return database_schema
 
@@ -191,15 +173,12 @@ class SQLRetriever(BaseRetriever):
         boolean_system_prompt: bool = True,
         format_instructions: Optional[str] = None,
     ) -> ChatPromptTemplate:
-
         if boolean_system_prompt is True:
             system_prompt = self.boolean_system_prompt
         else:
             system_prompt = self.generative_system_prompt
 
-        prepared_column_prompt = self._prepare_column_prompt(
-            column_schema=column_schema, table_schema=table_schema
-        )
+        prepared_column_prompt = self._prepare_column_prompt(column_schema=column_schema, table_schema=table_schema)
         column_schema_str = (
             prepared_column_prompt.messages[1]
             .format(
@@ -290,7 +269,6 @@ Below is a list of comparison operators for constructing filters for this value 
         table_schema: TableSchema,
         boolean_system_prompt: bool = True,
     ) -> ChatPromptTemplate:
-
         if boolean_system_prompt is True:
             system_prompt = self.boolean_system_prompt
         else:
@@ -312,9 +290,7 @@ Below is a list of comparison operators for constructing filters for this value 
             [("system", system_prompt), ("user", self.column_prompt_template)]
         )
 
-        header_str = (
-            f"This schema describes a column in the {table_schema.table} table."
-        )
+        header_str = f"This schema describes a column in the {table_schema.table} table."
 
         value_str = """
 ## **Content**
@@ -388,26 +364,18 @@ Below is a description of the contents in this column in list format:
         )
 
     def _rank_schema(self, prompt: ChatPromptTemplate, query: str) -> float:
-        rank_chain = LLMChain(
-            llm=self.llm.bind(logprobs=True), prompt=prompt, return_final_only=False
-        )
+        rank_chain = LLMChain(llm=self.llm.bind(logprobs=True), prompt=prompt, return_final_only=False)
         output = rank_chain({"query": query})  # returns metadata
 
         #  parse through metadata tokens until encountering either yes, or no.
         score = None  # a None score indicates the model output could not be parsed.
-        for content in output["full_generation"][0].message.response_metadata[
-            "logprobs"
-        ]["content"]:
+        for content in output["full_generation"][0].message.response_metadata["logprobs"]["content"]:
             #  Convert answer to score using the model's confidence
             if content["token"].lower().strip() == "yes":
-                score = (
-                    1 + math.exp(content["logprob"])
-                ) / 2  # If yes, use the model's confidence
+                score = (1 + math.exp(content["logprob"])) / 2  # If yes, use the model's confidence
                 break
             elif content["token"].lower().strip() == "no":
-                score = (
-                    1 - math.exp(content["logprob"])
-                ) / 2  # If no, invert the confidence
+                score = (1 - math.exp(content["logprob"])) / 2  # If no, invert the confidence
                 break
 
         if score is None:
@@ -465,9 +433,7 @@ Below is a description of the contents in this column in list format:
                         table_schema=table_schema,
                         boolean_system_prompt=True,
                     )
-                    column_schema.relevance = self._rank_schema(
-                        prompt=prompt, query=query
-                    )
+                    column_schema.relevance = self._rank_schema(prompt=prompt, query=query)
 
                     columns[column_key] = column_schema
 
@@ -512,9 +478,7 @@ Below is a description of the contents in this column in list format:
                             table_schema=table_schema,
                             boolean_system_prompt=True,
                         )
-                        value_schema.relevance = self._rank_schema(
-                            prompt=prompt, query=query
-                        )
+                        value_schema.relevance = self._rank_schema(prompt=prompt, query=query)
 
                         values[value_key] = value_schema
 
@@ -592,19 +556,13 @@ Below is a description of the contents in this column in list format:
         for table_key, table_schema in ordered_database_schema.tables.items():
             for column_key, column_schema in table_schema.columns.items():
                 for value_key, value_schema in column_schema.values.items():
-                    ablation_value_dict[(table_key, column_key, value_key)] = (
-                        value_schema.relevance
-                    )
+                    ablation_value_dict[(table_key, column_key, value_key)] = value_schema.relevance
 
-        ablation_value_dict = collections.OrderedDict(
-            sorted(ablation_value_dict.items(), key=lambda x: x[1])
-        )
+        ablation_value_dict = collections.OrderedDict(sorted(ablation_value_dict.items(), key=lambda x: x[1]))
 
         relevance_scores = list(ablation_value_dict.values())
         if len(relevance_scores) > 0:
-            ablation_quantiles = np.quantile(
-                relevance_scores, np.linspace(0, 1, self.num_retries + 2)[1:-1]
-            )
+            ablation_quantiles = np.quantile(relevance_scores, np.linspace(0, 1, self.num_retries + 2)[1:-1])
         else:
             ablation_quantiles = None
 
@@ -628,11 +586,7 @@ Below is a description of the contents in this column in list format:
         ablated_filters = []
         for filter in metadata_filters:
             for key in ablated_dict.keys():
-                if (
-                    filter.schema_table in key
-                    and filter.schema_column in key
-                    and filter.schema_value in key
-                ):
+                if filter.schema_table in key and filter.schema_column in key and filter.schema_value in key:
                     ablated_filters.append(filter)
 
         return ablated_filters
@@ -646,9 +600,7 @@ Below is a description of the contents in this column in list format:
         pass
 
     def _prepare_retrieval_query(self, query: str) -> str:
-        rewrite_prompt = PromptTemplate(
-            input_variables=["input"], template=self.rewrite_prompt_template
-        )
+        rewrite_prompt = PromptTemplate(input_variables=["input"], template=self.rewrite_prompt_template)
         rewrite_chain = LLMChain(llm=self.llm, prompt=rewrite_prompt)
         return rewrite_chain.predict(input=query)
 
@@ -668,9 +620,7 @@ Below is a description of the contents in this column in list format:
         # Add Table JOIN statements
         join_clauses = set()
         for metadata_filter in metadata_filters:
-            join_clause = ranked_database_schema.tables[
-                metadata_filter.schema_table
-            ].join
+            join_clause = ranked_database_schema.tables[metadata_filter.schema_table].join
             if join_clause in join_clauses:
                 continue
             else:
@@ -688,12 +638,12 @@ Below is a description of the contents in this column in list format:
             if i < len(metadata_filters) - 1:
                 base_query += " AND "
 
-        base_query += f" ORDER BY e.embeddings {self.distance_function.value[0]} '{{embeddings}}' LIMIT {self.search_kwargs.k};"
+        base_query += (
+            f" ORDER BY e.embeddings {self.distance_function.value[0]} '{{embeddings}}' LIMIT {self.search_kwargs.k};"
+        )
         return base_query
 
-    def _generate_filter(
-        self, prompt: ChatPromptTemplate, query: str
-    ) -> MetadataFilter:
+    def _generate_filter(self, prompt: ChatPromptTemplate, query: str) -> MetadataFilter:
         gen_filter_chain = LLMChain(llm=self.llm, prompt=prompt)
         output = gen_filter_chain({"query": query})
         return output
@@ -714,28 +664,22 @@ Below is a description of the contents in this column in list format:
                         # must use generation if field is a dictionary of tuples or a list
                         if type(value_schema.value) in [list, dict]:
                             try:
-                                metadata_prompt: ChatPromptTemplate = (
-                                    self._prepare_value_prompt(
-                                        format_instructions=parser.get_format_instructions(),
-                                        value_schema=value_schema,
-                                        column_schema=column_schema,
-                                        table_schema=table_schema,
-                                        boolean_system_prompt=False,
-                                    )
+                                metadata_prompt: ChatPromptTemplate = self._prepare_value_prompt(
+                                    format_instructions=parser.get_format_instructions(),
+                                    value_schema=value_schema,
+                                    column_schema=column_schema,
+                                    table_schema=table_schema,
+                                    boolean_system_prompt=False,
                                 )
 
-                                metadata_filters_chain = LLMChain(
-                                    llm=self.llm, prompt=metadata_prompt
-                                )
+                                metadata_filters_chain = LLMChain(llm=self.llm, prompt=metadata_prompt)
                                 metadata_filter_output = metadata_filters_chain.predict(
                                     query=query,
                                 )
 
                                 # If the LLM outputs raw JSON, use it as-is.
                                 # If the LLM outputs anything including a json markdown section, use the last one.
-                                json_markdown_output = re.findall(
-                                    r"```json.*```", metadata_filter_output, re.DOTALL
-                                )
+                                json_markdown_output = re.findall(r"```json.*```", metadata_filter_output, re.DOTALL)
                                 if json_markdown_output:
                                     metadata_filter_output = json_markdown_output[-1]
                                     # Clean the json tags.
@@ -755,11 +699,9 @@ Below is a description of the contents in this column in list format:
                             except OutputParserException as e:
                                 logger.warning(
                                     f"LLM failed to generate structured metadata filters: {e}",
-                                    exc_info=logger.isEnabledFor(logging.DEBUG)
+                                    exc_info=logger.isEnabledFor(logging.DEBUG),
                                 )
-                                return HandlerResponse(
-                                    RESPONSE_TYPE.ERROR, error_message=str(e)
-                                )
+                                return HandlerResponse(RESPONSE_TYPE.ERROR, error_message=str(e))
                         else:
                             metadata_filter = AblativeMetadataFilter(
                                 attribute=column_schema.column,
@@ -780,25 +722,17 @@ Below is a description of the contents in this column in list format:
         embeddings_str: str,
     ) -> HandlerResponse:
         try:
-            checked_sql_query = self._prepare_pgvector_query(
-                ranked_database_schema, metadata_filters
-            )
-            checked_sql_query_with_embeddings = checked_sql_query.format(
-                embeddings=embeddings_str
-            )
-            return self.vector_store_handler.native_query(
-                checked_sql_query_with_embeddings
-            )
+            checked_sql_query = self._prepare_pgvector_query(ranked_database_schema, metadata_filters)
+            checked_sql_query_with_embeddings = checked_sql_query.format(embeddings=embeddings_str)
+            return self.vector_store_handler.native_query(checked_sql_query_with_embeddings)
         except Exception as e:
             logger.warning(
                 f"Failed to prepare and execute SQL query from structured metadata: {e}",
-                exc_info=logger.isEnabledFor(logging.DEBUG)
+                exc_info=logger.isEnabledFor(logging.DEBUG),
             )
             return HandlerResponse(RESPONSE_TYPE.ERROR, error_message=str(e))
 
-    def _get_relevant_documents(
-        self, query: str, *, run_manager: CallbackManagerForRetrieverRun
-    ) -> List[Document]:
+    def _get_relevant_documents(self, query: str, *, run_manager: CallbackManagerForRetrieverRun) -> List[Document]:
         # Rewrite query to be suitable for retrieval.
         retrieval_query = self._prepare_retrieval_query(query)
 
@@ -806,14 +740,10 @@ Below is a description of the contents in this column in list format:
         embedded_query = self.embeddings_model.embed_query(retrieval_query)
 
         # Search for relevant filters
-        ranked_database_schema, ablation_value_dict, ablation_quantiles = (
-            self._breadth_first_search(query=query)
-        )
+        ranked_database_schema, ablation_value_dict, ablation_quantiles = self._breadth_first_search(query=query)
 
         # Generate metadata filters
-        metadata_filters = self._generate_metadata_filters(
-            query=query, ranked_database_schema=ranked_database_schema
-        )
+        metadata_filters = self._generate_metadata_filters(query=query, ranked_database_schema=ranked_database_schema)
 
         if type(metadata_filters) is list:
             # Initial Execution of the similarity search with metadata filters.
@@ -832,9 +762,7 @@ Below is a description of the contents in this column in list format:
                     break
                 elif document_response.resp_type == RESPONSE_TYPE.ERROR:
                     # LLMs won't always generate structured metadata so we should have a fallback after retrying.
-                    logger.info(
-                        f"SQL Retriever query failed with error {document_response.error_message}"
-                    )
+                    logger.info(f"SQL Retriever query failed with error {document_response.error_message}")
                 else:
                     logger.info(
                         f"SQL Retriever did not retrieve {self.min_k} documents: {len(document_response.data_frame)} documents retrieved."
@@ -869,17 +797,9 @@ Below is a description of the contents in this column in list format:
                 return retrieved_documents
 
             # If the SQL query constructed did not return any documents, fallback.
-            logger.info(
-                "No documents returned from SQL retriever, using fallback retriever."
-            )
-            return self.fallback_retriever._get_relevant_documents(
-                retrieval_query, run_manager=run_manager
-            )
+            logger.info("No documents returned from SQL retriever, using fallback retriever.")
+            return self.fallback_retriever._get_relevant_documents(retrieval_query, run_manager=run_manager)
         else:
             # If no metadata fields could be generated fallback.
-            logger.info(
-                "No metadata fields were successfully generated, using fallback retriever."
-            )
-            return self.fallback_retriever._get_relevant_documents(
-                retrieval_query, run_manager=run_manager
-            )
+            logger.info("No metadata fields were successfully generated, using fallback retriever.")
+            return self.fallback_retriever._get_relevant_documents(retrieval_query, run_manager=run_manager)

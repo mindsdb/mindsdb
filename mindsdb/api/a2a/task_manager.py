@@ -1,4 +1,8 @@
-from typing import AsyncIterable, Dict
+import time
+import logging
+import asyncio
+from typing import AsyncIterable, Dict, Union
+
 from mindsdb.api.a2a.common.types import (
     SendTaskRequest,
     TaskSendParams,
@@ -20,11 +24,6 @@ from mindsdb.api.a2a.common.server.task_manager import InMemoryTaskManager
 from mindsdb.api.a2a.agent import MindsDBAgent
 from mindsdb.api.a2a.utils import to_serializable, convert_a2a_message_to_qa_format
 
-from typing import Union
-import logging
-import asyncio
-import time
-import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -80,11 +79,11 @@ class AgentTaskManager(InMemoryTaskManager):
             task = await self.upsert_task(task_send_params)
             logger.info(f"Task created/updated with history length: {len(task.history) if task.history else 0}")
         except Exception as e:
-            logger.error(f"Error creating task: {str(e)}")
+            logger.exception("Error creating task:")
             error_result = to_serializable(
                 {
                     "id": request.id,
-                    "error": to_serializable(InternalError(message=f"Error creating task: {str(e)}")),
+                    "error": to_serializable(InternalError(message=f"Error creating task: {e}")),
                 }
             )
             yield error_result
@@ -149,14 +148,14 @@ class AgentTaskManager(InMemoryTaskManager):
                 return
 
             except Exception as e:
-                logger.error(f"Error invoking agent: {e}")
+                logger.exception("Error invoking agent:")
                 error_result = to_serializable(
                     {
                         "id": request.id,
                         "error": to_serializable(
                             JSONRPCResponse(
                                 id=request.id,
-                                error=to_serializable(InternalError(message=f"Error invoking agent: {str(e)}")),
+                                error=to_serializable(InternalError(message=f"Error invoking agent: {e}")),
                             )
                         ),
                     }
@@ -182,11 +181,10 @@ class AgentTaskManager(InMemoryTaskManager):
                     item["artifact"]["parts"] = [to_serializable(p) for p in item["artifact"]["parts"]]
                 yield to_serializable(item)
         except Exception as e:
-            logger.error(f"An error occurred while streaming the response: {e}")
-            logger.error(traceback.format_exc())
-            error_text = f"An error occurred while streaming the response: {str(e)}"
+            error_text = "An error occurred while streaming the response:"
+            logger.exception(error_text)
             # Ensure all parts are plain dicts
-            parts = [{"type": "text", "text": error_text}]
+            parts = [{"type": "text", "text": f"{error_text} {e}"}]
             parts = [to_serializable(part) for part in parts]
             artifact = {
                 "parts": parts,
@@ -333,11 +331,11 @@ class AgentTaskManager(InMemoryTaskManager):
                 yield response
         except Exception as e:
             # If an error occurs, yield an error response
-            logger.error(f"Error in on_send_task_subscribe: {str(e)}")
+            logger.exception(f"Error in on_send_task_subscribe: {e}")
             error_result = to_serializable(
                 {
                     "id": request.id,
-                    "error": to_serializable(InternalError(message=f"Error processing streaming request: {str(e)}")),
+                    "error": to_serializable(InternalError(message=f"Error processing streaming request: {e}")),
                 }
             )
             yield error_result
@@ -463,7 +461,7 @@ class AgentTaskManager(InMemoryTaskManager):
                 )
                 return to_serializable(SendTaskResponse(id=request.id, result=task))
         except Exception as e:
-            logger.error(f"Error invoking agent: {e}")
+            logger.exception("Error invoking agent:")
             result_text = f"Error invoking agent: {e}"
             parts = [{"type": "text", "text": result_text}]
 

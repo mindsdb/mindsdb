@@ -16,7 +16,6 @@ logger = log.getLogger(__name__)
 
 
 class TaskMonitor:
-
     MONITOR_INTERVAL_SECONDS = 2
     LOCK_EXPIRED_SECONDS = MONITOR_INTERVAL_SECONDS * 30
 
@@ -39,15 +38,14 @@ class TaskMonitor:
                 self.stop_all_tasks()
                 return
 
-            except Exception as e:
-                logger.error(e)
+            except Exception:
+                logger.exception("Error in TaskMonitor.start")
                 db.session.rollback()
 
             if stop_event is not None and stop_event.is_set():
                 return
 
     def stop_all_tasks(self):
-
         active_tasks = list(self._active_tasks.keys())
         for task_id in active_tasks:
             self.stop_task(task_id)
@@ -65,7 +63,6 @@ class TaskMonitor:
         # Check active tasks
         active_tasks = list(self._active_tasks.items())
         for task_id, task in active_tasks:
-
             if task_id not in allowed_tasks:
                 # old task
                 self.stop_task(task_id)
@@ -96,9 +93,7 @@ class TaskMonitor:
             task.run_by = run_by
             task.alive_time = db_date
 
-        elif db_date - task.alive_time > dt.timedelta(
-            seconds=self.LOCK_EXPIRED_SECONDS
-        ):
+        elif db_date - task.alive_time > dt.timedelta(seconds=self.LOCK_EXPIRED_SECONDS):
             # lock expired
             task.run_by = run_by
             task.alive_time = db_date
@@ -145,7 +140,6 @@ class TaskMonitor:
 
 
 def start(verbose=False):
-
     monitor = TaskMonitor()
     monitor.start()
 

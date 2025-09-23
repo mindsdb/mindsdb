@@ -22,6 +22,7 @@ from ...common.types import (
     AgentCard,
     TaskResubscriptionRequest,
     SendTaskStreamingRequest,
+    MessageStreamRequest,
 )
 from pydantic import ValidationError
 from ...common.server.task_manager import TaskManager
@@ -43,6 +44,7 @@ class A2AServer:
             routes=[
                 Route("/", self._process_request, methods=["POST"]),
                 Route("/.well-known/agent.json", self._get_agent_card, methods=["GET"]),
+                Route("/.well-known/agent-card.json", self._get_agent_card, methods=["GET"]),
                 Route("/status", self._get_status, methods=["GET"]),
             ]
         )
@@ -103,6 +105,8 @@ class A2AServer:
                 result = await self.task_manager.on_get_task_push_notification(json_rpc_request)
             elif isinstance(json_rpc_request, TaskResubscriptionRequest):
                 result = await self.task_manager.on_resubscribe_to_task(json_rpc_request)
+            elif isinstance(json_rpc_request, MessageStreamRequest):
+                result = await self.task_manager.on_message_stream(json_rpc_request, user_info)
             else:
                 logger.warning(f"Unexpected request type: {type(json_rpc_request)}")
                 raise ValueError(f"Unexpected request type: {type(request)}")

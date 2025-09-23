@@ -33,7 +33,7 @@ def get_a2a_app(
     agent_card = AgentCard(
         name="MindsDB Agent Connector",
         description=(f"A2A connector that proxies requests to MindsDB agents in project '{project_name}'."),
-        url=f"http://127.0.0.1:{mindsdb_port}",
+        url=f"http://127.0.0.1:{mindsdb_port}/a2a/",
         version="1.0.0",
         defaultInputModes=MindsDBAgent.SUPPORTED_CONTENT_TYPES,
         defaultOutputModes=MindsDBAgent.SUPPORTED_CONTENT_TYPES,

@@ -24,7 +24,7 @@ def test_get_all_skills_project_not_found(client):
 def test_create_skill(client):
     create_request = {
         'skill': {
-            'name': 'test_create_skill',
+            'name': 'test_create_SKILL',  # mixed case
             'type': 'Knowledge Base',
             'params': {
                 'k1': 'v1'

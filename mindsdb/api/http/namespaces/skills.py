@@ -19,7 +19,7 @@ def create_skill(project_name, skill):
                 'Missing field',
                 'Missing "{}" field for skill'.format(required_field)
             )
-    name = skill['name']
+    name = skill['name'].lower()
     type = skill['type']
     params = skill['params']
 

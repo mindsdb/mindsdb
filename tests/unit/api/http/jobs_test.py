@@ -10,7 +10,7 @@ def test_jobs_flow(client):
     start_at = (dt.datetime.now() + dt.timedelta(days=1)).strftime(date_format)
     end_at = (dt.datetime.now() + dt.timedelta(days=2)).strftime(date_format)
     job = {
-        "name": "test_job",
+        "name": "test_JOB",
         "query": "select 1",
         "if_query": "select 2",
         "start_at": start_at,
@@ -24,7 +24,7 @@ def test_jobs_flow(client):
     created_job = response.json
 
     for field in ["name", "query", "if_query", "schedule_str"]:
-        assert created_job[field] == job[field]
+        assert created_job[field] == job[field].lower()
 
     # dates, created date could have milliseconds, compare as substring
     assert job["start_at"] in created_job["start_at"]

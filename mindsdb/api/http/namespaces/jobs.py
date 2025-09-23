@@ -29,7 +29,7 @@ class JobsResource(Resource):
 
         job = request.json["job"]
 
-        name = job.pop("name")
+        name = job.pop("name").lower()
         if job["start_at"] is not None:
             job["start_at"] = parse_job_date(job["start_at"])
         if job["end_at"] is not None:

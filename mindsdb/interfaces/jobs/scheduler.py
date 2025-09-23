@@ -14,7 +14,6 @@ logger = log.getLogger(__name__)
 
 
 def execute_async(q_in, q_out):
-
     while True:
         task = q_in.get()
 
@@ -44,7 +43,7 @@ class Scheduler:
         self.q_in = queue.Queue()
         self.q_out = queue.Queue()
         self.work_thread = threading.Thread(
-            target=execute_async, args=(self.q_in, self.q_out), name='Scheduler.execute_async'
+            target=execute_async, args=(self.q_in, self.q_out), name="Scheduler.execute_async"
         )
         self.work_thread.start()
 
@@ -58,14 +57,13 @@ class Scheduler:
         check_interval = self.config.get("jobs", {}).get("check_interval", 30)
 
         while True:
-
             logger.debug("Scheduler check timetable")
             try:
                 self.check_timetable()
             except (SystemExit, KeyboardInterrupt):
                 raise
-            except Exception as e:
-                logger.error(e)
+            except Exception:
+                logger.exception("Error in 'scheduler_monitor'")
 
             # different instances should start in not the same time
 
@@ -83,7 +81,6 @@ class Scheduler:
         db.session.remove()
 
     def execute_task(self, record_id, exec_method):
-
         executor = JobsExecutor()
         if exec_method == "local":
             history_id = executor.lock_record(record_id)
@@ -117,7 +114,6 @@ class Scheduler:
             raise NotImplementedError()
 
     def start(self):
-
         config = Config()
         db.init()
         self.config = config
@@ -127,7 +123,6 @@ class Scheduler:
         try:
             self.scheduler_monitor()
         except (KeyboardInterrupt, SystemExit):
-
             self.stop_thread()
             pass
 

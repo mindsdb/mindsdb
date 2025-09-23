@@ -21,7 +21,7 @@ from mindsdb.integrations.utilities.utils import get_class_name
 from mindsdb.metrics import metrics
 from mindsdb.utilities import log
 from mindsdb.utilities.profiler import profiler
-from mindsdb.utilities.exception import format_db_error_message
+from mindsdb.utilities.exception import QueryError
 from mindsdb.api.executor.datahub.datanodes.system_tables import infer_mysql_type
 
 logger = log.getLogger(__name__)
@@ -288,14 +288,19 @@ class IntegrationDataNode(DataNode):
                     query_str = "can't be dump"
             else:
                 query_str = query
-            raise Exception(
-                format_db_error_message(
-                    db_name=self.integration_handler.name,
-                    db_type=self.integration_handler.__class__.name,
-                    db_error_msg=result.error_message,
-                    failed_query=query_str,
-                )
+
+            exception = QueryError(
+                db_name=self.integration_handler.name,
+                db_type=self.integration_handler.__class__.name,
+                db_error_msg=result.error_message,
+                failed_query=query_str,
+                is_acceptable=result.is_acceptable_error,
             )
+
+            if result.exception is None:
+                raise exception
+            else:
+                raise exception from result.exception
 
         if result.type == RESPONSE_TYPE.OK:
             return DataHubResponse(affected_rows=result.affected_rows)
@@ -310,8 +315,8 @@ class IntegrationDataNode(DataNode):
             # replace python's Nan, np.NaN, np.nan and pd.NA to None
             # TODO keep all NAN to the end of processing, bacause replacing also changes dtypes
             df.replace([np.NaN, pd.NA, pd.NaT], None, inplace=True)
-        except Exception as e:
-            logger.error(f"Issue with clearing DF from NaN values: {e}")
+        except Exception:
+            logger.exception("Issue with clearing DF from NaN values:")
         # endregion
 
         columns_info = [{"name": k, "type": v} for k, v in df.dtypes.items()]

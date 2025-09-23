@@ -107,8 +107,8 @@ class FileController:
             self.fs_store.put(store_file_path, base_dir=self.dir)
             db.session.commit()
 
-        except Exception as e:
-            logger.error(e)
+        except Exception:
+            logger.exception("An error occurred while saving the file:")
             if file_dir is not None:
                 shutil.rmtree(file_dir)
             raise

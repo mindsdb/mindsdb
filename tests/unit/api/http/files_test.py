@@ -56,23 +56,6 @@ def test_put_file_invalid_url(client):
     assert "Invalid URL" in data["title"]
 
 
-def test_put_file_with_extension_in_url(client):
-    """Test uploading a file with extension in the URL, ensuring normalization."""
-    file_content = b"Test content for extension normalization."
-    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-        temp_file.write(file_content)
-        temp_file.flush()
-        temp_file.seek(0)
-        data = {"file": (temp_file, "mydata.csv")}
-        response = client.put(
-            "/api/files/mydata.csv",
-            data=data,
-            content_type="multipart/form-data",
-            follow_redirects=True,
-        )
-    assert response.status_code == HTTPStatus.OK
-
-
 def test_put_file_url_upload_disabled(client, monkeypatch):
     """Test uploading from URL when URL upload is disabled"""
     # Patch config to disable URL upload
@@ -94,3 +77,20 @@ def test_put_file_url_upload_disabled(client, monkeypatch):
     assert response.status_code == 400
     data = response.get_json()
     assert "URL file upload is disabled" in data["detail"]
+
+def test_extension_in_filename(client):
+    """Test uploading a file with an extension in the name"""
+    data = {
+        "source_type": "url",
+        "source": "http://example.com/file.txt",
+        "file": "file.txt",
+    }
+    response = client.put(
+        "/api/files/file.txt",
+        json=data,
+        content_type="application/json",
+        follow_redirects=True,
+    )
+    assert response.status_code == 400
+    data = response.get_json()
+    assert "File name cannot contain extension." in data["detail"]

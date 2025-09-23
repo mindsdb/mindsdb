@@ -488,28 +488,22 @@ class AgentTaskManager(InMemoryTaskManager):
 
         query = self._get_user_query(request.params)
         params = self._get_task_params(request.params)
-        
+
         try:
             task_id = f"msg_stream_{request.params.sessionId}_{request.id}"
             context_id = f"ctx_{request.params.sessionId}"
             message_id = f"msg_{request.id}"
 
             agents_controller = AgentsController()
-            existing_agent = agents_controller.get_agent(params['agent_name'])
-            resp = agents_controller.get_completion(existing_agent, [{'question': query}])
-            response_message = resp['answer'][0]
+            existing_agent = agents_controller.get_agent(params["agent_name"])
+            resp = agents_controller.get_completion(existing_agent, [{"question": query}])
+            response_message = resp["answer"][0]
 
             response_message = Message(
-                role="agent",
-                parts=[{"type": "text", "text": response_message}],
-                metadata={},
-                messageId=message_id
+                role="agent", parts=[{"type": "text", "text": response_message}], metadata={}, messageId=message_id
             )
 
-            task_status = TaskStatus(
-                state=TaskState.COMPLETED,
-                message=response_message
-            )
+            task_status = TaskStatus(state=TaskState.COMPLETED, message=response_message)
 
             task_status_update = TaskStatusUpdateEvent(
                 id=task_id,
@@ -517,7 +511,7 @@ class AgentTaskManager(InMemoryTaskManager):
                 final=True,
                 metadata={"message_stream": True},
                 contextId=context_id,
-                taskId=task_id
+                taskId=task_id,
             )
 
             async def message_stream_generator():
@@ -528,6 +522,5 @@ class AgentTaskManager(InMemoryTaskManager):
         except Exception as e:
             logger.error(f"Error processing message stream: {e}")
             return SendStreamingMessageSuccessResponse(
-                id=request.id,
-                error=InternalError(message=f"Error processing message stream: {str(e)}")
+                id=request.id, error=InternalError(message=f"Error processing message stream: {str(e)}")
             )

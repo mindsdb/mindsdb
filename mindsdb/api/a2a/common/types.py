@@ -82,31 +82,32 @@ class Message(BaseModel):
 
 class FlexibleMessage(BaseModel):
     """Message that can handle both 'type' and 'kind' in parts."""
+
     role: Literal["user", "agent", "assistant"]
     parts: List[dict[str, Any]]  # Raw parts that we'll process manually
     metadata: dict[str, Any] | None = None
     history: Optional[List["FlexibleMessage"]] = None
-    
-    @model_validator(mode='after')
+
+    @model_validator(mode="after")
     def normalize_parts(self):
         """Convert parts with 'kind' to parts with 'type'."""
         normalized_parts = []
         for part in self.parts:
             if isinstance(part, dict):
                 # Convert 'kind' to 'type' if needed
-                if 'kind' in part and 'type' not in part:
+                if "kind" in part and "type" not in part:
                     normalized_part = part.copy()
-                    normalized_part['type'] = normalized_part.pop('kind')
+                    normalized_part["type"] = normalized_part.pop("kind")
                 else:
                     normalized_part = part
-                
+
                 # Validate the normalized part
                 try:
-                    if normalized_part.get('type') == 'text':
+                    if normalized_part.get("type") == "text":
                         normalized_parts.append(TextPart.model_validate(normalized_part))
-                    elif normalized_part.get('type') == 'file':
+                    elif normalized_part.get("type") == "file":
                         normalized_parts.append(FilePart.model_validate(normalized_part))
-                    elif normalized_part.get('type') == 'data':
+                    elif normalized_part.get("type") == "data":
                         normalized_parts.append(DataPart.model_validate(normalized_part))
                     else:
                         raise ValueError(f"Unknown part type: {normalized_part.get('type')}")
@@ -114,7 +115,7 @@ class FlexibleMessage(BaseModel):
                     raise ValueError(f"Invalid part: {normalized_part}, error: {e}")
             else:
                 normalized_parts.append(part)
-        
+
         self.parts = normalized_parts
         return self
 

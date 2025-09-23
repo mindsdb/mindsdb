@@ -159,6 +159,8 @@ class ChatBotsResource(Resource):
         chatbot = request.json["chatbot"]
 
         name = chatbot.get("name")
+        if name is not None:
+            name = name.lower()
         return create_chatbot(project_name, name, chatbot)
 
 
@@ -233,6 +235,7 @@ class ChatBotResource(Resource):
 
         # Chatbot must not exist with new name.
         if name is not None:
+            name = name.lower()
             if name != chatbot_name:
                 chatbot_with_new_name = chatbot_controller.get_chatbot(name, project_name=project_name)
                 if chatbot_with_new_name is not None:
@@ -241,8 +244,6 @@ class ChatBotResource(Resource):
                         "Chatbot already exists",
                         f"Chatbot with name {name} already exists. Please choose a different one.",
                     )
-            if not name.islower():
-                return http_error(HTTPStatus.BAD_REQUEST, "Wrong name", f"The name must be in lower case: {name}")
 
         if existing_chatbot is None:
             # Create

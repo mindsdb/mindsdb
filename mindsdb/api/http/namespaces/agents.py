@@ -107,6 +107,8 @@ class AgentsResource(Resource):
         agent = request.json["agent"]
 
         name = agent.get("name")
+        if name is not None:
+            name = name.lower()
         return create_agent(project_name, name, agent)
 
 
@@ -163,6 +165,7 @@ class AgentResource(Resource):
 
         # Agent must not exist with new name.
         if name is not None and name != agent_name:
+            name = name.lower()
             agent_with_new_name = agents_controller.get_agent(name, project_name=project_name)
             if agent_with_new_name is not None:
                 return http_error(

@@ -84,7 +84,7 @@ def test_get_all_chatbots_project_not_found(client):
 def test_get_chatbot(client, test_db):
     chatbot_data = {
         'chatbot': {
-            'name': 'test_get_chatbot',
+            'name': 'test_Get_Chatbot',  # mixed case
             'model_name': 'test_model',
             'database_id': test_db['id'],
             'is_running': True,

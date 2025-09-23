@@ -254,8 +254,16 @@ class SQLAgent:
                             self.check_table_permission(node)
                         except ValueError as origin_exc:
                             # was it badly quoted by llm?
-                            if len(node.parts) == 1 and node.is_quoted[0] and "." in node.parts[0]:
-                                node2 = Identifier(node.parts[0])
+                            #
+                            if "." in node.parts[0]:
+                                # extract quoted parts (with dots) to sub-parts
+                                parts = []
+                                for i, item in enumerate(node.parts):
+                                    if node.is_quoted[i] and "." in item:
+                                        parts.extend(Identifier(item).parts)
+                                    else:
+                                        parts.append(item)
+                                node2 = Identifier(parts=parts)
                                 try:
                                     _check_f(node2, is_table=True)
                                     return node2
@@ -405,6 +413,7 @@ class SQLAgent:
             tables_idx[tuple(table.parts)] = table
 
         tables = []
+        not_found = []
         for table_name in table_names:
             if not table_name.strip():
                 continue
@@ -419,9 +428,12 @@ class SQLAgent:
             table_identifier = tables_idx.get(tuple(table_parts))
 
             if table_identifier is None:
-                raise ValueError(f"Table {table_name} not found in the database")
-            tables.append(table_identifier)
+                not_found.append(table_name)
+            else:
+                tables.append(table_identifier)
 
+        if not_found:
+            raise ValueError(f"Tables: {', '.join(not_found)} not found in the database")
         return tables
 
     def get_knowledge_base_info(self, kb_names: Optional[List[str]] = None) -> str:
@@ -479,9 +491,9 @@ class SQLAgent:
                 # remove backticks
                 name = name.replace("`", "")
 
-                split = name.split(".")
-                if len(split) > 1:
-                    all_tables.append(Identifier(parts=[split[0], split[-1]]))
+                parts = name.split(".")
+                if len(parts) > 1:
+                    all_tables.append(Identifier(parts=parts))
                 else:
                     all_tables.append(Identifier(name))
 
@@ -581,7 +593,7 @@ class SQLAgent:
 
     def _get_sample_rows(self, table: str, fields: List[str]) -> str:
         logger.info(f"_get_sample_rows: table={table} fields={fields}")
-        command = f"select {', '.join(fields)} from {table} limit {self._sample_rows_in_table_info};"
+        command = f"select * from {table} limit {self._sample_rows_in_table_info};"
         try:
             ret = self._call_engine(command)
             sample_rows = ret.data.to_lists()

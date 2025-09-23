@@ -133,13 +133,17 @@ class S3Handler(APIHandler):
         """
         # Connect to S3 via DuckDB.
         duckdb_conn = duckdb.connect(":memory:")
-        try:
-            duckdb_conn.execute("INSTALL httpfs")
-        except HTTPException as http_error:
-            logger.debug(f"Error installing the httpfs extension, {http_error}! Forcing installation.")
-            duckdb_conn.execute("FORCE INSTALL httpfs")
 
         duckdb_conn.execute("LOAD httpfs")
+        # Cria o secret S3 para credential_chain (IAM Role, env, etc)
+        region = self.connection_data.get("region_name", "us-east-1")
+        duckdb_conn.execute(f"""
+            CREATE OR REPLACE SECRET (
+                TYPE s3,
+                PROVIDER credential_chain,
+                REGION '{region}'
+            );
+        """)
 
         # Configure credentials only if presentes
         if "aws_access_key_id" in self.connection_data:

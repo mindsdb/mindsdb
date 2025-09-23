@@ -726,9 +726,7 @@ class ExecuteCommands:
     def answer_drop_trigger(self, statement, database_name):
         triggers_controller = TriggersController()
 
-        name = statement.name
-        trigger_name = statement.name.parts[-1]
-        project_name = name.parts[-2] if len(name.parts) > 1 else database_name
+        project_name, trigger_name = match_two_part_name(statement.name, default_db_name=database_name)
 
         triggers_controller.delete(trigger_name, project_name)
 
@@ -831,10 +829,9 @@ class ExecuteCommands:
     def answer_drop_chatbot(self, statement, database_name):
         chatbot_controller = ChatBotController()
 
-        name = statement.name
-        project_name = name.parts[-2] if len(name.parts) > 1 else database_name
+        project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
 
-        chatbot_controller.delete_chatbot(name.parts[-1], project_name=project_name)
+        chatbot_controller.delete_chatbot(name, project_name=project_name)
         return ExecuteAnswer()
 
     def answer_evaluate_metric(self, statement, database_name):

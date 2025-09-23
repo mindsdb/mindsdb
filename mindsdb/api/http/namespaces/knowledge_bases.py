@@ -89,7 +89,7 @@ class KnowledgeBasesResource(Resource):
                 HTTPStatus.NOT_FOUND, "Project not found", f"Project with name {project_name} does not exist"
             )
 
-        kb_name = knowledge_base.get("name")
+        kb_name = knowledge_base["name"].lower()
         existing_kb = session.kb_controller.get(kb_name, project.id)
         if existing_kb is not None:
             # Knowledge Base must not exist.
@@ -168,6 +168,7 @@ class KnowledgeBaseResource(Resource):
     @api_endpoint_metrics("PUT", "/knowledge_bases/knowledge_base")
     def put(self, project_name: str, knowledge_base_name: str):
         """Updates a knowledge base with optional preprocessing."""
+        knowledge_base_name = knowledge_base_name.lower()
 
         # Check for required parameters
         if "knowledge_base" not in request.json:

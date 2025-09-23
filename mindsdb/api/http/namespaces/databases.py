@@ -55,7 +55,7 @@ class DatabasesResource(Resource):
             )
         if 'parameters' in database:
             parameters = database['parameters']
-        name = database['name']
+        name = database['name'].lower()
 
         if session.database_controller.exists(name):
             return http_error(

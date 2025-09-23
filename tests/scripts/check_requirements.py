@@ -38,8 +38,10 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 # lark is required for auto retrieval (RAG utilities). It is used by langchain
 # and not explicitly imported in mindsdb.
 # transformers is required for langchain_core and not explicitly imported by mindsdb.
-# gunicorn and dataprep_ml are for optional features that aren't required.
+# dataprep_ml is for optional features that aren't required.
 # opentelemetry and langfuse are metrics/tracing libraries that are only used in the cloud images (they're installed there as extras)
+# langchain_aws is used to create agent with bedrock provider;
+#   if is not installed - error message will be shown, but it is possible to use other providers with agent
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch", "pyarrow", "langfuse", "dataprep_ml"],
     "DEP001": [
@@ -47,10 +49,10 @@ MAIN_RULE_IGNORES = {
         "pgvector",
         "pyarrow",
         "openai",
-        "gunicorn",
         "dataprep_ml",
         "opentelemetry",
         "langfuse",
+        "langchain_aws",
     ],
     "DEP002": [
         "psycopg2-binary",
@@ -101,6 +103,9 @@ OPENAI_DEP002_IGNORE_HANDLER_DEPS = ["tiktoken"]
 
 CHROMADB_EP002_IGNORE_HANDLER_DEPS = ["onnxruntime"]
 
+# upper version of numba is fixed in statsforecast handler to prevent installing numba==0.62.0 (its import fails on windows)
+STATSFORECAST_EP002_IGNORE_HANDLER_DEPS = ["numba"]
+
 # The `pyarrow` package is used only if it is installed.
 # The handler can work without it.
 SNOWFLAKE_DEP003_IGNORE_HANDLER_DEPS = ["pyarrow"]
@@ -119,6 +124,7 @@ DEP002_IGNORE_HANDLER_DEPS = list(
         + LANGCHAIN_EMBEDDING_DEP002_IGNORE_HANDLER_DEPS
         + OPENAI_DEP002_IGNORE_HANDLER_DEPS
         + CHROMADB_EP002_IGNORE_HANDLER_DEPS
+        + STATSFORECAST_EP002_IGNORE_HANDLER_DEPS
     )
 )
 

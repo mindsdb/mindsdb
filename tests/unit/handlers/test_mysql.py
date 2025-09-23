@@ -439,7 +439,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.BLOB,
             MYSQL_DATA_TYPE.JSON,
         ]
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         for key, input_value in input_row.items():
             result_value = response.data_frame[key][0]
             self.assertEqual(type(result_value), type(input_value))
@@ -457,7 +457,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         ]
         response: Response = self.handler.native_query(query_str)
         excepted_mysql_types = [MYSQL_DATA_TYPE.TINYINT, MYSQL_DATA_TYPE.TINYINT, MYSQL_DATA_TYPE.TINYINT]
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         for key, input_value in input_row.items():
             result_value = response.data_frame[key][0]
             # without None values in result columns types will be one of pandas types
@@ -505,7 +505,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.DECIMAL,
         ]
 
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         for key, input_value in input_row.items():
             result_value = response.data_frame[key][0]
             self.assertEqual(result_value, input_value)
@@ -537,7 +537,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.DATETIME,
             MYSQL_DATA_TYPE.TIMESTAMP,
         ]
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         for key, input_value in input_row.items():
             result_value = response.data_frame[key][0]
             self.assertEqual(result_value, input_value)
@@ -553,10 +553,10 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         ]
         mock_cursor.description = description
         response: Response = self.handler.native_query(query_str)
-        self.assertEquals(response.data_frame.dtypes[0], "Int64")
-        self.assertEquals(response.data_frame.dtypes[1], "Int64")
-        self.assertEquals(response.data_frame.iloc[0, 0], bigint_val)
-        self.assertEquals(response.data_frame.iloc[0, 1], 1)
+        self.assertEqual(response.data_frame.dtypes[0], "Int64")
+        self.assertEqual(response.data_frame.dtypes[1], "Int64")
+        self.assertEqual(response.data_frame.iloc[0, 0], bigint_val)
+        self.assertEqual(response.data_frame.iloc[0, 1], 1)
         self.assertTrue(response.data_frame.iloc[1, 0] is pd.NA)
         self.assertTrue(response.data_frame.iloc[1, 1] is pd.NA)
         # endregion

@@ -84,6 +84,12 @@ class FileHandler(DatabaseHandler):
                 table_name = table_identifier.parts[-1]
                 try:
                     self.file_controller.delete_file(table_name)
+                except FileNotFoundError as e:
+                    if not query.if_exists:
+                        return Response(
+                            RESPONSE_TYPE.ERROR,
+                            error_message=f"Can't delete table '{table_name}': {e}",
+                        )
                 except Exception as e:
                     return Response(
                         RESPONSE_TYPE.ERROR,

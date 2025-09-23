@@ -22,12 +22,7 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
     TableField,
     VectorStoreHandler,
 )
-from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
-from mindsdb.integrations.utilities.rag.config_loader import load_rag_config
 from mindsdb.integrations.utilities.handler_utils import get_api_key
-from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import (
-    construct_model_from_args,
-)
 
 from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS, MAX_INSERT_BATCH_SIZE
 from mindsdb.interfaces.agents.langchain_agent import create_chat_model, get_llm_provider
@@ -56,6 +51,7 @@ class KnowledgeBaseInputParams(BaseModel):
     content_columns: List[str] | None = None
     id_column: str | None = None
     kb_no_upsert: bool = False
+    kb_skip_existing: bool = False
     embedding_model: Dict[Text, Any] | None = None
     is_sparse: bool = False
     vector_size: int | None = None
@@ -83,9 +79,9 @@ def get_model_params(model_params: dict, default_config_key: str):
     return combined_model_params
 
 
-def get_embedding_model_from_params(embedding_model_params: dict):
+def adapt_embedding_model_params(embedding_model_params: dict):
     """
-    Create embedding model from parameters.
+    Prepare parameters for embedding model.
     """
     params_copy = copy.deepcopy(embedding_model_params)
     provider = params_copy.pop("provider", None).lower()
@@ -106,7 +102,7 @@ def get_embedding_model_from_params(embedding_model_params: dict):
     params_copy.pop("api_key", None)
     params_copy["model"] = params_copy.pop("model_name", None)
 
-    return construct_model_from_args(params_copy)
+    return params_copy
 
 
 def get_reranking_model_from_params(reranking_model_params: dict):
@@ -685,6 +681,25 @@ class KnowledgeBaseTable:
             logger.warning("No valid content found in any content columns")
             return
 
+        # Check if we should skip existing items (before calculating embeddings)
+        if params is not None and params.get("kb_skip_existing", False):
+            logger.debug(f"Checking for existing items to skip before processing {len(df)} items")
+            db_handler = self.get_vector_db()
+
+            # Get list of IDs from current batch
+            current_ids = df[TableField.ID.value].dropna().astype(str).tolist()
+            if current_ids:
+                # Check which IDs already exist
+                existing_ids = db_handler.check_existing_ids(self._kb.vector_database_table, current_ids)
+                if existing_ids:
+                    # Filter out existing items
+                    df = df[~df[TableField.ID.value].astype(str).isin(existing_ids)]
+                    logger.info(f"Skipped {len(existing_ids)} existing items, processing {len(df)} new items")
+
+                    if df.empty:
+                        logger.info("All items already exist, nothing to insert")
+                        return
+
         # add embeddings and send to vector db
         df_emb = self._df_to_embeddings(df)
         df = pd.concat([df, df_emb], axis=1)
@@ -922,7 +937,12 @@ class KnowledgeBaseTable:
             ValueError: If the configuration is invalid or required components are missing
         """
         # Get embedding model from knowledge base
-        embeddings_model = None
+        from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import (
+            construct_model_from_args,
+        )
+        from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
+        from mindsdb.integrations.utilities.rag.config_loader import load_rag_config
+
         embedding_model_params = get_model_params(self._kb.params.get("embedding_model", {}), "default_embedding_model")
         if self._kb.embedding_model:
             # Extract embedding model args from knowledge base table
@@ -931,7 +951,7 @@ class KnowledgeBaseTable:
             embeddings_model = construct_model_from_args(embedding_args)
             logger.debug(f"Using knowledge base embedding model with args: {embedding_args}")
         elif embedding_model_params:
-            embeddings_model = get_embedding_model_from_params(embedding_model_params)
+            embeddings_model = construct_model_from_args(adapt_embedding_model_params(embedding_model_params))
             logger.debug(f"Using knowledge base embedding model from params: {self._kb.params['embedding_model']}")
         else:
             embeddings_model = DEFAULT_EMBEDDINGS_MODEL_CLASS()

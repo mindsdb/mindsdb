@@ -8,7 +8,6 @@ from tests.unit.executor.test_agent import set_litellm_embedding
 
 
 class TestLowercase(BaseExecutorDummyML):
-
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_view_name_lowercase(self, mock_handler):
         df = pd.DataFrame(
@@ -241,7 +240,6 @@ class TestLowercase(BaseExecutorDummyML):
             self.run_sql(f"DROP JOB {another_name}")
 
     def test_chatbot_lowercase(self):
-
         self.run_sql("create agent my_agent using model={'provider': 'openai', 'model_name': 'gpt-3.5'}")
 
         self.run_sql("create database my_db using engine='dummy_data'")
@@ -262,7 +260,6 @@ class TestLowercase(BaseExecutorDummyML):
             self.run_sql(f"DROP CHATBOT {name}")
 
     def test_database_lowercase(self):
-
         self.run_sql("create database my_db using engine='dummy_data'")
 
         with pytest.raises(Exception):
@@ -281,7 +278,6 @@ class TestLowercase(BaseExecutorDummyML):
             self.run_sql(f"DROP DATABASE {name}")
 
     def test_trigger_lowercase(self):
-
         with pytest.raises(Exception):
             self.run_sql("create trigger `MyTrigger` on dummy_data.table1 (select 1)")
 
@@ -296,4 +292,3 @@ class TestLowercase(BaseExecutorDummyML):
                 self.run_sql(f"DROP TRIGGER `{another_name}`")
 
             self.run_sql(f"DROP TRIGGER {name}")
-

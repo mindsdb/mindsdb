@@ -17,7 +17,6 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
     TableField,
     VectorStoreHandler,
 )
-from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -55,7 +54,7 @@ class ChromaDBHandler(VectorStoreHandler):
 
     def __init__(self, name: str, **kwargs):
         super().__init__(name)
-        self.handler_storage = HandlerStorage(kwargs.get("integration_id"))
+        self.handler_storage = kwargs["handler_storage"]
         self._client = None
         self.persist_directory = None
         self.is_connected = False
@@ -73,8 +72,6 @@ class ChromaDBHandler(VectorStoreHandler):
             "hnsw:space": config.distance,
         }
 
-        self.connect()
-
     def validate_connection_parameters(self, name, **kwargs):
         """
         Validate the connection parameters.
@@ -88,7 +85,7 @@ class ChromaDBHandler(VectorStoreHandler):
         if config.persist_directory:
             if os.path.isabs(config.persist_directory):
                 self.persist_directory = config.persist_directory
-            elif not self.handler_storage.is_temporal:
+            else:
                 # get full persistence directory from handler storage
                 self.persist_directory = self.handler_storage.folder_get(config.persist_directory)
                 self._use_handler_storage = True
@@ -149,6 +146,7 @@ class ChromaDBHandler(VectorStoreHandler):
         need_to_close = self.is_connected is False
 
         try:
+            self.connect()
             self._client.heartbeat()
             response_code.success = True
         except Exception as e:
@@ -233,6 +231,7 @@ class ChromaDBHandler(VectorStoreHandler):
         offset: int = None,
         limit: int = None,
     ) -> pd.DataFrame:
+        self.connect()
         collection = self._client.get_collection(table_name)
         filters = self._translate_metadata_condition(conditions)
 
@@ -399,6 +398,7 @@ class ChromaDBHandler(VectorStoreHandler):
         Insert/Upsert data into ChromaDB collection.
         If records with same IDs exist, they will be updated.
         """
+        self.connect()
         collection = self._client.get_or_create_collection(collection_name, metadata=self.create_collection_metadata)
 
         # Convert metadata from string to dict if needed
@@ -449,6 +449,7 @@ class ChromaDBHandler(VectorStoreHandler):
         """
         Update data in the ChromaDB database.
         """
+        self.connect()
         collection = self._client.get_collection(table_name)
 
         # drop columns with all None values
@@ -466,6 +467,7 @@ class ChromaDBHandler(VectorStoreHandler):
         self._sync()
 
     def delete(self, table_name: str, conditions: List[FilterCondition] = None):
+        self.connect()
         filters = self._translate_metadata_condition(conditions)
         # get id filters
         id_filters = [condition.value for condition in conditions if condition.column == TableField.ID.value] or None
@@ -480,6 +482,7 @@ class ChromaDBHandler(VectorStoreHandler):
         """
         Create a collection with the given name in the ChromaDB database.
         """
+        self.connect()
         self._client.create_collection(
             table_name, get_or_create=if_not_exists, metadata=self.create_collection_metadata
         )
@@ -489,6 +492,7 @@ class ChromaDBHandler(VectorStoreHandler):
         """
         Delete a collection from the ChromaDB database.
         """
+        self.connect()
         try:
             self._client.delete_collection(table_name)
             self._sync()
@@ -502,6 +506,7 @@ class ChromaDBHandler(VectorStoreHandler):
         """
         Get the list of collections in the ChromaDB database.
         """
+        self.connect()
         collections = self._client.list_collections()
         collections_name = pd.DataFrame(
             columns=["table_name"],
@@ -511,6 +516,7 @@ class ChromaDBHandler(VectorStoreHandler):
 
     def get_columns(self, table_name: str) -> HandlerResponse:
         # check if collection exists
+        self.connect()
         try:
             _ = self._client.get_collection(table_name)
         except ValueError:

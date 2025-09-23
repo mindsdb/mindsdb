@@ -304,10 +304,10 @@ def ft_jsonl_validation(
                     assistant_key=assistant_key,
                 )
             except Exception as e:
-                raise Exception(f"{prefix}{e}")
+                raise Exception(f"{prefix}{e}") from e
 
     except Exception as e:
-        raise Exception(f"Fine-tuning data format is not valid. Got {e}")
+        raise Exception(f"Fine-tuning data format is not valid. Got {e}") from e
 
 
 def ft_chat_format_validation(

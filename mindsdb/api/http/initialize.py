@@ -1,7 +1,6 @@
 import os
 import mimetypes
 import threading
-import traceback
 import webbrowser
 
 from pathlib import Path
@@ -154,8 +153,8 @@ def get_last_compatible_gui_version() -> Version | bool:
             else:
                 all_lower_versions = [parse_version(x) for x in lower_versions.keys()]
                 gui_version_lv = gui_versions[all_lower_versions[-1].base_version]
-    except Exception as e:
-        logger.error(f"Error in compatible-config.json structure: {e}")
+    except Exception:
+        logger.exception("Error in compatible-config.json structure:")
         return False
 
     logger.debug(f"Last compatible frontend version: {gui_version_lv}.")
@@ -349,15 +348,15 @@ def initialize_app():
         if company_id is not None:
             try:
                 company_id = int(company_id)
-            except Exception as e:
-                logger.error(f"Could not parse company id: {company_id} | exception: {e}")
+            except Exception:
+                logger.exception(f"Could not parse company id: {company_id} | exception:")
                 company_id = None
 
         if user_class is not None:
             try:
                 user_class = int(user_class)
-            except Exception as e:
-                logger.error(f"Could not parse user_class: {user_class} | exception: {e}")
+            except Exception:
+                logger.exception(f"Could not parse user_class: {user_class} | exception:")
                 user_class = 0
         else:
             user_class = 0
@@ -449,7 +448,6 @@ def _open_webbrowser(url: str, pid: int, port: int, init_static_thread, static_f
         is_http_active = wait_func_is_true(func=is_pid_listen_port, timeout=15, pid=pid, port=port)
         if is_http_active:
             webbrowser.open(url)
-    except Exception as e:
-        logger.error(f"Failed to open {url} in webbrowser with exception {e}")
-        logger.error(traceback.format_exc())
+    except Exception:
+        logger.exception(f"Failed to open {url} in webbrowser with exception:")
     db.session.close()

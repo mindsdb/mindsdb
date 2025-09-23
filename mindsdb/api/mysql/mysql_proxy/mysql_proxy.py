@@ -128,6 +128,14 @@ class SQLAnswer:
             raise ValueError(f"Unsupported response type for dump HTTP response: {self.resp_type}")
 
 
+class MysqlTCPServer(SocketServer.ThreadingTCPServer):
+    """
+    Custom TCP Server with increased request queue size
+    """
+
+    request_queue_size = 30
+
+
 class MysqlProxy(SocketServer.BaseRequestHandler):
     """
     The Main Server controller class
@@ -857,7 +865,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         logger.info(f"Starting MindsDB Mysql proxy server on tcp://{host}:{port}")
 
         SocketServer.TCPServer.allow_reuse_address = True
-        server = SocketServer.ThreadingTCPServer((host, port), MysqlProxy)
+        server = MysqlTCPServer((host, port), MysqlProxy)
         server.mindsdb_config = config
         server.check_auth = partial(check_auth, config=config)
         server.cert_path = cert_path

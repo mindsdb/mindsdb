@@ -576,7 +576,7 @@ class SQLAgent:
 
         try:
             sample_rows_info = self._get_sample_rows(table_str, fields)
-        except Exception as e:
+        except Exception:
             logger.warning(f"Could not get sample rows for {table_str}:", exc_info=True)
             sample_rows_info = "\n\t [error] Couldn't retrieve sample rows!"
 

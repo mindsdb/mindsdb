@@ -170,9 +170,9 @@ def get_all_website_links(url, headers: dict = None) -> dict:
                 href = href.rstrip("/")
                 urls.add(href)
 
-    except Exception as e:
+    except Exception:
         error_message = traceback.format_exc().splitlines()[-1]
-        logger.error("An exception occurred:", exc_info=True)
+        logger.exception("An exception occurred:")
         return {
             "url": url,
             "urls": urls,

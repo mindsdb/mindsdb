@@ -1,6 +1,5 @@
 import os
 import json
-import traceback
 from http import HTTPStatus
 from typing import Dict, Iterable, List
 

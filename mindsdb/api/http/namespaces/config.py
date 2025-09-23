@@ -229,8 +229,6 @@ class Integration(Resource):
             ca.integration_controller.modify(name, params)
 
         except Exception as e:
-            logger.exception('An error occurred while modifying the integration')
-            return http_error(
-                HTTPStatus.INTERNAL_SERVER_ERROR, "Error", f"Error during integration modification: {e}"
-            )
+            logger.exception("An error occurred while modifying the integration")
+            return http_error(HTTPStatus.INTERNAL_SERVER_ERROR, "Error", f"Error during integration modification: {e}")
         return "", 200

@@ -39,12 +39,8 @@ def download_gui(destignation, version):
     ZipFile(dist_zip_path).extractall(static_folder)
 
     if static_folder.joinpath("dist").is_dir():
-        shutil.move(
-            str(destignation.joinpath("dist").joinpath("index.html")), static_folder
-        )
-        shutil.move(
-            str(destignation.joinpath("dist").joinpath("assets")), static_folder
-        )
+        shutil.move(str(destignation.joinpath("dist").joinpath("index.html")), static_folder)
+        shutil.move(str(destignation.joinpath("dist").joinpath("assets")), static_folder)
         shutil.rmtree(destignation.joinpath("dist"))
 
     os.remove(dist_zip_path)
@@ -74,9 +70,7 @@ def update_static(gui_version: Version):
     config = Config()
     static_path = Path(config["paths"]["static"])
 
-    logger.info(
-        f"New version of GUI available ({gui_version.base_version}). Downloading..."
-    )
+    logger.info(f"New version of GUI available ({gui_version.base_version}). Downloading...")
 
     temp_dir = tempfile.mkdtemp(prefix="mindsdb_gui_files_")
     success = download_gui(temp_dir, gui_version.base_version)

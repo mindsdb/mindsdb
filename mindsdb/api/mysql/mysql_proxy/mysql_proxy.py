@@ -718,9 +718,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 error_code = e.mysql_error_code
                 if e.is_expected:
                     if logger.isEnabledFor(logging.DEBUG):
-                        logger.info('Query execution failed with expected error:', exc_info=True)
+                        logger.info("Query execution failed with expected error:", exc_info=True)
                     else:
-                        logger.info(f'Query execution failed with expected error: {e}')
+                        logger.info(f"Query execution failed with expected error: {e}")
                 else:
                     logger.exception("Query execution failed with error")
                 response = SQLAnswer(

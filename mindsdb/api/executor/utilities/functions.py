@@ -23,15 +23,15 @@ def download_file(url):
         parse_result = urllib.parse.urlparse(url)
         scheme = parse_result.scheme
     except ValueError:
-        raise Exception(f'Invalid url: {url}')
+        raise Exception(f"Invalid url: {url}")
     except Exception as e:
-        raise Exception(f'URL parsing error: {e}') from e
-    temp_dir = tempfile.mkdtemp(prefix='mindsdb_file_download_')
-    if scheme == '':
+        raise Exception(f"URL parsing error: {e}") from e
+    temp_dir = tempfile.mkdtemp(prefix="mindsdb_file_download_")
+    if scheme == "":
         raise Exception(f"Unknown url schema: {url}")
 
     response = requests.get(url)
-    temp_file_path = Path(temp_dir).joinpath('file')
-    with open(str(temp_file_path), 'wb')as file:
+    temp_file_path = Path(temp_dir).joinpath("file")
+    with open(str(temp_file_path), "wb") as file:
         file.write(response.content)
     return str(temp_file_path)

@@ -95,15 +95,11 @@ def query_df_with_type_infer_fallback(query_str: str, dataframes: dict, user_fun
             db_error_msg=f"DuckDB failed to execute query, likely due to inability to determine column data types. Details: {e}",
             failed_query=query_str,
             is_external=False,
-            is_expected=False
+            is_expected=False,
         ) from e
     except Exception as e:
         raise QueryError(
-            db_type="DuckDB",
-            db_error_msg=str(e),
-            failed_query=query_str,
-            is_external=False,
-            is_expected=False
+            db_type="DuckDB", db_error_msg=str(e), failed_query=query_str, is_external=False, is_expected=False
         ) from e
 
     return result_df, description
@@ -184,7 +180,7 @@ def query_df(df, query, session=None):
             db_error_msg="Only 'SELECT from TABLE' statements supported for internal query",
             failed_query=query_str,
             is_external=False,
-            is_expected=False
+            is_expected=False,
         )
 
     table_name = query_ast.from_table.parts[0]
@@ -243,7 +239,7 @@ def query_df(df, query, session=None):
                     ),
                     failed_query=query_str,
                     is_external=False,
-                    is_expected=False
+                    is_expected=False,
                 )
 
     query_traversal(query_ast, adapt_query)

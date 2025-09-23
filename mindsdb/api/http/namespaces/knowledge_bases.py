@@ -29,7 +29,6 @@ from mindsdb.utilities.exception import EntityNotExistsError, EntityExistsError
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_LLM_MODEL, DEFAULT_RAG_PROMPT_TEMPLATE
 
 
-
 logger = log.getLogger(__name__)
 
 

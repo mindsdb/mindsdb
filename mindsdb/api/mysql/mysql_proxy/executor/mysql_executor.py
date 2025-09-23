@@ -34,14 +34,13 @@ class Executor:
         self.sql = ""
         self.sql_lower = ""
 
-        context = {'connection_id': self.sqlserver.connection_id}
+        context = {"connection_id": self.sqlserver.connection_id}
         self.command_executor = ExecuteCommands(self.session, context)
 
     def change_default_db(self, new_db):
         self.command_executor.change_default_db(new_db)
 
     def stmt_prepare(self, sql):
-
         self.parse(sql)
 
         # if not params
@@ -59,11 +58,7 @@ class Executor:
 
             sqlquery.prepare_query()
 
-            self.params = [Column(
-                name=p.value,
-                alias=p.value,
-                type=MYSQL_DATA_TYPE.TEXT
-            ) for p in params]
+            self.params = [Column(name=p.value, alias=p.value, type=MYSQL_DATA_TYPE.TEXT) for p in params]
 
             # TODO:
             #   select * from mindsdb.models doesn't invoke prepare_steps and columns_list is empty
@@ -94,12 +89,10 @@ class Executor:
             self.query = parse_sql(sql)
         except ParsingException as mdb_error:
             # not all statements are parsed by parse_sql
-            logger.warning('Failed to parse SQL query')
-            logger.debug(f'Query that cannot be parsed: {sql}')
+            logger.warning("Failed to parse SQL query")
+            logger.debug(f"Query that cannot be parsed: {sql}")
 
-            raise SqlSyntaxError(
-                f"The SQL statement cannot be parsed - {sql}: {mdb_error}"
-            ) from mdb_error
+            raise SqlSyntaxError(f"The SQL statement cannot be parsed - {sql}: {mdb_error}") from mdb_error
         except Exception:
             logger.exception(f"Unexpected error while parsing SQL query: {sql}")
             raise

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Union, AsyncIterable, List, Dict
-from ...common.types import Task
 from ...common.types import (
+    Task,
     JSONRPCResponse,
     TaskIdParams,
     TaskQueryParams,
@@ -29,6 +29,7 @@ from ...common.types import (
     JSONRPCError,
     TaskPushNotificationConfig,
     InternalError,
+    MessageStreamRequest,
 )
 from ...common.server.utils import new_not_implemented_error
 from mindsdb.utilities import log
@@ -72,6 +73,12 @@ class TaskManager(ABC):
     async def on_resubscribe_to_task(
         self, request: TaskResubscriptionRequest
     ) -> Union[AsyncIterable[SendTaskResponse], JSONRPCResponse]:
+        pass
+
+    @abstractmethod
+    async def on_message_stream(
+        self, request: MessageStreamRequest, user_info: Dict
+    ) -> Union[AsyncIterable[SendTaskStreamingResponse], JSONRPCResponse]:
         pass
 
 

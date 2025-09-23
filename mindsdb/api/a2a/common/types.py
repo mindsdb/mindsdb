@@ -24,6 +24,12 @@ class TextPart(BaseModel):
     metadata: dict[str, Any] | None = None
 
 
+class TextPartKind(BaseModel):
+    kind: Literal["text"] = "text"
+    text: str
+    metadata: dict[str, Any] | None = None
+
+
 class FileContent(BaseModel):
     name: str | None = None
     mimeType: str | None = None
@@ -45,8 +51,20 @@ class FilePart(BaseModel):
     metadata: dict[str, Any] | None = None
 
 
+class FilePartKind(BaseModel):
+    kind: Literal["file"] = "file"
+    file: FileContent
+    metadata: dict[str, Any] | None = None
+
+
 class DataPart(BaseModel):
     type: Literal["data"] = "data"
+    data: dict[str, Any]
+    metadata: dict[str, Any] | None = None
+
+
+class DataPartKind(BaseModel):
+    kind: Literal["data"] = "data"
     data: dict[str, Any]
     metadata: dict[str, Any] | None = None
 
@@ -59,6 +77,46 @@ class Message(BaseModel):
     parts: List[Part]
     metadata: dict[str, Any] | None = None
     history: Optional[List["Message"]] = None
+    messageId: str | None = None
+
+
+class FlexibleMessage(BaseModel):
+    """Message that can handle both 'type' and 'kind' in parts."""
+    role: Literal["user", "agent", "assistant"]
+    parts: List[dict[str, Any]]  # Raw parts that we'll process manually
+    metadata: dict[str, Any] | None = None
+    history: Optional[List["FlexibleMessage"]] = None
+    
+    @model_validator(mode='after')
+    def normalize_parts(self):
+        """Convert parts with 'kind' to parts with 'type'."""
+        normalized_parts = []
+        for part in self.parts:
+            if isinstance(part, dict):
+                # Convert 'kind' to 'type' if needed
+                if 'kind' in part and 'type' not in part:
+                    normalized_part = part.copy()
+                    normalized_part['type'] = normalized_part.pop('kind')
+                else:
+                    normalized_part = part
+                
+                # Validate the normalized part
+                try:
+                    if normalized_part.get('type') == 'text':
+                        normalized_parts.append(TextPart.model_validate(normalized_part))
+                    elif normalized_part.get('type') == 'file':
+                        normalized_parts.append(FilePart.model_validate(normalized_part))
+                    elif normalized_part.get('type') == 'data':
+                        normalized_parts.append(DataPart.model_validate(normalized_part))
+                    else:
+                        raise ValueError(f"Unknown part type: {normalized_part.get('type')}")
+                except Exception as e:
+                    raise ValueError(f"Invalid part: {normalized_part}, error: {e}")
+            else:
+                normalized_parts.append(part)
+        
+        self.parts = normalized_parts
+        return self
 
 
 class TaskStatus(BaseModel):
@@ -88,6 +146,7 @@ class Task(BaseModel):
     artifacts: List[Artifact] | None = None
     history: List[Message] | None = None
     metadata: dict[str, Any] | None = None
+    contextId: str | None = None
 
 
 class TaskStatusUpdateEvent(BaseModel):
@@ -95,12 +154,16 @@ class TaskStatusUpdateEvent(BaseModel):
     status: TaskStatus
     final: bool = False
     metadata: dict[str, Any] | None = None
+    contextId: str | None = None
+    taskId: str | None = None
 
 
 class TaskArtifactUpdateEvent(BaseModel):
     id: str
     artifact: Artifact
     metadata: dict[str, Any] | None = None
+    contextId: str | None = None
+    taskId: str | None = None
 
 
 class AuthenticationInfo(BaseModel):
@@ -182,6 +245,25 @@ class SendTaskStreamingResponse(JSONRPCResponse):
     result: TaskStatusUpdateEvent | TaskArtifactUpdateEvent | None = None
 
 
+class MessageStreamParams(BaseModel):
+    sessionId: str = Field(default_factory=lambda: uuid4().hex)
+    message: FlexibleMessage
+    metadata: dict[str, Any] | None = None
+
+
+class MessageStreamRequest(JSONRPCRequest):
+    method: Literal["message/stream"] = "message/stream"
+    params: MessageStreamParams
+
+
+class MessageStreamResponse(JSONRPCResponse):
+    result: Message | None = None
+
+
+class SendStreamingMessageSuccessResponse(JSONRPCResponse):
+    result: Union[Task, TaskStatusUpdateEvent, TaskArtifactUpdateEvent] | None = None
+
+
 class GetTaskRequest(JSONRPCRequest):
     method: Literal["tasks/get"] = "tasks/get"
     params: TaskQueryParams
@@ -233,10 +315,22 @@ A2ARequest = TypeAdapter(
             GetTaskPushNotificationRequest,
             TaskResubscriptionRequest,
             SendTaskStreamingRequest,
+            MessageStreamRequest,
         ],
         Field(discriminator="method"),
     ]
 )
+
+# A2AResponse = Union[
+#     SendTaskResponse,
+#     GetTaskResponse,
+#     CancelTaskResponse,
+#     SetTaskPushNotificationResponse,
+#     GetTaskPushNotificationResponse,
+#     SendTaskStreamingResponse,
+#     MessageStreamResponse,
+#     SendStreamingMessageSuccessResponse,
+# ]
 
 # Error types
 

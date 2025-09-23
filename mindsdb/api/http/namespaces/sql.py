@@ -69,13 +69,13 @@ class Query(Resource):
                 }
                 logger.warning(f"Error query processing: {e}")
             except QueryError as e:
-                error_type = "expected" if e.is_expected else "unexpected"
+                error_type = "expected" if e.is_acceptable else "unexpected"
                 query_response = {
                     "type": SQL_RESPONSE_TYPE.ERROR,
                     "error_code": 0,
                     "error_message": str(e),
                 }
-                if e.is_expected:
+                if e.is_acceptable:
                     logger.warning(f"Query failed due to expected reason: {e}")
                 else:
                     logger.exception("Error query processing:")

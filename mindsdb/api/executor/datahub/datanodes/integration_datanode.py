@@ -294,7 +294,7 @@ class IntegrationDataNode(DataNode):
                 db_type=self.integration_handler.__class__.name,
                 db_error_msg=result.error_message,
                 failed_query=query_str,
-                is_expected=result.is_expected
+                is_acceptable=result.is_acceptable_error
             )
 
             if result.exception is None:

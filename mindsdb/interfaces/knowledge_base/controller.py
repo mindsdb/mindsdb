@@ -15,6 +15,7 @@ from mindsdb_sql_parser import parse_sql
 
 from mindsdb.integrations.libs.keyword_search_base import KeywordSearchBase
 from mindsdb.integrations.utilities.query_traversal import query_traversal
+from mindsdb.interfaces.knowledge_base.snowflake_integration import snowflake_integration
 
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.libs.vectordatabase_handler import (
@@ -921,6 +922,15 @@ class KnowledgeBaseTable:
             raise ValueError(f'Unable to use "{engine}" provider. Litellm handler is not installed')
         return module.Handler.embeddings(engine, llm_model, messages, args)
 
+    @staticmethod
+    def call_snowflake_embedding(session, model_params, messages):
+        args = copy.deepcopy(model_params)
+        model_name = args.pop("model_name")
+        pat_token = args.get("pat_token", "")
+        project_id = args.get("snowflake_project_id", "")
+        return snowflake_integration.embedding(model_name, project_id, pat_token, messages)
+
+
     def build_rag_pipeline(self, retrieval_config: dict):
         """
         Builds a RAG pipeline with returned sources
@@ -1251,11 +1261,18 @@ class KnowledgeBaseController:
             raise ValueError("'provider' parameter is required for embedding model")
 
         # check available providers
-        avail_providers = ("openai", "azure_openai", "bedrock", "gemini", "google")
+        avail_providers = ("openai", "azure_openai", "bedrock", "gemini", "google", "snowflake")
         if params["provider"] not in avail_providers:
             raise ValueError(
                 f"Wrong embedding provider: {params['provider']}. Available providers: {', '.join(avail_providers)}"
             )
+
+        if params['provider'] == "snowflake":
+            try:
+                KnowledgeBaseTable.call_snowflake_embedding(self.session, params, ["test"])
+            except Exception as e:
+                raise RuntimeError(f"Problem with embedding model config: {e}")
+            return
 
         if params["provider"] not in ("openai", "azure_openai"):
             # try use litellm

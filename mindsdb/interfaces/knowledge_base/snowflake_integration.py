@@ -1,7 +1,7 @@
 import requests
 
 
-def embedding(self, model_name: str, project_id: str, pat_token: str, texts: list[str]):
+def embedding(model_name: str, project_id: str, pat_token: str, texts: list[str]):
     url = f"https://{project_id}.snowflakecomputing.com/api/v2/cortex/inference:embed"
     headers = {
         "accept": "application/json",

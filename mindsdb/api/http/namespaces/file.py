@@ -197,7 +197,7 @@ class File(Resource):
 
         try:
             if not Path(mindsdb_file_name).suffix == "":
-                raise ValueError("File name cannot contain extension.")
+                return http_error(400, "Error", "File name cannot contain extension.")
             ca.file_controller.save_file(mindsdb_file_name, file_path, file_name=original_file_name)
         except FileProcessingError as e:
             return http_error(400, "Error", str(e))

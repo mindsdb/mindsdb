@@ -19,7 +19,7 @@ def test_put_file(client):
         temp_file.seek(0)
         data = {"file": (temp_file, "test.txt")}
         response = client.put(
-            "/api/files/test.txt",
+            "/api/files/test",
             data=data,
             content_type="multipart/form-data",
             follow_redirects=True,
@@ -29,7 +29,7 @@ def test_put_file(client):
 
 def test_delete_file(client):
     """Test deleting a file"""
-    response = client.delete("/api/files/test.txt", follow_redirects=True)
+    response = client.delete("/api/files/test", follow_redirects=True)
     assert response.status_code == HTTPStatus.OK
 
 
@@ -39,7 +39,10 @@ def test_delete_nonexistent_file(client):
     assert response.status_code == HTTPStatus.BAD_REQUEST
     data = response.get_json()
     assert "Error deleting file" in data["title"]
-    assert "There was an error while trying to delete file with name 'nonexistent.txt'" in data["detail"]
+    assert (
+        "There was an error while trying to delete file with name 'nonexistent.txt'"
+        in data["detail"]
+    )
 
 
 def test_put_file_invalid_url(client):
@@ -78,19 +81,21 @@ def test_put_file_url_upload_disabled(client, monkeypatch):
     data = response.get_json()
     assert "URL file upload is disabled" in data["detail"]
 
+
 def test_extension_in_filename(client):
     """Test uploading a file with an extension in the name"""
-    data = {
-        "source_type": "url",
-        "source": "http://example.com/file.txt",
-        "file": "file.txt",
-    }
-    response = client.put(
-        "/api/files/file.txt",
-        json=data,
-        content_type="application/json",
-        follow_redirects=True,
-    )
+    file_content = b"Hello, World!"
+    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+        temp_file.write(file_content)
+        temp_file.flush()
+        temp_file.seek(0)
+        data = {"file": (temp_file, "test.txt")}
+        response = client.put(
+            "/api/files/test.txt",
+            data=data,
+            content_type="multipart/form-data",
+            follow_redirects=True,
+        )
     assert response.status_code == 400
     data = response.get_json()
     assert "File name cannot contain extension." in data["detail"]

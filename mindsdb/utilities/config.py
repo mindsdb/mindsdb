@@ -364,7 +364,6 @@ class Config:
         elif mindsdb_gui_autoupdate != "":
             raise ValueError(f"Wrong value of env var MINDSDB_GUI_AUTOUPDATE={mindsdb_gui_autoupdate}")
 
-
     def fetch_auto_config(self) -> bool:
         """Load dict readed from config.auto.json to `auto_config`.
         Do it only if `auto_config` was not loaded before or config.auto.json been changed.

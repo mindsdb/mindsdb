@@ -1,5 +1,6 @@
+import io
+import os.path
 from http import HTTPStatus
-import tempfile
 
 
 def test_get_files_list(client):
@@ -12,19 +13,31 @@ def test_get_files_list(client):
 
 def test_put_file(client):
     """Test uploading a file"""
-    file_content = b"Hello, World!"
-    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-        temp_file.write(file_content)
-        temp_file.flush()
-        temp_file.seek(0)
-        data = {"file": (temp_file, "test.txt")}
-        response = client.put(
-            "/api/files/test.txt",
-            data=data,
-            content_type="multipart/form-data",
-            follow_redirects=True,
-        )
+    file = io.BytesIO(b"Hello, World!")
+
+    data = {"file": (file, "test.txt")}
+    response = client.put(
+        "/api/files/test.txt",
+        data=data,
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
     assert response.status_code == HTTPStatus.OK
+
+
+def test_path_traversal(client):
+    """Test uploading a file"""
+    file = io.BytesIO(b"Hello, World!")
+    path = "../../../../../../../../../../tmp/test_test.txt"
+    data = {"file": (file, path)}
+    response = client.put(
+        "/api/files/my_file",
+        data=data,
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert not os.path.exists(path)
 
 
 def test_delete_file(client):

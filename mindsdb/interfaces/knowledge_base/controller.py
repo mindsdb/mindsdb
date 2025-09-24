@@ -930,7 +930,6 @@ class KnowledgeBaseTable:
         project_id = args.get("snowflake_project_id", "")
         return snowflake_integration.embedding(model_name, project_id, pat_token, messages)
 
-
     def build_rag_pipeline(self, retrieval_config: dict):
         """
         Builds a RAG pipeline with returned sources
@@ -1267,7 +1266,7 @@ class KnowledgeBaseController:
                 f"Wrong embedding provider: {params['provider']}. Available providers: {', '.join(avail_providers)}"
             )
 
-        if params['provider'] == "snowflake":
+        if params["provider"] == "snowflake":
             try:
                 KnowledgeBaseTable.call_snowflake_embedding(self.session, params, ["test"])
             except Exception as e:

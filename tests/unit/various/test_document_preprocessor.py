@@ -371,12 +371,12 @@ class TestDocumentPreprocessor:
         chunks = preprocessor.process_documents([parent_doc])
         # Verify that all chunks have reference to the parent document
         for chunk in chunks:
-            assert "_original_doc_id" in chunk.metadata
-            assert chunk.metadata["_original_doc_id"] == "parent_doc"
+            assert "original_doc_id" in chunk.metadata
+            assert chunk.metadata["original_doc_id"] == "parent_doc"
             # Verify chunk position metadata
-            assert "_start_char" in chunk.metadata
-            assert "_end_char" in chunk.metadata
-            assert chunk.metadata["_end_char"] > chunk.metadata["_start_char"]
+            assert "start_char" in chunk.metadata
+            assert "end_char" in chunk.metadata
+            assert chunk.metadata["end_char"] > chunk.metadata["start_char"]
 
         # Test with delete_existing=True
         chunks = preprocessor.process_documents([parent_doc])
@@ -408,11 +408,11 @@ class TestDocumentPreprocessor:
 
         # Verify initial chunks have delete_existing=False
         for chunk in initial_chunks:
-            assert chunk.metadata["_original_doc_id"] == doc_id
+            assert chunk.metadata["original_doc_id"] == doc_id
 
         # Verify updated chunks also have delete_existing=False
         for chunk in updated_chunks_1:
-            assert chunk.metadata["_original_doc_id"] == doc_id
+            assert chunk.metadata["original_doc_id"] == doc_id
 
         # Test full document deletion mode (delete_existing=True)
         updated_content_2 = " ".join(["updated2"] * 20)
@@ -421,7 +421,7 @@ class TestDocumentPreprocessor:
 
         # Verify chunks are marked for full document deletion
         for chunk in updated_chunks_2:
-            assert chunk.metadata["_original_doc_id"] == doc_id
+            assert chunk.metadata["original_doc_id"] == doc_id
 
         # Verify chunk IDs are properly formatted in all cases
         for chunks in [initial_chunks, updated_chunks_1, updated_chunks_2]:
@@ -481,7 +481,7 @@ def test_metadata_preservation():
     doc = Document(content=content, metadata=metadata, id=doc_id)
     chunks = preprocessor.process_documents([doc])
     # Verify metadata is preserved and includes source
-    assert chunks[0].metadata["_source"] == "TextChunkingPreprocessor"
+    assert chunks[0].metadata["source"] == "TextChunkingPreprocessor"
     assert chunks[0].metadata["key"] == "value"
     assert chunks[0].metadata["content_column"] == "test_column"
 
@@ -507,7 +507,7 @@ def test_provided_id_handling():
     doc = Document(content="Test content", id="test_id")
     chunks = preprocessor.process_documents([doc])
     # Verify provided ID is incorporated into chunk ID
-    assert chunks[0].metadata["_original_doc_id"] == "test_id"
+    assert chunks[0].metadata["original_doc_id"] == "test_id"
 
 
 def test_empty_content_handling():
@@ -550,7 +550,7 @@ def test_source_metadata(content, metadata, expected_source):
     doc_id = generate_document_id(content, "test_column")
     doc = Document(content=content, metadata=metadata, id=doc_id)
     chunks = preprocessor.process_documents([doc])
-    assert chunks[0].metadata["_source"] == expected_source
+    assert chunks[0].metadata["source"] == expected_source
 
 
 class TestContextualPreprocessor:

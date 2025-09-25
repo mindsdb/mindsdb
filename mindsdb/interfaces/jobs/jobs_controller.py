@@ -21,29 +21,29 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
-default_project = config.get('default_project')
+default_project = config.get("default_project")
 
 
 def split_sql(sql):
     # split sql by ';' ignoring delimiter in quotes
-    pattern = re.compile(r'''((?:[^;"']|"[^"]*"|'[^']*')+)''')
+    pattern = re.compile(r"""((?:[^;"']|"[^"]*"|'[^']*')+)""")
     return pattern.split(sql)[1::2]
 
 
 def calc_next_date(schedule_str, base_date: dt.datetime):
     schedule_str = schedule_str.lower().strip()
 
-    repeat_prefix = 'every '
+    repeat_prefix = "every "
     if schedule_str.startswith(repeat_prefix):
-        repeat_str = schedule_str[len(repeat_prefix):]
+        repeat_str = schedule_str[len(repeat_prefix) :]
     else:
         # TODO cron format
-        raise NotImplementedError(f'Schedule: {schedule_str}')
+        raise NotImplementedError(f"Schedule: {schedule_str}")
 
     items = repeat_str.split()
 
     if len(items) == 1:
-        value = '1'
+        value = "1"
         period = items[0]
     elif len(items) == 2:
         value, period = items
@@ -53,15 +53,15 @@ def calc_next_date(schedule_str, base_date: dt.datetime):
     if not value.isdigit():
         raise Exception(f"Number expected: {value}")
     value = int(value)
-    if period in ('minute', 'minutes', 'min'):
+    if period in ("minute", "minutes", "min"):
         delta = dt.timedelta(minutes=value)
-    elif period in ('hour', 'hours'):
+    elif period in ("hour", "hours"):
         delta = dt.timedelta(hours=value)
-    elif period in ('day', 'days'):
+    elif period in ("day", "days"):
         delta = dt.timedelta(days=value)
-    elif period in ('week', 'weeks'):
+    elif period in ("week", "weeks"):
         delta = dt.timedelta(days=value * 7)  # 1 week = 7 days
-    elif period in ('month', 'months'):
+    elif period in ("month", "months"):
         delta = relativedelta(months=value)
     else:
         raise Exception(f"Unknown period: {period}")
@@ -85,10 +85,10 @@ def parse_job_date(date_str: str) -> dt.datetime:
     :return:
     """
 
-    if date_str.upper() == 'NOW':
+    if date_str.upper() == "NOW":
         return dt.datetime.now()
 
-    date_formats = ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d']
+    date_formats = ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d"]
     date = None
     for date_format in date_formats:
         try:
@@ -134,33 +134,33 @@ class JobsController:
 
         # check if exists
         if self.get(name, project_name) is not None:
-            raise EntityExistsError('Job already exists', name)
+            raise EntityExistsError("Job already exists", name)
 
         if start_at is None:
             start_at = dt.datetime.now()
 
         if end_at is not None and end_at < start_at:
-            raise Exception(f'Wrong end date {start_at} > {end_at}')
+            raise Exception(f"Wrong end date {start_at} > {end_at}")
 
         # check sql = try to parse it
         for sql in split_sql(query):
             try:
                 # replace template variables with null
-                sql = re.sub(r'\{\{[\w\d]+}}', "", sql)
+                sql = re.sub(r"\{\{[\w\d]+}}", "", sql)
 
                 parse_sql(sql)
             except ParsingException as e:
-                raise ParsingException(f'Unable to parse: {sql}: {e}')
+                raise ParsingException(f"Unable to parse: {sql}: {e}")
 
         if if_query is not None:
             for sql in split_sql(if_query):
                 try:
                     # replace template variables with null
-                    sql = re.sub(r'\{\{[\w\d]+}}', "", sql)
+                    sql = re.sub(r"\{\{[\w\d]+}}", "", sql)
 
                     parse_sql(sql)
                 except ParsingException as e:
-                    raise ParsingException(f'Unable to parse: {sql}: {e}')
+                    raise ParsingException(f"Unable to parse: {sql}: {e}")
 
         # plan next run
         next_run_at = start_at
@@ -185,7 +185,7 @@ class JobsController:
             start_at=start_at,
             end_at=end_at,
             next_run_at=next_run_at,
-            schedule_str=schedule_str
+            schedule_str=schedule_str,
         )
         db.session.add(record)
         db.session.commit()
@@ -219,10 +219,11 @@ class JobsController:
 
         schedule_str = None
         if query.repeat_str is not None:
-            schedule_str = 'every ' + query.repeat_str
+            schedule_str = "every " + query.repeat_str
 
         return self.add(
-            name, project_name,
+            name,
+            project_name,
             query=query_str,
             start_at=start_at,
             end_at=end_at,
@@ -231,36 +232,30 @@ class JobsController:
         )
 
     def delete(self, name, project_name):
-
         project_controller = ProjectController()
         project = project_controller.get(name=project_name)
 
         # check if exists
-        record = db.session.query(db.Jobs).filter_by(
-            company_id=ctx.company_id,
-            name=name,
-            project_id=project.id,
-            deleted_at=sa.null()
-        ).first()
+        record = (
+            db.session.query(db.Jobs)
+            .filter_by(company_id=ctx.company_id, name=name, project_id=project.id, deleted_at=sa.null())
+            .first()
+        )
         if record is None:
-            raise EntityNotExistsError('Job does not exist', name)
+            raise EntityNotExistsError("Job does not exist", name)
 
         self._delete_record(record)
         db.session.commit()
 
         # delete context
-        query_context_controller.drop_query_context('job', record.id)
-        query_context_controller.drop_query_context('job-if', record.id)
+        query_context_controller.drop_query_context("job", record.id)
+        query_context_controller.drop_query_context("job-if", record.id)
 
     def _delete_record(self, record):
         record.deleted_at = dt.datetime.now()
 
     def get_list(self, project_name=None):
-
-        query = db.session.query(db.Jobs).filter_by(
-            company_id=ctx.company_id,
-            deleted_at=sa.null()
-        )
+        query = db.session.query(db.Jobs).filter_by(company_id=ctx.company_id, deleted_at=sa.null())
 
         project_controller = ProjectController()
         if project_name is not None:
@@ -268,23 +263,22 @@ class JobsController:
             query = query.filter_by(project_id=project.id)
 
         data = []
-        project_names = {
-            i.id: i.name
-            for i in project_controller.get_list()
-        }
+        project_names = {i.id: i.name for i in project_controller.get_list()}
         for record in query:
-            data.append({
-                'id': record.id,
-                'name': record.name,
-                'project': project_names[record.project_id],
-                'start_at': record.start_at,
-                'end_at': record.end_at,
-                'next_run_at': record.next_run_at,
-                'schedule_str': record.schedule_str,
-                'query': record.query_str,
-                'if_query': record.if_query_str,
-                'variables': query_context_controller.get_context_vars('job', record.id)
-            })
+            data.append(
+                {
+                    "id": record.id,
+                    "name": record.name,
+                    "project": project_names[record.project_id],
+                    "start_at": record.start_at,
+                    "end_at": record.end_at,
+                    "next_run_at": record.next_run_at,
+                    "schedule_str": record.schedule_str,
+                    "query": record.query_str,
+                    "if_query": record.if_query_str,
+                    "variables": query_context_controller.get_context_vars("job", record.id),
+                }
+            )
         return data
 
     def get(self, name: str, project_name: str) -> dict:
@@ -298,25 +292,24 @@ class JobsController:
         project_controller = ProjectController()
         project = project_controller.get(name=project_name)
 
-        record = db.session.query(db.Jobs).filter_by(
-            company_id=ctx.company_id,
-            name=name,
-            project_id=project.id,
-            deleted_at=sa.null()
-        ).first()
+        record = (
+            db.session.query(db.Jobs)
+            .filter_by(company_id=ctx.company_id, name=name, project_id=project.id, deleted_at=sa.null())
+            .first()
+        )
 
         if record is not None:
             return {
-                'id': record.id,
-                'name': record.name,
-                'project': project_name,
-                'start_at': record.start_at,
-                'end_at': record.end_at,
-                'next_run_at': record.next_run_at,
-                'schedule_str': record.schedule_str,
-                'query': record.query_str,
-                'if_query': record.if_query_str,
-                'variables': query_context_controller.get_context_vars('job', record.id)
+                "id": record.id,
+                "name": record.name,
+                "project": project_name,
+                "start_at": record.start_at,
+                "end_at": record.end_at,
+                "next_run_at": record.next_run_at,
+                "schedule_str": record.schedule_str,
+                "query": record.query_str,
+                "if_query": record.if_query_str,
+                "variables": query_context_controller.get_context_vars("job", record.id),
             }
 
     def get_history(self, name: str, project_name: str) -> List[dict]:
@@ -331,27 +324,33 @@ class JobsController:
 
         query = Select(
             targets=[Star()],
-            from_table=Identifier('jobs_history'),
-            where=BinaryOperation(op='and', args=[
-                BinaryOperation(op='=', args=[Identifier('name'), Constant(name)]),
-                BinaryOperation(op='=', args=[Identifier('project'), Constant(project_name)])
-            ])
+            from_table=Identifier("jobs_history"),
+            where=BinaryOperation(
+                op="and",
+                args=[
+                    BinaryOperation(op="=", args=[Identifier("name"), Constant(name)]),
+                    BinaryOperation(op="=", args=[Identifier("project"), Constant(project_name)]),
+                ],
+            ),
         )
         response = logs_db_controller.query(query)
 
-        names = [i['name'] for i in response.columns]
-        return response.data_frame[names].to_dict(orient='records')
+        names = [i["name"] for i in response.columns]
+        return response.data_frame[names].to_dict(orient="records")
 
 
 class JobsExecutor:
-
     def get_next_tasks(self):
         # filter next_run < now
-        query = db.session.query(db.Jobs).filter(
-            db.Jobs.next_run_at < dt.datetime.now(),
-            db.Jobs.deleted_at == sa.null(),
-            db.Jobs.active == True,  # noqa
-        ).order_by(db.Jobs.next_run_at)
+        query = (
+            db.session.query(db.Jobs)
+            .filter(
+                db.Jobs.next_run_at < dt.datetime.now(),
+                db.Jobs.deleted_at == sa.null(),
+                db.Jobs.active == True,  # noqa
+            )
+            .order_by(db.Jobs.next_run_at)
+        )
 
         return query.all()
 
@@ -389,12 +388,7 @@ class JobsExecutor:
         record = db.Jobs.query.get(record_id)
 
         try:
-
-            history_record = db.JobsHistory(
-                job_id=record.id,
-                start_at=record.next_run_at,
-                company_id=record.company_id
-            )
+            history_record = db.JobsHistory(job_id=record.id, start_at=record.next_run_at, company_id=record.company_id)
 
             db.session.add(history_record)
             db.session.commit()
@@ -408,9 +402,7 @@ class JobsExecutor:
 
             # check if it is an old lock
             history_record = db.JobsHistory.query.filter_by(
-                job_id=record.id,
-                start_at=record.next_run_at,
-                company_id=record.company_id
+                job_id=record.id, start_at=record.next_run_at, company_id=record.company_id
             ).first()
             if history_record.updated_at < dt.datetime.now() - dt.timedelta(seconds=30):
                 db.session.delete(history_record)
@@ -419,13 +411,14 @@ class JobsExecutor:
         return None
 
     def __fill_variables(self, sql, record, history_record):
-        if '{{PREVIOUS_START_DATETIME}}' in sql:
+        if "{{PREVIOUS_START_DATETIME}}" in sql:
             # get previous run date
-            history_prev = db.session.query(db.JobsHistory.start_at) \
-                .filter(db.JobsHistory.job_id == record.id,
-                        db.JobsHistory.id != history_record.id) \
-                .order_by(db.JobsHistory.id.desc()) \
+            history_prev = (
+                db.session.query(db.JobsHistory.start_at)
+                .filter(db.JobsHistory.job_id == record.id, db.JobsHistory.id != history_record.id)
+                .order_by(db.JobsHistory.id.desc())
                 .first()
+            )
             if history_prev is None:
                 # start date of the job
                 value = record.created_at
@@ -433,18 +426,17 @@ class JobsExecutor:
                 # fix for twitter: created_at filter must be minimum of 10 seconds prior to the current time
                 value = history_prev.start_at - dt.timedelta(seconds=60)
             value = value.strftime("%Y-%m-%d %H:%M:%S")
-            sql = sql.replace('{{PREVIOUS_START_DATETIME}}', value)
+            sql = sql.replace("{{PREVIOUS_START_DATETIME}}", value)
 
-        if '{{START_DATE}}' in sql:
+        if "{{START_DATE}}" in sql:
             value = history_record.start_at.strftime("%Y-%m-%d")
-            sql = sql.replace('{{START_DATE}}', value)
-        if '{{START_DATETIME}}' in sql:
+            sql = sql.replace("{{START_DATE}}", value)
+        if "{{START_DATETIME}}" in sql:
             value = history_record.start_at.strftime("%Y-%m-%d %H:%M:%S")
-            sql = sql.replace('{{START_DATETIME}}', value)
+            sql = sql.replace("{{START_DATETIME}}", value)
         return sql
 
     def execute_task_local(self, record_id, history_id=None):
-
         record = db.Jobs.query.get(record_id)
 
         # set up environment
@@ -470,7 +462,7 @@ class JobsExecutor:
 
         project_controller = ProjectController()
         project = project_controller.get(record.project_id)
-        executed_sql = ''
+        executed_sql = ""
 
         from mindsdb.api.executor.controllers.session_controller import SessionController
         from mindsdb.api.executor.command_executor import ExecuteCommands
@@ -480,8 +472,8 @@ class JobsExecutor:
         command_executor = ExecuteCommands(sql_session)
 
         # job with condition?
-        query_context_controller.set_context('job-if', record.id)
-        error = ''
+        query_context_controller.set_context("job-if", record.id)
+        error = ""
         to_execute_query = True
         if record.if_query_str is not None:
             data = None
@@ -491,7 +483,7 @@ class JobsExecutor:
                     sql = self.__fill_variables(sql, record, history_record)
 
                     query = parse_sql(sql)
-                    executed_sql += sql + '; '
+                    executed_sql += sql + "; "
 
                     ret = command_executor.execute_command(query)
                     if ret.error_code is not None:
@@ -508,17 +500,16 @@ class JobsExecutor:
             if error or data is None or len(data) == 0:
                 to_execute_query = False
 
-        query_context_controller.release_context('job-if', record.id)
+        query_context_controller.release_context("job-if", record.id)
         if to_execute_query:
-
-            query_context_controller.set_context('job', record.id)
+            query_context_controller.set_context("job", record.id)
             for sql in split_sql(record.query_str):
                 try:
                     #  fill template variables
                     sql = self.__fill_variables(sql, record, history_record)
 
                     query = parse_sql(sql)
-                    executed_sql += sql + '; '
+                    executed_sql += sql + "; "
 
                     ret = command_executor.execute_command(query)
                     if ret.error_code is not None:

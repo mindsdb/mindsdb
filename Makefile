@@ -25,6 +25,8 @@ run_mindsdb:
 check:
 	python tests/scripts/check_requirements.py
 	python tests/scripts/check_print_statements.py
+	pre-commit install
+	pre-commit run --files $$(git diff --cached --name-only)
 
 build_docker:
 	docker buildx build -t mdb --load -f docker/mindsdb.Dockerfile .

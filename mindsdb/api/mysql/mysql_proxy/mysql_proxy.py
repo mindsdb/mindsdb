@@ -63,7 +63,7 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     NULL_VALUE,
     COMMANDS,
     ERR,
-    getConstName
+    getConstName,
 )
 from mindsdb.api.executor.data_types.answer import ExecuteAnswer
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
@@ -73,7 +73,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
 )
 from mindsdb.api.executor import exceptions as exec_exc
 
-from mindsdb.api.common.check_auth import check_auth
+from mindsdb.api.common.middleware import check_auth
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 from mindsdb.api.executor.sql_query.result_set import Column, ResultSet
 from mindsdb.utilities import log
@@ -116,10 +116,7 @@ class SQLAnswer:
             return {
                 "type": RESPONSE_TYPE.TABLE,
                 "data": data,
-                "column_names": [
-                    column.alias or column.name
-                    for column in self.result_set.columns
-                ],
+                "column_names": [column.alias or column.name for column in self.result_set.columns],
             }
         elif self.resp_type == RESPONSE_TYPE.ERROR:
             return {
@@ -149,17 +146,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         super().__init__(request, client_address, server)
 
     def init_session(self):
-        logger.debug(
-            "New connection [{ip}:{port}]".format(
-                ip=self.client_address[0], port=self.client_address[1]
-            )
-        )
+        logger.debug("New connection [{ip}:{port}]".format(ip=self.client_address[0], port=self.client_address[1]))
 
         if self.server.connection_id >= 65025:
             self.server.connection_id = 0
         self.server.connection_id += 1
         self.connection_id = self.server.connection_id
-        self.session = SessionController(api_type='sql')
+        self.session = SessionController(api_type="sql")
 
         if hasattr(self.server, "salt") and isinstance(self.server.salt, str):
             self.salt = self.server.salt
@@ -223,10 +216,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.session.is_ssl = True
 
             ssl_context = ssl.SSLContext()
+            ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
             ssl_context.load_cert_chain(self.server.cert_path)
-            ssl_socket = ssl_context.wrap_socket(
-                self.socket, server_side=True, do_handshake_on_connect=True
-            )
+            ssl_socket = ssl_context.wrap_socket(self.socket, server_side=True, do_handshake_on_connect=True)
 
             self.socket = ssl_socket
             handshake_resp = self.packet(HandshakeResponsePacket)
@@ -245,10 +237,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     else "mysql_native_password"
                 )
 
-                if (
-                    new_method == "caching_sha2_password"
-                    and self.session.is_ssl is False
-                ):
+                if new_method == "caching_sha2_password" and self.session.is_ssl is False:
                     logger.warning(
                         f"Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: "
                         "error: cant switch to caching_sha2_password without SSL"
@@ -307,9 +296,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             f"connecting to database {self.session.database}"
         )
 
-        auth_data = self.server.check_auth(
-            username, password, scramble_func, self.salt, ctx.company_id
-        )
+        auth_data = self.server.check_auth(username, password, scramble_func, self.salt, ctx.company_id)
         if auth_data["success"]:
             self.session.username = auth_data["username"]
             self.session.auth = True
@@ -349,9 +336,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif answer.type == RESPONSE_TYPE.OK:
             self.packet(OkPacket, state_track=answer.state_track, affected_rows=answer.affected_rows).send()
         elif answer.type == RESPONSE_TYPE.ERROR:
-            self.packet(
-                ErrPacket, err_code=answer.error_code, msg=answer.error_message
-            ).send()
+            self.packet(ErrPacket, err_code=answer.error_code, msg=answer.error_message).send()
 
     def _get_column_defenition_packets(self, columns: dict, data=None):
         if data is None:
@@ -370,14 +355,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             flags = column.get("flags", 0)
             if isinstance(flags, list):
                 flags = sum(flags)
-            if column.get('size') is None:
+            if column.get("size") is None:
                 length = 1
                 for row in data:
                     if isinstance(row, dict):
                         length = max(len(str(row[column_alias])), length)
                     else:
                         length = max(len(str(row[i])), length)
-                column['size'] = 1
+                column["size"] = 1
 
             packets.append(
                 self.packet(
@@ -397,7 +382,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
     def get_table_packets(self, result_set: ResultSet, status=0):
         data_frame, columns_dict = dump_result_set_to_mysql(result_set)
-        data = data_frame.to_dict('split')['data']
+        data = data_frame.to_dict("split")["data"]
 
         # TODO remove columns order
         packets = [self.packet(ColumnCountPacket, count=len(columns_dict))]
@@ -431,10 +416,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         chunk_size = 100
         for start in range(0, len(df), chunk_size):
-            string = b"".join([
-                self.packet(body=body, length=len(body)).accum()
-                for body in df[start:start + chunk_size].applymap(apply_f).values.sum(axis=1)
-            ])
+            string = b"".join(
+                [
+                    self.packet(body=body, length=len(body)).accum()
+                    for body in df[start : start + chunk_size].applymap(apply_f).values.sum(axis=1)
+                ]
+            )
             self.socket.sendall(string)
 
     def decode_utf(self, text):
@@ -510,7 +497,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             resp = SQLAnswer(
                 resp_type=RESPONSE_TYPE.OK,
                 state_track=executor_answer.state_track,
-                affected_rows=executor_answer.affected_rows
+                affected_rows=executor_answer.affected_rows,
             )
         else:
             resp = SQLAnswer(
@@ -519,7 +506,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 result_set=executor_answer.data,
                 status=executor.server_status,
                 affected_rows=executor_answer.affected_rows,
-                mysql_types=executor_answer.data.mysql_types
+                mysql_types=executor_answer.data.mysql_types,
             )
 
         # Increment the counter and include metadata in attributes
@@ -568,15 +555,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         executor_answer: ExecuteAnswer = executor.executor_answer
 
         if executor_answer.data is None:
-            resp = SQLAnswer(
-                resp_type=RESPONSE_TYPE.OK, state_track=executor_answer.state_track
-            )
+            resp = SQLAnswer(resp_type=RESPONSE_TYPE.OK, state_track=executor_answer.state_track)
             return self.send_query_answer(resp)
 
         # TODO prepared_stmt['type'] == 'lock' is not used but it works
         result_set = executor_answer.data
         data_frame, columns_dict = dump_result_set_to_mysql(result_set)
-        data = data_frame.to_dict('split')['data']
+        data = data_frame.to_dict("split")["data"]
 
         packages = [self.packet(ColumnCountPacket, count=len(columns_dict))]
         packages.extend(self._get_column_defenition_packets(columns_dict))
@@ -586,9 +571,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         # send all
         for row in data:
-            packages.append(
-                self.packet(BinaryResultsetRowPacket, data=row, columns=columns_dict)
-            )
+            packages.append(self.packet(BinaryResultsetRowPacket, data=row, columns=columns_dict))
 
         server_status = executor.server_status or 0x0002
         packages.append(self.last_packet(status=server_status))
@@ -603,17 +586,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         executor_answer: ExecuteAnswer = executor.executor_answer
 
         if executor_answer.data is None:
-            resp = SQLAnswer(
-                resp_type=RESPONSE_TYPE.OK, state_track=executor_answer.state_track
-            )
+            resp = SQLAnswer(resp_type=RESPONSE_TYPE.OK, state_track=executor_answer.state_track)
             return self.send_query_answer(resp)
 
         packages = []
         columns = self.to_mysql_columns(executor_answer.data.columns)
         for row in executor_answer.data[fetched:limit].to_lists():
-            packages.append(
-                self.packet(BinaryResultsetRowPacket, data=row, columns=columns)
-            )
+            packages.append(self.packet(BinaryResultsetRowPacket, data=row, columns=columns))
 
         prepared_stmt["fetched"] += len(executor_answer.data[fetched:limit])
 
@@ -656,9 +635,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         else:
             ctx.user_class = cloud_connection["user_class"]
             ctx.email_confirmed = cloud_connection["email_confirmed"]
-            self.client_capabilities = ClentCapabilities(
-                cloud_connection["client_capabilities"]
-            )
+            self.client_capabilities = ClentCapabilities(cloud_connection["client_capabilities"])
             self.session.database = cloud_connection["database"]
             self.session.username = "cloud"
             self.session.auth = True
@@ -678,9 +655,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 logger.debug("Session closed by client")
                 return
 
-            logger.debug(
-                "Command TYPE: {type}".format(type=getConstName(COMMANDS, p.type.value))
-            )
+            logger.debug("Command TYPE: {type}".format(type=getConstName(COMMANDS, p.type.value)))
 
             command_names = {
                 COMMANDS.COM_QUERY: "COM_QUERY",
@@ -705,10 +680,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 if p.type.value == COMMANDS.COM_QUERY:
                     sql = self.decode_utf(p.sql.value)
                     sql = clear_sql(sql)
-                    logger.debug(f'Incoming query: {sql}')
-                    profiler.set_meta(
-                        query=sql, api="mysql", environment=config.get("environment")
-                    )
+                    logger.debug(f"Incoming query: {sql}")
+                    profiler.set_meta(query=sql, api="mysql", environment=config.get("environment"))
                     with profiler.Context("mysql_query_processing"):
                         response = self.process_query(sql)
                 elif p.type.value == COMMANDS.COM_STMT_PREPARE:
@@ -791,9 +764,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 # any other exception
                 error_type = "unexpected"
                 error_traceback = traceback.format_exc()
-                logger.error(
-                    f"ERROR while executing query\n" f"{error_traceback}\n" f"{e}"
-                )
+                logger.error(f"ERROR while executing query\n{error_traceback}\n{e}")
                 error_code = ERR.ER_SYNTAX_ERROR
                 response = SQLAnswer(
                     resp_type=RESPONSE_TYPE.ERROR,
@@ -841,7 +812,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if "db" in context:
             self.session.database = context["db"]
         else:
-            self.session.database = config.get('default_project')
+            self.session.database = config.get("default_project")
 
         if "profiling" in context:
             self.session.profiling = context["profiling"]
@@ -851,9 +822,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.session.show_secrets = context["show_secrets"]
 
     def get_context(self):
-        context = {
-            "show_secrets": self.session.show_secrets
-        }
+        context = {"show_secrets": self.session.show_secrets}
         if self.session.database is not None:
             context["db"] = self.session.database
         if self.session.profiling is True:

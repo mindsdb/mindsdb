@@ -28,9 +28,11 @@ def app():
             os.environ["MINDSDB_DB_CON"] = db_path
             config.prepare_env_config()
             config.merge_configs()
+            config["gui"]["open_on_start"] = False
+            config["gui"]["autoupdate"] = False
             db.init()
             migrate.migrate_to_head()
-            app = initialize_app(config, True)
+            app = initialize_app()
             app._mindsdb_temp_dir = temp_dir
             yield app
     except PermissionError:

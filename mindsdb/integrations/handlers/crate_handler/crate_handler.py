@@ -56,9 +56,7 @@ class CrateHandler(DatabaseHandler):
         if self.is_connected:
             return self.connection
 
-        is_local = (
-            self.host.startswith("localhost") or self.host == "127.0.0.1"
-        )
+        is_local = self.host.startswith("localhost") or self.host == "127.0.0.1"
 
         try:
             # Build URL based on connection type
@@ -121,7 +119,7 @@ class CrateHandler(DatabaseHandler):
         """Receive raw query and act upon it somehow.
         Args:
             query (Any): query in native format (str for sql databases,
-                dict for mongo, etc)
+                etc)
         Returns:
             HandlerResponse
         """
@@ -136,9 +134,7 @@ class CrateHandler(DatabaseHandler):
                 result = cur.fetchall()
                 response = Response(
                     RESPONSE_TYPE.TABLE,
-                    data_frame=pd.DataFrame(
-                        result, columns=[x[0] for x in cur.description]
-                    ),
+                    data_frame=pd.DataFrame(result, columns=[x[0] for x in cur.description]),
                 )
             else:
                 response = Response(RESPONSE_TYPE.OK)

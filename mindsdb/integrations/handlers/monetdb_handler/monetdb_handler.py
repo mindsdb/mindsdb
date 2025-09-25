@@ -35,9 +35,7 @@ class MonetDBHandler(DatabaseHandler):
         self.database = connection_data["database"]
         self.user = connection_data["user"]
         self.password = connection_data["password"]
-        self.schemaName = (
-            connection_data["schema_name"] if "schema_name" in connection_data else None
-        )
+        self.schemaName = connection_data["schema_name"] if "schema_name" in connection_data else None
         self.host = connection_data["host"]
         self.port = connection_data["port"]
 
@@ -109,7 +107,7 @@ class MonetDBHandler(DatabaseHandler):
         """Receive raw query and act upon it somehow.
         Args:
             query (Any): query in native format (str for sql databases,
-                dict for mongo, etc)
+                etc)
         Returns:
             HandlerResponse
         """
@@ -123,9 +121,7 @@ class MonetDBHandler(DatabaseHandler):
                 result = cur.fetchall()
                 response = Response(
                     RESPONSE_TYPE.TABLE,
-                    data_frame=pd.DataFrame(
-                        result, columns=[x[0] for x in cur.description]
-                    ),
+                    data_frame=pd.DataFrame(result, columns=[x[0] for x in cur.description]),
                 )
             else:
                 response = Response(RESPONSE_TYPE.OK)

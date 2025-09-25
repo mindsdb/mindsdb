@@ -4,6 +4,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 
 from sqlalchemy.exc import SQLAlchemyError
+from mindsdb_sql_parser import parse_sql
 
 from base_handler_test import BaseDatabaseHandlerTest
 
@@ -53,6 +54,11 @@ class TestClickHouseHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertEqual(self.handler.dialect, "clickhouse")
         self.assertFalse(self.handler.is_connected)
         self.assertEqual(self.handler.protocol, "native")
+
+    def test_renderer(self):
+        sql = "SELECT * FROM ch.table WHERE created_at = (now() - INTERVAL '5' MINUTE);"
+        rendered_sql = self.handler.renderer.get_string(parse_sql(sql), with_failback=True)
+        assert rendered_sql == "SELECT * \nFROM ch.\"table\" \nWHERE created_at = now() - INTERVAL '5' MINUTE"
 
     def test_connect_success(self):
         self.mock_connect.return_value = MagicMock()

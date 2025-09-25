@@ -1,125 +1,130 @@
 ---
 title: The LLM() Function
-sidebarTitle: The LLM() Function
+sidebarTitle: LLM()
 ---
 
 MindsDB provides the `LLM()` function that lets users incorporate the LLM-generated output directly into the data queries.
 
 ## Prerequisites
 
-The `LLM()` function requires a large language model, which can be defined in the [MindsDB configuration under `default_llm`](/setup/custom-config) or via environment variables as below.
+The `LLM()` function requires a large language model, which can be defined in the following ways:
 
-To use the `LLM()` function with MindsDB, choosing one of the available model providers and define the following environment variables.
+- By setting the `default_llm` parameter in the [MindsDB configuration file](/setup/custom-config#default-llm).
+- By saving the default model in the MindsDB Editor under Settings.
+- By defining the environment variables as below, choosing one of the available model providers.
 
-<AccordionGroup>
+  <AccordionGroup>
 
-  <Accordion title="OpenAI">
-    Here are the environment variables for the OpenAI provider:
+    <Accordion title="OpenAI">
+      Here are the environment variables for the OpenAI provider:
 
-    ```
-    LLM_FUNCTION_MODEL_NAME
-    LLM_FUNCTION_TEMPERATURE
-    LLM_FUNCTION_MAX_RETRIES
-    LLM_FUNCTION_MAX_TOKENS
-    LLM_FUNCTION_BASE_URL
-    OPENAI_API_KEY
-    LLM_FUNCTION_API_ORGANIZATION
-    LLM_FUNCTION_REQUEST_TIMEOUT
-    ```
+      ```
+      LLM_FUNCTION_MODEL_NAME
+      LLM_FUNCTION_TEMPERATURE
+      LLM_FUNCTION_MAX_RETRIES
+      LLM_FUNCTION_MAX_TOKENS
+      LLM_FUNCTION_BASE_URL
+      OPENAI_API_KEY
+      LLM_FUNCTION_API_ORGANIZATION
+      LLM_FUNCTION_REQUEST_TIMEOUT
+      ```
 
-    Note that the values stored in the environment variables are specific for each provider.
-  </Accordion>
+      Note that the values stored in the environment variables are specific for each provider.
+    </Accordion>
 
-  <Accordion title="Anthropic">
-    Here are the environment variables for the Anthropic provider:
+    <Accordion title="Anthropic">
+      Here are the environment variables for the Anthropic provider:
 
-    ```
-    LLM_FUNCTION_MODEL_NAME
-    LLM_FUNCTION_TEMPERATURE
-    LLM_FUNCTION_MAX_TOKENS
-    LLM_FUNCTION_TOP_P
-    LLM_FUNCTION_TOP_K
-    LLM_FUNCTION_DEFAULT_REQUEST_TIMEOUT
-    LLM_FUNCTION_API_KEY
-    LLM_FUNCTION_BASE_URL
-    ```
+      ```
+      LLM_FUNCTION_MODEL_NAME
+      LLM_FUNCTION_TEMPERATURE
+      LLM_FUNCTION_MAX_TOKENS
+      LLM_FUNCTION_TOP_P
+      LLM_FUNCTION_TOP_K
+      LLM_FUNCTION_DEFAULT_REQUEST_TIMEOUT
+      LLM_FUNCTION_API_KEY
+      LLM_FUNCTION_BASE_URL
+      ```
 
-    Note that the values stored in the environment variables are specific for each provider.
-  </Accordion>
+      Note that the values stored in the environment variables are specific for each provider.
+    </Accordion>
 
-  <Accordion title="LiteLLM">
-    Here are the environment variables for the LiteLLM provider:
+    <Accordion title="LiteLLM">
+      Here are the environment variables for the LiteLLM provider:
 
-    ```
-    LLM_FUNCTION_MODEL_NAME
-    LLM_FUNCTION_TEMPERATURE
-    LLM_FUNCTION_API_BASE
-    LLM_FUNCTION_MAX_RETRIES
-    LLM_FUNCTION_MAX_TOKENS
-    LLM_FUNCTION_TOP_P
-    LLM_FUNCTION_TOP_K
-    ```
+      ```
+      LLM_FUNCTION_MODEL_NAME
+      LLM_FUNCTION_TEMPERATURE
+      LLM_FUNCTION_API_BASE
+      LLM_FUNCTION_MAX_RETRIES
+      LLM_FUNCTION_MAX_TOKENS
+      LLM_FUNCTION_TOP_P
+      LLM_FUNCTION_TOP_K
+      ```
 
-    Note that the values stored in the environment variables are specific for each provider.
-  </Accordion>
+      Note that the values stored in the environment variables are specific for each provider.
+    </Accordion>
 
-  <Accordion title="Ollama">
-    Here are the environment variables for the Ollama provider:
+    <Accordion title="Ollama">
+      Here are the environment variables for the Ollama provider:
 
-    ```
-    LLM_FUNCTION_BASE_URL
-    LLM_FUNCTION_MODEL_NAME
-    LLM_FUNCTION_TEMPERATURE
-    LLM_FUNCTION_TOP_P
-    LLM_FUNCTION_TOP_K
-    LLM_FUNCTION_REQUEST_TIMEOUT
-    LLM_FUNCTION_FORMAT
-    LLM_FUNCTION_HEADERS
-    LLM_FUNCTION_NUM_PREDICT
-    LLM_FUNCTION_NUM_CTX
-    LLM_FUNCTION_NUM_GPU
-    LLM_FUNCTION_REPEAT_PENALTY
-    LLM_FUNCTION_STOP
-    LLM_FUNCTION_TEMPLATE
-    ```
+      ```
+      LLM_FUNCTION_BASE_URL
+      LLM_FUNCTION_MODEL_NAME
+      LLM_FUNCTION_TEMPERATURE
+      LLM_FUNCTION_TOP_P
+      LLM_FUNCTION_TOP_K
+      LLM_FUNCTION_REQUEST_TIMEOUT
+      LLM_FUNCTION_FORMAT
+      LLM_FUNCTION_HEADERS
+      LLM_FUNCTION_NUM_PREDICT
+      LLM_FUNCTION_NUM_CTX
+      LLM_FUNCTION_NUM_GPU
+      LLM_FUNCTION_REPEAT_PENALTY
+      LLM_FUNCTION_STOP
+      LLM_FUNCTION_TEMPLATE
+      ```
 
-    Note that the values stored in the environment variables are specific for each provider.
-  </Accordion>
+      Note that the values stored in the environment variables are specific for each provider.
+    </Accordion>
 
-  <Accordion title="Nvidia NIMs">
-    Here are the environment variables for the Nvidia NIMs provider:
+    <Accordion title="Nvidia NIMs">
+      Here are the environment variables for the Nvidia NIMs provider:
 
-    ```
-    LLM_FUNCTION_BASE_URL
-    LLM_FUNCTION_MODEL_NAME
-    LLM_FUNCTION_TEMPERATURE
-    LLM_FUNCTION_TOP_P
-    LLM_FUNCTION_REQUEST_TIMEOUT
-    LLM_FUNCTION_FORMAT
-    LLM_FUNCTION_HEADERS
-    LLM_FUNCTION_NUM_PREDICT
-    LLM_FUNCTION_NUM_CTX
-    LLM_FUNCTION_NUM_GPU
-    LLM_FUNCTION_REPEAT_PENALTY
-    LLM_FUNCTION_STOP
-    LLM_FUNCTION_TEMPLATE
-    LLM_FUNCTION_NVIDIA_API_KEY
-    ```
+      ```
+      LLM_FUNCTION_BASE_URL
+      LLM_FUNCTION_MODEL_NAME
+      LLM_FUNCTION_TEMPERATURE
+      LLM_FUNCTION_TOP_P
+      LLM_FUNCTION_REQUEST_TIMEOUT
+      LLM_FUNCTION_FORMAT
+      LLM_FUNCTION_HEADERS
+      LLM_FUNCTION_NUM_PREDICT
+      LLM_FUNCTION_NUM_CTX
+      LLM_FUNCTION_NUM_GPU
+      LLM_FUNCTION_REPEAT_PENALTY
+      LLM_FUNCTION_STOP
+      LLM_FUNCTION_TEMPLATE
+      LLM_FUNCTION_NVIDIA_API_KEY
+      ```
 
-    Note that the values stored in the environment variables are specific for each provider.
-  </Accordion>
+      Note that the values stored in the environment variables are specific for each provider.
+    </Accordion>
+  </AccordionGroup>
 
-  <Accordion title="MindsDB">
-    Here are the environment variables for the MindsDB provider:
+<Note>
+**OpenAI-compatible model providers** can be used like OpenAI models.
 
-    ```
-    LLM_FUNCTION_MODEL_NAME
-    LLM_FUNCTION_PROJECT_NAME
-    ```
+There is a number of OpenAI-compatible model providers including OpenRouter or vLLM. To use models via these providers, users need to define the base URL and the API key of the provider.
 
-    To use MindsDB as a provider, create a model in a project within MindsDB and use its name in the `LLM_FUNCTION_MODEL_NAME` environment variable and the project name in the `LLM_FUNCTION_PROJECT_NAME` environment variable. 
-  </Accordion>
-</AccordionGroup>
+Here is an example of using OpenRouter.
+
+```
+LLM_FUNCTION_MODEL_NAME = "mistralai/devstral-small-2505"
+LLM_FUNCTION_BASE_URL = "https://openrouter.ai/api/v1"
+OPENAI_API_KEY = "openrouter-api-key"
+```
+</Note>
 
 ## Usage
 
@@ -139,7 +144,7 @@ Here is the output:
 +------------------------------------------+
 ```
 
-Moreover, you can the `LLM()` function with your data to swiftly complete tasks such as text generation or summarization.
+Moreover, you can use the `LLM()` function with your data to swiftly complete tasks such as text generation or summarization.
 
 ```sql
 SELECT

@@ -78,29 +78,28 @@ Optional connection parameters include the following:
 * `schema`: The database schema to use within the Snowflake database. Default is `PUBLIC`.
 * `role`: The Snowflake role to use.
 
-<Tip>
-This video presents how to connect to Snowflake and query the available tables.
-
-<iframe
-  className="w-full h-96"
-  width="613"
-  height="286"
-  src="https://www.youtube.com/embed/W9ErcEBQ4Y0"
-  title="Connect and query Snowflake"
-  frameBorder="0"
-  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-  allowFullScreen
-></iframe>
-
-</Tip>
-
 ## Usage
+
+Connect to the Snowflake database:
+
+```sql
+CREATE DATABASE snowflake_datasource
+WITH
+    ENGINE = 'snowflake',
+    PARAMETERS = {
+        "account": "VHACDYL-LQ24981"
+        "user": "DEMO_USER",
+        "password": "Demo_Userg1"
+        "database": "DENO"
+        "warehouse": "DEMO_HAREHOUSE"
+    };
+```
 
 Retrieve data from a specified table by providing the integration name, schema, and table name:
 
 ```sql
 SELECT *
-FROM snowflake_datasource.schema_name.table_name
+FROM snowflake_datasource.sample_data.orders;
 LIMIT 10;
 ```
 
@@ -119,10 +118,6 @@ SELECT * FROM snowflake_datasource (
 
 );
 ```
-
-<Note>
-The above examples utilize `snowflake_datasource` as the datasource name, which is defined in the `CREATE DATABASE` command.
-</Note>
 
 ## Troubleshooting Guide
 

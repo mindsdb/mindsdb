@@ -3,6 +3,7 @@ import shutil
 import tarfile
 import tempfile
 import zipfile
+from pathlib import Path
 from urllib.parse import urlparse
 
 import multipart
@@ -60,7 +61,10 @@ class File(Resource):
 
         def on_file(file):
             nonlocal file_object
-            data["file"] = file.file_name.decode()
+            file_name = file.file_name.decode()
+            data["file"] = file_name
+            if Path(file_name).name != file_name:
+                raise ValueError(f"Wrong file name: {file_name}")
             file_object = file.file_object
 
         temp_dir_path = tempfile.mkdtemp(prefix="mindsdb_file_")
@@ -72,8 +76,9 @@ class File(Resource):
                 on_file=on_file,
                 config={
                     "UPLOAD_DIR": temp_dir_path.encode(),  # bytes required
-                    "UPLOAD_KEEP_FILENAME": True,
+                    "UPLOAD_KEEP_FILENAME": False,
                     "UPLOAD_KEEP_EXTENSIONS": True,
+                    "UPLOAD_DELETE_TMP": False,
                     "MAX_MEMORY_FILE_SIZE": 0,
                 },
             )
@@ -93,6 +98,7 @@ class File(Resource):
                     except (AttributeError, ValueError, OSError):
                         logger.debug("Failed to flush file_object before closing.", exc_info=True)
                     file_object.close()
+                Path(file_object.name).rename(Path(file_object.name).parent / data["file"])
                 file_object = None
         else:
             data = request.json
@@ -101,7 +107,7 @@ class File(Resource):
             return http_error(
                 400,
                 "File already exists",
-                f"File with name '{data['file']}' already exists",
+                f"File with name '{mindsdb_file_name}' already exists",
             )
 
         if data.get("source_type") == "url":

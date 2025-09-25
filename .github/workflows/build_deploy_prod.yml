@@ -13,15 +13,16 @@ on:
 env:
   UV_LINK_MODE: "symlink"
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   # Check that the version defined in the github release is valid
   check-version:
     name: Check Code Version
     runs-on: mdb-dev
     if: github.actor != 'mindsdbadmin'
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-check-version
-      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
       - uses: FranzDiebold/github-env-vars-action@v2
@@ -39,18 +40,14 @@ jobs:
     runs-on: mdb-dev
     needs: check-version
     if: github.actor != 'mindsdbadmin'
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-pypi
-      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
         with:
-          # Place cache in the tool dir because we mount this in our runnners
-          cache-local-path: "/home/runner/_work/_tool/uv-local-cache"
-          prune-cache: false
-          python-version: ${{ vars.CI_PYTHON_VERSION || '3.10' }}
+          cache-local-path: "/home/runner/_work/_tool/uv-local-cache"  # Place cache in the tool dir because we mount this in our runnners
+          prune-cache: false                                           # We want to save all cache because it's in the mount^
+          python-version: ${{ vars.CI_PYTHON_VERSION || '3.11' }}      # Default to 3.11 where vars aren't available (PRs from forks)
       - name: Install dependencies
         run: |
           uv pip install -r requirements/requirements-dev.txt
@@ -71,9 +68,6 @@ jobs:
     runs-on: mdb-dev
     needs: [check-version]
     if: github.actor != 'mindsdbadmin'
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-build
-      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
       - name: Docker Login
@@ -81,13 +75,8 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-      - name: Pull MindsDB Github Actions
-        uses: actions/checkout@v4
-        with:
-          repository: mindsdb/github-actions
-          path: github-actions
       # Build the bakefile and push
-      - uses: ./github-actions/docker-bake
+      - uses: mindsdb/github-actions/docker-bake@main
         with:
           push-to-dockerhub: true
           push-cache: false
@@ -98,20 +87,10 @@ jobs:
     name: Push Docker Cache
     runs-on: mdb-dev
     needs: [build]
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-cache
-      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-      - name: Pull MindsDB Github Actions
-        uses: actions/checkout@v4
-        with:
-          repository: mindsdb/github-actions
-          path: github-actions
       # Build the bakefile and push
-      - uses: ./github-actions/docker-bake
+      - uses: mindsdb/github-actions/docker-bake@main
         with:
           push-cache: true
           cache-only: true
@@ -133,11 +112,6 @@ jobs:
     runs-on: mdb-dev
     needs: [build]
     if: github.actor != 'mindsdbadmin'
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-extension
-      cancel-in-progress: true
-    environment:
-      name: prod
     steps:
       - uses: FranzDiebold/github-env-vars-action@v2
       - uses: convictional/trigger-workflow-and-wait@v1.6.5

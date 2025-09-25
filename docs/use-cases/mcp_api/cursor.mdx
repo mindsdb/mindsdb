@@ -5,17 +5,6 @@ sidebarTitle: Usage with Cursor
 
 This tutorial walks you through the usage of MindsDB MCP API with [Cursor](https://www.cursor.com/).
 
-<iframe
-  className="w-full h-96"
-  width="613"
-  height="286"
-  src="https://www.youtube.com/embed/f5VFd5LIuPg"
-  title="MindsDB an an MCP server"
-  frameBorder="0"
-  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-  allowFullScreen
-></iframe>
-
 ## Tutorial
 
 1. Open Cursor, go to the Cursor Settings, open the MCP tab, and click on *Add new global MCP server*. Alternatively, go to the Cursor settings -> Features -> MCP Servers.
@@ -24,13 +13,13 @@ This tutorial walks you through the usage of MindsDB MCP API with [Cursor](https
   <img src="/assets/mcp_cursor_settings.png" />
 </p>
 
-2. Add the below content to the `mcp.json` file. Ensure that [MindsDB is running locally with its MCP API enabled](/use-cases/mcp_api/mindsdb_mcp_server).
+2. Add the below content to the `mcp.json` file. Ensure that [MindsDB is running locally with its HTTP API enabled](/use-cases/mcp_api/mindsdb_mcp_server).
 
 ```yml
 {
     "mcpServers": {
       "mindsdb": {
-        "url": "http://127.0.0.1:47337/sse"
+        "url": "http://127.0.0.1:47334/mcp/sse"
       }
     }
 }

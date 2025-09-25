@@ -105,13 +105,11 @@ def test_archive_file_with_extension_upload(client):
 
     # Create a zip file in memory
     zip_buffer = io.BytesIO()
-    with zipfile.ZipFile(zip_buffer, 'a', zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr('file1.txt', 'This is the content of file 1.')
+    with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("file1.txt", "This is the content of file 1.")
     zip_buffer.seek(0)
 
-    data = {
-        'file': (zip_buffer, 'archive.zip')
-    }
+    data = {"file": (zip_buffer, "archive.zip")}
     response = client.put(
         "/api/files/archive",
         data=data,

@@ -131,7 +131,7 @@ class TablesTable(Table):
                     row.TABLE_SCHEMA = ds_name
                     data.append(row.to_list())
             except Exception:
-                logger.error(f"Can't get tables from '{ds_name}'")
+                logger.exception(f"Can't get tables from '{ds_name}'")
 
         for project_name in inf_schema.get_projects_names():
             if databases is not None and project_name not in databases:

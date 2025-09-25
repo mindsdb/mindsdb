@@ -190,7 +190,8 @@ class AgentsController:
                     db.session.commit()
 
         except Exception as e:
-            raise ValueError(f"Failed to auto-create or update SQL skill: {str(e)}")
+            logger.exception("Failed to auto-create or update SQL skill:")
+            raise ValueError(f"Failed to auto-create or update SQL skill: {e}") from e
 
         return skill_name
 

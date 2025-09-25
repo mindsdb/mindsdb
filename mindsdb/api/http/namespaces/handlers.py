@@ -19,6 +19,9 @@ from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.handlers import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.api.executor.command_executor import ExecuteCommands
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 @ns_conf.route("/")
@@ -59,7 +62,9 @@ class HandlerIcon(Resource):
             if icon_path.is_absolute() is False:
                 icon_path = Path(os.getcwd()).joinpath(icon_path)
         except Exception:
-            return http_error(HTTPStatus.NOT_FOUND, "Icon not found", f"Icon for {handler_name} not found")
+            error_message = f"Icon for '{handler_name}' not found"
+            logger.warning(error_message)
+            return http_error(HTTPStatus.NOT_FOUND, "Icon not found", error_message)
         else:
             return send_file(icon_path)
 
@@ -170,7 +175,7 @@ class BYOMUpload(Resource):
         code_file_path = params["code"]
         try:
             module_file_path = params["modules"]
-        except AttributeError:
+        except KeyError:
             module_file_path = Path(code_file_path).parent / "requirements.txt"
             module_file_path.touch()
             module_file_path = str(module_file_path)

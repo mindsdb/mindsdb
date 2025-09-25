@@ -287,7 +287,7 @@ class TestPlanJoinPredictor:
                 ),
                 QueryStep(Select(targets=[Star()], limit=Constant(10)), from_table=Result(2), strict_where=False),
                 SubSelectStep(
-                    dataframe=Result(3), query=parse_sql("SELECT time limit 1"), table_name="Custom SQL Query"
+                    dataframe=Result(3), query=parse_sql("SELECT `time` limit 1"), table_name="Custom SQL Query"
                 ),
             ],
         )

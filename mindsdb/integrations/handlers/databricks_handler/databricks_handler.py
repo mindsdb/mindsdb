@@ -1,12 +1,12 @@
 from typing import Text, Dict, Any, Optional
 
+import pandas as pd
 from databricks.sql import connect, RequestError, ServerOperationError
 from databricks.sql.client import Connection
 from databricks.sqlalchemy import DatabricksDialect
 from mindsdb_sql_parser.ast.base import ASTNode
-from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
-import pandas as pd
 
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -14,9 +14,34 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE,
 )
 from mindsdb.utilities import log
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 
 logger = log.getLogger(__name__)
+
+
+def _map_type(internal_type_name: str | None) -> MYSQL_DATA_TYPE:
+    """Map MyDatabricks SQL text types names to MySQL types as enum.
+
+    Args:
+        internal_type_name (str): The name of the Databricks type to map.
+
+    Returns:
+        MYSQL_DATA_TYPE: The MySQL type enum that corresponds to the MySQL text type name.
+    """
+    if not isinstance(internal_type_name, str):
+        return MYSQL_DATA_TYPE.TEXT
+    if internal_type_name.upper() == "STRING":
+        return MYSQL_DATA_TYPE.TEXT
+    if internal_type_name.upper() == "LONG":
+        return MYSQL_DATA_TYPE.BIGINT
+    if internal_type_name.upper() == "SHORT":
+        return MYSQL_DATA_TYPE.SMALLINT
+    try:
+        return MYSQL_DATA_TYPE(internal_type_name.upper())
+    except Exception:
+        logger.info(f"Databricks handler: unknown type: {internal_type_name}, use TEXT as fallback.")
+        return MYSQL_DATA_TYPE.TEXT
 
 
 class DatabricksHandler(DatabaseHandler):
@@ -220,29 +245,39 @@ class DatabricksHandler(DatabaseHandler):
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 
-    def get_tables(self) -> Response:
+    def get_tables(self, all: bool = False) -> Response:
         """
         Retrieves a list of all non-system tables in the connected schema of the Databricks workspace.
+
+        Args:
+            all (bool): If True - return tables from all schemas.
 
         Returns:
             Response: A response object containing a list of tables in the connected schema.
         """
-        query = """
-            SHOW TABLES;
+        all_filter = "and table_schema = current_schema()"
+        if all is True:
+            all_filter = ""
+        query = f"""
+            SELECT
+                table_schema,
+                table_name,
+                table_type
+            FROM
+                information_schema.tables
+            WHERE
+                table_schema != 'information_schema'
+                {all_filter}
         """
-        result = self.native_query(query)
+        return self.native_query(query)
 
-        df = result.data_frame
-        if df is not None:
-            result.data_frame = df.rename(columns={"tableName": "table_name", "database": "schema_name"})
-        return result
-
-    def get_columns(self, table_name: Text) -> Response:
+    def get_columns(self, table_name: str, schema_name: str | None = None) -> Response:
         """
         Retrieves column details for a specified table in the Databricks workspace.
 
         Args:
-            table_name (Text): The name of the table for which to retrieve column information.
+            table_name (str): The name of the table for which to retrieve column information.
+            schema_name (str|None): The name of the schema in which the table is located.
 
         Raises:
             ValueError: If the 'table_name' is not a valid string.
@@ -253,9 +288,34 @@ class DatabricksHandler(DatabaseHandler):
         if not table_name or not isinstance(table_name, str):
             raise ValueError("Invalid table name provided.")
 
+        if isinstance(schema_name, str):
+            schema_name = f"'{schema_name}'"
+        else:
+            schema_name = "current_schema()"
+        query = f"""
+            SELECT
+                COLUMN_NAME,
+                DATA_TYPE,
+                ORDINAL_POSITION,
+                COLUMN_DEFAULT,
+                IS_NULLABLE,
+                CHARACTER_MAXIMUM_LENGTH,
+                CHARACTER_OCTET_LENGTH,
+                NUMERIC_PRECISION,
+                NUMERIC_SCALE,
+                DATETIME_PRECISION,
+                null as CHARACTER_SET_NAME,
+                null as COLLATION_NAME
+            FROM
+                information_schema.columns
+            WHERE
+                table_name = '{table_name}'
+            AND
+                table_schema = {schema_name}
+        """
+
         query = f"DESCRIBE TABLE {table_name};"
         result = self.native_query(query)
+        result.to_columns_table_response(map_type_fn=_map_type)
 
-        df = result.data_frame
-        result.data_frame = df.rename(columns={"col_name": "column_name"})
         return result

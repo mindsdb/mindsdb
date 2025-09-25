@@ -48,8 +48,8 @@ class TestJSONChunker:
         assert "Jane Smith" in chunks[1].content
 
         # Check metadata
-        assert chunks[0].metadata["_original_doc_id"] == "doc_0"
-        assert chunks[1].metadata["_original_doc_id"] == "doc_1"
+        assert chunks[0].metadata["original_doc_id"] == "doc_0"
+        assert chunks[1].metadata["original_doc_id"] == "doc_1"
 
         # Check chunk IDs
         assert chunks[0].id.startswith("doc_0:")

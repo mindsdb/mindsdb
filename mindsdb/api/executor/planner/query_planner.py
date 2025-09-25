@@ -177,7 +177,6 @@ class QueryPlanner:
             # cut integration part
             if len(node.parts) > 1 and node.parts[0].lower() == database:
                 node.parts.pop(0)
-                node.is_quoted.pop(0)
 
             if not hasattr(parent_query, "from_table"):
                 return

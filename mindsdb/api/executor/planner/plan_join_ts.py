@@ -85,7 +85,6 @@ class PlanJoinTSPredictorQuery:
                 if len(node.parts) == 1:
                     # add table alias to field
                     node.parts = table_alias + node.parts
-                    node.is_quoted = [False] + node.is_quoted
 
         query_traversal(query.where, add_aliases)
 
@@ -95,7 +94,6 @@ class PlanJoinTSPredictorQuery:
             if integration is not None and query.from_table.parts[0] not in self.planner.databases:
                 # add integration name to table
                 query.from_table.parts.insert(0, integration)
-                query.from_table.is_quoted.insert(0, False)
 
         join_left = join_left.from_table
 

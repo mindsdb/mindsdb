@@ -414,6 +414,18 @@ class Config:
         """Merge multiple configs to one."""
         new_config = deepcopy(self._default_config)
         _merge_configs(new_config, self._user_config)
+        _merge_configs(new_config, self._auto_config)
+        _merge_configs(new_config, self._env_config)
+
+        # Apply command-line arguments for A2A
+        a2a_config = {}
+
+        # Check for A2A command-line arguments
+        if hasattr(self.cmd_args, "a2a_host") and self.cmd_args.a2a_host is not None:
+            a2a_config["host"] = self.cmd_args.a2a_host
+
+        if hasattr(self.cmd_args, "a2a_port") and self.cmd_args.a2a_port is not None:
+            a2a_config["port"] = self.cmd_args.a2a_port
 
         if getattr(self.cmd_args, "no_studio", None) is True:
             new_config["gui"]["open_on_start"] = False

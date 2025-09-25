@@ -48,7 +48,7 @@ class File(Resource):
         """
 
         data = {}
-        mindsdb_file_name = name.lower()
+        mindsdb_file_name = name
 
         existing_file_names = ca.file_controller.get_files_names()
 

@@ -2,15 +2,8 @@ import copy
 
 from mindsdb_sql_parser.ast.mindsdb import Latest
 from mindsdb_sql_parser.ast import (
-    Select,
-    Identifier,
-    BetweenOperation,
-    Join,
-    Star,
-    BinaryOperation,
-    Constant,
-    OrderBy,
-    NullConstant,
+    Select, Identifier, BetweenOperation, Join, Star, BinaryOperation, Constant,
+    OrderBy, NullConstant
 )
 
 from mindsdb.integrations.utilities.query_traversal import query_traversal
@@ -18,22 +11,15 @@ from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.api.executor.planner.exceptions import PlanningException
 from mindsdb.api.executor.planner import utils
 from mindsdb.api.executor.planner.steps import (
-    JoinStep,
-    LimitOffsetStep,
-    MultipleSteps,
-    MapReduceStep,
-    ApplyTimeseriesPredictorStep,
+    JoinStep, LimitOffsetStep, MultipleSteps, MapReduceStep,
+    ApplyTimeseriesPredictorStep
 )
-from mindsdb.api.executor.planner.ts_utils import (
-    validate_ts_where_condition,
-    find_time_filter,
-    replace_time_filter,
-    find_and_remove_time_filter,
-    recursively_check_join_identifiers_for_ambiguity,
-)
+from mindsdb.api.executor.planner.ts_utils import validate_ts_where_condition, find_time_filter, replace_time_filter, \
+    find_and_remove_time_filter, recursively_check_join_identifiers_for_ambiguity
 
 
 class PlanJoinTSPredictorQuery:
+
     def __init__(self, planner):
         self.planner = planner
 
@@ -76,7 +62,7 @@ class PlanJoinTSPredictorQuery:
         # add latest to query.where
         for cond in moved_conditions:
             if query.where is not None:
-                query.where = BinaryOperation("and", args=[query.where, cond])
+                query.where = BinaryOperation('and', args=[query.where, cond])
             else:
                 query.where = cond
 
@@ -85,17 +71,18 @@ class PlanJoinTSPredictorQuery:
                 if len(node.parts) == 1:
                     # add table alias to field
                     node.parts = table_alias + node.parts
-                    node.is_quoted = [False] + node.is_quoted
 
         query_traversal(query.where, add_aliases)
 
         if isinstance(query.from_table, Identifier):
             # DBT workaround: allow use tables without integration.
             #   if table.part[0] not in integration - take integration name from create table command
-            if integration is not None and query.from_table.parts[0] not in self.planner.databases:
+            if (
+                integration is not None
+                and query.from_table.parts[0] not in self.planner.databases
+            ):
                 # add integration name to table
                 query.from_table.parts.insert(0, integration)
-                query.from_table.is_quoted.insert(0, False)
 
         join_left = join_left.from_table
 
@@ -116,7 +103,10 @@ class PlanJoinTSPredictorQuery:
         return aliased_fields
 
     def plan_fetch_timeseries_partitions(self, query, table, predictor_group_by_names):
-        targets = [Identifier(column) for column in predictor_group_by_names]
+        targets = [
+            Identifier(column)
+            for column in predictor_group_by_names
+        ]
 
         query = Select(
             distinct=True,
@@ -143,7 +133,7 @@ class PlanJoinTSPredictorQuery:
 
         if self.planner.is_predictor(join_left):
             # in the left is also predictor
-            raise PlanningException(f"Can't join two predictors {join_left} and {join_left}")
+            raise PlanningException(f'Can\'t join two predictors {join_left} and {join_left}')
 
         orig_query = query
         # dbt query?
@@ -165,16 +155,16 @@ class PlanJoinTSPredictorQuery:
         # add join
         # Update reference
 
-        left = Identifier(predictor_steps["predictor"].result.ref_name)
-        right = Identifier(predictor_steps["data"].result.ref_name)
+        left = Identifier(predictor_steps['predictor'].result.ref_name)
+        right = Identifier(predictor_steps['data'].result.ref_name)
 
         if not predictor_is_left:
             # swap join
             left, right = right, left
         new_join = Join(left=left, right=right, join_type=join.join_type)
 
-        left = predictor_steps["predictor"].result
-        right = predictor_steps["data"].result
+        left = predictor_steps['predictor'].result
+        right = predictor_steps['data'].result
         if not predictor_is_left:
             # swap join
             left, right = right, left
@@ -182,33 +172,33 @@ class PlanJoinTSPredictorQuery:
         last_step = self.planner.plan.add_step(JoinStep(left=left, right=right, query=new_join))
 
         # limit from timeseries
-        if predictor_steps.get("saved_limit"):
+        if predictor_steps.get('saved_limit'):
             last_step = self.planner.plan.add_step(
-                LimitOffsetStep(dataframe=last_step.result, limit=predictor_steps["saved_limit"])
+                LimitOffsetStep(dataframe=last_step.result, limit=predictor_steps['saved_limit'])
             )
 
         return self.planner.plan_project(orig_query, last_step.result)
 
     def plan_timeseries_predictor(self, query, table, predictor_namespace, predictor):
+
         predictor_metadata = self.planner.get_predictor(predictor)
 
-        predictor_time_column_name = predictor_metadata["order_by_column"]
-        predictor_group_by_names = predictor_metadata["group_by_columns"]
+        predictor_time_column_name = predictor_metadata['order_by_column']
+        predictor_group_by_names = predictor_metadata['group_by_columns']
         if predictor_group_by_names is None:
             predictor_group_by_names = []
-        predictor_window = predictor_metadata["window"]
+        predictor_window = predictor_metadata['window']
 
         if query.order_by:
             raise PlanningException(
-                f"Can't provide ORDER BY to time series predictor, it will be taken from predictor settings. Found: {query.order_by}"
-            )
+                f'Can\'t provide ORDER BY to time series predictor, it will be taken from predictor settings. Found: {query.order_by}')
 
         saved_limit = None
         if query.limit is not None:
             saved_limit = query.limit.value
 
         if query.group_by or query.having or query.offset:
-            raise PlanningException(f"Unsupported query to timeseries predictor: {str(query)}")
+            raise PlanningException(f'Unsupported query to timeseries predictor: {str(query)}')
 
         allowed_columns = [predictor_time_column_name.lower()]
         if len(predictor_group_by_names) > 0:
@@ -222,17 +212,21 @@ class PlanJoinTSPredictorQuery:
 
         time_filter = find_time_filter(preparation_where, time_column_name=predictor_time_column_name)
 
-        order_by = [OrderBy(Identifier(parts=[predictor_time_column_name]), direction="DESC")]
+        order_by = [OrderBy(Identifier(parts=[predictor_time_column_name]), direction='DESC')]
 
         query_modifiers = query.modifiers
 
         # add {order_by_field} is not null
         def add_order_not_null(condition):
-            order_field_not_null = BinaryOperation(
-                op="is not", args=[Identifier(parts=[predictor_time_column_name]), NullConstant()]
-            )
+            order_field_not_null = BinaryOperation(op='is not', args=[
+                Identifier(parts=[predictor_time_column_name]),
+                NullConstant()
+            ])
             if condition is not None:
-                condition = BinaryOperation(op="and", args=[condition, order_field_not_null])
+                condition = BinaryOperation(op='and', args=[
+                    condition,
+                    order_field_not_null
+                ])
             else:
                 condition = order_field_not_null
             return condition
@@ -243,7 +237,7 @@ class PlanJoinTSPredictorQuery:
         # Obtain integration selects
         if isinstance(time_filter, BetweenOperation):
             between_from = time_filter.args[1]
-            preparation_time_filter = BinaryOperation("<", args=[Identifier(predictor_time_column_name), between_from])
+            preparation_time_filter = BinaryOperation('<', args=[Identifier(predictor_time_column_name), between_from])
             preparation_where2 = replace_time_filter(preparation_where2, time_filter, preparation_time_filter)
             integration_select_1 = Select(
                 targets=[Star()],
@@ -251,86 +245,81 @@ class PlanJoinTSPredictorQuery:
                 where=add_order_not_null(preparation_where2),
                 modifiers=query_modifiers,
                 order_by=order_by,
-                limit=Constant(predictor_window),
+                limit=Constant(predictor_window)
             )
 
-            integration_select_2 = Select(
-                targets=[Star()],
-                from_table=table,
-                where=preparation_where,
-                modifiers=query_modifiers,
-                order_by=order_by,
-            )
+            integration_select_2 = Select(targets=[Star()],
+                                          from_table=table,
+                                          where=preparation_where,
+                                          modifiers=query_modifiers,
+                                          order_by=order_by)
 
             integration_selects = [integration_select_1, integration_select_2]
-        elif isinstance(time_filter, BinaryOperation) and time_filter.op == ">" and time_filter.args[1] == Latest():
-            integration_select = Select(
-                targets=[Star()],
-                from_table=table,
-                where=preparation_where,
-                modifiers=query_modifiers,
-                order_by=order_by,
-                limit=Constant(predictor_window),
-            )
+        elif isinstance(time_filter, BinaryOperation) and time_filter.op == '>' and time_filter.args[1] == Latest():
+            integration_select = Select(targets=[Star()],
+                                        from_table=table,
+                                        where=preparation_where,
+                                        modifiers=query_modifiers,
+                                        order_by=order_by,
+                                        limit=Constant(predictor_window),
+                                        )
             integration_select.where = find_and_remove_time_filter(integration_select.where, time_filter)
             integration_selects = [integration_select]
-        elif isinstance(time_filter, BinaryOperation) and time_filter.op == "=":
-            integration_select = Select(
-                targets=[Star()],
-                from_table=table,
-                where=preparation_where,
-                modifiers=query_modifiers,
-                order_by=order_by,
-                limit=Constant(predictor_window),
-            )
+        elif isinstance(time_filter, BinaryOperation) and time_filter.op == '=':
+            integration_select = Select(targets=[Star()],
+                                        from_table=table,
+                                        where=preparation_where,
+                                        modifiers=query_modifiers,
+                                        order_by=order_by,
+                                        limit=Constant(predictor_window),
+                                        )
 
             if type(time_filter.args[1]) is Latest:
                 integration_select.where = find_and_remove_time_filter(integration_select.where, time_filter)
             else:
                 time_filter_date = time_filter.args[1]
                 preparation_time_filter = BinaryOperation(
-                    "<=", args=[Identifier(predictor_time_column_name), time_filter_date]
+                    '<=',
+                    args=[
+                        Identifier(predictor_time_column_name),
+                        time_filter_date
+                    ]
                 )
                 integration_select.where = add_order_not_null(
-                    replace_time_filter(preparation_where2, time_filter, preparation_time_filter)
+                    replace_time_filter(
+                        preparation_where2, time_filter, preparation_time_filter
+                    )
                 )
-                time_filter.op = ">"
+                time_filter.op = '>'
 
             integration_selects = [integration_select]
-        elif isinstance(time_filter, BinaryOperation) and time_filter.op in (">", ">="):
+        elif isinstance(time_filter, BinaryOperation) and time_filter.op in ('>', '>='):
             time_filter_date = time_filter.args[1]
-            preparation_time_filter_op = {">": "<=", ">=": "<"}[time_filter.op]
+            preparation_time_filter_op = {'>': '<=', '>=': '<'}[time_filter.op]
 
-            preparation_time_filter = BinaryOperation(
-                preparation_time_filter_op, args=[Identifier(predictor_time_column_name), time_filter_date]
-            )
+            preparation_time_filter = BinaryOperation(preparation_time_filter_op, args=[Identifier(predictor_time_column_name), time_filter_date])
             preparation_where2 = replace_time_filter(preparation_where2, time_filter, preparation_time_filter)
-            integration_select_1 = Select(
-                targets=[Star()],
-                from_table=table,
-                where=add_order_not_null(preparation_where2),
-                modifiers=query_modifiers,
-                order_by=order_by,
-                limit=Constant(predictor_window),
-            )
+            integration_select_1 = Select(targets=[Star()],
+                                          from_table=table,
+                                          where=add_order_not_null(preparation_where2),
+                                          modifiers=query_modifiers,
+                                          order_by=order_by,
+                                          limit=Constant(predictor_window))
 
-            integration_select_2 = Select(
-                targets=[Star()],
-                from_table=table,
-                where=preparation_where,
-                modifiers=query_modifiers,
-                order_by=order_by,
-            )
+            integration_select_2 = Select(targets=[Star()],
+                                          from_table=table,
+                                          where=preparation_where,
+                                          modifiers=query_modifiers,
+                                          order_by=order_by)
 
             integration_selects = [integration_select_1, integration_select_2]
         else:
-            integration_select = Select(
-                targets=[Star()],
-                from_table=table,
-                where=preparation_where,
-                modifiers=query_modifiers,
-                order_by=order_by,
-            )
+            integration_select = Select(targets=[Star()],
+                                        from_table=table,
+                                        where=preparation_where,
+                                        modifiers=query_modifiers,
+                                        order_by=order_by,
+                                        )
             integration_selects = [integration_select]
 
         if len(predictor_group_by_names) == 0:
@@ -340,8 +329,7 @@ class PlanJoinTSPredictorQuery:
                 select_partition_step = self.planner.get_integration_select_step(integration_selects[0])
             else:
                 select_partition_step = MultipleSteps(
-                    steps=[self.planner.get_integration_select_step(s) for s in integration_selects], reduce="union"
-                )
+                    steps=[self.planner.get_integration_select_step(s) for s in integration_selects], reduce='union')
 
             # fetch data step
             data_step = self.planner.plan.add_step(select_partition_step)
@@ -350,13 +338,13 @@ class PlanJoinTSPredictorQuery:
             for integration_select in integration_selects:
                 condition = integration_select.where
                 for num, column in enumerate(predictor_group_by_names):
-                    cond = BinaryOperation("=", args=[Identifier(column), Constant(f"$var[{column}]")])
+                    cond = BinaryOperation('=', args=[Identifier(column), Constant(f'$var[{column}]')])
 
                     # join to main condition
                     if condition is None:
                         condition = cond
                     else:
-                        condition = BinaryOperation("and", args=[condition, cond])
+                        condition = BinaryOperation('and', args=[condition, cond])
 
                 integration_select.where = condition
             # one or multistep
@@ -364,19 +352,14 @@ class PlanJoinTSPredictorQuery:
                 select_partition_step = self.planner.get_integration_select_step(integration_selects[0])
             else:
                 select_partition_step = MultipleSteps(
-                    steps=[self.planner.get_integration_select_step(s) for s in integration_selects], reduce="union"
-                )
+                    steps=[self.planner.get_integration_select_step(s) for s in integration_selects], reduce='union')
 
             # get groping values
             no_time_filter_query.where = find_and_remove_time_filter(no_time_filter_query.where, time_filter)
-            select_partitions_step = self.plan_fetch_timeseries_partitions(
-                no_time_filter_query, table, predictor_group_by_names
-            )
+            select_partitions_step = self.plan_fetch_timeseries_partitions(no_time_filter_query, table, predictor_group_by_names)
 
             # sub-query by every grouping value
-            map_reduce_step = self.planner.plan.add_step(
-                MapReduceStep(values=select_partitions_step.result, reduce="union", step=select_partition_step)
-            )
+            map_reduce_step = self.planner.plan.add_step(MapReduceStep(values=select_partitions_step.result, reduce='union', step=select_partition_step))
             data_step = map_reduce_step
 
         predictor_identifier = utils.get_predictor_name_identifier(predictor)
@@ -395,7 +378,7 @@ class PlanJoinTSPredictorQuery:
         )
 
         return {
-            "predictor": predictor_step,
-            "data": data_step,
-            "saved_limit": saved_limit,
+            'predictor': predictor_step,
+            'data': data_step,
+            'saved_limit': saved_limit,
         }

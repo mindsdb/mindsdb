@@ -18,6 +18,8 @@ import pandas as pd
 
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from google.oauth2.credentials import Credentials as OAuthCredentials
+from google.auth.transport.requests import Request
 from email.message import EmailMessage
 
 from base64 import urlsafe_b64encode, urlsafe_b64decode
@@ -294,12 +296,14 @@ class GmailHandler(APIHandler):
                 self.credentials_url = secret_url
 
         self.scopes = self.connection_args.get('scopes', DEFAULT_SCOPES)
+        if isinstance(self.scopes, str):
+            self.scopes = [scope.strip() for scope in self.scopes.split(',') if scope.strip()]
 
         emails = EmailsTable(self)
         self.emails = emails
         self._register_table('emails', emails)
 
-    def connect(self):
+    def connect(self, **kwargs):
         """Authenticate with the Gmail API using the credentials file.
 
         Returns
@@ -308,6 +312,43 @@ class GmailHandler(APIHandler):
             The authenticated Gmail API service object.
         """
         if self.is_connected and self.service is not None:
+            return self.service
+
+        params = dict(self.connection_args) if self.connection_args else {}
+
+        # Merge optional parameters passed at call time without mutating the cached args
+        override_params = kwargs.get('parameters') or {}
+        params.update(override_params)
+
+        # Allow nested "parameters" key (e.g. when provided through CREATE DATABASE ... PARAMETERS = {...})
+        nested_params = params.get('parameters')
+        if isinstance(nested_params, dict):
+            params.update(nested_params)
+
+        if 'refresh_token' in params:
+            client_id = params.get('client_id')
+            client_secret = params.get('client_secret')
+            refresh_token = params['refresh_token']
+            token_uri = params.get('token_uri', 'https://oauth2.googleapis.com/token')
+            scopes = params.get('scopes') or self.scopes or ['https://www.googleapis.com/auth/gmail.readonly']
+            if isinstance(scopes, str):
+                scopes = [scope.strip() for scope in scopes.split(',') if scope.strip()]
+
+            if not client_id or not client_secret:
+                raise Exception('gmail_handler: client_id and client_secret are required when refresh_token is provided')
+
+            creds = OAuthCredentials(
+                token=None,
+                refresh_token=refresh_token,
+                token_uri=token_uri,
+                client_id=client_id,
+                client_secret=client_secret,
+                scopes=scopes
+            )
+
+            creds.refresh(Request())
+            self.service = build('gmail', 'v1', credentials=creds, cache_discovery=False)
+            self.is_connected = True
             return self.service
 
         google_oauth2_manager = GoogleUserOAuth2Manager(self.handler_storage, self.scopes, self.credentials_file, self.credentials_url, self.connection_args.get('code'))

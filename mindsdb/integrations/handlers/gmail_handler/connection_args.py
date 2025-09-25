@@ -24,4 +24,29 @@ connection_args = OrderedDict(
         'description': 'Code After Authorisation',
         'label': 'Code After Authorisation',
     },
+    client_id={
+        'type': ARG_TYPE.STR,
+        'description': 'OAuth client ID for the Google project',
+        'label': 'OAuth Client ID',
+    },
+    client_secret={
+        'type': ARG_TYPE.STR,
+        'description': 'OAuth client secret for the Google project',
+        'label': 'OAuth Client Secret',
+    },
+    refresh_token={
+        'type': ARG_TYPE.STR,
+        'description': 'User refresh token obtained during OAuth consent',
+        'label': 'Refresh Token',
+    },
+    token_uri={
+        'type': ARG_TYPE.STR,
+        'description': 'Optional override for the OAuth token URI',
+        'label': 'Token URI',
+    },
+    scopes={
+        'type': ARG_TYPE.STR,
+        'description': 'Comma separated OAuth scopes to request',
+        'label': 'OAuth Scopes',
+    },
 )

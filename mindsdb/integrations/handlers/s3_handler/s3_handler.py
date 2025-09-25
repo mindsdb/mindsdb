@@ -133,17 +133,23 @@ class S3Handler(APIHandler):
         """
         # Connect to S3 via DuckDB.
         duckdb_conn = duckdb.connect(":memory:")
-        try:
-            duckdb_conn.execute("INSTALL httpfs")
-        except HTTPException as http_error:
-            logger.debug(f"Error installing the httpfs extension, {http_error}! Forcing installation.")
-            duckdb_conn.execute("FORCE INSTALL httpfs")
 
         duckdb_conn.execute("LOAD httpfs")
+        # Cria o secret S3 para credential_chain (IAM Role, env, etc)
+        region = self.connection_data.get("region_name", "us-east-1")
+        duckdb_conn.execute(f"""
+            CREATE OR REPLACE SECRET (
+                TYPE s3,
+                PROVIDER credential_chain,
+                REGION '{region}'
+            );
+        """)
 
-        # Configure mandatory credentials.
-        duckdb_conn.execute(f"SET s3_access_key_id='{self.connection_data['aws_access_key_id']}'")
-        duckdb_conn.execute(f"SET s3_secret_access_key='{self.connection_data['aws_secret_access_key']}'")
+        # Configure credentials only if presentes
+        if "aws_access_key_id" in self.connection_data:
+            duckdb_conn.execute(f"SET s3_access_key_id='{self.connection_data['aws_access_key_id']}'")
+        if "aws_secret_access_key" in self.connection_data:
+            duckdb_conn.execute(f"SET s3_secret_access_key='{self.connection_data['aws_secret_access_key']}'")
 
         # Configure optional parameters.
         if "aws_session_token" in self.connection_data:
@@ -156,7 +162,8 @@ class S3Handler(APIHandler):
 
         # region = self._regions[bucket]
         # duckdb_conn.execute(f"SET s3_region='{region}'")
-        duckdb_conn.execute(f"SET s3_region='{self.connection_data['region_name']}'")
+        if "region_name" in self.connection_data:
+            duckdb_conn.execute(f"SET s3_region='{self.connection_data['region_name']}'")
 
         try:
             yield duckdb_conn

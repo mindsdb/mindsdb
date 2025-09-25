@@ -1,6 +1,6 @@
 __title__ = "MindsDB Strapi handler"
 __package_name__ = "mindsdb_strapi_handler"
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 __description__ = "MindsDB handler for Strapi"
 __author__ = "Ritwick Raj Makhal"
 __github__ = "https://github.com/mindsdb/mindsdb"

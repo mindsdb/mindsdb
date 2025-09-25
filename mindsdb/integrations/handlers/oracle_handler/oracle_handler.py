@@ -13,6 +13,7 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.utilities import log
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
+import mindsdb.utilities.profiler as profiler
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
 
@@ -311,6 +312,7 @@ class OracleHandler(MetaDatabaseHandler):
 
         return response
 
+    @profiler.profile()
     def native_query(self, query: Text) -> Response:
         """
         Executes a SQL query on the Oracle database and returns the result.
@@ -358,6 +360,73 @@ class OracleHandler(MetaDatabaseHandler):
 
         return response
 
+    def query_stream(self, query: ASTNode, fetch_size: int = 1000):
+        """
+        Executes a SQL query represented by an ASTNode and retrieves the data in a streaming fashion.
+
+        Args:
+            query (ASTNode): An ASTNode representing the SQL query to be executed.
+            fetch_size (int): The number of rows to fetch in each batch.
+        Yields:
+            pd.DataFrame: A DataFrame containing a batch of rows from the query result.
+            Response: In case of an error, yields a Response object with the error details.
+        """
+        query_str = SqlalchemyRender("oracle").get_string(query, with_failback=True)
+        need_to_close = self.is_connected is False
+
+        connection = self.connect()
+        with connection.cursor() as cur:
+            try:
+                cur.execute(query_str)
+                while True:
+                    result = cur.fetchmany(fetch_size)
+                    if not result:
+                        break
+                    df = pd.DataFrame(
+                        result, columns=[col[0] for col in cur.description]
+                    )
+                    yield df
+                connection.commit()
+            finally:
+                connect
+        if need_to_close is True:
+            self.disconnect()
+
+    def insert(self, table_name: str, df: pd.DataFrame) -> Response:
+        """
+        Inserts data from a DataFrame into a specified table in the Oracle database.
+
+        Args:
+            table_name (str): The name of the table where the data will be inserted.
+            df (pd.DataFrame): The DataFrame containing the data to be inserted.
+        Returns:
+            Response: A response object indicating the success or failure of the insert operation.
+        """
+        need_to_close = self.is_connected is False
+        connection = self.connect()
+        columns = list(df.columns)
+        placeholders = ", ".join([f":{i+1}" for i in range(len(columns))])
+        insert_query = (
+            f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({placeholders})"
+        )
+
+        with connection.cursor() as cur:
+            try:
+                cur.executemany(insert_query, df.values.tolist())
+                connection.commit()
+                rowcount = cur.rowcount
+            except DatabaseError as database_error:
+                logger.error(
+                    f"Error inserting data into table {table_name} on Oracle, {database_error}!"
+                )
+                connection.rollback()
+                raise
+        if need_to_close is True:
+            self.disconnect()
+
+        return Response(RESPONSE_TYPE.OK, affected_rows=rowcount)
+
+    @profiler.profile()
     def query(self, query: ASTNode) -> Response:
         """
         Executes a SQL query represented by an ASTNode and retrieves the data.

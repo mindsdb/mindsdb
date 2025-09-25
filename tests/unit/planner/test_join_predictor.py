@@ -3,7 +3,7 @@ import copy
 import pytest
 
 from mindsdb_sql_parser import parse_sql
-from mindsdb_sql_parser.ast import Identifier, Select, Join, Constant, Star, Parameter, BinaryOperation
+from mindsdb_sql_parser.ast import (Identifier, Select, Join, Constant, Star, Parameter, BinaryOperation)
 from mindsdb_sql_parser.utils import JoinType
 
 from mindsdb.api.executor.planner.exceptions import PlanningException
@@ -11,19 +11,14 @@ from mindsdb.api.executor.planner import plan_query
 from mindsdb.api.executor.planner.query_plan import QueryPlan
 from mindsdb.api.executor.planner.step_result import Result
 from mindsdb.api.executor.planner.steps import (
-    FetchDataframeStep,
-    ProjectStep,
-    JoinStep,
-    ApplyPredictorStep,
-    QueryStep,
-    SubSelectStep,
-    ApplyPredictorRowStep,
-    MapReduceStep,
+    FetchDataframeStep, ProjectStep, JoinStep, ApplyPredictorStep,
+    QueryStep, SubSelectStep, ApplyPredictorRowStep, MapReduceStep
 )
 
 
 class TestPlanJoinPredictor:
     def test_join_predictor_plan(self):
+
         sql = """
             select tab1.column1, pred.predicted
             from int.tab1, mindsdb.pred
@@ -33,30 +28,37 @@ class TestPlanJoinPredictor:
         expected_plan = QueryPlan(
             steps=[
                 FetchDataframeStep(
-                    integration="int",
-                    query=Select(targets=[Star()], from_table=Identifier("tab1")),
+                    integration='int',
+                    query=Select(
+                        targets=[Star()],
+                        from_table=Identifier('tab1')
+                    ),
                 ),
-                ApplyPredictorStep(namespace="mindsdb", dataframe=Result(0), predictor=Identifier("pred")),
+                ApplyPredictorStep(namespace='mindsdb', dataframe=Result(0), predictor=Identifier('pred')),
                 JoinStep(
-                    left=Result(0),
-                    right=Result(1),
-                    query=Join(left=Identifier("tab1"), right=Identifier("tab2"), join_type=JoinType.INNER_JOIN),
+                    left=Result(0), right=Result(1),
+                    query=Join(
+                        left=Identifier('tab1'),
+                        right=Identifier('tab2'),
+                        join_type=JoinType.INNER_JOIN
+                    )
                 ),
                 QueryStep(parse_sql("select tab1.column1, pred.predicted"), from_table=Result(2), strict_where=False),
             ],
         )
-        plan = plan_query(query, integrations=["int"], predictor_namespace="mindsdb", predictor_metadata={"pred": {}})
+        plan = plan_query(query, integrations=['int'], predictor_namespace='mindsdb', predictor_metadata={'pred': {}})
 
         for i in range(len(plan.steps)):
             assert plan.steps[i] == expected_plan.steps[i]
 
         # test_predictor_namespace_is_case_insensitive
-        plan = plan_query(query, integrations=["int"], predictor_namespace="MINDSDB", predictor_metadata={"pred": {}})
+        plan = plan_query(query, integrations=['int'], predictor_namespace='MINDSDB', predictor_metadata={'pred': {}})
 
         for i in range(len(plan.steps)):
             assert plan.steps[i] == expected_plan.steps[i]
 
     def test_join_predictor_plan_aliases(self):
+
         sql = """
             select ta.column1, tb.predicted
             from int.tab1 ta, mindsdb.pred tb
@@ -66,25 +68,32 @@ class TestPlanJoinPredictor:
         expected_plan = QueryPlan(
             steps=[
                 FetchDataframeStep(
-                    integration="int",
-                    query=Select(targets=[Star()], from_table=Identifier("tab1", alias=Identifier("ta"))),
+                    integration='int',
+                    query=Select(
+                        targets=[Star()],
+                        from_table=Identifier('tab1', alias=Identifier('ta'))
+                    ),
                 ),
                 ApplyPredictorStep(
-                    namespace="mindsdb", dataframe=Result(0), predictor=Identifier("pred", alias=Identifier("tb"))
+                    namespace='mindsdb', dataframe=Result(0), predictor=Identifier('pred', alias=Identifier('tb'))
                 ),
                 JoinStep(
-                    left=Result(0),
-                    right=Result(1),
-                    query=Join(left=Identifier("tab1"), right=Identifier("tab2"), join_type=JoinType.INNER_JOIN),
+                    left=Result(0), right=Result(1),
+                    query=Join(
+                        left=Identifier('tab1'),
+                        right=Identifier('tab2'),
+                        join_type=JoinType.INNER_JOIN
+                    )
                 ),
                 QueryStep(parse_sql("select ta.column1, tb.predicted"), from_table=Result(2), strict_where=False),
             ],
         )
-        plan = plan_query(query, integrations=["int"], predictor_namespace="mindsdb", predictor_metadata={"pred": {}})
+        plan = plan_query(query, integrations=['int'], predictor_namespace='mindsdb', predictor_metadata={'pred': {}})
 
         assert plan.steps == expected_plan.steps
 
     def test_join_predictor_plan_limit(self):
+
         sql = """
             select tab.column1, pred.predicted
             from int.tab, mindsdb.pred
@@ -102,7 +111,7 @@ class TestPlanJoinPredictor:
         expected_plan = QueryPlan(
             steps=[
                 FetchDataframeStep(
-                    integration="int",
+                    integration='int',
                     query=parse_sql(
                         """
                                               select * from tab
@@ -111,18 +120,21 @@ class TestPlanJoinPredictor:
                                               limit 10
                                               offset 1
                                             """
-                    ),
+                    )
                 ),
-                ApplyPredictorStep(namespace="mindsdb", dataframe=Result(0), predictor=Identifier("pred")),
+                ApplyPredictorStep(namespace='mindsdb', dataframe=Result(0), predictor=Identifier('pred')),
                 JoinStep(
-                    left=Result(0),
-                    right=Result(1),
-                    query=Join(left=Identifier("tab1"), right=Identifier("tab2"), join_type=JoinType.INNER_JOIN),
+                    left=Result(0), right=Result(1),
+                    query=Join(
+                        left=Identifier('tab1'),
+                        right=Identifier('tab2'),
+                        join_type=JoinType.INNER_JOIN
+                    )
                 ),
                 QueryStep(subquery, from_table=Result(2), strict_where=False),
             ],
         )
-        plan = plan_query(query, integrations=["int"], predictor_namespace="mindsdb", predictor_metadata={"pred": {}})
+        plan = plan_query(query, integrations=['int'], predictor_namespace='mindsdb', predictor_metadata={'pred': {}})
 
         assert plan.steps == expected_plan.steps
 
@@ -152,6 +164,7 @@ class TestPlanJoinPredictor:
     #         plan_query(query, integrations=['postgres_90'], predictor_namespace='mindsdb', predictor_metadata={'hrp3': {}})
 
     def test_join_predictor_plan_complex_query(self):
+
         sql = """
             select t.asset, t.time, m.predicted
             from int.tab t, mindsdb.pred m
@@ -169,64 +182,80 @@ class TestPlanJoinPredictor:
 
         expected_plan = QueryPlan(
             steps=[
-                FetchDataframeStep(integration="int", query=parse_sql("select * from tab as t where col1 = 'x'")),
+                FetchDataframeStep(
+                    integration='int',
+                    query=parse_sql("select * from tab as t where col1 = 'x'")
+                ),
                 ApplyPredictorStep(
-                    namespace="mindsdb", dataframe=Result(0), predictor=Identifier("pred", alias=Identifier("m"))
+                    namespace='mindsdb', dataframe=Result(0), predictor=Identifier('pred', alias=Identifier('m'))
                 ),
                 JoinStep(
-                    left=Result(0),
-                    right=Result(1),
-                    query=Join(left=Identifier("tab1"), right=Identifier("tab2"), join_type=JoinType.INNER_JOIN),
+                    left=Result(0), right=Result(1),
+                    query=Join(
+                        left=Identifier('tab1'),
+                        right=Identifier('tab2'),
+                        join_type=JoinType.INNER_JOIN
+                    )
                 ),
                 QueryStep(subquery, from_table=Result(2), strict_where=False),
             ],
         )
-        plan = plan_query(query, integrations=["int"], predictor_namespace="mindsdb", predictor_metadata={"pred": {}})
+        plan = plan_query(query, integrations=['int'], predictor_namespace='mindsdb', predictor_metadata={'pred': {}})
 
         assert plan.steps == expected_plan.steps
 
     def test_no_predictor_error(self):
         query = Select(
-            targets=[Identifier("tab1.column1"), Identifier("pred.predicted")],
-            from_table=Join(left=Identifier("int.tab1"), right=Identifier("pred"), join_type=None, implicit=True),
+            targets=[Identifier('tab1.column1'), Identifier('pred.predicted')],
+            from_table=Join(
+                left=Identifier('int.tab1'),
+                right=Identifier('pred'),
+                join_type=None,
+                implicit=True
+            )
         )
 
         with pytest.raises(PlanningException):
-            plan_query(query, integrations=["int"], predictor_metadata={"pred": {}})
+            plan_query(query, integrations=['int'], predictor_metadata={'pred': {}})
 
     def test_join_predictor_plan_default_namespace_integration(self):
+
         sql = """
             select tab1.column1, pred.predicted
             from tab1, mindsdb.pred
         """
         query = parse_sql(sql)
         expected_plan = QueryPlan(
-            default_namespace="int",
+            default_namespace='int',
             steps=[
                 FetchDataframeStep(
-                    integration="int",
-                    query=Select(targets=[Star()], from_table=Identifier("tab1")),
+                    integration='int',
+                    query=Select(
+                        targets=[Star()],
+                        from_table=Identifier('tab1')
+                    ),
                 ),
-                ApplyPredictorStep(namespace="mindsdb", dataframe=Result(0), predictor=Identifier("pred")),
+                ApplyPredictorStep(namespace='mindsdb', dataframe=Result(0), predictor=Identifier('pred')),
                 JoinStep(
-                    left=Result(0),
-                    right=Result(1),
-                    query=Join(left=Identifier("tab1"), right=Identifier("tab2"), join_type=JoinType.INNER_JOIN),
+                    left=Result(0), right=Result(1),
+                    query=Join(
+                        left=Identifier('tab1'),
+                        right=Identifier('tab2'),
+                        join_type=JoinType.INNER_JOIN
+                    )
                 ),
                 QueryStep(parse_sql("select tab1.column1, pred.predicted"), from_table=Result(2), strict_where=False),
             ],
         )
         plan = plan_query(
-            query,
-            integrations=["int"],
-            predictor_namespace="mindsdb",
-            default_namespace="int",
-            predictor_metadata={"pred": {}},
+            query, integrations=['int'], predictor_namespace='mindsdb', default_namespace='int',
+            predictor_metadata={'pred': {}}
         )
 
         assert plan.steps == expected_plan.steps
 
     def test_join_predictor_plan_default_namespace_predictor(self):
+
         sql = """
                    select tab1.column1, pred.predicted
                    from int.tab1, pred
@@ -234,27 +263,30 @@ class TestPlanJoinPredictor:
         query = parse_sql(sql)
 
         expected_plan = QueryPlan(
-            default_namespace="mindsdb",
+            default_namespace='mindsdb',
             steps=[
                 FetchDataframeStep(
-                    integration="int",
-                    query=Select(targets=[Star()], from_table=Identifier("tab1")),
+                    integration='int',
+                    query=Select(
+                        targets=[Star()],
+                        from_table=Identifier('tab1')
+                    ),
                 ),
-                ApplyPredictorStep(namespace="mindsdb", dataframe=Result(0), predictor=Identifier("pred")),
+                ApplyPredictorStep(namespace='mindsdb', dataframe=Result(0), predictor=Identifier('pred')),
                 JoinStep(
-                    left=Result(0),
-                    right=Result(1),
-                    query=Join(left=Identifier("tab1"), right=Identifier("tab2"), join_type=JoinType.INNER_JOIN),
+                    left=Result(0), right=Result(1),
+                    query=Join(
+                        left=Identifier('tab1'),
+                        right=Identifier('tab2'),
+                        join_type=JoinType.INNER_JOIN
+                    )
                 ),
                 QueryStep(parse_sql("select tab1.column1, pred.predicted"), from_table=Result(2), strict_where=False),
             ],
         )
         plan = plan_query(
-            query,
-            integrations=["int"],
-            predictor_namespace="mindsdb",
-            default_namespace="mindsdb",
-            predictor_metadata={"pred": {}},
+            query, integrations=['int'], predictor_namespace='mindsdb', default_namespace='mindsdb',
+            predictor_metadata={'pred': {}}
         )
 
         for i in range(len(plan.steps)):
@@ -263,7 +295,7 @@ class TestPlanJoinPredictor:
     def test_nested_select(self):
         # for tableau
 
-        sql = """
+        sql = '''
             SELECT time
             FROM (
                select * from int.covid
@@ -271,79 +303,93 @@ class TestPlanJoinPredictor:
                limit 10
             ) `Custom SQL Query`
             limit 1
-         """
+         '''
 
         query = parse_sql(sql)
 
         expected_plan = QueryPlan(
-            default_namespace="mindsdb",
+            default_namespace='mindsdb',
             steps=[
-                FetchDataframeStep(integration="int", query=parse_sql("select * from covid limit 10")),
-                ApplyPredictorStep(namespace="mindsdb", dataframe=Result(0), predictor=Identifier("pred")),
+                FetchDataframeStep(
+                    integration='int',
+                    query=parse_sql('select * from covid limit 10')
+                ),
+                ApplyPredictorStep(namespace='mindsdb', dataframe=Result(0), predictor=Identifier('pred')),
                 JoinStep(
-                    left=Result(0),
-                    right=Result(1),
-                    query=Join(left=Identifier("tab1"), right=Identifier("tab2"), join_type=JoinType.JOIN),
+                    left=Result(0), right=Result(1),
+                    query=Join(
+                        left=Identifier('tab1'),
+                        right=Identifier('tab2'),
+                        join_type=JoinType.JOIN
+                    )
                 ),
                 QueryStep(Select(targets=[Star()], limit=Constant(10)), from_table=Result(2), strict_where=False),
                 SubSelectStep(
-                    dataframe=Result(3), query=parse_sql("SELECT time limit 1"), table_name="Custom SQL Query"
+                    dataframe=Result(3), query=parse_sql('SELECT time limit 1'), table_name='Custom SQL Query'
                 ),
+
             ],
         )
 
         plan = plan_query(
             query,
-            integrations=["int"],
-            predictor_namespace="mindsdb",
-            default_namespace="mindsdb",
-            predictor_metadata={"pred": {}},
+            integrations=['int'],
+            predictor_namespace='mindsdb',
+            default_namespace='mindsdb',
+            predictor_metadata={'pred': {}}
         )
 
         assert plan.steps == expected_plan.steps
 
-        sql = """
+        sql = '''
                  SELECT `time`
                  FROM (
                    select * from int.covid
                    join mindsdb.pred
                  ) `Custom SQL Query`
                 GROUP BY 1
-            """
+            '''
 
         query = parse_sql(sql)
 
         expected_plan = QueryPlan(
-            default_namespace="mindsdb",
+            default_namespace='mindsdb',
             steps=[
-                FetchDataframeStep(integration="int", query=parse_sql("select * from covid")),
-                ApplyPredictorStep(namespace="mindsdb", dataframe=Result(0), predictor=Identifier("pred")),
+                FetchDataframeStep(
+                    integration='int',
+                    query=parse_sql('select * from covid')
+                ),
+                ApplyPredictorStep(namespace='mindsdb', dataframe=Result(0), predictor=Identifier('pred')),
                 JoinStep(
-                    left=Result(0),
-                    right=Result(1),
-                    query=Join(left=Identifier("tab1"), right=Identifier("tab2"), join_type=JoinType.JOIN),
+                    left=Result(0), right=Result(1),
+                    query=Join(
+                        left=Identifier('tab1'),
+                        right=Identifier('tab2'),
+                        join_type=JoinType.JOIN
+                    )
                 ),
                 SubSelectStep(
                     dataframe=Result(2),
-                    query=Select(targets=[Identifier("`time`")], group_by=[Constant(1)]),
-                    table_name="Custom SQL Query",
+                    query=Select(targets=[Identifier('time')], group_by=[Constant(1)]),
+                    table_name='Custom SQL Query'
                 ),
             ],
         )
 
         plan = plan_query(
             query,
-            integrations=["int"],
-            predictor_namespace="mindsdb",
-            default_namespace="mindsdb",
-            predictor_metadata={"pred": {}},
+            integrations=['int'],
+            predictor_namespace='mindsdb',
+            default_namespace='mindsdb',
+            predictor_metadata={'pred': {}}
         )
 
         assert plan.steps == expected_plan.steps
 
     def test_subselect(self):
+
         # nested limit is greater
-        sql = """
+        sql = '''
                SELECT *
                FROM (
                   select col from int.covid
@@ -351,36 +397,42 @@ class TestPlanJoinPredictor:
                ) as t
                join mindsdb.pred
                limit 5
-            """
+            '''
 
         query = parse_sql(sql)
 
         expected_plan = QueryPlan(
-            default_namespace="mindsdb",
+            default_namespace='mindsdb',
             steps=[
-                FetchDataframeStep(integration="int", query=parse_sql("select col as col from covid limit 10")),
-                SubSelectStep(query=Select(targets=[Star()]), dataframe=Result(0), table_name="t"),
-                ApplyPredictorStep(namespace="mindsdb", dataframe=Result(1), predictor=Identifier("pred")),
-                JoinStep(
-                    left=Result(1),
-                    right=Result(2),
-                    query=Join(left=Identifier("tab1"), right=Identifier("tab2"), join_type=JoinType.JOIN),
+                FetchDataframeStep(
+                    integration='int',
+                    query=parse_sql('select col as col from covid limit 10')
                 ),
-                QueryStep(Select(targets=[Star()], limit=Constant(5)), from_table=Result(3), strict_where=False),
+                SubSelectStep(query=Select(targets=[Star()]), dataframe=Result(0), table_name='t'),
+                ApplyPredictorStep(namespace='mindsdb', dataframe=Result(1), predictor=Identifier('pred')),
+                JoinStep(
+                    left=Result(1), right=Result(2),
+                    query=Join(
+                        left=Identifier('tab1'),
+                        right=Identifier('tab2'),
+                        join_type=JoinType.JOIN
+                    )
+                ),
+                QueryStep(Select(targets=[Star()], limit=Constant(5)), from_table=Result(3), strict_where=False)
             ],
         )
 
         plan = plan_query(
             query,
-            integrations=["int"],
-            predictor_namespace="mindsdb",
-            default_namespace="mindsdb",
-            predictor_metadata={"pred": {}},
+            integrations=['int'],
+            predictor_namespace='mindsdb',
+            default_namespace='mindsdb',
+            predictor_metadata={'pred': {}}
         )
         assert plan.steps == expected_plan.steps
 
         # only nested select with limit
-        sql = """
+        sql = '''
                SELECT *
                FROM (
                   select * from int.covid
@@ -388,106 +440,129 @@ class TestPlanJoinPredictor:
                   limit 5
                ) as t
                join mindsdb.pred
-            """
+            '''
 
         query = parse_sql(sql)
 
         expected_plan = QueryPlan(
-            default_namespace="mindsdb",
+            default_namespace='mindsdb',
             steps=[
-                FetchDataframeStep(integration="int", query=parse_sql("select * from covid join info limit 5")),
-                SubSelectStep(query=Select(targets=[Star()]), dataframe=Result(0), table_name="t"),
-                ApplyPredictorStep(namespace="mindsdb", dataframe=Result(1), predictor=Identifier("pred")),
+                FetchDataframeStep(
+                    integration='int',
+                    query=parse_sql('select * from covid join info limit 5')
+                ),
+                SubSelectStep(query=Select(targets=[Star()]), dataframe=Result(0), table_name='t'),
+                ApplyPredictorStep(namespace='mindsdb', dataframe=Result(1), predictor=Identifier('pred')),
                 JoinStep(
-                    left=Result(1),
-                    right=Result(2),
-                    query=Join(left=Identifier("tab1"), right=Identifier("tab2"), join_type=JoinType.JOIN),
+                    left=Result(1), right=Result(2),
+                    query=Join(
+                        left=Identifier('tab1'),
+                        right=Identifier('tab2'),
+                        join_type=JoinType.JOIN
+                    )
                 ),
             ],
         )
 
         plan = plan_query(
             query,
-            integrations=["int"],
-            predictor_namespace="mindsdb",
-            default_namespace="mindsdb",
-            predictor_metadata={"pred": {}},
+            integrations=['int'],
+            predictor_namespace='mindsdb',
+            default_namespace='mindsdb',
+            predictor_metadata={'pred': {}}
         )
         assert plan.steps == expected_plan.steps
 
 
 class TestPredictorWithUsing:
     def test_using_join(self):
-        sql = """
+
+        sql = '''
             select * from int.tab1
             join mindsdb.pred
             using a=1
-        """
+        '''
 
         query = parse_sql(sql)
         expected_plan = QueryPlan(
             steps=[
-                FetchDataframeStep(integration="int", query=parse_sql("select * from tab1")),
+                FetchDataframeStep(
+                    integration='int',
+                    query=parse_sql('select * from tab1')
+                ),
                 ApplyPredictorStep(
-                    namespace="mindsdb", dataframe=Result(0), predictor=Identifier("pred"), params={"a": 1}
+                    namespace='mindsdb', dataframe=Result(0),
+                    predictor=Identifier('pred'), params={'a': 1}
                 ),
                 JoinStep(
-                    left=Result(0),
-                    right=Result(1),
-                    query=Join(left=Identifier("tab1"), right=Identifier("tab2"), join_type=JoinType.JOIN),
+                    left=Result(0), right=Result(1),
+                    query=Join(
+                        left=Identifier('tab1'),
+                        right=Identifier('tab2'),
+                        join_type=JoinType.JOIN
+                    )
                 ),
                 ProjectStep(dataframe=Result(2), columns=[Star()]),
             ],
         )
-        plan = plan_query(query, integrations=["int"], predictor_namespace="mindsdb", predictor_metadata={"pred": {}})
+        plan = plan_query(query, integrations=['int'], predictor_namespace='mindsdb', predictor_metadata={'pred': {}})
 
         for i in range(len(plan.steps)):
             assert plan.steps[i] == expected_plan.steps[i]
 
         # with native query
 
-        sql = """
+        sql = '''
                     select * from int (select * from tab1) t
                     join mindsdb.pred
                     using a=1
-                """
+                '''
 
         query = parse_sql(sql)
         expected_plan = QueryPlan(
             steps=[
-                FetchDataframeStep(integration="int", raw_query="select * from tab1"),
-                SubSelectStep(step_num=1, query=Select(targets=[Star()]), dataframe=Result(0), table_name="t"),
+                FetchDataframeStep(integration='int', raw_query='select * from tab1'),
+                SubSelectStep(
+                    step_num=1, query=Select(targets=[Star()]),
+                    dataframe=Result(0), table_name='t'
+                ),
                 ApplyPredictorStep(
-                    namespace="mindsdb", dataframe=Result(1), predictor=Identifier("pred"), params={"a": 1}
+                    namespace='mindsdb', dataframe=Result(1),
+                    predictor=Identifier('pred'), params={'a': 1}
                 ),
                 JoinStep(
-                    left=Result(1),
-                    right=Result(2),
-                    query=Join(left=Identifier("tab1"), right=Identifier("tab2"), join_type=JoinType.JOIN),
+                    left=Result(1), right=Result(2),
+                    query=Join(
+                        left=Identifier('tab1'),
+                        right=Identifier('tab2'),
+                        join_type=JoinType.JOIN
+                    )
                 ),
                 ProjectStep(dataframe=Result(3), columns=[Star()]),
             ],
         )
-        plan = plan_query(query, integrations=["int"], predictor_namespace="mindsdb", predictor_metadata={"pred": {}})
+        plan = plan_query(query, integrations=['int'], predictor_namespace='mindsdb', predictor_metadata={'pred': {}})
 
         for i in range(len(plan.steps)):
             assert plan.steps[i] == expected_plan.steps[i]
 
     def test_using_one_line(self):
-        sql = """
+
+        sql = '''
             select * from mindsdb.pred where x=2 using a=1
-        """
+        '''
 
         query = parse_sql(sql)
         expected_plan = QueryPlan(
             steps=[
                 ApplyPredictorRowStep(
-                    namespace="mindsdb", predictor=Identifier("pred"), row_dict={"x": 2}, params={"a": 1}
+                    namespace='mindsdb', predictor=Identifier('pred'),
+                    row_dict={'x': 2}, params={'a': 1}
                 ),
                 ProjectStep(dataframe=Result(0), columns=[Star()]),
             ],
         )
-        plan = plan_query(query, integrations=["int"], predictor_namespace="mindsdb", predictor_metadata={"pred": {}})
+        plan = plan_query(query, integrations=['int'], predictor_namespace='mindsdb', predictor_metadata={'pred': {}})
 
         for i in range(len(plan.steps)):
             assert plan.steps[i] == expected_plan.steps[i]
@@ -495,33 +570,39 @@ class TestPredictorWithUsing:
 
 class TestPredictorVersion:
     def test_using_join(self):
-        sql = """
+
+        sql = '''
             select * from int.tab1
             join proj.pred.1
             using a=1
-        """
+        '''
 
         query = parse_sql(sql)
         expected_plan = QueryPlan(
             steps=[
-                FetchDataframeStep(integration="int", query=parse_sql("select * from tab1")),
+                FetchDataframeStep(
+                    integration='int',
+                    query=parse_sql('select * from tab1')
+                ),
                 ApplyPredictorStep(
-                    namespace="proj", dataframe=Result(0), predictor=Identifier("pred.1"), params={"a": 1}
+                    namespace='proj', dataframe=Result(0),
+                    predictor=Identifier('pred.1'), params={'a': 1}
                 ),
                 JoinStep(
-                    left=Result(0),
-                    right=Result(1),
-                    query=Join(left=Identifier("tab1"), right=Identifier("tab2"), join_type=JoinType.JOIN),
+                    left=Result(0), right=Result(1),
+                    query=Join(
+                        left=Identifier('tab1'),
+                        right=Identifier('tab2'),
+                        join_type=JoinType.JOIN
+                    )
                 ),
                 ProjectStep(dataframe=Result(2), columns=[Star()]),
             ],
         )
 
         plan = plan_query(
-            query,
-            integrations=["int"],
-            predictor_namespace="mindsdb",
-            predictor_metadata=[{"name": "pred", "integration_name": "proj"}],
+            query, integrations=['int'], predictor_namespace='mindsdb',
+            predictor_metadata=[{'name': 'pred', 'integration_name': 'proj'}]
         )
 
         for i in range(len(plan.steps)):
@@ -529,30 +610,28 @@ class TestPredictorVersion:
 
         # default namespace
 
-        sql = """
+        sql = '''
             select * from int.tab1
             join pred.1
             using a=1
-        """
+        '''
         query = parse_sql(sql)
 
         plan = plan_query(
-            query,
-            integrations=["int"],
-            predictor_namespace="mindsdb",
-            default_namespace="proj",
-            predictor_metadata=[{"name": "pred", "integration_name": "proj"}],
+            query, integrations=['int'], predictor_namespace='mindsdb',
+            default_namespace='proj', predictor_metadata=[{'name': 'pred', 'integration_name': 'proj'}]
         )
 
         for i in range(len(plan.steps)):
             assert plan.steps[i] == expected_plan.steps[i]
 
     def test_where_using(self):
-        sql = """
+
+        sql = '''
             select * from int.tab1 a
             join proj.pred.1 p
             where a.x=1 and p.x=1 and p.ttt=2 and a.y=3 and p.y=''
-        """
+        '''
 
         subquery = parse_sql(
             """
@@ -565,50 +644,53 @@ class TestPredictorVersion:
         query = parse_sql(sql)
         expected_plan = QueryPlan(
             steps=[
-                FetchDataframeStep(integration="int", query=parse_sql("select * from tab1 as a where x=1 and y=3")),
+                FetchDataframeStep(
+                    integration='int',
+                    query=parse_sql('select * from tab1 as a where x=1 and y=3')
+                ),
                 ApplyPredictorStep(
-                    namespace="proj",
-                    dataframe=Result(0),
-                    predictor=Identifier("pred.1", alias=Identifier("p")),
-                    row_dict={"x": 1, "y": ""},
+                    namespace='proj', dataframe=Result(0),
+                    predictor=Identifier('pred.1', alias=Identifier('p')),
+                    row_dict={'x': 1, 'y': ''}
                 ),
                 JoinStep(
-                    left=Result(0),
-                    right=Result(1),
-                    query=Join(left=Identifier("tab1"), right=Identifier("tab2"), join_type=JoinType.JOIN),
+                    left=Result(0), right=Result(1),
+                    query=Join(
+                        left=Identifier('tab1'),
+                        right=Identifier('tab2'),
+                        join_type=JoinType.JOIN
+                    )
                 ),
-                QueryStep(subquery, from_table=Result(2), strict_where=False),
+                QueryStep(subquery, from_table=Result(2), strict_where=False)
             ],
         )
 
         plan = plan_query(
-            query,
-            integrations=["int"],
-            predictor_namespace="mindsdb",
-            predictor_metadata=[{"name": "pred", "integration_name": "proj", "to_predict": ["ttt"]}],
+            query, integrations=['int'], predictor_namespace='mindsdb',
+            predictor_metadata=[{'name': 'pred', 'integration_name': 'proj', 'to_predict': ['ttt']}]
         )
 
         assert plan.steps == expected_plan.steps
 
     def test_using_one_line(self):
-        sql = """
+
+        sql = '''
             select * from proj.pred.1 where x=2 using a=1
-        """
+        '''
 
         query = parse_sql(sql)
         expected_plan = QueryPlan(
             steps=[
                 ApplyPredictorRowStep(
-                    namespace="proj", predictor=Identifier("pred.1"), row_dict={"x": 2}, params={"a": 1}
+                    namespace='proj', predictor=Identifier('pred.1'),
+                    row_dict={'x': 2}, params={'a': 1}
                 ),
                 ProjectStep(dataframe=Result(0), columns=[Star()]),
             ],
         )
         plan = plan_query(
-            query,
-            integrations=["int"],
-            predictor_namespace="mindsdb",
-            predictor_metadata=[{"name": "pred", "integration_name": "proj"}],
+            query, integrations=['int'], predictor_namespace='mindsdb',
+            predictor_metadata=[{'name': 'pred', 'integration_name': 'proj'}]
         )
 
         for i in range(len(plan.steps)):
@@ -616,17 +698,14 @@ class TestPredictorVersion:
 
         # default namespace
 
-        sql = """
+        sql = '''
              select * from pred.1 where x=2 using a=1
-        """
+        '''
         query = parse_sql(sql)
 
         plan = plan_query(
-            query,
-            integrations=["int"],
-            predictor_namespace="mindsdb",
-            default_namespace="proj",
-            predictor_metadata=[{"name": "pred", "integration_name": "proj"}],
+            query, integrations=['int'], predictor_namespace='mindsdb',
+            default_namespace='proj', predictor_metadata=[{'name': 'pred', 'integration_name': 'proj'}]
         )
 
         for i in range(len(plan.steps)):
@@ -635,11 +714,11 @@ class TestPredictorVersion:
 
 class TestPredictorParams:
     def test_model_param(self):
-        sql = """
+        sql = '''
             select * from int.tab1 t
             join mindsdb.pred m
             where m.a=1 and t.b=2
-        """
+        '''
 
         query = parse_sql(sql)
 
@@ -653,32 +732,36 @@ class TestPredictorParams:
 
         expected_plan = QueryPlan(
             steps=[
-                FetchDataframeStep(integration="int", query=parse_sql("select * from tab1 as t where b=2")),
+                FetchDataframeStep(
+                    integration='int',
+                    query=parse_sql('select * from tab1 as t where b=2')
+                ),
                 ApplyPredictorStep(
-                    namespace="mindsdb",
-                    dataframe=Result(0),
-                    predictor=Identifier("pred", alias=Identifier("m")),
-                    row_dict={"a": 1},
+                    namespace='mindsdb', dataframe=Result(0),
+                    predictor=Identifier('pred', alias=Identifier('m')), row_dict={'a': 1}
                 ),
                 JoinStep(
-                    left=Result(0),
-                    right=Result(1),
-                    query=Join(left=Identifier("tab1"), right=Identifier("tab2"), join_type=JoinType.JOIN),
+                    left=Result(0), right=Result(1),
+                    query=Join(
+                        left=Identifier('tab1'),
+                        right=Identifier('tab2'),
+                        join_type=JoinType.JOIN
+                    )
                 ),
                 QueryStep(subquery, from_table=Result(2), strict_where=False),
             ],
         )
-        plan = plan_query(query, integrations=["int"], predictor_namespace="mindsdb", predictor_metadata={"pred": {}})
+        plan = plan_query(query, integrations=['int'], predictor_namespace='mindsdb', predictor_metadata={'pred': {}})
 
         assert plan.steps == expected_plan.steps
 
         # 3 table
-        sql = """
+        sql = '''
             select * from int.tab1 t
             join int.tab2 t2
             join mindsdb.pred m
             where m.a=1
-        """
+        '''
 
         subquery = parse_sql(
             """
@@ -691,42 +774,52 @@ class TestPredictorParams:
         query = parse_sql(sql)
         expected_plan = QueryPlan(
             steps=[
-                FetchDataframeStep(integration="int", query=parse_sql("select * from tab1 as t")),
-                FetchDataframeStep(integration="int", query=parse_sql("select * from tab2 as t2")),
+                FetchDataframeStep(
+                    integration='int',
+                    query=parse_sql('select * from tab1 as t')
+                ),
+                FetchDataframeStep(
+                    integration='int',
+                    query=parse_sql('select * from tab2 as t2')
+                ),
                 JoinStep(
-                    left=Result(0),
-                    right=Result(1),
-                    query=Join(left=Identifier("tab1"), right=Identifier("tab2"), join_type=JoinType.JOIN),
+                    left=Result(0), right=Result(1),
+                    query=Join(
+                        left=Identifier('tab1'),
+                        right=Identifier('tab2'),
+                        join_type=JoinType.JOIN
+                    )
                 ),
                 ApplyPredictorStep(
-                    namespace="mindsdb",
-                    dataframe=Result(2),
-                    predictor=Identifier("pred", alias=Identifier("m")),
-                    row_dict={"a": 1},
+                    namespace='mindsdb', dataframe=Result(2),
+                    predictor=Identifier('pred', alias=Identifier('m')), row_dict={'a': 1}
                 ),
                 JoinStep(
-                    left=Result(2),
-                    right=Result(3),
-                    query=Join(left=Identifier("tab1"), right=Identifier("tab2"), join_type=JoinType.JOIN),
+                    left=Result(2), right=Result(3),
+                    query=Join(
+                        left=Identifier('tab1'),
+                        right=Identifier('tab2'),
+                        join_type=JoinType.JOIN
+                    )
                 ),
                 QueryStep(subquery, from_table=Result(4), strict_where=False),
             ],
         )
-        plan = plan_query(query, integrations=["int"], predictor_namespace="mindsdb", predictor_metadata={"pred": {}})
+        plan = plan_query(query, integrations=['int'], predictor_namespace='mindsdb', predictor_metadata={'pred': {}})
 
         assert plan.steps == expected_plan.steps
 
     def test_complex_subselect(self):
-        sql = """
+        sql = '''
                 select t2.x, m.id, (select a from int.tab0 where x=0) from int.tab1 t1
                 join int.tab2 t2 on t1.x = t2.a
                 join mindsdb.pred m
                 where m.a=(select a from int.tab3 where x=3)
                   and t2.x=(select a from int.tab4 where x=4)
                   and t1.b=1 and t2.b=2 and t1.a = t2.a
-        """
+        '''
 
-        q_table2 = parse_sql("select * from tab2 as t2 where x=0 and b=2 AND a IN 1")
+        q_table2 = parse_sql('select * from tab2 as t2 where x=0 and b=2 AND a IN 1')
         q_table2.where.args[0].args[0].args[1] = Parameter(Result(2))
         q_table2.where.args[1].args[1] = Parameter(Result(4))
 
@@ -747,44 +840,56 @@ class TestPredictorParams:
         expected_plan = QueryPlan(
             steps=[
                 # nested queries
-                FetchDataframeStep(integration="int", query=parse_sql("select a as a from tab0 where x=0")),
-                FetchDataframeStep(integration="int", query=parse_sql("select a as a from tab3 where x=3")),
-                FetchDataframeStep(integration="int", query=parse_sql("select a as a from tab4 where x=4")),
+                FetchDataframeStep(
+                    integration='int',
+                    query=parse_sql('select a as a from tab0 where x=0')
+                ),
+                FetchDataframeStep(
+                    integration='int',
+                    query=parse_sql('select a as a from tab3 where x=3')
+                ),
+                FetchDataframeStep(
+                    integration='int',
+                    query=parse_sql('select a as a from tab4 where x=4')
+                ),
                 # tables
-                FetchDataframeStep(integration="int", query=parse_sql("select * from tab1 as t1 where b=1")),
-                SubSelectStep(dataframe=Result(3), query=Select(targets=[Identifier("x")], distinct=True)),
-                FetchDataframeStep(integration="int", query=q_table2),
+                FetchDataframeStep(
+                    integration='int',
+                    query=parse_sql('select * from tab1 as t1 where b=1')
+                ),
+                SubSelectStep(dataframe=Result(3), query=Select(targets=[Identifier('x')], distinct=True)),
+                FetchDataframeStep(integration='int', query=q_table2),
                 JoinStep(
-                    left=Result(3),
-                    right=Result(5),
+                    left=Result(3), right=Result(5),
                     query=Join(
-                        left=Identifier("tab1"),
-                        right=Identifier("tab2"),
+                        left=Identifier('tab1'),
+                        right=Identifier('tab2'),
                         join_type=JoinType.JOIN,
-                        condition=BinaryOperation(op="=", args=[Identifier("t1.x"), Identifier("t2.a")]),
-                    ),
+                        condition=BinaryOperation(op='=', args=[Identifier('t1.x'), Identifier('t2.a')])
+                    )
                 ),
                 # model
                 ApplyPredictorStep(
-                    namespace="mindsdb",
-                    dataframe=Result(6),
-                    predictor=Identifier("pred", alias=Identifier("m")),
-                    row_dict={"a": Result(1)},
+                    namespace='mindsdb', dataframe=Result(6),
+                    predictor=Identifier('pred', alias=Identifier('m')), row_dict={'a': Result(1)}
                 ),
                 JoinStep(
-                    left=Result(6),
-                    right=Result(7),
-                    query=Join(left=Identifier("tab1"), right=Identifier("tab2"), join_type=JoinType.JOIN),
+                    left=Result(6), right=Result(7),
+                    query=Join(
+                        left=Identifier('tab1'),
+                        right=Identifier('tab2'),
+                        join_type=JoinType.JOIN
+                    )
                 ),
                 QueryStep(subquery, from_table=Result(8), strict_where=False),
             ],
         )
-        plan = plan_query(query, integrations=["int"], predictor_namespace="mindsdb", predictor_metadata={"pred": {}})
+        plan = plan_query(query, integrations=['int'], predictor_namespace='mindsdb', predictor_metadata={'pred': {}})
 
         assert plan.steps == expected_plan.steps
 
     def test_model_join_model(self):
-        sql = """
+        sql = '''
                      select * from int.tab1 t
                       join mindsdb.pred m
                       join mindsdb.pred m2
@@ -792,7 +897,7 @@ class TestPredictorParams:
                     using m.param1 = 'a',
                           m2.param2 = 'b',
                           param3 = 'c'
-              """
+              '''
 
         subquery = parse_sql(
             """
@@ -805,42 +910,48 @@ class TestPredictorParams:
         query = parse_sql(sql)
         expected_plan = QueryPlan(
             steps=[
-                FetchDataframeStep(integration="int", query=parse_sql("select * from tab1 as t")),
-                ApplyPredictorStep(
-                    namespace="mindsdb",
-                    dataframe=Result(0),
-                    predictor=Identifier("pred", alias=Identifier("m")),
-                    row_dict={"a": 2},
-                    params={"param1": "a", "param3": "c"},
-                ),
-                JoinStep(
-                    left=Result(0),
-                    right=Result(1),
-                    query=Join(left=Identifier("tab1"), right=Identifier("tab2"), join_type=JoinType.JOIN),
+                FetchDataframeStep(
+                    integration='int',
+                    query=parse_sql('select * from tab1 as t')
                 ),
                 ApplyPredictorStep(
-                    namespace="mindsdb",
-                    dataframe=Result(2),
-                    predictor=Identifier("pred", alias=Identifier("m2")),
-                    params={"param2": "b", "param3": "c"},
+                    namespace='mindsdb', dataframe=Result(0),
+                    predictor=Identifier('pred', alias=Identifier('m')),
+                    row_dict={'a': 2}, params={'param1': 'a', 'param3': 'c'}
                 ),
                 JoinStep(
-                    left=Result(2),
-                    right=Result(3),
-                    query=Join(left=Identifier("tab1"), right=Identifier("tab2"), join_type=JoinType.JOIN),
+                    left=Result(0), right=Result(1),
+                    query=Join(
+                        left=Identifier('tab1'),
+                        right=Identifier('tab2'),
+                        join_type=JoinType.JOIN
+                    )
+                ),
+                ApplyPredictorStep(
+                    namespace='mindsdb', dataframe=Result(2),
+                    predictor=Identifier('pred', alias=Identifier('m2')),
+                    params={'param2': 'b', 'param3': 'c'}
+                ),
+                JoinStep(
+                    left=Result(2), right=Result(3),
+                    query=Join(
+                        left=Identifier('tab1'),
+                        right=Identifier('tab2'),
+                        join_type=JoinType.JOIN
+                    )
                 ),
                 QueryStep(subquery, from_table=Result(4), strict_where=False),
             ],
         )
-        plan = plan_query(query, integrations=["int"], predictor_namespace="mindsdb", predictor_metadata={"pred": {}})
+        plan = plan_query(query, integrations=['int'], predictor_namespace='mindsdb', predictor_metadata={'pred': {}})
 
         assert plan.steps == expected_plan.steps
 
     def test_model_column_map(self):
-        sql = """
+        sql = '''
             select * from int.tab1 a
             join proj.pred.1 p on a.data1 = p.data2 and p.x = a.y
-        """
+        '''
 
         # subquery = parse_sql("""
         #     select * from x
@@ -851,88 +962,85 @@ class TestPredictorParams:
         query = parse_sql(sql)
         expected_plan = QueryPlan(
             steps=[
-                FetchDataframeStep(integration="int", query=parse_sql("select * from tab1 as a")),
+                FetchDataframeStep(
+                    integration='int',
+                    query=parse_sql('select * from tab1 as a')
+                ),
                 ApplyPredictorStep(
-                    namespace="proj",
-                    dataframe=Result(0),
-                    predictor=Identifier("pred.1", alias=Identifier("p")),
-                    columns_map={"data2": Identifier("a.data1"), "x": Identifier("a.y")},
+                    namespace='proj', dataframe=Result(0),
+                    predictor=Identifier('pred.1', alias=Identifier('p')),
+                    columns_map={'data2': Identifier('a.data1'), 'x': Identifier('a.y')}
                 ),
                 JoinStep(
-                    left=Result(0),
-                    right=Result(1),
+                    left=Result(0), right=Result(1),
                     query=Join(
-                        left=Identifier("tab1"),
-                        right=Identifier("tab2"),
+                        left=Identifier('tab1'),
+                        right=Identifier('tab2'),
                         join_type=JoinType.JOIN,
                         condition=BinaryOperation(
-                            "and",
-                            args=[
-                                BinaryOperation("=", args=[Constant(0), Constant(0)]),
-                                BinaryOperation("=", args=[Constant(0), Constant(0)]),
-                            ],
-                        ),
+                            'and', args=[
+                                BinaryOperation('=', args=[Constant(0), Constant(0)]),
+                                BinaryOperation('=', args=[Constant(0), Constant(0)])
+                            ]
+                        )
                     ),
                 ),
             ],
         )
 
         plan = plan_query(
-            query,
-            integrations=["int"],
-            predictor_namespace="mindsdb",
-            predictor_metadata=[{"name": "pred", "integration_name": "proj", "to_predict": ["ttt"]}],
+            query, integrations=['int'], predictor_namespace='mindsdb',
+            predictor_metadata=[{'name': 'pred', 'integration_name': 'proj', 'to_predict': ['ttt']}]
         )
 
         assert plan.steps == expected_plan.steps
 
     def test_partition(self):
-        sql = """
+        sql = '''
             select p1.* from int.tab1 a
             join proj.pred1 p1
             join proj.pred2 p2
             using partition_size=1000
-        """
+        '''
 
         query = parse_sql(sql)
 
         expected_plan = QueryPlan(
             steps=[
-                FetchDataframeStep(integration="int", query=parse_sql("select * from tab1 as a")),
+                FetchDataframeStep(
+                    integration='int',
+                    query=parse_sql('select * from tab1 as a')
+                ),
                 MapReduceStep(
                     values=Result(0),
                     step=[
                         ApplyPredictorStep(
-                            step_num="1_0",
-                            namespace="proj",
-                            dataframe=Result(0),
-                            params={},
-                            predictor=Identifier("pred1", alias=Identifier("p1")),
+                            step_num='1_0',
+                            namespace='proj', dataframe=Result(0), params={},
+                            predictor=Identifier('pred1', alias=Identifier('p1')),
                         ),
                         JoinStep(
-                            step_num="1_1",
+                            step_num='1_1',
                             left=Result(0),
-                            right=Result("1_0"),
+                            right=Result('1_0'),
                             query=Join(
-                                left=Identifier("tab1"),
-                                right=Identifier("tab2"),
+                                left=Identifier('tab1'),
+                                right=Identifier('tab2'),
                                 join_type=JoinType.JOIN,
                             ),
                         ),
                         ApplyPredictorStep(
-                            step_num="1_2",
-                            namespace="proj",
-                            dataframe=Result("1_1"),
-                            params={},
-                            predictor=Identifier("pred2", alias=Identifier("p2")),
+                            step_num='1_2',
+                            namespace='proj', dataframe=Result('1_1'), params={},
+                            predictor=Identifier('pred2', alias=Identifier('p2')),
                         ),
                         JoinStep(
-                            step_num="1_3",
-                            left=Result("1_1"),
-                            right=Result("1_2"),
+                            step_num='1_3',
+                            left=Result('1_1'),
+                            right=Result('1_2'),
                             query=Join(
-                                left=Identifier("tab1"),
-                                right=Identifier("tab2"),
+                                left=Identifier('tab1'),
+                                right=Identifier('tab2'),
                                 join_type=JoinType.JOIN,
                             ),
                         ),
@@ -944,13 +1052,11 @@ class TestPredictorParams:
         )
 
         plan = plan_query(
-            query,
-            integrations=["int"],
-            predictor_namespace="mindsdb",
+            query, integrations=['int'], predictor_namespace='mindsdb',
             predictor_metadata=[
-                {"name": "pred1", "integration_name": "proj", "to_predict": ["ttt"]},
-                {"name": "pred2", "integration_name": "proj", "to_predict": ["ttt"]},
-            ],
+                {'name': 'pred1', 'integration_name': 'proj', 'to_predict': ['ttt']},
+                {'name': 'pred2', 'integration_name': 'proj', 'to_predict': ['ttt']}
+            ]
         )
 
         assert plan.steps == expected_plan.steps

@@ -15,7 +15,7 @@ from mindsdb_sql_parser import parse_sql
 
 from mindsdb.integrations.libs.keyword_search_base import KeywordSearchBase
 from mindsdb.integrations.utilities.query_traversal import query_traversal
-from mindsdb.interfaces.knowledge_base.snowflake_integration import snowflake_integration
+from mindsdb.interfaces.knowledge_base import snowflake_integration
 
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.libs.vectordatabase_handler import (

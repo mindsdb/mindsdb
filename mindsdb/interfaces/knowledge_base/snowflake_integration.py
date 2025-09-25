@@ -15,5 +15,7 @@ def embedding(model_name: str, project_id: str, pat_token: str, texts: list[str]
     response_json = response.json()
     for elem in response_json.get("data", []):
         emb = elem.get("embedding")
+        if not emb:
+            raise
         embeddings.append(emb)
     return embeddings

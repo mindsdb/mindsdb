@@ -172,9 +172,6 @@ class IntegrationController:
         )
         handler_meta = self.get_handler_meta(engine)
 
-        if not name.islower():
-            raise ValueError(f"The name must be in lower case: {name}")
-
         accept_connection_args = handler_meta.get("connection_args")
         logger.debug("%s: accept_connection_args - %s", self.__class__.__name__, accept_connection_args)
 

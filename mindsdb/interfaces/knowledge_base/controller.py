@@ -1028,8 +1028,6 @@ class KnowledgeBaseController:
         :param is_sparse: Whether to use sparse vectors for embeddings
         :param vector_size: Optional size specification for vectors, required when is_sparse=True
         """
-        if not name.islower():
-            raise ValueError(f"The name must be in lower case: {name}")
 
         # fill variables
         params = variables_controller.fill_parameters(params)
@@ -1068,8 +1066,6 @@ class KnowledgeBaseController:
         project = self.session.database_controller.get_project(project_name)
         project_id = project.id
 
-        # not difference between cases in sql
-        name = name.lower()
         # check if knowledge base already exists
         kb = self.get(name, project_id)
         if kb is not None:

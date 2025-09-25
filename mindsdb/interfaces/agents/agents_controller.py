@@ -422,8 +422,6 @@ class AgentsController:
             raise ValueError("It is forbidden to change properties of the demo object")
 
         if name is not None and name != agent_name:
-            if not name.islower():
-                raise ValueError(f"The name must be in lower case: {name}")
             # Check to see if updated name already exists
             agent_with_new_name = self.get_agent(name, project_name=project_name)
             if agent_with_new_name is not None:

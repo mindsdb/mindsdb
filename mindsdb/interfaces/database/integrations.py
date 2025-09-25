@@ -161,7 +161,7 @@ class IntegrationController:
         db.session.commit()
         return integration_record.id
 
-    def add(self, name: str, engine, connection_args):
+    def add(self, name, engine, connection_args):
         logger.debug(
             "%s: add method calling name=%s, engine=%s, connection_args=%s, company_id=%s",
             self.__class__.__name__,
@@ -171,9 +171,6 @@ class IntegrationController:
             ctx.company_id,
         )
         handler_meta = self.get_handler_meta(engine)
-
-        if not name.islower():
-            raise ValueError(f"The name must be in lower case: {name}")
 
         accept_connection_args = handler_meta.get("connection_args")
         logger.debug("%s: accept_connection_args - %s", self.__class__.__name__, accept_connection_args)
@@ -213,32 +210,20 @@ class IntegrationController:
         integration_record.data = data
         db.session.commit()
 
-    def delete(self, name: str, strict_case: bool = False) -> None:
-        """Delete an integration by name.
-
-        Args:
-            name (str): The name of the integration to delete.
-            strict_case (bool, optional): If True, the integration name is case-sensitive. Defaults to False.
-
-        Raises:
-            Exception: If the integration cannot be deleted (system, permanent, demo, in use, or has active models).
-
-        Returns:
-            None
-        """
-        if name == "files":
+    def delete(self, name):
+        if name in ("files", "lightwood"):
             raise Exception("Unable to drop: is system database")
 
         self.handlers_cache.delete(name)
 
         # check permanent integration
-        if name.lower() in self.handler_modules:
+        if name in self.handler_modules:
             handler = self.handler_modules[name]
 
             if getattr(handler, "permanent", False) is True:
                 raise Exception("Unable to drop permanent integration")
 
-        integration_record = self._get_integration_record(name, case_sensitive=strict_case)
+        integration_record = self._get_integration_record(name)
         if isinstance(integration_record.data, dict) and integration_record.data.get("is_demo") is True:
             raise Exception("Unable to drop demo object")
 

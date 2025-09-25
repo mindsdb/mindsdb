@@ -459,8 +459,8 @@ class Config:
         """Merge multiple configs to one."""
         new_config = deepcopy(self._default_config)
         _merge_configs(new_config, self._user_config)
-        _merge_configs(new_config, self._auto_config or {})
-        _merge_configs(new_config, self._env_config or {})
+        _merge_configs(new_config, self._auto_config)
+        _merge_configs(new_config, self._env_config)
 
         # Apply command-line arguments for A2A
         a2a_config = {}

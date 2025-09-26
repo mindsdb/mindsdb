@@ -33,9 +33,6 @@ services:
     ports:
       - '47334:47334'
       - '47335:47335'
-      - '47336:47336'
-      - '47337:47337'
-      - '47338:47338'  # A2A server port
     environment:
       MINDSDB_DB_CON: "postgresql://postgres:postgres@postgres/mindsdb"
       MINDSDB_DOCKER_ENV: "True"
@@ -43,9 +40,7 @@ services:
       FLASK_DEBUG: 1  # This will make sure http requests are logged regardless of log level
       SENTRY_IO_DSN: ""
       SENTRY_IO_ENVIRONMENT: "local"
-      MINDSDB_APIS: "http,a2a,mcp"  # Explicitly set the APIs to enable
-      MINDSDB_A2A_HOST: "0.0.0.0"   # Force A2A to bind to all interfaces
-      MINDSDB_A2A_PORT: "47338"     # Force A2A to use port 47338
+      #MINDSDB_APIS: "http"  # Explicitly set the APIs to enable
       # SENTRY_IO_FORCE_RUN: "true" # Uncomment me to force-start sentry on local development. Good for profiling, but may annoy other devs on sentry.io with the "noise"
       # MINDSDB_LOG_LEVEL: "DEBUG"
       # OPENAI_API_KEY: "..."

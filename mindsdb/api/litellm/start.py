@@ -24,12 +24,12 @@ async def start_async(verbose=False):
     project_name = config.cmd_args.project or "mindsdb"
 
     # Get MCP server connection details
-    mcp_host = config.get('api', {}).get('mcp', {}).get('host', '127.0.0.1')
-    mcp_port = int(config.get('api', {}).get('mcp', {}).get('port', 47337))
+    mcp_host = "127.0.0.1"
+    mcp_port = int(config.get("api", {}).get("http", {}).get("port", 47334))
 
     # Get LiteLLM server settings
-    litellm_host = config.get('api', {}).get('litellm', {}).get('host', '0.0.0.0')
-    litellm_port = int(config.get('api', {}).get('litellm', {}).get('port', 8000))
+    litellm_host = config.get("api", {}).get("litellm", {}).get("host", "0.0.0.0")
+    litellm_port = int(config.get("api", {}).get("litellm", {}).get("port", 8000))
 
     logger.info(f"Starting LiteLLM server for agent '{agent_name}' in project '{project_name}'")
     logger.info(f"Connecting to MCP server at {mcp_host}:{mcp_port}")
@@ -41,7 +41,7 @@ async def start_async(verbose=False):
         mcp_host=mcp_host,
         mcp_port=mcp_port,
         host=litellm_host,
-        port=litellm_port
+        port=litellm_port,
     )
 
 
@@ -52,6 +52,7 @@ def start(verbose=False):
         verbose (bool): Whether to enable verbose logging
     """
     from mindsdb.interfaces.storage import db
+
     db.init()
 
     # Run the async function in the event loop
@@ -64,10 +65,10 @@ def start(verbose=False):
         config = Config()
         agent_name = config.cmd_args.agent
         project_name = config.cmd_args.project or "mindsdb"
-        mcp_host = config.get('api', {}).get('mcp', {}).get('host', '127.0.0.1')
-        mcp_port = int(config.get('api', {}).get('mcp', {}).get('port', 47337))
-        litellm_host = config.get('api', {}).get('litellm', {}).get('host', '0.0.0.0')
-        litellm_port = int(config.get('api', {}).get('litellm', {}).get('port', 8000))
+        mcp_host = config.get("api", {}).get("mcp", {}).get("host", "127.0.0.1")
+        mcp_port = int(config.get("api", {}).get("mcp", {}).get("port", 47337))
+        litellm_host = config.get("api", {}).get("litellm", {}).get("host", "0.0.0.0")
+        litellm_port = int(config.get("api", {}).get("litellm", {}).get("port", 8000))
 
         return run_server(
             agent_name=agent_name,
@@ -75,7 +76,7 @@ def start(verbose=False):
             mcp_host=mcp_host,
             mcp_port=mcp_port,
             host=litellm_host,
-            port=litellm_port
+            port=litellm_port,
         )
     else:
         logger.error("LiteLLM server initialization failed")

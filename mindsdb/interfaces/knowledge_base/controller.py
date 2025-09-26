@@ -22,14 +22,9 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
     TableField,
     VectorStoreHandler,
 )
-from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
-from mindsdb.integrations.utilities.rag.config_loader import load_rag_config
 from mindsdb.integrations.utilities.handler_utils import get_api_key
-from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import (
-    construct_model_from_args,
-)
 
-from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS
+from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS, MAX_INSERT_BATCH_SIZE
 from mindsdb.interfaces.agents.langchain_agent import create_chat_model, get_llm_provider
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.variables.variables_controller import variables_controller
@@ -56,6 +51,7 @@ class KnowledgeBaseInputParams(BaseModel):
     content_columns: List[str] | None = None
     id_column: str | None = None
     kb_no_upsert: bool = False
+    kb_skip_existing: bool = False
     embedding_model: Dict[Text, Any] | None = None
     is_sparse: bool = False
     vector_size: int | None = None
@@ -83,9 +79,9 @@ def get_model_params(model_params: dict, default_config_key: str):
     return combined_model_params
 
 
-def get_embedding_model_from_params(embedding_model_params: dict):
+def adapt_embedding_model_params(embedding_model_params: dict):
     """
-    Create embedding model from parameters.
+    Prepare parameters for embedding model.
     """
     params_copy = copy.deepcopy(embedding_model_params)
     provider = params_copy.pop("provider", None).lower()
@@ -106,7 +102,7 @@ def get_embedding_model_from_params(embedding_model_params: dict):
     params_copy.pop("api_key", None)
     params_copy["model"] = params_copy.pop("model_name", None)
 
-    return construct_model_from_args(params_copy)
+    return params_copy
 
 
 def get_reranking_model_from_params(reranking_model_params: dict):
@@ -245,22 +241,34 @@ class KnowledgeBaseTable:
         keyword_search_cols_and_values = []
         query_text = None
         relevance_threshold = None
+        relevance_threshold_allowed_operators = [
+            FilterOperator.GREATER_THAN_OR_EQUAL.value,
+            FilterOperator.GREATER_THAN.value,
+        ]
+        gt_filtering = False
         hybrid_search_enabled_flag = False
         query_conditions = db_handler.extract_conditions(query.where)
         hybrid_search_alpha = None  # Default to None, meaning no alpha weighted blending
         if query_conditions is not None:
             for item in query_conditions:
-                if item.column == "relevance" and item.op.value == FilterOperator.GREATER_THAN_OR_EQUAL.value:
+                if (item.column == "relevance") and (item.op.value in relevance_threshold_allowed_operators):
                     try:
                         relevance_threshold = float(item.value)
                         # Validate range: must be between 0 and 1
                         if not (0 <= relevance_threshold <= 1):
                             raise ValueError(f"relevance_threshold must be between 0 and 1, got: {relevance_threshold}")
+                        if item.op.value == FilterOperator.GREATER_THAN.value:
+                            gt_filtering = True
                         logger.debug(f"Found relevance_threshold in query: {relevance_threshold}")
                     except (ValueError, TypeError) as e:
-                        error_msg = f"Invalid relevance_threshold value: {item.value}. {str(e)}"
+                        error_msg = f"Invalid relevance_threshold value: {item.value}. {e}"
                         logger.error(error_msg)
-                        raise ValueError(error_msg)
+                        raise ValueError(error_msg) from e
+                elif (item.column == "relevance") and (item.op.value not in relevance_threshold_allowed_operators):
+                    raise ValueError(
+                        f"Invalid operator for relevance: {item.op.value}. Only the following operators are allowed: "
+                        f"{','.join(relevance_threshold_allowed_operators)}."
+                    )
                 elif item.column == "reranking":
                     if item.value is False or (isinstance(item.value, str) and item.value.lower() == "false"):
                         disable_reranking = True
@@ -279,10 +287,6 @@ class KnowledgeBaseTable:
                     if not (0 <= item.value <= 1):
                         raise ValueError(f"Invalid hybrid_search_alpha value: {item.value}. Must be between 0 and 1.")
                     hybrid_search_alpha = item.value
-                elif item.column == "relevance" and item.op.value != FilterOperator.GREATER_THAN_OR_EQUAL.value:
-                    raise ValueError(
-                        f"Invalid operator for relevance: {item.op.value}. Only GREATER_THAN_OR_EQUAL is allowed."
-                    )
                 elif item.column == TableField.CONTENT.value:
                     query_text = item.value
 
@@ -310,13 +314,20 @@ class KnowledgeBaseTable:
         self.addapt_conditions_columns(conditions)
 
         # Set default limit if query is present
+        limit = query.limit.value if query.limit is not None else None
         if query_text is not None:
-            limit = query.limit.value if query.limit is not None else None
             if limit is None:
                 limit = 10
             elif limit > 100:
                 limit = 100
-            query.limit = Constant(limit)
+
+            if not disable_reranking:
+                # expand limit, get more records before reranking usage:
+                #   get twice size of input but not greater than 30
+                query_limit = min(limit * 2, limit + 30)
+            else:
+                query_limit = limit
+            query.limit = Constant(query_limit)
 
         allowed_metadata_columns = self._get_allowed_metadata_columns()
         df = db_handler.dispatch_select(query, conditions, allowed_metadata_columns=allowed_metadata_columns)
@@ -367,6 +378,13 @@ class KnowledgeBaseTable:
 
         # Check if we have a rerank_model configured in KB params
         df = self.add_relevance(df, query_text, relevance_threshold, disable_reranking)
+        if limit is not None:
+            df = df[:limit]
+
+        # if relevance filtering method is strictly GREATER THAN we filter the df
+        if gt_filtering:
+            relevance_scores = TableField.RELEVANCE.value
+            df = df[relevance_scores > relevance_threshold]
 
         return df
 
@@ -394,7 +412,6 @@ class KnowledgeBaseTable:
         if reranking_model_params and query_text and len(df) > 0 and not disable_reranking:
             # Use reranker for relevance score
 
-            logger.info(f"Using knowledge reranking model from params: {reranking_model_params}")
             # Apply custom filtering threshold if provided
             if relevance_threshold is not None:
                 reranking_model_params["filtering_threshold"] = relevance_threshold
@@ -410,8 +427,7 @@ class KnowledgeBaseTable:
 
             # Filter by threshold
             scores_array = np.array(scores)
-            df = df[scores_array > reranker.filtering_threshold]
-            logger.debug(f"Applied reranking with params: {reranking_model_params}")
+            df = df[scores_array >= reranker.filtering_threshold]
 
         elif "distance" in df.columns:
             # Calculate relevance from distance
@@ -493,6 +509,8 @@ class KnowledgeBaseTable:
         """Process and insert raw data rows"""
         if not rows:
             return
+        if len(rows) > MAX_INSERT_BATCH_SIZE:
+            raise ValueError("Input data is too large, please load data in batches")
 
         df = pd.DataFrame(rows)
 
@@ -532,7 +550,7 @@ class KnowledgeBaseTable:
                 if processed_chunks:
                     content.value = processed_chunks[0].content
 
-            query.update_columns[emb_col] = Constant(self._content_to_embeddings(content))
+            query.update_columns[emb_col] = Constant(self._content_to_embeddings(content.value))
 
         if "metadata" not in query.update_columns:
             query.update_columns["metadata"] = Constant({})
@@ -662,6 +680,25 @@ class KnowledgeBaseTable:
         if df.empty:
             logger.warning("No valid content found in any content columns")
             return
+
+        # Check if we should skip existing items (before calculating embeddings)
+        if params is not None and params.get("kb_skip_existing", False):
+            logger.debug(f"Checking for existing items to skip before processing {len(df)} items")
+            db_handler = self.get_vector_db()
+
+            # Get list of IDs from current batch
+            current_ids = df[TableField.ID.value].dropna().astype(str).tolist()
+            if current_ids:
+                # Check which IDs already exist
+                existing_ids = db_handler.check_existing_ids(self._kb.vector_database_table, current_ids)
+                if existing_ids:
+                    # Filter out existing items
+                    df = df[~df[TableField.ID.value].astype(str).isin(existing_ids)]
+                    logger.info(f"Skipped {len(existing_ids)} existing items, processing {len(df)} new items")
+
+                    if df.empty:
+                        logger.info("All items already exist, nothing to insert")
+                        return
 
         # add embeddings and send to vector db
         df_emb = self._df_to_embeddings(df)
@@ -900,7 +937,12 @@ class KnowledgeBaseTable:
             ValueError: If the configuration is invalid or required components are missing
         """
         # Get embedding model from knowledge base
-        embeddings_model = None
+        from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import (
+            construct_model_from_args,
+        )
+        from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
+        from mindsdb.integrations.utilities.rag.config_loader import load_rag_config
+
         embedding_model_params = get_model_params(self._kb.params.get("embedding_model", {}), "default_embedding_model")
         if self._kb.embedding_model:
             # Extract embedding model args from knowledge base table
@@ -909,7 +951,7 @@ class KnowledgeBaseTable:
             embeddings_model = construct_model_from_args(embedding_args)
             logger.debug(f"Using knowledge base embedding model with args: {embedding_args}")
         elif embedding_model_params:
-            embeddings_model = get_embedding_model_from_params(embedding_model_params)
+            embeddings_model = construct_model_from_args(adapt_embedding_model_params(embedding_model_params))
             logger.debug(f"Using knowledge base embedding model from params: {self._kb.params['embedding_model']}")
         else:
             embeddings_model = DEFAULT_EMBEDDINGS_MODEL_CLASS()
@@ -937,8 +979,8 @@ class KnowledgeBaseTable:
             return rag
 
         except Exception as e:
-            logger.error(f"Error building RAG pipeline: {str(e)}")
-            raise ValueError(f"Failed to build RAG pipeline: {str(e)}")
+            logger.exception("Error building RAG pipeline:")
+            raise ValueError(f"Failed to build RAG pipeline: {str(e)}") from e
 
     def _parse_metadata(self, base_metadata):
         """Helper function to robustly parse metadata string to dict"""
@@ -1048,7 +1090,7 @@ class KnowledgeBaseController:
             msg = "\n".join(problems)
             if len(problems) > 1:
                 msg = "\n" + msg
-            raise ValueError(f"Problem with knowledge base parameters: {msg}")
+            raise ValueError(f"Problem with knowledge base parameters: {msg}") from e
 
         # Validate preprocessing config first if provided
         if preprocessing_config is not None:
@@ -1074,6 +1116,7 @@ class KnowledgeBaseController:
             raise EntityExistsError("Knowledge base already exists", name)
 
         embedding_params = get_model_params(params.get("embedding_model", {}), "default_embedding_model")
+        params["embedding_model"] = embedding_params
 
         # if model_name is None:  # Legacy
         model_name = self._create_embedding_model(
@@ -1090,6 +1133,9 @@ class KnowledgeBaseController:
             model_record = db.Predictor.query.get(model["id"])
             embedding_model_id = model_record.id
 
+            if model_record.learn_args.get("using", {}).get("sparse"):
+                is_sparse = True
+
         # if params.get("reranking_model", {}) is bool and False we evaluate it to empty dictionary
         reranking_model_params = params.get("reranking_model", {})
 
@@ -1100,6 +1146,7 @@ class KnowledgeBaseController:
             params["reranking_model"] = {}
 
         reranking_model_params = get_model_params(reranking_model_params, "default_reranking_model")
+        params["reranking_model"] = reranking_model_params
         if reranking_model_params:
             # Get reranking model from params.
             # This is called here to check validaity of the parameters.
@@ -1107,7 +1154,7 @@ class KnowledgeBaseController:
                 reranker = get_reranking_model_from_params(reranking_model_params)
                 reranker.get_scores("test", ["test"])
             except (ValueError, RuntimeError) as e:
-                raise RuntimeError(f"Problem with reranker config: {e}")
+                raise RuntimeError(f"Problem with reranker config: {e}") from e
 
         # search for the vector database table
         if storage is None:
@@ -1117,7 +1164,6 @@ class KnowledgeBaseController:
                 # Add sparse vector support for pgvector
                 vector_db_params = {}
                 # Check both explicit parameter and model configuration
-                is_sparse = is_sparse or model_record.learn_args.get("using", {}).get("sparse")
                 if is_sparse:
                     vector_db_params["is_sparse"] = True
                     if vector_size is not None:
@@ -1221,9 +1267,10 @@ class KnowledgeBaseController:
             try:
                 KnowledgeBaseTable.call_litellm_embedding(self.session, params, ["test"])
             except Exception as e:
-                raise RuntimeError(f"Problem with embedding model config: {e}")
+                raise RuntimeError(f"Problem with embedding model config: {e}") from e
             return
 
+        params = copy.deepcopy(params)
         if "provider" in params:
             engine = params.pop("provider").lower()
 
@@ -1273,8 +1320,8 @@ class KnowledgeBaseController:
         """
         try:
             project = self.session.database_controller.get_project(project_name)
-        except ValueError:
-            raise ValueError(f"Project not found: {project_name}")
+        except ValueError as e:
+            raise ValueError(f"Project not found: {project_name}") from e
         project_id = project.id
 
         # check if knowledge base exists

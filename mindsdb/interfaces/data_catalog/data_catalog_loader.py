@@ -109,8 +109,8 @@ class DataCatalogLoader(BaseDataCatalog):
 
             db.session.add_all(tables)
             db.session.commit()
-        except Exception as e:
-            self.logger.error(f"Failed to add tables: {e}")
+        except Exception:
+            self.logger.exception("Failed to add tables:")
             db.session.rollback()
             raise
         return tables
@@ -157,8 +157,8 @@ class DataCatalogLoader(BaseDataCatalog):
 
             db.session.add_all(columns)
             db.session.commit()
-        except Exception as e:
-            self.logger.error(f"Failed to add columns: {e}")
+        except Exception:
+            self.logger.exception("Failed to add columns:")
             db.session.rollback()
             raise
         return columns
@@ -223,8 +223,8 @@ class DataCatalogLoader(BaseDataCatalog):
 
             db.session.add_all(column_statistics)
             db.session.commit()
-        except Exception as e:
-            self.logger.error(f"Failed to add column statistics: {e}")
+        except Exception:
+            self.logger.exception("Failed to add column statistics:")
             db.session.rollback()
             raise
 
@@ -275,8 +275,8 @@ class DataCatalogLoader(BaseDataCatalog):
 
             db.session.add_all(primary_keys)
             db.session.commit()
-        except Exception as e:
-            self.logger.error(f"Failed to add primary keys: {e}")
+        except Exception:
+            self.logger.exception("Failed to add primary keys:")
             db.session.rollback()
             raise
 
@@ -344,8 +344,8 @@ class DataCatalogLoader(BaseDataCatalog):
 
             db.session.add_all(foreign_keys)
             db.session.commit()
-        except Exception as e:
-            self.logger.error(f"Failed to add foreign keys: {e}")
+        except Exception:
+            self.logger.exception("Failed to add foreign keys:")
             db.session.rollback()
             raise
 

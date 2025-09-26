@@ -1,12 +1,13 @@
 import json
 from typing import Any, AsyncIterable, Dict, List
 import requests
-import logging
 import httpx
 from mindsdb.api.a2a.utils import to_serializable, convert_a2a_message_to_qa_format
 from mindsdb.api.a2a.constants import DEFAULT_STREAM_TIMEOUT
+from mindsdb.utilities import log
+from mindsdb.utilities.config import config
 
-logger = logging.getLogger(__name__)
+logger = log.getLogger(__name__)
 
 
 class MindsDBAgent:
@@ -18,16 +19,15 @@ class MindsDBAgent:
         self,
         agent_name="my_agent",
         project_name="mindsdb",
-        host="localhost",
-        port=47334,
+        user_info: Dict[str, Any] = None,
     ):
         self.agent_name = agent_name
         self.project_name = project_name
-        self.host = host
-        self.port = port
-        self.base_url = f"http://{host}:{port}"
+        port = config.get("api", {}).get("http", {}).get("port", 47334)
+        self.base_url = f"http://localhost:{port}"
         self.agent_url = f"{self.base_url}/api/projects/{project_name}/agents/{agent_name}"
         self.sql_url = f"{self.base_url}/api/sql/query"
+        self.headers = {k: v for k, v in user_info.items() if v is not None} or {}
         logger.info(f"Initialized MindsDB agent connector to {self.base_url}")
 
     def invoke(self, query, session_id) -> Dict[str, Any]:
@@ -35,8 +35,8 @@ class MindsDBAgent:
         try:
             escaped_query = query.replace("'", "''")
             sql_query = f"SELECT * FROM {self.project_name}.{self.agent_name} WHERE question = '{escaped_query}'"
-            logger.info(f"Sending SQL query to MindsDB: {sql_query[:100]}...")
-            response = requests.post(self.sql_url, json={"query": sql_query})
+            logger.debug(f"Sending SQL query to MindsDB: {sql_query[:100]}...")
+            response = requests.post(self.sql_url, json={"query": sql_query}, headers=self.headers)
             response.raise_for_status()
             data = response.json()
             logger.debug(f"Received response from MindsDB: {json.dumps(data)[:200]}...")
@@ -73,24 +73,22 @@ class MindsDBAgent:
                     "parts": [{"type": "text", "text": error_msg}],
                 }
         except requests.exceptions.RequestException as e:
-            error_msg = f"Error connecting to MindsDB: {str(e)}"
-            logger.error(error_msg)
+            logger.exception("Error connecting to MindsDB:")
             return {
-                "content": error_msg,
+                "content": f"Error connecting to MindsDB: {e}",
                 "parts": [{"type": "text", "text": error_msg}],
             }
         except Exception as e:
-            error_msg = f"Error: {str(e)}"
-            logger.error(error_msg)
+            logger.exception("Error: ")
             return {
-                "content": error_msg,
+                "content": f"Error: {e}",
                 "parts": [{"type": "text", "text": error_msg}],
             }
 
     async def streaming_invoke(self, messages, timeout=DEFAULT_STREAM_TIMEOUT):
         url = f"{self.base_url}/api/projects/{self.project_name}/agents/{self.agent_name}/completions/stream"
-        logger.info(f"Sending streaming request to MindsDB agent: {self.agent_name}")
-        async with httpx.AsyncClient(timeout=timeout) as client:
+        logger.debug(f"Sending streaming request to MindsDB agent: {self.agent_name}")
+        async with httpx.AsyncClient(timeout=timeout, headers=self.headers) as client:
             async with client.stream("POST", url, json={"messages": to_serializable(messages)}) as response:
                 response.raise_for_status()
                 async for line in response.aiter_lines():
@@ -102,7 +100,7 @@ class MindsDBAgent:
                         try:
                             yield json.loads(payload)
                         except Exception as e:
-                            logger.error(f"Failed to parse SSE JSON payload: {e}; line: {payload}")
+                            logger.exception(f"Failed to parse SSE JSON payload: {e}; line: {payload}")
                     # Ignore comments or control lines
                 # Signal the end of the stream
                 yield {"is_task_complete": True}
@@ -116,7 +114,6 @@ class MindsDBAgent:
     ) -> AsyncIterable[Dict[str, Any]]:
         """Stream responses from the MindsDB agent (uses streaming API endpoint)."""
         try:
-            logger.info(f"Using streaming API for query: {query[:100]}...")
             # Create A2A message structure with history and current query
             a2a_message = {"role": "user", "parts": [{"text": query}]}
             if history:
@@ -130,13 +127,13 @@ class MindsDBAgent:
                 wrapped_chunk = {"is_task_complete": False, "content": content_value, "metadata": {}}
                 yield wrapped_chunk
         except Exception as e:
-            logger.error(f"Error in streaming: {str(e)}")
+            logger.exception(f"Error in streaming: {e}")
             yield {
                 "is_task_complete": True,
                 "parts": [
                     {
                         "type": "text",
-                        "text": f"Error: {str(e)}",
+                        "text": f"Error: {e}",
                     }
                 ],
                 "metadata": {

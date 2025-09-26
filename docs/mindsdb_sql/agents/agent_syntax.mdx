@@ -80,6 +80,19 @@ Available models:
 - claude-instant-1.2
 </Accordion>
 
+<Accordion title="Bedrock">
+Available models include all models accessible from Bedrock.
+
+Note that in order to use Bedrock as a model provider, you should ensure the following packages are installed: `langchain_aws` and `transformers`.
+
+The following parameters are specific to this provider:
+
+* `aws_region_name` is a required parameter.
+* `aws_access_key_id` is a required parameter.
+* `aws_secret_access_key` is a required parameter.
+* `aws_session_token` is an optional parameter. It may be required depending on the AWS permissions setup.
+</Accordion>
+
 <Accordion title="Google">
 Available models:
 - gemini-2.5-pro-preview-03-25

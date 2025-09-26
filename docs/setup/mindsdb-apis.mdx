@@ -1,0 +1,30 @@
+---
+title: MindsDB APIs
+sidebarTitle: MindsDB APIs
+---
+
+MindsDB provides multiple APIs with optional authentication mechanisms.
+
+## APIs
+
+When you start MindsDB, the following APIs become available:
+
+* **HTTP API**, along with **A2A API** and **MCP API**, runs on port `47334`.
+
+  - Access the MindsDB Editor at `mindsdb-instance-url:47334`
+
+  - Access the MCP API at `mindsdb-instance-url:47334/mcp/`
+
+  - Access the A2A API at `mindsdb-instance-url:47334/a2a/`
+
+* **MySQL API** runs on port `47335`.
+
+  - Connect to MindsDB from database clients as if it were a standard MySQL database.
+
+## Authentication
+
+Authentication mechanism covers HTTP API, A2A API, and MCP API.
+
+You can configure authentication by setting [environment variables](/setup/environment-vars#mindsdb-authentication) or by defining credentials in the [configuration file](/setup/custom-config#auth).
+
+For details on generating and using MindsDB authentication tokens, refer to the [authentication guide](/rest/authentication).

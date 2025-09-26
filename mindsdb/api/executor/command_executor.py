@@ -753,8 +753,6 @@ class ExecuteCommands:
         except EntityNotExistsError:
             if statement.if_exists is False:
                 raise
-        except Exception as e:
-            raise e
 
         return ExecuteAnswer()
 
@@ -837,7 +835,7 @@ class ExecuteCommands:
         try:
             sqlquery = SQLQuery(statement.data, session=self.session, database=database_name)
         except Exception as e:
-            raise Exception(f'Nested query failed to execute with error: "{e}", please check and try again.')
+            raise Exception(f'Nested query failed to execute with error: "{e}", please check and try again.') from e
         df = sqlquery.fetched_data.to_df()
         df.columns = [str(t.alias) if hasattr(t, "alias") else str(t.parts[-1]) for t in statement.data.targets]
 
@@ -1207,7 +1205,7 @@ class ExecuteCommands:
             ast_drop = DropMLEngine(name=Identifier(name))
             self.answer_drop_ml_engine(ast_drop)
             logger.info(msg)
-            raise ExecutorException(msg)
+            raise ExecutorException(msg) from e
 
         return ExecuteAnswer()
 

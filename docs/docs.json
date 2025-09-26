@@ -26,16 +26,16 @@
                 {
                   "group": "Installation",
                   "pages": [
-                    "setup/self-hosted/docker",
                     "setup/self-hosted/docker-desktop",
-                    "setup/cloud/aws-marketplace"
+                    "setup/self-hosted/docker"
                   ]
                 },
                 {
                   "group": "Configuration",
                   "pages": [
                     "setup/custom-config",
-                    "setup/environment-vars"
+                    "setup/environment-vars",
+                    "setup/mindsdb-apis"
                   ]
                 },
                 {
@@ -57,7 +57,8 @@
               "group": "Overview",
               "pages": [
                 "mindsdb-connect",
-                "mindsdb-fqe"
+                "mindsdb-fqe",
+                "mindsdb-objects"
               ]
             },
             {
@@ -142,7 +143,6 @@
                       "integrations/data-integrations/microsoft-access",
                       "integrations/data-integrations/microsoft-sql-server",
                       "integrations/data-integrations/monetdb",
-                      "integrations/data-integrations/mongodb",
                       "integrations/data-integrations/mysql",
                       "integrations/data-integrations/oceanbase",
                       "integrations/data-integrations/opengauss",
@@ -707,8 +707,7 @@
                 "faqs/persist-predictions",
                 "faqs/mindsdb-with-php",
                 "faqs/disposable-email-doman-and-openai",
-                "faqs/missing-required-cpu-features",
-                "faqs/a2a-unavailable"
+                "faqs/missing-required-cpu-features"
               ]
             }
           ]
@@ -955,10 +954,6 @@
       "destination": "/integrations/data-integrations/monetdb"
     },
     {
-      "source": "/data-integrations/mongodb",
-      "destination": "/integrations/data-integrations/mongodb"
-    },
-    {
       "source": "/data-integrations/mysql",
       "destination": "/integrations/data-integrations/mysql"
     },
@@ -1093,18 +1088,6 @@
     {
       "source": "/nixtla/house-sales-statsforecast",
       "destination": "/sql/tutorials/house-sales-statsforecast"
-    },
-    {
-      "source": "/mongo/stats",
-      "destination": "/mongo/models/describe"
-    },
-    {
-      "source": "/connect/mongo-compass",
-      "destination": "/sdks/mongo/connect/mongo-compass"
-    },
-    {
-      "source": "/connect/mongo-shell",
-      "destination": "/sdks/mongo/connect/mongo-shell"
     },
     {
       "source": "/connect/mindsdb_editor",
@@ -1367,24 +1350,12 @@
       "destination": "/use-cases/data_enrichment/text-summarization-inside-mysql-with-openai"
     },
     {
-      "source": "/nlp/text-summarization-inside-mongodb-with-openai",
-      "destination": "/use-cases/data_enrichment/text-summarization-inside-mongodb-with-openai"
-    },
-    {
       "source": "/nlp/sentiment-analysis-inside-mysql-with-openai",
       "destination": "/use-cases/data_enrichment/sentiment-analysis-inside-mysql-with-openai"
     },
     {
-      "source": "/nlp/sentiment-analysis-inside-mongodb-with-openai",
-      "destination": "/use-cases/data_enrichment/sentiment-analysis-inside-mongodb-with-openai"
-    },
-    {
       "source": "/nlp/question-answering-inside-mysql-with-openai",
       "destination": "/use-cases/data_enrichment/question-answering-inside-mysql-with-openai"
-    },
-    {
-      "source": "/nlp/question-answering-inside-mongodb-with-openai",
-      "destination": "/use-cases/data_enrichment/question-answering-inside-mongodb-with-openai"
     },
     {
       "source": "/sql/tutorials/text-sentiment-hf",

@@ -24,7 +24,7 @@ from mindsdb.utilities.ml_task_queue.const import (
     ML_TASK_STATUS,
     TASKS_STREAM_NAME,
     TASKS_STREAM_CONSUMER_NAME,
-    TASKS_STREAM_CONSUMER_GROUP_NAME
+    TASKS_STREAM_CONSUMER_GROUP_NAME,
 )
 from mindsdb.utilities import log
 from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
@@ -33,9 +33,10 @@ logger = log.getLogger(__name__)
 
 
 def _save_thread_link(func: Callable) -> Callable:
-    """ Decorator for MLTaskConsumer.
-        Save thread in which func is executed to a list.
+    """Decorator for MLTaskConsumer.
+    Save thread in which func is executed to a list.
     """
+
     @wraps(func)
     def wrapper(self, *args, **kwargs) -> None:
         current_thread = threading.current_thread()
@@ -45,22 +46,23 @@ def _save_thread_link(func: Callable) -> Callable:
         finally:
             self._listen_message_threads.remove(current_thread)
         return result
+
     return wrapper
 
 
 class MLTaskConsumer(BaseRedisQueue):
-    """ Listener of ML tasks queue and tasks executioner.
-        Each new message waited and executed in separate thread.
+    """Listener of ML tasks queue and tasks executioner.
+    Each new message waited and executed in separate thread.
 
-        Attributes:
-            _ready_event (Event): set if ready to start new queue listen thread
-            _stop_event (Event): set if need to stop all threads/processes
-            cpu_stat (list[float]): CPU usage statistic. Each value is 0-100 float representing CPU usage in %
-            _collect_cpu_stat_thread (Thread): pointer to thread that collecting CPU usage statistic
-            _listen_message_threads (list[Thread]): list of pointers to threads where queue messages are listening/processing
-            db (Redis): database object
-            cache: redis cache abstrtaction
-            consumer_group: redis consumer group object
+    Attributes:
+        _ready_event (Event): set if ready to start new queue listen thread
+        _stop_event (Event): set if need to stop all threads/processes
+        cpu_stat (list[float]): CPU usage statistic. Each value is 0-100 float representing CPU usage in %
+        _collect_cpu_stat_thread (Thread): pointer to thread that collecting CPU usage statistic
+        _listen_message_threads (list[Thread]): list of pointers to threads where queue messages are listening/processing
+        db (Redis): database object
+        cache: redis cache abstrtaction
+        consumer_group: redis consumer group object
     """
 
     def __init__(self) -> None:
@@ -75,7 +77,7 @@ class MLTaskConsumer(BaseRedisQueue):
         # region collect cpu usage statistic
         self.cpu_stat = [0] * 10
         self._collect_cpu_stat_thread = threading.Thread(
-            target=self._collect_cpu_stat, name='MLTaskConsumer._collect_cpu_stat'
+            target=self._collect_cpu_stat, name="MLTaskConsumer._collect_cpu_stat"
         )
         self._collect_cpu_stat_thread.start()
         # endregion
@@ -83,14 +85,14 @@ class MLTaskConsumer(BaseRedisQueue):
         self._listen_message_threads = []
 
         # region connect to redis
-        config = Config().get('ml_task_queue', {})
+        config = Config().get("ml_task_queue", {})
         self.db = Database(
-            host=config.get('host', 'localhost'),
-            port=config.get('port', 6379),
-            db=config.get('db', 0),
-            username=config.get('username'),
-            password=config.get('password'),
-            protocol=3
+            host=config.get("host", "localhost"),
+            port=config.get("port", 6379),
+            db=config.get("db", 0),
+            username=config.get("username"),
+            password=config.get("password"),
+            protocol=3,
         )
         self.wait_redis_ping(60)
 
@@ -102,30 +104,29 @@ class MLTaskConsumer(BaseRedisQueue):
         # endregion
 
     def _collect_cpu_stat(self) -> None:
-        """ Collect CPU usage statistic. Executerd in thread.
-        """
+        """Collect CPU usage statistic. Executerd in thread."""
         while self._stop_event.is_set() is False:
             self.cpu_stat = self.cpu_stat[1:]
             self.cpu_stat.append(psutil.cpu_percent())
             time.sleep(1)
 
     def get_avg_cpu_usage(self) -> float:
-        """ get average CPU usage for last period (10s by default)
+        """get average CPU usage for last period (10s by default)
 
-            Returns:
-                float: 0-100 value, average CPU usage
+        Returns:
+            float: 0-100 value, average CPU usage
         """
         return sum(self.cpu_stat) / len(self.cpu_stat)
 
     def wait_free_resources(self) -> None:
-        """ Sleep in thread untill there are free resources. Checks:
-            - avg CPU usage is less than 60%
-            - current CPU usage is less than 60%
-            - current tasks count is less than (N CPU cores) / 8
+        """Sleep in thread untill there are free resources. Checks:
+        - avg CPU usage is less than 60%
+        - current CPU usage is less than 60%
+        - current tasks count is less than (N CPU cores) / 8
         """
         config = Config()
-        is_cloud = config.get('cloud', False)
-        processes_dir = Path(tempfile.gettempdir()).joinpath('mindsdb/processes/learn/')
+        is_cloud = config.get("cloud", False)
+        processes_dir = Path(tempfile.gettempdir()).joinpath("mindsdb/processes/learn/")
         while True:
             while self.get_avg_cpu_usage() > 60 or max(self.cpu_stat[-3:]) > 60:
                 time.sleep(1)
@@ -139,8 +140,7 @@ class MLTaskConsumer(BaseRedisQueue):
 
     @_save_thread_link
     def _listen(self) -> None:
-        """ Listen message queue untill get new message. Execute task.
-        """
+        """Listen message queue untill get new message. Execute task."""
         message = None
         while message is None:
             self.wait_free_resources()
@@ -150,8 +150,8 @@ class MLTaskConsumer(BaseRedisQueue):
 
             try:
                 message = self.consumer_group.read(count=1, block=1000, consumer=TASKS_STREAM_CONSUMER_NAME)
-            except RedisConnectionError as e:
-                logger.error(f"Can't connect to Redis: {e}")
+            except RedisConnectionError:
+                logger.exception("Can't connect to Redis:")
                 self._stop_event.set()
                 return
             except Exception:
@@ -168,13 +168,13 @@ class MLTaskConsumer(BaseRedisQueue):
             self.consumer_group.streams[TASKS_STREAM_NAME].ack(message_id)
             self.consumer_group.streams[TASKS_STREAM_NAME].delete(message_id)
 
-            payload = from_bytes(message_content[b'payload'])
-            task_type = ML_TASK_TYPE(message_content[b'task_type'])
-            model_id = int(message_content[b'model_id'])
-            company_id = message_content[b'company_id']
+            payload = from_bytes(message_content[b"payload"])
+            task_type = ML_TASK_TYPE(message_content[b"task_type"])
+            model_id = int(message_content[b"model_id"])
+            company_id = message_content[b"company_id"]
             if len(company_id) == 0:
                 company_id = None
-            redis_key = RedisKey(message_content.get(b'redis_key'))
+            redis_key = RedisKey(message_content.get(b"redis_key"))
 
             # region read dataframe
             dataframe_bytes = self.cache.get(redis_key.dataframe)
@@ -184,16 +184,13 @@ class MLTaskConsumer(BaseRedisQueue):
                 self.cache.delete(redis_key.dataframe)
             # endregion
 
-            ctx.load(payload['context'])
+            ctx.load(payload["context"])
         finally:
             self._ready_event.set()
 
         try:
             task = process_cache.apply_async(
-                task_type=task_type,
-                model_id=model_id,
-                payload=payload,
-                dataframe=dataframe
+                task_type=task_type, model_id=model_id, payload=payload, dataframe=dataframe
             )
             status_notifier = StatusNotifier(redis_key, ML_TASK_STATUS.PROCESSING, self.db, self.cache)
             status_notifier.start()
@@ -215,20 +212,18 @@ class MLTaskConsumer(BaseRedisQueue):
             self.cache.set(redis_key.status, ML_TASK_STATUS.COMPLETE.value, 180)
 
     def run(self) -> None:
-        """ Start new listen thread each time when _ready_event is set
-        """
+        """Start new listen thread each time when _ready_event is set"""
         self._ready_event.set()
         while self._stop_event.is_set() is False:
             self._ready_event.wait(timeout=1)
             if self._ready_event.is_set() is False:
                 continue
             self._ready_event.clear()
-            threading.Thread(target=self._listen, name='MLTaskConsumer._listen').start()
+            threading.Thread(target=self._listen, name="MLTaskConsumer._listen").start()
         self.stop()
 
     def stop(self) -> None:
-        """ Stop all executing threads
-        """
+        """Stop all executing threads"""
         self._stop_event.set()
         for thread in (*self._listen_message_threads, self._collect_cpu_stat_thread):
             try:
@@ -238,17 +233,16 @@ class MLTaskConsumer(BaseRedisQueue):
                 pass
 
 
-@mark_process(name='internal', custom_mark='ml_task_consumer')
+@mark_process(name="internal", custom_mark="ml_task_consumer")
 def start(verbose: bool) -> None:
-    """ Create task queue consumer and start listen the queue
-    """
+    """Create task queue consumer and start listen the queue"""
     consumer = MLTaskConsumer()
     signal.signal(signal.SIGTERM, lambda _x, _y: consumer.stop())
     try:
         consumer.run()
     except Exception as e:
         consumer.stop()
-        logger.error(f'Got exception: {e}', flush=True)
+        logger.error(f"Got exception: {e}", flush=True)
         raise
     finally:
-        logger.info('Consumer process stopped', flush=True)
+        logger.info("Consumer process stopped", flush=True)

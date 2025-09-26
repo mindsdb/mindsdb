@@ -196,11 +196,13 @@ def match_two_part_name(
         ValueError: If the identifier does not contain one or two parts, or if ensure_lower_case is True and the name is not lowercase.
     """
     db_name = None
+
     match identifier.parts, identifier.is_quoted:
         case [name], [is_quoted]:
             ...
-        case [db_name, name], [_, is_quoted]:
-            ...
+        case [db_name, name], [db_is_quoted, is_quoted]:
+            if not db_is_quoted:
+                db_name = db_name.lower()
         case _:
             raise ValueError(f"Only single-part or two-part names are allowed: {identifier}")
     if not is_quoted:
@@ -710,9 +712,7 @@ class ExecuteCommands:
 
     def answer_create_trigger(self, statement, database_name):
         triggers_controller = TriggersController()
-        project_name, trigger_name = match_two_part_name(
-            statement.name, default_db_name=database_name
-        )
+        project_name, trigger_name = match_two_part_name(statement.name, default_db_name=database_name)
 
         triggers_controller.add(
             trigger_name,
@@ -734,9 +734,7 @@ class ExecuteCommands:
 
     def answer_create_job(self, statement: CreateJob, database_name):
         jobs_controller = JobsController()
-        project_name, job_name = match_two_part_name(
-            statement.name, default_db_name=database_name
-        )
+        project_name, job_name = match_two_part_name(statement.name, default_db_name=database_name)
 
         try:
             jobs_controller.create(job_name, project_name, statement)
@@ -969,6 +967,10 @@ class ExecuteCommands:
             identifier.is_quoted = [False] + identifier.is_quoted
 
         database_name, model_name, model_version = resolve_model_identifier(identifier)
+        # at least two part in identifier
+        identifier.parts[0] = database_name
+        identifier.parts[1] = model_name
+
         if database_name is None:
             database_name = database_name
 
@@ -1331,9 +1333,7 @@ class ExecuteCommands:
         Returns:
             ExecuteAnswer: answer for the command
         """
-        project_name, view_name = match_two_part_name(
-            statement.name, default_db_name=database_name
-        )
+        project_name, view_name = match_two_part_name(statement.name, default_db_name=database_name)
 
         query_str = statement.query_str
 
@@ -1407,9 +1407,7 @@ class ExecuteCommands:
                 "Please pass the model parameters as a JSON object in the embedding_model field."
             )
 
-        project_name, kb_name = match_two_part_name(
-            statement.name, default_db_name=database_name
-        )
+        project_name, kb_name = match_two_part_name(statement.name, default_db_name=database_name)
 
         if statement.storage is not None:
             if len(statement.storage.parts) != 2:
@@ -1538,11 +1536,9 @@ class ExecuteCommands:
 
     @mark_process("learn")
     def answer_create_predictor(self, statement: CreatePredictor, database_name: str):
-        integration_name, model_name = match_two_part_name(
-            statement.name, ensure_lower_case=True, default_db_name=database_name
-        )
+        integration_name, model_name = match_two_part_name(statement.name, default_db_name=database_name)
 
-        statement.name.parts = [integration_name.lower(), model_name]
+        statement.name.parts = [integration_name, model_name]
         statement.name.is_quoted = [False, False]
 
         ml_integration_name = "lightwood"  # default
@@ -2018,7 +2014,7 @@ class ExecuteCommands:
         else:
             # drop model
             try:
-                project = self.session.database_controller.get_project(project_name)
+                project = self.session.database_controller.get_project(project_name, strict_case=True)
                 project.drop_model(model_name)
             except Exception as e:
                 if not statement.if_exists:

@@ -9,7 +9,6 @@ from tests.unit.executor.test_agent import set_litellm_embedding
 
 class TestLowercase(BaseExecutorDummyML):
     def test_view_name_lowercase(self):
-
         # mix-case
         self.run_sql("CREATE VIEW `MyView` AS (SELECT 1)")
 
@@ -48,7 +47,6 @@ class TestLowercase(BaseExecutorDummyML):
             self.run_sql(f"DROP VIEW {another_name}")
 
     def test_project_name_lowercase(self):
-
         # quoted name in mix case
         self.run_sql("CREATE DATABASE `MyProject`")
 
@@ -90,7 +88,6 @@ class TestLowercase(BaseExecutorDummyML):
                 self.run_sql(f"DROP DATABASE {another_name}")
 
     def test_ml_engine_name_lowercase(self):
-
         # mixed case
         self.run_sql("CREATE ML_ENGINE `MyMlEngine` FROM dummy_ml")
 
@@ -123,8 +120,26 @@ class TestLowercase(BaseExecutorDummyML):
         )
         self.set_data("tasks", df)
 
+        # mixed case
+        self.run_sql("CREATE MODEL `MyModel` PREDICT a USING engine='myengine', join_learn_process=true")
+
+        res = self.run_sql(f"SELECT * FROM INFORMATION_SCHEMA.MODELS WHERE name ='MyModel'")
+        assert len(res) == 1
+
         with pytest.raises(Exception):
-            self.execute("CREATE MODEL `MyModel` PREDICT a USING engine='myengine', join_learn_process=true")
+            self.run_sql(f"DROP MODEL MyModel")
+        self.run_sql(f"DROP MODEL `MyModel`")
+
+        # mixed project
+        self.run_sql("CREATE DATABASE `MyProj`")
+        self.run_sql("CREATE MODEL `MyProj`.MyModel PREDICT a USING engine='myengine', join_learn_process=true")
+
+        res = self.run_sql(f"SELECT * FROM INFORMATION_SCHEMA.MODELS WHERE name ='mymodel'")
+        assert len(res) == 1
+
+        with pytest.raises(Exception):
+            self.run_sql(f"DROP MODEL MyProj.MyModel")
+        self.run_sql(f"DROP MODEL `MyProj`.MyModel")
 
         for model_name in ["mymodel", "MyModel", "MYMODEL"]:
             another_name = "myMODEL"
@@ -218,7 +233,6 @@ class TestLowercase(BaseExecutorDummyML):
 
         # clear mixed case skill
         self.run_sql(f"drop skill `MySkillMixed`")
-
 
     @patch("litellm.embedding")
     @patch("openai.OpenAI")

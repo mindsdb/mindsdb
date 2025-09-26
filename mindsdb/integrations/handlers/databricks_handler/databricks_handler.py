@@ -12,6 +12,7 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE,
+    INF_SCHEMA_COLUMNS_NAMES_SET,
 )
 from mindsdb.utilities import log
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
@@ -252,6 +253,9 @@ class DatabricksHandler(DatabaseHandler):
                 table_schema != 'information_schema'
                 {all_filter}
         """
+        result = self.native_query(query)
+        if result.resp_type == RESPONSE_TYPE.OK:
+            result = Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame([], columns=list(INF_SCHEMA_COLUMNS_NAMES_SET)))
         return self.native_query(query)
 
     def get_columns(self, table_name: str, schema_name: str | None = None) -> Response:
@@ -298,6 +302,8 @@ class DatabricksHandler(DatabaseHandler):
         """
 
         result = self.native_query(query)
+        if result.resp_type == RESPONSE_TYPE.OK:
+            result = Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame([], columns=list(INF_SCHEMA_COLUMNS_NAMES_SET)))
         result.to_columns_table_response(map_type_fn=_map_type)
 
         return result

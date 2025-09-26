@@ -238,8 +238,6 @@ class ChatBotResource(Resource):
                         "Chatbot already exists",
                         f"Chatbot with name {name} already exists. Please choose a different one.",
                     )
-            if not name.islower():
-                return http_error(HTTPStatus.BAD_REQUEST, "Wrong name", f"The name must be in lower case: {name}")
 
         if existing_chatbot is None:
             # Create

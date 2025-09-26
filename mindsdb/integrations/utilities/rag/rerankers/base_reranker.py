@@ -27,6 +27,16 @@ from mindsdb.integrations.libs.base import BaseMLEngine
 log = logging.getLogger(__name__)
 
 
+def get_event_loop():
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        # If no running loop exists, create a new one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    return loop
+
+
 class BaseLLMReranker(BaseModel, ABC):
     filtering_threshold: float = 0.0  # Default threshold for filtering
     provider: str = "openai"
@@ -74,7 +84,10 @@ class BaseLLMReranker(BaseModel, ABC):
                     timeout=self.request_timeout,
                     max_retries=2,
                 )
-            elif self.provider == "openai":
+            elif self.provider in ("openai", "ollama"):
+                if self.provider == "ollama":
+                    self.method = "no-logprobs"
+                    self.logprobs = False
                 api_key_var: str = "OPENAI_API_KEY"
                 openai_api_key = self.api_key or os.getenv(api_key_var)
                 if not openai_api_key:
@@ -84,7 +97,6 @@ class BaseLLMReranker(BaseModel, ABC):
                 self.client = AsyncOpenAI(
                     api_key=openai_api_key, base_url=base_url, timeout=self.request_timeout, max_retries=2
                 )
-
             else:
                 # try to use litellm
                 from mindsdb.api.executor.controllers.session_controller import SessionController
@@ -99,7 +111,7 @@ class BaseLLMReranker(BaseModel, ABC):
                 self.method = "no-logprobs"
 
     async def _call_llm(self, messages):
-        if self.provider in ("azure_openai", "openai"):
+        if self.provider in ("azure_openai", "openai", "ollama"):
             return await self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
@@ -134,7 +146,7 @@ class BaseLLMReranker(BaseModel, ABC):
             for idx, result in enumerate(results):
                 if isinstance(result, Exception):
                     log.error(f"Error processing document {i + idx}: {str(result)}")
-                    raise RuntimeError(f"Error during reranking: {result}")
+                    raise RuntimeError(f"Error during reranking: {result}") from result
 
                 score = result["relevance_score"]
 
@@ -392,16 +404,8 @@ class BaseLLMReranker(BaseModel, ABC):
     def get_scores(self, query: str, documents: list[str]):
         query_document_pairs = [(query, doc) for doc in documents]
         # Create event loop and run async code
-        import asyncio
 
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            # If no running loop exists, create a new one
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-        documents_and_scores = loop.run_until_complete(self._rank(query_document_pairs))
+        documents_and_scores = get_event_loop().run_until_complete(self._rank(query_document_pairs))
 
         scores = [score for _, score in documents_and_scores]
         return scores

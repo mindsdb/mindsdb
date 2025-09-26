@@ -297,7 +297,6 @@ class DatabricksHandler(DatabaseHandler):
                 table_schema = {schema_name}
         """
 
-        query = f"DESCRIBE TABLE {table_name};"
         result = self.native_query(query)
         result.to_columns_table_response(map_type_fn=_map_type)
 

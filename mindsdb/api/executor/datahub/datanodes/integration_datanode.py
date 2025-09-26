@@ -124,7 +124,7 @@ class IntegrationDataNode(DataNode):
         df.columns = [name.upper() for name in df.columns]
         if "FIELD" not in df.columns or "TYPE" not in df.columns:
             logger.warning(
-                f"Response from the handler's `get_columns` call does not contain required columns: f{df.columns}"
+                f"Response from the handler's `get_columns` call does not contain required columns: {list(df.columns)}"
             )
             return pd.DataFrame([], columns=astuple(INF_SCHEMA_COLUMNS_NAMES))
 

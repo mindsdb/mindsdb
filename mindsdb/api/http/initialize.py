@@ -95,7 +95,7 @@ def custom_output_json(data, code, headers=None):
 
 
 def get_last_compatible_gui_version() -> Version | bool:
-    logger.debug("Getting last compatible frontend..")
+    logger.debug("Getting last compatible frontend...")
     try:
         res = requests.get(
             "https://mindsdb-web-builds.s3.amazonaws.com/compatible-config.json",
@@ -178,7 +178,6 @@ def get_current_gui_version() -> Version:
 
 
 def initialize_static():
-    logger.debug("Initializing static..")
     last_gui_version_lv = get_last_compatible_gui_version()
     current_gui_version_lv = get_current_gui_version()
     required_gui_version = config["gui"].get("version")
@@ -214,8 +213,11 @@ def initialize_app():
     init_static_thread = None
 
     if config["gui"]["autoupdate"] is True or (config["gui"]["open_on_start"] is True and gui_exists is False):
+        logger.debug("Initializing static...")
         init_static_thread = threading.Thread(target=initialize_static, name="initialize_static")
         init_static_thread.start()
+    else:
+        logger.debug(f"Skip initializing static: config['gui']={config['gui']}, gui_exists={gui_exists}")
 
     # Wait for static initialization.
     if config["gui"]["open_on_start"] is True and init_static_thread is not None:
@@ -309,7 +311,6 @@ def initialize_app():
 
     @app.before_request
     def before_request():
-        logger.debug(f"HTTP {request.method}: {request.path}")
         ctx.set_default()
 
         h = request.headers.get("Authorization")
@@ -371,7 +372,7 @@ def initialize_app():
 
 
 def initialize_flask(config, init_static_thread):
-    logger.debug("Initializing flask..")
+    logger.debug("Initializing flask...")
     # region required for windows https://github.com/mindsdb/mindsdb/issues/2526
     mimetypes.add_type("text/css", ".css")
     mimetypes.add_type("text/javascript", ".js")

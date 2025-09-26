@@ -1,7 +1,6 @@
 import unittest
 from unittest.mock import patch, MagicMock, Mock
 from collections import OrderedDict
-from textwrap import dedent
 
 import pytest
 

@@ -8,7 +8,7 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
 from langchain_core.vectorstores import VectorStore
 from langchain_core.stores import BaseStore
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from langchain_text_splitters import TextSplitter
 
 DEFAULT_COLLECTION_NAME = "default_collection"
@@ -371,6 +371,8 @@ DEFAULT_NUM_QUERY_RETRIES = 2
 
 
 class LLMConfig(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    
     model_name: str = Field(default=DEFAULT_LLM_MODEL, description="LLM model to use for generation")
     provider: str = Field(
         default=DEFAULT_LLM_MODEL_PROVIDER,

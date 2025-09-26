@@ -291,7 +291,9 @@ class EvaluateRerank(EvaluateBase):
     def evaluate(self, test_data: pd.DataFrame) -> pd.DataFrame:
         json_to_log_list = []
         if {"question", "answer"} - set(test_data.columns):
-            raise KeyError(f"Test data must contain \"question\" and \"answer\" columns. Columns in the provided test data: {list(test_data.columns)}")
+            raise KeyError(
+                f'Test data must contain "question" and "answer" columns. Columns in the provided test data: {list(test_data.columns)}'
+            )
         questions = test_data.to_dict("records")
 
         for i, item in enumerate(questions):
@@ -488,7 +490,9 @@ class EvaluateDocID(EvaluateBase):
     def evaluate(self, test_data: pd.DataFrame) -> pd.DataFrame:
         stats = []
         if {"question", "doc_id"} - set(test_data.columns):
-            raise KeyError(f"Test data must contain \"question\" and \"doc_id\" columns. Columns in the provided test data: {list(test_data.columns)}")
+            raise KeyError(
+                f'Test data must contain "question" and "doc_id" columns. Columns in the provided test data: {list(test_data.columns)}'
+            )
         questions = test_data.to_dict("records")
 
         for i, item in enumerate(questions):

@@ -1446,7 +1446,7 @@ class ExecuteCommands:
         return ExecuteAnswer()
 
     def answer_create_skill(self, statement, database_name):
-        project_name, name = match_two_part_name(statement.name, ensure_lower_case=True, default_db_name=database_name)
+        project_name, name = match_two_part_name(statement.name, default_db_name=database_name)
 
         try:
             _ = self.session.skills_controller.add_skill(name, project_name, statement.type, statement.params)

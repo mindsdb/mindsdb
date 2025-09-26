@@ -157,7 +157,7 @@ class TestLowercase(BaseExecutorDummyML):
                 provider='openai',
                 prompt_template='Answer the user input in a helpful way using tools',
                 max_iterations=5,
-                mode='retrieval',
+                mode='retrieval'
         """
 
         skill_params = """
@@ -166,14 +166,17 @@ class TestLowercase(BaseExecutorDummyML):
                 description = 'user reviews'
         """
 
-        # skill can't be mixed case
-        with pytest.raises(Exception):
-            self.run_sql(f"create skill `MySKILL` using {skill_params}")
+        # mixed case: skill
+        self.run_sql(f"create skill `MySkillMixed` using {skill_params}")
 
-        self.run_sql(f"create skill MySKILL using {skill_params}")
+        res = self.run_sql("select * from information_schema.skills where name = 'MySkillMixed'")
+        assert len(res) == 1
+
+        with pytest.raises(Exception):
+            self.run_sql(f"drop skill MySkillMixed")
 
         # mixed case: agent
-        self.run_sql(f"create agent `MyAGENT` using {agent_params} skills=['myskill']")
+        self.run_sql(f"create agent `MyAGENT` using {agent_params}")
 
         res = self.run_sql("select * from information_schema.agents where name = 'MyAGENT'")
         assert len(res) == 1
@@ -182,21 +185,20 @@ class TestLowercase(BaseExecutorDummyML):
             self.run_sql(f"drop agent MyAGENT")
         self.run_sql(f"drop agent `MyAGENT`")
 
-        self.run_sql("drop skill MySKILL")
-
-        for agent_name, skill_name in [("myagent", "myskill"), ("MyAgent", "MySkill"), ("MYAGENT", "MYSKILL")]:
+        for agent_name, skill_name in [("myagent", "myskill"), ("MyAgent", "Myskill"), ("MYAGENT", "MYSKILL")]:
             another_skill_name = "mySKILL"
             another_agent_name = "myAGENT"
 
-            self.run_sql(f"create skill {skill_name} using {skill_params}")
-
+            # user mixed-case skill
             self.run_sql(f"""
-                create agent {agent_name} using {agent_params}
-                skills=['{skill_name.lower()}']
+                create agent {agent_name} using {agent_params},
+                skills=['MySkillMixed']
             """)
 
+            self.run_sql(f"create skill {skill_name} using {skill_params}")
+            # switch to lowercase
             self.run_sql(f"""
-                update agent {agent_name} set {agent_params}
+                update agent {agent_name} set {agent_params},
                 skills=['{skill_name.lower()}']
             """)
 
@@ -213,6 +215,10 @@ class TestLowercase(BaseExecutorDummyML):
             with pytest.raises(Exception):
                 self.run_sql(f"drop skill `{another_skill_name}`")
             self.run_sql(f"drop skill {another_skill_name}")
+
+        # clear mixed case skill
+        self.run_sql(f"drop skill `MySkillMixed`")
+
 
     @patch("litellm.embedding")
     @patch("openai.OpenAI")

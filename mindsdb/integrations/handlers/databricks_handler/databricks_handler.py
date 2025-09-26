@@ -258,7 +258,7 @@ class DatabricksHandler(DatabaseHandler):
             result = Response(
                 RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame([], columns=list(INF_SCHEMA_COLUMNS_NAMES_SET))
             )
-        return self.native_query(query)
+        return result
 
     def get_columns(self, table_name: str, schema_name: str | None = None) -> Response:
         """

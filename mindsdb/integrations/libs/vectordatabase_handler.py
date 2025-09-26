@@ -139,9 +139,17 @@ class VectorStoreHandler(BaseHandler):
             if self._is_metadata_condition(condition):
                 # check restriction
                 if allowed_metadata_columns is not None:
-                    # system columns are underscored, skip them
-                    if condition.column.lower() not in allowed_metadata_columns and not condition.column.startswith(
-                        "_"
+                    # system columns
+                    if condition.column.lower() not in allowed_metadata_columns and condition.column not in (
+                        "original_doc_id",
+                        "source",
+                        "created_at",
+                        "start_char",
+                        "end_char",
+                        "updated_at",
+                        "chunk_index",
+                        "content_column",
+                        "original_row_index",
                     ):
                         raise ValueError(f"Column is not found: {condition.column}")
 
@@ -334,7 +342,7 @@ class VectorStoreHandler(BaseHandler):
 
         if not df_update.empty:
             # get values of existed `created_at` and return them to metadata
-            origin_id_col = "_original_doc_id"
+            origin_id_col = "original_doc_id"
 
             created_dates, ids = {}, {}
             for _, row in df_existed.iterrows():

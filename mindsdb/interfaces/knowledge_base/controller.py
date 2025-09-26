@@ -369,14 +369,14 @@ class KnowledgeBaseTable:
     def _get_allowed_metadata_columns(self) -> List[str] | None:
         # Return list of KB columns to restrict querying, if None: no restrictions
 
-        if self._kb.params.get("version", 0) < 2:
-            # disable for old version KBs
-            return None
-
         user_columns = self._kb.params.get("metadata_columns", [])
         dynamic_columns = self._kb.params.get("inserted_metadata", [])
 
         columns = set(user_columns) | set(dynamic_columns)
+        if len(columns) == 0:
+            # probably old version of kb
+            return None
+
         return [col.lower() for col in columns]
 
     def score_documents(self, query_text, documents, reranking_model_params):

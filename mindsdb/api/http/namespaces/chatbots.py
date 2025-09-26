@@ -18,9 +18,6 @@ def create_chatbot(project_name, name, chatbot):
     if name is None:
         return http_error(HTTPStatus.BAD_REQUEST, "Missing field", 'Missing "name" field for chatbot')
 
-    if not name.islower():
-        return http_error(HTTPStatus.BAD_REQUEST, "Wrong name", f"The name must be in lower case: {name}")
-
     model_name = chatbot.get("model_name", None)
     agent_name = chatbot.get("agent_name", None)
     if model_name is None and agent_name is None:

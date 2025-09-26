@@ -131,7 +131,7 @@ def test_get_chatbot_project_not_found(client):
 def test_post_chatbot(client, test_db):
     chatbot_data = {
         'chatbot': {
-            'name': 'test_post_chatbot',
+            'name': 'TEST_post_chatbot',
             'model_name': 'test_model',
             'database_id': test_db['id'],
             'is_running': True,
@@ -145,7 +145,7 @@ def test_post_chatbot(client, test_db):
     created_chatbot = response.get_json()
 
     expected_chatbot = {
-        'name': 'test_post_chatbot',
+        'name': 'TEST_post_chatbot',
         'model_name': 'test_model',
         'agent_id': created_chatbot['agent_id'],
         'database_id': test_db['id'],

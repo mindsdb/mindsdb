@@ -38,18 +38,17 @@ class Project:
         return p
 
     def create(self, name: str):
-        name = name.lower()
 
         company_id = ctx.company_id if ctx.company_id is not None else 0
 
         existing_record = db.Integration.query.filter(
-            sa.func.lower(db.Integration.name) == name, db.Integration.company_id == ctx.company_id
+            db.Integration.name == name, db.Integration.company_id == ctx.company_id
         ).first()
         if existing_record is not None:
             raise EntityExistsError("Database exists with this name ", name)
 
         existing_record = db.Project.query.filter(
-            (sa.func.lower(db.Project.name) == name)
+            (db.Project.name == name)
             & (db.Project.company_id == company_id)
             & (db.Project.deleted_at == sa.null())
         ).first()

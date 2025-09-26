@@ -45,15 +45,11 @@ class FileSplitterConfig:
         headers_to_split_on=DEFAULT_MARKDOWN_HEADERS_TO_SPLIT_ON
     )
     # Splitter to use for HTML splitting
-    html_splitter: HTMLHeaderTextSplitter = HTMLHeaderTextSplitter(
-        headers_to_split_on=DEFAULT_HTML_HEADERS_TO_SPLIT_ON
-    )
+    html_splitter: HTMLHeaderTextSplitter = HTMLHeaderTextSplitter(headers_to_split_on=DEFAULT_HTML_HEADERS_TO_SPLIT_ON)
 
     def __post_init__(self):
         if self.text_chunking_config is None:
-            self.text_chunking_config = TextChunkingConfig(
-                chunk_size=self.chunk_size, chunk_overlap=self.chunk_overlap
-            )
+            self.text_chunking_config = TextChunkingConfig(chunk_size=self.chunk_size, chunk_overlap=self.chunk_overlap)
 
         if self.recursive_splitter is None:
             self.recursive_splitter = RecursiveCharacterTextSplitter(
@@ -85,9 +81,7 @@ class FileSplitter:
     ) -> Union[Callable, HTMLHeaderTextSplitter, MarkdownHeaderTextSplitter]:
         return self._extension_map.get(extension, self.default_splitter)()
 
-    def split_documents(
-        self, documents: List[Document], default_failover: bool = True
-    ) -> List[Document]:
+    def split_documents(self, documents: List[Document], default_failover: bool = True) -> List[Document]:
         """Splits a list of documents representing files using the appropriate splitting & chunking strategies
 
         Args:
@@ -105,13 +99,9 @@ class FileSplitter:
             try:
                 split_documents += split_func(document.page_content)
             except Exception as e:
-                logger.error(
-                    f"Error splitting document with extension {extension}: {str(e)}"
-                )
+                logger.exception(f"Error splitting document with extension {extension}:")
                 if not default_failover:
-                    raise ValueError(
-                        f"Error splitting document with extension {extension}"
-                    ) from e
+                    raise ValueError(f"Error splitting document with extension {extension}") from e
                 # Try default splitter as a failover, if enabled.
                 split_func = self._split_func_by_extension(extension=None)
                 split_documents += split_func(document.page_content)

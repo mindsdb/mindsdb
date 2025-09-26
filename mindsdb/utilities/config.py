@@ -170,6 +170,7 @@ class Config:
                     "restart_on_failure": True,
                     "max_restart_count": 1,
                     "max_restart_interval_seconds": 60,
+                    "a2wsgi": {"workers": 10, "send_queue_size": 10},
                 },
                 "mysql": {
                     "host": api_host,

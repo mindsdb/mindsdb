@@ -40,7 +40,7 @@ services:
       FLASK_DEBUG: 1  # This will make sure http requests are logged regardless of log level
       SENTRY_IO_DSN: ""
       SENTRY_IO_ENVIRONMENT: "local"
-      #MINDSDB_APIS: "http"  # Explicitly set the APIs to enable
+      MINDSDB_APIS: "http"  # Explicitly set the APIs to enable
       # SENTRY_IO_FORCE_RUN: "true" # Uncomment me to force-start sentry on local development. Good for profiling, but may annoy other devs on sentry.io with the "noise"
       # MINDSDB_LOG_LEVEL: "DEBUG"
       # OPENAI_API_KEY: "..."
@@ -94,7 +94,7 @@ services:
       - 13133:13133 # health_check extension
       - 4317:4317 # OTLP gRPC receiver
       - 4318:4318 # OTLP http receiver
-      - 55679:55679 # zpages extension
+      # - 55679:55679 # zpages extension
 
   langfuse:
     <<: *autoRestartOnFailure
@@ -142,7 +142,7 @@ services:
     ports:
       - "15432:5432" # Expose the port to the host. Use 15432 to avoid conflicts with local postgres installations
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - ../db_data:/var/lib/postgresql/data
       - ./scripts/init-dbs.sh:/docker-entrypoint-initdb.d/init-dbs.sh
 
 volumes:

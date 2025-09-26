@@ -30,9 +30,7 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
     @property
     def dummy_connection_data(self):
-        return OrderedDict(
-            user="example_user", password="example_pass", dsn="example_dsn"
-        )
+        return OrderedDict(user="example_user", password="example_pass", dsn="example_dsn")
 
     @property
     def err_to_raise_on_connect_failure(self):
@@ -71,9 +69,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         return OracleHandler("oracle", connection_data=self.dummy_connection_data)
 
     def create_patcher(self):
-        return patch(
-            "mindsdb.integrations.handlers.oracle_handler.oracle_handler.connect"
-        )
+        return patch("mindsdb.integrations.handlers.oracle_handler.oracle_handler.connect")
 
     def test_connect_validation(self):
         """
@@ -275,18 +271,14 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         expected_sql = "SELECT * FROM rendered_table"
 
-        with patch(
-            "mindsdb.integrations.handlers.oracle_handler.oracle_handler.SqlalchemyRender"
-        ) as MockRenderer:
+        with patch("mindsdb.integrations.handlers.oracle_handler.oracle_handler.SqlalchemyRender") as MockRenderer:
             mock_renderer_instance = MockRenderer.return_value
             mock_renderer_instance.get_string.return_value = expected_sql
 
             result = self.handler.query(mock_ast)
 
             MockRenderer.assert_called_once_with("oracle")
-            mock_renderer_instance.get_string.assert_called_once_with(
-                mock_ast, with_failback=True
-            )
+            mock_renderer_instance.get_string.assert_called_once_with(mock_ast, with_failback=True)
             self.handler.native_query.assert_called_once_with(expected_sql)
             self.assertEqual(result, expected_response)
 
@@ -729,6 +721,53 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             self.assertEqual(result_value, input_value)
         # endreion
 
+    def test_insert(self):
+        """
+        Tests the insert method to ensure it correctly constructs and executes an INSERT statement
+        using insertmany for batch inserts.
+        """
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=None)
+
+        self.handler.connect = MagicMock(return_value=mock_conn)
+        mock_conn.cursor = MagicMock(return_value=mock_cursor)
+        mock_cursor.rowcount = 3
+
+        df = pd.DataFrame({"id": [1, 2, 3], "name": ["a", "b", "c"]})
+
+        response = self.handler.insert("test_table", df)
+        expected_sql = "INSERT INTO test_table (id, name) VALUES (:1, :2)"
+        expected_values = df.values.tolist()
+        mock_cursor.executemany.assert_called_once_with(expected_sql, expected_values)
+        mock_conn.commit.assert_called_once()
+
+        self.assertEqual(response.affected_rows, 3)
+        self.assertEqual(response.type, RESPONSE_TYPE.OK)
+
+    def test_insert_error(self):
+        """
+        Tests the insert method to ensure it correctly handles errors
+        """
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=None)
+
+        self.handler.connect = MagicMock(return_value=mock_conn)
+        mock_conn.cursor = MagicMock(return_value=mock_cursor)
+
+        error_msg = "ORA-00942: table or view does not exist"
+        mock_cursor.executemany.side_effect = DatabaseError(error_msg)
+
+        df = pd.DataFrame({"id": [1, 2, 3], "name": ["a", "b", "c"]})
+
+        with self.assertRaises(DatabaseError):
+            self.handler.insert("nonexistent_table", df)
+
+        mock_conn.rollback.assert_called_once()
+
     # Metadata Handler Tests
 
     def test_meta_get_tables(self):
@@ -914,7 +953,10 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         assert list(df["referenced_table_name"]) == ["USERS", "ORDERS"]
         assert list(df["referenced_column_name"]) == ["USER_ID", "ORDER_ID"]
         assert list(df["ordinal_position"]) == [1, 1]
-        assert list(df["constraint_name"]) == ["FK_ORDERS_USERS", "FK_ORDERITEMS_ORDERS"]
+        assert list(df["constraint_name"]) == [
+            "FK_ORDERS_USERS",
+            "FK_ORDERITEMS_ORDERS",
+        ]
 
         del self.handler.native_query
 

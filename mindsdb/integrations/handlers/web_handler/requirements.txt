@@ -1,2 +1,2 @@
 html2text
-bs4
+beautifulsoup4

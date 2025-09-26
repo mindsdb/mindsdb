@@ -76,9 +76,7 @@ def _map_type(internal_type_name: str) -> MYSQL_DATA_TYPE:
         if internal_type_name in db_types_list:
             return mysql_data_type
 
-    logger.debug(
-        f"Oracle handler type mapping: unknown type: {internal_type_name}, use VARCHAR as fallback."
-    )
+    logger.debug(f"Oracle handler type mapping: unknown type: {internal_type_name}, use VARCHAR as fallback.")
     return MYSQL_DATA_TYPE.VARCHAR
 
 
@@ -152,11 +150,7 @@ def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
             expected_dtype = "Int64"
         elif mysql_type in (MYSQL_DATA_TYPE.BOOL, MYSQL_DATA_TYPE.BOOLEAN):
             expected_dtype = "boolean"
-        serieses.append(
-            pd.Series(
-                [row[i] for row in result], dtype=expected_dtype, name=description[i][0]
-            )
-        )
+        serieses.append(pd.Series([row[i] for row in result], dtype=expected_dtype, name=description[i][0]))
     df = pd.concat(serieses, axis=1, copy=False)
     # endregion
 
@@ -299,9 +293,7 @@ class OracleHandler(MetaDatabaseHandler):
             logger.error(f"Connection check to Oracle failed, {known_error}!")
             response.error_message = str(known_error)
         except Exception as unknown_error:
-            logger.error(
-                f"Connection check to Oracle failed due to an unknown error, {unknown_error}!"
-            )
+            logger.error(f"Connection check to Oracle failed due to an unknown error, {unknown_error}!")
             response.error_message = str(unknown_error)
 
         if response.success and need_to_close:
@@ -336,9 +328,7 @@ class OracleHandler(MetaDatabaseHandler):
                     response = _make_table_response(result, cur)
                 connection.commit()
             except DatabaseError as database_error:
-                logger.error(
-                    f"Error running query: {query} on Oracle, {database_error}!"
-                )
+                logger.error(f"Error running query: {query} on Oracle, {database_error}!")
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_message=str(database_error),
@@ -346,9 +336,7 @@ class OracleHandler(MetaDatabaseHandler):
                 connection.rollback()
 
             except Exception as unknown_error:
-                logger.error(
-                    f"Unknwon error running query: {query} on Oracle, {unknown_error}!"
-                )
+                logger.error(f"Unknwon error running query: {query} on Oracle, {unknown_error}!")
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_message=str(unknown_error),
@@ -382,9 +370,7 @@ class OracleHandler(MetaDatabaseHandler):
                     result = cur.fetchmany(fetch_size)
                     if not result:
                         break
-                    df = pd.DataFrame(
-                        result, columns=[col[0] for col in cur.description]
-                    )
+                    df = pd.DataFrame(result, columns=[col[0] for col in cur.description])
                     yield df
                 connection.commit()
             finally:
@@ -405,10 +391,8 @@ class OracleHandler(MetaDatabaseHandler):
         need_to_close = self.is_connected is False
         connection = self.connect()
         columns = list(df.columns)
-        placeholders = ", ".join([f":{i+1}" for i in range(len(columns))])
-        insert_query = (
-            f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({placeholders})"
-        )
+        placeholders = ", ".join([f":{i + 1}" for i in range(len(columns))])
+        insert_query = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({placeholders})"
 
         with connection.cursor() as cur:
             try:
@@ -416,9 +400,7 @@ class OracleHandler(MetaDatabaseHandler):
                 connection.commit()
                 rowcount = cur.rowcount
             except DatabaseError as database_error:
-                logger.error(
-                    f"Error inserting data into table {table_name} on Oracle, {database_error}!"
-                )
+                logger.error(f"Error inserting data into table {table_name} on Oracle, {database_error}!")
                 connection.rollback()
                 raise
         if need_to_close is True:
@@ -493,9 +475,7 @@ class OracleHandler(MetaDatabaseHandler):
             result.to_columns_table_response(map_type_fn=_map_type)
         return result
 
-    def meta_get_tables(
-        self, table_names: list[str] | None = None
-    ) -> list[dict[str, Any]]:
+    def meta_get_tables(self, table_names: list[str] | None = None) -> list[dict[str, Any]]:
         """
         Retrieves metadata about all non-system tables and views in the current schema of the Oracle database.
 

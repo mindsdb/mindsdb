@@ -39,7 +39,7 @@ langchain-openai==0.3.6
 langchain-anthropic==0.2.4
 langchain-text-splitters==0.3.5
 langchain-google-genai>=2.0.0
-langchain_writer==0.3.0 # Required for Writer agent
+langchain_writer==0.3.1 # Required for Writer agent
 lark
 lxml==5.3.0 # Required for knowledge base webpage embeddings
 pgvector==0.3.6 # Required for knowledge bases

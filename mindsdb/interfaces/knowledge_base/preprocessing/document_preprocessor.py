@@ -133,7 +133,12 @@ Please give a short succinct context to situate this chunk within the overall do
         super().__init__()
         self.config = config
         self.splitter = FileSplitter(
-            FileSplitterConfig(chunk_size=config.chunk_size, chunk_overlap=config.chunk_overlap)
+            FileSplitterConfig(
+                chunk_size=config.chunk_size,
+                chunk_overlap=config.chunk_overlap,
+                page_chunking=getattr(config, "page_chunking", False),
+                max_page_size=getattr(config, "max_page_size", 4000),
+            )
         )
         self.llm = create_chat_model(
             {

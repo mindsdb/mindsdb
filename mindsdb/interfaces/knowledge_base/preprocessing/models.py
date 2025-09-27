@@ -39,6 +39,14 @@ class TextChunkingConfig(BasePreprocessingConfig):
 
     chunk_size: int = Field(default=1000, description="The target size of each text chunk", gt=0)
     chunk_overlap: int = Field(default=200, description="The number of characters to overlap between chunks", ge=0)
+    page_chunking: bool = Field(
+        default=False, description="Whether to use page-based chunking for PDFs instead of character-based chunking"
+    )
+    max_page_size: int = Field(
+        default=4000,
+        description="Maximum size for individual pages when using page chunking (if page exceeds this, it will be split further)",
+        gt=0,
+    )
     length_function: Callable = Field(default=len, description="Function to measure text length")
     separators: List[str] = Field(
         default=["\n\n", "\n", " ", ""],

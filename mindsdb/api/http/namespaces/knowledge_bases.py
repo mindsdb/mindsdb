@@ -199,7 +199,19 @@ class KnowledgeBaseResource(Resource):
 
             # Set up dependencies for DocumentLoader
             file_controller = FileController()
-            file_splitter_config = FileSplitterConfig()
+
+            # Extract page_chunking settings from preprocessing config if available
+            page_chunking = False
+            max_page_size = 4000
+            if "preprocessing" in kb_data:
+                preprocessing_config = kb_data["preprocessing"]
+                if preprocessing_config.get("type") == "text_chunking" and preprocessing_config.get(
+                    "text_chunking_config"
+                ):
+                    page_chunking = preprocessing_config["text_chunking_config"].get("page_chunking", False)
+                    max_page_size = preprocessing_config["text_chunking_config"].get("max_page_size", 4000)
+
+            file_splitter_config = FileSplitterConfig(page_chunking=page_chunking, max_page_size=max_page_size)
             file_splitter = FileSplitter(file_splitter_config)
             markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=DEFAULT_MARKDOWN_HEADERS)
             mysql_proxy = FakeMysqlProxy()

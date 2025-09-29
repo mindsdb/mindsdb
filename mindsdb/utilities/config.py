@@ -356,6 +356,14 @@ class Config:
             self._env_config["gui"]["open_on_start"] = False
             self._env_config["gui"]["autoupdate"] = False
 
+        mindsdb_gui_autoupdate = os.environ.get("MINDSDB_GUI_AUTOUPDATE", "").lower()
+        if mindsdb_gui_autoupdate in ("0", "false"):
+            self._env_config["gui"]["autoupdate"] = False
+        elif mindsdb_gui_autoupdate in ("1", "true"):
+            self._env_config["gui"]["autoupdate"] = True
+        elif mindsdb_gui_autoupdate != "":
+            raise ValueError(f"Wrong value of env var MINDSDB_GUI_AUTOUPDATE={mindsdb_gui_autoupdate}")
+
     def fetch_auto_config(self) -> bool:
         """Load dict readed from config.auto.json to `auto_config`.
         Do it only if `auto_config` was not loaded before or config.auto.json been changed.

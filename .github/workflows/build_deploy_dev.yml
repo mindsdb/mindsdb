@@ -24,6 +24,9 @@ jobs:
     outputs:
       not-docs: ${{ steps.filter.outputs.not-docs }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: dorny/paths-filter@v3
         id: filter
         with:

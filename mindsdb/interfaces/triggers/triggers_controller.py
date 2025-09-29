@@ -14,7 +14,6 @@ class TriggersController:
     OBJECT_TYPE = "trigger"
 
     def add(self, name, project_name, table, query_str, columns=None):
-
         if project_name is None:
             project_name = config.get("default_project")
         project_controller = ProjectController()

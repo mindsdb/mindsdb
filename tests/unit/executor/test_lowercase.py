@@ -12,12 +12,12 @@ class TestLowercase(BaseExecutorDummyML):
         # mix-case
         self.run_sql("CREATE VIEW `MyView` AS (SELECT 1)")
 
-        res = self.run_sql(f"SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE table_name = 'MyView'")
+        res = self.run_sql("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE table_name = 'MyView'")
         assert res["TABLE_TYPE"][0] == "VIEW"
 
         with pytest.raises(Exception):
-            self.run_sql(f"DROP VIEW MyView")
-        self.run_sql(f"DROP VIEW `MyView`")
+            self.run_sql("DROP VIEW MyView")
+        self.run_sql("DROP VIEW `MyView`")
 
         views_names = ["myview", "MyView", "MYVIEW"]
         for view_name in views_names:
@@ -91,12 +91,12 @@ class TestLowercase(BaseExecutorDummyML):
         # mixed case
         self.run_sql("CREATE ML_ENGINE `MyMlEngine` FROM dummy_ml")
 
-        res = self.run_sql(f"SELECT * FROM INFORMATION_SCHEMA.ML_ENGINES WHERE name ='MyMlEngine'")
+        res = self.run_sql("SELECT * FROM INFORMATION_SCHEMA.ML_ENGINES WHERE name ='MyMlEngine'")
         assert len(res) == 1
 
         with pytest.raises(Exception):
-            self.run_sql(f"DROP ML_ENGINE MyMlEngine")
-        self.run_sql(f"DROP ML_ENGINE `MyMlEngine`")
+            self.run_sql("DROP ML_ENGINE MyMlEngine")
+        self.run_sql("DROP ML_ENGINE `MyMlEngine`")
 
         for engine_name in ["mymlengine", "MyMlEngine", "MYMLENGINE"]:
             another_name = "myMLEngine"
@@ -123,23 +123,23 @@ class TestLowercase(BaseExecutorDummyML):
         # mixed case
         self.run_sql("CREATE MODEL `MyModel` PREDICT a USING engine='myengine', join_learn_process=true")
 
-        res = self.run_sql(f"SELECT * FROM INFORMATION_SCHEMA.MODELS WHERE name ='MyModel'")
+        res = self.run_sql("SELECT * FROM INFORMATION_SCHEMA.MODELS WHERE name ='MyModel'")
         assert len(res) == 1
 
         with pytest.raises(Exception):
-            self.run_sql(f"DROP MODEL MyModel")
-        self.run_sql(f"DROP MODEL `MyModel`")
+            self.run_sql("DROP MODEL MyModel")
+        self.run_sql("DROP MODEL `MyModel`")
 
         # mixed project
         self.run_sql("CREATE DATABASE `MyProj`")
         self.run_sql("CREATE MODEL `MyProj`.MyModel PREDICT a USING engine='myengine', join_learn_process=true")
 
-        res = self.run_sql(f"SELECT * FROM INFORMATION_SCHEMA.MODELS WHERE name ='mymodel'")
+        res = self.run_sql("SELECT * FROM INFORMATION_SCHEMA.MODELS WHERE name ='mymodel'")
         assert len(res) == 1
 
         with pytest.raises(Exception):
-            self.run_sql(f"DROP MODEL MyProj.MyModel")
-        self.run_sql(f"DROP MODEL `MyProj`.MyModel")
+            self.run_sql("DROP MODEL MyProj.MyModel")
+        self.run_sql("DROP MODEL `MyProj`.MyModel")
 
         for model_name in ["mymodel", "MyModel", "MYMODEL"]:
             another_name = "myMODEL"
@@ -188,7 +188,7 @@ class TestLowercase(BaseExecutorDummyML):
         assert len(res) == 1
 
         with pytest.raises(Exception):
-            self.run_sql(f"drop skill MySkillMixed")
+            self.run_sql("drop skill MySkillMixed")
 
         # mixed case: agent
         self.run_sql(f"create agent `MyAGENT` using {agent_params}")
@@ -197,8 +197,8 @@ class TestLowercase(BaseExecutorDummyML):
         assert len(res) == 1
 
         with pytest.raises(Exception):
-            self.run_sql(f"drop agent MyAGENT")
-        self.run_sql(f"drop agent `MyAGENT`")
+            self.run_sql("drop agent MyAGENT")
+        self.run_sql("drop agent `MyAGENT`")
 
         for agent_name, skill_name in [("myagent", "myskill"), ("MyAgent", "Myskill"), ("MYAGENT", "MYSKILL")]:
             another_skill_name = "mySKILL"
@@ -232,7 +232,7 @@ class TestLowercase(BaseExecutorDummyML):
             self.run_sql(f"drop skill {another_skill_name}")
 
         # clear mixed case skill
-        self.run_sql(f"drop skill `MySkillMixed`")
+        self.run_sql("drop skill `MySkillMixed`")
 
     @patch("litellm.embedding")
     @patch("openai.OpenAI")
@@ -254,8 +254,8 @@ class TestLowercase(BaseExecutorDummyML):
         assert len(res) == 1
 
         with pytest.raises(Exception):
-            self.run_sql(f"DROP KNOWLEDGE BASE MyKB")
-        self.run_sql(f"DROP KNOWLEDGE BASE `MyKB`")
+            self.run_sql("DROP KNOWLEDGE BASE MyKB")
+        self.run_sql("DROP KNOWLEDGE BASE `MyKB`")
 
         for kb_name in ["mykb", "MyKB", "MYKB"]:
             another_kb_name = "myKB"
@@ -279,8 +279,8 @@ class TestLowercase(BaseExecutorDummyML):
         assert len(res) == 1
 
         with pytest.raises(Exception):
-            self.run_sql(f"DROP JOB MyJOB")
-        self.run_sql(f"DROP JOB `MyJOB`")
+            self.run_sql("DROP JOB MyJOB")
+        self.run_sql("DROP JOB `MyJOB`")
 
         for job_name in ["myjob", "Myjob", "MYJOB"]:
             another_name = "myjoB"
@@ -302,12 +302,12 @@ class TestLowercase(BaseExecutorDummyML):
         # mixed case
         self.run_sql("CREATE CHATBOT `MyChatbot` USING database = 'my_db',  agent = 'my_agent'")
 
-        res = self.run_sql(f"SELECT * FROM INFORMATION_SCHEMA.CHATBOTS WHERE name = 'MyChatbot'")
+        res = self.run_sql("SELECT * FROM INFORMATION_SCHEMA.CHATBOTS WHERE name = 'MyChatbot'")
         assert len(res) == 1
 
         with pytest.raises(Exception):
-            self.run_sql(f"DROP CHATBOT MyChatbot")
-        self.run_sql(f"DROP CHATBOT `MyChatbot`")
+            self.run_sql("DROP CHATBOT MyChatbot")
+        self.run_sql("DROP CHATBOT `MyChatbot`")
 
         for name in ["mychatbot", "MyChatbot", "MYCHATBOT"]:
             another_name = "myChatbot"
@@ -331,8 +331,8 @@ class TestLowercase(BaseExecutorDummyML):
         assert len(res) == 1
 
         with pytest.raises(Exception):
-            self.run_sql(f"DROP DATABASE MyDB")
-        self.run_sql(f"DROP DATABASE `MyDB`")
+            self.run_sql("DROP DATABASE MyDB")
+        self.run_sql("DROP DATABASE `MyDB`")
 
         for name in ["mydb", "MyDB", "MYDB"]:
             another_name = "myDb"
@@ -354,8 +354,8 @@ class TestLowercase(BaseExecutorDummyML):
         assert len(res) == 1
 
         with pytest.raises(Exception):
-            self.run_sql(f"DROP TRIGGER MyTrigger")
-        self.run_sql(f"DROP TRIGGER `MyTrigger`")
+            self.run_sql("DROP TRIGGER MyTrigger")
+        self.run_sql("DROP TRIGGER `MyTrigger`")
 
         for name in ["mytrigger", "MyTrigger", "MYTRIGGER"]:
             another_name = "myTrigger"

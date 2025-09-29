@@ -19,9 +19,7 @@ class ViewController:
         project_id = project_databases_dict[project_name]["id"]
         view_record = (
             db.session.query(db.View.id)
-            .filter(
-                db.View.name == name, db.View.company_id == ctx.company_id, db.View.project_id == project_id
-            )
+            .filter(db.View.name == name, db.View.company_id == ctx.company_id, db.View.project_id == project_id)
             .first()
         )
         if view_record is not None:

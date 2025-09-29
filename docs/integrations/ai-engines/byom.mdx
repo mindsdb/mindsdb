@@ -143,7 +143,27 @@ Please note that your custom model is uploaded to MindsDB as an engine. Then you
   <img src="/assets/byom_diagram.png" />
 </p>
 
-Let's look at an example.
+## Configuration
+
+The BYOM feature can be configured with the following environment variables:
+
+* `MINDSDB_BYOM_ENABLED`
+
+        This environment variable defines whether the BYOM feature is enabled (`MINDSDB_BYOM_ENABLED=true`) or disabled (`MINDSDB_BYOM_ENABLED=false`). Note that when running MindsDB locally, it is enabled by default.
+
+* `MINDSDB_BYOM_DEFAULT_TYPE`
+
+        This environment variable defines the modes of operation of the BYOM feature.
+
+        - `MINDSDB_BYOM_DEFAULT_TYPE=venv`<br></br>
+                When using the `venv` mode, MindsDB creates a virtual environment and installs in it the packages listed in the `requirements.txt` file. This virtual environment is dedicated for the custom model. Note that when running MindsDB locally, it is the default mode.
+
+        - `MINDSDB_BYOM_DEFAULT_TYPE=inhouse`<br></br>
+                When using the `inhouse` mode, there is no dedicated virtual environment for the custom model. It uses the environment of MindsDB, therefore, the `requirements.txt` file is not used with this mode.
+
+* `MINDSDB_BYOM_INHOUSE_ENABLED`
+
+        This environment variable defines whether the `inhouse` mode is enabled (`MINDSDB_BYOM_INHOUSE_ENABLED=true`) or disabled (`MINDSDB_BYOM_INHOUSE_ENABLED=false`). Note that when running MindsDB locally, it is enabled by default.
 
 ## Example
 

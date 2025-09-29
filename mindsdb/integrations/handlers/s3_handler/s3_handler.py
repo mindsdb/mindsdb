@@ -92,6 +92,7 @@ class S3Handler(APIHandler):
         self.connection_data = connection_data
         self.kwargs = kwargs
 
+        self.session = None
         self.connection = None
         self.is_connected = False
         self.thread_safe = True
@@ -135,35 +136,47 @@ class S3Handler(APIHandler):
         duckdb_conn = duckdb.connect(":memory:")
 
         duckdb_conn.execute("LOAD httpfs")
-        # Cria o secret S3 para credential_chain (IAM Role, env, etc)
-        region = self.connection_data.get("region_name", "us-east-1")
-        duckdb_conn.execute(f"""
-            CREATE OR REPLACE SECRET (
-                TYPE s3,
-                PROVIDER credential_chain,
-                REGION '{region}'
-            );
-        """)
-
-        # Configure credentials only if presentes
-        if "aws_access_key_id" in self.connection_data:
-            duckdb_conn.execute(f"SET s3_access_key_id='{self.connection_data['aws_access_key_id']}'")
-        if "aws_secret_access_key" in self.connection_data:
-            duckdb_conn.execute(f"SET s3_secret_access_key='{self.connection_data['aws_secret_access_key']}'")
-
-        # Configure optional parameters.
-        if "aws_session_token" in self.connection_data:
-            duckdb_conn.execute(f"SET s3_session_token='{self.connection_data['aws_session_token']}'")
 
         # detect region for bucket
         if bucket not in self._regions:
             client = self.connect()
-            self._regions[bucket] = client.get_bucket_location(Bucket=bucket)["LocationConstraint"]
+            bucket_region = client.get_bucket_location(Bucket=bucket).get("LocationConstraint")
+            # LocationConstraint pode ser None para us-east-1
+            self._regions[bucket] = bucket_region or "us-east-1"
 
-        # region = self._regions[bucket]
-        # duckdb_conn.execute(f"SET s3_region='{region}'")
-        if "region_name" in self.connection_data:
-            duckdb_conn.execute(f"SET s3_region='{self.connection_data['region_name']}'")
+        region = self.connection_data.get("region_name", self._regions.get(bucket, "us-east-1"))
+        region = region or "us-east-1"
+
+        credentials = None
+        if self.session is not None:
+            credentials = self.session.get_credentials()
+
+        if credentials is not None:
+            frozen_credentials = credentials.get_frozen_credentials()
+            access_key = frozen_credentials.access_key
+            secret_key = frozen_credentials.secret_key
+            session_token = frozen_credentials.token
+
+            if access_key:
+                duckdb_conn.execute("SET s3_access_key_id=?", [access_key])
+            if secret_key:
+                duckdb_conn.execute("SET s3_secret_access_key=?", [secret_key])
+            if session_token:
+                duckdb_conn.execute("SET s3_session_token=?", [session_token])
+        else:
+            # Cria o secret S3 para credential_chain (IAM Role, env, etc)
+            safe_region = region.replace("'", "''")
+            duckdb_conn.execute(
+                f"""
+                CREATE OR REPLACE SECRET default_s3 (
+                    TYPE s3,
+                    PROVIDER credential_chain,
+                    REGION '{safe_region}'
+                );
+                """
+            )
+
+        duckdb_conn.execute("SET s3_region=?", [region])
 
         try:
             yield duckdb_conn
@@ -177,23 +190,24 @@ class S3Handler(APIHandler):
         Returns:
             boto3.client: A client object to the AWS (S3) account.
         """
-        config = {}
+        session_kwargs = {}
         # Se use_env_credentials ou não existem as chaves, usa só region_name se existir
         if use_env_credentials or not ("aws_access_key_id" in self.connection_data and "aws_secret_access_key" in self.connection_data):
             if "region_name" in self.connection_data:
-                config["region_name"] = self.connection_data["region_name"]
+                session_kwargs["region_name"] = self.connection_data["region_name"]
             # Não adiciona credenciais, boto3 usará IAM Role do ambiente
         else:
             # Configure mandatory credentials.
-            config["aws_access_key_id"] = self.connection_data["aws_access_key_id"]
-            config["aws_secret_access_key"] = self.connection_data["aws_secret_access_key"]
+            session_kwargs["aws_access_key_id"] = self.connection_data["aws_access_key_id"]
+            session_kwargs["aws_secret_access_key"] = self.connection_data["aws_secret_access_key"]
             # Configure optional parameters.
             optional_parameters = ["region_name", "aws_session_token"]
             for parameter in optional_parameters:
                 if parameter in self.connection_data:
-                    config[parameter] = self.connection_data[parameter]
+                    session_kwargs[parameter] = self.connection_data[parameter]
 
-        client = boto3.client("s3", **config, config=Config(signature_version="s3v4"))
+        self.session = boto3.Session(**session_kwargs)
+        client = self.session.client("s3", config=Config(signature_version="s3v4"))
 
         # check connection
         if self.bucket is not None:
@@ -210,6 +224,7 @@ class S3Handler(APIHandler):
         if not self.is_connected:
             return
         self.connection.close()
+        self.session = None
         self.is_connected = False
 
     def check_connection(self) -> StatusResponse:

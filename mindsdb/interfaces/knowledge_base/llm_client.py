@@ -31,7 +31,7 @@ class LLMClient:
             azure_api_key = params.get("api_key") or os.getenv("AZURE_OPENAI_API_KEY")
             azure_api_endpoint = params.get("base_url") or os.environ.get("AZURE_OPENAI_ENDPOINT")
             azure_api_version = params.get("api_version") or os.environ.get("AZURE_OPENAI_API_VERSION")
-            self._llm_client = AzureOpenAI(
+            self.client = AzureOpenAI(
                 api_key=azure_api_key, azure_endpoint=azure_api_endpoint, api_version=azure_api_version, max_retries=2
             )
         elif self.provider == "openai":

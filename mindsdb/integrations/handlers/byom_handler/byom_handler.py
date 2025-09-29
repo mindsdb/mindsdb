@@ -1,10 +1,9 @@
 """BYOM: Bring Your Own Model
 
 env vars to contloll BYOM:
- - MINDSDB_BYOM_ENABLED - can BYOM be uysed or not. Locally enabled by default.
+ - MINDSDB_BYOM_ENABLED - can BYOM be used or not. Locally enabled by default.
  - MINDSDB_BYOM_INHOUSE_ENABLED - enable or disable 'inhouse' BYOM usage. Locally enabled by default.
  - MINDSDB_BYOM_DEFAULT_TYPE - [inhouse|venv] default byom type. Locally it is 'venv' by default.
- - MINDSDB_BYOM_TYPE - [safe|unsafe] - obsolete, same as above.
 """
 
 import os
@@ -73,15 +72,8 @@ class BYOMHandler(BaseMLEngine):
             self._default_byom_type = BYOM_TYPE.VENV
             if os.environ.get("MINDSDB_BYOM_DEFAULT_TYPE") is not None:
                 self._default_byom_type = BYOM_TYPE[os.environ.get("MINDSDB_BYOM_DEFAULT_TYPE").upper()]
-            else:
-                env_var = os.environ.get("MINDSDB_BYOM_DEFAULT_TYPE")
-                if env_var == "SAVE":
-                    self._default_byom_type = BYOM_TYPE["VENV"]
-                elif env_var == "UNSAVE":
-                    self._default_byom_type = BYOM_TYPE["INHOUSE"]
-                else:
-                    raise KeyError
         except KeyError:
+            logger.warning(f"Wrong value of env var MINDSDB_BYOM_DEFAULT_TYPE, {BYOM_TYPE.VENV} will be used")
             self._default_byom_type = BYOM_TYPE.VENV
         # endregion
 

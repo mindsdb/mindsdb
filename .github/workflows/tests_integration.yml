@@ -6,10 +6,6 @@ permissions:
 on:
   workflow_call:
     inputs:
-      git-sha:
-        required: false
-        type: string
-        default: ""
       deploy-env:
         required: true
         type: string
@@ -46,8 +42,6 @@ jobs:
     runs-on: mdb-dev
     steps:
     - uses: actions/checkout@v4
-      with:
-        ref: ${{ inputs.git-sha }}
     - name: Setup uv
       uses: astral-sh/setup-uv@v5
       with:

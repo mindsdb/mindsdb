@@ -1260,13 +1260,13 @@ class KnowledgeBaseController:
             raise ValueError("'provider' parameter is required for embedding model")
 
         # check available providers
-        avail_providers = ("openai", "azure_openai", "bedrock", "gemini", "google")
+        avail_providers = ("openai", "azure_openai", "bedrock", "gemini", "google", "ollama")
         if params["provider"] not in avail_providers:
             raise ValueError(
                 f"Wrong embedding provider: {params['provider']}. Available providers: {', '.join(avail_providers)}"
             )
 
-        if params["provider"] not in ("openai", "azure_openai"):
+        if params["provider"] not in ("openai", "azure_openai", "ollama"):
             # try use litellm
             try:
                 KnowledgeBaseTable.call_litellm_embedding(self.session, params, ["test"])
@@ -1275,8 +1275,7 @@ class KnowledgeBaseController:
             return
 
         params = copy.deepcopy(params)
-        if "provider" in params:
-            engine = params.pop("provider").lower()
+        engine = params.pop("provider").lower()
 
         api_key = get_api_key(engine, params, strict=False)
         if api_key is None:
@@ -1288,6 +1287,10 @@ class KnowledgeBaseController:
         if engine == "azure_openai":
             engine = "openai"
             params["provider"] = "azure"
+
+        if engine == "ollama":
+            engine = "openai"
+            params["provider"] = "ollama"
 
         if engine == "openai":
             if "question_column" not in params:

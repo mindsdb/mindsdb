@@ -6,6 +6,17 @@ sidebarTitle: Elasticsearch
 This documentation describes the integration of MindsDB with [Elasticsearch](https://www.elastic.co/elasticsearch/), a distributed search and analytics engine.
 The integration allows MindsDB to access data stored in Elasticsearch indices and enhance Elasticsearch with AI capabilities.
 
+## Architecture
+
+This handler uses a **SQL-first architecture** with automatic fallback:
+
+1. **Primary**: Elasticsearch SQL API for maximum performance and compatibility
+2. **Fallback**: Search API for array-containing indexes with automatic array-to-JSON conversion
+3. **Security**: SSL/TLS support with certificate validation
+4. **Efficiency**: Memory-efficient pagination for large datasets
+
+The handler automatically detects when SQL queries encounter array fields and seamlessly falls back to the Search API, converting arrays to JSON strings for SQL compatibility. This approach provides the best performance while handling all Elasticsearch data types.
+
 ## Prerequisites
 
 Before proceeding, ensure the following prerequisites are met:

@@ -4,6 +4,7 @@ from pandas import DataFrame
 
 from mindsdb.integrations.handlers.elasticsearch_handler.elasticsearch_handler import ElasticsearchHandler
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
+from test_config import SharedFixtures
 
 
 class TestElasticsearchHandler(unittest.TestCase):
@@ -14,12 +15,46 @@ class TestElasticsearchHandler(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        """Set up test fixtures for the entire test class."""
+        """Set up shared test fixtures for the entire test class."""
         cls.connection_data = {"hosts": "localhost:9200", "user": "test_user", "password": "test_password"}
+        cls.ssl_connection_data = {
+            "hosts": "localhost:9200",
+            "user": "test_user",
+            "password": "test_password",
+            "verify_certs": True,
+            "ca_certs": "/path/to/ca.crt",
+            "timeout": 30,
+        }
+        # Shared mock responses for efficiency
+        cls.mock_sql_response = {
+            "rows": [["John", 30], ["Jane", 25]],
+            "columns": [{"name": "name"}, {"name": "age"}],
+        }
+        cls.mock_search_response = {
+            "hits": {
+                "hits": [
+                    {"_source": {"name": "John", "age": 30, "tags": ["python", "elasticsearch"]}},
+                    {"_source": {"name": "Jane", "age": 25, "skills": ["java", "mongodb"]}},
+                ]
+            }
+        }
+        cls.mock_mapping_response = {
+            "test_index": {
+                "mappings": {
+                    "properties": {
+                        "field1": {"type": "text"},
+                        "field2": {"type": "integer"},
+                        "nested_field": {"properties": {"sub_field": {"type": "keyword"}}},
+                    }
+                }
+            }
+        }
 
     def setUp(self):
         """Set up test fixtures for each test method."""
         self.handler = ElasticsearchHandler("test_elasticsearch", self.connection_data)
+        # Initialize array cache for efficiency
+        self.handler._array_fields_cache = {"test_index": ["tags", "skills"]}
 
     def tearDown(self):
         """Clean up after each test method."""
@@ -49,7 +84,7 @@ class TestElasticsearchHandler(unittest.TestCase):
 
     @patch("mindsdb.integrations.handlers.elasticsearch_handler.elasticsearch_handler.Elasticsearch")
     def test_connect_success(self, mock_elasticsearch):
-        """Test successful connection to Elasticsearch."""
+        """Test successful connection to Elasticsearch with optimized mock setup."""
         mock_client = Mock()
         mock_elasticsearch.return_value = mock_client
 
@@ -58,6 +93,11 @@ class TestElasticsearchHandler(unittest.TestCase):
         self.assertEqual(result, mock_client)
         self.assertTrue(self.handler.is_connected)
         self.assertEqual(self.handler.connection, mock_client)
+
+        # Verify SSL defaults are applied
+        call_args = mock_elasticsearch.call_args[1]
+        self.assertIn("verify_certs", call_args)
+        self.assertTrue(call_args["verify_certs"])
 
     def test_connect_missing_hosts_and_cloud_id(self):
         """Test connection failure when both hosts and cloud_id are missing."""
@@ -148,13 +188,16 @@ class TestElasticsearchHandler(unittest.TestCase):
 
     @patch("mindsdb.integrations.handlers.elasticsearch_handler.elasticsearch_handler.ElasticsearchHandler.connect")
     def test_get_tables_success(self, mock_connect):
-        """Test successful retrieval of tables."""
+        """Test successful retrieval of tables with optimized response handling."""
         mock_client = Mock()
-        mock_client.cat.indices.return_value = [
-            {"index": "test_index1"},
-            {"index": "test_index2"},
-            {"index": ".system_index"},  # Should be filtered out
-        ]
+        mock_client.sql.query.return_value = {
+            "rows": [
+                ["test_index1", "table", "BASE TABLE"],
+                ["test_index2", "table", "BASE TABLE"],
+                [".system_index", "table", "BASE TABLE"],
+            ],
+            "columns": [{"name": "name"}, {"name": "type"}, {"name": "kind"}],
+        }
         mock_connect.return_value = mock_client
 
         response = self.handler.get_tables()
@@ -183,23 +226,17 @@ class TestElasticsearchHandler(unittest.TestCase):
 
     @patch("mindsdb.integrations.handlers.elasticsearch_handler.elasticsearch_handler.ElasticsearchHandler.connect")
     def test_get_columns_success(self, mock_connect):
-        """Test successful retrieval of columns."""
+        """Test successful retrieval of columns with optimized mock reuse."""
         mock_client = Mock()
-        mock_client.indices.get_mapping.return_value = {
-            "test_index": {
-                "mappings": {
-                    "properties": {
-                        "field1": {"type": "text"},
-                        "field2": {"type": "integer"},
-                        "nested_field": {"properties": {"sub_field": {"type": "keyword"}}},
-                    }
-                }
-            }
+        mock_client.sql.query.return_value = {
+            "rows": [
+                ["field1", "text", None],
+                ["field2", "integer", None],
+                ["nested_field.sub_field", "keyword", None],
+            ],
+            "columns": [{"name": "column"}, {"name": "type"}, {"name": "mapping"}],
         }
         mock_connect.return_value = mock_client
-
-        # Mock array field detection
-        self.handler._array_fields_cache = {"test_index": ["field1"]}
 
         response = self.handler.get_columns("test_index")
 
@@ -276,12 +313,9 @@ class TestElasticsearchHandler(unittest.TestCase):
 
     @patch("mindsdb.integrations.handlers.elasticsearch_handler.elasticsearch_handler.ElasticsearchHandler.connect")
     def test_native_query_success(self, mock_connect):
-        """Test successful native query execution."""
+        """Test successful native query execution with shared mock data."""
         mock_client = Mock()
-        mock_client.sql.query.return_value = {
-            "rows": [["John", 30], ["Jane", 25]],
-            "columns": [{"name": "name"}, {"name": "age"}],
-        }
+        mock_client.sql.query.return_value = self.mock_sql_response
         mock_connect.return_value = mock_client
 
         response = self.handler.native_query("SELECT name, age FROM users")
@@ -310,11 +344,8 @@ class TestElasticsearchHandler(unittest.TestCase):
 
     @patch("mindsdb.integrations.handlers.elasticsearch_handler.elasticsearch_handler.ElasticsearchHandler.connect")
     def test_use_search_api_fallback(self, mock_connect):
-        """Test Search API fallback functionality."""
-        mock_client = Mock()
-        mock_client.search.return_value = {
-            "hits": {"hits": [{"_source": {"name": "John", "age": 30, "tags": ["python", "elasticsearch"]}}]}
-        }
+        """Test Search API fallback functionality with shared fixtures."""
+        mock_client = SharedFixtures.mock_elasticsearch_client()
         mock_connect.return_value = mock_client
 
         response = self.handler._use_search_api_fallback("test_index", limit=10)
@@ -329,20 +360,21 @@ class TestElasticsearchHandler(unittest.TestCase):
             self.assertIn("python", tags_value)
 
     def test_extract_index_name_from_query(self):
-        """Test index name extraction from SQL queries."""
+        """Test index name extraction from SQL queries with batch processing."""
         test_cases = [
             ("SELECT * FROM users", "users"),
             ("SELECT name FROM `test-index`", "test-index"),
             ('SELECT * FROM "my_index" WHERE age > 25', "my_index"),
-            ("SELECT * FROM users WHERE id = 1", "users"),  # INSERT not supported by our regex
+            ("SELECT * FROM users WHERE id = 1", "users"),
         ]
 
         for query, expected in test_cases:
-            result = self.handler._extract_index_name_from_query(query)
-            self.assertEqual(result, expected, f"Failed for query: {query}")
+            with self.subTest(query=query):
+                result = self.handler._extract_index_name_from_query(query)
+                self.assertEqual(result, expected, f"Failed for query: {query}")
 
     def test_extract_limit_from_query(self):
-        """Test LIMIT extraction from SQL queries."""
+        """Test LIMIT extraction from SQL queries with batch processing."""
         test_cases = [
             ("SELECT * FROM users LIMIT 10", 10),
             ("SELECT * FROM users limit 25", 25),
@@ -351,11 +383,12 @@ class TestElasticsearchHandler(unittest.TestCase):
         ]
 
         for query, expected in test_cases:
-            result = self.handler._extract_limit_from_query(query)
-            self.assertEqual(result, expected, f"Failed for query: {query}")
+            with self.subTest(query=query):
+                result = self.handler._extract_limit_from_query(query)
+                self.assertEqual(result, expected, f"Failed for query: {query}")
 
     def test_extract_columns_from_query(self):
-        """Test column extraction from SELECT queries."""
+        """Test column extraction from SELECT queries with batch processing."""
         test_cases = [
             ("SELECT * FROM users", None),
             ("SELECT name, age FROM users", ["name", "age"]),
@@ -364,8 +397,9 @@ class TestElasticsearchHandler(unittest.TestCase):
         ]
 
         for query, expected in test_cases:
-            result = self.handler._extract_columns_from_query(query)
-            self.assertEqual(result, expected, f"Failed for query: {query}")
+            with self.subTest(query=query):
+                result = self.handler._extract_columns_from_query(query)
+                self.assertEqual(result, expected, f"Failed for query: {query}")
 
     @patch("mindsdb.integrations.handlers.elasticsearch_handler.elasticsearch_handler.SqlalchemyRender")
     @patch(
@@ -383,15 +417,11 @@ class TestElasticsearchHandler(unittest.TestCase):
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
 
     def test_connection_args_validation(self):
-        """Test all connection arguments from connection_args.py."""
+        """Test all connection arguments from connection_args.py with optimized validation."""
         from mindsdb.integrations.handlers.elasticsearch_handler.connection_args import connection_args
 
-        # Test that all required connection arguments are present
-        required_args = ["hosts"]  # Only hosts OR cloud_id is required
-        for arg in required_args:
-            self.assertIn(arg, connection_args, f"Missing required connection argument: {arg}")
-
-        # Test optional arguments exist
+        # Test configuration validation
+        required_args = ["hosts"]
         optional_args = [
             "cloud_id",
             "user",
@@ -403,13 +433,20 @@ class TestElasticsearchHandler(unittest.TestCase):
             "verify_certs",
             "timeout",
         ]
+
+        # Batch validate required arguments
+        for arg in required_args:
+            self.assertIn(arg, connection_args, f"Missing required connection argument: {arg}")
+
+        # Batch validate optional arguments
         for arg in optional_args:
             self.assertIn(arg, connection_args, f"Missing optional connection argument: {arg}")
 
-        # Test argument structure
+        # Batch validate argument structure
         for arg_name, arg_config in connection_args.items():
-            self.assertIn("type", arg_config, f"Missing 'type' for argument: {arg_name}")
-            self.assertIn("description", arg_config, f"Missing 'description' for argument: {arg_name}")
+            with self.subTest(argument=arg_name):
+                self.assertIn("type", arg_config, f"Missing 'type' for argument: {arg_name}")
+                self.assertIn("description", arg_config, f"Missing 'description' for argument: {arg_name}")
 
 
 class TestElasticsearchHandlerIntegration(unittest.TestCase):

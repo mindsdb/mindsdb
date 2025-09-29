@@ -8,33 +8,53 @@ from mindsdb.integrations.libs.response import RESPONSE_TYPE
 
 class TestArrayHandling(unittest.TestCase):
     """
-    Comprehensive unit tests for array handling functionality in ElasticsearchHandler.
+    Optimized unit tests for array handling functionality in ElasticsearchHandler.
     This is a critical enterprise feature that enables SQL compatibility with
     Elasticsearch data containing arrays.
     """
 
+    @classmethod
+    def setUpClass(cls):
+        """Set up shared test fixtures for efficiency."""
+        cls.connection_data = {"hosts": "localhost:9200"}
+        # Shared test data for efficiency
+        cls.simple_array_data = {"tags": ["python", "elasticsearch", "data"]}
+        cls.nested_array_data = {
+            "user": {"skills": ["python", "java"], "projects": ["project1", "project2"]},
+            "metadata": {"tags": ["tag1", "tag2"], "categories": ["cat1", "cat2"]},
+        }
+        cls.mixed_type_data = {
+            "mixed_array": ["string", 123, 45.6, True, None],
+            "numeric_array": [1, 2, 3, 4, 5],
+            "boolean_array": [True, False, True],
+        }
+        cls.complex_nested_data = {
+            "document": {
+                "metadata": {
+                    "tags": ["important", "archived"],
+                    "categories": ["work", "personal"],
+                    "authors": [
+                        {"name": "John", "roles": ["editor", "reviewer"]},
+                        {"name": "Jane", "roles": ["author"]},
+                    ],
+                }
+            }
+        }
+
     def setUp(self):
-        """Set up test fixtures."""
-        self.connection_data = {"hosts": "localhost:9200"}
+        """Set up test fixtures for each test."""
         self.handler = ElasticsearchHandler("test_elasticsearch", self.connection_data)
 
     def test_convert_simple_array_to_string(self):
         """Test conversion of simple arrays to JSON strings."""
-        test_data = {"tags": ["python", "elasticsearch", "data"]}
-
-        result = self.handler._convert_arrays_to_strings(test_data)
+        result = self.handler._convert_arrays_to_strings(self.simple_array_data)
 
         self.assertEqual(result["tags"], '["python", "elasticsearch", "data"]')
         self.assertIsInstance(result["tags"], str)
 
     def test_convert_nested_arrays_to_strings(self):
         """Test conversion of nested structure with arrays."""
-        test_data = {
-            "user": {"skills": ["python", "java"], "projects": ["project1", "project2"]},
-            "metadata": {"tags": ["tag1", "tag2"], "categories": ["cat1", "cat2"]},
-        }
-
-        result = self.handler._convert_arrays_to_strings(test_data)
+        result = self.handler._convert_arrays_to_strings(self.nested_array_data)
 
         self.assertEqual(result["user"]["skills"], '["python", "java"]')
         self.assertEqual(result["user"]["projects"], '["project1", "project2"]')
@@ -43,13 +63,7 @@ class TestArrayHandling(unittest.TestCase):
 
     def test_convert_mixed_type_arrays(self):
         """Test conversion of arrays with mixed data types."""
-        test_data = {
-            "mixed_array": ["string", 123, 45.6, True, None],
-            "numeric_array": [1, 2, 3, 4, 5],
-            "boolean_array": [True, False, True],
-        }
-
-        result = self.handler._convert_arrays_to_strings(test_data)
+        result = self.handler._convert_arrays_to_strings(self.mixed_type_data)
 
         # Check that arrays are converted to JSON strings
         self.assertIsInstance(result["mixed_array"], str)
@@ -92,20 +106,7 @@ class TestArrayHandling(unittest.TestCase):
 
     def test_convert_complex_nested_arrays(self):
         """Test conversion of complex nested structures with arrays."""
-        test_data = {
-            "document": {
-                "metadata": {
-                    "tags": ["important", "archived"],
-                    "categories": ["work", "personal"],
-                    "authors": [
-                        {"name": "John", "roles": ["editor", "reviewer"]},
-                        {"name": "Jane", "roles": ["author"]},
-                    ],
-                }
-            }
-        }
-
-        result = self.handler._convert_arrays_to_strings(test_data)
+        result = self.handler._convert_arrays_to_strings(self.complex_nested_data)
 
         # Check top-level arrays
         self.assertEqual(result["document"]["metadata"]["tags"], '["important", "archived"]')
@@ -118,9 +119,11 @@ class TestArrayHandling(unittest.TestCase):
         self.assertEqual(len(parsed_authors), 2)
 
     @patch("mindsdb.integrations.handlers.elasticsearch_handler.elasticsearch_handler.ElasticsearchHandler.connect")
-    def test_detect_array_fields_single_document(self, mock_connect):
-        """Test array field detection with single document."""
+    def test_detect_array_fields_scenarios(self, mock_connect):
+        """Test array field detection with both single and multiple document scenarios."""
         mock_client = Mock()
+
+        # Test single document scenario
         mock_client.search.return_value = {
             "hits": {
                 "hits": [
@@ -144,10 +147,7 @@ class TestArrayHandling(unittest.TestCase):
         self.assertIn("metadata.skills", array_fields)
         self.assertNotIn("name", array_fields)
 
-    @patch("mindsdb.integrations.handlers.elasticsearch_handler.elasticsearch_handler.ElasticsearchHandler.connect")
-    def test_detect_array_fields_multiple_documents(self, mock_connect):
-        """Test array field detection across multiple documents."""
-        mock_client = Mock()
+        # Test multiple document scenario
         mock_client.search.return_value = {
             "hits": {
                 "hits": [
@@ -169,15 +169,16 @@ class TestArrayHandling(unittest.TestCase):
                 ]
             }
         }
-        mock_connect.return_value = mock_client
 
-        array_fields = self.handler._detect_array_fields("test_index")
+        # Clear cache for second test
+        self.handler._array_fields_cache = {}
+        array_fields_multi = self.handler._detect_array_fields("multi_index")
 
         # Should detect arrays from both documents
-        self.assertIn("tags", array_fields)
-        self.assertIn("categories", array_fields)
-        self.assertIn("preferences.languages", array_fields)
-        self.assertNotIn("user_id", array_fields)
+        self.assertIn("tags", array_fields_multi)
+        self.assertIn("categories", array_fields_multi)
+        self.assertIn("preferences.languages", array_fields_multi)
+        self.assertNotIn("user_id", array_fields_multi)
 
     def test_detect_array_fields_caching(self):
         """Test that array field detection results are cached."""
@@ -289,19 +290,26 @@ class TestArrayHandling(unittest.TestCase):
         self.assertIn("good", result["problematic_array"])
 
     def test_performance_with_large_arrays(self):
-        """Test array conversion performance with large arrays."""
+        """Test array conversion performance with large arrays (optimized)."""
+        import time
+
         # Create a large array
         large_array = list(range(1000))
         test_data = {"large_array": large_array, "regular_field": "value"}
 
+        start_time = time.time()
         result = self.handler._convert_arrays_to_strings(test_data)
+        end_time = time.time()
 
-        # Should successfully convert large array
+        # Should successfully convert large array efficiently
         self.assertIsInstance(result["large_array"], str)
         parsed = json.loads(result["large_array"])
         self.assertEqual(len(parsed), 1000)
         self.assertEqual(parsed[0], 0)
         self.assertEqual(parsed[999], 999)
+
+        # Performance assertion - should complete within reasonable time
+        self.assertLess(end_time - start_time, 1.0, "Large array conversion should be efficient")
 
 
 if __name__ == "__main__":

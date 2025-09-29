@@ -5,25 +5,16 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 
 class TestConnectionArgs(unittest.TestCase):
     """
-    Unit tests for connection_args.py to ensure all required connection parameters
-    are properly defined according to MindsDB handler specifications.
+    Optimized unit tests for connection_args.py to ensure all required connection
+    parameters are properly defined according to MindsDB handler specifications.
     """
 
-    def test_connection_args_structure(self):
-        """Test that connection_args has the correct structure."""
-        self.assertIsInstance(connection_args, dict, "connection_args should be a dictionary")
-        self.assertGreater(len(connection_args), 0, "connection_args should not be empty")
-
-    def test_required_connection_parameters(self):
-        """Test that all required connection parameters are present."""
-        required_params = ["hosts"]
-
-        for param in required_params:
-            self.assertIn(param, connection_args, f"Required parameter '{param}' missing from connection_args")
-
-    def test_optional_connection_parameters(self):
-        """Test that all expected optional connection parameters are present."""
-        optional_params = [
+    @classmethod
+    def setUpClass(cls):
+        """Set up shared test data for efficiency."""
+        cls.valid_types = [ARG_TYPE.STR, ARG_TYPE.INT, ARG_TYPE.BOOL, ARG_TYPE.PWD]
+        cls.required_params = ["hosts"]
+        cls.optional_params = [
             "cloud_id",
             "user",
             "password",
@@ -34,18 +25,34 @@ class TestConnectionArgs(unittest.TestCase):
             "verify_certs",
             "timeout",
         ]
+        cls.secret_params = ["password", "api_key"]
+        cls.boolean_params = ["verify_certs"]
+        cls.integer_params = ["timeout"]
+        cls.ssl_params = ["ca_certs", "client_cert", "client_key", "verify_certs"]
 
-        for param in optional_params:
+    def test_connection_args_structure(self):
+        """Test that connection_args has the correct structure."""
+        self.assertIsInstance(connection_args, dict, "connection_args should be a dictionary")
+        self.assertGreater(len(connection_args), 0, "connection_args should not be empty")
+
+    def test_required_connection_parameters(self):
+        """Test that all required connection parameters are present."""
+        for param in self.required_params:
+            self.assertIn(param, connection_args, f"Required parameter '{param}' missing from connection_args")
+
+    def test_optional_connection_parameters(self):
+        """Test that all expected optional connection parameters are present."""
+        for param in self.optional_params:
             self.assertIn(param, connection_args, f"Expected parameter '{param}' missing from connection_args")
 
     def test_parameter_type_definitions(self):
         """Test that all parameters have valid type definitions."""
-        valid_types = [ARG_TYPE.STR, ARG_TYPE.INT, ARG_TYPE.BOOL, ARG_TYPE.PWD]
-
         for param_name, param_config in connection_args.items():
             self.assertIn("type", param_config, f"Parameter '{param_name}' missing 'type' field")
             self.assertIn(
-                param_config["type"], valid_types, f"Parameter '{param_name}' has invalid type: {param_config['type']}"
+                param_config["type"],
+                self.valid_types,
+                f"Parameter '{param_name}' has invalid type: {param_config['type']}",
             )
 
     def test_parameter_descriptions(self):
@@ -61,9 +68,7 @@ class TestConnectionArgs(unittest.TestCase):
 
     def test_secret_parameters(self):
         """Test that sensitive parameters are marked as secret."""
-        secret_params = ["password", "api_key"]
-
-        for param in secret_params:
+        for param in self.secret_params:
             if param in connection_args:
                 self.assertIn(
                     "secret", connection_args[param], f"Secret parameter '{param}' should have 'secret' field"
@@ -79,9 +84,7 @@ class TestConnectionArgs(unittest.TestCase):
 
     def test_boolean_parameter_types(self):
         """Test that boolean parameters use correct type."""
-        boolean_params = ["verify_certs"]
-
-        for param in boolean_params:
+        for param in self.boolean_params:
             if param in connection_args:
                 self.assertEqual(
                     connection_args[param]["type"],
@@ -91,9 +94,7 @@ class TestConnectionArgs(unittest.TestCase):
 
     def test_integer_parameter_types(self):
         """Test that integer parameters use correct type."""
-        integer_params = ["timeout"]
-
-        for param in integer_params:
+        for param in self.integer_params:
             if param in connection_args:
                 self.assertEqual(
                     connection_args[param]["type"], ARG_TYPE.INT, f"Integer parameter '{param}' should use ARG_TYPE.INT"
@@ -144,9 +145,7 @@ class TestConnectionArgs(unittest.TestCase):
 
     def test_ssl_parameters_present(self):
         """Test that SSL/TLS related parameters are present."""
-        ssl_params = ["ca_certs", "client_cert", "client_key", "verify_certs"]
-
-        for param in ssl_params:
+        for param in self.ssl_params:
             self.assertIn(param, connection_args, f"SSL parameter '{param}' should be present for enterprise security")
 
     def test_parameter_consistency(self):

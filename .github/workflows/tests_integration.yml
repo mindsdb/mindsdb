@@ -6,10 +6,6 @@ permissions:
 on:
   workflow_call:
     inputs:
-      git-sha:
-        required: false
-        type: string
-        default: ""
       deploy-env:
         required: true
         type: string
@@ -46,15 +42,13 @@ jobs:
     runs-on: mdb-dev
     steps:
     - uses: actions/checkout@v4
-      with:
-        ref: ${{ inputs.git-sha }}
     - name: Setup uv
       uses: astral-sh/setup-uv@v5
       with:
         # Place cache in the tool dir because we mount this in our runnners
         cache-local-path: "/home/runner/_work/_tool/uv-local-cache"
         prune-cache: false
-        python-version: ${{ vars.CI_PYTHON_VERSION || '3.10' }}
+        python-version: ${{ vars.CI_PYTHON_VERSION || '3.11' }}
     - name: Install dependencies
       run: |
         uv pip install -r requirements/requirements-test.txt

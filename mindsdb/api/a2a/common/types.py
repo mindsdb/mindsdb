@@ -24,12 +24,6 @@ class TextPart(BaseModel):
     metadata: dict[str, Any] | None = None
 
 
-class TextPartKind(BaseModel):
-    kind: Literal["text"] = "text"
-    text: str
-    metadata: dict[str, Any] | None = None
-
-
 class FileContent(BaseModel):
     name: str | None = None
     mimeType: str | None = None
@@ -51,20 +45,8 @@ class FilePart(BaseModel):
     metadata: dict[str, Any] | None = None
 
 
-class FilePartKind(BaseModel):
-    kind: Literal["file"] = "file"
-    file: FileContent
-    metadata: dict[str, Any] | None = None
-
-
 class DataPart(BaseModel):
     type: Literal["data"] = "data"
-    data: dict[str, Any]
-    metadata: dict[str, Any] | None = None
-
-
-class DataPartKind(BaseModel):
-    kind: Literal["data"] = "data"
     data: dict[str, Any]
     metadata: dict[str, Any] | None = None
 
@@ -321,17 +303,6 @@ A2ARequest = TypeAdapter(
         Field(discriminator="method"),
     ]
 )
-
-# A2AResponse = Union[
-#     SendTaskResponse,
-#     GetTaskResponse,
-#     CancelTaskResponse,
-#     SetTaskPushNotificationResponse,
-#     GetTaskPushNotificationResponse,
-#     SendTaskStreamingResponse,
-#     MessageStreamResponse,
-#     SendStreamingMessageSuccessResponse,
-# ]
 
 # Error types
 

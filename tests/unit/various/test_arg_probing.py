@@ -10,7 +10,7 @@ try:
     )
 
     STATSFORECAST_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError):
     StatsForecastHandler = None
     STATSFORECAST_AVAILABLE = False
 

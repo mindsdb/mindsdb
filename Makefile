@@ -11,7 +11,7 @@ install_handler:
 		pip install -e .[$(HANDLER_NAME)];\
 	else\
 		echo 'Please set $$HANDLER_NAME to the handler to install.';\
-	fi	
+	fi 	
 precommit:
 	pre-commit install
 	pre-commit run --files $$(git diff --cached --name-only)
@@ -35,11 +35,17 @@ run_docker: build_docker
 	docker run -it -p 47334:47334 mdb
 
 integration_tests:
-	pytest $(PYTEST_ARGS) tests/integration/ -k "not test_auth"
-	pytest $(PYTEST_ARGS) tests/integration/ -k test_auth  # Run this test separately because it alters the auth requirements, which breaks other tests
+	# Runs ALL integration tests EXCEPT the contract scan and auth tests
+	pytest $(PYTEST_ARGS) tests/integration/ -m "not api_contract" -k "not test_auth"
+	# Run this test separately because it alters the auth requirements, which breaks other tests
+	pytest $(PYTEST_ARGS) tests/integration/ -k test_auth
+
+integration_tests_api_contracts:
+	# Runs ONLY the Schemathesis contract scan
+	pytest $(PYTEST_ARGS) tests/integration/api/test_schemathesis_contract_scan.py
 
 integration_tests_slow:
-	pytest --runslow $(PYTEST_ARGS) tests/integration/ -k "not test_auth"
+	pytest --runslow $(PYTEST_ARGS) tests/integration/ -m "not api_contract" -k "not test_auth"
 	pytest --runslow $(PYTEST_ARGS) tests/integration/ -k test_auth
 
 integration_tests_debug:
@@ -51,11 +57,11 @@ unit_tests:
 	pytest $(PYTEST_ARGS) --ignore=tests/unit/executor tests/unit/
 
 unit_tests_slow:
-	env PYTHONPATH=./ pytest --runslow $(PYTEST_ARGS) tests/unit/executor/  # We have to run executor tests separately because they do weird things that break everything else
+	env PYTHONPATH=./ pytest --runslow $(PYTEST_ARGS) tests/unit/executor/
 	pytest --runslow $(PYTEST_ARGS) --ignore=tests/unit/executor tests/unit/
 
 unit_tests_debug:
 	env PYTHONPATH=./ pytest $(PYTEST_ARGS_DEBUG) tests/unit/executor/  
 	pytest $(PYTEST_ARGS_DEBUG) --ignore=tests/unit/executor tests/unit/
 
-.PHONY: install_mindsdb install_handler precommit format run_mindsdb check build_docker run_docker integration_tests integration_tests_slow integration_tests_debug unit_tests unit_tests_slow unit_tests_debug
+.PHONY: install_mindsdb install_handler precommit format run_mindsdb check build_docker run_docker integration_tests integration_tests_api_contracts integration_tests_slow integration_tests_debug unit_tests unit_tests_slow unit_tests_debug

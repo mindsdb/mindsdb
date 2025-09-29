@@ -1,13 +1,13 @@
+import os
+import hmac
+import secrets
+import hashlib
+from http import HTTPStatus
+from typing import Optional
+
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 from starlette.requests import Request
-from http import HTTPStatus
-from typing import Optional
-import secrets
-import hmac
-import hashlib
-import os
-import traceback
 
 from mindsdb.utilities import log
 from mindsdb.utilities.config import config
@@ -100,7 +100,5 @@ def check_auth(username, password, scramble_func, salt, company_id, config):
 
         logger.info(f"Check auth, user={username}: Ok")
         return {"success": True, "username": username}
-    except Exception as e:
-        logger.error(f"Check auth, user={username}: ERROR")
-        logger.error(e)
-        logger.error(traceback.format_exc())
+    except Exception:
+        logger.exception(f"Check auth, user={username}: ERROR")

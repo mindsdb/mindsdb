@@ -122,7 +122,7 @@ class A2AServer:
         elif isinstance(e, ValidationError):
             json_rpc_error = InvalidRequestError(data=json.loads(e.json()))
         else:
-            logger.error(f"Unhandled exception: {e}")
+            logger.exception("Unhandled exception:")
             json_rpc_error = InternalError()
 
         response = JSONRPCResponse(id=None, error=json_rpc_error)
@@ -141,8 +141,8 @@ class A2AServer:
                         else:
                             data = json.dumps(item)
                     except Exception as e:
-                        logger.error(f"Serialization error in SSE stream: {e}")
-                        data = json.dumps({"error": f"Serialization error: {str(e)}"})
+                        logger.exception("Serialization error in SSE stream:")
+                        data = json.dumps({"error": f"Serialization error: {e}"})
                     yield {"data": data}
 
             # Add robust SSE headers for compatibility

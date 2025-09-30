@@ -90,8 +90,15 @@ class OpenAIHandler(BaseMLEngine):
 
     @staticmethod
     def is_chat_model(model_name):
+        # For Azure OpenAI, deployment names often have prefixes before the actual model name
+        # e.g., "resource-group-gpt-4o" should be detected as a gpt-4 model
+        # TODO: For cases where the deployment has no reference to the actual model name, I couldn't come up with a way to check if the model is chat model or not
+        
+        model_name_lower = model_name.lower()
+        
         for prefix in CHAT_MODELS_PREFIXES:
-            if model_name.startswith(prefix):
+            # Check both startswith (for standard OpenAI) and contains (for Azure deployments)
+            if model_name.startswith(prefix) or prefix.lower() in model_name_lower:
                 return True
         return False
 
@@ -110,7 +117,15 @@ class OpenAIHandler(BaseMLEngine):
             None
         """
         try:
+            # Handle Azure OpenAI differently - it doesn't support models.retrieve("test")
+            if isinstance(client, AzureOpenAI):
+                # For Azure OpenAI, we can't test with arbitrary model names
+                # The connection will be validated when we actually use it
+                client.models.list()  # This will raise an error if the connection is invalid
+                return
+            
             client.models.retrieve("test")
+            
         except NotFoundError:
             pass
         except AuthenticationError as e:
@@ -232,7 +247,10 @@ class OpenAIHandler(BaseMLEngine):
                 or os.environ.get("OPENAI_API_BASE")
                 or self.api_base
             )
-            client = self._get_client(api_key=api_key, base_url=api_base, org=args.get("api_organization"), args=args)
+            # Merge connection args with model args for client creation. Without this, it always gives a "404 Resource Not Found" error
+            client_args = {**connection_args, **args}
+            client = self._get_client(api_key=api_key, base_url=api_base, org=args.get("api_organization"), args=client_args)
+            
             available_models = get_available_models(client)
 
             if not args.get("mode"):
@@ -247,8 +265,13 @@ class OpenAIHandler(BaseMLEngine):
                     args["model_name"] = self.default_image_model
                 else:
                     args["model_name"] = self.default_model
+            elif isinstance(client, AzureOpenAI):
+                ... # Azure OpenAI deployments are not identified by model name, but my resource name, which could vary alot from what openai models are names. Hence this check is skipped
             elif (args["model_name"] not in available_models) and (args["mode"] != "embedding"):
                 raise Exception(f"Invalid model name. Please use one of {available_models}")
+                
+        except Exception as e:
+            raise
         finally:
             self.model_storage.json_set("args", args)
 
@@ -763,7 +786,7 @@ class OpenAIHandler(BaseMLEngine):
             api_key=api_key,
             base_url=args.get("api_base"),
             org=args.pop("api_organization") if "api_organization" in args else None,
-            args=args,
+            args={**self.engine_storage.get_connection_args(), **args},  # Merge connection args with model args
         )
 
         try:

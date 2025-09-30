@@ -182,19 +182,18 @@ class DruidHandler(DatabaseHandler):
         """
 
         query = """
-            SELECT *
+            SELECT 
+                TABLE_SCHEMA AS table_schema,
+                TABLE_NAME AS table_name,
+                TABLE_TYPE AS table_type
             FROM INFORMATION_SCHEMA.TABLES
             WHERE TABLE_SCHEMA not in ('INFORMATION_SCHEMA', 'sys')
         """
         result = self.native_query(query)
-        df = result.data_frame
-
-        df = df[['TABLE_NAME', 'TABLE_TYPE']]
-        result.data_frame = df.rename(columns={'TABLE_NAME': 'table_name', 'TABLE_TYPE': 'table_type'})
 
         return result
 
-    def get_columns(self, table_name: str) -> StatusResponse:
+    def get_columns(self, table_name: str, schema_name: Optional[str] = None) -> StatusResponse:
         """
         Returns a list of entity columns.
         Args:
@@ -202,16 +201,15 @@ class DruidHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-
+        if schema_name is None:
+            schema_name = 'druid'
         query = f"""
-            SELECT *
+            SELECT
+                COLUMN_NAME FIELD,
+                DATA_TYPE TYPE
             FROM INFORMATION_SCHEMA.COLUMNS
-            WHERE "TABLE_SCHEMA" = 'druid' AND "TABLE_NAME" = '{table_name}'
+            WHERE "TABLE_SCHEMA" = '{schema_name}' AND "TABLE_NAME" = '{table_name}'
         """
         result = self.native_query(query)
-        df = result.data_frame
-
-        df = df[['COLUMN_NAME', 'DATA_TYPE']]
-        result.data_frame = df.rename(columns={'COLUMN_NAME': 'column_name', 'DATA_TYPE': 'data_type'})
 
         return result

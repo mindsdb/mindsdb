@@ -117,7 +117,11 @@ The `open_on_start` parameter defines whether MindsDB automatically opens the GU
             "port": "47334",
             "restart_on_failure": true,
             "max_restart_count": 1,
-            "max_restart_interval_seconds": 60
+            "max_restart_interval_seconds": 60,
+            "a2wsgi": {
+                "workers": 15,
+                "send_queue_size": 10
+            }
         },
         "mysql": {
             "host": "127.0.0.1",
@@ -163,6 +167,8 @@ Connection parameters for the HTTP API include:
     - MindsDB fails at 1020s of its work - the restart attempt fails as there were already max_restart_count=2 restarts (at 1000s and 1010s) in the past 30 seconds.
     - MindsDB fails at 1031s of its work - the restart attempt succeeds as there was only 1 restart (at 1010s) in the past 30 seconds.
     </Note>
+
+* `a2wsgi` is an WSGI wrapper with the following parameters: `workers` defines the number of requests that can be processed in parallel, and `send_queue_size` defines the buffer size.
 
 </Accordion>
 

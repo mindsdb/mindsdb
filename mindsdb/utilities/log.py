@@ -1,8 +1,13 @@
 import json
 import logging
+import warnings
 from logging.config import dictConfig
 
 from mindsdb.utilities.config import config as app_config
+
+# Suppress Pydantic warnings for third-party libraries
+# TODO: Work on a better solution to this
+warnings.filterwarnings("ignore", message="Field.*has conflict with protected namespace.*", category=UserWarning)
 
 
 logging_initialized = False

@@ -273,8 +273,23 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.handler.native_query.assert_called_once()
         call_args = self.handler.native_query.call_args[0][0]
 
-        self.assertIn("FROM user_tables", call_args)
-        self.assertIn("SELECT table_name", call_args)
+        expected_query = """
+            SELECT
+                tablespace_name AS table_schema,
+                table_name,
+                'BASE TABLE' AS table_type
+            FROM user_tables
+            WHERE tablespace_name = 'USERS'
+
+            UNION ALL
+
+            SELECT
+                'USERS' AS table_schema,
+                view_name AS table_name,
+                'VIEW' AS table_type
+            FROM user_views
+        """
+        self.handler.native_query.assert_called_once_with(expected_query)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
         self.assertIsInstance(response.data_frame, DataFrame)
         self.assertListEqual(list(response.data_frame.columns), ["TABLE_NAME"])

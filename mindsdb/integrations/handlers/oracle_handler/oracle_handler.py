@@ -436,12 +436,6 @@ class OracleHandler(MetaDatabaseHandler):
                 table_name,
                 'BASE TABLE' AS table_type
             FROM user_tables
-<<<<<<< HEAD
-            UNION ALL
-            SELECT view_name AS table_name
-            FROM user_views
-            ORDER BY 1
-=======
             WHERE tablespace_name = 'USERS'
 
             UNION ALL
@@ -451,7 +445,6 @@ class OracleHandler(MetaDatabaseHandler):
                 view_name AS table_name,
                 'VIEW' AS table_type
             FROM user_views
->>>>>>> upstream/develop
         """
         return self.native_query(query)
 

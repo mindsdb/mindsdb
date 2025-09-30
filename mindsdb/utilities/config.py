@@ -200,6 +200,8 @@ class Config:
             "default_reranking_model": {},
             "data_catalog": {
                 "enabled": False,
+                "knowledge_base_enabled": False,
+                "knowledge_base_name": "_mindsdb_data_catalog_kb",
             },
         }
         # endregion
@@ -350,6 +352,10 @@ class Config:
             self._env_config["default_reranking_model"].update(reranker_config)
         if os.environ.get("MINDSDB_DATA_CATALOG_ENABLED", "").lower() in ("1", "true"):
             self._env_config["data_catalog"] = {"enabled": True}
+        if os.environ.get("MINDSDB_DATA_CATALOG_KNOWLEDGE_BASE_ENABLED", "").lower() in ("1", "true"):
+            self._env_config["data_catalog"]["knowledge_base_enabled"] = True
+        if os.environ.get("MINDSDB_DATA_CATALOG_KNOWLEDGE_BASE_NAME", "") != "":
+            self._env_config["data_catalog"]["knowledge_base_name"] = os.environ["MINDSDB_DATA_CATALOG_KNOWLEDGE_BASE_NAME"]
 
         if os.environ.get("MINDSDB_NO_STUDIO", "").lower() in ("1", "true"):
             self._env_config["gui"]["open_on_start"] = False

@@ -7,12 +7,11 @@ on:
   # Using pull_request instead of push on main because we want access to the pull request's details via 'github.event'
   # But it means we need to check below if this PR was merged and not just closed
   pull_request:
-    types:
-      - closed
     branches:
       - 'main'
       - 'develop'
       - 'release/*'
+      - 'fix/gha_sha_err'
 
 concurrency:
   group: ${{ github.workflow_ref }}
@@ -24,8 +23,6 @@ jobs:
     name: Run Unit Tests
     if: github.event.pull_request.merged == true
     uses: ./.github/workflows/tests_unit.yml
-    with:
-      git-sha: ${{ github.event.pull_request.merge_commit_sha }}
     secrets: inherit
 
   # Build our docker images based on our bake file

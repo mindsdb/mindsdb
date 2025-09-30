@@ -271,7 +271,6 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         response = self.handler.get_tables()
 
         self.handler.native_query.assert_called_once()
-        call_args = self.handler.native_query.call_args[0][0]
 
         expected_query = """
             SELECT

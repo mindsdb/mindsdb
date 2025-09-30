@@ -44,7 +44,7 @@ class Context:
         storage = deepcopy(self._storage.get({}))
         if name not in storage:
             raise AttributeError(name)
-        del storage['name']
+        del storage[name]
         self._storage.set(storage)
 
     def dump(self) -> dict:

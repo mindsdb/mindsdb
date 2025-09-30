@@ -107,11 +107,16 @@ Create a functional application (CLI, Web App, API, Bot Interface etc.) where th
 
 ----
 
-🚀 Get Started
+## 🚀 Get Started
 
 - [MindsDB Documentation](https://docs.mindsdb.com/mindsdb)
 - [MindsDB Knowledge Bases Documentation](https://docs.mindsdb.com/mindsdb_sql/knowledge_bases/overview)
 - [SDK's and API documentation](https://docs.mindsdb.com/overview_sdks_apis)
+
+As the main category is based on the amount of likes/upvotes your Pull Request receives, you can request to have it merged so that you can claim the merged PR by the official [Hacktoberfest organizers](https://hacktoberfest.com/participation/). Pull Requests will be merged 2 hours before the deadline.
+
+**Deadline:**
+The competion ends on 31st October 2025 00:00 PST. It is advised to make Pull Requests well in advanced. We wish everyone goodluck!
 
 **Hack smarter. Query faster. Build the Next Generation of AI Analytics Apps with MindsDB.**
 

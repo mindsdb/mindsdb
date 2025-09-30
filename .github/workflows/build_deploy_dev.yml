@@ -4,7 +4,7 @@ permissions:
   contents: read
 
 on:
-  pull_request_target:
+  pull_request:
     types: [opened, reopened, synchronize, labeled]
     branches:
       - 'main'
@@ -13,7 +13,7 @@ on:
 # Cancel any existing runs of this workflow on the same branch/pr
 # We always want to build/deploy/test a new commit over an older one
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref }}
+  group: ${{ github.workflow_ref }}
   cancel-in-progress: true
 
 jobs:
@@ -23,8 +23,6 @@ jobs:
     runs-on: mdb-dev
     outputs:
       not-docs: ${{ steps.filter.outputs.not-docs }}
-    environment:
-      name: ${{ github.event.pull_request.head.repo.fork && 'manual-approval' || '' }}
     steps:
       - uses: dorny/paths-filter@v3
         id: filter
@@ -45,8 +43,6 @@ jobs:
     needs: [changes]
     if: ${{ needs.changes.outputs.not-docs == 'true' }}
     uses: ./.github/workflows/tests_unit.yml
-    with:
-      git-sha: ${{ github.event.pull_request.head.sha }}
     secrets: inherit
 
   # Looks for labels like "deploy-to-<env>" attached to a PR so we can deploy to those envs
@@ -68,8 +64,6 @@ jobs:
     if: ${{ needs.get-deploy-labels.outputs.deploy-envs != '[]' }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
       # Build the bakefile and push
       - uses: mindsdb/github-actions/docker-bake@main
         with:
@@ -86,8 +80,6 @@ jobs:
     needs: [build]
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
       # Build the bakefile and push
       - uses: mindsdb/github-actions/docker-bake@main
         with:
@@ -122,7 +114,6 @@ jobs:
       cancel-in-progress: false
     uses: ./.github/workflows/tests_integration.yml
     with:
-      git-sha: ${{ github.event.pull_request.head.sha }}
       deploy-env: ${{ matrix.deploy-env }}
     secrets: inherit
 

@@ -431,12 +431,27 @@ class OracleHandler(MetaDatabaseHandler):
             Response: A response object containing the list of tables and views, formatted as per the `Response` class.
         """
         query = """
-            SELECT table_name
+            SELECT
+                tablespace_name AS table_schema,
+                table_name,
+                'BASE TABLE' AS table_type
             FROM user_tables
+<<<<<<< HEAD
             UNION ALL
             SELECT view_name AS table_name
             FROM user_views
             ORDER BY 1
+=======
+            WHERE tablespace_name = 'USERS'
+
+            UNION ALL
+
+            SELECT
+                'USERS' AS table_schema,
+                view_name AS table_name,
+                'VIEW' AS table_type
+            FROM user_views
+>>>>>>> upstream/develop
         """
         return self.native_query(query)
 
@@ -468,7 +483,7 @@ class OracleHandler(MetaDatabaseHandler):
                 NULL AS COLLATION_NAME
             FROM USER_TAB_COLUMNS
             WHERE table_name = '{table_name}'
-            ORDER BY TABLE_NAME, COLUMN_ID;
+            ORDER BY TABLE_NAME, COLUMN_ID
         """
         result = self.native_query(query)
         if result.resp_type is RESPONSE_TYPE.TABLE:

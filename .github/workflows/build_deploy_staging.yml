@@ -24,8 +24,6 @@ jobs:
     name: Run Unit Tests
     if: github.event.pull_request.merged == true
     uses: ./.github/workflows/tests_unit.yml
-    with:
-      git-sha: ${{ github.event.pull_request.merge_commit_sha }}
     secrets: inherit
 
   # Build our docker images based on our bake file

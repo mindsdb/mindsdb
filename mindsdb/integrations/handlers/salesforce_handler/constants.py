@@ -74,7 +74,9 @@ def get_soql_instructions(integration_name):
   CORRECT: WHERE Services__c EXCLUDES ('Training')
   INCORRECT: WHERE Services__c = 'Consulting'
 - Limited subquery support - only IN/NOT IN with non-correlated subqueries in WHERE clause
-  CORRECT: SELECT Id FROM Contact WHERE Id NOT IN (SELECT WhoId FROM Task)
+  Important: Certain standard objects such as Task and Event are not supported as the inner entity of semi-join/anti-join subqueries. 
+  Attempting queries like WHERE Id NOT IN (SELECT WhoId FROM Task) will fail. Use parent-to-child subqueries or two-step logic instead.
+  CORRECT: SELECT Id FROM Contact WHERE AccountId IN (SELECT Id FROM Account WHERE Industry = 'Technology'))
   INCORRECT: SELECT Id FROM Contact WHERE NOT EXISTS (SELECT 1 FROM Task WHERE WhoId = Contact.Id)
 
 **JOINS:**
@@ -201,6 +203,8 @@ def get_soql_instructions(integration_name):
 - Null checks: SELECT Id, Name FROM Account WHERE ParentId = null
 - Multi-select picklist: SELECT Id, Name FROM Account WHERE Services__c INCLUDES ('Consulting;Support')
 - Sorting and limiting: SELECT Id, Name FROM Account ORDER BY Name ASC LIMIT 50
+- Never use semi/anti-joins on Task or Event (no IN/NOT IN subqueries selecting from them). 
+- For “recent/no recent activity,” prefer LastActivityDate.
 
 
 ***EXECUTION INSTRUCTIONS. IMPORTANT!***
@@ -208,7 +212,7 @@ After generating the core SOQL (and nothing else), always make sure you wrap it 
 
     SELECT * 
       FROM {integration_name}(
-        /* your generated SOQL goes here, without a trailing semicolon */
+        your generated SOQL goes here, without a trailing semicolon
       )
 
 Return only that wrapper call.

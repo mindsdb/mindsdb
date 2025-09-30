@@ -149,9 +149,31 @@ If used, the PID file is stored in the temp directory (`$TMPDIR` on MacOS and Li
     ```
 </CodeGroup>
 
-## MindsDB GUI
+## MindsDB GUI Updates
 
-In order to disable automatic GUI updates, the `MINDSDB_NO_STUDIO` environment variable should be set to `true`.
+In order to disable automatic GUI updates, the `MINDSDB_GUI_AUTOUPDATE` environment variable should be set to `false` (or `0`).
+
+By default, the automatic GUI updates are enabled and the `MINDSDB_GUI_AUTOUPDATE` environment variable is set to `true` (or `1`).
+
+### Example
+
+<CodeGroup>
+    ```bash Docker
+    docker run --name mindsdb_container -e MINDSDB_GUI_AUTOUPDATE=false -e MINDSDB_APIS=http,mysql -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+    ```
+
+    ```bash Shell
+    export MINDSDB_GUI_AUTOUPDATE=false
+    ```
+</CodeGroup>
+
+## MindsDB GUI Startup and Updates
+
+In order to not open the MindsDB GUI automatically when starting the instance (and to disable automatic GUI updates), the `MINDSDB_NO_STUDIO` environment variable should be set to `true` (or `1`).
+
+By default, the MindsDB GUI starts automatically when starting the instance (and the automatic GUI updates are enabled), that is, the `MINDSDB_NO_STUDIO` environment variable is set to `false` (or `0`).
+
+Note that the `MINDSDB_NO_STUDIO` is not recommended for the MindsDB instance running in Docker. Instead, use the `MINDSDB_GUI_AUTOUPDATE` environment variable to disable automatic GUI updates.
 
 ### Example
 

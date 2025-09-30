@@ -7,11 +7,12 @@ on:
   # Using pull_request instead of push on main because we want access to the pull request's details via 'github.event'
   # But it means we need to check below if this PR was merged and not just closed
   pull_request:
+    types:
+      - closed
     branches:
       - 'main'
       - 'develop'
       - 'release/*'
-      - 'fix/gha_sha_err'
 
 concurrency:
   group: ${{ github.workflow_ref }}

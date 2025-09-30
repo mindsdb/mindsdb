@@ -1192,6 +1192,8 @@ SERVER_VARIABLES = {
     "@@tx_isolation": ("REPEATABLE-READ", TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS["utf8_general_ci"]),
     "@@wait_timeout": (28800, TYPES.MYSQL_TYPE_LONGLONG, CHARSET_NUMBERS["binary"]),
     "@@session.tx_read_only": ("0", TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS["utf8_general_ci"]),
+    "@@session.autocommit": ("0", TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS["utf8_general_ci"]),  # Disable autocommit by default
+    "@@autocommit": ("0", TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS["utf8_general_ci"]),  # Disable autocommit by default
     "@@version_comment": ("(MindsDB)", TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS["utf8_general_ci"]),
     "@@version": ("8.0.17", TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS["utf8_general_ci"]),
     "@@collation_connection": ("utf8_general_ci", TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS["utf8_general_ci"]),

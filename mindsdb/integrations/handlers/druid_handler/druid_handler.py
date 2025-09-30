@@ -8,7 +8,7 @@ from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.base import DatabaseHandler
 from pydruid.db.sqlalchemy import DruidDialect
 
-from mindsdb_sql_parser.ast.base import ASTNode
+from mindsdb_sql_parser import ASTNode
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
@@ -184,6 +184,7 @@ class DruidHandler(DatabaseHandler):
         query = """
             SELECT *
             FROM INFORMATION_SCHEMA.TABLES
+            WHERE TABLE_SCHEMA not in ('INFORMATION_SCHEMA', 'sys')
         """
         result = self.native_query(query)
         df = result.data_frame

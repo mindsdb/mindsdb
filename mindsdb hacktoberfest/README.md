@@ -93,6 +93,8 @@ Create a functional application (CLI, Web App, API, Bot Interface etc.) where th
 - Jobs Integration: Auto-update KBs with [CREATE JOB](https://docs.mindsdb.com/mindsdb_sql/sql/create/jobs).
 - [Agent Integration](https://docs.mindsdb.com/mindsdb_sql/agents/agent)
 - Metadata Filtering: Hybrid search with semantic + structured filters for eg. LIKE and BETWEEN operators.
+- [Evaluate Knowledge Bases](https://docs.mindsdb.com/mindsdb_sql/knowledge_bases/evaluate): Produce an evaluation report (MRR, Hit@k, relevancy, etc.).
+- [Hybrid Search](https://docs.mindsdb.com/mindsdb_sql/knowledge_bases/hybrid_search): Perform semantic and metadata filtering queries on your data.
 
 -----
 

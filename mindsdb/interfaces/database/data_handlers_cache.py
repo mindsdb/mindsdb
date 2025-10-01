@@ -15,7 +15,7 @@ logger = log.getLogger(__name__)
 class HandlersCacheRecord:
     handler: DatabaseHandler
     expired_at: float
-    _connect_lock: threading.RLock = field(default_factory=threading.RLock)
+    connect_attempt_done: threading.Event = field(default_factory=threading.Event)
 
     @property
     def expired(self):
@@ -26,8 +26,13 @@ class HandlersCacheRecord:
         return sys.getrefcount(self.handler) > 2
     
     def connect(self):
-        with self._connect_lock:
-            self.handler.connect()
+        try:
+            if not self.handler.is_connected:
+                self.handler.connect()
+        except Exception:
+            logger.warning(f"Error connecting to handler: {self.handler.name}", exc_info=True)
+        finally:
+            self.connect_attempt_done.set()
 
 
 class HandlersCache:
@@ -53,10 +58,11 @@ class HandlersCache:
         """start worker that close connections after ttl expired"""
         if isinstance(self.cleaner_thread, threading.Thread) and self.cleaner_thread.is_alive():
             return
-        self._stop_event.clear()
-        self.cleaner_thread = threading.Thread(target=self._clean, name="HandlersCache.clean")
-        self.cleaner_thread.daemon = True
-        self.cleaner_thread.start()
+        with self._lock:
+            self._stop_event.clear()
+            self.cleaner_thread = threading.Thread(target=self._clean, name="HandlersCache.clean")
+            self.cleaner_thread.daemon = True
+            self.cleaner_thread.start()
 
     def _stop_clean(self) -> None:
         """stop clean worker"""
@@ -81,22 +87,16 @@ class HandlersCache:
                     ctx.company_id,
                     0 if thread_safe else threading.get_native_id(),
                 )
-                self.handlers[key].append(
-                    HandlersCacheRecord(
-                        handler=handler,
-                        expired_at=time.time() + self.ttl
-                    )
+                record = HandlersCacheRecord(
+                    handler=handler,
+                    expired_at=time.time() + self.ttl
                 )
-                if thread_safe:
-                    handler.connect()
+                self.handlers[key].append(record)
             except Exception:
                 logger.warning("Error setting data handler cache record:", exc_info=True)
-            self._start_clean()
-        try:
-            if not thread_safe:
-                handler.connect()
-        except Exception:
-            logger.warning("Error connecting to data handler:", exc_info=True)
+                return
+        self._start_clean()
+        record.connect()
 
     def _get_cache_records(self, name: str) -> tuple[list[HandlersCacheRecord] | None, str]:
         # If the handler is not thread safe, the thread ID will be assigned to the last element of the key.
@@ -119,6 +119,8 @@ class HandlersCache:
             for record in records:
                 if record.expired is False and record.has_references is False:
                     record.expired_at = time.time() + self.ttl
+                    if record.connect_attempt_done.wait(timeout=10) is False:
+                        logger.warning(f"Handler's connection attempt has not finished in 10s: {record.handler.name}")
                     return record.handler
             return None
 

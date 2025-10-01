@@ -563,7 +563,7 @@ class OracleHandler(MetaDatabaseHandler):
         result = self.native_query(query)
         return result
 
-    def meta_get_column_statistics(self, table_names):
+    def meta_get_column_statistics(self, table_names: Optional[List[str]]) -> Response:
         """Retrieves statistics about the columns of specified tables in the Oracle database.
 
         Args:
@@ -635,7 +635,7 @@ class OracleHandler(MetaDatabaseHandler):
             df.drop(columns=["HISTOGRAM_BOUNDS"], inplace=True)
         return result
 
-    def meta_get_primary_keys(self, table_names):
+    def meta_get_primary_keys(self, table_names: Optional[List[str]]) -> Response:
         """
         Retrieves the primary keys for the specified tables in the Oracle database.
 
@@ -669,7 +669,7 @@ class OracleHandler(MetaDatabaseHandler):
         result = self.native_query(query)
         return result
 
-    def meta_get_foreign_keys(self, table_names):
+    def meta_get_foreign_keys(self, table_names: Optional[List[str]]) -> Response:
         """
         Retrieves the foreign keys for the specified tables in the Oracle database.
 
@@ -681,7 +681,7 @@ class OracleHandler(MetaDatabaseHandler):
         """
 
         query = """
-            SELECT
+        SELECT
             pk_cols.table_name AS parent_table_name,
             pk_cols.column_name AS parent_column_name,
             fk_cols.table_name AS child_table_name,

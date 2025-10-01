@@ -302,20 +302,27 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         expected_query = """
             SELECT
-                tablespace_name AS table_schema,
-                table_name,
+                owner AS table_schema,
+                table_name AS table_name,
                 'BASE TABLE' AS table_type
-            FROM user_tables
-            WHERE tablespace_name = 'USERS'
+            FROM all_tables t
+            JOIN all_users u ON t.owner = u.username
+            WHERE t.tablespace_name = 'USERS'
 
             UNION ALL
 
             SELECT
-                'USERS' AS table_schema,
-                view_name AS table_name,
+                v.owner AS table_schema,
+                v.view_name AS table_name,
                 'VIEW' AS table_type
-            FROM user_views
-        """
+            FROM all_views v
+            JOIN all_users u ON v.owner = u.username
+            WHERE v.owner IN (
+                SELECT DISTINCT owner
+                FROM all_tables
+                WHERE tablespace_name = 'USERS'
+            )
+            """
         self.handler.native_query.assert_called_once_with(expected_query)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
         self.assertIsInstance(response.data_frame, DataFrame)
@@ -783,8 +790,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_conn.rollback.assert_called_once()
 
     # Metadata Handler Tests
-
-    def test_meta_get_tables(self):
+    def test_meta_get_tables(self, table_names=None):
         expected_df = DataFrame(
             [
                 ("TABLE1", "SAMPLEUSER", "TABLE", "desc1", 5),
@@ -801,7 +807,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         mock_response = Response(RESPONSE_TYPE.TABLE, data_frame=expected_df)
         self.handler.native_query = MagicMock(return_value=mock_response)
 
-        response = self.handler.meta_get_tables()
+        response = self.handler.meta_get_tables(table_names=table_names)
         self.handler.native_query.assert_called_once()
 
         assert response is mock_response
@@ -810,7 +816,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         del self.handler.native_query
 
-    def test_meta_get_columns(self):
+    def test_meta_get_columns(self, table_names=None):
         """
         Test the retrieval of column metadata.
         """
@@ -843,7 +849,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         del self.handler.native_query
 
-    def test_meta_get_column_statistics(self):
+    def test_meta_get_column_statistics(self, table_names=None):
         """
         Test the retrieval of column statistics.
         """
@@ -920,7 +926,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         del self.handler.native_query
 
-    def test_meta_get_foreign_keys(self):
+    def test_meta_get_foreign_keys(self, table_names=None):
         """
         Test the retrieval of foreign key metadata.
         """

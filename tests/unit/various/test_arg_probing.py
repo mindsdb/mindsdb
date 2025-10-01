@@ -1,18 +1,8 @@
 import pytest
 
 from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler
+from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import StatsForecastHandler
 from mindsdb.integrations.libs.base import ArgProbeMixin
-
-# Conditionally import StatsForecastHandler to avoid Windows test failures
-try:
-    from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import (
-        StatsForecastHandler,
-    )
-
-    STATSFORECAST_AVAILABLE = True
-except (ImportError, OSError):
-    StatsForecastHandler = None
-    STATSFORECAST_AVAILABLE = False
 
 """
 Tests for the arg probing mixin
@@ -133,10 +123,6 @@ def test_openai_handler_probing(mock_openai_handler_class):
     } not in handler.prediction_args()
 
 
-@pytest.mark.skipif(
-    not STATSFORECAST_AVAILABLE,
-    reason="StatsForecastHandler not available (likely due to missing dependencies on Windows)",
-)
 def test_statsforecast_handler_probing():
     class MockClass(StatsForecastHandler, ArgProbeMixin):
         def __init__(self, **kwargs): ...

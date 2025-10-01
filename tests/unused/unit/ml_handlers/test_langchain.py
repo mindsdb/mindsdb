@@ -97,30 +97,6 @@ class TestLangchain(BaseExecutorTest):
         )
         assert "victoria" in result_df['answer'].iloc[0].lower()
 
-    @pytest.mark.skipif(ANYSCALE_API_KEY is None, reason='Missing Anyscale API key (ANYSCALE_API_KEY env variable)')
-    def test_anyscale_provider(self):
-        self.run_sql(
-            f"""
-           create model proj.test_anyscale_langchain_model
-           predict answer
-           using
-             engine='langchain',
-             provider='anyscale',
-             model_name='meta-llama/Meta-Llama-3-8B-Instruct',
-             prompt_template='Answer the user in a useful way: {{{{question}}}}',
-             anyscale_api_key='{ANYSCALE_API_KEY}';
-        """
-        )
-        self.wait_predictor("proj", "test_anyscale_langchain_model")
-
-        result_df = self.run_sql(
-            """
-            SELECT answer
-            FROM proj.test_anyscale_langchain_model
-            WHERE question='What is the capital of Sweden?'
-        """
-        )
-        assert "stockholm" in result_df['answer'].iloc[0].lower()
 
     @pytest.mark.skipif(GOOGLE_API_KEY is None, reason='Missing Google API key (GOOGLE_API_KEY env variable)')
     def test_google_provider(self):

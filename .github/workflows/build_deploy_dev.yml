@@ -4,10 +4,17 @@ permissions:
   contents: read
 
 on:
-  pull_request_target:
+  pull_request:
     types: [opened, reopened, synchronize, labeled]
     branches:
       - 'main'
+      - 'develop'
+
+# Cancel any existing runs of this workflow on the same branch/pr
+# We always want to build/deploy/test a new commit over an older one
+concurrency:
+  group: ${{ github.workflow_ref }}
+  cancel-in-progress: true
 
 jobs:
 
@@ -25,26 +32,29 @@ jobs:
             not-docs:
               - '!docs/**'  
               - '!**/*.md'
+              - '!.github/workflows/build_deploy_dev.yml'
+              - '!.github/workflows/test_on_deploy.yml'
+              - '!mindsdb/__about__.py'
+
+  # Start running unit tests early - we want to run them always
+  # and they don't depend on build or deployment
+  run_unit_tests:
+    name: Run Unit Tests
+    needs: [changes]
+    if: ${{ needs.changes.outputs.not-docs == 'true' }}
+    uses: ./.github/workflows/tests_unit.yml
+    secrets: inherit
 
   # Looks for labels like "deploy-to-<env>" attached to a PR so we can deploy to those envs
   get-deploy-labels:
     name: Get Deploy Envs
     runs-on: mdb-dev
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-labels
-      cancel-in-progress: true
-    environment:
-      name: ${{ github.event.pull_request.head.repo.fork && 'manual-approval' || '' }}
+    needs: [changes]
     outputs:
       deploy-envs: ${{ steps.get-labels.outputs.deploy-envs }}
     steps:
-      - name: Pull MindsDB Github Actions
-        uses: actions/checkout@v4
-        with:
-          repository: mindsdb/github-actions
-          path: github-actions
       - id: get-labels
-        uses: ./github-actions/get-deploy-labels
+        uses: mindsdb/github-actions/get-deploy-labels@main
 
   # Build our docker images based on our bake file
   build:
@@ -52,20 +62,10 @@ jobs:
     runs-on: mdb-dev
     needs: [get-deploy-labels]
     if: ${{ needs.get-deploy-labels.outputs.deploy-envs != '[]' }}
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-build
-      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-      - name: Pull MindsDB Github Actions
-        uses: actions/checkout@v4
-        with:
-          repository: mindsdb/github-actions
-          path: github-actions
       # Build the bakefile and push
-      - uses: ./github-actions/docker-bake
+      - uses: mindsdb/github-actions/docker-bake@main
         with:
           git-sha: ${{ github.event.pull_request.head.sha }}
           target: cloud-cpu
@@ -78,20 +78,10 @@ jobs:
     name: Push Docker Cache
     runs-on: mdb-dev
     needs: [build]
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}-cache
-      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-      - name: Pull MindsDB Github Actions
-        uses: actions/checkout@v4
-        with:
-          repository: mindsdb/github-actions
-          path: github-actions
       # Build the bakefile and push
-      - uses: ./github-actions/docker-bake
+      - uses: mindsdb/github-actions/docker-bake@main
         with:
           git-sha: ${{ github.event.pull_request.head.sha }}
           target: cloud-cpu
@@ -99,7 +89,6 @@ jobs:
           push-cache: true
           cache-only: true
 
-  # Call our deployment workflow, so long as this is not a forked PR
   # This will run the deployment workflow in the base branch, not in the PR.
   # So if you change the deploy workflow in your PR, the changes won't be reflected in this run.
   deploy:
@@ -113,7 +102,7 @@ jobs:
     secrets: inherit
 
   # Run integration tests against the deployed environment
-  run_tests:
+  run_integration_tests:
     name: Run Integration Tests
     needs: [deploy, get-deploy-labels]
     strategy:
@@ -123,18 +112,19 @@ jobs:
     concurrency:
       group: deploy-${{ matrix.deploy-env }}
       cancel-in-progress: false
-    uses: ./.github/workflows/test_on_deploy.yml
+    uses: ./.github/workflows/tests_integration.yml
     with:
-      git-sha: ${{ github.event.pull_request.head.sha }}
       deploy-env: ${{ matrix.deploy-env }}
     secrets: inherit
 
+  # This is a collection point for all of the matrix tests above so we can have a single required job
   tests_completed:
-    needs: [run_tests, changes]
+    name: All Tests Succeeded
+    needs: [run_unit_tests, run_integration_tests, changes]
     runs-on: mdb-dev
     if: always()
     steps:
       - name: fail if tests failed or didnt run
-        if: ${{ needs.run_tests.result != 'success' && needs.changes.outputs.not-docs == 'true' }}
+        if: ${{ (needs.run_unit_tests.result != 'success' || needs.run_integration_tests.result != 'success') && needs.changes.outputs.not-docs == 'true' }}
         run: exit 1
       - run: echo "Tests ran successfully"

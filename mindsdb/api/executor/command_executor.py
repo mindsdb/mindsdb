@@ -757,8 +757,6 @@ class ExecuteCommands:
         except EntityNotExistsError:
             if statement.if_exists is False:
                 raise
-        except Exception as e:
-            raise e
 
         return ExecuteAnswer()
 
@@ -844,7 +842,7 @@ class ExecuteCommands:
         try:
             sqlquery = SQLQuery(statement.data, session=self.session, database=database_name)
         except Exception as e:
-            raise Exception(f'Nested query failed to execute with error: "{e}", please check and try again.')
+            raise Exception(f'Nested query failed to execute with error: "{e}", please check and try again.') from e
         df = sqlquery.fetched_data.to_df()
         df.columns = [str(t.alias) if hasattr(t, "alias") else str(t.parts[-1]) for t in statement.data.targets]
 
@@ -1195,16 +1193,22 @@ class ExecuteCommands:
                 msg = dedent(
                     f"""\
                     The '{handler_module_meta["name"]}' handler cannot be used. Reason is:
-                        {handler_module_meta["import"]["error_message"]}
+                        {handler_module_meta["import"]["error_message"] or msg}
                 """
                 )
                 is_cloud = self.session.config.get("cloud", False)
-                if is_cloud is False and "No module named" in handler_module_meta["import"]["error_message"]:
+                if (
+                    is_cloud is False
+                    # NOTE: BYOM may raise these errors if there is an error in the user's code,
+                    # therefore error_message will be None
+                    and handler_module_meta["name"] != "byom"
+                    and "No module named" in handler_module_meta["import"]["error_message"]
+                ):
                     logger.info(get_handler_install_message(handler_module_meta["name"]))
             ast_drop = DropMLEngine(name=Identifier(name))
             self.answer_drop_ml_engine(ast_drop)
             logger.info(msg)
-            raise ExecutorException(msg)
+            raise ExecutorException(msg) from e
 
         return ExecuteAnswer()
 
@@ -1342,24 +1346,12 @@ class ExecuteCommands:
                 from_table=NativeQuery(integration=statement.from_table, query=statement.query_str),
             )
             query_str = query.to_string()
-        else:
-            query = parse_sql(query_str)
-
-        if isinstance(query, Select):
-            # check create view sql
-            query.limit = Constant(1)
-
-            query_context_controller.set_context(query_context_controller.IGNORE_CONTEXT)
-            try:
-                SQLQuery(query, session=self.session, database=database_name)
-            finally:
-                query_context_controller.release_context(query_context_controller.IGNORE_CONTEXT)
 
         project = self.session.database_controller.get_project(project_name)
 
         if isinstance(statement, CreateView):
             try:
-                project.create_view(view_name, query=query_str)
+                project.create_view(view_name, query=query_str, session=self.session)
             except EntityExistsError:
                 if getattr(statement, "if_not_exists", False) is False:
                     raise

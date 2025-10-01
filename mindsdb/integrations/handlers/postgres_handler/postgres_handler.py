@@ -1,5 +1,6 @@
 import time
 import json
+import logging
 from typing import Optional, Any
 
 import pandas as pd
@@ -279,7 +280,7 @@ class PostgresHandler(MetaDatabaseHandler):
         df.columns = columns
 
     @profiler.profile()
-    def native_query(self, query: str, params=None) -> Response:
+    def native_query(self, query: str, params=None, **kwargs) -> Response:
         """
         Executes a SQL query on the PostgreSQL database and returns the result.
 
@@ -304,8 +305,19 @@ class PostgresHandler(MetaDatabaseHandler):
                     result = cur.fetchall()
                     response = _make_table_response(result, cur)
                 connection.commit()
+            except (psycopg.ProgrammingError, psycopg.DataError) as e:
+                # These is 'expected' exceptions, they should not be treated as mindsdb's errors
+                # ProgrammingError: table not found or already exists, syntax error, etc
+                # DataError: division by zero, numeric value out of range, etc.
+                # https://www.psycopg.org/psycopg3/docs/api/errors.html
+                log_message = "Database query failed with error, likely due to invalid SQL query"
+                if logger.isEnabledFor(logging.DEBUG):
+                    log_message += f". Executed query:\n{query}"
+                logger.info(log_message)
+                response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(e), is_acceptable_error=True)
+                connection.rollback()
             except Exception as e:
-                logger.error(f"Error running query: {query} on {self.database}, {e}!")
+                logger.error(f"Error running query:\n{query}\non {self.database}, {e}")
                 response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(e))
                 connection.rollback()
 
@@ -466,7 +478,10 @@ class PostgresHandler(MetaDatabaseHandler):
             AND
                 table_schema = {schema_name}
         """
-        result = self.native_query(query)
+        # If it is used by pgvector handler - `native_query` method of pgvector handler will be used
+        #   in that case if shared pgvector db is used - `native_query` will be skipped (return  empty result)
+        #   `no_restrict` flag allows to execute native query, and it will call `native_query` of postgres handler
+        result = self.native_query(query, no_restrict=True)
         result.to_columns_table_response(map_type_fn=_map_type)
         return result
 

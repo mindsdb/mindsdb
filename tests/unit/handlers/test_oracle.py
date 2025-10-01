@@ -271,10 +271,24 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         response = self.handler.get_tables()
 
         self.handler.native_query.assert_called_once()
-        call_args = self.handler.native_query.call_args[0][0]
 
-        self.assertIn("FROM user_tables", call_args)
-        self.assertIn("SELECT table_name", call_args)
+        expected_query = """
+            SELECT
+                tablespace_name AS table_schema,
+                table_name,
+                'BASE TABLE' AS table_type
+            FROM user_tables
+            WHERE tablespace_name = 'USERS'
+
+            UNION ALL
+
+            SELECT
+                'USERS' AS table_schema,
+                view_name AS table_name,
+                'VIEW' AS table_type
+            FROM user_views
+        """
+        self.handler.native_query.assert_called_once_with(expected_query)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
         self.assertIsInstance(response.data_frame, DataFrame)
         self.assertListEqual(list(response.data_frame.columns), ["TABLE_NAME"])
@@ -476,7 +490,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.FLOAT,
             MYSQL_DATA_TYPE.FLOAT,
         ]
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[response.data_frame.columns[i]][0]
             self.assertEqual(result_value, input_value)
@@ -500,7 +514,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         ]
         response: Response = self.handler.native_query(query_str)
         excepted_mysql_types = [MYSQL_DATA_TYPE.BOOLEAN, MYSQL_DATA_TYPE.BOOLEAN]
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[response.data_frame.columns[i]][0]
             self.assertEqual(result_value, input_value)
@@ -568,7 +582,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             MYSQL_DATA_TYPE.BINARY,
             MYSQL_DATA_TYPE.BINARY,
         ]
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[response.data_frame.columns[i]][0]
             self.assertEqual(result_value, input_value)
@@ -617,7 +631,7 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         ]
         response: Response = self.handler.native_query(query_str)
         excepted_mysql_types = [MYSQL_DATA_TYPE.DATE, MYSQL_DATA_TYPE.TIMESTAMP, MYSQL_DATA_TYPE.TIMESTAMP]
-        self.assertEquals(response.mysql_types, excepted_mysql_types)
+        self.assertEqual(response.mysql_types, excepted_mysql_types)
         for i, input_value in enumerate(input_row):
             result_value = response.data_frame[response.data_frame.columns[i]][0]
             self.assertEqual(result_value, input_value)
@@ -628,14 +642,14 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         input_rows = [(bigint_val, True), (None, None)]
         mock_cursor.fetchall.return_value = input_rows
         mock_cursor.description = [
-            ("N_BIGINT", oracledb.DB_TYPE_NUMBER, 39, None, 17, 0, True),  # set 17 jsut to force cast to Int64
+            ("N_BIGINT", oracledb.DB_TYPE_NUMBER, 39, None, 17, 0, True),  # set 17 just to force cast to Int64
             ("T_BOOLEAN", oracledb.DB_TYPE_BOOLEAN, None, None, None, None, True),
         ]
         response: Response = self.handler.native_query(query_str)
-        self.assertEquals(response.data_frame.dtypes[0], "Int64")
-        self.assertEquals(response.data_frame.dtypes[1], "boolean")
-        self.assertEquals(response.data_frame.iloc[0, 0], bigint_val)
-        self.assertEquals(response.data_frame.iloc[0, 1], True)
+        self.assertEqual(response.data_frame.dtypes[0], "Int64")
+        self.assertEqual(response.data_frame.dtypes[1], "boolean")
+        self.assertEqual(response.data_frame.iloc[0, 0], bigint_val)
+        self.assertEqual(response.data_frame.iloc[0, 1], True)
         self.assertTrue(response.data_frame.iloc[1, 0] is pd.NA)
         self.assertTrue(response.data_frame.iloc[1, 1] is pd.NA)
         # endregion

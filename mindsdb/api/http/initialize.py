@@ -1,7 +1,6 @@
 import os
 import mimetypes
 import threading
-import traceback
 import webbrowser
 
 from pathlib import Path
@@ -96,7 +95,7 @@ def custom_output_json(data, code, headers=None):
 
 
 def get_last_compatible_gui_version() -> Version | bool:
-    logger.debug("Getting last compatible frontend..")
+    logger.debug("Getting last compatible frontend...")
     try:
         res = requests.get(
             "https://mindsdb-web-builds.s3.amazonaws.com/compatible-config.json",
@@ -154,8 +153,8 @@ def get_last_compatible_gui_version() -> Version | bool:
             else:
                 all_lower_versions = [parse_version(x) for x in lower_versions.keys()]
                 gui_version_lv = gui_versions[all_lower_versions[-1].base_version]
-    except Exception as e:
-        logger.error(f"Error in compatible-config.json structure: {e}")
+    except Exception:
+        logger.exception("Error in compatible-config.json structure:")
         return False
 
     logger.debug(f"Last compatible frontend version: {gui_version_lv}.")
@@ -179,7 +178,6 @@ def get_current_gui_version() -> Version:
 
 
 def initialize_static():
-    logger.debug("Initializing static..")
     last_gui_version_lv = get_last_compatible_gui_version()
     current_gui_version_lv = get_current_gui_version()
     required_gui_version = config["gui"].get("version")
@@ -215,8 +213,11 @@ def initialize_app():
     init_static_thread = None
 
     if config["gui"]["autoupdate"] is True or (config["gui"]["open_on_start"] is True and gui_exists is False):
+        logger.debug("Initializing static...")
         init_static_thread = threading.Thread(target=initialize_static, name="initialize_static")
         init_static_thread.start()
+    else:
+        logger.debug(f"Skip initializing static: config['gui']={config['gui']}, gui_exists={gui_exists}")
 
     # Wait for static initialization.
     if config["gui"]["open_on_start"] is True and init_static_thread is not None:
@@ -310,7 +311,6 @@ def initialize_app():
 
     @app.before_request
     def before_request():
-        logger.debug(f"HTTP {request.method}: {request.path}")
         ctx.set_default()
 
         h = request.headers.get("Authorization")
@@ -349,15 +349,15 @@ def initialize_app():
         if company_id is not None:
             try:
                 company_id = int(company_id)
-            except Exception as e:
-                logger.error(f"Could not parse company id: {company_id} | exception: {e}")
+            except Exception:
+                logger.exception(f"Could not parse company id: {company_id} | exception:")
                 company_id = None
 
         if user_class is not None:
             try:
                 user_class = int(user_class)
-            except Exception as e:
-                logger.error(f"Could not parse user_class: {user_class} | exception: {e}")
+            except Exception:
+                logger.exception(f"Could not parse user_class: {user_class} | exception:")
                 user_class = 0
         else:
             user_class = 0
@@ -372,7 +372,7 @@ def initialize_app():
 
 
 def initialize_flask(config, init_static_thread):
-    logger.debug("Initializing flask..")
+    logger.debug("Initializing flask...")
     # region required for windows https://github.com/mindsdb/mindsdb/issues/2526
     mimetypes.add_type("text/css", ".css")
     mimetypes.add_type("text/javascript", ".js")
@@ -449,7 +449,6 @@ def _open_webbrowser(url: str, pid: int, port: int, init_static_thread, static_f
         is_http_active = wait_func_is_true(func=is_pid_listen_port, timeout=15, pid=pid, port=port)
         if is_http_active:
             webbrowser.open(url)
-    except Exception as e:
-        logger.error(f"Failed to open {url} in webbrowser with exception {e}")
-        logger.error(traceback.format_exc())
+    except Exception:
+        logger.exception(f"Failed to open {url} in webbrowser with exception:")
     db.session.close()

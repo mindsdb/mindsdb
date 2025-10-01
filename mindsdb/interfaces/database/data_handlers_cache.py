@@ -1,16 +1,21 @@
 import sys
 import time
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from collections import defaultdict
 
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 @dataclass(kw_only=True, slots=True)
 class HandlersCacheRecord:
     handler: DatabaseHandler
     expired_at: float
+    _connect_lock: threading.RLock = field(default_factory=threading.RLock)
 
     @property
     def expired(self):
@@ -19,6 +24,10 @@ class HandlersCacheRecord:
     @property
     def has_references(self):
         return sys.getrefcount(self.handler) > 2
+    
+    def connect(self):
+        with self._connect_lock:
+            self.handler.connect()
 
 
 class HandlersCache:
@@ -30,8 +39,9 @@ class HandlersCache:
         Args:
             ttl (int): time to live (in seconds) for record in cache
         """
-        self.ttl = ttl
-        self.handlers = {}
+        self.ttl: int = ttl
+        self._clean_timeout: int = 3
+        self.handlers: dict[str, list[HandlersCacheRecord]] = defaultdict(list)
         self._lock = threading.RLock()
         self._stop_event = threading.Event()
         self.cleaner_thread = None
@@ -71,27 +81,29 @@ class HandlersCache:
                     ctx.company_id,
                     0 if thread_safe else threading.get_native_id(),
                 )
-                self.handlers[key] = HandlersCacheRecord(
-                    handler=handler,
-                    expired_at=time.time() + self.ttl
+                self.handlers[key].append(
+                    HandlersCacheRecord(
+                        handler=handler,
+                        expired_at=time.time() + self.ttl
+                    )
                 )
                 if thread_safe:
                     handler.connect()
             except Exception:
-                pass
+                logger.warning("Error setting data handler cache record:", exc_info=True)
             self._start_clean()
         try:
             if not thread_safe:
                 handler.connect()
         except Exception:
-            pass
+            logger.warning("Error connecting to data handler:", exc_info=True)
 
-    def _get_cache_record(self, name: str) -> tuple[dict | None, str]:
+    def _get_cache_records(self, name: str) -> tuple[list[HandlersCacheRecord] | None, str]:
         # If the handler is not thread safe, the thread ID will be assigned to the last element of the key.
         key = (name, ctx.company_id, 0)
         if key not in self.handlers:
             key = (name, ctx.company_id, threading.get_native_id())
-        return self.handlers.get(key), key
+        return self.handlers.get(key, []), key
 
     def get(self, name: str) -> DatabaseHandler | None:
         """get handler from cache by name
@@ -103,15 +115,12 @@ class HandlersCache:
             DatabaseHandler
         """
         with self._lock:
-            record, _ = self._get_cache_record(name)
-            if (
-                record is None
-                or record.expired
-                or record.has_references
-            ):
-                return None
-            record.expired_at = time.time() + self.ttl
-            return record.handler
+            records, _ = self._get_cache_records(name)
+            for record in records:
+                if record.expired is False and record.has_references is False:
+                    record.expired_at = time.time() + self.ttl
+                    return record.handler
+            return None
 
     def delete(self, name: str) -> None:
         """delete handler from cache
@@ -120,29 +129,39 @@ class HandlersCache:
             name (str): handler name
         """
         with self._lock:
-            record, key = self._get_cache_record(name)
-            if record:
+            records, key = self._get_cache_records(name)
+            if len(records) > 0:
+                del self.handlers[key]
+            for record in records:
                 try:
                     record.handler.disconnect()
                 except Exception:
-                    pass
-                del self.handlers[key]
+                    logger.debug("Error disconnecting data handler:", exc_info=True)
+
             if len(self.handlers) == 0:
                 self._stop_clean()
 
     def _clean(self) -> None:
         """worker that delete from cache handlers that was not in use for ttl"""
-        while self._stop_event.wait(timeout=3) is False:
+        while self._stop_event.wait(timeout=self._clean_timeout) is False:
             with self._lock:
                 for key in list(self.handlers.keys()):
-                    if (
-                        self.handlers[key].expired
-                        and self.handlers[key].has_references is False
-                    ):
-                        try:
-                            self.handlers[key].handler.disconnect()
-                        except Exception:
-                            pass
+                    active_handlers_list = []
+                    for record in self.handlers[key]:
+                        if (
+                            record.expired
+                            and record.has_references is False
+                        ):
+                            try:
+                                record.handler.disconnect()
+                            except Exception:
+                                logger.debug("Error disconnecting data handler:", exc_info=True)
+                        else:
+                            active_handlers_list.append(record)
+                    if len(active_handlers_list) > 0:
+                        self.handlers[key] = active_handlers_list
+                    else:
                         del self.handlers[key]
+
                 if len(self.handlers) == 0:
                     self._stop_event.set()

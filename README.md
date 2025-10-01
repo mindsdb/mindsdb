@@ -79,6 +79,20 @@ Chat with Your Data
 * [**AGENTS**](https://docs.mindsdb.com/mindsdb_sql/agents/agent) – Configure built-in agents specialized in answering questions over your connected and unified data.
 * [**MCP**](https://docs.mindsdb.com/mcp/overview) – Connect to MindsDB through the MCP (Model Context Protocol) for seamless interaction.
 
+### 🔧 AI Development Tools
+
+Enhance your MindsDB development workflow with complementary AI assistant management:
+
+* **[Roundtable](https://github.com/askbudi/roundtable)** – Zero-configuration MCP server that unifies multiple AI coding assistants (Claude Code, Cursor, Codex, Gemini) for MindsDB developers. Perfect complement to MindsDB's data analytics capabilities by providing unified access to AI development tools through the same MCP standard.
+
+```bash
+# Install and use alongside MindsDB for complete AI workflow
+pip install roundtable-ai
+roundtable-ai  # Starts MCP server for AI assistant management
+```
+
+**Why use Roundtable with MindsDB?** While MindsDB excels at data analytics and AI response generation, Roundtable handles AI assistant management for your development workflow. Together they provide complete coverage: MindsDB for data intelligence, Roundtable for development intelligence.
+
 ----------------------------------------
 
 ## 🤝 Contribute

@@ -10,6 +10,7 @@ COPY . .
 # Find every FILE that is not a requirements file and delete it
 RUN find ./ -type f -not -name "requirements*.txt" -print | xargs rm -f \
 # Find every empty directory and delete it
+    && sleep 1 \
     && find ./ -type d -empty -delete
 # Copy setup.py and everything else used by setup.py
 COPY setup.py default_handlers.txt README.md ./

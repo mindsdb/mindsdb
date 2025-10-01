@@ -31,7 +31,7 @@
 ----------------------------------------
 
 
-MindsDB enables humans, AI, agents, and applications to get highly accurate answers across large scale data sources.
+MindsDB Query Engine enables humans, AI, agents, and applications to get highly accurate answers across large scale data sources.
 
 <a href="https://www.youtube.com/watch?v=MX3OKpnsoLM" target="_blank">
   <img src="https://github.com/user-attachments/assets/119e7b82-f901-4214-a26f-ff7c5ad86064" alt="MindsDB Demo">
@@ -52,7 +52,7 @@ MindsDB is an open-source server that can be deployed anywhere - from your lapto
 
 # Core Philosophy: Connect, Unify, Respond
 
-MindsDB's architecture is built around three fundamental capabilities:
+MindsDB's query engine architecture is built around three fundamental capabilities:
 
 ## [Connect](https://docs.mindsdb.com/integrations/data-overview) Your Data
 

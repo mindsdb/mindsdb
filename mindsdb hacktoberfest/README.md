@@ -2,7 +2,7 @@
 
 ## Supercharging AI analytical Apps with Knowledge Bases ⚡
 
-This Hacktoberfest, MindsDB challenges you to build AI-powered analytics apps using Knowledge Bases, Hybrid Search, and SQL Algebra.
+This Hacktoberfest, MindsDB challenges you to build RAG apps using Knowledge Bases.
 
 
 ### 🌟 Why Join?
@@ -13,18 +13,19 @@ MindsDB's Hacktoberfest is your chance to turn code into impact:
 - Compete for prizes: GitHub sponsorships, swag, and a Prize Draw for a [MacBook Pro 16" M4 Chip](https://www.apple.com/shop/buy-mac/macbook-pro/16-inch-space-black-standard-display-apple-m4-pro-with-14-core-cpu-and-20-core-gpu-48gb-memory-512gb).
 - Get your project featured on the MindsDB blog + community.
 
-**Your mission:** Create AI apps powered by MindsDB's Knowledge Bases that query enterprise-like data in place—delivering accurate, explainable answers without ETL or data movement.
+**Your mission:** Create AI apps powered by MindsDB's Knowledge Bases that query enterprise-like data in place—delivering accurate, explainable answers.
 
 
 ------
 
 ## 🛠️ Core Task
 
-- Build an app powered by MindsDB Knowledge Bases and Agents.
-- Write a blog post (Medium, Hashnode, dev.to, LinkedIn) explaining how you built it.
-- Submit a Pull Request to the Hacktoberfest file in the MindsDB repo with your project, blog post and social media post.
-- Invite people to like/upvote your PR. The PR with the most community likes wins!
-- Promote your app on LinkedIn and X/Twitter with a post mentioning @mindsdb.
+- Pick a use case where there is unstructured data and can benefit from making it searchable via natural language: (For example analyzing CRM Unstructured data: Notes, Emails, Calls, Meetings, Tasks, Conversations → transcripts, attachments, Tickets → Descriptions, associated notes/emails)
+- Pick the datasources that you will need for these use cases
+- Write a blog post (Medium, Hashnode, dev.to, LinkedIn) explaining your use case.
+- Write a pull request with your use-case implementation in the use-cases folder (create a folder for your use case with a descriptive name)
+- Your use case implementation can be either a notebook or an app, that uses MindsDB + Knowledge bases
+- Promote your use case on Linkedin, and X/Twitter with a post mentioning @mindsdb.
 
 -----
 
@@ -33,8 +34,8 @@ MindsDB's Hacktoberfest is your chance to turn code into impact:
 Stand a chance to win a [MacBook Pro 16" M4 Chip](https://www.apple.com/shop/buy-mac/macbook-pro/16-inch-space-black-standard-display-apple-m4-pro-with-14-core-cpu-and-20-core-gpu-48gb-memory-512gb) in our Prize Draw!
 
 ### 🔥 Most Popular Pull Requests
-- Top 3 Pull Requests with the most likes win GitHub sponsorship prizes.
-- Every 10 likes = 1 entry into the Apple MacBook Pro prize draw.
+- Top 3 Pull Requests with the most thumbs up (👍) or heart (❤️) reaction wins win GitHub sponsorship prizes.
+- Every 10 positive reaction = 1 entry into the Apple MacBook Pro prize draw.
   
 **Prizes:**
 - 🥇 $1500 + MindsDB T-shirt
@@ -100,12 +101,12 @@ Create a functional application (CLI, Web App, API, Bot Interface etc.) where th
 
 ## 📦 Deliverables/ Minimum Requirements
 - Public GitHub repo with code + infra (Docker optional).
-- README: problem statement(what use case this solves), architecture, KB schema, SQL examples, metrics.
+- README: problem statement(what use case this solves), architecture, Knowledge Base schema, SQL examples, metrics.
 - Demo UI (CLI or Web) + 5-min demo video
 - Sample queries (Natural language + SQL).
 - Evaluation report: metrics (MRR, Hit@k, avg relevancy, etc.).
 - Blog post explaining how you built the application and what use case it solves.
-- Social media posts on LinkedIn and Twitter about your project, mention @mindsdb.
+- Social media posts on LinkedIn and Twitter about your use case, mention @mindsdb.
 
 ----
 

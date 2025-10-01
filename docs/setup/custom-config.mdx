@@ -5,45 +5,19 @@ sidebarTitle: Extend the Default MindsDB Configuration
 
 To follow this guide, install MindsDB locally via [Docker](/setup/self-hosted/docker-desktop) or [PyPI](/setup/self-hosted/pip/source).
 
-## Starting MindsDB with Default Configuration
-
-Start MindsDB locally with the default configuration.
-
-1. Activate the virtual environment:
-
-```bash
-source mindsdb/bin/activate
-```
-
-2. Start MindsDB:
-
-```bash
-python -m mindsdb
-```
-
-3. Access MindsDB locally at `127.0.0.1:47334`.
-
-<Tip>
-By default, MindsDB starts the `http` and `mysql` APIs. You can define which APIs to start using the `api` flag as below.
-
-```bash
-python -m mindsdb --api http,mysql,postgres
-```
-
-If you want to start MindsDB without the graphical user interface (GUI), use the `--no_studio` flag as below.
-
-```bash
-python -m mindsdb --no_studio
-```
-</Tip>
-
 ## Starting MindsDB with Extended Configuration
 
 Start MindsDB locally with your custom configuration by providing a path to the `config.json` file that stores custom config parameters listed in this section.
 
-```bash
-python -m mindsdb --config=/path-to-the-extended-config-file/config.json
-```
+<CodeGroup>
+    ```bash Docker
+    docker run --name mindsdb_container -e MINDSDB_CONFIG_PATH=/Users/username/path/config.json -e MINDSDB_APIS=http,mysql -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+    ```
+
+    ```bash Python
+    python -m mindsdb --api=http,mysql --config=/path-to-the-extended-config-file/config.json
+    ```
+</CodeGroup>
 
 ### Available Config Parameters
 
@@ -123,13 +97,16 @@ In local instances of MindsDB, users can enable simple HTTP authentication based
 
 ```bash
     "gui": {
-        "autoupdate": true
+        "autoupdate": true,
+        "open_on_start": true
     },
 ```
 
 The `gui` parameter controls the behavior of the MindsDB graphical user interface (GUI) updates.
 
 The `autoupdate` parameter defines whether MindsDB automatically checks for and updates the GUI to the latest version when the application starts. If set to `true`, MindsDB will attempt to fetch the latest available version of the GUI. If set to `False`, MindsDB will not try to update the GUI on startup.
+
+The `open_on_start` parameter defines whether MindsDB automatically opens the GUI on start. If set to `true`, MindsDB will open the GUI automatically. If set to `False`, MindsDB will not open the GUI on startup.
 
 #### `api`
 
@@ -140,7 +117,11 @@ The `autoupdate` parameter defines whether MindsDB automatically checks for and 
             "port": "47334",
             "restart_on_failure": true,
             "max_restart_count": 1,
-            "max_restart_interval_seconds": 60
+            "max_restart_interval_seconds": 60,
+            "a2wsgi": {
+                "workers": 15,
+                "send_queue_size": 10
+            }
         },
         "mysql": {
             "host": "127.0.0.1",
@@ -186,6 +167,8 @@ Connection parameters for the HTTP API include:
     - MindsDB fails at 1020s of its work - the restart attempt fails as there were already max_restart_count=2 restarts (at 1000s and 1010s) in the past 30 seconds.
     - MindsDB fails at 1031s of its work - the restart attempt succeeds as there was only 1 restart (at 1010s) in the past 30 seconds.
     </Note>
+
+* `a2wsgi` is an WSGI wrapper with the following parameters: `workers` defines the number of requests that can be processed in parallel, and `send_queue_size` defines the buffer size.
 
 </Accordion>
 

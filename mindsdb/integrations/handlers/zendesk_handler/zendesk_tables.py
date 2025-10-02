@@ -8,6 +8,7 @@ from mindsdb.integrations.utilities.handlers.query_utilities import (
 from mindsdb.utilities import log
 from mindsdb_sql_parser import ast
 import zenpy
+from itertools import islice
 
 logger = log.getLogger(__name__)
 
@@ -51,13 +52,11 @@ class ZendeskUsersTable(APITable):
                     raise NotImplementedError(f"Unknown op: {op}. Only '=' is supported.")
                 subset_where_conditions[arg1] = arg2
 
-        count = 0
         result = self.handler.zen_client.users(**subset_where_conditions)
         response = []
         if isinstance(result, zenpy.lib.generator.BaseResultGenerator):
-            while count <= result_limit:
-                response.append(result.next().to_dict())
-                count += 1
+            for item in islice(result, result_limit):
+                response.append(item.to_dict())
         else:
             response.append(result.to_dict())
 
@@ -136,13 +135,11 @@ class ZendeskTicketsTable(APITable):
                     raise NotImplementedError(f"Unknown op: {op}. Only '=' is supported.")
                 subset_where_conditions[arg1] = arg2
 
-        count = 0
         result = self.handler.zen_client.tickets(**subset_where_conditions)
         response = []
         if isinstance(result, zenpy.lib.generator.BaseResultGenerator):
-            while count <= result_limit:
-                response.append(result.next().to_dict())
-                count += 1
+            for item in islice(result, result_limit):
+                response.append(item.to_dict())
         else:
             response.append(result.to_dict())
 
@@ -226,13 +223,11 @@ class ZendeskTriggersTable(APITable):
                     raise NotImplementedError(f"Unknown op: {op}. Only '=' is supported.")
                 subset_where_conditions[arg1] = arg2
 
-        count = 0
         result = self.handler.zen_client.triggers(**subset_where_conditions)
         response = []
         if isinstance(result, zenpy.lib.generator.BaseResultGenerator):
-            while count <= result_limit:
-                response.append(result.next().to_dict())
-                count += 1
+            for item in islice(result, result_limit):
+                response.append(item.to_dict())
         else:
             response.append(result.to_dict())
 
@@ -309,9 +304,8 @@ class ZendeskActivitiesTable(APITable):
         result = self.handler.zen_client.activities(**subset_where_conditions)
         response = []
         if isinstance(result, zenpy.lib.generator.BaseResultGenerator):
-            while count <= result_limit:
-                response.append(result.next().to_dict())
-                count += 1
+            for item in islice(result, result_limit):
+                response.append(item.to_dict())
         else:
             response.append(result.to_dict())
 

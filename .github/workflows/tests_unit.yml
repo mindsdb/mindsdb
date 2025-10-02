@@ -133,6 +133,7 @@ jobs:
             .[github] \
             .[ms_teams] \
             .[salesforce] \
+            .[statsforecast] \
             .[mysql] \
             .[chromadb] \
             .[mssql]

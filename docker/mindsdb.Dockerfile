@@ -84,12 +84,8 @@ ENV PATH=/venv/bin:$PATH
 EXPOSE 47334/tcp
 EXPOSE 47335/tcp
 
-# Pre-load tokenizer from Huggingface
-RUN python -m mindsdb --config=/root/mindsdb_config.json --load-tokenizer
-
-# Run GUI update during build so the final image already contains it
-# RUN python -m mindsdb --config=/root/mindsdb_config.json --update-gui
-
+# Pre-load tokenizer from Huggingface, and UI
+RUN python -m mindsdb --config=/root/mindsdb_config.json --load-tokenizer --update-gui
 
 # Same as extras image, but with dev dependencies installed.
 # This image is used in our docker-compose

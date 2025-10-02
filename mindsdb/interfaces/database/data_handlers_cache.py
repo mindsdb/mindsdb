@@ -27,7 +27,7 @@ class HandlersCacheRecord:
     @property
     def expired(self) -> bool:
         """check if the handler is expired
-        
+
         Returns:
             bool: True if the handler is expired, False otherwise
         """
@@ -36,7 +36,7 @@ class HandlersCacheRecord:
     @property
     def has_references(self) -> bool:
         """check if the handler has references
-        
+
         Returns:
             bool: True if the handler has references, False otherwise
         """
@@ -116,7 +116,7 @@ class HandlersCache:
 
     def _get_cache_records(self, name: str) -> tuple[list[HandlersCacheRecord] | None, str]:
         """get cache records by name
-        
+
         Args:
             name (str): handler name
 

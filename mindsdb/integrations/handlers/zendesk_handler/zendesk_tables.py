@@ -45,14 +45,17 @@ class ZendeskUsersTable(APITable):
             select_statement_parser.parse_query()
         )
 
-        subset_where_conditions = {}
+        subset_where_conditions = []
+        api_filters = {}
         for op, arg1, arg2 in where_conditions:
             if arg1 in self.get_columns():
                 if op != '=':
                     raise NotImplementedError(f"Unknown op: {op}. Only '=' is supported.")
-                subset_where_conditions[arg1] = arg2
+                api_filters[arg1] = arg2
+                subset_where_conditions.append([op, arg1, arg2])
 
-        result = self.handler.zen_client.users(**subset_where_conditions)
+
+        result = self.handler.zen_client.users(**api_filters)
         response = []
         if isinstance(result, zenpy.lib.generator.BaseResultGenerator):
             for item in islice(result, result_limit):
@@ -128,14 +131,16 @@ class ZendeskTicketsTable(APITable):
             select_statement_parser.parse_query()
         )
 
-        subset_where_conditions = {}
+        subset_where_conditions = []
+        api_filters = {}
         for op, arg1, arg2 in where_conditions:
             if arg1 in self.get_columns():
                 if op != '=':
                     raise NotImplementedError(f"Unknown op: {op}. Only '=' is supported.")
-                subset_where_conditions[arg1] = arg2
+                api_filters[arg1] = arg2
+                subset_where_conditions.append([op, arg1, arg2])
 
-        result = self.handler.zen_client.tickets(**subset_where_conditions)
+        result = self.handler.zen_client.tickets(**api_filters)
         response = []
         if isinstance(result, zenpy.lib.generator.BaseResultGenerator):
             for item in islice(result, result_limit):
@@ -216,14 +221,16 @@ class ZendeskTriggersTable(APITable):
             select_statement_parser.parse_query()
         )
 
-        subset_where_conditions = {}
+        subset_where_conditions = []
+        api_filters = {}
         for op, arg1, arg2 in where_conditions:
             if arg1 in self.get_columns():
                 if op != '=':
                     raise NotImplementedError(f"Unknown op: {op}. Only '=' is supported.")
-                subset_where_conditions[arg1] = arg2
+                api_filters[arg1] = arg2
+                subset_where_conditions.append([op, arg1, arg2])
 
-        result = self.handler.zen_client.triggers(**subset_where_conditions)
+        result = self.handler.zen_client.triggers(**api_filters)
         response = []
         if isinstance(result, zenpy.lib.generator.BaseResultGenerator):
             for item in islice(result, result_limit):
@@ -293,14 +300,16 @@ class ZendeskActivitiesTable(APITable):
             select_statement_parser.parse_query()
         )
 
-        subset_where_conditions = {}
+        subset_where_conditions = []
+        api_filters = {}
         for op, arg1, arg2 in where_conditions:
             if arg1 in self.get_columns():
                 if op != '=':
                     raise NotImplementedError(f"Unknown op: {op}. Only '=' is supported.")
-                subset_where_conditions[arg1] = arg2
+                api_filters[arg1] = arg2
+                subset_where_conditions.append([op, arg1, arg2])
 
-        result = self.handler.zen_client.activities(**subset_where_conditions)
+        result = self.handler.zen_client.activities(**api_filters)
         response = []
         if isinstance(result, zenpy.lib.generator.BaseResultGenerator):
             for item in islice(result, result_limit):

@@ -300,7 +300,6 @@ class ZendeskActivitiesTable(APITable):
                     raise NotImplementedError(f"Unknown op: {op}. Only '=' is supported.")
                 subset_where_conditions[arg1] = arg2
 
-        count = 0
         result = self.handler.zen_client.activities(**subset_where_conditions)
         response = []
         if isinstance(result, zenpy.lib.generator.BaseResultGenerator):

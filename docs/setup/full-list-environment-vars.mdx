@@ -1,0 +1,202 @@
+---
+title: Full List of Environment Variables
+sidebarTitle: Full List of Environment Variables
+---
+
+
+## Environment Variables
+
+### Storage & Paths
+
+#### `MINDSDB_STORAGE_DIR`
+- **Type:** String (path)
+- **Description:** Sets the root storage directory for MindsDB
+- **Default:** System-specific user data directory (`~/.local/share/mindsdb/var/` on Linux)
+- **Example:** `MINDSDB_STORAGE_DIR=/opt/mindsdb/data`
+
+#### `MINDSDB_STORAGE_BACKUP_DISABLED`
+- **Type:** Boolean (`1`, `true`, `True`)
+- **Description:** Disables permanent storage backup
+- **Default:** `false`
+- **Example:** `MINDSDB_STORAGE_BACKUP_DISABLED=1`
+
+#### `MINDSDB_CONFIG_PATH`
+- **Type:** String (path)
+- **Description:** Path to custom config.json file
+- **Default:** None
+- **Example:** `MINDSDB_CONFIG_PATH=/etc/mindsdb/config.json`
+
+### Database
+
+#### `MINDSDB_DB_CON`
+- **Type:** String (connection string)
+- **Description:** Database connection string for MindsDB's internal storage
+- **Default:** `sqlite:///<storage_root>/mindsdb.sqlite3.db?check_same_thread=False&timeout=30`
+- **Example:** `MINDSDB_DB_CON=postgresql://user:pass@localhost/mindsdb`
+
+### Authentication
+
+#### `MINDSDB_USERNAME`
+- **Type:** String
+- **Description:** Username for HTTP authentication (must be set with `MINDSDB_PASSWORD`)
+- **Default:** `mindsdb`
+- **Example:** `MINDSDB_USERNAME=admin`
+
+#### `MINDSDB_PASSWORD`
+- **Type:** String
+- **Description:** Password for HTTP authentication (must be set with `MINDSDB_USERNAME`)
+- **Default:** Empty
+- **Example:** `MINDSDB_PASSWORD=secretpassword`
+- **Note:** Both username and password must be set together to enable HTTP auth
+
+### Logging
+
+#### `MINDSDB_LOG_LEVEL`
+- **Type:** String (`DEBUG`, `INFO`, `WARNING`, `ERROR`)
+- **Description:** Sets console log level (legacy, use `MINDSDB_CONSOLE_LOG_LEVEL` instead)
+- **Default:** `INFO`
+- **Example:** `MINDSDB_LOG_LEVEL=DEBUG`
+
+#### `MINDSDB_CONSOLE_LOG_LEVEL`
+- **Type:** String (`DEBUG`, `INFO`, `WARNING`, `ERROR`)
+- **Description:** Sets console log level (takes precedence over `MINDSDB_LOG_LEVEL`)
+- **Default:** `INFO`
+- **Example:** `MINDSDB_CONSOLE_LOG_LEVEL=DEBUG`
+
+#### `MINDSDB_FILE_LOG_LEVEL`
+- **Type:** String (`DEBUG`, `INFO`, `WARNING`, `ERROR`)
+- **Description:** Sets file log level and enables file logging
+- **Default:** `INFO` (disabled by default)
+- **Example:** `MINDSDB_FILE_LOG_LEVEL=DEBUG`
+
+### ML Task Queue
+
+#### `MINDSDB_ML_QUEUE_TYPE`
+- **Type:** String (`local`, `redis`)
+- **Description:** Type of ML task queue to use
+- **Default:** `local`
+- **Example:** `MINDSDB_ML_QUEUE_TYPE=redis`
+
+#### `MINDSDB_ML_QUEUE_HOST`
+- **Type:** String (hostname)
+- **Description:** Redis host for ML task queue (only when `MINDSDB_ML_QUEUE_TYPE=redis`)
+- **Default:** `localhost`
+- **Example:** `MINDSDB_ML_QUEUE_HOST=redis.example.com`
+
+#### `MINDSDB_ML_QUEUE_PORT`
+- **Type:** Integer
+- **Description:** Redis port for ML task queue
+- **Default:** `6379`
+- **Example:** `MINDSDB_ML_QUEUE_PORT=6380`
+
+#### `MINDSDB_ML_QUEUE_DB`
+- **Type:** Integer
+- **Description:** Redis database number for ML task queue
+- **Default:** `0`
+- **Example:** `MINDSDB_ML_QUEUE_DB=1`
+
+#### `MINDSDB_ML_QUEUE_USERNAME`
+- **Type:** String
+- **Description:** Redis username for ML task queue
+- **Default:** None
+- **Example:** `MINDSDB_ML_QUEUE_USERNAME=redis_user`
+
+#### `MINDSDB_ML_QUEUE_PASSWORD`
+- **Type:** String
+- **Description:** Redis password for ML task queue
+- **Default:** None
+- **Example:** `MINDSDB_ML_QUEUE_PASSWORD=redis_pass`
+
+### AI Models
+
+#### `MINDSDB_DEFAULT_PROJECT`
+- **Type:** String
+- **Description:** Default project name (converted to lowercase)
+- **Default:** `mindsdb`
+- **Example:** `MINDSDB_DEFAULT_PROJECT=myproject`
+
+#### `MINDSDB_DEFAULT_LLM_API_KEY`
+- **Type:** String
+- **Description:** API key for default LLM (Large Language Model)
+- **Default:** None
+- **Example:** `MINDSDB_DEFAULT_LLM_API_KEY=sk-...`
+
+#### `MINDSDB_DEFAULT_EMBEDDING_MODEL_API_KEY`
+- **Type:** String
+- **Description:** API key for default embedding model
+- **Default:** None
+- **Example:** `MINDSDB_DEFAULT_EMBEDDING_MODEL_API_KEY=sk-...`
+
+#### `MINDSDB_DEFAULT_RERANKING_MODEL_API_KEY`
+- **Type:** String
+- **Description:** API key for default reranking model
+- **Default:** None
+- **Example:** `MINDSDB_DEFAULT_RERANKING_MODEL_API_KEY=sk-...`
+
+### Reranker Configuration
+
+#### `MINDSDB_RERANKER_N`
+- **Type:** Integer
+- **Description:** Number of results to rerank
+- **Default:** None
+- **Example:** `MINDSDB_RERANKER_N=10`
+
+#### `MINDSDB_RERANKER_LOGPROBS`
+- **Type:** Boolean (`true`, `false`, `1`, `0`, `yes`, `no`)
+- **Description:** Enable log probabilities in reranker
+- **Default:** None
+- **Example:** `MINDSDB_RERANKER_LOGPROBS=true`
+
+#### `MINDSDB_RERANKER_TOP_LOGPROBS`
+- **Type:** Integer
+- **Description:** Number of top log probabilities to return
+- **Default:** None
+- **Example:** `MINDSDB_RERANKER_TOP_LOGPROBS=5`
+
+#### `MINDSDB_RERANKER_MAX_TOKENS`
+- **Type:** Integer
+- **Description:** Maximum tokens for reranker
+- **Default:** None
+- **Example:** `MINDSDB_RERANKER_MAX_TOKENS=512`
+
+#### `MINDSDB_RERANKER_VALID_CLASS_TOKENS`
+- **Type:** String (comma-separated list)
+- **Description:** Valid class tokens for reranker
+- **Default:** None
+- **Example:** `MINDSDB_RERANKER_VALID_CLASS_TOKENS=token1,token2,token3`
+
+### Features
+
+#### `MINDSDB_DATA_CATALOG_ENABLED`
+- **Type:** Boolean (`1`, `true`)
+- **Description:** Enables the data catalog feature
+- **Default:** `false`
+- **Example:** `MINDSDB_DATA_CATALOG_ENABLED=1`
+
+#### `MINDSDB_NO_STUDIO`
+- **Type:** Boolean (`1`, `true`)
+- **Description:** Disables GUI (Studio) from opening on start and disables auto-update
+- **Default:** `false`
+- **Example:** `MINDSDB_NO_STUDIO=1`
+
+#### `MINDSDB_GUI_AUTOUPDATE`
+- **Type:** Boolean (`1`, `true`, `0`, `false`)
+- **Description:** Controls whether GUI auto-updates
+- **Default:** `true`
+- **Example:** `MINDSDB_GUI_AUTOUPDATE=false`
+
+### Runtime
+
+#### `MINDSDB_DOCKER_ENV`
+- **Type:** Any value (presence check)
+- **Description:** Indicates MindsDB is running in Docker environment (changes default API host to `0.0.0.0`)
+- **Default:** Not set
+- **Example:** `MINDSDB_DOCKER_ENV=1`
+
+#### `MINDSDB_RUNTIME`
+- **Type:** String (`1`)
+- **Description:** Indicates MindsDB runtime environment
+- **Default:** Not set
+- **Example:** `MINDSDB_RUNTIME=1`
+
+---

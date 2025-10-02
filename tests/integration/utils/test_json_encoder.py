@@ -1,12 +1,21 @@
 import numpy as np
 import pandas as pd
 from datetime import datetime, date, timedelta
+import pytest
+from flask import Flask
 
 from mindsdb.utilities.json_encoder import ORJSONProvider
 
 
-def test_dates_and_timedelta_serialization():
-    prov = ORJSONProvider()
+@pytest.fixture()
+def prov():
+    app = Flask(__name__)
+    app.json = ORJSONProvider(app)
+    with app.app_context():
+        yield app.json
+
+
+def test_dates_and_timedelta_serialization(prov):
     payload = {
         "d": date(2024, 1, 2),
         "dt": datetime(2024, 1, 2, 3, 4, 5),
@@ -17,8 +26,7 @@ def test_dates_and_timedelta_serialization():
     assert "01:02:03" in s
 
 
-def test_numpy_scalars_and_arrays():
-    prov = ORJSONProvider()
+def test_numpy_scalars_and_arrays(prov):
     payload = {
         "b": np.bool_(True),
         "i": np.int64(42),
@@ -30,25 +38,22 @@ def test_numpy_scalars_and_arrays():
     assert '"arr":[1,2,3]' in s
 
 
-def test_pandas_na_to_none():
+def test_pandas_na_to_none(prov):
     """
     Test if it calls our CustomJSONEncoder.default
     """
-    prov = ORJSONProvider()
     payload = {"x": pd.NA}
     s = prov.dumps(payload)
     assert '"x":null' in s
 
 
-def test_date_serialization_format():
-    prov = ORJSONProvider()
+def test_date_serialization_format(prov):
     payload = {"d": date(2024, 7, 9)}
     s = prov.dumps(payload)
     assert '"d":"2024-07-09"' in s
 
 
-def test_datetime_serialization_format():
-    prov = ORJSONProvider()
+def test_datetime_serialization_format(prov):
     dt = datetime(2024, 7, 9, 1, 2, 3, 0)
     payload = {"dt": dt}
     s = prov.dumps(payload)

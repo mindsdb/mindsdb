@@ -8,7 +8,7 @@ from http import HTTPStatus
 
 
 import requests
-from flask import Flask, url_for, make_response, request, send_from_directory
+from flask import Flask, url_for, request, send_from_directory
 from flask_compress import Compress
 from flask_restx import Api
 from werkzeug.exceptions import HTTPException

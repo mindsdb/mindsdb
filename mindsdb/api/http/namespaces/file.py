@@ -196,6 +196,8 @@ class File(Resource):
                 return http_error(400, "Wrong content.", "Archive must contain data file in root.")
 
         try:
+            if not Path(mindsdb_file_name).suffix == "":
+                return http_error(400, "Error", "File name cannot contain extension.")
             ca.file_controller.save_file(mindsdb_file_name, file_path, file_name=original_file_name)
         except FileProcessingError as e:
             return http_error(400, "Error", str(e))

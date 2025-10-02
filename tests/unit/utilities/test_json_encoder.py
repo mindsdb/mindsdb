@@ -14,14 +14,17 @@ def dumps(payload):
 
 
 def test_date_and_datetime_and_timedelta():
-    s = dumps({
-        "d": date(2024, 7, 9),
-        "dt": datetime(2024, 7, 9, 1, 2, 3, 0),
-        "td": timedelta(hours=1, minutes=2, seconds=3),
-    })
+    s = dumps(
+        {
+            "d": date(2024, 7, 9),
+            "dt": datetime(2024, 7, 9, 1, 2, 3, 0),
+            "td": timedelta(hours=1, minutes=2, seconds=3),
+        }
+    )
     assert '"d":"2024-07-09"' in s
     assert '"dt":"2024-07-09 01:02:03.000000"' in s
     assert '"td":"1:02:03"' in s
+
 
 def test_pandas_na_serializes_to_null():
     s = dumps({"x": pd.NA})
@@ -32,5 +35,3 @@ def test_decimal_serialization_to_string():
     # Our default does not special-case Decimal, so it should fall back to str(obj)
     s = dumps({"price": Decimal("12.34")})
     assert '"price":"12.34"' in s
-
-

@@ -421,6 +421,8 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertNotIn("OUTLN", response.data_frame["TABLE_SCHEMA"].values)
         self.assertNotIn("XDB", response.data_frame["TABLE_SCHEMA"].values)
 
+        del self.handler.native_query
+
     def test_get_columns(self):
         """
         Tests that get_columns calls native_query with the correct SQL for Oracle

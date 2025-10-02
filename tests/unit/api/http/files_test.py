@@ -17,7 +17,7 @@ def test_put_file(client):
 
     data = {"file": (file, "test.txt")}
     response = client.put(
-        "/api/files/test.txt",
+        "/api/files/test",
         data=data,
         content_type="multipart/form-data",
         follow_redirects=True,
@@ -42,7 +42,7 @@ def test_path_traversal(client):
 
 def test_delete_file(client):
     """Test deleting a file"""
-    response = client.delete("/api/files/test.txt", follow_redirects=True)
+    response = client.delete("/api/files/test", follow_redirects=True)
     assert response.status_code == HTTPStatus.OK
 
 
@@ -90,3 +90,42 @@ def test_put_file_url_upload_disabled(client, monkeypatch):
     assert response.status_code == 400
     data = response.get_json()
     assert "URL file upload is disabled" in data["detail"]
+
+
+def test_extension_in_filename(client):
+    """Test uploading a file with an extension in the name"""
+    file = io.BytesIO(b"Hello, World!")
+
+    data = {"file": (file, "test.txt")}
+    response = client.put(
+        "/api/files/test.txt",
+        data=data,
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+    assert response.status_code == 400
+    data = response.get_json()
+    assert "File name cannot contain extension." in data["detail"]
+
+
+def test_archive_file_with_extension_upload(client):
+    """Test uploading a zip archive file with an extension in the name"""
+    import zipfile
+    import io
+
+    # Create a zip file in memory
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("file1.txt", "This is the content of file 1.")
+    zip_buffer.seek(0)
+
+    data = {"file": (zip_buffer, "archive.zip")}
+    response = client.put(
+        "/api/files/archive",
+        data=data,
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+    assert response.status_code == 400
+    data = response.get_json()
+    assert "File name cannot contain extension." in data["detail"]

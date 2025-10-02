@@ -23,7 +23,7 @@ def test_dates_and_timedelta_serialization(prov):
     }
     s = prov.dumps(payload)
     assert '"2024-01-02"' in s
-    assert "01:02:03" in s
+    assert '"td":"1:02:03"' in s
 
 
 def test_numpy_scalars_and_arrays(prov):

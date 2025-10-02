@@ -100,10 +100,7 @@ class SkillsController:
             project_name = default_project
         project = self.project_controller.get(name=project_name)
 
-        if not name.islower():
-            raise ValueError(f"The name must be in lower case: {name}")
-
-        skill = self.get_skill(name, project_name)
+        skill = self.get_skill(name, project_name, strict_case=True)
 
         if skill is not None:
             raise ValueError(f"Skill with name already exists: {name}")

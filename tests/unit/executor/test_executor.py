@@ -574,7 +574,7 @@ class Test(BaseExecutorMockPredictor):
         self.set_handler(mock_handler, name="pg", tables={})
         self.execute("drop database pg")
         self.set_handler(mock_handler, name="PG", tables={})
-        self.execute("drop database pg")
+        self.execute("drop database `PG`")
         self.set_handler(mock_handler, name="pg", tables={})
         self.execute("drop database Pg")
 

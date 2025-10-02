@@ -76,7 +76,7 @@ def test_post_agent_depreciated(client):
 def test_post_agent(client):
     create_request = {
         "agent": {
-            "name": "test_post_agent",
+            "name": "TEST_post_agent",
             "model": {"model_name": "gpt-3.5-turbo", "provider": "openai", "api_key": "sk-..."},
             "data": {"tables": ["example_db.customers"]},
             "prompt_template": "example_db.customers stores customers data",
@@ -89,7 +89,7 @@ def test_post_agent(client):
     created_agent = create_response.get_json()
 
     expected_agent = {
-        "name": "test_post_agent",
+        "name": "TEST_post_agent",
         "model": {"model_name": "gpt-3.5-turbo", "provider": "openai", "api_key": "sk-..."},
         "data": {"tables": ["example_db.customers"]},
         "id": created_agent["id"],

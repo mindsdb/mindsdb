@@ -8,7 +8,6 @@ from mindsdb.interfaces.model.functions import get_project_record, get_project_r
 
 class ViewController:
     def add(self, name, query, project_name):
-        name = name.lower()
         from mindsdb.interfaces.database.database import DatabaseController
 
         database_controller = DatabaseController()
@@ -20,9 +19,7 @@ class ViewController:
         project_id = project_databases_dict[project_name]["id"]
         view_record = (
             db.session.query(db.View.id)
-            .filter(
-                func.lower(db.View.name) == name, db.View.company_id == ctx.company_id, db.View.project_id == project_id
-            )
+            .filter(db.View.name == name, db.View.company_id == ctx.company_id, db.View.project_id == project_id)
             .first()
         )
         if view_record is not None:

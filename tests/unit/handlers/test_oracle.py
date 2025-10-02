@@ -291,7 +291,14 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         Tests that get_tables calls native_query with the correct SQL for Oracle
         and returns the expected DataFrame structure.
         """
-        expected_df = DataFrame([("TABLE1",), ("TABLE2",)], columns=["TABLE_NAME"])
+        expected_df = DataFrame(
+            [
+                ("SAMPLEUSER", "CUSTOMERS", "BASE TABLE"),
+                ("SAMPLEUSER", "PRODUCTS", "BASE TABLE"),
+                ("SAMPLEUSER", "ORDERS_VIEW", "VIEW"),
+            ],
+            columns=["TABLE_SCHEMA", "TABLE_NAME", "TABLE_TYPE"],
+        )
         expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=expected_df)
 
         self.handler.native_query = MagicMock(return_value=expected_response)
@@ -326,10 +333,93 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.handler.native_query.assert_called_once_with(expected_query)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
         self.assertIsInstance(response.data_frame, DataFrame)
-        self.assertListEqual(list(response.data_frame.columns), ["TABLE_NAME"])
-        self.assertEqual(len(response.data_frame), 2)
+        self.assertEqual(len(response.data_frame), 3)
+        self.assertListEqual(
+            list(response.data_frame.columns),
+            ["TABLE_SCHEMA", "TABLE_NAME", "TABLE_TYPE"],
+        )
+        self.assertEqual(response.data_frame.iloc[0]["TABLE_SCHEMA"], "SAMPLEUSER")
+        self.assertEqual(response.data_frame.iloc[0]["TABLE_NAME"], "CUSTOMERS")
+        self.assertEqual(response.data_frame.iloc[0]["TABLE_TYPE"], "BASE TABLE")
+
+        view_rows = response.data_frame[response.data_frame["TABLE_TYPE"] == "VIEW"]
+        self.assertEqual(len(view_rows), 1)
 
         del self.handler.native_query
+
+    def test_get_tables_multiple_schemas(self):
+        """
+        Tests that get_tables calls native_query with the correct SQL for Oracle
+        and returns the expected DataFrame structure when multiple schemas are present.
+        """
+        expected_df = DataFrame(
+            [
+                ("SAMPLEUSER1", "EMPLOYEES", "BASE TABLE"),
+                ("SAMPLEUSER1", "DEPARTMENTS", "BASE TABLE"),
+                ("SAMPLEUSER1", "EMP_VIEW", "VIEW"),
+                ("SAMPLEUSER2", "CUSTOMERS", "BASE TABLE"),
+                ("SAMPLEUSER2", "ORDERS", "BASE TABLE"),
+                ("SAMPLEUSER2", "CUST_VIEW", "VIEW"),
+                ("SAMPLEUSER3", "PRODUCTS", "BASE TABLE"),
+            ],
+            columns=["TABLE_SCHEMA", "TABLE_NAME", "TABLE_TYPE"],
+        )
+        expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=expected_df)
+
+        self.handler.native_query = MagicMock(return_value=expected_response)
+
+        response = self.handler.get_tables()
+
+        self.handler.native_query.assert_called_once()
+
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+        self.assertIsInstance(response.data_frame, DataFrame)
+        self.assertEqual(len(response.data_frame), 7)
+        self.assertListEqual(
+            list(response.data_frame.columns),
+            ["TABLE_SCHEMA", "TABLE_NAME", "TABLE_TYPE"],
+        )
+        schemas = response.data_frame["TABLE_SCHEMA"].unique()
+        self.assertEqual(len(schemas), 3)
+        self.assertIn("SAMPLEUSER1", schemas)
+        self.assertIn("SAMPLEUSER2", schemas)
+        self.assertIn("SAMPLEUSER3", schemas)
+
+        table_types = response.data_frame["TABLE_TYPE"].unique()
+        self.assertIn("BASE TABLE", table_types)
+        self.assertIn("VIEW", table_types)
+
+        tables = response.data_frame[response.data_frame["TABLE_TYPE"] == "BASE TABLE"]
+        views = response.data_frame[response.data_frame["TABLE_TYPE"] == "VIEW"]
+        self.assertEqual(len(tables), 5)
+        self.assertEqual(len(views), 2)
+
+        del self.handler.native_query
+
+    def test_system_tables_exclusion(self):
+        """
+        Tests that get_tables excludes system tables from the results.
+        """
+        expected_df = DataFrame(
+            [
+                ("SAMPLEUSER", "CUSTOMERS", "BASE TABLE"),
+                ("SAMPLEUSER", "ORDERS", "BASE TABLE"),
+                ("SAMPLEUSER", "CUST_VIEW", "VIEW"),
+            ],
+            columns=["TABLE_SCHEMA", "TABLE_NAME", "TABLE_TYPE"],
+        )
+        expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=expected_df)
+        self.handler.native_query = MagicMock(return_value=expected_response)
+        response = self.handler.get_tables()
+
+        self.handler.native_query.assert_called_once()
+        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+        self.assertIsInstance(response.data_frame, DataFrame)
+        self.assertEqual(len(response.data_frame), 3)
+        self.assertNotIn("SYS", response.data_frame["TABLE_SCHEMA"].values)
+        self.assertNotIn("SYSTEM", response.data_frame["TABLE_SCHEMA"].values)
+        self.assertNotIn("OUTLN", response.data_frame["TABLE_SCHEMA"].values)
+        self.assertNotIn("XDB", response.data_frame["TABLE_SCHEMA"].values)
 
     def test_get_columns(self):
         """

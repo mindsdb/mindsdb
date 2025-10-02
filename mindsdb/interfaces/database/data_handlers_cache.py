@@ -24,7 +24,7 @@ class HandlersCacheRecord:
     @property
     def has_references(self):
         return sys.getrefcount(self.handler) > 2
-    
+
     def connect(self):
         try:
             if not self.handler.is_connected:
@@ -43,7 +43,7 @@ class HandlersCache:
 
         Args:
             ttl (int): time to live (in seconds) for record in cache
-            clean_timeout (float): 
+            clean_timeout (float):
         """
         self.ttl: int = ttl
         self._clean_timeout: int = clean_timeout
@@ -88,10 +88,7 @@ class HandlersCache:
                     ctx.company_id,
                     0 if thread_safe else threading.get_native_id(),
                 )
-                record = HandlersCacheRecord(
-                    handler=handler,
-                    expired_at=time.time() + self.ttl
-                )
+                record = HandlersCacheRecord(handler=handler, expired_at=time.time() + self.ttl)
                 self.handlers[key].append(record)
             except Exception:
                 logger.warning("Error setting data handler cache record:", exc_info=True)
@@ -151,10 +148,7 @@ class HandlersCache:
                 for key in list(self.handlers.keys()):
                     active_handlers_list = []
                     for record in self.handlers[key]:
-                        if (
-                            record.expired
-                            and record.has_references is False
-                        ):
+                        if record.expired and record.has_references is False:
                             try:
                                 record.handler.disconnect()
                             except Exception:

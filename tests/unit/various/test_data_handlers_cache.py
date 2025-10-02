@@ -9,31 +9,21 @@ class MockDatabaseHandler:
     """Mock database handler for testing"""
 
     def __init__(self, name: str, thread_safe: bool = True):
-        # super().__init__(name)
         self.name = name
         self.thread_safe = thread_safe
-        self.connect_called = False
-        self.disconnect_called = False
-        self.connection_count = 0
         self.is_connected = False
-        
+
     def connect(self):
-        self.connect_called = True
-        self.connection_count += 1
         self.is_connected = True
-        
+
     def disconnect(self):
-        self.disconnect_called = True
         self.is_connected = False
 
 
 class TestHandlersCache:
     def test_record(self):
         """Test HandlersCacheRecord"""
-        record = HandlersCacheRecord(
-            handler=MockDatabaseHandler("test_handler"),
-            expired_at=time.time() + 60
-        )
+        record = HandlersCacheRecord(handler=MockDatabaseHandler("test_handler"), expired_at=time.time() + 60)
 
         assert record.expired is False
         record.expired_at = time.time() - 1
@@ -44,9 +34,9 @@ class TestHandlersCache:
         assert record.handler.is_connected is True
 
         assert record.has_references is False
-        ref = record.handler    # noqa
+        ref = record.handler  # noqa
         assert record.has_references is True
-        ref = None              # noqa
+        ref = None  # noqa
         assert record.has_references is False
 
     def test_cache(self):

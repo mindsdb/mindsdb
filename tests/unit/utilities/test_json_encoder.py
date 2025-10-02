@@ -10,7 +10,11 @@ DEFAULT = CustomJSONEncoder().default
 
 
 def dumps(payload):
-    return orjson.dumps(payload, default=DEFAULT).decode("utf-8")
+    return orjson.dumps(
+        payload,
+        default=DEFAULT,
+        option=orjson.OPT_SERIALIZE_NUMPY | orjson.OPT_NON_STR_KEYS | orjson.OPT_PASSTHROUGH_DATETIME,
+    ).decode("utf-8")
 
 
 def test_date_and_datetime_and_timedelta():
@@ -31,7 +35,7 @@ def test_pandas_na_serializes_to_null():
     assert '"x":null' in s
 
 
-def test_decimal_serialization_to_string():
-    # Our default does not special-case Decimal, so it should fall back to str(obj)
+def test_decimal_serialization_to_number():
+    # Our default maps Decimal to float
     s = dumps({"price": Decimal("12.34")})
-    assert '"price":"12.34"' in s
+    assert '"price":12.34' in s

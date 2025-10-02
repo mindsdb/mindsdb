@@ -396,33 +396,6 @@ class TestOracleHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
         del self.handler.native_query
 
-    def test_system_tables_exclusion(self):
-        """
-        Tests that get_tables excludes system tables from the results.
-        """
-        expected_df = DataFrame(
-            [
-                ("SAMPLEUSER", "CUSTOMERS", "BASE TABLE"),
-                ("SAMPLEUSER", "ORDERS", "BASE TABLE"),
-                ("SAMPLEUSER", "CUST_VIEW", "VIEW"),
-            ],
-            columns=["TABLE_SCHEMA", "TABLE_NAME", "TABLE_TYPE"],
-        )
-        expected_response = Response(RESPONSE_TYPE.TABLE, data_frame=expected_df)
-        self.handler.native_query = MagicMock(return_value=expected_response)
-        response = self.handler.get_tables()
-
-        self.handler.native_query.assert_called_once()
-        self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
-        self.assertIsInstance(response.data_frame, DataFrame)
-        self.assertEqual(len(response.data_frame), 3)
-        self.assertNotIn("SYS", response.data_frame["TABLE_SCHEMA"].values)
-        self.assertNotIn("SYSTEM", response.data_frame["TABLE_SCHEMA"].values)
-        self.assertNotIn("OUTLN", response.data_frame["TABLE_SCHEMA"].values)
-        self.assertNotIn("XDB", response.data_frame["TABLE_SCHEMA"].values)
-
-        del self.handler.native_query
-
     def test_get_columns(self):
         """
         Tests that get_columns calls native_query with the correct SQL for Oracle

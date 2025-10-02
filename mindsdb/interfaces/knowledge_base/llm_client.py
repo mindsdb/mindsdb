@@ -26,7 +26,8 @@ class LLMClient:
     It chooses openai client or litellm handler depending on the config
     """
 
-    def __init__(self, params: dict = None):
+    def __init__(self, params: dict = None, session=None):
+        self._session = session
         self.params = params
 
         self.provider = params.get("provider", "openai")
@@ -54,10 +55,11 @@ class LLMClient:
             self.client = OpenAI(**params)
         else:
             # try to use litellm
-            from mindsdb.api.executor.controllers.session_controller import SessionController
+            if self._session is None:
+                from mindsdb.api.executor.controllers.session_controller import SessionController
 
-            session = SessionController()
-            module = session.integration_controller.get_handler_module("litellm")
+                self._session = SessionController()
+            module = self._session.integration_controller.get_handler_module("litellm")
 
             if module is None or module.Handler is None:
                 raise ValueError(f'Unable to use "{self.provider}" provider. Litellm handler is not installed')

@@ -867,7 +867,7 @@ class KnowledgeBaseTable:
             messages = list(df[TableField.CONTENT.value])
             embedding_params = get_model_params(self._kb.params.get("embedding_model", {}), "default_embedding_model")
 
-            llm_client = LLMClient(embedding_params)
+            llm_client = LLMClient(embedding_params, session=self.session)
             results = llm_client.embeddings(messages)
 
             results = [[val] for val in results]
@@ -1255,7 +1255,7 @@ class KnowledgeBaseController:
         except PredictorRecordNotFound:
             pass
 
-        llm_client = LLMClient(params)
+        llm_client = LLMClient(params, session=self.session)
 
         try:
             llm_client.embeddings(["test"])

@@ -353,6 +353,7 @@ if __name__ == "__main__":
         if config.cmd_args.load_tokenizer:
             try:
                 from langchain_core.language_models import get_tokenizer
+
                 get_tokenizer()
                 logger.info("Tokenizer successfully loaded")
             except Exception:

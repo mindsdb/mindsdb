@@ -13,19 +13,37 @@ logger = log.getLogger(__name__)
 
 @dataclass(kw_only=True, slots=True)
 class HandlersCacheRecord:
+    """Record for a handler in the cache
+
+    Args:
+        handler (DatabaseHandler): handler instance
+        expired_at (float): time when the handler will be expired
+    """
+
     handler: DatabaseHandler
     expired_at: float
     connect_attempt_done: threading.Event = field(default_factory=threading.Event)
 
     @property
-    def expired(self):
+    def expired(self) -> bool:
+        """check if the handler is expired
+        
+        Returns:
+            bool: True if the handler is expired, False otherwise
+        """
         return self.expired_at < time.time()
 
     @property
-    def has_references(self):
+    def has_references(self) -> bool:
+        """check if the handler has references
+        
+        Returns:
+            bool: True if the handler has references, False otherwise
+        """
         return sys.getrefcount(self.handler) > 2
 
-    def connect(self):
+    def connect(self) -> None:
+        """connect to the handler"""
         try:
             if not self.handler.is_connected:
                 self.handler.connect()
@@ -43,7 +61,7 @@ class HandlersCache:
 
         Args:
             ttl (int): time to live (in seconds) for record in cache
-            clean_timeout (float):
+            clean_timeout (float): interval between cleanups of expired handlers
         """
         self.ttl: int = ttl
         self._clean_timeout: int = clean_timeout
@@ -97,6 +115,14 @@ class HandlersCache:
         record.connect()
 
     def _get_cache_records(self, name: str) -> tuple[list[HandlersCacheRecord] | None, str]:
+        """get cache records by name
+        
+        Args:
+            name (str): handler name
+
+        Returns:
+            tuple[list[HandlersCacheRecord] | None, str]: cache records and key of the handler in cache
+        """
         # If the handler is not thread safe, the thread ID will be assigned to the last element of the key.
         key = (name, ctx.company_id, 0)
         if key not in self.handlers:

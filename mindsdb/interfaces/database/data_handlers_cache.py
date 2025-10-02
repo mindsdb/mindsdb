@@ -38,14 +38,15 @@ class HandlersCacheRecord:
 class HandlersCache:
     """Cache for data handlers that keep connections opened during ttl time from handler last use"""
 
-    def __init__(self, ttl: int = 60):
+    def __init__(self, ttl: int = 60, clean_timeout: float = 3):
         """init cache
 
         Args:
             ttl (int): time to live (in seconds) for record in cache
+            clean_timeout (float): 
         """
         self.ttl: int = ttl
-        self._clean_timeout: int = 3
+        self._clean_timeout: int = clean_timeout
         self.handlers: dict[str, list[HandlersCacheRecord]] = defaultdict(list)
         self._lock = threading.RLock()
         self._stop_event = threading.Event()

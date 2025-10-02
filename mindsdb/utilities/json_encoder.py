@@ -38,7 +38,12 @@ class ORJSONProvider(DefaultJSONProvider):
     def dumps(self, obj, **kwargs):
         return orjson.dumps(
             obj,
-            option=orjson.OPT_SERIALIZE_NUMPY | orjson.OPT_NON_STR_KEYS,
+            option=(
+                orjson.OPT_SERIALIZE_NUMPY
+                | orjson.OPT_NON_STR_KEYS
+                # keep this for using CustomJSON encoder
+                | orjson.OPT_PASSTHROUGH_DATETIME
+            ),
             default=CustomJSONEncoder().default,
         ).decode("utf-8")
 

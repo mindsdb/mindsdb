@@ -1,4 +1,5 @@
 from datetime import datetime, date, timedelta
+from decimal import Decimal
 import pandas as pd
 import numpy as np
 import json
@@ -14,6 +15,9 @@ class CustomJSONEncoder(json.JSONEncoder):
             return obj.strftime("%Y-%m-%d %H:%M:%S.%f")
         if isinstance(obj, date):
             return obj.strftime("%Y-%m-%d")
+        if isinstance(obj, np.float16) or isinstance(obj, np.float32) or
+                      or isinstance(obj, np.float64) or isinstance(obj, Decimal):
+            return float(obj)
         if isinstance(obj, np.bool_):
             return bool(obj)
         if pd.isnull(obj):

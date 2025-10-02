@@ -87,7 +87,6 @@ class BaseLLMReranker(BaseModel, ABC):
             elif self.provider in ("openai", "ollama"):
                 if self.provider == "ollama":
                     self.method = "no-logprobs"
-                    self.logprobs = False
                 api_key_var: str = "OPENAI_API_KEY"
                 openai_api_key = self.api_key or os.getenv(api_key_var)
                 if not openai_api_key:

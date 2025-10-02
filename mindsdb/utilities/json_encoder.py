@@ -15,8 +15,7 @@ class CustomJSONEncoder(json.JSONEncoder):
             return obj.strftime("%Y-%m-%d %H:%M:%S.%f")
         if isinstance(obj, date):
             return obj.strftime("%Y-%m-%d")
-        if isinstance(obj, np.float16) or isinstance(obj, np.float32) or
-                      or isinstance(obj, np.float64) or isinstance(obj, Decimal):
+        if isinstance(obj, np.float16) or isinstance(obj, np.float32) or isinstance(obj, np.float64) or isinstance(obj, Decimal):
             return float(obj)
         if isinstance(obj, np.bool_):
             return bool(obj)
@@ -40,3 +39,4 @@ class ORJSONProvider(DefaultJSONProvider):
 
     def loads(self, s, **kwargs):
         return orjson.loads(s)
+

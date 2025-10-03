@@ -7,89 +7,17 @@ from email.header import decode_header
 
 import pandas as pd
 
-from mindsdb.integrations.libs.api_handler import APIHandler
+from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb.integrations.libs.response import HandlerStatusResponse
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
 
-class EmailHandler(APIHandler):
-    """
-    This handler allows connecting to an email account via IMAP and querying emails.
-    """
-
-    def __init__(self, name: str, **kwargs):
-        super().__init__(name)
-        self.connection_data = kwargs.get("connection_data", {})
-        self.is_connected = False
-        self.connection = None
-
-        self.email_address = self.connection_data.get("email")
-        self.password = self.connection_data.get("password")
-
-        # Suggestion 2: Check for missing email before using it
-        if not self.email_address:
-            raise ValueError("'email' parameter is required.")
-
-        self.host = self.connection_data.get("host")
-        self.port = self.connection_data.get("port")
-        self.username = self.connection_data.get("username", self.email_address)
-        self.use_ssl = self.connection_data.get("use_ssl", True)
-
-        if not self.host:
-            try:
-                domain = self.email_address.split("@")[1]
-                self.host = f"imap.{domain}"
-                logger.info(
-                    f"IMAP host not provided. Deduced '{self.host}' from email address."
-                )
-            except IndexError:
-                raise ValueError("Invalid email address provided. Cannot deduce IMAP host.")
-
-        if not self.port:
-            self.port = 993
-
-        self._register_table("emails", self)
-
-    def connect(self) -> imaplib.IMAP4:
-        # Suggestion 3: Check for missing credentials
-        if not self.username or not self.password:
-            raise ValueError("Username and password are required for IMAP connection.")
-
-        if self.is_connected and self.connection:
-            return self.connection
-        try:
-            logger.info(
-                f"Connecting to {self.host}:{self.port} with user '{self.username}'..."
-            )
-            if self.use_ssl:
-                self.connection = imaplib.IMAP4_SSL(self.host, self.port)
-            else:
-                self.connection = imaplib.IMAP4(self.host, self.port)
-            status, _ = self.connection.login(self.username, self.password)
-            if status != "OK":
-                raise ConnectionError("IMAP login failed.")
-            self.is_connected = True
-            return self.connection
-        except Exception as e:
-            self.is_connected = False
-            logger.error(f"Error connecting to email server: {e}")
-            raise
-
-    def disconnect(self):
-        if self.is_connected and self.connection:
-            self.connection.logout()
-            self.is_connected = False
-            self.connection = None
-
-    def check_connection(self) -> HandlerStatusResponse:
-        try:
-            self.connect()
-            self.disconnect()
-            return HandlerStatusResponse(success=True)
-        except Exception as e:
-            return HandlerStatusResponse(success=False, error_message=str(e))
+# Suggestion 2: Re-introduce a dedicated table class
+class EmailsTable(APITable):
+    def __init__(self, handler):
+        super().__init__(handler)
 
     def select(self, query) -> pd.DataFrame:
         parts = str(query).lower().split()
@@ -98,25 +26,25 @@ class EmailHandler(APIHandler):
             mailbox_part = str(query).lower().split("mailbox=")[1].strip()
             mailbox = mailbox_part.split()[0].strip("'\"")
 
-        # Suggestion 7: Sanitize the mailbox name to prevent injection
-        if not re.match(r"^[a-zA-Z0-9_./-]+$", mailbox):
+        # Suggestion 6: Stricter mailbox sanitization
+        if not re.match(r"^[a-zA-Z0-9_-]+$", mailbox):
             raise ValueError(
-                f"Invalid mailbox name: '{mailbox}'. Only alphanumeric characters, underscore, dash, period, and slash are allowed."
+                f"Invalid mailbox name: '{mailbox}'. Only alphanumeric characters, underscore, and dash are allowed."
             )
 
-        conn = self.connect()
+        conn = self.handler.connect()
         conn.select(mailbox)
 
         status, messages = conn.search(None, "ALL")
         if status != "OK":
             raise Exception(f"Failed to search mailbox: {messages}")
 
-        # Suggestion 4: Handle empty mailboxes gracefully
         if not messages or not messages[0]:
             return pd.DataFrame()
 
         email_ids = messages[0].split()
-        limit = query.limit.value if query.limit else 25
+        # Suggestion 3: Safely get limit
+        limit = getattr(query.limit, "value", 25)
         ids_to_fetch = email_ids[-limit:]
 
         if not ids_to_fetch:
@@ -124,14 +52,22 @@ class EmailHandler(APIHandler):
 
         emails = []
 
-        # Suggestion 5: Batch fetch emails for performance
-        id_string = b",".join(ids_to_fetch)
+        # Suggestion 4: Correct IMAP separator
+        id_string = b" ".join(ids_to_fetch)
         status, msg_data = conn.fetch(id_string, "(RFC822)")
         if status != "OK":
             raise Exception("Failed to fetch emails.")
 
         for response_part in msg_data:
             if isinstance(response_part, tuple):
+                # Suggestion 5: Safely get email ID
+                email_id = None
+                if response_part and isinstance(response_part[0], bytes):
+                    try:
+                        email_id = response_part[0].split()[0].decode()
+                    except (IndexError, UnicodeDecodeError):
+                        pass
+
                 msg = email.message_from_bytes(response_part[1])
                 subject, encoding = decode_header(msg["Subject"])[0]
                 if isinstance(subject, bytes):
@@ -155,8 +91,7 @@ class EmailHandler(APIHandler):
                         pass
                 emails.append(
                     {
-                        # We extract the ID from the response part itself
-                        "id": response_part[0].split()[0].decode(),
+                        "id": email_id,
                         "from": from_,
                         "subject": subject,
                         "body": body,
@@ -166,7 +101,7 @@ class EmailHandler(APIHandler):
 
         return pd.DataFrame(emails)
 
-    def get_columns(self, table_name: str = "emails") -> pd.DataFrame:
+    def get_columns(self) -> pd.DataFrame:
         return pd.DataFrame(
             [
                 {"Field": "id", "Type": "string"},
@@ -176,3 +111,82 @@ class EmailHandler(APIHandler):
                 {"Field": "date", "Type": "string"},
             ]
         )
+
+
+class EmailHandler(APIHandler):
+    """
+    This handler allows connecting to an email account via IMAP and querying emails.
+    """
+
+    def __init__(self, name: str, **kwargs):
+        super().__init__(name)
+        self.connection_data = kwargs.get("connection_data", {})
+        self.is_connected = False
+        self.connection = None
+
+        self.email_address = self.connection_data.get("email")
+        self.password = self.connection_data.get("password")
+
+        if not self.email_address:
+            raise ValueError("'email' parameter is required.")
+
+        self.host = self.connection_data.get("host")
+        self.port = self.connection_data.get("port")
+        self.username = self.connection_data.get("username", self.email_address)
+        self.use_ssl = self.connection_data.get("use_ssl", True)
+
+        if not self.host:
+            try:
+                domain = self.email_address.split("@")[1]
+                self.host = f"imap.{domain}"
+                logger.info(
+                    f"IMAP host not provided. Deduced '{self.host}' from email address."
+                )
+            except IndexError:
+                raise ValueError("Invalid email address provided. Cannot deduce IMAP host.")
+
+        if not self.port:
+            self.port = 993
+
+        # Suggestion 2: Register an instance of EmailsTable, not the handler itself
+        self._register_table("emails", EmailsTable(self))
+
+    def connect(self) -> imaplib.IMAP4:
+        if not self.username or not self.password:
+            raise ValueError("Username and password are required for IMAP connection.")
+
+        if self.is_connected and self.connection:
+            return self.connection
+        try:
+            # Suggestion 8: Logging is already safe (does not log password)
+            logger.info(
+                f"Connecting to {self.host}:{self.port} with user '{self.username}'..."
+            )
+            if self.use_ssl:
+                self.connection = imaplib.IMAP4_SSL(self.host, self.port)
+            else:
+                self.connection = imaplib.IMAP4(self.host, self.port)
+            status, _ = self.connection.login(self.username, self.password)
+            if status != "OK":
+                raise ConnectionError("IMAP login failed.")
+            self.is_connected = True
+            return self.connection
+        except Exception as e:
+            self.is_connected = False
+            # Suggestion 8: Logging exception 'e' is also safe as it won't contain the password
+            logger.error(f"Error connecting to email server: {e}")
+            raise
+
+    def disconnect(self):
+        if self.is_connected and self.connection:
+            self.connection.logout()
+            self.is_connected = False
+            self.connection = None
+
+    def check_connection(self) -> HandlerStatusResponse:
+        try:
+            self.connect()
+            self.disconnect()
+            return HandlerStatusResponse(success=True)
+        except Exception as e:
+            return HandlerStatusResponse(success=False, error_message=str(e))

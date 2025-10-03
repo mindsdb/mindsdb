@@ -13,8 +13,8 @@ __license__ = "GPL-3.0"
 __copyright__ = "Copyright 2023- mindsdb"
 __icon_path__ = "icon.svg"
 
-# Suggestion 1: Use getattr for safer assignment
-HANDLER_TYPE = getattr(HANDLER_TYPE, "DATA", "data")
+# Suggestion 1: Use hasattr for safer assignment
+HANDLER_TYPE = HANDLER_TYPE.DATA if hasattr(HANDLER_TYPE, "DATA") else "data"
 
 connection_args = {
     "email": {

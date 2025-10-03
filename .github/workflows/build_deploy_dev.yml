@@ -47,6 +47,7 @@ jobs:
 
   # Looks for labels like "deploy-to-<env>" attached to a PR so we can deploy to those envs
   get-deploy-labels:
+    if: ${{ github.event.pull_request.head.repo.fork == 'false' }}
     name: Get Deploy Envs
     runs-on: mdb-dev
     needs: [changes]

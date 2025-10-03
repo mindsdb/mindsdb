@@ -47,6 +47,7 @@ jobs:
 
   # Looks for labels like "deploy-to-<env>" attached to a PR so we can deploy to those envs
   get-deploy-labels:
+    if: ${{ !github.event.pull_request.head.repo.fork }}
     name: Get Deploy Envs
     runs-on: mdb-dev
     needs: [changes]
@@ -58,10 +59,10 @@ jobs:
 
   # Build our docker images based on our bake file
   build:
+    if: ${{ !github.event.pull_request.head.repo.fork && needs.get-deploy-labels.outputs.deploy-envs != '[]' }}
     name: Build Docker Images
     runs-on: mdb-dev
     needs: [get-deploy-labels]
-    if: ${{ needs.get-deploy-labels.outputs.deploy-envs != '[]' }}
     steps:
       - uses: actions/checkout@v4
       # Build the bakefile and push
@@ -75,6 +76,7 @@ jobs:
   # Push cache layers to docker registry
   # This is separate to the build step so we can do other stuff in parallel
   build-cache:
+    if: ${{ !github.event.pull_request.head.repo.fork }}
     name: Push Docker Cache
     runs-on: mdb-dev
     needs: [build]
@@ -92,9 +94,9 @@ jobs:
   # This will run the deployment workflow in the base branch, not in the PR.
   # So if you change the deploy workflow in your PR, the changes won't be reflected in this run.
   deploy:
+    if: ${{ !github.event.pull_request.head.repo.fork && needs.get-deploy-labels.outputs.deploy-envs != '[]' }}
     name: Deploy
     needs: [build, get-deploy-labels]
-    if: needs.get-deploy-labels.outputs.deploy-envs != '[]'
     uses: ./.github/workflows/deploy.yml
     with:
       deploy-envs: ${{ needs.get-deploy-labels.outputs.deploy-envs }}
@@ -103,6 +105,7 @@ jobs:
 
   # Run integration tests against the deployed environment
   run_integration_tests:
+    if: ${{ !github.event.pull_request.head.repo.fork }}
     name: Run Integration Tests
     needs: [deploy, get-deploy-labels]
     strategy:
@@ -125,6 +128,6 @@ jobs:
     if: always()
     steps:
       - name: fail if tests failed or didnt run
-        if: ${{ (needs.run_unit_tests.result != 'success' || needs.run_integration_tests.result != 'success') && needs.changes.outputs.not-docs == 'true' }}
+        if: ${{ (needs.run_unit_tests.result != 'success' || (needs.run_integration_tests.result != 'success' && !github.event.pull_request.head.repo.fork)) && needs.changes.outputs.not-docs == 'true' }}
         run: exit 1
       - run: echo "Tests ran successfully"

@@ -6,7 +6,7 @@ import orjson
 from flask.json.provider import DefaultJSONProvider
 
 
-class CustomJSONEncoder():
+class CustomJSONEncoder:
     def default(self, obj):
         if isinstance(obj, timedelta):
             return str(obj)

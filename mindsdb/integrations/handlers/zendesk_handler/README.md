@@ -1,7 +1,4 @@
----
-title: Zendesk
-sidebarTitle: Zendesk
----
+# Zendesk Integration
 
 This documentation describes the integration of MindsDB with [Zendesk](https://www.zendesk.com/), which provides software-as-a-service products related to customer support, sales, and other customer communications.
 

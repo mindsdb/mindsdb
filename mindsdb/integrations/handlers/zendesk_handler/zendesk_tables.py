@@ -58,7 +58,8 @@ class ZendeskUsersTable(APITable):
         result = self.handler.zen_client.users(**api_filters)
         response = []
         if isinstance(result, zenpy.lib.generator.BaseResultGenerator):
-            response.append(result.to_dict())
+            for user in result:
+                response.append(user.to_dict())
         else:
             response.append(result.to_dict())
 
@@ -142,7 +143,8 @@ class ZendeskTicketsTable(APITable):
         result = self.handler.zen_client.tickets(**api_filters)
         response = []
         if isinstance(result, zenpy.lib.generator.BaseResultGenerator):
-            response.append(result.to_dict())
+            for ticket in result:
+                response.append(ticket.to_dict())
         else:
             response.append(result.to_dict())
 
@@ -231,7 +233,8 @@ class ZendeskTriggersTable(APITable):
         result = self.handler.zen_client.triggers(**api_filters)
         response = []
         if isinstance(result, zenpy.lib.generator.BaseResultGenerator):
-            response.append(result.to_dict())
+            for trigger in result:
+                response.append(trigger.to_dict())
         else:
             response.append(result.to_dict())
 
@@ -309,7 +312,8 @@ class ZendeskActivitiesTable(APITable):
         result = self.handler.zen_client.activities(**api_filters)
         response = []
         if isinstance(result, zenpy.lib.generator.BaseResultGenerator):
-            response.append(result.to_dict())
+            for activity in result:
+                response.append(activity.to_dict())
         else:
             response.append(result.to_dict())
 

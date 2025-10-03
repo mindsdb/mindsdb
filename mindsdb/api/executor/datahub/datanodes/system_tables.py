@@ -649,7 +649,7 @@ class MetaTableConstraintsTable(Table):
             primary_keys_df = data_catalog_retriever.retrieve_primary_keys()
             if not primary_keys_df.empty:
                 primary_keys_df["CONSTRAINT_CATALOG"] = "def"
-                primary_keys_df["CONSTRAINT_SCHEMA"] = database
+                primary_keys_df[["CONSTRAINT_SCHEMA", "TABLE_SCHEMA"]] = database
                 primary_keys_df["CONSTRAINT_TYPE"] = "PRIMARY KEY"
 
                 primary_keys_df.columns = primary_keys_df.columns.str.upper()
@@ -659,7 +659,7 @@ class MetaTableConstraintsTable(Table):
             foreign_keys_df = data_catalog_retriever.retrieve_foreign_keys()
             if not foreign_keys_df.empty:
                 foreign_keys_df["CONSTRAINT_CATALOG"] = "def"
-                foreign_keys_df["CONSTRAINT_SCHEMA"] = database
+                foreign_keys_df[["CONSTRAINT_SCHEMA", "TABLE_SCHEMA"]] = database
                 foreign_keys_df["CONSTRAINT_TYPE"] = "FOREIGN KEY"
 
                 foreign_keys_df.columns = foreign_keys_df.columns.str.upper()

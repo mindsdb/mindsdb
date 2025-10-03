@@ -109,7 +109,9 @@ def get_last_compatible_gui_version() -> Version | bool:
         return False
 
     if res.status_code != 200:
-        logger.error(f"Cant get compatible-config.json: returned status code = {res.status_code}")
+        logger.error(
+            f"Cant get compatible-config.json: returned status code = {res.status_code}"
+        )
         return False
 
     try:
@@ -130,7 +132,10 @@ def get_last_compatible_gui_version() -> Version | bool:
             else:
                 mindsdb_lv = parse_version(el["mindsdb_version"])
                 gui_lv = parse_version(el["gui_version"])
-                if mindsdb_lv.base_version not in gui_versions or gui_lv > gui_versions[mindsdb_lv.base_version]:
+                if (
+                    mindsdb_lv.base_version not in gui_versions
+                    or gui_lv > gui_versions[mindsdb_lv.base_version]
+                ):
                     gui_versions[mindsdb_lv.base_version] = gui_lv
                 if max_mindsdb_lv is None or max_mindsdb_lv < mindsdb_lv:
                     max_mindsdb_lv = mindsdb_lv
@@ -146,7 +151,9 @@ def get_last_compatible_gui_version() -> Version | bool:
             gui_version_lv = max_gui_lv
         else:
             lower_versions = {
-                key: value for key, value in gui_versions.items() if parse_version(key) < current_mindsdb_lv
+                key: value
+                for key, value in gui_versions.items()
+                if parse_version(key) < current_mindsdb_lv
             }
             if len(lower_versions) == 0:
                 gui_version_lv = gui_versions[all_mindsdb_lv[0].base_version]
@@ -171,7 +178,9 @@ def get_current_gui_version() -> Version:
         with open(version_txt_path, "rt") as f:
             current_gui_version = f.readline()
 
-    current_gui_lv = None if current_gui_version is None else parse_version(current_gui_version)
+    current_gui_lv = (
+        None if current_gui_version is None else parse_version(current_gui_version)
+    )
     logger.debug(f"Current frontend version: {current_gui_lv}.")
 
     return current_gui_lv
@@ -185,7 +194,10 @@ def initialize_static():
     if required_gui_version is not None:
         required_gui_version_lv = parse_version(required_gui_version)
         success = True
-        if current_gui_version_lv is None or required_gui_version_lv != current_gui_version_lv:
+        if (
+            current_gui_version_lv is None
+            or required_gui_version_lv != current_gui_version_lv
+        ):
             success = update_static(required_gui_version_lv)
     else:
         if last_gui_version_lv is False:
@@ -196,7 +208,9 @@ def initialize_static():
             return False
 
         if current_gui_version_lv == last_gui_version_lv:
-            logger.debug(f"The latest version is already in use: {current_gui_version_lv}")
+            logger.debug(
+                f"The latest version is already in use: {current_gui_version_lv}"
+            )
             return True
         success = update_static(last_gui_version_lv)
 
@@ -212,12 +226,18 @@ def initialize_app():
     logger.debug(f"Does GUI already exist.. {'YES' if gui_exists else 'NO'}")
     init_static_thread = None
 
-    if config["gui"]["autoupdate"] is True or (config["gui"]["open_on_start"] is True and gui_exists is False):
+    if config["gui"]["autoupdate"] is True or (
+        config["gui"]["open_on_start"] is True and gui_exists is False
+    ):
         logger.debug("Initializing static...")
-        init_static_thread = threading.Thread(target=initialize_static, name="initialize_static")
+        init_static_thread = threading.Thread(
+            target=initialize_static, name="initialize_static"
+        )
         init_static_thread.start()
     else:
-        logger.debug(f"Skip initializing static: config['gui']={config['gui']}, gui_exists={gui_exists}")
+        logger.debug(
+            f"Skip initializing static: config['gui']={config['gui']}, gui_exists={gui_exists}"
+        )
 
     # Wait for static initialization.
     if config["gui"]["open_on_start"] is True and init_static_thread is not None:
@@ -242,21 +262,29 @@ def initialize_app():
                 "The endpoint you are trying to access does not exist on the server.",
             )
 
-        # Normalize the path.
-        full_path = os.path.normpath(os.path.join(static_root, path))
+        try:
+            # Ensure the requested path is within the static directory
+            # https://docs.python.org/3/library/pathlib.html#pathlib.PurePath.is_relative_to
+            requested_path = (static_root / path).resolve()
 
-        # Check for directory traversal attacks.
-        if not full_path.startswith(str(static_root)):
+            if not requested_path.is_relative_to(static_root.resolve()):
+                return http_error(
+                    HTTPStatus.FORBIDDEN,
+                    "Forbidden",
+                    "You are not allowed to access the requested resource.",
+                )
+
+            if requested_path.is_file():
+                return send_from_directory(static_root, path)
+            else:
+                return send_from_directory(static_root, "index.html")
+
+        except (ValueError, OSError):
             return http_error(
-                HTTPStatus.FORBIDDEN,
-                "Forbidden",
-                "You are not allowed to access the requested resource.",
+                HTTPStatus.BAD_REQUEST,
+                "Bad Request",
+                "Invalid path requested.",
             )
-
-        if os.path.isfile(full_path):
-            return send_from_directory(static_root, path)
-        else:
-            return send_from_directory(static_root, "index.html")
 
     protected_namespaces = [
         tab_ns,
@@ -322,7 +350,9 @@ def initialize_app():
         # region routes where auth is required
         if (
             config["auth"]["http_auth_enabled"] is True
-            and any(request.path.startswith(f"/api{ns.path}") for ns in protected_namespaces)
+            and any(
+                request.path.startswith(f"/api{ns.path}") for ns in protected_namespaces
+            )
             and verify_pat(bearer) is False
         ):
             logger.debug(f"Auth failed for path {request.path}")
@@ -350,14 +380,18 @@ def initialize_app():
             try:
                 company_id = int(company_id)
             except Exception:
-                logger.exception(f"Could not parse company id: {company_id} | exception:")
+                logger.exception(
+                    f"Could not parse company id: {company_id} | exception:"
+                )
                 company_id = None
 
         if user_class is not None:
             try:
                 user_class = int(user_class)
             except Exception:
-                logger.exception(f"Could not parse user_class: {user_class} | exception:")
+                logger.exception(
+                    f"Could not parse user_class: {user_class} | exception:"
+                )
                 user_class = 0
         else:
             user_class = 0
@@ -395,7 +429,9 @@ def initialize_flask(config, init_static_thread):
     app.config["SWAGGER_HOST"] = "http://localhost:8000/mindsdb"
     app.json = CustomJSONProvider()
 
-    authorizations = {"apikey": {"type": "apiKey", "in": "header", "name": "Authorization"}}
+    authorizations = {
+        "apikey": {"type": "apiKey", "in": "header", "name": "Authorization"}
+    }
 
     logger.debug("Creating swagger API..")
     api = Swagger_Api(
@@ -446,7 +482,9 @@ def _open_webbrowser(url: str, pid: int, port: int, init_static_thread, static_f
     if init_static_thread is not None:
         init_static_thread.join()
     try:
-        is_http_active = wait_func_is_true(func=is_pid_listen_port, timeout=15, pid=pid, port=port)
+        is_http_active = wait_func_is_true(
+            func=is_pid_listen_port, timeout=15, pid=pid, port=port
+        )
         if is_http_active:
             webbrowser.open(url)
     except Exception:

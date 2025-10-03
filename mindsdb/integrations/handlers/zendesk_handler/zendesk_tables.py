@@ -44,20 +44,21 @@ class ZendeskUsersTable(APITable):
             select_statement_parser.parse_query()
         )
 
-        subset_where_conditions = {}
+        subset_where_conditions = []
+        api_filters = {}
         for op, arg1, arg2 in where_conditions:
             if arg1 in self.get_columns():
                 if op != '=':
                     raise NotImplementedError(f"Unknown op: {op}. Only '=' is supported.")
-                subset_where_conditions[arg1] = arg2
+                api_filters[arg1] = arg2
+                subset_where_conditions.append([op, arg1, arg2])
 
-        count = 0
-        result = self.handler.zen_client.users(**subset_where_conditions)
+
+        result = self.handler.zen_client.users(**api_filters)
         response = []
         if isinstance(result, zenpy.lib.generator.BaseResultGenerator):
-            while count <= result_limit:
-                response.append(result.next().to_dict())
-                count += 1
+            for user in result:
+                response.append(user.to_dict())
         else:
             response.append(result.to_dict())
 
@@ -129,20 +130,20 @@ class ZendeskTicketsTable(APITable):
             select_statement_parser.parse_query()
         )
 
-        subset_where_conditions = {}
+        subset_where_conditions = []
+        api_filters = {}
         for op, arg1, arg2 in where_conditions:
             if arg1 in self.get_columns():
                 if op != '=':
                     raise NotImplementedError(f"Unknown op: {op}. Only '=' is supported.")
-                subset_where_conditions[arg1] = arg2
+                api_filters[arg1] = arg2
+                subset_where_conditions.append([op, arg1, arg2])
 
-        count = 0
-        result = self.handler.zen_client.tickets(**subset_where_conditions)
+        result = self.handler.zen_client.tickets(**api_filters)
         response = []
         if isinstance(result, zenpy.lib.generator.BaseResultGenerator):
-            while count <= result_limit:
-                response.append(result.next().to_dict())
-                count += 1
+            for ticket in result:
+                response.append(ticket.to_dict())
         else:
             response.append(result.to_dict())
 
@@ -219,20 +220,20 @@ class ZendeskTriggersTable(APITable):
             select_statement_parser.parse_query()
         )
 
-        subset_where_conditions = {}
+        subset_where_conditions = []
+        api_filters = {}
         for op, arg1, arg2 in where_conditions:
             if arg1 in self.get_columns():
                 if op != '=':
                     raise NotImplementedError(f"Unknown op: {op}. Only '=' is supported.")
-                subset_where_conditions[arg1] = arg2
+                api_filters[arg1] = arg2
+                subset_where_conditions.append([op, arg1, arg2])
 
-        count = 0
-        result = self.handler.zen_client.triggers(**subset_where_conditions)
+        result = self.handler.zen_client.triggers(**api_filters)
         response = []
         if isinstance(result, zenpy.lib.generator.BaseResultGenerator):
-            while count <= result_limit:
-                response.append(result.next().to_dict())
-                count += 1
+            for trigger in result:
+                response.append(trigger.to_dict())
         else:
             response.append(result.to_dict())
 
@@ -298,20 +299,20 @@ class ZendeskActivitiesTable(APITable):
             select_statement_parser.parse_query()
         )
 
-        subset_where_conditions = {}
+        subset_where_conditions = []
+        api_filters = {}
         for op, arg1, arg2 in where_conditions:
             if arg1 in self.get_columns():
                 if op != '=':
                     raise NotImplementedError(f"Unknown op: {op}. Only '=' is supported.")
-                subset_where_conditions[arg1] = arg2
+                api_filters[arg1] = arg2
+                subset_where_conditions.append([op, arg1, arg2])
 
-        count = 0
-        result = self.handler.zen_client.activities(**subset_where_conditions)
+        result = self.handler.zen_client.activities(**api_filters)
         response = []
         if isinstance(result, zenpy.lib.generator.BaseResultGenerator):
-            while count <= result_limit:
-                response.append(result.next().to_dict())
-                count += 1
+            for activity in result:
+                response.append(activity.to_dict())
         else:
             response.append(result.to_dict())
 

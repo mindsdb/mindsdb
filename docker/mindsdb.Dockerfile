@@ -8,7 +8,7 @@ WORKDIR /mindsdb
 # This will almost always invalidate the cache for this stage
 COPY . .
 # Find every FILE that is not a requirements file and delete it
-RUN find ./ -type f -not -name "requirements*.txt" -print | xargs rm -f \
+RUN find ./ -type f -not -name "requirements*.txt" -print0 | xargs -0 rm -f \
 # Find every empty directory and delete it
     && find ./ -type d -empty -delete
 # Copy setup.py and everything else used by setup.py

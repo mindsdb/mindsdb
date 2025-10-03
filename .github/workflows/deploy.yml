@@ -50,7 +50,7 @@ jobs:
           # Place cache in the tool dir because we mount this in our runnners
           cache-local-path: "/home/runner/_work/_tool/uv-local-cache"
           prune-cache: false
-          python-version: ${{ vars.CI_PYTHON_VERSION || '3.10' }}
+          python-version: ${{ vars.CI_PYTHON_VERSION || '3.11' }}
       - name: Install dependencies
         run: |
           uv pip install -r requirements/requirements.txt

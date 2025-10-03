@@ -1,4 +1,5 @@
 import json
+import orjson
 import datetime
 from typing import Dict, List, Optional
 
@@ -47,10 +48,20 @@ def init(connection_str: str = None):
     global Base, session, engine
     if connection_str is None:
         connection_str = config["storage_db"]
+    # Use orjson with our CustomJSONEncoder.default for JSON serialization
+    _default_json = CustomJSONEncoder().default
+
+    def _json_serializer(value):
+        return orjson.dumps(
+            value,
+            default=_default_json,
+            option=orjson.OPT_SERIALIZE_NUMPY | orjson.OPT_PASSTHROUGH_DATETIME,
+        ).decode("utf-8")
+
     base_args = {
         "pool_size": 30,
         "max_overflow": 200,
-        "json_serializer": CustomJSONEncoder().encode,
+        "json_serializer": _json_serializer,
     }
     engine = create_engine(connection_str, echo=False, **base_args)
     session = scoped_session(sessionmaker(bind=engine, autoflush=True))

@@ -125,11 +125,16 @@ def prepare_formdata():
         params[name] = value
 
     def on_file(file):
-        file_name = file.field_name.decode()
-        if file_name not in ("code", "modules"):
-            raise ValueError(f"Wrong field name: {file_name}")
-        params[file_name] = file.file_object
-        file_names.append(file_name)
+        file_name = file.file_name.decode()
+        if Path(file_name).name != file_name:
+            raise ValueError(f"Wrong file name: {file_name}")
+
+        field_name = file.field_name.decode()
+        if field_name not in ("code", "modules"):
+            raise ValueError(f"Wrong field name: {field_name}")
+
+        params[field_name] = file.file_object
+        file_names.append(field_name)
 
     temp_dir_path = tempfile.mkdtemp(prefix="mindsdb_file_")
 

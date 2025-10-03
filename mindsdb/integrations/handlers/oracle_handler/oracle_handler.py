@@ -321,14 +321,10 @@ class OracleHandler(MetaDatabaseHandler):
         with connection.cursor() as cur:
             try:
                 cur.execute(query)
-                print("********************************************************************")
-                print("Executed query:", query)
                 if cur.description is None:
                     response = Response(RESPONSE_TYPE.OK, affected_rows=cur.rowcount)
                 else:
                     result = cur.fetchall()
-                    print("Fetched rows:", len(result))
-                    print("Fetched data:", result)
                     response = _make_table_response(result, cur)
                 connection.commit()
             except DatabaseError as database_error:
@@ -349,10 +345,6 @@ class OracleHandler(MetaDatabaseHandler):
 
         if need_to_close is True:
             self.disconnect()
-        print("********************************************************************")
-        print("Response from native_query:")
-        print(response)
-        print("********************************************************************")
         return response
 
     def query_stream(self, query: ASTNode, fetch_size: int = 1000):

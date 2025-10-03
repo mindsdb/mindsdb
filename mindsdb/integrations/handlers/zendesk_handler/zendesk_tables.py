@@ -7,8 +7,7 @@ from mindsdb.integrations.utilities.handlers.query_utilities import (
 )
 from mindsdb.utilities import log
 from mindsdb_sql_parser import ast
-import zenpy
-from itertools import islice
+import zenpy    
 
 logger = log.getLogger(__name__)
 

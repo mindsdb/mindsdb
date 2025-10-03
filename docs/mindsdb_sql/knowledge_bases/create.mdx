@@ -176,6 +176,19 @@ Follow the below steps to generate the API key.
 
 </Accordion>
 
+#### `provider = 'ollama'`
+
+This provider is supported for both `embedding_model` and `reranking_model`.
+
+<Note>
+Users can define the default embedding and reranking models from Ollama in Settings of the MindsDB GUI.
+</Note>
+
+When choosing `ollama` as the model provider, users should define the following model parameters.
+
+* `model_name` stores the name of the model to be used.
+* `base_url` stores the base URL of the Ollama instance.
+
 ### `embedding_model`
 
 The embedding model is a required component of the knowledge base. It stores specifications of the embedding model to be used.

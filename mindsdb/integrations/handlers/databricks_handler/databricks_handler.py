@@ -1,4 +1,4 @@
-from typing import Text, Dict, Any, Optional
+from typing import Text, Dict, Any, Optional, List
 
 from databricks.sql import connect, RequestError, ServerOperationError
 from databricks.sql.client import Connection
@@ -7,7 +7,7 @@ from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 import pandas as pd
 
-from mindsdb.integrations.libs.base import DatabaseHandler
+from mindsdb.integrations.libs.base import MetaDatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -19,7 +19,7 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 
-class DatabricksHandler(DatabaseHandler):
+class DatabricksHandler(MetaDatabaseHandler):
     """
     This handler handles the connection and execution of SQL statements on Databricks.
     """
@@ -259,3 +259,219 @@ class DatabricksHandler(DatabaseHandler):
         df = result.data_frame
         result.data_frame = df.rename(columns={"col_name": "column_name"})
         return result
+
+    def meta_get_tables(self, table_names: Optional[List[str]] = None) -> Response:
+        """
+        Retrieves metadata information about the tables in the Databricks database to be stored in the data catalog.
+
+        Args:
+            table_names (list): A list of table names for which to retrieve metadata information.
+
+        Returns:
+            Response: A response object containing the metadata information, formatted as per the `Response` class.
+        """
+        
+        schema_name = self.connection_data.get('schema', 'default')
+        
+        query = f"""
+            SELECT
+                table_catalog AS TABLE_CATALOG,
+                table_schema AS TABLE_SCHEMA,
+                table_name AS TABLE_NAME,
+                table_type AS TABLE_TYPE,
+                comment AS TABLE_DESCRIPTION,
+                NULL AS ROW_COUNT,
+                created AS CREATED,
+                last_altered AS LAST_ALTERED
+            FROM information_schema.tables
+            WHERE table_schema = '{schema_name}'
+            AND table_type IN ('BASE TABLE', 'VIEW', 'MANAGED')
+        """
+
+        if table_names is not None and len(table_names) > 0:
+            table_names_str = ", ".join([f"'{t}'" for t in table_names])
+            query += f" AND table_name IN ({table_names_str})"
+
+        result = self.native_query(query)
+
+        if result.type == RESPONSE_TYPE.TABLE and result.data_frame is not None and not result.data_frame.empty:
+            result.data_frame["TABLE_SCHEMA"] = self.name
+
+        return result
+    
+    def meta_get_columns(self, table_names: Optional[List[str]] = None) -> Response:
+        """
+        Retrieves column metadata for the specified tables (or all tables if no list is provided).
+
+        Args:
+            table_names (list): A list of table names for which to retrieve column metadata.
+
+        Returns:
+            Response: A response object containing the column metadata.
+        """
+        
+        # Get the schema from connection data or use 'default'
+        schema_name = self.connection_data.get('schema', 'default')
+        
+        # Use only columns that exist in Databricks information_schema.columns
+        query = f"""
+            SELECT
+                table_name AS TABLE_NAME,
+                column_name AS COLUMN_NAME,
+                data_type AS DATA_TYPE,
+                comment AS COLUMN_DESCRIPTION,
+                column_default AS COLUMN_DEFAULT,
+                (is_nullable = 'YES') AS IS_NULLABLE,
+                character_maximum_length AS CHARACTER_MAXIMUM_LENGTH,
+                character_octet_length AS CHARACTER_OCTET_LENGTH,
+                numeric_precision AS NUMERIC_PRECISION,
+                numeric_scale AS NUMERIC_SCALE,
+                datetime_precision AS DATETIME_PRECISION,
+                NULL AS CHARACTER_SET_NAME,
+                NULL AS COLLATION_NAME
+            FROM information_schema.columns
+            WHERE table_schema = '{schema_name}'
+        """
+
+        if table_names is not None and len(table_names) > 0:
+            table_names_str = ", ".join([f"'{t.lower()}'" for t in table_names])
+            query += f" AND LOWER(table_name) IN ({table_names_str})"
+
+        result = self.native_query(query)
+        return result
+
+    def meta_get_column_statistics(self, table_names: Optional[List[str]] = None) -> Response:
+        """
+        Retrieves basic column statistics: null %, distinct count.
+        
+        Args:
+            table_names (list): A list of table names for which to retrieve column statistics metadata.
+
+        Returns:
+            Response: A response object containing the column statistics metadata.
+        """
+        # Get the schema from connection data or use 'default'
+        schema_name = self.connection_data.get('schema', 'default')
+        
+        columns_query = f"""
+            SELECT table_name AS TABLE_NAME, column_name AS COLUMN_NAME
+            FROM information_schema.columns
+            WHERE table_schema = '{schema_name}'
+        """
+        if table_names:
+            table_names_str = ", ".join([f"'{t}'" for t in table_names])
+            columns_query += f" AND table_name IN ({table_names_str})"
+
+        columns_result = self.native_query(columns_query)
+        if (
+            columns_result.type == RESPONSE_TYPE.ERROR
+            or columns_result.data_frame is None
+            or columns_result.data_frame.empty
+        ):
+            return Response(RESPONSE_TYPE.ERROR, error_message="No columns found.")
+        columns_df = columns_result.data_frame
+        grouped = columns_df.groupby("TABLE_NAME")
+        all_stats = []
+
+        for table_name, group in grouped:
+            select_parts = []
+            for _, row in group.iterrows():
+                col = row["COLUMN_NAME"]
+                quoted_col = f'`{col}`'
+                select_parts.extend([
+                    f'SUM(CASE WHEN {quoted_col} IS NULL THEN 1 ELSE 0 END) AS `nulls_{col}`',
+                    f'APPROX_COUNT_DISTINCT({quoted_col}) AS `distincts_{col}`',
+                    f'MIN({quoted_col}) AS `min_{col}`',
+                    f'MAX({quoted_col}) AS `max_{col}`',
+                ])
+
+            quoted_table_name = f'`{table_name}`'
+            stats_query = f"""
+            SELECT COUNT(*) AS `total_rows`, {", ".join(select_parts)}
+            FROM {quoted_table_name}
+            """
+            
+            try:
+                stats_res = self.native_query(stats_query)
+                if stats_res.type != RESPONSE_TYPE.TABLE or stats_res.data_frame is None or stats_res.data_frame.empty:
+                    logger.warning(f"Could not retrieve stats for table {table_name}")
+                    # Add placeholder stats if query fails
+                    for _, row in group.iterrows():
+                        all_stats.append({
+                            "table_name": table_name,
+                            "column_name": row["COLUMN_NAME"],
+                            "null_percentage": None,
+                            "distinct_values_count": None,
+                            "most_common_values": [],
+                            "most_common_frequencies": [],
+                            "minimum_value": None,
+                            "maximum_value": None,
+                        })
+                    continue
+
+                stats_data = stats_res.data_frame.iloc[0]
+                total_rows = stats_data.get("total_rows", 0)
+
+                for _, row in group.iterrows():
+                    col = row["COLUMN_NAME"]
+                    nulls = stats_data.get(f"nulls_{col}", 0)
+                    distincts = stats_data.get(f"distincts_{col}", None)
+                    min_val = stats_data.get(f"min_{col}", None)
+                    max_val = stats_data.get(f"max_{col}", None)
+                    null_pct = (nulls / total_rows) * 100 if total_rows > 0 else None
+
+                    all_stats.append({
+                        "table_name": table_name,
+                        "column_name": col,
+                        "null_percentage": null_pct,
+                        "distinct_values_count": distincts,
+                        "most_common_values": [],
+                        "most_common_frequencies": [],
+                        "minimum_value": min_val,
+                        "maximum_value": max_val,
+                    })
+            except Exception as e:
+                logger.error(f"Exception while fetching statistics for table {table_name}: {e}")
+                for _, row in group.iterrows():
+                    all_stats.append({
+                        "table_name": table_name,
+                        "column_name": row["COLUMN_NAME"],
+                        "null_percentage": None,
+                        "distinct_values_count": None,
+                        "most_common_values": [],
+                        "most_common_frequencies": [],
+                        "minimum_value": None,
+                        "maximum_value": None,
+                    })
+        if not all_stats:
+            return Response(RESPONSE_TYPE.TABLE, data_frame=pandas.DataFrame())
+
+        return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(all_stats))
+
+    def meta_get_primary_keys(self, table_names: Optional[List[str]] = None) -> Response:
+        """
+        Databricks doesn't have primary key constraints in data warehouses.
+        Return empty result like Snowflake does when no keys exist.
+        """
+        empty_df = pd.DataFrame({
+            'table_name': pd.Series([], dtype='object'),
+            'column_name': pd.Series([], dtype='object'),
+            'ordinal_position': pd.Series([], dtype='Int64'),
+            'constraint_name': pd.Series([], dtype='object')
+        })
+        
+        return Response(RESPONSE_TYPE.TABLE, data_frame=empty_df)
+
+    def meta_get_foreign_keys(self, table_names: Optional[List[str]] = None) -> Response:
+        """
+        Databricks doesn't have foreign key constraints in data warehouses.
+        Return empty result like Snowflake does when no keys exist.
+        """
+        empty_df = pd.DataFrame({
+            'child_table_name': pd.Series([], dtype='object'),
+            'child_column_name': pd.Series([], dtype='object'),
+            'parent_table_name': pd.Series([], dtype='object'),
+            'parent_column_name': pd.Series([], dtype='object')
+        })
+        
+        return Response(RESPONSE_TYPE.TABLE, data_frame=empty_df)

@@ -1,4 +1,7 @@
-from typing import Any, Dict, Text
+from typing import Any, Dict, Text, Optional, List
+import time
+import json
+import hashlib
 
 import msal
 from mindsdb_sql_parser.ast.base import ASTNode
@@ -8,7 +11,13 @@ import pandas as pd
 from requests.exceptions import RequestException
 
 from mindsdb.integrations.handlers.ms_one_drive_handler.ms_graph_api_one_drive_client import MSGraphAPIOneDriveClient
-from mindsdb.integrations.handlers.ms_one_drive_handler.ms_one_drive_tables import FileTable, ListFilesTable
+from mindsdb.integrations.handlers.ms_one_drive_handler.ms_one_drive_tables import (
+    FileTable,
+    ListFilesTable,
+    ConnectionMetadataTable,
+    DeltaStateTable,
+    SyncStatsTable
+)
 from mindsdb.integrations.utilities.handlers.auth_utilities.microsoft import MSGraphAPIDelegatedPermissionsManager
 from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import AuthException
 from mindsdb.integrations.libs.response import (
@@ -25,10 +34,18 @@ logger = log.getLogger(__name__)
 class MSOneDriveHandler(APIHandler):
     """
     This handler handles the connection and execution of SQL statements on Microsoft OneDrive.
+
+    Supports both legacy code-based auth and modern token injection for multi-tenant operations.
     """
 
     name = 'one_drive'
     supported_file_formats = ['csv', 'tsv', 'json', 'parquet', 'pdf', 'txt']
+
+    # Token refresh settings
+    TOKEN_REFRESH_BUFFER_SECONDS = 300  # Refresh if expiring within 5 minutes
+
+    # Scope requirements
+    MINIMUM_REQUIRED_SCOPES = ['Files.Read', 'offline_access']
 
     def __init__(self, name: Text, connection_data: Dict, **kwargs: Any) -> None:
         """
@@ -37,6 +54,10 @@ class MSOneDriveHandler(APIHandler):
         Args:
             name (Text): The name of the handler instance.
             connection_data (Dict): The connection data required to connect to the Microsoft Graph API.
+                Supported parameters:
+                    - Legacy: client_id, client_secret, tenant_id, code
+                    - Modern: access_token, refresh_token, expires_at, tenant_id, account_id
+                    - Optional: authority (default: 'common'), scopes, enable_files_read_all
             kwargs: Arbitrary keyword arguments.
         """
         super().__init__(name)
@@ -44,12 +65,164 @@ class MSOneDriveHandler(APIHandler):
         self.handler_storage = kwargs['handler_storage']
         self.kwargs = kwargs
 
+        # Generate unique connection ID for storage isolation
+        self.connection_id = self._generate_connection_id()
+
         self.connection = None
         self.is_connected = False
+        self._token_metadata = None
+
+    def _generate_connection_id(self) -> str:
+        """
+        Generates a unique connection ID based on connection parameters for storage isolation.
+
+        Returns:
+            str: A unique connection identifier
+        """
+        # Use name + tenant_id/client_id combination for uniqueness
+        key_parts = [
+            self.kwargs.get('name', 'default'),
+            self.connection_data.get('tenant_id', ''),
+            self.connection_data.get('account_id', ''),
+            self.connection_data.get('client_id', '')
+        ]
+        key_string = '_'.join(filter(None, key_parts))
+        return hashlib.sha256(key_string.encode()).hexdigest()[:16]
+
+    def _get_token_cache_key(self) -> str:
+        """Returns the storage key for per-connection token cache."""
+        return f"token_cache_{self.connection_id}.bin"
+
+    def _load_token_metadata(self) -> Optional[Dict]:
+        """Load stored token metadata from handler storage."""
+        try:
+            metadata_key = f"token_metadata_{self.connection_id}.json"
+            metadata_content = self.handler_storage.file_get(metadata_key)
+            if metadata_content:
+                return json.loads(metadata_content.decode('utf-8'))
+        except FileNotFoundError:
+            pass
+        return None
+
+    def _save_token_metadata(self, metadata: Dict) -> None:
+        """Save token metadata to handler storage."""
+        metadata_key = f"token_metadata_{self.connection_id}.json"
+        self.handler_storage.file_set(
+            metadata_key,
+            json.dumps(metadata).encode('utf-8')
+        )
+
+    def _needs_token_refresh(self) -> bool:
+        """
+        Check if token needs refresh based on expiry time.
+
+        Returns:
+            bool: True if token needs refresh
+        """
+        if not self._token_metadata:
+            return False
+
+        expires_at = self._token_metadata.get('expires_at')
+        if not expires_at:
+            return False
+
+        # Refresh if expiring within buffer window
+        return time.time() >= (expires_at - self.TOKEN_REFRESH_BUFFER_SECONDS)
+
+    def _refresh_access_token(self) -> Optional[str]:
+        """
+        Refresh the access token using the refresh token.
+
+        Returns:
+            Optional[str]: New access token if successful, None otherwise
+        """
+        refresh_token = self.connection_data.get('refresh_token')
+        if not refresh_token:
+            logger.warning("No refresh token available for token refresh")
+            return None
+
+        try:
+            # Use MSAL to refresh token
+            cache = msal.SerializableTokenCache()
+            authority = self.connection_data.get('authority', 'common')
+            tenant_id = self.connection_data.get('tenant_id', authority)
+
+            msal_app = msal.ConfidentialClientApplication(
+                self.connection_data['client_id'],
+                authority=f"https://login.microsoftonline.com/{tenant_id}",
+                client_credential=self.connection_data.get('client_secret', ''),
+                token_cache=cache
+            )
+
+            scopes = self.connection_data.get('scopes', ['https://graph.microsoft.com/.default'])
+            if isinstance(scopes, str):
+                scopes = scopes.split(',')
+
+            result = msal_app.acquire_token_by_refresh_token(
+                refresh_token,
+                scopes=scopes
+            )
+
+            if 'access_token' in result:
+                # Update stored metadata
+                self._token_metadata = {
+                    'access_token': result['access_token'],
+                    'refresh_token': result.get('refresh_token', refresh_token),
+                    'expires_at': time.time() + result.get('expires_in', 3600)
+                }
+                self._save_token_metadata(self._token_metadata)
+
+                # Update connection data for current session
+                self.connection_data['access_token'] = result['access_token']
+                if 'refresh_token' in result:
+                    self.connection_data['refresh_token'] = result['refresh_token']
+
+                logger.info(f"Successfully refreshed access token for connection {self.connection_id}")
+                return result['access_token']
+            else:
+                logger.error(f"Token refresh failed: {result.get('error_description', 'Unknown error')}")
+                return None
+
+        except Exception as e:
+            logger.error(f"Exception during token refresh: {e}")
+            return None
+
+    def _validate_scopes(self, granted_scopes: List[str]) -> None:
+        """
+        Validate that granted scopes include minimum required scopes.
+
+        Args:
+            granted_scopes: List of granted scope strings
+
+        Raises:
+            ValueError: If required scopes are missing
+        """
+        # Check for Files.Read.All if explicitly enabled
+        if self.connection_data.get('enable_files_read_all'):
+            if 'Files.Read.All' not in granted_scopes:
+                logger.warning("Files.Read.All requested but not granted")
+
+        # Check minimum scopes
+        missing_scopes = [
+            scope for scope in self.MINIMUM_REQUIRED_SCOPES
+            if scope not in granted_scopes and not any(s in granted_scopes for s in ['Files.Read.All', '.default'])
+        ]
+
+        if missing_scopes:
+            raise ValueError(
+                f"Missing required scopes: {', '.join(missing_scopes)}. "
+                f"Please ensure your app registration includes these permissions."
+            )
+
+    def _use_token_injection_path(self) -> bool:
+        """Determine if we should use token injection (modern) or legacy code exchange."""
+        return 'access_token' in self.connection_data or 'refresh_token' in self.connection_data
 
     def connect(self):
         """
         Establishes a connection to Microsoft OneDrive via the Microsoft Graph API.
+
+        Supports both modern token injection and legacy code-based authentication.
 
         Raises:
             ValueError: If the required connection parameters are not provided.
@@ -58,49 +231,171 @@ class MSOneDriveHandler(APIHandler):
         Returns:
             MSGraphAPIOneDriveClient: An instance of the Microsoft Graph API client for Microsoft OneDrive.
         """
-        if self.is_connected and self.connection.check_connection():
+        if self.is_connected and self.connection and self.connection.check_connection():
             return self.connection
 
-        # Mandatory connection parameters.
+        # Choose authentication path
+        if self._use_token_injection_path():
+            # Modern path: Token injection
+            access_token = self._connect_with_token_injection()
+        else:
+            # Legacy path: Code exchange
+            logger.warning("Using legacy code-based authentication. Consider migrating to token injection.")
+            access_token = self._connect_with_code_exchange()
+
+        # Create the Graph API client with automatic token refresh callback
+        self.connection = MSGraphAPIOneDriveClient(
+            access_token=access_token,
+            refresh_callback=self._on_token_refresh_needed
+        )
+
+        self.is_connected = True
+
+        # Fetch and persist connection identity on first connect
+        self._fetch_and_store_identity()
+
+        logger.info(f"Connected to OneDrive for connection {self.connection_id}")
+        return self.connection
+
+    def _connect_with_token_injection(self) -> str:
+        """
+        Modern authentication path: Use injected tokens from backend.
+
+        Returns:
+            str: Access token
+
+        Raises:
+            ValueError: If required token parameters are missing
+        """
+        # Load existing metadata if available
+        self._token_metadata = self._load_token_metadata()
+
+        # Check if we have a valid access token
+        access_token = self.connection_data.get('access_token')
+        expires_at = self.connection_data.get('expires_at')
+
+        # Initialize metadata if not present
+        if not self._token_metadata:
+            if not access_token:
+                raise ValueError("access_token is required for token injection authentication")
+
+            self._token_metadata = {
+                'access_token': access_token,
+                'refresh_token': self.connection_data.get('refresh_token'),
+                'expires_at': expires_at or (time.time() + 3600),  # Default 1 hour if not provided
+                'tenant_id': self.connection_data.get('tenant_id'),
+                'account_id': self.connection_data.get('account_id')
+            }
+            self._save_token_metadata(self._token_metadata)
+
+        # Check if token needs refresh
+        if self._needs_token_refresh():
+            logger.info(f"Access token expiring soon for connection {self.connection_id}, refreshing...")
+            refreshed_token = self._refresh_access_token()
+            if refreshed_token:
+                return refreshed_token
+            else:
+                # Fall back to provided token if refresh fails
+                logger.warning("Token refresh failed, using provided access_token")
+                if not access_token:
+                    raise ValueError("Token refresh failed and no valid access_token available")
+                return access_token
+
+        # Use metadata token if available, otherwise use provided
+        return self._token_metadata.get('access_token') or access_token
+
+    def _connect_with_code_exchange(self) -> str:
+        """
+        Legacy authentication path: Exchange authorization code for tokens.
+
+        Returns:
+            str: Access token
+
+        Raises:
+            ValueError: If required legacy parameters are missing
+        """
+        # Validate legacy parameters
         if not all(key in self.connection_data for key in ['client_id', 'client_secret', 'tenant_id']):
             raise ValueError("Required parameters (client_id, client_secret, tenant_id) must be provided.")
 
-        # Initialize the token cache.
+        # Initialize per-connection token cache
         cache = msal.SerializableTokenCache()
 
-        # Load the cache from file if it exists.
-        cache_file = 'cache.bin'
+        # Load the cache from file if it exists
+        cache_file = self._get_token_cache_key()
         try:
             cache_content = self.handler_storage.file_get(cache_file)
+            if cache_content:
+                cache.deserialize(cache_content)
         except FileNotFoundError:
-            cache_content = None
+            pass
 
-        if cache_content:
-            cache.deserialize(cache_content)
-
-        # Initialize the Microsoft Authentication Library (MSAL) app.
+        # Initialize the Microsoft Authentication Library (MSAL) app
         permissions_manager = MSGraphAPIDelegatedPermissionsManager(
             client_id=self.connection_data['client_id'],
             client_secret=self.connection_data['client_secret'],
             tenant_id=self.connection_data['tenant_id'],
             cache=cache,
-            code=self.connection_data.get('code')
+            code=self.connection_data.get('code', None)
         )
 
         access_token = permissions_manager.get_access_token()
 
-        # Save the cache back to file if it has changed.
+        # Save the cache back to file if it has changed
         if cache.has_state_changed:
             self.handler_storage.file_set(cache_file, cache.serialize().encode('utf-8'))
 
-        # Pass the access token to the Microsoft Graph API client for Microsoft OneDrive.
-        self.connection = MSGraphAPIOneDriveClient(
-            access_token=access_token,
-        )
+        return access_token
 
-        self.is_connected = True
+    def _on_token_refresh_needed(self) -> Optional[str]:
+        """
+        Callback invoked by the client when it receives a 401 Unauthorized.
 
-        return self.connection
+        Returns:
+            Optional[str]: New access token if refresh successful, None otherwise
+        """
+        logger.info(f"Token refresh requested by client for connection {self.connection_id}")
+        new_token = self._refresh_access_token()
+        if new_token and self.connection:
+            # Update the client's token
+            self.connection.update_access_token(new_token)
+        return new_token
+
+    def _fetch_and_store_identity(self) -> None:
+        """
+        Fetch user identity from Graph API and store in connection metadata table.
+        """
+        try:
+            if not self.connection:
+                return
+
+            # Fetch user identity
+            user_info = self.connection.get_user_info()
+            drive_info = self.connection.get_drive_info()
+
+            # Store in metadata (will be persisted by ConnectionMetadataTable)
+            identity_data = {
+                'connection_id': self.connection_id,
+                'tenant_id': self.connection_data.get('tenant_id', ''),
+                'account_id': user_info.get('id', ''),
+                'display_name': user_info.get('displayName', ''),
+                'email': user_info.get('mail') or user_info.get('userPrincipalName', ''),
+                'drive_id': drive_info.get('id', ''),
+                'created_at': time.time(),
+                'updated_at': time.time()
+            }
+
+            # Save to storage
+            identity_key = f"connection_identity_{self.connection_id}.json"
+            self.handler_storage.file_set(
+                identity_key,
+                json.dumps(identity_data).encode('utf-8')
+            )
+
+            logger.info(f"Stored identity for connection {self.connection_id}: {identity_data.get('email')}")
+
+        except Exception as e:
+            logger.warning(f"Failed to fetch and store identity: {e}")
 
     def check_connection(self) -> StatusResponse:
         """
@@ -150,11 +445,19 @@ class MSOneDriveHandler(APIHandler):
         if isinstance(query, Select):
             table_name = query.from_table.parts[-1]
 
-            # If the table name is 'files', query the 'files' table.
+            # System tables for metadata and diagnostics
             if table_name == "files":
                 table = ListFilesTable(self)
                 df = table.select(query)
-
+            elif table_name == "onedrive_connections":
+                table = ConnectionMetadataTable(self)
+                df = table.select(query)
+            elif table_name == "onedrive_delta_state":
+                table = DeltaStateTable(self)
+                df = table.select(query)
+            elif table_name == "onedrive_sync_stats":
+                table = SyncStatsTable(self)
+                df = table.select(query)
             # For any other table name, query the file content via the 'FileTable' class.
             # Only the supported file formats can be queried.
             else:

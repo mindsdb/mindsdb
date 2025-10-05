@@ -13,7 +13,15 @@ from typing import Any, List, Optional, Tuple
 from openai import AsyncOpenAI, AsyncAzureOpenAI
 from pydantic import BaseModel
 
-from mindsdb.integrations.utilities.rag.settings import DEFAULT_RERANKING_MODEL, DEFAULT_LLM_ENDPOINT
+from mindsdb.integrations.utilities.rag.settings import (
+    DEFAULT_RERANKING_MODEL,
+    DEFAULT_LLM_ENDPOINT,
+    DEFAULT_RERANKER_N,
+    DEFAULT_RERANKER_LOGPROBS,
+    DEFAULT_RERANKER_TOP_LOGPROBS,
+    DEFAULT_RERANKER_MAX_TOKENS,
+    DEFAULT_VALID_CLASS_TOKENS,
+)
 from mindsdb.integrations.libs.base import BaseMLEngine
 
 log = logging.getLogger(__name__)
@@ -33,11 +41,16 @@ class BaseLLMReranker(BaseModel, ABC):
     client: Optional[AsyncOpenAI | BaseMLEngine] = None
     _semaphore: Optional[asyncio.Semaphore] = None
     max_concurrent_requests: int = 20
-    max_retries: int = 2
+    max_retries: int = 4
     retry_delay: float = 1.0
     request_timeout: float = 20.0  # Timeout for API requests
     early_stop: bool = True  # Whether to enable early stopping
     early_stop_threshold: float = 0.8  # Confidence threshold for early stopping
+    n: int = DEFAULT_RERANKER_N  # Number of completions to generate
+    logprobs: bool = DEFAULT_RERANKER_LOGPROBS  # Whether to include log probabilities
+    top_logprobs: int = DEFAULT_RERANKER_TOP_LOGPROBS  # Number of top log probabilities to include
+    max_tokens: int = DEFAULT_RERANKER_MAX_TOKENS  # Maximum tokens to generate
+    valid_class_tokens: List[str] = DEFAULT_VALID_CLASS_TOKENS
 
     class Config:
         arbitrary_types_allowed = True
@@ -234,6 +247,28 @@ class BaseLLMReranker(BaseModel, ABC):
         return rerank_data
 
     async def search_relevancy_score(self, query: str, document: str) -> Any:
+        """
+        This method is used to score the relevance of a document to a query.
+
+        Args:
+            query: The query to score the relevance of.
+            document: The document to score the relevance of.
+
+        Returns:
+            A dictionary with the document and the relevance score.
+        """
+
+        log.debug("Start search_relevancy_score")
+        log.debug(f"Reranker query: {query[:5]}")
+        log.debug(f"Reranker document: {document[:50]}")
+        log.debug(f"Reranker model: {self.model}")
+        log.debug(f"Reranker temperature: {self.temperature}")
+        log.debug(f"Reranker n: {self.n}")
+        log.debug(f"Reranker logprobs: {self.logprobs}")
+        log.debug(f"Reranker top_logprobs: {self.top_logprobs}")
+        log.debug(f"Reranker max_tokens: {self.max_tokens}")
+        log.debug(f"Reranker valid_class_tokens: {self.valid_class_tokens}")
+
         response = await self.client.chat.completions.create(
             model=self.model,
             messages=[
@@ -306,17 +341,30 @@ class BaseLLMReranker(BaseModel, ABC):
                 },
             ],
             temperature=self.temperature,
-            n=1,
-            logprobs=True,
-            top_logprobs=4,
-            max_tokens=3,
+            n=self.n,
+            logprobs=self.logprobs,
+            top_logprobs=self.top_logprobs,
+            max_tokens=self.max_tokens,
         )
 
         # Extract response and logprobs
         token_logprobs = response.choices[0].logprobs.content
-        # Reconstruct the prediction and extract the top logprobs from the final token (e.g., "1")
-        final_token_logprob = token_logprobs[-1]
-        top_logprobs = final_token_logprob.top_logprobs
+
+        # Find the token that contains the class number
+        # Instead of just taking the last token, search for the actual class number token
+        class_token_logprob = None
+        for token_logprob in reversed(token_logprobs):
+            if token_logprob.token in self.valid_class_tokens:
+                class_token_logprob = token_logprob
+                break
+
+        # If we couldn't find a class token, fall back to the last non-empty token
+        if class_token_logprob is None:
+            log.warning("No class token logprob found, using the last token as fallback")
+            class_token_logprob = token_logprobs[-1]
+
+        top_logprobs = class_token_logprob.top_logprobs
+
         # Create a map of 'class_1' -> probability, using token combinations
         class_probs = {}
         for top_token in top_logprobs:
@@ -337,6 +385,8 @@ class BaseLLMReranker(BaseModel, ABC):
                 score = 0.0
 
         rerank_data = {"document": document, "relevance_score": score}
+        log.debug(f"Reranker score: {score}")
+        log.debug("End search_relevancy_score")
         return rerank_data
 
     def get_scores(self, query: str, documents: list[str]):

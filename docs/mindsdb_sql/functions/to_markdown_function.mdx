@@ -1,126 +1,170 @@
 ---
 title: The TO_MARKDOWN() Function
-sidebarTitle: The TO_MARKDOWN() Function
+sidebarTitle: TO_MARKDOWN()
 ---
 
 MindsDB provides the `TO_MARKDOWN()` function that lets users extract the content of their documents in markdown by simply specifying the document path or URL. This function is especially useful for passing the extracted content of documents through LLMs or for storing them in a [Knowledge Base](/mindsdb_sql/agents/knowledge-bases).
 
+## Configuration
+
+The `TO_MARKDOWN()` function supports different file formats and methods of passing documents into it, as well as an LLM required for processing documents.
+
+### Supported File Formats
+
+The `TO_MARKDOWN()` function supports PDF, XML, and Nessus file formats. The documents can be provided from URLs, file storage, or Amazon S3 storage.
+
+### Supported LLMs
+
+The `TO_MARKDOWN()` function requires an LLM to process the document content into the Markdown format.
+
+The supported LLM providers include:
+
+- OpenAI
+- Azure OpenAI
+- Google
+
 <Info>
-At the moment, the `TO_MARKDOWN()` function only supports PDF documents.
+The model you select must support multi-modal inputs, that is, both images and text. For example, OpenAI’s gpt-4o is a supported multi-modal model.
 </Info>
 
-## Prerequisites
+User can provide an LLM using one of the below methods:
 
+1. Set the default model in the Settings of MindsDB Editor.
+2. Set the default model in the [MindsDB configuration file](/setup/custom-config#default-llm).
+3. Use environment variables defined below to set an LLM specifically for the `TO_MARKDOWN()` function.
 
-The `TO_MARKDOWN()` function in MindsDB requires the use of an LLM. To enable this, select one of the supported model providers and set the relevant environment variables.
+    The `TO_MARKDOWN_FUNCTION_PROVIDER` environment variable defines the selected provider, which is one of `openai`, `azure_openai`, or `google`.
 
-The model provider can be set using the `TO_MARKDOWN_FUNCTION_PROVIDER` environment variable. The default provider is OpenAI and the default model is gpt-4o. The following providers are supported:
-- OpenAI (`openai`)
-- Azure OpenAI (`azure_openai`)
-- Google (`google`)
+    <AccordionGroup>
+      <Accordion title="OpenAI">
+        Here are the environment variables for the OpenAI provider:
 
-<Info>
-The model you select must support multi-modal inputs (e.g., both images and text). For example, OpenAI’s gpt-4o is a supported multi-modal model.
+        ```
+        TO_MARKDOWN_FUNCTION_API_KEY (required)
+        TO_MARKDOWN_FUNCTION_MODEL_NAME
+        TO_MARKDOWN_FUNCTION_TEMPERATURE
+        TO_MARKDOWN_FUNCTION_MAX_RETRIES
+        TO_MARKDOWN_FUNCTION_MAX_TOKENS
+        TO_MARKDOWN_FUNCTION_BASE_URL
+        TO_MARKDOWN_FUNCTION_API_ORGANIZATION
+        TO_MARKDOWN_FUNCTION_REQUEST_TIMEOUT
+        ```
 
-You can also set up your default models in the [MindsDB configuration file](/setup/custom-config). With this, you will not need to set the environment variables specified below.
-</Info>
+      </Accordion>
 
-<AccordionGroup>
+      <Accordion title="Azure OpenAI">
+        Here are the environment variables for the Azure OpenAI provider:
 
-  <Accordion title="OpenAI">
-    Here are the environment variables for the OpenAI provider:
+        ```
+        TO_MARKDOWN_FUNCTION_API_KEY (required)
+        TO_MARKDOWN_FUNCTION_BASE_URL (required)
+        TO_MARKDOWN_FUNCTION_API_VERSION (required)
+        TO_MARKDOWN_FUNCTION_MODEL_NAME
+        TO_MARKDOWN_FUNCTION_TEMPERATURE
+        TO_MARKDOWN_FUNCTION_MAX_RETRIES
+        TO_MARKDOWN_FUNCTION_MAX_TOKENS
+        TO_MARKDOWN_FUNCTION_API_ORGANIZATION
+        TO_MARKDOWN_FUNCTION_REQUEST_TIMEOUT
+        ```
+      </Accordion>
 
-    ```
-    TO_MARKDOWN_FUNCTION_API_KEY (required)
-    TO_MARKDOWN_FUNCTION_MODEL_NAME
-    TO_MARKDOWN_FUNCTION_TEMPERATURE
-    TO_MARKDOWN_FUNCTION_MAX_RETRIES
-    TO_MARKDOWN_FUNCTION_MAX_TOKENS
-    TO_MARKDOWN_FUNCTION_BASE_URL
-    TO_MARKDOWN_FUNCTION_API_ORGANIZATION
-    TO_MARKDOWN_FUNCTION_REQUEST_TIMEOUT
-    ```
+      <Accordion title="Google">
+        Here are the environment variables for the Google provider:
 
-  </Accordion>
-
-  <Accordion title="Azure OpenAI">
-    Here are the environment variables for the Azure OpenAI provider:
-
-    ```
-    TO_MARKDOWN_FUNCTION_API_KEY (required)
-    TO_MARKDOWN_FUNCTION_BASE_URL (required)
-    TO_MARKDOWN_FUNCTION_API_VERSION (required)
-    TO_MARKDOWN_FUNCTION_MODEL_NAME
-    TO_MARKDOWN_FUNCTION_TEMPERATURE
-    TO_MARKDOWN_FUNCTION_MAX_RETRIES
-    TO_MARKDOWN_FUNCTION_MAX_TOKENS
-    TO_MARKDOWN_FUNCTION_API_ORGANIZATION
-    TO_MARKDOWN_FUNCTION_REQUEST_TIMEOUT
-    ```
-  </Accordion>
-</AccordionGroup>
+        ```
+        TO_MARKDOWN_FUNCTION_API_KEY
+        TO_MARKDOWN_FUNCTION_MODEL_NAME
+        TO_MARKDOWN_FUNCTION_TEMPERATURE
+        TO_MARKDOWN_FUNCTION_MAX_TOKENS
+        TO_MARKDOWN_FUNCTION_REQUEST_TIMEOUT
+        ```
+      </Accordion>
+    </AccordionGroup>
 
 ## Usage
 
 You can use the `TO_MARKDOWN()` function to extract the content of your documents in markdown format. The arguments for this function are:
+
 - `file_path_or_url`: The path or URL of the document you want to extract content from.
 
-The following example shows how to use the `TO_MARKDOWN()` function with a PDF document without using a LLM:
+<AccordionGroup>
+  <Accordion title="From Amazon S3">
 
-```sql
-SELECT TO_MARKDOWN('https://www.princexml.com/howcome/2016/samples/invoice/index.pdf');
-```
+  The following example shows how to use the `TO_MARKDOWN()` function with a PDF document from [Amazon S3 storage connected to MindsDB](/integrations/data-integrations/amazon-s3).
 
-Here is the output:
+  ```sql
+  SELECT TO_MARKDOWN(public_url) FROM s3_datasource.files;
+  ```
 
-```sql
-+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| to_markdown                                                                                                                                                                                                                                  |
-+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| ```markdown                                                                                                                                                                                                                                  |
-| # Invoice                                                                                                                                                                                                                                    |
-|                                                                                                                                                                                                                                              |
-| YesLogic Pty. Ltd.                                                                                                                                                                                                                           |
-| 7 / 39 Bouverie St                                                                                                                                                                                                                           |
-| Carlton VIC 3053                                                                                                                                                                                                                             |
-| Australia                                                                                                                                                                                                                                    |
-|                                                                                                                                                                                                                                              |
-| www.yeslogic.com                                                                                                                                                                                                                             |
-| ABN 32 101 193 560                                                                                                                                                                                                                           |
-|                                                                                                                                                                                                                                              |
-| Customer Name                                                                                                                                                                                                                                |
-| Street                                                                                                                                                                                                                                       |
-| Postcode City                                                                                                                                                                                                                                |
-| Country                                                                                                                                                                                                                                      |
-|                                                                                                                                                                                                                                              |
-| Invoice date: | Nov 26, 2016                                                                                                                                                                                                                 |
-| --- | ---                                                                                                                                                                                                                                    |
-| Invoice number: | 161126                                                                                                                                                                                                                     |
-| Payment due: | 30 days after invoice date                                                                                                                                                                                                    |
-|                                                                                                                                                                                                                                              |
-| | Description               | From        | Until       | Amount     |                                                                                                                                                                       |
-| |---------------------------|-------------|-------------|------------|                                                                                                                                                                       |
-| | Prince Upgrades & Support | Nov 26, 2016 | Nov 26, 2017 | USD $950.00 |                                                                                                                                                                    |
-| | Total                     |             |             | USD $950.00 |                                                                                                                                                                      |
-|                                                                                                                                                                                                                                              |
-| Please transfer amount to:                                                                                                                                                                                                                   |
-|                                                                                                                                                                                                                                              |
-| Bank account name: | Yes Logic Pty Ltd                                                                                                                                                                                                       |
-| --- | ---                                                                                                                                                                                                                                    |
-| Name of Bank: | Commonwealth Bank of Australia (CBA)                                                                                                                                                                                         |
-| Bank State Branch (BSB): | 063010                                                                                                                                                                                                            |
-| Bank State Branch (BSB): | 063010                                                                                                                                                                                                            |
-| Bank State Branch (BSB): | 063019                                                                                                                                                                                                            |
-| Bank account number: | 13201652                                                                                                                                                                                                              |
-| Bank SWIFT code: | CTBAAU2S                                                                                                                                                                                                                  |
-| Bank address: | 231 Swanston St, Melbourne, VIC 3000, Australia                                                                                                                                                                              |
-|                                                                                                                                                                                                                                              |
-| The BSB number identifies a branch of a financial institution in Australia. When transferring money to Australia, the BSB number is used together with the bank account number and the SWIFT code. Australian banks do not use IBAN numbers. |
-|                                                                                                                                                                                                                                              |
-| www.yeslogic.com                                                                                                                                                                                                                             |
-| ```                                                                                                                                                                                                                                          |
-+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-```
+  Here are the steps for passing files from Amazon S3 into TO_MARKDOWN().
+
+  1. Connect Amazon S3 to MindsDB following [this instruction](/integrations/data-integrations/amazon-s3).
+  2. The `public_url` of the file is generated in the `s3_datasource.files` table upon connecting the Amazon S3 data source to MindsDB.
+  3. Upon running the above query, the `public_url` of the file is selected from the `s3_datasource.files` table.
+
+  </Accordion>
+
+  <Accordion title="From URL">
+
+  The following example shows how to use the `TO_MARKDOWN()` function with a PDF document from URL.
+
+  ```sql
+  SELECT TO_MARKDOWN('https://www.princexml.com/howcome/2016/samples/invoice/index.pdf');
+  ```
+
+  Here is the output:
+
+  ```sql
+  +----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+  | to_markdown                                                                                                                                                                                                                                  |
+  +----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+  | ```markdown                                                                                                                                                                                                                                  |
+  | # Invoice                                                                                                                                                                                                                                    |
+  |                                                                                                                                                                                                                                              |
+  | YesLogic Pty. Ltd.                                                                                                                                                                                                                           |
+  | 7 / 39 Bouverie St                                                                                                                                                                                                                           |
+  | Carlton VIC 3053                                                                                                                                                                                                                             |
+  | Australia                                                                                                                                                                                                                                    |
+  |                                                                                                                                                                                                                                              |
+  | www.yeslogic.com                                                                                                                                                                                                                             |
+  | ABN 32 101 193 560                                                                                                                                                                                                                           |
+  |                                                                                                                                                                                                                                              |
+  | Customer Name                                                                                                                                                                                                                                |
+  | Street                                                                                                                                                                                                                                       |
+  | Postcode City                                                                                                                                                                                                                                |
+  | Country                                                                                                                                                                                                                                      |
+  |                                                                                                                                                                                                                                              |
+  | Invoice date: | Nov 26, 2016                                                                                                                                                                                                                 |
+  | --- | ---                                                                                                                                                                                                                                    |
+  | Invoice number: | 161126                                                                                                                                                                                                                     |
+  | Payment due: | 30 days after invoice date                                                                                                                                                                                                    |
+  |                                                                                                                                                                                                                                              |
+  | | Description               | From        | Until       | Amount     |                                                                                                                                                                       |
+  | |---------------------------|-------------|-------------|------------|                                                                                                                                                                       |
+  | | Prince Upgrades & Support | Nov 26, 2016 | Nov 26, 2017 | USD $950.00 |                                                                                                                                                                    |
+  | | Total                     |             |             | USD $950.00 |                                                                                                                                                                      |
+  |                                                                                                                                                                                                                                              |
+  | Please transfer amount to:                                                                                                                                                                                                                   |
+  |                                                                                                                                                                                                                                              |
+  | Bank account name: | Yes Logic Pty Ltd                                                                                                                                                                                                       |
+  | --- | ---                                                                                                                                                                                                                                    |
+  | Name of Bank: | Commonwealth Bank of Australia (CBA)                                                                                                                                                                                         |
+  | Bank State Branch (BSB): | 063010                                                                                                                                                                                                            |
+  | Bank State Branch (BSB): | 063010                                                                                                                                                                                                            |
+  | Bank State Branch (BSB): | 063019                                                                                                                                                                                                            |
+  | Bank account number: | 13201652                                                                                                                                                                                                              |
+  | Bank SWIFT code: | CTBAAU2S                                                                                                                                                                                                                  |
+  | Bank address: | 231 Swanston St, Melbourne, VIC 3000, Australia                                                                                                                                                                              |
+  |                                                                                                                                                                                                                                              |
+  | The BSB number identifies a branch of a financial institution in Australia. When transferring money to Australia, the BSB number is used together with the bank account number and the SWIFT code. Australian banks do not use IBAN numbers. |
+  |                                                                                                                                                                                                                                              |
+  | www.yeslogic.com                                                                                                                                                                                                                             |
+  | ```                                                                                                                                                                                                                                          |
+  +----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+  ```
+
+  </Accordion>
+</AccordionGroup>
 
 The content of each PDF page is intelligently extracted by first assessing how visually complex the page is. Based on this assessment, the system decides whether traditional text parsing is sufficient or if the page should be processed using an LLM.
 

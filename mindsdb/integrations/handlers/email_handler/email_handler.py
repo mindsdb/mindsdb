@@ -33,73 +33,15 @@ class EmailsTable(APITable):
             )
 
         conn = self.handler.connect()
-        conn.select(mailbox)
-
-        status, messages = conn.search(None, "ALL")
-        if status != "OK":
-            raise Exception(f"Failed to search mailbox: {messages}")
-
-        if not messages or not messages[0]:
-            return pd.DataFrame()
-
-        email_ids = messages[0].split()
-        # Suggestion 3: Safely get limit
-        limit = getattr(query.limit, "value", 25)
-        ids_to_fetch = email_ids[-limit:]
-
-        if not ids_to_fetch:
-            return pd.DataFrame()
-
-        emails = []
-
-        # Suggestion 4: Correct IMAP separator
-        id_string = b','.join(ids_to_fetch).decode()
-        status, msg_data = conn.fetch(id_string, "(RFC822)")
-        if status != "OK":
-            raise Exception("Failed to fetch emails.")
-
-        for response_part in msg_data:
-            if isinstance(response_part, tuple):
-                # Suggestion 5: Safely get email ID
-                email_id = None
-                if response_part and isinstance(response_part[0], bytes):
-                    try:
-                        email_id = response_part[0].split()[0].decode()
-                    except (IndexError, UnicodeDecodeError):
-                        pass
-
-                msg = email.message_from_bytes(response_part[1])
-                subject, encoding = decode_header(msg["Subject"])[0]
-                if isinstance(subject, bytes):
-                    subject = subject.decode(encoding if encoding else "utf-8", "ignore")
-                from_ = msg.get("From")
-                body = ""
-                if msg.is_multipart():
-                    for part in msg.walk():
-                        if part.get_content_type() == "text/plain":
-                            try:
-                                body = part.get_payload(decode=True).decode(
-                                    errors="ignore"
-                                )
-                                break
-                            except Exception:
-                                pass
-                else:
-                    try:
-                        body = msg.get_payload(decode=True).decode(errors="ignore")
-                    except Exception:
-                        pass
-                emails.append(
-                    {
-                        "id": email_id,
-                        "from": from_,
-                        "subject": subject,
-                        "body": body,
-                        "date": msg.get("Date"),
-                    }
-                )
-
-        return pd.DataFrame(emails)
+        try:
+            conn.select(mailbox)
+            ...
+            return pd.DataFrame(emails)
+        finally:
+            try:
+                conn.logout()
+            except Exception:
+                pass
 
     def get_columns(self) -> pd.DataFrame:
         return pd.DataFrame(

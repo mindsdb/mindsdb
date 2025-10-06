@@ -14,7 +14,7 @@ __copyright__ = "Copyright 2023- mindsdb"
 __icon_path__ = "icon.svg"
 
 # Suggestion 1: Use hasattr for safer assignment
-HANDLER_TYPE = HANDLER_TYPE.DATA if hasattr(HANDLER_TYPE, "DATA") else "data"
+HANDLER_TYPE = getattr(HANDLER_TYPE, "DATA", "data")
 
 connection_args = {
     "email": {

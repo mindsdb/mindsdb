@@ -205,25 +205,28 @@ def initialize_static():
     return success
 
 
-def initialize_app():
+def initialize_app(is_restart: bool = False):
     static_root = config["paths"]["static"]
     logger.debug(f"Static route: {static_root}")
-    gui_exists = Path(static_root).joinpath("index.html").is_file()
-    logger.debug(f"Does GUI already exist.. {'YES' if gui_exists else 'NO'}")
     init_static_thread = None
+    if not is_restart:
+        gui_exists = Path(static_root).joinpath("index.html").is_file()
+        logger.debug(f"Does GUI already exist.. {'YES' if gui_exists else 'NO'}")
 
-    if config["gui"]["autoupdate"] is True or (config["gui"]["open_on_start"] is True and gui_exists is False):
-        logger.debug("Initializing static...")
-        init_static_thread = threading.Thread(target=initialize_static, name="initialize_static")
-        init_static_thread.start()
-    else:
-        logger.debug(f"Skip initializing static: config['gui']={config['gui']}, gui_exists={gui_exists}")
+        if config["gui"]["autoupdate"] is True or (config["gui"]["open_on_start"] is True and gui_exists is False):
+            logger.debug("Initializing static...")
+            init_static_thread = threading.Thread(target=initialize_static, name="initialize_static")
+            init_static_thread.start()
+        else:
+            logger.debug(f"Skip initializing static: config['gui']={config['gui']}, gui_exists={gui_exists}")
 
-    # Wait for static initialization.
-    if config["gui"]["open_on_start"] is True and init_static_thread is not None:
-        init_static_thread.join()
+    app, api = initialize_flask()
 
-    app, api = initialize_flask(config, init_static_thread)
+    if not is_restart and config["gui"]["open_on_start"]:
+        if init_static_thread is not None:
+            init_static_thread.join()
+        open_gui(init_static_thread)
+
     Compress(app)
 
     initialize_interfaces(app)
@@ -371,7 +374,7 @@ def initialize_app():
     return app
 
 
-def initialize_flask(config, init_static_thread):
+def initialize_flask():
     logger.debug("Initializing flask...")
     # region required for windows https://github.com/mindsdb/mindsdb/issues/2526
     mimetypes.add_type("text/css", ".css")
@@ -409,26 +412,27 @@ def initialize_flask(config, init_static_thread):
 
     api.representations["application/json"] = custom_output_json
 
+    return app, api
+
+
+def open_gui(init_static_thread):
     port = config["api"]["http"]["port"]
     host = config["api"]["http"]["host"]
 
-    if config["gui"]["open_on_start"]:
-        if host in ("", "0.0.0.0"):
-            url = f"http://127.0.0.1:{port}/"
-        else:
-            url = f"http://{host}:{port}/"
-        logger.info(f" - GUI available at {url}")
+    if host in ("", "0.0.0.0"):
+        url = f"http://127.0.0.1:{port}/"
+    else:
+        url = f"http://{host}:{port}/"
+    logger.info(f" - GUI available at {url}")
 
-        pid = os.getpid()
-        thread = threading.Thread(
-            target=_open_webbrowser,
-            args=(url, pid, port, init_static_thread, config["paths"]["static"]),
-            daemon=True,
-            name="open_webbrowser",
-        )
-        thread.start()
-
-    return app, api
+    pid = os.getpid()
+    thread = threading.Thread(
+        target=_open_webbrowser,
+        args=(url, pid, port, init_static_thread, config["paths"]["static"]),
+        daemon=True,
+        name="open_webbrowser",
+    )
+    thread.start()
 
 
 def initialize_interfaces(app):

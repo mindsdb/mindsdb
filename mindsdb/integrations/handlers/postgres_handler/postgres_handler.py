@@ -3,6 +3,7 @@ import json
 import logging
 from typing import Optional, Any
 
+import polars as pl
 import pandas as pd
 from pandas import DataFrame
 import psycopg
@@ -119,11 +120,11 @@ def _make_table_response(result: list[tuple[Any]], cursor: Cursor) -> Response:
             MYSQL_DATA_TYPE.BIGINT,
             MYSQL_DATA_TYPE.TINYINT,
         ):
-            expected_dtype = "Int64"
+            expected_dtype = pl.datatypes.Int64
         elif mysql_type in (MYSQL_DATA_TYPE.BOOL, MYSQL_DATA_TYPE.BOOLEAN):
-            expected_dtype = "boolean"
-        serieses.append(pd.Series([row[i] for row in result], dtype=expected_dtype, name=description[i].name))
-    df = pd.concat(serieses, axis=1, copy=False)
+            expected_dtype = pl.datatypes.Boolean
+        serieses.append(pl.Series(values=[row[i] for row in result], dtype=expected_dtype, name=description[i].name))
+    df = pl.DataFrame(serieses)
     # endregion
 
     return Response(RESPONSE_TYPE.TABLE, data_frame=df, affected_rows=cursor.rowcount, mysql_types=mysql_types)

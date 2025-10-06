@@ -92,7 +92,7 @@ def rename_df_columns(df: pd.DataFrame, names: list | None = None) -> None:
     if names is not None:
         df.columns = names
     else:
-        df.columns = list(range(len(df.columns)))
+        df.columns = [str(x) for x in range(len(df.columns))]
 
 
 class ResultSet:
@@ -387,15 +387,15 @@ class ResultSet:
             return []
         # output for APIs. simplify types
         if json_types:
-            df = self.get_raw_df().copy()
-            for name, dtype in df.dtypes.to_dict().items():
+            df = self.get_raw_df().clone()
+            for name, dtype in df.schema.items():
                 if pd.api.types.is_datetime64_any_dtype(dtype):
                     df[name] = df[name].dt.strftime("%Y-%m-%d %H:%M:%S.%f")
             for i, column in enumerate(self.columns):
                 if column.type == MYSQL_DATA_TYPE.VECTOR:
                     df[i] = df[i].apply(_dump_vector)
-            df.replace({np.nan: None}, inplace=True)
-            return df.to_records(index=False).tolist()
+            # df.replace({np.nan: None}, inplace=True)
+            return df.rows()
 
         # slower but keep timestamp type
         df = self._df.replace({np.nan: None})  # TODO rework

@@ -59,7 +59,7 @@ def collect_metrics(func):
 
             num_rows = 0
             if result.data_frame is not None:
-                num_rows = len(result.data_frame.index)
+                num_rows = len(result.data_frame)
             response_size_with_labels = metrics.INTEGRATION_HANDLER_RESPONSE_SIZE.labels(
                 handler_class_name, result.type
             )
@@ -311,15 +311,15 @@ class IntegrationDataNode(DataNode):
         if isinstance(df, pd.Series):
             df = df.to_frame()
 
-        try:
-            # replace python's Nan, np.NaN, np.nan and pd.NA to None
-            # TODO keep all NAN to the end of processing, bacause replacing also changes dtypes
-            df.replace([np.NaN, pd.NA, pd.NaT], None, inplace=True)
-        except Exception:
-            logger.exception("Issue with clearing DF from NaN values:")
+        # try:
+        #     # replace python's Nan, np.NaN, np.nan and pd.NA to None
+        #     # TODO keep all NAN to the end of processing, bacause replacing also changes dtypes
+        #     df.replace([np.NaN, pd.NA, pd.NaT], None, inplace=True)
+        # except Exception:
+        #     logger.exception("Issue with clearing DF from NaN values:")
         # endregion
 
-        columns_info = [{"name": k, "type": v} for k, v in df.dtypes.items()]
+        columns_info = [{"name": name, "type": str(dtype)} for name, dtype in df.schema.items()]
 
         return DataHubResponse(
             data_frame=df, columns=columns_info, affected_rows=result.affected_rows, mysql_types=result.mysql_types

@@ -58,13 +58,13 @@ LIMIT 4;
 
 **query** : Base on the newsAPI documentation you must provide at least this  parameter with is the keywords or phrases to search for in the article title and body.
 
-**sources** : Is a comma-seperated string of identifiers (maximum 20) for the news sources or blogs you want headlines from.
+**sources** : Is a comma-separated string of identifiers (maximum 20) for the news sources or blogs you want headlines from.
 
     You can check all available sources[here](https://newsapi.org/sources) .
 
-**domains** : A comma-seperated string of domains (eg bbc.co.uk, techcrunch.com, engadget.com) to restrict the search to.
+**domains** : A comma-separated string of domains (eg bbc.co.uk, techcrunch.com, engadget.com) to restrict the search to.
 
-**exclude_domains** : A comma-seperated string of domains (eg bbc.co.uk, techcrunch.com, engadget.com) to remove from the results.
+**exclude_domains** : A comma-separated string of domains (eg bbc.co.uk, techcrunch.com, engadget.com) to remove from the results.
 
 **searchIn** : The fields to restrict your query search to possible options are title, description,  content. Multiple options can be specified by separating them with a comma, for example: `title,content`
 

@@ -314,7 +314,7 @@ class PostgresHandler(MetaDatabaseHandler):
                 if logger.isEnabledFor(logging.DEBUG):
                     log_message += f". Executed query:\n{query}"
                 logger.info(log_message)
-                response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(e), is_acceptable_error=True)
+                response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(e), is_expected_error=True)
                 connection.rollback()
             except Exception as e:
                 logger.error(f"Error running query:\n{query}\non {self.database}, {e}")

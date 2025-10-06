@@ -53,7 +53,7 @@ class EmailsTable(APITable):
         emails = []
 
         # Suggestion 4: Correct IMAP separator
-        id_string = b" ".join(ids_to_fetch)
+        id_string = b','.join(ids_to_fetch).decode()
         status, msg_data = conn.fetch(id_string, "(RFC822)")
         if status != "OK":
             raise Exception("Failed to fetch emails.")

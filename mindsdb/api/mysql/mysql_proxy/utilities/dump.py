@@ -4,6 +4,7 @@ from typing import Any
 from array import array
 
 import numpy as np
+import orjson
 from numpy import dtype as np_dtype
 import pandas as pd
 from pandas.api import types as pd_types
@@ -21,7 +22,8 @@ from mindsdb.utilities.json_encoder import CustomJSONEncoder
 
 logger = log.getLogger(__name__)
 
-json_encoder = CustomJSONEncoder()
+# Pre-bind default encoder for custom types so we can serialize JSON consistently
+_default_json = CustomJSONEncoder().default
 
 
 def column_to_mysql_column_dict(column: Column, database_name: str | None = None) -> dict[str, str | int]:
@@ -115,7 +117,11 @@ def _dump_str(var: Any) -> str | None:
             return str(var)[2:-1]
     if isinstance(var, (dict, list)):
         try:
-            return json_encoder.encode(var)
+            return orjson.dumps(
+                var,
+                default=_default_json,
+                option=orjson.OPT_SERIALIZE_NUMPY | orjson.OPT_PASSTHROUGH_DATETIME,
+            ).decode("utf-8")
         except Exception:
             return str(var)
     # pd.isna returns array of bools for list

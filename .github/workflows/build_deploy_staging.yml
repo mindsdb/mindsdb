@@ -24,8 +24,6 @@ jobs:
     name: Run Unit Tests
     if: github.event.pull_request.merged == true
     uses: ./.github/workflows/tests_unit.yml
-    with:
-      git-sha: ${{ github.event.pull_request.merge_commit_sha }}
     secrets: inherit
 
   # Build our docker images based on our bake file
@@ -85,10 +83,10 @@ jobs:
     secrets: inherit
   
   tests_completed:
+    if: always() && github.event.pull_request.merged == true
     name: All Tests Succeeded
     needs: [run_unit_tests, run_integration_tests]
     runs-on: mdb-dev
-    if: always()
     steps:
       - name: fail if tests failed or didnt run
         if: ${{ needs.run_unit_tests.result != 'success' || needs.run_integration_tests.result != 'success'}}
@@ -96,7 +94,7 @@ jobs:
       - run: echo "Tests ran successfully"
 
   slack_message:
-    if: failure() && !cancelled()
+    if: failure() && !cancelled() && github.event.pull_request.merged == true
     name: Notify Slack
     # Every previous job needs to be in here, because failure() will only return true if the job that failed is in 'needs'
     needs: [run_unit_tests, build, build-cache, deploy, run_integration_tests, tests_completed]
@@ -117,7 +115,7 @@ jobs:
                       "type": "header",
                       "text": {
                         "type": "plain_text",
-                        "text": "TEST RUN FAILED ON ${{ github.head_ref }}",
+                        "text": "TEST RUN FAILED ON ${{ github.base_ref }}",
                         "emoji": true
                       }
                     },

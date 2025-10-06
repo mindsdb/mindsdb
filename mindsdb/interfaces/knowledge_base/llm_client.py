@@ -52,7 +52,12 @@ class LLMClient:
                 kwargs["base_url"] = base_url
             self.client = OpenAI(**kwargs)
         elif self.provider == "ollama":
-            self.client = OpenAI(**params)
+            kwargs = params.copy()
+            kwargs.pop("model_name")
+            kwargs.pop("provider", None)
+            if kwargs["api_key"] is None:
+                kwargs["api_key"] = "n/a"
+            self.client = OpenAI(**kwargs)
         else:
             # try to use litellm
             if self._session is None:

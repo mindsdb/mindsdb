@@ -1255,6 +1255,16 @@ class KnowledgeBaseController:
         except PredictorRecordNotFound:
             pass
 
+        if "provider" not in params:
+            raise ValueError("'provider' parameter is required for embedding model")
+
+        # check available providers
+        avail_providers = ("openai", "azure_openai", "bedrock", "gemini", "google", "ollama")
+        if params["provider"] not in avail_providers:
+            raise ValueError(
+                f"Wrong embedding provider: {params['provider']}. Available providers: {', '.join(avail_providers)}"
+            )
+
         llm_client = LLMClient(params, session=self.session)
 
         try:

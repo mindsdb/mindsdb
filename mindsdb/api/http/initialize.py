@@ -8,8 +8,7 @@ from http import HTTPStatus
 
 
 import requests
-from flask import Flask, url_for, make_response, request, send_from_directory
-from flask.json import dumps
+from flask import Flask, url_for, request, send_from_directory
 from flask_compress import Compress
 from flask_restx import Api
 from werkzeug.exceptions import HTTPException
@@ -47,7 +46,7 @@ from mindsdb.metrics.server import init_metrics
 from mindsdb.utilities import log
 from mindsdb.utilities.config import config
 from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities.json_encoder import CustomJSONProvider
+from mindsdb.utilities.json_encoder import ORJSONProvider
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
 from mindsdb.utilities.otel import trace  # noqa: F401
@@ -86,12 +85,6 @@ class Swagger_Api(Api):
     @property
     def specs_url(self):
         return url_for(self.endpoint("specs"), _external=False)
-
-
-def custom_output_json(data, code, headers=None):
-    resp = make_response(dumps(data, cls=CustomJSONProvider), code)
-    resp.headers.extend(headers or {})
-    return resp
 
 
 def get_last_compatible_gui_version() -> Version | bool:
@@ -154,7 +147,7 @@ def get_last_compatible_gui_version() -> Version | bool:
                 all_lower_versions = [parse_version(x) for x in lower_versions.keys()]
                 gui_version_lv = gui_versions[all_lower_versions[-1].base_version]
     except Exception:
-        logger.exception("Error in compatible-config.json structure:")
+        logger.exception("Error in compatible-config.json structure")
         return False
 
     logger.debug(f"Last compatible frontend version: {gui_version_lv}.")
@@ -352,15 +345,15 @@ def initialize_app(is_restart: bool = False):
         if company_id is not None:
             try:
                 company_id = int(company_id)
-            except Exception:
-                logger.exception(f"Could not parse company id: {company_id} | exception:")
+            except Exception as e:
+                logger.error(f"Could not parse company id: {company_id} | exception: {e}")
                 company_id = None
 
         if user_class is not None:
             try:
                 user_class = int(user_class)
-            except Exception:
-                logger.exception(f"Could not parse user_class: {user_class} | exception:")
+            except Exception as e:
+                logger.error(f"Could not parse user_class: {user_class} | exception: {e}")
                 user_class = 0
         else:
             user_class = 0
@@ -396,7 +389,7 @@ def initialize_flask():
 
     app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 60
     app.config["SWAGGER_HOST"] = "http://localhost:8000/mindsdb"
-    app.json = CustomJSONProvider()
+    app.json = ORJSONProvider(app)
 
     authorizations = {"apikey": {"type": "apiKey", "in": "header", "name": "Authorization"}}
 
@@ -410,7 +403,17 @@ def initialize_flask():
         doc="/doc/",
     )
 
-    api.representations["application/json"] = custom_output_json
+    def __output_json_orjson(data, code, headers=None):
+        from flask import current_app, make_response
+
+        dumped = current_app.json.dumps(data)
+        resp = make_response(dumped, code)
+        if headers:
+            resp.headers.extend(headers)
+        resp.mimetype = "application/json"
+        return resp
+
+    api.representations["application/json"] = __output_json_orjson
 
     return app, api
 

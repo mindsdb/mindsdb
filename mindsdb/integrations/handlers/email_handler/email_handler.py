@@ -22,15 +22,17 @@ class EmailsTable(APITable):
     def select(self, query) -> pd.DataFrame:
         parts = str(query).lower().split()
         mailbox = "inbox"
+        # Restrict mailbox to a fixed allowlist to prevent traversal or unauthorized access
+        allowed_mailboxes = {"inbox", "sent", "drafts", "spam", "trash"}
         if "where" in parts and "mailbox=" in str(query).lower():
             mailbox_part = str(query).lower().split("mailbox=")[1].strip()
-            mailbox = mailbox_part.split()[0].strip("'\"")
-
-        # Suggestion 6: Stricter mailbox sanitization
-        if not re.match(r"^[a-zA-Z0-9_-]+$", mailbox):
-            raise ValueError(
-                f"Invalid mailbox name: '{mailbox}'. Only alphanumeric characters, underscore, and dash are allowed."
-            )
+            mailbox_candidate = mailbox_part.split()[0].strip("'\"").lower()
+            if mailbox_candidate in allowed_mailboxes:
+                mailbox = mailbox_candidate
+            else:
+                raise ValueError(f"Invalid mailbox name: '{mailbox_candidate}'. Allowed: {allowed_mailboxes}")
+        else:
+            mailbox = "inbox"
 
         conn = self.handler.connect()
         try:

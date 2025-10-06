@@ -287,7 +287,7 @@ class PreparedStatementPlanner:
                 if step.result_data is not None:
                     # save results
                     table.columns = step.result_data.columns
-                    table.columns_map = {column.name: column for column in step.result_data.columns}
+                    table.columns_map = {column.name.upper(): column for column in step.result_data.columns}
 
         # === create columns list ===
         columns_result = []

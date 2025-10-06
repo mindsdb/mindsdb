@@ -2,6 +2,7 @@ import inspect
 
 from mindsdb.api.executor.planner import query_planner
 from mindsdb.api.executor.planner import steps
+from mindsdb.api.executor.sql_query.result_set import ResultSet, Column
 
 from tests.unit.planner import test_integration_select
 from tests.unit.planner import test_join_predictor
@@ -16,13 +17,14 @@ class FakeExecutor:
     def list_cols_return(self, table_name, columns):
 
         table_alias = ('int', table_name, table_name)
-        data = {
-            'values': [],
-            'columns': {
-                table_alias: columns
-            },
-            'tables': [table_alias]
-        }
+        data = ResultSet()
+        for column in columns:
+            data.add_column(Column(
+                name=column['name'],
+                type=column.get('type'),
+                table_name=table_name,
+                table_alias=table_alias
+            ))
         return data
 
     def execute(self, step):

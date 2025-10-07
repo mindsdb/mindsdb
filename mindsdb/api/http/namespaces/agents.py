@@ -26,9 +26,6 @@ def create_agent(project_name, name, agent):
     if name is None:
         return http_error(HTTPStatus.BAD_REQUEST, "Missing field", 'Missing "name" field for agent')
 
-    if not name.islower():
-        return http_error(HTTPStatus.BAD_REQUEST, "Wrong name", f"The name must be in lower case: {name}")
-
     model_name = agent.get("model_name")
     provider = agent.get("provider")
     skills = agent.get("skills", [])

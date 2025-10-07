@@ -128,8 +128,6 @@ class JobsController:
             at the moment supports: 'every <number> <dimension>' or 'every <dimension>'
         :return: name of created job
         """
-        if not name.islower():
-            raise ValueError(f"The name must be in lower case: {name}")
 
         project_controller = ProjectController()
         project = project_controller.get(name=project_name)
@@ -173,8 +171,6 @@ class JobsController:
         else:
             # no schedule for job end_at is meaningless
             end_at = None
-
-        name = name.lower()
 
         # create job record
         record = db.Jobs(

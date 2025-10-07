@@ -10,7 +10,7 @@ def test_jobs_flow(client):
     start_at = (dt.datetime.now() + dt.timedelta(days=1)).strftime(date_format)
     end_at = (dt.datetime.now() + dt.timedelta(days=2)).strftime(date_format)
     job = {
-        "name": "test_job",
+        "name": "TEST_job",
         "query": "select 1",
         "if_query": "select 2",
         "start_at": start_at,
@@ -32,14 +32,14 @@ def test_jobs_flow(client):
 
     # --- get created ---
 
-    response = client.get("/api/projects/mindsdb/jobs/test_job")
+    response = client.get("/api/projects/mindsdb/jobs/TEST_job")
     assert response.status_code == HTTPStatus.OK
     job_resp = response.json
     assert job_resp["query"] == job["query"]
 
     # --- get history ---
 
-    response = client.get("/api/projects/mindsdb/jobs/test_job/history")
+    response = client.get("/api/projects/mindsdb/jobs/TEST_job/history")
     assert response.status_code == HTTPStatus.OK
     # no executions
     assert len(response.get_json()) == 0
@@ -52,13 +52,13 @@ def test_jobs_flow(client):
 
     # check first job
     job_resp = response.json[0]
-    assert job_resp["name"] == "test_job"
+    assert job_resp["name"] == "TEST_job"
 
     # --- delete job ---
 
-    response = client.delete("/api/projects/mindsdb/jobs/test_job")
+    response = client.delete("/api/projects/mindsdb/jobs/TEST_job")
     assert response.status_code == HTTPStatus.NO_CONTENT
 
     # got deleted
-    response = client.get("/api/projects/mindsdb/jobs/test_job")
+    response = client.get("/api/projects/mindsdb/jobs/TEST_job")
     assert response.status_code == HTTPStatus.NOT_FOUND

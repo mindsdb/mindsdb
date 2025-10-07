@@ -23,12 +23,12 @@ gc.enable()
 logger = log.getLogger(__name__)
 
 
-def start(verbose, app: Flask = None):
+def start(verbose, app: Flask = None, is_restart: bool = False):
     db.init()
     init_lexer_parsers()
 
     if app is None:
-        app = initialize_app()
+        app = initialize_app(is_restart)
 
     port = config["api"]["http"]["port"]
     host = config["api"]["http"]["host"]

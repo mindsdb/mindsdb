@@ -407,7 +407,7 @@ class KnowledgeBaseTable:
         # if relevance filtering method is strictly GREATER THAN we filter the df
         if gt_filtering:
             relevance_scores = TableField.RELEVANCE.value
-            df = df[relevance_scores > relevance_threshold]
+            df = df[df[relevance_scores] > relevance_threshold]
 
         return df
 

@@ -1,4 +1,4 @@
-from typing import Any, Union
+from typing import Any, Union, TYPE_CHECKING
 import datetime
 
 import pymssql
@@ -18,6 +18,9 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE,
 )
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
+
+if TYPE_CHECKING:
+    import pyodbc
 
 
 logger = log.getLogger(__name__)

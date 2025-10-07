@@ -5,6 +5,8 @@ from decimal import Decimal
 from unittest.mock import patch, MagicMock
 from uuid import UUID
 import datetime
+import sys
+import builtins
 
 try:
     from pymssql import OperationalError
@@ -589,6 +591,265 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                 continue
             self.assertEqual(result_value, input_value)
         # endregion
+
+
+class TestMSSQLHandlerODBC(unittest.TestCase):
+    """Tests for MSSQL handler with ODBC connection"""
+
+    def setUp(self):
+        self.connection_data = OrderedDict(
+            host="127.0.0.1",
+            port=1433,
+            user="example_user",
+            password="example_pass",
+            database="example_db",
+            driver="ODBC Driver 18 for SQL Server",
+            use_odbc=True
+        )
+
+    def test_odbc_mode_enabled_with_driver_param(self):
+        """Test that ODBC mode is enabled when driver parameter is provided"""
+        handler = SqlServerHandler("mssql_odbc", connection_data=self.connection_data)
+        self.assertTrue(handler.use_odbc)
+
+    def test_odbc_mode_enabled_with_use_odbc_param(self):
+        """Test that ODBC mode is enabled when use_odbc parameter is True"""
+        connection_data = self.connection_data.copy()
+        del connection_data['driver']
+        connection_data['use_odbc'] = True
+        
+        handler = SqlServerHandler("mssql_odbc", connection_data=connection_data)
+        self.assertTrue(handler.use_odbc)
+
+    def test_odbc_mode_disabled_by_default(self):
+        """Test that ODBC mode is disabled when neither driver nor use_odbc is provided"""
+        connection_data = OrderedDict(
+            host="127.0.0.1",
+            port=1433,
+            user="example_user",
+            password="example_pass",
+            database="example_db",
+        )
+        handler = SqlServerHandler("mssql", connection_data=connection_data)
+        self.assertFalse(handler.use_odbc)
+
+    def test_odbc_connection_string_construction(self):
+        """Test that ODBC connection string is constructed correctly"""
+        mock_pyodbc = MagicMock()
+        mock_connect = MagicMock()
+        mock_pyodbc.connect = mock_connect
+        
+        # Mock pyodbc in sys.modules so it can be imported
+        sys.modules['pyodbc'] = mock_pyodbc
+        
+        try:
+            handler = SqlServerHandler("mssql_odbc", connection_data=self.connection_data)
+            handler.connect()
+        except Exception:
+            pass
+        finally:
+            if 'pyodbc' in sys.modules:
+                del sys.modules['pyodbc']
+        if mock_connect.called:
+            call_args = mock_connect.call_args
+            conn_str = call_args[0][0] if call_args[0] else ""
+
+            self.assertIn("DRIVER={ODBC Driver 18 for SQL Server}", conn_str)
+            self.assertIn("SERVER=127.0.0.1,1433", conn_str)
+            self.assertIn("DATABASE=example_db", conn_str)
+            self.assertIn("UID=example_user", conn_str)
+            self.assertIn("PWD=example_pass", conn_str)
+
+    def test_odbc_connection_with_encryption_params(self):
+        """Test that encryption parameters are added to connection string"""
+        mock_pyodbc = MagicMock()
+        mock_connect = MagicMock()
+        mock_pyodbc.connect = mock_connect
+        
+        sys.modules['pyodbc'] = mock_pyodbc
+        
+        connection_data = self.connection_data.copy()
+        connection_data['encrypt'] = 'yes'
+        connection_data['trust_server_certificate'] = 'yes'
+        
+        try:
+            handler = SqlServerHandler("mssql_odbc", connection_data=connection_data)
+            handler.connect()
+        except Exception:
+            pass
+        finally:
+            if 'pyodbc' in sys.modules:
+                del sys.modules['pyodbc']
+        
+        if mock_connect.called:
+            conn_str = mock_connect.call_args[0][0]
+            self.assertIn("Encrypt=yes", conn_str)
+            self.assertIn("TrustServerCertificate=yes", conn_str)
+
+    def test_odbc_import_error_handling(self):
+        """Test that ImportError is raised with helpful message when pyodbc is not installed"""
+        orig_pyodbc = sys.modules.get('pyodbc')
+        
+        try:
+            # Remove pyodbc from sys.modules to simulate it not being installed
+            if 'pyodbc' in sys.modules:
+                del sys.modules['pyodbc']
+            
+            handler = SqlServerHandler("mssql_odbc", connection_data=self.connection_data)
+            
+            original_import = builtins.__import__
+            def mock_import(name, *args, **kwargs):
+                if name == 'pyodbc':
+                    raise ImportError("No module named 'pyodbc'")
+                return original_import(name, *args, **kwargs)
+            
+            with patch('builtins.__import__', side_effect=mock_import):
+                with self.assertRaises(ImportError) as context:
+                    handler._connect_odbc()
+                
+                self.assertIn("pyodbc is not installed", str(context.exception))
+                self.assertIn("pip install", str(context.exception).lower())
+        finally:
+            if orig_pyodbc is not None:
+                sys.modules['pyodbc'] = orig_pyodbc
+            elif 'pyodbc' in sys.modules:
+                del sys.modules['pyodbc']
+
+    def test_odbc_driver_not_found_error(self):
+        """Test that ConnectionError is raised with helpful message when ODBC driver is not found"""
+        mock_pyodbc = MagicMock()
+        mock_pyodbc.Error = Exception
+        mock_error = Exception("Can't open lib 'ODBC Driver 18 for SQL Server' : file not found")
+        mock_pyodbc.connect.side_effect = mock_error
+        
+        sys.modules['pyodbc'] = mock_pyodbc
+        
+        try:
+            handler = SqlServerHandler("mssql_odbc", connection_data=self.connection_data)
+            with self.assertRaises((ConnectionError, Exception)):
+                handler.connect()
+        finally:
+            if 'pyodbc' in sys.modules:
+                del sys.modules['pyodbc']
+
+    def test_odbc_native_query_with_row_objects(self):
+        """Test that native_query correctly handles pyodbc Row objects"""
+        class MockRow:
+            def __init__(self, *values):
+                self.values = values
+            
+            def __iter__(self):
+                return iter(self.values)
+            
+            def __getitem__(self, idx):
+                return self.values[idx]
+        
+        mock_pyodbc = MagicMock()
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=None)
+
+        mock_cursor.fetchall.return_value = [
+            MockRow(1, "test1"),
+            MockRow(2, "test2")
+        ]
+        mock_cursor.description = [
+            ("id", None, None, None, None, None, None),
+            ("name", None, None, None, None, None, None),
+        ]
+        
+        sys.modules['pyodbc'] = mock_pyodbc
+        
+        try:
+            handler = SqlServerHandler("mssql_odbc", connection_data=self.connection_data)
+            handler.connect = MagicMock(return_value=mock_conn)
+            handler.is_connected = True
+            mock_conn.cursor = MagicMock(return_value=mock_cursor)
+            
+            query_str = "SELECT * FROM test_table"
+            response = handler.native_query(query_str)
+            
+            # Verify cursor was called without as_dict parameter (ODBC doesn't support it)
+            mock_conn.cursor.assert_called_once_with()
+            mock_cursor.execute.assert_called_once_with(query_str)
+            
+            self.assertIsInstance(response, Response)
+            self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+            self.assertIsInstance(response.data_frame, DataFrame)
+            self.assertEqual(list(response.data_frame.columns), ["id", "name"])
+        finally:
+            if 'pyodbc' in sys.modules:
+                del sys.modules['pyodbc']
+
+    def test_odbc_connection_string_with_additional_args(self):
+        """Test that additional connection string arguments are appended"""
+        connection_data = self.connection_data.copy()
+        connection_data['connection_string_args'] = 'ApplicationIntent=ReadOnly;MultiSubnetFailover=Yes'
+        
+        mock_pyodbc = MagicMock()
+        mock_connect = MagicMock()
+        mock_pyodbc.connect = mock_connect
+        
+        sys.modules['pyodbc'] = mock_pyodbc
+        
+        try:
+            handler = SqlServerHandler("mssql_odbc", connection_data=connection_data)
+            handler.connect()
+        except Exception:
+            pass
+        finally:
+            if 'pyodbc' in sys.modules:
+                del sys.modules['pyodbc']
+        
+        if mock_connect.called:
+            conn_str = mock_connect.call_args[0][0]
+            self.assertIn("ApplicationIntent=ReadOnly", conn_str)
+            self.assertIn("MultiSubnetFailover=Yes", conn_str)
+
+    def test_odbc_vs_pymssql_type_inference(self):
+        """Test that type inference works correctly for ODBC connections"""
+        mock_pyodbc = MagicMock()
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_cursor.__exit__ = MagicMock(return_value=None)
+
+        class MockRow:
+            def __init__(self, *values):
+                self.values = values
+            def __iter__(self):
+                return iter(self.values)
+            def __getitem__(self, idx):
+                return self.values[idx]
+        
+        mock_cursor.fetchall.return_value = [
+            MockRow(123, 45.67, "text", datetime.datetime(2024, 1, 1)),
+        ]
+        mock_cursor.description = [
+            ("int_col", None, None, None, None, None, None),
+            ("float_col", None, None, None, None, None, None),
+            ("text_col", None, None, None, None, None, None),
+            ("datetime_col", None, None, None, None, None, None),
+        ]
+        
+        sys.modules['pyodbc'] = mock_pyodbc
+        
+        try:
+            handler = SqlServerHandler("mssql_odbc", connection_data=self.connection_data)
+            handler.connect = MagicMock(return_value=mock_conn)
+            handler.is_connected = True
+            mock_conn.cursor = MagicMock(return_value=mock_cursor)
+            
+            response = handler.native_query("SELECT * FROM test")
+
+            self.assertIsInstance(response, Response)
+            self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
+            self.assertIsNotNone(response.mysql_types)
+            self.assertTrue(len(response.mysql_types) > 0)
+        finally:
+            if 'pyodbc' in sys.modules:
+                del sys.modules['pyodbc']
 
 
 if __name__ == "__main__":

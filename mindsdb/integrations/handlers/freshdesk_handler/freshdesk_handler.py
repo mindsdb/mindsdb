@@ -49,13 +49,9 @@ class FreshdeskHandler(APIHandler):
             if not self.connection_data.get("api_key"):
                 raise ValueError("Missing required parameter: api_key")
 
-            self.freshdesk_client = API(
-                domain=self.connection_data["domain"],
-                api_key=self.connection_data["api_key"]
-            )
+            self.freshdesk_client = API(domain=self.connection_data["domain"], api_key=self.connection_data["api_key"])
             # Test the connection by getting new tickets
-            self.freshdesk_client.tickets.list_new_and_my_open_tickets(
-                page=1, per_page=1)
+            self.freshdesk_client.tickets.list_new_and_my_open_tickets(page=1, per_page=1)
             self.is_connected = True
             resp.success = True
         except KeyError as ex:

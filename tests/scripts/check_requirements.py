@@ -42,6 +42,7 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 # opentelemetry and langfuse are metrics/tracing libraries that are only used in the cloud images (they're installed there as extras)
 # langchain_aws is used to create agent with bedrock provider;
 #   if is not installed - error message will be shown, but it is possible to use other providers with agent
+# pyodbc is used in mssql but as optional dependency
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch", "pyarrow", "langfuse", "dataprep_ml"],
     "DEP001": [
@@ -142,6 +143,7 @@ HANDLER_RULE_IGNORES = {
         "pyarrow",
         "IfxPyDbi",
         "ingres_sa_dialect",
+        "pyodbc",
     ],  # 'tests' is the mindsdb tests folder in the repo root, 'pyarrow' used in snowflake handler
     "DEP003": DEP003_IGNORE_HANDLER_DEPS,
 }

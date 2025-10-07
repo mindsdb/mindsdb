@@ -1,1 +1,1 @@
-from .snowflake_jwt_gen import get_validated_jwt
+from .snowflake_jwt_gen import get_validated_jwt as get_validated_jwt

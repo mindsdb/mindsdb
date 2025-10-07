@@ -15,7 +15,7 @@ from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MYSQL_DATA_TYPE
 
@@ -24,7 +24,7 @@ logger = log.getLogger(__name__)
 
 
 def _map_type(mssql_type_text: str) -> MYSQL_DATA_TYPE:
-    """ Map MSSQL text types names to MySQL types as enum.
+    """Map MSSQL text types names to MySQL types as enum.
 
     Args:
         mssql_type_text (str): The name of the MSSQL type to map.
@@ -34,16 +34,16 @@ def _map_type(mssql_type_text: str) -> MYSQL_DATA_TYPE:
     """
     internal_type_name = mssql_type_text.lower()
     types_map = {
-        ('tinyint', 'smallint', 'int', 'bigint'): MYSQL_DATA_TYPE.INT,
-        ('bit',): MYSQL_DATA_TYPE.BOOL,
-        ('money', 'smallmoney', 'float', 'real'): MYSQL_DATA_TYPE.FLOAT,
-        ('decimal', 'numeric'): MYSQL_DATA_TYPE.DECIMAL,
-        ('date',): MYSQL_DATA_TYPE.DATE,
-        ('time',): MYSQL_DATA_TYPE.TIME,
-        ('datetime2', 'datetimeoffset', 'datetime', 'smalldatetime'): MYSQL_DATA_TYPE.DATETIME,
-        ('varchar', 'nvarchar'): MYSQL_DATA_TYPE.VARCHAR,
-        ('char', 'text', 'nchar', 'ntext'): MYSQL_DATA_TYPE.TEXT,
-        ('binary', 'varbinary', 'image'): MYSQL_DATA_TYPE.BINARY
+        ("tinyint", "smallint", "int", "bigint"): MYSQL_DATA_TYPE.INT,
+        ("bit",): MYSQL_DATA_TYPE.BOOL,
+        ("money", "smallmoney", "float", "real"): MYSQL_DATA_TYPE.FLOAT,
+        ("decimal", "numeric"): MYSQL_DATA_TYPE.DECIMAL,
+        ("date",): MYSQL_DATA_TYPE.DATE,
+        ("time",): MYSQL_DATA_TYPE.TIME,
+        ("datetime2", "datetimeoffset", "datetime", "smalldatetime"): MYSQL_DATA_TYPE.DATETIME,
+        ("varchar", "nvarchar"): MYSQL_DATA_TYPE.VARCHAR,
+        ("char", "text", "nchar", "ntext"): MYSQL_DATA_TYPE.TEXT,
+        ("binary", "varbinary", "image"): MYSQL_DATA_TYPE.BINARY,
     }
 
     for db_types_list, mysql_data_type in types_map.items():
@@ -54,7 +54,9 @@ def _map_type(mssql_type_text: str) -> MYSQL_DATA_TYPE:
     return MYSQL_DATA_TYPE.VARCHAR
 
 
-def _make_table_response(result: list[Union[dict[str, Any], tuple]], cursor: Union[pymssql.Cursor, 'pyodbc.Cursor'], use_odbc: bool = False) -> Response:
+def _make_table_response(
+    result: list[Union[dict[str, Any], tuple]], cursor: Union[pymssql.Cursor, "pyodbc.Cursor"], use_odbc: bool = False
+) -> Response:
     """Build response from result and cursor.
 
     Args:
@@ -78,10 +80,7 @@ def _make_table_response(result: list[Union[dict[str, Any], tuple]], cursor: Uni
             data_frame = pd.DataFrame(result, columns=columns)
         except (ValueError, TypeError):
             # Fallback: convert Row objects to tuples
-            data_frame = pd.DataFrame.from_records(
-                (tuple(row) for row in result),
-                columns=columns
-            )
+            data_frame = pd.DataFrame.from_records((tuple(row) for row in result), columns=columns)
     else:
         data_frame = pd.DataFrame(result, columns=columns)
 
@@ -89,7 +88,7 @@ def _make_table_response(result: list[Union[dict[str, Any], tuple]], cursor: Uni
         column_name = column[0]
         column_type = column[1]
         column_dtype = data_frame[column_name].dtype
-        
+
         if use_odbc:
             # For pyodbc, use type inference based on pandas dtype
             if pd_types.is_integer_dtype(column_dtype):
@@ -101,7 +100,9 @@ def _make_table_response(result: list[Union[dict[str, Any], tuple]], cursor: Uni
             elif pd_types.is_datetime64_any_dtype(column_dtype):
                 mysql_types.append(MYSQL_DATA_TYPE.DATETIME)
             elif pd_types.is_object_dtype(column_dtype):
-                if len(data_frame) > 0 and isinstance(data_frame[column_name].iloc[0], (datetime.datetime, datetime.date, datetime.time)):
+                if len(data_frame) > 0 and isinstance(
+                    data_frame[column_name].iloc[0], (datetime.datetime, datetime.date, datetime.time)
+                ):
                     mysql_types.append(MYSQL_DATA_TYPE.DATETIME)
                 else:
                     mysql_types.append(MYSQL_DATA_TYPE.TEXT)
@@ -136,7 +137,7 @@ def _make_table_response(result: list[Union[dict[str, Any], tuple]], cursor: Uni
                             and isinstance(series.dt.tz, datetime.timezone)
                             and series.dt.tz != datetime.timezone.utc
                         ):
-                            series = series.dt.tz_convert('UTC')
+                            series = series.dt.tz_convert("UTC")
                             data_frame[column_name] = series.dt.tz_localize(None)
                         mysql_types.append(MYSQL_DATA_TYPE.DATETIME)
                     else:
@@ -145,34 +146,31 @@ def _make_table_response(result: list[Union[dict[str, Any], tuple]], cursor: Uni
                     logger.warning(f"Unknown type: {column_type}, use TEXT as fallback.")
                     mysql_types.append(MYSQL_DATA_TYPE.TEXT)
 
-    return Response(
-        RESPONSE_TYPE.TABLE,
-        data_frame=data_frame,
-        mysql_types=mysql_types
-    )
+    return Response(RESPONSE_TYPE.TABLE, data_frame=data_frame, mysql_types=mysql_types)
 
 
 class SqlServerHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the Microsoft SQL Server statements.
     Supports both native pymssql connections and ODBC connections via pyodbc.
-    
+
     To use ODBC connection, specify either:
     - 'use_odbc': True in connection parameters, or
     - 'driver': '<ODBC driver name>' in connection parameters
     """
-    name = 'mssql'
+
+    name = "mssql"
 
     def __init__(self, name, **kwargs):
         super().__init__(name)
         self.parser = parse_sql
-        self.connection_args = kwargs.get('connection_data')
-        self.dialect = 'mssql'
-        self.database = self.connection_args.get('database')
-        self.renderer = SqlalchemyRender('mssql')
+        self.connection_args = kwargs.get("connection_data")
+        self.dialect = "mssql"
+        self.database = self.connection_args.get("database")
+        self.renderer = SqlalchemyRender("mssql")
 
         # Determine if ODBC should be used
-        self.use_odbc = self.connection_args.get('use_odbc', False) or 'driver' in self.connection_args
+        self.use_odbc = self.connection_args.get("use_odbc", False) or "driver" in self.connection_args
 
         self.connection = None
         self.is_connected = False
@@ -204,29 +202,29 @@ class SqlServerHandler(DatabaseHandler):
     def _connect_pymssql(self):
         """Connect using pymssql (native FreeTDS-based connection)."""
         # Mandatory connection parameters
-        if not all(key in self.connection_args for key in ['host', 'user', 'password', 'database']):
-            raise ValueError('Required parameters (host, user, password, database) must be provided.')
+        if not all(key in self.connection_args for key in ["host", "user", "password", "database"]):
+            raise ValueError("Required parameters (host, user, password, database) must be provided.")
 
         config = {
-            'host': self.connection_args.get('host'),
-            'user': self.connection_args.get('user'),
-            'password': self.connection_args.get('password'),
-            'database': self.connection_args.get('database')
+            "host": self.connection_args.get("host"),
+            "user": self.connection_args.get("user"),
+            "password": self.connection_args.get("password"),
+            "database": self.connection_args.get("database"),
         }
 
         # Optional connection parameters
-        if 'port' in self.connection_args:
-            config['port'] = self.connection_args.get('port')
+        if "port" in self.connection_args:
+            config["port"] = self.connection_args.get("port")
 
-        if 'server' in self.connection_args:
-            config['server'] = self.connection_args.get('server')
+        if "server" in self.connection_args:
+            config["server"] = self.connection_args.get("server")
 
         try:
             self.connection = pymssql.connect(**config)
             self.is_connected = True
             return self.connection
         except OperationalError as e:
-            logger.error(f'Error connecting to Microsoft SQL Server {self.database}, {e}!')
+            logger.error(f"Error connecting to Microsoft SQL Server {self.database}, {e}!")
             self.is_connected = False
             raise
 
@@ -241,46 +239,46 @@ class SqlServerHandler(DatabaseHandler):
             ) from e
 
         # Mandatory connection parameters
-        if not all(key in self.connection_args for key in ['host', 'user', 'password', 'database']):
-            raise ValueError('Required parameters (host, user, password, database) must be provided.')
+        if not all(key in self.connection_args for key in ["host", "user", "password", "database"]):
+            raise ValueError("Required parameters (host, user, password, database) must be provided.")
 
-        driver = self.connection_args.get('driver', 'ODBC Driver 17 for SQL Server')
-        host = self.connection_args.get('host')
-        port = self.connection_args.get('port', 1433)
-        database = self.connection_args.get('database')
-        user = self.connection_args.get('user')
-        password = self.connection_args.get('password')
+        driver = self.connection_args.get("driver", "ODBC Driver 17 for SQL Server")
+        host = self.connection_args.get("host")
+        port = self.connection_args.get("port", 1433)
+        database = self.connection_args.get("database")
+        user = self.connection_args.get("user")
+        password = self.connection_args.get("password")
 
         conn_str_parts = [
             f"DRIVER={{{driver}}}",
             f"SERVER={host},{port}",
             f"DATABASE={database}",
             f"UID={user}",
-            f"PWD={password}"
+            f"PWD={password}",
         ]
 
         # Add optional parameters
-        if 'encrypt' in self.connection_args:
+        if "encrypt" in self.connection_args:
             conn_str_parts.append(f"Encrypt={self.connection_args['encrypt']}")
-        if 'trust_server_certificate' in self.connection_args:
+        if "trust_server_certificate" in self.connection_args:
             conn_str_parts.append(f"TrustServerCertificate={self.connection_args['trust_server_certificate']}")
 
-        if 'connection_string_args' in self.connection_args:
-            conn_str_parts.append(self.connection_args['connection_string_args'])
+        if "connection_string_args" in self.connection_args:
+            conn_str_parts.append(self.connection_args["connection_string_args"])
 
-        conn_str = ';'.join(conn_str_parts)
+        conn_str = ";".join(conn_str_parts)
 
         try:
             self.connection = pyodbc.connect(conn_str, timeout=10)
             self.is_connected = True
             return self.connection
         except pyodbc.Error as e:
-            logger.error(f'Error connecting to Microsoft SQL Server {self.database} via ODBC, {e}!')
+            logger.error(f"Error connecting to Microsoft SQL Server {self.database} via ODBC, {e}!")
             self.is_connected = False
-            
+
             # Check if it's a driver not found error
             error_msg = str(e)
-            if 'Driver' in error_msg and ('not found' in error_msg or 'specified' in error_msg):
+            if "Driver" in error_msg and ("not found" in error_msg or "specified" in error_msg):
                 raise ConnectionError(
                     f"ODBC Driver not found: {driver}. "
                     f"Please install the Microsoft ODBC Driver for SQL Server. "
@@ -288,7 +286,7 @@ class SqlServerHandler(DatabaseHandler):
                 ) from e
             raise
         except Exception as e:
-            logger.error(f'Error connecting to Microsoft SQL Server {self.database} via ODBC, {e}!')
+            logger.error(f"Error connecting to Microsoft SQL Server {self.database} via ODBC, {e}!")
             self.is_connected = False
             raise
 
@@ -317,10 +315,10 @@ class SqlServerHandler(DatabaseHandler):
             connection = self.connect()
             with connection.cursor() as cur:
                 # Execute a simple query to test the connection
-                cur.execute('select 1;')
+                cur.execute("select 1;")
             response.success = True
         except OperationalError as e:
-            logger.error(f'Error connecting to Microsoft SQL Server {self.database}, {e}!')
+            logger.error(f"Error connecting to Microsoft SQL Server {self.database}, {e}!")
             response.error_message = str(e)
 
         if response.success and need_to_close:
@@ -344,25 +342,21 @@ class SqlServerHandler(DatabaseHandler):
         need_to_close = self.is_connected is False
 
         connection = self.connect()
-        
+
         if self.use_odbc:
             with connection.cursor() as cur:
                 try:
                     cur.execute(query)
                     if cur.description:
-                        #TODO: improve this to use server-side cursors, don't fetch all
+                        # TODO: improve this to use server-side cursors, don't fetch all
                         result = cur.fetchall()
                         response = _make_table_response(result, cur, use_odbc=True)
                     else:
                         response = Response(RESPONSE_TYPE.OK, affected_rows=cur.rowcount)
                     connection.commit()
                 except Exception as e:
-                    logger.error(f'Error running query: {query} on {self.database}, {e}!')
-                    response = Response(
-                        RESPONSE_TYPE.ERROR,
-                        error_code=0,
-                        error_message=str(e)
-                    )
+                    logger.error(f"Error running query: {query} on {self.database}, {e}!")
+                    response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(e))
                     connection.rollback()
         else:
             with connection.cursor(as_dict=True) as cur:
@@ -370,18 +364,14 @@ class SqlServerHandler(DatabaseHandler):
                     cur.execute(query)
                     if cur.description:
                         result = cur.fetchall()
-                        #TODO: improve this to use server-side cursors, don't fetch all
+                        # TODO: improve this to use server-side cursors, don't fetch all
                         response = _make_table_response(result, cur, use_odbc=False)
                     else:
                         response = Response(RESPONSE_TYPE.OK, affected_rows=cur.rowcount)
                     connection.commit()
                 except Exception as e:
-                    logger.error(f'Error running query: {query} on {self.database}, {e}!')
-                    response = Response(
-                        RESPONSE_TYPE.ERROR,
-                        error_code=0,
-                        error_message=str(e)
-                    )
+                    logger.error(f"Error running query: {query} on {self.database}, {e}!")
+                    response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(e))
                     connection.rollback()
 
         if need_to_close is True:

@@ -53,7 +53,7 @@ MAIN_RULE_IGNORES = {
         "opentelemetry",
         "langfuse",
         "langchain_aws",
-        "pyodbc"
+        "pyodbc",
     ],
     "DEP002": [
         "psycopg2-binary",

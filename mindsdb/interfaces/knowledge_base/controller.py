@@ -295,10 +295,10 @@ class KnowledgeBaseTable:
                 elif item.column == TableField.CONTENT.value:
                     query_text = item.value
 
-                    # replace content with embeddings
+                    # replace content with search_vector for similarity search
                     conditions.append(
                         FilterCondition(
-                            column=TableField.EMBEDDINGS.value,
+                            column=TableField.SEARCH_VECTOR.value,
                             value=self._content_to_embeddings(item.value),
                             op=FilterOperator.EQUAL,
                         )

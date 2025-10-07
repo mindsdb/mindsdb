@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40" fill="none">
+  <!-- AWS S3 inspired icon with vector representation -->
+  <rect x="5" y="8" width="30" height="24" rx="2" fill="#569A31" opacity="0.2"/>
+  <path d="M8 12 L20 8 L32 12 L20 16 Z" fill="#569A31"/>
+  <path d="M8 12 L8 20 L20 24 L20 16 Z" fill="#569A31" opacity="0.7"/>
+  <path d="M32 12 L32 20 L20 24 L20 16 Z" fill="#569A31" opacity="0.8"/>
+  <path d="M8 22 L20 26 L32 22 L20 28 Z" fill="#569A31"/>
+  <path d="M8 22 L8 30 L20 34 L20 28 Z" fill="#569A31" opacity="0.7"/>
+  <path d="M32 22 L32 30 L20 34 L20 28 Z" fill="#569A31" opacity="0.8"/>
+  <!-- Vector arrows -->
+  <path d="M25 18 L28 18" stroke="#FF9900" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M28 18 L27 17 M28 18 L27 19" stroke="#FF9900" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

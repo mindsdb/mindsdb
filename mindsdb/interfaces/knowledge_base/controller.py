@@ -1214,6 +1214,9 @@ class KnowledgeBaseController:
                 # check with no-logprobs
                 params["method"] = "no-logprobs"
                 self._test_reranking(params)
+                logger.warning(
+                    f"logprobs is not supported for this model: {params.get('model_name')}. using no-logprobs mode"
+                )
             else:
                 raise RuntimeError(f"Problem with reranker config: {e}") from e
 

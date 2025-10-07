@@ -38,6 +38,7 @@ paypal
 pgvector
 reddit
 s3
+s3vectors
 salesforce
 sharepoint
 sheets

@@ -645,12 +645,7 @@ class TestMSSQLHandlerODBC(unittest.TestCase):
         try:
             handler = SqlServerHandler("mssql_odbc", connection_data=self.connection_data)
             handler.connect()
-        except Exception:
-            pass
-        finally:
-            if "pyodbc" in sys.modules:
-                del sys.modules["pyodbc"]
-        if mock_connect.called:
+            self.assertTrue(mock_connect.called, "mock_connect was not called")
             call_args = mock_connect.call_args
             conn_str = call_args[0][0] if call_args[0] else ""
 
@@ -659,6 +654,9 @@ class TestMSSQLHandlerODBC(unittest.TestCase):
             self.assertIn("DATABASE=example_db", conn_str)
             self.assertIn("UID=example_user", conn_str)
             self.assertIn("PWD=example_pass", conn_str)
+        finally:
+            if "pyodbc" in sys.modules:
+                del sys.modules["pyodbc"]
 
     def test_odbc_connection_with_encryption_params(self):
         """Test that encryption parameters are added to connection string"""
@@ -675,16 +673,13 @@ class TestMSSQLHandlerODBC(unittest.TestCase):
         try:
             handler = SqlServerHandler("mssql_odbc", connection_data=connection_data)
             handler.connect()
-        except Exception:
-            pass
-        finally:
-            if "pyodbc" in sys.modules:
-                del sys.modules["pyodbc"]
-
-        if mock_connect.called:
+            self.assertTrue(mock_connect.called, "mock_connect was not called")
             conn_str = mock_connect.call_args[0][0]
             self.assertIn("Encrypt=yes", conn_str)
             self.assertIn("TrustServerCertificate=yes", conn_str)
+        finally:
+            if "pyodbc" in sys.modules:
+                del sys.modules["pyodbc"]
 
     def test_odbc_import_error_handling(self):
         """Test that ImportError is raised with helpful message when pyodbc is not installed"""
@@ -795,16 +790,14 @@ class TestMSSQLHandlerODBC(unittest.TestCase):
         try:
             handler = SqlServerHandler("mssql_odbc", connection_data=connection_data)
             handler.connect()
-        except Exception:
-            pass
-        finally:
-            if "pyodbc" in sys.modules:
-                del sys.modules["pyodbc"]
 
-        if mock_connect.called:
+            self.assertTrue(mock_connect.called, "mock_connect was not called")
             conn_str = mock_connect.call_args[0][0]
             self.assertIn("ApplicationIntent=ReadOnly", conn_str)
             self.assertIn("MultiSubnetFailover=Yes", conn_str)
+        finally:
+            if "pyodbc" in sys.modules:
+                del sys.modules["pyodbc"]
 
     def test_odbc_vs_pymssql_type_inference(self):
         """Test that type inference works correctly for ODBC connections"""

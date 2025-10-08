@@ -54,6 +54,15 @@ class DocumentLoader:
                 doc.metadata["extension"] = extension
                 doc.metadata["source"] = file_name
 
+                # For PDFs with page chunking enabled, read raw PDF content
+                if extension == ".pdf" and self.file_splitter.config.page_chunking:
+                    try:
+                        with open(file_path, "rb") as f:
+                            pdf_content = f.read()
+                        doc.metadata["pdf_content"] = pdf_content
+                    except Exception as e:
+                        logger.warning(f"Could not read raw PDF content for {file_name}: {str(e)}")
+
                 # Use FileSplitter to handle the document based on its type
                 split_docs = self.file_splitter.split_documents([doc])
                 for split_doc in split_docs:

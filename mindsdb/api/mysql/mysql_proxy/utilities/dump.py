@@ -16,7 +16,7 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     DATA_C_TYPE_MAP,
     CTypeProperties,
     CHARSET_NUMBERS,
-    NULL_VALUE
+    NULL_VALUE,
 )
 from mindsdb.utilities import log
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
@@ -412,9 +412,7 @@ def dump_result_set_to_mysql(
     return df, columns_dicts
 
 
-def dump_columns_info(
-    result_set: ResultSet, infer_column_size: bool = False
-) -> list[dict[str, str | int]]:
+def dump_columns_info(result_set: ResultSet, infer_column_size: bool = False) -> list[dict[str, str | int]]:
     """Preare list of columns attrs that are required for dump to mysql protocol
 
     Args:
@@ -480,7 +478,7 @@ def dump_chunks(df: pd.DataFrame, columns_info: list[dict], chunk_size: int):
     while start < len(df):
         serieces = []
         for i, column in enumerate(columns_info):
-            series = df[i][start:start + chunk_size]
+            series = df[i][start : start + chunk_size]
             match column["type_enum"]:
                 case MYSQL_DATA_TYPE.BOOL | MYSQL_DATA_TYPE.BOOLEAN:
                     series = series.apply(_dump_bool)
@@ -511,9 +509,7 @@ def dump_chunks(df: pd.DataFrame, columns_info: list[dict], chunk_size: int):
                     series = series.apply(_dump_str)
                 case _:
                     series = series.apply(_dump_str)
-            serieces.append(
-                series.astype(bytes).mask(series.isnull(), NULL_VALUE).apply(serialize_bytes)
-            )
+            serieces.append(series.astype(bytes).mask(series.isnull(), NULL_VALUE).apply(serialize_bytes))
 
         yield pd.concat(serieces, axis=1).sum(axis=1).tolist()
 

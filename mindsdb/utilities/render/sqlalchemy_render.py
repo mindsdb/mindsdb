@@ -10,6 +10,7 @@ from sqlalchemy.dialects import mysql, postgresql, sqlite, mssql, oracle
 from sqlalchemy.schema import CreateTable, DropTable
 from sqlalchemy.sql import ColumnElement
 from sqlalchemy.sql import functions as sa_fnc
+from sqlalchemy.engine.interfaces import Dialect
 
 from mindsdb_sql_parser import ast
 
@@ -80,27 +81,28 @@ def get_is_quoted(identifier: ast.Identifier):
     return quoted
 
 
-class SqlalchemyRender:
-    def __init__(self, dialect_name):
-        dialects = {
-            "mysql": mysql,
-            "postgresql": postgresql,
-            "postgres": postgresql,
-            "sqlite": sqlite,
-            "mssql": mssql,
-            "oracle": oracle,
-            "Snowflake": oracle,
-        }
+dialects = {
+    "mysql": mysql,
+    "postgresql": postgresql,
+    "postgres": postgresql,
+    "sqlite": sqlite,
+    "mssql": mssql,
+    "oracle": oracle,
+    "Snowflake": oracle,
+}
 
+
+class SqlalchemyRender:
+    def __init__(self, dialect_name: str | Dialect):
         if isinstance(dialect_name, str):
             dialect = dialects[dialect_name].dialect
         else:
             dialect = dialect_name
 
         # override dialect's preparer
-        if hasattr(dialect, "preparer"):
+        if hasattr(dialect, "preparer") and dialect.preparer.__name__ != 'MDBPreparer':
 
-            class Preparer(dialect.preparer):
+            class MDBPreparer(dialect.preparer):
                 def _requires_quotes(self, value: str) -> bool:
                     # check force-quote flag
                     if isinstance(value, AttributedStr):
@@ -116,7 +118,7 @@ class SqlalchemyRender:
                         # or (lc_value != value)
                     )
 
-            dialect.preparer = Preparer
+            dialect.preparer = MDBPreparer
 
         # remove double percent signs
         # https://docs.sqlalchemy.org/en/14/faq/sqlexpressions.html#why-are-percent-signs-being-doubled-up-when-stringifying-sql-statements

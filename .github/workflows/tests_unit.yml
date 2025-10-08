@@ -22,7 +22,7 @@ jobs:
           fetch-depth: 0  # required to grab the history of the PR so pre-commit can work out what's changed
           ref: ${{ github.event.pull_request.head.sha }}
       - name: Setup uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           cache-local-path: "/home/runner/_work/_tool/uv-local-cache"  # Place cache in the tool dir because we mount this in our runnners
           prune-cache: false                                           # We want to save all cache because it's in the mount^
@@ -80,7 +80,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
       - name: Setup uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           python-version: ${{ matrix.python-version }}

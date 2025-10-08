@@ -48,8 +48,18 @@ class LiteLLMHandler(BaseMLEngine):
     @classmethod
     def embeddings(cls, provider: str, model: str, messages: List[str], args: dict) -> List[list]:
         model, args = cls.prepare_arguments(provider, model, args)
-        response = embedding(model=model, input=messages, **args)
-        return [rec["embedding"] for rec in response.data]
+
+        # VertexAI has a limit of 100 requests per batch
+        # Batch the messages to avoid exceeding API limits
+        batch_size = 100
+        all_embeddings = []
+
+        for i in range(0, len(messages), batch_size):
+            batch = messages[i:i + batch_size]
+            response = embedding(model=model, input=batch, **args)
+            all_embeddings.extend([rec["embedding"] for rec in response.data])
+
+        return all_embeddings
 
     @classmethod
     async def acompletion(cls, provider: str, model: str, messages: List[dict], args: dict):

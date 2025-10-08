@@ -112,8 +112,8 @@ PARAMETERS = {
 ```
 ODBC-specific Parameters:
 
-* `driver`: The ODBC driver name (e.g., "ODBC Driver 18 for SQL Server"). When specified, enables ODBC mode.
-* `use_odbc`: Set to `true` to explicitly use ODBC. Optional if `driver` is specified.
+* `driver`: The ODBC driver name (e.g., "ODBC Driver 18 for SQL Server"). When specified, enables ODBC mode. 
+* `use_odbc`: Set to `true` to explicitly use ODBC. Optional if `driver` is specified. If this is true default driver is set as `ODBC Driver 17 for SQL Server`.
 * `encrypt`: Connection encryption: `"yes"` or `"no"`. Driver 18 defaults to `"yes"`.
 * `trust_server_certificate`: Whether to trust self-signed certificates: `"yes"` or `"no"`.
 * `connection_string_args`: Additional connection string arguments.

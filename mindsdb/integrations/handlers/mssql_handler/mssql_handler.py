@@ -264,7 +264,9 @@ class SqlServerHandler(DatabaseHandler):
         if "encrypt" in self.connection_args:
             conn_str_parts.append(f"Encrypt={self.connection_args.get('encrypt', 'yes')}")
         if "trust_server_certificate" in self.connection_args:
-            conn_str_parts.append(f"TrustServerCertificate={self.connection_args.get('trust_server_certificate', 'yes')}")
+            conn_str_parts.append(
+                f"TrustServerCertificate={self.connection_args.get('trust_server_certificate', 'yes')}"
+            )
 
         if "connection_string_args" in self.connection_args:
             conn_str_parts.append(self.connection_args["connection_string_args"])

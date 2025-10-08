@@ -1,6 +1,7 @@
 **/*.pyc
 *__pycache__*
 var
+mdb
 etc
 .idea
 mindsdb/logs

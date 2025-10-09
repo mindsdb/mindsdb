@@ -16,82 +16,89 @@ Here are the steps to install MindsDB from source. You can either
 follow the steps below or visit the provided link.
 
 <Info>
-Before installing MindsDB from source, ensure that you use one of the following Python versions: `3.10.x`, `3.11.x`.
+Before installing MindsDB from source, ensure that you use one of the following Python versions: `3.10.x`, `3.11.x` :cite[1].
 </Info>
 
-1. Fork the [MindsDB repository from GitHub](https://github.com/mindsdb/mindsdb).
+1.  Fork the [MindsDB repository from GitHub](https://github.com/mindsdb/mindsdb).
 
-2. Clone the fork locally:
+2.  Clone the fork locally:
 
-   ```bash
-   git clone https://github.com/<username>/mindsdb.git
-   ```
+    ```bash
+    git clone https://github.com/<username>/mindsdb.git
+    ```
 
-3. Create a virtual environment:
+3.  Create a virtual environment:
 
-   ```bash
-   python -m venv mindsdb-venv
-   ```
+    ```bash
+    python -m venv mindsdb-venv
+    ```
 
-4. Activate the virtual environment:
+4.  Activate the virtual environment:
 
-   Windows:
+    **Windows (PowerShell):**
+    ```powershell
+    .\mindsdb-venv\Scripts\Activate.ps1
+    ```
 
-     ```bash
-     .\mindsdb-venv\Scripts\activate
-     ```
+    **Windows (Command Prompt):**
+    ```cmd
+    .\mindsdb-venv\Scripts\activate.bat
+    ```
 
-   macOS/Linux:
+    **macOS/Linux:**
+    ```bash
+    source mindsdb-venv/bin/activate
+    ```
 
-     ```bash
-     source mindsdb-venv/bin/activate
-     ```
+5.  Install MindsDB with its local development dependencies:
 
-5. Install MindsDB with its local development dependencies:
+    Install dependencies:
 
-   Install dependencies:
+    ```bash
+    cd mindsdb
+    pip install -e .
+    pip install -r requirements/requirements-dev.txt
+    ```
 
-   ```bash
-   cd mindsdb
-   pip install -e .
-   pip install -r requirements/requirements-dev.txt
-   ```
-   
-6. Start MindsDB:
-   
-   ```bash
-   python -m mindsdb
-   ```
+<Tip>
+**For Windows Users:**
+- **PowerShell Execution Policy:** The first time you try to activate the virtual environment in PowerShell, you might see an error regarding the execution policy. To resolve this, you can run `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser` in an administrator PowerShell session. This allows running locally-created scripts :cite[5].
+- **Using `python -m pip`:** If you encounter issues with the `pip` command, for example due to PATH ambiguity, try using `python -m pip` instead (e.g., `python -m pip install -e .`) to ensure you are using the pip version inside your virtual environment.
+</Tip>
 
-   <Tip>
-   By default, MindsDB starts the `http` and `mysql` APIs. You can define which APIs to start using the `api` flag as below.
+6.  Start MindsDB:
 
-   ```bash
-   python -m mindsdb --api http,mysql,postgres
-   ```
+    ```bash
+    python -m mindsdb
+    ```
 
-   If you want to start MindsDB without the graphical user interface (GUI), use the `--no_studio` flag as below.
+    <Tip>
+    By default, MindsDB starts the `http` and `mysql` APIs. You can define which APIs to start using the `api` flag as below.
 
-   ```bash
-   python -m mindsdb --no_studio
-   ```
-   </Tip>
+    ```bash
+    python -m mindsdb --api http,mysql,postgres
+    ```
+
+    If you want to start MindsDB without the graphical user interface (GUI), use the `--no_studio` flag as below.
+
+    ```bash
+    python -m mindsdb --no_studio
+    ```
+    </Tip>
 
 <Info>
 Alternatively, you can use a makefile to install dependencies and start MindsDB:
-  
+
    ```bash
     make install_mindsdb
     make run_mindsdb
-    ```
+   ```
 </Info>
 
 Now you should see the following message in the console:
 
 ```
-...
-
-mindsdb.api.http.initialize:  - GUI available at http://127.0.0.1:47334/
+mindsdb.api.http.initialize: - GUI available at http://127.0.0.1:47334/
 mindsdb.api.mysql.mysql_proxy.mysql_proxy: Starting MindsDB Mysql proxy server on tcp://127.0.0.1:47335
 mindsdb.api.mysql.mysql_proxy.mysql_proxy: Waiting for incoming connections...
 mindsdb: mysql API: started on 47335
@@ -106,7 +113,6 @@ You can access the MindsDB Editor at `localhost:47334`.
 The dependencies for many of the data or ML integrations are not installed by default.
 
 If you want to use a data or AI/ML integration whose dependencies are not available by default, install it by running this command:
-
 ```
 pip install .[handler_name]
 ```

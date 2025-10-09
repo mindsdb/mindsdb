@@ -1,9 +1,11 @@
+import os
 import ast
 import uuid
 from typing import List, Optional, Dict, Any
 
 import boto3
 from botocore.exceptions import ClientError
+from dotenv import load_dotenv
 import pandas as pd
 import numpy as np
 
@@ -20,6 +22,7 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
+env = load_dotenv()
 
 DEFAULT_CREATE_TABLE_PARAMS = {
     "dimension": 1536,
@@ -152,7 +155,12 @@ class S3VectorsHandler(VectorStoreHandler):
                 session_kwargs["region_name"] = self.connection_data["region_name"]
 
             # Create session and client
-            self.session = boto3.Session(**session_kwargs)
+            
+            if os.getenv("AWS_PROFILE"):
+                self.session = boto3.Session(profile_name=os.getenv("AWS_PROFILE"))
+            else:
+                self.session = boto3.Session(**session_kwargs)
+                
             self.connection = self.session.client("s3vectors")
             # Verify connection by listing buckets
             

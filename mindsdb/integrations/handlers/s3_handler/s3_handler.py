@@ -1,3 +1,4 @@
+import os
 from typing import List
 from contextlib import contextmanager
 from io import BytesIO
@@ -10,6 +11,7 @@ import pandas as pd
 from typing import Text, Dict, Optional
 from botocore.client import Config
 from botocore.exceptions import ClientError
+from dotenv import load_dotenv
 
 from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb_sql_parser.ast import Select, Identifier, Insert, Star, Constant
@@ -26,7 +28,7 @@ from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOper
 from mindsdb.integrations.utilities.files.file_reader import FileReader
 
 logger = log.getLogger(__name__)
-
+env = load_dotenv()
 
 class ListFilesTable(APIResource):
     def list(
@@ -208,8 +210,12 @@ class S3Handler(APIHandler):
             for parameter in optional_parameters:
                 if parameter in self.connection_data:
                     session_kwargs[parameter] = self.connection_data[parameter]
-
-        self.session = boto3.Session(**session_kwargs)
+        
+        if os.getenv("AWS_PROFILE"):
+            self.session = boto3.Session(profile_name=os.getenv("AWS_PROFILE"))
+        else:
+            self.session = boto3.Session(**session_kwargs)
+            
         client = self.session.client("s3", config=Config(signature_version="s3v4"))
 
         # check connection

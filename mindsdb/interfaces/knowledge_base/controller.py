@@ -10,7 +10,6 @@ from pydantic import BaseModel, ValidationError
 from sqlalchemy.orm.attributes import flag_modified
 
 from mindsdb_sql_parser.ast import BinaryOperation, Constant, Identifier, Select, Update, Delete, Star
-from mindsdb_sql_parser.ast.mindsdb import CreatePredictor
 from mindsdb_sql_parser import parse_sql
 
 from mindsdb.integrations.libs.keyword_search_base import KeywordSearchBase
@@ -42,6 +41,7 @@ from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.utilities import log
 from mindsdb.integrations.utilities.rag.rerankers.base_reranker import BaseLLMReranker
+from mindsdb.interfaces.knowledge_base.llm_client import LLMClient
 
 logger = log.getLogger(__name__)
 
@@ -864,10 +864,12 @@ class KnowledgeBaseTable:
         model_id = self._kb.embedding_model_id
 
         if model_id is None:
-            # call litellm handler
             messages = list(df[TableField.CONTENT.value])
             embedding_params = get_model_params(self._kb.params.get("embedding_model", {}), "default_embedding_model")
-            results = self.call_litellm_embedding(self.session, embedding_params, messages)
+
+            llm_client = LLMClient(embedding_params, session=self.session)
+            results = llm_client.embeddings(messages)
+
             results = [[val] for val in results]
             return pd.DataFrame(results, columns=[TableField.EMBEDDINGS.value])
 
@@ -1123,22 +1125,11 @@ class KnowledgeBaseController:
         params["embedding_model"] = embedding_params
 
         # if model_name is None:  # Legacy
-        model_name = self._create_embedding_model(
+        self._create_embedding_model(
             project.name,
             params=embedding_params,
             kb_name=name,
         )
-        if model_name is not None:
-            params["created_embedding_model"] = model_name
-
-        embedding_model_id = None
-        if model_name is not None:
-            model = self.session.model_controller.get_model(name=model_name, project_name=project.name)
-            model_record = db.Predictor.query.get(model["id"])
-            embedding_model_id = model_record.id
-
-            if model_record.learn_args.get("using", {}).get("sparse"):
-                is_sparse = True
 
         # if params.get("reranking_model", {}) is bool and False we evaluate it to empty dictionary
         reranking_model_params = params.get("reranking_model", {})
@@ -1154,11 +1145,7 @@ class KnowledgeBaseController:
         if reranking_model_params:
             # Get reranking model from params.
             # This is called here to check validaity of the parameters.
-            try:
-                reranker = get_reranking_model_from_params(reranking_model_params)
-                reranker.get_scores("test", ["test"])
-            except (ValueError, RuntimeError) as e:
-                raise RuntimeError(f"Problem with reranker config: {e}") from e
+            self._test_reranking(reranking_model_params)
 
         # search for the vector database table
         if storage is None:
@@ -1211,12 +1198,27 @@ class KnowledgeBaseController:
             project_id=project_id,
             vector_database_id=vector_database_id,
             vector_database_table=vector_table_name,
-            embedding_model_id=embedding_model_id,
+            embedding_model_id=None,
             params=params,
         )
         db.session.add(kb)
         db.session.commit()
         return kb
+
+    def _test_reranking(self, params):
+        try:
+            reranker = get_reranking_model_from_params(params)
+            reranker.get_scores("test", ["test"])
+        except (ValueError, RuntimeError) as e:
+            if params["provider"] in ("azure_openai", "openai"):
+                # check with no-logprobs
+                params["method"] = "no-logprobs"
+                self._test_reranking(params)
+                logger.warning(
+                    f"logprobs is not supported for this model: {params.get('model_name')}. using no-logprobs mode"
+                )
+            else:
+                raise RuntimeError(f"Problem with reranker config: {e}") from e
 
     def _create_persistent_pgvector(self, params=None):
         """Create default vector database for knowledge base, if not specified"""
@@ -1244,7 +1246,7 @@ class KnowledgeBaseController:
         self.session.integration_controller.add(vector_store_name, engine, connection_args)
         return vector_store_name
 
-    def _create_embedding_model(self, project_name, engine="openai", params: dict = None, kb_name=""):
+    def _create_embedding_model(self, project_name, params: dict = None, kb_name=""):
         """create a default embedding model for knowledge base, if not specified"""
         model_name = f"kb_embedding_{kb_name}"
 
@@ -1266,60 +1268,12 @@ class KnowledgeBaseController:
                 f"Wrong embedding provider: {params['provider']}. Available providers: {', '.join(avail_providers)}"
             )
 
-        if params["provider"] not in ("openai", "azure_openai", "ollama"):
-            # try use litellm
-            try:
-                KnowledgeBaseTable.call_litellm_embedding(self.session, params, ["test"])
-            except Exception as e:
-                raise RuntimeError(f"Problem with embedding model config: {e}") from e
-            return
+        llm_client = LLMClient(params, session=self.session)
 
-        params = copy.deepcopy(params)
-        engine = params.pop("provider").lower()
-
-        api_key = get_api_key(engine, params, strict=False)
-        if api_key is None:
-            if "api_key" in params:
-                params.pop("api_key")
-            else:
-                raise ValueError("'api_key' parameter is required for embedding model")
-
-        if engine == "azure_openai":
-            engine = "openai"
-            params["provider"] = "azure"
-
-        if engine == "ollama":
-            engine = "openai"
-            params["provider"] = "ollama"
-
-        if engine == "openai":
-            if "question_column" not in params:
-                params["question_column"] = "content"
-            if api_key:
-                params[f"{engine}_api_key"] = api_key
-                if "api_key" in params:
-                    params.pop("api_key")
-            if "base_url" in params:
-                params["api_base"] = params.pop("base_url")
-
-        params["engine"] = engine
-        params["join_learn_process"] = True
-        params["mode"] = "embedding"
-
-        # Include API key if provided.
-        statement = CreatePredictor(
-            name=Identifier(parts=[project_name, model_name]),
-            using=params,
-            targets=[Identifier(parts=[TableField.EMBEDDINGS.value])],
-        )
-
-        command_executor = ExecuteCommands(self.session)
-        resp = command_executor.answer_create_predictor(statement, project_name)
-        # check model status
-        record = resp.data.records[0]
-        if record["STATUS"] == "error":
-            raise ValueError("Embedding model error:" + record["ERROR"])
-        return model_name
+        try:
+            llm_client.embeddings(["test"])
+        except Exception as e:
+            raise RuntimeError(f"Problem with embedding model config: {e}") from e
 
     def delete(self, name: str, project_name: int, if_exists: bool = False) -> None:
         """

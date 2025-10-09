@@ -1,5 +1,6 @@
 from typing import List
 from contextlib import contextmanager
+from io import BytesIO
 
 import boto3
 import duckdb
@@ -22,6 +23,7 @@ from mindsdb.integrations.libs.response import (
 
 from mindsdb.integrations.libs.api_handler import APIResource, APIHandler
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
+from mindsdb.integrations.utilities.files.file_reader import FileReader
 
 logger = log.getLogger(__name__)
 
@@ -76,8 +78,9 @@ class S3Handler(APIHandler):
     """
 
     name = "s3"
-    # TODO: Can other file formats be supported?
-    supported_file_formats = ["csv", "tsv", "json", "parquet"]
+    # Structured formats use DuckDB, text formats use FileReader
+    supported_file_formats = ["csv", "tsv", "json", "parquet", "txt", "pdf", "md", "doc", "docx"]
+    text_file_formats = ["txt", "pdf", "md", "doc", "docx"]
 
     def __init__(self, name: Text, connection_data: Optional[Dict], **kwargs):
         """
@@ -263,14 +266,31 @@ class S3Handler(APIHandler):
 
     def read_as_table(self, key) -> pd.DataFrame:
         """
-        Read object as dataframe. Uses duckdb
+        Read object as dataframe. Uses duckdb for structured files, FileReader for text files
         """
         bucket, key = self._get_bucket(key)
 
-        with self._connect_duckdb(bucket) as connection:
-            cursor = connection.execute(f"SELECT * FROM 's3://{bucket}/{key}'")
+        # Check if file is a text format
+        extension = key.split(".")[-1].lower()
+        if extension in self.text_file_formats:
+            # Use FileReader for text files
+            content = self._read_as_content(key)
+            file_obj = BytesIO(content)
 
-            return cursor.fetchdf()
+            # Extract filename from key
+            file_name = key.split("/")[-1]
+
+            # Use FileReader to parse the content
+            file_reader = FileReader(file=file_obj, name=file_name)
+            tables = file_reader.get_contents()
+
+            # Return the main table (text files have single table)
+            return tables.get("main", pd.DataFrame())
+        else:
+            # Use DuckDB for structured files (csv, json, parquet)
+            with self._connect_duckdb(bucket) as connection:
+                cursor = connection.execute(f"SELECT * FROM 's3://{bucket}/{key}'")
+                return cursor.fetchdf()
 
     def _read_as_content(self, key) -> None:
         """

@@ -29,6 +29,9 @@ class _SINGLE_PAGE_FORMAT:
     JSON: str = "json"
     TXT: str = "txt"
     PDF: str = "pdf"
+    MD: str = "md"
+    DOC: str = "doc"
+    DOCX: str = "docx"
     PARQUET: str = "parquet"
 
 
@@ -145,6 +148,8 @@ class FormatDetector:
         if extension == "tsv":
             extension = "csv"
             self.parameters["delimiter"] = "\t"
+        elif extension == "markdown":
+            extension = "md"
 
         return extension or None
 
@@ -162,6 +167,12 @@ class FormatDetector:
 
             if file_type.mime == "application/pdf":
                 return SINGLE_PAGE_FORMAT.PDF
+
+            if file_type.mime == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+                return SINGLE_PAGE_FORMAT.DOCX
+
+            if file_type.mime == "application/msword":
+                return SINGLE_PAGE_FORMAT.DOC
 
         file_obj = decode(self.file_obj)
 
@@ -332,6 +343,66 @@ class FileReader(FormatDetector):
 
         docs = text_splitter.split_text(text)
         return pd.DataFrame([{"content": doc, "metadata": {"source_file": name, "file_format": "txt"}} for doc in docs])
+
+    @staticmethod
+    def read_md(file_obj: BytesIO, name: str | None = None, **kwargs) -> pd.DataFrame:
+        # Read markdown files similar to txt
+
+        file_obj = decode(file_obj)
+
+        text = file_obj.read()
+
+        text_splitter = TextSplitter(chunk_size=DEFAULT_CHUNK_SIZE, chunk_overlap=DEFAULT_CHUNK_OVERLAP)
+
+        docs = text_splitter.split_text(text)
+        return pd.DataFrame([{"content": doc, "metadata": {"source_file": name, "file_format": "md"}} for doc in docs])
+
+    @staticmethod
+    def read_docx(file_obj: BytesIO, name: str | None = None, **kwargs) -> pd.DataFrame:
+        # the lib is heavy, so import it only when needed
+        try:
+            import docx
+            from docx import Document as DocxDocument
+        except ImportError as e:
+            raise FileProcessingError(
+                "python-docx package is required to read DOCX files. "
+                "Install it with: pip install python-docx"
+            ) from e
+
+        doc = DocxDocument(file_obj)
+
+        # Extract text from all paragraphs
+        text = "\n".join([paragraph.text for paragraph in doc.paragraphs if paragraph.text.strip()])
+
+        text_splitter = TextSplitter(chunk_size=DEFAULT_CHUNK_SIZE, chunk_overlap=DEFAULT_CHUNK_OVERLAP)
+
+        docs = text_splitter.split_text(text)
+        return pd.DataFrame([{"content": doc, "metadata": {"source_file": name, "file_format": "docx"}} for doc in docs])
+
+    @staticmethod
+    def read_doc(file_obj: BytesIO, name: str | None = None, **kwargs) -> pd.DataFrame:
+        # DOC files (older Word format) are more complex and require different handling
+        # For now, we'll try to use python-docx which sometimes works with .doc files
+        # or fall back to treating as text
+        try:
+            import docx
+            from docx import Document as DocxDocument
+            doc = DocxDocument(file_obj)
+            text = "\n".join([paragraph.text for paragraph in doc.paragraphs if paragraph.text.strip()])
+        except ImportError:
+            raise FileProcessingError(
+                "python-docx package is required to read DOC files. "
+                "Install it with: pip install python-docx"
+            )
+        except Exception:
+            # If docx fails, try reading as text
+            file_obj = decode(file_obj)
+            text = file_obj.read()
+
+        text_splitter = TextSplitter(chunk_size=DEFAULT_CHUNK_SIZE, chunk_overlap=DEFAULT_CHUNK_OVERLAP)
+
+        docs = text_splitter.split_text(text)
+        return pd.DataFrame([{"content": doc, "metadata": {"source_file": name, "file_format": "doc"}} for doc in docs])
 
     @staticmethod
     def read_pdf(file_obj: BytesIO, name: str | None = None, **kwargs) -> pd.DataFrame:

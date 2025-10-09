@@ -1,7 +1,18 @@
 import shopify
 import requests
+import re
 
-from mindsdb.integrations.handlers.shopify_handler.shopify_tables import ProductsTable, CustomersTable, OrdersTable, InventoryLevelTable, LocationTable, CustomerReviews, CarrierServiceTable, ShippingZoneTable, SalesChannelTable
+from mindsdb.integrations.handlers.shopify_handler.shopify_tables import (
+    ProductsTable,
+    CustomersTable,
+    OrdersTable,
+    InventoryLevelTable,
+    LocationTable,
+    CustomerReviews,
+    CarrierServiceTable,
+    ShippingZoneTable,
+    SalesChannelTable,
+)
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -9,7 +20,11 @@ from mindsdb.integrations.libs.response import (
 
 from mindsdb.utilities import log
 from mindsdb_sql_parser import parse_sql
-from mindsdb.integrations.libs.api_handler_exceptions import InvalidNativeQuery, ConnectionFailed, MissingConnectionParams
+from mindsdb.integrations.libs.api_handler_exceptions import (
+    InvalidNativeQuery,
+    ConnectionFailed,
+    MissingConnectionParams,
+)
 
 logger = log.getLogger(__name__)
 
@@ -19,7 +34,7 @@ class ShopifyHandler(APIHandler):
     The Shopify handler implementation.
     """
 
-    name = 'shopify'
+    name = "shopify"
 
     def __init__(self, name: str, **kwargs):
         """
@@ -81,10 +96,14 @@ class ShopifyHandler(APIHandler):
         if self.kwargs.get("connection_data") is None:
             raise MissingConnectionParams("Incomplete parameters passed to Shopify Handler")
 
-        api_session = shopify.Session(self.connection_data['shop_url'], '2021-10', self.connection_data['access_token'])
+        api_session = shopify.Session(
+            self.connection_data["shop_url"].strip(), "2021-10", self.connection_data["access_token"]
+        )
 
-        self.yotpo_app_key = self.connection_data['yotpo_app_key'] if 'yotpo_app_key' in self.connection_data else None
-        self.yotpo_access_token = self.connection_data['yotpo_access_token'] if 'yotpo_access_token' in self.connection_data else None
+        self.yotpo_app_key = self.connection_data["yotpo_app_key"] if "yotpo_app_key" in self.connection_data else None
+        self.yotpo_access_token = (
+            self.connection_data["yotpo_access_token"] if "yotpo_access_token" in self.connection_data else None
+        )
 
         self.connection = api_session
 
@@ -107,16 +126,64 @@ class ShopifyHandler(APIHandler):
             shopify.Shop.current()
             response.success = True
         except Exception as e:
-            logger.error('Error connecting to Shopify!')
-            raise ConnectionFailed("Conenction to Shopify failed.")
+            logger.error(f"Error connecting to Shopify: {str(e)}")
             response.error_message = str(e)
+
+            # Parse the error to extract clean, user-friendly messages
+            error_msg = str(e)
+
+            # Handle ClientError (Shopify API errors)
+            if "ClientError" in error_msg and "Response(" in error_msg:
+                # Extract HTTP status code
+                if "code=402" in error_msg:
+                    if '"errors":"Unavailable Shop"' in error_msg or "Unavailable Shop" in error_msg:
+                        raise ConnectionFailed(
+                            "Shopify shop is unavailable. This could be due to shop suspension, billing issues, or incorrect shop URL."
+                        )
+                    else:
+                        raise ConnectionFailed(
+                            "Shopify API access requires payment. Please check your Shopify billing status."
+                        )
+                elif "code=401" in error_msg:
+                    raise ConnectionFailed(
+                        "Invalid Shopify API credentials. Please check your access token and shop URL."
+                    )
+                elif "code=404" in error_msg:
+                    raise ConnectionFailed("Shopify shop not found. Please verify the shop URL is correct.")
+                elif "code=403" in error_msg:
+                    raise ConnectionFailed("Access denied. Please check your API permissions and credentials.")
+                else:
+                    body_match = re.search(r'"errors":"([^"]+)"', error_msg)
+                    if body_match:
+                        shopify_error = body_match.group(1)
+                        raise ConnectionFailed(f"Shopify API error: {shopify_error}")
+                    else:
+                        raise ConnectionFailed(
+                            "Failed to connect to Shopify API. Please check your credentials and shop URL."
+                        )
+
+            # Handle other HTTP errors
+            elif "HTTP Error 402" in error_msg:
+                raise ConnectionFailed(
+                    "Shopify shop is unavailable or requires payment. Please check your shop status and billing."
+                )
+            elif "HTTP Error 401" in error_msg or "Unauthorized" in error_msg:
+                raise ConnectionFailed("Invalid Shopify API credentials. Please check your access token and shop URL.")
+            elif "HTTP Error 404" in error_msg:
+                raise ConnectionFailed("Shopify shop not found. Please verify the shop URL is correct.")
+            elif "ConnectionError" in error_msg or "timeout" in error_msg.lower():
+                raise ConnectionFailed(
+                    "Network connection failed. Please check your internet connection and try again."
+                )
+            else:
+                # Generic error
+                raise ConnectionFailed("Failed to connect to Shopify. Please verify your shop URL and access token.")
+
+            response.success = False
 
         if self.yotpo_app_key is not None and self.yotpo_access_token is not None:
             url = f"https://api.yotpo.com/v1/apps/{self.yotpo_app_key}/reviews?count=1&utoken={self.yotpo_access_token}"
-            headers = {
-                "accept": "application/json",
-                "Content-Type": "application/json"
-            }
+            headers = {"accept": "application/json", "Content-Type": "application/json"}
             if requests.get(url, headers=headers).status_code == 200:
                 response.success = True
             else:

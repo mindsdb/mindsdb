@@ -100,7 +100,7 @@ class SqlalchemyRender:
             dialect = dialect_name
 
         # override dialect's preparer
-        if hasattr(dialect, "preparer") and dialect.preparer.__name__ != 'MDBPreparer':
+        if hasattr(dialect, "preparer") and dialect.preparer.__name__ != "MDBPreparer":
 
             class MDBPreparer(dialect.preparer):
                 def _requires_quotes(self, value: str) -> bool:

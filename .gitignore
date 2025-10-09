@@ -15,9 +15,10 @@ tests/integration/flows/my_model.zip
 distributions/docker-compose/*/storage
 venv/*
 env/*
+mindsdb-venv/*
 .envrc
 *.env
-mindsdb-venv/*
+
 root
 static
 tmp

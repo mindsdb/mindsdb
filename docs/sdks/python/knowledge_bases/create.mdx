@@ -102,13 +102,73 @@ When choosing `bedrock` as the model provider, users should define the following
 
 #### `provider = 'snowflake'`
 
-This provider is supported for `reranking_model`.
+This provider is supported for `reranking_model`. Note that Snowflake Cortex AI does not offer embedding models as of now.
 
 When choosing `snowflake` as the model provider, users should choose one of the available models from [Snowflake Cortex AI](https://www.snowflake.com/en/product/features/cortex/) and define the following model parameters.
 
 * `model_name` stores the name of the model available via Snowflake Cortex AI.
 * `api_key` stores the Snowflake Cortex AI API key.
 * `snowflake_account_id` stores the Snowflake account ID.
+
+<Accordion title = "How to Generate the API key of Snowflake Cortex AI">
+
+Follow the below steps to generate the API key.
+
+1. Generate a key pair according to [this instruction](https://docs.snowflake.com/en/user-guide/key-pair-auth) as below.
+
+    * Execute these commands in the console:
+
+        ```bash
+        # generate private key
+        openssl genrsa 2048 | openssl pkcs8 -topk8 -inform PEM -out rsa_key.p8 -nocrypt
+        # generate public key
+        openssl rsa -in rsa_key.p8 -pubout -out rsa_key.pub
+        ```
+    
+    * Save the public key, that is, the content of rsa_key.pub, into your database user:
+
+        ```sql
+        ALTER USER my_user SET RSA_PUBLIC_KEY = "<content of rsa_key.pub>"
+        ```
+
+2. Verify the key pair with the database user.
+
+    * Install `snowsql` following [this instruction](https://docs.snowflake.com/en/user-guide/snowsql-install-config).
+
+    * Execute this command in the console:
+
+        ```bash
+        snowsql -a <snowflake-account-id> -u my_user --private-key-path rsa_key.p8
+        ```
+
+3. Generate JWT token.
+
+    * Download the Python script from [Snowflake's Developer Guide for Authentication](https://docs.snowflake.com/en/developer-guide/sql-api/authenticating). Here is a [direct download link](https://docs.snowflake.com/en/_downloads/aeb84cdfe91dcfbd889465403b875515/sql-api-generate-jwt.py).
+
+    * Ensure to have the PyJWT module installed that is required for running the script.
+
+    * Run the script using this command:
+
+        ```bash
+        sql-api-generate-jwt.py --account <snowflake-account-id> --user my_user --private_key_file_path rsa_key.p8
+        ```
+
+        This command returns the JWT token, which is used in the `api_key` parameter for the `snowflake` provider.
+
+</Accordion>
+
+#### `provider = 'ollama'`
+
+This provider is supported for both `embedding_model` and `reranking_model`.
+
+<Note>
+Users can define the default embedding and reranking models from Ollama in Settings of the MindsDB GUI.
+</Note>
+
+When choosing `ollama` as the model provider, users should define the following model parameters.
+
+* `model_name` stores the name of the model to be used.
+* `base_url` stores the base URL of the Ollama instance.
 
 ### `embedding_model`
 

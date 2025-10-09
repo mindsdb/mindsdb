@@ -4,6 +4,7 @@ from typing import List
 import duckdb
 from duckdb import InvalidInputException
 import numpy as np
+import orjson
 
 from mindsdb_sql_parser import parse_sql
 from mindsdb_sql_parser.ast import ASTNode, Select, Identifier, Function, Constant
@@ -244,13 +245,13 @@ def query_df(df, query, session=None):
 
     query_traversal(query_ast, adapt_query)
 
-    # convert json columns
-    encoder = CustomJSONEncoder()
-
     def _convert(v):
         if isinstance(v, dict) or isinstance(v, list):
             try:
-                return encoder.encode(v)
+                default_encoder = CustomJSONEncoder().default
+                return orjson.dumps(
+                    v, default=default_encoder, option=orjson.OPT_SERIALIZE_NUMPY | orjson.OPT_PASSTHROUGH_DATETIME
+                ).decode("utf-8")
             except Exception:
                 pass
         return v

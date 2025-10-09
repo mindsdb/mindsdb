@@ -550,7 +550,7 @@ if __name__ == "__main__":
                         trunc_process_data.process = None
                         if trunc_process_data.name == TrunkProcessEnum.HTTP.value:
                             # do not open GUI on HTTP API restart
-                            trunc_process_data.args = (config.cmd_args.verbose, True)
+                            trunc_process_data.args = (config.cmd_args.verbose, None, True)
                         start_process(trunc_process_data)
                         api_name, port, started = await wait_api_start(
                             trunc_process_data.name,

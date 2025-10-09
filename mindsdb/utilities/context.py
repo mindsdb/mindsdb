@@ -27,6 +27,7 @@ class Context:
                 'tree': None
             },
             'email_confirmed': 0,
+            'used_handlers': set()
         })
 
     def __getattr__(self, name: str) -> Any:

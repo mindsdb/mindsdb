@@ -29,7 +29,15 @@ class VectorStoreLoader(BaseModel):
         Loads the vector store based on the provided config and embeddings model
         :return:
         """
-        if self.config.is_sparse is not None and self.config.vector_size is not None and self.config.kb_table is not None:
+        if not self.config:
+            raise ValueError("VectorStoreLoader.load() requires a valid VectorStoreConfig")
+
+        if not self.config.kb_table:
+            raise ValueError("VectorStoreConfig.kb_table must be set to load a vector store")
+
+        if self.config.vector_store_type == VectorStoreType.PGVECTOR:
+            if self.config.vector_size is None:
+                raise ValueError("Vector size must be specified for PGVector")
             # Only use PGVector store for sparse vectors.
             db_handler = self.config.kb_table.get_vector_db()
             db_args = db_handler.connection_args

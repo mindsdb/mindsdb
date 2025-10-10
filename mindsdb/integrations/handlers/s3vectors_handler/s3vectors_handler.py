@@ -31,6 +31,7 @@ DEFAULT_CREATE_TABLE_PARAMS = {
 MAX_FETCH_LIMIT = 10000
 UPSERT_BATCH_SIZE = 100
 MAX_METADATA_KEYS = 10  # S3 Vectors has a hard limit of 10 metadata keys per vector
+MAX_GET_VECTORS_KEYS = 100  # S3 Vectors API limit for GetVectors operation
 
 
 class S3VectorsHandler(VectorStoreHandler):
@@ -508,32 +509,41 @@ class S3VectorsHandler(VectorStoreHandler):
 
         elif id_filters:
             # Get by IDs (supports single or multiple IDs)
-            try:
-                result = connection.get_vectors(
-                    vectorBucketName=self.vector_bucket,
-                    indexName=table_name,
-                    keys=[str(id_val) for id_val in id_filters]
-                )
+            # AWS S3 Vectors API has a limit of 100 keys per GetVectors call, so batch requests
+            results_data = []
 
-                # Parse results
-                vectors = result.get("Vectors", [])
-                results_data = []
-                for vector in vectors:
-                    metadata = vector.get("Metadata", {})
-                    # Extract content from metadata if it exists
-                    content = metadata.get("_content", "")
+            # Convert all IDs to strings
+            id_strings = [str(id_val) for id_val in id_filters]
 
-                    results_data.append({
-                        TableField.ID.value: vector.get("Key"),
-                        TableField.CONTENT.value: content,
-                        TableField.EMBEDDINGS.value: vector.get("Vector", []),
-                        TableField.METADATA.value: metadata,
-                    })
+            # Batch the requests in chunks of MAX_GET_VECTORS_KEYS
+            for i in range(0, len(id_strings), MAX_GET_VECTORS_KEYS):
+                batch_ids = id_strings[i:i + MAX_GET_VECTORS_KEYS]
 
-            except Exception as e:
-                logger.warning(f"Error querying vectors by ID from '{table_name}': {e}")
-                # Return empty DataFrame with proper structure instead of raising
-                results_data = []
+                try:
+                    result = connection.get_vectors(
+                        vectorBucketName=self.vector_bucket,
+                        indexName=table_name,
+                        keys=batch_ids
+                    )
+
+                    # Parse results
+                    vectors = result.get("Vectors", [])
+                    for vector in vectors:
+                        metadata = vector.get("Metadata", {})
+                        # Extract content from metadata if it exists
+                        content = metadata.get("_content", "")
+
+                        results_data.append({
+                            TableField.ID.value: vector.get("Key"),
+                            TableField.CONTENT.value: content,
+                            TableField.EMBEDDINGS.value: vector.get("Vector", []),
+                            TableField.METADATA.value: metadata,
+                        })
+
+                except Exception as e:
+                    logger.warning(f"Error querying vectors by ID batch from '{table_name}': {e}")
+                    # Continue with next batch instead of failing completely
+                    continue
 
             results_df = pd.DataFrame(results_data) if results_data else pd.DataFrame(columns=[
                 TableField.ID.value,

@@ -238,21 +238,29 @@ def initialize_app(is_restart: bool = False):
                 "The endpoint you are trying to access does not exist on the server.",
             )
 
-        # Normalize the path.
-        full_path = os.path.normpath(os.path.join(static_root, path))
+        try:
+            # Ensure the requested path is within the static directory
+            # https://docs.python.org/3/library/pathlib.html#pathlib.PurePath.is_relative_to
+            requested_path = (static_root / path).resolve()
 
-        # Check for directory traversal attacks.
-        if not full_path.startswith(str(static_root)):
+            if not requested_path.is_relative_to(static_root.resolve()):
+                return http_error(
+                    HTTPStatus.FORBIDDEN,
+                    "Forbidden",
+                    "You are not allowed to access the requested resource.",
+                )
+
+            if requested_path.is_file():
+                return send_from_directory(static_root, path)
+            else:
+                return send_from_directory(static_root, "index.html")
+
+        except (ValueError, OSError):
             return http_error(
-                HTTPStatus.FORBIDDEN,
-                "Forbidden",
-                "You are not allowed to access the requested resource.",
+                HTTPStatus.BAD_REQUEST,
+                "Bad Request",
+                "Invalid path requested.",
             )
-
-        if os.path.isfile(full_path):
-            return send_from_directory(static_root, path)
-        else:
-            return send_from_directory(static_root, "index.html")
 
     protected_namespaces = [
         tab_ns,

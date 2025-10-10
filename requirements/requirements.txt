@@ -54,11 +54,11 @@ uvicorn>=0.30.0, <1.0.0   # For all HTTP-based APIs
 # files reading
 pymupdf==1.25.2
 filetype
+chardet
 charset-normalizer
 openpyxl # used by pandas to read txt and xlsx files
 aipdf==0.0.5
 pyarrow<=19.0.0 # used by pandas to read feather files in Files handler
-
 
 # A2A server
 httpx==0.28.1

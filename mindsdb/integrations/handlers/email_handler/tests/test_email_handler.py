@@ -1,85 +1,140 @@
-# mindsdb/integrations/handlers/email_handler/tests/test_email_handler.py
+from __future__ import annotations
 
-import imaplib
-import unittest
 from unittest.mock import MagicMock, patch
 
+import pandas as pd
+import pytest
+
 from mindsdb.integrations.handlers.email_handler.email_handler import EmailHandler
-from mindsdb.integrations.libs.response import HandlerStatusResponse
+from mindsdb.integrations.handlers.email_handler.email_client import EmailClient
+from mindsdb.integrations.handlers.email_handler.settings import EmailSearchOptions
 
 
-class EmailHandlerTest(unittest.TestCase):
-    @patch("mindsdb.integrations.handlers.email_handler.email_handler.imaplib")
-    def test_connect_with_advanced_settings(self, mock_imaplib):
-        mock_connection = MagicMock()
-        mock_connection.login.return_value = ("OK", [b"Login successful"])
-        mock_imaplib.IMAP4_SSL.return_value = mock_connection
-        connection_data = {
-            "email": "user@proton.me",
-            "password": "test_password",
-            "host": "127.0.0.1",
-            "port": 1143,
-            "username": "user@localhost",
-        }
-        handler = EmailHandler("test_email_handler", connection_data=connection_data)
-        handler.connect()
-        mock_imaplib.IMAP4_SSL.assert_called_once_with("127.0.0.1", 1143)
-        mock_connection.login.assert_called_once_with("user@localhost", "test_password")
+class TestEmailHandlerAdvanced:
+    def test_advanced_settings_precedence_passthrough(self):
+        # Given advanced settings, they should take precedence over defaults.
+        handler = EmailHandler(
+            connection_data={
+                "email": "user@proton.me",
+                "password": "secret",
+                "imap_host": "127.0.0.1",
+                "imap_port": 1143,
+                "imap_use_ssl": False,
+                "imap_use_starttls": True,
+                "imap_username": "user@localhost",
+                "smtp_host": "127.0.0.1",
+                "smtp_port": 1025,
+                "smtp_starttls": False,
+            }
+        )
 
-    @patch("mindsdb.integrations.handlers.email_handler.email_handler.imaplib")
-    def test_connect_fallback_to_deduced_settings(self, mock_imaplib):
-        mock_connection = MagicMock()
-        mock_connection.login.return_value = ("OK", [b"Login successful"])
-        mock_imaplib.IMAP4_SSL.return_value = mock_connection
-        connection_data = {"email": "user@example.com", "password": "test_password"}
-        handler = EmailHandler("test_email_handler", connection_data=connection_data)
-        handler.connect()
-        mock_imaplib.IMAP4_SSL.assert_called_once_with("imap.example.com", 993)
-        mock_connection.login.assert_called_once_with("user@example.com", "test_password")
+        with (
+            patch("mindsdb.integrations.handlers.email_handler.email_client.imaplib.IMAP4") as mock_imap4,
+            patch("mindsdb.integrations.handlers.email_handler.email_client.smtplib.SMTP") as mock_smtp,
+        ):
+            mock_imap4.return_value = MagicMock()
+            mock_smtp.return_value = MagicMock()
 
-    @patch("mindsdb.integrations.handlers.email_handler.email_handler.imaplib")
-    def test_connect_no_ssl(self, mock_imaplib):
-        mock_connection = MagicMock()
-        mock_connection.login.return_value = ("OK", [b"Login successful"])
-        mock_imaplib.IMAP4.return_value = mock_connection
-        connection_data = {
-            "email": "user@insecure.com",
-            "password": "test_password",
-            "host": "imap.insecure.com",
-            "port": 143,
-            "use_ssl": False,
-        }
-        handler = EmailHandler("test_email_handler", connection_data=connection_data)
-        handler.connect()
-        mock_imaplib.IMAP4_SSL.assert_not_called()
-        mock_imaplib.IMAP4.assert_called_once_with("imap.insecure.com", 143)
-        mock_connection.login.assert_called_once_with("user@insecure.com", "test_password")
+            client = handler.connect()
+            assert isinstance(client, EmailClient)
 
-    @patch("mindsdb.integrations.handlers.email_handler.email_handler.imaplib")
-    def test_check_connection_success(self, mock_imaplib):
-        mock_connection = MagicMock()
-        mock_connection.login.return_value = ("OK", [b"Login successful"])
-        mock_imaplib.IMAP4_SSL.return_value = mock_connection
-        connection_data = {"email": "user@example.com", "password": "pwd"}
-        handler = EmailHandler("test_email_handler", connection_data=connection_data)
-        status = handler.check_connection()
-        self.assertIsInstance(status, HandlerStatusResponse)
-        self.assertTrue(status.success)
-        mock_connection.logout.assert_called_once()
+            # Ensure IMAP4 (non-SSL) was used with host/port from advanced settings
+            mock_imap4.assert_called_once_with("127.0.0.1", 1143)
 
-    @patch("mindsdb.integrations.handlers.email_handler.email_handler.imaplib")
-    def test_check_connection_failure(self, mock_imaplib):
-        mock_imaplib.IMAP4_SSL.side_effect = imaplib.IMAP4.error("Authentication failed")
-        connection_data = {
-            "email": "user@example.com",
-            "password": "wrong_password",
-        }
-        handler = EmailHandler("test_email_handler", connection_data=connection_data)
-        status = handler.check_connection()
-        self.assertIsInstance(status, HandlerStatusResponse)
-        self.assertFalse(status.success)
-        self.assertIn("Authentication failed", status.error_message)
+            # Ensure SMTP used host/port from advanced settings
+            mock_smtp.assert_called_once_with("127.0.0.1", 1025)
 
+            # Ensure username override is set
+            assert client.imap_username == "user@localhost"
 
-if __name__ == "__main__":
-    unittest.main()
+            handler.disconnect()
+
+    def test_check_connection_success_and_failure(self):
+        # Success path
+        handler_ok = EmailHandler(connection_data={"email": "e", "password": "p"})
+        with (
+            patch.object(EmailClient, "select_mailbox", return_value=None),
+            patch.object(EmailClient, "logout", return_value=None),
+            patch("mindsdb.integrations.handlers.email_handler.email_client.imaplib.IMAP4_SSL") as mock_ssl,
+            patch("mindsdb.integrations.handlers.email_handler.email_client.smtplib.SMTP") as mock_smtp,
+        ):
+            mock_ssl.return_value = MagicMock()
+            mock_smtp.return_value = MagicMock()
+
+            resp_ok = handler_ok.check_connection()
+            assert resp_ok.success is True
+            assert not resp_ok.error_message
+
+        # Failure path: simulate constructor raising
+        with (
+            patch(
+                "mindsdb.integrations.handlers.email_handler.email_client.imaplib.IMAP4_SSL",
+                side_effect=RuntimeError("boom"),
+            ),
+            patch("mindsdb.integrations.handlers.email_handler.email_client.smtplib.SMTP") as mock_smtp,
+        ):
+            mock_smtp.return_value = MagicMock()
+            handler_fail = EmailHandler(connection_data={"email": "e", "password": "p"})
+            resp_fail = handler_fail.check_connection()
+            assert resp_fail.success is False
+            assert "Error connecting to Email" in (resp_fail.error_message or "")
+
+    def test_mailbox_sanitization(self):
+        handler = EmailHandler(connection_data={"email": "e", "password": "p"})
+        with (
+            patch("mindsdb.integrations.handlers.email_handler.email_client.imaplib.IMAP4_SSL") as mock_ssl,
+            patch("mindsdb.integrations.handlers.email_handler.email_client.smtplib.SMTP") as mock_smtp,
+        ):
+            imap = MagicMock()
+            mock_ssl.return_value = imap
+            mock_smtp.return_value = MagicMock()
+
+            client = handler.connect()
+            # login/select should fail on traversal mailbox
+            imap.login.return_value = ("OK", [])
+            imap.select.return_value = ("OK", [])
+            with pytest.raises(ValueError):
+                client.select_mailbox("INBOX/../../etc")
+            handler.disconnect()
+
+    def test_uid_fetch_uses_comma_separated_and_chunking(self):
+        handler = EmailHandler(connection_data={"email": "e", "password": "p"})
+        with (
+            patch("mindsdb.integrations.handlers.email_handler.email_client.imaplib.IMAP4_SSL") as mock_ssl,
+            patch("mindsdb.integrations.handlers.email_handler.email_client.smtplib.SMTP") as mock_smtp,
+            patch.object(EmailClient, "_UID_FETCH_CHUNK", 2),
+        ):  # Force multiple chunks for this test
+            imap = MagicMock()
+            mock_ssl.return_value = imap
+            mock_smtp.return_value = MagicMock()
+
+            # Arrange IMAP responses
+            imap.login.return_value = ("OK", [])
+            imap.select.return_value = ("OK", [])
+            # Simulate 3 UIDs
+            imap.uid.side_effect = [
+                # First call: search
+                ("OK", [b"1 2 3"]),
+                # Second call: fetch chunk 1 (1,2)
+                ("OK", [(b"1 (UID 1 RFC822 {10})", b"From: a\r\nSubject: s\r\n\r\nbody")]),
+                # Third call: fetch chunk 2 (3)
+                ("OK", [(b"3 (UID 3 RFC822 {10})", b"From: a\r\nSubject: s\r\n\r\nbody")]),
+            ]
+
+            client = handler.connect()
+            df = client.search_email(EmailSearchOptions(mailbox="INBOX"))
+            assert isinstance(df, pd.DataFrame)
+
+            # Assert uid was called for search and then for fetch twice
+            assert imap.uid.call_count == 3
+            # Validate the comma-separated list used in fetch
+            # 2nd call args
+            fetch_args_1 = imap.uid.call_args_list[1].args
+            assert fetch_args_1[0] == "fetch"
+            assert fetch_args_1[1] == "1,2"
+            # 3rd call args
+            fetch_args_2 = imap.uid.call_args_list[2].args
+            assert fetch_args_2[0] == "fetch"
+            assert fetch_args_2[1] == "3"
+
+            handler.disconnect()

@@ -1,27 +1,31 @@
 import datetime
-from pydantic import BaseModel
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict
 
 
 class EmailSearchOptions(BaseModel):
     """
     Represents IMAP search options to use when searching emails
     """
+
     # IMAP mailbox to search.
     mailbox: str = "INBOX"
     # Search by email subject.
-    subject: str = None
+    subject: Optional[str] = None
     # Search based on who the email was sent to.
-    to_field: str = None
+    to_field: Optional[str] = None
     # Search based on who the email was from.
-    from_field: str = None
+    from_field: Optional[str] = None
     # Search based on when the email was received.
-    since_date: datetime.date = None
-    until_date: datetime.date = None
+    since_date: Optional[datetime.date] = None
+    until_date: Optional[datetime.date] = None
     # Search for all emails after this ID.
-    since_email_id: int = None
+    since_email_id: Optional[int] = None
 
-    class Config:
-        json_schema_extra = {
+    # Pydantic v2 config (removes deprecation warnings)
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "mailbox": "INBOX",
                 "subject": "Test",
@@ -29,31 +33,54 @@ class EmailSearchOptions(BaseModel):
                 "from_email": "hello@example.com",
                 "since_date": "2021-01-01",
                 "until_date": "2021-01-31",
-                "since_email_id": "123"
+                "since_email_id": "123",
             }
-
-        }
-        extra = "forbid"
+        },
+        extra="forbid",
+    )
 
 
 class EmailConnectionDetails(BaseModel):
     """
-    Represents the connection details for an email client
+    Represents the connection details for an email client.
+    Backward compatible with previous fields and extended with advanced options.
     """
+
     email: str
     password: str
+
+    # Backward-compat legacy fields (kept for compatibility)
     imap_server: str = "imap.gmail.com"
     smtp_server: str = "smtp.gmail.com"
     smtp_port: int = 587
 
-    class Config:
-        json_schema_extra = {
+    # Advanced IMAP fields
+    imap_host: Optional[str] = None
+    imap_port: Optional[int] = None
+    imap_use_ssl: bool = True
+    imap_use_starttls: bool = False
+    imap_username: Optional[str] = None
+
+    # Advanced SMTP fields
+    smtp_host: Optional[str] = None
+    smtp_starttls: bool = True
+    smtp_username: Optional[str] = None  # not used currently but left for parity
+
+    # Pydantic v2 config (removes deprecation warnings)
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "email": "joe@bloggs.com",
                 "password": "password",
-                "imap_server": "imap.gmail.com",
-                "smtp_server": "smtp.gmail.com",
-                "smtp_port": 587
+                "imap_host": "127.0.0.1",
+                "imap_port": 1143,
+                "imap_use_ssl": False,
+                "imap_use_starttls": True,
+                "imap_username": "joe@localhost",
+                "smtp_host": "127.0.0.1",
+                "smtp_port": 587,
+                "smtp_starttls": True,
             }
-        }
-        extra = "forbid"
+        },
+        extra="forbid",
+    )

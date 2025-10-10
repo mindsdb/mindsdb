@@ -59,7 +59,7 @@ charset-normalizer
 openpyxl # used by pandas to read txt and xlsx files
 aipdf==0.0.5
 pyarrow<=19.0.0 # used by pandas to read feather files in Files handler
-
+orjson==3.11.3
 
 # A2A server
 httpx==0.28.1

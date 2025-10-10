@@ -98,9 +98,9 @@ class SqlalchemyRender:
             dialect = dialect_name
 
         # override dialect's preparer
-        if hasattr(dialect, "preparer"):
+        if hasattr(dialect, "preparer") and dialect.preparer.__name__ != "MDBPreparer":
 
-            class Preparer(dialect.preparer):
+            class MDBPreparer(dialect.preparer):
                 def _requires_quotes(self, value: str) -> bool:
                     # check force-quote flag
                     if isinstance(value, AttributedStr):
@@ -116,7 +116,7 @@ class SqlalchemyRender:
                         # or (lc_value != value)
                     )
 
-            dialect.preparer = Preparer
+            dialect.preparer = MDBPreparer
 
         # remove double percent signs
         # https://docs.sqlalchemy.org/en/14/faq/sqlexpressions.html#why-are-percent-signs-being-doubled-up-when-stringifying-sql-statements

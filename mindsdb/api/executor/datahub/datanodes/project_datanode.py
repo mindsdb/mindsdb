@@ -188,6 +188,8 @@ class ProjectDataNode(DataNode):
                 kb_table.clear()
 
             df = result_set.to_df()
-            kb_table.insert(df, params=params)
+            result_df = kb_table.insert(df, params=params)
+            if isinstance(result_df, pd.DataFrame):
+                return DataHubResponse(data_frame=result_df)
             return DataHubResponse()
         raise NotImplementedError(f"Can't create table {table_name}")

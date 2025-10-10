@@ -332,8 +332,11 @@ class VectorStoreHandler(BaseHandler):
             self.set_metadata_cur_time(df, "_updated_at")
 
         if hasattr(self, "upsert"):
-            self.upsert(table_name, df)
-            return
+            result = self.upsert(table_name, df)
+            # If upsert returns data, return it; otherwise return the IDs we processed
+            if result is not None:
+                return result
+            return pd.DataFrame({id_col: list(df[id_col])})
 
         # find existing ids
         df_existed = self.select(
@@ -381,6 +384,9 @@ class VectorStoreHandler(BaseHandler):
                 self.set_metadata_cur_time(df_insert, "_created_at")
 
             self.insert(table_name, df_insert)
+
+        # Return DataFrame with all processed IDs (both inserted and updated)
+        return pd.DataFrame({id_col: list(df[id_col])})
 
     def dispatch_delete(self, query: Delete, conditions: List[FilterCondition] = None):
         """

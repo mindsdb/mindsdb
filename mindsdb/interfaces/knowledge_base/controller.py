@@ -780,9 +780,9 @@ class KnowledgeBaseTable:
 
         if params is not None and params.get("kb_no_upsert", False):
             # speed up inserting by disable checking existing records
-            db_handler.insert(self._kb.vector_database_table, df)
+            return db_handler.insert(self._kb.vector_database_table, df)
         else:
-            db_handler.do_upsert(self._kb.vector_database_table, df)
+            return db_handler.do_upsert(self._kb.vector_database_table, df)
 
     def _adapt_column_names(self, df: pd.DataFrame) -> pd.DataFrame:
         """

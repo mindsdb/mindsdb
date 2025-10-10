@@ -328,6 +328,9 @@ class S3VectorsHandler(VectorStoreHandler):
             lambda x: ast.literal_eval(x) if isinstance(x, str) else x
         )
 
+        # Capture IDs before insertion to return them later
+        inserted_ids = data["id"].tolist()
+
         # Insert in batches
         for chunk in (data[pos:pos + UPSERT_BATCH_SIZE] for pos in range(0, len(data), UPSERT_BATCH_SIZE)):
             vectors = []
@@ -352,6 +355,9 @@ class S3VectorsHandler(VectorStoreHandler):
                 logger.error(f"Error inserting vectors into '{table_name}': {e}")
                 logger.error(f"First vector in batch: {vectors[0] if vectors else 'No vectors'}")
                 raise Exception(f"Error inserting vectors into S3Vectors index '{table_name}': {e}")
+
+        # Return DataFrame with inserted IDs so users can track and manage them
+        return pd.DataFrame({TableField.ID.value: inserted_ids})
 
     def drop_table(self, table_name: str, if_exists=True):
         """Delete an index from the S3 Vectors bucket."""

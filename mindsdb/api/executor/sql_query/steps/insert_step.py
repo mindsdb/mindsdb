@@ -95,6 +95,10 @@ class InsertToTableCall(BaseStepCall):
         response = dn.create_table(
             table_name=table_name, result_set=data, is_replace=is_replace, is_create=is_create, params=step.params
         )
+        if response.data_frame is not None:
+            cols = [Column(name=col_name) for col_name in response.data_frame.columns]
+            values = response.data_frame.values.tolist()
+            return ResultSet(affected_rows=response.affected_rows, columns=cols, values=values)
         return ResultSet(affected_rows=response.affected_rows)
 
 

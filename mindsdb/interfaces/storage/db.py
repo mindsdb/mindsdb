@@ -545,11 +545,10 @@ class KnowledgeBase(Base):
         reranking_model = params.pop("reranking_model", None)
 
         if not with_secrets:
-            if embedding_model and "api_key" in embedding_model:
-                embedding_model["api_key"] = "******"
-
-            if reranking_model and "api_key" in reranking_model:
-                reranking_model["api_key"] = "******"
+            for key in ("api_key", "private_key"):
+                for el in (embedding_model, reranking_model):
+                    if el and key in el:
+                        el[key] = "******"
 
         return {
             "id": self.id,

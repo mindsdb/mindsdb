@@ -35,6 +35,12 @@ class VectorStoreLoader(BaseModel):
         if not self.config.kb_table:
             raise ValueError("VectorStoreConfig.kb_table must be set to load a vector store")
 
+        if not self.config:
+            raise ValueError("VectorStoreLoader.load() requires a valid VectorStoreConfig")
+
+        if not self.config.kb_table:
+            raise ValueError("VectorStoreConfig.kb_table must be set to load a vector store")
+
         if self.config.vector_store_type == VectorStoreType.PGVECTOR:
             if self.config.vector_size is None:
                 raise ValueError("Vector size must be specified for PGVector")

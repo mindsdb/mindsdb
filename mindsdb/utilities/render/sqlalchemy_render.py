@@ -88,7 +88,6 @@ dialects = {
     "sqlite": sqlite,
     "mssql": mssql,
     "oracle": oracle,
-    "Snowflake": oracle,
 }
 
 

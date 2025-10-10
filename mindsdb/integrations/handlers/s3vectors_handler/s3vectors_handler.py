@@ -30,6 +30,7 @@ DEFAULT_CREATE_TABLE_PARAMS = {
 }
 MAX_FETCH_LIMIT = 10000
 UPSERT_BATCH_SIZE = 100
+MAX_METADATA_KEYS = 10  # S3 Vectors has a hard limit of 10 metadata keys per vector
 
 
 class S3VectorsHandler(VectorStoreHandler):
@@ -53,6 +54,15 @@ class S3VectorsHandler(VectorStoreHandler):
     def __del__(self):
         if self.is_connected is True:
             self.disconnect()
+
+    def get_metadata_limits(self) -> Optional[Dict[str, int]]:
+        """
+        S3 Vectors has a hard limit of 10 metadata keys per vector.
+
+        Returns:
+            Dictionary with 'max_keys' set to 10
+        """
+        return {'max_keys': MAX_METADATA_KEYS}
 
     def _get_s3vectors_operator(self, operator: FilterOperator) -> str:
         """Convert FilterOperator to an operator that S3 Vectors query language can understand"""

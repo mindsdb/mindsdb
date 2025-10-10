@@ -92,6 +92,18 @@ class VectorStoreHandler(BaseHandler):
     def disconnect(self):
         pass
 
+    def get_metadata_limits(self) -> Optional[Dict[str, int]]:
+        """
+        Get metadata constraints for this vector database.
+
+        Returns:
+            Dictionary with metadata limits, or None if no limits.
+            Possible keys:
+            - 'max_keys': Maximum number of metadata keys allowed per vector
+            - 'max_value_size': Maximum size of metadata values in bytes
+        """
+        return None
+
     def _value_or_self(self, value):
         if isinstance(value, Constant):
             return value.value
@@ -313,8 +325,11 @@ class VectorStoreHandler(BaseHandler):
         # id is string TODO is it ok?
         df[id_col] = df[id_col].apply(str)
 
-        # set updated_at
-        self.set_metadata_cur_time(df, "_updated_at")
+        # set updated_at (skip if vector DB has metadata key limits)
+        limits = self.get_metadata_limits()
+        skip_timestamps = limits and 'max_keys' in limits
+        if not skip_timestamps:
+            self.set_metadata_cur_time(df, "_updated_at")
 
         if hasattr(self, "upsert"):
             self.upsert(table_name, df)
@@ -361,8 +376,9 @@ class VectorStoreHandler(BaseHandler):
                 self.delete(table_name, conditions)
                 self.insert(table_name, df_update)
         if not df_insert.empty:
-            # set created_at
-            self.set_metadata_cur_time(df_insert, "_created_at")
+            # set created_at (skip if vector DB has metadata key limits)
+            if not skip_timestamps:
+                self.set_metadata_cur_time(df_insert, "_created_at")
 
             self.insert(table_name, df_insert)
 

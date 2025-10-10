@@ -22,6 +22,16 @@ class BasePreprocessingConfig(BaseModel):
     chunk_size: int = Field(default=DEFAULT_CHUNK_SIZE, description="Size of document chunks")
     chunk_overlap: int = Field(default=DEFAULT_CHUNK_OVERLAP, description="Overlap between chunks")
     doc_id_column_name: str = Field(default="_original_doc_id", description="Name of doc_id columns in metadata")
+    max_metadata_keys: Optional[int] = Field(default=None, description="Maximum number of metadata keys (e.g., 10 for S3 Vectors)")
+    include_timestamps: bool = Field(default=False, description="Whether to include _created_at and _updated_at timestamps in metadata")
+
+    @model_validator(mode="after")
+    def auto_disable_timestamps_for_limits(self) -> "BasePreprocessingConfig":
+        """Automatically disable timestamps when metadata key limit is set to save space"""
+        if self.max_metadata_keys is not None and self.include_timestamps:
+            # Auto-disable timestamps to save metadata keys
+            self.include_timestamps = False
+        return self
 
 
 class ContextualConfig(BasePreprocessingConfig):

@@ -165,6 +165,37 @@ class KnowledgeBaseTable:
         if self._kb.params.get("version", 0) < 2:
             self.kb_to_vector_columns["id"] = "original_doc_id"
 
+        # Detect and store vector database metadata limits
+        self._detect_and_store_vector_db_limits()
+
+    def _detect_and_store_vector_db_limits(self):
+        """
+        Detect vector database metadata limits and store them in KB params.
+        This ensures preprocessing configuration is consistent across sessions.
+        """
+        try:
+            # Check if limits are already stored
+            if 'vector_db_limits' in self._kb.params:
+                logger.debug(f"Using stored vector DB limits: {self._kb.params['vector_db_limits']}")
+                return
+
+            # Get vector DB handler and check for limits
+            db_handler = self.get_vector_db()
+            if hasattr(db_handler, 'get_metadata_limits'):
+                limits = db_handler.get_metadata_limits()
+                if limits:
+                    logger.info(f"Detected vector DB metadata limits: {limits}")
+                    self._kb.params['vector_db_limits'] = limits
+                    flag_modified(self._kb, "params")
+                    db.session.commit()
+                else:
+                    logger.debug("No vector DB metadata limits detected")
+            else:
+                logger.debug("Vector DB handler does not support get_metadata_limits()")
+        except Exception as e:
+            # Don't fail initialization if limits detection fails
+            logger.warning(f"Could not detect vector DB limits: {e}")
+
     def configure_preprocessing(self, config: Optional[dict] = None):
         """Configure preprocessing for the knowledge base table"""
         logger.debug(f"Configuring preprocessing with config: {config}")
@@ -176,6 +207,24 @@ class KnowledgeBaseTable:
         if config.get("type") == "json_chunking" and config.get("json_chunking_config"):
             if "content_column" not in config["json_chunking_config"]:
                 config["json_chunking_config"]["content_column"] = "content"
+
+        # Apply stored vector database limits to preprocessing configuration
+        vector_db_limits = self._kb.params.get('vector_db_limits')
+        if vector_db_limits and 'max_keys' in vector_db_limits:
+            max_metadata_keys = vector_db_limits['max_keys']
+            logger.info(f"Applying vector DB metadata limit: max_keys={max_metadata_keys}")
+
+            # Apply limits to all config types
+            config_types = ['text_chunking_config', 'contextual_config', 'json_chunking_config']
+            for config_type in config_types:
+                if config.get(config_type) is None:
+                    config[config_type] = {}
+                # Set max_metadata_keys if not already set by user
+                if 'max_metadata_keys' not in config[config_type]:
+                    config[config_type]['max_metadata_keys'] = max_metadata_keys
+                # Disable timestamps by default when there's a metadata limit to save space
+                if 'include_timestamps' not in config[config_type]:
+                    config[config_type]['include_timestamps'] = False
 
         preprocessing_config = PreprocessingConfig(**config)
         self.document_preprocessor = PreprocessorFactory.create_preprocessor(preprocessing_config)
@@ -656,6 +705,32 @@ class KnowledgeBaseTable:
                     }
 
                     raw_documents.append(Document(content=content_str, id=doc_id, metadata=metadata))
+
+        # Ensure preprocessor is configured before processing documents
+        # IMPORTANT: Force reconfiguration if we have metadata limits but preprocessor
+        # was created before limits were added (for backwards compatibility)
+        vector_db_limits = self._kb.params.get('vector_db_limits')
+        needs_reconfiguration = (
+            vector_db_limits and
+            self.document_preprocessor and
+            (not hasattr(self.document_preprocessor.config, 'max_metadata_keys') or
+             self.document_preprocessor.config.max_metadata_keys != vector_db_limits.get('max_keys'))
+        )
+
+        if self.document_preprocessor is None or needs_reconfiguration:
+            if needs_reconfiguration:
+                logger.info("Reconfiguring preprocessor to apply metadata limits...")
+                self.document_preprocessor = None  # Force recreation
+
+            # Try to detect vector DB limits if not already done
+            # (this is needed for KBs created before limit detection was added)
+            if 'vector_db_limits' not in self._kb.params:
+                logger.info("Vector DB limits not found in KB params, attempting detection now...")
+                self._detect_and_store_vector_db_limits()
+
+            # Configure with default settings, which will apply vector DB limits if detected
+            preprocessing_config = self._kb.params.get('preprocessing')
+            self.configure_preprocessing(preprocessing_config)
 
         # Apply preprocessing to all documents if preprocessor exists
         if self.document_preprocessor:

@@ -97,8 +97,18 @@ class DocumentPreprocessor:
         doc_id: Optional[str],
         chunk_index: Optional[int],
         base_metadata: Optional[Dict] = None,
+        max_metadata_keys: Optional[int] = None,
+        include_timestamps: bool = True,
     ) -> Dict:
-        """Centralized method for preparing chunk metadata"""
+        """Centralized method for preparing chunk metadata
+
+        Args:
+            doc_id: Document ID to preserve
+            chunk_index: Index of chunk in document (None for single chunks)
+            base_metadata: Base metadata dictionary to build upon
+            max_metadata_keys: Maximum number of metadata keys allowed (e.g., 10 for S3 Vectors)
+            include_timestamps: Whether to include _created_at and _updated_at timestamps
+        """
         metadata = base_metadata or {}
 
         # Always preserve original document ID
@@ -111,6 +121,15 @@ class DocumentPreprocessor:
 
         # Always set source
         metadata["_source"] = self._get_source()
+
+        # Add timestamps only if requested and if we have room
+        if include_timestamps:
+            # Check if we have room for 2 more keys (timestamps + potential other metadata)
+            if max_metadata_keys is None or len(metadata) + 2 <= max_metadata_keys:
+                from datetime import datetime
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                metadata["_created_at"] = timestamp
+                metadata["_updated_at"] = timestamp
 
         return metadata
 
@@ -255,7 +274,11 @@ Please give a short succinct context to situate this chunk within the overall do
                     id=chunk_id,
                     content=processed_content,  # Use the content with context
                     embeddings=doc.embeddings,
-                    metadata=self._prepare_chunk_metadata(doc.id, None, metadata),
+                    metadata=self._prepare_chunk_metadata(
+                        doc.id, None, metadata,
+                        max_metadata_keys=self.config.max_metadata_keys,
+                        include_timestamps=self.config.include_timestamps
+                    ),
                 )
             )
 
@@ -311,9 +334,8 @@ class TextChunkingPreprocessor(DocumentPreprocessor):
                 if doc.metadata:
                     metadata.update(doc.metadata)
 
-                # Add position metadata
-                metadata["_start_char"] = start_char
-                metadata["_end_char"] = end_char
+                # Add position metadata as a single key to save space
+                metadata["_char_range"] = f"{start_char}-{end_char}"
 
                 # Get content_column from metadata or use default
                 content_column = None
@@ -339,7 +361,11 @@ class TextChunkingPreprocessor(DocumentPreprocessor):
                         id=chunk_id,
                         content=chunk_doc.content,
                         embeddings=doc.embeddings,
-                        metadata=self._prepare_chunk_metadata(doc.id, i, metadata),
+                        metadata=self._prepare_chunk_metadata(
+                            doc.id, i, metadata,
+                            max_metadata_keys=self.config.max_metadata_keys,
+                            include_timestamps=self.config.include_timestamps
+                        ),
                     )
                 )
 

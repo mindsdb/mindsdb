@@ -94,7 +94,7 @@ class InformationSchemaDataNode(DataNode):
         self.integration_controller = session.integration_controller
         self.project_controller = ProjectController()
         self.database_controller = session.database_controller
-        self.persist_datanodes_names = ('log', 'files')
+        self.persist_datanodes_names = ("log", "files")
         self.tables = {t.name: t for t in self.tables_list}
 
     def __getitem__(self, key):

@@ -102,9 +102,10 @@ class TablesTable(Table):
             row = TablesRow(TABLE_TYPE=TABLES_ROW_TYPE.SYSTEM_VIEW, TABLE_NAME=name)
             data.append(row.to_list())
 
-        for ds_name, ds in inf_schema.persis_datanodes.items():
+        for ds_name in inf_schema.persist_datanodes_names:
             if databases is not None and ds_name not in databases:
                 continue
+            ds = inf_schema.get(ds_name)
 
             if hasattr(ds, "get_tables_rows"):
                 ds_tables = ds.get_tables_rows()

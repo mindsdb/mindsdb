@@ -20,7 +20,7 @@ connection_args = OrderedDict(
     }
 )
 
-connection_args_example = OrderedDict(
-    api_key="your_api_key_here",
-    domain="yourcompany.freshdesk.com"
-)
+connection_args_example = OrderedDict([
+    ("api_key", "your_api_key_here"),
+    ("domain", "yourcompany.freshdesk.com")
+])

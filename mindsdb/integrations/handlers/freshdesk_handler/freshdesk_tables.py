@@ -1,4 +1,5 @@
 import pandas as pd
+import re
 from typing import List
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.utilities.handlers.query_utilities import (
@@ -16,17 +17,14 @@ class FreshdeskAgentsTable(APITable):
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         """Pulls data from the Freshdesk agents API
-
         Parameters
         ----------
         query : ast.Select
             Given SQL SELECT query
-
         Returns
         -------
         pd.DataFrame
             Freshdesk agents data
-
         Raises
         ------
         ValueError
@@ -50,10 +48,15 @@ class FreshdeskAgentsTable(APITable):
                 if op == '=':
                     # For specific agent by ID
                     if arg1 == 'id':
-                        api_params['id'] = arg2
+                        if not str(arg2).isdigit():
+                            raise ValueError("Agent ID must be an integer.")
+                        api_params['id'] = int(arg2)
                 elif op in ['>', '<', '>=', '<=']:
                     # Freshdesk supports some date filtering
                     if arg1 in ['created_at', 'updated_at']:
+                        # Validate date format (ISO8601)
+                        if not re.match(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$", str(arg2)):
+                            raise ValueError(f"Invalid date format for {arg1}: {arg2}. Expected ISO8601 format (YYYY-MM-DDTHH:MM:SSZ)")
                         api_params[f'{arg1}__{op}'] = arg2
                 else:
                     raise NotImplementedError(f"Operator '{op}' is not supported for column '{arg1}'")
@@ -63,36 +66,25 @@ class FreshdeskAgentsTable(APITable):
             if 'id' in api_params:
                 # Get specific agent
                 endpoint = f"/api/v2/agents/{api_params['id']}"
-                response_data = self.handler.call_freshdesk_api(endpoint)
+                response_data = self.handler.call_freshdesk_api(endpoint, paginate=False)
                 agents = [response_data] if response_data else []
             else:
-                # Get all agents with pagination
+                # Get all agents with automatic pagination
                 endpoint = "/api/v2/agents"
-                page = 1
-                agents = []
-                
-                while len(agents) < result_limit:
-                    params = {'page': page, 'per_page': min(100, result_limit - len(agents))}
-                    page_data = self.handler.call_freshdesk_api(endpoint, params=params)
-                    
-                    if not page_data:
-                        break
-                        
-                    agents.extend(page_data)
-                    
-                    # If we got less than requested, we've reached the end
-                    if len(page_data) < params['per_page']:
-                        break
-                        
-                    page += 1
+                agents = self.handler.call_freshdesk_api(endpoint, params=api_params, paginate=True)
+
+                # Limit results if specified
+                if result_limit is not None and len(agents) > result_limit:
+                    agents = agents[:result_limit]
 
         except Exception as e:
             logger.error(f"Error fetching agents from Freshdesk: {e}")
             agents = []
 
-        # Convert to DataFrame
-        df = pd.DataFrame(agents, columns=self.get_columns())
-        
+        # Convert to DataFrame - build from data first, then reindex for efficiency
+        df = pd.DataFrame(agents)
+        df = df.reindex(columns=self.get_columns())
+
         # Apply query execution (filtering, ordering, limiting)
         select_statement_executor = SELECTQueryExecutor(
             df,
@@ -107,7 +99,6 @@ class FreshdeskAgentsTable(APITable):
 
     def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses
-
         Returns
         -------
         List[str]
@@ -132,17 +123,14 @@ class FreshdeskTicketsTable(APITable):
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         """Pulls data from the Freshdesk tickets API
-
         Parameters
         ----------
         query : ast.Select
             Given SQL SELECT query
-
         Returns
         -------
         pd.DataFrame
             Freshdesk tickets data
-
         Raises
         ------
         ValueError
@@ -162,21 +150,39 @@ class FreshdeskTicketsTable(APITable):
         # Build API parameters from WHERE conditions
         api_params = {}
         filter_params = {}
-        
+
         for op, arg1, arg2 in where_conditions:
             if arg1 in self.get_columns():
                 if op == '=':
                     if arg1 == 'id':
-                        api_params['id'] = arg2
+                        if not str(arg2).isdigit():
+                            raise ValueError("Ticket ID must be an integer.")
+                        api_params['id'] = int(arg2)
                     elif arg1 in ['status', 'priority', 'source', 'type']:
+                        # Validate allowed values for these fields
+                        allowed_values = {
+                            'status': [2, 3, 4, 5],  # Open, Pending, Resolved, Closed
+                            'priority': [1, 2, 3, 4],  # Low, Medium, High, Urgent
+                            'source': [1, 2, 3, 7, 8, 9, 10],  # Email, Portal, Phone, Chat, etc.
+                            'type': ["Question", "Incident", "Problem", "Feature Request"]
+                        }
+                        if arg1 in allowed_values and arg2 not in allowed_values[arg1]:
+                            raise ValueError(f"Invalid value for {arg1}: {arg2}. Allowed values: {allowed_values[arg1]}")
                         filter_params[arg1] = arg2
                     elif arg1 == 'requester_id':
-                        filter_params['requester_id'] = arg2
+                        if not str(arg2).isdigit():
+                            raise ValueError("Requester ID must be an integer.")
+                        filter_params['requester_id'] = int(arg2)
                     elif arg1 == 'responder_id':
-                        filter_params['agent_id'] = arg2  # Freshdesk uses agent_id
+                        if not str(arg2).isdigit():
+                            raise ValueError("Responder ID must be an integer.")
+                        filter_params['agent_id'] = int(arg2)  # Freshdesk uses agent_id
                 elif op in ['>', '<', '>=', '<=']:
                     # Date filtering
                     if arg1 in ['created_at', 'updated_at', 'due_by', 'fr_due_by']:
+                        # Validate date format (ISO8601)
+                        if not re.match(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$", str(arg2)):
+                            raise ValueError(f"Invalid date format for {arg1}: {arg2}. Expected ISO8601 format (YYYY-MM-DDTHH:MM:SSZ)")
                         filter_params[f'{arg1}__{op}'] = arg2
                 else:
                     raise NotImplementedError(f"Operator '{op}' is not supported for column '{arg1}'")
@@ -186,41 +192,25 @@ class FreshdeskTicketsTable(APITable):
             if 'id' in api_params:
                 # Get specific ticket
                 endpoint = f"/api/v2/tickets/{api_params['id']}"
-                response_data = self.handler.call_freshdesk_api(endpoint)
+                response_data = self.handler.call_freshdesk_api(endpoint, paginate=False)
                 tickets = [response_data] if response_data else []
             else:
-                # Get tickets with filters
+                # Get tickets with filters and automatic pagination
                 endpoint = "/api/v2/tickets"
-                page = 1
-                tickets = []
-                
-                while len(tickets) < result_limit:
-                    params = {
-                        'page': page, 
-                        'per_page': min(100, result_limit - len(tickets)),
-                        **filter_params
-                    }
-                    
-                    page_data = self.handler.call_freshdesk_api(endpoint, params=params)
-                    
-                    if not page_data:
-                        break
-                        
-                    tickets.extend(page_data)
-                    
-                    # If we got less than requested, we've reached the end
-                    if len(page_data) < params['per_page']:
-                        break
-                        
-                    page += 1
+                tickets = self.handler.call_freshdesk_api(endpoint, params=filter_params, paginate=True)
+
+                # Limit results if specified
+                if result_limit is not None and len(tickets) > result_limit:
+                    tickets = tickets[:result_limit]
 
         except Exception as e:
             logger.error(f"Error fetching tickets from Freshdesk: {e}")
             tickets = []
 
-        # Convert to DataFrame
-        df = pd.DataFrame(tickets, columns=self.get_columns())
-        
+        # Convert to DataFrame - build from data first, then reindex for efficiency
+        df = pd.DataFrame(tickets)
+        df = df.reindex(columns=self.get_columns())
+
         # Apply query execution (filtering, ordering, limiting)
         select_statement_executor = SELECTQueryExecutor(
             df,
@@ -235,7 +225,6 @@ class FreshdeskTicketsTable(APITable):
 
     def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses
-
         Returns
         -------
         List[str]

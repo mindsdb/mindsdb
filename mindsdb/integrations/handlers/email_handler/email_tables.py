@@ -11,6 +11,7 @@ from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.utilities.handlers.query_utilities import SELECTQueryParser, SELECTQueryExecutor
 from mindsdb.integrations.utilities.handlers.query_utilities.insert_query_utilities import INSERTQueryParser
 from mindsdb.integrations.handlers.email_handler.settings import EmailSearchOptions
+from mindsdb.integrations.handlers.email_handler.email_client import _sanitize_mailbox
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -20,24 +21,9 @@ class EmailsTable(APITable):
     """The Emails Table implementation"""
 
     def select(self, query: ast.Select) -> pd.DataFrame:
-        """Pulls email data from the connected account.
-
-        Parameters
-        ----------
-        query : ast.Select
-           Given SQL SELECT query
-
-        Returns
-        -------
-        pd.DataFrame
-            Emails matching the query
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
         """
-
+        Pulls email data from the connected account.
+        """
         select_statement_parser = SELECTQueryParser(query, "emails", self.get_columns())
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
@@ -46,7 +32,7 @@ class EmailsTable(APITable):
             if arg2 is None:
                 logger.warning(
                     f"Skipping condition: {arg1} {op} {arg2}."
-                    "Please ignore if this is intentional, e.g. 'id > last' on first query of job run."
+                    " Please ignore if this is intentional, e.g. 'id > last' on first query of job run."
                 )
                 continue
 
@@ -71,52 +57,38 @@ class EmailsTable(APITable):
             elif arg1 in ["mailbox", "subject", "to_field", "from_field"]:
                 if op != "=":
                     raise NotImplementedError("Only = operator is supported for mailbox, subject, to and from columns.")
+                # Sanitize mailbox early to fail fast
+                if arg1 == "mailbox":
+                    search_params["mailbox"] = _sanitize_mailbox(str(arg2))
+                elif arg1 == "from_field":
+                    search_params["from_field"] = arg2
                 else:
-                    if arg1 == "from_field":
-                        search_params["from_field"] = arg2
-                    else:
-                        search_params[arg1] = arg2
+                    search_params[arg1] = arg2
 
             else:
                 raise NotImplementedError(f"Unsupported column: {arg1}.")
 
         self.handler.connect()
 
-        # Propagate LIMIT to the search options to cap IMAP calls; still enforce with SELECTQueryExecutor below.
+        # Propagate LIMIT to search options to cap IMAP calls (client-side).
         if result_limit:
             search_params["max_results"] = int(result_limit)
 
-        if search_params:
-            search_options = EmailSearchOptions(**search_params)
-        else:
-            search_options = EmailSearchOptions()
+        search_options = EmailSearchOptions(**search_params) if search_params else EmailSearchOptions()
 
         email_ingestor = EmailIngestor(self.handler.connection, search_options)
 
         emails_df = email_ingestor.ingest()
 
-        # ensure all queries from query are applied to the dataframe
+        # Apply SELECT/ORDER/LIMIT on the DataFrame
         select_statement_executor = SELECTQueryExecutor(
             emails_df, selected_columns, [], order_by_conditions, result_limit
         )
         return select_statement_executor.execute_query()
 
     def insert(self, query: ast.Insert) -> None:
-        """Sends emails through the connected account.
-
-        Parameters
-        ----------
-        query : ast.Insert
-           Given SQL INSERT query
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
+        """
+        Sends emails through the connected account.
         """
         insert_statement_parser = INSERTQueryParser(
             query,
@@ -126,14 +98,16 @@ class EmailsTable(APITable):
         )
         email_data = insert_statement_parser.parse_query()
 
+        # Reuse a single connection for the batch to avoid connection thrashing
+        connection = self.handler.connect()
         for email in email_data:
-            connection = self.handler.connect()
             to_addr = email["to_field"]
-            del email["to_field"]
-            connection.send_email(to_addr, **email)
+            payload = {k: v for k, v in email.items() if k != "to_field"}
+            connection.send_email(to_addr, **payload)
 
     def get_columns(self):
-        return ["id", "body", "subject", "to_field", "from_field", "datetime"]
+        # Columns available for selection. Conditions are only supported on a subset handled in select().
+        return ["id", "body", "body_safe", "body_content_type", "subject", "to_field", "from_field", "datetime"]
 
     @staticmethod
     def parse_date(date_str) -> dt.datetime:
@@ -149,5 +123,4 @@ class EmailsTable(APITable):
         if date is None:
             raise ValueError(f"Can't parse date: {date_str}")
         date = date.astimezone(pytz.utc)
-
         return date

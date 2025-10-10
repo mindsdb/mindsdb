@@ -39,10 +39,19 @@ class TestEmailHandlerAdvanced:
             assert isinstance(client, EmailClient)
 
             # Ensure IMAP4 (non-SSL) was used with host/port from advanced settings
-            mock_imap4.assert_called_once_with("127.0.0.1", 1143)
+            mock_imap4.assert_called_once()
+            args, kwargs = mock_imap4.call_args
+            assert args == ("127.0.0.1", 1143)
+            # The client now passes a robust timeout kwarg; ensure it's present and reasonable.
+            assert "timeout" in kwargs
+            assert isinstance(kwargs["timeout"], (int, float)) and kwargs["timeout"] > 0
 
-            # Ensure SMTP used host/port from advanced settings
-            mock_smtp.assert_called_once_with("127.0.0.1", 1025)
+            # Ensure SMTP used host/port from advanced settings (also passes timeout kwarg)
+            mock_smtp.assert_called_once()
+            smtp_args, smtp_kwargs = mock_smtp.call_args
+            assert smtp_args == ("127.0.0.1", 1025)
+            assert "timeout" in smtp_kwargs
+            assert isinstance(smtp_kwargs["timeout"], (int, float)) and smtp_kwargs["timeout"] > 0
 
             # Ensure username override is set
             assert client.imap_username == "user@localhost"

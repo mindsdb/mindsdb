@@ -19,20 +19,12 @@ logger = log.getLogger(__name__)
 class EmailHandler(APIHandler):
     """
     Handler for interacting with Email (send and search).
-
-    Parameters
-    ----------
-    name : Optional[str]
-        The handler name
-    connection_data : Dict[str, Any]
-        Connection details; see EmailConnectionDetails for all fields.
     """
 
     def __init__(self, name: Optional[str] = None, **kwargs: Any) -> None:
         super().__init__(name)
 
         raw_connection_data: Dict[str, Any] = kwargs.get("connection_data", {}) or {}
-        # Construct a validated settings model. This also ensures forward/backward compatibility.
         self.connection_data = EmailConnectionDetails(**raw_connection_data)
         self.kwargs = kwargs
 
@@ -52,7 +44,6 @@ class EmailHandler(APIHandler):
             self.is_connected = True
         except Exception as e:
             logger.error(f"Error initializing Email client: {e}")
-            # Keep consistent state on failure
             self.connection = None
             self.is_connected = False
             raise
@@ -61,30 +52,37 @@ class EmailHandler(APIHandler):
 
     def disconnect(self) -> None:
         """Close any existing connections and reset flags."""
-        if self.connection is None:
-            self.is_connected = False
-            return
-
         try:
-            self.connection.logout()
-        except Exception as e:
-            # Don't fail on disconnect; just log.
-            logger.warning(f"Non-fatal error during email disconnect: {e}")
+            if self.connection is not None:
+                try:
+                    self.connection.logout()
+                except Exception as e:
+                    logger.warning(f"Non-fatal error during email disconnect: {e}")
         finally:
+            # Always reset state
             self.is_connected = False
             self.connection = None
 
     def check_connection(self) -> StatusResponse:
-        """Validate connectivity and credentials."""
+        """Validate connectivity and credentials with minimal overhead."""
         response = StatusResponse(False)
+        created_here = False
         try:
-            client = self.connect()
-            # Light-weight capability check: rely on EmailClient.select_mailbox's internal sanitization.
-            try:
-                client.select_mailbox("INBOX")
-            finally:
-                # Be a good citizen: close the session created for this check.
+            if not self.is_connected or self.connection is None:
+                self.connection = self.connect()
+                created_here = True
+            client = self.connection
+            assert client is not None
+
+            # Rely on internal sanitization in select_mailbox
+            client.select_mailbox("INBOX")
+
+            # Only teardown if we created it here (preserve reuse for callers)
+            if created_here:
                 client.logout()
+                self.is_connected = False
+                self.connection = None
+
             response.success = True
         except Exception as e:
             response.error_message = f"Error connecting to Email: {e}."

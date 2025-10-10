@@ -43,7 +43,18 @@ class KnowledgeBaseQueryExecutor:
         if isinstance(node, BinaryOperation):
             if isinstance(node.args[0], Identifier):
                 parts = node.args[0].parts
+
+                # map chunk_content to content
+                if parts[0].lower() == "chunk_content":
+                    parts[0] = self.content_column
+
                 if len(parts) == 1 and parts[0].lower() == self.content_column:
+                    if "LIKE" in node.op.upper():
+                        # remove '%'
+                        arg = node.args[1]
+                        if isinstance(arg, Constant) and isinstance(arg.value, str):
+                            arg.value = arg.value.strip(" %")
+
                     return True
         return False
 

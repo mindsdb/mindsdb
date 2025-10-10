@@ -694,6 +694,7 @@ class RerankerConfig(BaseModel):
     base_url: str = DEFAULT_LLM_ENDPOINT
     filtering_threshold: float = 0.5
     num_docs_to_keep: Optional[int] = None
+    mode: str = "pointwise"
     max_concurrent_requests: int = 20
     max_retries: int = 3
     retry_delay: float = 1.0

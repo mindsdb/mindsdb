@@ -81,10 +81,10 @@ class TestHandlersCache:
             for record in cache.handlers[handler_key]:
                 record.expired_at = time.time() - 1
 
-        time.sleep(0.15)
+        time.sleep(0.3)
         assert len(cache.handlers[first_key()]) == 1
         handler_1 = None
-        time.sleep(0.15)
+        time.sleep(0.3)
         assert len(cache.handlers) == 0
 
         cache.set(MockDatabaseHandler("test_handler_a", thread_safe=True))
@@ -134,5 +134,5 @@ class TestHandlersCache:
         for handler_key in cache.handlers:
             for record in cache.handlers[handler_key]:
                 record.expired_at = time.time() - 1
-        time.sleep(0.15)
+        time.sleep(0.3)
         assert len(cache.handlers) == 0

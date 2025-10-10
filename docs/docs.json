@@ -35,6 +35,7 @@
                   "pages": [
                     "setup/custom-config",
                     "setup/environment-vars",
+                    "setup/full-list-environment-vars",
                     "setup/mindsdb-apis"
                   ]
                 },

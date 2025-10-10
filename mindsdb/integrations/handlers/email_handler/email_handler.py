@@ -79,12 +79,11 @@ class EmailHandler(APIHandler):
         response = StatusResponse(False)
         try:
             client = self.connect()
-            # Light-weight capability check: do not fetch emails here.
-            # Simply attempt a no-op login/select of INBOX to ensure creds are valid.
+            # Light-weight capability check: rely on EmailClient.select_mailbox's internal sanitization.
             try:
                 client.select_mailbox("INBOX")
             finally:
-                # Be a good citizen: close the session.
+                # Be a good citizen: close the session created for this check.
                 client.logout()
             response.success = True
         except Exception as e:
@@ -99,18 +98,3 @@ class EmailHandler(APIHandler):
         """Receive and process a raw SQL query."""
         ast = parse_sql(query)
         return self.query(ast)
-
-    def query(self, ast) -> StatusResponse:
-        """Execute a parsed query against the registered tables.
-
-        Ensures we don't leak connections by disconnecting in a finally block.
-        """
-        try:
-            return super().query(ast)
-        finally:
-            # Avoid resource leaks on repeated queries (review feedback).
-            try:
-                self.disconnect()
-            except Exception:
-                # swallow disconnect errors to not mask query results
-                pass

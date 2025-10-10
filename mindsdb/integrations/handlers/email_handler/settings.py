@@ -22,8 +22,10 @@ class EmailSearchOptions(BaseModel):
     until_date: Optional[datetime.date] = None
     # Search for all emails after this ID.
     since_email_id: Optional[int] = None
+    # Optional cap for total messages fetched (client-side limit to reduce IMAP calls)
+    max_results: Optional[int] = None
 
-    # Pydantic v2 config (removes deprecation warnings)
+    # Pydantic v2 config
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -33,7 +35,8 @@ class EmailSearchOptions(BaseModel):
                 "from_email": "hello@example.com",
                 "since_date": "2021-01-01",
                 "until_date": "2021-01-31",
-                "since_email_id": "123",
+                "since_email_id": 123,
+                "max_results": 250,
             }
         },
         extra="forbid",
@@ -66,7 +69,7 @@ class EmailConnectionDetails(BaseModel):
     smtp_starttls: bool = True
     smtp_username: Optional[str] = None  # not used currently but left for parity
 
-    # Pydantic v2 config (removes deprecation warnings)
+    # Pydantic v2 config
     model_config = ConfigDict(
         json_schema_extra={
             "example": {

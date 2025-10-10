@@ -3,6 +3,7 @@ from __future__ import annotations
 import email
 import imaplib
 import smtplib
+import unicodedata
 from email.header import decode_header
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -45,20 +46,61 @@ def _chunked(iterable: List[bytes], size: int) -> Iterable[List[bytes]]:
         yield iterable[i : i + size]
 
 
+def _remove_bidi_and_controls(text: str) -> str:
+    """Remove Unicode bidirectional override and general control/format characters."""
+    cleaned_chars = []
+    for ch in text:
+        cat = unicodedata.category(ch)  # e.g., 'Cf', 'Cc'
+        # Reject any 'Other' categories (all 'C*') to avoid controls, formats, surrogates, etc.
+        if cat.startswith("C"):
+            continue
+        cleaned_chars.append(ch)
+    return "".join(cleaned_chars)
+
+
+def _sanitize_for_ui(text: str) -> str:
+    """
+    Normalize to NFKC, strip bidi/control chars, then HTML-escape for safe rendering.
+    Keeps the original 'body' separate for programmatic use.
+    """
+    try:
+        normalized = unicodedata.normalize("NFKC", text)
+    except Exception:
+        normalized = text
+    without_controls = _remove_bidi_and_controls(normalized)
+    return html_escape(without_controls)
+
+
 def _sanitize_mailbox(mailbox: str) -> str:
     """
     Allow typical IMAP mailbox names including hierarchies (e.g., 'INBOX', 'INBOX.Sent', 'Sent Mail').
-    Disallow traversal or path-like injection: '/', '\\', null bytes, and '..' segments.
+    Disallow traversal or path-like injection: '/', '\\', null bytes, '..' segments, and any Unicode control/format chars.
     """
     mb = (mailbox or "INBOX").strip()
+
+    # Normalize to reduce homoglyph tricks; mail servers typically accept normalized names.
+    try:
+        mb = unicodedata.normalize("NFKC", mb)
+    except Exception:
+        pass
+
+    # Reject obvious path injection
     if any(bad in mb for bad in ("/", "\\", "\x00")):
         raise ValueError("Invalid mailbox name: disallowed characters detected.")
+
     # Reject traversal segments
     if ".." in mb:
         raise ValueError("Invalid mailbox name: traversal patterns are not allowed.")
-    # Keep it reasonably bounded
+
+    # Reject non-printable / control-like characters (all Unicode 'C*' categories)
+    for ch in mb:
+        if unicodedata.category(ch).startswith("C"):
+            raise ValueError("Invalid mailbox name: contains control/unassigned characters.")
+
+    # Bounds
     if len(mb) > 255:
         raise ValueError("Invalid mailbox name: too long.")
+
     return mb
 
 
@@ -68,6 +110,7 @@ class EmailClient:
     # Reasonable defaults
     _DEFAULT_SINCE_DAYS = 10
     _UID_FETCH_CHUNK = 50  # batch size for UID FETCH
+    _MAX_RESULTS_DEFAULT = 500  # cap to prevent excessive sequential IMAP calls
 
     def __init__(self, connection_data: EmailConnectionDetails):
         # Credentials
@@ -108,7 +151,7 @@ class EmailClient:
             raise ValueError(f"Unable to login to IMAP: {resp}")
 
     def select_mailbox(self, mailbox: str = "INBOX") -> None:
-        """Login & select a mailbox from IMAP server."""
+        """Login & select a mailbox from IMAP server (mailbox is sanitized internally)."""
         target_mailbox = _sanitize_mailbox(mailbox)
         self._ensure_imap_session()
         ok, resp = self.imap_server.select(target_mailbox)
@@ -131,9 +174,6 @@ class EmailClient:
 
         # SMTP
         try:
-            if self._smtp_starttls:
-                # Not strictly required to call 'quit' only if starttls, but it's safe to always quit
-                pass
             self.smtp_server.quit()
         except Exception as e:
             logger.error(f"Exception occurred while logging out of SMTP server: {str(e)}")
@@ -206,6 +246,7 @@ class EmailClient:
         """
         Search emails based on the given options and return a DataFrame.
         Uses UID search/fetch and chunked fetching for performance and correctness.
+        Applies an upper bound on total fetched messages to avoid excessive IMAP calls.
         """
         self.select_mailbox(options.mailbox)
 
@@ -217,6 +258,12 @@ class EmailClient:
             raw_list = items[0].split() if items and items[0] else []
             if not raw_list:
                 return pd.DataFrame([])
+
+            # Apply server-side limit hint (client-side capping) to reduce total UID FETCH calls
+            max_results = options.max_results or EmailClient._MAX_RESULTS_DEFAULT
+            if max_results is not None and max_results > 0:
+                # Take the most recent UIDs (at the end); IMAP servers return ascending by default.
+                raw_list = raw_list[-max_results:]
 
             fetched = self._fetch_messages_by_uids(raw_list)
 
@@ -275,8 +322,8 @@ class EmailClient:
                 except Exception:
                     body_text = ""
 
-                # Security: provide an HTML-escaped variant safe for UI rendering
-                body_safe = html_escape(body_text)
+                # Security: provide an HTML-escaped, normalized, control-free variant safe for UI rendering
+                body_safe = _sanitize_for_ui(body_text)
 
                 # Attempt to pull UID from meta tuple
                 email_id = None
@@ -298,7 +345,7 @@ class EmailClient:
                         "subject": subject,
                         "date": date_hdr,
                         "body": body_text,
-                        "body_safe": body_safe,  # safe for UI rendering
+                        "body_safe": body_safe,  # safe for UI rendering (normalized + escaped, no bidi/control chars)
                         "body_content_type": content_type,
                     }
                 )

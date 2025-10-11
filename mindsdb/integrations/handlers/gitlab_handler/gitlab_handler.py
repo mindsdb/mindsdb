@@ -43,6 +43,9 @@ class GitlabHandler(APIHandler):
 
         connection_kwargs = {}
 
+        if self.connection_data.get("url", None):
+            connection_kwargs["url"] = self.connection_data["url"]
+
         if self.connection_data.get("api_key", None):
             connection_kwargs["private_token"] = self.connection_data["api_key"]
 

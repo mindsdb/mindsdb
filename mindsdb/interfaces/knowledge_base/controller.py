@@ -46,7 +46,7 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.utilities import log
-from mindsdb.integrations.utilities.rag.rerankers.base_reranker import BaseLLMReranker
+from mindsdb.integrations.utilities.rag.rerankers.base_reranker import BaseLLMReranker, ListwiseLLMReranker
 
 logger = log.getLogger(__name__)
 
@@ -124,6 +124,12 @@ def get_reranking_model_from_params(reranking_model_params: dict):
         raise ValueError("'model_name' must be provided for reranking model")
     params_copy["model"] = params_copy.pop("model_name")
 
+    mode = params_copy.get("mode", "pointwise")
+    if isinstance(mode, str) and mode.lower() == "listwise":
+        params_copy["mode"] = "listwise"
+        return ListwiseLLMReranker(**params_copy)
+
+    params_copy["mode"] = "pointwise"
     return BaseLLMReranker(**params_copy)
 
 

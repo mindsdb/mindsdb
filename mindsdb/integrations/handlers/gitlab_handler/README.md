@@ -13,7 +13,7 @@ The GitLab handler is initialized with the following parameters:
 
 - `repository`: a required name of a GitLab repository to connect to
 - `api_key`: an optional GitLab API key to use for authentication
-- `url`: an optional GitLab server URL (defaults to https://gitlab.com for self-hosted instances)
+- `url`: an optional GitLab server URL (defaults to https://gitlab.com)
 
 ## Implemented Features
 
@@ -41,18 +41,6 @@ PARAMETERS = {
   "repository": "gitlab-org/gitlab",
   "api_key": "api_key",    -- optional GitLab API key
   "url": "https://gitlab.com"  -- optional GitLab server URL (defaults to https://gitlab.com)
-};
-~~~~
-
-For self-hosted GitLab instances, specify the custom URL:
-
-~~~~sql
-CREATE DATABASE mindsdb_gitlab
-WITH ENGINE = 'gitlab',
-PARAMETERS = {
-  "repository": "my-project",
-  "api_key": "glpat-...",    -- GitLab Personal Access Token
-  "url": "https://git.example.com"  -- your self-hosted GitLab URL
 };
 ~~~~
 

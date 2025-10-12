@@ -4,20 +4,6 @@ import pathlib
 import shutil
 
 
-@pytest.fixture
-def errors(caplog):
-    """Module-level fixture to capture ERROR logs and expose `.text`."""
-    caplog.clear()
-    caplog.set_level("ERROR")
-
-    class E:
-        @property
-        def text(self):
-            return "\n".join(r.getMessage() for r in caplog.records)
-
-    return E()
-
-
 class TestMainCleanup:
     @pytest.fixture
     def patch_main_config(self, tmp_path, monkeypatch):
@@ -25,6 +11,19 @@ class TestMainCleanup:
 
         monkeypatch.setattr(main_mod, "config", {"paths": {"tmp": tmp_path}})
         return tmp_path, main_mod
+
+    @pytest.fixture
+    def errors(self, caplog):
+        """Fixture to capture error log messages."""
+
+        class ErrorCapture:
+            @property
+            def text(self):
+                return "\n".join([r.getMessage() for r in caplog.records])
+
+        caplog.clear()
+        caplog.set_level("ERROR")
+        return ErrorCapture()
 
     def test_cleans_files_and_dirs_but_keeps_tmp_path(self, patch_main_config):
         """Test that all content is cleaned but tmp_path itself remains"""

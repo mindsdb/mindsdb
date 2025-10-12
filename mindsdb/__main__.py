@@ -35,7 +35,12 @@ from mindsdb.utilities.starters import (
 )
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 import mindsdb.interfaces.storage.db as db
-from mindsdb.utilities.fs import clean_process_marks, clean_unlinked_process_marks, create_pid_file, delete_pid_file
+from mindsdb.utilities.fs import (
+    clean_process_marks,
+    clean_unlinked_process_marks,
+    create_pid_file,
+    delete_pid_file,
+)
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.auth import register_oauth_client, get_aws_meta_data
 from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
@@ -100,7 +105,9 @@ class TrunkProcessData:
         self._restarts_time.append(current_time_seconds)
         if self.max_restart_interval_seconds > 0:
             self._restarts_time = [
-                x for x in self._restarts_time if x >= (current_time_seconds - self.max_restart_interval_seconds)
+                x
+                for x in self._restarts_time
+                if x >= (current_time_seconds - self.max_restart_interval_seconds)
             ]
         if len(self._restarts_time) > self.max_restart_count:
             return False
@@ -117,11 +124,16 @@ class TrunkProcessData:
         if config.is_cloud:
             return False
         if sys.platform in ("linux", "darwin"):
-            return self.restart_on_failure and self.process.exitcode == -signal.SIGKILL.value
+            return (
+                self.restart_on_failure
+                and self.process.exitcode == -signal.SIGKILL.value
+            )
         else:
             if self.max_restart_count == 0:
                 # to prevent infinity restarts, max_restart_count should be > 0
-                logger.warning("In the current OS, it is not possible to use `max_restart_count=0`")
+                logger.warning(
+                    "In the current OS, it is not possible to use `max_restart_count=0`"
+                )
                 return False
             return self.restart_on_failure
 
@@ -155,12 +167,23 @@ def close_api_gracefully(trunc_processes_struct):
 
 def clean_mindsdb_tmp_dir():
     """Clean the MindsDB tmp dir at exit."""
-    temp_dir = config["paths"]["tmp"]
-    for file in temp_dir.iterdir():
-        if file.is_dir():
-            shutil.rmtree(file)
-        else:
-            file.unlink()
+    try:
+        temp_dir = config["paths"]["tmp"]
+        if not temp_dir.exists():
+            return
+
+        for file in temp_dir.iterdir():
+            try:
+                if file.is_dir():
+                    # https://docs.python.org/3/library/shutil.html#shutil.rmtree
+                    shutil.rmtree(file, ignore_errors=True)
+                else:
+                    # https://docs.python.org/3/library/pathlib.html#pathlib.Path.unlink
+                    file.unlink(missing_ok=True)
+            except Exception as e:
+                logger.error(f"Failed to clean {file}: {e}")
+    except Exception as e:
+        logger.error(f"Failed to clean MindsDB tmp dir: {e}")
 
 
 def set_error_model_status_by_pids(unexisting_pids: List[int]):
@@ -175,18 +198,24 @@ def set_error_model_status_by_pids(unexisting_pids: List[int]):
         db.session.query(db.Predictor)
         .filter(
             db.Predictor.deleted_at.is_(None),
-            db.Predictor.status.not_in([db.PREDICTOR_STATUS.COMPLETE, db.PREDICTOR_STATUS.ERROR]),
+            db.Predictor.status.not_in(
+                [db.PREDICTOR_STATUS.COMPLETE, db.PREDICTOR_STATUS.ERROR]
+            ),
         )
         .all()
     )
     for predictor_record in predictor_records:
-        predictor_process_id = (predictor_record.training_metadata or {}).get("process_id")
+        predictor_process_id = (predictor_record.training_metadata or {}).get(
+            "process_id"
+        )
         if predictor_process_id in unexisting_pids:
             predictor_record.status = db.PREDICTOR_STATUS.ERROR
             if isinstance(predictor_record.data, dict) is False:
                 predictor_record.data = {}
             if "error" not in predictor_record.data:
-                predictor_record.data["error"] = "The training process was terminated for unknown reasons"
+                predictor_record.data["error"] = (
+                    "The training process was terminated for unknown reasons"
+                )
                 flag_modified(predictor_record, "data")
             db.session.commit()
 
@@ -199,7 +228,9 @@ def set_error_model_status_for_unfinished():
         db.session.query(db.Predictor)
         .filter(
             db.Predictor.deleted_at.is_(None),
-            db.Predictor.status.not_in([db.PREDICTOR_STATUS.COMPLETE, db.PREDICTOR_STATUS.ERROR]),
+            db.Predictor.status.not_in(
+                [db.PREDICTOR_STATUS.COMPLETE, db.PREDICTOR_STATUS.ERROR]
+            ),
         )
         .all()
     )
@@ -227,7 +258,11 @@ def create_permanent_integrations():
     NOTE: this is intentional to avoid importing integration_controller
     """
     integration_name = "files"
-    existing = db.session.query(db.Integration).filter_by(name=integration_name, company_id=None).first()
+    existing = (
+        db.session.query(db.Integration)
+        .filter_by(name=integration_name, company_id=None)
+        .first()
+    )
     if existing is not None:
         return
     integration_record = db.Integration(
@@ -240,7 +275,9 @@ def create_permanent_integrations():
     try:
         db.session.commit()
     except Exception:
-        logger.exception(f"Failed to create permanent integration '{integration_name}' in the internal database.")
+        logger.exception(
+            f"Failed to create permanent integration '{integration_name}' in the internal database."
+        )
         db.session.rollback()
 
 
@@ -266,7 +303,9 @@ def validate_default_project() -> None:
             func.lower(db.Project.name) == func.lower(new_default_project_name),
         ).first()
         if existing_project is None:
-            logger.critical(f"A project with the name '{new_default_project_name}' does not exist")
+            logger.critical(
+                f"A project with the name '{new_default_project_name}' does not exist"
+            )
             sys.exit(1)
 
         existing_project.metadata_ = {"is_default": True}
@@ -279,7 +318,9 @@ def validate_default_project() -> None:
             func.lower(db.Project.name) == func.lower(new_default_project_name),
         ).first()
         if existing_project is not None:
-            logger.critical(f"A project with the name '{new_default_project_name}' already exists")
+            logger.critical(
+                f"A project with the name '{new_default_project_name}' already exists"
+            )
             sys.exit(1)
         current_default_project.name = new_default_project_name
         db.session.commit()
@@ -301,7 +342,9 @@ def start_process(trunc_process_data: TrunkProcessData) -> None:
         )
         trunc_process_data.process.start()
     except Exception as e:
-        logger.exception(f"Failed to start '{trunc_process_data.name}' API process due to unexpected error:")
+        logger.exception(
+            f"Failed to start '{trunc_process_data.name}' API process due to unexpected error:"
+        )
         close_api_gracefully(trunc_processes_struct)
         raise e
 
@@ -311,7 +354,8 @@ if __name__ == "__main__":
     # warn if less than 1Gb of free RAM
     if psutil.virtual_memory().available < (1 << 30):
         logger.warning(
-            "The system is running low on memory. " + "This may impact the stability and performance of the program."
+            "The system is running low on memory. "
+            + "This may impact the stability and performance of the program."
         )
 
     ctx.set_default()
@@ -409,7 +453,9 @@ if __name__ == "__main__":
 
             migrate.migrate_to_head()
         except Exception:
-            logger.exception("Failed to apply database migrations. This may prevent MindsDB from operating correctly:")
+            logger.exception(
+                "Failed to apply database migrations. This may prevent MindsDB from operating correctly:"
+            )
 
         validate_default_project()
 
@@ -431,9 +477,12 @@ if __name__ == "__main__":
             port=http_api_config["port"],
             args=(config.cmd_args.verbose,),
             restart_on_failure=http_api_config.get("restart_on_failure", False),
-            max_restart_count=http_api_config.get("max_restart_count", TrunkProcessData.max_restart_count),
+            max_restart_count=http_api_config.get(
+                "max_restart_count", TrunkProcessData.max_restart_count
+            ),
             max_restart_interval_seconds=http_api_config.get(
-                "max_restart_interval_seconds", TrunkProcessData.max_restart_interval_seconds
+                "max_restart_interval_seconds",
+                TrunkProcessData.max_restart_interval_seconds,
             ),
         ),
         TrunkProcessEnum.MYSQL: TrunkProcessData(
@@ -442,9 +491,12 @@ if __name__ == "__main__":
             port=mysql_api_config["port"],
             args=(config.cmd_args.verbose,),
             restart_on_failure=mysql_api_config.get("restart_on_failure", False),
-            max_restart_count=mysql_api_config.get("max_restart_count", TrunkProcessData.max_restart_count),
+            max_restart_count=mysql_api_config.get(
+                "max_restart_count", TrunkProcessData.max_restart_count
+            ),
             max_restart_interval_seconds=mysql_api_config.get(
-                "max_restart_interval_seconds", TrunkProcessData.max_restart_interval_seconds
+                "max_restart_interval_seconds",
+                TrunkProcessData.max_restart_interval_seconds,
             ),
         ),
         TrunkProcessEnum.POSTGRES: TrunkProcessData(
@@ -454,13 +506,19 @@ if __name__ == "__main__":
             args=(config.cmd_args.verbose,),
         ),
         TrunkProcessEnum.JOBS: TrunkProcessData(
-            name=TrunkProcessEnum.JOBS.value, entrypoint=start_scheduler, args=(config.cmd_args.verbose,)
+            name=TrunkProcessEnum.JOBS.value,
+            entrypoint=start_scheduler,
+            args=(config.cmd_args.verbose,),
         ),
         TrunkProcessEnum.TASKS: TrunkProcessData(
-            name=TrunkProcessEnum.TASKS.value, entrypoint=start_tasks, args=(config.cmd_args.verbose,)
+            name=TrunkProcessEnum.TASKS.value,
+            entrypoint=start_tasks,
+            args=(config.cmd_args.verbose,),
         ),
         TrunkProcessEnum.ML_TASK_QUEUE: TrunkProcessData(
-            name=TrunkProcessEnum.ML_TASK_QUEUE.value, entrypoint=start_ml_task_queue, args=(config.cmd_args.verbose,)
+            name=TrunkProcessEnum.ML_TASK_QUEUE.value,
+            entrypoint=start_ml_task_queue,
+            args=(config.cmd_args.verbose,),
         ),
         TrunkProcessEnum.LITELLM: TrunkProcessData(
             name=TrunkProcessEnum.LITELLM.value,
@@ -468,9 +526,12 @@ if __name__ == "__main__":
             port=litellm_api_config.get("port", 8000),
             args=(config.cmd_args.verbose,),
             restart_on_failure=litellm_api_config.get("restart_on_failure", False),
-            max_restart_count=litellm_api_config.get("max_restart_count", TrunkProcessData.max_restart_count),
+            max_restart_count=litellm_api_config.get(
+                "max_restart_count", TrunkProcessData.max_restart_count
+            ),
             max_restart_interval_seconds=litellm_api_config.get(
-                "max_restart_interval_seconds", TrunkProcessData.max_restart_interval_seconds
+                "max_restart_interval_seconds",
+                TrunkProcessData.max_restart_interval_seconds,
             ),
         ),
     }
@@ -493,7 +554,10 @@ if __name__ == "__main__":
     create_pid_file()
 
     for trunc_process_data in trunc_processes_struct.values():
-        if trunc_process_data.started is True or trunc_process_data.need_to_run is False:
+        if (
+            trunc_process_data.started is True
+            or trunc_process_data.need_to_run is False
+        ):
             continue
         start_process(trunc_process_data)
         # Set status for APIs without ports (they don't go through wait_api_start)
@@ -523,7 +587,8 @@ if __name__ == "__main__":
                 trunc_process_data.port,
             )
             for trunc_process_data in trunc_processes_struct.values()
-            if trunc_process_data.port is not None and trunc_process_data.need_to_run is True
+            if trunc_process_data.port is not None
+            and trunc_process_data.need_to_run is True
         ]
         for future in asyncio.as_completed(futures):
             api_name, port, started = await future
@@ -546,11 +611,17 @@ if __name__ == "__main__":
             finally:
                 if trunc_process_data.should_restart:
                     if trunc_process_data.request_restart_attempt():
-                        logger.warning(f"{trunc_process_data.name} API: stopped unexpectedly, restarting")
+                        logger.warning(
+                            f"{trunc_process_data.name} API: stopped unexpectedly, restarting"
+                        )
                         trunc_process_data.process = None
                         if trunc_process_data.name == TrunkProcessEnum.HTTP.value:
                             # do not open GUI on HTTP API restart
-                            trunc_process_data.args = (config.cmd_args.verbose, None, True)
+                            trunc_process_data.args = (
+                                config.cmd_args.verbose,
+                                None,
+                                True,
+                            )
                         start_process(trunc_process_data)
                         api_name, port, started = await wait_api_start(
                             trunc_process_data.name,

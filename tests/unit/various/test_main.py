@@ -31,9 +31,7 @@ class TestMainCleanup:
 
         assert list(tmp_path.iterdir()) == []
         main_mod.clean_mindsdb_tmp_dir()
-        assert (
-            list(tmp_path.iterdir()) == []
-        )
+        assert list(tmp_path.iterdir()) == []
         assert tmp_path.exists()
 
     def test_nonexistent_tmp_path(self, monkeypatch):
@@ -60,7 +58,7 @@ class TestMainCleanup:
 
         assert tmp_path.exists()
         assert list(tmp_path.iterdir()) == []
-        
+
     def test_nested_directories_cleanup(self, patch_main_config):
         """Test that nested directories are cleaned properly"""
         tmp_path, main_mod = patch_main_config
@@ -75,4 +73,20 @@ class TestMainCleanup:
 
         assert tmp_path.exists()
         assert list(tmp_path.iterdir()) == []
-        
+
+    def test_rmtree_failure_handling(self, patch_main_config, monkeypatch):
+        """Test that exceptions during rmtree are logged but do not stop cleanup"""
+        tmp_path, main_mod = patch_main_config
+
+        (tmp_path / "dir1").mkdir()
+        (tmp_path / "dir1" / "file1.txt").write_text("file1")
+
+        def mock_rmtree(path, ignore_errors):
+            raise Exception("Simulated rmtree failure")
+
+        monkeypatch.setattr(main_mod.shutil, "rmtree", mock_rmtree)
+
+        main_mod.clean_mindsdb_tmp_dir()
+
+        assert (tmp_path / "dir1").exists()
+        assert (tmp_path / "dir1" / "file1.txt").exists()

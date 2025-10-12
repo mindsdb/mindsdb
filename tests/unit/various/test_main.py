@@ -22,5 +22,16 @@ class TestMainCleanup:
 
         main_mod.clean_mindsdb_tmp_dir()
 
-        assert tmp_path.exists(), "tmp_path itself should not be deleted"
-        assert list(tmp_path.iterdir()) == [], "All content should be removed"
+        assert tmp_path.exists()
+        assert list(tmp_path.iterdir()) == []
+
+    def test_empty_tmp_path(self, patch_main_config):
+        """Test that cleaning an already empty tmp_path works without errors"""
+        tmp_path, main_mod = patch_main_config
+
+        assert list(tmp_path.iterdir()) == []
+        main_mod.clean_mindsdb_tmp_dir()
+        assert (
+            list(tmp_path.iterdir()) == []
+        )
+        assert tmp_path.exists()

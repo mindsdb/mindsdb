@@ -44,7 +44,7 @@ class GroqHandler(OpenAIHandler):
         except NotFoundError:
             pass
         except AuthenticationError as e:
-            if e.body["code"] == 401:
+            if isinstance(e.body, dict) and e.body.get("code") == "invalid_api_key":
                 raise Exception("Invalid api key")
             raise Exception(f"Something went wrong: {e}")
 

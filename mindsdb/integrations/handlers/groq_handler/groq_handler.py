@@ -100,6 +100,13 @@ class GroqHandler(OpenAIHandler):
         client = OpenAIHandler._get_client(api_key=api_key, base_url=api_base, org=org)
         GroqHandler._check_client_connection(client)
 
+    @staticmethod
+    def is_chat_model(model_name):
+        """
+        All Groq models use the chat completions endpoint, hence every model is a chat model
+        """
+        return True
+
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         """
         Call the Groq engine to predict the next token.

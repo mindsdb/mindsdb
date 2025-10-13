@@ -46,6 +46,16 @@ def get_configurations():
             name = f"{storage['engine']}-{embedding_model['provider']}"
             yield pytest.param(storage, embedding_model, id=name)
 
+    if "GEMINI_API_KEY" in os.environ:
+        embedding_model = {
+            "provider": "gemini",
+            "model_name": "text-embedding-004",
+            "api_key": HiddenVar(os.environ["GEMINI_API_KEY"]),
+        }
+        for storage in storages:
+            name = f"{storage['engine']}-{embedding_model['provider']}"
+            yield pytest.param(storage, embedding_model, id=name)
+
 
 def get_rerank_configurations():
     # configurations with reranking model

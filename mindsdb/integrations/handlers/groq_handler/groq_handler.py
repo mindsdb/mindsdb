@@ -65,7 +65,7 @@ class GroqHandler(OpenAIHandler):
         api_key = connection_args.get("groq_api_key")
         if api_key is not None:
             org = connection_args.get("api_organization")
-            api_base = connection_args.get("api_base") or os.environ.get("groq_BASE", groq_handler_config.BASE_URL)
+            api_base = connection_args.get("api_base") or os.environ.get("GROQ_BASE", groq_handler_config.BASE_URL)
             client = self._get_client(api_key=api_key, base_url=api_base, org=org)
             GroqHandler._check_client_connection(client)
 

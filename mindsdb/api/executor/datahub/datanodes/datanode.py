@@ -4,7 +4,7 @@ from mindsdb.api.executor.datahub.classes.response import DataHubResponse
 
 
 class DataNode:
-    type = 'meta'
+    type = "meta"
 
     def __init__(self):
         pass

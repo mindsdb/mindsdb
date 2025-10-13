@@ -35,7 +35,6 @@ def move_under(d, key_contents_to_move, key_to_move_under=None):
 
 
 class SAPERP:
-
     def __init__(self, url: str, api_key: str) -> None:
         self.base_url = url
         self.api_key = api_key
@@ -44,11 +43,7 @@ class SAPERP:
         kwargs = {
             "method": method,
             "url": urljoin(self.base_url, relative_endpoint),
-            "headers": {
-                "APIKey": self.api_key,
-                "Accept": "application/json",
-                "DataServiceVersion": "2.0"
-            }
+            "headers": {"APIKey": self.api_key, "Accept": "application/json", "DataServiceVersion": "2.0"},
         }
         if data is not None:
             kwargs["data"] = data
@@ -60,7 +55,7 @@ class SAPERP:
         return False
 
     def get(self, endpoint):
-        """ Common method for all get endpoints """
+        """Common method for all get endpoints"""
         try:
             resp = self._request("get", endpoint)
             if resp.ok:

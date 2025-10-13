@@ -5,7 +5,6 @@ from mindsdb.integrations.handlers.trino_handler.trino_handler import TrinoHandl
 
 
 class TrinoHandlerTest(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
@@ -17,20 +16,20 @@ class TrinoHandlerTest(unittest.TestCase):
                 "catalog": "gsam_dev2imddata_elastic",
                 "schema": "default",
                 "service_name": "HTTP/qa.analytics.quantum.site.gs.com",
-                "config_file_name": "test_trino_config.ini"
+                "config_file_name": "test_trino_config.ini",
             }
         }
-        cls.handler = TrinoHandler('test_trino_handler', **cls.kwargs)
+        cls.handler = TrinoHandler("test_trino_handler", **cls.kwargs)
 
     def test_0_canary(self):
-        print('Running canary test')
+        print("Running canary test")
         assert True
-        print('Canary test ran successfully')
+        print("Canary test ran successfully")
 
     def test_1_check_connection(self):
         conn_status = self.handler.check_connection()
-        print('Trino connection status: ', conn_status)
-        assert conn_status.get('success')
+        print("Trino connection status: ", conn_status)
+        assert conn_status.get("success")
 
     def test_2_get_tables(self):
         tables = self.handler.get_tables()
@@ -38,7 +37,7 @@ class TrinoHandlerTest(unittest.TestCase):
 
     def test_3_describe_table(self):
         described = self.handler.get_columns("axioma_att_2021-12")
-        assert described['type'] is not RESPONSE_TYPE.ERROR
+        assert described["type"] is not RESPONSE_TYPE.ERROR
 
     # TODO: complete tests implementation
     # def test_4_select_query(self):

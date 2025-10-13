@@ -1,4 +1,3 @@
-
 from langchain_core.embeddings import Embeddings
 from langchain_community.vectorstores import Chroma, PGVector
 from langchain_core.vectorstores import VectorStore
@@ -29,7 +28,11 @@ class VectorStoreLoader(BaseModel):
         Loads the vector store based on the provided config and embeddings model
         :return:
         """
-        if self.config.is_sparse is not None and self.config.vector_size is not None and self.config.kb_table is not None:
+        if (
+            self.config.is_sparse is not None
+            and self.config.vector_size is not None
+            and self.config.kb_table is not None
+        ):
             # Only use PGVector store for sparse vectors.
             db_handler = self.config.kb_table.get_vector_db()
             db_args = db_handler.connection_args
@@ -41,7 +44,7 @@ class VectorStoreLoader(BaseModel):
                 collection_name=self.config.kb_table._kb.vector_database_table,
                 embedding_function=self.embedding_model,
                 is_sparse=self.config.is_sparse,
-                vector_size=self.config.vector_size
+                vector_size=self.config.vector_size,
             )
         return MDBVectorStore(kb_table=self.config.kb_table)
 
@@ -49,7 +52,6 @@ class VectorStoreLoader(BaseModel):
 class VectorStoreFactory:
     @staticmethod
     def create(embedding_model: Embeddings, config: VectorStoreConfig):
-
         if config.vector_store_type == VectorStoreType.CHROMA:
             return VectorStoreFactory._load_chromadb_store(embedding_model, config)
         elif config.vector_store_type == VectorStoreType.PGVECTOR:
@@ -68,10 +70,11 @@ class VectorStoreFactory:
     @staticmethod
     def _load_pgvector_store(embedding_model: Embeddings, settings) -> PGVector:
         from .pgvector import PGVectorMDB
+
         return PGVectorMDB(
             connection_string=settings.connection_string,
             collection_name=settings.collection_name,
             embedding_function=embedding_model,
             is_sparse=settings.is_sparse,
-            vector_size=settings.vector_size
+            vector_size=settings.vector_size,
         )

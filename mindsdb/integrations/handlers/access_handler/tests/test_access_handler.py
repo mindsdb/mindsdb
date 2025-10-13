@@ -7,9 +7,9 @@ class AccessHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
-            "db_file": 'C:\\Users\\minurap\\Documents\\example_db.accdb',
+            "db_file": "C:\\Users\\minurap\\Documents\\example_db.accdb",
         }
-        cls.handler = AccessHandler('test_access_handler', cls.kwargs)
+        cls.handler = AccessHandler("test_access_handler", cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
@@ -24,9 +24,9 @@ class AccessHandlerTest(unittest.TestCase):
         assert tables.type is not RESPONSE_TYPE.ERROR
 
     def test_3_get_columns(self):
-        columns = self.handler.get_columns('example_tbl')
+        columns = self.handler.get_columns("example_tbl")
         assert columns.type is not RESPONSE_TYPE.ERROR
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

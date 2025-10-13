@@ -36,9 +36,7 @@ class GoogleGeminiHandler(BaseMLEngine):
     @staticmethod
     def create_validation(target, args=None, **kwargs):
         if "using" not in args:
-            raise Exception(
-                "Gemini engine requires a USING clause! Refer to its documentation for more details."
-            )
+            raise Exception("Gemini engine requires a USING clause! Refer to its documentation for more details.")
         else:
             args = args["using"]
 
@@ -56,9 +54,7 @@ class GoogleGeminiHandler(BaseMLEngine):
             )
             == 0
         ):
-            raise Exception(
-                "One of `question_column`, `prompt_template` or `json_struct` is required for this engine."
-            )
+            raise Exception("One of `question_column`, `prompt_template` or `json_struct` is required for this engine.")
 
         keys_collection = [
             ["prompt_template"],
@@ -68,9 +64,7 @@ class GoogleGeminiHandler(BaseMLEngine):
             ["img_url", "ctx_column"],
         ]
         for keys in keys_collection:
-            if keys[0] in args and any(
-                x[0] in args for x in keys_collection if x != keys
-            ):
+            if keys[0] in args and any(x[0] in args for x in keys_collection if x != keys):
                 raise Exception(
                     textwrap.dedent(
                         """\
@@ -117,18 +111,14 @@ class GoogleGeminiHandler(BaseMLEngine):
         args["target"] = target
         self.model_storage.json_set("args", args)
 
-    def predict(
-        self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None
-    ) -> pd.DataFrame:
+    def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> pd.DataFrame:
         pred_args = args["predict_params"] if args else {}
         args = self.model_storage.json_get("args")
         df = df.reset_index(drop=True)
 
         # same as opeani handler for getting prompt template and mode
         if pred_args.get("prompt_template", False):
-            base_template = pred_args[
-                "prompt_template"
-            ]  # override with predict-time template if available
+            base_template = pred_args["prompt_template"]  # override with predict-time template if available
         elif args.get("prompt_template", False):
             base_template = args["prompt_template"]
         else:
@@ -156,10 +146,7 @@ class GoogleGeminiHandler(BaseMLEngine):
             # Disclaimer: The following code has been adapted from the OpenAI handler.
             elif args.get("context_column", False):
                 empty_prompt_ids = np.where(
-                    df[[args["context_column"], args["question_column"]]]
-                    .isna()
-                    .all(axis=1)
-                    .values
+                    df[[args["context_column"], args["question_column"]]].isna().all(axis=1).values
                 )[0]
                 contexts = list(df[args["context_column"]].apply(lambda x: str(x)))
                 questions = list(df[args["question_column"]].apply(lambda x: str(x)))
@@ -170,9 +157,7 @@ class GoogleGeminiHandler(BaseMLEngine):
 
                 # Disclaimer: The following code has been adapted from the OpenAI handler.
             elif args.get("json_struct", False):
-                empty_prompt_ids = np.where(
-                    df[[args["input_text"]]].isna().all(axis=1).values
-                )[0]
+                empty_prompt_ids = np.where(df[[args["input_text"]]].isna().all(axis=1).values)[0]
                 prompts = []
                 for i in df.index:
                     if "json_struct" in df.columns:
@@ -188,7 +173,7 @@ class GoogleGeminiHandler(BaseMLEngine):
 
                     p = textwrap.dedent(
                         f"""\
-                        Using text starting after 'The text is:', give exactly {len(args['json_struct'])} answers to the questions:
+                        Using text starting after 'The text is:', give exactly {len(args["json_struct"])} answers to the questions:
                         {{{{json_struct}}}}
 
                         Answers should be in the same order as the questions.
@@ -197,7 +182,7 @@ class GoogleGeminiHandler(BaseMLEngine):
                         Answers should be as short as possible, ideally 1-2 words (unless otherwise specified).
 
                         The text is:
-                        {{{{{args['input_text']}}}}}
+                        {{{{{args["input_text"]}}}}}
                     """
                     )
                     p = p.replace("{{json_struct}}", json_struct)
@@ -210,9 +195,7 @@ class GoogleGeminiHandler(BaseMLEngine):
                 empty_prompt_ids = []
                 prompts = list(df[args["user_column"]])
             else:
-                empty_prompt_ids = np.where(
-                    df[[args["question_column"]]].isna().all(axis=1).values
-                )[0]
+                empty_prompt_ids = np.where(df[[args["question_column"]]].isna().all(axis=1).values)[0]
                 prompts = list(df[args["question_column"]].apply(lambda x: str(x)))
 
         # remove prompts without signal from completion queue
@@ -277,11 +260,7 @@ class GoogleGeminiHandler(BaseMLEngine):
 
             if task_type == "retrieval_query":
                 results = [
-                    str(
-                        genai.embed_content(
-                            model=model_name, content=query, task_type=task_type
-                        )["embedding"]
-                    )
+                    str(genai.embed_content(model=model_name, content=query, task_type=task_type)["embedding"])
                     for query in prompts
                 ]
             elif titles:
@@ -298,11 +277,7 @@ class GoogleGeminiHandler(BaseMLEngine):
                 ]
             else:
                 results = [
-                    str(
-                        genai.embed_content(
-                            model=model_name, content=doc, task_type=task_type
-                        )["embedding"]
-                    )
+                    str(genai.embed_content(model=model_name, content=doc, task_type=task_type)["embedding"])
                     for doc in prompts
                 ]
 
@@ -315,9 +290,7 @@ class GoogleGeminiHandler(BaseMLEngine):
         def get_img(url):
             # URL Validation
             response = requests.get(url)
-            if response.status_code == 200 and response.headers.get(
-                "content-type", ""
-            ).startswith("image/"):
+            if response.status_code == 200 and response.headers.get("content-type", "").startswith("image/"):
                 return Image.open(BytesIO(response.content))
             else:
                 raise Exception(f"{url} is not vaild image URL..")
@@ -340,10 +313,7 @@ class GoogleGeminiHandler(BaseMLEngine):
             imgs = list(executor.map(get_img, urls))
         # imgs = [Image.open(BytesIO(requests.get(url).content)) for url in urls]
         if prompts:
-            results = [
-                model.generate_content([img, text]).text
-                for img, text in zip(imgs, prompts)
-            ]
+            results = [model.generate_content([img, text]).text for img, text in zip(imgs, prompts)]
         else:
             results = [model.generate_content(img).text for img in imgs]
 
@@ -353,7 +323,6 @@ class GoogleGeminiHandler(BaseMLEngine):
 
     # Disclaimer: The following code has been adapted from the OpenAI handler.
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
-
         args = self.model_storage.json_get("args")
 
         if attribute == "args":

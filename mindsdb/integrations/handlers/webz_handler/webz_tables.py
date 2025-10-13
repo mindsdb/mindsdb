@@ -8,7 +8,6 @@ from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditio
 
 
 class WebzBaseAPITable(APITable):
-
     ENDPOINT = None
     OUTPUT_COLUMNS = []
     SORTABLE_COLUMNS = []
@@ -46,9 +45,7 @@ class WebzBaseAPITable(APITable):
 
         if query.limit is not None:
             params["size"] = query.limit.value
-        result = self.handler.call_webz_api(
-            method_name=type(self).TABLE_NAME, params=params
-        )
+        result = self.handler.call_webz_api(method_name=type(self).TABLE_NAME, params=params)
 
         # filter targets
         columns = []
@@ -77,9 +74,7 @@ class WebzBaseAPITable(APITable):
         # Rename columns
         for target in query.targets:
             if target.alias:
-                result.rename(
-                    columns={target.parts[-1]: str(target.alias)}, inplace=True
-                )
+                result.rename(columns={target.parts[-1]: str(target.alias)}, inplace=True)
         return result
 
     def get_columns(self) -> List[str]:

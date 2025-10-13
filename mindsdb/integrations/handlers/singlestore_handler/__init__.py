@@ -2,6 +2,7 @@ from mindsdb.integrations.libs.const import HANDLER_TYPE
 
 try:
     from .singlestore_handler import SingleStoreHandler as Handler
+
     import_error = None
 except Exception as e:
     Handler = None
@@ -9,12 +10,9 @@ except Exception as e:
 from .__about__ import __version__ as version, __description__ as description
 
 
-title = 'SingleStore'
-name = 'singlestore'
+title = "SingleStore"
+name = "singlestore"
 type = HANDLER_TYPE.DATA
-icon_path = 'icon.svg'
+icon_path = "icon.svg"
 
-__all__ = [
-    'Handler', 'version', 'name', 'type', 'title', 'description',
-    'import_error', 'icon_path'
-]
+__all__ = ["Handler", "version", "name", "type", "title", "description", "import_error", "icon_path"]

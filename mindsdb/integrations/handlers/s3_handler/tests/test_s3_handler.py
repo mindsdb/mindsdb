@@ -12,9 +12,9 @@ class S3HandlerTest(unittest.TestCase):
             "region_name": "us-east-1",
             "bucket": "mindsdb-bucket",
             "key": "iris.csv",
-            "input_serialization": "{'CSV': {'FileHeaderInfo': 'NONE'}}"
+            "input_serialization": "{'CSV': {'FileHeaderInfo': 'NONE'}}",
         }
-        cls.handler = S3Handler('test_s3_handler', cls.kwargs)
+        cls.handler = S3Handler("test_s3_handler", cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
@@ -33,5 +33,5 @@ class S3HandlerTest(unittest.TestCase):
         assert columns.type is not RESPONSE_TYPE.ERROR
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

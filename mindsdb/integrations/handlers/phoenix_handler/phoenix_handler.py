@@ -14,7 +14,7 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 
 
@@ -26,7 +26,7 @@ class PhoenixHandler(DatabaseHandler):
     This handler handles connection and execution of the Apache Phoenix statements.
     """
 
-    name = 'phoenix'
+    name = "phoenix"
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         """
@@ -38,9 +38,18 @@ class PhoenixHandler(DatabaseHandler):
         """
         super().__init__(name)
         self.parser = parse_sql
-        self.dialect = 'phoenix'
+        self.dialect = "phoenix"
 
-        optional_parameters = ['max_retries', 'autocommit', 'auth', 'authentication', 'avatica_user', 'avatica_password', 'user', 'password']
+        optional_parameters = [
+            "max_retries",
+            "autocommit",
+            "auth",
+            "authentication",
+            "avatica_user",
+            "avatica_password",
+            "user",
+            "password",
+        ]
         for parameter in optional_parameters:
             if parameter not in connection_data:
                 connection_data[parameter] = None
@@ -66,22 +75,22 @@ class PhoenixHandler(DatabaseHandler):
             return self.connection
 
         self.connection = phoenixdb.connect(
-            url=self.connection_data['url'],
-            max_retries=self.connection_data['max_retries'],
-            autocommit=self.connection_data['autocommit'],
-            auth=self.connection_data['auth'],
-            authentication=self.connection_data['authentication'],
-            avatica_user=self.connection_data['avatica_user'],
-            avatica_password=self.connection_data['avatica_password'],
-            user=self.connection_data['user'],
-            password=self.connection_data['password']
+            url=self.connection_data["url"],
+            max_retries=self.connection_data["max_retries"],
+            autocommit=self.connection_data["autocommit"],
+            auth=self.connection_data["auth"],
+            authentication=self.connection_data["authentication"],
+            avatica_user=self.connection_data["avatica_user"],
+            avatica_password=self.connection_data["avatica_password"],
+            user=self.connection_data["user"],
+            password=self.connection_data["password"],
         )
         self.is_connected = True
 
         return self.connection
 
     def disconnect(self):
-        """ Close any existing connections
+        """Close any existing connections
 
         Should switch self.is_connected.
         """
@@ -107,7 +116,7 @@ class PhoenixHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            logger.error(f'Error connecting to the Phoenix Query Server, {e}!')
+            logger.error(f"Error connecting to the Phoenix Query Server, {e}!")
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -136,21 +145,14 @@ class PhoenixHandler(DatabaseHandler):
             result = cursor.fetchall()
             if result:
                 response = Response(
-                    RESPONSE_TYPE.TABLE,
-                    data_frame=pd.DataFrame(
-                        result,
-                        columns=[x[0] for x in cursor.description]
-                    )
+                    RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(result, columns=[x[0] for x in cursor.description])
                 )
             else:
                 connection.commit()
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
-            logger.error(f'Error running query: {query} on the Phoenix Query Server!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
-            )
+            logger.error(f"Error running query: {query} on the Phoenix Query Server!")
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         cursor.close()
         if need_to_close is True:
@@ -184,9 +186,9 @@ class PhoenixHandler(DatabaseHandler):
         """
         result = self.native_query(query)
         df = result.data_frame
-        df = df[df['TABLE_SCHEM'] != 'SYSTEM']
-        df = df.drop('TABLE_SCHEM', axis=1)
-        result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
+        df = df[df["TABLE_SCHEM"] != "SYSTEM"]
+        df = df.drop("TABLE_SCHEM", axis=1)
+        result.data_frame = df.rename(columns={df.columns[0]: "table_name"})
         return result
 
     def get_columns(self, table_name: str) -> StatusResponse:
@@ -211,17 +213,13 @@ class PhoenixHandler(DatabaseHandler):
             response = Response(
                 RESPONSE_TYPE.TABLE,
                 data_frame=pd.DataFrame(
-                    [(x[0], x[1]) for x in cursor.description],
-                    columns=['column_name', 'data_type']
-                )
+                    [(x[0], x[1]) for x in cursor.description], columns=["column_name", "data_type"]
+                ),
             )
 
         except Exception as e:
-            logger.error(f'Error running query: {query} on the Phoenix Query Server!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
-            )
+            logger.error(f"Error running query: {query} on the Phoenix Query Server!")
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         cursor.close()
         if need_to_close is True:

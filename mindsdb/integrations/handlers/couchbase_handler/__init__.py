@@ -1,6 +1,7 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
 
 from .connection_args import connection_args, connection_args_example
+
 try:
     from .couchbase_handler import CouchbaseHandler as Handler
 

@@ -30,11 +30,7 @@ class AQByUserLocationTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'air_quality_user_location',
-            self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "air_quality_user_location", self.get_columns())
 
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
@@ -52,11 +48,7 @@ class AQByUserLocationTable(APITable):
         df = pd.json_normalize(response["content"])
 
         select_statement_executor = SELECTQueryExecutor(
-            df,
-            selected_columns,
-            subset_where_conditions,
-            order_by_conditions,
-            result_limit
+            df, selected_columns, subset_where_conditions, order_by_conditions, result_limit
         )
 
         df = select_statement_executor.execute_query()
@@ -102,7 +94,7 @@ class AQByUserLocationTable(APITable):
             "data.forecast.daily.o3",
             "data.forecast.daily.pm10",
             "data.forecast.daily.pm25",
-            "data.debug.sync"
+            "data.debug.sync",
         ]
 
 
@@ -128,26 +120,22 @@ class AQByCityTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'air_quality_city',
-            self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "air_quality_city", self.get_columns())
 
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
         search_params = {}
         subset_where_conditions = []
         for op, arg1, arg2 in where_conditions:
-            if arg1 == 'city':
-                if op == '=':
+            if arg1 == "city":
+                if op == "=":
                     search_params["city"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for city column.")
             elif arg1 in self.get_columns():
                 subset_where_conditions.append([op, arg1, arg2])
 
-        filter_flag = ("city" in search_params)
+        filter_flag = "city" in search_params
 
         if not filter_flag:
             raise NotImplementedError("city column has to be present in where clause.")
@@ -161,11 +149,7 @@ class AQByCityTable(APITable):
         df = pd.json_normalize(response["content"])
 
         select_statement_executor = SELECTQueryExecutor(
-            df,
-            selected_columns,
-            subset_where_conditions,
-            order_by_conditions,
-            result_limit
+            df, selected_columns, subset_where_conditions, order_by_conditions, result_limit
         )
 
         df = select_statement_executor.execute_query()
@@ -213,7 +197,7 @@ class AQByCityTable(APITable):
             "data.forecast.daily.o3",
             "data.forecast.daily.pm10",
             "data.forecast.daily.pm25",
-            "data.debug.sync"
+            "data.debug.sync",
         ]
 
 
@@ -239,24 +223,20 @@ class AQByLatLngTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'air_quality_lat_lng',
-            self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "air_quality_lat_lng", self.get_columns())
 
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
         search_params = {}
         subset_where_conditions = []
         for op, arg1, arg2 in where_conditions:
-            if arg1 == 'lat':
-                if op == '=':
+            if arg1 == "lat":
+                if op == "=":
                     search_params["lat"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for lat column.")
-            if arg1 == 'lng':
-                if op == '=':
+            if arg1 == "lng":
+                if op == "=":
                     search_params["lng"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for lng column.")
@@ -277,11 +257,7 @@ class AQByLatLngTable(APITable):
         df = pd.json_normalize(response["content"])
 
         select_statement_executor = SELECTQueryExecutor(
-            df,
-            selected_columns,
-            subset_where_conditions,
-            order_by_conditions,
-            result_limit
+            df, selected_columns, subset_where_conditions, order_by_conditions, result_limit
         )
 
         df = select_statement_executor.execute_query()
@@ -329,7 +305,7 @@ class AQByLatLngTable(APITable):
             "data.forecast.daily.o3",
             "data.forecast.daily.pm10",
             "data.forecast.daily.pm25",
-            "data.debug.sync"
+            "data.debug.sync",
         ]
 
 
@@ -355,26 +331,22 @@ class AQByNetworkStationTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'air_quality_station_by_name',
-            self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "air_quality_station_by_name", self.get_columns())
 
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
         search_params = {}
         subset_where_conditions = []
         for op, arg1, arg2 in where_conditions:
-            if arg1 == 'name':
-                if op == '=':
+            if arg1 == "name":
+                if op == "=":
                     search_params["name"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for name column.")
             elif arg1 in self.get_columns():
                 subset_where_conditions.append([op, arg1, arg2])
 
-        filter_flag = ("name" in search_params)
+        filter_flag = "name" in search_params
 
         if not filter_flag:
             raise NotImplementedError("name column have to be present in where clause.")
@@ -388,11 +360,7 @@ class AQByNetworkStationTable(APITable):
         df = pd.json_normalize(response["content"]["data"])
 
         select_statement_executor = SELECTQueryExecutor(
-            df,
-            selected_columns,
-            subset_where_conditions,
-            order_by_conditions,
-            result_limit
+            df, selected_columns, subset_where_conditions, order_by_conditions, result_limit
         )
 
         df = select_statement_executor.execute_query()
@@ -413,13 +381,13 @@ class AQByNetworkStationTable(APITable):
         """
 
         return [
-            'uid',
-            'aqi',
-            'time.tz',
-            'time.stime',
-            'time.vtime',
-            'station.name',
-            'station.geo',
-            'station.url',
-            'station.country'
+            "uid",
+            "aqi",
+            "time.tz",
+            "time.stime",
+            "time.vtime",
+            "station.name",
+            "station.geo",
+            "station.url",
+            "station.country",
         ]

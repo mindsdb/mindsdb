@@ -3,7 +3,12 @@ import pandas as pd
 from rocketchat_API.rocketchat import RocketChat
 
 from mindsdb.integrations.handlers.rocket_chat_handler.rocket_chat_tables import (
-    ChannelMessagesTable, ChannelsTable, DirectsTable, DirectMessagesTable, UsersTable)
+    ChannelMessagesTable,
+    ChannelsTable,
+    DirectsTable,
+    DirectMessagesTable,
+    UsersTable,
+)
 from mindsdb.integrations.libs.api_handler import APIChatHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -41,54 +46,49 @@ class RocketChatHandler(APIChatHandler):
         self.auth_user_id = None
         self.domain = None
 
-        args = kwargs.get('connection_data', {})
-        if 'domain' not in args:
+        args = kwargs.get("connection_data", {})
+        if "domain" not in args:
             raise ValueError('Must include Rocket Chat "domain" to read and write messages')
-        self.domain = args['domain']
+        self.domain = args["domain"]
 
-        if 'token' in args and 'user_id' in args:
-            self.auth_token = args['token']
-            self.auth_user_id = args['user_id']
-        elif 'username' in args and 'password' in args:
-            self.username = args['username']
-            self.password = args['password']
+        if "token" in args and "user_id" in args:
+            self.auth_token = args["token"]
+            self.auth_user_id = args["user_id"]
+        elif "username" in args and "password" in args:
+            self.username = args["username"]
+            self.password = args["password"]
         else:
             raise ValueError('Need "token" and "user_id", or "username" and "password" to connect to Rocket Chat')
 
         self.client = None
         self.is_connected = False
 
-        self._register_table('channels', ChannelsTable(self))
+        self._register_table("channels", ChannelsTable(self))
 
-        self._register_table('channel_messages', ChannelMessagesTable(self))
+        self._register_table("channel_messages", ChannelMessagesTable(self))
 
-        self._register_table('directs', DirectsTable(self))
+        self._register_table("directs", DirectsTable(self))
 
-        self._register_table('direct_messages', DirectMessagesTable(self))
+        self._register_table("direct_messages", DirectMessagesTable(self))
 
-        self._register_table('users', UsersTable(self))
+        self._register_table("users", UsersTable(self))
 
     def get_chat_config(self):
         params = {
-            'polling': {
-                'type': 'message_count',
-                'table': 'directs',
-                'chat_id_col': '_id',
-                'count_col': 'msgs'
+            "polling": {"type": "message_count", "table": "directs", "chat_id_col": "_id", "count_col": "msgs"},
+            "chat_table": {
+                "name": "direct_messages",
+                "chat_id_col": "room_id",
+                "username_col": "username",
+                "text_col": "text",
+                "time_col": "sent_at",
             },
-            'chat_table': {
-                'name': 'direct_messages',
-                'chat_id_col': 'room_id',
-                'username_col': 'username',
-                'text_col': 'text',
-                'time_col': 'sent_at',
-            }
         }
         return params
 
     def get_my_user_name(self):
-        info = self.call_api('me')
-        return info['username']
+        info = self.call_api("me")
+        return info["username"]
 
     def connect(self):
         """Creates a new Rocket Chat API client if needed and sets it as the client to use for requests.
@@ -103,7 +103,7 @@ class RocketChatHandler(APIChatHandler):
             password=self.password,
             auth_token=self.auth_token,
             user_id=self.auth_user_id,
-            server_url=self.domain
+            server_url=self.domain,
         )
 
         self.is_connected = True
@@ -121,7 +121,7 @@ class RocketChatHandler(APIChatHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            logger.error(f'Error connecting to Rocket Chat API: {e}!')
+            logger.error(f"Error connecting to Rocket Chat API: {e}!")
             response.error_message = e
 
         if response.success is False:

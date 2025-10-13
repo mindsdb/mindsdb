@@ -3,7 +3,17 @@ import copy
 from collections import defaultdict
 
 from mindsdb_sql_parser.ast import (
-    Identifier, Select, BinaryOperation, Last, Constant, Star, ASTNode, NullConstant, OrderBy, Function, TypeCast
+    Identifier,
+    Select,
+    BinaryOperation,
+    Last,
+    Constant,
+    Star,
+    ASTNode,
+    NullConstant,
+    OrderBy,
+    Function,
+    TypeCast,
 )
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 
@@ -34,21 +44,21 @@ class LastQuery:
 
     def _find_last_columns(self, query: ASTNode) -> Union[dict, None]:
         """
-          This function:
-           - Searches LAST column in the input query
-           - Replaces it with constants and memorises link to these constants
-           - Link to constants will be used to inject values to query instead of LAST
-           - Provide checks:
-             - if it is possible to find the table for column
-             - if column in select target
-           - Generates and returns last_column variable which is dict
-                last_columns[table_name] = {
-                    'table': <table identifier>,
-                    'column': <column name>,
-                    'links': [<link to ast node>, ... ],
-                    'target_idx': <number of column in select target>,
-                    'gen_init_query': if true: to generate query to initial values for LAST
-                }
+        This function:
+         - Searches LAST column in the input query
+         - Replaces it with constants and memorises link to these constants
+         - Link to constants will be used to inject values to query instead of LAST
+         - Provide checks:
+           - if it is possible to find the table for column
+           - if column in select target
+         - Generates and returns last_column variable which is dict
+              last_columns[table_name] = {
+                  'table': <table identifier>,
+                  'column': <column name>,
+                  'links': [<link to ast node>, ... ],
+                  'target_idx': <number of column in select target>,
+                  'gen_init_query': if true: to generate query to initial values for LAST
+              }
         """
 
         # index last variables in query
@@ -76,7 +86,6 @@ class LastQuery:
                         return found
 
         def index_query(node, is_table, parent_query, **kwargs):
-
             parent_query_id = id(parent_query)
             last = None
             if is_table and isinstance(node, Identifier):
@@ -105,13 +114,15 @@ class LastQuery:
 
             if last is not None:
                 # memorize
-                conditions.append({
-                    'query_id': parent_query_id,
-                    'condition': node,
-                    'last': last,
-                    'column': col,
-                    'gen_init_query': gen_init_query  # generate query to fetch initial last values from table
-                })
+                conditions.append(
+                    {
+                        "query_id": parent_query_id,
+                        "condition": node,
+                        "last": last,
+                        "column": col,
+                        "gen_init_query": gen_init_query,  # generate query to fetch initial last values from table
+                    }
+                )
 
         # find lasts
         query_traversal(query, index_query)
@@ -122,7 +133,7 @@ class LastQuery:
         self.query_orig = copy.deepcopy(query)
 
         for info in conditions:
-            self.last_idx[info['query_id']].append(info)
+            self.last_idx[info["query_id"]].append(info)
 
         # index query targets
         query_id = id(query)
@@ -152,21 +163,20 @@ class LastQuery:
         last_columns = {}
         for parent_query_id, items in self.last_idx.items():
             for info in items:
-                col = info['column']
-                last = info['last']
+                col = info["column"]
+                last = info["last"]
                 tables = tables_idx[parent_query_id]
 
                 uniq_tables = len(set([id(v) for v in tables.values()]))
                 if len(col.parts) > 1:
-
                     table = tables.get(col.parts[-2])
                     if table is None:
-                        raise ValueError('cant find table')
+                        raise ValueError("cant find table")
                 elif uniq_tables == 1:
                     table = list(tables.values())[0]
                 else:
                     # or just skip it?
-                    raise ValueError('cant find table')
+                    raise ValueError("cant find table")
 
                 col_name = col.parts[-1]
 
@@ -179,27 +189,27 @@ class LastQuery:
                             # will try to get by name
                             ...
                         else:
-                            raise ValueError('Last value should be in query target')
+                            raise ValueError("Last value should be in query target")
 
                     last_columns[table_name] = {
-                        'table': table,
-                        'column': col_name,
-                        'links': [last],
-                        'target_idx': target_idx,
-                        'gen_init_query': info['gen_init_query']
+                        "table": table,
+                        "column": col_name,
+                        "links": [last],
+                        "target_idx": target_idx,
+                        "gen_init_query": info["gen_init_query"],
                     }
 
-                elif last_columns[table_name]['column'] == col_name:
-                    last_columns[table_name]['column'].append(last)
+                elif last_columns[table_name]["column"] == col_name:
+                    last_columns[table_name]["column"].append(last)
                 else:
-                    raise ValueError('possible to use only one column')
+                    raise ValueError("possible to use only one column")
 
         return last_columns
 
     def to_string(self) -> str:
         """
-            String representation of the query
-            Used to identify query in query_context table
+        String representation of the query
+        Used to identify query in query_context table
         """
         return self.query_orig.to_string()
 
@@ -210,11 +220,11 @@ class LastQuery:
         """
         return [
             {
-                'table': info['table'],
-                'table_name': table_name,
-                'column_name': info['column'],
-                'target_idx': info['target_idx'],
-                'gen_init_query': info['gen_init_query'],
+                "table": info["table"],
+                "table_name": table_name,
+                "column_name": info["column"],
+                "target_idx": info["target_idx"],
+                "gen_init_query": info["gen_init_query"],
             }
             for table_name, info in self.last_tables.items()
         ]
@@ -224,8 +234,8 @@ class LastQuery:
         Fills query with new values and return it
         """
         for table_name, info in self.last_tables.items():
-            value = values.get(table_name, {}).get(info['column'])
-            for last in info['links']:
+            value = values.get(table_name, {}).get(info["column"])
+            for last in info["links"]:
                 last.value = value
 
         return self.query
@@ -239,9 +249,9 @@ class LastQuery:
         # replace values
         for items in self.last_idx.values():
             for info in items:
-                node = info['condition']
+                node = info["condition"]
                 back_up_values.append([node.op, node.args[1]])
-                node.op = 'is not'
+                node.op = "is not"
                 node.args[1] = NullConstant()
 
         query2 = copy.deepcopy(self.query)
@@ -249,18 +259,16 @@ class LastQuery:
         # return values
         for items in self.last_idx.values():
             for info in items:
-                node = info['condition']
+                node = info["condition"]
                 op, arg1 = back_up_values.pop(0)
                 node.op = op
                 node.args[1] = arg1
 
         for info in self.get_last_columns():
-            if not info['gen_init_query']:
+            if not info["gen_init_query"]:
                 continue
-            col = Identifier(info['column_name'])
+            col = Identifier(info["column_name"])
             query2.targets = [col]
-            query2.order_by = [
-                OrderBy(col, direction='DESC')
-            ]
+            query2.order_by = [OrderBy(col, direction="DESC")]
             query2.limit = Constant(1)
             yield query2, info

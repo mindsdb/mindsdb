@@ -56,7 +56,7 @@ class OpenStreetMapNodeTable(APITable):
             order_by_conditions["ascending"] = []
 
             for an_order in query.order_by:
-                if an_order.field.parts[0] == 'nodes':
+                if an_order.field.parts[0] == "nodes":
                     if an_order.field.parts[1] in nodes_df.columns:
                         order_by_conditions["columns"].append(an_order.field.parts[1])
 
@@ -65,40 +65,33 @@ class OpenStreetMapNodeTable(APITable):
                         else:
                             order_by_conditions["ascending"].append(False)
                     else:
-                        raise ValueError(
-                            f"Order by unknown column {an_order.field.parts[1]}"
-                        )
+                        raise ValueError(f"Order by unknown column {an_order.field.parts[1]}")
 
-        select_statement_executor = SELECTQueryExecutor(
-            nodes_df,
-            selected_columns,
-            [],
-            order_by_conditions
-        )
+        select_statement_executor = SELECTQueryExecutor(nodes_df, selected_columns, [], order_by_conditions)
         nodes_df = select_statement_executor.execute_query()
 
         return nodes_df
 
     def get_nodes(self, **kwargs) -> List[Dict]:
-        where_conditions = kwargs.get('where_conditions', None)
+        where_conditions = kwargs.get("where_conditions", None)
 
         area, tags = None, {}
         min_lat, min_lon, max_lat, max_lon = None, None, None, None
         if where_conditions:
             for condition in where_conditions:
-                if condition[1] == 'area':
+                if condition[1] == "area":
                     area = condition[2]
 
-                elif condition[1] == 'min_lat':
+                elif condition[1] == "min_lat":
                     min_lat = condition[2]
 
-                elif condition[1] == 'min_lon':
+                elif condition[1] == "min_lon":
                     min_lon = condition[2]
 
-                elif condition[1] == 'max_lat':
+                elif condition[1] == "max_lat":
                     max_lat = condition[2]
 
-                elif condition[1] == 'max_lon':
+                elif condition[1] == "max_lon":
                     max_lon = condition[2]
 
                 else:
@@ -111,21 +104,18 @@ class OpenStreetMapNodeTable(APITable):
             min_lon=min_lon,
             max_lat=max_lat,
             max_lon=max_lon,
-            limit=kwargs.get('limit', None)
+            limit=kwargs.get("limit", None),
         )
 
         nodes = []
         for node in result.nodes:
-            node_dict = {
-                "id": node.id,
-                "lat": node.lat,
-                "lon": node.lon,
-                "tags": node.tags
-            }
+            node_dict = {"id": node.id, "lat": node.lat, "lon": node.lon, "tags": node.tags}
             nodes.append(node_dict)
         return nodes
 
-    def execute_osm_node_query(self, tags, area=None, min_lat=None, min_lon=None, max_lat=None, max_lon=None, limit=None):
+    def execute_osm_node_query(
+        self, tags, area=None, min_lat=None, min_lon=None, max_lat=None, max_lon=None, limit=None
+    ):
         query_template = """
         [out:json];
         {area_clause}
@@ -154,7 +144,7 @@ class OpenStreetMapNodeTable(APITable):
             area_node_clause=area_node_clause,
             tags_clause=tags_clause,
             bbox=bbox_clause,
-            limit=limit_clause
+            limit=limit_clause,
         )
 
         api = self.handler.connect()
@@ -167,21 +157,13 @@ class OpenStreetMapWayTable(APITable):
     """The OpenStreetMap Ways Table implementation"""
 
     def select(self, query: ast.Select) -> pd.DataFrame:
-
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'ways',
-            self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "ways", self.get_columns())
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
         ways_df = pd.json_normalize(self.get_ways(limit=result_limit))
 
         select_statement_executor = SELECTQueryExecutor(
-            ways_df,
-            selected_columns,
-            where_conditions,
-            order_by_conditions
+            ways_df, selected_columns, where_conditions, order_by_conditions
         )
         ways_df = select_statement_executor.execute_query()
 
@@ -191,15 +173,15 @@ class OpenStreetMapWayTable(APITable):
         return pd.json_normalize(self.get_ways(limit=1)).columns.tolist()
 
     def get_ways(self, **kwargs) -> List[Dict]:
-
         api_session = self.handler.connect()
-        ways = api_session.query("""
+        ways = api_session.query(
+            """
             way
             ({{bbox}});
             out;
             """,
-                                 # bbox=self.connection_data['bbox']
-                                 )
+            # bbox=self.connection_data['bbox']
+        )
         return [way.to_dict() for way in ways.ways]
 
 
@@ -207,21 +189,13 @@ class OpenStreetMapRelationTable(APITable):
     """The OpenStreetMap Relations Table implementation"""
 
     def select_relations(self, query: ast.Select) -> pd.DataFrame:
-
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'relations',
-            self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "relations", self.get_columns())
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
         relations_df = pd.json_normalize(self.get_relations(limit=result_limit))
 
         select_statement_executor = SELECTQueryExecutor(
-            relations_df,
-            selected_columns,
-            where_conditions,
-            order_by_conditions
+            relations_df, selected_columns, where_conditions, order_by_conditions
         )
         relations_df = select_statement_executor.execute_query()
 
@@ -231,13 +205,13 @@ class OpenStreetMapRelationTable(APITable):
         return pd.json_normalize(self.get_relations(limit=1)).columns.tolist()
 
     def get_relations(self, **kwargs) -> List[Dict]:
-
         api_session = self.handler.connect()
-        relations = api_session.query("""
+        relations = api_session.query(
+            """
                     relation
                     ({{bbox}});
                     out;
                     """,
-                                      # bbox=self.connection_data['bbox']
-                                      )
+            # bbox=self.connection_data['bbox']
+        )
         return [relation.to_dict() for relation in relations.relations]

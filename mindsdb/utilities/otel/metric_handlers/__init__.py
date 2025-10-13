@@ -12,7 +12,7 @@ def get_query_request_counter():
     # Create the counter if it does not exist
     if _query_request_counter is None:
         meter_name = f"{OTEL_SERVICE_NAME}.query_service_meter"
-        
+
         # Get the meter from the main metrics object
         meter = metrics.get_meter(meter_name)
 
@@ -23,6 +23,7 @@ def get_query_request_counter():
         )
 
     return _query_request_counter
+
 
 def increment_otel_query_request_counter(metadata: dict) -> None:
     query_request_counter = get_query_request_counter()

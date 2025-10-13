@@ -7,7 +7,8 @@ from langchain_core.documents import Document
 
 
 class EventDispatchCallbackHandler(BaseCallbackHandler):
-    '''Puts dispatched events onto an event queue to be processed as a streaming chunk'''
+    """Puts dispatched events onto an event queue to be processed as a streaming chunk"""
+
     def __init__(self, queue: queue.Queue):
         self.queue = queue
 
@@ -19,13 +20,9 @@ class EventDispatchCallbackHandler(BaseCallbackHandler):
         run_id: UUID,
         tags: Optional[List[str]] = None,
         metadata: Optional[Dict[str, Any]] = None,
-        **kwargs
+        **kwargs,
     ):
-        self.queue.put({
-            'type': 'event',
-            'name': name,
-            'data': data
-        })
+        self.queue.put({"type": "event", "name": name, "data": data})
 
     def on_retriever_end(
         self,
@@ -37,14 +34,5 @@ class EventDispatchCallbackHandler(BaseCallbackHandler):
     ) -> Any:
         document_objects = []
         for d in documents:
-            document_objects.append({
-                'content': d.page_content,
-                'metadata': d.metadata
-            })
-        self.queue.put({
-            'type': 'event',
-            'name': 'retriever_end',
-            'data': {
-                'documents': document_objects
-            }
-        })
+            document_objects.append({"content": d.page_content, "metadata": d.metadata})
+        self.queue.put({"type": "event", "name": "retriever_end", "data": {"documents": document_objects}})

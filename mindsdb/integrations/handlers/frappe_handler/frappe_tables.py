@@ -7,7 +7,6 @@ from mindsdb_sql_parser import ast
 
 
 class FrappeDocumentsTable(APITable):
-
     def select(self, query: ast.Select) -> pd.DataFrame:
         """Selects data from the Frappe API and returns it as a pandas DataFrame.
 
@@ -21,33 +20,27 @@ class FrappeDocumentsTable(APITable):
         params = {}
         filters = []
         for op, arg1, arg2 in conditions:
-            if arg1 == 'doctype':
-                if op != '=':
+            if arg1 == "doctype":
+                if op != "=":
                     raise NotImplementedError
-                params['doctype'] = arg2
-            elif arg1 == 'name':
-                params['name'] = arg2
+                params["doctype"] = arg2
+            elif arg1 == "name":
+                params["name"] = arg2
             else:
                 filters.append([arg1, op, arg2])
 
-        if 'doctype' not in params:
+        if "doctype" not in params:
             raise ValueError('"doctype" parameter required')
 
         if query.limit:
-            params['limit'] = query.limit.value
+            params["limit"] = query.limit.value
         if filters:
-            params['filters'] = filters
+            params["filters"] = filters
 
-        if 'name' in params:
-            document_data = self.handler.call_frappe_api(
-                method_name='get_document',
-                params=params
-            )
+        if "name" in params:
+            document_data = self.handler.call_frappe_api(method_name="get_document", params=params)
         else:
-            document_data = self.handler.call_frappe_api(
-                method_name='get_documents',
-                params=params
-            )
+            document_data = self.handler.call_frappe_api(method_name="get_documents", params=params)
 
         # Only return the columns we need to.
         columns = []
@@ -75,8 +68,8 @@ class FrappeDocumentsTable(APITable):
         for row in query.values:
             params = dict(zip(columns, row))
 
-            self.handler.call_frappe_api('create_document', params)
+            self.handler.call_frappe_api("create_document", params)
 
     def get_columns(self) -> List:
         """Gets all columns to be returned in pandas DataFrame responses"""
-        return ['doctype', 'data']
+        return ["doctype", "data"]

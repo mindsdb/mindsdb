@@ -9,10 +9,7 @@ from google.cloud import storage
 from typing import Text, Dict, Optional, List
 from duckdb import DuckDBPyConnection
 
-from mindsdb.integrations.handlers.gcs_handler.gcs_tables import (
-    ListFilesTable,
-    FileTable
-)
+from mindsdb.integrations.handlers.gcs_handler.gcs_tables import ListFilesTable, FileTable
 from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb_sql_parser.ast import Select, Identifier, Insert, Star, Constant
 
@@ -20,7 +17,7 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 
 from mindsdb.integrations.libs.api_handler import APIHandler
@@ -33,9 +30,9 @@ class GcsHandler(APIHandler):
     This handler handles connection and execution of the SQL statements on GCS.
     """
 
-    name = 'gcs'
+    name = "gcs"
 
-    supported_file_formats = ['csv', 'tsv', 'json', 'parquet']
+    supported_file_formats = ["csv", "tsv", "json", "parquet"]
 
     def __init__(self, name: Text, connection_data: Optional[Dict], **kwargs):
         """
@@ -53,13 +50,13 @@ class GcsHandler(APIHandler):
         self.service_account_json = None
         self.connection = None
 
-        if 'service_account_keys' not in self.connection_data and 'service_account_json' not in self.connection_data:
-            raise ValueError('service_account_keys or service_account_json parameter must be provided.')
+        if "service_account_keys" not in self.connection_data and "service_account_json" not in self.connection_data:
+            raise ValueError("service_account_keys or service_account_json parameter must be provided.")
 
-        if 'service_account_json' in self.connection_data:
+        if "service_account_json" in self.connection_data:
             self.service_account_json = self.connection_data["service_account_json"]
 
-        if 'service_account_keys' in self.connection_data:
+        if "service_account_keys" in self.connection_data:
             with open(self.connection_data["service_account_keys"], "r") as f:
                 self.service_account_json = json.loads(f.read())
 
@@ -144,14 +141,14 @@ class GcsHandler(APIHandler):
         # Check connection via storage client.
         try:
             storage_client = self._connect_storage_client()
-            if 'bucket' in self.connection_data:
-                storage_client.get_bucket(self.connection_data['bucket'])
+            if "bucket" in self.connection_data:
+                storage_client.get_bucket(self.connection_data["bucket"])
             else:
                 storage_client.list_buckets()
             response.success = True
             storage_client.close()
         except Exception as e:
-            logger.error(f'Error connecting to GCS with the given credentials, {e}!')
+            logger.error(f"Error connecting to GCS with the given credentials, {e}!")
             response.error_message = str(e)
 
         if response.success and need_to_close:
@@ -163,12 +160,12 @@ class GcsHandler(APIHandler):
         return response
 
     def _get_bucket(self, key):
-        if 'bucket' in self.connection_data:
-            return self.connection_data['bucket'], key
+        if "bucket" in self.connection_data:
+            return self.connection_data["bucket"], key
 
         # get bucket from first part of the key
-        ar = key.split('/')
-        return ar[0], '/'.join(ar[1:])
+        ar = key.split("/")
+        return ar[0], "/".join(ar[1:])
 
     def read_as_table(self, key) -> pd.DataFrame:
         """
@@ -178,7 +175,6 @@ class GcsHandler(APIHandler):
         bucket, key = self._get_bucket(key)
 
         with self._connect_duckdb() as connection:
-
             cursor = connection.execute(f"SELECT * FROM 'gs://{bucket}/{key}'")
 
             return cursor.fetchdf()
@@ -211,7 +207,7 @@ class GcsHandler(APIHandler):
         stats = storage.Blob(bucket=bucketObj, name=key).exists(storage_client)
         storage_client.close()
         if not stats:
-            raise Exception(f'Error querying the file {key} in the bucket {bucket}!')
+            raise Exception(f"Error querying the file {key} in the bucket {bucket}!")
 
         with self._connect_duckdb() as connection:
             # copy
@@ -242,31 +238,28 @@ class GcsHandler(APIHandler):
         if isinstance(query, Select):
             table_name = query.from_table.parts[-1]
 
-            if table_name == 'files':
+            if table_name == "files":
                 table = self._files_table
                 df = table.select(query)
 
                 # add content
                 has_content = False
                 for target in query.targets:
-                    if isinstance(target, Identifier) and target.parts[-1].lower() == 'content':
+                    if isinstance(target, Identifier) and target.parts[-1].lower() == "content":
                         has_content = True
                         break
                 if has_content:
-                    df['content'] = df['path'].apply(self._read_as_content)
+                    df["content"] = df["path"].apply(self._read_as_content)
             else:
-                extension = table_name.split('.')[-1]
+                extension = table_name.split(".")[-1]
                 if extension not in self.supported_file_formats:
-                    logger.error(f'The file format {extension} is not supported!')
-                    raise ValueError(f'The file format {extension} is not supported!')
+                    logger.error(f"The file format {extension} is not supported!")
+                    raise ValueError(f"The file format {extension} is not supported!")
 
                 table = FileTable(self, table_name=table_name)
                 df = table.select(query)
 
-            response = Response(
-                RESPONSE_TYPE.TABLE,
-                data_frame=df
-            )
+            response = Response(RESPONSE_TYPE.TABLE, data_frame=df)
         elif isinstance(query, Insert):
             table_name = query.table.parts[-1]
             table = FileTable(self, table_name=table_name)
@@ -296,14 +289,14 @@ class GcsHandler(APIHandler):
                 continue
 
             for blob in blobs:
-                if blob.storage_class != 'STANDARD':
+                if blob.storage_class != "STANDARD":
                     continue
 
                 obj = {}
-                obj['Bucket'] = bucket
+                obj["Bucket"] = bucket
                 if add_bucket_to_name:
                     # bucket is part of the name
-                    obj['Key'] = f'{bucket}/{blob.name}'
+                    obj["Key"] = f"{bucket}/{blob.name}"
                 objects.append(obj)
             if limit is not None and len(objects) >= limit:
                 break
@@ -323,21 +316,13 @@ class GcsHandler(APIHandler):
         # Get only the supported file formats.
         # Wrap the object names with backticks to prevent SQL syntax errors.
         supported_names = [
-            f"`{obj['Key']}`"
-            for obj in self.get_objects()
-            if obj['Key'].split('.')[-1] in self.supported_file_formats
+            f"`{obj['Key']}`" for obj in self.get_objects() if obj["Key"].split(".")[-1] in self.supported_file_formats
         ]
 
         # virtual table with list of files
-        supported_names.insert(0, 'files')
+        supported_names.insert(0, "files")
 
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=pd.DataFrame(
-                supported_names,
-                columns=['table_name']
-            )
-        )
+        response = Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(supported_names, columns=["table_name"]))
 
         return response
 
@@ -354,11 +339,7 @@ class GcsHandler(APIHandler):
         Returns:
             Response: A response object containing the column details, formatted as per the `Response` class.
         """
-        query = Select(
-            targets=[Star()],
-            from_table=Identifier(parts=[table_name]),
-            limit=Constant(1)
-        )
+        query = Select(targets=[Star()], from_table=Identifier(parts=[table_name]), limit=Constant(1))
 
         result = self.query(query)
 
@@ -366,10 +347,12 @@ class GcsHandler(APIHandler):
             RESPONSE_TYPE.TABLE,
             data_frame=pd.DataFrame(
                 {
-                    'column_name': result.data_frame.columns,
-                    'data_type': [data_type if data_type != 'object' else 'string' for data_type in result.data_frame.dtypes]
+                    "column_name": result.data_frame.columns,
+                    "data_type": [
+                        data_type if data_type != "object" else "string" for data_type in result.data_frame.dtypes
+                    ],
                 }
-            )
+            ),
         )
 
         return response

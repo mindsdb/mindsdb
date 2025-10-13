@@ -1,4 +1,4 @@
-from .select_query_utilities import SELECTQueryParser, SELECTQueryExecutor
-from .insert_query_utilities import INSERTQueryParser
-from .update_query_utilities import UPDATEQueryParser, UPDATEQueryExecutor
-from .delete_query_utilities import DELETEQueryParser, DELETEQueryExecutor
+from .select_query_utilities import SELECTQueryParser as SELECTQueryParser, SELECTQueryExecutor as SELECTQueryExecutor
+from .insert_query_utilities import INSERTQueryParser as INSERTQueryParser
+from .update_query_utilities import UPDATEQueryParser as UPDATEQueryParser, UPDATEQueryExecutor as UPDATEQueryExecutor
+from .delete_query_utilities import DELETEQueryParser as DELETEQueryParser, DELETEQueryExecutor as DELETEQueryExecutor

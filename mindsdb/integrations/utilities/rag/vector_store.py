@@ -20,17 +20,16 @@ class VectorStoreOperator:
     Encapsulates the logic for adding documents to a vector store with rate limiting.
     """
 
-    def __init__(self,
-                 vector_store: VectorStore,
-                 embedding_model: Embeddings,
-                 documents: List[Document] = None,
-                 vector_store_config: VectorStoreConfig = None,
-                 token_per_minute_limit: int = _DEFAULT_TPM_LIMIT,
-                 rate_limit_interval: timedelta = _DEFAULT_RATE_LIMIT_INTERVAL,
-                 search_kwargs: SearchKwargs = None
-
-                 ):
-
+    def __init__(
+        self,
+        vector_store: VectorStore,
+        embedding_model: Embeddings,
+        documents: List[Document] = None,
+        vector_store_config: VectorStoreConfig = None,
+        token_per_minute_limit: int = _DEFAULT_TPM_LIMIT,
+        rate_limit_interval: timedelta = _DEFAULT_RATE_LIMIT_INTERVAL,
+        search_kwargs: SearchKwargs = None,
+    ):
         self.documents = documents
         self.embedding_model = embedding_model
         self.token_per_minute_limit = token_per_minute_limit
@@ -79,9 +78,7 @@ class VectorStoreOperator:
 
     def _init_vector_store(self, documents: List[Document], vector_store: VectorStore):
         if len(documents) > 0:
-            self._vector_store = vector_store.from_documents(
-                documents=[documents[0]], embedding=self.embedding_model
-            )
+            self._vector_store = vector_store.from_documents(documents=[documents[0]], embedding=self.embedding_model)
 
     def add_documents(self, documents: List[Document]):
         for document in documents:

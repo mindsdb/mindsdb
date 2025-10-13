@@ -11,13 +11,10 @@ def func_call_process(name: str, args: dict, integration_id: int, module_path: s
 
     result = None
 
-    if hasattr(module.Handler, 'function_call'):
+    if hasattr(module.Handler, "function_call"):
         engine_storage = HandlerStorage(integration_id)
         try:
-            result = module.Handler(
-                engine_storage=engine_storage,
-                model_storage=None
-            ).function_call(name, args)
+            result = module.Handler(engine_storage=engine_storage, model_storage=None).function_call(name, args)
         except NotImplementedError:
             return None
         except Exception as e:

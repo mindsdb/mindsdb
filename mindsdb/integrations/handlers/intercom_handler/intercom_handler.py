@@ -23,14 +23,11 @@ class IntercomHandler(APIHandler):
 
         self.connection = None
         self.is_connected = False
-        self._baseUrl = 'https://api.intercom.io'
-        args = kwargs.get('connection_data', {})
-        if 'access_token' in args:
-            access_token = args['access_token']
-        self._headers = {
-            "Accept": "application/json",
-            "Authorization": f"Bearer {access_token}"
-        }
+        self._baseUrl = "https://api.intercom.io"
+        args = kwargs.get("connection_data", {})
+        if "access_token" in args:
+            access_token = args["access_token"]
+        self._headers = {"Accept": "application/json", "Authorization": f"Bearer {access_token}"}
         self._register_table(Articles.name, Articles(self))
 
     def check_connection(self) -> StatusResponse:
@@ -45,24 +42,20 @@ class IntercomHandler(APIHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            logger.error(f'Error connecting to Intercom API: {e}!')
+            logger.error(f"Error connecting to Intercom API: {e}!")
             response.error_message = e
 
         self.is_connected = response.success
         return response
 
     def connect(self) -> StatusResponse:
-        """making the connectino object
-        """
+        """making the connectino object"""
         if self.is_connected and self.connection:
             return self.connection
 
         if self._headers:
             try:
-                response = requests.get(
-                    url=self._baseUrl,
-                    headers=self._headers
-                )
+                response = requests.get(url=self._baseUrl, headers=self._headers)
                 if response.status_code == 200:
                     self.connection = response
                     self.is_connected = True
@@ -90,7 +83,7 @@ class IntercomHandler(APIHandler):
         ast = parse_sql(query)
         return self.query(ast)
 
-    def call_intercom_api(self, endpoint: str, method: str = 'GET', params: dict = {}, data=None) -> pd.DataFrame:
+    def call_intercom_api(self, endpoint: str, method: str = "GET", params: dict = {}, data=None) -> pd.DataFrame:
         url = f"{self._baseUrl}{endpoint}"
         json_data = json.loads(data) if data else None
 
@@ -112,6 +105,4 @@ connection_args = OrderedDict(
     },
 )
 
-connection_args_example = OrderedDict(
-    api_key="d25509b171ad79395dc2c51b099ee6d0"
-)
+connection_args_example = OrderedDict(api_key="d25509b171ad79395dc2c51b099ee6d0")

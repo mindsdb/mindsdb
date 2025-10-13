@@ -6,9 +6,8 @@ import pandas as pd
 
 
 class CoinBaseAggregatedTradesTable(APITable):
-
     DEFAULT_INTERVAL = 60
-    DEFAULT_SYMBOL = 'BTC-USD'
+    DEFAULT_SYMBOL = "BTC-USD"
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         """Selects data from the CoinBase API and returns it as a pandas DataFrame.
@@ -21,36 +20,24 @@ class CoinBaseAggregatedTradesTable(APITable):
         conditions = extract_comparison_conditions(query.where)
 
         params = {
-            'interval': CoinBaseAggregatedTradesTable.DEFAULT_INTERVAL,
-            'symbol': CoinBaseAggregatedTradesTable.DEFAULT_SYMBOL,
+            "interval": CoinBaseAggregatedTradesTable.DEFAULT_INTERVAL,
+            "symbol": CoinBaseAggregatedTradesTable.DEFAULT_SYMBOL,
         }
         for op, arg1, arg2 in conditions:
-            if arg1 == 'interval':
-                if op != '=':
+            if arg1 == "interval":
+                if op != "=":
                     raise NotImplementedError
-                params['interval'] = arg2
+                params["interval"] = arg2
 
-            elif arg1 == 'symbol':
-                if op != '=':
+            elif arg1 == "symbol":
+                if op != "=":
                     raise NotImplementedError
-                params['symbol'] = arg2
+                params["symbol"] = arg2
 
-        coinbase_candle_data = self.handler.call_coinbase_api(
-            method_name='get_candle',
-            params=params
-        )
+        coinbase_candle_data = self.handler.call_coinbase_api(method_name="get_candle", params=params)
 
         return coinbase_candle_data
 
     def get_columns(self):
         """Gets all columns to be returned in pandas DataFrame responses"""
-        return [
-            'symbol',
-            'low',
-            'high',
-            'open',
-            'close',
-            'volume',
-            'timestamp',
-            'current_time'
-        ]
+        return ["symbol", "low", "high", "open", "close", "volume", "timestamp", "current_time"]

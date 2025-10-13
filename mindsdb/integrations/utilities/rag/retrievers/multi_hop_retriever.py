@@ -7,10 +7,7 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.retrievers import BaseRetriever
 from pydantic import Field, PrivateAttr
 
-from mindsdb.integrations.utilities.rag.settings import (
-    RAGPipelineModel,
-    DEFAULT_QUESTION_REFORMULATION_TEMPLATE
-)
+from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel, DEFAULT_QUESTION_REFORMULATION_TEMPLATE
 from mindsdb.integrations.utilities.rag.retrievers.retriever_factory import create_retriever
 
 
@@ -26,8 +23,7 @@ class MultiHopRetriever(BaseRetriever):
     llm: BaseChatModel = Field(description="LLM to use for generating follow-up questions")
     max_hops: int = Field(default=3, description="Maximum number of follow-up questions to generate")
     reformulation_template: str = Field(
-        default=DEFAULT_QUESTION_REFORMULATION_TEMPLATE,
-        description="Template for reformulating questions"
+        default=DEFAULT_QUESTION_REFORMULATION_TEMPLATE, description="Template for reformulating questions"
     )
 
     _asked_questions: set = PrivateAttr(default_factory=set)
@@ -45,7 +41,7 @@ class MultiHopRetriever(BaseRetriever):
             base_retriever=base_retriever,
             llm=config.llm,
             max_hops=config.multi_hop_config.max_hops,
-            reformulation_template=config.multi_hop_config.reformulation_template
+            reformulation_template=config.multi_hop_config.reformulation_template,
         )
 
     def _get_relevant_documents(
@@ -64,10 +60,7 @@ class MultiHopRetriever(BaseRetriever):
 
         # Generate follow-up questions
         context = "\n".join(doc.page_content for doc in docs)
-        prompt = self.reformulation_template.format(
-            question=query,
-            context=context
-        )
+        prompt = self.reformulation_template.format(question=query, context=context)
 
         try:
             follow_up_questions = json.loads(self.llm.invoke(prompt))

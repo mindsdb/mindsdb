@@ -30,11 +30,7 @@ class OilPriceLatestTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'latest_price',
-            self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "latest_price", self.get_columns())
 
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
@@ -42,23 +38,29 @@ class OilPriceLatestTable(APITable):
         subset_where_conditions = []
 
         for op, arg1, arg2 in where_conditions:
-            if arg1 == 'by_type':
-                if op == '=':
+            if arg1 == "by_type":
+                if op == "=":
                     search_params["by_type"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for by_type column.")
 
                 if not self.handler.client._is_valid_by_type(arg2):
-                    raise ValueError("Unknown value for `by_type` parameter. The allowed values are - " + self.handler.client.valid_values_by_type)
+                    raise ValueError(
+                        "Unknown value for `by_type` parameter. The allowed values are - "
+                        + self.handler.client.valid_values_by_type
+                    )
 
-            elif arg1 == 'by_code':
-                if op == '=':
+            elif arg1 == "by_code":
+                if op == "=":
                     search_params["by_code"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for by_code column.")
 
                 if not self.handler.client._is_valid_by_code(arg2):
-                    raise ValueError("Unknown value for `by_code` parameter. The allowed values are - " + self.handler.client.valid_values_by_code)
+                    raise ValueError(
+                        "Unknown value for `by_code` parameter. The allowed values are - "
+                        + self.handler.client.valid_values_by_code
+                    )
 
             elif arg1 in self.get_columns():
                 subset_where_conditions.append([op, arg1, arg2])
@@ -74,11 +76,7 @@ class OilPriceLatestTable(APITable):
         latest_price_df = pd.json_normalize(content["data"])
 
         select_statement_executor = SELECTQueryExecutor(
-            latest_price_df,
-            selected_columns,
-            subset_where_conditions,
-            order_by_conditions,
-            result_limit
+            latest_price_df, selected_columns, subset_where_conditions, order_by_conditions, result_limit
         )
 
         latest_price_df = select_statement_executor.execute_query()
@@ -98,14 +96,7 @@ class OilPriceLatestTable(APITable):
             List of columns
         """
 
-        return [
-            "price",
-            "formatted",
-            "currency",
-            "code",
-            "created_at",
-            "type"
-        ]
+        return ["price", "formatted", "currency", "code", "created_at", "type"]
 
 
 class OilPricePastDayPriceTable(APITable):
@@ -130,11 +121,7 @@ class OilPricePastDayPriceTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'past_day_price',
-            self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "past_day_price", self.get_columns())
 
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
@@ -142,23 +129,29 @@ class OilPricePastDayPriceTable(APITable):
         subset_where_conditions = []
 
         for op, arg1, arg2 in where_conditions:
-            if arg1 == 'by_type':
-                if op == '=':
+            if arg1 == "by_type":
+                if op == "=":
                     search_params["by_type"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for by_type column.")
 
                 if not self.handler.client._is_valid_by_type(arg2):
-                    raise ValueError("Unknown value for `by_type` parameter. The allowed values are - " + self.handler.client.valid_values_by_type)
+                    raise ValueError(
+                        "Unknown value for `by_type` parameter. The allowed values are - "
+                        + self.handler.client.valid_values_by_type
+                    )
 
-            elif arg1 == 'by_code':
-                if op == '=':
+            elif arg1 == "by_code":
+                if op == "=":
                     search_params["by_code"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for by_code column.")
 
                 if not self.handler.client._is_valid_by_code(arg2):
-                    raise ValueError("Unknown value for `by_code` parameter. The allowed values are - " + self.handler.client.valid_values_by_code)
+                    raise ValueError(
+                        "Unknown value for `by_code` parameter. The allowed values are - "
+                        + self.handler.client.valid_values_by_code
+                    )
 
             elif arg1 in self.get_columns():
                 subset_where_conditions.append([op, arg1, arg2])
@@ -174,11 +167,7 @@ class OilPricePastDayPriceTable(APITable):
         price_df = pd.json_normalize(content["data"]["prices"])
 
         select_statement_executor = SELECTQueryExecutor(
-            price_df,
-            selected_columns,
-            subset_where_conditions,
-            order_by_conditions,
-            result_limit
+            price_df, selected_columns, subset_where_conditions, order_by_conditions, result_limit
         )
 
         price_df = select_statement_executor.execute_query()
@@ -198,11 +187,4 @@ class OilPricePastDayPriceTable(APITable):
             List of columns
         """
 
-        return [
-            "price",
-            "formatted",
-            "currency",
-            "code",
-            "created_at",
-            "type"
-        ]
+        return ["price", "formatted", "currency", "code", "created_at", "type"]

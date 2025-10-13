@@ -6,13 +6,8 @@ from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 class DremioHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.kwargs = {
-            "host": "localhost",
-            "port": 9047,
-            "username": "minura_punchihewa",
-            "password": "password"
-        }
-        cls.handler = DremioHandler('test_dremio_handler', cls.kwargs)
+        cls.kwargs = {"host": "localhost", "port": 9047, "username": "minura_punchihewa", "password": "password"}
+        cls.handler = DremioHandler("test_dremio_handler", cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
@@ -27,9 +22,9 @@ class DremioHandlerTest(unittest.TestCase):
         assert tables.type is not RESPONSE_TYPE.ERROR
 
     def test_3_get_columns(self):
-        columns = self.handler.get_columns('staging.zips')
+        columns = self.handler.get_columns("staging.zips")
         assert columns.type is not RESPONSE_TYPE.ERROR
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

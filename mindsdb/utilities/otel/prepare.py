@@ -105,17 +105,11 @@ def get_logging_exporter() -> typing.Optional[LogExporter]:
     """
 
     if OTEL_EXPORTER_TYPE == "otlp":
-
         if OTEL_EXPORTER_PROTOCOL == "grpc":
-            return OTLPLogExporterGRPC(
-                endpoint=OTEL_OTLP_LOGGING_ENDPOINT,
-                insecure=True
-            )
+            return OTLPLogExporterGRPC(endpoint=OTEL_OTLP_LOGGING_ENDPOINT, insecure=True)
 
         elif OTEL_EXPORTER_PROTOCOL == "http":
-            return OTLPLogExporterHTTP(
-                endpoint=OTEL_OTLP_LOGGING_ENDPOINT
-            )
+            return OTLPLogExporterHTTP(endpoint=OTEL_OTLP_LOGGING_ENDPOINT)
 
     return None
 
@@ -129,17 +123,11 @@ def get_span_exporter() -> SpanExporter:
     """
 
     if OTEL_EXPORTER_TYPE == "otlp":
-
         if OTEL_EXPORTER_PROTOCOL == "grpc":
-            return OTLPSpanExporterGRPC(
-                endpoint=OTEL_OTLP_TRACING_ENDPOINT,
-                insecure=True
-            )
+            return OTLPSpanExporterGRPC(endpoint=OTEL_OTLP_TRACING_ENDPOINT, insecure=True)
 
         elif OTEL_EXPORTER_PROTOCOL == "http":
-            return OTLPSpanExporterHTTP(
-                endpoint=OTEL_OTLP_TRACING_ENDPOINT
-            )
+            return OTLPSpanExporterHTTP(endpoint=OTEL_OTLP_TRACING_ENDPOINT)
 
     return ConsoleSpanExporter()
 
@@ -153,17 +141,11 @@ def get_metrics_exporter() -> typing.Optional[MetricExporter]:
     """
 
     if OTEL_EXPORTER_TYPE == "otlp":
-
         if OTEL_EXPORTER_PROTOCOL == "grpc":
-            return OTLPMetricExporterGRPC(
-                endpoint=OTEL_OTLP_METRICS_ENDPOINT,
-                insecure=True
-            )
+            return OTLPMetricExporterGRPC(endpoint=OTEL_OTLP_METRICS_ENDPOINT, insecure=True)
 
         elif OTEL_EXPORTER_PROTOCOL == "http":
-            return OTLPMetricExporterHTTP(
-                endpoint=OTEL_OTLP_METRICS_ENDPOINT
-            )
+            return OTLPMetricExporterHTTP(endpoint=OTEL_OTLP_METRICS_ENDPOINT)
 
     return ConsoleMetricExporter()
 

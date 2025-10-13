@@ -2,8 +2,11 @@ from typing import BinaryIO, Sequence, Dict, Type
 
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_fields import PostgresField
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_message import PostgresMessage
-from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_message_identifiers import \
-    PostgresBackendMessageIdentifier, PostgresFrontendMessageIdentifier, PostgresAuthType
+from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_message_identifiers import (
+    PostgresBackendMessageIdentifier,
+    PostgresFrontendMessageIdentifier,
+    PostgresAuthType,
+)
 
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_packets import PostgresPacketReader
 from mindsdb.api.postgres.postgres_proxy.utilities import strip_null_byte
@@ -32,7 +35,7 @@ class NoticeResponse(PostgresMessage):
     frontends should silently ignore fields of unrecognized type.
 
     String
-    The field value. """  # noqa
+    The field value."""  # noqa
 
     def __init__(self):
         self.identifier = PostgresBackendMessageIdentifier.NOTICE_RESPONSE
@@ -54,7 +57,7 @@ class AuthenticationOk(PostgresMessage):
     Length of message contents in bytes, including self.
 
     Int32(0)
-    Specifies that the authentication was successful. """  # noqa
+    Specifies that the authentication was successful."""  # noqa
 
     def __init__(self):
         self.identifier = PostgresBackendMessageIdentifier.AUTHENTICATION_REQUEST
@@ -63,9 +66,7 @@ class AuthenticationOk(PostgresMessage):
         super().__init__()
 
     def send_internal(self, write_file: BinaryIO):
-        self.get_packet_builder() \
-            .add_int32(0) \
-            .write(write_file=write_file)
+        self.get_packet_builder().add_int32(0).write(write_file=write_file)
 
 
 class AuthenticationClearTextPassword(PostgresMessage):
@@ -78,7 +79,7 @@ class AuthenticationClearTextPassword(PostgresMessage):
     Length of message contents in bytes, including self.
 
     Int32(3)
-    Specifies that a clear-text password is required. """  # noqa
+    Specifies that a clear-text password is required."""  # noqa
 
     def __init__(self):
         self.identifier = PostgresBackendMessageIdentifier.AUTHENTICATION_REQUEST
@@ -87,9 +88,7 @@ class AuthenticationClearTextPassword(PostgresMessage):
         super().__init__()
 
     def send_internal(self, write_file: BinaryIO):
-        self.get_packet_builder() \
-            .add_int32(3) \
-            .write(write_file=write_file)
+        self.get_packet_builder().add_int32(3).write(write_file=write_file)
 
 
 class ReadyForQuery(PostgresMessage):
@@ -112,13 +111,11 @@ class ReadyForQuery(PostgresMessage):
         self.identifier = PostgresBackendMessageIdentifier.READY_FOR_QUERY
         self.backend_capable = True
         self.frontend_capable = False
-        self.transaction_status = transaction_status or b'I'
+        self.transaction_status = transaction_status or b"I"
         super().__init__()
 
     def send_internal(self, write_file: BinaryIO):
-        self.get_packet_builder() \
-            .add_char(self.transaction_status) \
-            .write(write_file=write_file)
+        self.get_packet_builder().add_char(self.transaction_status).write(write_file=write_file)
 
 
 class CommandComplete(PostgresMessage):
@@ -145,7 +142,7 @@ class CommandComplete(PostgresMessage):
 
     For a FETCH command, the tag is FETCH rows where rows is the number of rows that have been retrieved from the cursor.
 
-    For a COPY command, the tag is COPY rows where rows is the number of rows copied. (Note: the row count appears only in PostgreSQL 8.2 and later.) """  # noqa
+    For a COPY command, the tag is COPY rows where rows is the number of rows copied. (Note: the row count appears only in PostgreSQL 8.2 and later.)"""  # noqa
 
     tag: bytes
 
@@ -157,9 +154,7 @@ class CommandComplete(PostgresMessage):
         super().__init__()
 
     def send_internal(self, write_file: BinaryIO):
-        self.get_packet_builder() \
-            .add_string(self.tag) \
-            .write(write_file=write_file)
+        self.get_packet_builder().add_string(self.tag).write(write_file=write_file)
 
 
 class BindComplete(PostgresMessage):
@@ -169,7 +164,7 @@ class BindComplete(PostgresMessage):
     Identifies the message as a Bind-complete indicator.
 
     Int32(4)
-    Length of message contents in bytes, including self. """
+    Length of message contents in bytes, including self."""
 
     def __init__(self):
         self.identifier = PostgresBackendMessageIdentifier.BIND_COMPLETE
@@ -178,8 +173,7 @@ class BindComplete(PostgresMessage):
         super().__init__()
 
     def send_internal(self, write_file: BinaryIO):
-        self.get_packet_builder() \
-            .write(write_file=write_file)
+        self.get_packet_builder().write(write_file=write_file)
 
 
 class Error(PostgresMessage):
@@ -199,7 +193,8 @@ class Error(PostgresMessage):
     frontends should silently ignore fields of unrecognized type.
 
     String
-    The field value. """  # noqa
+    The field value."""  # noqa
+
     severity: bytes
     code: bytes
     message: bytes
@@ -214,15 +209,9 @@ class Error(PostgresMessage):
         super().__init__()
 
     def send_internal(self, write_file: BinaryIO):
-        self.get_packet_builder() \
-            .add_char(b'S') \
-            .add_string(self.severity) \
-            .add_char(b'C') \
-            .add_string(self.code) \
-            .add_char(b'M') \
-            .add_string(self.message) \
-            .add_char(b'\x00') \
-            .write(write_file=write_file)
+        self.get_packet_builder().add_char(b"S").add_string(self.severity).add_char(b"C").add_string(
+            self.code
+        ).add_char(b"M").add_string(self.message).add_char(b"\x00").write(write_file=write_file)
 
     @staticmethod
     def from_answer(error_code: bytes, error_message: bytes):
@@ -233,24 +222,33 @@ class ConnectionFailure(Error):
     def __init__(self, message: str = None, charset: str = "UTF-8"):
         if message is None:
             message = "Connection Failure occurred."
-        super().__init__(severity="FATAL".encode(encoding=charset), code="08006".encode(encoding=charset),
-                         message=message.encode(encoding=charset))
+        super().__init__(
+            severity="FATAL".encode(encoding=charset),
+            code="08006".encode(encoding=charset),
+            message=message.encode(encoding=charset),
+        )
 
 
 class InvalidSQLStatementName(Error):
     def __init__(self, message: str = None, charset: str = "UTF-8"):
         if message is None:
             message = "Invalid SQL Statement Name"
-            super().__init__(severity="FATAL".encode(encoding=charset), code="26000".encode(encoding=charset),
-                             message=message.encode(encoding=charset))
+            super().__init__(
+                severity="FATAL".encode(encoding=charset),
+                code="26000".encode(encoding=charset),
+                message=message.encode(encoding=charset),
+            )
 
 
 class DataException(Error):
     def __init__(self, message: str = None, charset: str = "UTF-8", code: str = "22000"):
         if message is None:
             message = "Data Exception"
-            super().__init__(severity="FATAL".encode(encoding=charset), code=code.encode(encoding=charset),
-                             message=message.encode(encoding=charset))
+            super().__init__(
+                severity="FATAL".encode(encoding=charset),
+                code=code.encode(encoding=charset),
+                message=message.encode(encoding=charset),
+            )
 
 
 class ParameterStatus(PostgresMessage):
@@ -266,7 +264,7 @@ class ParameterStatus(PostgresMessage):
     The name of the run-time parameter being reported.
 
     String
-    The current value of the parameter. """
+    The current value of the parameter."""
 
     def __init__(self, name: bytes, value: bytes):
         self.identifier = PostgresBackendMessageIdentifier.PARAMETER
@@ -277,10 +275,7 @@ class ParameterStatus(PostgresMessage):
         super().__init__()
 
     def send_internal(self, write_file: BinaryIO):
-        self.get_packet_builder() \
-            .add_string(self.name) \
-            .add_string(self.value) \
-            .write(write_file=write_file)
+        self.get_packet_builder().add_string(self.name).add_string(self.value).write(write_file=write_file)
 
 
 class RowDescriptions(PostgresMessage):
@@ -330,10 +325,7 @@ class RowDescriptions(PostgresMessage):
         super().__init__()
 
     def send_internal(self, write_file: BinaryIO):
-        self.get_packet_builder() \
-            .add_int16(len(self.fields)) \
-            .add_fields(self.fields) \
-            .write(write_file=write_file)
+        self.get_packet_builder().add_int16(len(self.fields)).add_fields(self.fields).write(write_file=write_file)
 
 
 class ParameterDescription(PostgresMessage):
@@ -351,7 +343,7 @@ class ParameterDescription(PostgresMessage):
     Then, for each parameter, there is the following:
 
     Int32
-    Specifies the object ID of the parameter data type. """
+    Specifies the object ID of the parameter data type."""
 
     def __init__(self, parameters: Sequence):
         self.identifier = PostgresBackendMessageIdentifier.PARAMETER_DESCRIPTION
@@ -387,7 +379,7 @@ class DataRow(PostgresMessage):
     case, -1 indicates a NULL column value. No value bytes follow in the NULL case.
 
     Byten
-    The value of the column, in the format indicated by the associated format code. n is the above length. """  # noqa
+    The value of the column, in the format indicated by the associated format code. n is the above length."""  # noqa
 
     rows: Sequence[Sequence[bytes]]
     num_cols: int
@@ -405,10 +397,7 @@ class DataRow(PostgresMessage):
 
     def send_internal(self, write_file: BinaryIO):
         for row in self.rows:
-            self.get_packet_builder() \
-                .add_int16(self.num_cols) \
-                .add_row(row) \
-                .write(write_file=write_file)
+            self.get_packet_builder().add_int16(self.num_cols).add_row(row).write(write_file=write_file)
 
 
 class NegotiateProtocolVersion(PostgresMessage):
@@ -429,7 +418,7 @@ class NegotiateProtocolVersion(PostgresMessage):
     Then, for protocol option not recognized by the server, there is the following:
 
     String
-    The option name. """
+    The option name."""
 
     def __init__(self, major_version, minor_version, option_not_recognized=None):
         self.identifier = PostgresBackendMessageIdentifier.NEGOTIATE_VERSION
@@ -441,9 +430,7 @@ class NegotiateProtocolVersion(PostgresMessage):
         super().__init__()
 
     def send_internal(self, write_file: BinaryIO):
-        packet_builder = self.get_packet_builder() \
-            .add_int32(self.major_version) \
-            .add_int32(self.minor_version)
+        packet_builder = self.get_packet_builder().add_int32(self.major_version).add_int32(self.minor_version)
         if self.option_not_recognized:
             packet_builder = packet_builder.add_string(self.option_not_recognized)
 
@@ -457,7 +444,7 @@ class ParseComplete(PostgresMessage):
     Identifies the message as a Parse-complete indicator.
 
     Int32(4)
-    Length of message contents in bytes, including self. """
+    Length of message contents in bytes, including self."""
 
     def __init__(self):
         self.identifier = PostgresBackendMessageIdentifier.PARSE_COMPLETE
@@ -466,8 +453,7 @@ class ParseComplete(PostgresMessage):
         super().__init__()
 
     def send_internal(self, write_file: BinaryIO):
-        self.get_packet_builder() \
-            .write(write_file=write_file)
+        self.get_packet_builder().write(write_file=write_file)
 
 
 class Query(PostgresMessage):
@@ -480,13 +466,13 @@ class Query(PostgresMessage):
     Length of message contents in bytes, including self.
 
     String
-    The query string itself. """
+    The query string itself."""
 
     sql: bytes
     length: int
 
     def __init__(self):
-        self.sql = b''
+        self.sql = b""
         self.length = 0
         self.identifier = PostgresFrontendMessageIdentifier.QUERY
         self.backend_capable = False
@@ -500,11 +486,11 @@ class Query(PostgresMessage):
 
     def get_parsed_sql(self, encoding=None):
         if not encoding:
-            encoding = 'utf-8'
+            encoding = "utf-8"
         try:
-            sql = self.sql.decode('utf-8')
+            sql = self.sql.decode("utf-8")
         except Exception:
-            raise Exception(f'SQL contains non {encoding} values: {self.sql}')
+            raise Exception(f"SQL contains non {encoding} values: {self.sql}")
         # Remove null bytes from end of sql statement. This is important.
         sql = strip_null_byte(sql)
         sql = clear_sql(sql)
@@ -518,7 +504,7 @@ class Terminate(PostgresMessage):
     Identifies the message as a termination.
 
     Int32(4)
-    Length of message contents in bytes, including self. """
+    Length of message contents in bytes, including self."""
 
     def __init__(self):
         self.identifier = PostgresFrontendMessageIdentifier.TERMINATE
@@ -626,7 +612,7 @@ class Bind(BaseFrontendMessage):
     number of result columns of the query.
 
     Int16[R]
-    The result-column format codes. Each must presently be zero (text) or one (binary). """
+    The result-column format codes. Each must presently be zero (text) or one (binary)."""
 
     def __init__(self):
         self.identifier = PostgresFrontendMessageIdentifier.BIND
@@ -695,7 +681,7 @@ class Sync(BaseFrontendMessage):
     Identifies the message as a Sync command.
 
     Int32(4)
-    Length of message contents in bytes, including self. """
+    Length of message contents in bytes, including self."""
 
     def __init__(self):
         self.identifier = PostgresFrontendMessageIdentifier.SYNC
@@ -732,13 +718,21 @@ class Describe(BaseFrontendMessage):
 
 
 IMPLEMENTED_BACKEND_POSTGRES_MESSAGE_CLASSES = [
-    NoticeResponse, AuthenticationOk, AuthenticationClearTextPassword, ReadyForQuery, CommandComplete, Error,
-    RowDescriptions, DataRow, NegotiateProtocolVersion, ParameterStatus, ParseComplete, BindComplete,
-    ParameterDescription
+    NoticeResponse,
+    AuthenticationOk,
+    AuthenticationClearTextPassword,
+    ReadyForQuery,
+    CommandComplete,
+    Error,
+    RowDescriptions,
+    DataRow,
+    NegotiateProtocolVersion,
+    ParameterStatus,
+    ParseComplete,
+    BindComplete,
+    ParameterDescription,
 ]
-IMPLEMENTED_FRONTEND_POSTGRES_MESSAGE_CLASSES = [
-    Query, Terminate, Parse, Bind, Execute, Sync, Describe
-]
+IMPLEMENTED_FRONTEND_POSTGRES_MESSAGE_CLASSES = [Query, Terminate, Parse, Bind, Execute, Sync, Describe]
 FE_MESSAGE_MAP: Dict[PostgresFrontendMessageIdentifier, Type[PostgresMessage]] = {
     PostgresFrontendMessageIdentifier.QUERY: Query,
     PostgresFrontendMessageIdentifier.TERMINATE: Terminate,
@@ -746,7 +740,7 @@ FE_MESSAGE_MAP: Dict[PostgresFrontendMessageIdentifier, Type[PostgresMessage]] =
     PostgresFrontendMessageIdentifier.BIND: Bind,
     PostgresFrontendMessageIdentifier.EXECUTE: Execute,
     PostgresFrontendMessageIdentifier.SYNC: Sync,
-    PostgresFrontendMessageIdentifier.DESCRIBE: Describe
+    PostgresFrontendMessageIdentifier.DESCRIBE: Describe,
 }
 SUPPORTED_AUTH_TYPES = [PostgresAuthType.PASSWORD]
 

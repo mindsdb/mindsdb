@@ -8,6 +8,7 @@
  * permission of MindsDB Inc
  *******************************************************
 """
+
 from mindsdb.api.executor.datahub.datanodes import InformationSchemaDataNode
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.agents.agents_controller import AgentsController
@@ -26,7 +27,7 @@ class SessionController:
     This class manages the server session
     """
 
-    def __init__(self, api_type='http') -> object:
+    def __init__(self, api_type="http") -> object:
         """
         Initialize the session
         """
@@ -42,6 +43,7 @@ class SessionController:
 
         # to prevent circular imports
         from mindsdb.interfaces.database.integrations import integration_controller
+
         self.integration_controller = integration_controller
 
         self.database_controller = DatabaseController()
@@ -50,6 +52,7 @@ class SessionController:
 
         # to prevent circular imports
         from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseController
+
         self.kb_controller = KnowledgeBaseController(self)
 
         self.datahub = InformationSchemaDataNode(self)
@@ -58,7 +61,7 @@ class SessionController:
         self.prepared_stmts = {}
         self.packet_sequence_number = 0
         self.profiling = False
-        self.predictor_cache = False if self.config.get('cache')['type'] == 'none' else True
+        self.predictor_cache = False if self.config.get("cache")["type"] == "none" else True
         self.show_secrets = False
 
     def inc_packet_sequence_number(self):

@@ -9,7 +9,7 @@ from mindsdb.integrations.utilities.time_series_utils import (
     infer_frequency,
     get_model_accuracy_dict,
     get_hierarchy_from_df,
-    reconcile_forecasts
+    reconcile_forecasts,
 )
 from neuralforecast import NeuralForecast
 from neuralforecast.models import NHITS
@@ -51,9 +51,9 @@ class NeuralForecastHandler(BaseMLEngine):
             using_args["frequency"] if "frequency" in using_args else infer_frequency(df, time_settings["order_by"])
         )
         model_args["exog_vars"] = using_args["exogenous_vars"] if "exogenous_vars" in using_args else []
-        model_args["max_steps"] = using_args.get('max_steps', 20)
-        model_args["val_check_steps"] = using_args.get('val_check_steps', 10)
-        model_args["n_auto_trials"] = using_args.get('n_auto_trials', 0)
+        model_args["max_steps"] = using_args.get("max_steps", 20)
+        model_args["val_check_steps"] = using_args.get("val_check_steps", 10)
+        model_args["n_auto_trials"] = using_args.get("n_auto_trials", 0)
         model_args["model_folder"] = tempfile.mkdtemp()
 
         # Deal with hierarchy
@@ -68,13 +68,20 @@ class NeuralForecastHandler(BaseMLEngine):
 
         # Train model
         if model_args["n_auto_trials"]:
-            model = AutoNHITS(time_settings["horizon"], gpus=0, num_samples=model_args["n_auto_trials"], search_alg=HyperOptSearch())
+            model = AutoNHITS(
+                time_settings["horizon"], gpus=0, num_samples=model_args["n_auto_trials"], search_alg=HyperOptSearch()
+            )
         else:
             # faster implementation without auto parameter tuning
-            model = NHITS(time_settings["horizon"], time_settings["window"], hist_exog_list=model_args["exog_vars"], max_steps=model_args["max_steps"])
+            model = NHITS(
+                time_settings["horizon"],
+                time_settings["window"],
+                hist_exog_list=model_args["exog_vars"],
+                max_steps=model_args["max_steps"],
+            )
         neural = NeuralForecast(models=[model], freq=model_args["frequency"])
 
-        if model_args.get('crossval', False):
+        if model_args.get("crossval", False):
             results_df = neural.cross_validation(training_df)
             model_args["accuracies"] = get_model_accuracy_dict(results_df, r2_score)
         else:
@@ -107,10 +114,13 @@ class NeuralForecastHandler(BaseMLEngine):
             reconciled_df = reconcile_forecasts(training_df, forecast_df, hier_df, hier_dict)
             results_df = reconciled_df[reconciled_df.index.isin(groups_to_keep)]
         else:
-            results_df = forecast_df[forecast_df.index.isin(groups_to_keep)].rename({
-                "y": model_args["target"],  # auto mode
-                "NHITS": model_args["target"],  # non-auto mode
-            }, axis=1)
+            results_df = forecast_df[forecast_df.index.isin(groups_to_keep)].rename(
+                {
+                    "y": model_args["target"],  # auto mode
+                    "NHITS": model_args["target"],  # non-auto mode
+                },
+                axis=1,
+            )
         return get_results_from_nixtla_df(results_df, model_args)
 
     def describe(self, attribute=None):
@@ -121,15 +131,20 @@ class NeuralForecastHandler(BaseMLEngine):
 
         elif attribute == "features":
             return pd.DataFrame(
-                {"ds": [model_args["order_by"]], "y": model_args["target"], "unique_id": [model_args["group_by"]], "exog_vars": [model_args["exog_vars"]]}
+                {
+                    "ds": [model_args["order_by"]],
+                    "y": model_args["target"],
+                    "unique_id": [model_args["group_by"]],
+                    "exog_vars": [model_args["exog_vars"]],
+                }
             )
 
-        elif attribute == 'info':
+        elif attribute == "info":
             outputs = model_args["target"]
             inputs = [model_args["target"], model_args["order_by"], model_args["group_by"]] + model_args["exog_vars"]
             accuracies = [(model, acc) for model, acc in model_args.get("accuracies", {}).items()]
             return pd.DataFrame({"accuracies": [accuracies], "outputs": outputs, "inputs": [inputs]})
 
         else:
-            tables = ['info', 'features', 'model']
-            return pd.DataFrame(tables, columns=['tables'])
+            tables = ["info", "features", "model"]
+            return pd.DataFrame(tables, columns=["tables"])

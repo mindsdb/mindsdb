@@ -9,7 +9,6 @@ from langchain_core.vectorstores import VectorStore
 
 
 class MDBVectorStore(VectorStore):
-
     def __init__(self, kb_table) -> None:
         self.kb_table = kb_table
 
@@ -23,12 +22,9 @@ class MDBVectorStore(VectorStore):
         k: int = 4,
         **kwargs: Any,
     ) -> List[Document]:
-
         query = Select(
             targets=[Star()],
-            where=BinaryOperation(op='=', args=[
-                Identifier(TableField.CONTENT.value), Constant(query)
-            ]),
+            where=BinaryOperation(op="=", args=[Identifier(TableField.CONTENT.value), Constant(query)]),
             limit=Constant(k),
         )
 
@@ -39,10 +35,7 @@ class MDBVectorStore(VectorStore):
             metadata = row[TableField.METADATA.value]
             if metadata is None:
                 metadata = {}
-            docs.append(Document(
-                page_content=row[TableField.CONTENT.value],
-                metadata=metadata
-            ))
+            docs.append(Document(page_content=row[TableField.CONTENT.value], metadata=metadata))
 
         return docs
 

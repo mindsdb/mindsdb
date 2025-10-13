@@ -1,4 +1,3 @@
-
 class QueryPlan:
     def __init__(self, steps=None, **kwargs):
         self.steps = []

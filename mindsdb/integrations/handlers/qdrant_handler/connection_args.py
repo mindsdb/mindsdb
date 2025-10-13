@@ -42,7 +42,7 @@ connection_args = OrderedDict(
         "type": ARG_TYPE.PWD,
         "description": "API key for authentication in Qdrant Cloud.",
         "required": False,
-        "secret": True
+        "secret": True,
     },
     prefix={
         "type": ARG_TYPE.STR,
@@ -66,10 +66,4 @@ connection_args = OrderedDict(
     },
 )
 
-connection_args_example = {
-    "location": ":memory:",
-    "collection_config": {
-        "size": 386,
-        "distance": "Cosine"
-    }
-}
+connection_args_example = {"location": ":memory:", "collection_config": {"size": 386, "distance": "Cosine"}}

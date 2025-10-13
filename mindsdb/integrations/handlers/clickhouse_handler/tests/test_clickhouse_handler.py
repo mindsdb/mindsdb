@@ -11,9 +11,9 @@ class PostgresHandlerTest(unittest.TestCase):
             "port": "9000",
             "user": "root",
             "password": "pass",
-            "database": "test_data"
+            "database": "test_data",
         }
-        cls.handler = ClickHouseHandler('test_clickhouse_handler', connection_data)
+        cls.handler = ClickHouseHandler("test_clickhouse_handler", connection_data)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
@@ -27,7 +27,7 @@ class PostgresHandlerTest(unittest.TestCase):
         assert result.type is RESPONSE_TYPE.ERROR
 
     def test_3_select_query(self):
-        query = 'SELECT * FROM hdi'
+        query = "SELECT * FROM hdi"
         result = self.handler.query(query)
         assert result.type is RESPONSE_TYPE.TABLE
 
@@ -37,5 +37,5 @@ class PostgresHandlerTest(unittest.TestCase):
 
     def test_5_describe_table(self):
         described = self.handler.get_columns("hdi")
-        print('described', described)
+        print("described", described)
         assert described.type is RESPONSE_TYPE.TABLE

@@ -48,9 +48,7 @@ class StravaAllClubsTable(APITable):
                     else:
                         order_by_conditions["ascending"].append(False)
                 else:
-                    raise ValueError(
-                        f"Order by unknown column {an_order.field.parts[1]}"
-                    )
+                    raise ValueError(f"Order by unknown column {an_order.field.parts[1]}")
         strava_clubs_df = self.call_strava_allclubs_api()
 
         selected_columns = []
@@ -89,13 +87,13 @@ class StravaAllClubsTable(APITable):
             List of columns
         """
         return [
-            'id',
-            'name',
-            'sport_type',
-            'city',
-            'state',
-            'country',
-            'member_count',
+            "id",
+            "name",
+            "sport_type",
+            "city",
+            "state",
+            "country",
+            "member_count",
         ]
 
     def call_strava_allclubs_api(self):
@@ -158,9 +156,7 @@ class StravaClubActivitesTable(APITable):
                     else:
                         order_by_conditions["ascending"].append(False)
                 else:
-                    raise ValueError(
-                        f"Order by unknown column {an_order.field.parts[1]}"
-                    )
+                    raise ValueError(f"Order by unknown column {an_order.field.parts[1]}")
 
         for a_where in conditions:
             if a_where[1] == "strava_club_id":
@@ -208,13 +204,13 @@ class StravaClubActivitesTable(APITable):
             List of columns
         """
         return [
-            'name',
-            'distance',
-            'moving_time',
-            'elapsed_time',
-            'total_elevation_gain',
-            'sport_type',
-            'athlete.firstname',
+            "name",
+            "distance",
+            "moving_time",
+            "elapsed_time",
+            "total_elevation_gain",
+            "sport_type",
+            "athlete.firstname",
         ]
 
     def call_strava_clubactivities_api(self, club_id):

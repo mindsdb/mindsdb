@@ -23,14 +23,15 @@ class AmazonBedrockHandlerSettings(BaseSettings):
     DEFAULT_TEXT_MODEL_ID : Text
         The default model ID to use for text generation. This will be the default model ID for the default and conversational modes.
     """
+
     # Modes.
     # TODO: Add other modes.
-    DEFAULT_MODE: ClassVar[Text] = 'default'
-    SUPPORTED_MODES: ClassVar[List] = ['default', 'conversational']
+    DEFAULT_MODE: ClassVar[Text] = "default"
+    SUPPORTED_MODES: ClassVar[List] = ["default", "conversational"]
 
     # TODO: Set the default model ID for other modes.
     # Model IDs.
-    DEFAULT_TEXT_MODEL_ID: ClassVar[Text] = 'amazon.titan-text-premier-v1:0'
+    DEFAULT_TEXT_MODEL_ID: ClassVar[Text] = "amazon.titan-text-premier-v1:0"
 
 
 class AmazonBedrockHandlerEngineConfig(BaseModel):
@@ -51,6 +52,7 @@ class AmazonBedrockHandlerEngineConfig(BaseModel):
     aws_session_token : Text, Optional
         The AWS session token. Optional, but required for temporary security credentials.
     """
+
     aws_access_key_id: Text
     aws_secret_access_key: Text
     region_name: Text
@@ -88,11 +90,7 @@ class AmazonBedrockHandlerEngineConfig(BaseModel):
             ValueError: If the AWS credentials are invalid or Amazon Bedrock is not accessible.
         """
         bedrock_client = create_amazon_bedrock_client(
-            "bedrock",
-            model.aws_access_key_id,
-            model.aws_secret_access_key,
-            model.region_name,
-            model.aws_session_token
+            "bedrock", model.aws_access_key_id, model.aws_secret_access_key, model.region_name, model.aws_session_token
         )
 
         try:
@@ -139,6 +137,7 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
     connection_args : Dict
         The connection arguments passed required to connect to Amazon Bedrock. These are AWS credentials provided when creating the engine.
     """
+
     # User-provided Handler Model Prameters: These are parameters specific to the MindsDB handler for Amazon Bedrock provided by the user.
     id: Text = Field(None)
     mode: Optional[Text] = Field(AmazonBedrockHandlerSettings.DEFAULT_MODE)
@@ -147,10 +146,10 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
     context_column: Optional[Text] = Field(None)
 
     # Amazon Bedrock Model Parameters: These are parameters specific to the models in Amazon Bedrock. They are provided by the user.
-    temperature: Optional[float] = Field(None, bedrock_model_param=True, bedrock_model_param_name='temperature')
-    top_p: Optional[float] = Field(None, bedrock_model_param=True, bedrock_model_param_name='topP')
-    max_tokens: Optional[int] = Field(None, bedrock_model_param=True, bedrock_model_param_name='maxTokens')
-    stop: Optional[List[Text]] = Field(None, bedrock_model_param=True, bedrock_model_param_name='stopSequences')
+    temperature: Optional[float] = Field(None, bedrock_model_param=True, bedrock_model_param_name="temperature")
+    top_p: Optional[float] = Field(None, bedrock_model_param=True, bedrock_model_param_name="topP")
+    max_tokens: Optional[int] = Field(None, bedrock_model_param=True, bedrock_model_param_name="maxTokens")
+    stop: Optional[List[Text]] = Field(None, bedrock_model_param=True, bedrock_model_param_name="stopSequences")
 
     # System-provided Handler Model Parameters: These are parameters specific to the MindsDB handler for Amazon Bedrock provided by the system.
     connection_args: Dict = Field(None, exclude=True)
@@ -187,7 +186,9 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
             ValueError: If the mode provided is not supported.
         """
         if mode not in AmazonBedrockHandlerSettings.SUPPORTED_MODES:
-            raise ValueError(f"Mode {mode} is not supported. The supported modes are {''.join(AmazonBedrockHandlerSettings.SUPPORTED_MODES)}!")
+            raise ValueError(
+                f"Mode {mode} is not supported. The supported modes are {''.join(AmazonBedrockHandlerSettings.SUPPORTED_MODES)}!"
+            )
 
         return mode
 
@@ -206,13 +207,10 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
         """
         # TODO: Set the default model ID for other modes.
         if model.id is None:
-            if model.mode in ['default', 'conversational']:
+            if model.mode in ["default", "conversational"]:
                 model.id = AmazonBedrockHandlerSettings.DEFAULT_TEXT_MODEL_ID
 
-        bedrock_client = create_amazon_bedrock_client(
-            "bedrock",
-            **model.connection_args
-        )
+        bedrock_client = create_amazon_bedrock_client("bedrock", **model.connection_args)
 
         try:
             # Check if the model ID is valid and accessible.
@@ -221,8 +219,8 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
             raise ValueError(f"Invalid Amazon Bedrock model ID: {e}!")
 
         # Check if the model is suitable for the mode provided.
-        if model.mode in ['default', 'conversational']:
-            if 'TEXT' not in response['modelDetails']['outputModalities']:
+        if model.mode in ["default", "conversational"]:
+            if "TEXT" not in response["modelDetails"]["outputModalities"]:
                 raise ValueError(f"The models used for the {model.mode} should support text generation!")
 
         return model
@@ -243,7 +241,7 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
         # 1. prompt_template.
         # 2. question_column with an optional context_column.
         # TODO: Find the other possible parameters/combinations for the default mode.
-        if model.mode in ['default', 'conversational']:
+        if model.mode in ["default", "conversational"]:
             error_message = textwrap.dedent(
                 f"""\
                     For the {model.mode} mode, one of the following need to be provided:
@@ -271,17 +269,26 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
         Returns:
             Dict: The configuration of the model.
         """
-        bedrock_model_param_names = [val.get("bedrock_model_param_name") for key, val in self.model_json_schema(mode='serialization')['properties'].items() if val.get("bedrock_model_param")]
-        bedrock_model_params = [key for key, val in self.model_json_schema(mode='serialization')['properties'].items() if val.get("bedrock_model_param")]
+        bedrock_model_param_names = [
+            val.get("bedrock_model_param_name")
+            for key, val in self.model_json_schema(mode="serialization")["properties"].items()
+            if val.get("bedrock_model_param")
+        ]
+        bedrock_model_params = [
+            key
+            for key, val in self.model_json_schema(mode="serialization")["properties"].items()
+            if val.get("bedrock_model_param")
+        ]
 
-        handler_model_params = [key for key, val in self.model_json_schema(mode='serialization')['properties'].items() if not val.get("bedrock_model_param")]
+        handler_model_params = [
+            key
+            for key, val in self.model_json_schema(mode="serialization")["properties"].items()
+            if not val.get("bedrock_model_param")
+        ]
 
         inference_config = {}
         for index, key in enumerate(bedrock_model_params):
             if getattr(self, key) is not None:
                 inference_config[bedrock_model_param_names[index]] = getattr(self, key)
 
-        return {
-            "inference_config": inference_config,
-            **{key: getattr(self, key) for key in handler_model_params}
-        }
+        return {"inference_config": inference_config, **{key: getattr(self, key) for key in handler_model_params}}

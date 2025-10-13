@@ -8,7 +8,6 @@ from mindsdb.integrations.handlers.writer_handler.settings import (
 
 class QuestionAnswerer(RAGQuestionAnswerer):
     def __init__(self, args: WriterHandlerParameters):
-
         super().__init__(args)
 
         self.llm = Writer(**args.llm_params.model_dump())

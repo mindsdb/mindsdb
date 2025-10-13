@@ -22,9 +22,7 @@ def create_an_entity(url: str, payload: Dict[Text, Any], bearer_token: str) -> N
         "Authorization": f"Bearer {bearer_token}",
         "Content-Type": "application/json",
     }
-    getresponse(
-        request_type="POST", url=url, headers=headers, payload=payload, files=[]
-    )
+    getresponse(request_type="POST", url=url, headers=headers, payload=payload, files=[])
 
 
 def get_an_entity(url: str, bearer_token: str) -> Any:
@@ -43,16 +41,12 @@ def get_an_entity(url: str, bearer_token: str) -> Any:
         "Authorization": f"Bearer {bearer_token}",
         "Content-Type": "application/json",
     }
-    response = getresponse(
-        request_type="GET", url=url, headers=headers, payload=payload, files=[]
-    )
+    response = getresponse(request_type="GET", url=url, headers=headers, payload=payload, files=[])
     response = response.json()["value"]
     return response
 
 
-def update_an_entity(
-    url: str, values_to_update: Dict[Text, Any], bearer_token: str
-) -> None:
+def update_an_entity(url: str, values_to_update: Dict[Text, Any], bearer_token: str) -> None:
     """
     Makes a PATCH request to given url with the given values_to_update and bearer_token
     updates the entity with the provided values
@@ -71,9 +65,7 @@ def update_an_entity(
         "Authorization": f"Bearer {bearer_token}",
         "Content-Type": "application/json",
     }
-    getresponse(
-        request_type="PATCH", url=url, headers=headers, payload=payload, files=[]
-    )
+    getresponse(request_type="PATCH", url=url, headers=headers, payload=payload, files=[])
 
 
 def delete_an_entity(url: str, bearer_token: str):
@@ -91,9 +83,7 @@ def delete_an_entity(url: str, bearer_token: str):
         "Authorization": f"Bearer {bearer_token}",
         "Content-Type": "application/json",
     }
-    getresponse(
-        request_type="DELETE", url=url, headers=headers, payload=payload, files=[]
-    )
+    getresponse(request_type="DELETE", url=url, headers=headers, payload=payload, files=[])
 
 
 def bearer_token_request(tenant_id: str, client_id: str, client_secret: str) -> Any:
@@ -121,9 +111,7 @@ def bearer_token_request(tenant_id: str, client_id: str, client_secret: str) -> 
     files = []
     headers = {}
 
-    response = getresponse(
-        request_type="POST", url=url, headers=headers, payload=payload, files=files
-    )
+    response = getresponse(request_type="POST", url=url, headers=headers, payload=payload, files=files)
     response = response.json()
     return response
 
@@ -150,9 +138,7 @@ def getresponse(
     Returns
     response: may return based on the response code
     """
-    response = requests.request(
-        request_type, url, headers=headers, data=payload, files=files
-    )
+    response = requests.request(request_type, url, headers=headers, data=payload, files=files)
     status_code = response.status_code
 
     if 400 <= status_code <= 499:

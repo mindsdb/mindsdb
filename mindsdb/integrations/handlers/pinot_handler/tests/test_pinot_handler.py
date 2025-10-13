@@ -11,9 +11,9 @@ class PinotHandlerTest(unittest.TestCase):
             "broker_port": 8000,
             "controller_port": 9000,
             "path": "/query/sql",
-            "scheme": "http"
+            "scheme": "http",
         }
-        cls.handler = PinotHandler('test_pinot_handler', cls.kwargs)
+        cls.handler = PinotHandler("test_pinot_handler", cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
@@ -28,9 +28,9 @@ class PinotHandlerTest(unittest.TestCase):
         assert tables.type is not RESPONSE_TYPE.ERROR
 
     def test_3_get_columns(self):
-        columns = self.handler.get_columns('baseballStats')
+        columns = self.handler.get_columns("baseballStats")
         assert columns.type is not RESPONSE_TYPE.ERROR
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

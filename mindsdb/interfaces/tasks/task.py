@@ -2,7 +2,6 @@ from mindsdb.interfaces.storage import db
 
 
 class BaseTask:
-
     def __init__(self, task_id, object_id):
         self.task_id = task_id
         self.object_id = object_id

@@ -18,6 +18,7 @@ class UPDATEQueryParser(BaseQueryParser):
     supported_columns : List[Text], Optional
         List of columns supported by the table for updating.
     """
+
     def __init__(self, query: ast.Update, supported_columns: Optional[List[Text]] = None):
         super().__init__(query)
         self.supported_columns = supported_columns

@@ -12,7 +12,7 @@ from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 
 
@@ -24,22 +24,22 @@ class SQLAnyHandler(DatabaseHandler):
     This handler handles connection and execution of the SAP SQL Anywhere statements.
     """
 
-    name = 'sqlany'
+    name = "sqlany"
 
     def __init__(self, name: str, connection_data: dict, **kwargs):
         super().__init__(name)
 
-        self.dialect = 'sqlany'
+        self.dialect = "sqlany"
         self.parser = parse_sql
         self.connection_data = connection_data
         self.renderer = SqlalchemyRender(sqlany_dialect.SQLAnyDialect)
-        self.host = self.connection_data.get('host')
-        self.port = self.connection_data.get('port')
-        self.userid = self.connection_data.get('user')
-        self.password = self.connection_data.get('password')
-        self.server = self.connection_data.get('server')
-        self.databaseName = self.connection_data.get('database')
-        self.encryption = self.connection_data.get('encrypt', False)
+        self.host = self.connection_data.get("host")
+        self.port = self.connection_data.get("port")
+        self.userid = self.connection_data.get("user")
+        self.password = self.connection_data.get("password")
+        self.server = self.connection_data.get("server")
+        self.databaseName = self.connection_data.get("database")
+        self.encryption = self.connection_data.get("encrypt", False)
         self.connection = None
         self.is_connected = False
 
@@ -69,7 +69,7 @@ class SQLAnyHandler(DatabaseHandler):
             password=self.password,
             server=self.server,
             databaseName=self.databaseName,
-            encryption=self.encryption
+            encryption=self.encryption,
         )
         self.is_connected = True
         self.connection = connection
@@ -96,10 +96,10 @@ class SQLAnyHandler(DatabaseHandler):
         try:
             connection = self.connect()
             cur = connection.cursor()
-            cur.execute('SELECT 1 FROM SYS.DUMMY;')
+            cur.execute("SELECT 1 FROM SYS.DUMMY;")
             response.success = True
         except sqlanydb.Error as e:
-            logger.error(f'Error connecting to SAP SQL Anywhere {self.host}, {e}!')
+            logger.error(f"Error connecting to SAP SQL Anywhere {self.host}, {e}!")
             response.error_message = e
 
         if response.success is True and need_to_close:
@@ -126,21 +126,11 @@ class SQLAnyHandler(DatabaseHandler):
                 response = Response(RESPONSE_TYPE.OK)
             else:
                 result = cur.fetchall()
-                response = Response(
-                    RESPONSE_TYPE.TABLE,
-                    DataFrame(
-                        result,
-                        columns=[x[0] for x in cur.description]
-                    )
-                )
+                response = Response(RESPONSE_TYPE.TABLE, DataFrame(result, columns=[x[0] for x in cur.description]))
             connection.commit()
         except Exception as e:
-            logger.error(f'Error running query: {query} on {self.connection}!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_code=0,
-                error_message=str(e)
-            )
+            logger.error(f"Error running query: {query} on {self.connection}!")
+            response = Response(RESPONSE_TYPE.ERROR, error_code=0, error_message=str(e))
             connection.rollback()
 
         if need_to_close is True:

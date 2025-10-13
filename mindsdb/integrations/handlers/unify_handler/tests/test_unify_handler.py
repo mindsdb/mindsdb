@@ -7,7 +7,6 @@ from tests.unit.executor_test_base import BaseExecutorTest
 
 
 class TestUnify(BaseExecutorTest):
-
     def run_sql(self, sql):
         ret = self.command_executor.execute_command(parse_sql(sql))
         assert ret.error_code is None
@@ -17,6 +16,7 @@ class TestUnify(BaseExecutorTest):
     """
     Integration tests for the Unify handler.
     """
+
     @pytest.fixture(autouse=True, scope="function")
     def setup_method(self):
         """
@@ -25,14 +25,14 @@ class TestUnify(BaseExecutorTest):
         super().setup_method()
         self.run_sql("create database proj")
 
-    @pytest.mark.skipif(os.environ.get('UNIFY_API_KEY') is None, reason='Missing API key!')
+    @pytest.mark.skipif(os.environ.get("UNIFY_API_KEY") is None, reason="Missing API key!")
     def test_unify_correct_flow(self):
         self.run_sql(
             f"""
         CREATE ML_ENGINE unify_engine
         FROM unify
         USING
-            unify_api_key = '{os.environ.get('UNIFY_API_KEY')}';
+            unify_api_key = '{os.environ.get("UNIFY_API_KEY")}';
         """
         )
 

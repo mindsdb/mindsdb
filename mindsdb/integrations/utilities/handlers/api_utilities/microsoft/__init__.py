@@ -1,1 +1,1 @@
-from .ms_graph_api_utilities import MSGraphAPIBaseClient
+from .ms_graph_api_utilities import MSGraphAPIBaseClient as MSGraphAPIBaseClient

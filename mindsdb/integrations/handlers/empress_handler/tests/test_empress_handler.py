@@ -4,7 +4,6 @@ from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 
 class EmpressHandlerTest(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
@@ -14,10 +13,10 @@ class EmpressHandlerTest(unittest.TestCase):
                 "user": "admin",
                 "password": "password",
                 "server": "test_server",
-                "database": "test_db"
+                "database": "test_db",
             }
         }
-        cls.handler = EmpressHandler('test_empress_handler', **cls.kwargs)
+        cls.handler = EmpressHandler("test_empress_handler", **cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
@@ -32,7 +31,7 @@ class EmpressHandlerTest(unittest.TestCase):
         assert result.type is RESPONSE_TYPE.TABLE
 
     def test_3_get_columns(self):
-        columns = self.handler.get_columns('test')
+        columns = self.handler.get_columns("test")
         assert columns.type is not RESPONSE_TYPE.ERROR
 
     def test_4_drop_table(self):
@@ -51,5 +50,5 @@ class EmpressHandlerTest(unittest.TestCase):
         assert self.handler.disconnect()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

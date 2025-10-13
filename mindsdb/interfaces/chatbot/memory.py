@@ -1,4 +1,3 @@
-
 from typing import Union
 
 from mindsdb_sql_parser.ast import Identifier, Select, BinaryOperation, Constant, OrderBy
@@ -8,9 +7,10 @@ from .types import ChatBotMessage
 
 
 class BaseMemory:
-    '''
+    """
     base class to work with chatbot memory
-    '''
+    """
+
     MAX_DEPTH = 100
 
     def __init__(self, chat_task, chat_params):
@@ -25,9 +25,9 @@ class BaseMemory:
         return ChatMemory(self, chat_id, table_name=table_name)
 
     def hide_history(self, chat_id, left_count, table_name=None):
-        '''
+        """
         set date to start hiding messages
-        '''
+        """
         history = self.get_chat_history(chat_id, table_name=table_name)
         if left_count > len(history) - 1:
             left_count = len(history) - 1
@@ -36,19 +36,15 @@ class BaseMemory:
         self._hide_history_before[chat_id] = sent_at
 
     def _apply_hiding(self, chat_id, history):
-        '''
+        """
         hide messages from history
-        '''
+        """
         before = self._hide_history_before.get(chat_id)
 
         if before is None:
             return history
 
-        return [
-            msg
-            for msg in history
-            if msg.sent_at >= before
-        ]
+        return [msg for msg in history if msg.sent_at >= before]
 
     def get_mode(self, chat_id):
         return self._modes.get(chat_id)
@@ -57,13 +53,8 @@ class BaseMemory:
         self._modes[chat_id] = mode
 
     def add_to_history(self, chat_id, chat_message, table_name=None):
-
         # If the chat_id is a tuple, convert it to a string when storing the message in the database.
-        self._add_to_history(
-            chat_id,
-            chat_message,
-            table_name=table_name
-        )
+        self._add_to_history(chat_id, chat_message, table_name=table_name)
         if chat_id in self._cache:
             del self._cache[chat_id]
 
@@ -73,10 +64,7 @@ class BaseMemory:
             history = self._cache[key]
 
         else:
-            history = self._get_chat_history(
-                chat_id,
-                table_name
-            )
+            history = self._get_chat_history(chat_id, table_name)
             self._cache[key] = history
 
         history = self._apply_hiding(chat_id, history)
@@ -90,9 +78,9 @@ class BaseMemory:
 
 
 class HandlerMemory(BaseMemory):
-    '''
+    """
     Uses handler's database to store and retrieve messages
-    '''
+    """
 
     def _add_to_history(self, chat_id, chat_message, table_name=None):
         # do nothing. sent message will be stored by handler db
@@ -100,37 +88,28 @@ class HandlerMemory(BaseMemory):
 
     def _get_chat_history(self, chat_id, table_name):
         t_params = next(
-            chat_params['chat_table'] for chat_params in self.chat_params if chat_params['chat_table']['name'] == table_name
+            chat_params["chat_table"]
+            for chat_params in self.chat_params
+            if chat_params["chat_table"]["name"] == table_name
         )
 
-        text_col = t_params['text_col']
-        username_col = t_params['username_col']
-        time_col = t_params['time_col']
-        chat_id_cols = t_params['chat_id_col'] if isinstance(t_params['chat_id_col'], list) else [t_params['chat_id_col']]
+        text_col = t_params["text_col"]
+        username_col = t_params["username_col"]
+        time_col = t_params["time_col"]
+        chat_id_cols = (
+            t_params["chat_id_col"] if isinstance(t_params["chat_id_col"], list) else [t_params["chat_id_col"]]
+        )
 
         chat_id = chat_id if isinstance(chat_id, tuple) else (chat_id,)
         # Add a WHERE clause for each chat_id column.
         where_conditions = [
-            BinaryOperation(
-                op='=',
-                args=[
-                    Identifier(chat_id_col),
-                    Constant(chat_id[idx])
-                ]
-            ) for idx, chat_id_col in enumerate(chat_id_cols)
+            BinaryOperation(op="=", args=[Identifier(chat_id_col), Constant(chat_id[idx])])
+            for idx, chat_id_col in enumerate(chat_id_cols)
         ]
         # Add a WHERE clause to ignore holding messages from the bot.
         from .chatbot_task import HOLDING_MESSAGE
 
-        where_conditions.append(
-            BinaryOperation(
-                op='!=',
-                args=[
-                    Identifier(text_col),
-                    Constant(HOLDING_MESSAGE)
-                ]
-            )
-        )
+        where_conditions.append(BinaryOperation(op="!=", args=[Identifier(text_col), Constant(HOLDING_MESSAGE)]))
 
         # Convert the WHERE conditions to a BinaryOperation object.
         where_conditions_binary_operation = None
@@ -138,13 +117,13 @@ class HandlerMemory(BaseMemory):
             if where_conditions_binary_operation is None:
                 where_conditions_binary_operation = condition
             else:
-                where_conditions_binary_operation = BinaryOperation('and', args=[where_conditions_binary_operation, condition])
+                where_conditions_binary_operation = BinaryOperation(
+                    "and", args=[where_conditions_binary_operation, condition]
+                )
 
         ast_query = Select(
-            targets=[Identifier(text_col),
-                     Identifier(username_col),
-                     Identifier(time_col)],
-            from_table=Identifier(t_params['name']),
+            targets=[Identifier(text_col), Identifier(username_col), Identifier(time_col)],
+            from_table=Identifier(t_params["name"]),
             where=where_conditions_binary_operation,
             order_by=[OrderBy(Identifier(time_col))],
             limit=Constant(self.MAX_DEPTH),
@@ -157,15 +136,12 @@ class HandlerMemory(BaseMemory):
         df = resp.data_frame
 
         # get last messages
-        df = df.iloc[-self.MAX_DEPTH:]
+        df = df.iloc[-self.MAX_DEPTH :]
 
         result = []
         for _, rec in df.iterrows():
             chatbot_message = ChatBotMessage(
-                ChatBotMessage.Type.DIRECT,
-                rec[text_col],
-                user=rec[username_col],
-                sent_at=rec[time_col]
+                ChatBotMessage.Type.DIRECT, rec[text_col], user=rec[username_col], sent_at=rec[time_col]
             )
             result.append(chatbot_message)
 
@@ -173,9 +149,9 @@ class HandlerMemory(BaseMemory):
 
 
 class DBMemory(BaseMemory):
-    '''
+    """
     uses mindsdb database to store messages
-    '''
+    """
 
     def _generate_chat_id_for_db(self, chat_id: Union[str, tuple], table_name: str = None) -> str:
         """
@@ -214,13 +190,13 @@ class DBMemory(BaseMemory):
         chat_bot_id = self.chat_task.bot_id
         destination = self._generate_chat_id_for_db(chat_id, table_name)
 
-        query = db.ChatBotsHistory.query\
-            .filter(
-                db.ChatBotsHistory.chat_bot_id == chat_bot_id,
-                db.ChatBotsHistory.destination == destination
-            )\
-            .order_by(db.ChatBotsHistory.sent_at.desc())\
+        query = (
+            db.ChatBotsHistory.query.filter(
+                db.ChatBotsHistory.chat_bot_id == chat_bot_id, db.ChatBotsHistory.destination == destination
+            )
+            .order_by(db.ChatBotsHistory.sent_at.desc())
             .limit(self.MAX_DEPTH)
+        )
 
         result = [
             ChatBotMessage(
@@ -236,9 +212,10 @@ class DBMemory(BaseMemory):
 
 
 class ChatMemory:
-    '''
+    """
     interface to work with individual chat
-    '''
+    """
+
     def __init__(self, memory, chat_id, table_name=None):
         self.memory = memory
         self.chat_id = chat_id
@@ -262,7 +239,7 @@ class ChatMemory:
         self.memory.set_mode(self.chat_id, mode)
 
     def hide_history(self, left_count):
-        '''
+        """
         set date to start hiding messages
-        '''
+        """
         self.memory.hide_history(self.chat_id, left_count, table_name=self.table_name)

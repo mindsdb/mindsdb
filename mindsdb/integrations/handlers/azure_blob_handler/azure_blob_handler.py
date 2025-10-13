@@ -1,7 +1,7 @@
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 from mindsdb.utilities import log
 import duckdb
@@ -21,21 +21,14 @@ logger = log.getLogger(__name__)
 
 
 class ListFilesTable(APIResource):
-
-    def list(self,
-             targets: List[str] = None,
-             conditions: List[FilterCondition] = None,
-             *args, **kwargs) -> pd.DataFrame:
-
+    def list(
+        self, targets: List[str] = None, conditions: List[FilterCondition] = None, *args, **kwargs
+    ) -> pd.DataFrame:
         tables = self.handler.get_files()
         data = []
         for path in tables:
-            path = path.replace('`', '')
-            item = {
-                'path': path,
-                'name': path[path.rfind('/') + 1:],
-                'extension': path[path.rfind('.') + 1:]
-            }
+            path = path.replace("`", "")
+            item = {"path": path, "name": path[path.rfind("/") + 1 :], "extension": path[path.rfind(".") + 1 :]}
 
             data.append(item)
 
@@ -46,7 +39,6 @@ class ListFilesTable(APIResource):
 
 
 class FileTable(APIResource):
-
     def list(self, targets: List[str] = None, table_name=None, *args, **kwargs) -> pd.DataFrame:
         return self.handler.read_as_table(table_name)
 
@@ -61,7 +53,7 @@ class AzureBlobHandler(APIHandler):
     """
 
     name = "azureblob"
-    supported_file_formats = ['csv', 'tsv', 'json', 'parquet']
+    supported_file_formats = ["csv", "tsv", "json", "parquet"]
 
     def __init__(self, name: Text, connection_data: Optional[Dict], **kwargs):
         super().__init__(name)
@@ -78,14 +70,14 @@ class AzureBlobHandler(APIHandler):
 
         self.connection_data = connection_data
 
-        if 'container_name' in connection_data:
-            self.container_name = connection_data['container_name']
+        if "container_name" in connection_data:
+            self.container_name = connection_data["container_name"]
 
-        if 'connection_string' in connection_data:
-            self.connection_string = connection_data['connection_string']
+        if "connection_string" in connection_data:
+            self.connection_string = connection_data["connection_string"]
 
     def connect(self) -> BlobServiceClient:
-        """ Set up any connections required by the handler
+        """Set up any connections required by the handler
         Should return output of check_connection() method after attempting
         connection. Should switch self.is_connected.
         Returns:
@@ -101,7 +93,7 @@ class AzureBlobHandler(APIHandler):
         return blob_service_client
 
     def check_connection(self) -> StatusResponse:
-        """ Check connection to the handler
+        """Check connection to the handler
         Returns:
             HandlerStatusResponse
         """
@@ -114,7 +106,7 @@ class AzureBlobHandler(APIHandler):
             response.success = True
 
         except Exception as e:
-            logger.error(f'Error connecting to Azure Blob: {e}!')
+            logger.error(f"Error connecting to Azure Blob: {e}!")
             response.error_message = e
 
         if response.success and need_to_close:
@@ -145,8 +137,8 @@ class AzureBlobHandler(APIHandler):
         """
         # Connect to Azure Blob via DuckDB.
         duckdb_conn = duckdb.connect(":memory:")
-        duckdb_conn.execute('INSTALL azure')
-        duckdb_conn.execute('LOAD azure')
+        duckdb_conn.execute("INSTALL azure")
+        duckdb_conn.execute("LOAD azure")
 
         # Configure mandatory credentials.
         duckdb_conn.execute(f'SET azure_storage_connection_string="{self.connection_string}"')
@@ -192,7 +184,7 @@ class AzureBlobHandler(APIHandler):
             blob_client.close()
 
         except Exception as e:
-            logger.error(f'Error querying the file {key} in the container {self.container_name}, {e}!')
+            logger.error(f"Error querying the file {key} in the container {self.container_name}, {e}!")
             raise e
 
         with self._connect_duckdb() as connection:
@@ -235,33 +227,30 @@ class AzureBlobHandler(APIHandler):
         self.connect()
 
         if isinstance(query, Select):
-            table_name = query.from_table.parts[-1].replace('`', '')
+            table_name = query.from_table.parts[-1].replace("`", "")
 
-            if table_name == 'files':
+            if table_name == "files":
                 table = self._files_table
                 df = table.select(query)
 
                 # add content
                 has_content = False
                 for target in query.targets:
-                    if isinstance(target, Identifier) and target.parts[-1].lower() == 'content':
+                    if isinstance(target, Identifier) and target.parts[-1].lower() == "content":
                         has_content = True
                         break
                 if has_content:
-                    df['content'] = df['path'].apply(self._read_as_content)
+                    df["content"] = df["path"].apply(self._read_as_content)
             else:
-                extension = table_name.split('.')[-1]
+                extension = table_name.split(".")[-1]
                 if extension not in self.supported_file_formats:
-                    logger.error(f'The file format {extension} is not supported!')
-                    raise ValueError(f'The file format {extension} is not supported!')
+                    logger.error(f"The file format {extension} is not supported!")
+                    raise ValueError(f"The file format {extension} is not supported!")
 
                 table = FileTable(self, table_name=table_name)
                 df = table.select(query)
 
-            response = Response(
-                RESPONSE_TYPE.TABLE,
-                data_frame=df
-            )
+            response = Response(RESPONSE_TYPE.TABLE, data_frame=df)
         elif isinstance(query, Insert):
             table_name = query.table.parts[-1]
             table = FileTable(self, table_name=table_name)
@@ -280,7 +269,8 @@ class AzureBlobHandler(APIHandler):
         # Wrap the object names with backticks to prevent SQL syntax errors.
         supported_files = [
             f"`{file.get('name')}`"
-            for file in all_files if file.get('name').split('.')[-1] in self.supported_file_formats
+            for file in all_files
+            if file.get("name").split(".")[-1] in self.supported_file_formats
         ]
 
         return supported_files
@@ -301,15 +291,9 @@ class AzureBlobHandler(APIHandler):
         supported_files = self.get_files()
 
         # virtual table with list of files
-        supported_files.insert(0, 'files')
+        supported_files.insert(0, "files")
 
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=pd.DataFrame(
-                supported_files,
-                columns=['table_name']
-            )
-        )
+        response = Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(supported_files, columns=["table_name"]))
 
         return response
 
@@ -337,10 +321,12 @@ class AzureBlobHandler(APIHandler):
             RESPONSE_TYPE.TABLE,
             data_frame=pd.DataFrame(
                 {
-                    'column_name': result.data_frame.columns,
-                    'data_type': [data_type if data_type != 'object' else 'string' for data_type in result.data_frame.dtypes]
+                    "column_name": result.data_frame.columns,
+                    "data_type": [
+                        data_type if data_type != "object" else "string" for data_type in result.data_frame.dtypes
+                    ],
                 }
-            )
+            ),
         )
 
         return response

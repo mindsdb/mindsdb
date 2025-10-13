@@ -12,10 +12,7 @@ From connection settings in MindsDB to an EventStoreDB AtomPub HTTP URL
 
 def build_basic_url(scheme, host, port):
     netloc = host + ":" + str(port)
-    url = urlunparse([
-        scheme,
-        netloc,
-        "", "", "", ""])
+    url = urlunparse([scheme, netloc, "", "", "", ""])
     return url
 
 
@@ -41,13 +38,12 @@ def build_next_url(link_url, read_batch_size):
 
 def entry_to_df(entry):
     # All events in EventStoreDB have the following:
-    fields = ['eventId', 'eventType', 'eventNumber']
-    df = pd.DataFrame([[entry['eventId'], entry['eventType'], entry['eventNumber']]],
-                      columns=fields)
-    data = pd.json_normalize(json.loads(entry['data']), sep='_')
-    return df.merge(data, how='cross')
+    fields = ["eventId", "eventType", "eventNumber"]
+    df = pd.DataFrame([[entry["eventId"], entry["eventType"], entry["eventNumber"]]], columns=fields)
+    data = pd.json_normalize(json.loads(entry["data"]), sep="_")
+    return df.merge(data, how="cross")
 
 
 def get_auth_string(username, password):
-    credentials = username + ':' + password
-    return 'Basic ' + str(base64.b64encode(credentials.encode('utf-8')).decode('utf-8'))
+    credentials = username + ":" + password
+    return "Basic " + str(base64.b64encode(credentials.encode("utf-8")).decode("utf-8"))

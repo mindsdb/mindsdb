@@ -1,5 +1,11 @@
 import stripe
-from mindsdb.integrations.handlers.stripe_handler.stripe_tables import CustomersTable, ProductsTable, PaymentIntentsTable, RefundsTable, PayoutsTable
+from mindsdb.integrations.handlers.stripe_handler.stripe_tables import (
+    CustomersTable,
+    ProductsTable,
+    PaymentIntentsTable,
+    RefundsTable,
+    PayoutsTable,
+)
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -16,7 +22,7 @@ class StripeHandler(APIHandler):
     The Stripe handler implementation.
     """
 
-    name = 'stripe'
+    name = "stripe"
 
     def __init__(self, name: str, **kwargs):
         """
@@ -60,7 +66,7 @@ class StripeHandler(APIHandler):
         if self.is_connected is True:
             return self.connection
 
-        stripe.api_key = self.connection_data['api_key']
+        stripe.api_key = self.connection_data["api_key"]
 
         self.connection = stripe
         self.is_connected = True
@@ -81,7 +87,7 @@ class StripeHandler(APIHandler):
             stripe.Account.retrieve()
             response.success = True
         except Exception as e:
-            logger.error('Error connecting to Stripe!')
+            logger.error("Error connecting to Stripe!")
             response.error_message = str(e)
 
         self.is_connected = response.success

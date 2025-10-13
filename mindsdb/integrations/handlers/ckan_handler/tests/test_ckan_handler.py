@@ -7,11 +7,10 @@ from mindsdb_sql_parser import ast
 
 class CkanHandlerTest(unittest.TestCase):
     def setUp(self):
-        self.handler = CkanHandler('test_ckan_handler', connection_data={
-            "url": "http://mock-ckan-url.com",
-            "api_key": "mock_api_key"
-        })
-        self.patcher = patch('mindsdb.integrations.handlers.ckan_handler.ckan_handler.RemoteCKAN')
+        self.handler = CkanHandler(
+            "test_ckan_handler", connection_data={"url": "http://mock-ckan-url.com", "api_key": "mock_api_key"}
+        )
+        self.patcher = patch("mindsdb.integrations.handlers.ckan_handler.ckan_handler.RemoteCKAN")
         self.mock_ckan = self.patcher.start()
         self.mock_ckan_instance = MagicMock()
         self.mock_ckan.return_value = self.mock_ckan_instance
@@ -48,9 +47,7 @@ class CkanHandlerTest(unittest.TestCase):
                 "num_resources": 1,
             },
         ]
-        self.mock_ckan_instance.action.package_search.return_value = {
-            "results": mock_packages
-        }
+        self.mock_ckan_instance.action.package_search.return_value = {"results": mock_packages}
 
         query = ast.Select(
             targets=[ast.Star()],
@@ -92,9 +89,7 @@ class CkanHandlerTest(unittest.TestCase):
                 ],
             },
         ]
-        self.mock_ckan_instance.action.package_search.return_value = {
-            "results": mock_packages
-        }
+        self.mock_ckan_instance.action.package_search.return_value = {"results": mock_packages}
 
         query = ast.Select(
             targets=[ast.Star()],
@@ -122,9 +117,7 @@ class CkanHandlerTest(unittest.TestCase):
             {"id": 2, "name": "Record 2"},
             {"id": 3, "name": "Record 3"},
         ]
-        self.mock_ckan_instance.action.datastore_search.return_value = {
-            "records": mock_records
-        }
+        self.mock_ckan_instance.action.datastore_search.return_value = {"records": mock_records}
 
         query = ast.Select(
             targets=[ast.Star()],

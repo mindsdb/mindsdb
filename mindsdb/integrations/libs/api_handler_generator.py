@@ -4,6 +4,7 @@ from io import StringIO
 import json
 from typing import Dict, List, Any
 import yaml
+
 try:
     from yaml import CLoader as Loader
 except ImportError:
@@ -14,9 +15,7 @@ import pandas as pd
 import requests
 from requests.auth import HTTPBasicAuth
 
-from mindsdb.integrations.utilities.sql_utils import (
-    FilterCondition, FilterOperator, SortColumn
-)
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator, SortColumn
 from mindsdb.integrations.libs.api_handler import APIResource
 
 
@@ -33,6 +32,7 @@ class APIInfo:
     """
     A class to store the information about the API.
     """
+
     base_url: str = None
     auth: dict = None
 
@@ -62,38 +62,36 @@ class APIEndpointParam:
 
 def find_common_url_prefix(urls):
     if len(urls) == 0:
-        return ''
-    urls = [
-        url.split('/')
-        for url in urls
-    ]
+        return ""
+    urls = [url.split("/") for url in urls]
 
     min_len = min(len(s) for s in urls)
 
     for i in range(min_len):
         for j in range(1, len(urls)):
             if urls[j][i] != urls[0][i]:
-                return '/'.join(urls[0][:i])
+                return "/".join(urls[0][:i])
 
-    return '/'.join(urls[0][:min_len])
+    return "/".join(urls[0][:min_len])
 
 
 class OpenAPISpecParser:
     """
     A class to parse the OpenAPI specification.
     """
+
     def __init__(self, openapi_spec_path: str) -> None:
-        if openapi_spec_path.startswith('http://') or openapi_spec_path.startswith('https://'):
+        if openapi_spec_path.startswith("http://") or openapi_spec_path.startswith("https://"):
             response = requests.get(openapi_spec_path)
             response.raise_for_status()
 
-            if openapi_spec_path.endswith('.json'):
+            if openapi_spec_path.endswith(".json"):
                 self.openapi_spec = response.json()
             else:
                 stream = StringIO(response.text)
                 self.openapi_spec = yaml.load(stream, Loader=Loader)
         else:
-            raise ApiRequestException('URL is required')
+            raise ApiRequestException("URL is required")
 
     def get_security_schemes(self) -> dict:
         """
@@ -102,7 +100,7 @@ class OpenAPISpecParser:
         Returns:
             dict: A dictionary containing the security schemes defined in the OpenAPI specification.
         """
-        return self.openapi_spec.get('components', {}).get('securitySchemes', {})
+        return self.openapi_spec.get("components", {}).get("securitySchemes", {})
 
     def get_schemas(self) -> dict:
         """
@@ -111,7 +109,7 @@ class OpenAPISpecParser:
         Returns:
             dict: A dictionary containing the schemas defined in the OpenAPI specification.
         """
-        return self.openapi_spec.get('components', {}).get('schemas', {})
+        return self.openapi_spec.get("components", {}).get("schemas", {})
 
     def get_paths(self) -> dict:
         """
@@ -120,7 +118,7 @@ class OpenAPISpecParser:
         Returns:
             dict: A dictionary containing the paths defined in the OpenAPI specification.
         """
-        return self.openapi_spec.get('paths', {})
+        return self.openapi_spec.get("paths", {})
 
     def get_specs(self) -> dict:
         return self.openapi_spec
@@ -130,6 +128,7 @@ class APIResourceGenerator:
     """
     A class to generate API resources based on the OpenAPI specification.
     """
+
     def __init__(self, url, connection_data, url_base=None, options=None) -> None:
         self.openapi_spec_parser = OpenAPISpecParser(url)
         self.connection_data = connection_data
@@ -138,12 +137,12 @@ class APIResourceGenerator:
         self.resources = {}
 
     def check_connection(self):
-        if 'check_connection_table' in self.options:
-            table = self.resources.get(self.options['check_connection_table'])
+        if "check_connection_table" in self.options:
+            table = self.resources.get(self.options["check_connection_table"])
             if table:
                 table.list(targets=[], limit=1, conditions=[])
 
-    def generate_api_resources(self, handler, table_name_format='{url}') -> Dict[str, APIResource]:
+    def generate_api_resources(self, handler, table_name_format="{url}") -> Dict[str, APIResource]:
         """
         Generates an API resource based on the OpenAPI specification.
 
@@ -162,8 +161,8 @@ class APIResourceGenerator:
         for endpoint in endpoints:
             url = endpoint.url[prefix_len:]
             # replace placehoders with x
-            url = re.sub(r"{(\w+)}", 'x', url)
-            url = url.replace('/', '_').strip('_')
+            url = re.sub(r"{(\w+)}", "x", url)
+            url = url.replace("/", "_").strip("_")
             table_name = table_name_format.format(url=url, method=endpoint.method).lower()
             self.resources[table_name] = RestApiTable(handler, endpoint=endpoint, resource_gen=self)
 
@@ -193,21 +192,18 @@ class APIResourceGenerator:
                 continue
 
             for http_method, method_info in path_info.items():
-                if http_method != 'get':
+                if http_method != "get":
                     continue
 
-                parameters = self._process_endpoint_parameters(method_info['parameters']) if 'parameters' in method_info else {}
-
-                response = self._process_endpoint_response(method_info['responses'])
-                if response['type'] is None:
-                    continue
-
-                endpoint = APIEndpoint(
-                    url=path,
-                    method=http_method,
-                    params=parameters,
-                    response=response
+                parameters = (
+                    self._process_endpoint_parameters(method_info["parameters"]) if "parameters" in method_info else {}
                 )
+
+                response = self._process_endpoint_response(method_info["responses"])
+                if response["type"] is None:
+                    continue
+
+                endpoint = APIEndpoint(url=path, method=http_method, params=parameters, response=response)
 
                 endpoints.append(endpoint)
 
@@ -216,7 +212,7 @@ class APIResourceGenerator:
     def get_ref_object(self, ref):
         # get object by $ref link
         el = self.openapi_spec_parser.get_specs()
-        for path in ref.lstrip('#').split('/'):
+        for path in ref.lstrip("#").split("/"):
             if path:
                 el = el[path]
         return el
@@ -233,16 +229,16 @@ class APIResourceGenerator:
         """
         endpoint_parameters = {}
         for parameter in parameters:
-            if '$ref' in parameter:
-                parameter = self.get_ref_object(parameter['$ref'])
+            if "$ref" in parameter:
+                parameter = self.get_ref_object(parameter["$ref"])
 
-            type_name = self.get_resource_type(parameter['schema'])
+            type_name = self.get_resource_type(parameter["schema"])
 
-            endpoint_parameters[parameter['name']] = APIEndpointParam(
-                name=parameter['name'],
+            endpoint_parameters[parameter["name"]] = APIEndpointParam(
+                name=parameter["name"],
                 type=type_name,
-                default=parameter['schema'].get('default'),
-                where=parameter['in'],
+                default=parameter["schema"].get("default"),
+                where=parameter["in"],
             )
 
         return endpoint_parameters
@@ -251,24 +247,24 @@ class APIResourceGenerator:
         response = None
         response_path = []  # used to find list in response
 
-        if '200' not in responses:
-            return {'type': None}
+        if "200" not in responses:
+            return {"type": None}
 
-        view = 'table'
+        view = "table"
 
-        resp_success = responses['200']
-        if '$ref' in resp_success:
-            resp_success = self.get_ref_object(responses['200']['$ref'])
+        resp_success = responses["200"]
+        if "$ref" in resp_success:
+            resp_success = self.get_ref_object(responses["200"]["$ref"])
 
-        for content_type, resp_info in resp_success['content'].items():
-            if content_type != 'application/json':
+        for content_type, resp_info in resp_success["content"].items():
+            if content_type != "application/json":
                 continue
 
             # type_name=get_type(resp_info['schema'])
-            if 'schema' not in resp_info:
+            if "schema" not in resp_info:
                 continue
 
-            resource_type = self._convert_to_resource_type(resp_info['schema'])
+            resource_type = self._convert_to_resource_type(resp_info["schema"])
 
             # resolve type
             type_name = None
@@ -276,36 +272,31 @@ class APIResourceGenerator:
                 type_name = resource_type.type_name
                 resource_type = self.resource_types[resource_type.type_name]
 
-            if resource_type.type_name == 'array':
+            if resource_type.type_name == "array":
                 response = resource_type.sub_type
-            elif resource_type.type_name == 'object':
+            elif resource_type.type_name == "object":
                 if resource_type.properties is None:
                     raise NotImplementedError
 
                 # if it is a table find property with list
                 is_table = False
-                if 'total_column' in self.options:
-                    for col in self.options['total_column']:
+                if "total_column" in self.options:
+                    for col in self.options["total_column"]:
                         if col in resource_type.properties:
                             is_table = True
 
                 if is_table:
                     for k, v in resource_type.properties.items():
-                        if v.type_name == 'array':
-
+                        if v.type_name == "array":
                             response = v.sub_type
                             response_path.append(k)
                             break
                 else:
                     response = type_name
-                    view = 'record'
+                    view = "record"
             break
 
-        return {
-            'type': response,
-            'path': response_path,
-            'view': view
-        }
+        return {"type": response, "path": response_path, "view": view}
 
     def _convert_to_resource_type(self, schema: dict) -> APIResourceType:
         """
@@ -322,37 +313,37 @@ class APIResourceGenerator:
 
         kwargs = {
             # 'name': name,
-            'type_name': type_name,
+            "type_name": type_name,
         }
 
-        if type_name == 'object':
+        if type_name == "object":
             properties = {}
-            if 'properties' in schema:
-                for k, v in schema['properties'].items():
+            if "properties" in schema:
+                for k, v in schema["properties"].items():
                     # type_name2 = get_type(v)
                     properties[k] = self._convert_to_resource_type(v)
-            elif 'additionalProperties' in schema:
-                if isinstance(schema['additionalProperties'], dict) and 'type' in schema['additionalProperties']:
-                    type_name = schema['additionalProperties']['type']
+            elif "additionalProperties" in schema:
+                if isinstance(schema["additionalProperties"], dict) and "type" in schema["additionalProperties"]:
+                    type_name = schema["additionalProperties"]["type"]
                 else:
-                    type_name = 'string'
+                    type_name = "string"
 
-            kwargs['properties'] = properties
-        if type_name == 'array' and 'items' in schema:
-            kwargs['sub_type'] = self.get_resource_type(schema['items'])
+            kwargs["properties"] = properties
+        if type_name == "array" and "items" in schema:
+            kwargs["sub_type"] = self.get_resource_type(schema["items"])
 
         return APIResourceType(**kwargs)
 
     def get_resource_type(self, schema: dict) -> str:
-        if 'type' in schema:
-            return schema['type']
+        if "type" in schema:
+            return schema["type"]
 
-        elif '$ref' in schema:
-            return schema['$ref'].split('/')[-1]
+        elif "$ref" in schema:
+            return schema["$ref"].split("/")[-1]
 
-        elif 'allOf' in schema:
+        elif "allOf" in schema:
             # TODO Get only the first type.
-            return self.get_resource_type(schema['allOf'][0])
+            return self.get_resource_type(schema["allOf"][0])
 
 
 class RestApiTable(APIResource):
@@ -364,18 +355,18 @@ class RestApiTable(APIResource):
         self.options = resource_gen.options
 
         self.output_columns = {}
-        response_type = endpoint.response['type']
+        response_type = endpoint.response["type"]
         if response_type in resource_types:
             self.output_columns = resource_types[response_type].properties
         else:
             # let it be single column with this type
-            self.output_columns = {'value': response_type}
+            self.output_columns = {"value": response_type}
 
         # check params:
         self.params, self.list_params = [], []
         for name, param in endpoint.params.items():
             self.params.append(name)
-            if param.type == 'array':
+            if param.type == "array":
                 self.list_params.append(name)
 
         super().__init__(*args, **kwargs)
@@ -385,11 +376,7 @@ class RestApiTable(APIResource):
 
         if isinstance(value, dict):
             # remove empty keys
-            value = {
-                k: v
-                for k, v in value.items()
-                if v is not None
-            }
+            value = {k: v for k, v in value.items() if v is not None}
             value = json.dumps(value)
         elif isinstance(value, list):
             value = ",".join([str(i) for i in value])
@@ -408,22 +395,15 @@ class RestApiTable(APIResource):
 
         security_schemes = self.security_schemes
 
-        if 'token' in self.connection_data:
-            headers = {'Authorization': f'Bearer {self.connection_data["token"]}'}
+        if "token" in self.connection_data:
+            headers = {"Authorization": f"Bearer {self.connection_data['token']}"}
 
-            return {
-                "headers": headers
-            }
+            return {"headers": headers}
 
-        elif 'basicAuth' in security_schemes:
+        elif "basicAuth" in security_schemes:
             # For basic authentication, the username and password are required.
-            if not all(
-                key in self.connection_data
-                for key in ["username", "password"]
-            ):
-                raise ApiRequestException(
-                    "The username and password are required for basic authentication."
-                )
+            if not all(key in self.connection_data for key in ["username", "password"]):
+                raise ApiRequestException("The username and password are required for basic authentication.")
             return {
                 "auth": HTTPBasicAuth(
                     self.connection_data["username"],
@@ -446,7 +426,7 @@ class RestApiTable(APIResource):
     def get_user_params(self):
         params = {}
         for k, v in self.connection_data.items():
-            if k not in ('username', 'password', 'token', 'api_base'):
+            if k not in ("username", "password", "token", "api_base"):
                 params[k] = v
         return params
 
@@ -454,20 +434,20 @@ class RestApiTable(APIResource):
         query, body, path_vars = {}, {}, {}
         for name, value in filters.items():
             param = self.endpoint.params[name]
-            if param.where == 'query':
+            if param.where == "query":
                 query[name] = value
-            elif param.where == 'path':
+            elif param.where == "path":
                 path_vars[name] = value
             else:
                 body[name] = value
 
-        url = self.connection_data['api_base'] + self.endpoint.url
+        url = self.connection_data["api_base"] + self.endpoint.url
         if path_vars:
             url = url.format(**path_vars)
         # check empty placeholders
         placeholders = re.findall(r"{(\w+)}", url)
         if placeholders:
-            raise ApiRequestException('Parameters are required: ' + ', '.join(placeholders))
+            raise ApiRequestException("Parameters are required: " + ", ".join(placeholders))
 
         kwargs = self._handle_auth()
         req = requests.request(self.endpoint.method, url, params=query, data=body, **kwargs)
@@ -477,16 +457,16 @@ class RestApiTable(APIResource):
         resp = req.json()
 
         total = None
-        if 'total_column' in self.options and isinstance(resp, dict):
-            for col in self.options['total_column']:
+        if "total_column" in self.options and isinstance(resp, dict):
+            for col in self.options["total_column"]:
                 if col in resp:
                     total = resp[col]
                     break
 
-        for item in self.endpoint.response['path']:
+        for item in self.endpoint.response["path"]:
             resp = resp[item]
 
-        if self.endpoint.response['view'] == 'record':
+        if self.endpoint.response["view"] == "record":
             # response is one record, make table
             resp = [resp]
         return resp, total
@@ -497,9 +477,8 @@ class RestApiTable(APIResource):
         limit: int = None,
         sort: List[SortColumn] = None,
         targets: List[str] = None,
-        **kwargs
+        **kwargs,
     ) -> pd.DataFrame:
-
         if limit is None:
             limit = 20
 
@@ -524,7 +503,7 @@ class RestApiTable(APIResource):
         if params:
             filters.update(params)
 
-        page_size_param = self.get_setting_param('page_size_param')
+        page_size_param = self.get_setting_param("page_size_param")
         page_size = None
         if page_size_param is not None:
             # use default value for page size
@@ -534,8 +513,8 @@ class RestApiTable(APIResource):
         resp, total = self._api_request(filters)
 
         # pagination
-        offset_param = self.get_setting_param('offset_param')
-        page_num_param = self.get_setting_param('page_num_param')
+        offset_param = self.get_setting_param("offset_param")
+        page_num_param = self.get_setting_param("page_num_param")
         if offset_param is not None or page_num_param is not None:
             page_num = 1
             while True:

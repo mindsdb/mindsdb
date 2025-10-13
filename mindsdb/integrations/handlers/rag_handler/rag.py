@@ -21,7 +21,6 @@ class RAGQuestionAnswerer:
     """A class for using a RAG model for question answering"""
 
     def __init__(self, args: RAGBaseParameters):
-
         self.output_data = defaultdict(list)
 
         self.args = args
@@ -48,7 +47,6 @@ class RAGQuestionAnswerer:
         self.prompt_template = args.prompt_template
 
         if isinstance(args, RAGHandlerParameters):
-
             llm_config = {"llm_config": args.llm_params.model_dump()}
 
             llm_loader = LLMLoader(**llm_config)
@@ -59,7 +57,6 @@ class RAGQuestionAnswerer:
         return self.query(question)
 
     def _prepare_prompt(self, vector_store_response, question) -> str:
-
         context = [doc.page_content for doc in vector_store_response]
 
         combined_context = "\n\n".join(context)
@@ -70,21 +67,15 @@ class RAGQuestionAnswerer:
         return self.prompt_template.format(question=question, context=combined_context)
 
     def summarize_context(self, combined_context: str, question: str) -> str:
-
         summarization_prompt_template = self.args.summarization_prompt_template
 
-        summarization_prompt = summarization_prompt_template.format(
-            context=combined_context, question=question
-        )
+        summarization_prompt = summarization_prompt_template.format(context=combined_context, question=question)
 
         summarized_context = self.llm(prompt=summarization_prompt)
 
-        return self.prompt_template.format(
-            question=question, context=self.extract_generated_text(summarized_context)
-        )
+        return self.prompt_template.format(question=question, context=self.extract_generated_text(summarized_context))
 
     def query_vector_store(self, question: str) -> List:
-
         return self.persisted_vector_store.similarity_search(
             query=question,
             k=self.args.top_k,
@@ -105,15 +96,11 @@ class RAGQuestionAnswerer:
             elif isinstance(data, Completion):
                 return data.choices[0].text
             else:
-                logger.info(
-                    f"Error extracting generated text: failed to parse response {response}"
-                )
+                logger.info(f"Error extracting generated text: failed to parse response {response}")
                 return response
 
         except Exception as e:
-            raise Exception(
-                f"{e} Error extracting generated text: failed to parse response {response}"
-            )
+            raise Exception(f"{e} Error extracting generated text: failed to parse response {response}")
 
     def query(self, question: str) -> defaultdict:
         """Post process LLM response"""

@@ -6,15 +6,8 @@ from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 class ImpalaHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.kwargs = {
-            'user': '<UID>',
-            'password': '<P455w0rd>',
-            'host': '127.0.0.1',
-            'port': 21050,
-            'database': 'temp'
-
-        }
-        cls.handler = ImpalaHandler('test_impala_handler', **cls.kwargs)
+        cls.kwargs = {"user": "<UID>", "password": "<P455w0rd>", "host": "127.0.0.1", "port": 21050, "database": "temp"}
+        cls.handler = ImpalaHandler("test_impala_handler", **cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
@@ -42,9 +35,9 @@ class ImpalaHandlerTest(unittest.TestCase):
         assert tables.type is RESPONSE_TYPE.TABLE
 
     def test_6_get_columns(self):
-        columns = self.handler.get_columns('Car')
+        columns = self.handler.get_columns("Car")
         assert columns.type is not RESPONSE_TYPE.ERROR
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

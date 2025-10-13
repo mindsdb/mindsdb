@@ -36,9 +36,7 @@ class MLflowHandler(BaseMLEngine):
         mlflow_models = [model.name for model in connection.search_registered_models()]
 
         if model_name not in mlflow_models:
-            raise Exception(
-                f"Error: model '{model_name}' not found in mlflow. Check serving and try again."
-            )
+            raise Exception(f"Error: model '{model_name}' not found in mlflow. Check serving and try again.")
 
         args["target"] = target
         self._check_model_url(args["predict_url"])
@@ -59,27 +57,17 @@ class MLflowHandler(BaseMLEngine):
     def describe(self, key: Optional[str] = None) -> pd.DataFrame:
         if key == "info":
             args = self.model_storage.json_get("args")
-            connection = MlflowClient(
-                args["mlflow_server_url"], args["self.mlflow_server_path"]
-            )
-            models = {
-                model.name: model for model in connection.search_registered_models()
-            }
+            connection = MlflowClient(args["mlflow_server_url"], args["self.mlflow_server_path"])
+            models = {model.name: model for model in connection.search_registered_models()}
             model = models[key]
             latest_version = model.latest_versions[-1]
             description = {
                 "NAME": [model.name],
                 "USER_DESCRIPTION": [model.description],
                 "LAST_STATUS": [latest_version.status],
-                "CREATED_AT": [
-                    datetime.fromtimestamp(model.creation_timestamp // 1000).strftime(
-                        "%m/%d/%Y, %H:%M:%S"
-                    )
-                ],
+                "CREATED_AT": [datetime.fromtimestamp(model.creation_timestamp // 1000).strftime("%m/%d/%Y, %H:%M:%S")],
                 "LAST_UPDATED": [
-                    datetime.fromtimestamp(
-                        model.last_updated_timestamp // 1000
-                    ).strftime("%m/%d/%Y, %H:%M:%S")
+                    datetime.fromtimestamp(model.last_updated_timestamp // 1000).strftime("%m/%d/%Y, %H:%M:%S")
                 ],
                 "TAGS": [model.tags],
                 "LAST_RUN_ID": [latest_version.run_id],
@@ -98,8 +86,6 @@ class MLflowHandler(BaseMLEngine):
         try:
             resp = requests.post(url)
             if resp.status_code in (404, 405):
-                raise Exception(
-                    f"Model url is incorrect, status_code: {resp.status_code}"
-                )
+                raise Exception(f"Model url is incorrect, status_code: {resp.status_code}")
         except requests.RequestException as e:
             raise Exception(f"Model url is incorrect: {str(e)}")

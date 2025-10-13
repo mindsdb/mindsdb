@@ -1,6 +1,6 @@
 from mindsdb.integrations.handlers.oilpriceapi_handler.oilpriceapi_tables import (
     OilPriceLatestTable,
-    OilPricePastDayPriceTable
+    OilPricePastDayPriceTable,
 )
 from mindsdb.integrations.handlers.oilpriceapi_handler.oilpriceapi import OilPriceAPIClient
 from mindsdb.integrations.libs.api_handler import APIHandler

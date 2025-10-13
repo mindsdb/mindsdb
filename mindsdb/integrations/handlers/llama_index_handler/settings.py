@@ -13,6 +13,7 @@ class LlamaIndexConfig(BaseSettings):
         default_reader (str): Default reader. Note this is custom data frame reader.
         supported_reader (List[str]): Supported readers.
     """
+
     DEFAULT_INDEX_CLASS: str = "VectorStoreIndex"
     SUPPORTED_INDEXES: List[str] = ["VectorStoreIndex"]
     DEFAULT_READER: str = "DFReader"
@@ -33,6 +34,7 @@ class LlamaIndexModel(BaseModel):
         reader_params (Any): Reader parameters.
         index_params (Any): Index parameters.
     """
+
     reader: Optional[str] = None
     index_class: Optional[str] = None
     input_column: str
@@ -42,7 +44,7 @@ class LlamaIndexModel(BaseModel):
     user_column: Optional[str] = None
     assistant_column: Optional[str] = None
 
-    @field_validator('reader')
+    @field_validator("reader")
     @classmethod
     def validate_reader(cls, value):
         if value not in llama_index_config.SUPPORTED_READERS:
@@ -50,7 +52,7 @@ class LlamaIndexModel(BaseModel):
 
         return value
 
-    @field_validator('index_class')
+    @field_validator("index_class")
     @classmethod
     def validate_index_class(cls, value):
         if value not in llama_index_config.SUPPORTED_INDEXES:
@@ -58,7 +60,7 @@ class LlamaIndexModel(BaseModel):
 
         return value
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def validate_mode(self):
         if self.mode == "conversational" and not all([self.user_column, self.assistant_column]):
             raise ValueError("Conversational mode requires user_column and assistant_column parameter")

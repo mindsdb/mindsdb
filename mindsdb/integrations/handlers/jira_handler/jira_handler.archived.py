@@ -10,7 +10,6 @@ logger = log.getLogger(__name__)
 
 
 class JiraHandler(APIHandler):
-
     def __init__(self, name=None, **kwargs):
         """
         Initialize the handler.
@@ -30,12 +29,12 @@ class JiraHandler(APIHandler):
         self.api_resource_generator = APIResourceGenerator(
             "https://developer.atlassian.com/cloud/jira/platform/swagger-v3.v3.json",
             self.connection_data,
-            url_base='/rest/api/3/',
+            url_base="/rest/api/3/",
             options={
-                'offset_param': ['startAt', 'offset'],
-                'total_column': ['totalEntryCount', 'total'],
-                'check_connection_table': 'myself'
-            }
+                "offset_param": ["startAt", "offset"],
+                "total_column": ["totalEntryCount", "total"],
+                "check_connection_table": "myself",
+            },
         )
 
         resource_tables = self.api_resource_generator.generate_api_resources(self)

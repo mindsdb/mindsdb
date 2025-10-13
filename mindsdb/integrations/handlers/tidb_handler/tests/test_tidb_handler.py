@@ -11,9 +11,9 @@ class TiDBHandlerTest(unittest.TestCase):
             "user": "root",
             "password": "root",
             "database": "test",
-            "ssl": False
+            "ssl": False,
         }
-        cls.handler = TiDBHandler('test_tidb_handler', **cls.kwargs)
+        cls.handler = TiDBHandler("test_tidb_handler", **cls.kwargs)
 
     def test_0_connect(self):
         self.handler.connect()

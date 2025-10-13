@@ -12,7 +12,6 @@ logger = log.getLogger(__name__)
 
 
 class TaskThread(threading.Thread):
-
     def __init__(self, task_id):
         threading.Thread.__init__(self)
         self.task_id = task_id
@@ -34,18 +33,17 @@ class TaskThread(threading.Thread):
         self.object_type = task_record.object_type
         self.object_id = task_record.object_id
 
-        logger.info(f'Task starting: {self.object_type}.{self.object_id}')
+        logger.info(f"Task starting: {self.object_type}.{self.object_id}")
         try:
-            if self.object_type == 'trigger':
-
+            if self.object_type == "trigger":
                 trigger = TriggerTask(self.task_id, self.object_id)
                 trigger.run(self._stop_event)
 
-            elif self.object_type == 'chatbot':
+            elif self.object_type == "chatbot":
                 bot = ChatBotTask(self.task_id, self.object_id)
                 bot.run(self._stop_event)
 
-            elif self.object_type == 'query':
+            elif self.object_type == "query":
                 query = QueryTask(self.task_id, self.object_id)
                 query.run(self._stop_event)
 
@@ -56,6 +54,6 @@ class TaskThread(threading.Thread):
         db.session.commit()
 
     def stop(self):
-        logger.info(f'Task stopping: {self.object_type}.{self.object_id}')
+        logger.info(f"Task stopping: {self.object_type}.{self.object_id}")
 
         self._stop_event.set()

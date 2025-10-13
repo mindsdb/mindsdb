@@ -71,7 +71,6 @@ class VectorStoreFactory:
 
     @staticmethod
     def get_vectorstore_class(name) -> Union[FAISS, Chroma, VectorStore]:
-
         if not isinstance(name, str):
             raise TypeError("name must be a string")
 
@@ -162,13 +161,12 @@ class PersistedVectorStoreLoader:
         self.config = config
 
     def load_vector_store_client(
-            self,
-            vector_store: str,
+        self,
+        vector_store: str,
     ):
         """Load vector store from the persisted vector store"""
 
         if vector_store == "chromadb":
-
             return Chroma(
                 collection_name=self.config.collection_name,
                 embedding_function=self.config.embeddings_model,
@@ -176,12 +174,11 @@ class PersistedVectorStoreLoader:
             )
 
         elif vector_store == "faiss":
-
             return FAISS.load_local(
                 folder_path=self.config.persist_directory,
                 embeddings=self.config.embeddings_model,
                 index_name=self.config.collection_name,
-                allow_dangerous_deserialization=True
+                allow_dangerous_deserialization=True,
             )
 
         else:
@@ -230,9 +227,7 @@ class OpenAIParameters(LLMParameters):
     def openai_model_must_be_supported(cls, v, values):
         supported_models = get_available_openai_model_ids(values)
         if v not in supported_models:
-            raise InvalidOpenAIModel(
-                f"'model_id' must be one of {supported_models}, got {v}"
-            )
+            raise InvalidOpenAIModel(f"'model_id' must be one of {supported_models}, got {v}")
         return v
 
 
@@ -249,9 +244,7 @@ class WriterLLMParameters(LLMParameters):
     def writer_model_must_be_supported(cls, v, values):
         supported_models = get_available_writer_model_ids(values)
         if v not in supported_models:
-            raise InvalidWriterModel(
-                f"'model_id' must be one of {supported_models}, got {v}"
-            )
+            raise InvalidWriterModel(f"'model_id' must be one of {supported_models}, got {v}")
         return v
 
 
@@ -318,8 +311,7 @@ class RAGBaseParameters(BaseModel):
     def prompt_format_must_be_valid(cls, v):
         if "{context}" not in v or "{question}" not in v:
             raise InvalidPromptTemplate(
-                "prompt_template must contain {context} and {question}"
-                f"\n For example, {DEFAULT_QA_PROMPT_TEMPLATE}"
+                f"prompt_template must contain {{context}} and {{question}}\n For example, {DEFAULT_QA_PROMPT_TEMPLATE}"
             )
         return v
 
@@ -383,9 +375,9 @@ class DfLoader(DataFrameLoader):
 
 
 def df_to_documents(
-        df: pd.DataFrame,
-        page_content_columns: Union[List[str], str],
-        url_column_name: str = None,
+    df: pd.DataFrame,
+    page_content_columns: Union[List[str], str],
+    url_column_name: str = None,
 ) -> List[Document]:
     """Converts a given dataframe to a list of documents"""
     documents = []
@@ -395,9 +387,7 @@ def df_to_documents(
 
     for _, page_content_column in enumerate(page_content_columns):
         if page_content_column not in df.columns.tolist():
-            raise ValueError(
-                f"page_content_column {page_content_column} not in dataframe columns"
-            )
+            raise ValueError(f"page_content_column {page_content_column} not in dataframe columns")
         if url_column_name is not None and page_content_column == url_column_name:
             documents.extend(url_to_documents(df[page_content_column].tolist()))
             continue
@@ -427,9 +417,7 @@ def load_embeddings_model(embeddings_model_name, use_gpu=False):
     """Load embeddings model from Hugging Face Hub"""
     try:
         model_kwargs = dict(device="cuda" if use_gpu else "cpu")
-        embedding_model = HuggingFaceEmbeddings(
-            model_name=embeddings_model_name, model_kwargs=model_kwargs
-        )
+        embedding_model = HuggingFaceEmbeddings(model_name=embeddings_model_name, model_kwargs=model_kwargs)
     except ValueError:
         raise ValueError(
             f"The {embeddings_model_name}  is not supported, please select a valid option from Hugging Face Hub!"
@@ -437,9 +425,7 @@ def load_embeddings_model(embeddings_model_name, use_gpu=False):
     return embedding_model
 
 
-def on_create_build_llm_params(
-        args: dict, llm_config_class: Union[WriterLLMParameters, OpenAIParameters]
-) -> Dict:
+def on_create_build_llm_params(args: dict, llm_config_class: Union[WriterLLMParameters, OpenAIParameters]) -> Dict:
     """build llm params from create args"""
 
     llm_params = {"llm_name": args["llm_type"]}
@@ -459,9 +445,7 @@ def build_llm_params(args: dict, update=False) -> Dict:
     elif args["llm_type"] == "openai":
         llm_config_class = OpenAIParameters
     else:
-        raise UnsupportedLLM(
-            f"'llm_type' must be one of {SUPPORTED_LLMS}, got {args['llm_type']}"
-        )
+        raise UnsupportedLLM(f"'llm_type' must be one of {SUPPORTED_LLMS}, got {args['llm_type']}")
 
     if not args.get("llm_params"):
         # for create method only

@@ -6,8 +6,9 @@ class SingleStoreHandler(MySQLHandler):
     """
     This handler handles connection and execution of the SingleStore statements.
     """
-    name = 'singlestore'
+
+    name = "singlestore"
 
     def __init__(self, name, **kwargs):
-        kwargs['conn_attrs'] = {'mindsdb', 'MindsDB', version}
+        kwargs["conn_attrs"] = {"mindsdb", "MindsDB", version}
         super().__init__(name, **kwargs)

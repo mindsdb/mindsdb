@@ -1,8 +1,6 @@
 from hubspot import HubSpot
 
-from mindsdb.integrations.handlers.hubspot_handler.hubspot_tables import (
-    ContactsTable, CompaniesTable, DealsTable
-)
+from mindsdb.integrations.handlers.hubspot_handler.hubspot_tables import ContactsTable, CompaniesTable, DealsTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -16,10 +14,10 @@ logger = log.getLogger(__name__)
 
 class HubspotHandler(APIHandler):
     """
-        A class for handling connections and interactions with the Hubspot API.
+    A class for handling connections and interactions with the Hubspot API.
     """
 
-    name = 'hubspot'
+    name = "hubspot"
 
     def __init__(self, name: str, **kwargs):
         """
@@ -54,7 +52,7 @@ class HubspotHandler(APIHandler):
         if self.is_connected is True:
             return self.connection
 
-        access_token = self.connection_data['access_token']
+        access_token = self.connection_data["access_token"]
 
         self.connection = HubSpot(access_token=access_token)
         self.is_connected = True
@@ -75,7 +73,7 @@ class HubspotHandler(APIHandler):
             response.success = True
 
         except Exception as e:
-            logger.error(f'Error connecting to Hubspot: {e}')
+            logger.error(f"Error connecting to Hubspot: {e}")
             response.error_message = e
 
         self.is_connected = response.success

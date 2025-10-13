@@ -29,7 +29,7 @@ class VertexHandler(BaseMLEngine):
         credentials_url, credentials_file, credentials_json = self._get_credentials_from_engine()
 
         # get vertex args from handler then update args from model
-        vertex_args = self.engine_storage.json_get('args')
+        vertex_args = self.engine_storage.json_get("args")
         vertex_args.update(args)
 
         vertex = VertexClient(vertex_args, credentials_url, credentials_file, credentials_json)
@@ -76,12 +76,22 @@ class VertexHandler(BaseMLEngine):
 
     def create_engine(self, connection_args):
         # check if one of credentials_url, credentials_file, or credentials_json is provided
-        if 'service_account_key_url' not in connection_args and 'service_account_key_file' not in connection_args and 'service_account_key_json' not in connection_args:
-            raise KeyError('Either service_account_key_url, service_account_key_file, or service_account_key_json must be provided')
+        if (
+            "service_account_key_url" not in connection_args
+            and "service_account_key_file" not in connection_args
+            and "service_account_key_json" not in connection_args
+        ):
+            raise KeyError(
+                "Either service_account_key_url, service_account_key_file, or service_account_key_json must be provided"
+            )
 
-        self.engine_storage.json_set('args', connection_args)
+        self.engine_storage.json_set("args", connection_args)
 
     def _get_credentials_from_engine(self):
-        engine_args = self.engine_storage.json_get('args')
+        engine_args = self.engine_storage.json_get("args")
 
-        return engine_args.get('service_account_key_url'), engine_args.get('service_account_key_file'), engine_args.get('service_account_key_json')
+        return (
+            engine_args.get("service_account_key_url"),
+            engine_args.get("service_account_key_file"),
+            engine_args.get("service_account_key_json"),
+        )

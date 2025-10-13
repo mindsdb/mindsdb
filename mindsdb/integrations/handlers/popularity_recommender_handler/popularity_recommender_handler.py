@@ -21,25 +21,18 @@ class PopularityRecommenderHandler(BaseMLEngine):
         meta_data: Dict = None,
         args: Optional[Dict] = None,
     ) -> None:
-
         args = args["using"]
 
         interaction_data = pl.from_pandas(df)
 
-        args["ave_per_item_user"] = (
-            interaction_data.get_column(args["user_id"])
-            .value_counts()
-            .mean()["count"][0]
-        )
+        args["ave_per_item_user"] = interaction_data.get_column(args["user_id"]).value_counts().mean()["count"][0]
 
         popularity = (
             interaction_data.get_column(args["item_id"])
             .value_counts()
             .sort("count", descending=True)
             .get_column(args["item_id"])
-            .head(
-                int(args["n_recommendations"] * args["ave_per_item_user"])
-            )  # to ensure there are enough to predict
+            .head(int(args["n_recommendations"] * args["ave_per_item_user"]))  # to ensure there are enough to predict
             .to_pandas()
             .reset_index()
             .to_dict(orient="list")
@@ -50,7 +43,6 @@ class PopularityRecommenderHandler(BaseMLEngine):
         self.model_storage.json_set("args", args)
 
     def predict(self, df=None, args: Optional[dict] = None):
-
         args = self.model_storage.json_get("args")
         popularity = self.model_storage.json_get("popularity")
         interaction = dill.loads(self.model_storage.file_get("interaction"))
@@ -61,9 +53,7 @@ class PopularityRecommenderHandler(BaseMLEngine):
             # get recommendations for specific users if specified
             user_ids = df[args["user_id"]].unique().tolist()
 
-            interaction_data = pl.from_pandas(interaction).filter(
-                pl.col(args["user_id"]).is_in(user_ids)
-            )
+            interaction_data = pl.from_pandas(interaction).filter(pl.col(args["user_id"]).is_in(user_ids))
 
         else:
             # get recommendations for all users

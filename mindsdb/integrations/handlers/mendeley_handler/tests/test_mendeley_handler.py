@@ -7,9 +7,7 @@ from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 class MendeleyHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.kwargs = {
-            "connection_data": {"client_id": 15253, "client_secret": "BxmSvbrRW5iYEIQR"}
-        }
+        cls.kwargs = {"connection_data": {"client_id": 15253, "client_secret": "BxmSvbrRW5iYEIQR"}}
         cls.handler = MendeleyHandler("test_mendeley_handler", **cls.kwargs)
 
     def test_0_connect(self):
@@ -54,7 +52,9 @@ class MendeleyHandlerTest(unittest.TestCase):
         assert result.type is RESPONSE_TYPE.TABLE
 
     def test_9_select(self):
-        query = "SELECT * FROM catalog_search_data WHERE source='American Journal of Clinical Nutrition'AND max_year='2020'"
+        query = (
+            "SELECT * FROM catalog_search_data WHERE source='American Journal of Clinical Nutrition'AND max_year='2020'"
+        )
         result = self.handler.native_query(query)
         assert result.type is RESPONSE_TYPE.TABLE
 
@@ -81,21 +81,20 @@ class MendeleyHandlerTest(unittest.TestCase):
         columns = self.handler.catalog_search_data.get_columns()
 
         expected_columns = [
-
-            'title',
-            'type',
-            'source',
-            'year',
-            'pmid',
-            'sgr',
-            'issn',
-            'scopus',
-            'doi',
-            'pui',
-            'authors',
-            'keywords',
-            'link',
-            'id'
+            "title",
+            "type",
+            "source",
+            "year",
+            "pmid",
+            "sgr",
+            "issn",
+            "scopus",
+            "doi",
+            "pui",
+            "authors",
+            "keywords",
+            "link",
+            "id",
         ]
 
         self.assertListEqual(columns, expected_columns)

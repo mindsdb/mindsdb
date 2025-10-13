@@ -5,6 +5,7 @@ from .__about__ import __version__ as version
 
 try:
     from .npm_handler import NPMHandler as Handler
+
     import_error = None
 except Exception as e:
     Handler = None

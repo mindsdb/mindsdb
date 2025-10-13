@@ -10,7 +10,7 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 
 logger = log.getLogger(__name__)
@@ -21,7 +21,7 @@ class AthenaHandler(DatabaseHandler):
     This handler handles connection and execution of the Athena statements.
     """
 
-    name = 'athena'
+    name = "athena"
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         """
@@ -33,7 +33,7 @@ class AthenaHandler(DatabaseHandler):
         """
         super().__init__(name)
         self.parser = parse_sql
-        self.dialect = 'athena'
+        self.dialect = "athena"
 
         self.connection_data = connection_data
         self.kwargs = kwargs
@@ -53,15 +53,15 @@ class AthenaHandler(DatabaseHandler):
 
         try:
             self.connection = client(
-                'athena',
-                aws_access_key_id=self.connection_data['aws_access_key_id'],
-                aws_secret_access_key=self.connection_data['aws_secret_access_key'],
-                region_name=self.connection_data['region_name'],
+                "athena",
+                aws_access_key_id=self.connection_data["aws_access_key_id"],
+                aws_secret_access_key=self.connection_data["aws_secret_access_key"],
+                region_name=self.connection_data["region_name"],
             )
             self.is_connected = True
             return StatusResponse(success=True)
         except Exception as e:
-            logger.error(f'Failed to connect to Athena: {str(e)}')
+            logger.error(f"Failed to connect to Athena: {str(e)}")
             return StatusResponse(success=False, error_message=str(e))
 
     def disconnect(self):
@@ -98,25 +98,23 @@ class AthenaHandler(DatabaseHandler):
             response = self.connection.start_query_execution(
                 QueryString=query,
                 QueryExecutionContext={
-                    'Database': self.connection_data['database'],
+                    "Database": self.connection_data["database"],
                 },
                 ResultConfiguration={
-                    'OutputLocation': self.connection_data['results_output_location'],
+                    "OutputLocation": self.connection_data["results_output_location"],
                 },
-                WorkGroup=self.connection_data['workgroup'],
+                WorkGroup=self.connection_data["workgroup"],
             )
-            query_execution_id = response['QueryExecutionId']
+            query_execution_id = response["QueryExecutionId"]
             status = self._wait_for_query_to_complete(query_execution_id)
-            if status == 'SUCCEEDED':
-                result = self.connection.get_query_results(
-                    QueryExecutionId=query_execution_id
-                )
+            if status == "SUCCEEDED":
+                result = self.connection.get_query_results(QueryExecutionId=query_execution_id)
                 df = self._parse_query_result(result)
                 response = Response(RESPONSE_TYPE.TABLE, data_frame=df)
             else:
-                response = Response(RESPONSE_TYPE.ERROR, error_message='Query failed or was cancelled')
+                response = Response(RESPONSE_TYPE.ERROR, error_message="Query failed or was cancelled")
         except Exception as e:
-            logger.error(f'Error executing query in Athena: {str(e)}')
+            logger.error(f"Error executing query in Athena: {str(e)}")
             response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         if need_to_close:
@@ -190,11 +188,11 @@ class AthenaHandler(DatabaseHandler):
         """
         while True:
             response = self.connection.get_query_execution(QueryExecutionId=query_execution_id)
-            status = response['QueryExecution']['Status']['State']
-            if status in ['SUCCEEDED', 'FAILED', 'CANCELLED']:
+            status = response["QueryExecution"]["Status"]["State"]
+            if status in ["SUCCEEDED", "FAILED", "CANCELLED"]:
                 return status
 
-            check_interval = self.connection_data.get('check_interval', 0)
+            check_interval = self.connection_data.get("check_interval", 0)
             if isinstance(check_interval, str) and check_interval.strip().isdigit():
                 check_interval = int(check_interval)
             if check_interval > 0:
@@ -209,10 +207,10 @@ class AthenaHandler(DatabaseHandler):
             pd.DataFrame: Query result as a DataFrame
         """
 
-        if not result or 'ResultSet' not in result or 'Rows' not in result['ResultSet']:
+        if not result or "ResultSet" not in result or "Rows" not in result["ResultSet"]:
             return pd.DataFrame()
 
-        rows = result['ResultSet']['Rows']
-        headers = [col['VarCharValue'] for col in rows[0]['Data']]
-        data = [[col.get('VarCharValue') for col in row['Data']] for row in rows[1:]]
+        rows = result["ResultSet"]["Rows"]
+        headers = [col["VarCharValue"] for col in rows[0]["Data"]]
+        data = [[col.get("VarCharValue") for col in row["Data"]] for row in rows[1:]]
         return pd.DataFrame(data, columns=headers)

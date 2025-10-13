@@ -1,7 +1,7 @@
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import DEFAULT_CAPABILITIES
 
 
-class ServerCapabilities():
+class ServerCapabilities:
     def __init__(self, capabilities):
         self._capabilities = capabilities
 

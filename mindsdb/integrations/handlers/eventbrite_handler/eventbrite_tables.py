@@ -31,15 +31,9 @@ class EventbriteUserTable(APITable):
 
         # Normalize email field
         if "emails" in user_info and isinstance(user_info["emails"], list):
-            user_info["email"] = (
-                user_info["emails"][0]["email"] if user_info["emails"] else None
-            )
-            user_info["email_verified"] = (
-                user_info["emails"][0]["verified"] if user_info["emails"] else None
-            )
-            user_info["email_primary"] = (
-                user_info["emails"][0]["primary"] if user_info["emails"] else None
-            )
+            user_info["email"] = user_info["emails"][0]["email"] if user_info["emails"] else None
+            user_info["email_verified"] = user_info["emails"][0]["verified"] if user_info["emails"] else None
+            user_info["email_primary"] = user_info["emails"][0]["primary"] if user_info["emails"] else None
             del user_info["emails"]
         else:
             user_info["email"] = None
@@ -50,11 +44,7 @@ class EventbriteUserTable(APITable):
 
         # Select columns based on query
         columns = self.get_columns()
-        selected_columns = [
-            target.parts[-1]
-            for target in query.targets
-            if isinstance(target, ast.Identifier)
-        ]
+        selected_columns = [target.parts[-1] for target in query.targets if isinstance(target, ast.Identifier)]
         if selected_columns:
             columns = [col for col in columns if col in selected_columns]
         data = data[columns]
@@ -135,9 +125,7 @@ class EventbriteCategoryTable(APITable):
         categories = category_info.get("categories", [])
         result = pd.DataFrame(categories)
 
-        select_statement_parser = SELECTQueryParser(
-            query, "categoryInfoTable", self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "categoryInfoTable", self.get_columns())
 
         (
             selected_columns,
@@ -175,9 +163,7 @@ class EventbriteCategoryTable(APITable):
             # filter by columns
             result = result[columns]
 
-        select_statement_executor = SELECTQueryExecutor(
-            result, selected_columns, where_conditions, order_by_conditions
-        )
+        select_statement_executor = SELECTQueryExecutor(result, selected_columns, where_conditions, order_by_conditions)
 
         result = select_statement_executor.execute_query()
 
@@ -205,9 +191,7 @@ class EventbriteSubcategoryTable(APITable):
         categories = category_info.get("subcategories", [])
         result = pd.DataFrame(categories)
 
-        select_statement_parser = SELECTQueryParser(
-            query, "subcategoryInfoTable", self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "subcategoryInfoTable", self.get_columns())
 
         (
             selected_columns,
@@ -221,9 +205,7 @@ class EventbriteSubcategoryTable(APITable):
         # Normalize nested fields
         parent_category = result["parent_category"].apply(pd.Series)
         parent_category.columns = [f"parent_{col}" for col in parent_category.columns]
-        result = pd.concat([result, parent_category], axis=1).drop(
-            "parent_category", axis=1
-        )
+        result = pd.concat([result, parent_category], axis=1).drop("parent_category", axis=1)
 
         # filter targets
         columns = []
@@ -252,9 +234,7 @@ class EventbriteSubcategoryTable(APITable):
             # filter by columns
             result = result[columns]
 
-        select_statement_executor = SELECTQueryExecutor(
-            result, selected_columns, where_conditions, order_by_conditions
-        )
+        select_statement_executor = SELECTQueryExecutor(result, selected_columns, where_conditions, order_by_conditions)
 
         result = select_statement_executor.execute_query()
 
@@ -287,9 +267,7 @@ class EventbriteFormatTable(APITable):
         formats = format_info.get("formats", [])
         result = pd.DataFrame(formats)
 
-        select_statement_parser = SELECTQueryParser(
-            query, "formatInfoTable", self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "formatInfoTable", self.get_columns())
 
         (
             selected_columns,
@@ -327,9 +305,7 @@ class EventbriteFormatTable(APITable):
             # filter by columns
             result = result[columns]
 
-        select_statement_executor = SELECTQueryExecutor(
-            result, selected_columns, where_conditions, order_by_conditions
-        )
+        select_statement_executor = SELECTQueryExecutor(result, selected_columns, where_conditions, order_by_conditions)
 
         result = select_statement_executor.execute_query()
 
@@ -490,9 +466,7 @@ class EventbriteEventsTable(APITable):
             if op == "=" and arg1 in allowed_keys:
                 params[arg1] = arg2
             else:
-                raise NotImplementedError(
-                    f"Unsupported operation or field: {op} {arg1}"
-                )
+                raise NotImplementedError(f"Unsupported operation or field: {op} {arg1}")
 
         if "organization_id" not in params:
             raise ValueError("Organization ID must be provided")
@@ -513,9 +487,7 @@ class EventbriteEventsTable(APITable):
             axis=1,
         )
 
-        select_statement_parser = SELECTQueryParser(
-            query, "subcategoryInfoTable", self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "subcategoryInfoTable", self.get_columns())
 
         (
             selected_columns,
@@ -553,9 +525,7 @@ class EventbriteEventsTable(APITable):
             # filter by columns
             result = result[columns]
 
-        select_statement_executor = SELECTQueryExecutor(
-            result, selected_columns, where_conditions, order_by_conditions
-        )
+        select_statement_executor = SELECTQueryExecutor(result, selected_columns, where_conditions, order_by_conditions)
 
         result = select_statement_executor.execute_query()
 

@@ -8,7 +8,7 @@ from mindsdb.integrations.utilities.time_series_utils import (
     get_best_model_from_results_df,
     get_model_accuracy_dict,
     reconcile_forecasts,
-    get_hierarchy_from_df
+    get_hierarchy_from_df,
 )
 from sklearn.metrics import r2_score
 from statsforecast import StatsForecast
@@ -54,7 +54,11 @@ def get_season_length(frequency):
 
 def get_insample_cv_results(model_args, df):
     """Gets insample cross validation results"""
-    season_length = get_season_length(model_args["frequency"]) if not model_args.get("season_length") else model_args["season_length"]  # noqa
+    season_length = (
+        get_season_length(model_args["frequency"])
+        if not model_args.get("season_length")
+        else model_args["season_length"]
+    )  # noqa
     if model_args["model_name"] == "auto":
         models = [model(season_length=season_length) for model in model_dict.values()]
     else:
@@ -75,7 +79,11 @@ def choose_model(model_args, results_df):
     """
     if model_args["model_name"] == "auto":
         model_args["model_name"] = get_best_model_from_results_df(results_df)
-    model_args["season_length"] = get_season_length(model_args["frequency"]) if not model_args.get("season_length") else model_args["season_length"]  # noqa
+    model_args["season_length"] = (
+        get_season_length(model_args["frequency"])
+        if not model_args.get("season_length")
+        else model_args["season_length"]
+    )  # noqa
     model = model_dict[model_args["model_name"]]
     return model(season_length=model_args["season_length"])
 
@@ -105,9 +113,9 @@ class StatsForecastHandler(BaseMLEngine):
         model_args["target"] = target
         model_args["horizon"] = time_settings["horizon"]
         model_args["order_by"] = time_settings["order_by"]
-        if 'group_by' not in time_settings:
+        if "group_by" not in time_settings:
             # add group column
-            group_col = '__group_by'
+            group_col = "__group_by"
             time_settings["group_by"] = [group_col]
 
         model_args["group_by"] = time_settings["group_by"]
@@ -167,7 +175,7 @@ class StatsForecastHandler(BaseMLEngine):
             results_df = forecast_df[forecast_df.index.isin(groups_to_keep)]
 
         result = get_results_from_nixtla_df(results_df, model_args)
-        result = result.rename(columns={model_name: model_args['target']})
+        result = result.rename(columns={model_name: model_args["target"]})
         return result
 
     def describe(self, attribute=None):
@@ -181,12 +189,12 @@ class StatsForecastHandler(BaseMLEngine):
                 {"ds": [model_args["order_by"]], "y": model_args["target"], "unique_id": [model_args["group_by"]]}
             )
 
-        elif attribute == 'info':
+        elif attribute == "info":
             outputs = model_args["target"]
             inputs = [model_args["target"], model_args["order_by"], model_args["group_by"]]
             accuracies = [(model, acc) for model, acc in model_args["accuracies"].items()]
             return pd.DataFrame({"accuracies": [accuracies], "outputs": outputs, "inputs": [inputs]})
 
         else:
-            tables = ['info', 'features', 'model']
-            return pd.DataFrame(tables, columns=['tables'])
+            tables = ["info", "features", "model"]
+            return pd.DataFrame(tables, columns=["tables"])

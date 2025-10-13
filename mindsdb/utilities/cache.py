@@ -74,9 +74,7 @@ _CACHE_MAX_SIZE = 500
 def dataframe_checksum(df: pd.DataFrame):
     original_columns = df.columns
     df.columns = list(range(len(df.columns)))
-    result = hashlib.sha256(
-        str(df.values).encode()
-    ).hexdigest()
+    result = hashlib.sha256(str(df.values).encode()).hexdigest()
     df.columns = original_columns
     return result
 
@@ -98,8 +96,8 @@ class BaseCache(ABC):
             max_size = self.config["cache"].get("max_size", _CACHE_MAX_SIZE)
         self.max_size = max_size
         if serializer is None:
-            serializer_module = self.config["cache"].get('serializer')
-            if serializer_module == 'pickle':
+            serializer_module = self.config["cache"].get("serializer")
+            if serializer_module == "pickle":
                 import pickle as s_module
             else:
                 import dill as s_module
@@ -125,7 +123,7 @@ class FileCache(BaseCache):
         super().__init__(**kwargs)
 
         if path is None:
-            path = self.config['paths']['cache']
+            path = self.config["paths"]["cache"]
 
         cache_path = Path(path) / category
 
@@ -149,14 +147,14 @@ class FileCache(BaseCache):
             if cur_count > self.max_size + buffer_size:
                 try:
                     files = sorted(Path(self.path).iterdir(), key=os.path.getmtime)
-                    for file in files[:cur_count - self.max_size]:
+                    for file in files[: cur_count - self.max_size]:
                         self.delete_file(file)
                 except FileNotFoundError:
                     pass
 
     def file_path(self, name):
         # Sanitize the key to avoid table (file) names with backticks and slashes.
-        sanitized_name = re.sub(r'[^\w\-.]', '_', name)
+        sanitized_name = re.sub(r"[^\w\-.]", "_", name)
         return self.path / sanitized_name
 
     def set_df(self, name, df):
@@ -168,7 +166,7 @@ class FileCache(BaseCache):
         path = self.file_path(name)
         value = self.serialize(value)
 
-        with open(path, 'wb') as fd:
+        with open(path, "wb") as fd:
             fd.write(value)
         self.clear_old_cache()
 
@@ -186,7 +184,7 @@ class FileCache(BaseCache):
         with FileLock(self.path):
             if not os.path.exists(path):
                 return None
-            with open(path, 'rb') as fd:
+            with open(path, "rb") as fd:
                 value = fd.read()
         value = self.deserialize(value)
         return value
@@ -211,7 +209,6 @@ class RedisCache(BaseCache):
         self.client = walrus.Database(**connection_info)
 
     def clear_old_cache(self, key_added):
-
         if self.max_size is None:
             return
 
@@ -230,11 +227,11 @@ class RedisCache(BaseCache):
             # sort by timestamp
             keys.sort(key=lambda x: x[1])
 
-            for key, _ in keys[:cur_count - self.max_size]:
+            for key, _ in keys[: cur_count - self.max_size]:
                 self.delete_key(key)
 
     def redis_key(self, name):
-        return f'{self.category}_{name}'
+        return f"{self.category}_{name}"
 
     def set(self, name, value):
         key = self.redis_key(name)
@@ -265,9 +262,10 @@ class RedisCache(BaseCache):
 
 
 class NoCache:
-    '''
-        class for no cache mode
-    '''
+    """
+    class for no cache mode
+    """
+
     def __init__(self, *args, **kwargs):
         pass
 
@@ -280,9 +278,9 @@ class NoCache:
 
 def get_cache(category, **kwargs):
     config = Config()
-    if config.get('cache')['type'] == 'redis':
+    if config.get("cache")["type"] == "redis":
         return RedisCache(category, **kwargs)
-    if config.get('cache')['type'] == 'none':
+    if config.get("cache")["type"] == "none":
         return NoCache(category, **kwargs)
     else:
         return FileCache(category, **kwargs)

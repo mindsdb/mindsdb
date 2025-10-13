@@ -11,7 +11,7 @@ from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 from mindsdb.utilities import log
 
@@ -23,10 +23,10 @@ class AltibaseHandler(DatabaseHandler):
     This handler handles connection and execution of the Altibase statements.
     """
 
-    name = 'altibase'
+    name = "altibase"
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
-        """ constructor
+        """constructor
         Args:
             name (str): name of particular handler instance
             connection_data (dict): parameters for connecting to the database
@@ -36,18 +36,18 @@ class AltibaseHandler(DatabaseHandler):
         self.parser = parse_sql
 
         self.connection_args = connection_data
-        self.database = self.connection_args.get('database')
-        self.host = self.connection_args.get('host')
-        self.port = self.connection_args.get('port')
-        self.user = self.connection_args.get('user')
-        self.password = self.connection_args.get('password')
-        self.dsn = self.connection_args.get('dsn')
+        self.database = self.connection_args.get("database")
+        self.host = self.connection_args.get("host")
+        self.port = self.connection_args.get("port")
+        self.user = self.connection_args.get("user")
+        self.password = self.connection_args.get("password")
+        self.dsn = self.connection_args.get("dsn")
 
         self.connection = None
         self.is_connected = False
 
     def connect(self):
-        """ Set up any connections required by the handler
+        """Set up any connections required by the handler
         Should return output of check_connection() method after attempting connection.
         Should switch self.is_connected.
         Returns:
@@ -62,7 +62,7 @@ class AltibaseHandler(DatabaseHandler):
             return self.connect_with_jdbc()
 
     def connect_with_odbc(self):
-        """ Set up any connections required by the handler
+        """Set up any connections required by the handler
         Should return output of check_connection() method after attempting connection.
         Should switch self.is_connected.
         Returns:
@@ -79,7 +79,7 @@ class AltibaseHandler(DatabaseHandler):
         if self.password:
             conn_str.append(f"Password={self.password}")
 
-        conn_str = ';'.join(conn_str)
+        conn_str = ";".join(conn_str)
 
         try:
             self.connection = pyodbc.connect(conn_str, timeout=10)
@@ -90,22 +90,29 @@ class AltibaseHandler(DatabaseHandler):
         return self.connection
 
     def connect_with_jdbc(self):
-        """ Set up any connections required by the handler
+        """Set up any connections required by the handler
         Should return output of check_connection() method after attempting connection.
         Should switch self.is_connected.
         Returns:
             connection
         """
-        jar_location = self.connection_args.get('jar_location')
+        jar_location = self.connection_args.get("jar_location")
 
-        jdbc_class = self.connection_args.get('jdbc_class', 'Altibase.jdbc.driver.AltibaseDriver')
+        jdbc_class = self.connection_args.get("jdbc_class", "Altibase.jdbc.driver.AltibaseDriver")
         jdbc_url = f"jdbc:Altibase://{self.host}:{self.port}/{self.database}"
 
         try:
             if self.user and self.password and jar_location:
-                connection = jdbcconnector.connect(jclassname=jdbc_class, url=jdbc_url, driver_args=[self.user, self.password], jars=str(jar_location).split(","))
+                connection = jdbcconnector.connect(
+                    jclassname=jdbc_class,
+                    url=jdbc_url,
+                    driver_args=[self.user, self.password],
+                    jars=str(jar_location).split(","),
+                )
             elif self.user and self.password:
-                connection = jdbcconnector.connect(jclassname=jdbc_class, url=jdbc_url, driver_args=[self.user, self.password])
+                connection = jdbcconnector.connect(
+                    jclassname=jdbc_class, url=jdbc_url, driver_args=[self.user, self.password]
+                )
             elif jar_location:
                 connection = jdbcconnector.connect(jclassname=jdbc_class, url=jdbc_url, jars=jar_location.split(","))
             else:
@@ -120,7 +127,7 @@ class AltibaseHandler(DatabaseHandler):
         return self.connection
 
     def disconnect(self):
-        """ Close any existing connections
+        """Close any existing connections
         Should switch self.is_connected.
         """
         if self.is_connected is True:
@@ -133,7 +140,7 @@ class AltibaseHandler(DatabaseHandler):
         return True
 
     def check_connection(self) -> StatusResponse:
-        """ Check connection to the handler
+        """Check connection to the handler
         Returns:
             HandlerStatusResponse
         """
@@ -144,7 +151,7 @@ class AltibaseHandler(DatabaseHandler):
             self.connect()
             responseCode.success = True
         except Exception as e:
-            logger.error(f'Error connecting to database {self.database}, {e}!')
+            logger.error(f"Error connecting to database {self.database}, {e}!")
             responseCode.error_message = str(e)
         finally:
             if responseCode.success and need_to_close:
@@ -174,21 +181,14 @@ class AltibaseHandler(DatabaseHandler):
                             result = np.array(result)
 
                     response = Response(
-                        RESPONSE_TYPE.TABLE,
-                        data_frame=pd.DataFrame(
-                            result,
-                            columns=[x[0] for x in cur.description]
-                        )
+                        RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(result, columns=[x[0] for x in cur.description])
                     )
                 else:
                     response = Response(RESPONSE_TYPE.OK)
                 connection.commit()
             except Exception as e:
-                logger.error(f'Error running query: {query} on {self.database}!')
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=str(e)
-                )
+                logger.error(f"Error running query: {query} on {self.database}!")
+                response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
                 connection.rollback()
 
         if need_to_close is True:
@@ -211,12 +211,12 @@ class AltibaseHandler(DatabaseHandler):
         return self.native_query(query_str)
 
     def get_tables(self) -> Response:
-        """ Return list of entities
+        """Return list of entities
         Return list of entities that will be accesible as tables.
         Returns:
             HandlerResponse
         """
-        query = '''
+        query = """
             SELECT
                 TABLE_NAME,
                 TABLE_ID,
@@ -225,12 +225,12 @@ class AltibaseHandler(DatabaseHandler):
                 system_.sys_tables_
             WHERE
                 user_id = USER_ID();
-            '''
+            """
 
         return self.native_query(query)
 
     def get_columns(self, table_name: str) -> Response:
-        """ Returns a list of entity columns
+        """Returns a list of entity columns
         Args:
             table_name (str): name of one of tables returned by self.get_tables()
         Returns:

@@ -28,9 +28,7 @@ class NewsAPIArticleTable(APITable):
                 params["q"] = urllib.parse.quote_plus(arg2)
             elif arg1 == "sources":
                 if len(arg2.split(",")) > 20:
-                    raise ValueError(
-                        "The number of items it sources should be 20 or less"
-                    )
+                    raise ValueError("The number of items it sources should be 20 or less")
                 else:
                     params[arg1] = arg2
             elif arg1 == "publishedAt":
@@ -58,14 +56,12 @@ class NewsAPIArticleTable(APITable):
 
         if query.order_by:
             if len(query.order_by) == 1:
-                order_column = str(query.order_by[0]).split('.')[-1]
+                order_column = str(query.order_by[0]).split(".")[-1]
                 if order_column not in ["relevancy", "publishedAt"]:
                     raise NotImplementedError("Not supported ordering by this field")
                 params["sort_by"] = order_column
             else:
-                raise ValueError(
-                    "Multiple order by condition is not supported by the API"
-                )
+                raise ValueError("Multiple order by condition is not supported by the API")
 
         selected_columns = []
 
@@ -178,9 +174,7 @@ class NewsAPIHandler(APIHandler):
         data = table.select(ast)
         return HandlerResponse(RESPONSE_TYPE.TABLE, data_frame=data)
 
-    def call_application_api(
-        self, method_name: str = None, params: dict = None
-    ) -> pd.DataFrame:
+    def call_application_api(self, method_name: str = None, params: dict = None) -> pd.DataFrame:
         # This will implement api base on the native query
         # By processing native query to convert it to api callable parameters
         if self.is_connected is False:

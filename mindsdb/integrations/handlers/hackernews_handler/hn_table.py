@@ -7,7 +7,7 @@ from typing import List
 
 class StoriesTable(APITable):
     json_endpoint = "topstories.json"
-    columns = ['id', 'time', 'title', 'url', 'score', 'descendants']
+    columns = ["id", "time", "title", "url", "score", "descendants"]
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         """Select data from the stories table and return it as a pandas DataFrame.
@@ -28,11 +28,11 @@ class StoriesTable(APITable):
         # Apply any WHERE clauses in the SQL query to the DataFrame
         conditions = extract_comparison_conditions(query.where)
         for condition in conditions:
-            if condition[0] == '=' and condition[1] == 'id':
-                df = df[df['id'] == int(condition[2])]
-            elif condition[0] == '>' and condition[1] == 'time':
+            if condition[0] == "=" and condition[1] == "id":
+                df = df[df["id"] == int(condition[2])]
+            elif condition[0] == ">" and condition[1] == "time":
                 timestamp = int(condition[2])
-                df = df[df['time'] > timestamp]
+                df = df[df["time"] > timestamp]
 
         # Filter the columns in the DataFrame according to the SQL query
         self.filter_columns(df, query)
@@ -65,17 +65,17 @@ class StoriesTable(APITable):
 
 class HNStoriesTable(StoriesTable):
     json_endpoint = "askstories.json"
-    columns = ['id', 'time', 'title', 'text', 'score', 'descendants']
+    columns = ["id", "time", "title", "text", "score", "descendants"]
 
 
 class JobStoriesTable(StoriesTable):
     json_endpoint = "jobstories.json"
-    columns = ['id', 'time', 'title', 'url', 'score', 'type']
+    columns = ["id", "time", "title", "url", "score", "type"]
 
 
 class ShowStoriesTable(StoriesTable):
     json_endpoint = "showstories.json"
-    columns = ['id', 'time', 'title', 'text', 'score', 'descendants']
+    columns = ["id", "time", "title", "text", "score", "descendants"]
 
 
 class CommentsTable(APITable):
@@ -97,17 +97,17 @@ class CommentsTable(APITable):
         item_id = None
         conditions = extract_comparison_conditions(query.where)
         for condition in conditions:
-            if condition[0] == '=' and condition[1] == 'item_id':
+            if condition[0] == "=" and condition[1] == "item_id":
                 item_id = condition[2]
 
         if item_id is None:
-            raise ValueError('Item ID is missing in the SQL query')
+            raise ValueError("Item ID is missing in the SQL query")
 
         # Call the Hacker News API to get the comments for the specified item
-        comments_df = hn_handler.call_hackernews_api('get_comments', params={'item_id': item_id})
+        comments_df = hn_handler.call_hackernews_api("get_comments", params={"item_id": item_id})
 
         # Fill NaN values with 'deleted'
-        comments_df = comments_df.fillna('deleted')
+        comments_df = comments_df.fillna("deleted")
         # Filter the columns to those specified in the SQL query
         self.filter_columns(comments_df, query)
 
@@ -123,12 +123,12 @@ class CommentsTable(APITable):
             list: A list of column names for the comments table.
         """
         return [
-            'id',
-            'by',
-            'parent',
-            'text',
-            'time',
-            'type',
+            "id",
+            "by",
+            "parent",
+            "text",
+            "time",
+            "type",
         ]
 
     def filter_columns(self, result: pd.DataFrame, query: ast.Select = None) -> None:
